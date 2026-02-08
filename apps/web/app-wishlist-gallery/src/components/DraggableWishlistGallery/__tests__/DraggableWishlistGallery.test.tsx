@@ -40,6 +40,7 @@ const createMockItem = (overrides: Partial<WishlistItem> = {}): WishlistItem => 
   priority: 3,
   notes: null,
   sortOrder: 0,
+  status: 'wishlist',
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-15T00:00:00.000Z',
   createdBy: null,

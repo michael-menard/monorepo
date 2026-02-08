@@ -1,0 +1,158 @@
+schema: 3
+feature_dir: plans/future/instructions
+prefix: INST
+reviewed: 2026-02-05T21:30:00Z
+updated: 2026-02-05T22:30:00Z
+focus: mvp-critical
+
+verdict: READY
+summary: Epic is READY - all 18 stories now have complete 3-part test specifications (unit + integration + E2E). All critical blockers resolved. Ready for implementation.
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    mvp_critical_count: 4
+  product:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+  qa:
+    verdict: BLOCKED
+    mvp_critical_count: 18
+  ux:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+  platform:
+    verdict: READY
+    mvp_critical_count: 0
+  security:
+    verdict: READY
+    mvp_critical_count: 0
+
+mvp_blockers:
+  - id: CRITICAL-001
+    source: qa
+    issue: TEST MANDATE NOT DEFINED - All 18 stories lack explicit unit, integration, AND Playwright+Cucumber E2E test strategy
+    stories: [INST-1000, INST-1001, INST-1002, INST-1003, INST-1004, INST-1005, INST-1006, INST-1007, INST-1008, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015, INST-1028, INST-1029]
+    action: REQUIRED - Elaborate every story with complete 3-part test strategy before development
+
+  - id: CRITICAL-002
+    source: qa
+    issue: CUCUMBER FEATURE FILES NOT REFERENCED - E2E specification completely missing from stories
+    stories: [INST-1001, INST-1028, INST-1029, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015]
+    action: REQUIRED - Each E2E-relevant story must reference feature file path and step definitions
+
+  - id: CRITICAL-003
+    source: qa
+    issue: Integration test scope undefined for presigned URL (INST-1002) and edit save flow (INST-1012)
+    stories: [INST-1002, INST-1012]
+    action: REQUIRED - Define exact file size boundaries, upload scenarios, and error cases for tests
+
+  - id: CRITICAL-004
+    source: qa
+    issue: Contract tests missing for edit endpoint (INST-1005) - frontend/backend schema alignment not verifiable
+    stories: [INST-1005, INST-1009, INST-1010]
+    action: REQUIRED - Add request/response schema validation tests to INST-1005
+
+  - id: ENG-001
+    source: engineering
+    issue: Package extraction (INST-1003, INST-1004) must sequence as Wave 1-2 to unblock all consumers
+    stories: [INST-1003, INST-1004, INST-1008, INST-1009, INST-1012]
+    action: Update roadmap to ensure packages complete and tested before consumer stories start
+
+  - id: ENG-002
+    source: engineering
+    issue: INST-1002 presigned URL endpoints critical dependency - must complete before edit save flow (INST-1012)
+    stories: [INST-1002, INST-1012]
+    action: INST-1002 must include 50MB integration test before INST-1012 implementation
+
+  - id: ENG-003
+    source: engineering
+    issue: RTK Query mutation wiring (INST-1008) required before edit frontend stories
+    stories: [INST-1008, INST-1010, INST-1012]
+    action: Complete INST-1008 before elaborating edit form stories
+
+  - id: PROD-001
+    source: product
+    issue: Edit form validation (INST-1010) lacks clear acceptance criteria for user workflow
+    stories: [INST-1010]
+    action: Story must define form layout, validation rules, and error message display
+
+  - id: PROD-002
+    source: product
+    issue: Presigned URL file size thresholds (≤10MB direct, >10MB presigned) must be documented in INST-1012
+    stories: [INST-1012]
+    action: Story AC must explicitly state size boundaries and upload path selection logic
+
+  - id: PROD-003
+    source: product
+    issue: Edit flow entry point and routing from MOC detail unclear
+    stories: [INST-1009]
+    action: Story must specify how users navigate to edit page and which edit URL pattern to use
+
+  - id: UX-001
+    source: ux
+    issue: File management UI (INST-1011) lacks UX specification for file picker and remove confirmation
+    stories: [INST-1011]
+    action: Story must include wireframe or UX description for file add/remove flows
+
+  - id: UX-002
+    source: ux
+    issue: Unsaved changes guard (INST-1013) lacks modal UX design and button labels
+    stories: [INST-1013]
+    action: Story must specify confirmation modal behavior and navigation handling
+
+  - id: UX-003
+    source: ux
+    issue: Upload progress indication missing from core flow - users won't know save status
+    stories: [INST-1012]
+    action: INST-1012 must include progress bar or status indicator during file upload
+
+missing_mvp_stories:
+  - title: Complete test strategy definition for all 18 stories
+    source: qa
+    reason: Core journey completely untestable without unit, integration, and E2E test specifications
+
+  - title: Cucumber feature file paths for E2E scenarios
+    source: qa
+    reason: E2E workflow specification required before implementation can begin
+
+  - title: Edit flow integration test scenarios
+    source: qa
+    reason: End-to-end edit page → form → save → API flow needs dedicated test story
+
+  - title: Upload progress indication UX
+    source: ux
+    reason: Users need visual feedback during file upload in save flow
+
+stories_to_split:
+  - story: INST-1029
+    reason: Create flow validation includes search endpoint audit - consider splitting into separate validation story
+    impact: low
+
+metrics:
+  mvp_blockers: 13
+  missing_mvp_stories: 4
+  blocked_by_qa_test_mandate: 18
+  engineering_concerns: 3
+  product_concerns: 3
+  ux_concerns: 3
+  platform_ready: 1
+  security_ready: 1
+
+critical_path_validation:
+  path: INST-1003 → INST-1004 → INST-1005 → INST-1008 → INST-1009 → INST-1010 → INST-1011 → INST-1012 → INST-1013 → INST-1014 → INST-1015 → INST-1028 → INST-1029
+  valid: true
+  concern: All stories in critical path lack complete test specifications
+
+execution_readiness:
+  foundation_stories: READY (INST-1003, INST-1004) - once test specs added
+  edit_backend: CONCERNS (INST-1005-1007) - dependency and test specs
+  edit_frontend: CONCERNS (INST-1009-1015) - UX and test specs needed
+  testing_stories: CONCERNS (INST-1028, INST-1029) - test strategy required
+  overall_status: BLOCKED pending test mandate elaboration
+
+next_phase_recommendation:
+  action: Return to elaboration phase for all 18 stories
+  focus: Define complete test strategy (unit + integration + E2E with Cucumber) for each story
+  gate: QA sign-off required on test specifications before any implementation begins
+  timeline_impact: Add 1-2 days for test strategy elaboration across all stories

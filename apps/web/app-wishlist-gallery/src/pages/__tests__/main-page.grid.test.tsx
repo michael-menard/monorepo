@@ -76,6 +76,7 @@ const mockWishlistResponse: WishlistListResponse = {
       priority: 5,
       notes: null,
       sortOrder: 0,
+      status: 'wishlist',
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z',
       createdBy: null,

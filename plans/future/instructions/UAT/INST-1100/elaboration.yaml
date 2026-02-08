@@ -1,0 +1,66 @@
+schema: 1
+story_id: INST-1100
+title: View MOC Gallery
+feature_dir: plans/future/instructions
+timestamp: "2026-02-05T00:00:00Z"
+
+## Elaboration Results
+
+verdict: CONDITIONAL PASS
+status: ready-to-work
+phase: 1
+size_estimate: 3
+
+## Analysis Summary
+
+audit_status: PASS
+- Scope alignment: PASS
+- Internal consistency: PASS
+- Reuse-first validation: PASS
+- Ports & adapters pattern: PASS
+- Local testability: PASS
+- Decision completeness: CONDITIONAL PASS
+- Risk disclosure: PASS
+- Story sizing: PASS
+
+issues_count: 4
+issues_severity: [MEDIUM, MEDIUM, LOW, LOW]
+issues_all_resolved: true
+
+## User Decisions
+
+gap_1_dependency:
+  finding: RTK Query hook dependency on INST-1008
+  decision: Wait for INST-1008
+  reason: Keep dependency, INST-1008 must complete before INST-1100 starts
+  implementation_note: Do not expand scope; wait for INST-1008 completion
+
+gap_2_hook_naming:
+  finding: Hook naming clarity - useGetMocsQuery vs useGetInstructionsQuery
+  decision: Accept both as equivalent
+  reason: INST-1008 creates both hooks pointing to same endpoint
+  implementation_note: Implementer can use either; document as equivalent
+
+## Conditions for Implementation
+
+- [ ] INST-1008 must be completed and merged
+- [ ] RTK Query hook must be available in @repo/api-client
+- [ ] Backend GET /mocs endpoint returns thumbnailUrl field
+
+## Ready-to-Work Status
+
+All gaps resolved via user decisions.
+Story may proceed to in-progress status after INST-1008 completion.
+No blockers remaining.
+
+## Follow-up Actions
+
+- [ ] Move story to ready-to-work/ directory
+- [ ] Update stories.index.md with ready-to-work status
+- [ ] Link from ELAB-INST-1100.md to story location
+
+---
+
+**Elaboration completed by**: elab-completion-leader (Haiku)
+**Phase**: Elaboration Phase 2 (Completion)
+**Verdict final**: CONDITIONAL PASS → ready-to-work

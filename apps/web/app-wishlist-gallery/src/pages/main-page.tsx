@@ -29,7 +29,7 @@ import {
   useFirstTimeHint,
   type GalleryDataTableColumn,
 } from '@repo/gallery'
-import { Tabs, TabsList, TabsTrigger, Button } from '@repo/app-component-library'
+import { Tabs, TabsList, TabsTrigger, CustomButton } from '@repo/app-component-library'
 import { Heart, Plus } from 'lucide-react'
 import type { WishlistItem, CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
 import {
@@ -42,6 +42,7 @@ import { GotItModal } from '../components/GotItModal'
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
 import { DraggableWishlistGallery } from '../components/DraggableWishlistGallery'
 import { useWishlistSortPersistence, DEFAULT_SORT_MODE } from '../hooks/useWishlistSortPersistence'
+import { useAnnouncer, Announcer } from '../hooks/useAnnouncer'
 
 /**
  * Main page props schema
@@ -184,6 +185,9 @@ function WishlistMainPageContent({
 }: WishlistMainPageContentProps) {
   const { filters, updateFilter, clearFilters } = useFilterContext<WishlistFilters>()
 
+  // WISH-2006: Screen reader announcements for filter/sort changes
+  const { announce, announcement, priority } = useAnnouncer()
+
   const search = filters.search
   const selectedStore = filters.store
   const selectedTags = filters.tags
@@ -208,6 +212,9 @@ function WishlistMainPageContent({
 
   // First-time hint state for view toggle tooltip
   const [showHint, dismissHint] = useFirstTimeHint()
+
+  // Navigate hook for empty state action
+  const navigateToAdd = useNavigate()
 
   // Screen reader announcement for restored sort mode (WISH-2015 AC14)
   const hasAnnouncedRef = useRef(false)
@@ -299,8 +306,16 @@ function WishlistMainPageContent({
     (value: string) => {
       updateFilter('search', value)
       updateFilter('page', 1)
+      // WISH-2006 AC10: Announce search results
+      if (value.trim()) {
+        // Delay announcement to wait for data to load
+        setTimeout(() => {
+          const count = wishlistData?.items.length ?? 0
+          announce(`Search results: ${count} items found for "${value}"`)
+        }, 500)
+      }
     },
-    [updateFilter],
+    [updateFilter, announce, wishlistData],
   )
 
   // Handle store filter
@@ -308,8 +323,12 @@ function WishlistMainPageContent({
     (store: string | null) => {
       updateFilter('store', store)
       updateFilter('page', 1)
+      // WISH-2006 AC10: Announce store filter change
+      const count = store ? (storeCounts[store] ?? 0) : (counts?.total ?? 0)
+      const storeLabel = store ?? 'All'
+      announce(`Filtered to ${storeLabel} store: ${count} items`)
     },
-    [updateFilter],
+    [updateFilter, announce, counts, storeCounts],
   )
 
   // Handle tag filter
@@ -317,8 +336,14 @@ function WishlistMainPageContent({
     (tags: string[]) => {
       updateFilter('tags', tags)
       updateFilter('page', 1)
+      // WISH-2006 AC10: Announce tag filter change
+      if (tags.length > 0) {
+        announce(`Filtered by tags: ${tags.join(', ')}`)
+      } else {
+        announce('Tag filter cleared')
+      }
     },
-    [updateFilter],
+    [updateFilter, announce],
   )
 
   // Handle sort (WISH-2015: persist to localStorage)
@@ -328,8 +353,11 @@ function WishlistMainPageContent({
       updateFilter('page', 1)
       // Persist to localStorage
       onSortPersist(value)
+      // WISH-2006 AC10: Announce sort change
+      const sortLabel = getSortModeLabel(value)
+      announce(`Sort mode changed to ${sortLabel}`)
     },
-    [updateFilter, onSortPersist],
+    [updateFilter, onSortPersist, announce],
   )
 
   // Handle page change
@@ -494,9 +522,6 @@ function WishlistMainPageContent({
     )
   }
 
-  // Navigate hook for empty state action
-  const navigateToAdd = useNavigate()
-
   // Empty state
   if (items.length === 0 && !search && !selectedStore && selectedTags.length === 0) {
     return (
@@ -505,10 +530,10 @@ function WishlistMainPageContent({
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Wishlist</h1>
             <Link to="/add">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
+              <CustomButton style="bold">
+                <Plus className="h-4 w-4" />
                 Add Item
-              </Button>
+              </CustomButton>
             </Link>
           </div>
           <GalleryEmptyState
@@ -529,6 +554,9 @@ function WishlistMainPageContent({
 
   return (
     <div className={className}>
+      {/* WISH-2006: Screen reader announcements */}
+      <Announcer announcement={announcement} priority={priority} />
+
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -541,10 +569,10 @@ function WishlistMainPageContent({
             ) : null}
           </div>
           <Link to="/add">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
+            <CustomButton style="bold">
+              <Plus className="h-4 w-4" />
               Add Item
-            </Button>
+            </CustomButton>
           </Link>
         </div>
 

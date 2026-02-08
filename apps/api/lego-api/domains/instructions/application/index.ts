@@ -4,4 +4,8 @@
  * Business logic and use cases.
  */
 
-export { createInstructionsService, type InstructionsService, type InstructionsServiceDeps } from './services.js'
+export {
+  createInstructionsService,
+  type InstructionsService,
+  type InstructionsServiceDeps,
+} from './services.js'

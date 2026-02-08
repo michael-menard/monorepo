@@ -1,6 +1,12 @@
 ---
 name: review
 description: Comprehensive code review with parallel specialist sub-agents. Analyzes requirements traceability, code quality, security, performance, accessibility, test coverage, and technical debt. Produces detailed findings and calls /qa-gate for final gate decision.
+mcp_tools_available:
+  - context7  # For checking current best practices
+  - perplexity  # For researching security patterns and best practices
+  - chrome-devtools  # For performance and network debugging
+  - postgres-mcp  # For query analysis and optimization review
+  - kb_search  # For project-specific patterns and past decisions
 ---
 
 # /review - Comprehensive Code Review

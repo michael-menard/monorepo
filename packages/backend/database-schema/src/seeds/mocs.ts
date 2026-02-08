@@ -20,11 +20,12 @@ export async function seedMocs(db: DB) {
   // Second user for testing non-owner access
   const otherUserId = 'dev-user-00000000-0000-0000-0000-000000000002'
 
-  // Fixed UUIDs for deterministic seeding
+  // Fixed UUIDs for deterministic seeding (RFC 4122 compliant)
+  // Format: xxxxxxxx-xxxx-4xxx-axxx-xxxxxxxxxxxx (version 4, variant a)
   const sampleMocs = [
     // Published MOC - visible to all
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0001',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0001',
       userId: devUserId,
       type: 'moc',
       mocId: 'MOC-12345',
@@ -41,7 +42,7 @@ export async function seedMocs(db: DB) {
     },
     // Draft MOC - only visible to owner
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0002',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0002',
       userId: devUserId,
       type: 'moc',
       mocId: 'MOC-67890',
@@ -58,7 +59,7 @@ export async function seedMocs(db: DB) {
     },
     // Archived MOC - only visible to owner
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0003',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0003',
       userId: devUserId,
       type: 'moc',
       mocId: 'MOC-11111',
@@ -75,7 +76,7 @@ export async function seedMocs(db: DB) {
     },
     // Published MOC owned by other user - visible to all, not editable by dev user
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0004',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0004',
       userId: otherUserId,
       type: 'moc',
       mocId: 'MOC-99999',
@@ -92,7 +93,7 @@ export async function seedMocs(db: DB) {
     },
     // Draft MOC owned by other user - NOT visible to dev user
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0005',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0005',
       userId: otherUserId,
       type: 'moc',
       mocId: 'MOC-88888',
@@ -109,7 +110,7 @@ export async function seedMocs(db: DB) {
     },
     // Published set (not MOC) - for type discrimination testing
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0006',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0006',
       userId: devUserId,
       type: 'set',
       mocId: null,
@@ -126,7 +127,7 @@ export async function seedMocs(db: DB) {
     },
     // STORY-015: Test MOC with duplicate title (for 409 CONFLICT test)
     {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddd0015',
+      id: 'dddddddd-dddd-4ddd-addd-dddddddd0015',
       userId: devUserId,
       type: 'moc',
       mocId: 'MOC-DUPLICATE',
@@ -143,7 +144,7 @@ export async function seedMocs(db: DB) {
     },
     // STORY-015: Draft MOC owned by other user (for 403 FORBIDDEN test on finalize)
     {
-      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeee0001',
+      id: 'eeeeeeee-eeee-4eee-aeee-eeeeeeee0001',
       userId: otherUserId,
       type: 'moc',
       mocId: 'MOC-OTHER-DRAFT',
@@ -193,26 +194,26 @@ export async function seedMocs(db: DB) {
   console.log('  Seeding MOC files...')
 
   const sampleFiles = [
-    // Files for King's Castle
+    // Files for King's Castle (RFC 4122 compliant UUIDs)
     {
-      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeee0001',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0001',
+      id: 'eeeeeeee-eeee-4eee-aeee-eeeeeeee0002',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0001',
       fileType: 'instruction',
       fileUrl: 'https://example.com/kings-castle-instructions.pdf',
       originalFilename: 'kings-castle-instructions.pdf',
       mimeType: 'application/pdf',
     },
     {
-      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeee0002',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0001',
+      id: 'eeeeeeee-eeee-4eee-aeee-eeeeeeee0003',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0001',
       fileType: 'parts-list',
       fileUrl: 'https://example.com/kings-castle-parts.xml',
       originalFilename: 'kings-castle-parts.xml',
       mimeType: 'application/xml',
     },
     {
-      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeee0003',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0001',
+      id: 'eeeeeeee-eeee-4eee-aeee-eeeeeeee0004',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0001',
       fileType: 'thumbnail',
       fileUrl: 'https://example.com/kings-castle-thumb.jpg',
       originalFilename: 'kings-castle-thumb.jpg',
@@ -220,8 +221,8 @@ export async function seedMocs(db: DB) {
     },
     // Files for Space Station
     {
-      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeee0004',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0002',
+      id: 'eeeeeeee-eeee-4eee-aeee-eeeeeeee0005',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0002',
       fileType: 'instruction',
       fileUrl: 'https://example.com/space-station-instructions.pdf',
       originalFilename: 'space-station-instructions.pdf',
@@ -261,35 +262,34 @@ export async function seedMocs(db: DB) {
   // - 22222222-... (Space Station Build)
   // - 66666666-... (Update Test Image)
   const mocGalleryImageLinks = [
-    // Happy path list test - King's Castle + Castle Tower Photo
+    // Happy path list test - King's Castle + Castle Tower Photo (RFC 4122 compliant UUIDs)
     {
-      id: 'cccccccc-cccc-cccc-cccc-cccccccc0001',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0001', // King's Castle (dev user)
-      galleryImageId: '11111111-1111-1111-1111-111111111111', // Castle Tower Photo (dev user)
+      id: 'cccccccc-cccc-4ccc-accc-cccccccc0001',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0001', // King's Castle (dev user)
+      galleryImageId: '11111111-1111-4111-a111-111111111111', // Castle Tower Photo (dev user)
     },
     // Multiple links test - King's Castle + Medieval Knight
     {
-      id: 'cccccccc-cccc-cccc-cccc-cccccccc0002',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0001', // King's Castle (dev user)
-      galleryImageId: '33333333-3333-3333-3333-333333333333', // Medieval Knight (dev user)
+      id: 'cccccccc-cccc-4ccc-accc-cccccccc0002',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0001', // King's Castle (dev user)
+      galleryImageId: '33333333-3333-4333-a333-333333333333', // Medieval Knight (dev user)
     },
     // Cross-user link test - Space Station (dev user's MOC) + Private Image (other user's image)
     {
-      id: 'cccccccc-cccc-cccc-cccc-cccccccc0003',
-      mocId: 'dddddddd-dddd-dddd-dddd-dddddddd0002', // Space Station (dev user, draft)
-      galleryImageId: '55555555-5555-5555-5555-555555555555', // Private Image (other user)
+      id: 'cccccccc-cccc-4ccc-accc-cccccccc0003',
+      mocId: 'dddddddd-dddd-4ddd-addd-dddddddd0002', // Space Station (dev user, draft)
+      galleryImageId: '55555555-5555-4555-a555-555555555555', // Private Image (other user)
     },
   ]
 
   for (const link of mocGalleryImageLinks) {
     await db.execute(sql`
       INSERT INTO moc_gallery_images (
-        id, moc_id, gallery_image_id, created_at
+        id, moc_id, gallery_image_id
       ) VALUES (
         ${link.id},
         ${link.mocId},
-        ${link.galleryImageId},
-        NOW()
+        ${link.galleryImageId}
       )
       ON CONFLICT (id) DO NOTHING
     `)

@@ -24,13 +24,15 @@ export interface ImageRepository {
   findByUserId(
     userId: string,
     pagination: PaginationInput,
-    filters?: { albumId?: string | null; search?: string }
+    filters?: { albumId?: string | null; search?: string },
   ): Promise<PaginatedResult<GalleryImage>>
 
   /**
    * Insert a new image record
    */
-  insert(data: Omit<GalleryImage, 'id' | 'createdAt' | 'lastUpdatedAt' | 'flagged'>): Promise<GalleryImage>
+  insert(
+    data: Omit<GalleryImage, 'id' | 'createdAt' | 'lastUpdatedAt' | 'flagged'>,
+  ): Promise<GalleryImage>
 
   /**
    * Update an existing image
@@ -64,18 +66,23 @@ export interface AlbumRepository {
   findByUserId(
     userId: string,
     pagination: PaginationInput,
-    filters?: { search?: string }
+    filters?: { search?: string },
   ): Promise<PaginatedResult<GalleryAlbum>>
 
   /**
    * Insert a new album
    */
-  insert(data: Omit<GalleryAlbum, 'id' | 'createdAt' | 'lastUpdatedAt' | 'imageCount'>): Promise<GalleryAlbum>
+  insert(
+    data: Omit<GalleryAlbum, 'id' | 'createdAt' | 'lastUpdatedAt' | 'imageCount'>,
+  ): Promise<GalleryAlbum>
 
   /**
    * Update an existing album
    */
-  update(id: string, data: Partial<{ title: string; description: string | null; coverImageId: string | null }>): Promise<Result<GalleryAlbum, 'NOT_FOUND'>>
+  update(
+    id: string,
+    data: Partial<{ title: string; description: string | null; coverImageId: string | null }>,
+  ): Promise<Result<GalleryAlbum, 'NOT_FOUND'>>
 
   /**
    * Delete an album
@@ -91,7 +98,11 @@ export interface ImageStorage {
   /**
    * Upload an image and return the URL
    */
-  upload(key: string, buffer: Buffer, contentType: string): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>>
+  upload(
+    key: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>>
 
   /**
    * Delete an image by key
@@ -112,8 +123,13 @@ export interface ImageProcessor {
   /**
    * Process an uploaded image (resize, optimize, generate thumbnail)
    */
-  process(buffer: Buffer): Promise<Result<{
-    main: { buffer: Buffer; contentType: string }
-    thumbnail: { buffer: Buffer; contentType: string }
-  }, 'PROCESSING_FAILED'>>
+  process(buffer: Buffer): Promise<
+    Result<
+      {
+        main: { buffer: Buffer; contentType: string }
+        thumbnail: { buffer: Buffer; contentType: string }
+      },
+      'PROCESSING_FAILED'
+    >
+  >
 }

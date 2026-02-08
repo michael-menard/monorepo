@@ -1,7 +1,9 @@
 /**
  * Instructions Gallery API Integration
  * RTK Query endpoints for instructions gallery operations
+ *
  * Story 3.1.3: Instructions Gallery API Endpoints
+ * Story INST-1008: Wire RTK Query Mutations for MOC Instructions API
  */
 
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
@@ -9,15 +11,24 @@ import { createApi } from '@reduxjs/toolkit/query/react'
 import { createLogger } from '@repo/logger'
 import { createAuthenticatedBaseQuery } from '../auth/rtk-auth-integration'
 import { SERVERLESS_ENDPOINTS, buildEndpoint } from '../config/endpoints'
-import type {
-  Instruction,
-  InstructionsListResponse,
-  InstructionDetailResponse,
-} from '../types/api-responses'
+import type { Instruction } from '../types/api-responses'
+import {
+  MocInstructionsSchema,
+  MocFileSchema,
+  MocListResponseSchema,
+  GetMocDetailResponseSchema,
+  UploadThumbnailResponseSchema,
+  type MocInstructions,
+  type MocFile,
+  type CreateMocInput,
+  type UpdateMocInput,
+  type ListMocsQuery,
+  type MocListResponse,
+  type GetMocDetailResponse,
+} from '../schemas/instructions'
 import { getServerlessCacheConfig } from './base-query'
 
 const logger = createLogger('api-client:instructions')
-
 /**
  * Instructions search/filter parameters
  */
@@ -65,7 +76,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
       enablePerformanceMonitoring: true,
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
-      requireAuthForEndpoints: ['/api/v2/mocs'],
+      requireAuthForEndpoints: ['/instructions/mocs'],
       onAuthFailure:
         onAuthFailure ||
         (error => {
@@ -77,91 +88,306 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
           logger.debug('Instructions API token refreshed')
         }),
     }),
-    tagTypes: ['Instruction', 'InstructionList'],
+    // Story INST-1008: Updated tag types for cache invalidation
+    tagTypes: ['Moc', 'MocList', 'MocFile'],
     endpoints: builder => ({
       /**
-       * GET /api/instructions - List instructions with pagination and filtering
+       * GET /instructions/mocs/search - List MOC instructions with pagination and filtering
        *
        * Supports:
-       * - Search by name/description (q parameter)
+       * - Search by title/description
        * - Filter by tags
        * - Filter by theme
        * - Sort by name, createdAt, pieceCount
        * - Pagination with page/limit
        */
-      getInstructions: builder.query<InstructionsListResponse, GetInstructionsParams>({
+      getInstructions: builder.query<MocListResponse, Partial<ListMocsQuery>>({
         query: (params = {}) => {
-          logger.debug('Fetching instructions list', undefined, {
+          logger.debug('Fetching MOC instructions list', undefined, {
             hasSearch: !!params.search,
-            hasTags: !!params.tags?.length,
             hasTheme: !!params.theme,
-            sort: params.sort,
             page: params.page,
           })
 
           return {
             url: SERVERLESS_ENDPOINTS.MOC.SEARCH,
             params: {
-              q: params.search || undefined,
-              tags: params.tags?.join(',') || undefined,
+              search: params.search || undefined,
+              type: params.type || undefined,
+              status: params.status || undefined,
               theme: params.theme || undefined,
-              sort: params.sort || undefined,
-              order: params.order || undefined,
               page: params.page || 1,
               limit: params.limit || 20,
             },
           }
         },
-        transformResponse: (response: InstructionsListResponse) => {
-          logger.info('Instructions list fetched', undefined, {
-            itemCount: response.data.items.length,
-            totalPages: response.pagination?.totalPages,
-            total: response.pagination?.total,
+        transformResponse: (response: unknown) => {
+          const validated = MocListResponseSchema.parse(response)
+          logger.info('MOC instructions list fetched', undefined, {
+            itemCount: validated.items.length,
+            totalPages: validated.pagination?.totalPages,
+            total: validated.pagination?.total,
           })
-
-          return response
+          return validated
         },
-        providesTags: result => {
-          const tags: Array<{ type: 'Instruction'; id: string } | { type: 'InstructionList' }> = [
-            { type: 'InstructionList' as const },
-          ]
-
-          if (result?.data.items) {
-            result.data.items.forEach(({ id }) => {
-              tags.push({ type: 'Instruction' as const, id })
-            })
-          }
-
-          return tags
-        },
+        providesTags: result =>
+          result
+            ? [
+                ...result.items.map(({ id }) => ({ type: 'Moc' as const, id })),
+                { type: 'MocList' as const },
+              ]
+            : [{ type: 'MocList' as const }],
         // Medium caching for list queries (5 minutes)
         ...getServerlessCacheConfig('medium'),
       }),
 
       /**
-       * GET /api/instructions/:id - Get single instruction detail
+       * GET /instructions/mocs/:id - Get single MOC instruction detail
        */
-      getInstructionById: builder.query<InstructionDetailResponse, string>({
+      getInstructionById: builder.query<MocInstructions, string>({
         query: id => {
-          logger.debug('Fetching instruction by ID', undefined, { id })
-
+          logger.debug('Fetching MOC instruction by ID', undefined, { id })
           return buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_INSTRUCTION, { id })
         },
-        transformResponse: (response: InstructionDetailResponse) => {
-          logger.info('Instruction detail fetched', undefined, {
-            id: response.data.id,
-            name: response.data.name,
+        transformResponse: (response: unknown) => {
+          const validated = MocInstructionsSchema.parse(response)
+          logger.info('MOC instruction detail fetched', undefined, {
+            id: validated.id,
+            title: validated.title,
           })
-
-          return response
+          return validated
         },
-        providesTags: (_result, _error, id) => [{ type: 'Instruction' as const, id }],
+        providesTags: (_result, _error, id) => [{ type: 'Moc' as const, id }],
         // Long caching for individual instructions (30 minutes)
         ...getServerlessCacheConfig('long'),
       }),
 
       /**
+       * GET /instructions/mocs/:id - Get MOC detail with files (INST-1101)
+       *
+       * Returns comprehensive MOC data including all files, stats, and metadata.
+       * This endpoint provides the complete data needed for the MOC detail page.
+       *
+       * Story INST-1101: View MOC Details
+       */
+      getMocDetail: builder.query<GetMocDetailResponse, string>({
+        query: id => {
+          logger.debug('Fetching MOC detail with files', undefined, { id })
+          return buildEndpoint(SERVERLESS_ENDPOINTS.MOC.GET_INSTRUCTION, { id })
+        },
+        transformResponse: (response: unknown) => {
+          const validated = GetMocDetailResponseSchema.parse(response)
+          logger.info('MOC detail fetched', undefined, {
+            id: validated.id,
+            title: validated.title,
+            fileCount: validated.stats.fileCount,
+          })
+          return validated
+        },
+        providesTags: (_result, _error, id) => [
+          { type: 'Moc' as const, id },
+          { type: 'MocFile' as const, id },
+        ],
+        // Long caching for detail view (30 minutes)
+        ...getServerlessCacheConfig('long'),
+      }),
+
+      /**
+       * POST /instructions/mocs - Create new MOC instruction
+       *
+       * Story INST-1008: Create MOC mutation
+       */
+      createMoc: builder.mutation<MocInstructions, CreateMocInput>({
+        query: body => {
+          logger.debug('Creating new MOC instruction', undefined, { title: body.title })
+          return {
+            url: SERVERLESS_ENDPOINTS.MOC.CREATE,
+            method: 'POST',
+            body,
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = MocInstructionsSchema.parse(response)
+          logger.info('MOC instruction created', undefined, {
+            id: validated.id,
+            title: validated.title,
+          })
+          return validated
+        },
+        invalidatesTags: [{ type: 'MocList' }],
+      }),
+
+      /**
+       * PATCH /instructions/mocs/:id - Update existing MOC instruction
+       *
+       * Story INST-1008: Update MOC mutation
+       */
+      updateMoc: builder.mutation<MocInstructions, { id: string; input: UpdateMocInput }>({
+        query: ({ id, input }) => {
+          logger.debug('Updating MOC instruction', undefined, { id })
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.UPDATE, { id }),
+            method: 'PATCH',
+            body: input,
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = MocInstructionsSchema.parse(response)
+          logger.info('MOC instruction updated', undefined, { id: validated.id })
+          return validated
+        },
+        invalidatesTags: (_result, _error, { id }) => [{ type: 'Moc', id }, { type: 'MocList' }],
+      }),
+
+      /**
+       * DELETE /instructions/mocs/:id - Delete MOC instruction
+       *
+       * Story INST-1008: Delete MOC mutation
+       */
+      deleteMoc: builder.mutation<void, string>({
+        query: id => {
+          logger.debug('Deleting MOC instruction', undefined, { id })
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.DELETE, { id }),
+            method: 'DELETE',
+          }
+        },
+        invalidatesTags: (_result, _error, id) => [{ type: 'Moc', id }, { type: 'MocList' }],
+      }),
+
+      /**
+       * POST /instructions/mocs/:id/files/instruction - Upload instruction file
+       *
+       * Story INST-1008: Upload instruction file mutation
+       */
+      uploadInstructionFile: builder.mutation<MocFile, { mocId: string; file: File }>({
+        query: ({ mocId, file }) => {
+          logger.debug('Uploading instruction file', undefined, {
+            mocId,
+            fileName: file.name,
+            fileSize: file.size,
+          })
+
+          const formData = new FormData()
+          formData.append('file', file)
+
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.UPLOAD_INSTRUCTION, { id: mocId }),
+            method: 'POST',
+            body: formData,
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = MocFileSchema.parse(response)
+          logger.info('Instruction file uploaded', undefined, {
+            fileId: validated.id,
+            mocId: validated.mocId,
+          })
+          return validated
+        },
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocFile', id: mocId },
+        ],
+      }),
+
+      /**
+       * POST /instructions/mocs/:id/files/parts-list - Upload parts list file
+       *
+       * Story INST-1008: Upload parts list file mutation
+       */
+      uploadPartsListFile: builder.mutation<MocFile, { mocId: string; file: File }>({
+        query: ({ mocId, file }) => {
+          logger.debug('Uploading parts list file', undefined, {
+            mocId,
+            fileName: file.name,
+            fileSize: file.size,
+          })
+
+          const formData = new FormData()
+          formData.append('file', file)
+
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.UPLOAD_PARTS_LIST, { id: mocId }),
+            method: 'POST',
+            body: formData,
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = MocFileSchema.parse(response)
+          logger.info('Parts list file uploaded', undefined, {
+            fileId: validated.id,
+            mocId: validated.mocId,
+          })
+          return validated
+        },
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocFile', id: mocId },
+        ],
+      }),
+
+      /**
+       * POST /instructions/mocs/:id/thumbnail - Upload thumbnail image
+       *
+       * Story INST-1008: Upload thumbnail mutation
+       */
+      uploadThumbnail: builder.mutation<
+        { thumbnailUrl: string },
+        { mocId: string; file: File }
+      >({
+        query: ({ mocId, file }) => {
+          logger.debug('Uploading thumbnail', undefined, {
+            mocId,
+            fileName: file.name,
+            fileSize: file.size,
+          })
+
+          const formData = new FormData()
+          formData.append('thumbnail', file)
+
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.UPLOAD_THUMBNAIL, { id: mocId }),
+            method: 'POST',
+            body: formData,
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = UploadThumbnailResponseSchema.parse(response)
+          logger.info('Thumbnail uploaded', undefined, {
+            thumbnailUrl: validated.thumbnailUrl,
+          })
+          return validated
+        },
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocFile', id: mocId },
+        ],
+      }),
+
+      /**
+       * DELETE /instructions/mocs/:id/files/:fileId - Delete file
+       *
+       * Story INST-1008: Delete file mutation
+       */
+      deleteFile: builder.mutation<void, { mocId: string; fileId: string }>({
+        query: ({ mocId, fileId }) => {
+          logger.debug('Deleting file', undefined, { mocId, fileId })
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.DELETE_FILE, { id: mocId, fileId }),
+            method: 'DELETE',
+          }
+        },
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocFile', id: mocId },
+        ],
+      }),
+
+      /**
        * Toggle favorite status for an instruction
+       *
+       * Legacy mutation - uses optimistic update pattern
        */
       toggleInstructionFavorite: builder.mutation<Instruction, { id: string; isFavorite: boolean }>(
         {
@@ -170,21 +396,18 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
             method: 'PATCH',
             body: { isFavorite },
           }),
-          invalidatesTags: (_result, _error, { id }) => [
-            { type: 'Instruction', id },
-            'InstructionList',
-          ],
+          invalidatesTags: (_result, _error, { id }) => [{ type: 'Moc', id }, { type: 'MocList' }],
           // Optimistic update
           onQueryStarted: async ({ id, isFavorite }, { dispatch, queryFulfilled }) => {
             // Optimistically update the instruction in any cached list
             const patchResult = dispatch(
               instructionsApi.util.updateQueryData(
                 'getInstructions',
-                {} as GetInstructionsParams,
+                {} as Partial<ListMocsQuery>,
                 draft => {
-                  const instruction = draft?.data?.items?.find(item => item.id === id)
+                  const instruction = draft?.items?.find(item => item.id === id)
                   if (instruction) {
-                    instruction.isFavorite = isFavorite
+                    instruction.isFeatured = isFavorite
                   }
                 },
               ),
@@ -214,5 +437,17 @@ export const {
   useLazyGetInstructionsQuery,
   useGetInstructionByIdQuery,
   useLazyGetInstructionByIdQuery,
+  // Story INST-1101: MOC detail with files
+  useGetMocDetailQuery,
+  useLazyGetMocDetailQuery,
+  // Story INST-1008: New mutation hooks
+  useCreateMocMutation,
+  useUpdateMocMutation,
+  useDeleteMocMutation,
+  useUploadInstructionFileMutation,
+  useUploadPartsListFileMutation,
+  useUploadThumbnailMutation,
+  useDeleteFileMutation,
+  // Legacy hooks
   useToggleInstructionFavoriteMutation,
 } = instructionsApi

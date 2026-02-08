@@ -12,8 +12,28 @@
 import React, { forwardRef } from 'react'
 import { z } from 'zod'
 import { GalleryCard } from '@repo/gallery'
-import { Badge, Button } from '@repo/app-component-library'
-import { Star, Puzzle, Check, Trash2 } from 'lucide-react'
+import { AppBadge, Button, CustomButton } from '@repo/app-component-library'
+import { Star, Puzzle, Trash2 } from 'lucide-react'
+/**
+ * Checkmark icon with circle - based on cool-checkmark.tsx design
+ */
+function CheckCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="50" cy="50" r="40" />
+      <path d="M30 50L45 65L70 35" />
+    </svg>
+  )
+}
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { getBestImageUrl } from '../ResponsiveImage/index.js'
 import { generateItemAriaLabel, focusRingClasses } from '../../utils/a11y'
@@ -136,12 +156,13 @@ export const WishlistCard = forwardRef<HTMLDivElement, WishlistCardProps>(functi
   const metadata = (
     <div className="flex flex-wrap items-center gap-2">
       {/* Store Badge */}
-      <Badge
+      <AppBadge
+        size="sm"
         className={storeBadgeColors[store] || storeBadgeColors.Other}
         data-testid="wishlist-card-store"
       >
         {store}
-      </Badge>
+      </AppBadge>
 
       {/* Price */}
       {price ? (
@@ -195,9 +216,9 @@ export const WishlistCard = forwardRef<HTMLDivElement, WishlistCardProps>(functi
 
         {/* Got It Button (WISH-2042) */}
         {onGotIt ? (
-          <Button
+          <CustomButton
             size="sm"
-            variant="outline"
+            style="bold"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation()
               onGotIt()
@@ -205,9 +226,9 @@ export const WishlistCard = forwardRef<HTMLDivElement, WishlistCardProps>(functi
             data-testid="wishlist-card-got-it"
             aria-label={`Mark ${title} as purchased`}
           >
-            <Check className="h-3 w-3 mr-1" aria-hidden="true" />
+            <CheckCircleIcon className="h-4 w-4" />
             Got It
-          </Button>
+          </CustomButton>
         ) : null}
       </div>
     </div>
@@ -251,12 +272,13 @@ export const WishlistCard = forwardRef<HTMLDivElement, WishlistCardProps>(functi
     <div
       ref={ref}
       role="button"
-      tabIndex={tabIndex ?? (onClick ? 0 : undefined)}
+      tabIndex={tabIndex}
       aria-label={ariaLabel}
       aria-selected={isSelected}
       onClick={handleWrapperClick}
       onKeyDown={handleWrapperKeyDown}
       data-testid={`wishlist-card-${id}`}
+      data-index={index}
       className={cardClassName}
     >
       <GalleryCard

@@ -1,7 +1,14 @@
 import { motion } from 'framer-motion'
 import { LayoutGrid, Table } from 'lucide-react'
 import { z } from 'zod'
-import { cn, Tooltip, TooltipContent, TooltipTrigger } from '@repo/app-component-library'
+import {
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  AppToggleGroup,
+  AppToggleGroupItem,
+} from '@repo/app-component-library'
 import { ViewModeSchema } from '../types'
 
 export const GalleryViewTogglePropsSchema = z.object({
@@ -44,40 +51,19 @@ export function GalleryViewToggle({
     >
       <Tooltip open={showFirstTimeHint}>
         <TooltipTrigger asChild>
-          <div
-            role="group"
+          <AppToggleGroup
+            value={currentView}
+            onValueChange={handleViewChange}
             aria-label="View mode selector"
-            className="inline-flex items-center gap-1 rounded-md bg-background/80 p-1 shadow-sm"
+            style="surface"
           >
-            <button
-              type="button"
-              onClick={() => handleViewChange('grid')}
-              aria-label="Grid view"
-              aria-pressed={currentView === 'grid'}
-              className={cn(
-                'flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md',
-                'text-muted-foreground hover:text-foreground',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                currentView === 'grid' && 'bg-accent text-accent-foreground',
-              )}
-            >
+            <AppToggleGroupItem value="grid" aria-label="Grid view">
               <LayoutGrid className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleViewChange('datatable')}
-              aria-label="Table view"
-              aria-pressed={currentView === 'datatable'}
-              className={cn(
-                'flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md',
-                'text-muted-foreground hover:text-foreground',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                currentView === 'datatable' && 'bg-accent text-accent-foreground',
-              )}
-            >
+            </AppToggleGroupItem>
+            <AppToggleGroupItem value="datatable" aria-label="Table view">
               <Table className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
+            </AppToggleGroupItem>
+          </AppToggleGroup>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="flex items-center gap-2">
           <span>Try table view!</span>

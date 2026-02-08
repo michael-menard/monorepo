@@ -1,10 +1,11 @@
 import { useCallback } from 'react'
 import { z } from 'zod'
-import { useGetInstructionByIdQuery } from '@repo/api-client/rtk/instructions-api'
+import { useGetMocDetailQuery } from '@repo/api-client/rtk/instructions-api'
+import type { GetMocDetailResponse } from '@repo/api-client'
 import { createLogger } from '@repo/logger'
 import { Skeleton } from '@repo/app-component-library'
 import { MocDetailDashboard } from '../components/MocDetailDashboard/MocDetailDashboard'
-import { MocSchema } from '../components/MocDetailDashboard/__types__/moc'
+import { MocSchema, type Moc } from '../components/MocDetailDashboard/__types__/moc'
 
 const logger = createLogger('app-instructions-gallery:MocDetailModule')
 
@@ -14,10 +15,46 @@ const MocDetailModulePropsSchema = z.object({
 
 export type MocDetailModuleProps = z.infer<typeof MocDetailModulePropsSchema>
 
+/**
+ * Map backend API response to frontend Moc type
+ * Story INST-1101: View MOC Details
+ */
+function mapApiResponseToMoc(apiData: GetMocDetailResponse): Moc {
+  // Separate files by type
+  const instructionFiles = apiData.files.filter(f => f.fileType === 'instruction')
+  const partsListFiles = apiData.files.filter(f => f.fileType === 'parts-list')
+  const galleryFiles = apiData.files.filter(f => f.fileType === 'gallery-image')
+
+  return {
+    id: apiData.id,
+    title: apiData.title,
+    description: apiData.description || undefined,
+    tags: apiData.tags || [],
+    coverImageUrl: apiData.thumbnailUrl || '',
+    instructionsPdfUrls: instructionFiles.map(f => f.downloadUrl),
+    partsLists: partsListFiles.map(f => ({
+      id: f.id,
+      url: f.downloadUrl,
+      filename: f.name,
+    })),
+    galleryImages: galleryFiles.map(f => ({
+      id: f.id,
+      url: f.downloadUrl,
+    })),
+    updatedAt: apiData.updatedAt.toISOString(),
+    publishDate: apiData.createdAt.toISOString(),
+    purchasedDate: undefined,
+    author: undefined,
+    partsCount: apiData.stats.pieceCount || 0,
+    partsOwned: undefined,
+    orders: [],
+  }
+}
+
 export function MocDetailModule({ mocIdOrSlug }: MocDetailModuleProps) {
   const id = mocIdOrSlug ?? ''
 
-  const { data, isLoading, isError, error, refetch } = useGetInstructionByIdQuery(id, {
+  const { data, isLoading, isError, error, refetch } = useGetMocDetailQuery(id, {
     skip: !id,
   })
 
@@ -61,32 +98,10 @@ export function MocDetailModule({ mocIdOrSlug }: MocDetailModuleProps) {
     )
   }
 
-  const api = data.data
-
-  const mapped = {
-    id: api.id,
-    title: api.name,
-    description: api.description,
-    tags: api.tags,
-    coverImageUrl: api.thumbnail,
-    instructionsPdfUrls: api.pdfUrl ? [api.pdfUrl] : [],
-    partsLists: [],
-    galleryImages: (api.images || []).map((url, index) => ({
-      id: `${api.id}-image-${index}`,
-      url,
-    })),
-    updatedAt: api.updatedAt,
-    publishDate: api.createdAt,
-    purchasedDate: undefined,
-    author: undefined,
-    partsCount: api.pieceCount,
-    partsOwned: 0,
-    orders: [],
-  }
-
-  let moc
+  let moc: Moc
 
   try {
+    const mapped = mapApiResponseToMoc(data)
     moc = MocSchema.parse(mapped)
   } catch (parseError) {
     logger.error('Failed to validate MOC detail data', undefined, { id, error: parseError })

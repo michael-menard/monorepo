@@ -130,6 +130,11 @@ export {
 } from './errors/error-boundary-specialized'
 export type { ApiError } from './errors/error-boundary-specialized'
 
+export {
+  AuthorizationErrorDisplay,
+  useAuthorizationError,
+} from './errors/AuthorizationErrorDisplay'
+
 // Notifications
 export { Toaster } from './notifications/sonner'
 export type { ToasterProps } from './notifications/sonner'
@@ -145,6 +150,42 @@ export type { ToastApiError, ToastType } from './notifications/toast-utils'
 
 // Selects
 export { MultiSelect } from './selects/multi-select'
+
+// Gates (Feature gating)
+export {
+  FeatureGate,
+  withFeatureGate,
+  FeatureGatePropsSchema,
+  FeatureSchema as GateFeatureSchema,
+  TierSchema as GateTierSchema,
+  FEATURE_REQUIRED_TIER,
+  TIER_DISPLAY_NAMES,
+  FEATURE_DISPLAY_NAMES,
+} from './gates/FeatureGate'
+export type { FeatureGateProps, Feature as GateFeature, Tier as GateTier } from './gates/FeatureGate'
+
+// Indicators (Quota display)
+export {
+  QuotaIndicator,
+  QuotaBar,
+  QuotaCard,
+  QuotaTypeSchema,
+  QuotaInfoSchema,
+  QuotaIndicatorPropsSchema,
+  QuotaBarPropsSchema,
+  QuotaCardPropsSchema,
+  QUOTA_DISPLAY_NAMES,
+  QUOTA_UNITS,
+  getQuotaPercentage,
+  getQuotaStatus,
+} from './indicators/QuotaIndicator'
+export type {
+  QuotaIndicatorProps,
+  QuotaBarProps,
+  QuotaCardProps,
+  QuotaType,
+  QuotaInfo,
+} from './indicators/QuotaIndicator'
 
 // Dialogs
 export { ConfirmationDialog } from './dialogs/ConfirmationDialog'
@@ -331,6 +372,14 @@ export {
 
 // Tabs
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './_primitives/tabs'
+
+// ToggleGroup
+export { ToggleGroup, ToggleGroupItem } from './_primitives/toggle-group'
+export type { ToggleGroupProps, ToggleGroupItemProps } from './_primitives/toggle-group'
+
+// AppToggleGroup (app-level wrapper)
+export { AppToggleGroup, AppToggleGroupItem } from './toggles/AppToggleGroup'
+export type { AppToggleGroupProps, AppToggleGroupItemProps } from './toggles/AppToggleGroup'
 
 // Tooltip
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './_primitives/tooltip'

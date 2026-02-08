@@ -14,6 +14,11 @@ import {
   generateThumbnailKey,
   generatePartsListKey,
 } from '../adapters/storage.js'
+import {
+  validatePdfFile,
+  createSecurityEvent,
+  logSecurityEvent,
+} from '../../../core/utils/file-validation.js'
 
 /**
  * Instructions Service Dependencies
@@ -234,20 +239,38 @@ export function createInstructionsService(deps: InstructionsServiceDeps) {
         return mocResult
       }
 
-      // Validate file type
-      const allowedTypes = [
-        'application/pdf',
-        'application/x-studio',
-        'application/x-lxf',
-        'application/x-ldraw',
-      ]
-      if (!allowedTypes.includes(file.mimetype) && !file.mimetype.startsWith('application/')) {
-        return err('INVALID_FILE')
-      }
+      // Validate PDF file (AC72: Use validatePdfFile utility)
+      // AC73: Enforce 10MB limit for direct upload (100MB is for presigned upload in INST-1105)
+      const validation = validatePdfFile(file.mimetype, file.filename, file.size)
+      if (!validation.valid) {
+        // AC36: Security logging for rejected uploads
+        logSecurityEvent(
+          createSecurityEvent({
+            userId,
+            fileName: file.filename,
+            rejectionReason: validation.error,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            sourceMethod: 'uploadInstructionFile',
+          }),
+        )
 
-      // Validate file size (100MB max for instructions)
-      const maxSize = 100 * 1024 * 1024
-      if (file.size > maxSize) {
+        // AC74: Return structured error codes
+        // Map validation codes to service error codes
+        if (validation.code === 'INVALID_MIME_TYPE') {
+          return err('INVALID_MIME_TYPE')
+        }
+        if (validation.code === 'INVALID_EXTENSION') {
+          return err('INVALID_EXTENSION')
+        }
+        if (validation.code === 'FILE_TOO_LARGE') {
+          return err('FILE_TOO_LARGE')
+        }
+        if (validation.code === 'FILE_TOO_SMALL') {
+          return err('FILE_TOO_SMALL')
+        }
+
+        // Fallback for any other validation error
         return err('INVALID_FILE')
       }
 

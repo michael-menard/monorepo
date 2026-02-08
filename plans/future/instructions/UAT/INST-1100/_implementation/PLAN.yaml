@@ -1,0 +1,510 @@
+schema: 1
+story_id: INST-1100
+timestamp: '2026-02-05T00:00:00Z'
+
+# Implementation steps (sequential execution order)
+steps:
+  - id: 1
+    description: "Update main-page.tsx to use GallerySkeleton for loading states"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/main-page.tsx"
+    dependencies: []
+    slice: frontend
+    details: |
+      Replace current loading text with:
+      <GallerySkeleton count={12} />
+
+      Ensure showLoadingState renders skeleton:
+      {showLoadingState ? (
+        <GallerySkeleton count={12} />
+      ) : isEmpty ? (
+        <GalleryEmptyState ... />
+      ) : (
+        <GalleryGrid>...</GalleryGrid>
+      )}
+
+  - id: 2
+    description: "Verify InstructionCard displays thumbnail, title, piece count, theme"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/InstructionCard/index.tsx"
+    dependencies: []
+    slice: frontend
+    details: |
+      Current implementation already shows:
+      - Thumbnail via GalleryCard image prop
+      - Title via GalleryCard title prop
+      - Piece count via Badge component
+      - Theme badge if present
+
+      Verify:
+      - Placeholder image for missing thumbnailUrl
+      - Keyboard navigation (tabIndex on GalleryCard)
+      - Proper ARIA labels
+      - data-testid attributes for testing
+
+  - id: 3
+    description: "Fix schema alignment - access data.items instead of data.data.items"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/main-page.tsx"
+    dependencies: []
+    slice: frontend
+    details: |
+      MocListResponseSchema returns: { items, pagination, counts, filters }
+      Current code incorrectly accesses: data.data.items
+
+      Change useEffect to:
+      useEffect(() => {
+        if (!data) return
+        const next: Instruction[] = data.items.map(api => ({
+          id: api.id,
+          name: api.title,  // Note: API uses 'title', local uses 'name'
+          description: api.description,
+          thumbnail: api.thumbnailUrl,
+          pieceCount: api.partsCount || 0,
+          theme: api.theme,
+          tags: api.tags || [],
+          createdAt: api.createdAt,
+          updatedAt: api.updatedAt,
+          // Map other fields as needed
+        }))
+        setInstructions(next)
+      }, [data])
+
+  - id: 4
+    description: "Verify responsive grid breakpoints match requirements"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/main-page.tsx"
+    dependencies: [1, 2, 3]
+    slice: frontend
+    details: |
+      GalleryGrid default breakpoints:
+      - Mobile (≤640px): 1 column
+      - Tablet (641-1024px): 2 columns
+      - Desktop (>1024px): 3-4 columns
+
+      Verify GalleryGrid uses default responsive classes.
+      If custom breakpoints needed, pass columns prop.
+
+      Story requirements match defaults - no changes needed.
+
+  - id: 5
+    description: "Add comprehensive unit tests for main-page.tsx"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/main-page.test.tsx"
+    dependencies: [1, 2, 3, 4]
+    slice: frontend
+    details: |
+      Test cases (following wishlist pattern):
+      1. Renders grid layout with GalleryGrid component
+      2. Shows empty state when no MOCs (mock empty response)
+      3. Displays MOC cards with correct data (thumbnail, title, piece count, theme)
+      4. Shows loading skeletons during fetch (isLoading: true)
+      5. Handles missing thumbnailUrl with placeholder
+      6. Displays error state on API failure
+      7. Responsive grid rendering at different breakpoints
+
+      Mock patterns:
+      - @repo/logger (vi.mock)
+      - @tanstack/react-router (Link, useNavigate)
+      - useGetInstructionsQuery with mock data
+      - useViewMode returns ['grid', vi.fn()]
+
+      Wrap in Redux Provider with configureStore.
+
+  - id: 6
+    description: "Add integration tests with MSW for API interaction"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/main-page.integration.test.tsx"
+    dependencies: [5]
+    slice: frontend
+    details: |
+      Test cases:
+      1. API call fetches MOC list via useGetInstructionsQuery
+      2. Error state displays on API failure (500 response)
+      3. Auth error (401) triggers redirect to login
+      4. Query params passed correctly (page=1, limit=50)
+      5. Zod validation error handled gracefully
+      6. Response data properly transformed
+
+      MSW handler:
+      http.get('/api/v2/mocs/search', () => {
+        return HttpResponse.json({
+          items: [mockMocData],
+          pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+          counts: { total: 1 },
+          filters: { availableTags: [], availableThemes: [] }
+        })
+      })
+
+  - id: 7
+    description: "Add unit tests for InstructionCard component"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/InstructionCard/__tests__/InstructionCard.test.tsx"
+    dependencies: [2]
+    slice: frontend
+    details: |
+      Test cases:
+      1. Renders thumbnail, title, piece count
+      2. Handles missing thumbnail with placeholder
+      3. Displays theme badge if present
+      4. onClick handler called on card click
+      5. onFavorite handler called on favorite button click
+      6. onEdit handler called on edit button click
+      7. Keyboard navigation works (Enter/Space)
+      8. ARIA labels present and correct
+      9. data-testid attributes for testing
+
+  - id: 8
+    description: "Create E2E test feature file for gallery MVP"
+    files:
+      - "apps/web/playwright/tests/instructions/inst-1100-gallery.spec.ts"
+    dependencies: [1, 2, 3, 4, 5, 6, 7]
+    slice: frontend
+    details: |
+      Test scenarios (following wishlist pattern):
+
+      Scenario 1: Display user's MOC collection
+      - Given user has 5 MOCs
+      - When user navigates to /mocs
+      - Then gallery displays 5 MOC cards
+      - And each card shows thumbnail, title, piece count, theme
+      - And grid is responsive (test at 375px, 768px, 1024px)
+
+      Scenario 2: Empty gallery state
+      - Given user has no MOCs
+      - When user navigates to /mocs
+      - Then empty state displays
+      - And "Create your first MOC" button is visible
+
+      Scenario 3: Gallery loading state
+      - Given API response delayed by 1 second
+      - When user navigates to /mocs
+      - Then loading skeletons display
+      - And MOC cards appear after delay
+
+      Use browser-auth.fixture for authenticated page.
+      Navigate via client-side Link click (not page.goto).
+      Wait for filter bar to confirm page load.
+
+  - id: 9
+    description: "Verify /mocs route is wired in main-app router"
+    files:
+      - "apps/web/main-app/src/routes/index.ts"
+    dependencies: []
+    slice: frontend
+    details: |
+      Verify route configuration:
+      - Path: '/mocs' maps to InstructionsGalleryModule
+      - Auth: Required (JWT Bearer token)
+      - Navigation: Link in sidebar/header
+
+      No changes needed if already configured.
+      Add route if missing.
+
+  - id: 10
+    description: "Add accessibility attributes to gallery page"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/main-page.tsx"
+    dependencies: [1, 2, 3]
+    slice: frontend
+    details: |
+      Add/verify:
+      - Gallery region: <div role="region" aria-label="MOC Gallery">
+      - Loading state: <div aria-live="polite">Loading MOCs...</div>
+      - Empty state: <div role="status" aria-live="polite">No MOCs found</div>
+      - Grid: aria-label="MOC instruction cards"
+
+      InstructionCard accessibility:
+      - aria-label="{title}, {partsCount} pieces, {theme} theme"
+      - tabIndex={0} for keyboard navigation
+      - onKeyDown handler for Enter/Space
+
+# Files to modify or create (comprehensive list)
+files_to_change:
+  # Frontend - Main page updates
+  - path: "apps/web/app-instructions-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Add GallerySkeleton for loading, fix schema alignment, add accessibility"
+    estimated_lines_changed: 30-40
+
+  # Frontend - Component updates
+  - path: "apps/web/app-instructions-gallery/src/components/InstructionCard/index.tsx"
+    action: modify
+    reason: "Verify/add accessibility attributes, keyboard navigation, ARIA labels"
+    estimated_lines_changed: 10-20
+
+  # Frontend - Router configuration
+  - path: "apps/web/main-app/src/routes/index.ts"
+    action: modify
+    reason: "Verify /mocs route is configured with auth"
+    estimated_lines_changed: 0-5
+
+  # Tests - Unit tests
+  - path: "apps/web/app-instructions-gallery/src/pages/__tests__/main-page.test.tsx"
+    action: create
+    reason: "Unit tests for gallery page rendering, states, responsive layout"
+    estimated_lines: 200-300
+
+  - path: "apps/web/app-instructions-gallery/src/pages/__tests__/main-page.integration.test.tsx"
+    action: create
+    reason: "Integration tests for API calls, error handling, auth redirects"
+    estimated_lines: 150-200
+
+  - path: "apps/web/app-instructions-gallery/src/components/InstructionCard/__tests__/InstructionCard.test.tsx"
+    action: create
+    reason: "Unit tests for card component rendering, interactions, accessibility"
+    estimated_lines: 150-200
+
+  # Tests - E2E tests
+  - path: "apps/web/playwright/tests/instructions/inst-1100-gallery.spec.ts"
+    action: create
+    reason: "E2E tests for gallery MVP user workflows"
+    estimated_lines: 200-300
+
+# Commands to run (in order)
+commands_to_run:
+  - command: "pnpm build --filter app-instructions-gallery"
+    when: "after all code changes"
+    required: true
+    reason: "Verify TypeScript compilation succeeds"
+
+  - command: "pnpm check-types --filter app-instructions-gallery"
+    when: "after all code changes"
+    required: true
+    reason: "Verify no TypeScript errors"
+
+  - command: "pnpm lint --filter app-instructions-gallery"
+    when: "after all code changes"
+    required: true
+    reason: "Verify ESLint and Prettier compliance"
+
+  - command: "pnpm test --filter app-instructions-gallery"
+    when: "after all code changes"
+    required: true
+    reason: "Run unit and integration tests"
+
+  - command: "pnpm test:e2e tests/instructions/inst-1100-gallery.spec.ts"
+    when: "after all tests pass"
+    required: true
+    reason: "Run E2E tests for gallery MVP"
+
+  - command: "pnpm lighthouse http://localhost:3000/mocs"
+    when: "manual verification"
+    required: false
+    reason: "Verify performance score >70"
+
+# Acceptance criteria mapping (evidence plan)
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    description: "Gallery page at /mocs displays all user's MOCs in a responsive grid"
+    planned_evidence: "E2E test: inst-1100-gallery.spec.ts - Display user's MOC collection"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    description: "Each MOC card shows thumbnail, title, piece count, and theme"
+    planned_evidence: "E2E test: inst-1100-gallery.spec.ts - Verify card metadata"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    description: "Grid is responsive (1 col mobile, 2 col tablet, 3-4 col desktop)"
+    planned_evidence: "E2E test: inst-1100-gallery.spec.ts - Test at 375px, 768px, 1024px"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    description: "Empty state displays when user has no MOCs"
+    planned_evidence: "Unit test: main-page.test.tsx - Shows empty state when no MOCs"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    description: "Empty state includes 'Create your first MOC' CTA button"
+    planned_evidence: "E2E test: inst-1100-gallery.spec.ts - Empty gallery state"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    description: "CTA button links to create page or shows 'Coming soon'"
+    planned_evidence: "Manual verification: Click CTA button in empty state"
+    evidence_type: manual
+
+  - ac_id: "AC-7"
+    description: "Loading skeleton states show while fetching data"
+    planned_evidence: "Unit test: main-page.test.tsx - Shows loading skeletons during fetch"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    description: "Skeleton uses GallerySkeleton component from @repo/gallery"
+    planned_evidence: "Code inspection: main-page.tsx imports and uses GallerySkeleton"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    description: "Skeleton is replaced with actual cards when data loads"
+    planned_evidence: "E2E test: inst-1100-gallery.spec.ts - Gallery loading state"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    description: "Gallery uses useGetInstructionsQuery from @repo/api-client"
+    planned_evidence: "Code inspection: main-page.tsx imports useGetInstructionsQuery"
+    evidence_type: file
+
+  - ac_id: "AC-11"
+    description: "API call includes query params: page=1, limit=50"
+    planned_evidence: "Integration test: main-page.integration.test.tsx - Query params"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    description: "Response is validated with Zod schema"
+    planned_evidence: "Code inspection: instructions-api.ts uses MocListResponseSchema.parse()"
+    evidence_type: file
+
+  - ac_id: "AC-13"
+    description: "Thumbnail URLs are retrieved from moc_files table or mocs.thumbnailUrl"
+    planned_evidence: "Code inspection: Backend routes.ts joins moc_files for thumbnails"
+    evidence_type: file
+
+  - ac_id: "AC-14"
+    description: "API errors display user-friendly error message"
+    planned_evidence: "Unit test: main-page.test.tsx - Displays error state on API failure"
+    evidence_type: test
+
+  - ac_id: "AC-15"
+    description: "Retry option available on error"
+    planned_evidence: "Code inspection: Error state component includes retry button"
+    evidence_type: file
+
+  - ac_id: "AC-16"
+    description: "Auth errors (401) redirect to login page"
+    planned_evidence: "Integration test: main-page.integration.test.tsx - Auth error redirect"
+    evidence_type: test
+
+  - ac_id: "AC-17"
+    description: "Gallery has role='region' and aria-label='MOC Gallery'"
+    planned_evidence: "Unit test: main-page.test.tsx - Accessibility attributes present"
+    evidence_type: test
+
+  - ac_id: "AC-18"
+    description: "Loading state announced to screen readers: 'Loading MOCs...'"
+    planned_evidence: "Unit test: main-page.test.tsx - aria-live polite on loading state"
+    evidence_type: test
+
+  - ac_id: "AC-19"
+    description: "Empty state message announced to screen readers"
+    planned_evidence: "Unit test: main-page.test.tsx - aria-live on empty state"
+    evidence_type: test
+
+  - ac_id: "AC-20"
+    description: "MOC cards are keyboard navigable (Tab key)"
+    planned_evidence: "Unit test: InstructionCard.test.tsx - tabIndex={0} on cards"
+    evidence_type: test
+
+  - ac_id: "AC-21"
+    description: "Cards activate with Enter or Space key"
+    planned_evidence: "Unit test: InstructionCard.test.tsx - onKeyDown handler"
+    evidence_type: test
+
+  - ac_id: "AC-22"
+    description: "Gallery loads in <2 seconds with 50 MOCs"
+    planned_evidence: "Manual verification: Network tab shows load time <2s"
+    evidence_type: manual
+
+  - ac_id: "AC-23"
+    description: "No memory leaks (verified with React DevTools Profiler)"
+    planned_evidence: "Manual verification: React DevTools Profiler shows no leaks"
+    evidence_type: manual
+
+  - ac_id: "AC-24"
+    description: "Lighthouse performance score >70"
+    planned_evidence: "Command: pnpm lighthouse http://localhost:3000/mocs"
+    evidence_type: command
+
+# Architectural decisions for this story
+architectural_decisions:
+  - id: ARCH-INST-1100-001
+    question: "Should we wait for INST-1008 or proceed with existing hooks?"
+    decision: "Proceed with implementation - useGetInstructionsQuery already exists"
+    rationale: |
+      INST-1008 is marked as blocker, but code inspection shows the hook is
+      fully wired in instructions-api.ts. No actual blocker exists.
+    decided_by: agent
+    timestamp: '2026-02-05T00:00:00Z'
+
+  - id: ARCH-INST-1100-002
+    question: "How to handle missing thumbnailUrl in MOC cards?"
+    decision: "Use placeholder image from design system"
+    rationale: |
+      Design system provides placeholder images for missing content.
+      Better UX than broken image icons.
+    decided_by: agent
+    timestamp: '2026-02-05T00:00:00Z'
+
+  - id: ARCH-INST-1100-003
+    question: "Should we create new gallery components or reuse existing?"
+    decision: "Reuse all existing @repo/gallery components"
+    rationale: |
+      Per ADR-001 (Gallery Component Reuse Strategy), all gallery pages must
+      use shared components for consistency.
+    decided_by: adr
+    timestamp: '2026-02-05T00:00:00Z'
+
+# Story complexity assessment
+complexity: simple
+
+# Implementation notes and warnings
+notes:
+  - "Main-page.tsx already has most patterns implemented - primary work is adding tests"
+  - "Schema alignment issue: API returns 'title' but local state uses 'name' - map correctly"
+  - "GallerySkeleton import: import { GallerySkeleton } from '@repo/gallery'"
+  - "Follow wishlist test patterns exactly - they are comprehensive and proven"
+  - "E2E tests must use browser-auth.fixture and navigate via client-side Link clicks"
+  - "Performance testing is manual - no automated lighthouse test in CI yet"
+
+warnings:
+  - "INST-1008 dependency is not a real blocker - hooks already exist"
+  - "Current implementation accesses data.data.items - should be data.items"
+  - "Loading state currently uses text, not GallerySkeleton component"
+  - "Test coverage is minimal - need comprehensive unit, integration, and E2E tests"
+  - "Accessibility attributes may be incomplete - verify all ARIA labels present"
+
+# Phase completion checklist
+completion_checklist:
+  code:
+    - "GallerySkeleton used for loading states"
+    - "Schema alignment fixed (data.items not data.data.items)"
+    - "InstructionCard verified for thumbnail, title, piece count, theme"
+    - "Responsive grid breakpoints match requirements"
+    - "Accessibility attributes added (role, aria-label, aria-live)"
+    - "Keyboard navigation works (Tab, Enter, Space)"
+    - "/mocs route wired in main-app router"
+
+  tests:
+    - "Unit tests for main-page.tsx (7+ test cases)"
+    - "Integration tests for API interaction (6+ test cases)"
+    - "Unit tests for InstructionCard (9+ test cases)"
+    - "E2E tests for gallery MVP (3 scenarios)"
+    - "All tests passing with 45%+ coverage"
+
+  quality:
+    - "pnpm build succeeds"
+    - "pnpm check-types passes"
+    - "pnpm lint passes (no errors)"
+    - "pnpm test passes (all new tests)"
+    - "pnpm test:e2e passes (gallery spec)"
+
+  manual:
+    - "Gallery loads in <2 seconds with 50 MOCs"
+    - "No memory leaks (React DevTools Profiler)"
+    - "Lighthouse performance score >70"
+    - "Empty state CTA links correctly"
+
+# Test execution order (for verification phase)
+test_execution_order:
+  - phase: unit
+    tests:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/main-page.test.tsx"
+      - "apps/web/app-instructions-gallery/src/components/InstructionCard/__tests__/InstructionCard.test.tsx"
+
+  - phase: integration
+    tests:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/main-page.integration.test.tsx"
+
+  - phase: e2e
+    tests:
+      - "apps/web/playwright/tests/instructions/inst-1100-gallery.spec.ts"

@@ -1,0 +1,44 @@
+schema: 1
+story_id: INST-1101
+feature_dir: plans/future/instructions
+timestamp: '2026-02-06T22:40:00Z'
+
+current_phase: execute
+last_successful_phase: plan
+iteration: 1
+max_iterations: 3
+blocked: true
+forced: false
+
+warnings:
+  - "E2E tests failing: API endpoint /api/v2/instructions/mocs returns 404"
+  - "Backend GET /mocs/:id implemented but gallery list endpoint missing"
+  - "Monorepo build failing due to cyclic dependency (unrelated to INST-1101)"
+
+block_reason: |
+  Implementation complete but E2E tests blocked on missing API endpoint.
+
+  COMPLETED (Steps 1-12):
+  - ✓ Zod schemas (GetMocDetailResponseSchema)
+  - ✓ Repository getMocById with Drizzle joins
+  - ✓ Service getMoc with authorization
+  - ✓ Route GET /mocs/:id
+  - ✓ RTK Query hook useGetMocDetailQuery
+  - ✓ Frontend MocDetailModule updated
+  - ✓ Unit tests: 32 passing (13 frontend + 19 backend)
+  - ✓ E2E tests: 18 tests written
+
+  BLOCKED ON:
+  - E2E tests require /api/v2/instructions/mocs (list endpoint) to load gallery
+  - This endpoint is from INST-1100 (dependency), not INST-1101
+  - Tests authenticate successfully but fail to navigate to detail page
+
+  OPTIONS:
+  1. E2E EXEMPT: Story implements GET /mocs/:id, not the list endpoint
+  2. Wait for INST-1100 E2E to be passing first
+  3. Add test data seeding for standalone E2E execution
+
+next_steps:
+  - "Determine E2E exemption eligibility (detail page vs gallery list)"
+  - "Consider marking E2E exempt if list endpoint is INST-1100 scope"
+  - "Or wait for INST-1100 E2E completion"

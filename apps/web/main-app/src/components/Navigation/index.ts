@@ -11,7 +11,7 @@
  */
 
 // Core Navigation Components
-export { NavigationProvider, useNavigation } from './NavigationProvider'
+export { NavigationProvider, useNavigation, useNavigationOptional } from './NavigationProvider'
 export { NavigationSearch } from './NavigationSearch'
 export { EnhancedBreadcrumb, CompactBreadcrumb } from './EnhancedBreadcrumb'
 export { QuickActions } from './QuickActions'

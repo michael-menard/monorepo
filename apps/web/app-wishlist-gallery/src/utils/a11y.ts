@@ -12,7 +12,7 @@ import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 /**
  * Generate an accessible label for a wishlist item
  *
- * Format: "[Title], [price], [pieces] pieces, priority [n] of [total]"
+ * Format: "[Title], [price], [pieces] pieces, item [n] of [total], priority [p]"
  *
  * @param item - The wishlist item
  * @param index - Zero-based index in the list
@@ -22,7 +22,7 @@ import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
  * @example
  * ```typescript
  * const label = generateItemAriaLabel(item, 0, 10)
- * // "LEGO Millennium Falcon, $800, 7,541 pieces, priority 1 of 10"
+ * // "LEGO Millennium Falcon, $800, 7,541 pieces, item 1 of 10, priority 5"
  * ```
  */
 export function generateItemAriaLabel(item: WishlistItem, index: number, total: number): string {
@@ -50,9 +50,9 @@ export function generateItemAriaLabel(item: WishlistItem, index: number, total: 
   // Add position (1-indexed for users)
   parts.push(`item ${index + 1} of ${total}`)
 
-  // Add priority if set
+  // Add priority if set (no "of 5" since that's redundant)
   if (item.priority && item.priority > 0) {
-    parts.push(`priority ${item.priority} of 5`)
+    parts.push(`priority ${item.priority}`)
   }
 
   return parts.join(', ')

@@ -1,0 +1,124 @@
+schema: 3
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/cognito-scopes"
+prefix: "COGN"
+reviewed: "2026-02-04T18:30:00Z"
+focus: mvp-critical
+
+verdict: CONCERNS
+summary: "MVP requires specification of critical technical, testing, and security implementations; 13 blockers across 4 perspectives block core journey."
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    mvp_critical_count: 4
+  product:
+    verdict: READY
+    mvp_critical_count: 0
+  qa:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+  ux:
+    verdict: READY
+    mvp_critical_count: 0
+  platform:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+  security:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+
+mvp_blockers:
+  - id: COGN-B-001
+    source: engineering
+    issue: "COGN-004 (Pre Token Generation Lambda) has undefined cold start SLA and database connection failure handling - critical path blocker for all auth operations"
+    stories: [COGN-004]
+    action: "Define cold start requirements (<1s for MVP), implement connection pooling with clear failure modes before implementation"
+
+  - id: COGN-B-002
+    source: engineering
+    issue: "COGN-007 (Quota Check) lacks specification for race condition handling on concurrent operations - core safety feature blocks quota enforcement reliability"
+    stories: [COGN-007]
+    action: "Document transaction isolation levels (serializable for quota), row-level locking strategy before dev starts"
+
+  - id: COGN-B-003
+    source: engineering
+    issue: "No shared middleware framework defined across COGN-005, COGN-006, COGN-007, COGN-008 - risk of inconsistent patterns and maintainability issues"
+    stories: [COGN-005, COGN-006, COGN-007, COGN-008]
+    action: "Create shared middleware framework package and auth contract before implementing individual middlewares"
+
+  - id: COGN-B-004
+    source: engineering
+    issue: "JWT refresh token lifecycle undefined - COGN-015 frontend integration needs backend contract for token expiration, refresh endpoint behavior, error recovery"
+    stories: [COGN-005, COGN-015]
+    action: "Define token expiration (1 hour per platform), refresh endpoint behavior, and error recovery flows in COGN-005 spec"
+
+  - id: COGN-B-005
+    source: qa
+    issue: "COGN-025 test suite lacks specification of 10+ concurrency edge cases for quota operations - core safety feature for revenue integrity"
+    stories: [COGN-025]
+    action: "Spec all edge cases (concurrent requests at limit, quota increment failure, tier downgrade with violation) and race condition scenarios before test implementation"
+
+  - id: COGN-B-006
+    source: qa
+    issue: "No test infrastructure defined for database transaction isolation testing (COGN-007) - critical for concurrent quota reliability"
+    stories: [COGN-007, COGN-025]
+    action: "Define transaction isolation levels, create test fixtures for concurrent access patterns, implement race condition detection"
+
+  - id: COGN-B-007
+    source: qa
+    issue: "JWT token refresh testing unclear - affects COGN-015, COGN-005 verification - critical path dependency for frontend session management"
+    stories: [COGN-005, COGN-015, COGN-025]
+    action: "Spec token refresh scenarios (expired, refresh token invalid, concurrent refresh) and implement comprehensive test coverage"
+
+  - id: COGN-B-008
+    source: platform
+    issue: "Lambda concurrency and connection pooling strategy undefined for COGN-004 - impacts reliability at scale and affects all auth operations"
+    stories: [COGN-004]
+    action: "Define Lambda reserved concurrency, database connection pool sizing, and connection management strategy before implementation"
+
+  - id: COGN-B-009
+    source: platform
+    issue: "Database migration strategy for COGN-001 lacks zero-downtime approach - risks production data integrity for quotas schema"
+    stories: [COGN-001]
+    action: "Define blue-green or phased migration plan with rollback capability and validation gates before COGN-001 implementation"
+
+  - id: COGN-B-010
+    source: platform
+    issue: "CloudWatch monitoring and alerting strategy not detailed - COGN-022/023 needs upfront planning for operational visibility"
+    stories: [COGN-022, COGN-023]
+    action: "Define metrics (Lambda duration, quota operations, auth failures), dashboards, and alert thresholds before monitoring implementation"
+
+  - id: COGN-B-011
+    source: security
+    issue: "COGN-005 JWT signature verification implementation unclear - core security gate for all requests blocks authentication integrity"
+    stories: [COGN-005]
+    action: "Spec JWKS verification algorithm, key rotation handling (cache <1hr), and signature validation before implementation"
+
+  - id: COGN-B-012
+    source: security
+    issue: "COGN-006 admin bypass logic must be strictly enforced - critical for authorization integrity and revenue protection"
+    stories: [COGN-006]
+    action: "Define admin bypass only for specific scopes with approval workflow, implement audit logging, document enforcement before implementation"
+
+  - id: COGN-B-013
+    source: security
+    issue: "COGN-019 age verification relies on self-reported birthdate - compliance risk for underage users and COPPA violation"
+    stories: [COGN-019]
+    action: "Document legal compliance approach (honor system vs. 3rd party verification), define enforcement with legal review before implementation"
+
+missing_mvp_stories:
+  - title: "Shared middleware framework foundation"
+    source: engineering
+    reason: "Required before COGN-005, COGN-006, COGN-007, COGN-008 to ensure consistent patterns, error handling, and maintainability"
+
+  - title: "Database connection pooling setup"
+    source: engineering
+    reason: "Blocks COGN-004 and COGN-007 implementation; critical for reliability at scale"
+
+stories_to_split: []
+
+metrics:
+  mvp_blockers: 13
+  missing_mvp_stories: 2
+  perspectives_with_concerns: 4
+  perspectives_ready: 2

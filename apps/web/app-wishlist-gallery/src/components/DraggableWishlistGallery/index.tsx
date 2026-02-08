@@ -6,13 +6,14 @@
  *
  * Story WISH-2005a: Drag-and-drop reordering with dnd-kit
  * Story WISH-2005b: Optimistic updates and undo flow
+ * Story WISH-2006: Accessibility (keyboard navigation and shortcuts)
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -21,12 +22,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable'
+import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
 import { CheckCircle, Undo2, Loader2 } from 'lucide-react'
 import { Button } from '@repo/app-component-library'
@@ -40,6 +36,9 @@ import {
 import { useDispatch } from 'react-redux'
 import { SortableWishlistCard } from '../SortableWishlistCard'
 import { WishlistDragPreview } from '../WishlistDragPreview'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useAnnouncer } from '../../hooks/useAnnouncer'
+import { useRovingTabIndex } from '../../hooks/useRovingTabIndex'
 
 /**
  * DraggableWishlistGallery props schema (data-only)
@@ -145,6 +144,9 @@ export function DraggableWishlistGallery({
   // Redux dispatch for RTK Query cache manipulation
   const dispatch = useDispatch()
 
+  // Navigation for A key shortcut (WISH-2006)
+  const navigate = useNavigate()
+
   // Local state for visual ordering during drag
   const [items, setItems] = useState<WishlistItem[]>(initialItems)
 
@@ -154,8 +156,31 @@ export function DraggableWishlistGallery({
   // Store original order for rollback
   const originalOrderRef = useRef<WishlistItem[]>([])
 
-  // ARIA live region announcement
+  // ARIA live region announcement (for drag-and-drop)
   const [announcement, setAnnouncement] = useState('')
+
+  // WISH-2006: Screen reader announcements for keyboard actions
+  const {
+    announce,
+    announcement: keyboardAnnouncement,
+    priority: keyboardPriority,
+  } = useAnnouncer()
+
+  // WISH-2006: Container ref for keyboard shortcut scoping
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // WISH-2006: Item refs for focus management
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  // WISH-2006: Roving tabindex for keyboard navigation
+  const {
+    activeIndex,
+    getTabIndex,
+    handleKeyDown: handleRovingKeyDown,
+  } = useRovingTabIndex(items.length, containerRef, {
+    wrapHorizontal: true,
+    wrapVertical: false,
+  })
 
   // RTK Query mutation
   const [reorderWishlist, { isLoading: isReordering }] = useReorderWishlistMutation()
@@ -179,6 +204,62 @@ export function DraggableWishlistGallery({
   useEffect(() => {
     setItems(initialItems)
   }, [initialItems])
+
+  // WISH-2006: Focus management - focus active item when activeIndex changes
+  useEffect(() => {
+    if (!activeItem && itemRefs.current[activeIndex]) {
+      itemRefs.current[activeIndex]?.focus()
+    }
+  }, [activeIndex, activeItem])
+
+  // WISH-2006: Keyboard shortcuts for gallery actions
+  useKeyboardShortcuts(
+    [
+      {
+        key: 'a',
+        handler: () => {
+          navigate({ to: '/add' })
+          announce('Navigating to add item page')
+        },
+        description: 'Add item',
+      },
+      {
+        key: 'g',
+        handler: () => {
+          const focusedItem = items[activeIndex]
+          if (focusedItem && onGotIt) {
+            onGotIt(focusedItem)
+            announce(`Opening Got It modal for ${focusedItem.title}`)
+          }
+        },
+        description: 'Got it',
+      },
+      {
+        key: 'Delete',
+        handler: () => {
+          const focusedItem = items[activeIndex]
+          if (focusedItem && onDelete) {
+            onDelete(focusedItem)
+            announce(`Opening delete confirmation for ${focusedItem.title}`)
+          }
+        },
+        description: 'Delete',
+      },
+      {
+        key: 'Enter',
+        handler: () => {
+          const focusedItem = items[activeIndex]
+          if (focusedItem && onCardClick) {
+            onCardClick(focusedItem.id)
+            announce(`Opening ${focusedItem.title}`)
+          }
+        },
+        description: 'View details',
+      },
+    ],
+    containerRef,
+    { enabled: !activeItem }, // Disable shortcuts during drag
+  )
 
   // WISH-2005b AC 13: Cleanup undo on unmount/route navigation
   useEffect(() => {
@@ -330,6 +411,8 @@ export function DraggableWishlistGallery({
   )
 
   // Configure sensors per AC requirements
+  // WISH-2006: Removed KeyboardSensor to avoid conflict with useRovingTabIndex
+  // Drag-and-drop is still accessible via PointerSensor and TouchSensor
   const sensors = useSensors(
     // AC 1: Mouse drag with 8px threshold
     useSensor(PointerSensor, {
@@ -343,10 +426,6 @@ export function DraggableWishlistGallery({
         delay: 300,
         tolerance: 5,
       },
-    }),
-    // AC 3: Keyboard with arrow key navigation
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
     }),
   )
 
@@ -519,11 +598,54 @@ export function DraggableWishlistGallery({
   // Single item - no reordering possible
   const effectiveDraggingEnabled = isDraggingEnabled && items.length > 1
 
+  // WISH-2006: Handle keyboard events - combine roving tabindex with other handlers
+  const handleContainerKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      // Only handle roving tabindex navigation when NOT dragging
+      if (!activeItem) {
+        handleRovingKeyDown(e)
+      }
+    },
+    [activeItem, handleRovingKeyDown],
+  )
+
+  // WISH-2006: Focus the active card when container receives focus
+  const handleContainerFocus = useCallback(
+    (e: React.FocusEvent) => {
+      // Only focus the card if focus came from outside the container (Tab in)
+      // Not when focus is moving between cards inside the container
+      if (e.target === containerRef.current && itemRefs.current[activeIndex]) {
+        itemRefs.current[activeIndex]?.focus()
+      }
+    },
+    [activeIndex],
+  )
+
   return (
-    <div className={className}>
-      {/* AC 19: ARIA live region for screen reader announcements */}
+    <div
+      className={className}
+      ref={containerRef}
+      role="region"
+      tabIndex={0}
+      onKeyDown={handleContainerKeyDown}
+      onFocus={handleContainerFocus}
+      data-testid="wishlist-gallery-container"
+      aria-label="Wishlist items gallery. Use arrow keys to navigate, Enter to open, G for Got It, Delete to remove, A to add items."
+    >
+      {/* AC 19: ARIA live region for screen reader announcements (drag-and-drop - assertive) */}
       <div role="status" aria-live="assertive" aria-atomic="true" className="sr-only">
         {announcement}
+      </div>
+
+      {/* WISH-2006: Announcer for keyboard shortcut feedback (polite) */}
+      <div
+        role="status"
+        aria-live={keyboardPriority}
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="keyboard-shortcut-announcer"
+      >
+        {keyboardAnnouncement}
       </div>
 
       <DndContext
@@ -560,6 +682,11 @@ export function DraggableWishlistGallery({
                   onGotIt={() => onGotIt?.(item)}
                   onDelete={() => onDelete?.(item)}
                   isDraggingEnabled={effectiveDraggingEnabled}
+                  tabIndex={getTabIndex(index)}
+                  isSelected={activeIndex === index}
+                  ref={(el: HTMLDivElement | null) => {
+                    itemRefs.current[index] = el
+                  }}
                 />
               ))}
             </GalleryGrid>

@@ -5,6 +5,41 @@ module.exports = {
     extend: {
       // LEGO MOC Color Palette - Teal/Sage/Taupe + Cyberpunk Glow
       colors: {
+        // shadcn/ui semantic colors (from CSS variables)
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+
         // Primary Brand - Teal Family
         teal: {
           100: 'var(--color-teal-100)', // #D1E3E8 - Disabled states
@@ -113,12 +148,12 @@ module.exports = {
         24: 'var(--space-24)',
       },
 
-      // Border Radius
+      // Border Radius (shadcn/ui uses --radius for the base radius)
       borderRadius: {
-        sm: 'var(--radius-sm)',
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
         DEFAULT: 'var(--radius-base)',
-        md: 'var(--radius-md)',
-        lg: 'var(--radius-lg)',
         xl: 'var(--radius-xl)',
         '2xl': 'var(--radius-2xl)',
         full: 'var(--radius-full)',

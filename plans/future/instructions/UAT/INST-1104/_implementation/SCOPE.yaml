@@ -1,0 +1,31 @@
+schema: 1
+story_id: INST-1104
+timestamp: '2026-02-07T16:00:00Z'
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - 'apps/api/lego-api/domains/instructions/**'
+  - 'apps/api/lego-api/core/utils/file-validation.ts'
+  - 'apps/web/app-instructions-gallery/src/**'
+  - 'packages/core/api-client/src/rtk/**'
+  - 'packages/backend/database-schema/src/schema/**'
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: true
+  security: true
+  performance: true
+
+summary: >-
+  Implement direct PDF upload (≤10MB) for MOC instruction files with
+  client/server validation, S3 storage, and RTK Query mutation integration

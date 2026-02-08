@@ -1,0 +1,186 @@
+# WISH-2006 E2E Test Verification Evidence
+# Test Execution Date: 2026-02-04
+# Configuration: playwright.legacy.config.ts (LIVE mode)
+# Backend: http://localhost:9000
+# Frontend: http://localhost:3002
+# Project: chromium
+
+test_summary:
+  total_tests: 65
+  passed: 19
+  failed: 40
+  skipped: 6
+  duration: "4.0 minutes"
+
+e2e_gate_status: FAIL
+
+test_files:
+  keyboard_navigation:
+    file: apps/web/playwright/tests/wishlist/keyboard-navigation.spec.ts
+    tests_run: ~15
+    passed: ~11
+    failed: 4
+    failures:
+      - test: "AC2: End key jumps to last item"
+        reason: "End key navigation not working correctly"
+      - test: "Keyboard navigation works in Manual Order mode (sortOrder-asc)"
+        reason: "Navigation broken in manual sort mode"
+      - test: "Responsive: Keyboard navigation works with 1 column (mobile)"
+        reason: "Navigation not working in mobile layout"
+      - test: "Responsive: Keyboard navigation works with 3 columns (desktop)"
+        reason: "Navigation not working in desktop layout"
+
+  keyboard_shortcuts:
+    file: apps/web/playwright/tests/wishlist/keyboard-shortcuts.spec.ts
+    tests_run: ~16
+    passed: ~3
+    failed: 13
+    failures:
+      - test: "AC5: A key opens Add Item modal when gallery is focused"
+        reason: "A key shortcut not working"
+      - test: "AC6: G key opens Got It modal for focused item"
+        reason: "G key shortcut not working"
+      - test: "AC6: Delete key opens delete confirmation for focused item"
+        reason: "Delete key shortcut not working"
+      - test: "AC6: Enter key activates focused item (opens detail view)"
+        reason: "Enter key shortcut not working"
+      - test: "AC7: Escape key closes modal (Add Item)"
+        reason: "Escape to close modal not working"
+      - test: "AC7: Escape key closes modal (Got It)"
+        reason: "Escape to close modal not working"
+      - test: "AC7: Escape key closes modal (Delete)"
+        reason: "Escape to close modal not working"
+      - test: "AC8: Shortcuts ignored when focus is in input field"
+        reason: "Shortcuts not properly disabled in input fields"
+      - test: "AC8: Shortcuts ignored when focus is in search field"
+        reason: "Shortcuts not properly disabled in search fields"
+      - test: "Shortcuts work after navigating with arrow keys"
+        reason: "Shortcuts not working after arrow key navigation"
+      - test: "Shortcuts disabled during drag operation"
+        reason: "Shortcuts not disabled during drag, timeout after 30s"
+      - test: "Multiple rapid keypresses handled correctly"
+        reason: "Rapid keypress handling failing, timeout after 17.8s"
+      - test: "Screen reader announcements for keyboard shortcuts"
+        reason: "Screen reader announcements not working for shortcuts"
+      - test: "Focus returns to trigger element after modal closes"
+        reason: "Focus management broken after modal close, timeout after 17.7s"
+
+  screen_reader_announcements:
+    file: apps/web/playwright/tests/wishlist/screen-reader-announcements.spec.ts
+    tests_run: ~19
+    passed: ~2
+    failed: 9
+    skipped: 2
+    failures:
+      - test: "AC9: Item focus announces ARIA label with details"
+        reason: "ARIA label announcements not working"
+      - test: "AC10: Sort change announces results"
+        reason: "Sort change announcements not working"
+      - test: "AC10: Search announces results"
+        reason: "Search result announcements not working"
+      - test: "AC10: Item added announces success"
+        reason: "Item added announcements not working"
+      - test: "AC10: Item deleted announces next item"
+        reason: "Item deleted announcements not working"
+      - test: "Announcements are cleared after timeout (no stale content)"
+        reason: "Announcement clearing not working properly"
+      - test: "Same announcement can be triggered twice"
+        reason: "Duplicate announcements not working"
+      - test: "Priority announcement format is correct"
+        reason: "ARIA label format incorrect - Expected pattern with commas and priority info, received 'Delete Third'"
+      - test: "Multiple rapid announcements are handled correctly"
+        reason: "Rapid announcements failing - timeout on sort select (30s)"
+      - test: "Keyboard shortcut announcements work correctly"
+        reason: "No 'Got It' announcement found in live regions"
+      - test: "Drag-and-drop announcements work (assertive priority)"
+        reason: "Drag announcements failing - timeout on sort select (30s)"
+
+  accessibility_scan:
+    file: apps/web/playwright/tests/wishlist/accessibility-scan.spec.ts
+    tests_run: ~15
+    passed: ~3
+    failed: 11
+    skipped: 2
+    failures:
+      - test: "AC14: axe-core scan reports zero WCAG AA violations on gallery page"
+        reason: "Multiple WCAG AA violations found"
+      - test: "AC12: Color contrast meets 4.5:1 ratio for normal text"
+        reason: "Color contrast issues detected"
+      - test: "All interactive elements have accessible names"
+        reason: "Some interactive elements missing accessible names"
+      - test: "No critical accessibility violations"
+        reason: "Critical violations present"
+      - test: "ARIA attributes are valid"
+        reason: "Invalid ARIA attributes detected"
+      - test: "Keyboard accessibility rules pass"
+        reason: "Keyboard accessibility violations found"
+      - test: "Modals are accessible"
+        reason: "Modal accessibility issues"
+      - test: "Delete modal is accessible"
+        reason: "Delete modal accessibility issues"
+      - test: "Heading hierarchy is logical"
+        reason: "Heading hierarchy issues"
+      - test: "No empty links or buttons"
+        reason: "Empty links or buttons found"
+      - test: "Complete WCAG 2.1 AA compliance report"
+        reason: "WCAG compliance report shows failures: 29 passed, 5 failed, 3 incomplete, 32 inapplicable"
+
+critical_issues:
+  - category: "Keyboard Shortcuts"
+    severity: "HIGH"
+    description: "Most keyboard shortcuts (A, G, Delete, Enter, Escape) are not functioning, completely breaking accessibility"
+    affected_acceptance_criteria:
+      - AC5
+      - AC6
+      - AC7
+
+  - category: "Screen Reader Announcements"
+    severity: "HIGH"
+    description: "Screen reader announcements not working for most operations, breaking accessibility for blind users"
+    affected_acceptance_criteria:
+      - AC9
+      - AC10
+
+  - category: "Keyboard Navigation"
+    severity: "MEDIUM"
+    description: "Arrow key navigation has issues in responsive layouts and certain sort modes"
+    affected_acceptance_criteria:
+      - AC2
+      - AC3
+
+  - category: "WCAG Compliance"
+    severity: "HIGH"
+    description: "Multiple WCAG 2.1 AA violations including color contrast, ARIA attributes, and heading hierarchy"
+    affected_acceptance_criteria:
+      - AC12
+      - AC14
+
+  - category: "Timeouts"
+    severity: "MEDIUM"
+    description: "Multiple tests timing out (30s), suggesting UI elements not appearing or responding"
+    tests_affected:
+      - "Shortcuts disabled during drag operation"
+      - "Multiple rapid announcements are handled correctly"
+      - "Drag-and-drop announcements work (assertive priority)"
+
+blockers:
+  - "Keyboard shortcuts implementation appears to be missing or non-functional"
+  - "Screen reader live regions not updating with announcements"
+  - "ARIA labels and attributes need correction"
+  - "Focus management after modal close is broken"
+  - "Sort/filter controls timing out suggests possible UI rendering issues"
+
+recommendations:
+  - "Review keyboard event handlers - most shortcuts not working"
+  - "Check screen reader live region implementation and announcement logic"
+  - "Fix ARIA label format to include price, pieces, and priority information"
+  - "Address WCAG color contrast violations"
+  - "Fix focus management in modals"
+  - "Investigate timeout issues with sort/filter controls"
+  - "Consider breaking this story into smaller, more focused stories"
+
+next_steps:
+  - "STORY CANNOT PROCEED - 40 of 65 tests failing (61.5% failure rate)"
+  - "Core accessibility features not implemented or broken"
+  - "Requires significant rework before ready for QA"
+  - "Recommend developer review and fix before retest"

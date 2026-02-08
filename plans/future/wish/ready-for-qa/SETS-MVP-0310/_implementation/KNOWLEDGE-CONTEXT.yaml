@@ -1,0 +1,108 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-01T20:15:00-07:00"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WISH-2004"
+        lesson: "API path mismatch between frontend RTK Query and backend Hono routes caused 404s"
+        category: blocker
+        applies_because: "Story involves new PATCH endpoint for purchase flow"
+
+      - story_id: "WISH-2042"
+        lesson: "Purchase flow creates Set item and deletes wishlist item - this story replaces with status update"
+        category: pattern
+        applies_because: "Story replaces WISH-2004 purchase approach with unified model status transition"
+
+      - story_id: "SETS-MVP-001"
+        lesson: "Unified model adds status, purchaseDate, buildStatus, purchasePrice, purchaseTax, purchaseShipping, statusChangedAt fields"
+        category: reuse
+        applies_because: "Story depends on SETS-MVP-001 schema implementation"
+
+    blockers_to_avoid:
+      - "API path schema mismatch between frontend and backend - verify ADR-001 compliance"
+      - "Service method conflict - existing markAsPurchased() creates Set + deletes wishlist, new version should update status"
+      - "SETS-MVP-001 dependency - verify schema fields exist before implementation"
+
+    patterns_to_follow:
+      - "Use Ports & Adapters pattern - business logic in application/services.ts, not route handlers"
+      - "Repository mapper applies transformations on read (e.g., toCloudFrontUrl)"
+      - "Use Zod schemas for runtime validation at API boundary"
+
+    patterns_to_avoid:
+      - "Don't hardcode business logic in route handlers"
+      - "Don't skip ownership validation in service layer"
+      - "Don't use console.log - use @repo/logger"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+
+      - id: "ADR-002"
+        title: "Infrastructure-as-Code Strategy"
+        status: active
+        constraint: "Use CloudFormation for framework-agnostic infrastructure"
+        applies_to: ["infra"]
+
+      - id: "ADR-003"
+        title: "Image Storage and CDN Architecture"
+        status: active
+        constraint: "CloudFront CDN in front of S3, URL conversion in repository mapper"
+        applies_to: ["backend", "images"]
+
+      - id: "ADR-004"
+        title: "Authentication Architecture"
+        status: active
+        constraint: "AWS Cognito with OAuth PKCE flow, token validity 60min access/ID, 30d refresh"
+        applies_to: ["auth", "backend", "frontend"]
+
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT must never use mocking - all real services required"
+        applies_to: ["testing", "e2e", "uat"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per story during dev implementation"
+        applies_to: ["testing", "e2e", "dev"]
+
+    constraints:
+      api_paths: "Frontend: /api/v2/wishlist/:id/purchase -> Backend: /wishlist/:id/purchase (via Vite proxy)"
+      infrastructure: "CloudFormation templates survive framework migrations"
+      storage: "CloudFront URL conversion in repository mapper"
+      auth: "Auth middleware validates ownership via userId"
+      testing: "E2E tests required using playwright.legacy.config.ts (live API mode)"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read full serverless.yml"
+        typical_tokens: 17500
+        mitigation: "Not needed for this story - focused on domain code only"
+
+      - operation: "Full codebase exploration"
+        typical_tokens: 25000
+        mitigation: "Used targeted Grep and file reads for specific patterns"
+
+      - operation: "Read all story docs"
+        typical_tokens: 10000
+        mitigation: "Read only ACs section from story file per agent instructions"
+
+    recommended_patterns:
+      - "Targeted file reads over full files (used offset/limit on large files)"
+      - "Grep before Read to locate relevant code"
+      - "Read only ACs section from story file, not full file"
+      - "Batch related operations in parallel"
+
+  warnings:
+    - "SETS-MVP-001 is in UAT phase - schema fields exist and are verified"
+    - "Story has 3 critical architectural decisions (AC11-AC13) that require resolution"
+    - "Existing markAsPurchased() service method creates Set + deletes wishlist - will need refactor or rename"
+    - "Migration strategy from WISH-2004 endpoint needs clarification"

@@ -4,7 +4,6 @@ import { cn } from '@repo/app-component-library'
 
 interface MainAreaProps {
   className?: string
-  isAuthenticated?: boolean
   isPageTransitioning?: boolean
   currentPath?: string
 }
@@ -38,7 +37,6 @@ const pageTransitionVariants = {
  */
 export function MainArea({
   className,
-  isAuthenticated = false,
   isPageTransitioning = false,
   currentPath = '/',
 }: MainAreaProps) {
@@ -46,7 +44,6 @@ export function MainArea({
     <main
       className={cn(
         'flex-1 min-h-[calc(100vh-4rem)] overflow-auto transition-all duration-300',
-        isAuthenticated && 'md:ml-64', // Account for sidebar width when authenticated (matches sidebar md:block)
         className,
       )}
     >

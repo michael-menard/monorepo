@@ -6,8 +6,7 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./multer": "./dist/multer.js"
+    ".": "./dist/index.js"
   },
   "scripts": {
     "build": "tsup",
@@ -22,7 +21,6 @@
     "validation",
     "upload",
     "mime-type",
-    "multer",
     "universal"
   ],
   "author": "Your Team",
@@ -31,20 +29,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/multer": "^2.0.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.19.25",
     "eslint": "^8.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "vitest": "^1.0.0"
-  },
-  "peerDependencies": {
-    "multer": "^2.0.0"
-  },
-  "peerDependenciesMeta": {
-    "multer": {
-      "optional": true
-    }
   }
 }

@@ -9,10 +9,7 @@ import { z } from 'zod'
 
 const ImageUploadZonePropsSchema = z.object({
   images: z.array(z.instanceof(File)),
-  onImagesChange: z
-    .function()
-    .args(z.array(z.instanceof(File)))
-    .returns(z.void()),
+  onImagesChange: z.function(z.tuple([z.array(z.instanceof(File))]), z.void()),
   maxImages: z.number().optional(),
   disabled: z.boolean().optional(),
 })

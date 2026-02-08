@@ -1,0 +1,77 @@
+perspective: platform
+verdict: READY
+
+infrastructure:
+  aws_services_required: S3, Lambda, RDS, API Gateway, CloudWatch
+  deployment_readiness: true
+  scalability_concern: false
+
+mvp_blockers: []
+
+missing_mvp_stories: []
+
+future:
+  infrastructure_improvements:
+    - suggestion: Add CloudFront CDN for instruction file serving (post-MVP)
+      impact: high
+    - suggestion: Implement S3 lifecycle policies for automatic cleanup of expired sessions
+      impact: medium
+    - suggestion: Add database connection pooling for high-concurrency edit scenarios
+      impact: medium
+
+  recommended_infra_stories:
+    - title: S3 cleanup job automation (INST-1007)
+      reason: Prevents storage waste from failed uploads
+      priority: P2
+
+    - title: Rate limiting observability (INST-1006)
+      reason: Monitor for API abuse patterns
+      priority: P2
+
+    - title: Presigned URL expiry monitoring
+      reason: Track expired sessions to improve UX
+      priority: P2
+
+  recommendations:
+    - Use CloudWatch alarms for S3 quota monitoring
+    - Log all presigned URL issuance for audit trail
+    - Monitor presigned URL expiry rates to tune TTL
+    - Set up metrics for upload success/failure rates by file size
+    - Configure auto-scaling for Lambda functions handling presigned URL requests
+
+platform_readiness:
+  s3_presigned_urls: READY (AWS SDK built-in)
+  lambda_concurrent_executions: READY (presigned URL generation lightweight)
+  rds_connection_limits: READY (edit operations metadata-only mostly)
+  api_gateway_rate_limiting: READY (middleware available)
+  cloudwatch_monitoring: READY (custom metrics implementable)
+
+operational_considerations:
+  monitoring:
+    - Presigned URL expiry rates (tune TTL based on data)
+    - Upload success/failure rates by file size
+    - S3 storage usage trends
+    - Lambda cold start impacts on presigned URL response times
+
+  backup_strategy:
+    - S3 versioning enabled for instruction files
+    - Database backups hourly during business hours
+    - No special strategy needed for presigned URLs (ephemeral)
+
+  disaster_recovery:
+    - Failed uploads recoverable via session expiry cleanup
+    - RDS multi-AZ failover for database
+    - S3 cross-region replication for critical MOCs (post-MVP)
+
+cost_implications:
+  s3_storage: Estimated 1-10GB monthly instruction files (low cost)
+  s3_put_requests: Each file upload = 1 PutObject call (negligible)
+  lambda_execution: Presigned URL generation minimal compute (negligible)
+  api_gateway: Calls per user per edit session moderate (monitor threshold)
+  data_transfer: Instruction files to/from S3 = user bandwidth (normal AWS cost)
+
+deployment_notes:
+  presigned_url_generation: POST /mocs/:id/upload-sessions/create Lambda handler
+  s3_iam_permissions: Scope presigned URLs to specific S3 prefix (security)
+  session_storage: RDS with expiry index for efficient cleanup queries
+  monitoring_hooks: CloudWatch metrics on presigned URL validation success rate

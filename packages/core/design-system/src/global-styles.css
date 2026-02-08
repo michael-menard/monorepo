@@ -1,7 +1,9 @@
-@import 'tailwindcss';
-
-/* Import the single source of truth for tokens */
+/* Import the single source of truth for tokens - must be before @tailwind */
 @import './design-tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   * {

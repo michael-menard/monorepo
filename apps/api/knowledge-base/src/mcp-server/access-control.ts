@@ -36,6 +36,21 @@ export const ToolNameSchema = z.enum([
   'kb_rebuild_embeddings',
   'kb_stats',
   'kb_health',
+  // Artifact tools (DB-first artifact storage)
+  'kb_write_artifact',
+  'kb_read_artifact',
+  'kb_list_artifacts',
+  // Story status tools
+  'kb_get_story',
+  'kb_list_stories',
+  'kb_update_story_status',
+  'kb_get_next_story',
+  // Token logging tools
+  'kb_log_tokens',
+  // Analytics tools
+  'kb_get_token_summary',
+  'kb_get_bottleneck_analysis',
+  'kb_get_churn_analysis',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -81,6 +96,21 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_rebuild_embeddings: new Set(['pm']), // Admin only - expensive operation
   kb_stats: new Set(['pm', 'dev', 'qa', 'all']),
   kb_health: new Set(['pm', 'dev', 'qa', 'all']),
+  // Artifact tools (DB-first artifact storage)
+  kb_write_artifact: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_read_artifact: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_list_artifacts: new Set(['pm', 'dev', 'qa', 'all']),
+  // Story status tools - available to all roles
+  kb_get_story: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_list_stories: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_update_story_status: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_next_story: new Set(['pm', 'dev', 'qa', 'all']),
+  // Token logging tools - available to all roles
+  kb_log_tokens: new Set(['pm', 'dev', 'qa', 'all']),
+  // Analytics tools - available to pm and dev roles
+  kb_get_token_summary: new Set(['pm', 'dev']),
+  kb_get_bottleneck_analysis: new Set(['pm', 'dev']),
+  kb_get_churn_analysis: new Set(['pm', 'dev']),
 }
 
 /**

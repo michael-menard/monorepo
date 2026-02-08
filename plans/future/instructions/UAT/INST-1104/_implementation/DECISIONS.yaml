@@ -1,0 +1,184 @@
+mode: autonomous
+analysis_date: 2026-02-06
+story_id: INST-1104
+feature: instructions
+story_title: "Upload Instructions (Direct ≤10MB)"
+
+mvp_critical_gaps:
+  - gap: "PDF validation utilities missing from file-validation.ts"
+    severity: medium
+    action: added_as_ac
+    ac_number: AC72
+    ac_text: "Backend uses validatePdfFile() utility from file-validation.ts for all PDF validation"
+    rationale: "Story correctly identifies need for PDF validation (2 hours). Current validateMimeType() only whitelists images. Must add validatePdfMimeType(), validatePdfExtension(), and validatePdfFile() to maintain validation consistency across all file types."
+
+  - gap: "File size limit mismatch between story and backend implementation"
+    severity: high
+    action: added_as_ac
+    ac_number: AC73
+    ac_text: "Backend enforces MAX_FILE_SIZE constant of 10MB (not 100MB) for direct upload endpoint"
+    rationale: "Backend service allows 100MB (services.ts line 249) but story requires 10MB limit. This is a critical discrepancy. 100MB limit may be intended for presigned uploads (INST-1105). Direct upload must enforce 10MB to match story requirements and AC34."
+
+  - gap: "Backend validation returns generic error codes instead of specific structured errors"
+    severity: medium
+    action: added_as_ac
+    ac_number: AC74
+    ac_text: "Backend validation returns structured error codes: 'INVALID_MIME_TYPE', 'INVALID_EXTENSION', 'FILE_TOO_LARGE'"
+    rationale: "Story AC46-47 requires specific error messages ('Only PDF files are allowed', 'File size exceeds maximum limit of 10MB'). Backend currently returns generic 'INVALID_FILE'. Service should return structured error codes that can be mapped to specific user-facing messages by the frontend."
+
+non_blocking_findings:
+  - category: accessibility
+    finding: "No explicit accessibility ACs in main acceptance criteria list"
+    impact: low
+    action: documented
+    rationale: "Accessibility requirements are documented in UI/UX Notes section (lines 428-432) with keyboard navigation, screen reader labels, focus management, and WCAG AA compliance. These are sufficient for MVP. Consider adding explicit ACs (Gap #1 from FUTURE-OPPORTUNITIES.md) in future refinement session for easier QA verification."
+
+  - category: edge_cases
+    finding: "Zero-byte file handling not explicitly tested"
+    impact: low
+    action: documented
+    rationale: "Backend validateFileSize() already handles this (MIN_FILE_SIZE = 1), but no E2E test case. This is defensive validation that works but isn't explicitly verified. Can be added to edge case test suite post-MVP."
+
+  - category: security
+    finding: "File extension spoofing (mismatched MIME type and extension) not explicitly tested"
+    impact: low
+    action: documented
+    rationale: "Story validates MIME type (AC31) and extension (AC35) separately. Backend should validate both match for defense-in-depth. Consider adding magic byte validation (PDF files start with '%PDF-'). This is security enhancement, not MVP-blocking. Estimated 4 hours."
+
+  - category: ux
+    finding: "Duplicate filename handling not specified"
+    impact: low
+    action: documented
+    rationale: "Backend uses UUID prefix (line 255) which prevents S3 key collisions. UI doesn't warn user about duplicate filenames. This is acceptable for MVP - backend handles it correctly. Consider showing 'instructions (2).pdf' style naming in future UI polish."
+
+  - category: ux
+    finding: "Upload cancellation edge case (mid-flight abort) not specified"
+    impact: low
+    action: documented
+    rationale: "AC18 specifies cancel button aborts remaining uploads, but doesn't specify cleanup for mid-upload file. Consider adding AbortController for fetch cancellation. This is UX polish, not critical for MVP."
+
+  - category: ux
+    finding: "File list ordering not explicitly specified"
+    impact: low
+    action: documented
+    rationale: "Story doesn't specify sort order for uploaded files. Backend likely returns by uploadedAt DESC (services.ts pattern). This is acceptable default behavior. Can add sortBy parameter to GET endpoint in future iteration."
+
+  - category: ux_enhancements
+    finding: "Sequential upload may feel slow for 5+ files"
+    impact: medium
+    action: documented
+    rationale: "Story AC14 specifies sequential upload (one at a time). Parallel upload with Promise.all() would be faster but adds complexity (partial failures, progress tracking, rate limiting). Sequential is acceptable for MVP. Deferred to INST-2036 (Chunked Upload Progress). Estimated 8 hours."
+
+  - category: ux_enhancements
+    finding: "No drag-and-drop upload zone"
+    impact: high
+    action: documented
+    rationale: "Story AC5 uses standard file picker. Users expect drag-and-drop in 2026. HIGH IMPACT enhancement but not MVP-blocking. Standard file picker is functional. Deferred to INST-2035 (Drag-and-Drop Upload Zone). Estimated 12 hours."
+
+  - category: ux_enhancements
+    finding: "No PDF thumbnail preview in file list"
+    impact: high
+    action: documented
+    rationale: "HIGH IMPACT enhancement. Users expect to see first page thumbnail for visual confirmation. Requires backend thumbnail generation (ImageMagick or pdfjs). Deferred to INST-2032 (File Preview/Thumbnails). Estimated 16 hours."
+
+  - category: ux_enhancements
+    finding: "Simple spinner instead of percentage-based progress bar"
+    impact: medium
+    action: documented
+    rationale: "Story AC15-16 shows simple spinner and 'Uploading 2 of 5...' text. Modern UX expects percentage. Consider ProgressEvent tracking on fetch(). Deferred per Non-Goals (simple spinner sufficient for MVP). Estimated 4 hours."
+
+  - category: performance
+    finding: "Sequential individual POST requests instead of batch upload"
+    impact: low
+    action: documented
+    rationale: "Sequential upload acceptable for MVP (most users upload 1-2 files). Batching into single multipart request would reduce latency but adds complexity. Deferred per Non-Goals. Estimated 6 hours."
+
+  - category: features
+    finding: "No file metadata editing (filename, description) post-upload"
+    impact: medium
+    action: documented
+    rationale: "Users may want to organize multiple instruction PDFs (Part 1, Part 2, etc.). Consider inline edit or modal for file metadata. Useful feature but not MVP-critical. Estimated 8 hours."
+
+  - category: security
+    finding: "No virus scanning integration"
+    impact: high
+    action: documented
+    rationale: "HIGH PRIORITY for production launch. User-generated content platform must scan files before serving to other users. Integrate ClamAV or AWS GuardDuty. Deferred to INST-2031 (Virus Scanning). Estimated 20 hours. REQUIRED before production."
+
+  - category: features
+    finding: "No per-user file storage quota enforcement"
+    impact: medium
+    action: documented
+    rationale: "Story uses MOC quota (AC92) but not file storage quota. User could upload 1000 PDFs, exhaust storage. Consider adding storage quota check (e.g., 500MB per user). Medium priority - can monitor usage first. Estimated 12 hours."
+
+  - category: reliability
+    finding: "No automatic retry with exponential backoff for transient failures"
+    impact: medium
+    action: documented
+    rationale: "Story AC23 shows network error toast with 'try again' message. Consider automatic retry for 503/timeout. Deferred to INST-1201 (Session Persistence & Error Recovery). Estimated 4 hours."
+
+  - category: observability
+    finding: "No upload analytics events"
+    impact: low
+    action: documented
+    rationale: "Consider tracking: upload_started, upload_completed, upload_failed, file_type_rejected. Useful for monitoring adoption and error rates. Can be added in Phase 2 (INST-1203: Rate Limiting & Observability). Estimated 2 hours."
+
+  - category: security
+    finding: "CloudFront URLs not specified as signed or public"
+    impact: medium
+    action: documented
+    rationale: "Story AC21 adds download button but doesn't specify if CloudFront URLs are public or signed. Consider signed URLs with expiration for private MOCs. Requires CloudFront key pair setup. Estimated 8 hours."
+
+  - category: validation
+    finding: "No PDF page count validation"
+    impact: low
+    action: documented
+    rationale: "Consider rejecting PDFs with 0 pages (corrupted) or excessive pages (>500, likely scans). Requires PDF parsing library. This is defensive validation, not MVP-critical. Estimated 6 hours."
+
+  - category: mobile
+    finding: "No mobile file picker considerations (iOS/Android limitations)"
+    impact: medium
+    action: documented
+    rationale: "iOS restricts file access to Photos and iCloud Drive. Android may require storage permissions. Should test on real devices. Deferred to INST-3060 (Mobile-Optimized Upload). Estimated 8 hours."
+
+verdict: PASS
+verdict_rationale: |
+  All 3 MVP-critical gaps have been successfully addressed by adding specific acceptance criteria:
+  - AC72: Backend validation utility consistency
+  - AC73: File size limit enforcement (10MB)
+  - AC74: Structured error codes for specific user messages
+
+  The story is now ready for implementation. All blocking issues have clear acceptance criteria.
+  Story quality is excellent - comprehensive ACs (now 74 total), well-structured with clear scope,
+  and backend infrastructure already exists requiring only refinement.
+
+  Non-blocking findings (19 total) are correctly categorized as future enhancements. High-priority
+  items for next iteration are: drag-and-drop (Enhancement #2), PDF thumbnails (Enhancement #3),
+  and virus scanning (Enhancement #7 - production requirement).
+
+  Story structure remains intact - no split required, no major refactoring needed.
+
+changes_made:
+  - added_ac_72: "Backend uses validatePdfFile() utility from file-validation.ts for all PDF validation"
+  - added_ac_73: "Backend enforces MAX_FILE_SIZE constant of 10MB (not 100MB) for direct upload endpoint"
+  - added_ac_74: "Backend validation returns structured error codes: 'INVALID_MIME_TYPE', 'INVALID_EXTENSION', 'FILE_TOO_LARGE'"
+  - updated_completion_criteria: "Changed from 71 to 74 acceptance criteria"
+
+next_steps:
+  - Story is ready for implementation phase
+  - No further elaboration required
+  - Dev team can begin work on frontend InstructionsUpload component
+  - Backend team should add PDF validation utilities (2 hours estimated)
+  - QA team has 74 explicit ACs to verify
+
+high_priority_future_work:
+  - INST-2035: "Drag-and-Drop Upload Zone (HIGH IMPACT, 12 hours)"
+  - INST-2032: "File Preview/Thumbnails (HIGH IMPACT, 16 hours)"
+  - INST-2031: "Virus Scanning (REQUIRED for production, 20 hours)"
+
+confidence: very_high
+confidence_rationale: |
+  Backend infrastructure already exists (route, service, RTK mutation).
+  Frontend is standard file upload component following established patterns.
+  Only gaps are validation utilities (2 hours) and file size limit constant.
+  Story has comprehensive ACs (74), clear test plan, and detailed reuse plan.

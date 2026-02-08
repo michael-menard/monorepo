@@ -1,69 +1,143 @@
-@wishlist @add-item
+@wishlist @add-item @form
 Feature: Wishlist Add Item
-  As a user
-  I want to add items to my wishlist
-  So that I can track LEGO sets and instructions I want to purchase
+  As a wishlist user
+  I want to add new items to my wishlist
+  So that I can track LEGO sets I want to purchase
 
   Background:
     Given I am logged in as a test user
-    And the wishlist API is mocked with items
-    And the add-to-wishlist API is mocked for create scenarios
+    And I navigate to the wishlist gallery
+    And I click the Add Item button
 
-  @smoke @happy-path @wish-2002
-  Scenario: Happy path - add wishlist item with all fields
-    When I navigate to the wishlist page
-    And I click the "Add Item" button
-    Then I should be on the "Add to Wishlist" page
-    When I fill in the add item form with valid required and optional data
-    And I upload a wishlist image
-    And I submit the add item form
-    Then I should see a success toast for adding to wishlist
-    And I should be redirected back to the wishlist page
-    And I should see the newly added item in the gallery
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Form Fields Rendering
+  # ─────────────────────────────────────────────────────────────────────────────
 
-  @validation @wish-2002
-  Scenario: Validation errors when required fields are missing
-    When I navigate to the wishlist page
-    And I click the "Add Item" button
-    And I submit the add item form without filling required fields
-    Then I should see validation errors for the required fields "Store" and "Title"
-    And the form should remain on the add item page
+  @smoke @form-fields
+  Scenario: Form displays required fields
+    Then I should see the store selector
+    And I should see the title input
 
-  @validation @wish-2002
-  Scenario: Optional fields can be left empty
-    When I navigate to the wishlist page
-    And I click the "Add Item" button
-    And I fill only the required fields in the add item form
-    And I submit the add item form
-    Then I should see a success toast for adding to wishlist
-    And I should be redirected back to the wishlist page
-    And the new item should appear with fallback values for optional fields
+  @form-fields
+  Scenario: Form displays optional fields
+    Then I should see the set number input
+    And I should see the price input
+    And I should see the piece count input
+    And I should see the priority selector
+    And I should see the source URL input
+    And I should see the notes input
 
-  @image-upload @wish-2002
-  Scenario: Image upload preview and removal
-    When I navigate to the wishlist page
-    And I click the "Add Item" button
-    And I select an image to upload for the wishlist item
-    Then I should see a preview of the uploaded image
-    When I remove the uploaded image
-    Then the image preview should disappear
-    And I should be able to submit the form without an image
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Store Selector Options
+  # ─────────────────────────────────────────────────────────────────────────────
 
-  @error-handling @wish-2002
-  Scenario: API error on add item shows error toast
-    Given the add-to-wishlist API is mocked to return an error
-    When I navigate to the wishlist page
-    And I click the "Add Item" button
-    And I fill in the add item form with valid data
-    And I submit the add item form
-    Then I should see an error toast for failing to add to wishlist
+  @store-selector
+  Scenario: Store selector displays all 5 options
+    When I click the store selector
+    Then I should see 5 store options
+    And I should see store option "LEGO"
+    And I should see store option "Barweer"
+    And I should see store option "Cata"
+    And I should see store option "BrickLink"
+    And I should see store option "Other"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Priority Selector Options
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @priority-selector
+  Scenario: Priority selector displays 0-5 scale options
+    When I click the priority selector
+    Then I should see 6 priority options
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Form Validation
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @validation
+  Scenario: Form prevents submission without title
+    Given the title field is empty
+    When I click the submit button
+    Then the form should not submit
     And I should remain on the add item page
 
-  @navigation @wish-2002
-  Scenario: Cancel add item and return to wishlist gallery
-    When I navigate to the wishlist page
-    And I click the "Add Item" button
-    Then I should be on the "Add to Wishlist" page
-    When I click the "Cancel" button on the add item form
-    Then I should be redirected back to the wishlist page
-    And no new wishlist item should be created
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Form Submission - Success
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @submission @smoke
+  Scenario: Form submits with required fields only
+    Given I fill in the title with "Test Wishlist Item"
+    When I click the submit button
+    Then the form should submit successfully
+    And I should see success indication
+
+  @submission
+  Scenario: Form submits with all fields filled
+    Given I fill in all form fields
+    When I click the submit button
+    Then the form should submit successfully
+    And I should be redirected to the wishlist gallery
+
+  @toast
+  Scenario: Success toast displays after submission
+    Given I fill in the title with "Success Toast Test"
+    When I click the submit button
+    Then I should see a success toast
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Error Handling
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @error @api
+  Scenario: Error toast displays when API returns error
+    Given I mock POST to return 500 error
+    And I fill in the title with "Error Test Item"
+    When I click the submit button
+    Then I should see an error indication
+
+  @error @network
+  Scenario: Form handles network errors gracefully
+    Given I simulate a network error on POST
+    And I fill in the title with "Network Error Test"
+    When I click the submit button
+    Then the page should not crash
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Navigation
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @navigation
+  Scenario: Back link returns to gallery
+    When I click the Back to Gallery button
+    Then I should be on the wishlist gallery page
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Image Upload - S3 Flow
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @image-upload
+  Scenario: Image upload drop zone is displayed
+    Then I should see the image upload drop zone
+    And I should see upload instructions
+
+  @image-upload @api
+  Scenario: Selecting image requests presigned URL
+    Given I mock the presign endpoint
+    When I select an image file for upload
+    Then the presign endpoint should be called
+    And I should see the image preview
+
+  @image-upload
+  Scenario: User can remove uploaded image
+    Given I have uploaded an image
+    When I click the remove image button
+    Then the image preview should disappear
+    And the drop zone should return
+
+  @image-upload @submission
+  Scenario: Form submits with uploaded image URL
+    Given I have uploaded an image
+    And I fill in the title with "Item with Image"
+    When I click the submit button
+    Then the form should submit successfully

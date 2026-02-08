@@ -26,6 +26,7 @@ import { getAuthMiddleware } from '@repo/api-client/auth/auth-middleware'
 import { enhancedGalleryApi } from '@repo/api-client/rtk/gallery-api'
 import { enhancedWishlistApi } from '@repo/api-client/rtk/wishlist-api'
 import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
+import { setAuthSession, refreshAuthSession, clearAuthSession } from './sessionService'
 import {
   setLoading,
   setAuthenticated,
@@ -233,6 +234,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
 
         dispatch(setAuthenticated({ user: userData, tokens }))
+
+        // Sync session with backend (set httpOnly cookie)
+        if (tokens.idToken) {
+          try {
+            await setAuthSession(tokens.idToken)
+          } catch (sessionError) {
+            // Log but don't fail auth - cookie sync is non-critical
+            logger.warn('Failed to sync session with backend:', sessionError)
+          }
+        }
       } else {
         dispatch(setUnauthenticated())
       }
@@ -272,6 +283,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
             idToken: tokens.idToken,
             refreshToken: tokens.refreshToken,
           })
+        }
+
+        // Sync refreshed session with backend
+        if (tokens.idToken) {
+          try {
+            await refreshAuthSession(tokens.idToken)
+          } catch (sessionError) {
+            // Log but don't fail refresh - cookie sync is non-critical
+            logger.warn('Failed to sync refreshed session with backend:', sessionError)
+          }
         }
 
         return {
@@ -576,6 +597,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const handleSignOut = async () => {
     try {
+      // Clear backend session (httpOnly cookie) first
+      await clearAuthSession()
+
       // Sign out from all devices (AC: 2)
       await signOut({ global: true })
 
@@ -593,13 +617,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Clear Redux auth state (AC: 3)
       dispatch(setUnauthenticated())
 
-      // Redirect to home page (AC: 5)
-      navigate({ to: '/' })
+      // Redirect to login page (AC: 5)
+      navigate({ to: '/login' })
     } catch (error) {
       logger.error('Sign out failed:', error)
       // Even if Amplify signOut fails, still clear local state
       dispatch(setUnauthenticated())
-      navigate({ to: '/' })
+      navigate({ to: '/login' })
     }
   }
 

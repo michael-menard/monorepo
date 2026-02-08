@@ -1,0 +1,33 @@
+schema: 1
+story_id: "WISH-2001"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-03T12:00:00-07:00"
+
+# Story is frontend-only (backend already existed)
+touches:
+  backend: false
+  frontend: true
+  packages: true
+
+# Surface areas
+surfaces:
+  frontend:
+    - apps/web/app-wishlist-gallery/src/pages/main-page.tsx
+    - apps/web/app-wishlist-gallery/src/components/WishlistCard/index.tsx
+    - apps/web/app-wishlist-gallery/src/App.tsx
+
+  packages:
+    - packages/core/api-client/src/rtk/wishlist-gallery-api.ts
+    - packages/core/app-component-library/
+
+# E2E tests needed per v7.1
+e2e_scope:
+  required: true
+  test_areas:
+    - Gallery page load with real data
+    - Store filter tabs (All, LEGO, Barweer, etc.)
+    - Search functionality
+    - Sort options
+    - Grid/List view toggle
+    - Pagination
+    - Error states

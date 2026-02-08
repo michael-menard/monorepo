@@ -1,0 +1,20 @@
+feature_dir: plans/future/instructions
+prefix: INST
+started: 2026-02-05T21:00:00Z
+phases:
+  setup: complete
+  reviews: complete
+  aggregation: complete
+  interactive: complete
+  updates: complete
+resume_from: null
+last_updated: 2026-02-05T22:30:00Z
+reviews_started: 2026-02-05T21:15:00Z
+reviews_completed: 2026-02-05T21:25:00Z
+aggregation_started: 2026-02-05T21:25:00Z
+aggregation_completed: 2026-02-05T21:30:00Z
+updates_started: 2026-02-05T22:15:00Z
+updates_completed: 2026-02-05T22:30:00Z
+test_mandate_applied: true
+test_mandate_stories: 18
+stories_with_test_specs: 18

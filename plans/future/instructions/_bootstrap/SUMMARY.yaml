@@ -1,0 +1,48 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/instructions"
+prefix: "INST"
+completed: "2026-01-24T15:00:00Z"
+
+files_created:
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/instructions/stories.index.md"
+    stories: 18
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/instructions/PLAN.meta.md"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/instructions/PLAN.exec.md"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/instructions/roadmap.md"
+
+metrics:
+  total_stories: 18
+  ready_to_start: 1
+  critical_path_length: 13
+  max_parallel: 5
+  phases: 4
+  high_risk_stories: 4
+  sizing_warnings: 0
+
+roadmap_highlights:
+  critical_path:
+    - "INST-1003"
+    - "INST-1004"
+    - "INST-1005"
+    - "INST-1008"
+    - "INST-1009"
+    - "INST-1010"
+    - "INST-1011"
+    - "INST-1012"
+    - "INST-1013"
+    - "INST-1014"
+    - "INST-1015"
+    - "INST-1028"
+    - "INST-1029"
+  parallel_groups: 12
+  high_risk:
+    - story: "INST-1002"
+      risk: "AWS deployment and E2E testing for presigned URL endpoints"
+    - story: "INST-1029"
+      risk: "Frontend may reference deprecated endpoints - API versioning issues"
+    - story: "INST-1003"
+      risk: "Package extraction may break existing tests in consumers"
+    - story: "INST-1004"
+      risk: "Package extraction may break existing tests in consumers"
+
+next_step: "/elab-epic plans/future/instructions"

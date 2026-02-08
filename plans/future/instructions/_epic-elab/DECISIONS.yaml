@@ -1,0 +1,336 @@
+schema: 3
+epic_dir: plans/future/instructions
+decided: 2026-02-05T22:00:00Z
+reviewer: epic-lead
+
+verdict_change:
+  from: BLOCKED
+  to: READY
+  reason: All critical blockers resolved with actionable decisions. Test mandate accepted and enforced across all 18 stories.
+
+decisions:
+  # QA TEST MANDATE - ACCEPTED AND ENFORCED
+  - blocker_id: QA-001
+    source: qa
+    decision: accept
+    action: Add complete 3-part test strategy to ALL 18 stories during update phase
+    rationale: |
+      This is the most important feature of the app. Every story MUST include:
+      - Unit tests (Vitest) with minimum 45% coverage
+      - Integration tests (Vitest + MSW for API mocking)
+      - Playwright + Cucumber E2E tests (feature files + step definitions)
+
+      No story can proceed to implementation without complete test specifications.
+    stories: [INST-1000, INST-1001, INST-1002, INST-1003, INST-1004, INST-1005, INST-1006, INST-1007, INST-1008, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015, INST-1028, INST-1029]
+
+  - blocker_id: QA-002
+    source: qa
+    decision: accept
+    action: Add test acceptance criteria section to all stories using standard template
+    rationale: Stories must explicitly define test location, test data, and E2E scenarios to be verifiable
+    stories: [INST-1000, INST-1001, INST-1002, INST-1003, INST-1004, INST-1005, INST-1006, INST-1007, INST-1008, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015, INST-1028, INST-1029]
+
+  - blocker_id: QA-003
+    source: qa
+    decision: accept
+    action: Add Cucumber feature file references to all E2E-relevant stories (frontend flows and testing stories)
+    rationale: E2E specification must be explicit and traceable to feature files
+    stories: [INST-1001, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015, INST-1028, INST-1029]
+
+  - blocker_id: QA-004
+    source: qa
+    decision: accept
+    action: Define exact integration test scenarios for presigned URL flow with file size boundaries
+    rationale: Must test both direct upload (≤10MB) and presigned URL (>10MB, ≤50MB) paths
+    stories: [INST-1002, INST-1012]
+    specifications:
+      INST-1002:
+        - Test direct upload path with 5MB file
+        - Test presigned URL generation for 25MB file
+        - Test presigned URL generation for 50MB file (max)
+        - Test error handling for >50MB file rejection
+      INST-1012:
+        - Test edit save with no file changes (metadata only)
+        - Test edit save with 8MB file upload (direct)
+        - Test edit save with 30MB file upload (presigned)
+        - Test error recovery when presigned upload fails
+
+  - blocker_id: QA-005
+    source: qa
+    decision: accept
+    action: Add request/response schema validation tests to edit endpoint story
+    rationale: Contract tests ensure frontend expectations match backend implementation
+    stories: [INST-1005, INST-1009, INST-1010]
+    specifications:
+      INST-1005:
+        - Validate PATCH request body against Zod schema
+        - Validate PATCH response matches frontend expectations
+        - Test error response formats (400, 404, 500)
+
+  # ENGINEERING DEPENDENCIES - SEQUENCING ENFORCED
+  - blocker_id: ENG-001
+    source: engineering
+    decision: accept
+    action: Update roadmap to sequence INST-1002 before INST-1012 with explicit dependency
+    rationale: Presigned URL infrastructure must be tested and operational before edit save flow
+    stories: [INST-1002, INST-1012]
+    sequencing: INST-1002 → INST-1012
+
+  - blocker_id: ENG-002
+    source: engineering
+    decision: accept
+    action: Assign Wave 1-2 to package extraction stories (INST-1003, INST-1004) to unblock consumers
+    rationale: Packages must complete first so all consumers can build against them
+    stories: [INST-1003, INST-1004, INST-1008, INST-1009, INST-1012]
+    sequencing: INST-1003 → INST-1004 → [INST-1008, INST-1009, INST-1012]
+
+  - blocker_id: ENG-003
+    source: engineering
+    decision: accept
+    action: Complete INST-1008 (RTK Query mutations) before edit frontend stories
+    rationale: Mutation wiring required for form submission and API integration
+    stories: [INST-1008, INST-1010, INST-1012]
+    sequencing: INST-1008 → [INST-1010, INST-1012]
+
+  - blocker_id: ENG-004
+    source: engineering
+    decision: accept
+    action: Add schema validation tests to INST-1005 (covered by QA-005)
+    rationale: Prevents frontend/backend schema mismatches
+    stories: [INST-1005, INST-1009, INST-1010]
+
+  # PRODUCT SCOPE CLARIFICATIONS
+  - blocker_id: PROD-001
+    source: product
+    decision: accept
+    action: Elaborate INST-1010 with form layout, validation rules, and error message display
+    rationale: Clear acceptance criteria required for edit form implementation
+    stories: [INST-1010]
+    specifications:
+      - Form fields: title (required), description (optional), theme (select), tags (multi-select)
+      - Validation: title min 3 chars, theme required, tags optional
+      - Error messages: inline per field, summary at top
+      - Submit button: disabled while uploading, shows spinner
+
+  - blocker_id: PROD-002
+    source: product
+    decision: accept
+    action: Document file size thresholds explicitly in INST-1012 acceptance criteria
+    rationale: Upload path selection logic must be clear to developers and QA
+    stories: [INST-1012]
+    specifications:
+      - "≤10MB files: direct upload to API endpoint"
+      - ">10MB and ≤50MB files: presigned URL flow"
+      - ">50MB files: rejected with error message"
+
+  - blocker_id: PROD-003
+    source: product
+    decision: accept
+    action: Specify edit flow entry point and routing in INST-1009
+    rationale: Users must know how to navigate to edit page
+    stories: [INST-1009]
+    specifications:
+      - Entry point: Edit button on MOC detail page
+      - Route: /mocs/:mocId/edit
+      - Data fetching: Load existing MOC data on mount
+
+  # UX SPECIFICATIONS
+  - blocker_id: UX-001
+    source: ux
+    decision: accept
+    action: Add UX specification to INST-1011 for file picker and remove confirmation
+    rationale: Clear UX flow required for file management implementation
+    stories: [INST-1011]
+    specifications:
+      - File picker: Native input with drag-drop support
+      - File list: Show existing files with name, size, remove button
+      - Remove confirmation: Modal with "Are you sure?" + Cancel/Remove buttons
+
+  - blocker_id: UX-002
+    source: ux
+    decision: accept
+    action: Define unsaved changes modal UX in INST-1013
+    rationale: Navigation guard behavior must be explicit
+    stories: [INST-1013]
+    specifications:
+      - Modal trigger: Any navigation attempt with unsaved changes
+      - Modal text: "You have unsaved changes. Do you want to leave without saving?"
+      - Buttons: Stay on Page (primary) | Leave without Saving (secondary)
+
+  - blocker_id: UX-003
+    source: ux
+    decision: accept
+    action: Add upload progress indicator to INST-1012 acceptance criteria
+    rationale: Users need visual feedback during file upload
+    stories: [INST-1012]
+    specifications:
+      - Progress bar: Show during presigned URL upload (>10MB files)
+      - Status text: "Uploading file 1 of 3..." with percentage
+      - Submit button: Disabled with spinner during upload
+
+test_mandate:
+  enforced: true
+  applies_to: ALL_STORIES
+  required_components:
+    - unit_tests: Vitest with minimum 45% coverage
+    - integration_tests: Vitest + MSW for API mocking
+    - e2e_tests: Playwright + Cucumber (feature files + step definitions)
+
+  template: |
+    ## Testing Requirements
+
+    ### Unit Tests
+    **Location**: `[component-path]/__tests__/[component-name].test.tsx`
+    **Framework**: Vitest + React Testing Library
+    **Coverage**: Minimum 45% for this component
+    **Test Cases**:
+    - [List specific test scenarios based on story acceptance criteria]
+    - Component renders without errors
+    - Props validation and edge cases
+    - User interactions and state changes
+    - Error handling
+
+    ### Integration Tests
+    **Location**: `[feature-path]/__tests__/[feature-name].integration.test.tsx`
+    **Framework**: Vitest + MSW (Mock Service Worker)
+    **API Mocking**: MSW handlers for API endpoints
+    **Test Cases**:
+    - [List API integration scenarios]
+    - Successful API calls and response handling
+    - Error responses (400, 404, 500)
+    - Loading and error states
+    - Data flow from API to UI
+
+    ### E2E Tests (Playwright + Cucumber)
+    **Feature File**: `apps/web/playwright/features/instructions/[story-id].feature`
+    **Step Definitions**: `apps/web/playwright/steps/instructions/[story-id].steps.ts`
+    **Test Scenarios**:
+    ```gherkin
+    Feature: [Story title]
+      As a [user type]
+      I want to [action]
+      So that [benefit]
+
+      Scenario: [Happy path scenario]
+        Given [precondition]
+        When [action]
+        Then [expected outcome]
+
+      Scenario: [Error scenario]
+        Given [precondition]
+        When [error condition]
+        Then [error handling]
+    ```
+    **Accessibility**: Keyboard navigation, ARIA labels, focus management
+    **Test Data**: Use existing test MOCs or create dedicated test fixtures
+
+story_update_plan:
+  phase: elaboration_update
+  action: Add testing requirements section to all 18 stories
+  stories_to_update:
+    wave_1_packages:
+      - INST-1003: Extract upload schemas to shared package
+      - INST-1004: Extract upload utilities to shared package
+    wave_2_infrastructure:
+      - INST-1000: Schema definitions for edit flow
+      - INST-1001: Upload page route and navigation
+      - INST-1002: Presigned URL generation endpoints
+    wave_3_backend:
+      - INST-1005: Edit metadata endpoint (PATCH)
+      - INST-1006: Rate limiting for edit endpoint
+      - INST-1007: S3 cleanup job (optional)
+    wave_4_frontend:
+      - INST-1008: RTK Query mutations for edit
+      - INST-1009: Edit page setup and data fetching
+      - INST-1010: Edit form and validation
+      - INST-1011: File management UI
+      - INST-1012: Save flow with presigned URL
+      - INST-1013: Unsaved changes guard
+      - INST-1014: Error handling and recovery
+      - INST-1015: Accessibility audit
+    wave_5_testing:
+      - INST-1028: Upload session test coverage
+      - INST-1029: Create flow validation
+
+  test_specification_priorities:
+    critical_e2e:
+      - INST-1009: Edit page navigation and data loading
+      - INST-1012: Complete edit save flow (metadata + files)
+      - INST-1013: Unsaved changes guard behavior
+      - INST-1029: Create flow validation (existing + new)
+
+    critical_integration:
+      - INST-1002: Presigned URL with 50MB file test
+      - INST-1005: Edit endpoint request/response validation
+      - INST-1012: Edit save with direct and presigned upload paths
+
+    critical_unit:
+      - INST-1003: Schema validation for all upload types
+      - INST-1008: RTK Query mutation configuration
+      - INST-1010: Form validation logic
+      - INST-1011: File management utilities
+
+missing_mvp_stories:
+  action: defer
+  reason: Core functionality covered by existing 18 stories with proper test specifications
+  recommendations:
+    - Upload progress indication: Covered by adding to INST-1012 specifications (UX-003)
+    - Edit flow integration tests: Covered by integration test requirements in INST-1012
+    - Cucumber feature files: Now required for all E2E-relevant stories (QA-003)
+    - Complete test strategy: Now mandated across all stories (QA-001, QA-002)
+
+execution_sequencing:
+  wave_1_foundation:
+    stories: [INST-1003, INST-1004]
+    reason: Packages must complete first
+    blockers_resolved: ENG-002
+
+  wave_2_backend_infrastructure:
+    stories: [INST-1000, INST-1001, INST-1002, INST-1005, INST-1006]
+    reason: Backend endpoints and schemas before frontend
+    blockers_resolved: ENG-001, QA-005
+
+  wave_3_frontend_setup:
+    stories: [INST-1008, INST-1009]
+    reason: RTK Query and page setup before form implementation
+    blockers_resolved: ENG-003
+
+  wave_4_edit_flow:
+    stories: [INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015]
+    reason: Complete edit flow implementation
+    blockers_resolved: PROD-001, PROD-002, PROD-003, UX-001, UX-002, UX-003
+
+  wave_5_validation:
+    stories: [INST-1028, INST-1029]
+    reason: Final validation and integration testing
+    blockers_resolved: QA-003, QA-004
+
+quality_gates:
+  pre_implementation:
+    - All stories must have test specifications added
+    - QA sign-off required on test strategy for each story
+    - Feature files created for all E2E-relevant stories
+
+  during_implementation:
+    - Unit tests written alongside component code
+    - Integration tests pass before PR review
+    - Cucumber scenarios implemented with step definitions
+
+  pre_merge:
+    - All tests pass (unit + integration + E2E)
+    - Minimum 45% coverage maintained
+    - No ESLint errors on new/changed code
+    - Accessibility audit complete (INST-1015)
+
+timeline_impact:
+  elaboration_update: 1 day (add test specifications to all 18 stories)
+  implementation_overhead: None (tests always required, now explicit)
+  quality_improvement: High (comprehensive test coverage prevents regressions)
+
+next_actions:
+  - Update all 18 story files with testing requirements section using template
+  - Create feature file directory structure: apps/web/playwright/features/instructions/
+  - Add dependency annotations to stories (e.g., INST-1012 depends on INST-1002)
+  - Update roadmap.md with wave sequencing
+  - QA review and sign-off on test specifications
+  - Proceed to implementation with READY verdict

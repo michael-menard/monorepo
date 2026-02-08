@@ -17,8 +17,35 @@ import { relations, sql } from 'drizzle-orm'
 import { setImages, sets } from './sets'
 export { setImages, sets }
 
-// Re-export Feature Flags table (WISH-2009)
-export { featureFlags } from './feature-flags'
+// Re-export Feature Flags tables (WISH-2009, WISH-2039)
+export { featureFlags, featureFlagUserOverrides } from './feature-flags'
+
+// Re-export Admin Audit Log table (Admin Panel)
+export { adminAuditLog } from './admin-audit-log'
+
+// Re-export User Quotas tables (Authorization & Tier System)
+export {
+  userQuotas,
+  userAddons,
+  userQuotasRelations,
+  userAddonsRelations,
+} from './user-quotas'
+
+// Re-export Inspiration Gallery tables (Epic 5)
+export {
+  inspirations,
+  inspirationAlbums,
+  inspirationAlbumItems,
+  albumParents,
+  inspirationMocs,
+  albumMocs,
+  inspirationsRelations,
+  inspirationAlbumsRelations,
+  inspirationAlbumItemsRelations,
+  albumParentsRelations,
+  inspirationMocsRelations,
+  albumMocsRelations,
+} from './inspiration'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
 // Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
@@ -376,6 +403,12 @@ export const wishlistStoreEnum = pgEnum('wishlist_store', [
 /** Currency enum for wishlist items */
 export const wishlistCurrencyEnum = pgEnum('wishlist_currency', ['USD', 'EUR', 'GBP', 'CAD', 'AUD'])
 
+/** Item status enum for tracking lifecycle (SETS-MVP-001) */
+export const itemStatusEnum = pgEnum('item_status', ['wishlist', 'owned'])
+
+/** Build status enum for owned items (SETS-MVP-001) */
+export const buildStatusEnum = pgEnum('build_status', ['not_started', 'in_progress', 'completed'])
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Wishlist Items Table (WISH-2000)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -418,6 +451,23 @@ export const wishlistItems = pgTable(
     // Audit fields (WISH-2000 enhancement)
     createdBy: text('created_by'), // User ID who created this item (nullable for existing records)
     updatedBy: text('updated_by'), // User ID who last modified this item
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Collection Management (SETS-MVP-001)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Lifecycle tracking
+    status: itemStatusEnum('status').notNull().default('wishlist'), // Item lifecycle: wishlist -> owned
+    statusChangedAt: timestamp('status_changed_at'), // Timestamp when status last changed
+
+    // Purchase tracking (for owned items)
+    purchaseDate: timestamp('purchase_date'), // When item was purchased
+    purchasePrice: text('purchase_price'), // Actual purchase price (using text for decimal precision)
+    purchaseTax: text('purchase_tax'), // Tax amount paid (using text for decimal precision)
+    purchaseShipping: text('purchase_shipping'), // Shipping cost (using text for decimal precision)
+
+    // Build tracking (for owned items)
+    buildStatus: buildStatusEnum('build_status'), // Build progress: not_started, in_progress, completed
   },
   table => ({
     // Indexes for common queries
@@ -430,6 +480,12 @@ export const wishlistItems = pgTable(
       table.userId,
       table.store,
       table.priority,
+    ),
+    // Composite index for collection queries (SETS-MVP-001)
+    userStatusPurchaseDateIdx: index('idx_wishlist_user_status_purchase_date').on(
+      table.userId,
+      table.status,
+      table.purchaseDate,
     ),
     // Check constraint for priority range (WISH-2000 enhancement)
     priorityRangeCheck: check('priority_range_check', sql`priority >= 0 AND priority <= 5`),

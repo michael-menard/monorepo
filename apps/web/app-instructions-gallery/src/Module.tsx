@@ -3,7 +3,9 @@
  *
  * Main entry point for the Instuctions Gallery feature module.
  * This module is designed to be lazy-loaded by the shell app.
- * Handles internal routing for gallery, upload, detail, and edit views.
+ * Handles internal routing for gallery, upload, detail, edit, and create views.
+ *
+ * Story INST-1102: Added 'create' mode for Create Basic MOC
  */
 import { z } from 'zod'
 import { ModuleLayout } from './components/module-layout'
@@ -11,11 +13,12 @@ import { MainPage } from './pages/main-page'
 import { UploadPage } from './pages/UploadPage'
 import { EditPage } from './pages/EditPage'
 import { MocDetailModule } from './pages/MocDetailModule'
+import { CreateMocPage } from './pages/CreateMocPage'
 
 /**
  * Gallery view modes controlled by the host application.
  */
-const GalleryModeSchema = z.enum(['gallery', 'upload', 'detail', 'edit'])
+const GalleryModeSchema = z.enum(['gallery', 'upload', 'detail', 'edit', 'create'])
 
 export type GalleryMode = z.infer<typeof GalleryModeSchema>
 
@@ -50,6 +53,7 @@ export function InstuctionsGalleryModule({
       {mode === 'upload' && <UploadPage />}
       {mode === 'detail' && <MocDetailModule mocIdOrSlug={mocIdOrSlug} />}
       {mode === 'edit' && <EditPage />}
+      {mode === 'create' && <CreateMocPage />}
     </ModuleLayout>
   )
 }

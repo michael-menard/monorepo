@@ -1,13 +1,15 @@
-@import 'tailwindcss';
-
 /* App Instructions Gallery - Global Styles
  * ========================================
  * Uses shared design tokens from the design system and defines
  * base application styles (typography, scrolling, focus, etc.).
  */
 
-/* Import shared design system tokens */
+/* Import shared design system tokens - must be before @tailwind */
 @import '@repo/design-system/design-tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   * {

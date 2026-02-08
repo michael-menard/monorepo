@@ -40,8 +40,13 @@ export type HealthCheckResult = z.infer<typeof HealthCheckResultSchema>
 /**
  * Dependencies for health check
  * Platform-agnostic interface for testing connections
+ * Note: z.any() used for function as Zod function validation has compatibility issues
  */
 export const HealthCheckDepsSchema = z.object({
-  testPostgresConnection: z.function().returns(z.promise(z.boolean())),
+  testPostgresConnection: z.any(),
 })
-export type HealthCheckDeps = z.infer<typeof HealthCheckDepsSchema>
+
+/** Properly typed health check dependencies */
+export type HealthCheckDeps = {
+  testPostgresConnection: () => Promise<boolean>
+}

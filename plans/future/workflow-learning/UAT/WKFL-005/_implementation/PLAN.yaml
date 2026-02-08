@@ -1,0 +1,407 @@
+schema_version: 1.0.0
+story_id: WKFL-005
+created_at: 2026-02-07T15:00:00-07:00
+phases:
+  - id: setup
+    name: Setup and Context Loading
+    order: 1
+    estimated_tokens: 3000
+    steps:
+      - step: 1.1
+        description: Create directory structure for artifacts
+        actions:
+          - Create `.claude/agents/doc-sync.agent.md`
+          - Create `.claude/commands/doc-sync.md`
+        dependencies: []
+        verification:
+          - Directories exist
+          - File paths are correct
+
+      - step: 1.2
+        description: Load context from existing documentation
+        actions:
+          - Read docs/workflow/*.md to understand structure
+          - Read .claude/agents/_shared/FRONTMATTER.md for parsing spec
+          - Identify all sections that need updating
+        dependencies: []
+        verification:
+          - Context loaded successfully
+          - Section mapping identified
+
+  - id: agent_creation
+    name: Create doc-sync Agent
+    order: 2
+    estimated_tokens: 8000
+    steps:
+      - step: 2.1
+        description: Create doc-sync.agent.md with proper frontmatter
+        actions:
+          - Add YAML frontmatter (created, updated, version, type, model)
+          - Set model to haiku (fast text processing)
+          - Add tools list (Read, Grep, Glob, Write, Edit, Bash)
+          - Define mission statement
+        dependencies: [1.1, 1.2]
+        verification:
+          - Frontmatter follows .claude/agents/_shared/FRONTMATTER.md standard
+          - Model is set to haiku
+          - Mission is clear
+
+      - step: 2.2
+        description: Implement Phase 1 - File Discovery
+        actions:
+          - Add git diff logic for changed files in .claude/agents/ and .claude/commands/
+          - Fallback to timestamp-based detection if git unavailable
+          - Filter for *.agent.md and *.md files
+        dependencies: [2.1]
+        verification:
+          - Git diff command correctly identifies staged/uncommitted changes
+          - Fallback works when git unavailable
+          - File list generation tested
+
+      - step: 2.3
+        description: Implement Phase 2 - Frontmatter Parsing
+        actions:
+          - Extract YAML frontmatter using regex or yaml parser
+          - Parse required fields (created, updated, version)
+          - Parse optional fields (type, triggers, name, description, model, tools, spawns)
+          - Handle malformed YAML gracefully (skip file, log error)
+        dependencies: [2.2]
+        verification:
+          - Can parse valid frontmatter from existing agents
+          - Handles missing optional fields
+          - Skips files with invalid YAML without crashing
+
+      - step: 2.4
+        description: Implement Phase 3 - Section Mapping Logic
+        actions:
+          - Create section mapping for agent patterns (pm-*, elab-*, dev-*, etc.)
+          - Map patterns to docs/workflow/phases.md sections
+          - Identify which tables need updates (Model Assignments, Agents & Sub-Agents)
+        dependencies: [2.3]
+        verification:
+          - Section mapping covers all agent patterns in story
+          - Mapping aligns with actual docs/workflow/phases.md structure
+
+      - step: 2.5
+        description: Implement Phase 4 - Documentation Update Logic
+        actions:
+          - Update "Agents & Sub-Agents" tables in phases.md
+          - Update Model Assignments table
+          - Use Edit tool for surgical updates
+          - Preserve existing formatting and structure
+        dependencies: [2.4]
+        verification:
+          - Tables updated correctly
+          - No formatting regressions
+          - Multi-agent changes handled
+
+      - step: 2.6
+        description: Implement Phase 5 - Mermaid Diagram Generation
+        actions:
+          - Parse spawns field from agent frontmatter
+          - Build graph of leader → worker relationships
+          - Generate Mermaid syntax (graph TD format)
+          - Add basic validation (balanced brackets, arrow syntax)
+          - Preserve existing diagram on validation failure
+        dependencies: [2.5]
+        verification:
+          - Mermaid diagrams generated for agents with spawns field
+          - Syntax is valid (can be rendered)
+          - Fallback works when validation fails
+
+      - step: 2.7
+        description: Implement Phase 6 - Changelog Entry Drafting
+        actions:
+          - Determine version bump type (major/minor/patch) based on change type
+          - Draft changelog entry with [DRAFT] marker
+          - Use format from docs/workflow/changelog.md
+          - Insert at top of changelog after version header
+        dependencies: [2.6]
+        verification:
+          - Version bump logic follows story's decision table
+          - Changelog format matches existing entries
+          - [DRAFT] marker present
+
+      - step: 2.8
+        description: Implement Phase 7 - SYNC-REPORT.md Generation
+        actions:
+          - Create SYNC-REPORT.md with all required sections
+          - files_changed (list with paths)
+          - sections_updated (list with file + section)
+          - diagrams_regenerated (list with diagram names)
+          - manual_review_needed (edge cases requiring human review)
+          - changelog_entry (proposed version and description)
+        dependencies: [2.7]
+        verification:
+          - All sections present in report
+          - Data is accurate
+          - Report is human-readable
+
+  - id: command_creation
+    name: Create /doc-sync Command Wrapper
+    order: 3
+    estimated_tokens: 2000
+    steps:
+      - step: 3.1
+        description: Create doc-sync.md command file
+        actions:
+          - Add YAML frontmatter (created, updated, version)
+          - List doc-sync.agent.md in agents array
+          - Document command usage
+          - Add --check-only flag documentation
+        dependencies: [2.8]
+        verification:
+          - Command file follows .claude/commands/ pattern
+          - Frontmatter is correct
+          - Usage documentation is clear
+
+      - step: 3.2
+        description: Implement --check-only mode
+        actions:
+          - Add flag to perform dry-run without modifying files
+          - Exit with error code if docs out of sync
+          - Use for pre-commit hook validation
+        dependencies: [3.1]
+        verification:
+          - --check-only detects out-of-sync docs
+          - Exit codes correct (0 = in sync, 1 = out of sync)
+          - No files modified in check-only mode
+
+  - id: documentation
+    name: Documentation and Pre-commit Hook Integration
+    order: 4
+    estimated_tokens: 2000
+    steps:
+      - step: 4.1
+        description: Create pre-commit hook documentation
+        actions:
+          - Document hook installation in command file or separate doc
+          - Provide example .git/hooks/pre-commit script
+          - Explain when hook triggers (agent/command file changes)
+        dependencies: [3.2]
+        verification:
+          - Documentation is clear
+          - Example script is copy-paste ready
+          - Explains opt-in nature (not auto-installed)
+
+      - step: 4.2
+        description: Create SYNC-REPORT.md schema documentation
+        actions:
+          - Document expected structure
+          - Provide example SYNC-REPORT.md
+          - Explain each section's purpose
+        dependencies: [2.8]
+        verification:
+          - Schema documentation exists
+          - Example matches actual output format
+
+  - id: testing
+    name: Testing and Verification
+    order: 5
+    estimated_tokens: 5000
+    steps:
+      - step: 5.1
+        description: Test AC-1 - New Agent Detection
+        actions:
+          - Create test agent .claude/agents/test-new-agent.agent.md
+          - Run /doc-sync
+          - Verify docs/workflow/phases.md updated
+          - Verify SYNC-REPORT.md contains new agent
+        dependencies: [4.2]
+        verification:
+          - Git diff shows additions to phases.md
+          - Agent appears in correct phase table
+          - SYNC-REPORT.md accurate
+
+      - step: 5.2
+        description: Test AC-2 - Frontmatter Changes
+        actions:
+          - Modify existing agent frontmatter (change model field)
+          - Run /doc-sync
+          - Verify Model Assignments table updated
+          - Verify SYNC-REPORT.md shows modification
+        dependencies: [5.1]
+        verification:
+          - Table reflects new model value
+          - SYNC-REPORT.md identifies change correctly
+
+      - step: 5.3
+        description: Test AC-3 - Mermaid Diagram Regeneration
+        actions:
+          - Create/modify agent with spawns field
+          - Run /doc-sync
+          - Verify Mermaid diagram includes spawn relationships
+          - Validate Mermaid syntax
+          - Verify SYNC-REPORT.md lists diagrams_regenerated
+        dependencies: [5.2]
+        verification:
+          - Mermaid syntax valid
+          - Spawn relationships correct
+          - Report accurate
+
+      - step: 5.4
+        description: Test AC-4 - Changelog Entry Drafting
+        actions:
+          - Make agent changes
+          - Run /doc-sync
+          - Verify docs/workflow/changelog.md has [DRAFT] entry
+          - Verify version number incremented correctly
+          - Verify SYNC-REPORT.md includes changelog_entry
+        dependencies: [5.3]
+        verification:
+          - Changelog entry format correct
+          - Version bump appropriate
+          - [DRAFT] marker present
+
+      - step: 5.5
+        description: Test AC-5 - SYNC-REPORT.md Generation
+        actions:
+          - Run /doc-sync with various change scenarios
+          - Verify all required sections present
+          - Verify data accuracy
+        dependencies: [5.4]
+        verification:
+          - files_changed list complete
+          - sections_updated list complete
+          - diagrams_regenerated list complete
+          - manual_review_needed populated when needed
+          - changelog_entry present
+
+      - step: 5.6
+        description: Test AC-6 - Command and Pre-commit Hook
+        actions:
+          - Run /doc-sync from command line
+          - Verify successful execution
+          - Test --check-only flag
+          - Review hook documentation
+        dependencies: [5.5]
+        verification:
+          - Command executes successfully
+          - --check-only works as expected
+          - Hook documentation exists
+
+      - step: 5.7
+        description: Test Error Cases
+        actions:
+          - Test invalid YAML frontmatter (should skip gracefully)
+          - Test missing required fields (should warn but continue)
+          - Test concurrent run protection (clean git working directory check)
+          - Test Mermaid validation failure (preserve existing diagram)
+        dependencies: [5.6]
+        verification:
+          - All error cases handled gracefully
+          - Appropriate error messages
+          - No crashes or data loss
+
+  - id: cleanup
+    name: Cleanup and Finalization
+    order: 6
+    estimated_tokens: 1000
+    steps:
+      - step: 6.1
+        description: Remove test artifacts
+        actions:
+          - Delete test agent files created during testing
+          - Revert any test changes to documentation
+          - Clean up SYNC-REPORT.md if generated during tests
+        dependencies: [5.7]
+        verification:
+          - Test files removed
+          - Documentation in clean state
+
+      - step: 6.2
+        description: Final review and SYNC-REPORT.md
+        actions:
+          - Review all created files
+          - Ensure frontmatter versions are correct
+          - Run /doc-sync one final time to sync the new agent itself
+          - Generate final SYNC-REPORT.md for submission
+        dependencies: [6.1]
+        verification:
+          - All deliverables present
+          - Frontmatter correct
+          - Final SYNC-REPORT.md generated
+
+deliverables:
+  - path: .claude/agents/doc-sync.agent.md
+    description: Main doc-sync agent with haiku model
+    acceptance_criteria: [AC-1, AC-2, AC-3, AC-4, AC-5]
+
+  - path: .claude/commands/doc-sync.md
+    description: Command wrapper for doc-sync agent
+    acceptance_criteria: [AC-6]
+
+  - path: SYNC-REPORT.md
+    description: Report format and example
+    location: Generated in story artifacts or run directory
+    acceptance_criteria: [AC-5]
+
+  - path: Pre-commit hook documentation
+    description: Installation instructions for optional pre-commit hook
+    location: In .claude/commands/doc-sync.md or separate doc
+    acceptance_criteria: [AC-6]
+
+dependencies:
+  must_read:
+    - .claude/agents/_shared/FRONTMATTER.md
+    - docs/workflow/phases.md
+    - docs/workflow/README.md
+    - docs/workflow/agent-system.md
+    - docs/workflow/changelog.md
+
+  must_not_modify:
+    - .claude/agents/_shared/FRONTMATTER.md
+    - docs/workflow/ file structure (can update content, not structure)
+
+  integration_points:
+    read:
+      - .claude/agents/*.agent.md
+      - .claude/commands/*.md
+    write:
+      - docs/workflow/phases.md
+      - docs/workflow/README.md
+      - docs/workflow/changelog.md
+      - SYNC-REPORT.md
+
+risks:
+  - risk: Mermaid diagram generation complexity
+    mitigation: Start with simple graph TD format, validate with regex, preserve existing on failure
+    likelihood: medium
+    impact: low
+
+  - risk: Section mapping may not cover all agent patterns
+    mitigation: Use pattern matching with fallback to manual_review_needed
+    likelihood: low
+    impact: low
+
+  - risk: Concurrent doc-sync runs
+    mitigation: Require clean git working directory before running
+    likelihood: low
+    impact: medium
+
+success_criteria:
+  - All 6 acceptance criteria pass
+  - No regressions in existing documentation
+  - SYNC-REPORT.md generated correctly
+  - Command executes without errors
+  - Pre-commit hook documentation clear and actionable
+
+estimated_total_tokens: 21000
+buffer_tokens: 5000
+total_budget: 40000
+confidence: high
+
+notes: |
+  This story is exceptionally well-formed with comprehensive architecture notes,
+  verification steps in each AC, and a clear reality baseline. Implementation
+  should be straightforward following the story's Architecture Notes section.
+
+  Key implementation decisions already made in story:
+  - Model: haiku (fast text processing)
+  - Section mapping: hardcoded patterns (can extract to config in future)
+  - Mermaid validation: regex-based (mermaid-cli optional enhancement)
+  - Change detection: git diff primary, timestamps fallback
+  - Error handling: skip invalid files, preserve diagrams on failure
+
+  Future opportunities documented in _implementation/FUTURE-OPPORTUNITIES.md
+  are all non-blocking and should not delay MVP.

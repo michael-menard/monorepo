@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Search, Clock, Star, ArrowRight, Command } from 'lucide-react'
-import { Input, Button, Badge, Card, CardContent, cn } from '@repo/app-component-library'
+import { Search, Clock, Star, ArrowRight } from 'lucide-react'
+import { Input, Button, Card, CardContent, cn } from '@repo/app-component-library'
 import { useNavigation } from './NavigationProvider'
 import {
   setSearchQuery,
@@ -146,23 +146,21 @@ export function NavigationSearch({
     <div className={cn('relative', className)} ref={resultsRef}>
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           ref={inputRef}
-          type="text"
+          type="search"
           placeholder={placeholder}
           value={search.query}
           onChange={e => handleSearchChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsOpen(true)}
-          className="pl-10 pr-20"
+          className="w-full pl-9 pr-14 h-10 bg-muted/50 border-border focus:border-primary focus:ring-primary/20 placeholder:text-muted-foreground rounded-lg transition-colors"
         />
         {showShortcut ? (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-            <Badge variant="outline" className="text-xs">
-              <Command className="h-3 w-3 mr-1" />K
-            </Badge>
-          </div>
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <span className="text-xs">⌘</span>K
+          </kbd>
         ) : null}
       </div>
 

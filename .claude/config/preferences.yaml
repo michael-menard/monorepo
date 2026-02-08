@@ -1,0 +1,93 @@
+# User Preferences
+#
+# Learned preferences from past decisions to improve auto-accept accuracy.
+# Preferences are applied when confidence threshold is met.
+#
+# Managed by: preference-learning system
+# Updated: automatically after user decisions
+
+version: 1
+updated_at: 2026-02-06
+
+# Preference application rules
+application_rules:
+  # Auto-apply without confirmation
+  auto_apply:
+    min_confidence: 0.9
+    min_applications: 5
+    max_overrides: 0
+
+  # Apply with logging
+  apply_with_log:
+    min_confidence: 0.8
+    min_applications: 3
+    max_overrides: 1
+
+  # Suggest only, await confirmation
+  suggest_only:
+    min_confidence: 0.7
+    min_applications: 2
+    max_overrides: 2
+
+  # Do not apply
+  do_not_apply:
+    below_confidence: 0.7
+
+# Confidence decay
+# Preferences decay if not applied recently
+decay:
+  enabled: true
+  rate: 0.95  # multiplier per month
+  archive_after_months: 6
+
+# Project-level preferences (established conventions)
+project_preferences:
+  - id: pref-proj-001
+    pattern: "test.*framework|testing.*library"
+    choice: vitest
+    confidence: 1.0
+    source: CLAUDE.md
+    locked: true  # Cannot be overridden
+
+  - id: pref-proj-002
+    pattern: "ui.*component.*library"
+    choice: "@repo/ui"
+    confidence: 1.0
+    source: CLAUDE.md
+    locked: true
+
+  - id: pref-proj-003
+    pattern: "type.*definition|interface.*vs.*type"
+    choice: "zod schema with z.infer"
+    confidence: 1.0
+    source: CLAUDE.md
+    locked: true
+
+  - id: pref-proj-004
+    pattern: "logging|console.*log"
+    choice: "@repo/logger"
+    confidence: 1.0
+    source: CLAUDE.md
+    locked: true
+
+  - id: pref-proj-005
+    pattern: "css.*framework|styling"
+    choice: "tailwind"
+    confidence: 1.0
+    source: CLAUDE.md
+    locked: true
+
+# User-learned preferences (from past decisions)
+# These are updated automatically as the user makes decisions
+learned_preferences: []
+# Example entry (will be populated over time):
+# - id: pref-user-001
+#   created_at: 2026-02-06T10:00:00Z
+#   updated_at: 2026-02-06T10:00:00Z
+#   pattern: "state.*management"
+#   choice: "zustand"
+#   confidence: 0.85
+#   applications: 8
+#   overrides: 2
+#   last_applied: 2026-02-06T10:00:00Z
+#   notes: "User prefers zustand for simpler state"

@@ -1,8 +1,15 @@
 import { Hono } from 'hono'
 import { auth } from '../../middleware/auth.js'
-import { db, schema } from '../../composition/index.js'
+import { loadPermissions } from '../../middleware/load-permissions.js'
+import { requireFeature } from '../../middleware/require-feature.js'
+import { requireQuota, releaseReservedQuota } from '../../middleware/require-quota.js'
+import { authorizationService, db, schema } from '../../composition/index.js'
 import { createGalleryService } from './application/index.js'
-import { createImageRepository, createAlbumRepository, createImageStorage } from './adapters/index.js'
+import {
+  createImageRepository,
+  createAlbumRepository,
+  createImageStorage,
+} from './adapters/index.js'
 import {
   CreateImageInputSchema,
   UpdateImageInputSchema,
@@ -36,8 +43,10 @@ const galleryService = createGalleryService({
 
 const gallery = new Hono()
 
-// All gallery routes require authentication
+// All gallery routes require authentication and gallery feature (pro-tier+)
 gallery.use('*', auth)
+gallery.use('*', loadPermissions)
+gallery.use('*', requireFeature('gallery'))
 
 // ─────────────────────────────────────────────────────────────────────────
 // Image Routes
@@ -46,7 +55,7 @@ gallery.use('*', auth)
 /**
  * GET /images - List user's images
  */
-gallery.get('/images', async (c) => {
+gallery.get('/images', async c => {
   const userId = c.get('userId')
   const query = ListImagesQuerySchema.safeParse(c.req.query())
 
@@ -58,7 +67,7 @@ gallery.get('/images', async (c) => {
   const result = await galleryService.listImages(
     userId,
     { page, limit },
-    { search, albumId: albumId ?? null }
+    { search, albumId: albumId ?? null },
   )
 
   return c.json(result)
@@ -67,7 +76,7 @@ gallery.get('/images', async (c) => {
 /**
  * GET /images/:id - Get single image
  */
-gallery.get('/images/:id', async (c) => {
+gallery.get('/images/:id', async c => {
   const userId = c.get('userId')
   const imageId = c.req.param('id')
 
@@ -84,7 +93,7 @@ gallery.get('/images/:id', async (c) => {
 /**
  * POST /images - Upload new image
  */
-gallery.post('/images', async (c) => {
+gallery.post('/images', async c => {
   const userId = c.get('userId')
 
   // Parse multipart form
@@ -109,7 +118,7 @@ gallery.post('/images', async (c) => {
     try {
       parsedTags = JSON.parse(body.tags)
     } catch {
-      parsedTags = body.tags.split(',').map((t) => t.trim())
+      parsedTags = body.tags.split(',').map(t => t.trim())
     }
   }
 
@@ -136,14 +145,18 @@ gallery.post('/images', async (c) => {
       mimetype: file.type,
       size: file.size,
     },
-    input.data
+    input.data,
   )
 
   if (!result.ok) {
     const status =
-      result.error === 'INVALID_FILE' ? 400 :
-      result.error === 'UPLOAD_FAILED' ? 500 :
-      result.error === 'DB_ERROR' ? 500 : 500
+      result.error === 'INVALID_FILE'
+        ? 400
+        : result.error === 'UPLOAD_FAILED'
+          ? 500
+          : result.error === 'DB_ERROR'
+            ? 500
+            : 500
     return c.json({ error: result.error }, status)
   }
 
@@ -153,7 +166,7 @@ gallery.post('/images', async (c) => {
 /**
  * PATCH /images/:id - Update image metadata
  */
-gallery.patch('/images/:id', async (c) => {
+gallery.patch('/images/:id', async c => {
   const userId = c.get('userId')
   const imageId = c.req.param('id')
 
@@ -177,7 +190,7 @@ gallery.patch('/images/:id', async (c) => {
 /**
  * DELETE /images/:id - Delete image
  */
-gallery.delete('/images/:id', async (c) => {
+gallery.delete('/images/:id', async c => {
   const userId = c.get('userId')
   const imageId = c.req.param('id')
 
@@ -198,7 +211,7 @@ gallery.delete('/images/:id', async (c) => {
 /**
  * GET /albums - List user's albums
  */
-gallery.get('/albums', async (c) => {
+gallery.get('/albums', async c => {
   const userId = c.get('userId')
   const query = ListAlbumsQuerySchema.safeParse(c.req.query())
 
@@ -215,7 +228,7 @@ gallery.get('/albums', async (c) => {
 /**
  * GET /albums/:id - Get single album with images
  */
-gallery.get('/albums/:id', async (c) => {
+gallery.get('/albums/:id', async c => {
   const userId = c.get('userId')
   const albumId = c.req.param('id')
 
@@ -231,23 +244,34 @@ gallery.get('/albums/:id', async (c) => {
 
 /**
  * POST /albums - Create new album
+ *
+ * Requires galleries quota availability. Quota is reserved atomically before
+ * creation and released on failure.
  */
-gallery.post('/albums', async (c) => {
+gallery.post('/albums', requireQuota('galleries'), async c => {
   const userId = c.get('userId')
   const body = await c.req.json()
   const input = CreateAlbumInputSchema.safeParse(body)
 
   if (!input.success) {
+    // Release reserved quota on validation failure
+    await releaseReservedQuota(c)
     return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
   }
 
   const result = await galleryService.createAlbum(userId, input.data)
 
   if (!result.ok) {
+    // Release reserved quota on creation failure
+    await releaseReservedQuota(c)
     const status =
-      result.error === 'VALIDATION_ERROR' ? 400 :
-      result.error === 'FORBIDDEN' ? 403 :
-      result.error === 'DB_ERROR' ? 500 : 500
+      result.error === 'VALIDATION_ERROR'
+        ? 400
+        : result.error === 'FORBIDDEN'
+          ? 403
+          : result.error === 'DB_ERROR'
+            ? 500
+            : 500
     return c.json({ error: result.error }, status)
   }
 
@@ -257,7 +281,7 @@ gallery.post('/albums', async (c) => {
 /**
  * PATCH /albums/:id - Update album
  */
-gallery.patch('/albums/:id', async (c) => {
+gallery.patch('/albums/:id', async c => {
   const userId = c.get('userId')
   const albumId = c.req.param('id')
 
@@ -272,9 +296,13 @@ gallery.patch('/albums/:id', async (c) => {
 
   if (!result.ok) {
     const status =
-      result.error === 'NOT_FOUND' ? 404 :
-      result.error === 'FORBIDDEN' ? 403 :
-      result.error === 'VALIDATION_ERROR' ? 400 : 500
+      result.error === 'NOT_FOUND'
+        ? 404
+        : result.error === 'FORBIDDEN'
+          ? 403
+          : result.error === 'VALIDATION_ERROR'
+            ? 400
+            : 500
     return c.json({ error: result.error }, status)
   }
 
@@ -283,8 +311,10 @@ gallery.patch('/albums/:id', async (c) => {
 
 /**
  * DELETE /albums/:id - Delete album (orphans images)
+ *
+ * Releases galleries quota after successful deletion.
  */
-gallery.delete('/albums/:id', async (c) => {
+gallery.delete('/albums/:id', async c => {
   const userId = c.get('userId')
   const albumId = c.req.param('id')
 
@@ -294,6 +324,9 @@ gallery.delete('/albums/:id', async (c) => {
     const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
     return c.json({ error: result.error }, status)
   }
+
+  // Release galleries quota after successful deletion
+  await authorizationService.releaseQuota(userId, 'galleries')
 
   return c.body(null, 204)
 })

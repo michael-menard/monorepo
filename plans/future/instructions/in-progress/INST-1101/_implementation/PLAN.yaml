@@ -1,0 +1,352 @@
+schema: 1
+story_id: INST-1101
+timestamp: '2026-02-06T21:00:00Z'
+
+# Implementation Plan for INST-1101: View MOC Details
+# Vertical slice: Frontend page + Backend endpoint + Database queries
+
+steps:
+  - id: 1
+    description: "Define Zod schemas for GET /mocs/:id request/response in packages/core/api-client"
+    files:
+      - "packages/core/api-client/src/schemas/mocs.ts"
+    dependencies: []
+    slice: packages
+    rationale: "Zod-first approach - define schemas before implementation"
+
+  - id: 2
+    description: "Add getMocById method to MocRepository port and Drizzle adapter"
+    files:
+      - "apps/api/lego-api/domains/mocs/ports/index.ts"
+      - "apps/api/lego-api/domains/mocs/adapters/repositories.ts"
+    dependencies: []
+    slice: backend
+    rationale: "Data layer foundation - must exist before service layer"
+
+  - id: 3
+    description: "Add getMoc method to MocService for fetching MOC with authorization check"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+    dependencies: [2]
+    slice: backend
+    rationale: "Service layer orchestrates repository calls and business logic"
+
+  - id: 4
+    description: "Add GET /mocs/:id route handler in backend"
+    files:
+      - "apps/api/lego-api/domains/mocs/routes.ts"
+    dependencies: [3]
+    slice: backend
+    rationale: "HTTP layer exposes service methods via REST API"
+
+  - id: 5
+    description: "Add response type definitions to backend types.ts"
+    files:
+      - "apps/api/lego-api/domains/mocs/types.ts"
+    dependencies: [1]
+    slice: backend
+    rationale: "Backend needs response type definitions aligned with Zod schemas"
+
+  - id: 6
+    description: "Create RTK Query hook useGetMocQuery in api-client"
+    files:
+      - "packages/core/api-client/src/rtk/mocs-api.ts"
+      - "packages/core/api-client/src/rtk/index.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "Frontend data fetching layer using RTK Query"
+
+  - id: 7
+    description: "Create MocDetailPage component with route integration"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/MocDetailPage.tsx"
+      - "apps/web/app-instructions-gallery/src/routes/index.ts"
+    dependencies: [6]
+    slice: frontend
+    rationale: "Page-level component that uses RTK Query hook and renders MocDetailDashboard"
+
+  - id: 8
+    description: "Update MocDetailDashboard to handle loading/error states"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/MocDetailDashboard/MocDetailDashboard.tsx"
+    dependencies: [7]
+    slice: frontend
+    rationale: "Add loading skeleton and error boundary support"
+
+  - id: 9
+    description: "Create unit tests for MocDetailPage component"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/MocDetailPage.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+    rationale: "Test component rendering, loading states, error handling"
+
+  - id: 10
+    description: "Create integration tests for GET /mocs/:id endpoint"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/MocDetailPage.integration.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+    rationale: "Test API integration with MSW mocking"
+
+  - id: 11
+    description: "Create E2E tests with Playwright for MOC detail page flows"
+    files:
+      - "apps/web/playwright/tests/instructions/moc-detail.spec.ts"
+    dependencies: [7, 8]
+    slice: frontend
+    rationale: "Test full user flows including navigation, drag-drop, responsive layout"
+
+  - id: 12
+    description: "Update backend service tests for getMoc method"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts"
+    dependencies: [3]
+    slice: backend
+    rationale: "Test service layer authorization and error handling"
+
+files_to_change:
+  - path: "packages/core/api-client/src/schemas/mocs.ts"
+    action: create
+    reason: "Define Zod schemas for MOC response including files array (AC-13, AC-14, AC-15)"
+
+  - path: "apps/api/lego-api/domains/mocs/ports/index.ts"
+    action: modify
+    reason: "Add MocWithFiles type and getMocById method to MocRepository interface (AC-17, AC-18)"
+
+  - path: "apps/api/lego-api/domains/mocs/adapters/repositories.ts"
+    action: modify
+    reason: "Implement getMocById with Drizzle relations for file joins (AC-18, AC-19)"
+
+  - path: "apps/api/lego-api/domains/mocs/application/services.ts"
+    action: modify
+    reason: "Add getMoc method with userId authorization check (AC-12, AC-16, AC-21)"
+
+  - path: "apps/api/lego-api/domains/mocs/routes.ts"
+    action: modify
+    reason: "Add GET /mocs/:id route handler (AC-12)"
+
+  - path: "apps/api/lego-api/domains/mocs/types.ts"
+    action: modify
+    reason: "Add GetMocResponse type definition (AC-13, AC-14, AC-15)"
+
+  - path: "packages/core/api-client/src/rtk/mocs-api.ts"
+    action: create
+    reason: "Create RTK Query API definition with useGetMocQuery hook"
+
+  - path: "packages/core/api-client/src/rtk/index.ts"
+    action: modify
+    reason: "Export mocsApi from new mocs-api.ts file"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/MocDetailPage.tsx"
+    action: create
+    reason: "Create page component for /mocs/:mocId route (AC-1, AC-10, AC-11)"
+
+  - path: "apps/web/app-instructions-gallery/src/routes/index.ts"
+    action: modify
+    reason: "Register /mocs/:mocId route"
+
+  - path: "apps/web/app-instructions-gallery/src/components/MocDetailDashboard/MocDetailDashboard.tsx"
+    action: modify
+    reason: "Add loading skeleton and error handling (AC-10, AC-25, AC-28)"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/__tests__/MocDetailPage.test.tsx"
+    action: create
+    reason: "Unit tests for page rendering, loading, error states"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/__tests__/MocDetailPage.integration.test.tsx"
+    action: create
+    reason: "Integration tests with MSW for API calls and 404 handling"
+
+  - path: "apps/web/playwright/tests/instructions/moc-detail.spec.ts"
+    action: create
+    reason: "E2E tests for user flows, navigation, drag-drop, responsive layout"
+
+  - path: "apps/api/lego-api/domains/mocs/application/__tests__/services.test.ts"
+    action: create
+    reason: "Unit tests for MocService.getMoc authorization and error handling"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+    reason: "Build all packages to ensure TypeScript compilation succeeds"
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after schema changes"
+    required: true
+    reason: "Run api-client package tests to verify schema definitions"
+
+  - command: "pnpm test --filter lego-api"
+    when: "after backend changes"
+    required: true
+    reason: "Run backend service and repository tests"
+
+  - command: "pnpm test --filter app-instructions-gallery"
+    when: "after frontend changes"
+    required: true
+    reason: "Run frontend unit and integration tests"
+
+  - command: "pnpm playwright test apps/web/playwright/tests/instructions/moc-detail.spec.ts"
+    when: "after all changes"
+    required: true
+    reason: "Run E2E tests for full user flow validation"
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+    reason: "Verify code style and catch common errors"
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+    reason: "Verify TypeScript types across all touched packages"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Route registration in routes/index.ts and E2E test navigating to /mocs/:mocId"
+    evidence_type: "file"
+
+  - ac_id: "AC-2"
+    planned_evidence: "Grid layout with xl:col-span-4 sidebar and xl:col-span-8 main in MocDetailDashboard.tsx"
+    evidence_type: "file"
+
+  - ac_id: "AC-3"
+    planned_evidence: "CoverCard component rendered in sidebar section"
+    evidence_type: "file"
+
+  - ac_id: "AC-4"
+    planned_evidence: "MetaCard component rendered in sidebar section with title, description, theme, tags"
+    evidence_type: "file"
+
+  - ac_id: "AC-5"
+    planned_evidence: "StatsCard component in main area displaying pieceCount, fileCount, createdAt"
+    evidence_type: "file"
+
+  - ac_id: "AC-6"
+    planned_evidence: "PartsGauge component in main area showing parts owned vs total"
+    evidence_type: "file"
+
+  - ac_id: "AC-7"
+    planned_evidence: "Dashboard cards with draggable attribute and drag handlers in MocDetailDashboard.tsx"
+    evidence_type: "file"
+
+  - ac_id: "AC-8"
+    planned_evidence: "localStorage.setItem called in persistOrder function with card order array"
+    evidence_type: "file"
+
+  - ac_id: "AC-9"
+    planned_evidence: "Responsive classes grid-cols-1 xl:grid-cols-12 for mobile stacking"
+    evidence_type: "file"
+
+  - ac_id: "AC-10"
+    planned_evidence: "Loading skeleton in MocDetailPage while useGetMocQuery isLoading=true"
+    evidence_type: "file"
+
+  - ac_id: "AC-11"
+    planned_evidence: "404 component rendered when useGetMocQuery returns 404 error"
+    evidence_type: "file"
+
+  - ac_id: "AC-12"
+    planned_evidence: "GET /mocs/:id route handler in routes.ts"
+    evidence_type: "file"
+
+  - ac_id: "AC-13"
+    planned_evidence: "GetMocResponseSchema with metadata fields in schemas/mocs.ts"
+    evidence_type: "file"
+
+  - ac_id: "AC-14"
+    planned_evidence: "Files array in response schema with name, size, type, uploadedAt, downloadUrl"
+    evidence_type: "file"
+
+  - ac_id: "AC-15"
+    planned_evidence: "Stats object in response schema with pieceCount, fileCount"
+    evidence_type: "file"
+
+  - ac_id: "AC-16"
+    planned_evidence: "Service test: getMoc returns null for unauthorized access, route returns 404"
+    evidence_type: "test"
+
+  - ac_id: "AC-17"
+    planned_evidence: "getMocById query with userId filter in repository adapter"
+    evidence_type: "file"
+
+  - ac_id: "AC-18"
+    planned_evidence: "Drizzle query with 'with: { files: true }' for automatic join"
+    evidence_type: "file"
+
+  - ac_id: "AC-19"
+    planned_evidence: "File metadata fields selected in repository query (name, size, type, s3Key, uploadedAt)"
+    evidence_type: "file"
+
+  - ac_id: "AC-20"
+    planned_evidence: "DraggableCard using native HTML5 drag-drop API (already implemented)"
+    evidence_type: "file"
+
+  - ac_id: "AC-21"
+    planned_evidence: "MocService.getMoc method with userId parameter and authorization check"
+    evidence_type: "file"
+
+  - ac_id: "AC-22"
+    planned_evidence: "MocRepository.getMocById interface method in ports/index.ts"
+    evidence_type: "file"
+
+  - ac_id: "AC-23"
+    planned_evidence: "localStorage schema with version field in DASHBOARD_CARD_ORDER_STORAGE_KEY"
+    evidence_type: "file"
+
+  - ac_id: "AC-24"
+    planned_evidence: "Fallback to DEFAULT_CARD_ORDER on localStorage errors in useEffect"
+    evidence_type: "file"
+
+  - ac_id: "AC-25"
+    planned_evidence: "Error handling for missing files with empty state UI in dashboard cards"
+    evidence_type: "file"
+
+  - ac_id: "AC-26"
+    planned_evidence: "Visual feedback classes during drag (opacity-50, ring-2) in MocDetailDashboard"
+    evidence_type: "file"
+
+  - ac_id: "AC-27"
+    planned_evidence: "Performance metrics collection in MocDetailPage (DOM ready, data loaded)"
+    evidence_type: "file"
+
+  - ac_id: "AC-28"
+    planned_evidence: "Empty state components rendered when card content arrays are empty"
+    evidence_type: "file"
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Use existing native HTML5 drag-drop or migrate to @dnd-kit?"
+    decision: "Keep native HTML5 drag-drop"
+    rationale: "MocDetailDashboard already has complete native implementation with accessibility support. No need to introduce new dependency."
+    decided_by: "agent"
+
+  - id: ARCH-002
+    question: "Where to implement authorization check - routes or service?"
+    decision: "Service layer (MocService.getMoc)"
+    rationale: "Authorization is business logic and belongs in service layer. Routes should be thin HTTP adapters."
+    decided_by: "agent"
+
+  - id: ARCH-003
+    question: "Return 403 or 404 for unauthorized MOC access?"
+    decision: "404"
+    rationale: "Security best practice - avoid information disclosure about resource existence to unauthorized users"
+    decided_by: "agent"
+
+  - id: ARCH-004
+    question: "localStorage schema - simple array or versioned object?"
+    decision: "Versioned object { version: 1, cardOrder: string[] }"
+    rationale: "Enables future migrations without breaking existing user data. Version field allows detecting old formats."
+    decided_by: "agent"
+
+complexity: moderate
+
+notes:
+  - "MocDetailDashboard is 90% complete - focus on integration with API and error handling"
+  - "Backend service layer follows existing patterns from wishlist domain"
+  - "RTK Query hook follows patterns from wishlist-gallery-api.ts"
+  - "E2E tests should cover drag-drop interactions and responsive layout breakpoints"
+  - "Authorization check prevents information disclosure by returning 404 for unauthorized access"
+  - "localStorage implementation already exists but may need version migration logic"
+  - "File metadata includes downloadUrl which will be used in future file download story (INST-1107)"

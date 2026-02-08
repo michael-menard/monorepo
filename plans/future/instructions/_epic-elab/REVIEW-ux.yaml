@@ -1,0 +1,81 @@
+perspective: ux
+verdict: CONCERNS
+
+core_flow:
+  complete: false
+  usable: true
+
+mvp_blockers:
+  - id: UX-001
+    issue: Edit form validation (INST-1010) required for users to submit edits
+    stories: [INST-1010]
+    action: Story must include form validation UX, error messages, and submit button state management
+
+  - id: UX-002
+    issue: File management UI (INST-1011) required for users to add/remove files
+    stories: [INST-1011]
+    action: Story must clarify file picker UX, file list display, remove confirmation flow
+
+  - id: UX-003
+    issue: Unsaved changes guard (INST-1013) required to prevent data loss on navigation
+    stories: [INST-1013]
+    action: Story must define modal UX, button labels, and navigation handling
+
+missing_mvp_stories:
+  - title: Upload progress indication during save
+    gap: Core flow step (uploading new files) lacks progress UX
+    severity: HIGH
+
+core_flow_coverage:
+  step_1_navigate_to_edit: "INST-1009 (edit page entry and data fetching)"
+  step_2_display_form: "INST-1010 (form and validation)"
+  step_3_modify_files: "INST-1011 (file add/remove UI)"
+  step_4_update_metadata: "INST-1010 (form fields)"
+  step_5_save_changes: "INST-1012 (save flow)"
+  step_6_upload_files: "INST-1012 (presigned URL flow)"
+  step_7_success_confirmation: "INST-1012 (navigation to detail page)"
+
+future:
+  ux_polish:
+    - story: INST-1015
+      suggestion: Add inline edit mode alternative to modal/page (post-MVP)
+      impact: medium
+    - story: INST-1011
+      suggestion: Drag-to-reorder files for organization (post-MVP)
+      impact: low
+
+  accessibility_improvements:
+    - story: INST-1009
+      suggestion: Ensure edit page accessible via keyboard navigation
+    - story: INST-1010
+      suggestion: Form fields properly labeled with aria-labels
+    - story: INST-1015
+      suggestion: Focus management when modal opens/closes
+
+  suggested_stories:
+    - title: Bulk edit interface
+      gap: Users cannot edit multiple MOCs metadata at once
+      priority: P2
+    - title: Edit undo/redo
+      gap: Users cannot recover from form field mistakes
+      priority: P2
+
+  recommendations:
+    - Create wireframes for edit page layout showing form fields, file list, and action buttons
+    - Define success/error states for file upload progress
+    - Specify focus management and keyboard navigation flow
+    - Add ARIA labels and semantic HTML requirements to acceptance criteria
+
+design_system_alignment:
+  uses_existing_components: Button, Form, Modal, Card from @repo/app-component-library
+  new_components_needed:
+    - FileUploadInput (drag-drop and file picker)
+    - FileListItem (display existing files with remove action)
+    - UploadProgressBar (shows upload progress during save)
+  theme_adherence: Sky/Teal palette expected, consistent with dashboard and gallery apps
+
+interaction_design:
+  form_submission: INST-1010 (clear disabled state while uploading)
+  error_feedback: INST-1012 (show which files failed, retry options)
+  unsaved_changes: INST-1013 (confirm before leaving)
+  session_recovery: INST-1014 (restore form state after crash)

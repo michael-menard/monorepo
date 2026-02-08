@@ -1,0 +1,118 @@
+schema: 1
+story_id: INST-1008
+timestamp: '2026-02-05T00:00:00Z'
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - 'packages/core/api-client/src/rtk/**'
+  - 'packages/core/api-client/src/schemas/**'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Add RTK Query mutation endpoints for MOC Instructions API with Zod validation and cache invalidation
+
+files_to_create:
+  - packages/core/api-client/src/schemas/instructions.ts
+
+files_to_modify:
+  - packages/core/api-client/src/rtk/instructions-api.ts
+  - packages/core/api-client/src/schemas/index.ts
+
+tests_to_create:
+  - packages/core/api-client/src/rtk/__tests__/instructions-api.test.ts
+  - packages/core/api-client/src/schemas/__tests__/instructions.test.ts
+
+key_patterns:
+  - RTK Query mutation hooks with optimistic updates (from wishlist-gallery-api.ts)
+  - Zod schema validation for request/response bodies
+  - Cache invalidation tags for related queries
+  - Error handling with rollback on failure
+  - Logging via @repo/logger
+  - Named exports for mutation hooks
+
+mutation_endpoints:
+  - name: useCreateMocMutation
+    method: POST
+    url: /api/v2/mocs
+    body: CreateMocInput
+    returns: MocInstructions
+    tags: ['MocList']
+    optimistic: true
+
+  - name: useUpdateMocMutation
+    method: PATCH
+    url: /api/v2/mocs/{id}
+    body: UpdateMocInput
+    returns: MocInstructions
+    tags: ['Moc', 'MocList']
+    optimistic: false
+
+  - name: useDeleteMocMutation
+    method: DELETE
+    url: /api/v2/mocs/{id}
+    returns: void
+    tags: ['Moc', 'MocList']
+    optimistic: false
+
+  - name: useUploadInstructionFileMutation
+    method: POST
+    url: /api/v2/mocs/{mocId}/files/instruction
+    body: FormData
+    returns: MocFile
+    tags: ['Moc', 'MocFile']
+    optimistic: false
+
+  - name: useUploadPartsListFileMutation
+    method: POST
+    url: /api/v2/mocs/{mocId}/files/parts-list
+    body: FormData
+    returns: MocFile
+    tags: ['Moc', 'MocFile']
+    optimistic: false
+
+  - name: useUploadThumbnailMutation
+    method: POST
+    url: /api/v2/mocs/{mocId}/thumbnail
+    body: FormData
+    returns: MocInstructions
+    tags: ['Moc']
+    optimistic: false
+
+  - name: useDeleteFileMutation
+    method: DELETE
+    url: /api/v2/mocs/{mocId}/files/{fileId}
+    returns: void
+    tags: ['Moc', 'MocFile']
+    optimistic: false
+
+dependencies:
+  - @reduxjs/toolkit/query/react
+  - zod
+  - @repo/logger
+  - existing: CreateMocInputSchema, UpdateMocInputSchema from backend types
+  - existing: MocInstructions, MocFile from backend types
+
+blocked_by: []
+blocks:
+  - INST-1100
+  - INST-1102
+  - INST-1103
+  - INST-1104
+  - INST-1106
+  - INST-1108
+  - INST-1109
+  - INST-1110

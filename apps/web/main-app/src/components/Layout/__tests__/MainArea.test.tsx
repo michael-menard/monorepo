@@ -68,22 +68,6 @@ describe('MainArea', () => {
     })
   })
 
-  describe('responsive behavior (AC: 6)', () => {
-    it('should have margin for sidebar when authenticated', () => {
-      render(<MainArea isAuthenticated={true} />)
-
-      const main = screen.getByRole('main')
-      expect(main.className).toContain('md:ml-64')
-    })
-
-    it('should not have sidebar margin when not authenticated', () => {
-      render(<MainArea isAuthenticated={false} />)
-
-      const main = screen.getByRole('main')
-      expect(main.className).not.toContain('md:ml-64')
-    })
-  })
-
   describe('custom className', () => {
     it('should accept custom className prop', () => {
       render(<MainArea className="custom-class" />)

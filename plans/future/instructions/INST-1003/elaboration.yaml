@@ -1,0 +1,47 @@
+---
+verdict: PASS
+elaboration_date: 2026-02-05
+story_id: INST-1003
+title: Extract Upload Types Package
+summary: >
+  Retrospective documentation story for @repo/upload-types package. Implementation
+  was completed on December 26, 2024. All 11 acceptance criteria verified complete.
+  Package fully functional with 175+ passing unit tests. No elaboration gaps or
+  user decisions needed.
+
+gaps_identified: []
+
+enhancement_opportunities: []
+
+follow_up_stories:
+  - INST-1003b: Remove deprecated wrapper files from main-app and app-instructions-gallery
+  - INST-1003c: Add API-side validation using @repo/upload-types schemas
+  - INST-1003d: Generate TypeDoc documentation for the package
+
+out_of_scope: []
+
+design_decisions:
+  - Separate package enables versioning and explicit dependencies vs shared types folder
+  - Zod schemas provide runtime validation and self-documenting constraints
+  - Deprecated wrappers allow incremental migration without breaking changes
+  - Comprehensive test coverage ensures schema changes don't break consumers
+
+verification_status: VERIFIED
+all_acceptance_criteria_met: true
+quality_gates_passed:
+  - Package structure follows established template
+  - All schemas use Zod with type inference
+  - Comprehensive unit test coverage (175+ tests)
+  - TypeScript compilation passes
+  - Consuming apps integrate successfully
+  - No lint or type errors
+  - Build produces clean dist/ output
+  - Backward compatibility maintained via deprecated wrappers
+
+proceed_to_implementation: true
+notes: |
+  This is a retrospective documentation story. The @repo/upload-types package was
+  implemented on December 26, 2024, as part of sprint work on upload functionality.
+  The implementation preceded formal story creation. All acceptance criteria have
+  been verified against the actual codebase. Story is ready to move to ready-to-work
+  and serve as documentation for the completed work.

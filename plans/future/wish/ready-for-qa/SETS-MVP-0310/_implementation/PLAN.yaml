@@ -1,0 +1,294 @@
+schema: 1
+story_id: "SETS-MVP-0310"
+timestamp: "2026-02-01T20:30:00-07:00"
+
+steps:
+  - id: 1
+    description: "Create Zod schemas for purchase details input (PurchaseDetailsInputSchema)"
+    files:
+      - "packages/core/api-client/src/schemas/wishlist.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create PurchaseDetailsStep component for modal"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/index.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/__types__/index.ts"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 3
+    description: "Extend GotItModal with purchase details step"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 4
+    description: "Add PATCH /wishlist/:id/purchase endpoint to routes"
+    files:
+      - "apps/api/lego-api/domains/wishlist/routes.ts"
+      - "apps/api/lego-api/domains/wishlist/types.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 5
+    description: "Implement updateItemStatus service method (replacing markAsPurchased logic)"
+    files:
+      - "apps/api/lego-api/domains/wishlist/application/services.ts"
+    dependencies: [4]
+    slice: backend
+
+  - id: 6
+    description: "Add RTK Query mutation for PATCH endpoint"
+    files:
+      - "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 7
+    description: "Update GotItModal to use new PATCH endpoint"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    dependencies: [3, 6]
+    slice: frontend
+
+  - id: 8
+    description: "Write unit tests for PurchaseDetailsStep component"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/__tests__/PurchaseDetailsStep.test.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 9
+    description: "Write unit tests for Zod schemas"
+    files:
+      - "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 10
+    description: "Write integration tests for PATCH endpoint service layer"
+    files:
+      - "apps/api/lego-api/domains/wishlist/__tests__/purchase-status.test.ts"
+    dependencies: [5]
+    slice: backend
+
+  - id: 11
+    description: "Add deprecation warning to legacy POST :id/purchased endpoint"
+    files:
+      - "apps/api/lego-api/domains/wishlist/routes.ts"
+    dependencies: [4]
+    slice: backend
+
+  - id: 12
+    description: "Document API migration in changelog"
+    files:
+      - "docs/api/CHANGELOG.md"
+    dependencies: [4, 11]
+    slice: shared
+
+  - id: 13
+    description: "Write E2E test for happy path purchase flow"
+    files:
+      - "apps/web/playwright/tests/wishlist/purchase-flow.spec.ts"
+    dependencies: [7]
+    slice: frontend
+
+files_to_change:
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    action: modify
+    reason: "Add PurchaseDetailsInputSchema for new purchase flow"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/index.tsx"
+    action: create
+    reason: "New step component for purchase details form (AC2, AC3)"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for PurchaseDetailsStep props"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/__tests__/PurchaseDetailsStep.test.tsx"
+    action: create
+    reason: "Unit tests for PurchaseDetailsStep (AC3-AC6)"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    action: modify
+    reason: "Extend modal with purchase details step and new endpoint (AC1-AC6)"
+
+  - path: "apps/api/lego-api/domains/wishlist/routes.ts"
+    action: modify
+    reason: "Add PATCH /wishlist/:id/purchase endpoint (AC7)"
+
+  - path: "apps/api/lego-api/domains/wishlist/types.ts"
+    action: modify
+    reason: "Add PurchaseDetailsInput type schema"
+
+  - path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+    action: modify
+    reason: "Add updateItemStatus service method for status transition (AC8-AC10)"
+
+  - path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    action: modify
+    reason: "Add RTK Query mutation for PATCH endpoint"
+
+  - path: "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+    action: modify
+    reason: "Add tests for PurchaseDetailsInputSchema"
+
+  - path: "apps/api/lego-api/domains/wishlist/__tests__/purchase-status.test.ts"
+    action: create
+    reason: "Integration tests for status update service method (AC8-AC10)"
+
+  - path: "apps/web/playwright/tests/wishlist/purchase-flow.spec.ts"
+    action: create
+    reason: "E2E test for happy path and skip path (ADR-006 requirement)"
+
+  - path: "docs/api/CHANGELOG.md"
+    action: modify
+    reason: "Document deprecation of POST :id/purchased and migration path to PATCH :id/purchase"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after schema changes"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery"
+    when: "after frontend changes"
+    required: true
+
+  - command: "pnpm test --filter @lego-api/lego-api"
+    when: "after backend changes"
+    required: true
+
+  - command: "pnpm playwright test tests/wishlist/purchase-flow.spec.ts --config=playwright.legacy.config.ts"
+    when: "after all changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Existing GotItModal opens confirmation step - verify no regression"
+    evidence_type: test
+
+  - ac_id: "AC2"
+    planned_evidence: "Unit test: PurchaseDetailsStep renders after confirmation"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "Unit test: PurchaseDetailsStep includes all required fields (date, price, tax, shipping, buildStatus)"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Unit test: Skip button saves with minimal data (status='owned', buildStatus='in_pieces', purchaseDate=today)"
+    evidence_type: test
+
+  - ac_id: "AC5"
+    planned_evidence: "Unit test: Save button validates and saves all entered data"
+    evidence_type: test
+
+  - ac_id: "AC6"
+    planned_evidence: "Unit test: Form shows calculated total (price + tax + shipping)"
+    evidence_type: test
+
+  - ac_id: "AC7"
+    planned_evidence: "Backend file: routes.ts has PATCH /wishlist/:id/purchase endpoint"
+    evidence_type: file
+
+  - ac_id: "AC8"
+    planned_evidence: "Integration test: Endpoint updates status='owned', statusChangedAt=now(), plus purchase fields"
+    evidence_type: test
+
+  - ac_id: "AC9"
+    planned_evidence: "Integration test: Endpoint validates ownership (existing auth middleware)"
+    evidence_type: test
+
+  - ac_id: "AC10"
+    planned_evidence: "Integration test: Returns updated item with new status"
+    evidence_type: test
+
+  - ac_id: "AC11"
+    planned_evidence: "RESOLVED (ARCH-001): Endpoint is /purchase (purchase-specific)"
+    evidence_type: file
+
+  - ac_id: "AC12"
+    planned_evidence: "RESOLVED (ARCH-002): New service method updateItemStatus(), markAsPurchased() deprecated with @deprecated JSDoc"
+    evidence_type: file
+
+  - ac_id: "AC13"
+    planned_evidence: "RESOLVED (ARCH-003): 2-week deprecation period for POST :id/purchased with migration guide in documentation"
+    evidence_type: manual
+
+  - ac_id: "AC14"
+    planned_evidence: "Manual verification: SETS-MVP-001 schema fields exist (status, purchaseDate, buildStatus, etc.)"
+    evidence_type: manual
+
+  - ac_id: "AC15"
+    planned_evidence: "RESOLVED (ARCH-003): GotItModal will migrate to PATCH :id/purchase in this story. Legacy POST :id/purchased remains active for 2 weeks for other consumers."
+    evidence_type: file
+
+  - ac_id: "AC16"
+    planned_evidence: "Manual verification: Schema supports status='owned' enum and unified model state machine"
+    evidence_type: manual
+
+  - ac_id: "AC17"
+    planned_evidence: "Unit test: Total calculation logic and UI feedback for edge cases (tax/shipping without price)"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Endpoint naming: Should this be /purchase (purchase-specific) or /status (generic status transition)?"
+    decision: "/purchase (purchase-specific endpoint)"
+    rationale: "Clear intent for purchase flow. While less generic, it provides better API discoverability and matches the specific use case. Future status transitions can use separate endpoints if needed."
+    decided_by: user
+
+  - id: ARCH-002
+    question: "Service method approach: Replace existing markAsPurchased() or run parallel with feature flag?"
+    decision: "New method + deprecate (create updateItemStatus(), deprecate markAsPurchased() gradually)"
+    rationale: "Allows gradual migration without breaking existing consumers. New method updateItemStatus() uses unified model status update pattern. Legacy markAsPurchased() remains for backward compatibility during deprecation period."
+    decided_by: user
+
+  - id: ARCH-003
+    question: "WISH-2004 migration strategy: Deprecate POST :id/purchased? Timeline? Backward compatibility?"
+    decision: "2-week deprecation (grace period for consumers to migrate)"
+    rationale: "Provides reasonable time for consumers to migrate from POST :id/purchased to PATCH :id/purchase. Will add deprecation warnings in response headers and update documentation with migration guide."
+    decided_by: user
+
+complexity: moderate
+
+notes:
+  - "SETS-MVP-001 dependency verified - schema fields exist in UAT phase"
+  - "Per ADR-001, frontend paths use /api/v2/wishlist/:id/purchase, backend uses /wishlist/:id/purchase"
+  - "Per ADR-006, E2E test required using playwright.legacy.config.ts (live API mode)"
+  - "ARCH-001 RESOLVED: Endpoint will be PATCH /wishlist/:id/purchase (purchase-specific)"
+  - "ARCH-002 RESOLVED: New service method updateItemStatus(), deprecate markAsPurchased() with @deprecated JSDoc"
+  - "ARCH-003 RESOLVED: 2-week deprecation period for POST :id/purchased with migration guide"
+  - "Implementation plan: Keep legacy markAsPurchased() for backward compatibility, add updateItemStatus() for new flow"
+  - "GotItModal will migrate to PATCH :id/purchase in this story"
+  - "Legacy POST :id/purchased endpoint remains active during 2-week deprecation period"
+  - "Add deprecation warning to POST :id/purchased response headers (Deprecated: Use PATCH :id/purchase)"
+  - "Build status enum uses snake_case ('in_pieces' | 'built') but UI displays proper case"
+  - "Purchase price fields use text type for decimal precision (per SETS-MVP-001 schema)"
+  - "Auth middleware already validates ownership via userId - reuse for new endpoint"
+  - "Service layer: updateItemStatus() contains unified model business logic (status update + purchase fields)"
+  - "AC14, AC16, AC17 require manual verification or testing before implementation"
+
+warnings:
+  - "ARCHITECTURAL DECISIONS RESOLVED: ARCH-001, ARCH-002, ARCH-003 have been decided - ready for implementation"
+  - "AC14 requires manual verification that SETS-MVP-001 schema fields exist (status, purchaseDate, buildStatus, etc.) - dependency in UAT phase"
+  - "AC16 requires manual verification of schema state machine support - verify with SETS-MVP-001 implementation"
+  - "Story has CONDITIONAL_PASS from QA elaboration - 7 ACs added for critical findings (now addressed)"
+  - "Legacy markAsPurchased() service method will remain for 2-week deprecation period alongside new updateItemStatus()"
+  - "POST :id/purchased endpoint will be deprecated with warning headers - document migration path in API changelog"

@@ -59,10 +59,12 @@ vi.mock('@/services/auth/AuthProvider', () => ({
 
 // Mock NavigationProvider
 const mockTrackNavigation = vi.fn()
+const mockNavigationContext = {
+  trackNavigation: mockTrackNavigation,
+}
 vi.mock('@/components/Navigation/NavigationProvider', () => ({
-  useNavigation: () => ({
-    trackNavigation: mockTrackNavigation,
-  }),
+  useNavigation: () => mockNavigationContext,
+  useNavigationOptional: () => mockNavigationContext,
 }))
 
 // Mock AuthLayout

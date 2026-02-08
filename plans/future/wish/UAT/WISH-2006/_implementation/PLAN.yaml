@@ -1,0 +1,105 @@
+schema: 2
+story_id: WISH-2006
+timestamp: '2026-02-03T23:30:00Z'
+
+status: planning_complete
+blocked: false
+
+implementation_approach: |
+  The accessibility hooks (useAnnouncer, useKeyboardShortcuts, useRovingTabIndex) ALREADY EXIST
+  and have passed code review with 82 unit tests. However, they are NOT integrated into the
+  main wishlist gallery UI.
+
+  The main gaps are:
+  1. Integration of hooks into main-page.tsx and DraggableWishlistGallery
+  2. E2E tests for keyboard navigation (arrow keys, shortcuts, screen reader announcements)
+  3. E2E tests for roving tabindex pattern
+  4. axe-core accessibility scan integration in E2E tests
+
+  This story requires BOTH implementation (wiring up hooks) AND comprehensive E2E testing.
+
+phases:
+  - id: 1
+    name: Integration
+    description: Wire up accessibility hooks to main gallery UI
+    tasks:
+      - Wire useAnnouncer into main-page.tsx for filter/sort announcements
+      - Wire useKeyboardShortcuts into DraggableWishlistGallery for A/G/Delete/Enter keys
+      - Wire useRovingTabIndex into gallery for arrow key navigation
+      - Add Announcer component to render tree
+      - Test integration manually
+
+  - id: 2
+    name: E2E Keyboard Navigation Tests
+    description: Create comprehensive Playwright tests for keyboard navigation
+    tasks:
+      - Create keyboard-navigation.spec.ts in apps/web/playwright/tests/wishlist/
+      - Test arrow key navigation in 2D grid (Up/Down/Left/Right)
+      - Test Home/End keys for first/last item
+      - Test roving tabindex pattern (only one item with tabindex=0)
+      - Test visible focus ring on keyboard navigation
+      - Test keyboard navigation with different column counts (responsive)
+
+  - id: 3
+    name: E2E Keyboard Shortcuts Tests
+    description: Test all keyboard shortcuts (A, G, Delete, Enter, Escape)
+    tasks:
+      - Test A key opens Add Item modal
+      - Test G key opens Got It modal for focused item
+      - Test Delete key opens delete confirmation for focused item
+      - Test Enter key on focused item (detail view or action)
+      - Test Escape key closes modals
+      - Test shortcuts ignored when focus is in input fields
+
+  - id: 4
+    name: E2E Screen Reader Announcements
+    description: Test aria-live announcements for state changes
+    tasks:
+      - Test item focus announces correct ARIA label
+      - Test priority change announces update
+      - Test item deleted announces next item
+      - Test item added announces success
+      - Test filter/sort change announces results
+      - Verify aria-live region exists with correct attributes
+
+  - id: 5
+    name: E2E Accessibility Scan
+    description: Integrate axe-core for automated WCAG AA compliance
+    tasks:
+      - Add axe-core to Playwright tests
+      - Run axe scan on wishlist gallery page
+      - Verify zero violations for WCAG AA
+      - Test focus ring contrast meets 4.5:1 ratio
+      - Document any acceptable violations (if any)
+
+verification:
+  type_check: true
+  lint: true
+  unit_tests: true
+  e2e_tests: true
+  manual_testing: false
+
+success_criteria:
+  - All acceptance criteria from WISH-2006.md verified in E2E tests
+  - Keyboard navigation works in 2D grid with arrow keys
+  - All keyboard shortcuts functional (A, G, Delete, Enter, Escape)
+  - Screen reader announcements trigger for all state changes
+  - axe-core scan passes with zero WCAG AA violations
+  - Focus ring visible and meets contrast requirements
+  - Existing unit tests continue to pass
+
+risks:
+  - Integration may reveal issues with existing component structure
+  - Responsive grid column detection may be complex in E2E tests
+  - aria-live announcements are async and may be flaky in tests
+  - axe-core may report false positives that need investigation
+
+dependencies:
+  - Existing hooks must remain unchanged (already code reviewed)
+  - main-page.tsx and DraggableWishlistGallery components
+  - Playwright test infrastructure in apps/web/playwright/
+
+estimated_effort:
+  integration: 2-3 hours
+  e2e_tests: 4-6 hours
+  total: 6-9 hours

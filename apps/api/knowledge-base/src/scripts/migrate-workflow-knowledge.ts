@@ -348,7 +348,10 @@ async function runMigration(options: MigrationOptions): Promise<MigrationReport>
       })
 
       if (options.verbose) {
-        log(`    ${newEntries.length} new, ${kbEntries.length - newEntries.length} duplicates`, 'dim')
+        log(
+          `    ${newEntries.length} new, ${kbEntries.length - newEntries.length} duplicates`,
+          'dim',
+        )
       }
 
       // Import if not dry-run
@@ -418,9 +421,18 @@ function printSummary(report: MigrationReport): void {
   log(`Files processed:      ${report.files_processed}`)
   log('')
   log(`Total entries found:  ${report.total_entries_found}`)
-  log(`Entries imported:     ${report.total_entries_imported}`, report.total_entries_imported > 0 ? 'green' : 'reset')
-  log(`Entries skipped:      ${report.total_entries_skipped}`, report.total_entries_skipped > 0 ? 'yellow' : 'reset')
-  log(`Entries failed:       ${report.total_entries_failed}`, report.total_entries_failed > 0 ? 'red' : 'reset')
+  log(
+    `Entries imported:     ${report.total_entries_imported}`,
+    report.total_entries_imported > 0 ? 'green' : 'reset',
+  )
+  log(
+    `Entries skipped:      ${report.total_entries_skipped}`,
+    report.total_entries_skipped > 0 ? 'yellow' : 'reset',
+  )
+  log(
+    `Entries failed:       ${report.total_entries_failed}`,
+    report.total_entries_failed > 0 ? 'red' : 'reset',
+  )
   log('')
 
   if (report.kb_count_before !== undefined && report.kb_count_after !== undefined) {

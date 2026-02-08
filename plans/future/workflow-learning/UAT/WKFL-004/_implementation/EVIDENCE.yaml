@@ -1,0 +1,212 @@
+schema: 1
+story_id: WKFL-004
+timestamp: 2026-02-07T14:55:00Z
+
+evidence:
+  - ac_id: AC-1
+    description: "/feedback SEC-042 --false-positive 'reason' captures to KB"
+    status: satisfied
+    verification_method: automated_test
+    evidence_location:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+        test: "should validate complete false_positive feedback entry (AC-1)"
+        line: 113
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should validate false_positive feedback"
+        line: 18
+    implementation:
+      - file: apps/api/knowledge-base/src/__types__/index.ts
+        description: "FeedbackContentSchema with false_positive enum value"
+        lines: "61-66"
+      - file: .claude/commands/feedback.md
+        description: "Command documentation and implementation logic for --false-positive flag"
+        lines: "1-270"
+    notes: |
+      FeedbackContentSchema validates false_positive feedback type.
+      Command file includes argument parsing, VERIFICATION.yaml resolution, and KB integration.
+      Integration test verifies complete kb_add payload with false_positive content.
+
+  - ac_id: AC-2
+    description: "/feedback ARCH-015 --helpful 'note' captures to KB"
+    status: satisfied
+    verification_method: automated_test
+    evidence_location:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+        test: "should validate complete helpful feedback entry (AC-2)"
+        line: 158
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should validate helpful feedback"
+        line: 36
+    implementation:
+      - file: apps/api/knowledge-base/src/__types__/index.ts
+        description: "FeedbackContentSchema with helpful enum value"
+        lines: "61-66"
+      - file: .claude/commands/feedback.md
+        description: "Command documentation and implementation logic for --helpful flag"
+        lines: "1-270"
+    notes: |
+      Helpful feedback type is one of four supported types.
+      Test validates end-to-end flow: schema → serialization → kb_add payload.
+
+  - ac_id: AC-3
+    description: "Feedback linked to agent, story, and finding"
+    status: satisfied
+    verification_method: automated_test
+    evidence_location:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+        test: "should preserve all linkage fields through serialization"
+        line: 81
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should fail when finding_id is missing"
+        line: 98
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should fail when agent_id is missing"
+        line: 116
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should fail when story_id is missing"
+        line: 125
+    implementation:
+      - file: apps/api/knowledge-base/src/__types__/index.ts
+        description: "FeedbackContentSchema requires finding_id, agent_id, story_id with min(1) validation"
+        lines: "85-92"
+      - file: .claude/commands/feedback.md
+        description: "Command extracts agent_id from VERIFICATION.yaml section, story_id from context"
+        lines: "130-180"
+    notes: |
+      FeedbackContentSchema enforces all three linkage fields as required:
+      - finding_id: min(1) validation
+      - agent_id: min(1) validation
+      - story_id: min(1) validation
+      
+      Command implementation shows how agent_id is derived from VERIFICATION.yaml section path.
+
+  - ac_id: AC-4
+    description: "Queryable via kb_search with feedback tags"
+    status: satisfied
+    verification_method: automated_test
+    evidence_location:
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+        test: "should support tags for filtering false_positive feedback"
+        line: 100
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+        test: "should support all feedback type tags (AC-5)"
+        line: 116
+    implementation:
+      - file: .claude/commands/feedback.md
+        description: "Tag generation pattern: ['feedback', 'agent:{name}', 'story:{id}', 'type:{type}', 'date:{YYYY-MM}']"
+        lines: "105-120"
+      - file: .claude/commands/feedback.md
+        description: "kb_search examples with tag filtering"
+        lines: "280-310"
+    notes: |
+      KbAddInputSchema accepts tags array. Command documentation shows:
+      - Tag pattern for feedback entries
+      - Example kb_search queries with tag filters
+      - Multiple tag combinations for precise filtering
+
+  - ac_id: AC-5
+    description: "Multiple feedback types supported"
+    status: satisfied
+    verification_method: automated_test
+    evidence_location:
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should accept all valid feedback types"
+        line: 267
+      - file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+        test: "should validate complete severity_wrong feedback entry with suggested_severity (AC-5)"
+        line: 172
+      - file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+        test: "should fail when severity_wrong feedback lacks suggested_severity"
+        line: 202
+    implementation:
+      - file: apps/api/knowledge-base/src/__types__/index.ts
+        description: "FeedbackTypeSchema enum with 4 types: false_positive, helpful, missing, severity_wrong"
+        lines: "61-66"
+      - file: apps/api/knowledge-base/src/__types__/index.ts
+        description: "Zod refine() validates severity_wrong requires suggested_severity"
+        lines: "109-121"
+      - file: .claude/commands/feedback.md
+        description: "Command examples for all 4 feedback types"
+        lines: "10-30"
+    notes: |
+      All four feedback types are supported and tested:
+      1. false_positive - finding was incorrect
+      2. helpful - finding was accurate and valuable
+      3. missing - finding should have caught more
+      4. severity_wrong - finding severity was incorrect (requires suggested_severity)
+      
+      Conditional validation enforced via Zod refine() for severity_wrong case.
+
+test_coverage:
+  unit_tests:
+    total: 27
+    passed: 27
+    failed: 0
+    file: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+    duration_ms: 5
+
+  integration_tests:
+    total: 11
+    passed: 11
+    failed: 0
+    file: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+    duration_ms: 4
+
+  type_checks:
+    status: pass
+    command: pnpm --filter knowledge-base check-types
+
+  lint_checks:
+    status: pass
+    notes: New files pass linting. Pre-existing errors in unrelated files not blocking.
+
+files_changed:
+  - path: apps/api/knowledge-base/src/__types__/index.ts
+    action: modify
+    lines_added: 80
+    description: Added feedback to KnowledgeEntryTypeSchema enum, created FeedbackContentSchema, FeedbackTypeSchema, FindingSeveritySchema
+
+  - path: .claude/commands/feedback.md
+    action: create
+    lines_added: 270
+    description: Command file with CLI interface, VERIFICATION.yaml parsing, KB integration
+
+  - path: apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts
+    action: create
+    lines_added: 430
+    description: Comprehensive unit tests for FeedbackContentSchema validation
+
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts
+    action: create
+    lines_added: 270
+    description: Integration tests for schema serialization and kb_add payload validation
+
+  - path: apps/api/knowledge-base/src/mcp-server/__tests__/fixtures/verification-sample.yaml
+    action: create
+    lines_added: 50
+    description: Test fixture with sample VERIFICATION.yaml structure
+
+total_lines_added: 1100
+
+architectural_decisions:
+  - id: ARCH-WKFL-004-001
+    question: "Should /feedback command be in .claude/commands/ or separate script?"
+    decision: "Place in .claude/commands/ following established pattern"
+    rationale: "Consistency with other commands like /story-status"
+    status: accepted
+
+  - id: ARCH-WKFL-004-002
+    question: "Should FeedbackContentSchema be separate file or in __types__/index.ts?"
+    decision: "Add to __types__/index.ts with other schemas"
+    rationale: "Follows monorepo convention for KB schemas"
+    status: accepted
+
+  - id: ARCH-WKFL-004-003
+    question: "Should feedback entries use 'type' or 'entry_type' field?"
+    decision: "Use 'entry_type' (matches DB column name)"
+    rationale: "DB schema uses entry_type column, not type"
+    status: accepted
+
+completion_status: complete
+all_acs_satisfied: true
+blocker_count: 0

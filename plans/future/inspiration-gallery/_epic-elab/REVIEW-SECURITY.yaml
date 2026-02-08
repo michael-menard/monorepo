@@ -1,0 +1,126 @@
+perspective: security
+verdict: READY
+timestamp: "2026-02-04T23:28:30Z"
+
+security_posture:
+  overall_risk: MEDIUM
+  primary_concerns:
+    - "S3 access control and image visibility"
+    - "Album ownership and permission boundaries"
+    - "Delete cascade safety with multi-album items"
+
+authentication_authorization:
+  session_based_navigation: "Session state does not alter permissions - OK"
+
+  required_checks:
+    - "User owns album before viewing/editing"
+    - "User owns inspiration before editing/deleting"
+    - "Multi-album memberships respect all owner checks"
+
+  concerns:
+    - "INSP-013 (breadcrumbs) must not allow traversal of other users' albums"
+    - "INSP-015 (delete) must verify ownership before cascade"
+
+data_protection:
+  s3_security:
+    - "Bucket: private (block all public access)"
+    - "Encryption: AES-256 at rest, TLS in transit"
+    - "Signing: Presigned URLs with 15-min expiry for images"
+    - "Cleanup: S3 lifecycle rules for orphaned images"
+
+  database_security:
+    - "All queries parameterized (prevent SQL injection)"
+    - "Row-level security: users see only own inspirations/albums"
+    - "Audit logging for album parent modifications"
+
+image_handling:
+  file_validation:
+    - "Frontend: MIME type check (jpg, png, gif, webp, heic, heif)"
+    - "Backend: File magic bytes verification"
+    - "Size limits: 50MB per image, 500MB per upload session"
+
+  malware_protection:
+    - "Scan uploads with ClamAV (optional, Phase 3)"
+    - "Monitor for suspicious patterns in metadata"
+
+  privacy:
+    - "Preserve image EXIF data stripping (remove location/camera data)"
+    - "Store only filename and upload timestamp in DB"
+
+api_security:
+  rate_limiting:
+    - "Upload: 10 files/minute per user"
+    - "DELETE album: 5/minute per user"
+    - "GET album: 100/minute per user"
+
+  input_validation:
+    - "Album name: alphanumeric, spaces, hyphens only, max 100 chars"
+    - "Album description: plain text, max 500 chars, no HTML"
+    - "Tags: alphanumeric, hyphens, max 50 per inspiration"
+
+deletion_safety:
+  cascade_strategy:
+    - "Album delete: soft reference deletion (inspiration stays if in other albums)"
+    - "Inspiration delete: hard delete, remove from all albums and S3"
+
+  safeguards:
+    - "Require confirmation modal with album count"
+    - "Log all cascade deletions for audit"
+    - "Retry S3 deletion failures (exponential backoff)"
+
+dependency_security:
+  external_apis:
+    - "S3: AWS SigV4 authentication, no static credentials"
+    - "MOC Instructions: validate responses before storing"
+
+  third_party_libraries:
+    - "dnd-kit (drag-and-drop): keep updated"
+    - "Image processing library: audit for vulnerabilities"
+
+testing_requirements:
+  security_testing:
+    - "Verify users cannot access other users' albums (unit test)"
+    - "Test multi-album delete with ownership checks (unit test)"
+    - "Test S3 presigned URL expiry (integration test)"
+    - "Penetration test drag-and-drop for injection (E2E)"
+
+  compliance_testing:
+    - "GDPR: user can delete all data including images"
+    - "CCPA: audit trail of album modifications"
+
+future:
+  advanced_features:
+    - "Album sharing with permission levels (Phase 5)"
+    - "Two-factor authentication for sensitive operations"
+    - "Encryption at rest for sensitive metadata"
+
+  threat_monitoring:
+    - "CloudTrail logging for S3 operations"
+    - "RDS Enhanced Monitoring for database access"
+    - "GuardDuty for threat detection"
+
+security_checklist:
+  insp_003: "API endpoints - implement authorization checks"
+  insp_004: "Upload page - validate file types and sizes"
+  insp_007: "Album schema - ensure RLS policies in place"
+  insp_009: "Album CRUD - verify ownership before operations"
+  insp_010: "Inspiration CRUD - handle S3 cleanup on delete"
+  insp_013: "Breadcrumbs - prevent traversal of other users' albums"
+  insp_015: "Delete flows - cascade safety with ownership verification"
+
+implementation_priorities:
+  critical: ["S3 access control", "authorization checks", "input validation"]
+  high: ["file type validation", "rate limiting", "audit logging"]
+  medium: ["malware scanning", "EXIF stripping", "presigned URL expiry"]
+
+security_notes:
+  risk_mitigation:
+    - "S3 bucket must never be public - use presigned URLs"
+    - "Album ownership checked on every operation"
+    - "Inspiration delete requires S3 cleanup transaction"
+
+  compliance_required:
+    - "GDPR: user data deletion capability"
+    - "CCPA: audit trail of personal data access"
+
+SECURITY REVIEW COMPLETE

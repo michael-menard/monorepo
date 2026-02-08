@@ -64,6 +64,20 @@
       "when": 1769908987153,
       "tag": "0008_numerous_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770272271771,
+      "tag": "0009_silly_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770304601089,
+      "tag": "0010_thankful_marrow",
+      "breakpoints": true
     }
   ]
 }

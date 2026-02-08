@@ -10,6 +10,7 @@ import { getServerlessApiConfig } from '../config/environments'
 import { withRetry, withPriorityRetry, type RetryConfig } from '../retry/retry-logic'
 import { handleServerlessError } from '../retry/error-handling'
 import { performanceMonitor } from '../lib/performance'
+import { getCognitoAuthToken } from '../auth/cognito-integration'
 
 const logger = createLogger('api-client:base-query')
 
@@ -29,6 +30,8 @@ export interface ServerlessBaseQueryOptions {
   enableCsrf?: boolean
   /** Story 3.1.4: Function to retrieve CSRF token (e.g., from meta tag or cookie) */
   getCsrfToken?: () => string | undefined
+  /** Enable JWT Bearer token auth via CognitoTokenManager */
+  enableJwtAuth?: boolean
 }
 
 /**
@@ -50,6 +53,7 @@ export function createServerlessBaseQuery(
     customHeaders = {},
     enableCsrf = false,
     getCsrfToken,
+    enableJwtAuth = false,
   } = options
 
   // Create base query with serverless configuration
@@ -76,7 +80,15 @@ export function createServerlessBaseQuery(
         }
       }
 
-      // Story 3.1.4: Cookie-based auth only; do not inject Authorization headers
+      // JWT Bearer token auth via CognitoTokenManager
+      if (enableJwtAuth) {
+        const token = getCognitoAuthToken()
+        if (token) {
+          headers.set('Authorization', `Bearer ${token}`)
+          logger.debug('JWT Authorization header added to request')
+        }
+      }
+
       return headers
     },
   })

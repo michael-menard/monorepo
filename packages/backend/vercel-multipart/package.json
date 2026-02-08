@@ -24,8 +24,8 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/busboy": "^1.5.4",
+    "@types/node": "^20.19.25",
     "@vercel/node": "^5.1.9",
     "typescript": "^5.8.0",
     "vitest": "^3.2.4"

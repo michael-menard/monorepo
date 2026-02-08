@@ -154,7 +154,7 @@ export function createWishlistApi(config?: WishlistApiConfig) {
       enablePerformanceMonitoring: true,
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
-      requireAuthForEndpoints: ['/api/v2/wishlist'],
+      requireAuthForEndpoints: ['/wishlist'],
       onAuthFailure:
         onAuthFailure ||
         (error => {

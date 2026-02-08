@@ -1,0 +1,143 @@
+schema: 1
+story_id: INST-1101
+timestamp: '2026-02-06T21:00:00Z'
+
+# Knowledge Context for MOC Detail Page Implementation
+# Extracted from codebase analysis and related stories
+
+relevant_patterns:
+  - pattern: "Ports & Adapters Architecture"
+    source: "apps/api/lego-api/domains/*/application/services.ts"
+    example: "apps/api/lego-api/domains/wishlist/application/services.ts"
+    lesson: "All domain services follow ports/adapters pattern with repository interfaces defined in ports/ and implementations in adapters/"
+    applies_to: [backend]
+
+  - pattern: "RTK Query API Integration"
+    source: "packages/core/api-client/src/rtk/"
+    example: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    lesson: "RTK Query hooks are defined in api-client package with Zod schema validation for requests/responses"
+    applies_to: [frontend, packages]
+
+  - pattern: "Drizzle ORM Relations"
+    source: "packages/backend/database-schema/src/schema/index.ts"
+    example: "mocInstructions with relations to mocFiles, mocGalleryImages, mocPartsLists"
+    lesson: "Use Drizzle relations API with db.query for automatic joins instead of manual SQL"
+    applies_to: [backend, database]
+
+  - pattern: "localStorage Persistence"
+    source: "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    example: "Card order persistence with versioning schema"
+    lesson: "Always check typeof window !== 'undefined' and wrap in try-catch for SSR safety and storage quota errors"
+    applies_to: [frontend]
+
+  - pattern: "Drag and Drop with Native HTML5"
+    source: "apps/web/app-instructions-gallery/src/components/MocDetailDashboard/MocDetailDashboard.tsx"
+    example: "Native drag-drop implementation with dragStart, dragEnd, dragOver, drop handlers"
+    lesson: "Native HTML5 drag-drop is already implemented in MocDetailDashboard - do not replace with @dnd-kit unless required"
+    applies_to: [frontend]
+
+  - pattern: "Sticky Sidebar Layout"
+    source: "apps/web/app-instructions-gallery/src/components/MocDetailDashboard/MocDetailDashboard.tsx"
+    example: "Grid layout with xl:sticky xl:top-20 xl:self-start"
+    lesson: "Tailwind sticky positioning with responsive breakpoints for desktop-only sticky behavior"
+    applies_to: [frontend]
+
+  - pattern: "404 vs 403 for Unauthorized"
+    source: "Security best practice"
+    lesson: "Return 404 for unauthorized access (not 403) to prevent information disclosure about resource existence"
+    applies_to: [backend]
+
+  - pattern: "Zod-First Type Definitions"
+    source: "CLAUDE.md project guidelines"
+    lesson: "Always define Zod schemas first, then use z.infer<typeof Schema> for TypeScript types. Never use interfaces."
+    applies_to: [backend, frontend, packages]
+
+existing_implementations:
+  - component: "MocDetailDashboard"
+    path: "apps/web/app-instructions-gallery/src/components/MocDetailDashboard/"
+    status: "Partial - needs integration with real API and MocDetailPage"
+    features:
+      - "Sticky sidebar with CoverCard and MetaCard"
+      - "Main area with StatsCard and PartsGauge"
+      - "Draggable dashboard cards (Orders, PartsLists, Instructions, Gallery)"
+      - "localStorage persistence for card order"
+    missing:
+      - "Integration with RTK Query API"
+      - "Loading states"
+      - "Error handling"
+      - "Route-level page component"
+
+  - service: "MocService"
+    path: "apps/api/lego-api/domains/mocs/application/services.ts"
+    status: "Partial - only has createMoc method"
+    missing:
+      - "getMoc(userId, mocId) method for fetching single MOC with files"
+
+  - repository: "MocRepository"
+    path: "apps/api/lego-api/domains/mocs/adapters/repositories.ts"
+    status: "Partial - only has create and findBySlug methods"
+    missing:
+      - "getMocById(userId, mocId) with file joins"
+
+related_stories:
+  - story_id: "INST-1100"
+    title: "View MOC Gallery"
+    relation: "Predecessor - provides navigation context and RTK Query setup"
+    reusable_patterns:
+      - "Gallery grid layout"
+      - "RTK Query hooks"
+      - "Loading skeletons"
+
+  - story_id: "INST-1008"
+    title: "RTK Query Integration"
+    relation: "Foundation - provides API client structure"
+    reusable_patterns:
+      - "API endpoint definitions"
+      - "Zod schema validation"
+      - "Error handling patterns"
+
+technical_decisions:
+  - decision: "Use Native HTML5 Drag-Drop"
+    rationale: "Already implemented in MocDetailDashboard with full accessibility support"
+    alternative_considered: "@dnd-kit library"
+    chosen_approach: "Keep existing native implementation"
+
+  - decision: "localStorage Schema with Versioning"
+    schema: "{ [mocId]: { version: 1, cardOrder: string[] } }"
+    rationale: "Enables future migrations without breaking existing data"
+    fallback: "Default card order if localStorage unavailable or invalid"
+
+  - decision: "404 for Unauthorized Access"
+    rationale: "Security best practice - avoid information disclosure"
+    implementation: "Check userId ownership in service layer, return null for not found/unauthorized"
+
+  - decision: "Service Layer Authorization"
+    rationale: "Authorization logic belongs in service layer, not routes"
+    implementation: "MocService.getMoc checks userId matches MOC owner, returns error for unauthorized"
+
+database_queries:
+  - query_purpose: "Fetch MOC with all related files"
+    tables: ["mocInstructions", "mocFiles"]
+    join_type: "LEFT JOIN mocFiles ON mocInstructions.id = mocFiles.mocId"
+    filters: ["mocInstructions.userId = $userId", "mocInstructions.id = $mocId"]
+    drizzle_pattern: "db.query.mocInstructions.findFirst({ where: and(eq(mocInstructions.id, id), eq(mocInstructions.userId, userId)), with: { files: true } })"
+
+testing_requirements:
+  - type: "unit"
+    framework: "Vitest + React Testing Library"
+    focus: "Component rendering, drag-drop interactions, localStorage persistence"
+
+  - type: "integration"
+    framework: "Vitest + MSW"
+    focus: "API integration, error handling, 404 scenarios"
+
+  - type: "e2e"
+    framework: "Playwright"
+    focus: "Full user flows, navigation, responsive layout"
+
+notes:
+  - "MocDetailDashboard component is already 90% complete - focus on integration"
+  - "Backend needs GET /mocs/:id endpoint with service/repository methods"
+  - "RTK Query hook needs to be added to packages/core/api-client"
+  - "Page-level component needs to be created at apps/web/app-instructions-gallery/src/pages/MocDetailPage.tsx"
+  - "Route needs to be registered in apps/web/app-instructions-gallery/src/routes/"

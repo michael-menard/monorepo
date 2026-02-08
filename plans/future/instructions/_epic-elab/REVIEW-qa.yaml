@@ -1,0 +1,94 @@
+perspective: qa
+verdict: BLOCKED
+
+testability:
+  core_journey_testable: false
+  core_acs_clear: false
+  test_strategy_complete: false
+
+mvp_blockers:
+  - id: QA-001
+    issue: CRITICAL - No stories define unit, integration, AND Playwright+Cucumber E2E tests
+    stories: [INST-1000, INST-1001, INST-1002, INST-1003, INST-1004, INST-1005, INST-1006, INST-1007, INST-1008, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015, INST-1028, INST-1029]
+    action: REQUIRED - All 18 stories must define complete 3-part test strategy before elaboration
+
+  - id: QA-002
+    issue: Test acceptance criteria missing from all stories - cannot verify core journey is testable
+    stories: [INST-1000, INST-1001, INST-1002, INST-1003, INST-1004, INST-1005, INST-1006, INST-1007, INST-1008, INST-1009, INST-1010, INST-1011, INST-1012, INST-1013, INST-1014, INST-1015, INST-1028, INST-1029]
+    action: REQUIRED - Each story must explicitly define test location, test data, and E2E scenarios
+
+  - id: QA-003
+    issue: Cucumber feature files not referenced in any story - E2E specification missing
+    stories: [INST-1001, INST-1028, INST-1029]
+    action: REQUIRED - Stories must reference feature file paths and step definitions
+
+  - id: QA-004
+    issue: Integration test scope unclear for presigned URL flow (INST-1002, INST-1012) - 50MB file handling untestable
+    stories: [INST-1002, INST-1012]
+    action: REQUIRED - Define exact integration test scenarios with file size boundaries (≤10MB direct, >10MB presigned)
+
+  - id: QA-005
+    issue: Edit endpoint validation (INST-1005) lacks request/response schema contract tests
+    stories: [INST-1005, INST-1009, INST-1010]
+    action: REQUIRED - Add contract test requirements verifying frontend expectations match backend implementation
+
+missing_mvp_stories:
+  - title: Upload session test coverage (INST-1028 partial)
+    gap: Unit tests for session expiry, retry logic, and error scenarios not clearly specified
+    severity: CRITICAL
+
+  - title: Edit flow integration test specification
+    gap: Need dedicated story for integration tests across edit page → form → save → API flow
+    severity: HIGH
+
+test_mandate_enforcement:
+  status: ENFORCEMENT ACTIVE
+  requirement: Every story MUST define unit tests, integration tests, AND Playwright+Cucumber E2E tests
+  failure_impact: MVP CANNOT LAUNCH without complete test coverage - insufficient verification of core functionality
+  critical_stories:
+    - INST-1002: Presigned URL endpoints (requires 50MB integration test)
+    - INST-1005: Edit endpoint (requires schema validation tests)
+    - INST-1009-1015: Edit frontend (requires full E2E flow tests)
+    - INST-1029: Create flow validation (requires end-to-end API audit)
+
+future:
+  test_improvements:
+    - area: Performance benchmarking
+      stories: [INST-1001]
+      suggestion: Add Lighthouse metrics for upload page performance
+    - area: Accessibility audit
+      stories: [INST-1001, INST-1015]
+      suggestion: Automated a11y testing alongside manual audit
+    - area: Error scenario coverage
+      stories: [INST-1012, INST-1014]
+      suggestion: Test network interruption, presigned URL expiry, rate limiting responses
+
+  recommended_test_stories:
+    - title: Error scenario integration tests (network failures, timeouts)
+      gap: Error recovery scenarios from INST-1014 need dedicated test coverage
+      priority: P1
+
+    - title: E2E accessibility compliance testing
+      gap: Keyboard navigation and screen reader testing automated in CI
+      priority: P1
+
+  recommendations:
+    - Block all story elaboration until test strategy is defined for each
+    - Create test template: unit test location + integration test location + E2E feature file
+    - Add pre-commit hook to verify test files exist alongside implementation
+    - QA sign-off required on test strategy before story implementation begins
+
+testability_assessment:
+  edit_page_flow: UNTESTABLE (no E2E specification)
+  presigned_url_flow: PARTIALLY TESTABLE (integration unclear)
+  error_recovery: UNTESTABLE (no test scenarios defined)
+  validation_rules: UNTESTABLE (contract test approach missing)
+  accessibility: UNTESTABLE (audit approach unclear)
+
+test_coverage_gaps:
+  unit_tests: Not defined in any story
+  integration_tests: Only mentioned informally (50MB file for INST-1002)
+  e2e_tests: Only INST-1001 mentions but no feature files referenced
+  contract_tests: Missing entirely
+  performance_tests: Missing entirely
+  accessibility_tests: Missing entirely

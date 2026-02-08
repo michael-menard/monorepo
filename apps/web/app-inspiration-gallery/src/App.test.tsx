@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { waitFor } from '@testing-library/react'
+import { render, screen } from './test/test-utils'
 import { App } from './App'
 
 vi.mock('@repo/logger', () => ({
@@ -18,19 +19,46 @@ vi.mock('@repo/logger', () => ({
 }))
 
 describe('App Inspiration Gallery Module', () => {
-  it('renders the page heading', () => {
+  it('renders the page heading', async () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: /App Inspiration Gallery/i })).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Inspiration Gallery/i })).toBeInTheDocument()
+    })
   })
 
-  it('displays the welcome message', () => {
+  it('displays the gallery description', async () => {
     render(<App />)
-    expect(screen.getByText(/Welcome to the App Inspiration Gallery module/i)).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Collect and organize visual inspiration for your LEGO MOC builds/i),
+      ).toBeInTheDocument()
+    })
   })
 
-  it('shows the Getting Started card', () => {
+  it('shows the Add Inspiration button', async () => {
     render(<App />)
-    expect(screen.getByText(/Getting Started/i)).toBeInTheDocument()
-    expect(screen.getByText(/Customize this module to build your feature/i)).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Add Inspiration/i })).toBeInTheDocument()
+    })
+  })
+
+  it('shows the New Album button', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /New Album/i })).toBeInTheDocument()
+    })
+  })
+
+  it('renders tab navigation', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /All Inspirations/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /Albums/i })).toBeInTheDocument()
+    })
   })
 })

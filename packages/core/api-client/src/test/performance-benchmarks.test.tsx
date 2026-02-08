@@ -16,7 +16,7 @@ import { performanceMonitor } from '../lib/performance'
 
 // Mock server with controlled delays
 const server = setupServer(
-  http.get('/api/v2/gallery/search', async () => {
+  http.get('/api/gallery/search', async () => {
     await delay(100) // Simulate network delay
     return HttpResponse.json({
       success: true,
@@ -33,7 +33,7 @@ const server = setupServer(
     })
   }),
 
-  http.get('/api/v2/wishlist/items', async () => {
+  http.get('/api/wishlist', async () => {
     await delay(150) // Simulate network delay
     return HttpResponse.json({
       success: true,
@@ -52,7 +52,7 @@ const server = setupServer(
     })
   }),
 
-  http.post('/api/v2/gallery/search/batch', async () => {
+  http.post('/api/gallery/search/batch', async () => {
     await delay(50) // Batch operations should be faster
     return HttpResponse.json({
       success: true,
@@ -188,7 +188,7 @@ describe('Performance Benchmarking Tests', () => {
       const batchStartTime = performance.now()
       
       // Simulate batch operation
-      const batchResponse = await fetch('/api/v2/gallery/search/batch', {
+      const batchResponse = await fetch('/api/gallery/search/batch', {
         method: 'POST',
         body: JSON.stringify({
           operation: 'get',

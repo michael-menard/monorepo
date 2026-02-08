@@ -5,53 +5,72 @@
 
 export const SERVERLESS_ENDPOINTS = {
   // Gallery API endpoints
+  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   GALLERY: {
-    SEARCH: '/api/v2/gallery/search',
-    GET_IMAGE: '/api/v2/gallery/images/{id}',
-    GET_METADATA: '/api/v2/gallery/images/{id}/metadata',
-    UPLOAD: '/api/v2/gallery/upload',
-    DELETE: '/api/v2/gallery/images/{id}',
+    SEARCH: '/gallery/search',
+    GET_IMAGE: '/gallery/images/{id}',
+    GET_METADATA: '/gallery/images/{id}/metadata',
+    UPLOAD: '/gallery/upload',
+    DELETE: '/gallery/images/{id}',
   },
 
   // Wishlist API endpoints
+  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   WISHLIST: {
-    GET_ITEMS: '/api/v2/wishlist/items',
-    ADD_ITEM: '/api/v2/wishlist/items',
-    UPDATE_ITEM: '/api/v2/wishlist/items/{id}',
-    DELETE_ITEM: '/api/v2/wishlist/items/{id}',
-    SHARE: '/api/v2/wishlist/share',
-    GET_SHARED: '/api/v2/wishlist/shared/{shareId}',
+    GET_ITEMS: '/wishlist',
+    ADD_ITEM: '/wishlist',
+    UPDATE_ITEM: '/wishlist/{id}',
+    DELETE_ITEM: '/wishlist/{id}',
+    SHARE: '/wishlist/share',
+    GET_SHARED: '/wishlist/shared/{shareId}',
   },
 
   // MOC Instructions API endpoints
+  // Story INST-1008: Wire RTK Query Mutations for MOC Instructions API
+  // Backend routes are mounted at /instructions/mocs
+  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   MOC: {
-    SEARCH: '/api/v2/mocs/search',
-    GET_INSTRUCTION: '/api/v2/mocs/{id}',
-    GET_STEPS: '/api/v2/mocs/{id}/steps',
-    GET_PARTS_LIST: '/api/v2/mocs/{id}/parts',
-    UPLOAD: '/api/v2/mocs/upload',
-    UPDATE: '/api/v2/mocs/{id}',
-    DELETE: '/api/v2/mocs/{id}',
+    // Query endpoints
+    SEARCH: '/instructions/mocs',
+    GET_INSTRUCTION: '/instructions/mocs/{id}',
+    GET_STEPS: '/instructions/mocs/{id}/steps',
+    GET_PARTS_LIST: '/instructions/mocs/{id}/parts',
+
+    // Mutation endpoints (INST-1008)
+    CREATE: '/instructions/mocs',
+    UPDATE: '/instructions/mocs/{id}',
+    DELETE: '/instructions/mocs/{id}',
+
+    // File upload endpoints (INST-1008)
+    UPLOAD_INSTRUCTION: '/instructions/mocs/{id}/files/instruction',
+    UPLOAD_PARTS_LIST: '/instructions/mocs/{id}/files/parts-list',
+    UPLOAD_THUMBNAIL: '/instructions/mocs/{id}/thumbnail',
+    DELETE_FILE: '/instructions/mocs/{id}/files/{fileId}',
+
+    // Legacy upload endpoint
+    UPLOAD: '/instructions/mocs/upload',
   },
 
   // User/Profile endpoints
+  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   USER: {
-    GET_PROFILE: '/api/v2/user/profile',
-    UPDATE_PROFILE: '/api/v2/user/profile',
-    GET_PREFERENCES: '/api/v2/user/preferences',
-    UPDATE_PREFERENCES: '/api/v2/user/preferences',
+    GET_PROFILE: '/user/profile',
+    UPDATE_PROFILE: '/user/profile',
+    GET_PREFERENCES: '/user/preferences',
+    UPDATE_PREFERENCES: '/user/preferences',
   },
 
   // Health and monitoring
+  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   HEALTH: {
-    CHECK: '/api/v2/health',
-    METRICS: '/api/v2/health/metrics',
+    CHECK: '/health',
+    METRICS: '/health/metrics',
   },
 } as const
 
 /**
  * Helper function to build endpoint URLs with path parameters
- * @param endpoint - The endpoint template (e.g., '/api/v2/mocs/{id}')
+ * @param endpoint - The endpoint template (e.g., '/instructions/mocs/{id}')
  * @param params - Object with parameter values (e.g., { id: '123' })
  * @returns The endpoint with parameters replaced
  */

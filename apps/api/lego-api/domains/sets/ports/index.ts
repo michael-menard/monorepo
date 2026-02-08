@@ -24,15 +24,13 @@ export interface SetRepository {
   findByUserId(
     userId: string,
     pagination: PaginationInput,
-    filters?: { search?: string; theme?: string; isBuilt?: boolean }
+    filters?: { search?: string; theme?: string; isBuilt?: boolean },
   ): Promise<PaginatedResult<Set>>
 
   /**
    * Insert a new set record
    */
-  insert(
-    data: Omit<Set, 'id' | 'createdAt' | 'updatedAt'>
-  ): Promise<Set>
+  insert(data: Omit<Set, 'id' | 'createdAt' | 'updatedAt'>): Promise<Set>
 
   /**
    * Update an existing set
@@ -94,7 +92,11 @@ export interface ImageStorage {
   /**
    * Upload an image and return the URL
    */
-  upload(key: string, buffer: Buffer, contentType: string): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>>
+  upload(
+    key: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>>
 
   /**
    * Delete an image by key

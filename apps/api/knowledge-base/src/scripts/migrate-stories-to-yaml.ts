@@ -169,7 +169,12 @@ interface MigrationResult {
 // Parsers
 // ============================================================================
 
-function parseStoryMarkdown(content: string, storyId: string, feature: string, stage: string): StoryYaml {
+function parseStoryMarkdown(
+  content: string,
+  storyId: string,
+  feature: string,
+  stage: string,
+): StoryYaml {
   // Parse frontmatter
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/)
   const frontmatter = frontmatterMatch ? yaml.parse(frontmatterMatch[1]) : {}
@@ -241,8 +246,15 @@ function parseStoryMarkdown(content: string, storyId: string, feature: string, s
   if (packagesMatch) {
     const lines = packagesMatch[1].split('\n')
     for (const line of lines) {
-      const pkg = line.replace(/^[-*]\s*`?/, '').replace(/`?\s*[-–].*$/, '').trim()
-      if (pkg && pkg.startsWith('packages/') || pkg.startsWith('.github/') || pkg.startsWith('apps/')) {
+      const pkg = line
+        .replace(/^[-*]\s*`?/, '')
+        .replace(/`?\s*[-–].*$/, '')
+        .trim()
+      if (
+        (pkg && pkg.startsWith('packages/')) ||
+        pkg.startsWith('.github/') ||
+        pkg.startsWith('apps/')
+      ) {
         packages.push(pkg)
       }
     }
@@ -251,13 +263,25 @@ function parseStoryMarkdown(content: string, storyId: string, feature: string, s
   // Determine surfaces
   const surfaces: StoryYaml['scope']['surfaces'] = []
   const contentLower = content.toLowerCase()
-  if (contentLower.includes('api') || contentLower.includes('lambda') || contentLower.includes('backend')) {
+  if (
+    contentLower.includes('api') ||
+    contentLower.includes('lambda') ||
+    contentLower.includes('backend')
+  ) {
     surfaces.push('backend')
   }
-  if (contentLower.includes('react') || contentLower.includes('frontend') || contentLower.includes('component')) {
+  if (
+    contentLower.includes('react') ||
+    contentLower.includes('frontend') ||
+    contentLower.includes('component')
+  ) {
     surfaces.push('frontend')
   }
-  if (contentLower.includes('github actions') || contentLower.includes('ci') || contentLower.includes('infrastructure')) {
+  if (
+    contentLower.includes('github actions') ||
+    contentLower.includes('ci') ||
+    contentLower.includes('infrastructure')
+  ) {
     surfaces.push('infra')
   }
   if (surfaces.length === 0) surfaces.push('backend')
@@ -287,7 +311,7 @@ function parseStoryMarkdown(content: string, storyId: string, feature: string, s
 function parseElaborationMarkdown(content: string, storyId: string): ElaborationYaml {
   // Parse verdict
   const verdictMatch = content.match(/\*\*Verdict\*\*:\s*(\w+)/i)
-  const verdict = verdictMatch ? verdictMatch[1].toLowerCase() as 'pass' | 'fail' : 'pass'
+  const verdict = verdictMatch ? (verdictMatch[1].toLowerCase() as 'pass' | 'fail') : 'pass'
 
   // Parse date
   const dateMatch = content.match(/\*\*Date\*\*:\s*([\d-]+)/)
@@ -298,8 +322,12 @@ function parseElaborationMarkdown(content: string, storyId: string): Elaboration
   const auditMatch = content.match(/## Audit Results\n\n\|[\s\S]*?\n\n/)
   if (auditMatch) {
     const rows = auditMatch[0].split('\n').filter(r => r.startsWith('|') && !r.includes('---'))
-    for (const row of rows.slice(1)) { // Skip header
-      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+    for (const row of rows.slice(1)) {
+      // Skip header
+      const cols = row
+        .split('|')
+        .map(c => c.trim())
+        .filter(Boolean)
       if (cols.length >= 4) {
         const check = cols[1].toLowerCase().replace(/\s+/g, '_')
         audit[check] = { status: cols[2].toLowerCase(), note: cols[4] || '' }
@@ -313,7 +341,10 @@ function parseElaborationMarkdown(content: string, storyId: string): Elaboration
   if (gapsMatch) {
     const rows = gapsMatch[0].split('\n').filter(r => r.startsWith('|') && !r.includes('---'))
     for (const row of rows.slice(1)) {
-      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      const cols = row
+        .split('|')
+        .map(c => c.trim())
+        .filter(Boolean)
       if (cols.length >= 3 && cols[1] !== 'No MVP-critical gaps identified') {
         gaps.push({
           id: `GAP-${cols[0]}`,
@@ -328,7 +359,9 @@ function parseElaborationMarkdown(content: string, storyId: string): Elaboration
 
   // Parse follow-ups
   const followUps: ElaborationYaml['follow_ups'] = []
-  const followUpMatch = content.match(/### Follow-up Stories Suggested\n\n([\s\S]*?)(?=\n##|\n###|\Z)/)
+  const followUpMatch = content.match(
+    /### Follow-up Stories Suggested\n\n([\s\S]*?)(?=\n##|\n###|\Z)/,
+  )
   if (followUpMatch) {
     const lines = followUpMatch[1].split('\n')
     for (const line of lines) {
@@ -512,9 +545,14 @@ function parseTokenLog(content: string, storyId: string): TokensYaml {
   let totalOutput = 0
 
   // Parse table rows
-  const rows = content.split('\n').filter(r => r.startsWith('|') && !r.includes('---') && !r.includes('Timestamp'))
+  const rows = content
+    .split('\n')
+    .filter(r => r.startsWith('|') && !r.includes('---') && !r.includes('Timestamp'))
   for (const row of rows) {
-    const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+    const cols = row
+      .split('|')
+      .map(c => c.trim())
+      .filter(Boolean)
     if (cols.length >= 5) {
       const phase = cols[1]
       const input = parseInt(cols[2].replace(/,/g, '')) || 0
@@ -534,7 +572,12 @@ function parseTokenLog(content: string, storyId: string): TokensYaml {
   }
 }
 
-function parseAgentContext(content: string, storyId: string, feature: string, state: string): ContextYaml {
+function parseAgentContext(
+  content: string,
+  storyId: string,
+  feature: string,
+  state: string,
+): ContextYaml {
   // Parse paths from yaml block
   const yamlMatch = content.match(/```yaml\n([\s\S]*?)\n```/)
   const contextData = yamlMatch ? yaml.parse(yamlMatch[1]) : {}
@@ -570,7 +613,9 @@ function parseAgentContext(content: string, storyId: string, feature: string, st
     state,
     paths: {
       story: contextData.base_path || `plans/future/${feature}/${state}/${storyId}/`,
-      artifacts: contextData.artifacts_path || `plans/future/${feature}/${state}/${storyId}/_implementation/`,
+      artifacts:
+        contextData.artifacts_path ||
+        `plans/future/${feature}/${state}/${storyId}/_implementation/`,
     },
     files: {
       story: 'story.yaml',
@@ -596,7 +641,15 @@ async function findStoryDirectories(basePath: string): Promise<string[]> {
     if (!stat.isDirectory()) continue
 
     // Check each stage directory
-    const stages = ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed']
+    const stages = [
+      'backlog',
+      'ready-to-work',
+      'in-progress',
+      'ready-for-qa',
+      'uat',
+      'UAT',
+      'completed',
+    ]
     for (const stage of stages) {
       const stagePath = path.join(featurePath, stage)
       try {
@@ -626,7 +679,9 @@ async function migrateStoryDirectory(storyDir: string, dryRun: boolean): Promise
   const storyId = result.storyId
   const pathParts = storyDir.split(path.sep)
   const stageIndex = pathParts.findIndex(p =>
-    ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed'].includes(p)
+    ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed'].includes(
+      p,
+    ),
   )
   const stage = pathParts[stageIndex] || 'backlog'
   const feature = pathParts[stageIndex - 1] || 'unknown'
@@ -738,7 +793,6 @@ async function migrateStoryDirectory(storyDir: string, dryRun: boolean): Promise
     } catch {
       // Context may not exist
     }
-
   } catch (e) {
     result.errors.push(`General error: ${e}`)
   }

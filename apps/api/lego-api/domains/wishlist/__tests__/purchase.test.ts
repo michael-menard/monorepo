@@ -41,6 +41,14 @@ const mockWishlistItem: WishlistItem = {
   sortOrder: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
+  // SETS-MVP-001: Collection management fields
+  status: 'wishlist',
+  statusChangedAt: null,
+  purchaseDate: null,
+  purchasePrice: null,
+  purchaseTax: null,
+  purchaseShipping: null,
+  buildStatus: null,
 }
 
 // Mock Set item (result of purchase)

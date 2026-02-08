@@ -19,6 +19,7 @@ An issue is **MVP-critical** ONLY if it **blocks the core user journey**:
 - Core happy path is untestable
 - No way to verify core functionality works
 - Missing test infrastructure for core flow
+- **TEST MANDATE: Every story MUST have unit tests, integration tests, AND Playwright+Cucumber E2E tests**
 
 Everything else is a **future improvement**.
 
@@ -44,8 +45,10 @@ verdict: READY | CONCERNS | BLOCKED
 testability:
   core_journey_testable: true | false
   core_acs_clear: true | false
+  test_strategy_complete: true | false  # unit + integration + e2e specified
 
 # MVP-CRITICAL ONLY - blocks core journey verification
+# ENFORCE: All stories must define unit, integration, AND Playwright+Cucumber E2E tests
 mvp_blockers:
   - id: QA-001
     issue: "cannot verify core journey because..."

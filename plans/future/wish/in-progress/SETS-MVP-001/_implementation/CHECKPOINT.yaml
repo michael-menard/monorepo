@@ -1,0 +1,13 @@
+schema: 1
+story_id: "SETS-MVP-001"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-01T20:15:00Z"
+
+current_phase: fix
+last_successful_phase: review
+iteration: 2
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+fix_started_at: "2026-02-01T20:15:00Z"

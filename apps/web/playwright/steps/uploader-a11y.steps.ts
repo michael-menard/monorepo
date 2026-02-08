@@ -36,9 +36,7 @@ When('I focus on the title input', async () => {
   await uploaderPage.titleInput.focus()
 })
 
-When('I press Tab', async ({ page }) => {
-  await page.keyboard.press('Tab')
-})
+// Note: 'I press Tab' step is defined in common.steps.ts
 
 When('I press Tab repeatedly', async ({ page }) => {
   // Tab through all focusable elements
@@ -48,9 +46,7 @@ When('I press Tab repeatedly', async ({ page }) => {
   }
 })
 
-When('I press Enter', async ({ page }) => {
-  await page.keyboard.press('Enter')
-})
+// Note: 'I press Enter' step is defined in common.steps.ts
 
 Then('the description field should be focused', async ({ page }) => {
   const focusedElement = page.locator(':focus')

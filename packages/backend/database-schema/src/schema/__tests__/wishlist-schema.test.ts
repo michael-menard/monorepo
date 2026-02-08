@@ -8,6 +8,8 @@ import {
   wishlistItems,
   wishlistStoreEnum,
   wishlistCurrencyEnum,
+  itemStatusEnum,
+  buildStatusEnum,
 } from '../index'
 
 describe('Wishlist Schema', () => {
@@ -106,6 +108,35 @@ describe('Wishlist Schema', () => {
     it('should have updatedBy audit column', () => {
       expect(wishlistItems.updatedBy).toBeDefined()
     })
+
+    // SETS-MVP-001: Collection management columns
+    it('should have status column', () => {
+      expect(wishlistItems.status).toBeDefined()
+    })
+
+    it('should have statusChangedAt column', () => {
+      expect(wishlistItems.statusChangedAt).toBeDefined()
+    })
+
+    it('should have purchaseDate column', () => {
+      expect(wishlistItems.purchaseDate).toBeDefined()
+    })
+
+    it('should have purchasePrice column', () => {
+      expect(wishlistItems.purchasePrice).toBeDefined()
+    })
+
+    it('should have purchaseTax column', () => {
+      expect(wishlistItems.purchaseTax).toBeDefined()
+    })
+
+    it('should have purchaseShipping column', () => {
+      expect(wishlistItems.purchaseShipping).toBeDefined()
+    })
+
+    it('should have buildStatus column', () => {
+      expect(wishlistItems.buildStatus).toBeDefined()
+    })
   })
 
   describe('Enums', () => {
@@ -136,18 +167,55 @@ describe('Wishlist Schema', () => {
       expect(enumValues).toContain('AUD')
       expect(enumValues).toHaveLength(5)
     })
+
+    // SETS-MVP-001: New enum types
+    it('should export itemStatusEnum', () => {
+      expect(itemStatusEnum).toBeDefined()
+    })
+
+    it('should have correct item status enum values', () => {
+      const enumValues = itemStatusEnum.enumValues
+      expect(enumValues).toContain('wishlist')
+      expect(enumValues).toContain('owned')
+      expect(enumValues).toHaveLength(2)
+    })
+
+    it('should export buildStatusEnum', () => {
+      expect(buildStatusEnum).toBeDefined()
+    })
+
+    it('should have correct build status enum values', () => {
+      const enumValues = buildStatusEnum.enumValues
+      expect(enumValues).toContain('not_started')
+      expect(enumValues).toContain('in_progress')
+      expect(enumValues).toContain('completed')
+      expect(enumValues).toHaveLength(3)
+    })
   })
 
   describe('Column Count', () => {
-    it('should have all expected columns (18 columns)', () => {
+    it('should have all expected columns (26 columns)', () => {
       // Get all column keys from the table
       const columns = Object.keys(wishlistItems).filter(
         key => key !== '_' && key !== '$inferInsert' && key !== '$inferSelect',
       )
-      // id, userId, title, store, setNumber, sourceUrl, imageUrl, price, currency,
+      // Original columns (19): id, userId, title, store, setNumber, sourceUrl, imageUrl, price, currency,
       // pieceCount, releaseDate, tags, priority, notes, sortOrder, createdAt, updatedAt,
-      // createdBy, updatedBy = 19 columns
-      expect(columns.length).toBeGreaterThanOrEqual(18)
+      // createdBy, updatedBy
+      // SETS-MVP-001 additions (7): status, statusChangedAt, purchaseDate, purchasePrice,
+      // purchaseTax, purchaseShipping, buildStatus
+      // Total: 26 columns
+      expect(columns.length).toBeGreaterThanOrEqual(26)
+    })
+  })
+
+  describe('Default Values (SETS-MVP-001)', () => {
+    it('should have default value for status column', () => {
+      // Check that status column has a default
+      const statusColumn = wishlistItems.status
+      expect(statusColumn).toBeDefined()
+      expect(statusColumn.hasDefault).toBe(true)
+      expect(statusColumn.default).toBe('wishlist')
     })
   })
 })

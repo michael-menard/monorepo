@@ -1,0 +1,138 @@
+id: WKFL-003
+title: "Emergent Heuristic Discovery"
+status: ready-to-work
+priority: P2
+phase: adaptation
+created_at: 2026-02-06T17:00:00-07:00
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies:
+  - WKFL-002
+  - WKFL-004
+blocks:
+  - WKFL-010
+
+owner: null
+estimated_tokens: 60000
+
+tags:
+  - adaptation
+  - heuristics
+  - autonomy
+
+summary: |
+  Analyze decision outcomes to discover which patterns should be auto-accepted
+  vs escalated, evolving autonomy tiers based on actual user behavior.
+
+goal: |
+  Create a system that:
+  1. Tracks auto-accept success rate per decision pattern
+  2. Proposes tier promotions when success rate > 95%
+  3. Proposes tier demotions when success rate < 80%
+  4. Updates decision-classification.yaml with proposals (not auto-apply)
+
+non_goals:
+  - Auto-applying tier changes
+  - Learning across projects
+  - Real-time tier updates
+
+scope:
+  in:
+    - Decision outcome tracking schema
+    - heuristic-evolver.agent.md (sonnet)
+    - Tier adjustment proposals in HEURISTIC-PROPOSALS.yaml
+    - Integration with decision-classification.yaml
+    - Success rate calculation per pattern
+
+  out:
+    - Auto-applying changes
+    - Pattern mining (WKFL-006)
+    - Calibration (WKFL-002 provides input)
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Track: pattern, auto_accepted, user_outcome (confirmed/overridden)"
+    verification: "KB entries have all fields, queryable by pattern"
+
+  - id: AC-2
+    description: "Compute success rate per pattern (min 5 samples)"
+    verification: "Only patterns with 5+ samples have computed rates"
+
+  - id: AC-3
+    description: "Propose promotion when success rate > 95%"
+    verification: "HEURISTIC-PROPOSALS.yaml has promotion entries"
+
+  - id: AC-4
+    description: "Propose demotion when success rate < 80%"
+    verification: "HEURISTIC-PROPOSALS.yaml has demotion entries"
+
+  - id: AC-5
+    description: "All changes are proposals, not auto-applied"
+    verification: "decision-classification.yaml unchanged after run"
+
+technical_notes: |
+  ## Decision Outcome Schema
+
+  ```yaml
+  type: decision_outcome
+  pattern: "loading.*state|skeleton"
+  story_id: WISH-2045
+  decision_id: dec-042
+  tier: 3
+  auto_accepted: true
+  user_outcome: confirmed  # or overridden
+  timestamp: 2026-02-06T15:30:00Z
+  ```
+
+  ## Success Rate Calculation
+
+  success_rate = confirmed_decisions / total_decisions
+
+  ## Promotion/Demotion Logic
+
+  ```
+  If success_rate > 0.95 AND samples >= 5:
+    Propose: Promote to higher autonomy (e.g., tier 3 → tier 1)
+
+  If success_rate < 0.80 AND samples >= 5:
+    Propose: Demote to lower autonomy (e.g., tier 1 → tier 3)
+  ```
+
+  ## HEURISTIC-PROPOSALS.yaml
+
+  ```yaml
+  generated_at: 2026-02-06T16:00:00Z
+
+  promotions:
+    - pattern: "loading.*state|skeleton"
+      current_tier: 3
+      proposed_tier: 1
+      success_rate: 0.97
+      samples: 23
+      rationale: "Users consistently accept loading state additions"
+
+  demotions:
+    - pattern: "breaking.*api"
+      current_tier: 2
+      proposed_tier: 4
+      success_rate: 0.12
+      samples: 8
+      rationale: "Users often override API breaking change auto-decisions"
+  ```
+
+reuse_plan:
+  must_reuse:
+    - Calibration data from WKFL-002
+    - Feedback data from WKFL-004
+    - Existing autonomy tier definitions
+
+  may_create:
+    - heuristic-evolver.agent.md
+    - Decision outcome tracking
+    - HEURISTIC-PROPOSALS.yaml
+
+token_budget:
+  estimated: 60000
+  enforcement: warning

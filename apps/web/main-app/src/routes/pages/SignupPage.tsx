@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useSelector } from 'react-redux'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
@@ -20,7 +21,8 @@ import {
 } from '@repo/app-component-library'
 import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth, type SocialProvider } from '@/services/auth/AuthProvider'
-import { useNavigation } from '@/components/Navigation/NavigationProvider'
+import { useNavigationOptional } from '@/components/Navigation/NavigationProvider'
+import { selectAuth } from '@/store/slices/authSlice'
 
 // Signup form validation schema
 const SignupSchema = z
@@ -99,11 +101,21 @@ const AppleIcon = () => (
 export function SignupPage() {
   const navigate = useNavigate()
   const { signUp, signInWithSocial, isLoading } = useAuth()
-  const { trackNavigation } = useNavigation()
+  const auth = useSelector(selectAuth)
+  const navigationContext = useNavigationOptional()
+  const trackNavigation = navigationContext?.trackNavigation ?? (() => {})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Redirect authenticated users to dashboard
+  // This handles the case where auth state resolves after the route guard already ran
+  useEffect(() => {
+    if (auth.isAuthenticated && !auth.isLoading) {
+      navigate({ to: '/dashboard' })
+    }
+  }, [auth.isAuthenticated, auth.isLoading, navigate])
 
   const {
     register,

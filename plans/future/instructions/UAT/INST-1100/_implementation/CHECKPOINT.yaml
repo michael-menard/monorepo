@@ -1,0 +1,72 @@
+schema: 1
+story_id: INST-1100
+feature_dir: plans/future/instructions
+title: View MOC Gallery
+timestamp: '2026-02-07T04:37:00Z'
+
+# Phase tracking
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 1
+max_iterations: 3
+
+# Status flags
+blocked: false
+forced: false
+blocker_reason: null
+warnings: []
+
+# Planning phase completion
+planning_complete: true
+planning_timestamp: '2026-02-05T00:00:00Z'
+plan_validated: true
+
+# Execution phase status
+execution_started: '2026-02-05T00:00:00Z'
+execution_completed: '2026-02-05T23:10:00Z'
+execution_summary:
+  files_modified: 1
+  files_created: 2
+  tests_created: 25
+  tests_passing: 25
+  build_status: pass
+  lint_status: pass
+
+# Review phase status
+review_completed: '2026-02-06T04:55:00Z'
+review_summary:
+  initial_verdict: CONCERNS
+  initial_score: 68
+  final_verdict: PASS
+  final_score: 92
+  high_severity_fixed: 5
+  iterations: 2
+
+# QA Setup phase status
+qa_setup_started: '2026-02-07T04:36:00Z'
+qa_setup_summary:
+  preconditions_validated: true
+  story_moved_to_uat: true
+  status_updated_to_in_qa: true
+  index_updated: true
+
+# QA Verify phase status
+qa_verify_started: '2026-02-07T04:37:00Z'
+qa_verify_completed: '2026-02-07T04:37:00Z'
+qa_verify_summary:
+  verdict: PASS
+  acs_verified: 21
+  acs_manual: 3
+  acs_deferred: 1
+  unit_tests_pass: 45
+  e2e_tests_pass: 13
+  coverage: 96.5
+  test_quality: PASS
+  architecture_compliant: true
+
+# Completion
+completed_at: '2026-02-07T04:35:00Z'
+e2e_gate: passed
+e2e_gate_reason: "E2E tests executed with live server: 13 passed, 3 skipped, 0 failed"
+e2e_verified_at: '2026-02-06T21:35:00Z'
+review_gate: passed

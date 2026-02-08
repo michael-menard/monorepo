@@ -1,0 +1,107 @@
+---
+schema: 3
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery"
+prefix: "INSP"
+reviewed: "2026-02-04T23:30:00Z"
+focus: mvp-critical
+
+verdict: CONCERNS
+summary: "MVP ready on product/platform/security fronts but engineering and QA have blocking concerns around DAG cycle detection algorithm specification and comprehensive test coverage for complex album operations."
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    mvp_critical_count: 2
+  product:
+    verdict: READY
+    mvp_critical_count: 1
+  qa:
+    verdict: CONCERNS
+    mvp_critical_count: 2
+  ux:
+    verdict: READY
+    mvp_critical_count: 1
+  platform:
+    verdict: READY
+    mvp_critical_count: 0
+  security:
+    verdict: READY
+    mvp_critical_count: 0
+
+mvp_blockers:
+  - id: ENG-001
+    source: engineering
+    issue: "DAG cycle detection algorithm not specified - blocks INSP-007 album schema and INSP-009 album CRUD operations which are prerequisites for all album features"
+    stories: [INSP-007, INSP-009]
+    action: "Specify cycle detection algorithm (e.g., DFS-based, constraint-based) and performance requirements before implementation. Define max nesting levels and performance SLAs."
+
+  - id: ENG-002
+    source: engineering
+    issue: "Multi-file upload with partial failure handling undefined - blocks INSP-008 from proceeding. Complex state management required for upload retry and error recovery."
+    stories: [INSP-008]
+    action: "Define retry strategy, error recovery patterns, and state machine for upload modal before implementation."
+
+  - id: QA-001
+    source: qa
+    issue: "DAG cycle detection test suite missing - blocks MVP launch without verification that album parent constraints work correctly and prevent data corruption"
+    stories: [INSP-007, INSP-009]
+    action: "Create comprehensive unit and integration test suite for cycle detection edge cases (5+ parent levels, complex hierarchies)."
+
+  - id: QA-002
+    source: qa
+    issue: "Multi-file upload error scenario tests missing - blocks INSP-008 from launch. Partial failure handling is complex and requires extensive testing."
+    stories: [INSP-008]
+    action: "Define test scenarios for upload timeouts, partial failures, S3 errors, and create comprehensive Playwright E2E tests."
+
+  - id: PROD-001
+    source: product
+    issue: "First-time user onboarding flow missing - blocks core user journey for stack-to-create gesture which requires guided introduction and discoverability"
+    stories: [INSP-018]
+    action: "Create onboarding story (PROD-ONBOARDING-001) with stack gesture tutorial, tooltip strategy, and UX validation before Phase 2."
+
+  - id: UX-001
+    source: ux
+    issue: "Stack-to-create gesture discovery UI not designed - non-obvious interaction requires prominent tooltip and/or onboarding to be usable in MVP"
+    stories: [INSP-012]
+    action: "Design discovery UI with animation/tooltip for stack gesture. Conduct usability testing with 5+ users before Phase 2."
+
+missing_mvp_stories:
+  - title: "DAG cycle detection algorithm specification and validation story"
+    source: engineering
+    reason: "Blocks INSP-007 and INSP-009. Team needs to evaluate and document algorithm choice before implementation."
+
+  - title: "Multi-file upload state management and error recovery specification"
+    source: engineering
+    reason: "Blocks INSP-008. Complex retry and recovery patterns need design before coding."
+
+  - title: "First-time user onboarding flow for stack gesture and album concepts"
+    source: product
+    reason: "Blocks core user journey. Stack-to-create gesture is novel and non-obvious without guided introduction."
+
+  - title: "DAG cycle detection comprehensive test suite"
+    source: qa
+    reason: "Blocks MVP launch. Data integrity depends on cycle detection correctness in edge cases."
+
+  - title: "Multi-file upload error scenario E2E tests"
+    source: qa
+    reason: "Blocks INSP-008 launch. Upload error handling is complex and must be thoroughly tested."
+
+  - title: "Stack gesture usability testing and discovery UI design"
+    source: ux
+    reason: "Blocks MVP usability. Novel interaction requires validation that users can discover and use it."
+
+stories_to_split:
+  - story: INSP-008
+    reason: "Multi-file upload modal is complex with error handling. Consider splitting into: basic upload modal + multi-file support + error recovery patterns."
+  - story: INSP-011
+    reason: "Drag-and-drop reordering requires library evaluation. Consider splitting into: drag-and-drop library spike + keyboard equivalent design."
+
+metrics:
+  mvp_blockers: 6
+  missing_mvp_stories: 6
+  stories_to_split: 2
+
+notes:
+  phase_1_readiness: "Backend Phase 1 (INSP-003, INSP-007, INSP-009, INSP-010) blocked on DAG algorithm specification. Recommend 1-2 day spike before implementation."
+  phase_2_readiness: "Frontend Phase 2 (INSP-001, INSP-002, INSP-004, INSP-005, INSP-008) blocked on upload error handling spec and onboarding story definition."
+  MVP_definition: "Core journey = create album + add inspirations + link to MOC. All album parent operations and upload error handling must work correctly."

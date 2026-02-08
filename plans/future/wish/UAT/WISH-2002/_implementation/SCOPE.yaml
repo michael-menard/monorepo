@@ -1,0 +1,27 @@
+schema: 1
+story_id: WISH-2002
+timestamp: "2026-02-04T12:00:00Z"
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: true
+  infra: true
+
+touched_paths_globs:
+  - apps/api/lego-api/**
+  - apps/web/app-wishlist-gallery/**
+  - packages/core/api-client/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true
+  security: false
+  performance: false
+
+summary: Add item flow with form, validation (Zod), image upload to S3, and RTK Query mutation

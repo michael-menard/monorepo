@@ -1,0 +1,653 @@
+schema: 1
+story_id: INST-1104
+timestamp: '2026-02-07T16:30:00Z'
+
+summary: |
+  Codebase knowledge for implementing PDF upload functionality. Includes existing patterns
+  from file uploads, validation utilities, RTK Query mutations, and component architecture.
+
+existing_patterns:
+  file_upload_component:
+    location: apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx
+    pattern_name: File Upload with Validation
+    description: |
+      ThumbnailUpload provides the canonical pattern for file upload components in this codebase.
+      It includes:
+      - Client-side validation (file type, size)
+      - Preview with metadata display
+      - Upload flow with loading state
+      - Success/error toast notifications
+      - RTK Query mutation integration
+      - Accessibility (keyboard nav, screen reader labels)
+
+    key_code_snippets:
+      validation:
+        lines: 34-60
+        code: |
+          function validateFile(file: File): FileValidationResult {
+            // Check file type
+            if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
+              return { valid: false, error: 'Invalid file type...' }
+            }
+            // Check file size
+            if (file.size > MAX_FILE_SIZE) {
+              return { valid: false, error: `File is too large...` }
+            }
+            return { valid: true }
+          }
+
+      upload_flow:
+        lines: 158-185
+        code: |
+          const handleUpload = useCallback(async () => {
+            if (!selectedFile) return
+            try {
+              const result = await uploadThumbnail({ mocId, file: selectedFile }).unwrap()
+              showSuccessToast('Thumbnail uploaded successfully')
+              if (onSuccess) { onSuccess(result.thumbnailUrl) }
+              handleRemove()
+            } catch (error: any) {
+              const errorMessage = error?.data?.message || 'Failed to upload...'
+              showErrorToast(errorMessage)
+            }
+          }, [selectedFile, mocId, uploadThumbnail, onSuccess, handleRemove])
+
+      file_selection:
+        lines: 88-105
+        code: |
+          const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+            const files = e.target.files
+            if (!files || files.length === 0) return
+            const file = files[0]
+            const validation = validateFile(file)
+            if (!validation.valid) {
+              showErrorToast(validation.error || 'Invalid file')
+              return
+            }
+            setSelectedFile(file)
+            setPreviewUrl(URL.createObjectURL(file))
+            e.target.value = '' // Reset input
+          }, [])
+
+    differences_for_inst_1104:
+      - Multiple file selection (multiple attribute on input)
+      - Sequential upload (loop through files, not single upload)
+      - Progress indicator ("Uploading 2 of 5...")
+      - Cancel button to abort remaining uploads
+      - No drag-and-drop (deferred to INST-2035)
+      - PDF validation instead of image validation
+
+  file_validation_backend:
+    location: apps/api/lego-api/core/utils/file-validation.ts
+    pattern_name: Whitelist-Based File Validation
+    description: |
+      Centralized validation utilities with whitelist approach for security.
+      Returns structured ValidationResult with specific error codes.
+
+    key_code_snippets:
+      validation_result:
+        lines: 50-66
+        code: |
+          export const ValidationResultSchema = z.discriminatedUnion('valid', [
+            z.object({ valid: z.literal(true) }),
+            z.object({
+              valid: z.literal(false),
+              error: z.string(),
+              code: z.enum([
+                'INVALID_MIME_TYPE',
+                'FILE_TOO_LARGE',
+                'FILE_TOO_SMALL',
+                'MISSING_MIME_TYPE',
+                'MISSING_FILE_SIZE',
+              ]),
+            }),
+          ])
+
+      validation_function:
+        lines: 103-130
+        code: |
+          export function validateMimeType(mimeType: string | undefined | null): ValidationResult {
+            if (!mimeType || mimeType.trim() === '') {
+              return { valid: false, error: 'MIME type is required', code: 'MISSING_MIME_TYPE' }
+            }
+            const normalizedType = mimeType.toLowerCase().trim()
+            if (ALLOWED_MIME_TYPES.includes(normalizedType as any)) {
+              return { valid: true }
+            }
+            return {
+              valid: false,
+              error: `Unsupported file type. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`,
+              code: 'INVALID_MIME_TYPE',
+            }
+          }
+
+      security_logging:
+        lines: 206-233
+        code: |
+          export function logSecurityEvent(event: SecurityLogEvent): void {
+            logger.warn('Security event: file validation failure', {
+              ...event,
+              category: 'validation_failure',
+              namespace: 'security',
+            })
+          }
+
+          export function createSecurityEvent(params: {
+            userId: string
+            fileName: string
+            rejectionReason: string
+            fileSize?: number
+            mimeType?: string
+            ipAddress?: string
+            sourceMethod: string
+          }): SecurityLogEvent {
+            return { ...params, timestamp: new Date().toISOString() }
+          }
+
+    pattern_to_follow:
+      - Create ALLOWED_PDF_MIME_TYPES = ['application/pdf']
+      - Create ALLOWED_PDF_EXTENSIONS = ['.pdf']
+      - Create validatePdfMimeType() following validateMimeType() pattern
+      - Create validatePdfExtension() for .pdf check
+      - Create validatePdfFile() combining all validations
+      - Use same ValidationResult return type
+      - Log security events on rejection
+
+  rtk_query_mutation:
+    location: packages/core/api-client/src/rtk/instructions-api.ts
+    pattern_name: RTK Query File Upload Mutation
+    description: |
+      RTK Query mutation for instruction file upload already exists.
+      Handles FormData, response validation, cache invalidation.
+
+    key_code_snippets:
+      mutation_definition:
+        lines: 262-291
+        code: |
+          uploadInstructionFile: builder.mutation<MocFile, { mocId: string; file: File }>({
+            query: ({ mocId, file }) => {
+              logger.debug('Uploading instruction file', undefined, {
+                mocId,
+                fileName: file.name,
+                fileSize: file.size,
+              })
+              const formData = new FormData()
+              formData.append('file', file)
+              return {
+                url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.UPLOAD_INSTRUCTION, { id: mocId }),
+                method: 'POST',
+                body: formData,
+              }
+            },
+            transformResponse: (response: unknown) => {
+              const validated = MocFileSchema.parse(response)
+              logger.info('Instruction file uploaded', undefined, {
+                fileId: validated.id,
+                mocId: validated.mocId,
+              })
+              return validated
+            },
+            invalidatesTags: (_result, _error, { mocId }) => [
+              { type: 'Moc', id: mocId },
+              { type: 'MocFile', id: mocId },
+            ],
+          })
+
+    usage_in_component:
+      code: |
+        import { useUploadInstructionFileMutation } from '@repo/api-client'
+
+        const [uploadInstructionFile, { isLoading }] = useUploadInstructionFileMutation()
+
+        const result = await uploadInstructionFile({ mocId, file }).unwrap()
+
+    notes:
+      - Mutation already exists, no changes needed
+      - Cache invalidation automatically refetches MOC and MocFile data
+      - Response validated with MocFileSchema (Zod)
+      - Logging includes mocId, fileName, fileSize
+
+  backend_route:
+    location: apps/api/lego-api/domains/instructions/routes.ts
+    pattern_name: Multipart File Upload Route
+    description: |
+      Backend route POST /mocs/:id/files/instruction already exists.
+      Parses multipart form, calls service layer, maps errors to HTTP status.
+
+    key_code_snippets:
+      route_handler:
+        lines: 200-237
+        code: |
+          instructions.post('/mocs/:id/files/instruction', async c => {
+            const userId = c.get('userId')
+            const mocId = c.req.param('id')
+
+            // Parse multipart form
+            const formData = await c.req.formData()
+            const file = formData.get('file') as File | null
+
+            if (!file) {
+              return c.json({ error: 'No file provided' }, 400)
+            }
+
+            // Convert File to buffer
+            const buffer = Buffer.from(await file.arrayBuffer())
+
+            const result = await instructionsService.uploadInstructionFile(userId, mocId, {
+              buffer,
+              filename: file.name,
+              mimetype: file.type,
+              size: file.size,
+            })
+
+            if (!result.ok) {
+              const status =
+                result.error === 'NOT_FOUND' ? 404
+                : result.error === 'FORBIDDEN' ? 403
+                : result.error === 'INVALID_FILE' ? 400
+                : result.error === 'UPLOAD_FAILED' ? 500
+                : 500
+              return c.json({ error: result.error }, status)
+            }
+
+            return c.json(result.data, 201)
+          })
+
+    notes:
+      - Route exists, no changes needed
+      - Error mapping needs update to handle new structured error codes
+      - Add specific error codes: INVALID_MIME_TYPE, INVALID_EXTENSION, FILE_TOO_LARGE
+
+  backend_service:
+    location: apps/api/lego-api/domains/instructions/application/services.ts
+    pattern_name: Service Layer with Validation and S3 Upload
+    description: |
+      Service uploadInstructionFile() exists but needs refinement.
+      Current validation is too permissive (allows 100MB, loose MIME check).
+
+    key_code_snippets:
+      current_validation:
+        lines: 238-252
+        code: |
+          // Validate file type
+          const allowedTypes = [
+            'application/pdf',
+            'application/x-studio',
+            'application/x-lxf',
+            'application/x-ldraw',
+          ]
+          if (!allowedTypes.includes(file.mimetype) && !file.mimetype.startsWith('application/')) {
+            return err('INVALID_FILE')
+          }
+
+          // Validate file size (100MB max for instructions)
+          const maxSize = 100 * 1024 * 1024
+          if (file.size > maxSize) {
+            return err('INVALID_FILE')
+          }
+
+      upload_and_save:
+        lines: 254-280
+        code: |
+          // Generate S3 key
+          const key = generateInstructionFileKey(userId, mocId, file.filename)
+
+          // Upload to S3
+          const uploadResult = await fileStorage.upload(key, file.buffer, file.mimetype)
+          if (!uploadResult.ok) {
+            return err('UPLOAD_FAILED')
+          }
+
+          // Save to database
+          try {
+            const mocFile = await fileRepo.insert({
+              mocId,
+              fileType: 'instruction',
+              fileUrl: uploadResult.data.url,
+              originalFilename: file.filename,
+              mimeType: file.mimetype,
+            })
+            return ok(mocFile)
+          } catch (error) {
+            // Clean up S3 on DB error
+            await fileStorage.delete(key)
+            console.error('Failed to save file to database:', error)
+            return err('DB_ERROR')
+          }
+
+    changes_needed:
+      - Replace inline validation with validatePdfFile() call
+      - Change max size from 100MB to 10MB (use MAX_FILE_SIZE constant)
+      - Return structured error codes instead of generic 'INVALID_FILE'
+      - Add security logging with createSecurityEvent() on validation failure
+      - Replace console.error with logger.error
+
+  database_schema:
+    location: packages/backend/database-schema/src/schema/index.ts
+    pattern_name: MOC Files Table
+    description: |
+      Database table moc_files stores file metadata for MOCs.
+      Supports multiple files per MOC, including multiple instruction files.
+
+    key_code_snippets:
+      table_definition:
+        lines: 322-350
+        code: |
+          export const mocFiles = pgTable(
+            'moc_files',
+            {
+              id: uuid('id').primaryKey().defaultRandom(),
+              mocId: uuid('moc_id')
+                .notNull()
+                .references(() => mocInstructions.id, { onDelete: 'cascade' }),
+              fileType: text('file_type').notNull(), // 'instruction' | 'parts-list' | 'thumbnail' | 'gallery-image'
+              fileUrl: text('file_url').notNull(),
+              originalFilename: text('original_filename'),
+              mimeType: text('mime_type'),
+              createdAt: timestamp('created_at').notNull().defaultNow(),
+              updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+              deletedAt: timestamp('deleted_at', { withTimezone: true }),
+            },
+            table => ({
+              mocIdx: index('idx_moc_files_moc_id_lazy').on(table.mocId),
+              mocTypeIdx: index('idx_moc_files_moc_type').on(table.mocId, table.fileType),
+              uniqueMocFilename: uniqueIndex('moc_files_moc_filename_unique').on(
+                table.mocId,
+                table.originalFilename,
+              ),
+            }),
+          )
+
+    notes:
+      - No schema changes needed
+      - fileType='instruction' for instruction files
+      - Supports multiple instruction files per MOC (no unique constraint on type)
+      - Unique constraint on (mocId, originalFilename) prevents duplicate filenames
+      - Soft delete supported (deletedAt field)
+
+  ui_component_library:
+    location: packages/core/app-component-library
+    pattern_name: Shadcn UI Primitives and App Components
+    description: |
+      App component library provides UI primitives and app-level components.
+      Always import from @repo/app-component-library, never from individual paths.
+
+    components_to_use:
+      button:
+        import: "import { Button } from '@repo/app-component-library'"
+        usage: "<Button onClick={handleUpload} disabled={isLoading}>Upload</Button>"
+        notes: Use for "Add Instructions", "Upload", "Remove", "Cancel" buttons
+
+      card:
+        import: "import { Card } from '@repo/app-component-library'"
+        usage: "<Card className='p-4'>...</Card>"
+        notes: Use for file selection list wrapper
+
+      loading_spinner:
+        import: "import { LoadingSpinner } from '@repo/app-component-library'"
+        usage: "<LoadingSpinner className='mr-2' />"
+        notes: Use for upload progress indicator
+
+      toast:
+        import: "import { showSuccessToast, showErrorToast } from '@repo/app-component-library'"
+        usage: |
+          showSuccessToast('Instructions uploaded!')
+          showErrorToast('Upload failed. Please try again.')
+        notes: Use for success/error notifications (AC19, AC22-23)
+
+      badge:
+        import: "import { Badge } from '@repo/app-component-library'"
+        usage: "<Badge variant='secondary'>{fileCount} files</Badge>"
+        notes: Use for file count indicator (AC12)
+
+    styling_guidelines:
+      - Use Tailwind CSS utility classes
+      - Follow LEGO-inspired theme (Sky/Teal color palette)
+      - Ensure WCAG AA color contrast (4.5:1 minimum)
+      - Use semantic HTML (button, input[type=file], ul, li)
+      - Add ARIA labels for accessibility
+
+reusable_utilities:
+  format_file_size:
+    description: Format file size in bytes to human-readable string
+    location: apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx
+    code: |
+      function formatFileSize(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`
+        const kb = bytes / 1024
+        if (kb < 1024) return `${kb.toFixed(1)} KB`
+        const mb = kb / 1024
+        return `${mb.toFixed(1)} MB`
+      }
+    usage: Used for AC11 (display file size as "5 MB", "2.3 MB")
+
+  generate_s3_key:
+    description: Generate S3 key with UUID prefix to prevent filename collisions
+    location: apps/api/lego-api/domains/instructions/application/services.ts
+    code: |
+      const key = generateInstructionFileKey(userId, mocId, file.filename)
+      // Pattern: mocs/{userId}/{mocId}/instructions/{uuid}-{sanitizedFilename}
+    notes: Utility already exists, use as-is
+
+  sanitize_filename:
+    description: Remove special characters from filename for S3 key
+    location: Likely in file storage utilities
+    pattern: Remove/replace characters that are problematic in S3 keys
+    notes: Check existing implementation before creating new one
+
+architecture_patterns:
+  ports_and_adapters:
+    description: Backend follows ports & adapters (hexagonal) architecture
+    layers:
+      - Route Layer (routes.ts): Thin HTTP adapter, parses request, calls service
+      - Service Layer (services.ts): Business logic, no HTTP types, returns Result<T, E>
+      - Adapter Layer (adapters/): S3 storage, database repositories
+
+    validation_placement:
+      - Client-side: Component validates file type/size before upload (UX optimization)
+      - Server-side: Service validates file type/size/extension (security requirement)
+      - Never trust client validation, always validate on server
+
+    error_handling:
+      - Service returns Result<T, E> with structured error codes
+      - Route maps error codes to HTTP status codes
+      - Frontend receives error message and displays toast
+
+  zod_first_types:
+    description: All types must be Zod schemas, never TypeScript interfaces
+    pattern: |
+      // CORRECT
+      const FileValidationSchema = z.object({
+        maxSize: z.number(),
+        allowedTypes: z.array(z.string()),
+      })
+      type FileValidation = z.infer<typeof FileValidationSchema>
+
+      // WRONG
+      interface FileValidation {
+        maxSize: number
+        allowedTypes: string[]
+      }
+
+    usage_in_story:
+      - Component props schema in __types__/index.ts
+      - File validation result schema
+      - Backend ValidationResult already uses Zod (file-validation.ts)
+
+  component_directory_structure:
+    pattern: |
+      InstructionsUpload/
+        index.tsx              # Main component file
+        __tests__/
+          InstructionsUpload.test.tsx
+          InstructionsUpload.integration.test.tsx
+        __types__/
+          index.ts             # Zod schemas for this component
+        README.md              # Component documentation (Phase 7)
+
+    notes:
+      - No barrel files (no re-exports via index.ts)
+      - Import directly from source: import { InstructionsUpload } from './InstructionsUpload'
+      - Shared types go in central __types__, not component-local
+
+testing_patterns:
+  unit_test_setup:
+    location: apps/web/app-instructions-gallery/src/test/setup.ts
+    description: Vitest setup with React Testing Library
+    usage: |
+      import { render, screen, waitFor } from '@testing-library/react'
+      import userEvent from '@testing-library/user-event'
+      import { InstructionsUpload } from '../InstructionsUpload'
+
+      test('validates PDF file type', async () => {
+        const user = userEvent.setup()
+        render(<InstructionsUpload mocId="123" />)
+        const input = screen.getByLabelText(/upload/i)
+        const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+        await user.upload(input, file)
+        expect(screen.getByText(/only pdf files allowed/i)).toBeInTheDocument()
+      })
+
+  integration_test_msw:
+    description: Mock Service Worker for API mocking
+    pattern: |
+      import { rest } from 'msw'
+      import { setupServer } from 'msw/node'
+
+      const server = setupServer(
+        rest.post('/api/v2/mocs/:id/files/instruction', async (req, res, ctx) => {
+          const mocId = req.params.id
+          const formData = await req.formData()
+          const file = formData.get('file') as File
+
+          if (file.type !== 'application/pdf') {
+            return res(ctx.status(400), ctx.json({ error: 'INVALID_FILE' }))
+          }
+
+          return res(
+            ctx.status(201),
+            ctx.json({
+              id: 'file-123',
+              mocId,
+              fileType: 'instruction',
+              fileUrl: 'https://cdn.example.com/file.pdf',
+              originalFilename: file.name,
+              mimeType: file.type,
+            })
+          )
+        })
+      )
+
+    notes: MSW handlers should match actual API responses
+
+  e2e_test_playwright:
+    description: Playwright E2E tests with real browser
+    pattern: |
+      import { test, expect } from '@playwright/test'
+
+      test('upload single PDF instruction file', async ({ page }) => {
+        await page.goto('/mocs/123')
+
+        // Upload file
+        const fileInput = page.locator('input[type="file"]')
+        await fileInput.setInputFiles('fixtures/files/sample-5mb.pdf')
+
+        await page.click('button:has-text("Upload")')
+
+        // Wait for upload to complete
+        await expect(page.locator('text=Instructions uploaded!')).toBeVisible()
+
+        // Verify file appears in list
+        await expect(page.locator('text=sample-5mb.pdf')).toBeVisible()
+      })
+
+    notes: Create PDF fixtures in apps/web/playwright/fixtures/files/
+
+project_conventions:
+  imports:
+    ui_components: "Always import from @repo/app-component-library, never from individual paths"
+    logging: "Always use @repo/logger, never console.log/error/warn"
+    api_client: "Import RTK hooks from @repo/api-client"
+
+  formatting:
+    semicolons: false
+    quotes: single
+    trailing_commas: always
+    line_width: 100
+    indentation: 2 spaces
+    arrow_parens: "x => x (avoid parens for single param)"
+
+  naming:
+    components: PascalCase (InstructionsUpload)
+    files: kebab-case for test files (instructions-upload.test.tsx)
+    constants: UPPER_SNAKE_CASE (MAX_FILE_SIZE)
+    functions: camelCase (validatePdfFile)
+
+  git:
+    commits: "Conventional commits (feat:, fix:, docs:, refactor:, test:)"
+    branches: "feature/INST-1104-upload-instructions"
+
+security_considerations:
+  validation_defense_in_depth:
+    - Client validates file type/size (UX optimization)
+    - Server validates MIME type (security check)
+    - Server validates file extension (additional security)
+    - Server validates file size (prevent abuse)
+    - Security logging on rejection (audit trail)
+
+  file_upload_risks:
+    - MIME type spoofing: Validate both MIME and extension match
+    - Oversized files: Enforce 10MB limit strictly
+    - Zero-byte files: Reject with MIN_FILE_SIZE = 1
+    - Malicious filenames: Sanitize filename before S3 upload
+    - Upload abuse: Security logging with userId, fileName, rejectionReason
+
+  deferred_security:
+    - Virus scanning: INST-2031 (production requirement)
+    - Magic byte validation: Future enhancement (validate PDF header starts with %PDF-)
+    - Rate limiting: INST-1203 (Phase 2 observability)
+
+knowledge_gaps:
+  clarification_needed: []
+  assumptions_made:
+    - RTK Query mutation useUploadInstructionFileMutation works as documented
+    - Backend route POST /mocs/:id/files/instruction is functional in current state
+    - File storage adapter fileStorage.upload() returns CloudFront URL
+    - Database fileRepo.insert() transaction rollback works correctly
+    - ThumbnailUpload component pattern is production-ready and stable
+
+  future_investigation:
+    - Exact implementation of generateInstructionFileKey() (confirm UUID prefix pattern)
+    - fileStorage.upload() CloudFront URL conversion logic (confirm AC41)
+    - Transaction rollback behavior in fileRepo.insert() (confirm AC42)
+    - Existing security logging implementation (confirm pattern match)
+
+references:
+  story_file: /Users/michaelmenard/Development/Monorepo/plans/future/instructions/in-progress/INST-1104/INST-1104.md
+  analysis_file: /Users/michaelmenard/Development/Monorepo/plans/future/instructions/in-progress/INST-1104/_implementation/ANALYSIS.md
+  decisions_file: /Users/michaelmenard/Development/Monorepo/plans/future/instructions/in-progress/INST-1104/_implementation/DECISIONS.yaml
+
+  key_files:
+    - /Users/michaelmenard/Development/Monorepo/apps/api/lego-api/core/utils/file-validation.ts
+    - /Users/michaelmenard/Development/Monorepo/apps/api/lego-api/domains/instructions/routes.ts
+    - /Users/michaelmenard/Development/Monorepo/apps/api/lego-api/domains/instructions/application/services.ts
+    - /Users/michaelmenard/Development/Monorepo/packages/core/api-client/src/rtk/instructions-api.ts
+    - /Users/michaelmenard/Development/Monorepo/apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx
+    - /Users/michaelmenard/Development/Monorepo/apps/web/app-instructions-gallery/src/components/MocDetailDashboard/InstructionsCard.tsx
+    - /Users/michaelmenard/Development/Monorepo/packages/backend/database-schema/src/schema/index.ts
+
+next_steps:
+  immediate:
+    - Begin Phase 1: Backend PDF validation utilities (2 hours)
+    - Create validatePdfMimeType(), validatePdfExtension(), validatePdfFile()
+    - Add unit tests for validation functions
+
+  after_phase_1:
+    - Phase 2: Refine backend service to use new validation utilities
+    - Update uploadInstructionFile() to enforce 10MB limit
+    - Add structured error codes
+
+  after_phase_2:
+    - Phase 3: Build InstructionsUpload frontend component
+    - Follow ThumbnailUpload pattern for consistency
+    - Implement client-side validation and sequential upload

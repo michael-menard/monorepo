@@ -153,3 +153,68 @@ Then('I should see a call-to-action to browse sets or add new wishlist items', a
   const cta = page.getByRole('button', { name: /browse sets|add item/i })
   await expect(cta).toBeVisible()
 })
+
+// ---------------------------------------------------------------------------
+// Additional reorder steps for new BDD features
+// ---------------------------------------------------------------------------
+
+Given('I select {string} sort option', async ({ page }, option: string) => {
+  const sortDropdown = page.getByRole('combobox').first()
+  await sortDropdown.click()
+  const optionElement = page.getByRole('option', { name: new RegExp(option, 'i') })
+  await optionElement.click()
+  await page.waitForTimeout(500)
+})
+
+Given('the wishlist has at least {int} items', async ({ page }, count: number) => {
+  const cards = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+  await expect(cards.first()).toBeVisible({ timeout: 10000 })
+  const cardCount = await cards.count()
+  expect(cardCount).toBeGreaterThanOrEqual(count)
+})
+
+Given('I hover over the first wishlist card', async ({ page }) => {
+  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  await card.hover()
+})
+
+Then('the drag handle is visible', async ({ page }) => {
+  const handle = page.locator('[data-testid="drag-handle"]').first()
+  await expect(handle).toBeVisible()
+})
+
+When('I drag the first card to the second card position', async ({ page }) => {
+  const cards = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+  const firstCard = cards.first()
+  const secondCard = cards.nth(1)
+
+  await firstCard.hover()
+  await firstCard.dragTo(secondCard)
+  await page.waitForTimeout(500)
+})
+
+Then('the cards should be reordered', async ({ page }) => {
+  const cards = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+  await expect(cards.first()).toBeVisible()
+})
+
+Then('the first wishlist card should have role {string}', async ({ page }, role: string) => {
+  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  await expect(card).toHaveAttribute('role', role)
+})
+
+Then('the drag handle should have an aria-label containing {string}', async ({ page }, text: string) => {
+  const handle = page.locator('[data-testid="drag-handle"]').first()
+  const ariaLabel = await handle.getAttribute('aria-label')
+  expect(ariaLabel).toContain(text)
+})
+
+Then('there should be a list container with role {string}', async ({ page }, role: string) => {
+  const list = page.locator(`[role="${role}"]`)
+  await expect(list.first()).toBeVisible()
+})
+
+Then('an undo option should be available', async ({ page }) => {
+  const undoButton = page.getByRole('button', { name: /undo/i })
+  await expect(undoButton).toBeVisible({ timeout: 5000 })
+})

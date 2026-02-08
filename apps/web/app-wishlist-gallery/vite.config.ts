@@ -1,14 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
+import { config } from 'dotenv'
+
+// Load .env files before config is processed (Vite loads these after config, so we do it manually)
+// Priority: local app .env.local > local app .env > root .env.local > root .env
+const rootDir = resolve(__dirname, '../../..')
+config({ path: resolve(__dirname, '.env.local') })
+config({ path: resolve(__dirname, '.env') })
+config({ path: resolve(rootDir, '.env.local') })
+config({ path: resolve(rootDir, '.env') })
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -23,7 +28,12 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3005,
+    port: (() => {
+      if (!process.env.FRONTEND_PORT) {
+        throw new Error('FRONTEND_PORT environment variable is required. Set it in root .env')
+      }
+      return parseInt(process.env.FRONTEND_PORT)
+    })(),
     host: true,
   },
   build: {

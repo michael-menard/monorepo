@@ -1,0 +1,236 @@
+---
+schema: 3
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery"
+prefix: "INSP"
+decided: "2026-02-04T23:35:00Z"
+decision: "ACCEPT_ALL"
+decided_by: "Product Stakeholders"
+
+summary: "All 6 MVP blockers accepted. All 6 missing MVP stories accepted. Both story split recommendations accepted. Proceed with parallel story refinement phase."
+
+# MVP Blockers - All Accepted
+mvp_blockers:
+  - id: ENG-001
+    source: engineering
+    issue: "DAG cycle detection algorithm not specified - blocks INSP-007 album schema and INSP-009 album CRUD operations which are prerequisites for all album features"
+    stories: [INSP-007, INSP-009]
+    action: "Specify cycle detection algorithm (e.g., DFS-based, constraint-based) and performance requirements before implementation. Define max nesting levels and performance SLAs."
+    decision: accept
+    rationale: "Core data integrity dependency. DAG parent constraints are fundamental to album feature set."
+    assigned_to: Dev
+    priority: P0
+    due_phase: "Phase 1 Setup"
+
+  - id: ENG-002
+    source: engineering
+    issue: "Multi-file upload with partial failure handling undefined - blocks INSP-008 from proceeding. Complex state management required for upload retry and error recovery."
+    stories: [INSP-008]
+    action: "Define retry strategy, error recovery patterns, and state machine for upload modal before implementation."
+    decision: accept
+    rationale: "Upload reliability critical for user trust. Partial failure is complex and requires design before coding."
+    assigned_to: Dev
+    priority: P0
+    due_phase: "Phase 2 Setup"
+
+  - id: QA-001
+    source: qa
+    issue: "DAG cycle detection test suite missing - blocks MVP launch without verification that album parent constraints work correctly and prevent data corruption"
+    stories: [INSP-007, INSP-009]
+    action: "Create comprehensive unit and integration test suite for cycle detection edge cases (5+ parent levels, complex hierarchies)."
+    decision: accept
+    rationale: "Data corruption risk unacceptable. Cycle detection must be thoroughly tested before MVP launch."
+    assigned_to: QA
+    priority: P0
+    due_phase: "Phase 1 Testing"
+
+  - id: QA-002
+    source: qa
+    issue: "Multi-file upload error scenario tests missing - blocks INSP-008 from launch. Partial failure handling is complex and requires extensive testing."
+    stories: [INSP-008]
+    action: "Define test scenarios for upload timeouts, partial failures, S3 errors, and create comprehensive Playwright E2E tests."
+    decision: accept
+    rationale: "Upload is core user interaction. Error handling must be tested across multiple failure modes."
+    assigned_to: QA
+    priority: P0
+    due_phase: "Phase 2 Testing"
+
+  - id: PROD-001
+    source: product
+    issue: "First-time user onboarding flow missing - blocks core user journey for stack-to-create gesture which requires guided introduction and discoverability"
+    stories: [INSP-018]
+    action: "Create onboarding story (PROD-ONBOARDING-001) with stack gesture tutorial, tooltip strategy, and UX validation before Phase 2."
+    decision: accept
+    rationale: "Stack gesture is novel interaction. Users will not discover it without guided introduction."
+    assigned_to: PM
+    priority: P0
+    due_phase: "Before Phase 2"
+
+  - id: UX-001
+    source: ux
+    issue: "Stack-to-create gesture discovery UI not designed - non-obvious interaction requires prominent tooltip and/or onboarding to be usable in MVP"
+    stories: [INSP-012]
+    action: "Design discovery UI with animation/tooltip for stack gesture. Conduct usability testing with 5+ users before Phase 2."
+    decision: accept
+    rationale: "UX validation required for novel gesture. 5-user test will confirm learnability."
+    assigned_to: UX
+    priority: P0
+    due_phase: "Before Phase 2"
+
+# Missing MVP Stories - All Accepted
+missing_mvp_stories:
+  - id: INSP-ENGINE-001
+    title: "DAG cycle detection algorithm specification and validation story"
+    source: engineering
+    reason: "Blocks INSP-007 and INSP-009. Team needs to evaluate and document algorithm choice before implementation."
+    decision: accept
+    assigned_to: Dev
+    priority: P0
+    due_phase: "Phase 1 Setup (1-2 days)"
+    description: "Spike story to research and specify DFS-based or constraint-based cycle detection. Document algorithm choice, performance characteristics, max nesting level constraints, and SLA for detection operations."
+
+  - id: INSP-ENGINE-002
+    title: "Multi-file upload state management and error recovery specification"
+    source: engineering
+    reason: "Blocks INSP-008. Complex retry and recovery patterns need design before coding."
+    decision: accept
+    assigned_to: Dev
+    priority: P0
+    due_phase: "Phase 2 Setup (1-2 days)"
+    description: "Design specification for upload state machine covering: retry strategy (exponential backoff, max retries), partial failure handling, error categorization (transient vs. permanent), and recovery flow."
+
+  - id: INSP-PROD-001
+    title: "First-time user onboarding flow for stack gesture and album concepts"
+    source: product
+    reason: "Blocks core user journey. Stack-to-create gesture is novel and non-obvious without guided introduction."
+    decision: accept
+    assigned_to: PM
+    priority: P0
+    due_phase: "Before Phase 2"
+    description: "Onboarding story defining: stack gesture tutorial sequence, tooltip messaging, onboarding modal design, dismissal logic, and integration point in user flow."
+
+  - id: INSP-QA-001
+    title: "DAG cycle detection comprehensive test suite"
+    source: qa
+    reason: "Blocks MVP launch. Data integrity depends on cycle detection correctness in edge cases."
+    decision: accept
+    assigned_to: QA
+    priority: P0
+    due_phase: "Phase 1 Testing"
+    description: "Test coverage story for cycle detection including: unit tests for 5+ parent nesting levels, circular parent detection, indirect cycles, and performance benchmarks."
+
+  - id: INSP-QA-002
+    title: "Multi-file upload error scenario E2E tests"
+    source: qa
+    reason: "Blocks INSP-008 launch. Upload error handling is complex and must be thoroughly tested."
+    decision: accept
+    assigned_to: QA
+    priority: P0
+    due_phase: "Phase 2 Testing"
+    description: "E2E test coverage for upload failure modes: S3 timeouts, partial batch failures, network errors, and recovery/retry workflows. Requires Playwright test suite with mocked S3 error responses."
+
+  - id: INSP-UX-001
+    title: "Stack gesture usability testing and discovery UI design"
+    source: ux
+    reason: "Blocks MVP usability. Novel interaction requires validation that users can discover and use it."
+    decision: accept
+    assigned_to: UX
+    priority: P0
+    due_phase: "Before Phase 2"
+    description: "Usability testing story covering: high-fidelity gesture discovery UI design, animation/tooltip specs, 5+ participant usability test with success criteria, and design validation report."
+
+# Story Splits - Both Accepted
+story_splits:
+  - story_id: INSP-008
+    title: "Multi-file upload to album"
+    recommendation: "Split into: basic upload modal + multi-file support + error recovery patterns"
+    decision: accept
+    rationale: "Upload error handling is complex and cross-cutting. Breaking into separate stories allows parallel work on modal UI vs. error recovery logic."
+    subtasks:
+      - "INSP-008a: Basic single-file upload modal with success path"
+      - "INSP-008b: Multi-file batch upload support"
+      - "INSP-008c: Error recovery and retry state machine"
+    assigned_to: Dev
+    priority: P0
+
+  - story_id: INSP-011
+    title: "Reorder inspirations in album (drag-and-drop)"
+    recommendation: "Split into: drag-and-drop library evaluation spike + keyboard equivalent design"
+    decision: accept
+    rationale: "Library choice impacts implementation approach. Keyboard accessibility must be designed in parallel with drag-and-drop."
+    subtasks:
+      - "INSP-011a: Drag-and-drop library evaluation and recommendation"
+      - "INSP-011b: Keyboard reordering accessibility design and implementation"
+    assigned_to: Dev
+    priority: P1
+
+# Action Items Summary
+action_items:
+  phase_1_setup:
+    - task: "INSP-ENGINE-001: Specify DAG cycle detection algorithm"
+      owner: Dev
+      duration: "1-2 days"
+      blocker_id: "ENG-001"
+      description: "Research DFS-based vs constraint-based algorithms, define performance requirements and SLAs"
+
+    - task: "INSP-QA-001: Design DAG cycle detection test suite"
+      owner: QA
+      duration: "1-2 days"
+      blocker_id: "QA-001"
+      description: "Create comprehensive test plan for edge cases (5+ nesting, circular parents, indirect cycles)"
+
+  phase_2_setup:
+    - task: "INSP-ENGINE-002: Design upload state machine and error recovery"
+      owner: Dev
+      duration: "1-2 days"
+      blocker_id: "ENG-002"
+      description: "Specify retry strategy, error categorization, and recovery patterns before coding"
+
+    - task: "INSP-QA-002: Plan upload error scenario E2E tests"
+      owner: QA
+      duration: "1-2 days"
+      blocker_id: "QA-002"
+      description: "Define Playwright test scenarios for S3 timeouts, partial failures, network errors"
+
+  before_phase_2:
+    - task: "INSP-PROD-001: Create first-time user onboarding story"
+      owner: PM
+      duration: "1 day"
+      blocker_id: "PROD-001"
+      description: "Define onboarding flow for stack gesture with tooltip and tutorial sequence"
+
+    - task: "INSP-UX-001: Design stack gesture discovery UI and conduct usability test"
+      owner: UX
+      duration: "3-4 days"
+      blocker_id: "UX-001"
+      description: "High-fidelity gesture UI design and 5+ participant usability testing"
+
+  story_splits:
+    - task: "Split INSP-008 into 3 subtasks (modal, multi-file, error recovery)"
+      owner: Dev
+      duration: "Planning: 4 hours"
+      description: "Separate basic upload from error handling complexity"
+
+    - task: "Split INSP-011 into 2 subtasks (library spike, keyboard design)"
+      owner: Dev
+      duration: "Planning: 4 hours"
+      description: "Decouple library evaluation from accessibility implementation"
+
+# Decision Tracking
+timeline:
+  phase_1_setup: "Concurrent with Phase 1 (2-3 days parallel path)"
+  phase_2_setup: "Concurrent with Phase 1 (1-2 weeks into Phase 1)"
+  before_phase_2: "Must complete before Phase 2 starts (1-2 weeks)"
+  story_splits: "Refine during Phase 1 & 2 planning"
+
+critical_path:
+  - "INSP-ENGINE-001 (DAG spec) -> INSP-007, INSP-009 implementation"
+  - "INSP-QA-001 (DAG tests) -> MVP launch verification"
+  - "INSP-UX-001 (gesture design + usability) -> INSP-PROD-001 (onboarding) -> Phase 2"
+  - "INSP-ENGINE-002 (upload design) -> INSP-008 implementation"
+
+notes:
+  engagement_required: "Product stakeholders, engineering lead, and QA lead should review DAG algorithm choice and upload state machine designs before implementation."
+  risk_mitigation: "All blockers addressed. Novel interactions (stack gesture, multi-file upload error recovery) de-risked through design spikes and usability testing before coding."
+  parallel_work: "Phase 1 setup (DAG) and Phase 2 setup (upload, onboarding, gesture design) can proceed in parallel after Phase 1 implementation starts."
+
+approved_date: "2026-02-04T23:35:00Z"

@@ -1,0 +1,194 @@
+---
+schema: 1
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery"
+prefix: "INSP"
+reviewed: "2026-02-04T23:30:00Z"
+
+summary: "Post-MVP enhancements and nice-to-have features that improve user experience and platform capabilities but are not required for core user journey."
+
+enhancements:
+  high_value:
+    - id: ENG-PERF-001
+      source: engineering
+      suggestion: "Implement materialized views for DAG hierarchy queries to optimize deep album hierarchies"
+      impact: high
+      effort: high
+      phase: "Phase 5+"
+
+    - id: ENG-PERF-002
+      source: engineering
+      suggestion: "Implement connection pooling for database due to many-to-many queries"
+      impact: medium
+      effort: medium
+      phase: "Phase 3+"
+
+    - id: ENG-PERF-003
+      source: engineering
+      suggestion: "Cache album parent chains for session-based navigation to reduce query load"
+      impact: medium
+      effort: medium
+      phase: "Phase 3+"
+
+    - id: ENG-FEAT-001
+      source: engineering
+      suggestion: "Image optimization pipeline with thumbnail generation prevents future performance issues"
+      impact: high
+      effort: medium
+      phase: "Phase 2"
+
+    - id: QA-PERF-001
+      source: qa
+      suggestion: "Performance tests for DAG operations with 100+ albums and 10+ parent relationships"
+      impact: medium
+      effort: medium
+      phase: "Phase 3"
+
+    - id: QA-COMPAT-001
+      source: qa
+      suggestion: "Touch device drag-and-drop tests (iOS/Android swipe, long-press gestures)"
+      impact: medium
+      effort: high
+      phase: "Phase 3"
+
+    - id: UX-INTEROP-001
+      source: ux
+      suggestion: "User preferences for view (grid vs list), album cover image selection"
+      impact: medium
+      effort: medium
+      phase: "Phase 4+"
+
+  nice_to_have:
+    - id: ENG-DND-001
+      source: engineering
+      suggestion: "Drag-and-drop library evaluation (dnd-kit) and learning curve planning"
+      impact: medium
+      effort: medium
+      phase: "Phase 2"
+
+    - id: UX-WIRE-001
+      source: ux
+      suggestion: "Wireframes for album creation modal (INSP-009), multi-parent badge (INSP-013), delete options (INSP-015)"
+      impact: low
+      effort: low
+      phase: "Phase 1-2"
+
+    - id: UX-WIRE-002
+      source: ux
+      suggestion: "Wireframes for metadata edit modal (INSP-016)"
+      impact: low
+      effort: low
+      phase: "Phase 2"
+
+    - id: PROD-RESEARCH-001
+      source: product
+      suggestion: "User research to validate multi-parent album mental model with target audience"
+      impact: medium
+      effort: medium
+      phase: "Phase 2"
+
+    - id: PROD-RESEARCH-002
+      source: product
+      suggestion: "Usability testing for stack-to-create gesture with 5+ users"
+      impact: medium
+      effort: medium
+      phase: "Phase 2"
+
+    - id: QA-ACCESS-001
+      source: qa
+      suggestion: "Accessibility compliance tests (Axe, keyboard navigation, screen reader testing)"
+      impact: high
+      effort: high
+      phase: "Phase 4"
+
+    - id: SEC-ADVANCED-001
+      source: security
+      suggestion: "Album sharing with permission levels and collaboration features"
+      impact: high
+      effort: high
+      phase: "Phase 5+"
+
+    - id: SEC-MONITORING-001
+      source: security
+      suggestion: "CloudTrail logging for S3 operations, RDS Enhanced Monitoring, GuardDuty threat detection"
+      impact: medium
+      effort: medium
+      phase: "Phase 3+"
+
+suggested_stories:
+  - title: "Image optimization pipeline with thumbnail generation"
+    source: engineering
+    priority: P1
+    reason: "Prevents future performance degradation but not required for MVP launch"
+
+  - title: "Database query optimization for DAG traversal"
+    source: engineering
+    priority: P1
+    reason: "Deep hierarchies may cause N+1 queries but MVP can launch with simpler queries"
+
+  - title: "Drag-and-drop library spike and evaluation"
+    source: engineering
+    priority: P2
+    reason: "Team unfamiliar with dnd-kit; evaluation helps Phase 3 planning"
+
+  - title: "Album sharing and collaboration framework"
+    source: product
+    priority: P1
+    reason: "Growth opportunity aligned with competitive platforms (Pinterest/Figma patterns)"
+
+  - title: "Inspiration source tracking and attribution"
+    source: product
+    priority: P2
+    reason: "Improves user retention but not required for MVP"
+
+  - title: "Community gallery integration and discovery"
+    source: product
+    priority: P2
+    reason: "Long-term differentiation opportunity beyond MOC linking"
+
+  - title: "Accessibility compliance implementation (WCAG AA)"
+    source: qa
+    priority: P1
+    reason: "Required by Phase 4 but extensive testing deferred to post-MVP"
+
+  - title: "Performance testing suite for DAG operations"
+    source: qa
+    priority: P1
+    reason: "Baseline established in MVP but comprehensive testing deferred"
+
+stories_to_defer:
+  - story: INSP-011
+    reason: "Drag-and-drop reordering requires dnd-kit library evaluation. Defer to Phase 3 after team has evaluated options."
+
+  - story: INSP-015
+    reason: "Delete flows with multi-album options add complexity. MVP can use simple 'delete from all' approach, defer nuanced options to Phase 4."
+
+  - story: INSP-016
+    reason: "Metadata editing (tags, notes) is enhancement. Defer to Phase 4."
+
+  - story: INSP-017
+    reason: "Inspiration comments are social feature. Defer to Phase 5+."
+
+  - story: INSP-020
+    reason: "Loading states and animations are polish. Defer to Phase 4."
+
+  - story: INSP-021
+    reason: "Bulk operations (multi-select, batch actions) are advanced features. Defer to Phase 4-5."
+
+metrics:
+  total_suggestions: 20
+  deferred_stories: 6
+  high_value_enhancements: 8
+  nice_to_have_enhancements: 9
+  suggested_future_stories: 8
+
+phase_guidance:
+  phase_1: "Focus on backend DAG schema and album CRUD. All platform and security infrastructure ready. No Phase 1 deferrals."
+  phase_2: "Upload and gallery UI. Defer drag-and-drop library learning to Phase 3. Onboarding must be included. Image optimization is enhancement."
+  phase_3: "Album management, drag-and-drop, multi-album awareness (breadcrumbs, badges, delete flows). Defer complex delete options to Phase 4."
+  phase_4: "Polish, accessibility, bulk operations. Defer community features to Phase 5+"
+  phase_5: "Album sharing, collaboration, community features, advanced search"
+
+risk_mitigation:
+  research_gap: "Multi-parent album mental model should be validated early (Phase 2) to avoid major rework"
+  library_evaluation: "dnd-kit evaluation critical for Phase 3 timeline - recommend 2-3 day spike in Phase 2"
+  performance: "DAG query performance monitoring essential from launch - implement metrics from day one"

@@ -21,7 +21,7 @@
     "@aws-sdk/client-cognito-identity-provider": "^3.848.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.19.25",
     "typescript": "^5.8.0"
   },
   "keywords": [

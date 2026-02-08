@@ -120,14 +120,19 @@ export function initializeAuthFailureHandler(store: {
  * Get the global auth failure handler instance
  * Used by RTK Query API configurations
  *
- * @returns Auth failure handler function or no-op if not initialized
+ * Returns a wrapper function that defers handler lookup until invocation time.
+ * This solves the initialization order problem where the store is created
+ * before initializeAuthFailureHandler is called.
+ *
+ * @returns Auth failure handler function that delegates to the initialized handler
  */
 export function getAuthFailureHandler(): (error: FetchBaseQueryError) => void {
-  if (!authFailureHandlerInstance) {
-    logger.warn('Auth failure handler not initialized - using no-op handler')
-    return (error: FetchBaseQueryError) => {
+  // Return a wrapper that looks up the handler at invocation time, not import time
+  return (error: FetchBaseQueryError) => {
+    if (!authFailureHandlerInstance) {
       logger.warn('Auth failure occurred but handler not initialized', undefined, { error })
+      return
     }
+    authFailureHandlerInstance(error)
   }
-  return authFailureHandlerInstance
 }

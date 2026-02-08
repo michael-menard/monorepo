@@ -2,9 +2,9 @@
   "name": "@repo/pii-sanitizer",
   "version": "1.0.0",
   "description": "PII sanitization utilities for logs, errors, and analytics",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -14,18 +14,22 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./src/index.ts",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./src/index.ts"
     }
   },
   "dependencies": {
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.19.1",
     "tsup": "^8.5.0",
     "typescript": "^5.7.2",
     "vitest": "^3.0.5"
-  }
+  },
+  "files": [
+    "dist",
+    "src"
+  ]
 }

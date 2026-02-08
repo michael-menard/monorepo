@@ -4,44 +4,19 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { Button } from '@repo/app-component-library'
-import { Plus, Images, Heart } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 /**
- * Quick action buttons for common dashboard tasks
+ * Add MOC button for dashboard
  */
 export function QuickActions() {
-  const actions = [
-    {
-      to: '/instructions/new',
-      icon: Plus,
-      label: 'Add MOC',
-      variant: 'default' as const,
-    },
-    {
-      to: '/gallery',
-      icon: Images,
-      label: 'Browse Gallery',
-      variant: 'outline' as const,
-    },
-    {
-      to: '/wishlist',
-      icon: Heart,
-      label: 'View Wishlist',
-      variant: 'outline' as const,
-    },
-  ]
-
   return (
-    <div className="flex flex-wrap gap-2">
-      {actions.map(action => (
-        <Button key={action.to} variant={action.variant} asChild>
-          <Link to={action.to}>
-            <action.icon className="mr-2 h-4 w-4" />
-            {action.label}
-          </Link>
-        </Button>
-      ))}
-    </div>
+    <Link
+      to="/instructions/new"
+      className="flex items-center gap-2 h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+    >
+      <Plus className="h-4 w-4" aria-hidden="true" />
+      Add MOC
+    </Link>
   )
 }

@@ -8,6 +8,7 @@ import type {
   UpdateWishlistItemInput,
   ReorderWishlistInput,
   MarkAsPurchasedInput,
+  PurchaseDetailsInput,
   WishlistError,
   PresignError,
 } from '../types.js'
@@ -105,6 +106,14 @@ export function createWishlistService(deps: WishlistServiceDeps) {
           priority: input.priority ?? 0,
           notes: input.notes ?? null,
           sortOrder,
+          // SETS-MVP-001: Collection management fields (new items default to wishlist)
+          status: 'wishlist',
+          statusChangedAt: null,
+          purchaseDate: null,
+          purchasePrice: null,
+          purchaseTax: null,
+          purchaseShipping: null,
+          buildStatus: null,
         })
 
         return ok(item)
@@ -143,6 +152,10 @@ export function createWishlistService(deps: WishlistServiceDeps) {
      * - bestValue: Sort by price/pieceCount ratio (lowest first)
      * - expiringSoon: Sort by oldest release date first
      * - hiddenGems: Sort by (5 - priority) * pieceCount (highest first)
+     *
+     * SETS-MVP-001: Added status filter with default 'wishlist' for backward compatibility
+     * - status: Filter by item lifecycle status ('wishlist' or 'owned')
+     * - If not provided, defaults to 'wishlist' to maintain existing behavior
      */
     async listItems(
       userId: string,
@@ -152,6 +165,7 @@ export function createWishlistService(deps: WishlistServiceDeps) {
         store?: string
         tags?: string[]
         priority?: number
+        status?: 'wishlist' | 'owned' // SETS-MVP-001: Filter by lifecycle status
         sort?:
           | 'createdAt'
           | 'title'
@@ -165,7 +179,12 @@ export function createWishlistService(deps: WishlistServiceDeps) {
         order?: 'asc' | 'desc'
       },
     ): Promise<PaginatedResult<WishlistItem>> {
-      return wishlistRepo.findByUserId(userId, pagination, filters)
+      // SETS-MVP-001: Default to 'wishlist' status for backward compatibility
+      const effectiveFilters = filters
+        ? { ...filters, status: (filters.status ?? 'wishlist') as 'wishlist' | 'owned' }
+        : { status: 'wishlist' as const }
+
+      return wishlistRepo.findByUserId(userId, pagination, effectiveFilters)
     },
 
     // ─────────────────────────────────────────────────────────────────────
@@ -353,6 +372,75 @@ export function createWishlistService(deps: WishlistServiceDeps) {
       }
 
       return ok(newSet)
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Status Transitions (SETS-MVP-0310)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Update item status to 'owned' with purchase details
+     *
+     * SETS-MVP-0310: Unified model status transition approach.
+     * Updates the existing item's status field instead of creating a new Set record.
+     *
+     * Steps:
+     * 1. Fetch and verify wishlist item ownership
+     * 2. Update status to 'owned' with purchase metadata
+     *
+     * @deprecated markAsPurchased - Use this method instead for new purchase flows
+     */
+    async updateItemStatus(
+      userId: string,
+      itemId: string,
+      input: PurchaseDetailsInput,
+    ): Promise<Result<WishlistItem, WishlistError>> {
+      // Step 1: Fetch and verify wishlist item ownership
+      const wishlistResult = await wishlistRepo.findById(itemId)
+      if (!wishlistResult.ok) {
+        return wishlistResult
+      }
+
+      const wishlistItem = wishlistResult.data
+      if (wishlistItem.userId !== userId) {
+        return err('FORBIDDEN')
+      }
+
+      // Step 2: Build update data with status transition
+      const now = new Date()
+      const purchaseDate = input.purchaseDate ? new Date(input.purchaseDate) : now
+
+      const updateData: UpdateWishlistItemInput & {
+        status?: 'owned'
+        statusChangedAt?: Date
+        purchaseDate?: Date
+        purchasePrice?: string | null
+        purchaseTax?: string | null
+        purchaseShipping?: string | null
+        buildStatus?: 'not_started' | 'in_progress' | 'completed'
+      } = {
+        // Status transition
+        status: 'owned',
+        statusChangedAt: now,
+
+        // Purchase metadata
+        purchaseDate,
+        purchasePrice: input.purchasePrice ?? null,
+        purchaseTax: input.purchaseTax ?? null,
+        purchaseShipping: input.purchaseShipping ?? null,
+
+        // Build tracking
+        buildStatus: input.buildStatus ?? 'not_started',
+      }
+
+      // Step 3: Update the item
+      const updateResult = await wishlistRepo.update(itemId, updateData)
+      if (!updateResult.ok) {
+        logger.error(`Failed to update item status for item ${itemId}:`, updateResult.error)
+        return updateResult
+      }
+
+      return ok(updateResult.data)
     },
   }
 }

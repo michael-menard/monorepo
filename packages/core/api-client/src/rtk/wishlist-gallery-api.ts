@@ -28,6 +28,7 @@ import {
   type PresignRequest,
   type PresignResponse,
   type MarkAsPurchasedInput,
+  type PurchaseDetailsInput,
   type SetItem,
   type BatchReorder,
   type ReorderResponse,
@@ -58,12 +59,13 @@ export type ReorderUndoContext = z.infer<typeof ReorderUndoContextDataSchema> & 
  * Wishlist Gallery API
  *
  * Provides list and get operations for the wishlist gallery.
- * Uses cookie-based authentication via credentials: 'include'.
+ * Uses JWT Bearer token authentication via CognitoTokenManager.
  */
 export const wishlistGalleryApi = createApi({
   reducerPath: 'wishlistGalleryApi',
   baseQuery: createServerlessBaseQuery({
     enablePerformanceMonitoring: true,
+    enableJwtAuth: true,
   }),
   tagTypes: ['Wishlist', 'WishlistItem', 'Sets'],
   endpoints: builder => ({
@@ -179,6 +181,14 @@ export const wishlistGalleryApi = createApi({
           updatedAt: now,
           createdBy: null,
           updatedBy: null,
+          // SETS-MVP-001: Collection management fields
+          status: 'wishlist',
+          statusChangedAt: null,
+          purchaseDate: null,
+          purchasePrice: null,
+          purchaseTax: null,
+          purchaseShipping: null,
+          buildStatus: null,
         }
 
         // Optimistically add to cache
@@ -256,6 +266,31 @@ export const wishlistGalleryApi = createApi({
               { type: 'WishlistItem', id: itemId },
               { type: 'Wishlist', id: 'LIST' },
               { type: 'Sets', id: 'LIST' },
+            ]
+          : [],
+    }),
+
+    /**
+     * PATCH /api/wishlist/:id/purchase
+     *
+     * SETS-MVP-0310: Update item status to 'owned' with purchase details.
+     * Uses unified model status transition instead of creating new Set record.
+     */
+    updateItemPurchase: builder.mutation<
+      WishlistItem,
+      { itemId: string; input: PurchaseDetailsInput }
+    >({
+      query: ({ itemId, input }) => ({
+        url: `/wishlist/${itemId}/purchase`,
+        method: 'PATCH',
+        body: input,
+      }),
+      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+      invalidatesTags: (result, _error, { itemId }) =>
+        result
+          ? [
+              { type: 'WishlistItem', id: itemId },
+              { type: 'Wishlist', id: 'LIST' },
             ]
           : [],
     }),
@@ -368,6 +403,7 @@ export const {
   useAddWishlistItemMutation,
   useGetWishlistImagePresignUrlMutation,
   useMarkAsPurchasedMutation,
+  useUpdateItemPurchaseMutation,
   useDeleteWishlistItemMutation,
   // WISH-2041: Delete Flow - alias hook
   useRemoveFromWishlistMutation,

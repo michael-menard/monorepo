@@ -5,20 +5,30 @@
 
 import { StatsCards as BaseStatsCards } from '@repo/app-component-library'
 import type { StatItem } from '@repo/app-component-library'
-import { Blocks, Heart, Palette } from 'lucide-react'
+import { Blocks, Heart, Palette, Hammer } from 'lucide-react'
 import type { DashboardStats } from '@repo/api-client/rtk/dashboard-api'
+import type { DashboardStatsExtended } from '../__types__'
 
 export interface DashboardStatsCardsProps {
-  stats: DashboardStats
+  stats: DashboardStats | DashboardStatsExtended
   isLoading?: boolean
   error?: Error | null
+  /** Additional class names for the grid container */
+  className?: string
+}
+
+/**
+ * Type guard to check if stats has buildProgress
+ */
+function hasProgress(stats: DashboardStats | DashboardStatsExtended): stats is DashboardStatsExtended {
+  return 'buildProgress' in stats
 }
 
 /**
  * Dashboard-specific stats cards with LEGO branding
  * Uses the generic StatsCards component from @repo/app-component-library
  */
-export function StatsCards({ stats, isLoading = false, error = null }: DashboardStatsCardsProps) {
+export function StatsCards({ stats, isLoading = false, error = null, className }: DashboardStatsCardsProps) {
   const items: StatItem[] = [
     {
       icon: Blocks,
@@ -43,11 +53,23 @@ export function StatsCards({ stats, isLoading = false, error = null }: Dashboard
     },
   ]
 
+  // Add build progress if available
+  if (hasProgress(stats)) {
+    items.push({
+      icon: Hammer,
+      label: 'Built %',
+      value: stats.buildProgress,
+      colorClass: 'text-emerald-600 dark:text-emerald-400',
+      bgClass: 'bg-emerald-600/10 dark:bg-emerald-400/10',
+    })
+  }
+
   return (
     <BaseStatsCards
       items={items}
       isLoading={isLoading}
       error={error}
+      className={className}
       emptyTitle="No data yet"
       emptyDescription="Start adding MOCs to see your stats!"
       errorTitle="Unable to load statistics"

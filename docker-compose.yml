@@ -1,3 +1,22 @@
+# Local Development Services
+#
+# Usage:
+#   docker-compose up -d          # Start all services (DB, cache, observability)
+#   docker-compose up -d postgres # Start only PostgreSQL
+#   docker-compose up -d redis    # Start only Redis
+#   docker-compose down           # Stop all services
+#   docker-compose down -v        # Stop and remove volumes (reset data)
+#
+# Services:
+#   PostgreSQL: localhost:5432
+#   Redis: localhost:6379
+#   Prometheus: http://localhost:9090
+#   Grafana: http://localhost:3003 (admin/admin)
+#   OTel Collector: localhost:4317 (gRPC), localhost:4318 (HTTP)
+#
+# For E2E tests, start services then run:
+#   pnpm --filter lego-api dev    # Backend API on port 3001
+
 services:
   postgres:
     image: postgres:16
@@ -10,6 +29,104 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d monorepo']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: monorepo-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Observability Stack
+
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: monorepo-prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:9090/-/healthy']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: monorepo-grafana
+    ports:
+      - '3003:3000'
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3003
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: monorepo-otel-collector
+    ports:
+      - '4317:4317'   # OTLP gRPC
+      - '4318:4318'   # OTLP HTTP
+      - '8888:8888'   # Prometheus metrics (self)
+      - '8889:8889'   # Prometheus exporter
+      - '13133:13133' # Health check
+    volumes:
+      - ./infra/otel/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+    command: ['--config=/etc/otelcol-contrib/config.yaml']
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:13133']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
 
 volumes:
   postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

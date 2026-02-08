@@ -1,6 +1,5 @@
-import { uploadToS3, deleteFromS3 } from '@repo/api-core'
+import { uploadToS3, deleteFromS3, ok, err } from '@repo/api-core'
 import type { Result } from '@repo/api-core'
-import { ok, err } from '@repo/api-core'
 import type { ImageStorage } from '../ports/index.js'
 
 /**
@@ -13,7 +12,7 @@ export function createImageStorage(): ImageStorage {
     async upload(
       key: string,
       buffer: Buffer,
-      contentType: string
+      contentType: string,
     ): Promise<Result<{ url: string }, 'UPLOAD_FAILED'>> {
       return uploadToS3(key, buffer, contentType)
     },

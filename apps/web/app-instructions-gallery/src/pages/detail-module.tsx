@@ -44,20 +44,19 @@ export function DetailPageModule({ mocIdOrSlug }: DetailPageModuleProps) {
   }
 
   // Map API Instruction (api-responses.ts) to local Instruction type (__types__/index.ts)
-  const api = data.data
   const instruction: Instruction = {
-    id: api.id,
-    name: api.name,
-    description: api.description,
-    thumbnail: api.thumbnail,
-    images: api.images ?? [],
-    pieceCount: api.pieceCount,
-    theme: api.theme,
-    tags: api.tags,
-    pdfUrl: api.pdfUrl,
-    createdAt: api.createdAt,
-    updatedAt: api.updatedAt,
-    isFavorite: api.isFavorite,
+    id: data.id,
+    name: data.title,
+    description: data.description ?? undefined,
+    thumbnail: data.thumbnailUrl ?? '',
+    images: [],
+    pieceCount: data.totalPieceCount ?? 0,
+    theme: data.theme ?? '',
+    tags: data.tags ?? [],
+    pdfUrl: undefined,
+    createdAt: data.createdAt.toISOString(),
+    updatedAt: data.updatedAt.toISOString(),
+    isFavorite: data.isFeatured,
   }
 
   return <DetailPage instruction={instruction} onBack={handleBack} />

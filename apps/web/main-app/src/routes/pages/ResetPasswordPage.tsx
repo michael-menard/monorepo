@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { AuthLayout } from '@/components/Layout/RootLayout'
 import { useAuth } from '@/services/auth/AuthProvider'
-import { useNavigation } from '@/components/Navigation/NavigationProvider'
+import { useNavigationOptional } from '@/components/Navigation/NavigationProvider'
 import { OTPInput } from '@/components/Auth/OTPInput'
 
 // Password validation schema with Cognito requirements
@@ -126,7 +126,8 @@ const legoBrickVariants = {
 export function ResetPasswordPage() {
   const router = useRouter()
   const { confirmResetPassword, forgotPassword, isLoading } = useAuth()
-  const { trackNavigation } = useNavigation()
+  const navigationContext = useNavigationOptional()
+  const trackNavigation = navigationContext?.trackNavigation ?? (() => {})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)

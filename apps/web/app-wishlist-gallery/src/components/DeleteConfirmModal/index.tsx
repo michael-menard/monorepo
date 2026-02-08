@@ -52,7 +52,11 @@ export function DeleteConfirmModal({
 
   return (
     <AppAlertDialog open={isOpen} onOpenChange={open => !open && !isDeleting && onClose()}>
-      <AppAlertDialogContent variant="destructive" className="sm:max-w-md">
+      <AppAlertDialogContent
+        variant="destructive"
+        className="sm:max-w-md"
+        data-testid="delete-confirm-modal"
+      >
         <AppAlertDialogHeader>
           <AppAlertDialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
@@ -115,7 +119,7 @@ export function DeleteConfirmModal({
             onClick={handleConfirm}
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            data-testid="delete-confirm-delete"
+            data-testid="delete-confirm-button"
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
           </AppAlertDialogAction>

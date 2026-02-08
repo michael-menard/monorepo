@@ -1,0 +1,582 @@
+schema: 1
+story_id: INST-1104
+timestamp: '2026-02-07T16:30:00Z'
+autonomy_level: conservative
+phase: planning
+
+summary: |
+  Implement direct PDF upload (≤10MB) for MOC instruction files. Backend endpoint exists but needs
+  PDF validation refinement. Frontend requires new InstructionsUpload component with client-side
+  validation, sequential upload, and file list display.
+
+phases:
+  - id: 1-backend-validation
+    name: Backend PDF Validation Utilities
+    duration_hours: 2
+    blockers: []
+    outputs:
+      - file: apps/api/lego-api/core/utils/file-validation.ts
+        type: modify
+        description: Add validatePdfFile() utilities with MIME type, extension, and size validation
+
+    tasks:
+      - name: Add PDF validation constants
+        description: |
+          Add ALLOWED_PDF_MIME_TYPES = ['application/pdf'] and ALLOWED_PDF_EXTENSIONS = ['.pdf']
+          to file-validation.ts following existing pattern from image validation
+        acceptance:
+          - Constants exported and typed correctly
+          - Constants follow existing naming convention
+
+      - name: Implement validatePdfMimeType()
+        description: |
+          Create validatePdfMimeType() function that validates MIME type is 'application/pdf'.
+          Follow same pattern as validateMimeType() with ValidationResult return type.
+        acceptance:
+          - Function validates application/pdf only
+          - Returns ValidationResult with appropriate error codes
+          - Handles null/undefined MIME types
+          - Returns code 'INVALID_MIME_TYPE' on failure
+
+      - name: Implement validatePdfExtension()
+        description: |
+          Create validatePdfExtension() function that validates file extension is .pdf (case-insensitive).
+          Extract extension from filename and normalize to lowercase for comparison.
+        acceptance:
+          - Function validates .pdf extension only
+          - Case-insensitive matching (.PDF, .pdf, .Pdf all valid)
+          - Returns ValidationResult with code 'INVALID_EXTENSION' on failure
+          - Handles filenames without extensions gracefully
+
+      - name: Implement validatePdfFile()
+        description: |
+          Create validatePdfFile() function that combines validatePdfMimeType(), validatePdfExtension(),
+          and validateFileSize() into single validation call. Validates in order: MIME type, extension, size.
+        acceptance:
+          - Function accepts (mimeType, filename, sizeBytes) parameters
+          - Returns first validation failure encountered
+          - Returns success only if all validations pass
+          - Follows existing validateFileUpload() pattern
+
+      - name: Add unit tests for PDF validation
+        description: |
+          Create unit tests for all three new functions in file-validation.test.ts (or create if missing).
+          Test success cases, failure cases, edge cases (null, empty, wrong type).
+        acceptance:
+          - validatePdfMimeType() test coverage ≥90%
+          - validatePdfExtension() test coverage ≥90%
+          - validatePdfFile() test coverage ≥90%
+          - All edge cases covered (null, empty, invalid)
+
+  - id: 2-backend-service-refinement
+    name: Backend Service Layer Updates
+    duration_hours: 2
+    blockers: [1-backend-validation]
+    outputs:
+      - file: apps/api/lego-api/domains/instructions/application/services.ts
+        type: modify
+        description: Update uploadInstructionFile() to use validatePdfFile() and enforce 10MB limit
+
+    tasks:
+      - name: Refactor uploadInstructionFile validation
+        description: |
+          Replace existing inline validation (lines 238-252) with call to validatePdfFile().
+          Import from core/utils/file-validation.ts. Use structured error codes from validation result.
+        acceptance:
+          - Service calls validatePdfFile(file.mimetype, file.filename, file.size)
+          - Validation failure returns appropriate InstructionsError
+          - Error codes map correctly: INVALID_MIME_TYPE → 'INVALID_FILE', etc.
+          - Security logging on validation failure with createSecurityEvent()
+
+      - name: Enforce 10MB file size limit
+        description: |
+          Update MAX_FILE_SIZE check to use MAX_FILE_SIZE constant from file-validation.ts (10MB).
+          Remove hardcoded 100MB check on line 249. Document that 100MB is for presigned uploads (INST-1105).
+        acceptance:
+          - Service enforces 10MB limit for direct upload
+          - Uses MAX_FILE_SIZE constant from file-validation.ts
+          - Code comment documents 100MB is for INST-1105 presigned flow
+          - Validation error message specifies "10MB"
+
+      - name: Add structured error messages
+        description: |
+          Update error handling to return structured error codes that frontend can map to user-friendly messages.
+          Return specific codes: 'INVALID_MIME_TYPE', 'INVALID_EXTENSION', 'FILE_TOO_LARGE' instead of generic 'INVALID_FILE'.
+        acceptance:
+          - Service returns specific error codes from validation
+          - Route handler (routes.ts) maps codes to HTTP status and message
+          - Frontend receives actionable error information
+          - AC46-47 error messages achievable from error codes
+
+      - name: Update service unit tests
+        description: |
+          Update existing service tests to cover new PDF validation logic.
+          Add tests for 10MB limit enforcement, structured error codes, security logging.
+        acceptance:
+          - Test validates PDF MIME type rejection
+          - Test validates file size rejection at 10MB boundary
+          - Test validates extension rejection
+          - Service test coverage ≥90%
+
+  - id: 3-frontend-component
+    name: Frontend InstructionsUpload Component
+    duration_hours: 6
+    blockers: []
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/index.tsx
+        type: create
+        description: Main upload component with file picker, validation, and upload flow
+      - file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__types__/index.ts
+        type: create
+        description: Zod schemas for component props and file validation
+
+    tasks:
+      - name: Create component structure and types
+        description: |
+          Create InstructionsUpload directory with index.tsx and __types__/index.ts.
+          Define Zod schemas for props (mocId, onSuccess callback), file validation (type, size).
+          Define ALLOWED_FILE_TYPES = ['application/pdf'], MAX_FILE_SIZE = 10MB constants.
+        acceptance:
+          - Component directory follows project structure
+          - __types__/index.ts has Zod schemas (not TypeScript interfaces)
+          - Props schema includes mocId (string) and optional onSuccess callback
+          - File validation constants match backend limits
+
+      - name: Implement file picker UI
+        description: |
+          Create file input with accept="application/pdf" and multiple attributes.
+          Add "Add Instructions" button that triggers file picker.
+          Use Button primitive from @repo/app-component-library.
+        acceptance:
+          - File input accepts .pdf files only (AC3)
+          - Multiple file selection enabled (AC4)
+          - "Add Instructions" button visible and clickable (AC2, AC5)
+          - File input visually hidden but accessible
+          - Keyboard navigation works (Tab, Enter)
+
+      - name: Implement client-side validation
+        description: |
+          Create validateFile() helper that checks MIME type and file size.
+          Reject non-PDF files with toast: "Only PDF files allowed" (AC6).
+          Reject files >10MB with toast: "File too large. Max 10MB per file" (AC7).
+          Show upgrade hint for >10MB: "Use presigned upload for larger files (coming soon)" (AC8).
+        acceptance:
+          - validateFile() checks file.type === 'application/pdf'
+          - validateFile() checks file.size <= 10MB
+          - Error toasts display specific messages per AC6-8
+          - Validation happens before file appears in selection list
+          - Uses showErrorToast from @repo/app-component-library
+
+      - name: Implement file selection list
+        description: |
+          Display selected files in list with filename, formatted size, and Remove button.
+          Show file count header: "Selected Files (3)" (AC12).
+          Format file size as "5 MB", "2.3 MB" using formatFileSize() helper (AC11).
+        acceptance:
+          - Selected files display in list (AC9)
+          - Each file shows Remove button (AC10)
+          - File size formatted correctly (AC11)
+          - File count displayed above list (AC12)
+          - Remove button removes file from selection (local state)
+
+      - name: Implement sequential upload flow
+        description: |
+          Create handleUpload() that uploads files one at a time using useUploadInstructionFileMutation.
+          Show upload progress: "Uploading 2 of 5..." (AC16).
+          Display loading spinner during upload (AC15).
+          Disable Upload button and show Cancel button during upload (AC17, AC18).
+        acceptance:
+          - Files upload sequentially (one at a time) (AC14)
+          - Upload progress indicator shows current file number (AC16)
+          - Loading spinner visible during upload (AC15)
+          - Upload button disabled during upload (AC17)
+          - Cancel button aborts remaining uploads (AC18)
+          - Uses useUploadInstructionFileMutation from @repo/api-client
+
+      - name: Implement success and error handling
+        description: |
+          On success: show toast "Instructions uploaded!", clear selection, update file list via cache invalidation.
+          On error: show toast with API error message or generic "Upload failed. Please try again." (AC23).
+          Uploaded files appear in InstructionsCard immediately without page reload (AC19-21).
+        acceptance:
+          - Success toast displays after upload (AC19)
+          - File list updates without page reload (AC20)
+          - Uploaded files show download button (AC21)
+          - API errors display as toast with message (AC22)
+          - Network errors show generic error message (AC23)
+          - Cache invalidation triggers via RTK Query mutation
+
+  - id: 4-frontend-integration
+    name: Frontend Integration with MOC Detail Page
+    duration_hours: 2
+    blockers: [3-frontend-component]
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/components/MocDetailDashboard/InstructionsCard.tsx
+        type: modify
+        description: Add InstructionsUpload component to instructions card for MOC owners
+
+    tasks:
+      - name: Integrate InstructionsUpload in InstructionsCard
+        description: |
+          Import InstructionsUpload component and render below file list in InstructionsCard.
+          Only show for MOC owner (check userId matches moc.userId).
+          Pass mocId prop and onSuccess callback to refresh file list.
+        acceptance:
+          - InstructionsUpload renders on MOC detail page (AC1)
+          - Component only visible to MOC owner
+          - mocId prop passed correctly
+          - onSuccess callback refreshes file list
+          - Component placed below existing file list
+
+      - name: Update InstructionsCard file list
+        description: |
+          Ensure InstructionsCard displays files from moc_files table with type='instruction'.
+          Show download button for each file (AC21).
+          Fetch files via RTK Query (should already exist from backend).
+        acceptance:
+          - Files fetched from correct API endpoint
+          - Only instruction files displayed (type='instruction')
+          - Download button functional (AC21)
+          - File list updates after upload via cache invalidation
+
+      - name: Add loading and error states
+        description: |
+          Show loading state while fetching MOC details.
+          Show error state if MOC not found or unauthorized.
+          Handle edge case where MOC has no owner (shouldn't show upload).
+        acceptance:
+          - Loading spinner while fetching MOC
+          - Error message if MOC not found
+          - No upload component if user not owner
+          - Graceful handling of missing data
+
+  - id: 5-frontend-tests
+    name: Frontend Unit and Integration Tests
+    duration_hours: 5
+    blockers: [3-frontend-component, 4-frontend-integration]
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx
+        type: create
+        description: Unit tests for InstructionsUpload component
+      - file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.integration.test.tsx
+        type: create
+        description: Integration tests with MSW handlers
+
+    tasks:
+      - name: Create unit tests for InstructionsUpload
+        description: |
+          Test component rendering, file validation, selection list, Remove button.
+          Use React Testing Library with semantic queries (getByRole, getByLabelText).
+          Mock useUploadInstructionFileMutation to avoid API calls.
+        acceptance:
+          - AC51: Component renders
+          - AC52: Validates PDF file type (rejects JPEG, TXT)
+          - AC53: Validates file size (rejects >10MB, accepts ≤10MB)
+          - AC54: Multiple files supported in selection list
+          - AC55: Remove button removes file from selection
+          - Coverage ≥80% for component file
+
+      - name: Create integration tests with MSW
+        description: |
+          Create MSW handler for POST /api/v2/mocs/:id/files/instruction.
+          Test success response (201 with MocFile), error responses (400, 403, 404).
+          Verify cache invalidation after successful upload.
+        acceptance:
+          - AC60: POST endpoint called correctly
+          - AC61: MSW handler returns success
+          - AC62: MSW handler returns error for invalid file
+          - AC63: File metadata matches MocFile schema
+          - AC64: Cache invalidation triggers
+          - Integration tests pass with MSW mocks
+
+      - name: Create accessibility tests
+        description: |
+          Test keyboard navigation (Tab, Enter, Space), screen reader labels, focus management.
+          Verify WCAG AA color contrast (4.5:1 minimum).
+          Use @testing-library/jest-dom matchers for accessibility assertions.
+        acceptance:
+          - File picker opens with Enter/Space key
+          - Screen reader labels present ("Add instructions", "Selected files list")
+          - Focus returns to upload button after file picker closes
+          - Color contrast meets WCAG AA (4.5:1)
+          - Accessibility tests pass
+
+  - id: 6-e2e-tests
+    name: E2E Tests with Playwright
+    duration_hours: 4
+    blockers: [4-frontend-integration]
+    outputs:
+      - file: apps/web/playwright/tests/instructions/upload-direct.spec.ts
+        type: create
+        description: E2E tests for instruction file upload flow
+
+    tasks:
+      - name: Create E2E test for single file upload
+        description: |
+          Test happy path: Navigate to MOC detail page, upload single 5MB PDF, verify file appears in list.
+          Use real file (create fixture in apps/web/playwright/fixtures/files/).
+          Verify download button works.
+        acceptance:
+          - AC65: Upload single 5MB PDF
+          - AC66: File uploads successfully, appears in list
+          - AC71: Download button functional
+          - Test passes consistently (no flakiness)
+
+      - name: Create E2E test for multiple file upload
+        description: |
+          Test uploading 2-3 PDFs sequentially.
+          Verify all files appear in list after upload.
+          Check upload progress indicator shows correct count.
+        acceptance:
+          - AC67: Upload multiple PDFs (2-3 files) sequentially
+          - AC68: All files appear in list after upload
+          - Upload progress updates correctly ("Uploading 2 of 3...")
+          - Test passes consistently
+
+      - name: Create E2E tests for error cases
+        description: |
+          Test rejection of 15MB PDF with presigned flow hint (AC69).
+          Test rejection of JPEG file with error "Only PDF files allowed" (AC70).
+          Verify error toasts display correctly.
+        acceptance:
+          - AC69: Reject 15MB PDF with error message
+          - AC70: Reject JPEG file with error message
+          - Error toasts visible and have correct text
+          - Tests pass consistently
+
+  - id: 7-documentation
+    name: Documentation and Cleanup
+    duration_hours: 1
+    blockers: [5-frontend-tests, 6-e2e-tests]
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/README.md
+        type: create
+        description: Component usage documentation
+
+    tasks:
+      - name: Create component README
+        description: |
+          Document InstructionsUpload component props, usage example, validation rules.
+          Include code examples for integration in MOC detail page.
+        acceptance:
+          - Props documented with types
+          - Usage example with code snippet
+          - Validation rules listed (PDF only, 10MB max)
+          - File saved in component directory
+
+      - name: Update API documentation
+        description: |
+          Document POST /mocs/:id/files/instruction endpoint in API docs (if applicable).
+          Include request format (multipart/form-data), response schema, error codes.
+        acceptance:
+          - Endpoint documented with examples
+          - Error codes listed (INVALID_FILE, FORBIDDEN, etc.)
+          - Response schema includes MocFile structure
+
+      - name: Code cleanup and linting
+        description: |
+          Run ESLint and fix any warnings/errors in new/modified files.
+          Run Prettier to ensure consistent formatting.
+          Remove any console.log statements (use @repo/logger instead).
+        acceptance:
+          - ESLint passes with no errors
+          - Prettier formatting applied
+          - No console.log statements in production code
+          - All imports follow project conventions
+
+risks:
+  - id: risk-1
+    title: PDF MIME Type Validation Missing
+    severity: low
+    impact: |
+      Current file-validation.ts only supports images. Need to add PDF validation utilities.
+    mitigation: |
+      Phase 1 adds validatePdfFile() utilities. Estimated 2 hours. Non-blocking, straightforward implementation.
+    status: mitigated
+
+  - id: risk-2
+    title: Sequential Upload UX
+    severity: medium
+    impact: |
+      Multiple files upload one at a time which may feel slow for 5+ files.
+    mitigation: |
+      Show progress for each file, allow cancellation. Parallel upload deferred to INST-2036.
+      Acceptable for MVP since most users upload 1-2 files.
+    status: accepted
+
+  - id: risk-3
+    title: S3 Transaction Safety
+    severity: low
+    impact: |
+      S3 success but DB failure creates orphaned objects.
+    mitigation: |
+      Transaction wrapper exists in service (line 276). Cleanup job handled by INST-1204.
+      Existing pattern works well.
+    status: mitigated
+
+dependencies:
+  external:
+    - name: INST-1102 (Create Basic MOC)
+      status: in_qa
+      description: E2E tests depend on MOC creation flow
+      blocking: false
+      notes: Use existing MOC creation from INST-1102 in E2E setup
+
+  internal:
+    - name: useUploadInstructionFileMutation
+      location: packages/core/api-client/src/rtk/instructions-api.ts
+      status: exists
+      lines: 258-291
+      notes: RTK Query mutation already implemented, reuse as-is
+
+    - name: POST /mocs/:id/files/instruction endpoint
+      location: apps/api/lego-api/domains/instructions/routes.ts
+      status: exists
+      lines: 198-237
+      notes: Endpoint exists, needs validation refinement only
+
+    - name: ThumbnailUpload component
+      location: apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx
+      status: exists
+      notes: Similar file upload pattern to follow for consistency
+
+testing_strategy:
+  unit_tests:
+    frontend:
+      target_coverage: 80
+      test_file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx
+      test_cases:
+        - Component renders with "Add Instructions" button (AC51)
+        - Validates PDF file type, rejects JPEG/TXT (AC52)
+        - Validates file size, rejects >10MB (AC53)
+        - Multiple file selection supported (AC54)
+        - Remove button removes file (AC55)
+
+    backend:
+      target_coverage: 90
+      test_file: apps/api/lego-api/core/utils/__tests__/file-validation.test.ts
+      test_cases:
+        - validatePdfMimeType accepts application/pdf (AC56)
+        - validatePdfMimeType rejects other types (AC56)
+        - validateFileSize accepts 1 byte to 10MB (AC57)
+        - validateFileSize rejects >10MB and 0 bytes (AC57)
+        - validatePdfExtension accepts .pdf (AC58)
+        - validatePdfExtension rejects other extensions (AC58)
+        - Authorization check prevents unauthorized uploads (AC59)
+
+  integration_tests:
+    test_file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.integration.test.tsx
+    test_cases:
+      - POST endpoint called correctly (AC60)
+      - MSW handler returns success with MocFile schema (AC61, AC63)
+      - MSW handler returns error for invalid file (AC62)
+      - Cache invalidation triggers after success (AC64)
+
+  e2e_tests:
+    test_file: apps/web/playwright/tests/instructions/upload-direct.spec.ts
+    test_cases:
+      - Upload single 5MB PDF, appears in list (AC65, AC66)
+      - Upload multiple PDFs sequentially (AC67, AC68)
+      - Reject 15MB PDF with error (AC69)
+      - Reject JPEG file with error (AC70)
+      - Download button functional (AC71)
+
+files_to_modify:
+  - path: apps/api/lego-api/core/utils/file-validation.ts
+    lines: [21-42, 88-130]
+    changes:
+      - Add ALLOWED_PDF_MIME_TYPES constant
+      - Add ALLOWED_PDF_EXTENSIONS constant
+      - Add validatePdfMimeType() function
+      - Add validatePdfExtension() function
+      - Add validatePdfFile() function
+    reason: Phase 1 - Add PDF validation utilities (AC72, AC73, AC74)
+
+  - path: apps/api/lego-api/domains/instructions/application/services.ts
+    lines: [238-252]
+    changes:
+      - Replace inline validation with validatePdfFile() call
+      - Update file size limit to 10MB (use MAX_FILE_SIZE constant)
+      - Add structured error codes (INVALID_MIME_TYPE, INVALID_EXTENSION, FILE_TOO_LARGE)
+      - Add security logging with createSecurityEvent()
+    reason: Phase 2 - Refine backend validation and enforce 10MB limit
+
+  - path: apps/web/app-instructions-gallery/src/components/MocDetailDashboard/InstructionsCard.tsx
+    lines: [12-19]
+    changes:
+      - Import InstructionsUpload component
+      - Render InstructionsUpload below file list
+      - Add authorization check (only show for MOC owner)
+      - Pass mocId and onSuccess callback
+    reason: Phase 4 - Integrate upload component in MOC detail page
+
+files_to_create:
+  - path: apps/web/app-instructions-gallery/src/components/InstructionsUpload/index.tsx
+    description: Main upload component with file picker, validation, sequential upload
+    size_estimate: 300 lines
+    reason: Phase 3 - New component for instruction file uploads (AC1-23)
+
+  - path: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__types__/index.ts
+    description: Zod schemas for component props, file validation, constants
+    size_estimate: 50 lines
+    reason: Phase 3 - Type definitions following Zod-first pattern
+
+  - path: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx
+    description: Unit tests for component rendering, validation, file selection
+    size_estimate: 200 lines
+    reason: Phase 5 - Unit tests (AC51-55)
+
+  - path: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.integration.test.tsx
+    description: Integration tests with MSW handlers
+    size_estimate: 150 lines
+    reason: Phase 5 - Integration tests (AC60-64)
+
+  - path: apps/web/playwright/tests/instructions/upload-direct.spec.ts
+    description: E2E tests for upload flow (happy path and error cases)
+    size_estimate: 250 lines
+    reason: Phase 6 - E2E tests (AC65-71)
+
+  - path: apps/web/playwright/fixtures/files/sample-instructions-5mb.pdf
+    description: 5MB PDF fixture for E2E testing
+    size_estimate: 5MB binary
+    reason: Phase 6 - Test fixture for happy path upload
+
+  - path: apps/web/playwright/fixtures/files/sample-instructions-15mb.pdf
+    description: 15MB PDF fixture for E2E testing (error case)
+    size_estimate: 15MB binary
+    reason: Phase 6 - Test fixture for oversized file rejection
+
+  - path: apps/web/app-instructions-gallery/src/components/InstructionsUpload/README.md
+    description: Component usage documentation
+    size_estimate: 100 lines
+    reason: Phase 7 - Documentation for developers
+
+acceptance_criteria_coverage:
+  total: 74
+  by_phase:
+    phase_1: [72, 73, 74]  # Backend validation utilities (3 ACs)
+    phase_2: [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]  # Backend refinement (24 ACs)
+    phase_3: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]  # Frontend component (23 ACs)
+    phase_4: [1, 20, 21]  # Frontend integration (overlaps with phase 3)
+    phase_5: [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]  # Tests (14 ACs)
+    phase_6: [65, 66, 67, 68, 69, 70, 71]  # E2E tests (7 ACs)
+    phase_7: []  # Documentation (no explicit ACs, but supports all)
+
+  database: [48, 49, 50]  # Database schema (3 ACs) - already exists, no changes needed
+
+notes: |
+  - Backend endpoint POST /mocs/:id/files/instruction already exists (routes.ts lines 198-237)
+  - RTK Query mutation useUploadInstructionFileMutation already exists (instructions-api.ts lines 258-291)
+  - Database schema moc_files already supports type='instruction' with multiple files per MOC
+  - ThumbnailUpload component provides excellent pattern to follow for consistency
+  - Most work is frontend component (Phase 3: 6 hours) and tests (Phases 5-6: 9 hours)
+  - Backend refinement is minimal (Phase 1-2: 4 hours total)
+  - Total estimated effort: 24 hours (3 story points) matches story estimate
+
+confidence: very_high
+confidence_rationale: |
+  Backend infrastructure already exists and only needs validation refinement (4 hours).
+  Frontend follows established ThumbnailUpload pattern with clear acceptance criteria.
+  RTK Query mutation already implemented with cache invalidation.
+  Database schema supports requirements without changes.
+  Risk mitigation strategies are clear and non-blocking.

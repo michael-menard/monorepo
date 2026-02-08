@@ -15,7 +15,11 @@ export interface CognitoTokens {
   refreshToken?: string
 }
 
-export interface CognitoUser {
+/**
+ * JWT payload user info (decoded from Cognito token)
+ * Note: Renamed from CognitoUser to avoid conflict with admin schemas CognitoUser
+ */
+export interface CognitoJwtUser {
   sub: string
   email?: string
   name?: string
@@ -282,7 +286,7 @@ export class CognitoTokenManager {
   /**
    * Decode JWT token payload (client-side only, not for security)
    */
-  decodeToken(token?: string): CognitoUser | null {
+  decodeToken(token?: string): CognitoJwtUser | null {
     const tokenToUse = token || this.tokens?.accessToken
     if (!tokenToUse) return null
 
@@ -304,7 +308,7 @@ export class CognitoTokenManager {
   /**
    * Get current user information from tokens
    */
-  getCurrentUser(): CognitoUser | null {
+  getCurrentUser(): CognitoJwtUser | null {
     return this.decodeToken()
   }
 
@@ -469,7 +473,7 @@ export async function isCognitoAuthenticationValid(): Promise<boolean> {
 /**
  * Get current user from global token manager
  */
-export function getCurrentCognitoUser(): CognitoUser | null {
+export function getCurrentCognitoUser(): CognitoJwtUser | null {
   return globalTokenManager?.getCurrentUser() || null
 }
 

@@ -1,0 +1,53 @@
+# Prometheus Configuration
+# Scrapes metrics from lego-api and other monitored services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+  # Attach these labels to all time series
+  external_labels:
+    monitor: 'monorepo'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files (optional)
+# rule_files:
+#   - "rules/*.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Lego API (main backend)
+  - job_name: 'lego-api'
+    static_configs:
+      - targets: ['host.docker.internal:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # OpenTelemetry Collector Prometheus exporter
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+    scrape_interval: 10s
+
+  # Knowledge Base API (if running)
+  - job_name: 'knowledge-base-api'
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Node.js default metrics (from OTel SDK)
+  - job_name: 'nodejs'
+    static_configs:
+      - targets: ['host.docker.internal:9464']
+    scrape_interval: 10s

@@ -10,7 +10,7 @@
     "declarationMap": true,
     "strict": true,
     "noImplicitAny": false,
-    "skipLibCheck": true,
+    "skipLibCheck": true, "types": ["node"],
     "esModuleInterop": true,
     "resolveJsonModule": true
   },

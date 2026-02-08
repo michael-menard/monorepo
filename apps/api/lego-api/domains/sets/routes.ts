@@ -2,7 +2,11 @@ import { Hono } from 'hono'
 import { auth } from '../../middleware/auth.js'
 import { db, schema } from '../../composition/index.js'
 import { createSetsService } from './application/index.js'
-import { createSetRepository, createSetImageRepository, createImageStorage } from './adapters/index.js'
+import {
+  createSetRepository,
+  createSetImageRepository,
+  createImageStorage,
+} from './adapters/index.js'
 import {
   CreateSetInputSchema,
   UpdateSetInputSchema,
@@ -45,7 +49,7 @@ sets.use('*', auth)
 /**
  * GET / - List user's sets
  */
-sets.get('/', async (c) => {
+sets.get('/', async c => {
   const userId = c.get('userId')
   const query = ListSetsQuerySchema.safeParse(c.req.query())
 
@@ -54,11 +58,7 @@ sets.get('/', async (c) => {
   }
 
   const { page, limit, search, theme, isBuilt } = query.data
-  const result = await setsService.listSets(
-    userId,
-    { page, limit },
-    { search, theme, isBuilt }
-  )
+  const result = await setsService.listSets(userId, { page, limit }, { search, theme, isBuilt })
 
   return c.json(result)
 })
@@ -66,7 +66,7 @@ sets.get('/', async (c) => {
 /**
  * GET /:id - Get single set with images
  */
-sets.get('/:id', async (c) => {
+sets.get('/:id', async c => {
   const userId = c.get('userId')
   const setId = c.req.param('id')
 
@@ -83,7 +83,7 @@ sets.get('/:id', async (c) => {
 /**
  * POST / - Create new set
  */
-sets.post('/', async (c) => {
+sets.post('/', async c => {
   const userId = c.get('userId')
   const body = await c.req.json()
   const input = CreateSetInputSchema.safeParse(body)
@@ -105,7 +105,7 @@ sets.post('/', async (c) => {
 /**
  * PATCH /:id - Update set
  */
-sets.patch('/:id', async (c) => {
+sets.patch('/:id', async c => {
   const userId = c.get('userId')
   const setId = c.req.param('id')
 
@@ -129,7 +129,7 @@ sets.patch('/:id', async (c) => {
 /**
  * DELETE /:id - Delete set
  */
-sets.delete('/:id', async (c) => {
+sets.delete('/:id', async c => {
   const userId = c.get('userId')
   const setId = c.req.param('id')
 
@@ -150,7 +150,7 @@ sets.delete('/:id', async (c) => {
 /**
  * GET /:setId/images - List images for a set
  */
-sets.get('/:setId/images', async (c) => {
+sets.get('/:setId/images', async c => {
   const userId = c.get('userId')
   const setId = c.req.param('setId')
 
@@ -167,7 +167,7 @@ sets.get('/:setId/images', async (c) => {
 /**
  * POST /:setId/images - Upload new image for a set
  */
-sets.post('/:setId/images', async (c) => {
+sets.post('/:setId/images', async c => {
   const userId = c.get('userId')
   const setId = c.req.param('setId')
 
@@ -202,16 +202,22 @@ sets.post('/:setId/images', async (c) => {
       mimetype: file.type,
       size: file.size,
     },
-    input.data
+    input.data,
   )
 
   if (!result.ok) {
     const status =
-      result.error === 'NOT_FOUND' ? 404 :
-      result.error === 'FORBIDDEN' ? 403 :
-      result.error === 'INVALID_FILE' ? 400 :
-      result.error === 'UPLOAD_FAILED' ? 500 :
-      result.error === 'DB_ERROR' ? 500 : 500
+      result.error === 'NOT_FOUND'
+        ? 404
+        : result.error === 'FORBIDDEN'
+          ? 403
+          : result.error === 'INVALID_FILE'
+            ? 400
+            : result.error === 'UPLOAD_FAILED'
+              ? 500
+              : result.error === 'DB_ERROR'
+                ? 500
+                : 500
     return c.json({ error: result.error }, status)
   }
 
@@ -221,7 +227,7 @@ sets.post('/:setId/images', async (c) => {
 /**
  * PATCH /images/:imageId - Update image (position)
  */
-sets.patch('/images/:imageId', async (c) => {
+sets.patch('/images/:imageId', async c => {
   const userId = c.get('userId')
   const imageId = c.req.param('imageId')
 
@@ -245,7 +251,7 @@ sets.patch('/images/:imageId', async (c) => {
 /**
  * DELETE /images/:imageId - Delete image
  */
-sets.delete('/images/:imageId', async (c) => {
+sets.delete('/images/:imageId', async c => {
   const userId = c.get('userId')
   const imageId = c.req.param('imageId')
 

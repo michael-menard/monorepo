@@ -1,0 +1,26 @@
+schema: 1
+story_id: WISH-2006
+timestamp: '2026-02-03T22:18:00Z'
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - apps/web/app-wishlist-gallery/**
+  - apps/web/playwright/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Add comprehensive keyboard navigation and screen reader support to wishlist gallery with roving tabindex, keyboard shortcuts, and ARIA announcements for WCAG AA compliance"

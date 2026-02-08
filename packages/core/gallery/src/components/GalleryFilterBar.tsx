@@ -27,6 +27,8 @@ export interface GalleryFilterBarProps {
   onSearch?: (value: string) => void
   /** Search placeholder text */
   searchPlaceholder?: string
+  /** Accessible label for search input (A11Y-001) */
+  searchAriaLabel?: string
 
   /** Available tags for filtering */
   tags?: string[]
@@ -106,6 +108,7 @@ export const GalleryFilterBar = ({
   onSearchChange,
   onSearch,
   searchPlaceholder = 'Search...',
+  searchAriaLabel,
   tags = [],
   selectedTags = [],
   onTagsChange,
@@ -197,6 +200,7 @@ export const GalleryFilterBar = ({
                 onChange={onSearchChange}
                 onSearch={onSearch}
                 placeholder={searchPlaceholder}
+                aria-label={searchAriaLabel}
                 data-testid={`${testId}-search`}
               />
             </div>

@@ -1,0 +1,248 @@
+schema: 1
+feature_dir: plans/future/instructions
+prefix: INST
+reviewed: 2026-02-05T21:30:00Z
+
+summary: Post-MVP enhancements and improvements for MOC instructions feature. These items do not block core journey but improve robustness, scalability, and user experience.
+
+enhancements:
+  high_value:
+    - id: ENG-100
+      source: engineering
+      suggestion: Implement multipart upload support for files >100MB (currently capped at 100MB presigned URL)
+      impact: high
+      effort: high
+      priority: P1
+
+    - id: ENG-101
+      source: engineering
+      suggestion: Add retry strategy with exponential backoff for failed uploads
+      impact: high
+      effort: medium
+
+    - id: ENG-102
+      source: engineering
+      suggestion: Implement presigned URL refresh logic for long-running uploads
+      impact: high
+      effort: medium
+
+    - id: PLAT-100
+      source: platform
+      suggestion: Add S3 lifecycle policies for automatic cleanup of expired upload sessions
+      impact: high
+      effort: low
+
+    - id: SEC-100
+      source: security
+      suggestion: Implement audit logging for all edit operations (compliance and debugging)
+      impact: high
+      effort: medium
+
+    - id: UX-100
+      source: ux
+      suggestion: Drag-to-reorder files for better organization in edit UI
+      impact: medium
+      effort: medium
+
+  medium_value:
+    - id: ENG-103
+      source: engineering
+      suggestion: Contract tests between frontend and API to catch schema mismatches early
+      impact: medium
+      effort: low
+
+    - id: PLAT-101
+      source: platform
+      suggestion: CloudWatch alarms and dashboards for S3 quota, presigned URL expiry rates, and upload success metrics
+      impact: medium
+      effort: medium
+
+    - id: PLAT-102
+      source: platform
+      suggestion: Add CloudFront CDN for instruction file serving and edge caching
+      impact: medium
+      effort: high
+
+    - id: PLAT-103
+      source: platform
+      suggestion: Implement S3 cross-region replication for critical MOCs
+      impact: medium
+      effort: high
+
+    - id: SEC-101
+      source: security
+      suggestion: File type validation and scanning to prevent malicious uploads
+      impact: medium
+      effort: medium
+
+    - id: SEC-102
+      source: security
+      suggestion: IP-based rate limiting on presigned URL requests
+      impact: medium
+      effort: low
+
+    - id: UX-101
+      source: ux
+      suggestion: Inline edit mode as alternative to modal/page experience
+      impact: medium
+      effort: medium
+
+    - id: UX-102
+      source: ux
+      suggestion: Edit undo/redo to help users recover from form field mistakes
+      impact: medium
+      effort: high
+
+  nice_to_have:
+    - id: PROD-100
+      source: product
+      suggestion: Soft delete with restore (30-day retention) for accidental deletion protection
+      impact: low
+      effort: high
+
+    - id: PROD-101
+      source: product
+      suggestion: Bulk edit operations to update multiple MOCs metadata at once
+      impact: low
+      effort: medium
+
+    - id: PROD-102
+      source: product
+      suggestion: File reordering in edit UI (requires backend displayOrder field)
+      impact: low
+      effort: high
+
+    - id: PROD-103
+      source: product
+      suggestion: Gallery image uploads (backend endpoint missing)
+      impact: low
+      effort: medium
+
+    - id: PLAT-104
+      source: platform
+      suggestion: Database connection pooling for high-concurrency edit scenarios
+      impact: low
+      effort: medium
+
+    - id: UX-103
+      source: ux
+      suggestion: Bulk file operations (delete multiple, reorder multiple)
+      impact: low
+      effort: medium
+
+suggested_stories:
+  - title: Soft delete with restore capability
+    source: product
+    priority: P2
+    reason: Users protected against accidental deletion with 30-day recovery window
+
+  - title: Bulk edit interface
+    source: product
+    priority: P2
+    reason: Increases efficiency for power users managing multiple MOCs
+
+  - title: S3 cleanup job automation
+    source: engineering, platform
+    priority: P2
+    reason: Prevents storage waste from failed uploads, INST-1007 optional for MVP
+
+  - title: Rate limiting observability
+    source: engineering, platform
+    priority: P2
+    reason: Monitor for API abuse patterns, INST-1006 optional for MVP
+
+  - title: Multipart upload (>100MB files)
+    source: engineering
+    priority: P2
+    reason: Extend upload capability beyond current 100MB presigned URL limit
+
+  - title: Upload session performance optimization
+    source: platform
+    priority: P2
+    reason: Monitor presigned URL expiry rates, optimize TTL based on user behavior
+
+  - title: File type validation and scanning
+    source: security
+    priority: P2
+    reason: Prevent malicious uploads disguised as instruction files
+
+  - title: Edit operation audit logging
+    source: security
+    priority: P2
+    reason: Compliance and debugging trail for edit operations
+
+  - title: Edit undo/redo capability
+    source: ux
+    priority: P2
+    reason: Better error recovery for users who make form mistakes
+
+  - title: Bulk file operations
+    source: ux
+    priority: P3
+    reason: Delete or reorder multiple files at once for efficiency
+
+stories_to_defer:
+  - story: INST-1006
+    reason: Edit rate limiting observability optional for MVP - can add post-launch based on usage patterns
+    priority: P2
+
+  - story: INST-1007
+    reason: S3 cleanup job optional for MVP - manual cleanup acceptable, automate later
+    priority: P2
+
+deferred_from_epic:
+  - feature: Soft delete with restore
+    reason: Hard delete sufficient for MVP, soft delete adds significant complexity
+    future_story: INST-2000+
+
+  - feature: Multipart upload (>100MB)
+    reason: Presigned URL handles up to 100MB, multipart needed only for very large files
+    future_story: INST-2010
+
+  - feature: File reordering
+    reason: Requires backend displayOrder field and additional PATCH endpoint complexity
+    future_story: INST-2020
+
+  - feature: Gallery image uploads
+    reason: Backend endpoint missing, thumbnail sufficient for MVP
+    future_story: INST-2030
+
+metrics:
+  total_suggestions: 24
+  high_value_enhancements: 6
+  medium_value_enhancements: 7
+  nice_to_have_enhancements: 6
+  suggested_stories: 10
+  deferred_stories: 2
+  future_stories: 4
+
+roadmap_timeline:
+  wave_1: INST-1003 (Foundation)
+  wave_2: INST-1004, INST-1008 (Support)
+  wave_3: INST-1002, INST-1005 (Core)
+  wave_4: INST-1000, INST-1006, INST-1007, INST-1009 (Parallel work)
+  wave_5: INST-1001, INST-1010 (Continue)
+  wave_6_onwards: INST-1011 through INST-1029 (Sequential frontend/testing)
+
+post_launch_priorities:
+  immediate: P1 enhancements for robustness (multipart upload, retry logic)
+  short_term: P2 features for user experience (soft delete, bulk operations)
+  medium_term: P2 infrastructure (CDN, audit logging, monitoring)
+  long_term: P3 nice-to-have features as needed
+
+risk_mitigation:
+  high_value_items:
+    - Multipart upload (scaling risk for large files)
+    - Soft delete (data protection risk post-MVP)
+    - Audit logging (compliance risk)
+  monitoring_needed:
+    - S3 storage growth rate
+    - Upload success/failure rates by file size
+    - Presigned URL expiry correlation with user experience
+    - Edit operation frequency and performance
+
+notes:
+  all_deferred_items_acceptable_for_mvp: true
+  test_mandate_priority: All 18 MVP stories require complete unit + integration + E2E test specifications
+  frontend_complexity: Edit UI most complex, likely to benefit from additional polish post-MVP
+  backend_simplicity: Edit endpoints mostly validation, low risk for MVP

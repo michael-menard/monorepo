@@ -59,10 +59,12 @@ vi.mock('@/services/auth/AuthProvider', () => ({
 
 // Mock NavigationProvider
 const mockTrackNavigation = vi.fn()
+const mockNavigationContext = {
+  trackNavigation: mockTrackNavigation,
+}
 vi.mock('@/components/Navigation/NavigationProvider', () => ({
-  useNavigation: () => ({
-    trackNavigation: mockTrackNavigation,
-  }),
+  useNavigation: () => mockNavigationContext,
+  useNavigationOptional: () => mockNavigationContext,
 }))
 
 // Note: LoginPage is a standalone page component that manages its own layout
@@ -104,15 +106,7 @@ vi.mock('@repo/app-component-library', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }))
 
-// Mock Lucide icons
-vi.mock('lucide-react', () => ({
-  Lock: () => <span data-testid="lock-icon">Lock</span>,
-  Mail: () => <span data-testid="mail-icon">Mail</span>,
-  Eye: () => <span data-testid="eye-icon">Eye</span>,
-  EyeOff: () => <span data-testid="eye-off-icon">EyeOff</span>,
-  ArrowLeft: () => <span data-testid="arrow-left-icon">ArrowLeft</span>,
-  AlertCircle: () => <span data-testid="alert-circle-icon">AlertCircle</span>,
-}))
+// Note: Lucide icons are mocked globally in test/setup.ts
 
 const createMockStore = () => {
   return configureStore({

@@ -1,0 +1,18 @@
+schema: 1
+story_id: "WISH-2000"
+feature_dir: "plans/future/wish"
+timestamp: "2026-01-27T18:50:00-07:00"
+
+current_phase: done
+last_successful_phase: qa-complete
+
+iteration: 2
+max_iterations: 3
+
+blocked: false
+blocked_reason: null
+
+forced: false
+warnings: []
+
+completed_at: "2026-01-27T18:50:00-07:00"

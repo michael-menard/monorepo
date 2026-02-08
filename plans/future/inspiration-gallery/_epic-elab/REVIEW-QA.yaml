@@ -1,0 +1,77 @@
+perspective: qa
+verdict: CONCERNS
+timestamp: "2026-02-04T23:27:00Z"
+
+test_coverage_gaps:
+  critical:
+    - "DAG cycle detection edge cases (5+ parent levels)"
+    - "Multi-file upload partial failure scenarios"
+    - "Drag-and-drop interaction on touch devices"
+    - "Multi-album delete with cascade behaviors"
+
+  high:
+    - "S3 cleanup on inspiration delete"
+    - "Session-based breadcrumb path consistency"
+    - "Concurrent album updates race conditions"
+
+test_plan_status:
+  unit_tests: "DEFINED - INSP-001 through INSP-010"
+  integration_tests: "PARTIAL - upload and album operations need scenarios"
+  e2e_tests: "GAPS - drag-and-drop, delete flows, accessibility"
+  performance_tests: "MISSING - DAG queries with 100+ albums"
+
+missing_test_stories:
+  - title: "DAG cycle detection test suite"
+    reason: "Critical security and data integrity concern"
+    scope: "Unit + integration tests for cycle detection"
+
+  - title: "Multi-file upload error scenario tests"
+    reason: "INSP-008 has sizing warning - needs comprehensive failure testing"
+    scope: "Upload timeouts, partial failures, S3 errors"
+
+  - title: "Touch device drag-and-drop tests"
+    reason: "INSP-011/012 must work on mobile - Playwright E2E needed"
+    scope: "iOS/Android swipe, long-press gestures"
+
+  - title: "Accessibility compliance tests"
+    reason: "INSP-019 requires WCAG AA - need automated checks"
+    scope: "Axe, keyboard navigation, screen reader testing"
+
+  - title: "Performance tests for DAG operations"
+    reason: "Deep hierarchies may timeout - baseline needed"
+    scope: "100+ albums, 10+ parent relationships"
+
+test_environment_needs:
+  database:
+    - "Seeded test data with complex album hierarchies"
+    - "Performance baseline for DAG queries"
+
+  external_services:
+    - "S3 mock for upload tests (use Localstack)"
+    - "MOC Instructions stub for linking tests"
+
+  browsers:
+    - "Touch device testing (Playwright on BrowserStack or similar)"
+    - "Screen reader testing (NVDA, JAWS)"
+
+future:
+  regression_testing:
+    - "Album reorganization doesn't break breadcrumb state"
+    - "S3 cleanup doesn't leave orphaned images"
+    - "Multi-parent badges always match current album state"
+
+  exploratory_testing:
+    - "Stress test DAG traversal with pathological hierarchies"
+    - "Long-running sessions with many page transitions"
+
+qa_notes:
+  sizing_concerns:
+    - "INSP-008 (multi-file upload) - partial failure handling is complex"
+    - "INSP-011 (drag-and-drop) - interaction testing time-intensive"
+    - "INSP-019 (accessibility) - comprehensive testing required"
+
+  dependencies:
+    - "INSP-020 (loading states) affects test visibility and timing"
+    - "INSP-015 (delete flows) test matrix is large (multiple scenarios)"
+
+QA REVIEW COMPLETE

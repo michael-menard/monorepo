@@ -90,6 +90,7 @@ export interface WishlistRepository {
       store?: string
       tags?: string[]
       priority?: number
+      status?: 'wishlist' | 'owned' // SETS-MVP-001: Filter by lifecycle status
       sort?:
         | 'createdAt'
         | 'title'

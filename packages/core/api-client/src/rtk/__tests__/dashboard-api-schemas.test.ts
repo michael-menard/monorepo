@@ -201,6 +201,7 @@ describe('RecentMocSchema', () => {
       const validMoc = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         title: 'LEGO Technic Crane',
+        slug: 'lego-technic-crane',
         thumbnail: 'https://example.com/image.jpg',
         createdAt: '2025-12-25T00:00:00Z',
       }
@@ -213,6 +214,7 @@ describe('RecentMocSchema', () => {
       const mocWithNullThumbnail = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         title: 'LEGO Castle',
+        slug: 'lego-castle',
         thumbnail: null,
         createdAt: '2025-12-25T00:00:00Z',
       }
@@ -225,6 +227,7 @@ describe('RecentMocSchema', () => {
       const mocWithLongTitle = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         title: 'A'.repeat(500),
+        slug: 'a'.repeat(500),
         thumbnail: null,
         createdAt: '2025-12-25T00:00:00Z',
       }

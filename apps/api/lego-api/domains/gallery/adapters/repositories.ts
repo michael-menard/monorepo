@@ -2,19 +2,16 @@ import { eq, and, isNull, ilike, or, sql, desc } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err, paginate } from '@repo/api-core'
+import type * as schema from '@repo/database-schema'
 import type { ImageRepository, AlbumRepository } from '../ports/index.js'
 import type { GalleryImage, GalleryAlbum, UpdateImageInput } from '../types.js'
-import type * as schema from '@repo/database-schema'
 
 type Schema = typeof schema
 
 /**
  * Create an ImageRepository implementation using Drizzle
  */
-export function createImageRepository(
-  db: NodePgDatabase<Schema>,
-  schema: Schema
-): ImageRepository {
+export function createImageRepository(db: NodePgDatabase<Schema>, schema: Schema): ImageRepository {
   const { galleryImages } = schema
 
   return {
@@ -33,7 +30,7 @@ export function createImageRepository(
     async findByUserId(
       userId: string,
       pagination: PaginationInput,
-      filters?: { albumId?: string | null; search?: string }
+      filters?: { albumId?: string | null; search?: string },
     ): Promise<PaginatedResult<GalleryImage>> {
       const { page, limit } = pagination
       const offset = (page - 1) * limit
@@ -54,8 +51,8 @@ export function createImageRepository(
         conditions.push(
           or(
             ilike(galleryImages.title, searchPattern),
-            ilike(galleryImages.description, searchPattern)
-          )!
+            ilike(galleryImages.description, searchPattern),
+          )!,
         )
       }
 
@@ -95,7 +92,10 @@ export function createImageRepository(
       return mapRowToImage(row)
     },
 
-    async update(id: string, data: Partial<UpdateImageInput>): Promise<Result<GalleryImage, 'NOT_FOUND'>> {
+    async update(
+      id: string,
+      data: Partial<UpdateImageInput>,
+    ): Promise<Result<GalleryImage, 'NOT_FOUND'>> {
       const updateData: Record<string, unknown> = {
         lastUpdatedAt: new Date(),
       }
@@ -140,10 +140,7 @@ export function createImageRepository(
 /**
  * Create an AlbumRepository implementation using Drizzle
  */
-export function createAlbumRepository(
-  db: NodePgDatabase<Schema>,
-  schema: Schema
-): AlbumRepository {
+export function createAlbumRepository(db: NodePgDatabase<Schema>, schema: Schema): AlbumRepository {
   const { galleryAlbums, galleryImages } = schema
 
   return {
@@ -170,7 +167,7 @@ export function createAlbumRepository(
     async findByUserId(
       userId: string,
       pagination: PaginationInput,
-      filters?: { search?: string }
+      filters?: { search?: string },
     ): Promise<PaginatedResult<GalleryAlbum>> {
       const { page, limit } = pagination
       const offset = (page - 1) * limit
@@ -183,8 +180,8 @@ export function createAlbumRepository(
         conditions.push(
           or(
             ilike(galleryAlbums.title, searchPattern),
-            ilike(galleryAlbums.description, searchPattern)
-          )!
+            ilike(galleryAlbums.description, searchPattern),
+          )!,
         )
       }
 
@@ -214,7 +211,7 @@ export function createAlbumRepository(
 
       const total = countResult[0]?.count ?? 0
 
-      const albums: GalleryAlbum[] = rows.map((row) => ({
+      const albums: GalleryAlbum[] = rows.map(row => ({
         id: row.id,
         userId: row.userId,
         title: row.title,
@@ -244,7 +241,7 @@ export function createAlbumRepository(
 
     async update(
       id: string,
-      data: Partial<{ title: string; description: string | null; coverImageId: string | null }>
+      data: Partial<{ title: string; description: string | null; coverImageId: string | null }>,
     ): Promise<Result<GalleryAlbum, 'NOT_FOUND'>> {
       const updateData: Record<string, unknown> = {
         lastUpdatedAt: new Date(),
@@ -329,7 +326,7 @@ function mapRowToAlbum(
     createdAt: Date
     lastUpdatedAt: Date
   },
-  imageCount: number
+  imageCount: number,
 ): GalleryAlbum {
   return {
     id: row.id,

@@ -1,0 +1,372 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery"
+prefix: "INSP"
+project_name: "inspiration-gallery"
+analyzed: "2026-02-04"
+
+overall_goal: |
+  Enable users to collect, organize, and manage visual inspiration for their LEGO MOC builds through a flexible album-based system with nested hierarchies and MOC linking.
+
+phases:
+  - id: 1
+    name: "Foundation"
+    description: "Core data models, infrastructure, and basic CRUD endpoints"
+  - id: 2
+    name: "Gallery & Upload"
+    description: "Gallery scaffolding, card components, and multi-image upload modal"
+  - id: 3
+    name: "Album Management"
+    description: "Album navigation, hierarchy, drag-and-drop, and album creation patterns"
+  - id: 4
+    name: "Integration & Polish"
+    description: "MOC linking, metadata editing, accessibility, and UX refinements"
+
+stories:
+  - id: "INSP-001"
+    title: "Gallery scaffolding"
+    feature: "Set up basic gallery page structure with routing, layout, and integration with shared gallery package"
+    phase: 2
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Establish the foundational gallery page that will host inspiration cards and albums"
+    risk_notes: "Existing story (insp-1000). May be partially complete. Integration with shared gallery package required."
+    sizing_warning: false
+
+  - id: "INSP-002"
+    title: "Card component"
+    feature: "Create reusable inspiration and album card components for grid display"
+    phase: 2
+    depends_on: ["INSP-001"]
+    endpoints: []
+    infrastructure: []
+    goal: "Build card UI that visually distinguishes between inspirations (single image) and albums (folder icon)"
+    risk_notes: "Existing story (insp-1001). May be partially complete. Must support both inspiration and album types."
+    sizing_warning: false
+
+  - id: "INSP-003"
+    title: "API endpoints (partial)"
+    feature: "Initial API endpoint stubs for inspiration CRUD operations"
+    phase: 1
+    depends_on: []
+    endpoints:
+      - "GET /api/inspirations"
+      - "GET /api/inspirations/:id"
+    infrastructure: []
+    goal: "Provide initial read endpoints for inspirations"
+    risk_notes: "Existing story (insp-1002). Partial implementation. Will be extended by INSP-009."
+    sizing_warning: false
+
+  - id: "INSP-004"
+    title: "Upload page"
+    feature: "Basic upload page for single image upload"
+    phase: 2
+    depends_on: ["INSP-003"]
+    endpoints: []
+    infrastructure: ["S3 bucket for image storage"]
+    goal: "Allow users to upload a single inspiration image"
+    risk_notes: "Existing story (insp-1003). Basic implementation. Will be replaced/enhanced by INSP-007 multi-image modal."
+    sizing_warning: false
+
+  - id: "INSP-005"
+    title: "Collection management"
+    feature: "Basic collection/album management UI"
+    phase: 3
+    depends_on: ["INSP-002"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide initial UI for managing albums"
+    risk_notes: "Existing story (insp-1004). Basic implementation. Will be enhanced by INSP-008, INSP-012."
+    sizing_warning: false
+
+  - id: "INSP-006"
+    title: "Link to MOC"
+    feature: "UI and logic to link inspirations to existing MOC Instructions"
+    phase: 4
+    depends_on: ["INSP-002"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable users to associate inspiration images with their MOC projects"
+    risk_notes: "Existing story (insp-1005). Depends on MOC Instructions epic. Many-to-many relationship."
+    sizing_warning: false
+
+  - id: "INSP-007"
+    title: "Album data model and nested hierarchy"
+    feature: "Define album schema with many-to-many parent relationships, implement cycle detection for DAG structure"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["Database migration for albums table"]
+    goal: "Establish the album data model supporting nested hierarchies without cycles"
+    risk_notes: "High priority. Complex many-to-many DAG structure. Cycle detection critical. Proper indexing required for performance."
+    sizing_warning: true
+
+  - id: "INSP-008"
+    title: "Upload modal with multi-image support"
+    feature: "Replace upload page with modal supporting drag-and-drop, multi-file selection, preview, progress indicators, and album creation prompt"
+    phase: 2
+    depends_on: ["INSP-004", "INSP-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable users to upload multiple images at once with option to create album"
+    risk_notes: "High priority. Complex UI with multi-file handling, previews, partial failure scenarios. Large uploads may timeout."
+    sizing_warning: true
+
+  - id: "INSP-009"
+    title: "Album create/edit endpoints"
+    feature: "Complete CRUD endpoints for albums including parent relationship management and cycle validation"
+    phase: 1
+    depends_on: ["INSP-007"]
+    endpoints:
+      - "POST /api/albums"
+      - "PUT /api/albums/:id"
+      - "DELETE /api/albums/:id"
+      - "GET /api/albums"
+      - "GET /api/albums/:id"
+    infrastructure: []
+    goal: "Provide full backend CRUD operations for album management"
+    risk_notes: "High priority. Must validate cycles in DAG. Handle cascade behaviors for delete operations."
+    sizing_warning: false
+
+  - id: "INSP-010"
+    title: "Inspiration create/edit endpoints"
+    feature: "Complete CRUD endpoints for inspirations with album membership and MOC linking"
+    phase: 1
+    depends_on: ["INSP-003"]
+    endpoints:
+      - "POST /api/inspirations"
+      - "PUT /api/inspirations/:id"
+      - "DELETE /api/inspirations/:id"
+    infrastructure: []
+    goal: "Provide full backend CRUD operations for inspiration management"
+    risk_notes: "High priority. Extends INSP-003. Handle S3 cleanup on delete. Support many-to-many album relationships."
+    sizing_warning: false
+
+  - id: "INSP-011"
+    title: "Drag-and-drop reorder in gallery"
+    feature: "Implement drag-and-drop reordering with visual feedback, keyboard alternatives, and touch support"
+    phase: 3
+    depends_on: ["INSP-001", "INSP-002"]
+    endpoints:
+      - "PATCH /api/inspirations/:id/reorder"
+      - "PATCH /api/albums/:id/reorder"
+    infrastructure: []
+    goal: "Allow users to reorder items in gallery and albums via drag-and-drop"
+    risk_notes: "Medium priority. Use dnd-kit library. Complex interaction patterns. Must support keyboard and touch."
+    sizing_warning: true
+
+  - id: "INSP-012"
+    title: "Stack-to-create-album gesture with undo"
+    feature: "Implement drag-to-stack gesture for album creation with confirmation modal, undo toast, and keyboard alternative"
+    phase: 3
+    depends_on: ["INSP-011", "INSP-009"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable intuitive album creation by dragging images onto each other"
+    risk_notes: "Medium priority. Novel interaction pattern requiring careful UX. Undo mechanism needed. Discoverability via onboarding tooltip."
+    sizing_warning: false
+
+  - id: "INSP-013"
+    title: "Album navigation and breadcrumbs (session-based path)"
+    feature: "Build album navigation with session-based breadcrumb trail, multi-parent awareness, and back button"
+    phase: 3
+    depends_on: ["INSP-005", "INSP-009"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide clear navigation through nested album hierarchy"
+    risk_notes: "Medium priority. Session-based path tracking (not canonical). Must handle multiple parent scenarios with 'Also in' badges."
+    sizing_warning: false
+
+  - id: "INSP-014"
+    title: "MOC linking UI and endpoints"
+    feature: "Create UI components and endpoints for linking inspirations and albums to MOC Instructions"
+    phase: 4
+    depends_on: ["INSP-006", "INSP-009", "INSP-010"]
+    endpoints:
+      - "POST /api/inspirations/:id/mocs"
+      - "DELETE /api/inspirations/:id/mocs/:mocId"
+      - "POST /api/albums/:id/mocs"
+      - "DELETE /api/albums/:id/mocs/:mocId"
+    infrastructure: []
+    goal: "Complete the MOC linking feature with full CRUD support"
+    risk_notes: "Medium priority. Depends on MOC Instructions epic existence. Many-to-many relationships."
+    sizing_warning: false
+
+  - id: "INSP-015"
+    title: "Delete flows (album options, multi-album awareness)"
+    feature: "Implement delete confirmation modals with album-specific options and multi-album membership warnings"
+    phase: 4
+    depends_on: ["INSP-009", "INSP-010"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide safe, informed delete operations with clear user choices"
+    risk_notes: "Medium priority. Complex UX with different delete options. Must show album membership. Hard delete (no soft delete)."
+    sizing_warning: false
+
+  - id: "INSP-016"
+    title: "Metadata edit modal with album membership"
+    feature: "Create modal for editing title, description, tags, source URL, and managing album membership"
+    phase: 4
+    depends_on: ["INSP-010"]
+    endpoints: []
+    infrastructure: []
+    goal: "Allow users to edit all metadata and manage which albums contain the inspiration"
+    risk_notes: "Low priority. Straightforward form modal. Must integrate with album membership UI."
+    sizing_warning: false
+
+  - id: "INSP-017"
+    title: "Tag management integration"
+    feature: "Integrate tag creation, editing, and filtering with shared gallery package"
+    phase: 4
+    depends_on: ["INSP-001", "INSP-010"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable users to organize inspirations and albums by tags"
+    risk_notes: "Low priority. Leverage shared gallery package. Straightforward integration."
+    sizing_warning: false
+
+  - id: "INSP-018"
+    title: "Empty states and onboarding tooltips"
+    feature: "Design and implement empty states for all scenarios and onboarding tooltip for stack gesture"
+    phase: 4
+    depends_on: ["INSP-001", "INSP-012"]
+    endpoints: []
+    infrastructure: []
+    goal: "Guide users through first-time experience and handle empty states gracefully"
+    risk_notes: "Medium priority. Multiple empty state scenarios. Critical for discoverability of stack gesture."
+    sizing_warning: false
+
+  - id: "INSP-019"
+    title: "Keyboard navigation and accessibility"
+    feature: "Implement full keyboard navigation, screen reader support, focus management, and WCAG AA compliance"
+    phase: 4
+    depends_on: ["INSP-011", "INSP-012", "INSP-015"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure the inspiration gallery is fully accessible to all users"
+    risk_notes: "Medium priority. Comprehensive accessibility requirements. Must support all interactions via keyboard."
+    sizing_warning: true
+
+  - id: "INSP-020"
+    title: "Loading states and error handling"
+    feature: "Implement skeleton loaders, image placeholders, upload progress, and error states with retry actions"
+    phase: 4
+    depends_on: ["INSP-001", "INSP-008"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide responsive UI feedback for all async operations"
+    risk_notes: "Low priority. Standard loading/error patterns. Must handle partial upload failures."
+    sizing_warning: false
+
+  - id: "INSP-021"
+    title: "Multi-select mode and bulk operations"
+    feature: "Add multi-select mode with shift-click, keyboard shortcuts, and bulk operations (create album, delete, tag)"
+    phase: 4
+    depends_on: ["INSP-011", "INSP-019"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable efficient bulk operations on multiple inspirations"
+    risk_notes: "Low priority. Enhances UX for power users. Must integrate with accessibility features."
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "INSP-001": []
+    "INSP-002": ["INSP-001"]
+    "INSP-003": []
+    "INSP-004": ["INSP-003"]
+    "INSP-005": ["INSP-002"]
+    "INSP-006": ["INSP-002"]
+    "INSP-007": []
+    "INSP-008": ["INSP-004", "INSP-007"]
+    "INSP-009": ["INSP-007"]
+    "INSP-010": ["INSP-003"]
+    "INSP-011": ["INSP-001", "INSP-002"]
+    "INSP-012": ["INSP-011", "INSP-009"]
+    "INSP-013": ["INSP-005", "INSP-009"]
+    "INSP-014": ["INSP-006", "INSP-009", "INSP-010"]
+    "INSP-015": ["INSP-009", "INSP-010"]
+    "INSP-016": ["INSP-010"]
+    "INSP-017": ["INSP-001", "INSP-010"]
+    "INSP-018": ["INSP-001", "INSP-012"]
+    "INSP-019": ["INSP-011", "INSP-012", "INSP-015"]
+    "INSP-020": ["INSP-001", "INSP-008"]
+    "INSP-021": ["INSP-011", "INSP-019"]
+
+  critical_path:
+    - "INSP-007"
+    - "INSP-009"
+    - "INSP-012"
+    - "INSP-019"
+    - "INSP-021"
+
+  critical_path_length: 5
+
+parallelization:
+  max_parallel: 4
+  groups:
+    - stories: ["INSP-001", "INSP-003", "INSP-007"]
+      after: null
+      description: "Foundation work - can start immediately"
+    - stories: ["INSP-002", "INSP-004", "INSP-010"]
+      after: "group_1"
+      description: "Basic CRUD and UI components"
+    - stories: ["INSP-005", "INSP-006", "INSP-009"]
+      after: "group_2"
+      description: "Album infrastructure and MOC linking setup"
+    - stories: ["INSP-008", "INSP-011"]
+      after: "group_3"
+      description: "Advanced upload and interaction patterns"
+    - stories: ["INSP-012", "INSP-013", "INSP-014", "INSP-015"]
+      after: "group_4"
+      description: "Album management features"
+    - stories: ["INSP-016", "INSP-017", "INSP-018", "INSP-020"]
+      after: "group_5"
+      description: "Metadata, tags, and UX polish"
+    - stories: ["INSP-019", "INSP-021"]
+      after: "group_6"
+      description: "Accessibility and power user features"
+
+risks:
+  - id: "RISK-001"
+    description: "Complex drag-and-drop interactions may be difficult to implement correctly across desktop, keyboard, and touch interfaces"
+    affected_stories: ["INSP-011", "INSP-012", "INSP-019"]
+    severity: medium
+    mitigation: "Use established dnd-kit library, create early prototypes, test extensively with real users"
+
+  - id: "RISK-002"
+    description: "Many-to-many queries for album hierarchy may perform poorly at scale with deep nesting"
+    affected_stories: ["INSP-007", "INSP-009", "INSP-013"]
+    severity: medium
+    mitigation: "Implement proper database indexing on foreign keys, consider denormalizing frequently accessed paths, add query performance monitoring"
+
+  - id: "RISK-003"
+    description: "Large image uploads may timeout or fail, frustrating users"
+    affected_stories: ["INSP-008", "INSP-020"]
+    severity: low
+    mitigation: "Implement multipart upload with resume capability, add client-side image compression option, show clear progress feedback"
+
+  - id: "RISK-004"
+    description: "Cycle detection in album DAG must be bulletproof to prevent infinite loops in UI"
+    affected_stories: ["INSP-007", "INSP-009"]
+    severity: high
+    mitigation: "Implement robust cycle detection on backend before allowing parent relationships, add comprehensive test coverage for edge cases"
+
+  - id: "RISK-005"
+    description: "Stack-to-create-album gesture may not be discoverable enough for users"
+    affected_stories: ["INSP-012", "INSP-018"]
+    severity: low
+    mitigation: "Add prominent onboarding tooltip on first visit, provide alternative multi-select menu option, track analytics on gesture usage"
+
+  - id: "RISK-006"
+    description: "Session-based breadcrumb navigation may confuse users who expect canonical paths"
+    affected_stories: ["INSP-013"]
+    severity: low
+    mitigation: "Clear 'Also in' badges when albums have multiple parents, user testing to validate approach, consider adding 'All paths' view in future"
+
+metrics:
+  total_stories: 21
+  phases: 4
+  max_parallel: 4
+  critical_path_length: 5
+  stories_with_sizing_warnings: 4

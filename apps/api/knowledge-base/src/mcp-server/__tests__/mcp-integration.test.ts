@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 14 tool definitions (CRUD + search + admin + audit)', () => {
+    it('should return all 47 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(14)
+      expect(tools).toHaveLength(47)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -78,13 +78,63 @@ describe('MCP Server Integration', () => {
         'kb_list',
         'kb_search',
         'kb_get_related',
+        // Bucket A typed entry tools (KBMEM-004)
+        'kb_add_decision',
+        'kb_add_constraint',
+        'kb_add_lesson',
+        'kb_add_runbook',
+        // Bucket B work state tools (KBMEM-006)
+        'kb_get_work_state',
+        'kb_update_work_state',
+        'kb_archive_work_state',
+        // Bucket B working set sync (KBMEM-008)
+        'kb_sync_working_set',
+        // Bucket B working set fallback (KBMEM-011)
+        'kb_generate_working_set',
+        // Bucket B constraint inheritance (KBMEM-016)
+        'kb_inherit_constraints',
+        // Bucket B working set archive (KBMEM-021)
+        'kb_archive_working_set',
+        // Bucket C task tools (KBMEM-005)
+        'kb_add_task',
+        'kb_get_task',
+        'kb_update_task',
+        'kb_list_tasks',
+        // Bucket C task triage (KBMEM-018)
+        'kb_triage_tasks',
+        // Bucket C task promotion (KBMEM-019)
+        'kb_promote_task',
+        'kb_list_promotable_tasks',
+        // Bucket C stale task cleanup (KBMEM-020)
+        'kb_cleanup_stale_tasks',
+        // Deferred writes (KBMEM-022)
+        'kb_queue_deferred_write',
+        'kb_list_deferred_writes',
+        'kb_process_deferred_writes',
+        // Admin tools
         'kb_bulk_import',
         'kb_rebuild_embeddings',
         'kb_stats',
         'kb_health',
+        // Audit tools
         'kb_audit_by_entry',
         'kb_audit_query',
         'kb_audit_retention_cleanup',
+        // Artifact tools (DB-first artifact storage)
+        'kb_write_artifact',
+        'kb_read_artifact',
+        'kb_list_artifacts',
+        // Story status tools
+        'kb_get_story',
+        'kb_list_stories',
+        'kb_update_story_status',
+        'kb_get_next_story',
+        // Token logging tools
+        'kb_log_tokens',
+        // Analytics tools
+        'kb_get_token_summary',
+        'kb_get_bottleneck_analysis',
+        'kb_get_churn_analysis',
       ])
     })
 

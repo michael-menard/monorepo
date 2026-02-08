@@ -18,7 +18,7 @@ import { performanceMonitor } from '../lib/performance'
 // Mock server for API responses
 const server = setupServer(
   // Gallery API endpoints
-  http.get('/api/v2/gallery/search', () => {
+  http.get('/api/gallery/search', () => {
     return HttpResponse.json({
       success: true,
       data: {
@@ -55,7 +55,7 @@ const server = setupServer(
   }),
 
   // Wishlist API endpoints
-  http.get('/api/v2/wishlist/items', () => {
+  http.get('/api/wishlist', () => {
     return HttpResponse.json({
       success: true,
       data: {
@@ -97,7 +97,7 @@ const server = setupServer(
   }),
 
   // Batch operations
-  http.post('/api/v2/gallery/search/batch', () => {
+  http.post('/api/gallery/search/batch', () => {
     return HttpResponse.json({
       success: true,
       data: [
@@ -107,7 +107,7 @@ const server = setupServer(
     })
   }),
 
-  http.post('/api/v2/wishlist/items/batch', () => {
+  http.post('/api/wishlist/batch', () => {
     return HttpResponse.json({
       success: true,
       data: {
@@ -119,7 +119,7 @@ const server = setupServer(
   }),
 
   // Statistics endpoints
-  http.get('/api/v2/gallery/search/stats', () => {
+  http.get('/api/gallery/search/stats', () => {
     return HttpResponse.json({
       success: true,
       data: {
@@ -131,7 +131,7 @@ const server = setupServer(
     })
   }),
 
-  http.get('/api/v2/wishlist/items/stats', () => {
+  http.get('/api/wishlist/stats', () => {
     return HttpResponse.json({
       success: true,
       data: {
@@ -145,7 +145,7 @@ const server = setupServer(
   }),
 
   // Price estimates
-  http.get('/api/v2/wishlist/items/price-estimates', () => {
+  http.get('/api/wishlist/price-estimates', () => {
     return HttpResponse.json({
       success: true,
       data: {

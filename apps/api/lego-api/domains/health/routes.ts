@@ -1,5 +1,10 @@
 import { Hono } from 'hono'
-import { getLivenessStatus, getReadinessStatus, getHealthStatus, getApiInfo } from './application/index.js'
+import {
+  getLivenessStatus,
+  getReadinessStatus,
+  getHealthStatus,
+  getApiInfo,
+} from './application/index.js'
 
 /**
  * Health Domain Routes

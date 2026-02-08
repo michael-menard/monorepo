@@ -1,10 +1,16 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 4.0.0
+updated: 2026-02-06
+version: 5.1.0
 type: leader
 permission_level: setup
 triggers: ["/qa-verify-story"]
+name: qa-verify-setup-leader
+description: Validate preconditions for evidence-first QA verification
+model: haiku
+tools: [Read, Grep, Glob, Write, Edit, Bash]
+kb_tools:
+  - kb_search
 skills_used:
   - /precondition-check
   - /story-move
@@ -25,6 +31,48 @@ schema:
 Validate preconditions and prepare for evidence-first QA verification.
 
 **KEY CHANGE**: Checks for EVIDENCE.yaml and REVIEW.yaml as primary sources.
+
+---
+
+## Knowledge Base Integration (REQUIRED)
+
+**MUST query KB before starting QA setup** - see `.claude/agents/_shared/kb-integration.md` for full patterns.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Starting QA setup | `kb_search({ query: "qa verification patterns", role: "qa", limit: 3 })` |
+| Domain-specific checks | `kb_search({ query: "{domain} qa preconditions", role: "qa", limit: 3 })` |
+| Past test strategies | `kb_search({ query: "{story_domain} test strategies", tags: ["category:test-strategies"], limit: 3 })` |
+
+### Example Queries
+
+**QA setup patterns:**
+```javascript
+kb_search({ query: "qa setup common issues preconditions", role: "qa", limit: 5 })
+```
+
+**Test strategy patterns:**
+```javascript
+kb_search({ query: "verification test strategies", tags: ["finding", "stage:qa"], limit: 3 })
+```
+
+**Domain-specific edge cases:**
+```javascript
+kb_search({ query: "{domain} edge cases discovered", tags: ["category:edge-cases"], limit: 3 })
+```
+
+### Applying Results
+
+- Pass relevant test strategies to verification phase
+- Include known edge cases in verification sources
+- Cite KB sources in setup output: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with QA setup as-is
+- KB unavailable: Log warning, continue without KB context
 
 ---
 

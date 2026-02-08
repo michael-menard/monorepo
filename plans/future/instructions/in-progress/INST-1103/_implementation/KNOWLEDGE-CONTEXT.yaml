@@ -1,0 +1,92 @@
+schema: 1
+story_id: INST-1103
+timestamp: '2026-02-06T22:00:00Z'
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "API path schema mismatch between frontend and backend (frontend uses /api/v2/mocs, backend uses /mocs)"
+      - "File validation must use file-type library to verify actual MIME type, not trust client headers"
+      - "Transaction safety required for S3 upload + DB update (rollback on failure)"
+    patterns_to_follow:
+      - "Direct reuse of ImageUploadZone component from app-sets-gallery (95% reusable)"
+      - "Use toCloudFrontUrl() utility to convert S3 URLs on read operations"
+      - "Service layer pattern with ports & adapters for testability"
+      - "Multipart form parsing with c.req.formData() in Hono routes"
+      - "File object conversion: Buffer.from(await file.arrayBuffer())"
+    patterns_to_avoid:
+      - "Trusting client-side MIME type validation only"
+      - "S3 upload without transaction wrapper"
+      - "Reading full config files when only one section needed"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/mocs, Backend uses /mocs"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-003"
+        title: "Image Storage and CDN Architecture"
+        status: active
+        constraint: "Store in S3, serve via CloudFront, convert URLs with toCloudFrontUrl()"
+        applies_to: ["images", "storage"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT must use real S3, real database, no MSW mocking"
+        applies_to: ["testing", "e2e"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test required using playwright.legacy.config.ts"
+        applies_to: ["testing", "workflow"]
+
+    constraints:
+      api_paths: "Frontend RTK Query: /api/v2/mocs/:id/thumbnail, Backend Hono route: /mocs/:id/thumbnail"
+      storage: "Upload to S3 with key pattern: mocs/{userId}/{mocId}/thumbnail/{uuid}-{filename}, convert to CloudFront URL"
+      testing: "UAT must use real services, E2E test required in dev phase with live mode"
+      service_layer: "Use ports & adapters pattern - service in application/, adapter in adapters/, port interface in ports/"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file"
+        typical_tokens: 8000
+        mitigation: "Read only Acceptance Criteria section"
+      - operation: "Full codebase Explore"
+        typical_tokens: 25000
+        mitigation: "Use targeted Grep + Read for specific files"
+    recommended_patterns:
+      - "Targeted file reads over full files"
+      - "Grep before Read to locate relevant code"
+      - "Reuse existing patterns (ImageUploadZone, toCloudFrontUrl, service layer)"
+
+  existing_patterns:
+    components:
+      - name: "ImageUploadZone"
+        location: "apps/web/app-sets-gallery/src/components/ImageUploadZone.tsx"
+        reuse_score: 95
+        adaptations: "Set maxImages={1}, remove reorder button, change labels to 'Thumbnail'"
+    utilities:
+      - name: "toCloudFrontUrl"
+        location: "apps/api/lego-api/core/cdn/cloudfront.ts"
+        purpose: "Convert S3 URLs to CloudFront URLs"
+      - name: "buildImageUrlFromKey"
+        location: "apps/api/lego-api/core/cdn/cloudfront.ts"
+        purpose: "Build CloudFront URL from S3 key with S3 fallback"
+    service_patterns:
+      - name: "Gallery upload pattern"
+        location: "apps/api/lego-api/domains/gallery/routes.ts"
+        pattern: "Multipart form parsing, file validation, service layer orchestration"
+      - name: "Wishlist CloudFront integration"
+        location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+        pattern: "toCloudFrontUrl() in repository mapper"
+
+  warnings:
+    - "Knowledge base tables do not exist yet - no historical lessons loaded"
+    - "INST-1102 dependency may block E2E tests if not completed"

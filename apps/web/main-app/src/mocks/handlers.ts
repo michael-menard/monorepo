@@ -2,6 +2,11 @@ import { http, HttpResponse } from 'msw'
 import type { MockWishlistItem, MockWishlistListResponse } from '../test/mocks/wishlist-types'
 import { mockWishlistItems, wishlistListResponse } from '../test/mocks/wishlist-mocks'
 import { mockSets, buildSetListResponse } from '../test/mocks/sets-mocks'
+import {
+  mockMocInstructions,
+  buildMocListResponse,
+  type MockMocInstruction,
+} from '../test/mocks/instructions-mocks'
 
 // NOTE: These handlers are used by MSW when VITE_ENABLE_MSW === 'true'.
 // They mock the core wishlist API and related flows used by the main app
@@ -138,6 +143,114 @@ export const handlers = [
     mockWishlistItems.splice(index, 1)
 
     return HttpResponse.json({ data: { message: 'Item deleted' } }, { status: 200 })
+  }),
+
+  // ---------------------------------------------------------------------------
+  // Instructions (MOC) Gallery API Endpoints
+  // Story INST-1100: MOC Gallery E2E tests
+  // ---------------------------------------------------------------------------
+
+  // GET /api/v2/instructions/mocs - List MOC instructions with pagination
+  http.get('*/api/v2/instructions/mocs', async ({ request }) => {
+    console.log('[MSW] Intercepted instructions request:', request.url)
+    const url = new URL(request.url)
+    const search = url.searchParams.get('search') || undefined
+    const theme = url.searchParams.get('theme') || undefined
+    const type = url.searchParams.get('type') || undefined
+    const status = url.searchParams.get('status') || undefined
+    const page = parseInt(url.searchParams.get('page') || '1', 10)
+    const limit = parseInt(url.searchParams.get('limit') || '20', 10)
+    const scenario = url.searchParams.get('__instructionsScenario') || undefined
+    const delayMsParam = url.searchParams.get('__instructionsDelayMs') || '0'
+    const delayMs = Number.isNaN(Number(delayMsParam)) ? 0 : Number(delayMsParam)
+
+    if (delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
+
+    // Scenario-specific behavior for E2E tests
+    if (scenario === 'error') {
+      return HttpResponse.json(
+        { error: 'INTERNAL_ERROR', message: 'Failed to load instructions' },
+        { status: 500 },
+      )
+    }
+
+    if (scenario === 'empty') {
+      return HttpResponse.json(buildMocListResponse([], page, limit), { status: 200 })
+    }
+
+    let items: MockMocInstruction[] = [...mockMocInstructions]
+
+    // Apply filters
+    if (search) {
+      const lower = search.toLowerCase()
+      items = items.filter(item => {
+        return (
+          item.title.toLowerCase().includes(lower) ||
+          item.description?.toLowerCase().includes(lower) ||
+          item.tags.some(tag => tag.toLowerCase().includes(lower))
+        )
+      })
+    }
+
+    if (theme) {
+      items = items.filter(item => item.theme === theme)
+    }
+
+    if (type) {
+      items = items.filter(item => item.type === type)
+    }
+
+    if (status) {
+      items = items.filter(item => item.status === status)
+    }
+
+    const response = buildMocListResponse(items, page, limit)
+    return HttpResponse.json(response, { status: 200 })
+  }),
+
+  // GET /api/v2/instructions/mocs/:id - Get single MOC instruction
+  http.get('/api/v2/instructions/mocs/:id', ({ params }) => {
+    const id = String(params.id)
+    const item = mockMocInstructions.find(i => i.id === id)
+
+    if (!item) {
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Instruction not found' }, { status: 404 })
+    }
+
+    return HttpResponse.json(item, { status: 200 })
+  }),
+
+  // PATCH /api/v2/instructions/mocs/:id - Update MOC instruction
+  http.patch('/api/v2/instructions/mocs/:id', async ({ params, request }) => {
+    const id = String(params.id)
+    const index = mockMocInstructions.findIndex(i => i.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Instruction not found' }, { status: 404 })
+    }
+
+    const body = (await request.json()) as Partial<MockMocInstruction>
+    const updated: MockMocInstruction = {
+      ...mockMocInstructions[index],
+      ...body,
+      updatedAt: new Date().toISOString(),
+    }
+    mockMocInstructions[index] = updated
+
+    return HttpResponse.json(updated, { status: 200 })
+  }),
+
+  // DELETE /api/v2/instructions/mocs/:id - Delete MOC instruction
+  http.delete('/api/v2/instructions/mocs/:id', ({ params }) => {
+    const id = String(params.id)
+    const index = mockMocInstructions.findIndex(i => i.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Instruction not found' }, { status: 404 })
+    }
+
+    mockMocInstructions.splice(index, 1)
+    return HttpResponse.json({ message: 'Instruction deleted' }, { status: 200 })
   }),
 
   // ---------------------------------------------------------------------------

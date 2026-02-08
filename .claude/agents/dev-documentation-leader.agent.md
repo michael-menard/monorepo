@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-02-07
+version: 3.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story", "/dev-fix-story"]
@@ -11,6 +11,7 @@ skills_used:
   - /index-update
   - /checkpoint
   - /token-log
+story_id: WKFL-001  # OUTCOME.yaml integration
 ---
 
 # Agent: dev-documentation-leader
@@ -128,7 +129,75 @@ Wait for `LEARNINGS CAPTURED` signal.
    /token-report {STORY_ID}
    ```
 
-### Step 5: Update Story Status (use /story-update skill)
+### Step 5: Generate OUTCOME.yaml (Meta-Learning Foundation)
+
+Write `_implementation/OUTCOME.yaml` to capture story metrics for workflow learning.
+
+**Data Sources:**
+
+| Source | Extracts |
+|--------|----------|
+| `TOKEN-LOG.md` | Per-phase tokens_in, tokens_out |
+| `CHECKPOINT.yaml` | Phase timestamps, review cycles, iteration count |
+| `VERIFICATION.yaml` | QA verdicts, gate results |
+| `DECISIONS.yaml` | Decision counts (auto_accepted, escalated, etc.) |
+| `story.yaml` | Estimated tokens (for variance calculation) |
+
+**OUTCOME.yaml Structure:**
+
+```yaml
+schema_version: 1
+story_id: "{STORY_ID}"
+epic_id: "{EPIC_ID}"
+completed_at: "{ISO_TIMESTAMP}"
+
+phases:
+  # Populate from TOKEN-LOG.md parsing
+  # Each phase: tokens_in, tokens_out, duration_ms, status/verdict
+
+totals:
+  tokens_in: {sum of all phases}
+  tokens_out: {sum of all phases}
+  tokens_total: {tokens_in + tokens_out}
+  duration_ms: {sum of phase durations}
+  review_cycles: {from CHECKPOINT.yaml}
+  gate_attempts: {from VERIFICATION.yaml}
+
+decisions:
+  auto_accepted: {from DECISIONS.yaml or 0}
+  escalated: {from DECISIONS.yaml or 0}
+  overridden: {0}
+  deferred: {from DECISIONS.yaml or 0}
+
+predictions: null  # Placeholder for WKFL-002
+human_feedback: [] # Placeholder for WKFL-004
+
+sources:
+  token_log: "_implementation/TOKEN-LOG.md"
+  checkpoint: "_implementation/CHECKPOINT.yaml"
+  verification: "_implementation/VERIFICATION.yaml"
+  decisions: "_implementation/DECISIONS.yaml"
+```
+
+**Parsing TOKEN-LOG.md:**
+
+Extract phase entries in format:
+```
+| {phase} | {timestamp} | {input} | {output} |
+```
+
+Map phase names to OUTCOME.yaml phases:
+- `pm-story` → `pm_story`
+- `elaboration` → `elaboration`
+- `dev-setup` → `dev_setup`
+- `dev-plan` → `dev_plan`
+- `dev-implementation` → `dev_implementation`
+- `dev-documentation` → `dev_documentation`
+- `qa-verify` → `qa_verify`
+
+See: `.claude/schemas/outcome-schema.md` for full schema reference.
+
+### Step 6: Update Story Status (use /story-update skill)
 
 ```
 /story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
@@ -136,7 +205,7 @@ Wait for `LEARNINGS CAPTURED` signal.
 
 This updates the story frontmatter from `in-progress` to `ready-for-code-review`.
 
-### Step 6: Update Story Index (use /index-update skill)
+### Step 7: Update Story Index (use /index-update skill)
 
 ```
 /index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
@@ -149,6 +218,7 @@ This updates the index entry and Progress Summary counts.
 - `PROOF-{STORY_ID}.md` - created
 - `LESSONS-LEARNED.md` - appended
 - `TOKEN-SUMMARY.md` - created
+- `OUTCOME.yaml` - created (for workflow learning / meta-learning loop)
 - Story/index status updated
 
 ---
@@ -264,9 +334,11 @@ Before reporting completion signal:
 
 - MUST call `/token-log` before reporting completion signal
 - MUST validate `mode` parameter is provided
+- MUST generate OUTCOME.yaml in implement mode (Step 5)
 - Do NOT skip any step
 - Do NOT modify story content (only status in frontmatter)
 - Do NOT create proof yourself (delegate to Proof Writer)
 - ALWAYS report next step: `/dev-code-review STORY-XXX`
 - implement mode: MUST call `/token-report` for full summary
+- implement mode: MUST generate OUTCOME.yaml for workflow learning
 - fix mode: MUST add Fix Cycle section to existing proof

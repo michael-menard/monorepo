@@ -9,9 +9,14 @@ import {
   validateMimeType,
   validateFileSize,
   validateFileUpload,
+  validatePdfMimeType,
+  validatePdfExtension,
+  validatePdfFile,
   logSecurityEvent,
   createSecurityEvent,
   ALLOWED_MIME_TYPES,
+  ALLOWED_PDF_MIME_TYPES,
+  ALLOWED_PDF_EXTENSIONS,
   MAX_FILE_SIZE,
   MIN_FILE_SIZE,
 } from '../file-validation.js'
@@ -347,6 +352,210 @@ describe('logSecurityEvent', () => {
   })
 })
 
+describe('validatePdfMimeType', () => {
+  describe('valid MIME types', () => {
+    it('should accept application/pdf', () => {
+      const result = validatePdfMimeType('application/pdf')
+      expect(result).toEqual({ valid: true })
+    })
+
+    it('should accept uppercase PDF MIME type (case insensitive)', () => {
+      const result = validatePdfMimeType('APPLICATION/PDF')
+      expect(result).toEqual({ valid: true })
+    })
+
+    it('should accept PDF MIME type with leading/trailing whitespace', () => {
+      const result = validatePdfMimeType('  application/pdf  ')
+      expect(result).toEqual({ valid: true })
+    })
+  })
+
+  describe('invalid MIME types', () => {
+    it('should reject image/jpeg', () => {
+      const result = validatePdfMimeType('image/jpeg')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('INVALID_MIME_TYPE')
+        expect(result.error).toContain('Only PDF files are allowed')
+      }
+    })
+
+    it('should reject text/plain', () => {
+      const result = validatePdfMimeType('text/plain')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('INVALID_MIME_TYPE')
+      }
+    })
+
+    it('should reject application/msword', () => {
+      const result = validatePdfMimeType('application/msword')
+      expect(result.valid).toBe(false)
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should reject null MIME type', () => {
+      const result = validatePdfMimeType(null)
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_MIME_TYPE')
+      }
+    })
+
+    it('should reject undefined MIME type', () => {
+      const result = validatePdfMimeType(undefined)
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_MIME_TYPE')
+      }
+    })
+
+    it('should reject empty string MIME type', () => {
+      const result = validatePdfMimeType('')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_MIME_TYPE')
+      }
+    })
+  })
+})
+
+describe('validatePdfExtension', () => {
+  describe('valid extensions', () => {
+    it('should accept .pdf extension', () => {
+      const result = validatePdfExtension('instructions.pdf')
+      expect(result).toEqual({ valid: true })
+    })
+
+    it('should accept .PDF extension (case insensitive)', () => {
+      const result = validatePdfExtension('instructions.PDF')
+      expect(result).toEqual({ valid: true })
+    })
+
+    it('should accept .Pdf extension (mixed case)', () => {
+      const result = validatePdfExtension('instructions.Pdf')
+      expect(result).toEqual({ valid: true })
+    })
+
+    it('should accept filename with multiple dots', () => {
+      const result = validatePdfExtension('my.instructions.v2.pdf')
+      expect(result).toEqual({ valid: true })
+    })
+  })
+
+  describe('invalid extensions', () => {
+    it('should reject .jpg extension', () => {
+      const result = validatePdfExtension('image.jpg')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('INVALID_EXTENSION')
+        expect(result.error).toContain('Only .pdf file extension is allowed')
+      }
+    })
+
+    it('should reject .docx extension', () => {
+      const result = validatePdfExtension('document.docx')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('INVALID_EXTENSION')
+      }
+    })
+
+    it('should reject .txt extension', () => {
+      const result = validatePdfExtension('readme.txt')
+      expect(result.valid).toBe(false)
+    })
+
+    it('should reject filename with no extension', () => {
+      const result = validatePdfExtension('instructions')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('INVALID_EXTENSION')
+        expect(result.error).toContain('no extension')
+      }
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should reject null filename', () => {
+      const result = validatePdfExtension(null)
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_EXTENSION')
+      }
+    })
+
+    it('should reject undefined filename', () => {
+      const result = validatePdfExtension(undefined)
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_EXTENSION')
+      }
+    })
+
+    it('should reject empty string filename', () => {
+      const result = validatePdfExtension('')
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_EXTENSION')
+      }
+    })
+  })
+})
+
+describe('validatePdfFile', () => {
+  it('should pass when all validations pass', () => {
+    const result = validatePdfFile('application/pdf', 'instructions.pdf', 5 * 1024 * 1024)
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('should fail on invalid MIME type (checked first)', () => {
+    const result = validatePdfFile('image/jpeg', 'instructions.pdf', 5 * 1024 * 1024)
+    expect(result.valid).toBe(false)
+    if (!result.valid) {
+      expect(result.code).toBe('INVALID_MIME_TYPE')
+    }
+  })
+
+  it('should fail on invalid extension (checked second)', () => {
+    const result = validatePdfFile('application/pdf', 'instructions.jpg', 5 * 1024 * 1024)
+    expect(result.valid).toBe(false)
+    if (!result.valid) {
+      expect(result.code).toBe('INVALID_EXTENSION')
+    }
+  })
+
+  it('should fail on oversized file (checked last)', () => {
+    const result = validatePdfFile('application/pdf', 'instructions.pdf', 15 * 1024 * 1024)
+    expect(result.valid).toBe(false)
+    if (!result.valid) {
+      expect(result.code).toBe('FILE_TOO_LARGE')
+    }
+  })
+
+  it('should accept exactly 10MB PDF', () => {
+    const result = validatePdfFile('application/pdf', 'instructions.pdf', MAX_FILE_SIZE)
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('should reject 10MB + 1 byte PDF', () => {
+    const result = validatePdfFile('application/pdf', 'instructions.pdf', MAX_FILE_SIZE + 1)
+    expect(result.valid).toBe(false)
+    if (!result.valid) {
+      expect(result.code).toBe('FILE_TOO_LARGE')
+    }
+  })
+
+  it('should fail on missing MIME type before checking extension', () => {
+    const result = validatePdfFile(null, 'instructions.pdf', 5 * 1024 * 1024)
+    expect(result.valid).toBe(false)
+    if (!result.valid) {
+      expect(result.code).toBe('MISSING_MIME_TYPE')
+    }
+  })
+})
+
 describe('constants', () => {
   it('should have MAX_FILE_SIZE as 10MB', () => {
     expect(MAX_FILE_SIZE).toBe(10 * 1024 * 1024)
@@ -361,5 +570,15 @@ describe('constants', () => {
     expect(ALLOWED_MIME_TYPES).toContain('image/jpeg')
     expect(ALLOWED_MIME_TYPES).toContain('image/png')
     expect(ALLOWED_MIME_TYPES).toContain('image/webp')
+  })
+
+  it('should have 1 allowed PDF MIME type', () => {
+    expect(ALLOWED_PDF_MIME_TYPES).toHaveLength(1)
+    expect(ALLOWED_PDF_MIME_TYPES).toContain('application/pdf')
+  })
+
+  it('should have 1 allowed PDF extension', () => {
+    expect(ALLOWED_PDF_EXTENSIONS).toHaveLength(1)
+    expect(ALLOWED_PDF_EXTENSIONS).toContain('.pdf')
   })
 })

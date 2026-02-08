@@ -2,26 +2,23 @@ import { eq, and, ilike, or, sql, desc } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err, paginate } from '@repo/api-core'
+import type * as schema from '@repo/database-schema'
 import type { SetRepository, SetImageRepository } from '../ports/index.js'
 import type { Set, SetImage, UpdateSetInput, UpdateSetImageInput } from '../types.js'
-import type * as schema from '@repo/database-schema'
 
 type Schema = typeof schema
 
 /**
  * Create a SetRepository implementation using Drizzle
  */
-export function createSetRepository(
-  db: NodePgDatabase<Schema>,
-  schema: Schema
-): SetRepository {
+export function createSetRepository(db: NodePgDatabase<Schema>, schema: Schema): SetRepository {
   const { sets } = schema
 
   return {
     async findById(id: string): Promise<Result<Set, 'NOT_FOUND'>> {
-      const row = await db.query.sets.findFirst({
+      const row = (await db.query.sets.findFirst({
         where: eq(sets.id, id),
-      }) as typeof sets.$inferSelect | undefined
+      })) as typeof sets.$inferSelect | undefined
 
       if (!row) {
         return err('NOT_FOUND')
@@ -33,7 +30,7 @@ export function createSetRepository(
     async findByUserId(
       userId: string,
       pagination: PaginationInput,
-      filters?: { search?: string; theme?: string; isBuilt?: boolean }
+      filters?: { search?: string; theme?: string; isBuilt?: boolean },
     ): Promise<PaginatedResult<Set>> {
       const { page, limit } = pagination
       const offset = (page - 1) * limit
@@ -47,8 +44,8 @@ export function createSetRepository(
           or(
             ilike(sets.title, searchPattern),
             ilike(sets.setNumber, searchPattern),
-            ilike(sets.notes, searchPattern)
-          )!
+            ilike(sets.notes, searchPattern),
+          )!,
         )
       }
 
@@ -61,12 +58,12 @@ export function createSetRepository(
       }
 
       // Get items
-      const rows = await db.query.sets.findMany({
+      const rows = (await db.query.sets.findMany({
         where: and(...conditions),
         orderBy: desc(sets.createdAt),
         limit,
         offset,
-      }) as (typeof sets.$inferSelect)[]
+      })) as (typeof sets.$inferSelect)[]
 
       // Get total count
       const countResult = await db
@@ -128,11 +125,7 @@ export function createSetRepository(
       if (data.purchaseDate !== undefined) updateData.purchaseDate = data.purchaseDate
       if (data.wishlistItemId !== undefined) updateData.wishlistItemId = data.wishlistItemId
 
-      const [row] = await db
-        .update(sets)
-        .set(updateData)
-        .where(eq(sets.id, id))
-        .returning()
+      const [row] = await db.update(sets).set(updateData).where(eq(sets.id, id)).returning()
 
       if (!row) {
         return err('NOT_FOUND')
@@ -158,15 +151,15 @@ export function createSetRepository(
  */
 export function createSetImageRepository(
   db: NodePgDatabase<Schema>,
-  schema: Schema
+  schema: Schema,
 ): SetImageRepository {
   const { setImages } = schema
 
   return {
     async findById(id: string): Promise<Result<SetImage, 'NOT_FOUND'>> {
-      const row = await db.query.setImages.findFirst({
+      const row = (await db.query.setImages.findFirst({
         where: eq(setImages.id, id),
-      }) as typeof setImages.$inferSelect | undefined
+      })) as typeof setImages.$inferSelect | undefined
 
       if (!row) {
         return err('NOT_FOUND')
@@ -176,10 +169,10 @@ export function createSetImageRepository(
     },
 
     async findBySetId(setId: string): Promise<SetImage[]> {
-      const rows = await db.query.setImages.findMany({
+      const rows = (await db.query.setImages.findMany({
         where: eq(setImages.setId, setId),
         orderBy: setImages.position,
-      }) as (typeof setImages.$inferSelect)[]
+      })) as (typeof setImages.$inferSelect)[]
 
       return rows.map(mapRowToSetImage)
     },
@@ -198,7 +191,10 @@ export function createSetImageRepository(
       return mapRowToSetImage(row)
     },
 
-    async update(id: string, data: Partial<UpdateSetImageInput>): Promise<Result<SetImage, 'NOT_FOUND'>> {
+    async update(
+      id: string,
+      data: Partial<UpdateSetImageInput>,
+    ): Promise<Result<SetImage, 'NOT_FOUND'>> {
       const updateData: Record<string, unknown> = {}
 
       if (data.position !== undefined) updateData.position = data.position

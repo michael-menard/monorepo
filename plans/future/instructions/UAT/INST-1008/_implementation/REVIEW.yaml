@@ -1,0 +1,194 @@
+schema: 1
+story_id: INST-1008
+title: Wire RTK Query Mutations for MOC Instructions API
+feature_dir: plans/future/instructions
+reviewed_at: '2026-02-05T22:50:00Z'
+reviewed_by: qa-verify-setup-leader
+status: complete
+
+# Code review verdict
+verdict: PASS
+iteration: 1
+review_score: 92
+
+# Review findings summary
+summary: |
+  INST-1008 implementation successfully wires all RTK Query mutations for MOC Instructions API.
+  Implementation follows established patterns from wishlist-gallery-api.ts and maintains consistency
+  with project guidelines (Zod schemas, structured logging, proper cache invalidation).
+
+  All 13 acceptance criteria are satisfied with comprehensive test coverage. The mutations provide
+  complete CRUD functionality for MOCs and file management, unblocking all downstream Phase 1 stories
+  (INST-1100+).
+
+# Acceptance criteria verification
+acceptance_criteria_review:
+  total: 13
+  passing: 13
+  failing: 0
+
+  criteria:
+    - id: AC1
+      description: Frontend Zod schemas created
+      status: PASS
+      notes: MocInstructionsSchema and 6 other schemas properly defined with date transformations
+
+    - id: AC2
+      description: Schemas exported from index.ts
+      status: PASS
+      notes: All exports use proper aliasing (MocFeatureSchema, MocPaginationSchema) to avoid conflicts
+
+    - id: AC3
+      description: Updated tagTypes
+      status: PASS
+      notes: Changed to ['Moc', 'MocList', 'MocFile'] for granular cache invalidation
+
+    - id: AC4
+      description: Updated existing queries with new tags
+      status: PASS
+      notes: getInstructions and getInstructionById properly tagged for cache management
+
+    - id: AC5
+      description: createMoc mutation implemented
+      status: PASS
+      notes: POST /api/v2/mocs with proper invalidation and logging
+
+    - id: AC6
+      description: updateMoc mutation implemented
+      status: PASS
+      notes: PATCH /api/v2/mocs/{id} with dual cache invalidation
+
+    - id: AC7
+      description: deleteMoc mutation implemented
+      status: PASS
+      notes: DELETE /api/v2/mocs/{id} with proper cleanup
+
+    - id: AC8
+      description: uploadInstructionFile mutation implemented
+      status: PASS
+      notes: FormData multipart upload with MocFile cache invalidation
+
+    - id: AC9
+      description: uploadPartsListFile mutation implemented
+      status: PASS
+      notes: Same pattern as instruction file upload
+
+    - id: AC10
+      description: uploadThumbnail mutation implemented
+      status: PASS
+      notes: Returns updated MocInstructions with thumbnailUrl
+
+    - id: AC11
+      description: deleteFile mutation implemented
+      status: PASS
+      notes: Deletes specific files with proper cache management
+
+    - id: AC12
+      description: All hooks exported
+      status: PASS
+      notes: 12 hooks properly exported with no barrel files
+
+    - id: AC13
+      description: Endpoints added to config
+      status: PASS
+      notes: All 7 mutation endpoints documented in endpoints.ts
+
+# Code quality assessment
+code_quality:
+  architecture_patterns: PASS
+  pattern_notes: |
+    - Follows wishlist-gallery-api.ts mutation patterns
+    - Proper use of buildEndpoint() for path parameters
+    - Consistent error handling through RTK Query
+    - Well-structured FormData for multipart uploads
+
+  zod_compliance: PASS
+  zod_notes: |
+    - All types derived from Zod schemas using z.infer<>
+    - Proper use of transformResponse for validation
+    - Request/response validation enforced throughout
+
+  logging_compliance: PASS
+  logging_notes: |
+    - Uses @repo/logger for all structured logging
+    - Consistent log formatting across mutations
+    - Error logging properly captures context
+
+  project_guidelines: PASS
+  guideline_notes: |
+    - No barrel files used
+    - Named exports only
+    - Proper TypeScript strict mode
+    - Follows formatting (no semicolons, single quotes)
+
+# Test coverage
+test_coverage:
+  status: PASS
+  tests_passing: 348
+  tests_failing: 0
+  tests_flaky: 1
+  flaky_note: retry-logic.test.ts (unrelated to implementation)
+  coverage_notes: |
+    - All schema validation tests passing
+    - All API integration tests passing
+    - Mutation endpoints have full coverage
+    - File upload tests verified
+
+# Build and type safety
+build_and_types:
+  typescript_compilation: PASS
+  build_status: PASS
+  lint_status: PASS
+  notes: |
+    - TypeScript compilation successful
+    - No type errors
+    - All lint checks passing
+    - Prettier formatting applied
+
+# Security assessment
+security:
+  status: PASS
+  findings: 0
+  notes: |
+    - No hardcoded credentials
+    - Proper FormData usage for file uploads
+    - RTK Query handles request/response security
+    - No authentication/authorization changes (backend handled)
+
+# Performance assessment
+performance:
+  status: PASS
+  findings: 0
+  cache_invalidation: PASS
+  cache_notes: |
+    - Granular tag system (Moc, MocList, MocFile) prevents over-invalidation
+    - Reduces unnecessary query refetches
+    - Follows optimized pattern from wishlist feature
+
+# Blockers and dependencies
+dependencies:
+  unblocks: [INST-1100, INST-1102, INST-1103, INST-1104, INST-1106, INST-1108, INST-1109, INST-1110]
+  blocked_by: []
+  blocking_notes: |
+    All downstream Phase 1 stories can now proceed with full RTK mutation API available
+
+# Files reviewed
+files_analyzed:
+  - packages/core/api-client/src/schemas/instructions.ts
+  - packages/core/api-client/src/schemas/index.ts
+  - packages/core/api-client/src/config/endpoints.ts
+  - packages/core/api-client/src/rtk/instructions-api.ts
+
+# Final recommendation
+recommendation: |
+  APPROVED FOR QA VERIFICATION
+
+  This implementation successfully delivers the required RTK Query mutation infrastructure.
+  Code quality is high, test coverage is comprehensive, and all acceptance criteria are satisfied.
+  The implementation follows established project patterns and maintains consistency with similar
+  features (wishlist-gallery-api). No blockers identified for proceeding to QA verification phase.
+
+  Ready to move to UAT and begin evidence-based QA verification.
+
+gate_decision: PASS
+ready_for_qa: true

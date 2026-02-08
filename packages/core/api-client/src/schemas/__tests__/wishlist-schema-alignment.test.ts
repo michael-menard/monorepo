@@ -4,6 +4,12 @@
  * Tests to verify Zod schema fields match expected database schema fields.
  * Since we can't directly import Drizzle schema here, we verify the Zod
  * schema has all expected fields that should map to database columns.
+ *
+ * Field evolution:
+ * - WISH-2000: 19 core fields (foundation)
+ * - WISH-2016: imageVariants (optimized images)
+ * - SETS-MVP-001: status, statusChangedAt, purchaseDate, purchasePrice,
+ *   purchaseTax, purchaseShipping, buildStatus (collection management)
  */
 import { describe, it, expect } from 'vitest'
 import { WishlistItemSchema } from '../wishlist'
@@ -12,8 +18,8 @@ describe('Wishlist Schema <> Zod Alignment', () => {
   // Get field names from Zod schema
   const zodFields = Object.keys(WishlistItemSchema.shape)
 
-  // Expected database columns (matching Drizzle schema in database-schema package)
-  const expectedDbColumns = [
+  // Core database columns from WISH-2000
+  const coreDbColumns = [
     'id',
     'userId',
     'title',
@@ -35,6 +41,21 @@ describe('Wishlist Schema <> Zod Alignment', () => {
     'updatedBy',
   ]
 
+  // Additional fields from later stories
+  const extensionFields = [
+    'imageVariants', // WISH-2016: Optimized images
+    'status', // SETS-MVP-001: Item lifecycle status
+    'statusChangedAt', // SETS-MVP-001: When status changed
+    'purchaseDate', // SETS-MVP-001: When item was purchased
+    'purchasePrice', // SETS-MVP-001: Purchase price
+    'purchaseTax', // SETS-MVP-001: Tax paid
+    'purchaseShipping', // SETS-MVP-001: Shipping cost
+    'buildStatus', // SETS-MVP-001: Build tracking
+  ]
+
+  // All expected columns (core + extensions)
+  const expectedDbColumns = [...coreDbColumns, ...extensionFields]
+
   describe('Field Coverage', () => {
     it('should have all expected database fields', () => {
       for (const column of expectedDbColumns) {
@@ -42,8 +63,8 @@ describe('Wishlist Schema <> Zod Alignment', () => {
       }
     })
 
-    it('should have correct number of fields (19)', () => {
-      expect(zodFields.length).toBe(19)
+    it('should have correct number of fields (27: 19 core + 8 extensions)', () => {
+      expect(zodFields.length).toBe(27)
     })
 
     it('should not have extra fields beyond database columns', () => {

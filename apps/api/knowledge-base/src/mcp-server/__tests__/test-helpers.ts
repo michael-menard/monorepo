@@ -110,7 +110,12 @@ export function createMockKnowledgeEntry(overrides?: Partial<KnowledgeEntry>): K
     content: overrides?.content ?? 'Test knowledge content',
     embedding: overrides?.embedding ?? createMockEmbedding(),
     role: overrides?.role ?? 'dev',
+    entryType: overrides?.entryType ?? 'note',
+    storyId: overrides?.storyId ?? null,
     tags: overrides?.tags ?? ['test'],
+    verified: overrides?.verified ?? false,
+    verifiedAt: overrides?.verifiedAt ?? null,
+    verifiedBy: overrides?.verifiedBy ?? null,
     createdAt: overrides?.createdAt ?? now,
     updatedAt: overrides?.updatedAt ?? now,
   }

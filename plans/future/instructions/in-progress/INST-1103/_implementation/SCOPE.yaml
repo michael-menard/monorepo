@@ -1,0 +1,29 @@
+schema: 1
+story_id: INST-1103
+timestamp: '2026-02-06T20:15:00Z'
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - 'apps/api/lego-api/domains/mocs/**'
+  - 'apps/web/app-instructions-gallery/**'
+  - 'packages/core/api-client/**'
+  - 'packages/core/app-component-library/**'
+  - 'packages/backend/database-schema/**'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: true
+  performance: false
+
+summary: Implement single-image thumbnail upload for MOC instructions with frontend component, backend endpoint, S3 storage, and database integration

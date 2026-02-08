@@ -27,7 +27,7 @@ export function EnhancedBreadcrumb({
   showBackButton = true,
   showHomeIcon = true,
   maxItems = 5,
-  separator = <ChevronRight className="h-4 w-4 text-muted-foreground" />,
+  separator = <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />,
 }: EnhancedBreadcrumbProps) {
   const navigate = useNavigate()
   const breadcrumbs = useSelector(selectBreadcrumbs)
@@ -117,7 +117,7 @@ export function EnhancedBreadcrumb({
                 {item.icon ? (
                   <>
                     {item.icon === 'Home' && showHomeIcon ? (
-                      <Home className="h-4 w-4" />
+                      <Home className="h-3.5 w-3.5" />
                     ) : (
                       <div className="w-4 h-4 bg-muted rounded" />
                     )}
@@ -141,7 +141,7 @@ export function EnhancedBreadcrumb({
                 {item.icon ? (
                   <>
                     {item.icon === 'Home' && showHomeIcon ? (
-                      <Home className="h-4 w-4" />
+                      <Home className="h-3.5 w-3.5" />
                     ) : (
                       <div className="w-4 h-4 bg-muted rounded" />
                     )}

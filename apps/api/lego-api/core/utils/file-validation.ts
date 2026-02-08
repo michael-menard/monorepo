@@ -29,6 +29,16 @@ export const MIME_TYPE_ALIASES: Record<string, (typeof ALLOWED_MIME_TYPES)[numbe
 }
 
 /**
+ * Allowed MIME types for PDF uploads (whitelist).
+ */
+export const ALLOWED_PDF_MIME_TYPES = ['application/pdf'] as const
+
+/**
+ * Allowed file extensions for PDF uploads (whitelist).
+ */
+export const ALLOWED_PDF_EXTENSIONS = ['.pdf'] as const
+
+/**
  * Maximum file size in bytes (10MB).
  * Files larger than this will be rejected.
  */
@@ -56,10 +66,12 @@ export const ValidationResultSchema = z.discriminatedUnion('valid', [
     error: z.string(),
     code: z.enum([
       'INVALID_MIME_TYPE',
+      'INVALID_EXTENSION',
       'FILE_TOO_LARGE',
       'FILE_TOO_SMALL',
       'MISSING_MIME_TYPE',
       'MISSING_FILE_SIZE',
+      'MISSING_EXTENSION',
     ]),
   }),
 ])
@@ -188,6 +200,111 @@ export function validateFileUpload(
     return mimeResult
   }
 
+  return validateFileSize(sizeBytes)
+}
+
+/**
+ * Validates a PDF MIME type against the allowed whitelist.
+ *
+ * @param mimeType - The MIME type to validate
+ * @returns ValidationResult indicating if the MIME type is PDF
+ *
+ * @example
+ * const result = validatePdfMimeType('application/pdf')
+ * // { valid: true }
+ */
+export function validatePdfMimeType(mimeType: string | undefined | null): ValidationResult {
+  if (!mimeType || mimeType.trim() === '') {
+    return {
+      valid: false,
+      error: 'MIME type is required',
+      code: 'MISSING_MIME_TYPE',
+    }
+  }
+
+  const normalizedType = mimeType.toLowerCase().trim()
+
+  if (ALLOWED_PDF_MIME_TYPES.includes(normalizedType as any)) {
+    return { valid: true }
+  }
+
+  return {
+    valid: false,
+    error: 'Only PDF files are allowed',
+    code: 'INVALID_MIME_TYPE',
+  }
+}
+
+/**
+ * Validates a PDF file extension.
+ *
+ * @param filename - The filename to validate
+ * @returns ValidationResult indicating if the extension is .pdf
+ *
+ * @example
+ * const result = validatePdfExtension('instructions.pdf')
+ * // { valid: true }
+ */
+export function validatePdfExtension(filename: string | undefined | null): ValidationResult {
+  if (!filename || filename.trim() === '') {
+    return {
+      valid: false,
+      error: 'Filename is required',
+      code: 'MISSING_EXTENSION',
+    }
+  }
+
+  const extension = filename.toLowerCase().match(/\.[^.]+$/)?.[0]
+
+  if (!extension) {
+    return {
+      valid: false,
+      error: 'File has no extension',
+      code: 'INVALID_EXTENSION',
+    }
+  }
+
+  if (ALLOWED_PDF_EXTENSIONS.includes(extension as any)) {
+    return { valid: true }
+  }
+
+  return {
+    valid: false,
+    error: 'Only .pdf file extension is allowed',
+    code: 'INVALID_EXTENSION',
+  }
+}
+
+/**
+ * Validates a PDF file (MIME type, extension, and size).
+ *
+ * @param mimeType - The MIME type to validate
+ * @param filename - The filename to validate
+ * @param sizeBytes - The file size in bytes
+ * @returns ValidationResult indicating if all checks pass
+ *
+ * @example
+ * const result = validatePdfFile('application/pdf', 'file.pdf', 5000000)
+ * // { valid: true }
+ */
+export function validatePdfFile(
+  mimeType: string | undefined | null,
+  filename: string | undefined | null,
+  sizeBytes: number | undefined | null,
+): ValidationResult {
+  // Check MIME type first
+  const mimeResult = validatePdfMimeType(mimeType)
+  if (!mimeResult.valid) {
+    return mimeResult
+  }
+
+  // Check extension
+  const extensionResult = validatePdfExtension(filename)
+  if (!extensionResult.valid) {
+    return extensionResult
+  }
+
+  // Check file size
   return validateFileSize(sizeBytes)
 }
 

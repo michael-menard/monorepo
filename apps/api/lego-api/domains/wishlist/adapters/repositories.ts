@@ -39,6 +39,7 @@ export function createWishlistRepository(
         store?: string
         tags?: string[]
         priority?: number
+        status?: 'wishlist' | 'owned' // SETS-MVP-001: Filter by lifecycle status
         sort?:
           | 'createdAt'
           | 'title'
@@ -77,6 +78,16 @@ export function createWishlistRepository(
 
       if (filters?.priority !== undefined) {
         conditions.push(eq(wishlistItems.priority, filters.priority))
+      }
+
+      // SETS-MVP-001: Filter by status (defaults to 'wishlist' in service layer)
+      if (filters?.status) {
+        conditions.push(
+          eq(
+            wishlistItems.status,
+            filters.status as (typeof wishlistItems.status.enumValues)[number],
+          ),
+        )
       }
 
       if (filters?.tags && filters.tags.length > 0) {
@@ -215,7 +226,15 @@ export function createWishlistRepository(
 
     async update(
       id: string,
-      data: Partial<UpdateWishlistItemInput>,
+      data: Partial<UpdateWishlistItemInput> & {
+        status?: 'wishlist' | 'owned'
+        statusChangedAt?: Date
+        purchaseDate?: Date
+        purchasePrice?: string | null
+        purchaseTax?: string | null
+        purchaseShipping?: string | null
+        buildStatus?: 'not_started' | 'in_progress' | 'completed' | null
+      },
     ): Promise<Result<WishlistItem, 'NOT_FOUND'>> {
       const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
@@ -236,6 +255,15 @@ export function createWishlistRepository(
       if (data.priority !== undefined) updateData.priority = data.priority
       if (data.notes !== undefined) updateData.notes = data.notes
       if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder
+
+      // SETS-MVP-0310: Status transition fields
+      if (data.status !== undefined) updateData.status = data.status
+      if (data.statusChangedAt !== undefined) updateData.statusChangedAt = data.statusChangedAt
+      if (data.purchaseDate !== undefined) updateData.purchaseDate = data.purchaseDate
+      if (data.purchasePrice !== undefined) updateData.purchasePrice = data.purchasePrice
+      if (data.purchaseTax !== undefined) updateData.purchaseTax = data.purchaseTax
+      if (data.purchaseShipping !== undefined) updateData.purchaseShipping = data.purchaseShipping
+      if (data.buildStatus !== undefined) updateData.buildStatus = data.buildStatus
 
       const [row] = await db
         .update(wishlistItems)
@@ -343,6 +371,14 @@ function mapRowToWishlistItem(row: {
   sortOrder: number
   createdAt: Date
   updatedAt: Date
+  // SETS-MVP-001: Collection management fields
+  status?: string | null
+  statusChangedAt?: Date | null
+  purchaseDate?: Date | null
+  purchasePrice?: string | null
+  purchaseTax?: string | null
+  purchaseShipping?: string | null
+  buildStatus?: string | null
 }): WishlistItem {
   // WISH-2018: Convert S3 URLs to CloudFront URLs on-the-fly
   // This provides backward compatibility for existing S3 URLs stored in the database
@@ -367,5 +403,13 @@ function mapRowToWishlistItem(row: {
     sortOrder: row.sortOrder,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    // SETS-MVP-001: Collection management fields
+    status: (row.status as WishlistItem['status']) ?? 'wishlist',
+    statusChangedAt: row.statusChangedAt ?? null,
+    purchaseDate: row.purchaseDate ?? null,
+    purchasePrice: row.purchasePrice ?? null,
+    purchaseTax: row.purchaseTax ?? null,
+    purchaseShipping: row.purchaseShipping ?? null,
+    buildStatus: (row.buildStatus as WishlistItem['buildStatus']) ?? null,
   }
 }

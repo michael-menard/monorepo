@@ -65,6 +65,20 @@ export type ImageVariants = z.infer<typeof ImageVariantsSchema>
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
+ * Item status enum for lifecycle tracking.
+ * Matches the `item_status` PostgreSQL enum from SETS-MVP-001.
+ */
+export const ItemStatusSchema = z.enum(['wishlist', 'owned'])
+export type ItemStatus = z.infer<typeof ItemStatusSchema>
+
+/**
+ * Build status enum for owned items.
+ * Matches the `build_status` PostgreSQL enum from SETS-MVP-001.
+ */
+export const BuildStatusSchema = z.enum(['not_started', 'in_progress', 'completed'])
+export type BuildStatus = z.infer<typeof BuildStatusSchema>
+
+/**
  * Internal wishlist item schema for database results.
  * Uses z.date() for timestamps because Drizzle returns Date objects.
  *
@@ -89,6 +103,23 @@ export const WishlistItemSchema = z.object({
   sortOrder: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Collection Management (SETS-MVP-001)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Lifecycle tracking
+  status: ItemStatusSchema.default('wishlist'),
+  statusChangedAt: z.date().nullable().optional(),
+
+  // Purchase tracking (for owned items)
+  purchaseDate: z.date().nullable().optional(),
+  purchasePrice: z.string().nullable().optional(),
+  purchaseTax: z.string().nullable().optional(),
+  purchaseShipping: z.string().nullable().optional(),
+
+  // Build tracking (for owned items)
+  buildStatus: BuildStatusSchema.nullable().optional(),
 })
 
 export type WishlistItem = z.infer<typeof WishlistItemSchema>
@@ -324,6 +355,76 @@ export const MarkAsPurchasedInputSchema = z.object({
 })
 
 export type MarkAsPurchasedInput = z.infer<typeof MarkAsPurchasedInputSchema>
+
+/**
+ * Input schema for updating item status to 'owned' with purchase details.
+ * SETS-MVP-0310: Unified model status transition approach.
+ *
+ * Used by PATCH /wishlist/:id/purchase endpoint.
+ * Updates existing item's status field instead of creating new Set record.
+ */
+export const PurchaseDetailsInputSchema = z.object({
+  /**
+   * Date of purchase (defaults to today on backend if not provided)
+   */
+  purchaseDate: z
+    .string()
+    .datetime()
+    .optional()
+    .refine(
+      val => {
+        if (!val) return true
+        const purchaseDate = new Date(val)
+        const today = new Date()
+        today.setHours(23, 59, 59, 999) // End of today
+        return purchaseDate <= today
+      },
+      { message: 'Purchase date cannot be in the future' },
+    ),
+
+  /**
+   * Purchase price (must be >= 0 if provided)
+   * Stored as string for decimal precision
+   */
+  purchasePrice: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid decimal')
+    .optional()
+    .refine(val => val === undefined || parseFloat(val) >= 0, {
+      message: 'Price must be >= 0',
+    }),
+
+  /**
+   * Tax paid (must be >= 0 if provided)
+   * Stored as string for decimal precision
+   */
+  purchaseTax: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Tax must be a valid decimal')
+    .optional()
+    .refine(val => val === undefined || parseFloat(val) >= 0, {
+      message: 'Tax must be >= 0',
+    }),
+
+  /**
+   * Shipping cost (must be >= 0 if provided)
+   * Stored as string for decimal precision
+   */
+  purchaseShipping: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Shipping must be a valid decimal')
+    .optional()
+    .refine(val => val === undefined || parseFloat(val) >= 0, {
+      message: 'Shipping must be >= 0',
+    }),
+
+  /**
+   * Initial build status (defaults to 'not_started')
+   */
+  buildStatus: BuildStatusSchema.optional().default('not_started'),
+})
+
+export type PurchaseDetailsInput = z.infer<typeof PurchaseDetailsInputSchema>
 
 // ─────────────────────────────────────────────────────────────────────────
 // Error Types (Backend-specific)

@@ -5,20 +5,67 @@ type: feature
 state: uat
 title: Add Item Flow
 points: 5
-priority: null
+priority: medium
 blocked_by: null
 depends_on:
   - WISH-2001
 follow_up_from: null
 scope:
-  packages: []
+  packages:
+    - "@repo/api-client"
   surfaces:
     - backend
     - frontend
-    - infra
+    - infrastructure
 goal: Enable users to add wishlist items manually with all fields and image upload.
-non_goals: []
-acs: []
-risks: []
-created_at: 2026-01-24T02:00:00-07:00
-updated_at: 2026-01-28T14:30:00Z
+non_goals:
+  - Duplicate detection
+  - Currency selector (default USD sufficient for MVP)
+  - Tag autocomplete
+  - Form autosave (follow-up story WISH-2012)
+  - Client-side image compression (follow-up story WISH-2022)
+  - Optimistic UI for form submission (follow-up story WISH-2032)
+acs:
+  - id: AC-001
+    description: POST /api/wishlist endpoint validates and creates item
+    testable: true
+    automated: true
+  - id: AC-002
+    description: Add item page with form fields (store, title, set number, price, currency, piece count, priority, image, source URL, notes, tags)
+    testable: true
+    automated: true
+  - id: AC-003
+    description: Store selector contains LEGO, Barweer, Cata, BrickLink, Other options
+    testable: true
+    automated: true
+  - id: AC-004
+    description: Priority selector has 0-5 scale options
+    testable: true
+    automated: true
+  - id: AC-005
+    description: Image upload field with S3 presigned URL works end-to-end
+    testable: true
+    automated: true
+  - id: AC-006
+    description: Form validation with Zod (client and server) prevents submission without required fields
+    testable: true
+    automated: true
+  - id: AC-007
+    description: RTK Query mutation useAddToWishlistMutation triggers API request
+    testable: true
+    automated: true
+  - id: AC-008
+    description: Success toast appears after successful submission
+    testable: true
+    automated: true
+  - id: AC-009
+    description: Error handling displays toast for API failures
+    testable: true
+    automated: true
+risks:
+  - id: RISK-001
+    description: Image upload to S3 can fail or timeout
+    severity: medium
+    mitigation: Robust error handling with retry logic and clear error messages
+created_at: "2026-01-24T09:00:00Z"
+updated_at: "2026-02-04T12:00:00Z"

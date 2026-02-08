@@ -92,6 +92,7 @@ const mockWishlistResponse: WishlistListResponse = {
       priority: 0, // Hidden Gems score: (5-0)*1000 = 5000
       notes: null,
       sortOrder: 0,
+      status: 'wishlist',
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-01-01T00:00:00.000Z',
       createdBy: null,
@@ -113,6 +114,7 @@ const mockWishlistResponse: WishlistListResponse = {
       priority: 5, // Hidden Gems score: (5-5)*7541 = 0
       notes: null,
       sortOrder: 1,
+      status: 'wishlist',
       createdAt: '2025-01-02T00:00:00.000Z',
       updatedAt: '2025-01-02T00:00:00.000Z',
       createdBy: null,

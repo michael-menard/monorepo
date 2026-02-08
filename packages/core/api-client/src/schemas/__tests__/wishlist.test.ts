@@ -3,6 +3,8 @@ import { describe, it, expect } from 'vitest'
 import {
   WishlistStoreSchema,
   CurrencySchema,
+  ItemStatusSchema,
+  BuildStatusSchema,
   WishlistItemSchema,
   CreateWishlistItemSchema,
   UpdateWishlistItemSchema,
@@ -10,6 +12,8 @@ import {
   WishlistListResponseSchema,
   ReorderWishlistItemSchema,
   BatchReorderSchema,
+  MarkAsPurchasedSchema,
+  UpdateBuildStatusSchema,
 } from '../wishlist'
 
 describe('Wishlist Schemas', () => {
@@ -704,6 +708,255 @@ describe('Wishlist Schemas', () => {
       })
       expect(result.createdBy).toBeNull()
       expect(result.updatedBy).toBeNull()
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Collection Management Tests (SETS-MVP-001)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('ItemStatusSchema', () => {
+    it('should accept wishlist status', () => {
+      expect(ItemStatusSchema.parse('wishlist')).toBe('wishlist')
+    })
+
+    it('should accept owned status', () => {
+      expect(ItemStatusSchema.parse('owned')).toBe('owned')
+    })
+
+    it('should reject invalid status', () => {
+      expect(() => ItemStatusSchema.parse('pending')).toThrow()
+    })
+  })
+
+  describe('BuildStatusSchema', () => {
+    it('should accept not_started status', () => {
+      expect(BuildStatusSchema.parse('not_started')).toBe('not_started')
+    })
+
+    it('should accept in_progress status', () => {
+      expect(BuildStatusSchema.parse('in_progress')).toBe('in_progress')
+    })
+
+    it('should accept completed status', () => {
+      expect(BuildStatusSchema.parse('completed')).toBe('completed')
+    })
+
+    it('should reject invalid build status', () => {
+      expect(() => BuildStatusSchema.parse('building')).toThrow()
+    })
+  })
+
+  describe('WishlistItemSchema with Collection Fields', () => {
+    it('should validate item with default status=wishlist', () => {
+      const result = WishlistItemSchema.parse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'LEGO Castle',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      })
+
+      expect(result.status).toBe('wishlist')
+      expect(result.buildStatus).toBeUndefined()
+    })
+
+    it('should validate owned item with purchase details', () => {
+      const result = WishlistItemSchema.parse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'LEGO Star Wars',
+        store: 'LEGO',
+        setNumber: '75192',
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: 7541,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+        status: 'owned',
+        statusChangedAt: '2024-12-28T10:00:00.000Z',
+        purchaseDate: '2024-12-28T10:00:00.000Z',
+        purchasePrice: '849.99',
+        purchaseTax: '85.00',
+        purchaseShipping: '15.00',
+        buildStatus: 'not_started',
+      })
+
+      expect(result.status).toBe('owned')
+      expect(result.purchasePrice).toBe('849.99')
+      expect(result.buildStatus).toBe('not_started')
+    })
+
+    it('should accept null for owned-specific fields when status=wishlist', () => {
+      const result = WishlistItemSchema.parse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'LEGO Castle',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+        status: 'wishlist',
+        statusChangedAt: null,
+        purchaseDate: null,
+        purchasePrice: null,
+        purchaseTax: null,
+        purchaseShipping: null,
+        buildStatus: null,
+      })
+
+      expect(result.status).toBe('wishlist')
+      expect(result.purchaseDate).toBeNull()
+      expect(result.buildStatus).toBeNull()
+    })
+  })
+
+  describe('MarkAsPurchasedSchema', () => {
+    it('should validate mark as purchased request with all fields', () => {
+      const result = MarkAsPurchasedSchema.parse({
+        purchaseDate: '2024-12-28T10:00:00.000Z',
+        purchasePrice: '849.99',
+        purchaseTax: '85.00',
+        purchaseShipping: '15.00',
+      })
+
+      expect(result.purchasePrice).toBe('849.99')
+      expect(result.purchaseTax).toBe('85.00')
+      expect(result.purchaseShipping).toBe('15.00')
+    })
+
+    it('should accept empty request (minimal purchase)', () => {
+      const result = MarkAsPurchasedSchema.parse({})
+      expect(result.purchaseDate).toBeUndefined()
+      expect(result.purchasePrice).toBeUndefined()
+    })
+
+    it('should accept empty strings for optional price fields', () => {
+      const result = MarkAsPurchasedSchema.parse({
+        purchasePrice: '',
+        purchaseTax: '',
+        purchaseShipping: '',
+      })
+
+      expect(result.purchasePrice).toBe('')
+      expect(result.purchaseTax).toBe('')
+      expect(result.purchaseShipping).toBe('')
+    })
+
+    it('should reject invalid price format', () => {
+      expect(() =>
+        MarkAsPurchasedSchema.parse({
+          purchasePrice: 'invalid',
+        }),
+      ).toThrow()
+    })
+
+    it('should accept valid decimal formats', () => {
+      const result = MarkAsPurchasedSchema.parse({
+        purchasePrice: '99.99',
+        purchaseTax: '10.50',
+        purchaseShipping: '5.00',
+      })
+
+      expect(result.purchasePrice).toBe('99.99')
+      expect(result.purchaseTax).toBe('10.50')
+      expect(result.purchaseShipping).toBe('5.00')
+    })
+  })
+
+  describe('UpdateBuildStatusSchema', () => {
+    it('should validate build status update', () => {
+      const result = UpdateBuildStatusSchema.parse({
+        buildStatus: 'in_progress',
+      })
+
+      expect(result.buildStatus).toBe('in_progress')
+    })
+
+    it('should accept all valid build statuses', () => {
+      const result1 = UpdateBuildStatusSchema.parse({ buildStatus: 'not_started' })
+      const result2 = UpdateBuildStatusSchema.parse({ buildStatus: 'in_progress' })
+      const result3 = UpdateBuildStatusSchema.parse({ buildStatus: 'completed' })
+
+      expect(result1.buildStatus).toBe('not_started')
+      expect(result2.buildStatus).toBe('in_progress')
+      expect(result3.buildStatus).toBe('completed')
+    })
+
+    it('should reject invalid build status', () => {
+      expect(() =>
+        UpdateBuildStatusSchema.parse({
+          buildStatus: 'building',
+        }),
+      ).toThrow()
+    })
+
+    it('should require buildStatus field', () => {
+      expect(() => UpdateBuildStatusSchema.parse({})).toThrow()
+    })
+  })
+
+  describe('WishlistQueryParamsSchema with Status Filter', () => {
+    it('should default to wishlist status', () => {
+      const result = WishlistQueryParamsSchema.parse({})
+      expect(result.status).toBe('wishlist')
+    })
+
+    it('should accept owned status filter', () => {
+      const result = WishlistQueryParamsSchema.parse({
+        status: 'owned',
+      })
+      expect(result.status).toBe('owned')
+    })
+
+    it('should accept wishlist status filter', () => {
+      const result = WishlistQueryParamsSchema.parse({
+        status: 'wishlist',
+      })
+      expect(result.status).toBe('wishlist')
+    })
+
+    it('should reject invalid status filter', () => {
+      expect(() =>
+        WishlistQueryParamsSchema.parse({
+          status: 'pending',
+        }),
+      ).toThrow()
     })
   })
 })

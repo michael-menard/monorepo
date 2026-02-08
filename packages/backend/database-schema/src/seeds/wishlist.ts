@@ -55,7 +55,7 @@ export async function seedWishlist(db: DB) {
       id: '11111111-1111-1111-1111-111111111003',
       userId: devUserId,
       title: 'Tower Bridge',
-      store: 'Amazon',
+      store: 'Other', // Amazon not in enum, using Other
       setNumber: '10214',
       sourceUrl: 'https://www.amazon.com/dp/B00F9Z29FI',
       imageUrl: null,

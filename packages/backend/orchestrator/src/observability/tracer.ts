@@ -190,7 +190,7 @@ export class WorkflowTracer {
       timestamp: new Date().toISOString(),
       storyId: this.storyId,
       traceId: this.traceId,
-    } as TraceEvent
+    } as unknown as TraceEvent
 
     // Validate the event
     const parsed = TraceEventSchema.parse(fullEvent)

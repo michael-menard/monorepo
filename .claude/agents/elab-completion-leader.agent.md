@@ -30,12 +30,35 @@ This is a self-contained leader (no worker sub-agents).
 From orchestrator context:
 - Feature directory (e.g., `plans/future/wishlist`)
 - Story ID (e.g., WISH-001)
+- Mode: `interactive` (default) or `autonomous`
 - Final verdict: PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED
-- User decisions from interactive discussion (JSON or structured)
+- User decisions from interactive discussion (JSON or structured) - OR - auto-decisions from DECISIONS.yaml
 
 From filesystem:
 - `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story file
 - `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md` - audit/discovery results
+- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/DECISIONS.yaml` - (autonomous mode only)
+
+### Decision Source
+
+**Interactive mode**: Decisions come from orchestrator context (user input)
+
+**Autonomous mode**: Read decisions from `_implementation/DECISIONS.yaml`:
+```yaml
+decisions:
+  gaps:
+    - id: 1
+      finding: "..."
+      decision: "Add as AC" | "KB-logged"
+      notes: "..."
+  enhancements:
+    - id: 1
+      finding: "..."
+      decision: "KB-logged"
+      notes: "..."
+  follow_ups: []  # Always empty in autonomous mode
+  out_of_scope: []  # Always empty in autonomous mode
+```
 
 ---
 
@@ -73,23 +96,29 @@ Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/ELAB-{STORY_ID}.md`:
 
 ### Gaps Identified
 
-| # | Finding | User Decision | Notes |
-|---|---------|---------------|-------|
-[From interactive discussion or "Not Reviewed"]
+| # | Finding | Decision | Notes |
+|---|---------|----------|-------|
+[From interactive discussion, DECISIONS.yaml, or "Not Reviewed"]
 
 ### Enhancement Opportunities
 
-| # | Finding | User Decision | Notes |
-|---|---------|---------------|-------|
-[From interactive discussion or "Not Reviewed"]
+| # | Finding | Decision | Notes |
+|---|---------|----------|-------|
+[From interactive discussion, DECISIONS.yaml, or "Not Reviewed"]
 
 ### Follow-up Stories Suggested
 
-- [ ] [From user decisions]
+- [ ] [From user decisions - empty in autonomous mode]
 
 ### Items Marked Out-of-Scope
 
-- [Item]: [User justification]
+- [Item]: [User justification - empty in autonomous mode]
+
+### KB Entries Created (Autonomous Mode Only)
+
+If autonomous mode, list KB entries:
+- `{kb_entry_id}`: {finding summary}
+- ...
 
 ## Proceed to Implementation?
 
@@ -100,6 +129,7 @@ Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/ELAB-{STORY_ID}.md`:
 
 If any findings were reviewed, append to {STORY_ID}.md:
 
+**Interactive mode:**
 ```markdown
 ## QA Discovery Notes (for PM Review)
 
@@ -118,6 +148,28 @@ _Added by QA Elaboration on [date]_
 
 ### Items Marked Out-of-Scope
 - [Item]: [Justification]
+```
+
+**Autonomous mode:**
+```markdown
+## QA Discovery Notes (Auto-Generated)
+
+_Added by Autonomous Elaboration on [date]_
+
+### MVP Gaps Resolved
+| # | Finding | Resolution | AC Added |
+|---|---------|------------|----------|
+| 1 | [gap] | Add as AC | AC 9 |
+
+### Non-Blocking Items (Logged to KB)
+| # | Finding | Category | KB Entry |
+|---|---------|----------|----------|
+| 1 | [finding] | edge-case | {kb_entry_id} |
+
+### Summary
+- ACs added: N
+- KB entries created: M
+- Mode: autonomous
 ```
 
 ### Step 3: Update Story Status (use /story-update skill)

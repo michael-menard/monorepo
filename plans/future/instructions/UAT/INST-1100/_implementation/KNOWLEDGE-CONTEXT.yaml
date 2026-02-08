@@ -1,0 +1,242 @@
+schema: 1
+story_id: INST-1100
+timestamp: '2026-02-05T00:00:00Z'
+
+# Knowledge context for MOC Gallery implementation
+
+# Relevant patterns from similar implementations
+patterns:
+  gallery_pages:
+    - source: apps/web/app-wishlist-gallery/src/pages/main-page.tsx
+      pattern: |
+        - Use FilterProvider context for shared filter state
+        - useGetWishlistQuery for data fetching with pagination
+        - useState for local state (search, selected items)
+        - useViewMode hook for grid/datatable toggle persistence
+        - useFirstTimeHint for first-time view mode hint
+        - AnimatePresence for view mode transitions
+        - GalleryFilterBar with rightSlot for view toggle
+        - Conditional rendering: showLoadingState, showErrorState, isEmpty
+        - Map filteredItems to card components
+      notes: |
+        Instructions gallery already follows this pattern in main-page.tsx.
+        Verify it matches all these patterns and add missing pieces.
+
+    - source: apps/web/app-instructions-gallery/src/pages/main-page.tsx
+      pattern: |
+        - Already uses useGetInstructionsQuery from @repo/api-client
+        - Already has GalleryGrid, GalleryEmptyState, GalleryFilterBar
+        - Already supports grid/datatable view modes
+        - Uses InstructionCard component for grid items
+        - Maps API response (data.data.items) to local state
+      notes: |
+        Current implementation is close to requirements. Main gaps:
+        - Loading skeleton not using GallerySkeleton component
+        - Need to verify responsive grid breakpoints
+        - Need comprehensive test coverage
+
+  rtk_query_hooks:
+    - source: packages/core/api-client/src/rtk/instructions-api.ts
+      pattern: |
+        - useGetInstructionsQuery already exists and is wired
+        - Endpoint: SERVERLESS_ENDPOINTS.MOC.SEARCH (/api/v2/mocs/search)
+        - Query params: search, type, status, theme, page, limit
+        - transformResponse with MocListResponseSchema.parse()
+        - providesTags for cache invalidation: ['Moc', 'MocList']
+        - getServerlessCacheConfig('medium') for 5-minute caching
+      notes: |
+        Hook is fully implemented in INST-1008.
+        No additional RTK Query work needed for this story.
+
+  gallery_components:
+    - source: packages/core/gallery/src/components/GallerySkeleton.tsx
+      pattern: |
+        interface GallerySkeletonProps {
+          count?: number (default 12)
+          columns?: { sm: 1, md: 2, lg: 3, xl: 4 }
+          gap?: number (default 4)
+          showFilters?: boolean (default false)
+          className?: string
+        }
+        - Renders skeleton cards in responsive grid
+        - Uses Tailwind gap-{gap} and grid-cols-{breakpoint}
+        - Each skeleton card has aspect-video image placeholder
+      notes: |
+        Replace current loading text with <GallerySkeleton count={12} />
+
+    - source: packages/core/gallery/src/components/GalleryEmptyState.tsx
+      pattern: |
+        interface GalleryEmptyStateProps {
+          icon?: LucideIcon
+          title: string
+          description?: string
+          action?: { label: string, onClick: () => void }
+          className?: string
+        }
+        - Displays centered empty state with icon, text, and optional CTA
+      notes: |
+        Already used in main-page.tsx. Verify CTA button links correctly.
+
+# Lessons learned from prior implementations
+lessons:
+  - id: STORY-007
+    category: gallery-patterns
+    lesson: |
+      When creating gallery pages, reuse @repo/gallery components exactly as-is.
+      Do not create custom grid layouts - use GalleryGrid with default breakpoints.
+      Empty state should use GalleryEmptyState with appropriate icon and CTA.
+
+  - id: STORY-016
+    category: testing
+    lesson: |
+      Comprehensive testing requires:
+      - Unit tests: Component rendering, state management, conditional rendering
+      - Integration tests: API calls with MSW mocks, error handling, auth redirects
+      - E2E tests: Full user workflows with real API data
+      Expect 3x test files vs components (unit + integration + e2e).
+
+  - id: WRKF-1020
+    category: rtk-query
+    lesson: |
+      RTK Query hooks should:
+      - Use transformResponse with Zod schema validation
+      - Configure providesTags for proper cache invalidation
+      - Use getServerlessCacheConfig for serverless-optimized caching
+      - Handle auth failures with onAuthFailure callback
+      Instructions API already follows this pattern.
+
+  - id: token-optimization
+    category: efficiency
+    lesson: |
+      Token optimization patterns:
+      - Read only relevant sections of large files (use offset/limit)
+      - Use Grep to find files before reading
+      - Reference existing patterns by file path instead of re-reading
+      - Skip reading files already in conversation context
+
+# Architectural decisions from prior stories
+adrs:
+  - id: ADR-001
+    title: Gallery Component Reuse Strategy
+    decision: |
+      All gallery pages must use @repo/gallery components (GalleryGrid,
+      GalleryEmptyState, GallerySkeleton, GalleryFilterBar) to maintain
+      consistency across apps.
+    rationale: |
+      Reduces code duplication, ensures consistent UX, simplifies maintenance.
+    applies_to: [INST-1100, all future gallery stories]
+
+  - id: ADR-002
+    title: RTK Query for All API Calls
+    decision: |
+      All frontend API calls must use RTK Query hooks from @repo/api-client.
+      No direct fetch() or axios calls allowed.
+    rationale: |
+      RTK Query provides caching, automatic refetching, optimistic updates,
+      and consistent error handling patterns.
+    applies_to: [INST-1100, all frontend stories]
+
+  - id: ADR-003
+    title: Zod-First Type Strategy
+    decision: |
+      All types must be inferred from Zod schemas. Never use TypeScript
+      interfaces or type aliases without corresponding Zod schema.
+    rationale: |
+      Provides runtime validation, self-documenting constraints, and
+      automatic type inference.
+    applies_to: [INST-1100, all stories]
+
+# File patterns and imports
+import_patterns:
+  ui_components:
+    correct: |
+      import { Button, Card, Badge } from '@repo/app-component-library'
+    incorrect: |
+      import { Button } from '@repo/ui/button'
+    notes: Always use @repo/app-component-library, never individual paths
+
+  logger:
+    correct: |
+      import { logger } from '@repo/logger'
+      logger.info('message', undefined, { context })
+    incorrect: |
+      console.log('message')
+    notes: Never use console.log - always use @repo/logger
+
+  gallery:
+    correct: |
+      import { GalleryGrid, GalleryEmptyState, GallerySkeleton } from '@repo/gallery'
+    notes: Gallery components are exported from package root
+
+# Schema references
+schemas:
+  moc_instructions:
+    location: packages/core/api-client/src/schemas/instructions.ts
+    key_schemas:
+      - MocInstructionsSchema: Full MOC entity with all fields
+      - MocListResponseSchema: Paginated list response with items, pagination, counts, filters
+      - ListMocsQuery: Query params for list endpoint
+    notes: |
+      Response shape: { items: MocInstructions[], pagination: {...}, counts: {...}, filters: {...} }
+      Access via: data.items (not data.data.items as currently implemented)
+
+# Test patterns
+test_patterns:
+  unit_tests:
+    pattern: |
+      - Mock @repo/logger with vi.mock()
+      - Mock @tanstack/react-router Link component
+      - Mock RTK Query hooks with mock responses
+      - Mock @repo/gallery hooks (useViewMode, useFirstTimeHint)
+      - Use configureStore for Redux provider wrapper
+      - Test loading state, empty state, error state, success state
+      - Test responsive grid rendering
+    example_file: apps/web/app-wishlist-gallery/src/pages/__tests__/main-page.grid.test.tsx
+
+  e2e_tests:
+    pattern: |
+      - Use browser-auth.fixture for authenticated page
+      - Navigate via client-side Link click (not page.goto) for auth context
+      - Wait for filter bar to confirm page load
+      - Test card rendering with data-testid selectors
+      - Test responsive breakpoints (375px, 768px, 1024px)
+      - Verify loading states, empty states, error states
+    example_file: apps/web/playwright/tests/wishlist/gallery-mvp.spec.ts
+
+# Performance considerations
+performance:
+  - Use getServerlessCacheConfig('medium') for list queries (5 min cache)
+  - Limit default page size to 20-50 items
+  - Use lazy loading for images (native loading="lazy" attribute)
+  - Avoid re-renders with useCallback for handlers
+  - Memoize filtered/sorted lists with useMemo
+
+# Accessibility requirements
+accessibility:
+  - Gallery region: role="region" aria-label="MOC Gallery"
+  - Loading state: aria-live="polite" "Loading MOCs..."
+  - Empty state: role="status" aria-live="polite"
+  - Cards: keyboard navigable (tabIndex={0})
+  - Cards: activate with Enter/Space
+  - Images: alt text with meaningful description
+  - Focus visible: focus:ring-2 focus:ring-lego-teal-500
+
+# Reality baseline notes
+reality_check:
+  existing_implementation:
+    - apps/web/app-instructions-gallery/src/pages/main-page.tsx exists
+    - Uses useGetInstructionsQuery correctly
+    - Has GalleryGrid, GalleryEmptyState, GalleryFilterBar
+    - InstructionCard component exists and follows patterns
+    - View mode toggle already implemented
+    - Main gaps: Loading skeleton, test coverage, schema alignment
+
+  dependencies:
+    - INST-1008 (RTK Query mutations) marked as blocker but hooks already exist
+    - useGetInstructionsQuery is fully wired and functional
+    - No actual dependency blocker - can proceed with implementation
+
+  protected_features:
+    - Do not modify backend routes (apps/api/lego-api/domains/instructions/routes.ts)
+    - Do not modify MocInstructionsSchema or database schema
+    - Do not modify instructionsService interface

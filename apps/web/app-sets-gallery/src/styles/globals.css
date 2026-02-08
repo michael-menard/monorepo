@@ -5,7 +5,6 @@
  */
 
 @import '@repo/design-system/global-styles.css';
-@import 'tw-animate-css';
 
 @layer base {
   /* No app-specific overrides yet; relies on global-styles.css */

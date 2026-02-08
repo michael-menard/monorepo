@@ -1,0 +1,444 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel"
+prefix: "ADMI"
+project_name: "admin-panel"
+analyzed: "2026-02-04T00:00:00Z"
+
+overall_goal: |
+  Enable authorized administrators to manage users, revoke sessions, block/unblock accounts, and maintain comprehensive audit logs through a secure admin panel integrated into the main application.
+
+phases:
+  - id: 1
+    name: "Foundation & Database"
+    description: "Database schema, audit logging infrastructure, and IAM configuration"
+  - id: 2
+    name: "Backend API"
+    description: "Cognito integration, user management endpoints, and revocation logic"
+  - id: 3
+    name: "Frontend Core"
+    description: "Admin routes, user list/search interface, and route protection"
+  - id: 4
+    name: "User Actions & Audit"
+    description: "Revoke, block/unblock actions, confirmation dialogs, and audit viewing"
+  - id: 5
+    name: "Testing & Deployment"
+    description: "Integration testing, security review, and production deployment"
+
+stories:
+  - id: "ADMI-001"
+    title: "Create admin_audit_log database table"
+    feature: "Create Drizzle schema and migration for admin_audit_log table with fields for admin_user_id, action_type, target_user_id, reason, details (JSONB), result, error_message, ip_address, user_agent, and created_at with appropriate indexes"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["PostgreSQL", "Drizzle ORM migration"]
+    goal: "Establish audit logging database table for tracking all administrative actions"
+    risk_notes: "Low risk - straightforward schema creation"
+    sizing_warning: false
+
+  - id: "ADMI-002"
+    title: "Configure IAM permissions for Cognito admin operations"
+    feature: "Add IAM policy to Lambda execution role granting cognito-idp:ListUsers, cognito-idp:AdminGetUser, and cognito-idp:AdminUserGlobalSignOut permissions for the user pool"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["AWS IAM", "Lambda execution role"]
+    goal: "Enable Lambda functions to perform admin operations on Cognito user pool"
+    risk_notes: "Requires AWS access and proper permission scoping. Validate in staging before production."
+    sizing_warning: false
+
+  - id: "ADMI-003"
+    title: "Implement Cognito user listing service"
+    feature: "Create backend service using AWS SDK CognitoIdentityProviderClient to list users with pagination support (50 per page) and optional email prefix filtering"
+    phase: 2
+    depends_on: ["ADMI-002"]
+    endpoints: []
+    infrastructure: ["AWS SDK", "Cognito"]
+    goal: "Provide backend service for retrieving paginated user lists from Cognito"
+    risk_notes: "Cognito ListUsers API has 60 req/sec rate limit. Email filter is prefix-only."
+    sizing_warning: false
+
+  - id: "ADMI-004"
+    title: "Implement GET /admin/users endpoint"
+    feature: "Create endpoint to list users with pagination support, returning user email, user ID (sub), Cognito status, and is_suspended flag from user_quotas table. Supports optional ?email= query parameter for search."
+    phase: 2
+    depends_on: ["ADMI-003", "ADMI-001"]
+    endpoints: ["GET /admin/users", "GET /admin/users?email={query}"]
+    infrastructure: []
+    goal: "Expose paginated user listing and search to frontend with combined Cognito and database data"
+    risk_notes: "Must join Cognito data with user_quotas table. Handle cases where user_quotas record doesn't exist."
+    sizing_warning: false
+
+  - id: "ADMI-005"
+    title: "Implement GET /admin/users/:userId endpoint"
+    feature: "Create endpoint to retrieve detailed user information including email, user ID (sub), Cognito status, account creation date, is_suspended flag, suspended_at, and suspended_reason from user_quotas"
+    phase: 2
+    depends_on: ["ADMI-002", "ADMI-001"]
+    endpoints: ["GET /admin/users/:userId"]
+    infrastructure: []
+    goal: "Provide detailed user information for admin review before taking action"
+    risk_notes: "Must handle case where user exists in Cognito but not in user_quotas table"
+    sizing_warning: false
+
+  - id: "ADMI-006"
+    title: "Implement POST /admin/users/:userId/revoke-tokens endpoint"
+    feature: "Create endpoint that calls Cognito AdminUserGlobalSignOut API to invalidate all refresh tokens for a user, with audit logging of admin_user_id, target_user_id, action result, IP address, and user agent"
+    phase: 2
+    depends_on: ["ADMI-002", "ADMI-001"]
+    endpoints: ["POST /admin/users/:userId/revoke-tokens"]
+    infrastructure: ["Cognito AdminUserGlobalSignOut API"]
+    goal: "Enable immediate invalidation of user refresh tokens to terminate sessions"
+    risk_notes: "Existing access tokens remain valid until expiry (typically 1 hour). Cognito API may fail - ensure error handling and audit logging."
+    sizing_warning: false
+
+  - id: "ADMI-007"
+    title: "Implement POST /admin/users/:userId/block endpoint"
+    feature: "Create endpoint that sets is_suspended=true, suspended_at, and suspended_reason in user_quotas table, calls AdminUserGlobalSignOut, and logs both actions to audit log with required reason parameter"
+    phase: 2
+    depends_on: ["ADMI-006", "ADMI-001"]
+    endpoints: ["POST /admin/users/:userId/block"]
+    infrastructure: []
+    goal: "Provide dual-layer access revocation combining Cognito token invalidation with application-level blocking"
+    risk_notes: "Critical path - must ensure auth middleware checks is_suspended flag. Requires transaction to ensure atomicity."
+    sizing_warning: false
+
+  - id: "ADMI-008"
+    title: "Implement POST /admin/users/:userId/unblock endpoint"
+    feature: "Create endpoint that sets is_suspended=false and clears suspended_at/suspended_reason in user_quotas table, with audit logging of unblock action and admin identity"
+    phase: 2
+    depends_on: ["ADMI-001"]
+    endpoints: ["POST /admin/users/:userId/unblock"]
+    infrastructure: []
+    goal: "Enable administrators to restore user access after suspension or error"
+    risk_notes: "Low risk - straightforward database update"
+    sizing_warning: false
+
+  - id: "ADMI-009"
+    title: "Implement GET /admin/audit-log endpoint"
+    feature: "Create endpoint to retrieve paginated audit log entries with filters for admin_user_id, target_user_id, action_type, and date range, returning all audit fields ordered by created_at DESC"
+    phase: 2
+    depends_on: ["ADMI-001"]
+    endpoints: ["GET /admin/audit-log"]
+    infrastructure: []
+    goal: "Expose audit trail for compliance review and security investigation"
+    risk_notes: "May need performance optimization if audit log grows large. Consider archival strategy."
+    sizing_warning: false
+
+  - id: "ADMI-010"
+    title: "Create AdminGuard route protection component"
+    feature: "Create React component that checks JWT for 'admin' group membership, shows loading spinner during auth check, and redirects unauthorized users to root route"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Establish frontend route protection ensuring only admin group members can access admin panel"
+    risk_notes: "Critical security component - must not have bypass routes. Ensure auth context properly exposes groups claim."
+    sizing_warning: false
+
+  - id: "ADMI-011"
+    title: "Create admin route structure under /admin/*"
+    feature: "Set up React Router routes for /admin/users (list), /admin/users/:userId (detail), /admin/audit-log (audit viewer), all wrapped in AdminGuard component"
+    phase: 3
+    depends_on: ["ADMI-010"]
+    endpoints: []
+    infrastructure: []
+    goal: "Establish protected route hierarchy for admin panel within main-app"
+    risk_notes: "Low risk - standard routing setup"
+    sizing_warning: false
+
+  - id: "ADMI-012"
+    title: "Build user list page with pagination"
+    feature: "Create paginated table view displaying users with columns for email, user ID, account status (active/suspended badge), and action buttons. Implement pagination controls using Cognito pagination tokens."
+    phase: 3
+    depends_on: ["ADMI-011", "ADMI-004"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide primary interface for browsing all users with clear status indicators"
+    risk_notes: "Must handle loading states and empty states. Consider client-side caching for performance."
+    sizing_warning: false
+
+  - id: "ADMI-013"
+    title: "Build user search functionality"
+    feature: "Implement email search input with debouncing (300ms) that queries GET /admin/users?email= endpoint, showing search results in same table format as user list"
+    phase: 3
+    depends_on: ["ADMI-012"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable quick user discovery by email for common admin workflows"
+    risk_notes: "Cognito search is prefix-only. Consider UX for communicating this limitation. Debouncing required to avoid rate limits."
+    sizing_warning: false
+
+  - id: "ADMI-014"
+    title: "Build user detail modal/page"
+    feature: "Create detail view showing user email, user ID (sub), Cognito status, is_suspended flag, suspended_at, suspended_reason, and available action buttons (revoke/block/unblock based on current state)"
+    phase: 4
+    depends_on: ["ADMI-011", "ADMI-005"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide comprehensive user information context before administrators take action"
+    risk_notes: "Must handle missing user_quotas records gracefully"
+    sizing_warning: false
+
+  - id: "ADMI-015"
+    title: "Implement revoke tokens action with confirmation"
+    feature: "Create revoke tokens button that shows confirmation modal explaining action impact (refresh tokens invalidated, access tokens valid until expiry), calls POST /admin/users/:userId/revoke-tokens, and shows success/error toast"
+    phase: 4
+    depends_on: ["ADMI-014", "ADMI-006"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable session termination with clear user communication about action consequences"
+    risk_notes: "Must clearly communicate that existing access tokens remain valid. Handle API failures gracefully."
+    sizing_warning: false
+
+  - id: "ADMI-016"
+    title: "Implement block user action with reason capture"
+    feature: "Create block button that opens modal with required reason dropdown (Security incident, Policy violation, Account compromise, Other), optional notes field, confirmation checkbox, calls POST /admin/users/:userId/block, and updates UI to reflect blocked state"
+    phase: 4
+    depends_on: ["ADMI-014", "ADMI-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide dual-layer revocation with mandatory reason capture for audit trail"
+    risk_notes: "Critical action - must have clear confirmation. Consider adding 'Are you sure?' text verification."
+    sizing_warning: false
+
+  - id: "ADMI-017"
+    title: "Implement unblock user action"
+    feature: "Create unblock button (shown only for suspended users) with confirmation dialog, calls POST /admin/users/:userId/unblock, and updates UI to reflect active state"
+    phase: 4
+    depends_on: ["ADMI-014", "ADMI-008"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable access restoration for temporary suspensions or administrative errors"
+    risk_notes: "Low risk - simpler than block action"
+    sizing_warning: false
+
+  - id: "ADMI-018"
+    title: "Build audit log viewer page"
+    feature: "Create paginated table displaying audit log entries with columns for timestamp, admin user, action type, target user, reason, and result. Support basic filtering by action type and date range."
+    phase: 4
+    depends_on: ["ADMI-011", "ADMI-009"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide audit trail visibility for compliance and security investigation"
+    risk_notes: "May need performance optimization for large datasets. Consider virtualization for very long logs."
+    sizing_warning: false
+
+  - id: "ADMI-019"
+    title: "Add loading states and error handling"
+    feature: "Implement comprehensive loading skeletons for all data fetching, error boundaries for component failures, error toasts for API failures, and retry mechanisms for transient failures"
+    phase: 4
+    depends_on: ["ADMI-012", "ADMI-013", "ADMI-014", "ADMI-015", "ADMI-016", "ADMI-017", "ADMI-018"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure robust UX with clear feedback for all loading and error states"
+    risk_notes: "Cross-cutting concern - must review all components"
+    sizing_warning: false
+
+  - id: "ADMI-020"
+    title: "Write backend unit tests"
+    feature: "Create unit tests for all admin endpoints covering success cases, error cases, unauthorized access, invalid inputs, Cognito API failures, database failures, and audit logging correctness"
+    phase: 5
+    depends_on: ["ADMI-004", "ADMI-005", "ADMI-006", "ADMI-007", "ADMI-008", "ADMI-009"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure backend reliability and security through comprehensive test coverage"
+    risk_notes: "Must test auth middleware integration. Mock Cognito SDK calls."
+    sizing_warning: false
+
+  - id: "ADMI-021"
+    title: "Write frontend component tests"
+    feature: "Create React Testing Library tests for AdminGuard, user list, search, detail modal, and all action components covering user interactions, loading states, error states, and accessibility"
+    phase: 5
+    depends_on: ["ADMI-010", "ADMI-012", "ADMI-013", "ADMI-014", "ADMI-015", "ADMI-016", "ADMI-017", "ADMI-018"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure frontend components work correctly and are accessible"
+    risk_notes: "Must test route protection behavior. Mock API calls with MSW."
+    sizing_warning: false
+
+  - id: "ADMI-022"
+    title: "End-to-end integration testing"
+    feature: "Create Playwright E2E tests covering full user flows: admin login -> search user -> view details -> revoke tokens, block user with reason, verify blocked user cannot access API, unblock user, verify audit log entries"
+    phase: 5
+    depends_on: ["ADMI-020", "ADMI-021"]
+    endpoints: []
+    infrastructure: ["Playwright"]
+    goal: "Verify complete admin panel workflows function correctly end-to-end"
+    risk_notes: "Requires test Cognito users with admin group. May need dedicated test environment."
+    sizing_warning: true
+
+  - id: "ADMI-023"
+    title: "Security review and auth middleware validation"
+    feature: "Conduct code review focusing on: admin group validation, is_suspended flag checks in auth middleware, route protection, audit logging completeness, IAM permission scoping, and potential bypass vectors"
+    phase: 5
+    depends_on: ["ADMI-022"]
+    endpoints: []
+    infrastructure: []
+    goal: "Validate security posture and ensure no authorization bypass vulnerabilities"
+    risk_notes: "Critical - security failures could allow unauthorized access or revocation bypass"
+    sizing_warning: false
+
+  - id: "ADMI-024"
+    title: "Staging deployment and manual testing"
+    feature: "Deploy admin panel to staging environment, perform manual testing of all user flows, verify IAM permissions work correctly, test with real Cognito users, validate audit logging, and test error scenarios"
+    phase: 5
+    depends_on: ["ADMI-023"]
+    endpoints: []
+    infrastructure: ["Staging environment"]
+    goal: "Validate admin panel functions correctly in staging before production release"
+    risk_notes: "May discover environment-specific issues. Ensure staging Cognito pool mirrors production."
+    sizing_warning: false
+
+  - id: "ADMI-025"
+    title: "Production deployment and team training"
+    feature: "Deploy admin panel to production, create admin group in production Cognito pool, assign initial admin users, document admin panel usage, train support team on revocation workflows, and monitor for issues"
+    phase: 5
+    depends_on: ["ADMI-024"]
+    endpoints: []
+    infrastructure: ["Production environment"]
+    goal: "Successfully launch admin panel to production and enable team to use it"
+    risk_notes: "Requires production AWS access. Plan rollback strategy. Monitor error rates post-deployment."
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "ADMI-001": []
+    "ADMI-002": []
+    "ADMI-003": ["ADMI-002"]
+    "ADMI-004": ["ADMI-003", "ADMI-001"]
+    "ADMI-005": ["ADMI-002", "ADMI-001"]
+    "ADMI-006": ["ADMI-002", "ADMI-001"]
+    "ADMI-007": ["ADMI-006", "ADMI-001"]
+    "ADMI-008": ["ADMI-001"]
+    "ADMI-009": ["ADMI-001"]
+    "ADMI-010": []
+    "ADMI-011": ["ADMI-010"]
+    "ADMI-012": ["ADMI-011", "ADMI-004"]
+    "ADMI-013": ["ADMI-012"]
+    "ADMI-014": ["ADMI-011", "ADMI-005"]
+    "ADMI-015": ["ADMI-014", "ADMI-006"]
+    "ADMI-016": ["ADMI-014", "ADMI-007"]
+    "ADMI-017": ["ADMI-014", "ADMI-008"]
+    "ADMI-018": ["ADMI-011", "ADMI-009"]
+    "ADMI-019": ["ADMI-012", "ADMI-013", "ADMI-014", "ADMI-015", "ADMI-016", "ADMI-017", "ADMI-018"]
+    "ADMI-020": ["ADMI-004", "ADMI-005", "ADMI-006", "ADMI-007", "ADMI-008", "ADMI-009"]
+    "ADMI-021": ["ADMI-010", "ADMI-012", "ADMI-013", "ADMI-014", "ADMI-015", "ADMI-016", "ADMI-017", "ADMI-018"]
+    "ADMI-022": ["ADMI-020", "ADMI-021"]
+    "ADMI-023": ["ADMI-022"]
+    "ADMI-024": ["ADMI-023"]
+    "ADMI-025": ["ADMI-024"]
+
+  critical_path:
+    - "ADMI-001"
+    - "ADMI-002"
+    - "ADMI-003"
+    - "ADMI-004"
+    - "ADMI-012"
+    - "ADMI-013"
+    - "ADMI-019"
+    - "ADMI-020"
+    - "ADMI-021"
+    - "ADMI-022"
+    - "ADMI-023"
+    - "ADMI-024"
+    - "ADMI-025"
+
+  critical_path_length: 13
+
+parallelization:
+  max_parallel: 4
+  groups:
+    - stories: ["ADMI-001", "ADMI-002", "ADMI-010"]
+      after: null
+      phase: "Foundation setup"
+    - stories: ["ADMI-003"]
+      after: "group_1"
+      phase: "Cognito service"
+    - stories: ["ADMI-004", "ADMI-005", "ADMI-006", "ADMI-008", "ADMI-009", "ADMI-011"]
+      after: "group_2"
+      phase: "Backend endpoints and routing"
+    - stories: ["ADMI-007"]
+      after: "group_3"
+      phase: "Block endpoint (depends on revoke)"
+    - stories: ["ADMI-012"]
+      after: "group_3"
+      phase: "User list UI"
+    - stories: ["ADMI-013", "ADMI-014", "ADMI-018"]
+      after: "group_5"
+      phase: "Detail views and search"
+    - stories: ["ADMI-015", "ADMI-016", "ADMI-017"]
+      after: "group_6"
+      phase: "User actions"
+    - stories: ["ADMI-019"]
+      after: "group_7"
+      phase: "UX polish"
+    - stories: ["ADMI-020", "ADMI-021"]
+      after: "group_8"
+      phase: "Testing"
+    - stories: ["ADMI-022"]
+      after: "group_9"
+      phase: "E2E testing"
+    - stories: ["ADMI-023"]
+      after: "group_10"
+      phase: "Security review"
+    - stories: ["ADMI-024"]
+      after: "group_11"
+      phase: "Staging"
+    - stories: ["ADMI-025"]
+      after: "group_12"
+      phase: "Production"
+
+risks:
+  - id: "RISK-001"
+    description: "Cognito API failures could prevent revocation, leaving users with access despite admin action"
+    affected_stories: ["ADMI-006", "ADMI-007"]
+    severity: high
+    mitigation: "Application-level is_suspended flag serves as fail-safe. Auth middleware must check this flag on every request."
+
+  - id: "RISK-002"
+    description: "Auth middleware bypass could render blocking ineffective, critical security vulnerability"
+    affected_stories: ["ADMI-007", "ADMI-023"]
+    severity: high
+    mitigation: "Comprehensive code review. Ensure all API routes use same middleware stack. Test bypass scenarios."
+
+  - id: "RISK-003"
+    description: "Cognito rate limits (60 req/sec) could cause search/listing failures under load"
+    affected_stories: ["ADMI-003", "ADMI-004", "ADMI-013"]
+    severity: medium
+    mitigation: "Implement client-side caching, debounced search input, and graceful degradation with error messages."
+
+  - id: "RISK-004"
+    description: "IAM permission issues could prevent Cognito operations from functioning"
+    affected_stories: ["ADMI-002", "ADMI-024"]
+    severity: medium
+    mitigation: "Validate permissions in staging environment before production. Document required permissions."
+
+  - id: "RISK-005"
+    description: "Accidental user blocks could cause support burden and user disruption"
+    affected_stories: ["ADMI-016"]
+    severity: medium
+    mitigation: "Confirmation dialogs, easy unblock process, comprehensive audit trail for accountability."
+
+  - id: "RISK-006"
+    description: "Missing user_quotas records for Cognito users could cause errors or inconsistent states"
+    affected_stories: ["ADMI-004", "ADMI-005", "ADMI-007"]
+    severity: low
+    mitigation: "Handle missing records gracefully. Consider auto-creating user_quotas on first access."
+
+  - id: "RISK-007"
+    description: "Large audit log table could cause performance degradation over time"
+    affected_stories: ["ADMI-009", "ADMI-018"]
+    severity: low
+    mitigation: "Implement pagination, consider archival strategy, add database indexes for common queries."
+
+metrics:
+  total_stories: 25
+  phases: 5
+  max_parallel: 4
+  critical_path_length: 13
+  stories_with_sizing_warnings: 1
+  estimated_weeks: "2-3"
+  backend_stories: 9
+  frontend_stories: 10
+  infrastructure_stories: 2
+  testing_stories: 4

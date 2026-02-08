@@ -1,0 +1,97 @@
+perspective: security
+verdict: READY
+
+security_posture:
+  authentication_required: true
+  authorization_model: Owner-based (MOC creator only)
+  data_classification: User-generated content, private
+
+mvp_blockers: []
+
+missing_mvp_stories: []
+
+future:
+  security_improvements:
+    - suggestion: Add audit logging for all edit operations (who changed what when)
+      impact: high
+    - suggestion: Implement API rate limiting per-user to prevent DOS (INST-1006 partial)
+      impact: medium
+    - suggestion: Add CSRF token validation on edit form submission
+      impact: medium
+
+  threat_mitigation:
+    - Presigned URL scoping: Restrict to specific S3 prefix and file type
+    - Upload size limits: Enforce 100MB max via presigned URL metadata
+    - Session expiry: 1-hour TTL prevents indefinite URL validity
+    - File integrity: Verify MIME type and magic bytes on upload completion
+    - Access control: Only MOC owner can edit their MOCs (check authorization)
+
+  recommended_security_stories:
+    - title: Audit logging for edit operations
+      reason: Track who edited what for compliance and debugging
+      priority: P2
+
+    - title: File type validation and scanning
+      reason: Prevent malicious file uploads disguised as instructions
+      priority: P2
+
+  recommendations:
+    - Require HTTPS for all presigned URL interactions
+    - Log all presigned URL issuance with user ID and IP address
+    - Implement IP-based rate limiting on presigned URL requests
+    - Verify MOC ownership before allowing edits (authz check in Lambda)
+    - Set Content-Type headers on uploaded files to prevent execution
+
+authentication_requirements:
+  edit_endpoint: User must be authenticated (session cookie)
+  presigned_url_generation: User must own the MOC (authz check required)
+  file_upload_to_s3: Presigned URL scoped to user session (S3 SigV4)
+
+authorization_checks:
+  edit_moc: Only MOC owner can edit
+  delete_files: Only MOC owner can delete files
+  view_edit_page: Only MOC owner can access edit page
+  cancel_edit: Only MOC owner can cancel and lose changes
+
+data_protection:
+  encryption_at_rest: S3 default encryption (AES-256)
+  encryption_in_transit: HTTPS/TLS for all API calls
+  presigned_url_scope: Limited to specific S3 object and expiry time
+  session_tokens: Stored in HttpOnly, Secure, SameSite=Lax cookies
+
+attack_vectors_mitigated:
+  unauthorized_file_upload: Presigned URL scoped to user session
+  file_format_exploitation: Magic bytes validation on upload completion
+  session_hijacking: HttpOnly cookie prevents JavaScript access
+  csrf_attacks: Cookies use SameSite=Lax and CSRF middleware
+  dos_attacks: Rate limiting on presigned URL requests (INST-1006)
+  path_traversal: S3 presigned URL cannot escape prefix scope
+
+compliance_considerations:
+  pii_handling: MOC titles/descriptions may contain PII - not separately tracked
+  data_retention: Edit history not required for MVP (hard delete acceptable)
+  audit_trail: Presigned URL logs sufficient for basic audit (improve post-MVP)
+  user_consent: Users aware of file uploads to S3 via MOC creation flow
+
+presigned_url_security:
+  ttl_duration: 1 hour (balances usability vs. exposure)
+  scoping_rules: Limited to single S3 object, user session
+  validation: Server verifies upload completion with ETag matching
+  logging: All presigned URL generation logged with user ID and timestamp
+  restrictions: No nested path access, no wildcard patterns
+
+risk_assessment:
+  high_priority: None (baseline security practices adequate)
+  medium_priority:
+    - Rate limit edit operations per-user
+    - Add audit logging for compliance
+    - File type validation to prevent malicious uploads
+  low_priority:
+    - Consider VPC endpoints for S3 in future
+    - Implement secrets rotation for API keys
+
+security_testing_requirements:
+  unit_tests: Verify authorization checks in edit endpoint
+  integration_tests: Test presigned URL scoping and expiry validation
+  e2e_tests: Verify unauthorized users cannot edit MOCs
+  penetration_tests: Post-MVP assessment of upload flow security

@@ -56,6 +56,8 @@ export async function seedSets(db: DB) {
   ]
 
   for (const set of sampleSets) {
+    // Format tags as PostgreSQL array literal: '{tag1,tag2,tag3}'
+    const tagsLiteral = `{${set.tags.join(',')}}`
     await db.execute(sql`
       INSERT INTO sets (
         id, user_id, title, set_number, store, piece_count, theme, tags, is_built, quantity,
@@ -68,7 +70,7 @@ export async function seedSets(db: DB) {
         ${set.store},
         ${set.pieceCount},
         ${set.theme},
-        ${JSON.stringify(set.tags)}::jsonb,
+        ${tagsLiteral}::text[],
         ${set.isBuilt},
         ${set.quantity},
         NOW(),

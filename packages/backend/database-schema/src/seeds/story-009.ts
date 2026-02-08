@@ -49,7 +49,7 @@ export async function seedStory009(db: DB) {
       'LEGO',
       500,
       'Test Theme',
-      ${JSON.stringify(['test', 'story-009'])}::jsonb,
+      '{test,story-009}'::text[],
       false,
       1,
       NOW(),
@@ -71,7 +71,7 @@ export async function seedStory009(db: DB) {
       'LEGO',
       300,
       'Test Theme',
-      ${JSON.stringify(['test', 'story-009'])}::jsonb,
+      '{test,story-009}'::text[],
       false,
       1,
       NOW(),
@@ -81,13 +81,16 @@ export async function seedStory009(db: DB) {
   `)
 
   // 3. Create Set Images for User A's set (position testing)
+  const imageUrl1 = `https://example-bucket.s3.us-east-1.amazonaws.com/sets/${setIdUserA}/image1.webp`
+  const imageUrl2 = `https://example-bucket.s3.us-east-1.amazonaws.com/sets/${setIdUserA}/image2.webp`
+
   await db.execute(sql`
     INSERT INTO set_images (
       id, set_id, image_url, thumbnail_url, position, created_at
     ) VALUES (
       ${setImageId1},
       ${setIdUserA},
-      'https://example-bucket.s3.us-east-1.amazonaws.com/sets/${setIdUserA}/image1.webp',
+      ${imageUrl1},
       NULL,
       0,
       NOW()
@@ -101,7 +104,7 @@ export async function seedStory009(db: DB) {
     ) VALUES (
       ${setImageId2},
       ${setIdUserA},
-      'https://example-bucket.s3.us-east-1.amazonaws.com/sets/${setIdUserA}/image2.webp',
+      ${imageUrl2},
       NULL,
       1,
       NOW()

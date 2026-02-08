@@ -1,0 +1,65 @@
+schema: 1
+story_id: "WISH-2002"
+timestamp: "2026-02-04T12:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create E2E test spec file for add item flow"
+    files: ["apps/web/playwright/tests/wishlist/add-item.spec.ts"]
+    dependencies: []
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/playwright/tests/wishlist/add-item.spec.ts"
+    action: create
+    reason: "E2E test coverage for WISH-2002 add item flow (v7.1 mandate: E2E tests required for stories to be marked done)"
+
+commands_to_run:
+  - command: "npx playwright test tests/wishlist/add-item.spec.ts --config=playwright.gallery-mvp.config.ts"
+    when: "after test file created"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1-POST-endpoint"
+    planned_evidence: "E2E test: Verify form submission triggers POST /api/wishlist"
+    evidence_type: test
+  - ac_id: "AC2-form-fields"
+    planned_evidence: "E2E test: Verify form renders all required fields (store, title) and optional fields (setNumber, price, currency, pieceCount, priority, image, sourceUrl, notes, tags)"
+    evidence_type: test
+  - ac_id: "AC3-store-selector"
+    planned_evidence: "E2E test: Verify store selector contains all 5 options (LEGO, Barweer, Cata, BrickLink, Other)"
+    evidence_type: test
+  - ac_id: "AC4-priority-selector"
+    planned_evidence: "E2E test: Verify priority selector has 0-5 scale options"
+    evidence_type: test
+  - ac_id: "AC5-image-upload"
+    planned_evidence: "E2E test: Verify image upload with presigned URL flow works end-to-end"
+    evidence_type: test
+  - ac_id: "AC6-validation"
+    planned_evidence: "E2E test: Verify required field validation (store and title), verify error messages display"
+    evidence_type: test
+  - ac_id: "AC7-rtk-mutation"
+    planned_evidence: "E2E test: Verify API request is made when form submitted (indirectly via success flow)"
+    evidence_type: test
+  - ac_id: "AC8-success-toast"
+    planned_evidence: "E2E test: Verify success toast appears after submission"
+    evidence_type: test
+  - ac_id: "AC9-error-handling"
+    planned_evidence: "E2E test: Mock API failure and verify error toast appears"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "E2E tests are the ONLY missing piece for WISH-2002. All code implementation, unit tests, and manual verification already complete."
+  - "Per VERIFICATION.yaml: Backend tests 157/157 passing, Frontend tests 78/92 passing (85%), all 16 ACs verified PASS"
+  - "Tests must run against LIVE backend on port 9000 (not mocked via MSW) per v7.1 workflow"
+  - "Use playwright.gallery-mvp.config.ts which has VITE_ENABLE_MSW=false and points to http://localhost:3000"
+  - "Test file should be a .spec.ts file, NOT a .feature file (we're not using BDD/Cucumber for new tests)"
+  - "Existing step definitions at apps/web/playwright/steps/wishlist-add-item.steps.ts can be referenced for selectors/patterns but are from old BDD approach"
+  - "Follow test patterns from gallery-mvp.spec.ts and purchase-flow.spec.ts for structure and assertions"
+  - "Use authenticatedPage fixture from browser-auth.fixture.ts"
+  - "Focus on key acceptance criteria: form fields, validation, submission, success/error states, image upload"
+  - "Test should cover happy path (add item with all fields), minimal path (required fields only), validation errors, and error handling"

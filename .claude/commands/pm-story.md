@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-31
-version: 3.3.0
+updated: 2026-02-06
+version: 3.4.0
 type: orchestrator
 agents: ["pm-story-seed-agent.agent.md", "pm-story-generation-leader.agent.md", "pm-story-adhoc-leader.agent.md", "pm-story-followup-leader.agent.md", "pm-story-split-leader.agent.md"]
 ---
@@ -50,6 +50,10 @@ Story IDs follow the pattern `{PREFIX}-XXYZ` where:
 /pm-story generate plans/future/wishlist WISH-0100
 /pm-story generate plans/future/wishlist next
 
+# Generate + Elaborate in one shot (chains to /elab-story after generation)
+/pm-story generate plans/future/wishlist WISH-0100 --elab
+/pm-story generate plans/future/wishlist WISH-0100 --elab --autonomous
+
 # Follow-up: creates WISH-0101 from WISH-0100 (increments Z)
 /pm-story followup plans/stories/WISH.stories.index.md WISH-0100
 
@@ -60,12 +64,27 @@ Story IDs follow the pattern `{PREFIX}-XXYZ` where:
 /pm-story generate --ad-hoc plans/stories/WISH.stories.index.md
 ```
 
+### Pipeline Flags
+
+| Flag | Purpose |
+|------|---------|
+| `--elab` | After generation, chain to `/elab-story` (interactive mode) |
+| `--elab --autonomous` | After generation, chain to `/elab-story --autonomous` |
+
+When `--elab` is used:
+- Story is generated normally
+- On success, automatically runs `/elab-story {FEATURE_DIR} {STORY_ID}`
+- If `--autonomous` is also specified, runs `/elab-story {FEATURE_DIR} {STORY_ID} --autonomous`
+- Reduces PM overhead by combining generation + elaboration in one command
+
 ## Actions
 
 | Action | Usage | Purpose |
 |--------|-------|---------|
 | `generate` | `/pm-story generate {INDEX_PATH} [STORY_ID]` | Create story from index (auto-finds next if no ID) |
 | `generate` | `/pm-story generate {FEATURE_DIR} {STORY_ID \| next}` | Create story from feature dir (legacy) |
+| `generate --elab` | `/pm-story generate {PATH} {STORY_ID} --elab` | Generate + elaborate (interactive) |
+| `generate --elab --autonomous` | `/pm-story generate {PATH} {STORY_ID} --elab --autonomous` | Generate + elaborate (autonomous) |
 | `generate --ad-hoc` | `/pm-story generate --ad-hoc {INDEX_PATH}` | Create emergent/one-off story (next XX00) |
 | `followup` | `/pm-story followup {INDEX_PATH} {STORY_ID}` | Create follow-up (increments Z digit) |
 | `split` | `/pm-story split {INDEX_PATH} {STORY_ID}` | Split oversized story (increments Y digit)  |
@@ -318,9 +337,34 @@ Task tool:
 ### Step 4: Handle Response
 
 - Wait for completion signal
-- `PM COMPLETE` → report success, suggest next step
+- `PM COMPLETE` → report success, chain to elab if `--elab` flag present
 - `PM BLOCKED: <reason>` → report blocker to user
 - `PM FAILED: <reason>` → report failure
+
+### Step 5: Chain to Elaboration (if --elab flag)
+
+**IF `--elab` flag was provided AND response was `PM COMPLETE`:**
+
+```
+if --autonomous flag also present:
+    /elab-story {FEATURE_DIR} {STORY_ID} --autonomous
+else:
+    /elab-story {FEATURE_DIR} {STORY_ID}
+```
+
+The elaboration will:
+1. Move story from `backlog/` to `elaboration/`
+2. Run analysis phase
+3. Make decisions (interactive or autonomous)
+4. Complete with verdict (PASS → move to `ready-to-work/`)
+
+**IF elaboration returns `ELABORATION COMPLETE: PASS`:**
+- Report combined success: "Story generated and elaborated successfully"
+- Story is now in `ready-to-work/` and ready for `/dev-implement-story`
+
+**IF elaboration returns `SPLIT REQUIRED`:**
+- Report: "Story generated but requires split"
+- Prompt for split (same as standalone elab-story behavior)
 
 ## Error Handling
 
@@ -330,7 +374,7 @@ Report: "PM story action '<action>' failed: <reason>"
 
 Report what was created and next step.
 
-**Output format:**
+**Output format (without --elab):**
 ```
 Story created: {PREFIX}-{XXYZ}
   - XX (story): {XX}
@@ -340,8 +384,20 @@ Story created: {PREFIX}-{XXYZ}
 Next: /elab-story {INDEX_PATH} {STORY_ID}
 ```
 
+**Output format (with --elab):**
+```
+Story created: {PREFIX}-{XXYZ}
+Elaboration: PASS (autonomous mode)
+  - ACs added: 2
+  - KB entries: 5
+Status: ready-to-work
+
+Next: /dev-implement-story {FEATURE_DIR} {STORY_ID}
+```
+
 **Next by action:**
 - generate → `/elab-story {INDEX_PATH} {STORY_ID}`
+- generate --elab → story is elaborated, next is `/dev-implement-story`
 - generate --ad-hoc → `/elab-story {INDEX_PATH} {NEW_ID}`
 - followup → `/elab-story {INDEX_PATH} {FOLLOWUP_ID}` (e.g., WISH-0110)
 - split → `/elab-story {INDEX_PATH} {FIRST_SPLIT}` (e.g., WISH-0101)

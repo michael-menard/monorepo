@@ -1,15 +1,23 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 4.0.0
+updated: 2026-02-04
+version: 5.0.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-fix-story"]
+name: dev-fix-fix-leader
+description: Apply fixes from REVIEW.yaml using backend/frontend coders
+model: sonnet
+tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 schema:
   - packages/backend/orchestrator/src/artifacts/review.ts
   - packages/backend/orchestrator/src/artifacts/evidence.ts
 skills_used:
   - /token-log
+kb_tools:
+  - kb_search
+  - kb_add_lesson
+  - kb_update_story_status
 ---
 
 # Agent: dev-fix-fix-leader
@@ -19,6 +27,46 @@ skills_used:
 ## Mission
 
 Apply fixes using Backend/Frontend Coders. Read issues from REVIEW.yaml ranked_patches. Update EVIDENCE.yaml after fixes.
+
+---
+
+## Knowledge Base Integration
+
+Query KB for fix patterns before starting, write learnings about difficult fixes.
+
+### When to Query (Before Fixes)
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Starting fix iteration | `kb_search({ query: "fix iteration patterns lessons", role: "dev", limit: 3 })` |
+| Type error patterns | `kb_search({ query: "type error fix patterns", tags: ["blockers"], limit: 3 })` |
+| Domain-specific | `kb_search({ query: "{domain} common issues", role: "dev", limit: 3 })` |
+
+### Applying Results
+
+- Check for known fix patterns from KB
+- Apply proven solutions for similar issues
+- Cite KB sources in fix context: "Per KB entry {ID}: {summary}"
+
+### When to Write (After Fixes)
+
+If fixes required multiple retries or revealed interesting patterns:
+
+```javascript
+kb_add_lesson({
+  title: "Fix pattern: {brief description}",
+  story_id: "{STORY_ID}",
+  category: "blockers",  // or "architecture" for structural fixes
+  what_happened: "Encountered {issue type} during fix iteration",
+  resolution: "Applied {fix approach} - key insight: {lesson}",
+  tags: ["fix-iteration", "{domain}"]
+})
+```
+
+### Fallback Behavior
+
+- KB unavailable: Continue without KB context, queue writes to DEFERRED-KB-WRITES.yaml
+- No results: Proceed with standard fix approach
 
 ## Inputs
 
@@ -101,6 +149,17 @@ Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
    - Read current iteration
    - Write iteration + 1 for next review cycle
 
+8. **Update Story Status in KB** (track fix iteration)
+   ```javascript
+   kb_update_story_status({
+     story_id: "{STORY_ID}",
+     state: "in_progress",
+     phase: "implementation",
+     iteration: {N}  // current iteration from REVIEW.yaml
+   })
+   ```
+   **Fallback**: If KB unavailable, log warning and continue.
+
 ## Retry Policy
 
 | Error | Action |
@@ -124,6 +183,41 @@ Issues fixed: X/Y
 Evidence updated: EVIDENCE.yaml
 Next: /dev-code-review {FEATURE_DIR} {STORY_ID}
 ```
+
+---
+
+## Session Close (KBMEM-013)
+
+At the END of every run:
+
+1. **Update working-set.md** (if exists):
+   - Mark fix tasks as complete
+   - Update next_steps (e.g., "Re-run code review")
+   - Add blockers if retry exhausted
+
+2. **Write back to KB** (if notable findings):
+   ```javascript
+   // If fix required multiple retries or revealed pattern
+   kb_add_lesson({
+     title: "Fix required retry for {issue type}",
+     story_id: "{STORY_ID}",
+     category: "blockers",
+     what_happened: "First fix attempt failed because...",
+     resolution: "Successful after applying...",
+     tags: ["fix-iteration"]
+   })
+   ```
+
+3. **Sync working-set to KB**:
+   ```javascript
+   kb_sync_working_set({
+     story_id: "{STORY_ID}",
+     content: "<updated working-set.md>",
+     direction: "to_kb"
+   })
+   ```
+
+---
 
 ## Token tracking
 

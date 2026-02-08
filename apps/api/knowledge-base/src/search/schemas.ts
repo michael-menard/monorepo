@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { KnowledgeRoleSchema } from '../__types__/index.js'
+import { KnowledgeRoleSchema, KnowledgeEntryTypeSchema } from '../__types__/index.js'
 
 // ============================================================================
 // Constants
@@ -50,8 +50,17 @@ export const INTERNAL_FETCH_LIMIT = 100
 
 /**
  * Valid entry types for knowledge entries.
+ *
+ * Part of the KBMEM 3-bucket memory architecture:
+ * - 'note': General notes and documentation (default)
+ * - 'decision': Architecture Decision Records (ADRs)
+ * - 'constraint': Project/epic/story constraints
+ * - 'runbook': Step-by-step operational procedures
+ * - 'lesson': Lessons learned from implementation
+ *
+ * @see KBMEM-001 for implementation details
  */
-export const EntryTypeSchema = z.enum(['fact', 'summary', 'template'])
+export const EntryTypeSchema = KnowledgeEntryTypeSchema
 export type EntryType = z.infer<typeof EntryTypeSchema>
 
 // ============================================================================

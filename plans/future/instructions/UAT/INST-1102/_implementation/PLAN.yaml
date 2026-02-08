@@ -1,0 +1,662 @@
+schema: 1
+story_id: INST-1102
+timestamp: '2026-02-07T02:46:36Z'
+
+# Implementation plan for Create Basic MOC
+
+# Plan metadata
+plan_version: 1
+estimated_duration: 3-4 days
+complexity: medium
+reuse_factor: high
+
+# Implementation phases
+phases:
+  - id: 1
+    name: Backend Types & Schemas
+    duration: 2 hours
+    files:
+      - apps/api/lego-api/domains/mocs/types.ts
+    steps:
+      - step: 1.1
+        description: Create CreateMocRequestSchema with Zod validation
+        details: |
+          - title: z.string().min(1).max(200)
+          - description: z.string().max(2000).optional()
+          - theme: z.enum(['Castle', 'Space', 'City', 'Technic', 'Creator', 'Star Wars', 'Harry Potter', 'Marvel', 'DC', 'Friends', 'Other'])
+          - tags: z.array(z.string().max(30)).max(20).optional()
+        acceptance_criteria: [AC-8, AC-9]
+        evidence: "Schema validates all input constraints"
+
+      - step: 1.2
+        description: Create CreateMocResponseSchema for API response
+        details: |
+          - id, userId, title, description, theme, tags, slug, type, createdAt, updatedAt
+          - Infer type: type CreateMocResponse = z.infer<typeof CreateMocResponseSchema>
+        acceptance_criteria: [AC-12]
+        evidence: "Response schema matches database fields"
+
+      - step: 1.3
+        description: Export types from schema
+        details: |
+          export type CreateMocRequest = z.infer<typeof CreateMocRequestSchema>
+          export type CreateMocResponse = z.infer<typeof CreateMocResponseSchema>
+        acceptance_criteria: []
+        evidence: "Types available for import"
+
+  - id: 2
+    name: Backend Ports & Interfaces
+    duration: 1 hour
+    files:
+      - apps/api/lego-api/domains/mocs/ports/index.ts
+    steps:
+      - step: 2.1
+        description: Define MocRepository interface
+        details: |
+          interface MocRepository {
+            create(userId: string, data: CreateMocRequest): Promise<Moc>
+            findBySlug(slug: string, userId: string): Promise<Moc | null>
+          }
+        acceptance_criteria: [AC-10, AC-11]
+        evidence: "Interface defines repository contract"
+
+  - id: 3
+    name: Backend Repository Implementation
+    duration: 3 hours
+    files:
+      - apps/api/lego-api/domains/mocs/adapters/index.ts
+      - apps/api/lego-api/domains/mocs/adapters/repositories.ts
+    steps:
+      - step: 3.1
+        description: Create repository factory function
+        details: |
+          export function createMocRepository(db, schema): MocRepository {
+            // Implementation
+          }
+        acceptance_criteria: []
+        evidence: "Factory function follows composition pattern"
+
+      - step: 3.2
+        description: Implement create method with slug generation
+        details: |
+          async create(userId: string, data: CreateMocRequest): Promise<Moc> {
+            const slug = slugify(data.title, { lower: true, strict: true })
+            try {
+              return await db.insert(schema.mocInstructions).values({
+                userId,
+                ...data,
+                slug,
+                type: 'MOC',
+              }).returning()
+            } catch (error) {
+              // Handle unique constraint on (userId, title)
+              if (isUniqueViolation(error)) {
+                // Retry with UUID suffix
+                const uuidSuffix = crypto.randomUUID().slice(0, 6)
+                const uniqueSlug = `${slug}-${uuidSuffix}`
+                return await db.insert(...).values({ ...data, slug: uniqueSlug })
+              }
+              throw error
+            }
+          }
+        acceptance_criteria: [AC-10, AC-11]
+        evidence: "Slug generated from title, UUID suffix on collision, type='MOC'"
+
+      - step: 3.3
+        description: Implement findBySlug method
+        details: |
+          async findBySlug(slug: string, userId: string): Promise<Moc | null> {
+            const result = await db.select()
+              .from(schema.mocInstructions)
+              .where(and(eq(schema.mocInstructions.slug, slug), eq(schema.mocInstructions.userId, userId)))
+              .limit(1)
+            return result[0] || null
+          }
+        acceptance_criteria: []
+        evidence: "Query by slug for collision detection"
+
+  - id: 4
+    name: Backend Service Layer
+    duration: 2 hours
+    files:
+      - apps/api/lego-api/domains/mocs/application/index.ts
+      - apps/api/lego-api/domains/mocs/application/services.ts
+    steps:
+      - step: 4.1
+        description: Create service factory function
+        details: |
+          export function createMocService({ mocRepo }: { mocRepo: MocRepository }) {
+            return {
+              createMoc: async (userId: string, data: CreateMocRequest) => { ... }
+            }
+          }
+        acceptance_criteria: []
+        evidence: "Service factory follows dependency injection pattern"
+
+      - step: 4.2
+        description: Implement createMoc service method
+        details: |
+          async createMoc(userId: string, data: CreateMocRequest): Promise<Result<Moc, string>> {
+            // Validate with Zod
+            const validated = CreateMocRequestSchema.safeParse(data)
+            if (!validated.success) {
+              return { ok: false, error: 'VALIDATION_ERROR' }
+            }
+
+            try {
+              const moc = await mocRepo.create(userId, validated.data)
+              return { ok: true, data: moc }
+            } catch (error) {
+              logger.error('Failed to create MOC', error, { userId, title: data.title })
+              return { ok: false, error: 'DB_ERROR' }
+            }
+          }
+        acceptance_criteria: [AC-8, AC-9, AC-11, AC-13]
+        evidence: "Service validates input, calls repository, handles errors"
+
+  - id: 5
+    name: Backend Routes
+    duration: 2 hours
+    files:
+      - apps/api/lego-api/domains/mocs/routes.ts
+      - apps/api/lego-api/server.ts
+    steps:
+      - step: 5.1
+        description: Create Hono router with middleware
+        details: |
+          import { Hono } from 'hono'
+          import { auth } from '../../middleware/auth.js'
+          import { loadPermissions } from '../../middleware/load-permissions.js'
+          import { requireFeature } from '../../middleware/require-feature.js'
+
+          const mocs = new Hono()
+          mocs.use('*', auth)
+          mocs.use('*', loadPermissions)
+          mocs.use('*', requireFeature('instructions'))
+        acceptance_criteria: []
+        evidence: "Middleware chain enforces auth and feature gate"
+
+      - step: 5.2
+        description: Implement POST /mocs endpoint
+        details: |
+          mocs.post('/', async (c) => {
+            const userId = c.get('userId')
+            const body = await c.req.json()
+            const input = CreateMocRequestSchema.safeParse(body)
+
+            if (!input.success) {
+              return c.json({ error: 'VALIDATION_ERROR', details: input.error.flatten() }, 400)
+            }
+
+            const result = await mocService.createMoc(userId, input.data)
+
+            if (!result.ok) {
+              const status = result.error === 'VALIDATION_ERROR' ? 400 : 500
+              return c.json({ error: result.error }, status)
+            }
+
+            return c.json(result.data, 201)
+          })
+        acceptance_criteria: [AC-8, AC-9, AC-12]
+        evidence: "Endpoint validates, extracts userId, returns 201 with created MOC"
+
+      - step: 5.3
+        description: Mount /mocs routes in server.ts
+        details: |
+          import mocs from './domains/mocs/routes.js'
+          app.route('/mocs', mocs)
+        acceptance_criteria: []
+        evidence: "Routes accessible at /mocs"
+
+  - id: 6
+    name: Frontend Form Component
+    duration: 3 hours
+    files:
+      - apps/web/app-instructions-gallery/src/components/MocForm/index.tsx
+      - apps/web/app-instructions-gallery/src/components/MocForm/__tests__/MocForm.test.tsx
+    steps:
+      - step: 6.1
+        description: Create MocForm component with state management
+        details: |
+          interface MocFormProps {
+            onSubmit: (data: CreateMocInput) => void
+            isSubmitting: boolean
+            initialValues?: Partial<CreateMocInput>
+          }
+
+          export function MocForm({ onSubmit, isSubmitting, initialValues }: MocFormProps) {
+            const [formState, setFormState] = useState<CreateMocInput>({
+              title: initialValues?.title || '',
+              description: initialValues?.description || '',
+              theme: initialValues?.theme || '',
+              tags: initialValues?.tags || [],
+            })
+
+            const [errors, setErrors] = useState<Record<string, string>>({})
+
+            // Validation logic
+            const validateForm = () => {
+              const newErrors: Record<string, string> = {}
+              if (!formState.title || formState.title.length < 3) {
+                newErrors.title = 'Title must be at least 3 characters'
+              }
+              if (!formState.theme) {
+                newErrors.theme = 'Theme is required'
+              }
+              setErrors(newErrors)
+              return Object.keys(newErrors).length === 0
+            }
+
+            const handleSubmit = (e: FormEvent) => {
+              e.preventDefault()
+              if (validateForm()) {
+                onSubmit(formState)
+              }
+            }
+
+            return (
+              <form onSubmit={handleSubmit}>
+                {/* Input fields */}
+              </form>
+            )
+          }
+        acceptance_criteria: [AC-2, AC-4, AC-5]
+        evidence: "Form renders fields, validates, disables submit when invalid"
+
+      - step: 6.2
+        description: Add form fields with validation
+        details: |
+          - Title: Input with required, minLength=3, maxLength=200
+          - Description: Textarea with maxLength=2000 (optional)
+          - Theme: Select dropdown with 11 theme options
+          - Tags: TagInput component (from MocEdit/TagInput.tsx)
+          - Submit button: disabled when isSubmitting or form invalid
+          - Cancel button: navigate back to gallery
+        acceptance_criteria: [AC-2, AC-4, AC-5]
+        evidence: "All fields present, validation shown, submit disabled correctly"
+
+      - step: 6.3
+        description: Write MocForm unit tests
+        details: |
+          - Test form renders all fields
+          - Test input change handlers update state
+          - Test validation errors appear
+          - Test submit button disabled when invalid
+          - Test onSubmit called with correct data
+        acceptance_criteria: [AC-2, AC-4, AC-5]
+        evidence: "95%+ test coverage on MocForm component"
+
+  - id: 7
+    name: Frontend Create Page
+    duration: 3 hours
+    files:
+      - apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx
+      - apps/web/app-instructions-gallery/src/pages/__tests__/CreateMocPage.test.tsx
+    steps:
+      - step: 7.1
+        description: Create CreateMocPage with navigation and hooks
+        details: |
+          export function CreateMocPage() {
+            const navigate = useNavigate()
+            const [createMoc, { isLoading }] = useCreateMocMutation()
+            const [hasSubmitted, setHasSubmitted] = useState(false)
+            const [recoveredFormData, setRecoveredFormData, clearRecoveredFormData] =
+              useLocalStorage<CreateMocInput | null>('moc:form:recovery', null)
+            const lastFormDataRef = useRef<CreateMocInput | null>(null)
+            const [initialValues, setInitialValues] = useState<Partial<CreateMocInput> | undefined>(undefined)
+
+            // Recovery logic on mount
+            useEffect(() => {
+              if (recoveredFormData) {
+                setInitialValues(recoveredFormData)
+                clearRecoveredFormData()
+              }
+            }, [])
+
+            return (
+              <div className="container max-w-2xl py-8">
+                <Link to="/mocs">
+                  <Button variant="ghost" size="sm">
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Back to Gallery
+                  </Button>
+                </Link>
+                <h1 className="text-3xl font-bold">Add New MOC</h1>
+                <p className="text-muted-foreground mt-2">Create a new MOC to add to your collection.</p>
+                <MocForm onSubmit={handleSubmit} isSubmitting={isLoading || hasSubmitted} initialValues={initialValues} />
+              </div>
+            )
+          }
+        acceptance_criteria: [AC-1, AC-15]
+        evidence: "Page renders form, recovers from localStorage"
+
+      - step: 7.2
+        description: Implement auto-focus on title input
+        details: |
+          useEffect(() => {
+            const timer = setTimeout(() => {
+              const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement
+              titleInput?.focus()
+            }, 100)
+            return () => clearTimeout(timer)
+          }, [])
+        acceptance_criteria: [AC-3]
+        evidence: "Title field auto-focuses on page load"
+
+      - step: 7.3
+        description: Implement Escape key handler
+        details: |
+          useEffect(() => {
+            const handleEscape = (e: KeyboardEvent) => {
+              if (e.key === 'Escape' && !isLoading && !hasSubmitted) {
+                void navigate({ to: '/mocs' })
+              }
+            }
+            window.addEventListener('keydown', handleEscape)
+            return () => window.removeEventListener('keydown', handleEscape)
+          }, [navigate, isLoading, hasSubmitted])
+        acceptance_criteria: [AC-14]
+        evidence: "Escape key navigates back to gallery"
+
+      - step: 7.4
+        description: Implement optimistic submit with error recovery
+        details: |
+          const handleSubmit = useCallback(
+            async (data: CreateMocInput) => {
+              lastFormDataRef.current = data
+              setHasSubmitted(true)
+
+              // Optimistic: show toast and navigate
+              showSuccessToast('MOC created!', `${data.title} has been created.`, 5000)
+              void navigate({ to: '/mocs' })
+
+              try {
+                const result = await createMoc(data).unwrap()
+                // Success - stay on redirected page
+              } catch (error) {
+                // Rollback: save form data, navigate back, show error
+                setRecoveredFormData(data)
+                void navigate({ to: '/mocs/new' })
+                showErrorToastWithRetry('Failed to create MOC', 'Please try again.', handleRetry)
+              } finally {
+                setHasSubmitted(false)
+              }
+            },
+            [createMoc, navigate, setRecoveredFormData]
+          )
+        acceptance_criteria: [AC-6, AC-7, AC-13, AC-15]
+        evidence: "Calls RTK mutation, shows toast, redirects, handles errors with localStorage"
+
+      - step: 7.5
+        description: Write CreateMocPage unit tests
+        details: |
+          - Test page renders with form
+          - Test back button navigation
+          - Test auto-focus on mount
+          - Test Escape key handler
+          - Test submit triggers mutation
+          - Test success flow (toast + redirect)
+          - Test error recovery (localStorage + retry)
+        acceptance_criteria: [AC-1, AC-3, AC-6, AC-7, AC-13, AC-14, AC-15]
+        evidence: "95%+ test coverage on CreateMocPage"
+
+  - id: 8
+    name: Frontend Integration Tests
+    duration: 2 hours
+    files:
+      - apps/web/app-instructions-gallery/src/pages/__tests__/CreateMocPage.integration.test.tsx
+    steps:
+      - step: 8.1
+        description: Write integration tests with MSW
+        details: |
+          - Test successful MOC creation flow end-to-end
+          - Test validation error from API (400 response)
+          - Test network error handling
+          - Test localStorage recovery after error
+          - Mock useCreateMocMutation with MSW handlers
+          - Verify POST request body matches schema
+        acceptance_criteria: [AC-6, AC-7, AC-13, AC-15]
+        evidence: "Integration tests verify full form submission flow"
+
+  - id: 9
+    name: Backend Unit Tests - Services
+    duration: 2 hours
+    files:
+      - apps/api/lego-api/domains/mocs/__tests__/services.test.ts
+    steps:
+      - step: 9.1
+        description: Write service layer tests
+        details: |
+          - Test createMoc with valid data (success)
+          - Test validation error (invalid input)
+          - Test repository error handling
+          - Test slug generation logic
+          - Mock repository with vi.fn()
+          - Verify service calls repository correctly
+        acceptance_criteria: [AC-8, AC-9, AC-10, AC-11]
+        evidence: "90%+ coverage on services.ts, all business logic tested"
+
+  - id: 10
+    name: Backend Unit Tests - Routes
+    duration: 2 hours
+    files:
+      - apps/api/lego-api/domains/mocs/__tests__/routes.test.ts
+    steps:
+      - step: 10.1
+        description: Write route layer tests
+        details: |
+          - Test POST /mocs creates MOC (201 response)
+          - Test validation error returns 400 with details
+          - Test auth required (401 when no userId)
+          - Test service error returns 500
+          - Mock service layer with vi.fn()
+          - Verify userId extracted from context
+          - Verify response matches schema
+        acceptance_criteria: [AC-8, AC-9, AC-12]
+        evidence: "90%+ coverage on routes.ts, all HTTP layer tested"
+
+  - id: 11
+    name: E2E Tests
+    duration: 2 hours
+    files:
+      - apps/web/playwright/tests/instructions/inst-1102-create.spec.ts
+    steps:
+      - step: 11.1
+        description: Write E2E test for happy path
+        details: |
+          test.describe('INST-1102: Create Basic MOC', () => {
+            test('User can create a new MOC from gallery', async ({ authenticatedPage }) => {
+              // Navigate to gallery
+              await authenticatedPage.goto('/mocs')
+              await authenticatedPage.waitForSelector('[data-testid="gallery-filter-bar"]')
+
+              // Click "Create MOC" button
+              await authenticatedPage.click('[data-testid="create-moc-button"]')
+
+              // Fill form
+              await authenticatedPage.fill('input[name="title"]', 'Test Castle MOC')
+              await authenticatedPage.fill('textarea[name="description"]', 'A medieval castle build')
+              await authenticatedPage.selectOption('select[name="theme"]', 'Castle')
+
+              // Add tags (interact with TagInput)
+              await authenticatedPage.click('[data-testid="tag-input"]')
+              await authenticatedPage.fill('[data-testid="tag-input"]', 'medieval')
+              await authenticatedPage.press('[data-testid="tag-input"]', 'Enter')
+
+              // Submit
+              await authenticatedPage.click('button[type="submit"]')
+
+              // Verify success toast
+              await expect(authenticatedPage.getByText('MOC created!')).toBeVisible()
+
+              // Verify redirect to gallery
+              await authenticatedPage.waitForURL('/mocs')
+            })
+
+            test('Validation prevents empty submission', async ({ authenticatedPage }) => {
+              await authenticatedPage.goto('/mocs/new')
+              await authenticatedPage.click('button[type="submit"]')
+              await expect(authenticatedPage.getByText('Title must be at least 3 characters')).toBeVisible()
+            })
+
+            test('Escape key returns to gallery', async ({ authenticatedPage }) => {
+              await authenticatedPage.goto('/mocs/new')
+              await authenticatedPage.press('body', 'Escape')
+              await authenticatedPage.waitForURL('/mocs')
+            })
+          })
+        acceptance_criteria: [AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-14]
+        evidence: "E2E tests verify full user workflow with live API"
+
+# Acceptance criteria mapping
+acceptance_criteria_mapping:
+  AC-1:
+    description: "User can navigate to /mocs/new from gallery page"
+    evidence_in_phases: [7, 11]
+    verification: "E2E test navigates from gallery to create page"
+
+  AC-2:
+    description: "Create page renders form with fields: title, description, theme, tags"
+    evidence_in_phases: [6, 7]
+    verification: "MocForm component renders all required fields"
+
+  AC-3:
+    description: "Title field auto-focuses on page load"
+    evidence_in_phases: [7]
+    verification: "useEffect focuses title input with 100ms delay"
+
+  AC-4:
+    description: "Form shows inline validation errors"
+    evidence_in_phases: [6, 7]
+    verification: "Validation logic displays field-specific error messages"
+
+  AC-5:
+    description: "Submit button disabled until title meets minimum length"
+    evidence_in_phases: [6]
+    verification: "Submit button disabled when formState invalid"
+
+  AC-6:
+    description: "Form submission triggers useCreateMocMutation"
+    evidence_in_phases: [7, 8]
+    verification: "handleSubmit calls createMoc mutation with form data"
+
+  AC-7:
+    description: "Success shows toast and redirects to /mocs/:id"
+    evidence_in_phases: [7, 8, 11]
+    verification: "Optimistic UI shows toast, navigates to gallery on success"
+
+  AC-8:
+    description: "Backend POST /mocs validates request with Zod schema"
+    evidence_in_phases: [1, 5, 10]
+    verification: "Route uses CreateMocRequestSchema.safeParse()"
+
+  AC-9:
+    description: "Backend extracts userId from auth context"
+    evidence_in_phases: [5, 10]
+    verification: "Route calls c.get('userId') and passes to service"
+
+  AC-10:
+    description: "Backend generates URL-friendly slug from title"
+    evidence_in_phases: [3, 9]
+    verification: "Repository creates slug with slugify(), appends UUID on collision"
+
+  AC-11:
+    description: "Backend inserts record with type='MOC'"
+    evidence_in_phases: [3, 4, 9]
+    verification: "Repository sets type field to 'MOC' in insert"
+
+  AC-12:
+    description: "Backend returns 201 with created MOC"
+    evidence_in_phases: [1, 5, 10]
+    verification: "Route returns c.json(result.data, 201) with all fields"
+
+  AC-13:
+    description: "Validation errors from API display in form"
+    evidence_in_phases: [7, 8]
+    verification: "Error recovery shows error toast with retry button"
+
+  AC-14:
+    description: "Escape key cancels form and navigates back"
+    evidence_in_phases: [7, 11]
+    verification: "useEffect adds Escape key listener that navigates to /mocs"
+
+  AC-15:
+    description: "Form state persists to localStorage on submission failure"
+    evidence_in_phases: [7, 8]
+    verification: "useLocalStorage hook saves form data on error, restores on mount"
+
+# Risk mitigation
+risks:
+  - risk: "Slug collision handling complexity"
+    mitigation: "Simple UUID suffix approach, tested in service tests"
+    phase: 3
+
+  - risk: "Duplicate title error handling"
+    mitigation: "Database enforces unique constraint, API returns 409, frontend shows friendly message"
+    phase: 4
+
+  - risk: "Form recovery localStorage key conflicts"
+    mitigation: "Use unique key 'moc:form:recovery' (different from wishlist)"
+    phase: 7
+
+  - risk: "TagInput component reuse"
+    mitigation: "Component already exists in app-instructions-gallery, verified in elaboration"
+    phase: 6
+
+# Testing strategy
+testing:
+  unit_tests:
+    target_coverage: 90%
+    focus_areas:
+      - Form validation logic
+      - Service layer business logic
+      - Route layer HTTP handling
+      - Error handling paths
+
+  integration_tests:
+    focus_areas:
+      - RTK Query mutation integration
+      - MSW API mocking
+      - localStorage recovery
+      - Error toast with retry
+
+  e2e_tests:
+    config: playwright.legacy.config.ts
+    focus_areas:
+      - Happy path: create MOC end-to-end
+      - Validation prevents submission
+      - Keyboard shortcuts (Escape)
+
+# Dependencies
+dependencies:
+  external:
+    - package: slugify
+      version: latest
+      usage: "Generate URL-friendly slugs from titles"
+      install: "pnpm add slugify --filter lego-api"
+
+  internal:
+    - INST-1008: "RTK Query mutations (useCreateMocMutation)"
+      status: "VERIFIED - hook exists and is exported"
+      blocker: false
+
+# Completion criteria
+completion_criteria:
+  - "All 15 acceptance criteria have evidence in tests"
+  - "Frontend unit tests: 95%+ coverage on CreateMocPage and MocForm"
+  - "Backend unit tests: 90%+ coverage on services and routes"
+  - "Integration tests pass with MSW mocks"
+  - "E2E test passes with live API"
+  - "All tests pass in CI"
+  - "No linting errors"
+  - "No type errors"
+
+# Notes
+notes:
+  - "Story follows proven patterns from WISH-2002 (AddItemPage)"
+  - "High code reuse (80%+) from wishlist domain"
+  - "Database schema exists - no migrations needed"
+  - "RTK hooks verified in elaboration - no blockers"
+  - "TagInput component exists - no need to create"
+  - "Focus on backend domain creation (mocs/)"
+  - "Frontend is mostly adapted from wishlist with MOC fields"

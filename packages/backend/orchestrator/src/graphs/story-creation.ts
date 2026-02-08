@@ -989,11 +989,19 @@ export function createPersistLearningsNode(kbDeps: unknown) {
 
     try {
       // Extract learnings from workflow state
+      // Convert string errors to NodeError format for extractLearnings
+      // Cast to GraphStateWithLearnings - extractLearnings only uses storyId, errors, storyDomain
+      const now = new Date().toISOString()
       const learnings = extractLearnings({
         storyId: state.storyId,
-        errors: state.errors.map(e => ({ message: e, recoverable: false })),
+        errors: state.errors.map(e => ({
+          message: e,
+          recoverable: false,
+          nodeId: 'story-creation',
+          timestamp: now,
+        })),
         storyDomain: state.epicPrefix,
-      })
+      } as Parameters<typeof extractLearnings>[0])
 
       if (learnings.length === 0) {
         return {

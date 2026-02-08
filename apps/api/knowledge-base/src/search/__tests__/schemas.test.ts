@@ -112,7 +112,8 @@ describe('SearchInputSchema', () => {
 
   describe('entry_type validation', () => {
     it('should accept valid entry types', () => {
-      const types = ['fact', 'summary', 'template'] as const
+      // KBMEM-001: Updated entry types for 3-bucket memory architecture
+      const types = ['note', 'decision', 'constraint', 'runbook', 'lesson'] as const
 
       for (const entry_type of types) {
         const input = SearchInputSchema.parse({ query: 'test', entry_type })
@@ -124,6 +125,17 @@ describe('SearchInputSchema', () => {
       expect(() =>
         SearchInputSchema.parse({ query: 'test', entry_type: 'invalid' }),
       ).toThrow(ZodError)
+    })
+
+    it('should reject legacy entry types', () => {
+      // Legacy values no longer valid after KBMEM-001
+      const legacyTypes = ['fact', 'summary', 'template']
+
+      for (const entry_type of legacyTypes) {
+        expect(() =>
+          SearchInputSchema.parse({ query: 'test', entry_type }),
+        ).toThrow(ZodError)
+      }
     })
   })
 

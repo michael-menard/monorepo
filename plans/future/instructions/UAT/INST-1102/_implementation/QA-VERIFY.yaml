@@ -1,0 +1,171 @@
+schema: 1
+story_id: "INST-1102"
+timestamp: "2026-02-07T05:18:00Z"
+
+verdict: FAIL
+
+tests_executed: true
+test_results:
+  unit: { pass: 41, fail: 1 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 7, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 92.5
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: CONCERNS
+  anti_patterns:
+    - "MocForm test has flaky timing issue with user.type() (TEST-002)"
+  notes: |
+    - One unit test fails intermittently due to text input timing in user.type()
+    - Expected: "My Castle MOC" / "A medieval castle build"
+    - Actual: "My Castle MOCbuild" / "A medieval castle " (text concatenation)
+    - This is a known flaky test issue documented in REVIEW.yaml (TEST-002)
+    - setTimeout in CreateMocPage tests is valid (simulating API delay for optimistic UI)
+    - No console.log anti-patterns found
+    - Tests use waitFor() correctly for async operations
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "Navigation verified in E2E tests"
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "Form fields verified in unit tests (25 passing)"
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Auto-focus verified in unit test"
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "Validation errors verified in unit and E2E tests"
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Submit button state verified in unit tests"
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Mutation trigger verified in CreateMocPage tests (16 passing)"
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Success toast and navigation verified in unit and E2E tests"
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Zod validation in routes.ts verified (line 150: safeParse)"
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "userId extraction verified in routes.ts (line 28: c.get('userId'))"
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "Slug generation verified in repositories.ts (line 23: slugify())"
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "type='MOC' verified in repositories.ts (line 36)"
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: "201 response verified in routes.ts and E2E tests"
+
+  - ac_id: "AC-13"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    notes: "API error display verified in unit tests"
+
+  - ac_id: "AC-14"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[13]"
+    notes: "Escape key navigation verified in E2E test"
+
+  - ac_id: "AC-15"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[14]"
+    notes: "localStorage recovery verified in unit test"
+
+architecture_compliant: true
+architecture_notes: |
+  - ADR-001: Routes use /mocs, frontend uses /api/v2/instructions/mocs ✓
+  - ADR-005: E2E tests use live API (playwright.legacy.config.ts) ✓
+  - ADR-006: E2E tests present (7 tests, all passing) ✓
+  - Middleware chain: auth → loadPermissions → requireFeature('moc') ✓
+  - Zod schemas used throughout (routes, services, repositories) ✓
+  - Feature gate 'moc' (not 'instructions' as per existing convention) ✓
+  - Proper separation of concerns (routes → services → repositories) ✓
+
+issues:
+  - id: ISSUE-1
+    severity: medium
+    category: test_quality
+    description: "One MocForm unit test fails intermittently due to userEvent.type() timing"
+    file: "apps/web/app-instructions-gallery/src/components/MocForm/__tests__/MocForm.test.tsx"
+    line: 270
+    impact: "Test suite fails 1 out of 26 MocForm tests"
+    recommendation: "Use userEvent.clear() + userEvent.type() or replace with fireEvent.change for more reliable test"
+    blocker: true
+
+  - id: ISSUE-2
+    severity: low
+    category: test_coverage
+    description: "Backend unit tests missing (routes, services, repositories)"
+    file: "apps/api/lego-api/domains/mocs/__tests__/"
+    impact: "Backend coverage at 0%, below project standards"
+    recommendation: "Add backend unit tests in future iteration"
+    blocker: false
+    documented_deviation: true
+
+  - id: ISSUE-3
+    severity: low
+    category: code_quality
+    description: "Console warnings in E2E: 'Cannot read properties of undefined (reading find)'"
+    impact: "Non-blocking console errors during E2E test runs"
+    recommendation: "Investigate undefined reference in gallery navigation code"
+    blocker: false
+
+  - id: ISSUE-4
+    severity: low
+    category: code_quality
+    description: "Redux non-serializable warning for Date objects in createdAt"
+    impact: "Console warning during E2E tests, no functional impact"
+    recommendation: "Transform dates to ISO strings in RTK mutation response"
+    blocker: false
+
+lessons_to_record:
+  - lesson: "userEvent.type() can have timing issues leading to text concatenation in tests"
+    category: anti_pattern
+    tags: ["frontend", "testing", "vitest"]
+    context: "MocForm test intermittently fails with concatenated text input"
+
+  - lesson: "E2E tests with live API effectively catch integration issues"
+    category: pattern
+    tags: ["testing", "e2e", "playwright"]
+    context: "7 E2E tests passed, validated full user workflow end-to-end"
+
+  - lesson: "Optimistic UI requires careful error rollback handling"
+    category: pattern
+    tags: ["frontend", "ux"]
+    context: "CreateMocPage navigates immediately, rolls back on error with localStorage recovery"
+
+tokens:
+  in: 54000
+  out: 3500

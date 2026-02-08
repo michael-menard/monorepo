@@ -126,7 +126,7 @@ export function createGalleryApi(config?: GalleryApiConfig) {
       enablePerformanceMonitoring: true,
       enableAuthCaching: true,
       skipAuthForEndpoints: ['/health', '/public'],
-      requireAuthForEndpoints: ['/api/v2/gallery'],
+      requireAuthForEndpoints: ['/gallery'],
       onAuthFailure:
         onAuthFailure ||
         (error => {

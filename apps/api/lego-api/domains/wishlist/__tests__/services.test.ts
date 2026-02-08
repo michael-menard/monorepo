@@ -47,6 +47,14 @@ const mockItem: WishlistItem = {
   sortOrder: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
+  // SETS-MVP-001: Collection management fields
+  status: 'wishlist',
+  statusChangedAt: null,
+  purchaseDate: null,
+  purchasePrice: null,
+  purchaseTax: null,
+  purchaseShipping: null,
+  buildStatus: null,
 }
 
 function createMockWishlistRepo(): WishlistRepository {
@@ -111,20 +119,22 @@ describe('WishlistService', () => {
 
       expect(result.items).toHaveLength(1)
       expect(result.pagination.total).toBe(1)
+      // SETS-MVP-001: Service now defaults to status='wishlist' for backward compatibility
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        undefined
+        { status: 'wishlist' }
       )
     })
 
     it('passes filters to repository', async () => {
       await service.listItems('user-123', { page: 1, limit: 20 }, { store: 'LEGO', priority: 5 })
 
+      // SETS-MVP-001: Service adds default status='wishlist' even when other filters provided
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { store: 'LEGO', priority: 5 }
+        { store: 'LEGO', priority: 5, status: 'wishlist' }
       )
     })
   })
@@ -407,6 +417,110 @@ describe('WishlistService', () => {
       const url = serviceWithoutStorage.buildImageUrl('wishlist/user-123/test.jpg')
 
       expect(url).toBeNull()
+    })
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Collection Management Tests (SETS-MVP-001)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('listItems with status filter (SETS-MVP-001)', () => {
+    it('should default to wishlist status when no filter provided', async () => {
+      const result = await service.listItems('user-123', { page: 1, limit: 20 })
+
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        { status: 'wishlist' },
+      )
+    })
+
+    it('should pass through wishlist status filter', async () => {
+      const result = await service.listItems('user-123', { page: 1, limit: 20 }, { status: 'wishlist' })
+
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        { status: 'wishlist' },
+      )
+    })
+
+    it('should pass through owned status filter', async () => {
+      const result = await service.listItems('user-123', { page: 1, limit: 20 }, { status: 'owned' })
+
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        { status: 'owned' },
+      )
+    })
+
+    it('should preserve other filters when adding default status', async () => {
+      const result = await service.listItems(
+        'user-123',
+        { page: 1, limit: 20 },
+        {
+          search: 'castle',
+          store: 'LEGO',
+          priority: 5,
+        },
+      )
+
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        {
+          search: 'castle',
+          store: 'LEGO',
+          priority: 5,
+          status: 'wishlist',
+        },
+      )
+    })
+
+    it('should not override explicit status filter with default', async () => {
+      const result = await service.listItems(
+        'user-123',
+        { page: 1, limit: 20 },
+        {
+          status: 'owned',
+          search: 'castle',
+        },
+      )
+
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        {
+          status: 'owned',
+          search: 'castle',
+        },
+      )
+    })
+  })
+
+  describe('backward compatibility (SETS-MVP-001)', () => {
+    it('GET /api/wishlist with no status param returns only wishlist items', async () => {
+      // Simulates existing API calls that don't pass status parameter
+      const result = await service.listItems('user-123', { page: 1, limit: 20 }, undefined)
+
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        { status: 'wishlist' },
+      )
+    })
+
+    it('existing wishlist queries only return status=wishlist items', async () => {
+      // Verify that without explicit status, we filter to wishlist only
+      const result = await service.listItems('user-123', { page: 1, limit: 20 })
+
+      // The default status='wishlist' ensures backward compatibility
+      expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
+        'user-123',
+        { page: 1, limit: 20 },
+        { status: 'wishlist' },
+      )
     })
   })
 })

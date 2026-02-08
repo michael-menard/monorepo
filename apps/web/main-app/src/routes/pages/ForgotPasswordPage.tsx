@@ -20,7 +20,7 @@ import {
 import { Mail, ArrowLeft, AlertCircle, CheckCircle, KeyRound } from 'lucide-react'
 import { AuthLayout } from '@/components/Layout/RootLayout'
 import { useAuth } from '@/services/auth/AuthProvider'
-import { useNavigation } from '@/components/Navigation/NavigationProvider'
+import { useNavigationOptional } from '@/components/Navigation/NavigationProvider'
 
 // Forgot password form validation schema
 const ForgotPasswordSchema = z.object({
@@ -48,7 +48,8 @@ const legoBrickVariants = {
 export function ForgotPasswordPage() {
   const router = useRouter()
   const { forgotPassword, isLoading } = useAuth()
-  const { trackNavigation } = useNavigation()
+  const navigationContext = useNavigationOptional()
+  const trackNavigation = navigationContext?.trackNavigation ?? (() => {})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)

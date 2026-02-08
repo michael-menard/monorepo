@@ -1,0 +1,59 @@
+# Sample VERIFICATION.yaml for testing feedback command parsing
+# WKFL-004 - Step 9
+
+story_id: WISH-2045
+status: ready-for-qa
+
+code_review:
+  security:
+    verdict: conditional_pass
+    findings:
+      - id: SEC-042
+        agent: code-review-security
+        severity: high
+        description: "No Zod validation on request body"
+        file: apps/api/lego-api/routes.ts
+        line: 42
+        recommendation: "Add Zod schema validation"
+
+      - id: SEC-055
+        agent: code-review-security
+        severity: medium
+        description: "Missing rate limiting on upload endpoint"
+        file: apps/api/lego-api/domains/gallery/routes.ts
+        line: 18
+
+  architecture:
+    verdict: pass
+    findings:
+      - id: ARCH-015
+        agent: code-review-architecture
+        severity: medium
+        description: "API boundary issue - controller logic in route handler"
+        file: apps/api/lego-api/routes.ts
+        line: 55
+        recommendation: "Move business logic to service layer"
+
+      - id: ARCH-022
+        agent: code-review-architecture
+        severity: low
+        description: "Inconsistent error handling pattern"
+        file: apps/api/lego-api/middleware/error-handler.js
+        line: 12
+
+qa_verify:
+  verdict: pass
+  findings:
+    - id: QA-001
+      agent: qa-verify
+      severity: low
+      description: "Missing edge case test for empty array"
+      file: apps/web/app-wishlist-gallery/src/pages/__tests__/main-page.test.tsx
+      line: 125
+
+    - id: QA-008
+      agent: qa-verify
+      severity: critical
+      description: "No E2E test coverage for critical purchase flow"
+      file: apps/web/playwright/tests/wishlist/
+      recommendation: "Add E2E test for mark-as-purchased flow"

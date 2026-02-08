@@ -37,9 +37,11 @@ vi.mock('@repo/app-component-library', () => ({
 
 // Mock Lucide icons
 vi.mock('lucide-react', () => ({
+  ArrowRight: () => <span data-testid="arrow-right-icon">ArrowRight</span>,
   BookOpen: () => <span data-testid="book-open-icon">BookOpen</span>,
   Download: () => <span data-testid="download-icon">Download</span>,
   Heart: () => <span data-testid="heart-icon">Heart</span>,
+  LogIn: () => <span data-testid="login-icon">LogIn</span>,
   Search: () => <span data-testid="search-icon">Search</span>,
   Shield: () => <span data-testid="shield-icon">Shield</span>,
   Star: () => <span data-testid="star-icon">Star</span>,

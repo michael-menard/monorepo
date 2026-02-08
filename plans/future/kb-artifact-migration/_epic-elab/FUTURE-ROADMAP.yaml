@@ -1,0 +1,226 @@
+schema: 1
+feature_dir: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration
+prefix: KBAR
+reviewed: "2026-02-05T06:50:00Z"
+
+summary: "Post-MVP opportunities identified across all stakeholder perspectives. High-value enhancements grouped by priority and impact for future roadmap planning."
+
+enhancements:
+  high_value:
+    - id: ENG-001
+      source: engineering
+      suggestion: "Implement event-sourcing for story mutations once core sync stable"
+      impact: medium
+      effort: high
+      phase: "Post-MVP (2-3 sprints)"
+    - id: ENG-002
+      source: engineering
+      suggestion: "Add query caching layer for frequently-accessed story hierarchies"
+      impact: medium
+      effort: medium
+      phase: "Post-MVP optimization"
+    - id: ENG-003
+      source: engineering
+      suggestion: "Implement batch processing with hash-based change detection for file-DB sync performance under 200+ stories"
+      impact: high
+      effort: medium
+      phase: "Post-MVP scalability"
+    - id: ENG-004
+      source: engineering
+      suggestion: "Add connection pooling and prepared statements for MCP tool latency under concurrent agents"
+      impact: medium
+      effort: low
+      phase: "Post-MVP optimization"
+    - id: PROD-001
+      source: product
+      suggestion: "Automate lesson extraction to reduce manual documentation burden (stories KBAR-025-027)"
+      impact: high
+      effort: medium
+      phase: "Post-MVP value-add"
+    - id: PROD-002
+      source: product
+      suggestion: "Add semantic search UI for knowledge base browsing"
+      impact: medium
+      effort: high
+      phase: "Post-MVP (1-2 sprints)"
+    - id: PLAT-001
+      source: platform
+      suggestion: "Add read replica for semantic search queries (separate from transactional DB)"
+      impact: high
+      effort: medium
+      phase: "Post-MVP scalability"
+    - id: PLAT-002
+      source: platform
+      suggestion: "Implement caching layer (Redis) for frequently-accessed story hierarchies"
+      impact: medium
+      effort: medium
+      phase: "Post-MVP optimization"
+    - id: SEC-001
+      source: security
+      suggestion: "Validate YAML schema strictly; reject unknown artifact types"
+      impact: medium
+      effort: low
+      phase: "Post-MVP hardening"
+    - id: SEC-002
+      source: security
+      suggestion: "Implement row-level security (RLS) for multi-tenant scenarios"
+      impact: high
+      effort: high
+      phase: "Post-MVP (architecture change)"
+    - id: SEC-003
+      source: security
+      suggestion: "Log all story mutations with agent identity and timestamp for audit trail"
+      impact: medium
+      effort: medium
+      phase: "Post-MVP compliance"
+
+  nice_to_have:
+    - id: UX-001
+      source: ux
+      suggestion: "Add artifact preview/snippet in semantic search results"
+      impact: medium
+    - id: UX-002
+      source: ux
+      suggestion: "Add story visualization showing dependency graph"
+      impact: low
+    - id: UX-003
+      source: ux
+      suggestion: "Ensure all MCP query results include text summaries alongside structured data"
+      impact: medium
+    - id: QA-001
+      source: qa
+      suggestion: "E2E tests for file-DB sync under concurrent writes (KBAR-003-006)"
+      impact: high
+    - id: QA-002
+      source: qa
+      suggestion: "Performance regression tests tracking sync latency with 100+ story dataset"
+      impact: high
+    - id: QA-003
+      source: qa
+      suggestion: "Semantic search quality metrics with precision/recall tests"
+      impact: medium
+    - id: PLAT-003
+      source: platform
+      suggestion: "Add structured logging for file-to-DB sync performance"
+      impact: medium
+    - id: PLAT-004
+      source: platform
+      suggestion: "Track MCP tool call latency and success rates via metrics"
+      impact: medium
+    - id: PLAT-005
+      source: platform
+      suggestion: "Alert on sync lag > 5 minutes and DB connection pool exhaustion"
+      impact: medium
+    - id: SEC-004
+      source: security
+      suggestion: "Implement encryption at rest for story artifacts"
+      impact: medium
+
+suggested_stories:
+  - title: "Performance test suite for file-DB sync"
+    source: engineering
+    user_journey: "Validate scalability with large story counts (200+)"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Observability improvements for MCP tool execution"
+    source: engineering
+    user_journey: "Enable agent debugging and performance monitoring"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Knowledge base browser UI"
+    source: product
+    user_journey: "Admin discovers solutions by semantic search (UI-only, MCP available MVP)"
+    priority: P1
+    phase: "Post-MVP (1-2 sprints)"
+  - title: "Lessons query API"
+    source: product
+    user_journey: "Agent retrieves contextual historical lessons"
+    priority: P1
+    phase: "Post-MVP value-add"
+  - title: "Load test suite for file-DB sync"
+    source: qa
+    user_journey: "Validate scalability with 500+ stories"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Chaos engineering tests for DB connection failures"
+    source: qa
+    user_journey: "Ensure graceful fallback to file-based workflow"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Knowledge base admin UI"
+    source: ux
+    user_journey: "Admin cannot currently browse/manage KB visually (deferred, appropriate for MVP)"
+    priority: P2
+    phase: "Post-MVP (1-2 sprints)"
+  - title: "Search results ranking UI"
+    source: ux
+    user_journey: "Agents need way to refine semantic search results"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "CloudWatch dashboards for KBAR metrics"
+    source: platform
+    user_journey: "Visibility into sync performance and MCP tool health"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Database query performance optimization"
+    source: platform
+    user_journey: "Prepare for 500+ story dataset"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Backup/restore procedures for story artifacts"
+    source: platform
+    user_journey: "Operational runbooks for data recovery"
+    priority: P2
+    phase: "Post-MVP"
+  - title: "Input validation hardening for story YAML"
+    source: security
+    user_journey: "Prevent injection attacks via malformed story files"
+    priority: P2
+    phase: "Post-MVP hardening"
+  - title: "Audit logging for all story mutations"
+    source: security
+    user_journey: "Enable forensic analysis of knowledge base changes"
+    priority: P2
+    phase: "Post-MVP compliance"
+  - title: "Encryption at rest for story artifacts"
+    source: security
+    user_journey: "Protect sensitive procedural information"
+    priority: P2
+    phase: "Post-MVP hardening"
+
+deferred_decision_items:
+  - item: "Validate semantic search quality with 50+ real stories before index expansion"
+    source: product
+    reason: "Validation gate, not a blocker"
+    phase: "During MVP (within Phase 5-6)"
+  - item: "Consider phased rollout: internal agents first, then user-facing features"
+    source: product
+    reason: "Operational decision, MVP design supports this"
+    phase: "Pre-launch planning"
+  - item: "Monitor story creation rate to validate DB sync performance at scale"
+    source: product
+    reason: "Performance monitoring, not a blocker"
+    phase: "During MVP"
+  - item: "Automate schema validation tests in CI/CD pipeline"
+    source: qa
+    reason: "Automation improvement, not required for core tests"
+    phase: "Post-MVP"
+  - item: "Test database failover scenarios before production launch"
+    source: platform
+    reason: "Pre-production validation, not MVP blocker"
+    phase: "Pre-production hardening"
+  - item: "Verify database backup encryption is enabled"
+    source: security
+    reason: "Ops checklist item, existing practices apply"
+    phase: "Pre-production"
+  - item: "Review IAM policies before production launch"
+    source: security
+    reason: "Standard pre-production review"
+    phase: "Pre-production"
+
+metrics:
+  total_high_value_enhancements: 11
+  total_nice_to_have_enhancements: 10
+  suggested_stories_post_mvp: 14
+  deferred_validation_items: 7
+  perspectives_contributed: 6

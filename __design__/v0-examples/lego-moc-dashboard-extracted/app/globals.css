@@ -1,0 +1,193 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Light Theme - Warm Taupe Palette (User's preserved colors + Shadcn defaults) */
+:root {
+  --background: #F5F1ED;
+  --foreground: #2C2C2C;
+  --card: #FFFFFF;
+  --card-foreground: #2C2C2C;
+  --popover: #FFFFFF;
+  --popover-foreground: #2C2C2C;
+  --primary: #1B5E6D;
+  --primary-foreground: #FFFFFF;
+  --secondary: #A8B8A3;
+  --secondary-foreground: #2C2C2C;
+  --muted: #F5F1ED;
+  --muted-foreground: #9B8B7E;
+  --accent: #A8B8A3;
+  --accent-foreground: #2C2C2C;
+  --destructive: #A85B4B;
+  --destructive-foreground: #FFFFFF;
+  --border: #D9CFC5;
+  --input: #D9CFC5;
+  --ring: #1B5E6D;
+  --chart-1: #1B5E6D;
+  --chart-2: #A8B8A3;
+  --chart-3: #2D5F4F;
+  --chart-4: #D4A574;
+  --chart-5: #A85B4B;
+  --radius: 0.625rem;
+  
+  /* LEGO Brand Colors */
+  --lego-red: #E3000B;
+  --lego-blue: #0055BF;
+  --lego-yellow: #F5CD2F;
+  
+  /* Status Colors */
+  --success: #2D5F4F;
+  --warning: #D4A574;
+  --error: #A85B4B;
+
+  /* Shadcn Sidebar Defaults */
+  --sidebar: oklch(0.985 0 0); /* Default, not in user's */
+  --sidebar-foreground: oklch(0.145 0 0); /* Default, not in user's */
+  --sidebar-primary: oklch(0.205 0 0); /* Default, not in user's */
+  --sidebar-primary-foreground: oklch(0.985 0 0); /* Default, not in user's */
+  --sidebar-accent: oklch(0.97 0 0); /* Default, not in user's */
+  --sidebar-accent-foreground: oklch(0.205 0 0); /* Default, not in user's */
+  --sidebar-border: oklch(0.922 0 0); /* Default, not in user's */
+  --sidebar-ring: oklch(0.708 0 0); /* Default, not in user's */
+}
+
+/* Dark Theme - Cyberpunk/Futuristic (User's preserved colors + Shadcn defaults) */
+.dark {
+  --background: #020617;
+  --foreground: #f1f5f9;
+  --card: rgba(15, 23, 42, 0.5);
+  --card-foreground: #f1f5f9;
+  --popover: #0f172a;
+  --popover-foreground: #f1f5f9;
+  --primary: #0ea5e9;
+  --primary-foreground: #020617;
+  --secondary: #334155;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #f59e0b;
+  --accent-foreground: #020617;
+  --destructive: #ef4444;
+  --destructive-foreground: #f1f5f9;
+  --border: #334155;
+  --input: #334155;
+  --ring: #0ea5e9;
+  --chart-1: #0ea5e9;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #8b5cf6;
+  --chart-5: #ef4444;
+  
+  /* LEGO Brand Colors - Vibrant for Dark Mode */
+  --lego-red: #ff3b3b;
+  --lego-blue: #3b82f6;
+  --lego-yellow: #fbbf24;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  
+  /* Glow Effects */
+  --glow-primary: rgba(14, 165, 233, 0.3);
+  --glow-accent: rgba(245, 158, 11, 0.3);
+
+  /* Shadcn Sidebar Defaults */
+  --sidebar: oklch(0.205 0 0); /* Default, not in user's */
+  --sidebar-foreground: oklch(0.985 0 0); /* Default, not in user's */
+  --sidebar-primary: oklch(0.488 0.243 264.376); /* Default, not in user's */
+  --sidebar-primary-foreground: oklch(0.985 0 0); /* Default, not in user's */
+  --sidebar-accent: oklch(0.269 0 0); /* Default, not in user's */
+  --sidebar-accent-foreground: oklch(0.985 0 0); /* Default, not in user's */
+  --sidebar-border: oklch(0.269 0 0); /* Default, not in user's */
+  --sidebar-ring: oklch(0.439 0 0); /* Default, not in user's */
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Inter Fallback', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* LEGO Brand Colors */
+  --color-lego-red: var(--lego-red);
+  --color-lego-blue: var(--lego-blue);
+  --color-lego-yellow: var(--lego-yellow);
+  
+  /* Status Colors */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+
+  /* Shadcn Sidebar Color Mappings */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}

@@ -1,0 +1,114 @@
+schema: 2
+feature_dir: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration
+prefix: KBAR
+completed: "2026-02-05T06:30:00Z"
+
+files_created:
+  - path: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/stories.index.md
+    purpose: Master story index with progress tracking
+    stories: 27
+  - path: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/PLAN.meta.md
+    purpose: Meta plan with documentation principles and reuse rules
+  - path: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/PLAN.exec.md
+    purpose: Execution plan with artifact naming, token budgets, and parallel strategy
+  - path: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/roadmap.md
+    purpose: Visual roadmap with dependencies, Gantt timeline, and risk indicators
+
+stage_directories_created:
+  - /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/backlog
+  - /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/elaboration
+  - /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/ready-to-work
+  - /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/in-progress
+  - /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration/UAT
+
+metrics:
+  total_stories: 27
+  phases: 7
+  ready_to_start: 1
+  critical_path_length: 27
+  max_parallel: 2
+  stories_with_sizing_warnings: 1
+  high_risk_stories: 3
+  medium_risk_stories: 5
+  low_risk_stories: 1
+
+roadmap_highlights:
+  critical_path:
+    - KBAR-001
+    - KBAR-002
+    - KBAR-003
+    - KBAR-004
+    - KBAR-005
+    - KBAR-006
+    - KBAR-007
+    - KBAR-008
+    - KBAR-009
+    - KBAR-010
+    - KBAR-011
+    - KBAR-012
+    - KBAR-014
+    - KBAR-015
+    - KBAR-016
+    - KBAR-017
+    - KBAR-019
+    - KBAR-020
+    - KBAR-021
+    - KBAR-022
+    - KBAR-023
+    - KBAR-024
+    - KBAR-025
+    - KBAR-026
+    - KBAR-027
+
+  parallel_groups:
+    - group: 12
+      stories: [KBAR-012, KBAR-013]
+      after: Group 11 (KBAR-011)
+    - group: 16
+      stories: [KBAR-017, KBAR-018]
+      after: Group 15 (KBAR-016)
+
+  high_risk_stories:
+    - KBAR-001: "Schema migration may break workflow if rollback fails"
+    - KBAR-002: "Foreign key validation and index performance critical"
+    - "KBAR-016-021": "Agent updates affect production workflows; high rollout risk"
+
+phase_breakdown:
+  phase_1_database_schema:
+    stories: [KBAR-001, KBAR-002]
+    goal: "Create migrations and Drizzle schema for stories, story_dependencies, and story_artifacts"
+    duration: 4 days
+
+  phase_2_sync_infrastructure:
+    stories: [KBAR-003, KBAR-004, KBAR-005, KBAR-006]
+    goal: "Implement file-to-DB sync functions and CLI commands"
+    duration: 8 days
+
+  phase_3_mcp_story_tools:
+    stories: [KBAR-007, KBAR-008, KBAR-009, KBAR-010]
+    goal: "Implement story management tools (story_get, story_list, story_update, story_ready_to_start)"
+    duration: 8 days
+
+  phase_4_mcp_artifact_tools:
+    stories: [KBAR-011, KBAR-012, KBAR-013, KBAR-014, KBAR-015]
+    goal: "Implement artifact tools with dual-write to files and KB"
+    duration: 10 days
+
+  phase_5_agent_updates:
+    stories: [KBAR-016, KBAR-017, KBAR-018, KBAR-019, KBAR-020, KBAR-021, KBAR-022]
+    goal: "Update all agents to use new MCP tools"
+    duration: 14 days
+
+  phase_6_index_generation:
+    stories: [KBAR-023, KBAR-024]
+    goal: "Implement DB-driven index generation"
+    duration: 4 days
+
+  phase_7_lesson_extraction:
+    stories: [KBAR-025, KBAR-026, KBAR-027]
+    goal: "Implement automatic lesson extraction and architectural decision indexing"
+    duration: 6 days
+
+next_step: /elab-epic KBAR
+
+bootstrap_workflow_status: COMPLETE

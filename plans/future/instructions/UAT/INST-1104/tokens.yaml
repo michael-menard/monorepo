@@ -1,0 +1,58 @@
+---
+story_id: INST-1104
+phase: pm-generate
+agent: pm-story-generation-leader
+model: claude-sonnet-4-5-20250929
+timestamp: 2026-02-06T23:00:00-07:00
+
+# Token usage breakdown
+input_tokens: 66000  # Approximate input tokens (reading agent files, seed, patterns, etc.)
+output_tokens: 34000  # Approximate output tokens (seed, workers, story synthesis)
+total_tokens: 100000
+
+# Worker breakdown (embedded in this session, not spawned separately)
+workers:
+  test_plan:
+    input: ~10000
+    output: ~8000
+    total: ~18000
+  uiux_notes:
+    input: ~8000
+    output: ~9000
+    total: ~17000
+  dev_feasibility:
+    input: ~8000
+    output: ~9000
+    total: ~17000
+
+# Phase breakdown
+phases:
+  phase_0_setup: ~5000
+  phase_0_seed_generation: ~15000
+  phase_1_3_workers: ~52000  # All three workers created inline
+  phase_4_synthesis: ~20000
+  phase_4_5_kb_persistence: ~1000  # Deferred due to MCP unavailable
+  phase_5_index_update: ~7000
+
+# Artifacts generated
+artifacts:
+  - _pm/STORY-SEED.md (16kb)
+  - _pm/TEST-PLAN.md (25kb)
+  - _pm/UIUX-NOTES.md (22kb)
+  - _pm/DEV-FEASIBILITY.md (20kb)
+  - INST-1104.md (40kb)
+  - DEFERRED-KB-WRITES.yaml (1kb)
+
+# Quality metrics
+acceptance_criteria_count: 71
+test_scenarios_count: 32
+reuse_components_identified: 12
+estimated_effort_hours: 24
+confidence_level: very_high
+
+notes: |
+  - Backend route already implemented (lines 198-237 in routes.ts)
+  - RTK mutation already exists (lines 258-291 in instructions-api.ts)
+  - Only frontend component and PDF validation needed
+  - KB write deferred to DEFERRED-KB-WRITES.yaml (MCP CLI unavailable)
+  - Workers created inline (not spawned as separate tasks)

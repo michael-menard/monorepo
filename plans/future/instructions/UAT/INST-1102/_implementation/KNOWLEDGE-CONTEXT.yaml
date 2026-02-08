@@ -1,0 +1,450 @@
+schema: 1
+story_id: INST-1102
+timestamp: '2026-02-07T02:46:36Z'
+
+# Knowledge context for Create Basic MOC implementation
+
+# Relevant patterns from similar implementations
+patterns:
+  create_page_pattern:
+    - source: apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx
+      pattern: |
+        - Page component with form, back button, and header
+        - useNavigate for navigation (back button, success redirect)
+        - useState for tracking submission state (hasSubmitted)
+        - useEffect for auto-focus on title input (100ms delay)
+        - useEffect for Escape key handler (navigate back)
+        - useLocalStorage for form recovery after errors
+        - useRef for storing last submitted data (retry)
+        - Optimistic UI: show toast + navigate immediately, rollback on error
+        - Error recovery: save form data to localStorage, navigate back to form
+        - Custom ErrorToastWithRetry component for error display
+        - Pass initialValues to form component for recovery
+      notes: |
+        AddItemPage provides 80%+ reusable pattern for CreateMocPage.
+        Key differences: MOC has theme select (11 options) instead of store/priority.
+        MOC uses TagInput from app-instructions-gallery instead of wishlist.
+
+  form_component_pattern:
+    - source: apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
+      pattern: |
+        - Form component receives onSubmit, isSubmitting, initialValues props
+        - useState for form state with all fields
+        - useEffect to populate initialValues on mount
+        - Inline validation with error state per field
+        - Submit button disabled when form invalid or isSubmitting
+        - Form validation checks: required fields, min/max lengths
+        - Use @repo/app-component-library components (Input, Textarea, Button, Label, Select)
+        - Two-column responsive layout (desktop) with full-width on mobile
+      notes: |
+        Create MocForm component following this exact structure.
+        Replace store/priority with theme select dropdown.
+        Use MocEdit/TagInput component for tags field.
+
+  rtk_mutation_pattern:
+    - source: packages/core/api-client/src/rtk/instructions-api.ts
+      pattern: |
+        - useCreateMocMutation hook exported from instructions-api.ts
+        - Mutation: createMoc endpoint (POST /api/v2/mocs)
+        - transformResponse with MocInstructionsSchema.parse()
+        - invalidatesTags: [{ type: 'MocList' }] for cache invalidation
+        - Query body: CreateMocInput with title, description, theme, tags
+        - Response: MocInstructions with id, userId, slug, createdAt, etc.
+      notes: |
+        Hook already exists from INST-1008 - verified in elaboration.
+        Import: import { useCreateMocMutation } from '@repo/api-client/rtk/instructions-api'
+
+  backend_routes_pattern:
+    - source: apps/api/lego-api/domains/wishlist/routes.ts
+      pattern: |
+        - Hono router with middleware chain: auth, loadPermissions, requireFeature
+        - POST endpoint with Zod schema validation (safeParse)
+        - Extract userId from c.get('userId')
+        - Call service layer for business logic
+        - Return 201 for successful creation with JSON body
+        - Return 400 for validation errors with error details
+        - Return 403/404 for authorization failures with audit logging
+        - Structured error responses: { error: string, details?: object }
+      notes: |
+        Create domains/mocs/routes.ts following this exact pattern.
+        Use CreateMocRequestSchema for input validation.
+        Use requireFeature('instructions') middleware.
+
+  backend_service_pattern:
+    - source: apps/api/lego-api/domains/wishlist/application/services.ts
+      pattern: |
+        - Service layer: business logic, validation, orchestration
+        - Result type pattern: { ok: true, data: T } | { ok: false, error: string }
+        - Zod schema validation before repository calls
+        - Error handling with discriminated unions
+        - Call repository for database operations
+        - Service factory function: createService({ repo, ... })
+      notes: |
+        Create domains/mocs/application/services.ts following this pattern.
+        Include slug generation logic in service layer.
+
+  backend_repository_pattern:
+    - source: apps/api/lego-api/domains/wishlist/adapters/repositories.ts
+      pattern: |
+        - Repository interface in ports/index.ts
+        - Drizzle ORM for database operations
+        - createRepository(db, schema) factory function
+        - Methods return entities or throw errors
+        - Use db.insert().values().returning() for creates
+        - Use db.select().where(eq(...)) for queries
+        - Handle unique constraint violations
+      notes: |
+        Create domains/mocs/adapters/repositories.ts following this pattern.
+        Implement slug collision handling: append UUID suffix on duplicate.
+
+  zod_schemas_pattern:
+    - source: apps/api/lego-api/domains/wishlist/types.ts
+      pattern: |
+        - Define Zod schemas for all inputs/outputs
+        - Input schema: CreateXInputSchema with validation rules
+        - Response schema: XSchema for API responses
+        - Type inference: type X = z.infer<typeof XSchema>
+        - Validation constraints: min/max lengths, enums, arrays
+      notes: |
+        Create domains/mocs/types.ts with:
+        - CreateMocRequestSchema (title, description, theme, tags)
+        - CreateMocResponseSchema (full MOC entity)
+        - Theme enum with 11 values from SCOPE.yaml
+
+# Lessons learned from prior implementations
+lessons:
+  - id: WISH-2002
+    category: create-flow
+    lesson: |
+      When implementing create flows:
+      - Use optimistic UI for better perceived performance
+      - Save form data to localStorage on error for recovery
+      - Show error toast with retry button for failed submissions
+      - Navigate immediately on submit, rollback on error
+      - Auto-focus first input field on page mount
+      - Support Escape key to cancel/navigate back
+
+  - id: WISH-2032
+    category: form-recovery
+    lesson: |
+      Form recovery pattern:
+      1. Store form data to localStorage on submission
+      2. On error, navigate back to form with localStorage key
+      3. On mount, check for recovery data and populate form
+      4. Clear recovery data after loading it
+      5. Use useRef for in-memory retry (immediate retry)
+      6. Use localStorage for page reload recovery
+
+  - id: INST-1100
+    category: gallery-components
+    lesson: |
+      Use @repo/gallery components consistently:
+      - GalleryGrid for responsive card layout
+      - GallerySkeleton for loading states
+      - GalleryEmptyState for empty states with CTAs
+      - GalleryFilterBar for search/filters
+      Do not create custom layouts.
+
+  - id: project-standards
+    category: imports-logging
+    lesson: |
+      Critical import rules:
+      - UI: import from '@repo/app-component-library' (not individual paths)
+      - Logging: import { logger } from '@repo/logger' (never console.log)
+      - Gallery: import from '@repo/gallery'
+      - Zod: All types must be z.infer<typeof Schema> (no interfaces)
+
+  - id: backend-testing
+    category: test-patterns
+    lesson: |
+      Backend test coverage requirements:
+      - Services: 90%+ (mock repository, test business logic)
+      - Routes: 90%+ (mock service, test HTTP layer)
+      - Test validation errors, authorization, happy paths
+      - Use vitest for unit tests
+      - Mock external dependencies with vi.mock()
+
+# Architectural decisions
+adrs:
+  - id: ADR-001
+    title: API Path Schema
+    decision: |
+      Frontend uses /api/v2/mocs for production endpoints.
+      Backend uses /mocs for route definitions.
+      Vite proxy rewrites /api/* to backend for local dev.
+    rationale: API versioning and production path alignment.
+    applies_to: [INST-1102, all API endpoints]
+
+  - id: ADR-005
+    title: UAT Must Use Real Services
+    decision: |
+      E2E tests must use live API (playwright.legacy.config.ts).
+      No MSW mocking in E2E tests.
+    rationale: Catch integration issues early.
+    applies_to: [INST-1102, all stories in UAT phase]
+
+  - id: ADR-006
+    title: E2E Required in Dev Phase
+    decision: |
+      At least one happy-path E2E test required before story completion.
+      Tests must verify full user workflow.
+    rationale: Ensure end-to-end functionality before QA.
+    applies_to: [INST-1102, all dev stories]
+
+  - id: ADR-SLUG
+    title: Slug Generation Strategy
+    decision: |
+      Generate slug from title using slugify library.
+      On collision (unique constraint), append 6-char UUID suffix.
+      Format: "my-castle-moc-a1b2c3"
+    rationale: Ensures unique slugs without user intervention.
+    applies_to: [INST-1102, INST-1108]
+
+# Component and file dependencies
+dependencies:
+  frontend_components:
+    - path: apps/web/app-instructions-gallery/src/components/MocEdit/TagInput.tsx
+      description: Existing TagInput component for multi-select tags (100% reuse)
+      api: "props: { tags: string[], onChange: (tags: string[]) => void }"
+      notes: Already exists in app-instructions-gallery - no new TagInput needed
+
+  rtk_hooks:
+    - path: packages/core/api-client/src/rtk/instructions-api.ts
+      description: useCreateMocMutation hook for POST /api/v2/mocs
+      verified: true
+      notes: Hook exported and functional from INST-1008
+
+  shared_hooks:
+    - path: apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
+      description: localStorage hook for form recovery pattern
+      reuse: 100%
+
+  ui_library:
+    - package: '@repo/app-component-library'
+      components: [Button, Input, Textarea, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue]
+      notes: Import from package root, never individual paths
+
+  backend_middleware:
+    - path: apps/api/lego-api/middleware/auth.ts
+      description: JWT authentication middleware
+    - path: apps/api/lego-api/middleware/load-permissions.ts
+      description: Load user permissions middleware
+    - path: apps/api/lego-api/middleware/require-feature.ts
+      description: Feature gate middleware (use 'instructions')
+
+# Schema references
+schemas:
+  frontend:
+    - location: packages/core/api-client/src/schemas/instructions.ts
+      schemas:
+        - CreateMocInput: Form input type (title, description, theme, tags)
+        - MocInstructions: Full MOC entity response
+      notes: Use CreateMocInput for form validation
+
+  backend:
+    - location: apps/api/lego-api/domains/mocs/types.ts (NEW)
+      schemas:
+        - CreateMocRequestSchema: Zod schema for POST body validation
+        - CreateMocResponseSchema: Zod schema for response
+        - ThemeEnum: z.enum with 11 theme values
+      notes: Define all new schemas in this file
+
+# Database schema
+database:
+  table: moc_instructions
+  schema_location: packages/backend/database-schema/src/schema/index.ts
+  key_fields:
+    - id: uuid, primary key, auto-generated
+    - userId: text, from auth context (c.get('userId'))
+    - title: text, required, min 3 chars
+    - description: text, optional, max 2000 chars
+    - theme: text, required, one of 11 themes
+    - tags: jsonb, array of strings, max 20 items, max 30 chars each
+    - slug: text, generated from title, unique per user
+    - type: text, always "MOC"
+    - createdAt: timestamp, auto
+    - updatedAt: timestamp, auto
+  constraints:
+    - uniqueUserTitle: unique constraint on (userId, title)
+  notes: Schema exists - no migrations needed
+
+# Test file structure
+test_coverage:
+  frontend_unit:
+    - file: apps/web/app-instructions-gallery/src/pages/__tests__/CreateMocPage.test.tsx
+      coverage: 95%+
+      tests:
+        - Form renders all fields
+        - Title auto-focuses on mount
+        - Validation errors shown
+        - Submit disabled when invalid
+        - Escape key navigates back
+        - Loading state during submission
+
+  frontend_integration:
+    - file: apps/web/app-instructions-gallery/src/pages/__tests__/CreateMocPage.integration.test.tsx
+      coverage: integration flows
+      tests:
+        - RTK mutation called with correct payload
+        - Success toast and redirect
+        - API error handling
+        - localStorage recovery
+
+  backend_services:
+    - file: apps/api/lego-api/domains/mocs/__tests__/services.test.ts
+      coverage: 90%+
+      tests:
+        - Request validation (Zod)
+        - Slug generation
+        - UUID collision handling
+        - Duplicate title error
+
+  backend_routes:
+    - file: apps/api/lego-api/domains/mocs/__tests__/routes.test.ts
+      coverage: 90%+
+      tests:
+        - POST /mocs creates MOC (201)
+        - Validation errors (400)
+        - Auth required (401)
+        - Response schema validation
+
+  e2e:
+    - file: apps/web/playwright/tests/instructions/inst-1102-create.spec.ts
+      config: playwright.legacy.config.ts
+      tests:
+        - Happy path: navigate -> fill form -> submit -> redirect
+        - Validation prevents empty submit
+        - Escape key returns to gallery
+
+# Theme options (from SCOPE.yaml)
+theme_options:
+  - Castle
+  - Space
+  - City
+  - Technic
+  - Creator
+  - Star Wars
+  - Harry Potter
+  - Marvel
+  - DC
+  - Friends
+  - Other
+
+# Form validation constraints
+validation_rules:
+  title:
+    required: true
+    minLength: 3
+    maxLength: 200
+  description:
+    required: false
+    maxLength: 2000
+  theme:
+    required: true
+    enum: theme_options
+  tags:
+    required: false
+    maxItems: 20
+    maxItemLength: 30
+
+# Error handling
+error_messages:
+  duplicate_title:
+    http_code: 409
+    error_code: DUPLICATE_TITLE
+    message: "A MOC with this title already exists. Please try another title."
+    recovery: "Preserve form data in localStorage, show error toast with retry"
+  validation_error:
+    http_code: 400
+    error_code: VALIDATION_ERROR
+    message: "Show field-specific validation errors"
+    recovery: "Highlight invalid fields, keep form data"
+  network_error:
+    http_code: 500
+    error_code: NETWORK_ERROR
+    message: "Failed to create MOC. Please try again."
+    recovery: "localStorage + retry button in toast"
+
+# Import patterns
+import_patterns:
+  ui_components:
+    correct: |
+      import { Button, Card, Input, Textarea, Label, Select } from '@repo/app-component-library'
+    incorrect: |
+      import { Button } from '@repo/ui/button'
+    notes: Always use package root import
+
+  logger:
+    correct: |
+      import { logger } from '@repo/logger'
+      logger.info('Creating MOC', undefined, { title: data.title })
+    incorrect: |
+      console.log('Creating MOC', data)
+    notes: Never use console.log
+
+  rtk_hooks:
+    correct: |
+      import { useCreateMocMutation } from '@repo/api-client/rtk/instructions-api'
+    notes: Hook already exists from INST-1008
+
+  navigation:
+    correct: |
+      import { useNavigate, Link } from '@tanstack/react-router'
+    notes: Use TanStack Router for navigation
+
+# Performance considerations
+performance:
+  - Use useCallback for event handlers to avoid re-renders
+  - Use useMemo for validation checks
+  - Debounce localStorage saves (if implementing auto-save)
+  - Optimistic UI: navigate immediately, rollback on error
+
+# Accessibility requirements
+accessibility:
+  - All form fields have proper Label with htmlFor
+  - Required fields marked with * and required attribute
+  - Error messages linked via aria-describedby
+  - aria-invalid on fields with errors
+  - Keyboard navigation (Tab, Enter, Escape)
+  - Auto-focus title on mount
+  - Focus visible states (focus:ring-2)
+
+# Feature gate
+feature_gate:
+  name: instructions
+  middleware: requireFeature('instructions')
+  applies_to: All /mocs routes
+  notes: Use consistent gate name across epic
+
+# Slug generation implementation notes
+slug_generation:
+  library: slugify (or similar)
+  collision_strategy: Append 6-char UUID suffix
+  format: "title-slug" or "title-slug-abc123"
+  example: |
+    "My Castle MOC" -> "my-castle-moc"
+    (on collision) -> "my-castle-moc-a1b2c3"
+  implementation: |
+    1. Generate slug from title: slugify(title, { lower: true, strict: true })
+    2. Attempt insert
+    3. On unique constraint error, generate UUID suffix
+    4. Retry with slug-{uuid.slice(0,6)}
+
+# Reality baseline
+reality_check:
+  database_table: EXISTS (moc_instructions with all fields)
+  rtk_hooks: EXISTS (useCreateMocMutation from INST-1008)
+  tag_input: EXISTS (MocEdit/TagInput.tsx in app-instructions-gallery)
+  middleware: EXISTS (auth, loadPermissions, requireFeature)
+  wishlist_patterns: PRODUCTION (AddItemPage, WishlistForm)
+  blockers: NONE (INST-1008 complete per elaboration verification)
+
+# Notes
+notes:
+  - "Story follows proven AddItemPage pattern with 80%+ reuse"
+  - "All dependencies verified in elaboration phase"
+  - "No new database migrations needed"
+  - "RTK hooks already wired from INST-1008"
+  - "TagInput component exists - no need to create new one"
+  - "Focus on backend service/repository/routes creation"
+  - "Frontend is mostly copy-paste from wishlist with MOC-specific fields"

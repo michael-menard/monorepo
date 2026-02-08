@@ -1,0 +1,61 @@
+perspective: engineering
+verdict: CONCERNS
+
+feasibility:
+  core_journey_feasible: true
+  blocking_deps:
+    - AWS S3 presigned URL API (for INST-1002)
+    - RTK Query installation and setup
+
+mvp_blockers:
+  - id: ENG-001
+    issue: INST-1002 presigned URL implementation blocks edit save flow without it
+    stories: [INST-1012]
+    action: Ensure INST-1002 completed and tested before INST-1012 implementation
+
+  - id: ENG-002
+    issue: Package extraction (INST-1003, INST-1004) must complete before consumers can build
+    stories: [INST-1008, INST-1009, INST-1012]
+    action: Sequence packages as Wave 1-2 to unblock all consumers
+
+  - id: ENG-003
+    issue: RTK Query mutation wiring (INST-1008) required for edit form submission
+    stories: [INST-1010, INST-1012]
+    action: Complete INST-1008 before edit frontend stories
+
+  - id: ENG-004
+    issue: Edit endpoint validation (INST-1005) must confirm PATCH schema matches frontend expectations
+    stories: [INST-1009, INST-1010]
+    action: INST-1005 must include request/response schema validation tests
+
+missing_mvp_stories: []
+
+future:
+  architecture_improvements:
+    - suggestion: Consider multipart upload (>100MB) post-MVP infrastructure
+      impact: high
+    - suggestion: Add presigned URL refresh logic for long-running uploads
+      impact: medium
+    - suggestion: Implement retry strategy with exponential backoff for failed uploads
+      impact: medium
+
+  recommended_technical_stories:
+    - title: Multipart upload (>100MB) support
+      reason: Presigned URL capped at 100MB
+      priority: P2
+
+    - title: S3 cleanup job for orphaned files
+      reason: INST-1007 is optional but prevents storage waste
+      priority: P2
+
+  recommendations:
+    - Ensure all 18 stories have comprehensive unit and integration tests (currently unclear in story docs)
+    - Add contract tests between frontend and API to catch schema mismatches early
+    - Plan post-MVP optimization for file handling in edit flow
+
+architecture_notes:
+  critical_path: INST-1003 → INST-1004 → INST-1005 → INST-1008 → INST-1009 → INST-1010 → INST-1011 → INST-1012 → INST-1013 → INST-1014 → INST-1015 → INST-1028 → INST-1029
+  parallelizable_streams:
+    - Edit backend (INST-1005-1007 parallel after INST-1004)
+    - Foundation stories (INST-1000-1001 parallel after INST-1002)
+    - Testing stories (INST-1028-1029 parallel after INST-1015)

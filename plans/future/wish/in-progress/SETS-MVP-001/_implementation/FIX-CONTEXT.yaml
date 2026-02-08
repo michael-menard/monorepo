@@ -1,0 +1,38 @@
+schema: 1
+story_id: "SETS-MVP-001"
+timestamp: "2026-02-01T20:15:00Z"
+failure_source: needs-work
+iteration: 2
+
+issues_to_fix:
+  - id: 1
+    file: "apps/api/lego-api/domains/wishlist/types.ts"
+    issue: "Backend domain types incomplete - missing status, statusChangedAt, purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus fields in WishlistItemSchema"
+    severity: critical
+    auto_fixable: false
+    related_ac: AC11
+    context: "TypeScript compilation fails with errors on repositories.ts lines 387, 393. Repository mapper cannot access new fields; runtime errors will occur."
+
+  - id: 2
+    file: "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+    issue: "4 integration tests failing - mock spy receives undefined instead of effectiveFilters object during status filtering verification"
+    severity: critical
+    auto_fixable: false
+    related_ac: "AC20, AC22"
+    context: "Tests fail at verification of backward compatibility guarantees. Service implementation is correct but test harness doesn't capture effectiveFilters properly."
+
+focus_files:
+  - "apps/api/lego-api/domains/wishlist/types.ts"
+  - "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+  - "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+
+key_lessons:
+  - "Backend domain types (apps/api/*/domains/*/types.ts) must be updated when database schema changes"
+  - "Integration test mocks must properly capture all arguments to verify behavior"
+  - "TypeScript compilation on all touched packages needed to catch type errors"
+
+success_criteria:
+  - "TypeScript compilation passes for apps/api package"
+  - "All 4 integration tests pass"
+  - "AC11 verification shows WishlistItemSchema has all new fields"
+  - "AC22 verification passes with correct default filter behavior"

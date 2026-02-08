@@ -1,7 +1,7 @@
 schema: 1
 id: WISH-2000
 feature: wish
-type: feature
+type: infrastructure
 state: uat
 title: Database Schema & Types
 points: 3
@@ -10,13 +10,86 @@ blocked_by: null
 depends_on: []
 follow_up_from: null
 scope:
-  packages: []
+  packages:
+    - "@repo/database-schema"
+    - "@repo/api-client"
   surfaces:
     - backend
-    - infra
+    - infrastructure
 goal: Establish data model foundation for wishlist items with runtime validation and type safety.
-non_goals: []
-acs: []
-risks: []
+non_goals:
+  - UI components
+  - API endpoints
+  - Authentication integration
+acs:
+  - id: AC-001
+    description: "Drizzle schema includes all fields: id, userId, title, store, setNumber, sourceUrl, imageUrl, price, currency, pieceCount, releaseDate, tags, priority, notes, sortOrder, timestamps"
+    testable: true
+    automated: true
+  - id: AC-002
+    description: "Zod schemas created: WishlistItemSchema, CreateWishlistItemSchema, UpdateWishlistItemSchema, WishlistQueryParamsSchema, WishlistListResponseSchema"
+    testable: true
+    automated: true
+  - id: AC-003
+    description: "31+ unit tests for schema validation"
+    testable: true
+    automated: true
+  - id: AC-004
+    description: "TypeScript types inferred via z.infer"
+    testable: true
+    automated: true
+  - id: GAP-001
+    description: "Schema validation tests (compile, exports, indexes)"
+    testable: true
+    automated: true
+  - id: GAP-002
+    description: "Schema/Zod alignment tests"
+    testable: true
+    automated: true
+  - id: GAP-003
+    description: "Large decimal value tests (999999.99)"
+    testable: true
+    automated: true
+  - id: GAP-004
+    description: "Tags array handling tests"
+    testable: true
+    automated: true
+  - id: GAP-005
+    description: "sortOrder conflict behavior tests"
+    testable: true
+    automated: true
+  - id: GAP-008
+    description: "DB-level enum validation tests"
+    testable: true
+    automated: true
+  - id: ENH-001
+    description: "pgEnum for store field"
+    testable: true
+    automated: true
+  - id: ENH-002
+    description: "Priority check constraint (0-5)"
+    testable: true
+    automated: true
+  - id: ENH-004
+    description: "Composite index for common queries"
+    testable: true
+    automated: true
+  - id: ENH-005
+    description: "Schema evolution documentation"
+    testable: false
+    automated: false
+  - id: ENH-006
+    description: "Seed data generation"
+    testable: true
+    automated: false
+  - id: ENH-008
+    description: "created_by/updated_by audit fields"
+    testable: true
+    automated: true
+risks:
+  - id: RISK-001
+    description: "Schema changes after migration are costly"
+    severity: medium
+    mitigation: "Comprehensive testing before deployment; schema evolution documentation"
 created_at: 2026-01-24T02:00:00-07:00
-updated_at: 2026-01-27T18:45:00-07:00
+updated_at: 2026-02-04T12:00:00-07:00

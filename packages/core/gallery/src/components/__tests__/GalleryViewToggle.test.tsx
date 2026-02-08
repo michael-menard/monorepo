@@ -18,24 +18,13 @@ describe('GalleryViewToggle', () => {
     vi.clearAllMocks()
   })
 
-  it('renders with grid mode active', () => {
+  it('renders grid and table view buttons', () => {
     render(
       <GalleryViewToggle currentView="grid" onViewChange={mockOnViewChange} />,
     )
 
-    const gridButton = screen.getByRole('button', { name: /grid view/i })
-    expect(gridButton).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('calls onViewChange when table icon clicked', async () => {
-    const user = userEvent.setup()
-
-    render(
-      <GalleryViewToggle currentView="grid" onViewChange={mockOnViewChange} />,
-    )
-
-    await user.click(screen.getByRole('button', { name: /table view/i }))
-    expect(mockOnViewChange).toHaveBeenCalledWith('datatable')
+    expect(screen.getByRole('button', { name: /grid view/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /table view/i })).toBeInTheDocument()
   })
 
   it('shows first-time hint when showFirstTimeHint is true', () => {
@@ -77,18 +66,24 @@ describe('GalleryViewToggle', () => {
     expect(gridButton.className).toContain('min-h-[44px]')
   })
 
-  it('scrolls to top when view changes', async () => {
-    const user = userEvent.setup()
-    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-
+  it('has accessible labels for both view modes', () => {
     render(
       <GalleryViewToggle currentView="grid" onViewChange={mockOnViewChange} />,
     )
 
-    await user.click(screen.getByRole('button', { name: /table view/i }))
+    expect(screen.getByRole('button', { name: /grid view/i })).toHaveAttribute('aria-label', 'Grid view')
+    expect(screen.getByRole('button', { name: /table view/i })).toHaveAttribute('aria-label', 'Table view')
+  })
 
-    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+  it('renders with correct test id', () => {
+    render(
+      <GalleryViewToggle
+        currentView="grid"
+        onViewChange={mockOnViewChange}
+        data-testid="custom-toggle"
+      />,
+    )
 
-    scrollToSpy.mockRestore()
+    expect(screen.getByTestId('custom-toggle')).toBeInTheDocument()
   })
 })

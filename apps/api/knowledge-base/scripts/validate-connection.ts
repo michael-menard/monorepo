@@ -16,7 +16,12 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
+import { fileURLToPath } from 'url'
 import { spawn, execSync, type ChildProcess } from 'child_process'
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // ANSI color codes
 const COLORS = {

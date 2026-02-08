@@ -1,0 +1,206 @@
+---
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery"
+prefix: "INSP"
+project_name: "inspiration-gallery"
+completed: "2026-02-04T00:00:00Z"
+
+files_created:
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/stories.index.md"
+    purpose: "Master story index with all 21 stories"
+    stories: 21
+    size: "~15KB"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/PLAN.meta.md"
+    purpose: "Documentation principles and structure"
+    size: "~5KB"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/PLAN.exec.md"
+    purpose: "Execution rules and workflow"
+    size: "~8KB"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/roadmap.md"
+    purpose: "Visual dependency graphs with Mermaid diagrams"
+    size: "~12KB"
+
+directories_created:
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/backlog"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/elaboration"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/ready-to-work"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/in-progress"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/UAT"
+
+metrics:
+  total_stories: 21
+  stories_by_phase:
+    phase_1_foundation: 4
+    phase_2_gallery_upload: 4
+    phase_3_album_management: 7
+    phase_4_integration_polish: 6
+  ready_to_start: 3
+  critical_path_length: 5
+  max_parallel: 4
+  phases: 4
+  high_risk_stories: 3
+  sizing_warnings: 5
+
+ready_to_start_stories:
+  - "INSP-001"
+  - "INSP-003"
+  - "INSP-007"
+
+critical_path:
+  - "INSP-007"
+  - "INSP-009"
+  - "INSP-012"
+  - "INSP-019"
+  - "INSP-021"
+
+parallelization_opportunities:
+  foundation_phase:
+    group: "Group 1: Foundation"
+    stories: ["INSP-001", "INSP-003", "INSP-007"]
+    description: "No dependencies, can start immediately"
+    count: 3
+
+  phase_2a:
+    group: "Group 2A: Basic Components"
+    stories: ["INSP-002", "INSP-004"]
+    after: "Group 1"
+    description: "Basic CRUD and UI components"
+    count: 2
+
+  phase_2b:
+    group: "Group 2B: Advanced Upload"
+    stories: ["INSP-008", "INSP-020"]
+    after: "Group 2A"
+    description: "Complex upload and loading states"
+    count: 2
+
+  phase_3a:
+    group: "Group 3A: Collection Setup"
+    stories: ["INSP-005", "INSP-006", "INSP-010"]
+    after: "Group 2"
+    description: "Album and inspiration infrastructure"
+    count: 3
+
+  phase_3b:
+    group: "Group 3B: Advanced Interactions"
+    stories: ["INSP-009", "INSP-011", "INSP-012", "INSP-013"]
+    after: "Group 3A"
+    description: "Album management and gestures"
+    count: 4
+
+  phase_4:
+    group: "Group 4: Integration & Polish"
+    stories: ["INSP-014", "INSP-015", "INSP-016", "INSP-017", "INSP-018", "INSP-019", "INSP-021"]
+    after: "Group 3"
+    description: "Feature completion, accessibility, and refinements"
+    count: 7
+
+risk_summary:
+  high_risk_stories:
+    - story: "INSP-007"
+      risk: "RISK-004"
+      description: "Cycle detection in album DAG must prevent infinite loops"
+      severity: "High"
+    - story: "INSP-008"
+      risk: "RISK-001"
+      description: "Complex drag-and-drop across multiple interfaces"
+      severity: "High"
+    - story: "INSP-011"
+      risk: "RISK-001"
+      description: "Complex drag-and-drop interactions"
+      severity: "High"
+
+  medium_risk_stories:
+    - story: "INSP-012"
+      risk: "RISK-005"
+      description: "Stack gesture discoverability"
+      severity: "Medium"
+    - story: "INSP-013"
+      risk: "RISK-006"
+      description: "Session-based navigation clarity"
+      severity: "Medium"
+    - story: "INSP-009"
+      risk: "RISK-002"
+      description: "Many-to-many query performance at scale"
+      severity: "Medium"
+    - story: "INSP-019"
+      risk: "RISK-007"
+      description: "Comprehensive accessibility implementation"
+      severity: "Medium"
+
+phase_breakdown:
+  phase_1:
+    name: "Foundation"
+    description: "Core data models, infrastructure, and basic CRUD endpoints"
+    stories: ["INSP-003", "INSP-007", "INSP-009", "INSP-010"]
+    dependencies: "None"
+    estimated_duration: "2-3 weeks"
+    deliverables:
+      - "Album data model with DAG support"
+      - "API endpoints for inspiration and album CRUD"
+      - "Initial database schema"
+
+  phase_2:
+    name: "Gallery & Upload"
+    description: "Gallery scaffolding, card components, and multi-image upload modal"
+    stories: ["INSP-001", "INSP-002", "INSP-004", "INSP-008", "INSP-020"]
+    dependencies: "Phase 1"
+    estimated_duration: "2-3 weeks"
+    deliverables:
+      - "Gallery page with routing"
+      - "Card components for inspirations and albums"
+      - "Multi-image upload modal"
+      - "Loading and error states"
+
+  phase_3:
+    name: "Album Management"
+    description: "Album navigation, hierarchy, drag-and-drop, and album creation patterns"
+    stories: ["INSP-005", "INSP-006", "INSP-011", "INSP-012", "INSP-013"]
+    dependencies: "Phase 2"
+    estimated_duration: "2-3 weeks"
+    deliverables:
+      - "Drag-and-drop reordering"
+      - "Stack-to-create-album gesture"
+      - "Album navigation with breadcrumbs"
+      - "MOC linking infrastructure"
+
+  phase_4:
+    name: "Integration & Polish"
+    description: "MOC linking, metadata editing, accessibility, and UX refinements"
+    stories: ["INSP-014", "INSP-015", "INSP-016", "INSP-017", "INSP-018", "INSP-019", "INSP-021"]
+    dependencies: "Phase 3"
+    estimated_duration: "3-4 weeks"
+    deliverables:
+      - "Complete MOC linking with UI"
+      - "Safe delete flows"
+      - "Metadata editing modal"
+      - "Tag management"
+      - "Full keyboard navigation"
+      - "Multi-select and bulk operations"
+
+sizing_analysis:
+  total_story_points_estimated: "~180-220 points"
+  stories_with_warnings: 5
+  warning_stories:
+    - "INSP-007: Album data model (High complexity)"
+    - "INSP-008: Upload modal (High complexity)"
+    - "INSP-011: Drag-and-drop (High complexity)"
+    - "INSP-019: Accessibility (High complexity)"
+    - "INSP-021: Multi-select (Medium complexity)"
+
+next_steps:
+  immediate:
+    - "Begin elaboration on ready-to-start stories (INSP-001, INSP-003, INSP-007)"
+    - "Create story directories under /plans/stories/INSP-XXX/"
+    - "Generate detailed story documents"
+    - "Conduct technical feasibility review"
+
+  phase_2_onwards:
+    - "Elaborate remaining stories in dependency order"
+    - "Begin implementation on Phase 1 stories"
+    - "Conduct code reviews and QA verification"
+    - "Track token usage and update LESSONS-LEARNED.md"
+
+validation_status: "PASS"
+all_artifacts_generated: true
+bootstrap_phase_complete: true

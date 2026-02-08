@@ -7,6 +7,9 @@
 
 export { db, schema } from './database.js'
 
+// Authorization service (used by middleware)
+export { authorizationService } from './authorization.js'
+
 // Domain compositions will be added here as domains are restructured:
 // export { galleryComposition } from './gallery.js'
 // export { setsComposition } from './sets.js'

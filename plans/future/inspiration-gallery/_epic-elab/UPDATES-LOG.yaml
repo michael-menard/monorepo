@@ -1,0 +1,186 @@
+---
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery"
+prefix: "INSP"
+updated: "2026-02-04T23:40:00Z"
+decision_source: "DECISIONS.yaml"
+decision_date: "2026-02-04T23:35:00Z"
+
+summary: "Applied all accepted decisions from epic elaboration phase. Added 6 new MVP blocker stories, split 2 existing stories, added risk notes to 4 affected stories, and updated roadmap with new dependencies and critical path."
+
+stories_index:
+  total_stories: 27
+  original_count: 21
+  new_stories_added: 6
+  stories_split: 2
+  superseded_stories: 2
+  risk_notes_added: 4
+
+  stories_added:
+    - id: "INSP-022"
+      title: "DAG Cycle Detection Algorithm Specification and Validation"
+      source: "Engineering blocker (ENG-001)"
+      priority: "P0"
+      phase: "1 Setup"
+      description: "Spike to research and specify DFS-based or constraint-based cycle detection algorithm. Unblocks INSP-007, INSP-009."
+
+    - id: "INSP-023"
+      title: "Multi-File Upload State Machine and Error Recovery Specification"
+      source: "Engineering blocker (ENG-002)"
+      priority: "P0"
+      phase: "2 Setup"
+      description: "Design specification for upload state machine with retry strategy and error recovery patterns. Unblocks INSP-008 split."
+
+    - id: "INSP-024"
+      title: "First-Time User Onboarding Flow for Stack Gesture and Album Concepts"
+      source: "Product blocker (PROD-001)"
+      priority: "P0"
+      phase: "Before Phase 2"
+      description: "Product story defining onboarding flow with stack gesture tutorial and tooltip strategy. Unblocks INSP-018, INSP-012."
+
+    - id: "INSP-025"
+      title: "DAG Cycle Detection Comprehensive Test Suite"
+      source: "QA blocker (QA-001)"
+      priority: "P0"
+      phase: "1 Testing"
+      description: "Comprehensive unit and integration test suite for cycle detection with edge case coverage. Validates INSP-007, INSP-009 before MVP launch."
+
+    - id: "INSP-026"
+      title: "Multi-File Upload Error Scenario E2E Tests"
+      source: "QA blocker (QA-002)"
+      priority: "P0"
+      phase: "2 Testing"
+      description: "E2E test suite for upload error scenarios (S3 timeouts, partial failures, network errors). Validates INSP-008-A/B/C before MVP launch."
+
+    - id: "INSP-027"
+      title: "Stack Gesture Usability Testing and Discovery UI Design"
+      source: "UX blocker (UX-001)"
+      priority: "P0"
+      phase: "Before Phase 2"
+      description: "High-fidelity gesture UI design and 5+ participant usability testing. Validates discoverability and learnability before Phase 2."
+
+  stories_split:
+    - original_id: "INSP-008"
+      original_title: "Multi-file upload to album"
+      decision: "accept"
+      subtasks:
+        - "INSP-008-A: Basic single-file upload modal with success path"
+        - "INSP-008-B: Multi-file batch upload support"
+        - "INSP-008-C: Error recovery and retry state machine"
+      rationale: "Upload error handling is complex and cross-cutting. Breaking into separate stories allows parallel work on modal UI vs. error recovery logic."
+
+    - original_id: "INSP-011"
+      original_title: "Reorder inspirations in album (drag-and-drop)"
+      decision: "accept"
+      subtasks:
+        - "INSP-011-A: Drag-and-drop library evaluation and recommendation"
+        - "INSP-011-B: Keyboard reordering accessibility design and implementation"
+      rationale: "Library choice impacts implementation approach. Keyboard accessibility must be designed in parallel with drag-and-drop."
+
+  risk_notes_added:
+    - story_id: "INSP-007"
+      blocker_id: "ENG-001"
+      issue: "DAG cycle detection algorithm not specified"
+      mitigation: "INSP-022 spike specifies algorithm before implementation"
+      related_story: "INSP-025 (comprehensive test suite)"
+
+    - story_id: "INSP-009"
+      blocker_id: "ENG-001"
+      issue: "DAG cycle detection algorithm not specified"
+      mitigation: "INSP-022 spike specifies algorithm before implementation"
+      related_story: "INSP-025 (comprehensive test suite)"
+
+    - story_id: "INSP-012"
+      blocker_id: "UX-001"
+      issue: "Stack gesture discovery UI not designed - non-obvious interaction"
+      mitigation: "INSP-027 usability testing (5+ users) validates learnability with 80%+ discovery rate"
+      related_story: "INSP-024 (onboarding flow), INSP-018 (onboarding tooltips)"
+
+    - story_id: "INSP-018"
+      blocker_id: "PROD-001"
+      issue: "First-time user onboarding flow missing"
+      mitigation: "INSP-024 product story defines onboarding with stack gesture tutorial"
+      related_story: "INSP-027 (UX validation), INSP-012 (gesture implementation)"
+
+roadmap:
+  dependencies_added: 12
+  critical_path_changed: true
+  critical_path_original_length: 5
+  critical_path_new_length: 6
+  critical_path_extension_reason: "INSP-022 (DAG spec) added as critical blocker before INSP-007 implementation"
+
+  dependency_additions:
+    - "INSP-022 → INSP-007 (DAG algorithm must be specified before schema design)"
+    - "INSP-022 → INSP-009 (DAG algorithm must be specified before CRUD design)"
+    - "INSP-023 → INSP-008-A/B/C (upload state machine spec required before implementation)"
+    - "INSP-024 → INSP-018 (onboarding flow design required before implementation)"
+    - "INSP-024 → INSP-012 (onboarding flow design required before gesture implementation)"
+    - "INSP-025 → INSP-007/009 (test suite validates implementation)"
+    - "INSP-026 → INSP-008-A/B/C (test suite validates implementation)"
+    - "INSP-027 → INSP-012 (UX validation guides implementation)"
+    - "INSP-027 → INSP-018 (UX validation inputs onboarding design)"
+    - "INSP-011-A → INSP-011-B (library choice impacts keyboard design)"
+    - "INSP-008-A → INSP-008-B (basic modal required before multi-file)"
+    - "INSP-008-B → INSP-008-C (multi-file required before error recovery)"
+
+  roadmap_changes:
+    - section: "Dependency Graph"
+      change: "Added Phase 0 (MVP Blockers) with 6 stories"
+      impact: "3 new subgraphs show dependencies from specs to implementation stories"
+
+    - section: "Gantt Chart"
+      change: "Added MVP Blocker section with parallel execution"
+      impact: "All Phase 1/2/3 stories now depend on completing corresponding blocker stories"
+
+    - section: "Critical Path"
+      change: "Updated main path from 5 to 6 stories"
+      old_path: "INSP-007 → INSP-009 → INSP-012 → INSP-019 → INSP-021"
+      new_path: "INSP-022 → INSP-007 → INSP-009 → INSP-012 → INSP-019 → INSP-021"
+
+    - section: "Parallel Opportunities"
+      change: "Added MVP Blocker group with 6 parallel stories"
+      max_parallelization: "Increased from 4 to 6 stories (MVP blocker phase)"
+
+    - section: "Risk Indicators"
+      change: "Added 5 critical-risk stories"
+      new_risks: "INSP-022, INSP-023, INSP-025, INSP-026, INSP-027 all marked as MVP critical"
+
+    - section: "Quick Reference"
+      change: "Updated all metrics to reflect new structure"
+      total_stories: "Increased from 21 to 27 (21 original + 6 blockers)"
+
+files_modified:
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/stories.index.md"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/inspiration-gallery/roadmap.md"
+
+validation:
+  stories_index_validation:
+    - "Story count updated from 21 to 27 pending"
+    - "INSP-008 marked as superseded with split reference"
+    - "INSP-011 marked as superseded with split reference"
+    - "INSP-007, INSP-009, INSP-012, INSP-018 updated with MVP blocker risk notes"
+    - "6 new stories added (INSP-022 through INSP-027) with full details"
+
+  roadmap_validation:
+    - "Dependency graph updated with Phase 0 (MVP Blockers)"
+    - "Gantt chart extended with MVP blocker section"
+    - "Critical path updated to 6-story sequence with INSP-022 prepended"
+    - "Parallel opportunities group added for MVP blockers (6 parallel stories)"
+    - "Risk indicators expanded to include 5 critical-risk blocker stories"
+    - "Quick reference updated with new metrics"
+    - "Update log extended with epic elaboration date entry"
+
+completion_summary:
+  phase_0_setup_stories: 6
+  phase_0_ready_to_start: true
+  mv_blocker_acceptance_rate: "100% (all 6 blockers accepted)"
+  story_split_acceptance_rate: "100% (both splits accepted)"
+  risk_mitigation_approach: "Specification-first with parallel testing and validation"
+  next_phase: "Phase 1 can proceed once MVP blockers complete"
+
+approval:
+  decided_by: "Product Stakeholders"
+  decided_date: "2026-02-04T23:35:00Z"
+  all_decisions_applied: true
+  next_step: "Begin INSP-022 through INSP-027 in parallel"
+
+---

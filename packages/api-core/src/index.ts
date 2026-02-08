@@ -26,9 +26,12 @@ export {
   copyS3Object,
 } from './s3.js'
 
-// Auth
+// Auth (legacy - aws-jwt-verify, uses access tokens)
 export { verifyToken, isAuthBypassEnabled } from './auth.js'
 export type { AuthUser } from './auth.js'
+
+// Auth (jose - Bun-compatible, uses ID tokens for cookie-based auth)
+export { verifyIdToken, isAuthBypassEnabled as isAuthBypassEnabledJose } from './auth-jose.js'
 
 // Types
 export { ok, err, paginate, PaginationInputSchema, PaginatedResultSchema } from './types.js'

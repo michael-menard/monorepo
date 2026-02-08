@@ -6,7 +6,7 @@
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
 
-const { When, Then } = createBdd()
+const { Given, When, Then } = createBdd()
 
 // ---------------------------------------------------------------------------
 // Arrow-key grid navigation
@@ -192,4 +192,87 @@ Then('a screen reader announcement should indicate the item was removed', async 
 
 Then('a screen reader announcement should indicate the item was added to the wishlist', async () => {
   expect(true).toBe(true)
+})
+
+// ---------------------------------------------------------------------------
+// Additional accessibility steps for new BDD features
+// ---------------------------------------------------------------------------
+
+import AxeBuilder from '@axe-core/playwright'
+
+Given('I navigate to the wishlist gallery', async ({ page }) => {
+  const wishlistLink = page.locator('a[href="/wishlist"]').first()
+  await wishlistLink.waitFor({ state: 'visible', timeout: 10000 })
+  await wishlistLink.click()
+  await page.waitForURL('**/wishlist', { timeout: 10000 })
+})
+
+Given('the wishlist has items loaded', async ({ page }) => {
+  const filterBar = page.locator('[data-testid="wishlist-filter-bar"]')
+  const emptyState = page.locator('[data-testid="gallery-empty-state"]')
+
+  await Promise.race([
+    filterBar.waitFor({ timeout: 30000 }),
+    emptyState.waitFor({ timeout: 30000 }),
+  ])
+})
+
+Given('I open the delete modal for the first wishlist card', async ({ page }) => {
+  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  await card.hover()
+  const deleteButton = card.locator('[data-testid="wishlist-card-delete"]')
+  await deleteButton.click()
+})
+
+Given('I open the Got It modal for the first wishlist card', async ({ page }) => {
+  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  await card.hover()
+  const gotItButton = card.locator('[data-testid="wishlist-card-got-it"]')
+  await gotItButton.click()
+})
+
+When('I click the cancel button in the delete modal', async ({ page }) => {
+  await page.locator('[data-testid="delete-confirm-cancel"]').evaluate(el => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, view: window })
+    el.dispatchEvent(event)
+  })
+})
+
+When('I click the cancel button in the Got It modal', async ({ page }) => {
+  await page.locator('[data-testid="cancel-button"]').evaluate(el => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, view: window })
+    el.dispatchEvent(event)
+  })
+})
+
+Then('the page should have no WCAG AA violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .exclude('aside, [role="complementary"], nav[aria-label*="sidebar"]')
+    .analyze()
+
+  expect(results.violations).toEqual([])
+})
+
+Then('there should be no color contrast violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['color-contrast'])
+    .exclude('aside, [role="complementary"], nav[aria-label*="sidebar"]')
+    .analyze()
+
+  expect(results.violations).toEqual([])
+})
+
+Then('all buttons should have accessible names', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['button-name'])
+    .analyze()
+
+  expect(results.violations).toEqual([])
+})
+
+Then('there should be ARIA live regions on the page', async ({ page }) => {
+  const liveRegions = page.locator('[aria-live]')
+  const count = await liveRegions.count()
+  expect(count).toBeGreaterThan(0)
 })

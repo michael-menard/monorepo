@@ -14,24 +14,21 @@
   "workspaces": [
     "apps/*",
     "apps/api/*",
-    "apps/api/functions/*",
     "apps/web/*",
-    "shared/*",
-    "packages/shared",
-    "packages/core/ui",
-    "packages/core/auth",
-    "packages/core/accessibility",
-    "packages/core/cache",
-    "packages/core/design-system",
-    "packages/features/gallery",
-    "packages/features/moc-instructions",
-    "packages/features/profile",
-    "packages/features/wishlist",
-    "packages/tools/upload",
-    "packages/tools/mock-data",
-    "packages/dev/tech-radar"
+    "packages/api-core",
+    "packages/shared/*",
+    "packages/core/*",
+    "packages/features/*",
+    "packages/backend/*",
+    "packages/tools/*",
+    "packages/dev/*"
   ],
   "scripts": {
+    "dev": "lsof -ti:3000 -ti:9000 | xargs kill -9 2>/dev/null || true; docker info > /dev/null 2>&1 || (echo '\\n❌ Docker is not running. Please start Docker Desktop first.\\n' && exit 1) && docker-compose up -d && concurrently -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:services": "docker-compose up -d",
+    "dev:api": "pnpm --filter lego-api dev",
+    "dev:web": "pnpm --filter main-app dev",
+    "dev:all-web": "turbo run dev --filter='./apps/web/*'",
     "build": "turbo run build",
     "build:changed": "turbo run build --filter='...[HEAD^1]'",
     "analyze": "./scripts/local-coderabbit-analysis.sh",
@@ -127,10 +124,8 @@
     ]
   },
   "exports": {},
-  "pnpm": {
-    "overrides": {
-      "esbuild": "^0.21.5",
-      "@smithy/types": "4.9.0"
-    }
+  "overrides": {
+    "esbuild": "^0.21.5",
+    "@smithy/types": "4.9.0"
   }
 }

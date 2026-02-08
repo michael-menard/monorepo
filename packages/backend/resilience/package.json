@@ -1,0 +1,42 @@
+{
+  "name": "@repo/resilience",
+  "version": "1.0.0",
+  "description": "Resilience patterns: circuit breaker, rate limiter, and timeout utilities",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@repo/logger": "workspace:*",
+    "bottleneck": "^2.19.5",
+    "opossum": "^8.1.4",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "@types/opossum": "8.1.9",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "resilience",
+    "circuit-breaker",
+    "rate-limiter",
+    "timeout",
+    "opossum",
+    "bottleneck"
+  ]
+}

@@ -1,0 +1,86 @@
+# Decision Classification Rules
+#
+# Extends the autonomy tier system defined in .claude/agents/_shared/autonomy-tiers.md
+# These patterns help classify decisions into the appropriate tier automatically.
+#
+# Source of Truth for Tiers: .claude/agents/_shared/autonomy-tiers.md
+# - Tier 1: Clarification (missing info with reasonable default)
+# - Tier 2: Preference (valid alternatives, human preference matters)
+# - Tier 3: Ambiguous Scope (requirements interpreted multiple ways)
+# - Tier 4: Destructive/Irreversible (cannot be undone, production impact)
+# - Tier 5: External Dependency (external services, cross-team coordination)
+
+version: 1
+updated_at: 2026-02-06
+
+# Pattern-based classification rules
+# Patterns are matched against decision context text
+rules:
+  # Tier 4: Destructive/Irreversible - ALWAYS requires human approval
+  tier_4_destructive:
+    patterns:
+      - "delete|drop|truncate|destroy|remove.*permanently"
+      - "force.*push|reset.*hard|checkout.*\\."
+      - "production|prod.*deploy|prod.*config"
+      - "migration.*destructive|migration.*drop"
+      - "auth.*change|permission.*change|security.*change"
+      - "breaking.*change|backwards.*compat"
+      - "credential|secret|api.*key"
+    always_escalate: true
+
+  # Tier 5: External Dependency
+  tier_5_external:
+    patterns:
+      - "npm.*install|add.*dependency|new.*package"
+      - "infrastructure|infra.*change"
+      - "third.*party|external.*service"
+      - "shared.*schema|cross.*team"
+      - "api.*contract.*change"
+    risk_assessment: true  # Check risk level before auto-proceeding
+
+  # Tier 3: Ambiguous Scope
+  tier_3_ambiguous:
+    patterns:
+      - "validation|validate.*what"
+      - "improve.*performance|optimize"
+      - "handle.*edge.*case"
+      - "similar.*to|like.*existing"
+      - "appropriate|suitable|reasonable"
+    interpretation_required: true
+
+  # Tier 2: Preference
+  tier_2_preference:
+    patterns:
+      - "component.*library|ui.*framework"
+      - "state.*management|redux|zustand|context"
+      - "test.*framework|testing.*approach"
+      - "api.*format|response.*format"
+      - "naming.*convention|style.*choice"
+    check_project_default: true
+
+  # Tier 1: Clarification
+  tier_1_clarification:
+    patterns:
+      - "file.*naming|directory.*structure"
+      - "order.*of.*operations|sequence"
+      - "which.*pattern|existing.*pattern"
+      - "default.*value|fallback"
+    use_codebase_conventions: true
+
+# Decision categories for logging and analytics
+categories:
+  - clarification
+  - preference
+  - ambiguous_scope
+  - destructive
+  - external_dependency
+  - mvp_feature
+  - enhancement
+  - moonshot
+
+# Moonshot detection (auto-defer, never block workflow)
+moonshot_patterns:
+  - "future|nice.*to.*have|stretch.*goal"
+  - "exploration|experiment|spike"
+  - "v2|phase.*2|later.*version"
+  - "out.*of.*scope|beyond.*current"

@@ -236,3 +236,320 @@ export function generateContentHash(content: string): string {
   const normalized = content.trim().replace(/\s+/g, ' ')
   return crypto.createHash('sha256').update(normalized, 'utf-8').digest('hex')
 }
+
+// =============================================================================
+// ADR Types
+// =============================================================================
+
+/**
+ * ADR status values.
+ */
+export const ADR_STATUSES = ['Active', 'Proposed', 'Deprecated', 'Superseded'] as const
+export type ADRStatus = (typeof ADR_STATUSES)[number]
+
+/**
+ * Schema for a single parsed ADR from ADR-LOG.md.
+ */
+export const ADREntrySchema = z.object({
+  /** ADR ID (e.g., "ADR-001") */
+  id: z.string(),
+
+  /** ADR title */
+  title: z.string(),
+
+  /** Date recorded */
+  date: z.string().optional(),
+
+  /** Status of the decision */
+  status: z.enum(ADR_STATUSES).default('Active'),
+
+  /** Context/background for the decision */
+  context: z.string().optional(),
+
+  /** Problem being addressed */
+  problem: z.string().optional(),
+
+  /** The decision made */
+  decision: z.string(),
+
+  /** Consequences (positive and negative) */
+  consequences: z.string().optional(),
+
+  /** Related files */
+  related_files: z.array(z.string()).default([]),
+
+  /** Source file path */
+  source_file: z.string(),
+})
+
+export type ADREntry = z.infer<typeof ADREntrySchema>
+
+/**
+ * Schema for parsed ADRs from a single file.
+ */
+export const ParsedADRFileSchema = z.object({
+  /** Source file path */
+  source_file: z.string(),
+
+  /** Parsed ADRs from this file */
+  adrs: z.array(ADREntrySchema),
+
+  /** Warnings encountered during parsing */
+  warnings: z.array(z.string()),
+})
+
+export type ParsedADRFile = z.infer<typeof ParsedADRFileSchema>
+
+/**
+ * Convert an ADR entry to a KB-compatible ParsedEntry.
+ */
+export function adrToKbEntry(adr: ADREntry): z.infer<typeof ParsedEntrySchema> {
+  const tags: string[] = ['adr', 'decision', 'architecture']
+
+  // Add ADR ID as tag
+  if (adr.id) {
+    tags.push(`adr:${adr.id.toLowerCase()}`)
+  }
+
+  // Add status as tag
+  if (adr.status) {
+    tags.push(`status:${adr.status.toLowerCase()}`)
+  }
+
+  // Build content
+  const sections: string[] = []
+  sections.push(`# ${adr.id}: ${adr.title}`)
+  sections.push('')
+  if (adr.date) sections.push(`**Date:** ${adr.date}`)
+  if (adr.status) sections.push(`**Status:** ${adr.status}`)
+  sections.push('')
+  if (adr.context) {
+    sections.push('## Context')
+    sections.push(adr.context)
+    sections.push('')
+  }
+  if (adr.problem) {
+    sections.push('## Problem')
+    sections.push(adr.problem)
+    sections.push('')
+  }
+  sections.push('## Decision')
+  sections.push(adr.decision)
+  sections.push('')
+  if (adr.consequences) {
+    sections.push('## Consequences')
+    sections.push(adr.consequences)
+    sections.push('')
+  }
+  if (adr.related_files.length > 0) {
+    sections.push('## Related Files')
+    sections.push(adr.related_files.map(f => `- \`${f}\``).join('\n'))
+  }
+
+  return {
+    content: sections.join('\n').trim(),
+    role: 'dev',
+    tags,
+    source_file: adr.source_file,
+  }
+}
+
+// =============================================================================
+// DECISIONS.yaml Types
+// =============================================================================
+
+/**
+ * Schema for a critical finding from DECISIONS.yaml.
+ */
+export const CriticalFindingSchema = z.object({
+  /** Finding ID */
+  id: z.string(),
+
+  /** Decision made (ACCEPT, DEFER, REJECT) */
+  decision: z.string(),
+
+  /** Action to take */
+  action: z.string(),
+
+  /** Source (engineering, qa, security, platform) */
+  source: z.string().optional(),
+
+  /** Additional notes */
+  notes: z.string().optional(),
+})
+
+export type CriticalFinding = z.infer<typeof CriticalFindingSchema>
+
+/**
+ * Schema for parsed DECISIONS.yaml file.
+ */
+export const ParsedDecisionsFileSchema = z.object({
+  /** Source file path */
+  source_file: z.string(),
+
+  /** Feature directory */
+  feature_dir: z.string().optional(),
+
+  /** Prefix (e.g., "WISH", "COGN") */
+  prefix: z.string().optional(),
+
+  /** Decision date */
+  decided: z.string().optional(),
+
+  /** Critical findings */
+  critical_findings: z.array(CriticalFindingSchema).default([]),
+
+  /** MVP blockers */
+  mvp_blockers: z.array(CriticalFindingSchema).default([]),
+
+  /** Action items */
+  action_items: z
+    .array(
+      z.object({
+        id: z.string(),
+        action: z.string(),
+        owner: z.string().optional(),
+        stories: z.array(z.string()).optional(),
+        new_story: z.string().optional(),
+      }),
+    )
+    .default([]),
+
+  /** New stories added */
+  new_stories_added: z
+    .array(
+      z.object({
+        title: z.string(),
+        priority: z.string().optional(),
+        reason: z.string().optional(),
+      }),
+    )
+    .default([]),
+
+  /** Story splits */
+  story_splits: z
+    .array(
+      z.object({
+        story: z.string(),
+        decision: z.string(),
+        new_stories: z
+          .array(
+            z.object({
+              id: z.string(),
+              title: z.string(),
+              complexity: z.string().optional(),
+              scope: z.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .default([]),
+
+  /** Story deferrals */
+  story_deferrals: z
+    .array(
+      z.object({
+        story: z.string(),
+        decision: z.string(),
+        reason: z.string().optional(),
+        recommendation: z.string().optional(),
+      }),
+    )
+    .default([]),
+
+  /** Warnings encountered during parsing */
+  warnings: z.array(z.string()).default([]),
+})
+
+export type ParsedDecisionsFile = z.infer<typeof ParsedDecisionsFileSchema>
+
+/**
+ * Convert a DECISIONS.yaml file to KB entries.
+ */
+export function decisionsToKbEntries(
+  decisions: ParsedDecisionsFile,
+): z.infer<typeof ParsedEntrySchema>[] {
+  const entries: z.infer<typeof ParsedEntrySchema>[] = []
+  const prefix = decisions.prefix?.toLowerCase() || 'unknown'
+
+  // Create an entry for each critical finding
+  for (const finding of decisions.critical_findings) {
+    const tags: string[] = ['epic-decision', 'critical-finding', prefix]
+    if (finding.source) tags.push(`source:${finding.source}`)
+    tags.push(`decision:${finding.decision.toLowerCase()}`)
+
+    entries.push({
+      content: `**[${prefix.toUpperCase()}] Critical Finding: ${finding.id}**\n\n**Decision:** ${finding.decision}\n\n**Action:** ${finding.action}${finding.notes ? `\n\n**Notes:** ${finding.notes}` : ''}`,
+      role: 'all',
+      tags,
+      source_file: decisions.source_file,
+    })
+  }
+
+  // Create an entry for each MVP blocker
+  for (const blocker of decisions.mvp_blockers) {
+    const tags: string[] = ['epic-decision', 'mvp-blocker', prefix]
+    if (blocker.source) tags.push(`source:${blocker.source}`)
+    tags.push(`decision:${blocker.decision.toLowerCase()}`)
+
+    entries.push({
+      content: `**[${prefix.toUpperCase()}] MVP Blocker: ${blocker.id}**\n\n**Issue:** ${blocker.action}${blocker.notes ? `\n\n**Notes:** ${blocker.notes}` : ''}`,
+      role: 'all',
+      tags,
+      source_file: decisions.source_file,
+    })
+  }
+
+  // Create entries for new stories added
+  for (const story of decisions.new_stories_added) {
+    const tags: string[] = ['epic-decision', 'new-story', prefix]
+    if (story.priority) tags.push(`priority:${story.priority.toLowerCase()}`)
+
+    entries.push({
+      content: `**[${prefix.toUpperCase()}] New Story Added**\n\n**Title:** ${story.title}${story.priority ? `\n\n**Priority:** ${story.priority}` : ''}${story.reason ? `\n\n**Reason:** ${story.reason}` : ''}`,
+      role: 'pm',
+      tags,
+      source_file: decisions.source_file,
+    })
+  }
+
+  return entries
+}
+
+// =============================================================================
+// Tech Stack Types
+// =============================================================================
+
+/**
+ * Schema for a tech stack documentation entry.
+ */
+export const TechStackEntrySchema = z.object({
+  /** Title of the tech stack document */
+  title: z.string(),
+
+  /** Category (backend, frontend, monorepo) */
+  category: z.string(),
+
+  /** Content of the document */
+  content: z.string(),
+
+  /** Source file path */
+  source_file: z.string(),
+})
+
+export type TechStackEntry = z.infer<typeof TechStackEntrySchema>
+
+/**
+ * Convert a tech stack entry to a KB-compatible ParsedEntry.
+ */
+export function techStackToKbEntry(entry: TechStackEntry): z.infer<typeof ParsedEntrySchema> {
+  const tags: string[] = ['tech-stack', 'reference', entry.category]
+
+  return {
+    content: entry.content,
+    role: 'dev',
+    tags,
+    source_file: entry.source_file,
+  }
+}

@@ -1,0 +1,113 @@
+schema: 1
+story_id: WISH-2005a
+feature_dir: plans/future/wish
+timestamp: "2026-02-03T22:06:00Z"
+
+current_phase: qa-verify-complete
+last_successful_phase: qa-verify
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+e2e_gate: passed
+completed_at: "2026-02-04T18:30:00Z"
+warnings: []
+
+phase_history:
+  - phase: setup
+    status: complete
+    timestamp: "2026-01-28T14:45:00-07:00"
+  - phase: planning
+    status: complete
+    timestamp: "2026-01-28T15:30:00-07:00"
+  - phase: implementation
+    status: complete
+    timestamp: "2026-01-29T10:00:00-07:00"
+  - phase: code-review
+    status: complete
+    timestamp: "2026-01-29T12:00:00-07:00"
+  - phase: e2e-execution
+    status: complete
+    timestamp: "2026-02-03T23:30:00Z"
+  - phase: qa-verify
+    status: complete
+    timestamp: "2026-02-04T18:30:00Z"
+
+implementation_status:
+  stage: done
+  code_review_verdict: PASS
+  code_review_iteration: 1
+  moved_to_qa: true
+  completed_at: "2026-01-29T12:00:00-07:00"
+
+phases_completed:
+  - name: "Phase 0: Setup"
+    status: COMPLETE
+    notes: "Story already in in-progress, SCOPE.md/AGENT-CONTEXT.md created"
+  - name: "Phase 1: Planning"
+    status: COMPLETE
+    notes: "IMPLEMENTATION-PLAN.md created"
+  - name: "Phase 2: RTK Query Mutation"
+    status: COMPLETE
+    notes: "useReorderWishlistMutation added"
+  - name: "Phase 3: SortableWishlistCard"
+    status: COMPLETE
+    notes: "Component with drag handle"
+  - name: "Phase 4: DraggableWishlistGallery"
+    status: COMPLETE
+    notes: "Container with DndContext"
+  - name: "Phase 5: Integration"
+    status: COMPLETE
+    notes: "main-page.tsx updated"
+  - name: "Phase 6: Unit Tests"
+    status: COMPLETE
+    notes: "35 tests passing"
+  - name: "Phase 7: HTTP Tests"
+    status: COMPLETE
+    notes: "wishlist-reorder.http created"
+  - name: "Phase 8: Documentation"
+    status: COMPLETE
+    notes: "PROOF and FRONTEND-LOG written"
+
+verification_results:
+  type_check: PASS
+  lint: PASS
+  unit_tests: PASS
+  http_tests: CREATED
+
+artifacts_created:
+  - "_implementation/SCOPE.md"
+  - "_implementation/AGENT-CONTEXT.md"
+  - "_implementation/IMPLEMENTATION-PLAN.md"
+  - "_implementation/FRONTEND-LOG.md"
+  - "PROOF-WISH-2005a.md"
+  - "__http__/wishlist-reorder.http"
+
+files_changed:
+  new:
+    - "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/index.tsx"
+    - "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/__tests__/SortableWishlistCard.test.tsx"
+    - "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/index.tsx"
+    - "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/__tests__/DraggableWishlistGallery.test.tsx"
+    - "__http__/wishlist-reorder.http"
+  modified:
+    - "packages/core/api-client/src/schemas/wishlist.ts"
+    - "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    - "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    - "apps/web/app-wishlist-gallery/package.json"
+
+acceptance_criteria_status:
+  implemented: 27
+  deferred: 2
+  total: 29
+  notes: |
+    AC 17: Cross-page toast not needed (pagination prevents cross-page drag)
+    AC 27: Playwright E2E tests deferred and now being completed in execute phase
+
+code_review_results:
+  lint: PASS
+  style_compliance: PASS
+  syntax: PASS
+  security: PASS
+  type_check: PASS
+  build: PASS

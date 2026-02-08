@@ -1,0 +1,69 @@
+# Context7 Integration Configuration
+#
+# Controls how the workflow integrates with Context7 for documentation caching.
+# Context7 provides up-to-date documentation for libraries and frameworks.
+
+version: 1
+updated_at: 2026-02-06
+
+# Enable/disable Context7 integration
+enabled: true
+
+# Libraries to always keep cached (high usage in this project)
+pinned_libraries:
+  - id: "/vercel/next.js"
+    refresh: weekly
+    reason: "Primary frontend framework patterns"
+
+  - id: "/tailwindlabs/tailwindcss"
+    refresh: weekly
+    reason: "Styling system"
+
+  - id: "/colinhacks/zod"
+    refresh: monthly
+    reason: "Schema validation (core pattern)"
+
+  - id: "/tanstack/react-query"
+    refresh: weekly
+    reason: "Data fetching patterns"
+
+  - id: "/testing-library/react"
+    refresh: monthly
+    reason: "Testing patterns"
+
+  - id: "/vitest-dev/vitest"
+    refresh: monthly
+    reason: "Test runner"
+
+  - id: "/microsoft/playwright"
+    refresh: monthly
+    reason: "E2E testing"
+
+# Libraries to cache on first use
+on_demand_patterns:
+  - "react-*"
+  - "@tanstack/*"
+  - "@radix-ui/*"
+  - "framer-motion"
+  - "drizzle-orm"
+  - "hono"
+
+# Cache settings
+cache:
+  location: ".claude/cache/context7/"
+  max_size_mb: 100
+  entry_ttl_days: 30
+  cleanup_on_startup: true
+
+# Query caching
+# Cache query results to avoid repeated lookups
+query_cache:
+  enabled: true
+  max_entries_per_library: 50
+  ttl_hours: 24
+
+# Fallback behavior when Context7 is unavailable
+fallback:
+  use_cached_if_stale: true
+  max_stale_days: 7
+  log_fallback: true

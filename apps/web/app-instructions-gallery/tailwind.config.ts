@@ -8,9 +8,8 @@ const config: Config = {
     './src/**/*.{ts,tsx}',
     './index.html',
     // Include shared package components
-    '../../packages/core/ui/src/**/*.{ts,tsx}',
+    '../../packages/core/app-component-library/src/**/*.{ts,tsx}',
     '../../packages/core/accessibility/src/**/*.{ts,tsx}',
-    
   ],
   theme: {
     extend: {

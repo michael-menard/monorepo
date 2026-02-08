@@ -21,11 +21,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "^22.15.2",
+    "@types/node": "^22.19.1",
     "typescript": "^5.8.2",
     "vitest": "^3.0.8"
   },
-  "peerDependencies": {},
   "sideEffects": false,
   "keywords": [
     "upload",

@@ -1,0 +1,213 @@
+# Knowledge Base Seed Data: Resilience & Observability
+# Import via: kb_bulk_import or add to db-seed.ts
+# Created: 2026-02-05
+
+entries:
+  - content: |
+      # @repo/resilience Package
+
+      Provides resilience patterns for protecting external service calls.
+
+      ## Circuit Breaker (Opossum)
+      ```typescript
+      import { createCircuitBreaker } from '@repo/resilience'
+
+      const breaker = createCircuitBreaker(
+        async (signal) => fetch('/api', { signal }),
+        { name: 'my-api', timeout: 5000, errorThresholdPercentage: 50 }
+      )
+      const result = await breaker.fire()
+      ```
+
+      ## Rate Limiter (Bottleneck)
+      ```typescript
+      import { createRateLimiter } from '@repo/resilience'
+
+      const limiter = createRateLimiter({
+        name: 'openai',
+        reservoir: 60,
+        reservoirRefreshAmount: 60,
+        reservoirRefreshInterval: 60000, // 60 RPM
+      })
+      const result = await limiter.schedule(() => callAPI())
+      ```
+
+      ## Timeout Utilities
+      ```typescript
+      import { withTimeout, TimeoutError } from '@repo/resilience'
+
+      const result = await withTimeout(
+        (signal) => fetch('/api', { signal }),
+        5000,
+        'api-call'
+      )
+      ```
+
+      ## Pre-built Service Policies
+      - `getOpenAIPolicy()` - 60 RPM, 30s timeout
+      - `getCognitoPolicy()` - 50 concurrent, 10s timeout
+      - `getS3Policy()` - 100 concurrent, 30s timeout
+      - `getPostgresPolicy()` - 50 concurrent, 30s timeout
+      - `getRedisPolicy()` - 200 concurrent, 1s timeout
+    role: dev
+    entryType: runbook
+    tags:
+      - resilience
+      - circuit-breaker
+      - rate-limiter
+      - timeout
+      - package
+
+  - content: |
+      # @repo/observability Package
+
+      Provides OpenTelemetry tracing and Prometheus metrics.
+
+      ## Initialize Tracing
+      ```typescript
+      import { initializeTracing } from '@repo/observability'
+
+      // Call early in app startup
+      initializeTracing({
+        serviceName: 'my-api',
+        environment: 'production',
+        metricsPort: 9464,
+      })
+      ```
+
+      ## Hono Middleware
+      ```typescript
+      import {
+        createTracingMiddleware,
+        createHttpMetricsMiddleware,
+        createMetricsEndpoint,
+      } from '@repo/observability'
+
+      const app = new Hono()
+      app.use('*', createTracingMiddleware({ serviceName: 'my-api' }))
+      app.use('*', createHttpMetricsMiddleware())
+      app.get('/metrics', createMetricsEndpoint())
+      ```
+
+      ## Custom Spans
+      ```typescript
+      import { withSpan, addSpanAttributes } from '@repo/observability'
+
+      const result = await withSpan('processOrder', async (span) => {
+        span.setAttribute('order.id', orderId)
+        return await processOrder(orderId)
+      })
+      ```
+
+      ## Environment Variables
+      - `ENABLE_METRICS=true` - Enable observability
+      - `METRICS_PORT=9464` - Prometheus exporter port
+    role: dev
+    entryType: runbook
+    tags:
+      - observability
+      - tracing
+      - metrics
+      - opentelemetry
+      - prometheus
+      - package
+
+  - content: |
+      # Observability Stack (Docker)
+
+      The monorepo includes Prometheus, Grafana, and OpenTelemetry Collector.
+
+      ## Services
+      - **Prometheus**: http://localhost:9090 - Metrics collection
+      - **Grafana**: http://localhost:3003 (admin/admin) - Dashboards
+      - **OTel Collector**: localhost:4317 (gRPC), 4318 (HTTP)
+
+      ## Starting Services
+      ```bash
+      docker-compose up -d  # Starts all including observability
+      pnpm dev              # Also starts docker-compose
+      ```
+
+      ## Pre-built Dashboards
+      1. **API Overview** - Request rate, latency, error rate
+      2. **Resilience** - Circuit breaker states and events
+      3. **Database** - Connection pool, query latency
+
+      ## Configuration Files
+      - `infra/prometheus/prometheus.yml` - Scrape config
+      - `infra/grafana/provisioning/` - Datasources and dashboards
+      - `infra/otel/otel-collector.yml` - OTLP receiver config
+    role: dev
+    entryType: runbook
+    tags:
+      - observability
+      - docker
+      - prometheus
+      - grafana
+      - infrastructure
+
+  - content: |
+      # Circuit Breaker Decision
+
+      **Decision**: Use Opossum for circuit breakers across all services.
+
+      **Context**: The codebase had custom circuit breaker implementations in
+      `@repo/orchestrator` and `@repo/api-client`. These were inconsistent
+      and lacked features like half-open state testing.
+
+      **Rationale**:
+      - Opossum is battle-tested (used by Netflix, Red Hat)
+      - Provides configurable thresholds and timeouts
+      - Emits events for monitoring (open, close, half-open)
+      - Integrates with AbortController for cancellation
+
+      **Configuration Guidelines**:
+      - `timeout`: Set to 2-3x expected p99 latency
+      - `errorThresholdPercentage`: 50% is a good default
+      - `volumeThreshold`: At least 5 to avoid false positives
+      - `resetTimeout`: 30-60 seconds for most services
+
+      **Consequences**:
+      - Existing custom implementations should migrate to @repo/resilience
+      - All external service calls should use service policies
+    role: dev
+    entryType: decision
+    tags:
+      - resilience
+      - circuit-breaker
+      - opossum
+      - architecture
+
+  - content: |
+      # Observability Decision
+
+      **Decision**: Use OpenTelemetry + Prometheus + Grafana for observability.
+
+      **Context**: The monorepo lacked visibility into API performance,
+      error rates, and service health.
+
+      **Rationale**:
+      - OpenTelemetry is vendor-agnostic (can export to any backend)
+      - Prometheus is pull-based (better for containers)
+      - Grafana provides rich visualization
+      - Auto-instrumentation reduces manual work
+
+      **Trade-offs**:
+      - Additional Docker services (~500MB RAM total)
+      - OpenTelemetry SDK adds ~50ms startup time
+      - Metrics collection adds ~1-2% CPU overhead
+
+      **Alternatives Considered**:
+      - Datadog: Excellent but expensive for dev
+      - Jaeger: Good for tracing but no metrics
+      - Custom logging: Not scalable
+
+      **Future**: Can add Jaeger/Tempo for trace storage if needed.
+    role: dev
+    entryType: decision
+    tags:
+      - observability
+      - opentelemetry
+      - prometheus
+      - grafana
+      - architecture

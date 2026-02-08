@@ -1,0 +1,43 @@
+schema: 1
+story_id: "WISH-2002"
+timestamp: "2026-02-03T00:00:00Z"
+
+domain: "wishlist"
+scope: "E2E tests for add item flow"
+
+lessons_learned: []
+
+adrs: []
+
+patterns:
+  - name: "E2E Test Structure"
+    source: "apps/web/playwright/tests/wishlist/gallery-mvp.spec.ts"
+    description: "Use test.describe blocks to organize tests by AC groups. Use authenticatedPage fixture from browser-auth.fixture.ts. Use data-testid selectors for reliability."
+  - name: "Form Testing Pattern"
+    source: "apps/web/playwright/tests/wishlist/purchase-flow.spec.ts"
+    description: "Use getByLabel for form inputs, getByRole for buttons/dropdowns. Use page.route for API mocking when needed. Wait for toasts with getByText and expect().toBeVisible()."
+  - name: "Live Backend Testing"
+    source: "apps/web/playwright/playwright.gallery-mvp.config.ts"
+    description: "Config uses baseURL http://localhost:3000 with no webServer. Tests run against already-running dev servers (frontend on 3000, backend on 9000). VITE_ENABLE_MSW=false."
+
+dependencies:
+  - type: "test-fixture"
+    path: "apps/web/playwright/fixtures/browser-auth.fixture.ts"
+    description: "Provides authenticatedPage fixture for logged-in tests"
+  - type: "test-config"
+    path: "apps/web/playwright/playwright.gallery-mvp.config.ts"
+    description: "Playwright config for live backend testing"
+  - type: "component"
+    path: "apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx"
+    description: "Add item page component being tested"
+  - type: "component"
+    path: "apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx"
+    description: "Form component with all input fields"
+
+notes:
+  - "Story WISH-2002 implementation is complete. All code, unit tests, and manual verification done."
+  - "E2E tests are the final requirement per v7.1 workflow mandate."
+  - "Tests must verify key user flows: navigate to add page, fill form, submit, see success/error feedback."
+  - "Backend already has comprehensive test coverage (157/157 passing)."
+  - "Frontend has good coverage (78/92 passing, 85%)."
+  - "No architectural or implementation lessons to apply - focus is purely on E2E test creation."

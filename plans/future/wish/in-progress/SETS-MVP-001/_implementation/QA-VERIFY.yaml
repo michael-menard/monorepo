@@ -1,0 +1,186 @@
+schema: 1
+story_id: "SETS-MVP-001"
+timestamp: "2026-02-01T20:00:00Z"
+
+verdict: FAIL
+
+tests_executed: true
+test_results:
+  unit:
+    pass: 143
+    fail: 0
+  integration:
+    pass: 23
+    fail: 4
+
+coverage: "All new database columns and Zod schemas tested; service layer implementation incomplete"
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "Tests use proper Vitest patterns, semantic assertions, no setTimeout/setInterval found"
+
+acs_verified:
+  - ac_id: "AC1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "itemStatusEnum exists with wishlist/owned values"
+
+  - ac_id: "AC2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "purchaseDate column exists as timestamp"
+
+  - ac_id: "AC3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "purchasePrice column exists as text"
+
+  - ac_id: "AC4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "purchaseTax column exists as text"
+
+  - ac_id: "AC5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "purchaseShipping column exists as text"
+
+  - ac_id: "AC6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "buildStatusEnum exists with not_started/in_progress/completed"
+
+  - ac_id: "AC7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "statusChangedAt column exists as timestamp"
+
+  - ac_id: "AC8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Composite index userStatusPurchaseDateIdx created"
+
+  - ac_id: "AC9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "ItemStatusSchema exported from @repo/api-client"
+
+  - ac_id: "AC10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "BuildStatusSchema exported from @repo/api-client"
+
+  - ac_id: "AC11"
+    status: FAIL
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "CRITICAL: Backend domain types incomplete - apps/api/lego-api/domains/wishlist/types.ts is missing status, statusChangedAt, purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus fields. TypeScript compilation fails with errors on repositories.ts lines 387, 393."
+
+  - ac_id: "AC12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: "MarkAsPurchasedSchema exported and tested"
+
+  - ac_id: "AC13"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    notes: "UpdateBuildStatusSchema exported and tested"
+
+  - ac_id: "AC14"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[13]"
+    notes: "Migration 0009_add_owned_status.sql creates enums and columns"
+
+  - ac_id: "AC15"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[14]"
+    notes: "status column defaults to 'wishlist' in migration"
+
+  - ac_id: "AC16"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[15]"
+    notes: "DOWN migration included as commented SQL"
+
+  - ac_id: "AC17"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[16]"
+    notes: "64 unit tests pass for schema layer"
+
+  - ac_id: "AC18"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[17]"
+    notes: "Tests verify default status='wishlist'"
+
+  - ac_id: "AC19"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[18]"
+    notes: "Tests verify nullable fields for wishlist items"
+
+  - ac_id: "AC20"
+    status: FAIL
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[19]"
+    notes: "4 integration tests failing - mock receives undefined instead of effectiveFilters object. Root cause: service creates effectiveFilters correctly but Vitest mock spy doesn't capture it. Indicates test harness issue, but without passing tests we cannot verify backward compatibility guarantees."
+
+  - ac_id: "AC21"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[20]"
+    notes: "Service layer implements status filtering logic with default 'wishlist'"
+
+  - ac_id: "AC22"
+    status: FAIL
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[21]"
+    notes: "Cannot verify without passing integration tests for backward compatibility"
+
+  - ac_id: "AC23"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[22]"
+    notes: "Service handles status enum correctly when explicitly provided"
+
+architecture_compliant: false
+architecture_notes:
+  - "ADR-001 (API paths): Not applicable - no API path changes"
+  - "ADR-005 (Testing Strategy): VIOLATION - Integration tests failing, cannot verify real service behavior"
+  - "ADR-006 (E2E Tests): Not required per SCOPE.yaml (frontend_impacted=false)"
+  - "Ports & Adapters: Interface updated correctly but implementation has type errors"
+
+issues:
+  - severity: CRITICAL
+    category: type_safety
+    description: "Backend domain types incomplete in apps/api/lego-api/domains/wishlist/types.ts"
+    impact: "TypeScript compilation fails; repository mapper cannot access new fields; runtime errors will occur"
+    files:
+      - "apps/api/lego-api/domains/wishlist/types.ts"
+      - "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+    resolution_required: "Add missing fields (status, statusChangedAt, purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus) to WishlistItemSchema in types.ts"
+
+  - severity: CRITICAL
+    category: integration_tests
+    description: "4 integration tests failing for status filtering and backward compatibility"
+    impact: "Cannot verify that existing API consumers will only see wishlist items; backward compatibility not proven"
+    files:
+      - "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+    resolution_required: "Fix test harness to properly capture effectiveFilters object passed to repository mock"
+
+  - severity: HIGH
+    category: evidence_accuracy
+    description: "EVIDENCE.yaml AC11 claims PASS but backend types are incomplete"
+    impact: "False positive in evidence generation; QA process caught the error but dev phase missed it"
+    resolution_required: "Verify PROOF generation process includes backend domain types verification"
+
+lessons_to_record:
+  - lesson: "Backend domain types (apps/api/*/domains/*/types.ts) must be updated when database schema changes, not just @repo/api-client schemas"
+    category: blocker
+    tags: ["backend", "schema-alignment", "type-safety"]
+
+  - lesson: "Integration test mocks should be verified to capture all arguments correctly; mock behavior should be tested separately"
+    category: testing
+    tags: ["vitest", "mocking", "integration-tests"]
+
+  - lesson: "QA verification must run TypeScript compilation on all touched packages to catch type errors"
+    category: process
+    tags: ["qa", "type-checking", "quality-gate"]
+
+tokens:
+  in: 46666
+  out: 1500

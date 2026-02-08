@@ -29,6 +29,7 @@ vi.mock('@/services/auth/AuthProvider', () => ({
 
 vi.mock('@/components/Navigation/NavigationProvider', () => ({
   useNavigation: () => mockNavigation,
+  useNavigationOptional: () => mockNavigation,
 }))
 
 vi.mock('@tanstack/react-router', () => ({

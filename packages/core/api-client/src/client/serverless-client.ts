@@ -187,7 +187,7 @@ export class ServerlessApiClient {
    * Health check endpoint for connection warming
    */
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    return this.get('/api/v2/health', { skipRetry: true, timeout: 5000 })
+    return this.get('/health', { skipRetry: true, timeout: 5000 })
   }
 
   /**

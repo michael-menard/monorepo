@@ -1,0 +1,186 @@
+id: WKFL-008
+title: "Workflow Experimentation Framework"
+status: pending
+priority: P3
+phase: experimentation
+created_at: 2026-02-06T17:00:00-07:00
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies:
+  - WKFL-001
+blocks: []
+
+owner: null
+estimated_tokens: 80000
+
+tags:
+  - experimentation
+  - ab-testing
+  - metrics
+
+summary: |
+  A/B test workflow variations (fast-track, parallel review, etc.) with
+  metrics tracking and controlled rollout based on statistical significance.
+
+goal: |
+  Create an experimentation framework that:
+  1. Defines experiments with traffic splits
+  2. Tags stories with experiment variants
+  3. Tracks metrics per variant
+  4. Computes statistical significance
+  5. Generates rollout recommendations
+
+non_goals:
+  - Auto-rollout (proposals only)
+  - Complex ML-based experiment design
+  - Cross-project experiments
+
+scope:
+  in:
+    - .claude/config/experiments.yaml schema
+    - experiment-analyzer.agent.md (sonnet)
+    - /experiment-report command
+    - Traffic routing mechanism
+    - Metric comparison and winner detection
+    - Rollout recommendations
+
+  out:
+    - Auto-applying winning experiments
+    - Complex statistical modeling
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Define experiments with traffic split (e.g., 20%)"
+    verification: "experiments.yaml accepts traffic field, routing respects it"
+
+  - id: AC-2
+    description: "Tag stories with experiment variant"
+    verification: "Story YAML has experiment_variant field when in experiment"
+
+  - id: AC-3
+    description: "Track metrics per variant (gate_pass_rate, cycle_time, etc.)"
+    verification: "OUTCOME.yaml includes variant, metrics queryable by variant"
+
+  - id: AC-4
+    description: "Statistical comparison (min 10 stories per variant)"
+    verification: "Report only makes claims with >= 10 samples per variant"
+
+  - id: AC-5
+    description: "Generate rollout recommendation"
+    verification: "EXPERIMENT-REPORT.yaml has recommendation with confidence"
+
+technical_notes: |
+  ## experiments.yaml Schema
+
+  ```yaml
+  experiments:
+    - id: exp-fast-track
+      description: "Skip elaboration for trivial stories"
+      status: active
+      created_at: 2026-02-01
+      traffic: 0.2  # 20%
+      eligibility:
+        ac_count_max: 2
+        complexity: simple
+      metrics:
+        primary: gate_pass_rate
+        secondary:
+          - cycle_time
+          - rework_rate
+          - token_cost
+      min_sample_size: 10
+
+    - id: exp-parallel-review
+      description: "Run code review + QA verify in parallel"
+      status: active
+      created_at: 2026-02-05
+      traffic: 0.1  # 10%
+      eligibility:
+        all: true
+      metrics:
+        primary: time_to_merge
+        secondary:
+          - finding_overlap
+          - gate_pass_rate
+      min_sample_size: 10
+  ```
+
+  ## Story Tagging
+
+  During story creation, check experiments:
+
+  ```javascript
+  for (const exp of active_experiments) {
+    if (isEligible(story, exp.eligibility)) {
+      if (Math.random() < exp.traffic) {
+        story.experiment_variant = exp.id
+        break
+      }
+    }
+  }
+  // If no experiment assigned, story.experiment_variant = 'control'
+  ```
+
+  ## EXPERIMENT-REPORT.yaml
+
+  ```yaml
+  report_date: 2026-02-15
+  experiment: exp-fast-track
+
+  variants:
+    control:
+      sample_size: 45
+      gate_pass_rate: 0.82
+      avg_cycle_time_hours: 4.2
+      avg_tokens: 156000
+
+    treatment:
+      sample_size: 12
+      gate_pass_rate: 0.83
+      avg_cycle_time_hours: 2.8
+      avg_tokens: 98000
+
+  analysis:
+    primary_metric: gate_pass_rate
+    difference: +0.01 (not significant)
+    p_value: 0.45
+    confidence: low
+
+    secondary_metrics:
+      cycle_time:
+        difference: -33%
+        p_value: 0.02
+        confidence: high
+
+  recommendation:
+    action: expand_traffic
+    rationale: |
+      Gate pass rate maintained (0.83 vs 0.82, p=0.45).
+      Significant cycle time reduction (-33%, p=0.02).
+      Recommend expanding to 50% traffic for more data.
+    confidence: medium
+  ```
+
+  ## Rollout Actions
+
+  - `expand_traffic`: Increase experiment traffic %
+  - `rollout`: Make treatment the new default
+  - `stop`: End experiment, keep control
+  - `continue`: Need more data
+
+reuse_plan:
+  must_reuse:
+    - OUTCOME.yaml from WKFL-001
+    - Existing story creation flow
+
+  may_create:
+    - experiments.yaml schema
+    - experiment-analyzer.agent.md
+    - /experiment-report command
+    - Traffic routing in story creation
+
+token_budget:
+  estimated: 80000
+  enforcement: warning

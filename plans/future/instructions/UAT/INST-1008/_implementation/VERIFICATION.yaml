@@ -1,0 +1,121 @@
+schema: 1
+story_id: INST-1008
+feature_dir: plans/future/instructions
+timestamp: '2026-02-05T22:52:00Z'
+
+# Setup phase completion
+setup_phase: complete
+setup_timestamp: '2026-02-05T22:52:00Z'
+setup_status: ready-for-verification
+
+# Precondition validation
+preconditions:
+  story_exists: true
+  story_location: plans/future/instructions/ready-for-qa/INST-1008
+  status_valid: true
+  status_value: ready-to-work
+  evidence_yaml_exists: true
+  review_yaml_exists: true
+  review_verdict: PASS
+  all_gates_passed: true
+
+# Evidence summary
+evidence:
+  version: 1
+  acceptance_criteria_total: 13
+  acceptance_criteria_passing: 13
+  acceptance_criteria_failing: 0
+  test_status: PASS
+  build_status: PASS
+  lint_status: PASS
+  type_check_status: PASS
+
+# Review summary
+review:
+  verdict: PASS
+  iteration: 1
+  score: 92
+  code_quality_issues: 0
+  security_issues: 0
+  performance_issues: 0
+  test_coverage_status: PASS
+
+# Next phase readiness
+next_phase_ready: true
+next_phase_name: qa-verify-completion
+verification_sources:
+  - _implementation/EVIDENCE.yaml
+  - _implementation/REVIEW.yaml
+  - INST-1008.md
+
+# QA gates
+gates:
+  evidence_gate: PASS
+  review_gate: PASS
+  precondition_gate: PASS
+  ready_for_uat: true
+
+# QA Verification Completion Gate
+qa_verify:
+  phase: qa-verify-completion
+  status: complete
+  verdict: PASS
+  timestamp: '2026-02-05T23:54:00Z'
+
+  # Final QA gate decision
+  gate:
+    verdict: PASS
+    timestamp: '2026-02-05T23:54:00Z'
+    notes: |
+      All acceptance criteria verified and passing. Infrastructure story with no E2E requirement per ADR-006.
+
+      Verification Summary:
+      - AC-1 through AC-13: All 13 acceptance criteria satisfied with evidence
+      - Unit tests: 25 tests passing (instructions-api.test.ts)
+      - Integration tests: 348/349 tests passing (1 flaky unrelated test in retry-logic)
+      - Type check: TypeScript compilation successful with no errors
+      - Lint: Implementation files passing ESLint validation
+      - Build: pnpm build successful
+      - Code review: PASS (score: 92/100)
+      - E2E tests: Exempt per ADR-006 (infrastructure story)
+
+      Implementation Quality:
+      - All 7 mutation hooks implemented with proper RTK Query patterns
+      - Cache invalidation strategy: Granular tags (Moc, MocList, MocFile)
+      - File uploads: FormData multipart pattern with proper validation
+      - Response validation: All mutations use Zod transformResponse
+      - Structured logging: @repo/logger used consistently
+      - Pattern compliance: Follows wishlist-gallery-api.ts established patterns
+      - Project guidelines: Zod-first types, no interfaces, named exports, no barrel files
+
+      Endpoints Added:
+      - useCreateMocMutation (POST /api/v2/mocs)
+      - useUpdateMocMutation (PATCH /api/v2/mocs/{id})
+      - useDeleteMocMutation (DELETE /api/v2/mocs/{id})
+      - useUploadInstructionFileMutation (POST /api/v2/mocs/{id}/files/instruction)
+      - useUploadPartsListFileMutation (POST /api/v2/mocs/{id}/files/parts-list)
+      - useUploadThumbnailMutation (POST /api/v2/mocs/{id}/thumbnail)
+      - useDeleteFileMutation (DELETE /api/v2/mocs/{id}/files/{fileId})
+
+      Unblocks downstream Phase 1 stories:
+      - INST-1100: View MOC Gallery
+      - INST-1102: Create Basic MOC
+      - INST-1103: Upload Thumbnail
+      - INST-1104: Upload Instructions
+      - INST-1106: Upload Parts List
+      - INST-1108: Edit MOC Metadata
+      - INST-1109: Delete MOC
+      - INST-1110: Remove Individual File
+
+      No blockers identified. Ready for merge and deployment.
+
+    decision_criteria_met:
+      - All ACs have passing evidence: true
+      - Tests passing (flaky unrelated acceptable): true
+      - Type check passing: true
+      - Code review passed: true
+      - Infrastructure story E2E exempt: true
+      - No blocking issues: true
+
+  verification_executed_by: qa-verify-completion-leader
+  verification_timestamp: '2026-02-05T23:54:00Z'

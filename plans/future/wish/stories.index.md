@@ -4,7 +4,7 @@ title: "WISH Stories Index"
 status: active
 story_prefix: "WISH"
 created_at: "2026-01-25T23:20:00Z"
-updated_at: "2026-01-31T23:55:00Z"
+updated_at: "2026-02-04T18:45:00Z"
 ---
 
 # WISH Stories Index
@@ -18,16 +18,16 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 | completed | 22 |
 | in-progress | 0 |
 | review | 0 |
-| ready-for-code-review | 1 |
+| ready-for-code-review | 0 |
 | ready-for-qa | 0 |
-| uat | 0 |
+| uat | 1 |
 | in-qa | 0 |
 | backlog | 13 |
 | elaboration | 3 |
 | needs-refinement | 1 |
 | deferred | 17 |
 | ready-to-work | 17 |
-| pending | 10 |
+| pending | 12 |
 | created | 1 |
 | cancelled | 1 |
 | BLOCKED | 1 |
@@ -165,20 +165,26 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005a: Drag-and-drop reordering with dnd-kit
 
-**Status:** completed
-**Depends On:** WISH-2002, WISH-2003, WISH-2004
+**Status:** uat
+**Depends On:** WISH-2002, WISH-2003, WISH-2041
 **Phase:** 4 - UX Polish
 
-**Feature:** Core drag-and-drop functionality with dnd-kit library, persisted reorder via `PATCH /api/wishlist/reorder` endpoint, awareness of pagination boundaries.
+**Feature:** Core drag-and-drop functionality with dnd-kit library, persisted reorder via `PUT /api/wishlist/reorder` endpoint, awareness of pagination boundaries.
 
 **Endpoints:**
-- `PATCH /api/wishlist/reorder`
+- `PUT /api/wishlist/reorder`
 
 **Complexity:** Large
 
 **Goal:** Implement drag-and-drop priority reordering with persistence
 
 **Risk Notes:** dnd-kit integration requires careful handling of pagination context and state synchronization
+
+**Code Review Verdict:** PASS (2026-01-29) - All review checks passed, 100% quality score
+
+**QA Verdict:** PASS (2026-02-04) - All 29 acceptance criteria verified, 53 unit tests passing, 13 E2E tests passing, no blocking issues
+
+**Story File:** `plans/future/wish/UAT/WISH-2005a/WISH-2005a.md`
 
 ---
 
@@ -244,7 +250,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2006: Accessibility
 
-**Status:** completed
+**Status:** in-qa
 **Depends On:** WISH-2005
 **Phase:** 5 - Accessibility (Deferred to Phase 2 after core functionality)
 
@@ -3614,7 +3620,7 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #4)
 
 ## SETS-MVP-001: Unified Schema Extension
 
-**Status:** ready-to-work
+**Status:** ready-for-qa
 **Depends On:** WISH-2000
 **Phase:** 1 - Foundation
 **Story Prefix:** SETS-MVP
@@ -3757,7 +3763,7 @@ Track and display build completion dates and maintain a history of build status 
 
 ## SETS-MVP-0310: Status Update Flow
 
-**Status:** backlog
+**Status:** elaboration
 **Depends On:** SETS-MVP-001
 **Split From:** SETS-MVP-003
 **Phase:** 2 - MVP Feature
@@ -3777,7 +3783,7 @@ Core purchase flow using the unified model - update item status to 'owned' with 
 - AC1-6: Modal flow (confirmation step, purchase details form, optional fields, skip/save buttons, calculated total)
 - AC7-10: API changes (PATCH /api/wishlist/:id/purchase endpoint, status update, ownership validation, return updated item)
 
-**Story File:** `plans/future/wish/backlog/SETS-MVP-0310/SETS-MVP-0310.md`
+**Story File:** `plans/future/wish/elaboration/SETS-MVP-0310/SETS-MVP-0310.md`
 
 ---
 
@@ -3927,5 +3933,76 @@ Collection-level build status analytics showing completion percentage, built vs 
 - Accessibility compliance (ARIA labels, keyboard navigation)
 
 **Story File:** `plans/future/wish/backlog/SETS-MVP-0370/SETS-MVP-0370.md`
+
+---
+
+## SETS-MVP-0380: WISH-2004 Endpoint Deprecation and Migration Strategy
+
+**Status:** pending
+**Depends On:** SETS-MVP-0310
+**Follow-up From:** SETS-MVP-0310
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Documentation-only story to define deprecation timeline and migration strategy for the legacy WISH-2004 endpoint (`POST /api/wishlist/:id/purchased`) after SETS-MVP-0310 implements the unified model approach.
+
+**Feature:** Migration strategy document covering deprecation timeline, feature flag approach, service layer conflict resolution, consumer notification plan, and rollback strategy.
+
+**Goal:** Document a clear deprecation timeline and migration strategy for the WISH-2004 endpoint to ensure smooth transition to the unified model approach with minimal disruption to consumers.
+
+**Dependencies:** SETS-MVP-0310 (Status Update Flow - must complete implementation before deprecation can occur)
+
+**Source:** Follow-up from QA Elaboration of SETS-MVP-0310 - Gap identified during elaboration (Finding #1: "WISH-2004 migration strategy undefined")
+
+**Acceptance Criteria:**
+- Migration strategy document with deprecation timeline, specific dates/phases
+- Feature flag approach specified or explanation of why not needed
+- Service layer resolution strategy for `markAsPurchased()` method conflict
+- Consumer notification plan with communication templates
+- Consumer migration guide with code examples showing old vs new approach
+- Rollback plan with specific trigger conditions and procedures
+- Document reviewed by backend and frontend engineers
+- Monitoring/metrics plan to track migration progress
+- Backward compatibility constraints documented
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0380/SETS-MVP-0380.md`
+
+---
+
+## SETS-MVP-0400: Consumer Notification and Migration Guide for API Endpoint Transition
+
+**Status:** pending
+**Depends On:** SETS-MVP-0310
+**Follow-up From:** SETS-MVP-0310
+**Phase:** 2 - MVP Feature
+**Story Prefix:** SETS-MVP
+
+### Scope
+
+Create comprehensive migration documentation and establish notification strategy to guide API consumers through the transition from `POST /api/wishlist/:id/purchased` to `PATCH /api/wishlist/:id/purchase`.
+
+**Feature:** API migration guide documenting behavioral differences, request/response schema changes, and migration steps; consumer notification plan covering channels, timing, and stakeholders; API documentation updates with deprecation notices.
+
+**Goal:** Ensure smooth adoption of the unified model approach by providing clear migration guidance and proactive communication to all API consumers.
+
+**Dependencies:** SETS-MVP-0310 (Status Update Flow - must be implemented before migration documentation is finalized)
+
+**Source:** Follow-up from QA Elaboration of SETS-MVP-0310 - Enhancement opportunity identified during elaboration (Finding #3: "Consumer notification strategy for API transition")
+
+**Acceptance Criteria:**
+- Migration guide documenting behavioral differences between old and new endpoints
+- Request/response schema change documentation with code examples
+- Migration timeline and deprecation schedule documented
+- Feature flag behavior documented (if applicable)
+- Notification channels and timing defined
+- All API consumers identified (GotItModal, external consumers)
+- Notification message templates created
+- API documentation updated with deprecation notices
+- New endpoint documentation with migration guide links
+- API changelog updated with migration information
+
+**Story File:** `plans/future/wish/backlog/SETS-MVP-0400/SETS-MVP-0400.md`
 
 ---

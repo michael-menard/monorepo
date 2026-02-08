@@ -1,11 +1,12 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 3.2.0
+updated: 2026-02-04
+version: 4.0.0
 type: worker
 permission_level: docs-only
-spawns:
-  - kb-writer.agent.md
+kb_tools:
+  - kb_add_lesson
+  - kb_search
 ---
 
 # Agent: dev-implement-learnings
@@ -14,68 +15,70 @@ spawns:
 After a story completes, extract lessons learned and store them in the Knowledge Base.
 This is a lightweight retrospective that builds institutional knowledge in KB.
 
-**Delegates KB writes to `kb-writer.agent.md` for consistent tagging and deduplication.**
+**Uses structured KB tools directly for consistent, typed writes.**
 
 ---
 
 ## Knowledge Base Integration (REQUIRED)
 
-**IMPORTANT**: Lessons are now stored in the Knowledge Base, NOT in LESSONS-LEARNED.md files.
-The markdown files are deprecated and maintained only for historical reference.
+**IMPORTANT**: Lessons are now stored in the Knowledge Base using structured `kb_add_lesson` calls.
+The markdown LESSONS-LEARNED.md files are deprecated.
 
-### Writing Lessons via kb-writer
+### Writing Lessons Directly
 
-**Delegate all KB writes to `kb-writer.agent.md`** for consistent tagging and deduplication.
+Use `kb_add_lesson` to write each learning directly to KB:
 
-After analyzing the story artifacts, spawn kb-writer for each learning category:
-
-```yaml
-# Example: Reuse Discoveries
-kb_write_request:
-  entry_type: lesson
-  source_stage: dev
-  story_id: "{STORY_ID}"
-  category: "reuse-discoveries"
-  content: |
-    - **DI pattern for core functions**: The pattern was highly reusable for all functions.
-    - **Discriminated union result types**: Works seamlessly for all operations.
-  additional_tags: []
+```javascript
+kb_add_lesson({
+  title: "DI pattern for core functions",
+  story_id: "{STORY_ID}",
+  category: "architecture",  // reuse | blockers | performance | testing | architecture
+  what_happened: "Discovered DI pattern from album functions was highly reusable",
+  resolution: "Applied DI pattern to all 4 new image functions with success",
+  tags: ["reuse", "dependency-injection"]
+})
 ```
 
-The kb-writer handles:
+The KB handles:
 - Duplicate detection (skips if >0.85 similarity exists)
-- Standardized tagging (`lesson-learned`, `story:xxx`, `category:xxx`, `date:YYYY-MM`)
-- Consistent content formatting
+- Automatic tagging (`lesson-learned`, `story:xxx`, `date:YYYY-MM`)
+- Embedding generation for semantic search
 
 ### Categories to Capture
 
-Spawn kb-writer for each category with learnings:
+For each category with learnings, call `kb_add_lesson`:
 
 | Category | `category` value | Description |
 |----------|------------------|-------------|
-| Reuse Discoveries | `reuse-discoveries` | New reusable patterns/utilities found |
-| Blockers Hit | `blockers-hit` | What blocked and how to avoid |
-| Time Sinks | `time-sinks` | What took longer than expected |
-| Plan vs Reality | `plan-vs-reality` | Planned vs actual files touched |
-| Verification Notes | `verification-notes` | What fast-fail/final verification caught |
-| Token Usage | `token-usage` | High-cost operations and optimizations |
-| Recommendations | `recommendations` | Actionable advice for future stories |
+| Reuse Discoveries | `reuse` | New reusable patterns/utilities found |
+| Blockers Hit | `blockers` | What blocked and how to avoid |
+| Performance Issues | `performance` | What took longer than expected, optimizations |
+| Testing Insights | `testing` | What fast-fail/verification caught, test strategies |
+| Architecture Patterns | `architecture` | Patterns discovered, structure decisions |
 
 ### Querying Existing Lessons
 
-Before capturing learnings, query KB for context:
+Before capturing learnings, query KB to avoid duplicates:
 
-| Trigger | Query Pattern |
-|---------|--------------|
-| Pattern comparison | `kb_search({ query: "{domain} lessons learned", role: "dev", limit: 5 })` |
-| Blocker analysis | `kb_search({ query: "common implementation blockers", tags: ["lesson-learned"], limit: 3 })` |
-| Optimization ideas | `kb_search({ query: "token optimization strategies", role: "dev", limit: 3 })` |
+```javascript
+// Check for similar learnings before adding
+const existing = await kb_search({
+  query: "DI pattern implementation",
+  tags: ["lesson-learned"],
+  limit: 3
+})
+
+// Skip if similar lesson exists with high relevance
+if (existing.results.some(r => r.relevance_score > 0.85)) {
+  // Already captured, skip this learning
+}
+```
 
 ### Fallback Behavior
 
-- KB unavailable: kb-writer returns `{ status: "skipped", reason: "kb_unavailable" }` - continue with story completion
+- KB unavailable: Queue to `_implementation/DEFERRED-KB-WRITES.yaml` for later processing
 - Search returns no results: Proceed with standard learning extraction
-- Duplicate detected: kb-writer skips automatically - no action needed
+- Duplicate detected (>0.85 similarity): Skip automatically
 
 ---
 
@@ -123,60 +126,65 @@ Read from story directory:
 
 ## Output (MUST UPDATE)
 
-**1. Spawn kb-writer for each learning category:**
-- One kb-writer call per category with learnings
-- kb-writer handles tagging, formatting, and deduplication automatically
+**1. Call `kb_add_lesson` for each learning category:**
+- One `kb_add_lesson` call per distinct learning
+- KB handles tagging, formatting, and deduplication automatically
 
 **2. Update TOKEN-LOG.md with learnings phase tokens**
 
 **3. If high-cost operations identified (>10k tokens):**
-- Include `high-cost-operation` in `additional_tags`
-- Include mitigation strategy in content
+- Include `high-cost-operation` in tags array
+- Include mitigation strategy in resolution field
 
 **DO NOT append to LESSONS-LEARNED.md** - these files are deprecated.
 
-## kb-writer Invocation Pattern
+## kb_add_lesson Invocation Pattern
 
-For each learning category, spawn kb-writer with structured input:
+For each learning, call `kb_add_lesson` directly:
 
-```yaml
-kb_write_request:
-  entry_type: lesson
-  source_stage: dev
-  story_id: "{STORY_ID}"
-  category: "{category-slug}"
-  content: |
-    - {bullet point 1}
-    - {bullet point 2}
-    - {bullet point 3}
-  additional_tags: []  # e.g., ["high-cost-operation"] for token issues
+```javascript
+kb_add_lesson({
+  title: "Descriptive title of the learning",
+  story_id: "{STORY_ID}",
+  category: "reuse",  // reuse | blockers | performance | testing | architecture
+  what_happened: "Brief description of the situation",
+  resolution: "What we learned / how we solved it",
+  tags: ["relevant", "tags"]
+})
 ```
 
-### Example kb-writer Calls
+### Example kb_add_lesson Calls
 
-```yaml
-# Reuse discovery
-kb_write_request:
-  entry_type: lesson
-  source_stage: dev
-  story_id: "STORY-007"
-  category: "reuse-discoveries"
-  content: |
-    - **DI pattern for core functions**: The dependency injection pattern from album functions was highly reusable for all 4 new image functions.
-    - **Discriminated union result types**: The success/failure pattern worked seamlessly.
-  additional_tags: []
+```javascript
+// Reuse discovery
+kb_add_lesson({
+  title: "DI pattern reuse for image functions",
+  story_id: "STORY-007",
+  category: "reuse",
+  what_happened: "Needed to implement 4 new image functions with consistent error handling",
+  resolution: "Applied DI pattern from album functions - highly reusable for all 4 functions",
+  tags: ["dependency-injection", "image-processing"]
+})
 
-# Token optimization (with high-cost-operation tag)
-kb_write_request:
-  entry_type: lesson
-  source_stage: dev
-  story_id: "WRKF-1020"
-  category: "token-usage"
-  content: |
-    - **Total tokens:** ~118k (input: ~80k, output: ~38k)
-    - **High-cost operation:** Reading story file 5x across agents (~35k tokens wasted)
-    - **Optimization:** Pass story context between agents instead of re-reading
-  additional_tags: ["high-cost-operation"]
+// Token optimization
+kb_add_lesson({
+  title: "Redundant story file reads across agents",
+  story_id: "WRKF-1020",
+  category: "performance",
+  what_happened: "Story file was read 5x across agents, consuming ~35k tokens",
+  resolution: "Pass story context between agents instead of re-reading",
+  tags: ["token-optimization", "high-cost-operation"]
+})
+
+// Blocker pattern
+kb_add_lesson({
+  title: "HEIC detection fails with browser FileReader",
+  story_id: "WISH-2045",
+  category: "blockers",
+  what_happened: "Browser FileReader couldn't detect HEIC magic bytes correctly",
+  resolution: "Use file extension check as primary, magic bytes as fallback",
+  tags: ["heic", "file-upload", "browser-api"]
+})
 ```
 
 ## Worker Token Summary (REQUIRED)

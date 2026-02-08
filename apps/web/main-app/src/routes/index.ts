@@ -27,11 +27,12 @@ const rootRoute = createRootRoute({
   errorComponent: RouteErrorComponent,
 })
 
-// Home route
+// Home route - redirect authenticated users to dashboard
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: HomePage,
+  beforeLoad: RouteGuards.guestOnly,
 })
 
 // Authentication routes
@@ -53,14 +54,12 @@ const forgotPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/forgot-password',
   component: ForgotPasswordPage,
-  beforeLoad: RouteGuards.guestOnly,
 })
 
 const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reset-password',
   component: ResetPasswordPage,
-  beforeLoad: RouteGuards.guestOnly,
 })
 
 const otpVerificationRoute = createRoute({
@@ -81,11 +80,17 @@ const newPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/new-password',
   component: NewPasswordPage,
-  beforeLoad: RouteGuards.guestOnly,
 })
 
-// Import the WishlistModule directly - it handles its own lazy loading via React.lazy
+// Import modules directly - they handle their own lazy loading via React.lazy
 import { WishlistModule } from './modules/WishlistModule'
+import { DashboardModule } from './modules/DashboardModule'
+import { InspirationModule } from './modules/InspirationModule'
+import { InstructionsModule } from './modules/InstructionsModule'
+import { InstructionsCreateModule } from './modules/InstructionsCreateModule'
+import { InstructionsDetail } from './modules/InstructionsDetailModule'
+import { SetsGalleryModule } from './modules/SetsGalleryModule'
+import { AdminModule } from './admin/AdminModule'
 
 const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -103,55 +108,29 @@ const wishlistRoute = createRoute({
 const instructionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions',
-  component: () => {
-    // Lazy load instructions gallery module - handles all sub-routes internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
+  component: InstructionsModule,
   pendingComponent: LoadingPage,
 })
 
 const instructionsNewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions/new',
-  component: () => {
-    // Lazy load instructions gallery module - handles upload view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
+  component: InstructionsCreateModule,
   pendingComponent: LoadingPage,
-  beforeLoad: ({
-    context,
-    location,
-  }: {
-    context: RouteContext
-    location: { pathname: string }
-  }) => {
-    // Check authentication for upload
-    if (!context.auth?.isAuthenticated) {
-      throw redirect({
-        to: '/login',
-        search: { redirect: location.pathname },
-      })
-    }
-  },
+  beforeLoad: RouteGuards.protected,
 })
 
 const instructionDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions/$instructionId',
-  component: () => {
-    // Lazy load instructions gallery module - handles detail view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
+  component: InstructionsDetail,
   pendingComponent: LoadingPage,
 })
 
 const instructionEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions/$instructionId/edit',
-  component: () => {
-    // Lazy load instructions gallery module - handles edit view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
+  component: InstructionsModule, // Uses edit mode based on route
   pendingComponent: LoadingPage,
   beforeLoad: ({
     context,
@@ -173,11 +152,7 @@ const instructionEditRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
-  component: () => {
-    // Lazy load dashboard module
-    return import('./modules/DashboardModule').then(module => module.DashboardModule)
-  },
-  pendingComponent: LoadingPage,
+  component: DashboardModule,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     // Check authentication
     if (!context.auth?.isAuthenticated) {
@@ -190,10 +165,7 @@ const dashboardRoute = createRoute({
 const setsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sets',
-  component: () => {
-    // Lazy load sets gallery module - handles sub-routes internally
-    return import('./modules/SetsGalleryModule').then(module => module.SetsGalleryModule)
-  },
+  component: SetsGalleryModule,
   pendingComponent: LoadingPage,
   beforeLoad: ({ context }: { context: RouteContext }) => {
     if (!context.auth?.isAuthenticated) {
@@ -259,7 +231,13 @@ const galleryDetailRoute = createRoute({
 const inspirationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/inspiration',
-  component: PlaceholderPage,
+  component: InspirationModule,
+  beforeLoad: ({ context }: { context: RouteContext }) => {
+    // Check authentication
+    if (!context.auth?.isAuthenticated) {
+      throw redirect({ to: '/login' })
+    }
+  },
 })
 
 const profileRoute = createRoute({
@@ -324,20 +302,14 @@ const cookiesRoute = createRoute({
 const mocDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mocs/$slug',
-  component: () => {
-    // Lazy load instructions gallery module - handles MOC detail view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
+  component: InstructionsDetail,
   pendingComponent: LoadingPage,
 })
 
 const mocEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mocs/$slug/edit',
-  component: () => {
-    // Lazy load instructions gallery module - handles MOC edit view internally
-    return import('./modules/InstructionsModule').then(module => module.InstructionsModule)
-  },
+  component: InstructionsModule, // Uses edit mode based on route
   pendingComponent: LoadingPage,
   beforeLoad: ({
     context,
@@ -364,6 +336,23 @@ const dashboardMocsUploadRoute = createRoute({
     // Redirect to canonical path
     throw redirect({ to: '/instructions/new' })
   },
+})
+
+// Admin routes (Admin Panel)
+const adminUsersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/users',
+  component: AdminModule,
+  pendingComponent: LoadingPage,
+  beforeLoad: RouteGuards.admin,
+})
+
+const adminUserDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/users/$userId',
+  component: AdminModule,
+  pendingComponent: LoadingPage,
+  beforeLoad: RouteGuards.admin,
 })
 
 // 403 Unauthorized route
@@ -412,6 +401,9 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   termsRoute,
   cookiesRoute,
+  // Admin routes (Admin Panel)
+  adminUsersRoute,
+  adminUserDetailRoute,
   unauthorizedRoute,
   notFoundRoute,
 ])

@@ -6,16 +6,17 @@ title: "WISH-2005a: Drag-and-drop reordering with dnd-kit"
 story_id: WISH-2005a
 story_prefix: WISH
 status: uat
+e2e_required: true
 phase: 4
 created_at: "2026-01-28T14:45:00-07:00"
-updated_at: "2026-01-29T18:12:00Z"
+updated_at: "2026-02-04T18:45:00Z"
 depends_on: [WISH-2002, WISH-2003, WISH-2041]
 estimated_points: 5
 complexity: Large
 elaboration_verdict: CONDITIONAL PASS
 elaboration_date: "2026-01-28"
 qa_verdict: PASS
-qa_date: "2026-01-29"
+qa_date: "2026-02-04"
 ---
 
 ## Context

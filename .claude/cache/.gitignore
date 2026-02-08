@@ -1,0 +1,8 @@
+# Cache files are generated and should not be committed
+*.yaml
+session/
+context7/
+
+# Keep this gitignore and README
+!.gitignore
+!README.md

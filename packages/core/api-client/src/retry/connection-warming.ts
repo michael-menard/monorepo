@@ -50,15 +50,15 @@ export interface WarmingStats {
 export const DEFAULT_WARMING_CONFIG: WarmingConfig = {
   enabled: true,
   interval: 5 * 60 * 1000, // 5 minutes
-  endpoints: ['/api/v2/health'],
+  endpoints: ['/health'],
   maxConcurrent: 3,
   timeout: 5000,
   // Enhanced features
   adaptiveWarming: true,
-  priorityEndpoints: ['/api/v2/health'],
+  priorityEndpoints: ['/health'],
   failureThreshold: 3,
   backoffMultiplier: 1.5,
-  healthCheckEndpoint: '/api/v2/health',
+  healthCheckEndpoint: '/health',
 }
 
 /**

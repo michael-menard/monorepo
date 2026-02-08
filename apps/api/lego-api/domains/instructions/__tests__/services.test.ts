@@ -302,14 +302,15 @@ describe('InstructionsService', () => {
         buffer: Buffer.from('test'),
         filename: 'big.pdf',
         mimetype: 'application/pdf',
-        size: 150 * 1024 * 1024, // 150MB
+        size: 150 * 1024 * 1024, // 150MB - exceeds 10MB limit
       }
 
       const result = await service.uploadInstructionFile('user-123', mockMoc.id, file)
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error).toBe('INVALID_FILE')
+        // AC74: Backend returns structured error codes
+        expect(result.error).toBe('FILE_TOO_LARGE')
       }
     })
   })

@@ -1,6 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router'
 import { Provider, useSelector } from 'react-redux'
-import { ThemeProvider, Toaster } from '@repo/app-component-library'
+import { ThemeProvider, Toaster, TooltipProvider } from '@repo/app-component-library'
 import { initializeCognitoTokenManager } from '@repo/api-client/auth/cognito-integration'
 import { router } from './routes'
 import { store } from './store'
@@ -37,8 +37,10 @@ export function App() {
     <ErrorBoundary>
       <Provider store={store}>
         <ThemeProvider defaultTheme="system" storageKey="main-app-theme">
-          <InnerApp />
-          <Toaster />
+          <TooltipProvider>
+            <InnerApp />
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </Provider>
     </ErrorBoundary>

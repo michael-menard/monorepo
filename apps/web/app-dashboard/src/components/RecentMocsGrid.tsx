@@ -5,12 +5,17 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { Card, CardContent } from '@repo/app-component-library'
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/app-component-library'
 import { Blocks, Clock, Pencil } from 'lucide-react'
 import type { RecentMoc } from '@repo/api-client/rtk/dashboard-api'
+import type { RecentMocExtended } from '../__types__'
+
+// Accept both the original RecentMoc and the extended version with theme
+type RecentMocItem = RecentMoc | RecentMocExtended
 
 interface RecentMocsGridProps {
-  mocs: RecentMoc[]
+  mocs: RecentMocItem[]
+  isLoading?: boolean
 }
 
 /**
@@ -33,62 +38,103 @@ function formatRelativeDate(dateString: string): string {
 /**
  * Displays recent MOCs in a responsive grid with thumbnails
  */
-export function RecentMocsGrid({ mocs }: RecentMocsGridProps) {
+export function RecentMocsGrid({ mocs, isLoading }: RecentMocsGridProps) {
+  if (isLoading) {
+    return (
+      <Card className="bg-card border-border dark:backdrop-blur-sm">
+        <CardHeader className="pb-2 px-4 md:px-6">
+          <div className="h-5 md:h-6 w-28 md:w-32 bg-muted animate-pulse rounded" />
+        </CardHeader>
+        <CardContent className="px-4 md:px-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i}>
+                <div className="aspect-square bg-muted animate-pulse rounded-lg" />
+                <div className="mt-2 h-3 md:h-4 w-full bg-muted animate-pulse rounded" />
+                <div className="mt-1 h-2.5 md:h-3 w-12 md:w-16 bg-muted animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (mocs.length === 0) {
-    return null
+    return (
+      <Card className="bg-card border-border dark:backdrop-blur-sm">
+        <CardHeader className="pb-2 px-4 md:px-6">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg font-semibold text-card-foreground">
+            <Clock className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" aria-hidden="true" />
+            Recent MOCs
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6">
+          <div className="flex flex-col items-center justify-center py-8 md:py-12 text-center">
+            <Blocks
+              className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4"
+              aria-hidden="true"
+            />
+            <p className="text-sm md:text-base text-muted-foreground">
+              No MOCs match your filters
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold flex items-center gap-2">
-        <Clock className="h-5 w-5 text-muted-foreground" />
-        Recent MOCs
-      </h2>
-      <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-5 md:overflow-visible">
-        {mocs.map(moc => (
-          <div key={moc.id} className="flex-shrink-0 relative">
-            <Link to="/gallery/$mocId" params={{ mocId: moc.id }}>
-              <Card className="w-40 md:w-auto bg-card/80 dark:bg-surface backdrop-blur-sm border border-border dark:border-surface-border hover:border-primary/50 dark:hover:border-glow-primary hover:shadow-md dark:hover:shadow-glow-primary transition-all duration-200 cursor-pointer group">
-                <CardContent className="p-3">
-                  {/* Thumbnail */}
-                  <div className="aspect-square rounded-lg overflow-hidden bg-muted dark:bg-surface-light/30 mb-2 relative">
-                    {moc.thumbnail ? (
-                      <img
-                        src={moc.thumbnail}
-                        alt={moc.title}
-                        className="w-full h-full object-cover"
+    <Card className="bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
+      <CardHeader className="pb-2 px-4 md:px-6">
+        <CardTitle className="flex items-center gap-2 text-base md:text-lg font-semibold text-card-foreground">
+          <Clock className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" aria-hidden="true" />
+          Recent MOCs
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 md:px-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+          {mocs.map(moc => (
+            <div key={moc.id} className="group relative cursor-pointer">
+              <Link to="/gallery/$mocId" params={{ mocId: moc.id }}>
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-muted border border-border transition-all duration-200 group-hover:border-primary/50 dark:group-hover:shadow-[0_0_15px_rgba(14,165,233,0.2)]">
+                  {moc.thumbnail ? (
+                    <img
+                      src={moc.thumbnail}
+                      alt={moc.title}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                      <Blocks
+                        className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground"
+                        aria-hidden="true"
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Blocks className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Title */}
-                  <p className="font-medium truncate text-sm">{moc.title}</p>
-
-                  {/* Date */}
-                  <p className="text-xs text-muted-foreground">
-                    {formatRelativeDate(moc.createdAt)}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-            {/* Story 3.1.39: Edit button overlay (AC: 3) - outside Link to avoid nesting */}
-            {moc.slug ? (
-              <Link
-                to="/mocs/$slug/edit"
-                params={{ slug: moc.slug }}
-                className="absolute top-4 right-4 p-1.5 rounded-full bg-background/80 dark:bg-surface/80 opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity duration-200 hover:bg-primary hover:text-primary-foreground z-10"
-                aria-label={`Edit ${moc.title}`}
-              >
-                <Pencil className="h-3.5 w-3.5" />
+                    </div>
+                  )}
+                </div>
+                <h3 className="mt-1.5 md:mt-2 text-xs md:text-sm font-medium text-card-foreground truncate">
+                  {moc.title}
+                </h3>
+                <p className="text-[10px] md:text-xs text-muted-foreground">
+                  {formatRelativeDate(moc.createdAt)}
+                </p>
               </Link>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </section>
+              {/* Story 3.1.39: Edit button overlay (AC: 3) - outside Link to avoid nesting */}
+              {moc.slug ? (
+                <Link
+                  to="/mocs/$slug/edit"
+                  params={{ slug: moc.slug }}
+                  className="absolute top-1.5 right-1.5 md:top-2 md:right-2 p-1.5 rounded-full bg-card/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground z-10"
+                  aria-label={`Edit ${moc.title}`}
+                >
+                  <Pencil className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                </Link>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

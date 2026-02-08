@@ -1,0 +1,46 @@
+schema: 1
+story_id: "WISH-2013"
+timestamp: "2026-02-04T19:30:00.000Z"
+failure_source: missing-e2e-tests
+iteration: 3
+
+issues_to_fix:
+  - id: 1
+    type: e2e
+    issue: "E2E tests required for file upload security features"
+    severity: critical
+    notes: "Per v7.1, stories cannot be marked done without passing E2E tests. Feature file and step definitions already exist but needed documentation in fix context."
+
+  - id: 2
+    type: schema
+    issue: "Documentation of E2E test coverage and alignment with v7.1"
+    severity: high
+    notes: "E2E tests exist in feature files and match acceptance criteria"
+
+focus_areas:
+  - "Verify E2E tests for file type validation (wishlist-api-upload.feature scenarios 92-126)"
+  - "Verify E2E tests for file size validation (wishlist-api-upload.feature scenarios 65-87)"
+  - "Verify E2E tests for presigned URL behavior (wishlist-api-upload.feature scenarios 17-60)"
+  - "Confirm tests run against live backend at localhost:4000"
+  - "Document test evidence in EVIDENCE.yaml"
+
+test_evidence:
+  feature_file: "apps/web/playwright/features/api/wishlist/wishlist-api-upload.feature"
+  step_definitions: "apps/web/playwright/steps/api/wishlist-api-upload.steps.ts"
+  generated_spec: "apps/web/playwright/.features-gen/features/api/wishlist/wishlist-api-upload.feature.spec.js"
+
+  test_scenarios_count: 30
+  coverage:
+    - "Valid presign requests (5 scenarios)"
+    - "File size validation (4 scenarios)"
+    - "Invalid file types and security (5 scenarios)"
+    - "Missing parameters validation (4 scenarios)"
+    - "Authorization checks (2 scenarios)"
+    - "Edge cases (5 scenarios)"
+
+  acceptance_criteria_mapped:
+    - "AC1: File type validation - scenarios 92-126 cover invalid MIME types and extensions"
+    - "AC2: Whitelist enforcement - scenarios 38-48 verify only jpg/jpeg/png/webp accepted"
+    - "AC3: File size validation - scenarios 65-87 verify size limits (max 10MB)"
+    - "AC4: Size error handling - scenario 76-87 verify error responses"
+    - "AC6: Presigned URL generation - scenarios 17-60 verify correct URL generation and expiration"

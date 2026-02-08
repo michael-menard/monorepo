@@ -1,0 +1,81 @@
+# Autonomy Configuration
+#
+# Controls autonomous decision-making behavior across the workflow.
+# Works with the tier system defined in .claude/agents/_shared/autonomy-tiers.md
+#
+# Autonomy levels control how agents handle decisions at each tier.
+
+version: 1
+updated_at: 2026-02-06
+
+# Default autonomy level for all commands
+default_level: conservative
+
+# Level definitions (from autonomy-tiers.md)
+levels:
+  conservative:
+    description: "Escalate Tier 1-3 and 5 decisions"
+    tier_1: escalate
+    tier_2: escalate
+    tier_3: escalate
+    tier_4: escalate  # Always escalate
+    tier_5: escalate
+
+  moderate:
+    description: "Auto-approve Tier 1 and 3, escalate Tier 2 and 5"
+    tier_1: auto
+    tier_2: escalate
+    tier_3: auto
+    tier_4: escalate  # Always escalate
+    tier_5: escalate
+
+  aggressive:
+    description: "Only escalate Tier 4 and high-risk Tier 5"
+    tier_1: auto
+    tier_2: auto
+    tier_3: auto
+    tier_4: escalate  # Always escalate
+    tier_5: auto_if_low_risk
+
+# Per-phase autonomy overrides
+# Allows different autonomy levels for different workflow phases
+phase_overrides:
+  pm_story_generation:
+    level: conservative
+    reason: "Requirements need human validation"
+
+  elab_story:
+    level: conservative
+    reason: "Story audit should involve human judgment"
+
+  dev_implementation:
+    level: moderate
+    reason: "Code decisions can often use conventions"
+
+  code_review:
+    level: aggressive
+    reason: "Automated checks are reliable"
+
+  qa_verification:
+    level: conservative
+    reason: "Quality gates need human oversight"
+
+# Auto-accept conditions
+# When ALL conditions are met, tier 1-3 decisions can be auto-accepted
+auto_accept:
+  enabled: true
+  conditions:
+    min_confidence: 0.8
+    has_project_convention: true
+    matches_existing_patterns: true
+    no_conflicting_preferences: true
+
+# Deferred backlog settings
+deferred_backlog:
+  enabled: true
+  auto_defer:
+    - moonshot_decisions
+    - out_of_scope_enhancements
+    - low_priority_improvements
+  create_followup_story: true
+  max_deferred_per_story: 10

@@ -1,0 +1,54 @@
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/cognito-scopes"
+prefix: "COGN"
+completed: "2026-02-04T18:45:00Z"
+
+perspectives:
+  engineering: complete
+  product: complete
+  qa: complete
+  ux: complete
+  platform: complete
+  security: complete
+
+success_count: 6
+failed_count: 0
+
+verdicts:
+  engineering: CONCERNS
+  product: READY
+  qa: CONCERNS
+  ux: READY
+  platform: CONCERNS
+  security: CONCERNS
+
+overall_verdict: CONCERNS
+
+summary: "5 of 6 stakeholders cleared; 3 critical mvp_blockers identified across Engineering, QA, Platform, and Security requiring clarification before implementation can proceed"
+
+mvp_blockers_total: 13
+  engineering: 4
+  qa: 3
+  platform: 3
+  security: 3
+  product: 0
+  ux: 0
+
+recommendations:
+  - "Establish shared middleware framework before COGN-005-008 (Engineering)"
+  - "Define Lambda cold start and connection pooling strategy before COGN-004 (Engineering, Platform)"
+  - "Spec all concurrency edge cases for COGN-025 test suite (QA)"
+  - "Define database migration zero-downtime approach before COGN-001 (Platform)"
+  - "Clarify JWT refresh lifecycle before COGN-005 and COGN-015 (Engineering)"
+  - "Finalize legal/compliance approach for age verification (Security)"
+
+next_steps:
+  - "Run aggregation phase to consolidate MVP-critical findings"
+  - "Schedule refinement sessions for identified blockers"
+  - "Update story specifications with blocker resolutions"
+  - "Confirm shared package strategy before implementation begins"
+
+review_coverage:
+  stories_analyzed: 27
+  phases_covered: 6
+  risk_areas_identified: 12+
+  future_enhancements_tracked: 20+

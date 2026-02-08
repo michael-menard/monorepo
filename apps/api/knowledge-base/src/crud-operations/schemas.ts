@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { KnowledgeRoleSchema } from '../__types__/index.js'
+import { KnowledgeRoleSchema, KnowledgeEntryTypeSchema } from '../__types__/index.js'
 
 /**
  * Maximum content length in characters.
@@ -30,6 +30,17 @@ export const MAX_CONTENT_LENGTH = 30000
  *   tags: ['typescript', 'best-practice']
  * })
  * ```
+ *
+ * @example with entry_type and story_id
+ * ```typescript
+ * const input = KbAddInputSchema.parse({
+ *   content: 'Decision: Use server-side image processing',
+ *   role: 'dev',
+ *   entry_type: 'decision',
+ *   story_id: 'WISH-2045',
+ *   tags: ['architecture', 'images']
+ * })
+ * ```
  */
 export const KbAddInputSchema = z.object({
   /** Knowledge content text (1-30000 characters) */
@@ -40,6 +51,18 @@ export const KbAddInputSchema = z.object({
 
   /** Role this knowledge is relevant for */
   role: KnowledgeRoleSchema,
+
+  /**
+   * Type of knowledge entry (optional, defaults to 'note').
+   * Values: 'note', 'decision', 'constraint', 'runbook', 'lesson'
+   */
+  entry_type: KnowledgeEntryTypeSchema.optional(),
+
+  /**
+   * Optional story ID this entry is linked to.
+   * Examples: 'WISH-2045', 'KBMEM-001'
+   */
+  story_id: z.string().optional().nullable(),
 
   /** Optional tags for categorization */
   tags: z.array(z.string()).optional().nullable(),
@@ -67,7 +90,7 @@ export type KbGetInput = z.infer<typeof KbGetInputSchema>
 /**
  * Schema for kb_update input.
  *
- * At least one field (content, role, or tags) must be provided.
+ * At least one modifiable field must be provided.
  * Undefined fields are not modified.
  *
  * @example
@@ -82,6 +105,13 @@ export type KbGetInput = z.infer<typeof KbGetInputSchema>
  * const input = KbUpdateInputSchema.parse({
  *   id: '123e4567-e89b-12d3-a456-426614174000',
  *   tags: ['new-tag']
+ * })
+ *
+ * // Mark as verified
+ * const input = KbUpdateInputSchema.parse({
+ *   id: '123e4567-e89b-12d3-a456-426614174000',
+ *   verified: true,
+ *   verified_by: 'qa-gate:WISH-2045'
  * })
  * ```
  */
@@ -100,13 +130,32 @@ export const KbUpdateInputSchema = z
     /** New role */
     role: KnowledgeRoleSchema.optional(),
 
+    /** New entry type */
+    entry_type: KnowledgeEntryTypeSchema.optional(),
+
+    /** New story ID (null clears, undefined leaves unchanged) */
+    story_id: z.string().optional().nullable(),
+
     /** New tags (null clears tags, undefined leaves unchanged) */
     tags: z.array(z.string()).optional().nullable(),
+
+    /** Update verification status */
+    verified: z.boolean().optional(),
+
+    /** Who verified the entry */
+    verified_by: z.string().optional().nullable(),
   })
   .refine(
-    data => data.content !== undefined || data.role !== undefined || data.tags !== undefined,
+    data =>
+      data.content !== undefined ||
+      data.role !== undefined ||
+      data.entry_type !== undefined ||
+      data.story_id !== undefined ||
+      data.tags !== undefined ||
+      data.verified !== undefined ||
+      data.verified_by !== undefined,
     {
-      message: 'At least one field (content, role, or tags) must be provided for update',
+      message: 'At least one field must be provided for update',
     },
   )
 
@@ -135,6 +184,8 @@ export type KbDeleteInput = z.infer<typeof KbDeleteInputSchema>
  * All fields are optional. Defaults:
  * - limit: 10
  * - role: undefined (no filter)
+ * - entry_type: undefined (no filter)
+ * - story_id: undefined (no filter)
  * - tags: undefined (no filter)
  *
  * @example
@@ -152,6 +203,17 @@ export type KbDeleteInput = z.infer<typeof KbDeleteInputSchema>
  * const input = KbListInputSchema.parse({
  *   tags: ['typescript', 'best-practice']
  * })
+ *
+ * // List all decisions
+ * const input = KbListInputSchema.parse({
+ *   entry_type: 'decision'
+ * })
+ *
+ * // List constraints for a specific story
+ * const input = KbListInputSchema.parse({
+ *   entry_type: 'constraint',
+ *   story_id: 'WISH-2045'
+ * })
  * ```
  */
 export const KbListInputSchema = z
@@ -159,8 +221,17 @@ export const KbListInputSchema = z
     /** Filter by role */
     role: KnowledgeRoleSchema.optional(),
 
+    /** Filter by entry type */
+    entry_type: KnowledgeEntryTypeSchema.optional(),
+
+    /** Filter by story ID */
+    story_id: z.string().optional(),
+
     /** Filter by tags (ANY match - entries with at least one matching tag) */
     tags: z.array(z.string()).optional(),
+
+    /** Filter by verification status */
+    verified: z.boolean().optional(),
 
     /** Maximum number of results (1-100, default 10) */
     limit: z.number().int().positive().max(100).default(10),

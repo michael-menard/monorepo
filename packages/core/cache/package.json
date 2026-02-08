@@ -53,14 +53,6 @@
       "import": "./src/hooks/useServerlessCache.ts",
       "types": "./src/hooks/useServerlessCache.ts"
     },
-    "./components/CachedImage": {
-      "import": "./src/components/CachedImage.tsx",
-      "types": "./src/components/CachedImage.tsx"
-    },
-    "./components/CacheDashboard": {
-      "import": "./src/components/CacheDashboard/index.tsx",
-      "types": "./src/components/CacheDashboard/index.tsx"
-    },
     "./hooks/useIntelligentCache": {
       "import": "./src/hooks/useIntelligentCache.ts",
       "types": "./src/hooks/useIntelligentCache.ts"
@@ -84,28 +76,26 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
-    "@repo/app-component-library": "workspace:*",
-    "zod": "^3.25.76",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "framer-motion": "^12.23.3",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.4",
-    "lucide-react": "^0.468.0"
+    "zod": "^3.25.76"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react-swc": "^3.6.0",
     "eslint": "^9.30.0",
     "jsdom": "^26.0.0",
     "prettier": "^3.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "typescript": "5.8.3",
     "vite": "^5.2.10",
-    "vitest": "^3.0.5",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0"
+    "vitest": "^3.0.5"
   }
 }

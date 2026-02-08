@@ -75,6 +75,51 @@ async function setupBrowserAuthViaUI(page: Page): Promise<string | null> {
   }
   console.log('Auth verified, current URL:', currentUrl)
 
+  // CRITICAL: Wait for Redux auth state to be set to isAuthenticated: true
+  // This ensures the router context has the correct auth state before tests navigate
+  const authStateReady = await page.evaluate(() => {
+    return new Promise<boolean>((resolve) => {
+      const checkAuth = () => {
+        try {
+          // Access Redux store from window (exposed in dev mode)
+          const store = (window as any).__REDUX_STORE__
+          if (store) {
+            const state = store.getState()
+            if (state.auth?.isAuthenticated === true) {
+              resolve(true)
+              return true
+            }
+          }
+        } catch (e) {
+          // Store not available yet
+        }
+        return false
+      }
+
+      // Check immediately
+      if (checkAuth()) return
+
+      // Poll every 100ms for up to 10 seconds
+      const interval = setInterval(() => {
+        if (checkAuth()) {
+          clearInterval(interval)
+        }
+      }, 100)
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(interval)
+        resolve(false)
+      }, 10000)
+    })
+  })
+
+  if (!authStateReady) {
+    console.warn('Redux auth state not confirmed as authenticated - tests may fail')
+  } else {
+    console.log('Redux auth state confirmed: isAuthenticated = true')
+  }
+
   // Extract the access token from Amplify's localStorage storage
   // Cognito stores tokens in localStorage with keys like CognitoIdentityServiceProvider.<clientId>.<username>.accessToken
   const accessToken = await page.evaluate(() => {
@@ -102,17 +147,32 @@ async function setupBrowserAuthViaUI(page: Page): Promise<string | null> {
  */
 async function setupApiAuthInterception(page: Page, accessToken: string): Promise<void> {
   // Intercept API requests and add Authorization header
-  // Using a more specific pattern to avoid intercepting module loading
-  await page.route('**/api/**', async route => {
-    const request = route.request()
-    console.log(`[API Route] ${request.method()} ${request.url()}`)
-    const headers = {
-      ...request.headers(),
-      Authorization: `Bearer ${accessToken}`,
-    }
-    await route.continue({ headers })
-  })
-  console.log('API auth interception set up for /api/** routes')
+  // Catch both proxy paths (/api/**) and direct API calls (localhost:9000)
+  const apiPatterns = [
+    '**/api/**',
+    '**/localhost:9000/**',
+  ]
+
+  for (const pattern of apiPatterns) {
+    await page.route(pattern, async route => {
+      const request = route.request()
+      const url = request.url()
+
+      // Skip module/asset requests
+      if (url.includes('.ts') || url.includes('.js') || url.includes('.css')) {
+        await route.continue()
+        return
+      }
+
+      console.log(`[API Route] ${request.method()} ${url}`)
+      const headers = {
+        ...request.headers(),
+        Authorization: `Bearer ${accessToken}`,
+      }
+      await route.continue({ headers })
+    })
+  }
+  console.log('API auth interception set up for /api/** and localhost:9000 routes')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,3 +224,4 @@ export const test = base.extend<BrowserAuthFixtures>({
 })
 
 export { expect }
+export type { Page }

@@ -1,0 +1,186 @@
+schema: 1
+story_id: WISH-2005a
+timestamp: "2026-02-03T22:06:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-wishlist-gallery/**"
+  - "packages/core/api-client/**"
+  - "packages/core/gallery/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Frontend drag-and-drop reordering for wishlist items using dnd-kit with error handling and API persistence"
+
+detailed_scope:
+  surfaces_impacted:
+    backend: false
+    frontend: true
+    infra: false
+
+  components_created:
+    - name: SortableWishlistCard
+      path: "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/index.tsx"
+      description: "Wraps WishlistCard with dnd-kit sortable hook and drag handle"
+      lines: ~120
+
+    - name: DraggableWishlistGallery
+      path: "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/index.tsx"
+      description: "Gallery container with DndContext, sensors, and reorder mutation"
+      lines: ~180
+
+  components_modified:
+    - name: main-page
+      path: "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+      description: "Integrated DraggableWishlistGallery instead of WishlistGallery"
+
+    - name: wishlist-gallery-api
+      path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+      description: "Added useReorderWishlistMutation RTK Query mutation"
+
+    - name: wishlist schema
+      path: "packages/core/api-client/src/schemas/wishlist.ts"
+      description: "Added ReorderWishlistInputSchema for type safety"
+
+  dependencies_used:
+    - package: "@dnd-kit/core"
+      version: "6.3.1"
+      purpose: "Core drag-and-drop functionality"
+
+    - package: "@dnd-kit/sortable"
+      version: "10.0.0"
+      purpose: "Sortable list utilities"
+
+    - package: "@dnd-kit/utilities"
+      version: "3.2.2"
+      purpose: "DnD utilities"
+
+    - package: "framer-motion"
+      purpose: "Smooth animations for item transitions"
+
+  endpoints:
+    - method: PUT
+      path: "/api/wishlist/reorder"
+      status: existing
+      description: "Already exists, no new endpoint required"
+
+  database_changes: false
+
+  migrations_required: false
+
+  acceptance_criteria:
+    total: 29
+    implemented: 27
+    deferred: 2
+    categories:
+      - name: "Drag-and-Drop Core"
+        implemented: 6
+        deferred: 0
+        criteria:
+          - "User can drag with mouse"
+          - "User can drag with touch"
+          - "User can reorder with keyboard"
+          - "Drag handle visible appropriately"
+          - "Visual feedback on drag"
+          - "Smooth transitions"
+
+      - name: "API Integration"
+        implemented: 4
+        deferred: 0
+        criteria:
+          - "RTK Query mutation added"
+          - "Drop sends PUT request"
+          - "Request includes sortOrder array"
+          - "Changes persist after reload"
+
+      - name: "Error Handling"
+        implemented: 4
+        deferred: 0
+        criteria:
+          - "API failures show toast"
+          - "Items rollback on error"
+          - "Appropriate error messages"
+          - "Retry button functional"
+
+      - name: "Pagination"
+        implemented: 2
+        deferred: 1
+        criteria:
+          - "Reordering constrained to page"
+          - "Cannot drag beyond page"
+          - "Cross-page toast (deferred)"
+
+      - name: "Accessibility"
+        implemented: 4
+        deferred: 0
+        criteria:
+          - "Keyboard navigation"
+          - "Screen reader support"
+          - "ARIA attributes"
+          - "Focus management"
+
+      - name: "Visual/UX"
+        implemented: 4
+        deferred: 0
+        criteria:
+          - "Touch target size"
+          - "Design system colors"
+          - "Drop animation timing"
+          - "Empty state handling"
+
+      - name: "Auto-scroll"
+        implemented: 1
+        deferred: 0
+        criteria:
+          - "Viewport scrolls near edges"
+
+      - name: "Testing"
+        implemented: 2
+        deferred: 1
+        criteria:
+          - "Unit tests coverage"
+          - "HTTP tests created"
+          - "Playwright E2E tests (deferred, now in execute)"
+
+performance_considerations:
+  - description: "Auto-scroll during drag maintains 2px/ms rate"
+    impact: "low"
+  - description: "RTK Query mutation with error rollback"
+    impact: "low"
+  - description: "Framer Motion animations on multiple items"
+    impact: "low"
+
+testing_strategy:
+  unit_tests:
+    status: complete
+    coverage: "100%"
+    count: 35
+    frameworks: ["vitest", "react-testing-library"]
+
+  http_tests:
+    status: complete
+    location: "__http__/wishlist-reorder.http"
+    scenarios: ["happy_path", "404_error", "403_error"]
+
+  e2e_tests:
+    status: deferred_to_execute
+    framework: "playwright"
+    scenarios:
+      - "mouse drag and drop"
+      - "touch drag and drop"
+      - "keyboard reorder"
+      - "error handling and rollback"

@@ -516,35 +516,45 @@ vi.mock('@/services/auth/AuthProvider', () => ({
 }))
 
 // Mock Navigation Provider
+const mockNavigationContext = {
+  // Event tracking
+  trackEvent: vi.fn(),
+  trackPageView: vi.fn(),
+  trackUserAction: vi.fn(),
+  trackNavigation: vi.fn(),
+  // Navigation state
+  currentPath: '/',
+  breadcrumbs: [],
+  searchQuery: '',
+  isSearchOpen: false,
+  contextualNavigation: [],
+  navigationHistory: [],
+  navigation: {
+    activeRoute: '/',
+    items: [],
+    recentSearches: [],
+    contextualNavigation: [],
+  },
+  activeItem: undefined,
+  // Navigation functions
+  navigateToItem: vi.fn(),
+  searchNavigation: vi.fn(),
+  setContextualItems: vi.fn(),
+  addToFavorites: vi.fn(),
+  clearSearch: vi.fn(),
+  // Search state
+  search: {
+    query: '',
+    results: [],
+    recentSearches: [],
+    isLoading: false,
+  },
+}
+
 vi.mock('@/components/Navigation/NavigationProvider', () => ({
   NavigationProvider: vi.fn(({ children }) => children),
-  useNavigation: vi.fn(() => ({
-    // Event tracking
-    trackEvent: vi.fn(),
-    trackPageView: vi.fn(),
-    trackUserAction: vi.fn(),
-    trackNavigation: vi.fn(),
-    // Navigation state
-    currentPath: '/',
-    breadcrumbs: [],
-    searchQuery: '',
-    isSearchOpen: false,
-    contextualNavigation: [],
-    navigationHistory: [],
-    // Navigation functions
-    navigateToItem: vi.fn(),
-    searchNavigation: vi.fn(),
-    setContextualItems: vi.fn(),
-    addToFavorites: vi.fn(),
-    clearSearch: vi.fn(),
-    // Search state
-    search: {
-      query: '',
-      results: [],
-      recentSearches: [],
-      isLoading: false,
-    },
-  })),
+  useNavigation: vi.fn(() => mockNavigationContext),
+  useNavigationOptional: vi.fn(() => mockNavigationContext),
 }))
 
 // Mock react-hook-form
@@ -653,6 +663,22 @@ vi.mock('@/store', () => ({
   galleryApi: { reducerPath: 'galleryApi', reducer: vi.fn(), middleware: vi.fn() },
   wishlistApi: { reducerPath: 'wishlistApi', reducer: vi.fn(), middleware: vi.fn() },
   dashboardApi: { reducerPath: 'dashboardApi', reducer: vi.fn(), middleware: vi.fn() },
+  // Admin API hooks
+  adminApi: { reducerPath: 'adminApi', reducer: vi.fn(), middleware: vi.fn() },
+  useListUsersQuery: vi.fn(() => ({
+    data: { users: [], paginationToken: null },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+  })),
+  useLazyListUsersQuery: vi.fn(() => [vi.fn(), { data: null, isLoading: false }]),
+  useGetUserDetailQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useLazyGetUserDetailQuery: vi.fn(() => [vi.fn(), { data: null, isLoading: false }]),
+  useRevokeTokensMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useBlockUserMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUnblockUserMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetAuditLogQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+  useLazyGetAuditLogQuery: vi.fn(() => [vi.fn(), { data: null, isLoading: false }]),
 }))
 
 // Note: Redux mocking is handled per test file as needed
@@ -779,6 +805,20 @@ vi.mock('lucide-react', () => ({
   ),
   Construction: vi.fn(props =>
     React.createElement('svg', { 'data-testid': 'construction-icon', ...props }),
+  ),
+  // Admin panel icons
+  Shield: vi.fn(props => React.createElement('svg', { 'data-testid': 'shield-icon', ...props })),
+  ShieldOff: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'shield-off-icon', ...props }),
+  ),
+  Users: vi.fn(props => React.createElement('svg', { 'data-testid': 'users-icon', ...props })),
+  XCircle: vi.fn(props => React.createElement('svg', { 'data-testid': 'x-circle-icon', ...props })),
+  ShieldCheck: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'shield-check-icon', ...props }),
+  ),
+  UserX: vi.fn(props => React.createElement('svg', { 'data-testid': 'user-x-icon', ...props })),
+  KeySquare: vi.fn(props =>
+    React.createElement('svg', { 'data-testid': 'key-square-icon', ...props }),
   ),
 }))
 

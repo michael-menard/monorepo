@@ -14,6 +14,7 @@
 
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { createHash } from 'crypto'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
@@ -159,14 +160,232 @@ The logger is configured for:
     role: 'dev',
     tags: ['logging', 'best-practice', 'debugging'],
   },
+  // ========================================================================
+  // Workflow Commands - Added 2026-02-06
+  // ========================================================================
+  {
+    content: `
+# Workflow Phases and Next Steps
+
+The development workflow has these phases in order:
+
+| Phase | Command | Purpose | Next Step |
+|-------|---------|---------|-----------|
+| 1 | \`/pm-bootstrap-workflow\` | Create epic artifacts (one-time) | \`/pm-generate-story-000-harness\` |
+| 2 | \`/pm-story generate\` | Generate story specification | \`/elab-story\` |
+| 3 | \`/elab-story\` | QA audit - approve or reject story | \`/dev-implement-story\` |
+| 4 | \`/dev-implement-story\` | Build feature + code review + fix loop | \`/qa-verify-story\` |
+| 5 | \`/qa-verify-story\` | Verify acceptance criteria met | \`/qa-gate\` |
+| 6 | \`/qa-gate\` | Final ship decision | \`/wt-finish\` |
+| 7 | \`/wt-finish\` | Merge and cleanup | Done |
+
+**Quick reference for next steps:**
+- After generating a story → run elaboration
+- After elaboration PASS → run implementation
+- After implementation → run QA verification
+- After QA verification → run QA gate
+- After QA gate PASS → merge and finish
+    `.trim(),
+    role: 'all',
+    tags: ['workflow', 'next-step', 'phases', 'commands'],
+  },
+  {
+    content: `
+# Story Generation Commands
+
+Use \`/pm-story\` to generate stories. Here are all available options:
+
+## Basic Generation
+\`\`\`bash
+# Generate story from index (auto-finds next available)
+/pm-story generate plans/future/wishlist
+
+# Generate specific story
+/pm-story generate plans/future/wishlist WISH-001
+\`\`\`
+
+## Pipeline Mode (Generate + Elaborate)
+\`\`\`bash
+# Generate and elaborate (interactive mode)
+/pm-story generate plans/future/wishlist WISH-001 --elab
+
+# Generate and elaborate (autonomous mode - no prompts)
+/pm-story generate plans/future/wishlist WISH-001 --elab --autonomous
+\`\`\`
+
+## Other Actions
+\`\`\`bash
+# Ad-hoc story (emergent/one-off)
+/pm-story generate --ad-hoc plans/future/wishlist
+
+# Follow-up story from QA findings
+/pm-story followup plans/future/wishlist WISH-001
+
+# Split oversized story
+/pm-story split plans/future/wishlist WISH-001
+
+# Bug/defect story
+/pm-story bug plans/future/wishlist BUG-001
+\`\`\`
+
+**Recommended for fastest workflow:**
+\`/pm-story generate {path} {id} --elab --autonomous\`
+This generates the story AND elaborates it automatically, setting status to ready-to-work.
+    `.trim(),
+    role: 'pm',
+    tags: ['story', 'creation', 'pm-story', 'generate', 'commands'],
+  },
+  {
+    content: `
+# Story Elaboration Commands
+
+Use \`/elab-story\` to audit and elaborate stories before implementation.
+
+## Interactive Mode (default)
+\`\`\`bash
+# Elaborate with interactive discussion
+/elab-story plans/future/wishlist WISH-001
+\`\`\`
+- Presents each finding to user
+- User chooses: Add as AC, Follow-up story, Out-of-scope, or Skip
+- Requires user input for decisions
+
+## Autonomous Mode (recommended for speed)
+\`\`\`bash
+# Elaborate with auto-decisions
+/elab-story plans/future/wishlist WISH-001 --autonomous
+\`\`\`
+- MVP-blocking gaps → Automatically added as new ACs
+- Non-blocking items → Logged to Knowledge Base
+- No user prompts required
+- Story goes directly to ready-to-work
+
+## What happens in elaboration:
+1. **Phase 0**: Setup - validates story exists
+2. **Phase 1**: Analysis - runs 8-point audit checklist
+3. **Phase 1.5**: (autonomous only) Auto-decisions
+4. **Phase 2**: Completion - writes report, updates status
+
+## Verdicts:
+- **PASS** → Story moves to ready-to-work
+- **CONDITIONAL PASS** → Minor fixes, then ready-to-work
+- **FAIL** → Needs PM revision
+- **SPLIT REQUIRED** → Story too large, needs splitting
+    `.trim(),
+    role: 'pm',
+    tags: ['elaboration', 'elab-story', 'autonomous', 'commands', 'qa'],
+  },
+  {
+    content: `
+# Fastest Path to Ready-to-Work
+
+To get a story from nothing to ready-to-work in one command:
+
+\`\`\`bash
+/pm-story generate plans/future/wishlist WISH-001 --elab --autonomous
+\`\`\`
+
+This command:
+1. Generates the story with all required sections
+2. Runs elaboration analysis
+3. Auto-resolves MVP-blocking gaps (adds as ACs)
+4. Logs non-blocking items to Knowledge Base
+5. Sets status to ready-to-work
+
+**Next step after this command:**
+\`\`\`bash
+/dev-implement-story plans/future/wishlist WISH-001
+\`\`\`
+
+## Alternative: Two-step process
+\`\`\`bash
+# Step 1: Generate story
+/pm-story generate plans/future/wishlist WISH-001
+
+# Step 2: Elaborate (with or without autonomous)
+/elab-story plans/future/wishlist WISH-001 --autonomous
+\`\`\`
+    `.trim(),
+    role: 'all',
+    tags: ['workflow', 'quick-start', 'pipeline', 'autonomous', 'ready-to-work'],
+  },
+  {
+    content: `
+# Implementation Commands
+
+After a story is in ready-to-work status, implement it:
+
+\`\`\`bash
+# Standard implementation with integrated code review
+/dev-implement-story plans/future/wishlist WISH-001
+
+# With custom max review iterations
+/dev-implement-story plans/future/wishlist WISH-001 --max-iterations=5
+
+# Force continue after max iterations (proceed with warnings)
+/dev-implement-story plans/future/wishlist WISH-001 --force-continue
+
+# Autonomous mode (moderate autonomy)
+/dev-implement-story plans/future/wishlist WISH-001 --autonomous=moderate
+\`\`\`
+
+## What happens:
+1. **Setup**: Prepares implementation context
+2. **Planning**: Creates implementation plan
+3. **Implementation**: Backend and frontend coders work
+4. **Review**: Integrated code review with fix loop
+5. **Learnings**: Captures lessons to Knowledge Base
+
+## Next step after implementation:
+\`\`\`bash
+/qa-verify-story plans/future/wishlist WISH-001
+\`\`\`
+    `.trim(),
+    role: 'dev',
+    tags: ['implementation', 'dev-implement-story', 'commands', 'development'],
+  },
+  {
+    content: `
+# QA Verification and Gate Commands
+
+After implementation, verify and gate the story:
+
+## QA Verification
+\`\`\`bash
+# Verify acceptance criteria are met
+/qa-verify-story plans/future/wishlist WISH-001
+\`\`\`
+
+## QA Gate (Final Ship Decision)
+\`\`\`bash
+# Create quality gate decision
+/qa-gate plans/future/wishlist WISH-001
+\`\`\`
+
+Gate verdicts:
+- **PASS** → Ready to merge
+- **CONCERNS** → Merge with advisory notes
+- **WAIVED** → Merge with accepted risk
+- **FAIL** → Back to development
+
+## Merge and Cleanup
+\`\`\`bash
+# After QA gate PASS
+/wt-finish
+\`\`\`
+
+This merges the feature branch and cleans up the worktree.
+    `.trim(),
+    role: 'qa',
+    tags: ['qa', 'verification', 'gate', 'commands', 'qa-verify', 'qa-gate'],
+  },
 ]
 
 /**
  * Generate SHA-256 hash of content for cache deduplication
  */
 function hashContent(content: string): string {
-  const crypto = require('crypto')
-  return crypto.createHash('sha256').update(content, 'utf-8').digest('hex')
+  return createHash('sha256').update(content, 'utf-8').digest('hex')
 }
 
 async function main(): Promise<void> {

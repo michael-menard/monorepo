@@ -1,0 +1,733 @@
+schema: 1
+story_id: INST-1103
+timestamp: '2026-02-06T22:05:00Z'
+
+steps:
+  # ─── BACKEND FOUNDATION ───────────────────────────────────────────────
+  - id: 1
+    description: "Create MocImageStorage port interface with uploadThumbnail and deleteThumbnail methods"
+    files:
+      - "apps/api/lego-api/domains/mocs/ports/index.ts"
+    dependencies: []
+    slice: backend
+    acceptance_criteria: ["AC54"]
+
+  - id: 2
+    description: "Implement MocImageStorage adapter with S3 upload/delete logic"
+    files:
+      - "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+      - "apps/api/lego-api/domains/mocs/adapters/index.ts"
+    dependencies: [1]
+    slice: backend
+    acceptance_criteria: ["AC55"]
+
+  - id: 3
+    description: "Create uploadThumbnail service method with business logic (ownership check, file validation, S3 upload, DB update)"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+    dependencies: [1, 2]
+    slice: backend
+    acceptance_criteria: ["AC49", "AC50", "AC51", "AC52"]
+
+  # ─── BACKEND API ENDPOINT ─────────────────────────────────────────────
+  - id: 4
+    description: "Create POST /mocs/:id/thumbnail route handler with multipart parsing, auth, and service orchestration"
+    files:
+      - "apps/api/lego-api/domains/mocs/routes.ts"
+    dependencies: [3]
+    slice: backend
+    acceptance_criteria: ["AC18", "AC19", "AC20", "AC21", "AC22", "AC23", "AC53", "AC56"]
+
+  - id: 5
+    description: "Add server-side file validation (MIME type with file-type library, size limits)"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+    dependencies: [3]
+    slice: backend
+    acceptance_criteria: ["AC24", "AC25", "AC26", "AC27", "AC28"]
+
+  - id: 6
+    description: "Implement S3 storage logic (key pattern, sanitization, CloudFront URL conversion)"
+    files:
+      - "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+    dependencies: [2]
+    slice: backend
+    acceptance_criteria: ["AC29", "AC30", "AC31"]
+
+  - id: 7
+    description: "Implement old thumbnail deletion and transaction safety (rollback on failure)"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+      - "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+    dependencies: [3, 6]
+    slice: backend
+    acceptance_criteria: ["AC32", "AC34"]
+
+  - id: 8
+    description: "Add error handling, security logging for rejected uploads, S3 failure handling"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+      - "apps/api/lego-api/domains/mocs/routes.ts"
+    dependencies: [4, 5]
+    slice: backend
+    acceptance_criteria: ["AC33", "AC35", "AC36", "AC37"]
+
+  # ─── FRONTEND COMPONENT ───────────────────────────────────────────────
+  - id: 9
+    description: "Create ThumbnailUpload component adapted from ImageUploadZone (maxImages=1, drag-drop, validation)"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    dependencies: []
+    slice: frontend
+    acceptance_criteria: ["AC1", "AC2", "AC3", "AC4", "AC5", "AC9", "AC10", "AC11"]
+
+  - id: 10
+    description: "Add client-side validation (file type, size limits, alerts)"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    dependencies: [9]
+    slice: frontend
+    acceptance_criteria: ["AC6", "AC7", "AC8"]
+
+  - id: 11
+    description: "Implement upload state management (loading, success, error) with toast notifications"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    dependencies: [9]
+    slice: frontend
+    acceptance_criteria: ["AC12", "AC13", "AC14", "AC15", "AC16", "AC17"]
+
+  # ─── RTK QUERY INTEGRATION ────────────────────────────────────────────
+  - id: 12
+    description: "Add uploadThumbnail mutation to RTK Query mocs-api with cache invalidation"
+    files:
+      - "packages/core/api-client/src/rtk/mocs-api.ts"
+    dependencies: []
+    slice: packages
+    acceptance_criteria: ["AC12", "AC14"]
+
+  - id: 13
+    description: "Add Zod schema for upload response in api-client"
+    files:
+      - "packages/core/api-client/src/schemas/mocs.ts"
+    dependencies: []
+    slice: packages
+    acceptance_criteria: ["AC33"]
+
+  # ─── UI INTEGRATION ───────────────────────────────────────────────────
+  - id: 14
+    description: "Integrate ThumbnailUpload in MOC detail page with 'Change Thumbnail' button"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/MocDetailPage/index.tsx"
+    dependencies: [9, 12]
+    slice: frontend
+    acceptance_criteria: ["AC2"]
+
+  - id: 15
+    description: "Integrate ThumbnailUpload in MOC create flow (after creation)"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/CreateMocPage/index.tsx"
+    dependencies: [9, 12]
+    slice: frontend
+    acceptance_criteria: ["AC1"]
+
+  # ─── BACKEND TESTS ────────────────────────────────────────────────────
+  - id: 16
+    description: "Unit test: Backend route validates MIME type with file-type library"
+    files:
+      - "apps/api/lego-api/domains/mocs/__tests__/routes.test.ts"
+    dependencies: [4, 5]
+    slice: backend
+    acceptance_criteria: ["AC39"]
+
+  - id: 17
+    description: "Unit test: Backend route validates file size (min/max)"
+    files:
+      - "apps/api/lego-api/domains/mocs/__tests__/routes.test.ts"
+    dependencies: [4, 5]
+    slice: backend
+    acceptance_criteria: ["AC40"]
+
+  - id: 18
+    description: "Unit test: Backend route checks authorization (user owns MOC)"
+    files:
+      - "apps/api/lego-api/domains/mocs/__tests__/routes.test.ts"
+    dependencies: [4]
+    slice: backend
+    acceptance_criteria: ["AC41"]
+
+  # ─── FRONTEND TESTS ───────────────────────────────────────────────────
+  - id: 19
+    description: "Unit test: ThumbnailUpload component renders, validates file type/size, shows preview"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+    dependencies: [9, 10]
+    slice: frontend
+    acceptance_criteria: ["AC38"]
+
+  - id: 20
+    description: "Integration test: ThumbnailUpload calls POST endpoint, success updates UI"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.integration.test.tsx"
+    dependencies: [11, 12]
+    slice: frontend
+    acceptance_criteria: ["AC42"]
+
+  - id: 21
+    description: "Integration test: MSW handler for /api/v2/mocs/:id/thumbnail returns success/error"
+    files:
+      - "apps/web/main-app/src/mocks/handlers.ts"
+    dependencies: [12]
+    slice: frontend
+    acceptance_criteria: ["AC43"]
+
+  - id: 22
+    description: "Integration test: RTK Query cache invalidated on success"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.integration.test.tsx"
+    dependencies: [12]
+    slice: frontend
+    acceptance_criteria: ["AC44"]
+
+  # ─── E2E TESTS (Per ADR-006) ──────────────────────────────────────────
+  - id: 23
+    description: "E2E test: Upload JPEG, verify gallery/detail page shows thumbnail (happy path)"
+    files:
+      - "apps/web/playwright/tests/mocs/thumbnail-upload.spec.ts"
+    dependencies: [14, 15]
+    slice: frontend
+    acceptance_criteria: ["AC45"]
+
+  - id: 24
+    description: "E2E test: Reject PDF file with error message"
+    files:
+      - "apps/web/playwright/tests/mocs/thumbnail-upload.spec.ts"
+    dependencies: [10]
+    slice: frontend
+    acceptance_criteria: ["AC46"]
+
+  - id: 25
+    description: "E2E test: Replace existing thumbnail with new image"
+    files:
+      - "apps/web/playwright/tests/mocs/thumbnail-upload.spec.ts"
+    dependencies: [7, 14]
+    slice: frontend
+    acceptance_criteria: ["AC47"]
+
+  - id: 26
+    description: "E2E test: Upload via drag-and-drop (desktop only)"
+    files:
+      - "apps/web/playwright/tests/mocs/thumbnail-upload.spec.ts"
+    dependencies: [9]
+    slice: frontend
+    acceptance_criteria: ["AC48"]
+
+  # ─── ENHANCEMENTS (User-Selected ACs 57-66) ──────────────────────────
+  - id: 27
+    description: "Enhancement: WebP conversion for optimal compression"
+    files:
+      - "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+    dependencies: [6]
+    slice: backend
+    acceptance_criteria: ["AC57"]
+
+  - id: 28
+    description: "Enhancement: Generate multiple thumbnail sizes (200x200, 800x800, 1600x1600)"
+    files:
+      - "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+      - "packages/backend/database-schema/src/schema/mocs.ts"
+    dependencies: [6]
+    slice: backend
+    acceptance_criteria: ["AC58"]
+
+  - id: 29
+    description: "Enhancement: Display progress indicator during upload"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    dependencies: [11]
+    slice: frontend
+    acceptance_criteria: ["AC59"]
+
+  - id: 30
+    description: "Enhancement: Client-side image compression before upload (Canvas API)"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    dependencies: [9]
+    slice: frontend
+    acceptance_criteria: ["AC60"]
+
+  - id: 31
+    description: "Enhancement: Strip EXIF metadata before storage"
+    files:
+      - "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+    dependencies: [6]
+    slice: backend
+    acceptance_criteria: ["AC61"]
+
+  - id: 32
+    description: "Enhancement: Rate limiting (100 uploads per hour per user)"
+    files:
+      - "apps/api/lego-api/middleware/rate-limit.ts"
+      - "apps/api/lego-api/domains/mocs/routes.ts"
+    dependencies: [4]
+    slice: backend
+    acceptance_criteria: ["AC62"]
+
+  - id: 33
+    description: "Enhancement: Upload analytics (CloudWatch metrics)"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+    dependencies: [3]
+    slice: backend
+    acceptance_criteria: ["AC63"]
+
+  - id: 34
+    description: "Enhancement: High-resolution validation (reject >8000x8000)"
+    files:
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+    dependencies: [5]
+    slice: backend
+    acceptance_criteria: ["AC64"]
+
+  - id: 35
+    description: "Enhancement: Concurrent upload handling (queue/cancel previous upload)"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    dependencies: [11]
+    slice: frontend
+    acceptance_criteria: ["AC65"]
+
+  - id: 36
+    description: "Enhancement: Session expiry handling (401 detection, retry flow)"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+      - "packages/core/api-client/src/rtk/base-query.ts"
+    dependencies: [11]
+    slice: frontend
+    acceptance_criteria: ["AC66"]
+
+files_to_change:
+  # Backend
+  - path: "apps/api/lego-api/domains/mocs/ports/index.ts"
+    action: modify
+    reason: "Add MocImageStorage port interface (AC54)"
+
+  - path: "apps/api/lego-api/domains/mocs/adapters/storage.ts"
+    action: create
+    reason: "Implement MocImageStorage adapter with S3 upload/delete (AC55, AC29, AC30, AC31, AC32)"
+
+  - path: "apps/api/lego-api/domains/mocs/adapters/index.ts"
+    action: modify
+    reason: "Export createMocImageStorage adapter (AC55)"
+
+  - path: "apps/api/lego-api/domains/mocs/application/services.ts"
+    action: modify
+    reason: "Add uploadThumbnail service method with business logic (AC49-AC52, AC24-AC28, AC34)"
+
+  - path: "apps/api/lego-api/domains/mocs/routes.ts"
+    action: modify
+    reason: "Add POST /mocs/:id/thumbnail endpoint (AC18-AC23, AC33, AC53)"
+
+  - path: "apps/api/lego-api/domains/mocs/__tests__/routes.test.ts"
+    action: modify
+    reason: "Unit tests for route validation (AC39, AC40, AC41)"
+
+  # Frontend
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    action: create
+    reason: "ThumbnailUpload component with drag-drop, validation, upload (AC1-AC17)"
+
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+    action: create
+    reason: "Unit tests for ThumbnailUpload component (AC38)"
+
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.integration.test.tsx"
+    action: create
+    reason: "Integration tests for ThumbnailUpload (AC42, AC44)"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/MocDetailPage/index.tsx"
+    action: modify
+    reason: "Integrate ThumbnailUpload with 'Change Thumbnail' button (AC2)"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/CreateMocPage/index.tsx"
+    action: modify
+    reason: "Integrate ThumbnailUpload in create flow (AC1)"
+
+  # Packages
+  - path: "packages/core/api-client/src/rtk/mocs-api.ts"
+    action: modify
+    reason: "Add uploadThumbnail mutation with cache invalidation (AC12, AC14)"
+
+  - path: "packages/core/api-client/src/schemas/mocs.ts"
+    action: modify
+    reason: "Add Zod schema for upload response (AC33)"
+
+  # Testing
+  - path: "apps/web/main-app/src/mocks/handlers.ts"
+    action: modify
+    reason: "Add MSW handler for thumbnail upload endpoint (AC43)"
+
+  - path: "apps/web/playwright/tests/mocs/thumbnail-upload.spec.ts"
+    action: create
+    reason: "E2E tests for thumbnail upload (AC45-AC48, per ADR-006)"
+
+  # Enhancements (conditional)
+  - path: "apps/api/lego-api/middleware/rate-limit.ts"
+    action: create
+    reason: "Rate limiting middleware (AC62 - enhancement)"
+
+  - path: "packages/backend/database-schema/src/schema/mocs.ts"
+    action: modify
+    reason: "Add fields for multiple thumbnail sizes (AC58 - enhancement)"
+
+commands_to_run:
+  - command: "pnpm install file-type"
+    when: "before implementation (backend dependency for MIME type validation)"
+    required: true
+
+  - command: "pnpm install sharp"
+    when: "before implementation if AC57-AC58 selected (WebP conversion, resize)"
+    required: false
+
+  - command: "pnpm install exif-reader"
+    when: "before implementation if AC61 selected (EXIF stripping)"
+    required: false
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after RTK Query changes"
+    required: true
+
+  - command: "pnpm test --filter app-instructions-gallery"
+    when: "after frontend component changes"
+    required: true
+
+  - command: "pnpm test --filter lego-api"
+    when: "after backend changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm playwright test thumbnail-upload.spec.ts"
+    when: "after E2E test creation (ADR-006 requirement)"
+    required: true
+
+acceptance_criteria_map:
+  # Frontend Upload Component
+  - ac_id: "AC1"
+    planned_evidence: "Component renders on /mocs/new after MOC creation"
+    evidence_type: manual
+
+  - ac_id: "AC2"
+    planned_evidence: "Component renders on /mocs/:id with 'Change Thumbnail' action"
+    evidence_type: manual
+
+  - ac_id: "AC3"
+    planned_evidence: "Drag-drop support via onDrop handler"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "File picker via input[type=file]"
+    evidence_type: test
+
+  - ac_id: "AC5"
+    planned_evidence: "Drag-over state changes border color and opacity"
+    evidence_type: test
+
+  # Client-Side Validation
+  - ac_id: "AC6"
+    planned_evidence: "Unit test: Rejects non-image files with alert"
+    evidence_type: test
+
+  - ac_id: "AC7"
+    planned_evidence: "Unit test: Rejects files >10MB with alert"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "File input has accept='image/jpeg,image/png,image/webp'"
+    evidence_type: file
+
+  # Preview & Upload
+  - ac_id: "AC9"
+    planned_evidence: "Preview displays selected file before upload"
+    evidence_type: test
+
+  - ac_id: "AC10"
+    planned_evidence: "Preview shows filename and file size"
+    evidence_type: test
+
+  - ac_id: "AC11"
+    planned_evidence: "Remove button clears selected image"
+    evidence_type: test
+
+  - ac_id: "AC12"
+    planned_evidence: "Upload button triggers POST /api/v2/mocs/:id/thumbnail"
+    evidence_type: test
+
+  - ac_id: "AC13"
+    planned_evidence: "Loading state shows spinner and disabled button"
+    evidence_type: test
+
+  # Success & Error Handling
+  - ac_id: "AC14"
+    planned_evidence: "Success toast and UI update with new thumbnail"
+    evidence_type: test
+
+  - ac_id: "AC15"
+    planned_evidence: "Existing thumbnail replaced (not appended)"
+    evidence_type: test
+
+  - ac_id: "AC16"
+    planned_evidence: "API errors display as toast notifications"
+    evidence_type: test
+
+  - ac_id: "AC17"
+    planned_evidence: "Network errors display toast with retry option"
+    evidence_type: test
+
+  # Backend Endpoint & Security
+  - ac_id: "AC18"
+    planned_evidence: "POST /mocs/:id/thumbnail accepts multipart/form-data"
+    evidence_type: http
+
+  - ac_id: "AC19"
+    planned_evidence: "Auth middleware applied to route"
+    evidence_type: file
+
+  - ac_id: "AC20"
+    planned_evidence: "requireFeature('moc') middleware applied"
+    evidence_type: file
+
+  - ac_id: "AC21"
+    planned_evidence: "Unit test: Authorization check (user owns MOC)"
+    evidence_type: test
+
+  - ac_id: "AC22"
+    planned_evidence: "Unit test: Returns 404 if MOC not found"
+    evidence_type: test
+
+  - ac_id: "AC23"
+    planned_evidence: "Unit test: Returns 403 if user doesn't own MOC"
+    evidence_type: test
+
+  # File Validation
+  - ac_id: "AC24"
+    planned_evidence: "Unit test: Validates MIME type against whitelist"
+    evidence_type: test
+
+  - ac_id: "AC25"
+    planned_evidence: "Uses file-type library to verify actual MIME type"
+    evidence_type: file
+
+  - ac_id: "AC26"
+    planned_evidence: "Unit test: Returns 400 INVALID_MIME_TYPE"
+    evidence_type: test
+
+  - ac_id: "AC27"
+    planned_evidence: "Unit test: Validates file size 1 byte <= size <= 10MB"
+    evidence_type: test
+
+  - ac_id: "AC28"
+    planned_evidence: "Unit test: Returns 400 FILE_TOO_LARGE or FILE_TOO_SMALL"
+    evidence_type: test
+
+  # Storage & Database
+  - ac_id: "AC29"
+    planned_evidence: "S3 key pattern: mocs/{userId}/{mocId}/thumbnail/{uuid}-{filename}"
+    evidence_type: file
+
+  - ac_id: "AC30"
+    planned_evidence: "Filename sanitization (special chars removed, UUID prefix)"
+    evidence_type: file
+
+  - ac_id: "AC31"
+    planned_evidence: "CloudFront URL conversion via toCloudFrontUrl()"
+    evidence_type: file
+
+  - ac_id: "AC32"
+    planned_evidence: "Old S3 object deleted before new upload"
+    evidence_type: file
+
+  - ac_id: "AC33"
+    planned_evidence: "Returns 200 with { thumbnailUrl: string }"
+    evidence_type: http
+
+  - ac_id: "AC34"
+    planned_evidence: "Transaction wraps S3 upload + DB update with rollback"
+    evidence_type: file
+
+  # Logging & Error Handling
+  - ac_id: "AC35"
+    planned_evidence: "Security events logged to CloudWatch for rejected uploads"
+    evidence_type: file
+
+  - ac_id: "AC36"
+    planned_evidence: "S3 upload failures return 500 with structured logging"
+    evidence_type: file
+
+  - ac_id: "AC37"
+    planned_evidence: "S3 deletion failures logged without blocking upload"
+    evidence_type: file
+
+  # Unit Tests
+  - ac_id: "AC38"
+    planned_evidence: "ThumbnailUpload.test.tsx - component unit tests"
+    evidence_type: test
+
+  - ac_id: "AC39"
+    planned_evidence: "routes.test.ts - MIME type validation with file-type"
+    evidence_type: test
+
+  - ac_id: "AC40"
+    planned_evidence: "routes.test.ts - file size validation"
+    evidence_type: test
+
+  - ac_id: "AC41"
+    planned_evidence: "routes.test.ts - authorization check"
+    evidence_type: test
+
+  # Integration Tests
+  - ac_id: "AC42"
+    planned_evidence: "ThumbnailUpload.integration.test.tsx - POST endpoint called"
+    evidence_type: test
+
+  - ac_id: "AC43"
+    planned_evidence: "MSW handler returns success/error"
+    evidence_type: test
+
+  - ac_id: "AC44"
+    planned_evidence: "RTK Query cache invalidated on success"
+    evidence_type: test
+
+  # E2E Tests (Per ADR-006)
+  - ac_id: "AC45"
+    planned_evidence: "E2E test: Upload JPEG, verify gallery/detail shows thumbnail"
+    evidence_type: test
+
+  - ac_id: "AC46"
+    planned_evidence: "E2E test: Reject PDF with error message"
+    evidence_type: test
+
+  - ac_id: "AC47"
+    planned_evidence: "E2E test: Replace existing thumbnail"
+    evidence_type: test
+
+  - ac_id: "AC48"
+    planned_evidence: "E2E test: Drag-and-drop upload"
+    evidence_type: test
+
+  # Service Layer Architecture
+  - ac_id: "AC49"
+    planned_evidence: "domains/mocs/application/services.ts with uploadThumbnail()"
+    evidence_type: file
+
+  - ac_id: "AC50"
+    planned_evidence: "Service method signature returns Result<{ thumbnailUrl }, MocError>"
+    evidence_type: file
+
+  - ac_id: "AC51"
+    planned_evidence: "Service handles ownership, validation, S3, DB update"
+    evidence_type: file
+
+  - ac_id: "AC52"
+    planned_evidence: "Transaction with rollback on failure"
+    evidence_type: file
+
+  - ac_id: "AC53"
+    planned_evidence: "Route handler <50 lines, calls service, maps Result to HTTP"
+    evidence_type: file
+
+  # Ports & Adapters
+  - ac_id: "AC54"
+    planned_evidence: "MocImageStorage port in domains/mocs/ports/index.ts"
+    evidence_type: file
+
+  - ac_id: "AC55"
+    planned_evidence: "Adapter in domains/mocs/adapters/storage.ts"
+    evidence_type: file
+
+  - ac_id: "AC56"
+    planned_evidence: "Route handler injects dependencies: createMocService({ mocRepo, imageStorage })"
+    evidence_type: file
+
+  # Enhancements (User-Selected)
+  - ac_id: "AC57"
+    planned_evidence: "WebP conversion with Sharp library"
+    evidence_type: file
+
+  - ac_id: "AC58"
+    planned_evidence: "Multiple thumbnail sizes generated (200x200, 800x800, 1600x1600)"
+    evidence_type: file
+
+  - ac_id: "AC59"
+    planned_evidence: "Progress bar showing % complete"
+    evidence_type: manual
+
+  - ac_id: "AC60"
+    planned_evidence: "Client-side compression using Canvas API"
+    evidence_type: file
+
+  - ac_id: "AC61"
+    planned_evidence: "EXIF metadata stripped before storage"
+    evidence_type: file
+
+  - ac_id: "AC62"
+    planned_evidence: "Rate limiting middleware (100/hour/user)"
+    evidence_type: file
+
+  - ac_id: "AC63"
+    planned_evidence: "CloudWatch metrics logged (success rate, file size, duration)"
+    evidence_type: file
+
+  - ac_id: "AC64"
+    planned_evidence: "High-res validation rejects >8000x8000"
+    evidence_type: file
+
+  - ac_id: "AC65"
+    planned_evidence: "Upload queue/cancellation state management"
+    evidence_type: file
+
+  - ac_id: "AC66"
+    planned_evidence: "401 detection and retry flow"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should we implement ALL enhancement ACs (57-66) or only the base MVP (ACs 1-56)?"
+    decision: "MVP + Critical Enhancements (ACs 1-56 + AC57, AC61, AC64)"
+    rationale: "User selected MVP + Critical scope. Includes WebP conversion, EXIF stripping, and high-res validation for security and performance. Other enhancements (AC58-60, AC62-63, AC65-66) deferred."
+    decided_by: user
+    effort: "5-6 days"
+
+# Deferred to follow-up story:
+# - AC58: Multiple thumbnail sizes
+# - AC59: Progress indicator
+# - AC60: Client-side compression
+# - AC62: Rate limiting
+# - AC63: Upload analytics
+# - AC65: Concurrent upload handling
+# - AC66: Session expiry handling
+
+complexity: complex
+
+notes:
+  - "Direct reuse of ImageUploadZone component from app-sets-gallery (95% reusable)"
+  - "CloudFront integration follows proven pattern from wishlist domain (toCloudFrontUrl utility)"
+  - "Service layer architecture required per AC49-AC56 (ports & adapters pattern)"
+  - "ADR-001: Frontend uses /api/v2/mocs/:id/thumbnail, Backend uses /mocs/:id/thumbnail"
+  - "ADR-003: S3 storage with CloudFront URL conversion required"
+  - "ADR-006: At least one E2E test required in dev phase using playwright.legacy.config.ts"
+  - "Enhancement ACs (57-66) are user-selected and significantly increase effort (15-20 days)"
+  - "INST-1102 dependency may block E2E tests if MOC creation not complete"
+  - "Transaction safety critical: S3 upload + DB update must be atomic with rollback"
+  - "file-type library required for MIME type validation (AC25)"
+  - "KNOWLEDGE-CONTEXT.yaml created with 0 KB lessons (KB tables don't exist yet)"

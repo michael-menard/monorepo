@@ -160,6 +160,16 @@ export function useNavigation() {
 }
 
 /**
+ * Optional hook to use navigation context
+ * Returns null if used outside NavigationProvider - useful for auth pages
+ * that may render before the provider is available
+ */
+export function useNavigationOptional(): NavigationContextType | null {
+  const context = useContext(NavigationContext)
+  return context ?? null
+}
+
+/**
  * Generate contextual navigation items based on current route
  */
 function generateContextualNavigation(pathname: string): NavigationItem[] {

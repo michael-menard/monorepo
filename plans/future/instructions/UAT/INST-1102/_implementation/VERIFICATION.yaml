@@ -1,0 +1,154 @@
+schema: 1
+story_id: "INST-1102"
+timestamp: "2026-02-07T06:25:00Z"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# QA Verify Section
+# ─────────────────────────────────────────────────────────────────────────────
+
+qa_verify:
+  verdict: PASS
+  tests_executed: true
+  test_results:
+    unit: { pass: 42, fail: 0 }
+    http: { pass: 0, fail: 0 }
+    e2e: { pass: 7, fail: 0 }
+
+  coverage: 92.5
+  coverage_meets_threshold: true
+
+  test_quality:
+    verdict: PASS
+    anti_patterns: []
+    notes: |
+      - Fixed flaky test in MocForm (userEvent.type timing → fireEvent.change)
+      - All 42 unit tests now pass consistently
+      - 7 E2E tests pass with live API
+
+  acs_verified:
+    - ac_id: "AC-1"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+      notes: "Navigation to /mocs/new verified via Module.tsx routing"
+
+    - ac_id: "AC-2"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+      notes: "All form fields present: title, description, theme, tags"
+
+    - ac_id: "AC-3"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+      notes: "Title auto-focus via useEffect with ref"
+
+    - ac_id: "AC-4"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+      notes: "Inline validation with aria-invalid attributes"
+
+    - ac_id: "AC-5"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+      notes: "Submit button disabled until valid (title >= 3 chars + theme)"
+
+    - ac_id: "AC-6"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+      notes: "useCreateMocMutation from @repo/api-client"
+
+    - ac_id: "AC-7"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+      notes: "Success toast + navigation to /mocs"
+
+    - ac_id: "AC-8"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+      notes: "Zod validation via CreateMocRequestSchema.safeParse()"
+
+    - ac_id: "AC-9"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+      notes: "userId from c.get('userId') after auth middleware"
+
+    - ac_id: "AC-10"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+      notes: "slugify() with UUID suffix on collision"
+
+    - ac_id: "AC-11"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+      notes: "type: 'MOC' set in insert values"
+
+    - ac_id: "AC-12"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+      notes: "201 response with CreateMocResponseSchema"
+
+    - ac_id: "AC-13"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+      notes: "apiError prop displays error banner in MocForm"
+
+    - ac_id: "AC-14"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[13]"
+      notes: "Escape key handler with navigation"
+
+    - ac_id: "AC-15"
+      status: PASS
+      evidence_ref: "EVIDENCE.yaml:acceptance_criteria[14]"
+      notes: "useLocalStorage with 'moc:form:recovery' key"
+
+  architecture_compliant: true
+  architecture_notes: |
+    - Proper middleware chain: auth → loadPermissions → requireFeature('moc')
+    - Zod schemas for all request/response validation
+    - Clean separation: routes → services → repositories
+    - Feature gate correctly applied
+    - API paths follow ADR-001 convention
+
+  issues: []
+
+  lessons_to_record:
+    - lesson: "userEvent.type() can be flaky in jsdom - use fireEvent.change() for reliability"
+      category: anti_pattern
+      tags: ["testing", "vitest", "react-testing-library"]
+
+    - lesson: "Radix Select requires initialValues in tests - direct interaction fails in jsdom"
+      category: blocker
+      tags: ["testing", "radix-ui", "jsdom"]
+
+    - lesson: "Optimistic UI with error rollback works well for form submissions"
+      category: pattern
+      tags: ["frontend", "ux", "forms"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gate Section
+# ─────────────────────────────────────────────────────────────────────────────
+
+gate:
+  decision: PASS
+  reason: "All 15 ACs verified, 42 unit tests + 7 E2E tests pass, architecture compliant"
+  blocking_issues: []
+  score: 88
+  reviewed_at: "2026-02-07T06:25:00Z"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Token Summary
+# ─────────────────────────────────────────────────────────────────────────────
+
+tokens:
+  qa_setup:
+    in: 2800
+    out: 1200
+  qa_verify:
+    in: 54000
+    out: 3500
+  qa_completion:
+    in: 2000
+    out: 800
+  total:
+    in: 58800
+    out: 5500

@@ -2,7 +2,21 @@
 
 ## Executive Summary
 
-This project delivers a comprehensive administrative control panel that enables authorized administrators to manage users, troubleshoot issues, and maintain system security. The admin panel provides essential user management capabilities including user search and listing, session management through Cognito token revocation, user blocking/unblocking, and user impersonation for support scenarios. Built with React, Tailwind CSS, and shadcn components on the frontend with a serverless backend architecture, this panel serves as the foundation for future administrative capabilities while immediately addressing critical operational needs for user management and support.
+This project delivers an administrative control panel that enables authorized administrators to manage users, troubleshoot issues, and maintain system security. The admin panel provides essential user management capabilities including user search and listing, session management through Cognito token revocation, and user blocking/unblocking. Built with React, Tailwind CSS, and shadcn components on the frontend with a serverless backend architecture, this panel serves as the foundation for future administrative capabilities.
+
+**Note:** This plan incorporates the `user-revocation` epic, which has been merged here since the functionality is tightly coupled. The `user-revocation` plan is now deprecated.
+
+## Dependencies
+
+| Dependency | Status | Required Before |
+|------------|--------|-----------------|
+| `cognito-scopes` epic | Planned | Development start |
+
+**Why `cognito-scopes` is required:**
+- Establishes `admin` Cognito group for authorization
+- Creates `user_quotas` table with `is_suspended` flag for blocking
+- Implements auth middleware that checks suspension status
+- Defines database-authoritative permission model
 
 ## Problem Statement
 
@@ -10,592 +24,422 @@ This project delivers a comprehensive administrative control panel that enables 
 
 Currently, administrators lack a centralized interface for managing users and responding to support issues. Without a dedicated admin panel, teams face several operational challenges:
 
-- **No User Visibility:** Administrators cannot easily view user lists, search for specific users, or access critical user information like last login times and email addresses
-- **Manual User Management:** User account management (blocking, unblocking, session termination) requires direct AWS console access or manual database queries, creating security risks and operational bottlenecks
-- **Inefficient Troubleshooting:** Support teams cannot reproduce user issues because they lack the ability to impersonate users and see the application from their perspective
+- **No User Visibility:** Administrators cannot easily view user lists, search for specific users, or access user information
+- **Manual User Management:** User account management (blocking, session termination) requires direct AWS console access or manual database queries, creating security risks and operational bottlenecks
 - **Scattered Tools:** Administrative tasks are spread across AWS Console, database tools, and custom scripts, leading to context switching and increased error potential
 - **Security Gaps:** Granting AWS console access to support staff creates unnecessary security exposure and violates principle of least privilege
+- **No Immediate Revocation:** When users need to be blocked, their Cognito refresh tokens remain valid until expiration (potentially days/weeks)
 
 **Impact of the Problem:**
 
-- **Operational Inefficiency:** Simple administrative tasks take 10-30 minutes instead of seconds, reducing team productivity
-- **Poor User Support:** Support teams struggle to diagnose and resolve user-reported issues without seeing what users see, leading to longer resolution times and user frustration
-- **Security Risk:** Overly broad AWS permissions for admin staff increase attack surface and compliance concerns
+- **Operational Inefficiency:** Simple administrative tasks take 10-30 minutes instead of seconds
+- **Security Risk:** Compromised accounts continue to have access even after being flagged
+- **Compliance Exposure:** Failure to immediately revoke access may violate regulatory requirements
 - **Scalability Limitations:** As user base grows, manual user management becomes increasingly unsustainable
-- **Audit Challenges:** Lack of centralized logging for administrative actions makes compliance audits difficult and time-consuming
-
-**Why Existing Solutions Fall Short:**
-
-- **AWS Console:** Too technical for non-engineering admins, requires broad IAM permissions, no application-specific context
-- **Database Tools:** Require SQL knowledge, no audit trail, error-prone, security risk
-- **Custom Scripts:** Not user-friendly, require technical knowledge, no standardization, difficult to maintain
-- **Third-Party Admin Tools:** Don't integrate with Cognito, lack application-specific features, additional cost and complexity
-
-**Urgency and Importance:**
-
-As the application scales and the user base grows, the need for efficient user management and support capabilities becomes critical. Every support ticket that takes 30 minutes instead of 5 minutes represents lost productivity and degraded user experience. Building this foundation now enables the team to scale operations effectively.
 
 ## Proposed Solution
 
 **Core Concept and Approach:**
 
-Build a modern, secure, single-page admin panel application that provides a unified interface for all user management and support operations. The solution consists of:
+Build a modern, secure admin panel integrated into the main application that provides a unified interface for all user management operations. The solution consists of:
 
-1. **Frontend Application:** React-based SPA using Tailwind CSS for styling and shadcn component library for consistent, accessible UI components
-2. **Serverless Backend:** AWS Lambda functions providing secure API endpoints for user management operations, Cognito integration, and impersonation token generation
-3. **Authentication & Authorization:** JWT-based authentication with admin scope validation ensuring only authorized administrators can access the panel
-4. **User Management Interface:** Searchable, filterable user list with detailed user views showing email, last login, account status, and available actions
-5. **Session Control:** Integrated Cognito token revocation and user blocking/unblocking with application-level enforcement
-6. **Impersonation System:** Secure user impersonation allowing admins to generate time-limited impersonation tokens to troubleshoot as specific users
+1. **Protected Route Group:** Admin routes under `/admin/*` in the main-app, protected by admin group membership check
+2. **User Management Interface:** Searchable, paginated user list with user detail views and available actions
+3. **Dual-Layer Access Revocation:**
+   - Cognito `AdminUserGlobalSignOut` API to invalidate all refresh tokens
+   - Application-level `is_suspended` flag (from `user_quotas` table) checked on every request
+4. **Audit Logging:** All administrative actions logged for compliance and security review
 
-**Key Differentiators from Existing Solutions:**
+**Key Architectural Decisions:**
 
-- **Application-Native:** Built specifically for your application with full context and integration, not a generic admin tool
-- **Modern UX:** Leverages shadcn components for a polished, professional interface that's intuitive for non-technical admins
-- **Secure by Design:** Admin scope validation, audit logging, time-limited impersonation tokens, principle of least privilege
-- **Serverless Architecture:** Scales automatically, pay-per-use pricing, no infrastructure to manage
-- **Extensible Foundation:** Designed to accommodate future admin features without architectural changes
-
-**Why This Solution Will Succeed:**
-
-- **Proven Tech Stack:** React, Tailwind, and shadcn are mature, well-documented technologies with strong community support
-- **AWS Native:** Leverages existing Cognito infrastructure and AWS services for seamless integration
-- **Developer Friendly:** Component library approach enables rapid feature development
-- **User Centered:** Focuses on admin workflows and common tasks, not just exposing database tables
-- **Security First:** Built-in audit logging and scope-based access control from day one
-
-**High-Level Vision:**
-
-A comprehensive administrative command center where authorized admins can efficiently manage users, troubleshoot issues, monitor system health, configure application settings, and access analytics - all from a single, secure, intuitive interface.
+1. **Integrated into main-app** — Not a separate application; uses existing auth infrastructure
+2. **Database-authoritative blocking** — `is_suspended` flag from `user_quotas` (defined in `cognito-scopes`)
+3. **Cognito for user listing** — Use `ListUsers` API; no need to sync users to PostgreSQL
+4. **Session-based impersonation** (Phase 2) — No custom JWT signing; server-side session state
 
 ## Target Users
 
-### Primary User Segment: System Administrators & Support Staff
+### Primary User Segment: System Administrators
 
-**Demographic/Firmographic Profile:**
-
-- Internal team members with administrative responsibilities (IT admins, customer support leads, operations staff)
+**Profile:**
+- Internal team members with administrative responsibilities
 - Technical proficiency ranges from non-technical support staff to experienced engineers
-- Require elevated permissions to perform user management and troubleshooting tasks
-- Typically 5-20 admin users in early stages, scaling with organization growth
-- Work in fast-paced support or operations environments requiring quick access to user information
+- Typically 5-20 admin users initially
 
-**Current Behaviors and Workflows:**
+**Current Behaviors:**
+- Respond to user support tickets requiring account investigation
+- Monitor user activity for suspicious behavior
+- Manage user lifecycle events (access problems, session management)
+- Currently use AWS Console for Cognito operations
 
-- Respond to user support tickets requiring account investigation or troubleshooting
-- Monitor user activity and investigate suspicious behavior or reported issues
-- Manage user lifecycle events (account issues, access problems, session management)
-- Currently switch between AWS Console, database tools, and application interface to complete tasks
-- Need to quickly find users by email, view their account status, and take action
-- Frequently need to "see what the user sees" to diagnose reported problems
-
-**Specific Needs and Pain Points:**
-
-- Need fast, intuitive search to find users among potentially thousands of accounts
-- Require one-click access to common actions (block user, revoke sessions, impersonate)
-- Must be able to troubleshoot user issues without requiring users to share screenshots or detailed descriptions
-- Need confidence that actions (especially impersonation) are secure and audited
-- Want to avoid learning AWS Console or SQL to perform routine tasks
-- Require visibility into user activity (last login) to assess account status
-
-**Goals They're Trying to Achieve:**
-
-- Resolve user support tickets quickly and accurately
+**Goals:**
+- Resolve user support issues quickly
 - Maintain system security by managing compromised or problematic accounts
-- Troubleshoot user-reported issues efficiently by seeing the application from user perspective
-- Perform administrative tasks without requiring engineering team assistance
+- Perform administrative tasks without requiring AWS console access
 - Maintain audit trail for compliance and security reviews
-- Scale support operations as user base grows
 
 ## Goals & Success Metrics
 
 ### Business Objectives
 
-- **Reduce Support Resolution Time:** Decrease average time to resolve user issues from 30 minutes to under 5 minutes through efficient user lookup and impersonation capabilities
-- **Eliminate AWS Console Dependency:** Remove need for support staff to have AWS Console access, reducing security surface area and IAM complexity
-- **Improve Admin Productivity:** Enable admins to complete user management tasks 10x faster through centralized, purpose-built interface
-- **Scale Support Operations:** Support 10x user growth without proportional increase in support staff through improved tooling and efficiency
-- **Establish Audit Foundation:** Create comprehensive audit trail for all administrative actions to support compliance and security requirements
-
-### User Success Metrics
-
-- **Time to Find User:** Average time from opening admin panel to locating specific user (target: < 10 seconds)
-- **Task Completion Rate:** Percentage of admin tasks completed without requiring engineering assistance (target: 95%+)
-- **Impersonation Usage:** Frequency of impersonation feature usage for troubleshooting (indicates feature value)
-- **Admin Satisfaction:** Post-deployment survey showing admin confidence and satisfaction with the tool (target: 4.5/5 or higher)
-- **Error Rate:** Percentage of admin actions that fail or require retry (target: < 2%)
+- **Reduce Support Resolution Time:** Achieve user access revocation within 60 seconds of admin action
+- **Eliminate AWS Console Dependency:** Remove need for support staff to have direct AWS console access
+- **Improve Admin Productivity:** Enable admins to complete user management tasks 10x faster
+- **Establish Audit Foundation:** Create comprehensive audit trail for all administrative actions
 
 ### Key Performance Indicators (KPIs)
 
-- **User Search Performance:** Search results returned in < 500ms for database of 100k+ users
-- **Admin Panel Adoption:** 100% of user management tasks performed through admin panel (vs. AWS Console/database tools) within 30 days of launch
-- **Support Ticket Resolution Time:** 80% reduction in average time to resolve user account issues
-- **Impersonation Session Success Rate:** 100% of impersonation sessions successfully initiated and properly audited
-- **System Uptime:** 99.9% availability for admin panel (critical for support operations)
+- **User Search Performance:** Search results returned in < 2 seconds
+- **Mean Time to Revoke (MTTR):** Target < 60 seconds from admin action to complete access termination
+- **Revocation Success Rate:** 100% - no instances of revoked users maintaining access
 - **Audit Completeness:** 100% of administrative actions logged with admin identity, timestamp, action type, and target user
 
 ## MVP Scope
 
 ### Core Features (Must Have)
 
-- **Admin Authentication & Authorization:** Secure login requiring JWT with admin scope; redirect unauthorized users; session management
-  - _Rationale:_ Foundation for all security - must validate admin scope before allowing any access
+- **Admin Route Protection:** Routes under `/admin/*` require JWT with `admin` group membership; redirect unauthorized users
+  - _Rationale:_ Foundation for all security - must validate admin group before allowing any access
 
-- **User List View:** Paginated table displaying all users with columns for email, last login time, account status (active/blocked), and actions
-  - _Rationale:_ Primary interface for user discovery and management; must handle large user bases efficiently
+- **User List View:** Paginated table displaying users from Cognito with columns for email, user ID, account status (active/suspended), and actions
+  - _Rationale:_ Primary interface for user discovery and management
+  - _Implementation:_ Uses Cognito `ListUsers` API with pagination tokens
 
-- **User Search & Filtering:** Real-time search by email with debouncing; filters for account status (active/blocked), last login date range
-  - _Rationale:_ Critical for quickly finding specific users among thousands; search is the most common admin workflow
+- **User Search:** Search by email using Cognito `ListUsers` API with filter
+  - _Rationale:_ Critical for quickly finding specific users; search is the most common admin workflow
+  - _Note:_ Cognito search is prefix-based only (e.g., `email ^= "john"`)
 
-- **User Detail View:** Dedicated page/modal showing comprehensive user information including email, user ID, creation date, last login timestamp, account status, and action history
+- **User Detail View:** Modal or page showing user information: email, user ID (sub), Cognito status, `is_suspended` flag, and available actions
   - _Rationale:_ Provides context needed for informed administrative decisions
 
-- **Revoke Refresh Token:** Button to call Cognito `AdminUserGlobalSignOut` API to invalidate all refresh tokens for selected user
+- **Revoke Refresh Tokens:** Button to call Cognito `AdminUserGlobalSignOut` API to invalidate all refresh tokens for selected user
   - _Rationale:_ Core security feature for immediate session termination
+  - _Behavior:_ Existing access tokens remain valid until expiry (typically 1 hour), but no new tokens can be obtained
 
-- **Block/Unblock User:** Toggle to set application-level block flag preventing authentication; visual indicator of blocked status
-  - _Rationale:_ Prevents blocked users from obtaining new tokens even if Cognito allows it; fail-safe mechanism
+- **Block/Unblock User:** Toggle to set `is_suspended` flag in `user_quotas` table; visual indicator of blocked status
+  - _Rationale:_ Prevents blocked users from accessing API even if they have valid tokens
+  - _Note:_ Depends on `cognito-scopes` auth middleware checking this flag
 
-- **User Impersonation:** "Impersonate User" action that generates time-limited impersonation token and opens application in new tab/window as that user
-  - _Rationale:_ Essential troubleshooting tool; must be secure with clear visual indicators and automatic expiration
+- **Revocation Reason Capture:** Required dropdown for reason when blocking (Security incident, Policy violation, Account compromise, Other)
+  - _Rationale:_ Essential for audit trail and compliance
 
-- **Impersonation Banner:** Prominent visual indicator when admin is impersonating a user, showing impersonated user email and "Exit Impersonation" button
-  - _Rationale:_ Prevents confusion and accidental actions while impersonating; security best practice
+- **Confirmation Dialog:** Modal requiring admin to confirm before executing revoke/block actions
+  - _Rationale:_ Prevents accidental clicks; critical given the immediate and disruptive nature
 
-- **Admin Audit Log:** Automatic logging of all admin actions (searches, views, token revocations, blocks/unblocks, impersonations) with timestamp, admin identity, action type, and target user
-  - _Rationale:_ Non-negotiable for security, compliance, and troubleshooting admin issues
+- **Restore Access:** Ability for admins to unblock users (remove `is_suspended` flag)
+  - _Rationale:_ Handles error cases and temporary suspensions
 
-- **Responsive Layout:** Mobile-friendly design using Tailwind responsive utilities, though primary use case is desktop
-  - _Rationale:_ Admins may need to respond to issues from mobile devices; shadcn components support responsive design
+- **Audit Logging:** Automatic logging of all admin actions with timestamp, admin user ID, action type, target user ID, reason, and result
+  - _Rationale:_ Non-negotiable for security and compliance requirements
 
 ### Out of Scope for MVP
 
+- User impersonation (deferred to Phase 2 - requires careful security design)
+- Last login tracking (requires auth middleware changes)
 - Bulk user operations (block multiple users, export user lists)
-- Advanced filtering (by user attributes, custom fields, registration date)
+- Advanced filtering (by registration date, custom attributes)
 - User creation/deletion through admin panel
 - Role-based admin permissions (different admin levels)
 - Admin activity dashboard/analytics
 - Email notifications to users when blocked/unblocked
-- User session history (all past logins, not just last login)
 - Integration with support ticketing systems
-- Custom admin roles or granular permissions
-- Admin user management (adding/removing admins)
+- Mobile-optimized layout (desktop-first is acceptable)
 
 ### MVP Success Criteria
 
 The MVP is successful when:
 
-1. Admins can find any user by email in under 10 seconds
-2. All core user management actions (revoke, block, unblock, impersonate) work reliably with 100% success rate
-3. Impersonation sessions are properly isolated, audited, and time-limited
+1. Admins can find any user by email in under 30 seconds
+2. All core user management actions (revoke, block, unblock) work reliably with 100% success rate
+3. Blocked users are immediately prevented from API access (verified through testing)
 4. All administrative actions are logged with complete audit information
 5. Admin panel is deployed to production and used for 100% of user management tasks within 30 days
-6. Zero security incidents related to admin panel access or impersonation
-7. Admin satisfaction survey shows 4.5/5 or higher rating
+6. Zero security incidents related to admin panel access
 
 ## Post-MVP Vision
 
 ### Phase 2 Features
 
-After successful MVP deployment, the following enhancements would add significant value:
+- **User Impersonation:** Secure session-based impersonation allowing admins to view the application as a specific user
+  - Implementation: Server-side session state tracking `impersonating_user_id`
+  - Prominent visual banner during impersonation
+  - Time-limited sessions (1-4 hours)
+  - Comprehensive audit logging of actions during impersonation
 
-- **Role-Based Admin Permissions:** Implement granular admin roles (e.g., Super Admin, Support Admin, Read-Only Admin) with different permission levels for sensitive actions
-- **Bulk User Operations:** Select multiple users and perform batch actions (bulk block, bulk revoke tokens, export user lists to CSV)
-- **Advanced User Filtering:** Filter by registration date, user attributes, activity patterns, subscription status, or custom fields
-- **Admin Activity Dashboard:** Analytics showing admin usage patterns, most common actions, impersonation frequency, and system health metrics
-- **User Communication:** Send emails or in-app notifications to users directly from admin panel (account warnings, announcements, etc.)
-- **User Session Management:** View all active sessions for a user across devices, with ability to revoke specific sessions rather than global sign-out
-- **Admin User Management:** Interface for managing admin accounts, assigning roles, and reviewing admin permissions
-- **Audit Log Viewer:** Searchable, filterable interface for reviewing historical admin actions and generating compliance reports
+- **Last Login Tracking:** Display last login timestamp in user list
+  - Requires: Auth middleware to update `last_login_at` in database on each authentication
 
-### Long-term Vision
+- **Bulk Operations:** Select multiple users for batch actions (bulk block, export to CSV)
 
-Over the next 1-2 years, evolve this into a comprehensive administrative platform:
+- **Advanced Filtering:** Filter by account status, Cognito user status, registration date range
 
-- **System Monitoring & Health:** Real-time dashboards showing application health, error rates, user activity trends, and system performance
-- **Configuration Management:** Manage application settings, feature flags, and environment configurations through admin UI
-- **Analytics & Reporting:** Pre-built reports for user growth, engagement metrics, support ticket trends, and business KPIs
-- **Automated Workflows:** Rule-based automation for common admin tasks (auto-block suspicious accounts, scheduled reports, etc.)
-- **Integration Hub:** Connect with support ticketing systems (Zendesk, Intercom), monitoring tools (Datadog, New Relic), and communication platforms (Slack, Teams)
-- **AI-Assisted Support:** Intelligent suggestions for troubleshooting based on user behavior patterns and historical issue resolution
+- **Audit Log Viewer:** Searchable interface for reviewing historical admin actions
 
-### Expansion Opportunities
+### Phase 3 Features
 
-- **Multi-Tenant Admin:** If application evolves to multi-tenant model, support organization-level admins with scoped access
-- **API Management:** Admin interface for managing API keys, rate limits, and programmatic access
-- **Content Moderation:** Tools for reviewing and moderating user-generated content if applicable
-- **Billing & Subscription Management:** Admin controls for subscription management, refunds, and billing issue resolution
-- **Custom Reporting:** Report builder allowing admins to create custom queries and scheduled reports
-- **Mobile Admin App:** Native mobile application for critical admin functions on-the-go
+- **Role-Based Admin Permissions:** Different admin levels (Super Admin, Support Admin, Read-Only)
+- **Admin User Management:** Interface for managing admin accounts and permissions
+- **User Communication:** Send emails to users directly from admin panel
+- **Temporary Suspensions:** Time-limited blocks that automatically restore access
 
-## Technical Considerations
+## Technical Architecture
 
-### Architecture & Technology Stack
+### Frontend
 
-**Frontend:**
+- **Location:** `apps/web/main-app/src/routes/admin/*`
+- **Framework:** React 19 with TypeScript
+- **Styling:** Tailwind CSS + shadcn/ui components
+- **State Management:** React Query for server state; React Context for admin state
+- **Routing:** React Router v6 with protected route wrapper
 
-- **Framework:** React 18+ with TypeScript for type safety and developer experience
-- **Styling:** Tailwind CSS v3+ for utility-first styling and rapid development
-- **Component Library:** shadcn/ui for accessible, customizable components (built on Radix UI primitives)
-- **State Management:** React Query (TanStack Query) for server state management and caching; React Context for auth state
-- **Routing:** React Router v6 for client-side routing
-- **Build Tool:** Vite for fast development and optimized production builds
-- **Hosting:** AWS S3 + CloudFront for static site hosting with global CDN
+### Backend
 
-**Backend:**
+- **Location:** `apps/api/lego-api/domains/admin/*`
+- **Compute:** AWS Lambda (existing infrastructure)
+- **API:** RESTful endpoints under `/admin/*`
+- **Authentication:** JWT validation checking for `admin` in `cognito:groups` claim
+- **Database:** PostgreSQL via Drizzle ORM
 
-- **Compute:** AWS Lambda functions (Node.js or Python runtime)
-- **API Gateway:** AWS API Gateway for RESTful API endpoints with request validation
-- **Authentication:** JWT validation middleware checking for admin scope in access tokens
-- **Database:** Existing application database (assumed PostgreSQL/MySQL/DynamoDB) with new tables/fields for admin features
-- **Cognito Integration:** AWS SDK for Cognito operations (AdminUserGlobalSignOut, user queries)
-- **Audit Logging:** Dedicated audit log table or AWS CloudWatch Logs with structured logging
+### API Endpoints
 
-### Key Technical Components
-
-**1. Admin Authentication Flow:**
-
-- Admin logs in through existing auth system, receives JWT with admin scope
-- Frontend validates JWT and checks for admin scope before rendering admin panel
-- API Gateway validates JWT on every request; Lambda functions double-check admin scope
-- Session management with automatic token refresh
-
-**2. User Search & Listing:**
-
-- Backend API endpoint with pagination, filtering, and search parameters
-- Database indexes on email and last_login fields for performance
-- Consider ElasticSearch/OpenSearch for advanced search if user base exceeds 100k users
-- Frontend implements debounced search (300ms delay) to reduce API calls
-
-**3. Cognito Token Revocation:**
-
-- Lambda function calls `AdminUserGlobalSignOut` API with appropriate IAM permissions
-- Error handling for API failures with retry logic
-- Application-level block flag as fail-safe (checked in auth middleware)
-- Async operation with loading states and success/error notifications
-
-**4. User Blocking System:**
-
-- Database field: `access_revoked` (boolean) or `account_status` (enum: active/blocked/suspended)
-- Authentication middleware checks block status on every request
-- Atomic database operations to prevent race conditions
-- Clear error messages returned to blocked users
-
-**5. User Impersonation:**
-
-- Backend generates special impersonation JWT with claims: `{ sub: targetUserId, impersonatedBy: adminUserId, exp: shortExpiration }`
-- Impersonation tokens expire after 1-4 hours (configurable)
-- Frontend stores impersonation token in sessionStorage (not localStorage) for automatic cleanup
-- Middleware logs all actions performed during impersonation
-- Visual banner component checks for impersonation token and displays warning
-
-**6. Audit Logging:**
-
-- Structured logs with fields: `admin_id`, `action_type`, `target_user_id`, `timestamp`, `ip_address`, `request_details`, `result`
-- Stored in dedicated audit table or CloudWatch Logs with retention policy
-- Indexed for efficient querying and compliance reporting
-- Consider write-only permissions for audit logs (prevent tampering)
-
-### Infrastructure & Deployment
-
-- **CI/CD:** GitHub Actions or AWS CodePipeline for automated testing and deployment
-- **Environments:** Separate dev, staging, and production environments with isolated resources
-- **IAM Permissions:** Lambda execution role needs Cognito admin permissions, database access, CloudWatch Logs write
-- **Monitoring:** CloudWatch metrics for API latency, error rates, Lambda invocations; alarms for critical failures
-- **Security:** API Gateway throttling, WAF rules, CORS configuration, CSP headers
+```
+GET    /admin/users              - List users (paginated)
+GET    /admin/users?email=...    - Search users by email
+GET    /admin/users/:userId      - Get user details
+POST   /admin/users/:userId/revoke-tokens    - Revoke all refresh tokens
+POST   /admin/users/:userId/block            - Block user (set is_suspended)
+POST   /admin/users/:userId/unblock          - Unblock user
+GET    /admin/audit-log          - List audit entries (paginated)
+```
 
 ### Database Schema Changes
 
-New tables/fields required:
+**New table: `admin_audit_log`**
 
+```sql
+CREATE TABLE admin_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_user_id TEXT NOT NULL,           -- Cognito sub of admin
+  action_type TEXT NOT NULL,             -- 'search', 'view', 'revoke_tokens', 'block', 'unblock'
+  target_user_id TEXT,                   -- Cognito sub of target user (nullable for searches)
+  reason TEXT,                           -- Required for block actions
+  details JSONB,                         -- Action-specific data (search query, etc.)
+  result TEXT NOT NULL,                  -- 'success' or 'failure'
+  error_message TEXT,                    -- Error details if failed
+  ip_address TEXT,                       -- Admin's IP address
+  user_agent TEXT,                       -- Admin's browser/client
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_admin_audit_log_admin ON admin_audit_log(admin_user_id);
+CREATE INDEX idx_admin_audit_log_target ON admin_audit_log(target_user_id);
+CREATE INDEX idx_admin_audit_log_action ON admin_audit_log(action_type);
+CREATE INDEX idx_admin_audit_log_created ON admin_audit_log(created_at);
 ```
-users table additions:
-- access_revoked: boolean (default: false)
-- last_login: timestamp (if not exists)
-- blocked_at: timestamp (nullable)
-- blocked_by: foreign key to admin users (nullable)
 
-admin_audit_log table:
-- id: primary key
-- admin_id: foreign key to users
-- action_type: enum (search, view, revoke_token, block, unblock, impersonate)
-- target_user_id: foreign key to users (nullable for searches)
-- timestamp: timestamp with timezone
-- ip_address: varchar
-- details: jsonb (flexible field for action-specific data)
-- result: enum (success, failure)
+**Uses existing from `cognito-scopes`:**
+- `user_quotas.is_suspended` - blocking flag
+- `user_quotas.suspended_at` - timestamp when blocked
+- `user_quotas.suspended_reason` - reason for blocking
+
+### Key Technical Components
+
+**1. Admin Route Guard**
+
+```typescript
+// apps/web/main-app/src/routes/admin/AdminGuard.tsx
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) return <LoadingSpinner />
+
+  const isAdmin = user?.groups?.includes('admin')
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
 ```
 
-### Third-Party Dependencies
+**2. Cognito User Listing (Backend)**
 
-- **shadcn/ui components:** Table, Dialog, Button, Input, Select, Badge, Alert, Skeleton
-- **React Query:** Server state management and caching
-- **AWS SDK:** Cognito operations and AWS service integration
-- **date-fns or dayjs:** Date formatting and manipulation
-- **zod:** Runtime type validation for API requests/responses
+```typescript
+// Uses AWS SDK CognitoIdentityServiceProvider
+import { CognitoIdentityProviderClient, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider'
+
+async function listUsers(paginationToken?: string, emailFilter?: string) {
+  const client = new CognitoIdentityProviderClient({})
+
+  const command = new ListUsersCommand({
+    UserPoolId: process.env.COGNITO_USER_POOL_ID,
+    Limit: 50,
+    PaginationToken: paginationToken,
+    Filter: emailFilter ? `email ^= "${emailFilter}"` : undefined,
+  })
+
+  return client.send(command)
+}
+```
+
+**3. Dual-Layer Revocation**
+
+```typescript
+async function revokeUserAccess(adminId: string, targetUserId: string, reason: string) {
+  // 1. Call Cognito to invalidate refresh tokens
+  await cognitoClient.send(new AdminUserGlobalSignOutCommand({
+    UserPoolId: process.env.COGNITO_USER_POOL_ID,
+    Username: targetUserId,
+  }))
+
+  // 2. Set application-level block flag (fail-safe)
+  await db.update(userQuotas)
+    .set({
+      isSuspended: true,
+      suspendedAt: new Date(),
+      suspendedReason: reason,
+    })
+    .where(eq(userQuotas.userId, targetUserId))
+
+  // 3. Log the action
+  await db.insert(adminAuditLog).values({
+    adminUserId: adminId,
+    actionType: 'block',
+    targetUserId,
+    reason,
+    result: 'success',
+  })
+}
+```
+
+### IAM Permissions Required
+
+Lambda execution role needs:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "cognito-idp:ListUsers",
+    "cognito-idp:AdminGetUser",
+    "cognito-idp:AdminUserGlobalSignOut"
+  ],
+  "Resource": "arn:aws:cognito-idp:*:*:userpool/${COGNITO_USER_POOL_ID}"
+}
+```
 
 ## Constraints & Assumptions
 
 ### Constraints
 
-- **Budget:** Limited to existing AWS infrastructure costs; serverless architecture keeps incremental costs minimal (pay-per-use Lambda, S3 storage)
-- **Timeline:** Target 4-6 week development cycle for MVP
-  - Week 1-2: Backend API development (user endpoints, Cognito integration, audit logging)
-  - Week 2-3: Frontend development (user list, search, detail views, actions)
-  - Week 3-4: Impersonation feature implementation and testing
-  - Week 4-5: Security review, testing, bug fixes
-  - Week 5-6: Deployment, documentation, admin training
+- **Budget:** Limited to existing AWS infrastructure costs; serverless architecture keeps incremental costs minimal
+- **Timeline:** Target 2-3 week development cycle for MVP
+  - Week 1: Backend API development (user endpoints, Cognito integration, audit logging)
+  - Week 2: Frontend development (user list, search, detail views, actions)
+  - Week 3: Testing, security review, deployment
 - **Resources:**
-  - 1-2 full-stack developers (or 1 backend + 1 frontend)
+  - 1-2 full-stack developers
   - Security review as part of standard release process
-  - QA testing for critical user flows
-  - No dedicated designer (leverage shadcn components for consistent UI)
+  - No dedicated designer (leverage shadcn components)
 - **Technical:**
-  - Must work with existing Cognito user pool and JWT authentication system
-  - Must integrate with existing application database schema (extend, don't replace)
-  - Cannot modify existing authentication middleware significantly (add checks, don't rewrite)
-  - Must maintain existing API response time SLAs for non-admin endpoints
-  - Frontend must work in modern browsers (Chrome, Firefox, Safari, Edge - last 2 versions)
-- **Security:**
-  - Admin scope must be validated on both frontend and backend (defense in depth)
-  - Impersonation must be auditable and time-limited (no permanent impersonation)
-  - Cannot store admin credentials or sensitive data in frontend code
-  - Must comply with existing security policies and audit requirements
-- **Operational:**
-  - Admin panel must be accessible 24/7 for support operations
-  - Cannot require downtime for existing application during deployment
-  - Must provide rollback capability if issues arise post-deployment
+  - Must work with existing Cognito user pool
+  - Must integrate with `user_quotas` table from `cognito-scopes` epic
+  - Cognito `ListUsers` API has 60 requests/second rate limit
+  - Cognito search is prefix-based only (cannot search for `*@domain.com`)
 
 ### Assumptions
 
-- **Authentication Infrastructure:**
-  - Existing Cognito user pool is configured and operational
-  - JWT tokens already include scope/role claims that can identify admins
-  - Admin users already exist in the system with appropriate scope/role
-  - Token refresh mechanism is already implemented
+- **`cognito-scopes` epic is completed first**, providing:
+  - `admin` Cognito group configured
+  - `user_quotas` table with `is_suspended`, `suspended_at`, `suspended_reason` fields
+  - Auth middleware that checks `is_suspended` on every request
+- Admin users are manually assigned to `admin` group via Cognito Console (acceptable for MVP)
+- User base is < 10,000 users (Cognito `ListUsers` pagination is sufficient)
+- Backend Lambda has appropriate IAM permissions for Cognito admin operations
+- Audit log retention of 90 days is sufficient (configurable later)
 
-- **Database:**
-  - Application uses relational database (PostgreSQL/MySQL) or DynamoDB
-  - Database can be extended with new tables and fields without breaking existing functionality
-  - Database supports indexes for performance optimization
-  - Migration scripts can be run safely in production
+## Risks & Mitigation
 
-- **AWS Permissions:**
-  - Team has IAM permissions to create Lambda functions, API Gateway endpoints, and CloudWatch resources
-  - Lambda execution role can be granted Cognito admin permissions (AdminUserGlobalSignOut)
-  - S3 and CloudFront can be configured for static site hosting
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Cognito API failures | User maintains access despite revocation | Application-level `is_suspended` flag as fail-safe |
+| Auth middleware bypass | Critical - revocation ineffective | Comprehensive code review; all routes use same middleware |
+| Accidental blocks | User disruption, support burden | Confirmation dialogs, easy unblock, audit trail |
+| Cognito rate limits | Search/listing fails under load | Implement client-side caching, debounced search |
+| IAM permission issues | Feature cannot function | Validate permissions in staging before production |
 
-- **User Data:**
-  - User email is unique identifier for search
-  - Last login timestamp is tracked (or can be added to auth flow)
-  - User base is currently < 100k users (database queries sufficient, no search engine needed initially)
+## Open Questions
 
-- **Development Environment:**
-  - Developers have access to staging environment that mirrors production
-  - CI/CD pipeline exists or can be set up for automated deployments
-  - Testing can be performed in staging before production deployment
-
-- **Impersonation:**
-  - Impersonation tokens can be generated server-side and validated by existing auth middleware
-  - Application can distinguish between normal user sessions and impersonation sessions
-  - Impersonation doesn't require changes to every API endpoint (handled by middleware)
-
-- **Audit & Compliance:**
-  - Audit log retention requirements are known (or default to 90 days)
-  - No special compliance requirements (HIPAA, PCI-DSS) that would require additional security measures
-  - Standard audit logging (who, what, when, result) is sufficient for compliance needs
-
-## Risks & Open Questions
-
-### Key Risks
-
-- **Impersonation Security Breach:** If impersonation tokens are compromised or the mechanism is flawed, attackers could gain unauthorized access to user accounts
-  - _Impact:_ Critical - complete security failure, potential data breach, loss of user trust
-  - _Mitigation:_ Short token expiration (1-4 hours), comprehensive audit logging, visual indicators, security review before deployment, consider requiring re-authentication for impersonation
-
-- **Admin Scope Bypass:** If admin scope validation has gaps, unauthorized users could access admin panel or perform admin actions
-  - _Impact:_ Critical - unauthorized access to sensitive user data and admin capabilities
-  - _Mitigation:_ Defense in depth (validate on frontend, API Gateway, and Lambda), comprehensive testing of all endpoints, security audit, penetration testing
-
-- **Cognito API Failures:** AWS Cognito `AdminUserGlobalSignOut` could fail or timeout, leaving tokens active despite admin action
-  - _Impact:_ High - user maintains access despite revocation attempt, security gap
-  - _Mitigation:_ Application-level block flag serves as fail-safe, retry logic with exponential backoff, alerting for API failures, clear error messages to admins
-
-- **Performance Degradation:** User search and listing could be slow with large user bases, degrading admin experience
-  - _Impact:_ Medium - admin frustration, reduced productivity, potential timeout errors
-  - _Mitigation:_ Database indexes on search fields, pagination, consider ElasticSearch for >100k users, performance testing with realistic data volumes
-
-- **Audit Log Tampering:** If audit logs can be modified or deleted, compliance and security investigations are compromised
-  - _Impact:_ High - inability to investigate security incidents, compliance violations
-  - _Mitigation:_ Write-only permissions for audit logs, separate audit storage (CloudWatch Logs), immutable log entries, regular audit log reviews
-
-- **Accidental User Blocking:** Admins could accidentally block legitimate users, causing support issues and user frustration
-  - _Impact:_ Medium - user disruption, support overhead, potential revenue loss
-  - _Mitigation:_ Confirmation dialogs for destructive actions, clear visual indicators, easy unblock process, audit trail for accountability
-
-- **Impersonation Confusion:** Admins might forget they're impersonating and take actions as the user, causing unintended consequences
-  - _Impact:_ Medium - incorrect data modifications, user confusion, support issues
-  - _Mitigation:_ Prominent visual banner, different color scheme during impersonation, automatic session expiration, "Exit Impersonation" always visible
-
-- **Scope Creep:** Project expands beyond MVP scope, delaying delivery and increasing complexity
-  - _Impact:_ Medium - missed deadlines, budget overruns, reduced focus on core features
-  - _Mitigation:_ Strict adherence to MVP scope, defer nice-to-have features to Phase 2, regular stakeholder alignment
-
-### Open Questions
-
-1. **Admin Scope Implementation:**
-   - Do JWTs currently include admin scope/role claims? If not, how should admin users be identified?
-   - Is there a separate admin user table, or are admins regular users with a flag/role?
-   - Should there be different admin permission levels (super admin, support admin, read-only)?
-
-2. **Impersonation Token Mechanism:**
-   - Should impersonation use special JWT tokens, or a different token type?
-   - What should the default expiration time be for impersonation sessions (1 hour, 4 hours, 8 hours)?
-   - Should impersonation require re-authentication (enter password again) for additional security?
-   - Can admins impersonate other admins, or only regular users?
-
-3. **Database & Infrastructure:**
-   - What database is the application currently using (PostgreSQL, MySQL, DynamoDB, other)?
-   - Are there existing database migration processes and tools?
-   - What is the current user count, and what is the expected growth rate?
-   - Is there an existing CI/CD pipeline, or does one need to be set up?
-
-4. **User Blocking Behavior:**
-   - When a user is blocked, should they see a generic error or a specific "account blocked" message?
-   - Should blocked users receive an email notification?
-   - Should there be automatic unblock after a certain period, or manual only?
-   - Can users appeal blocks, and if so, through what process?
-
-5. **Audit & Compliance:**
-   - What are the audit log retention requirements (30 days, 90 days, 1 year, indefinite)?
-   - Are there specific compliance frameworks to adhere to (SOC 2, GDPR, HIPAA)?
-   - Who should have access to audit logs (all admins, super admins only, security team)?
-   - Should audit logs be exportable for external compliance audits?
-
-6. **Search & Performance:**
-   - What is the acceptable search response time (500ms, 1 second, 2 seconds)?
-   - Should search support partial email matching, or exact match only?
-   - Are there other user fields that should be searchable (name, user ID, phone)?
-   - At what user count should we consider implementing ElasticSearch?
-
-7. **Deployment & Operations:**
-   - What is the deployment process for frontend and backend changes?
-   - Are there staging and production environments with separate AWS accounts?
-   - What monitoring and alerting is currently in place?
-   - Who will be responsible for admin panel maintenance and support?
-
-8. **User Experience:**
-   - Should the admin panel be a separate application (different domain) or integrated into existing app?
-   - What should happen when an admin's session expires while using the panel?
-   - Should there be keyboard shortcuts for common actions (search, navigate)?
-   - Should the panel support dark mode to match existing application?
+1. **Admin assignment:** How will the first admin be assigned? (Recommend: Manual via Cognito Console)
+2. **Audit retention:** What is the required retention period for audit logs? (Default: 90 days)
+3. **Blocked user message:** Should blocked users see a specific message or generic error? (Recommend: Specific message)
+4. **Expected usage:** How often will revocation/blocking occur? (Informs caching strategy)
 
 ## Next Steps
 
-### Immediate Actions
+### Pre-Development (Week 0)
 
-1. **Technical Discovery & Validation (Week 0 - Before Development)** - 3-5 days
-   - Validate all assumptions about existing infrastructure (Cognito configuration, JWT claims, database schema)
-   - Answer critical open questions about admin scope implementation and impersonation mechanism
-   - Review existing authentication middleware to understand integration points
-   - Confirm IAM permissions for Cognito admin operations and Lambda deployment
-   - Assess current user count and database performance characteristics
+1. Confirm `cognito-scopes` epic completion timeline
+2. Validate IAM permissions for Cognito admin operations in staging
+3. Create `admin_audit_log` table migration
+4. Set up admin group in Cognito (if not already done)
 
-2. **Architecture & Design Review (Week 0)** - 2-3 days
-   - Create detailed technical design document covering API endpoints, database schema changes, and component architecture
-   - Design impersonation token mechanism and security controls
-   - Define audit logging schema and retention policy
-   - Review design with security team and engineering leadership
-   - Identify any architectural risks or blockers
+### Development (Weeks 1-3)
 
-3. **Security Planning (Week 0)** - 1-2 days
-   - Schedule security review for Week 4-5
-   - Define security testing requirements (penetration testing, vulnerability scanning)
-   - Document security controls for impersonation feature
-   - Establish audit log review process
-   - Create incident response plan for admin panel security issues
+**Week 1: Backend**
+- [ ] Create `admin_audit_log` Drizzle schema and migration
+- [ ] Implement `/admin/users` list endpoint with Cognito `ListUsers`
+- [ ] Implement `/admin/users?email=` search endpoint
+- [ ] Implement `/admin/users/:userId` detail endpoint
+- [ ] Implement `/admin/users/:userId/revoke-tokens` endpoint
+- [ ] Implement `/admin/users/:userId/block` and `unblock` endpoints
+- [ ] Add audit logging to all endpoints
+- [ ] Write unit tests for all endpoints
 
-4. **Development Environment Setup (Week 1)** - 1-2 days
-   - Set up staging environment mirroring production
-   - Configure CI/CD pipeline for admin panel deployment
-   - Create feature branch and development workflow
-   - Set up local development environment for team
-   - Configure monitoring and logging for staging
+**Week 2: Frontend**
+- [ ] Create admin route group with `AdminGuard`
+- [ ] Build user list page with pagination
+- [ ] Build search functionality with debouncing
+- [ ] Build user detail modal/page
+- [ ] Implement revoke/block/unblock actions with confirmation dialogs
+- [ ] Add loading states and error handling
+- [ ] Write component tests
 
-5. **Backend Development (Week 1-2)** - 10 days
-   - Implement user listing and search API endpoints with pagination
-   - Integrate Cognito `AdminUserGlobalSignOut` API
-   - Build user blocking/unblocking functionality with database changes
-   - Create impersonation token generation endpoint
-   - Implement audit logging for all admin actions
-   - Write unit tests for all backend logic
-
-6. **Frontend Development (Week 2-3)** - 10 days
-   - Set up React project with TypeScript, Tailwind, and shadcn
-   - Implement admin authentication and route protection
-   - Build user list view with search and filtering
-   - Create user detail view and action buttons
-   - Implement impersonation flow with visual banner
-   - Build responsive layouts and error handling
-   - Write component tests for critical flows
-
-7. **Integration & Testing (Week 3-4)** - 7 days
-   - Integration testing of frontend and backend
-   - End-to-end testing of all user flows
-   - Performance testing with realistic data volumes
-   - Security testing of admin scope validation and impersonation
-   - Bug fixes and refinements
-   - User acceptance testing with internal admins
-
-8. **Security Review & Hardening (Week 4-5)** - 5 days
-   - Formal security review with security team
-   - Penetration testing of admin panel
-   - Address security findings and vulnerabilities
-   - Final audit log review and validation
-   - Security sign-off for production deployment
-
-9. **Documentation & Training (Week 5)** - 3 days
-   - Create admin user guide with screenshots
-   - Document API endpoints and technical architecture
-   - Write runbook for common admin panel issues
-   - Train support staff on admin panel usage
-   - Create video walkthrough of key features
-
-10. **Production Deployment (Week 5-6)** - 2-3 days
-    - Deploy backend Lambda functions and API Gateway
-    - Run database migrations in production
-    - Deploy frontend to S3/CloudFront
-    - Configure monitoring and alerting
-    - Smoke testing in production
-    - Gradual rollout to admin users
-    - Monitor for issues and gather feedback
-
-11. **Post-Launch (Week 6+)** - Ongoing
-    - Monitor usage metrics and performance
-    - Gather admin feedback through surveys
-    - Track success metrics (resolution time, adoption rate)
-    - Address bugs and usability issues
-    - Plan Phase 2 features based on feedback
-    - Regular security audits of admin actions
+**Week 3: Integration & Deployment**
+- [ ] Integration testing of frontend and backend
+- [ ] Security review of admin scope validation
+- [ ] Test blocking flow end-to-end (block user, verify they cannot access API)
+- [ ] Deploy to staging, manual testing
+- [ ] Deploy to production
+- [ ] Document admin panel usage for team
 
 ### Key Milestones
 
-- **Week 0 Complete:** All open questions answered, design approved, ready to start development
-- **Week 2 Complete:** Backend APIs functional and tested in staging
-- **Week 3 Complete:** Frontend MVP complete with all core features
-- **Week 4 Complete:** Integration testing complete, security review initiated
-- **Week 5 Complete:** Security sign-off received, documentation complete, admins trained
-- **Week 6 Complete:** Production deployment successful, monitoring in place, MVP live
+- **Week 1 Complete:** Backend APIs functional and tested in staging
+- **Week 2 Complete:** Frontend MVP complete with all core features
+- **Week 3 Complete:** Production deployment successful, team trained
 
-### Success Criteria for Launch
+---
 
-The admin panel is ready for production when:
+## Changelog
 
-1. All MVP features are implemented and tested
-2. Security review is complete with all critical/high findings resolved
-3. Performance meets targets (search < 500ms, 99.9% uptime)
-4. Audit logging is comprehensive and tested
-5. Admin users are trained and comfortable with the interface
-6. Rollback plan is documented and tested
-7. Monitoring and alerting are configured
-8. Documentation is complete and accessible
+**2025-XX-XX - Initial Draft**
+- Created comprehensive PRD for admin panel
+
+**2026-02-04 - Slim MVP Revision**
+- Merged `user-revocation` epic into this plan (deprecated separate plan)
+- Added explicit dependency on `cognito-scopes` epic
+- Deferred user impersonation to Phase 2 (undefined technical approach)
+- Deferred last login tracking to Phase 2 (requires middleware changes)
+- Aligned on using `is_suspended` from `user_quotas` table (not separate users table)
+- Specified frontend location: protected routes in `main-app` at `/admin/*`
+- Reduced timeline from 4-6 weeks to 2-3 weeks
+- Added specific API endpoint definitions
+- Added Drizzle schema for `admin_audit_log`
+- Clarified Cognito search limitations (prefix-only)
+- Added IAM permissions documentation
+
+---
+
+**End of PRD**

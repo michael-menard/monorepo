@@ -1,7 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { instructionsApi } from '@repo/api-client'
 import { MocSchema, type Moc } from '../__types__/moc'
 import { MocDetailDashboard } from '../MocDetailDashboard'
+
+// Create a test store
+function createTestStore() {
+  return configureStore({
+    reducer: {
+      [instructionsApi.reducerPath]: instructionsApi.reducer,
+    },
+    middleware: getDefaultMiddleware =>
+      getDefaultMiddleware().concat(instructionsApi.middleware),
+  })
+}
+
+function renderWithProviders(ui: React.ReactElement) {
+  const store = createTestStore()
+  return render(<Provider store={store}>{ui}</Provider>)
+}
 
 const BASE_MOC: Moc = {
   id: 'moc-1',
@@ -50,7 +69,7 @@ describe('MocDetailDashboard', () => {
   })
 
   it('renders key cards from Moc data', () => {
-    render(<MocDetailDashboard moc={BASE_MOC} />)
+    renderWithProviders(<MocDetailDashboard moc={BASE_MOC} />)
 
     expect(screen.getByTestId('moc-detail-dashboard')).toBeInTheDocument()
     expect(screen.getByText('Parts Orders')).toBeInTheDocument()
@@ -62,7 +81,7 @@ describe('MocDetailDashboard', () => {
   it('persists card order to localStorage when reordered', () => {
     const setItemSpy = vi.spyOn(window.localStorage.__proto__, 'setItem')
 
-    render(<MocDetailDashboard moc={BASE_MOC} />)
+    renderWithProviders(<MocDetailDashboard moc={BASE_MOC} />)
 
     const ordersHeader = screen.getByText('Parts Orders').closest('[data-card-id]') as HTMLElement
     const galleryHeader = screen.getByText('Gallery').closest('[data-card-id]') as HTMLElement

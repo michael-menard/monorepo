@@ -28,13 +28,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "busboy": "^1.6.0",
-    "@aws-sdk/client-cloudwatch": "3.932.0"
+    "@aws-sdk/client-cloudwatch": "3.932.0",
+    "busboy": "^1.6.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/busboy": "^1.5.4",
     "@types/aws-lambda": "^8.10.145",
+    "@types/busboy": "^1.5.4",
+    "@types/node": "^20.19.25",
     "typescript": "^5.8.0",
     "vitest": "^3.2.4"
   },

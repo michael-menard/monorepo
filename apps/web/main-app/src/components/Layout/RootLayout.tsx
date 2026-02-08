@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from '@tanstack/react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { LoadingSpinner, cn } from '@repo/app-component-library'
+import {
+  LoadingSpinner,
+  cn,
+  AppTabs,
+  AppTabsList,
+  AppTabsTrigger,
+} from '@repo/app-component-library'
+import {
+  LayoutDashboard,
+  Heart,
+  BookOpen,
+  Package,
+  Lightbulb,
+} from 'lucide-react'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { PageTransitionSpinner } from '../PageTransitionSpinner/PageTransitionSpinner'
 import { Header } from './Header'
-import { Sidebar } from './Sidebar'
 import { MobileSidebar } from './MobileSidebar'
 import { Footer } from './Footer'
 import { MainArea } from './MainArea'
@@ -15,6 +27,14 @@ import { selectAuth } from '@/store/slices/authSlice'
 import { AuthProvider } from '@/services/auth/AuthProvider'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { useNavigationSync } from '@/hooks/useNavigationSync'
+
+const mainNavItems = [
+  { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { id: 'wishlist', label: 'Wishlist', href: '/wishlist', icon: Heart },
+  { id: 'instructions', label: 'Instructions', href: '/instructions', icon: BookOpen },
+  { id: 'sets', label: 'Sets', href: '/sets', icon: Package },
+  { id: 'inspiration', label: 'Inspiration', href: '/inspiration', icon: Lightbulb },
+]
 
 // LEGO brick building animation for loading states
 const legoBrickVariants = {
@@ -46,8 +66,30 @@ const legoBrickVariants = {
 function RootLayoutContent() {
   const dispatch = useDispatch()
   const location = useLocation()
+  const navigate = useNavigate()
   const auth = useSelector(selectAuth)
   const [isPageTransitioning, setIsPageTransitioning] = useState(false)
+
+  // Determine which tab should be active based on current route
+  const getActiveTab = () => {
+    const path = location.pathname
+    if (path === '/' || path === '/dashboard' || path.startsWith('/dashboard/')) {
+      return '/dashboard'
+    }
+    for (const item of mainNavItems) {
+      if (path === item.href || path.startsWith(item.href + '/')) {
+        return item.href
+      }
+    }
+    // Return empty string for non-nav routes (settings, profile, help, etc.)
+    return ''
+  }
+
+  const handleTabChange = (value: string) => {
+    if (value) {
+      navigate({ to: value })
+    }
+  }
 
   // Sync router navigation state with Redux (Story 1.31)
   // Must be inside RouterProvider context
@@ -104,24 +146,12 @@ function RootLayoutContent() {
     )
   }
 
-  // Public routes that don't need authentication
-  const publicRoutes = [
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password',
-    '/auth/verify-email',
-    '/auth/otp-verification',
-    '/auth/new-password',
-  ]
-  const isPublicRoute = publicRoutes.includes(location.pathname)
-
-  // If not authenticated and not on a public route, show minimal layout
-  if (!auth.isAuthenticated && !isPublicRoute) {
+  // Unauthenticated users get minimal layout (no header, sidebar, or footer)
+  // This applies to both auth pages and any other pages they might access
+  if (!auth.isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
         <MainArea
-          isAuthenticated={false}
           isPageTransitioning={isPageTransitioning}
           currentPath={location.pathname}
         />
@@ -130,13 +160,15 @@ function RootLayoutContent() {
   }
 
   // Authenticated layout with full navigation and LEGO-inspired design
+  const activeTab = getActiveTab()
+
   return (
     <NavigationProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950">
         {/* Page transition spinner - shows during route navigation */}
         <PageTransitionSpinner />
 
-        {/* Header with enhanced styling */}
+        {/* Header */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -145,33 +177,38 @@ function RootLayoutContent() {
           <Header />
         </motion.div>
 
-        {/* Main content area with smooth transitions */}
-        <div className="flex relative">
-          {/* Sidebar - only show for authenticated users */}
-          {auth.isAuthenticated ? (
-            <>
-              {/* Desktop sidebar with slide-in animation - visible on md and up */}
-              <motion.div
-                initial={{ x: -264, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="hidden md:block"
-              >
-                <Sidebar className="fixed left-0 top-16 bottom-0 z-30" showLegacyRoutes={true} />
-              </motion.div>
+        {/* Mobile sidebar drawer - uses globalUISlice */}
+        <MobileSidebar />
 
-              {/* Mobile sidebar drawer - uses globalUISlice */}
-              <MobileSidebar />
-            </>
-          ) : null}
-
-          {/* Main content area */}
-          <MainArea
-            isAuthenticated={auth.isAuthenticated}
-            isPageTransitioning={isPageTransitioning}
-            currentPath={location.pathname}
-          />
+        {/* Navigation tabs - hidden on mobile, shown on md+ */}
+        <div className="hidden md:block border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <AppTabs value={activeTab} onValueChange={handleTabChange}>
+              <AppTabsList variant="underline" className="h-12 w-full justify-start gap-0 bg-transparent p-0">
+                {mainNavItems.map(item => {
+                  const Icon = item.icon
+                  return (
+                    <AppTabsTrigger
+                      key={item.id}
+                      value={item.href}
+                      variant="underline"
+                      className="gap-2 px-4 h-full rounded-none data-[state=active]:border-primary border-b-2 border-transparent"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </AppTabsTrigger>
+                  )
+                })}
+              </AppTabsList>
+            </AppTabs>
+          </div>
         </div>
+
+        {/* Main content area */}
+        <MainArea
+          isPageTransitioning={isPageTransitioning}
+          currentPath={location.pathname}
+        />
 
         {/* Footer with slide-up animation */}
         <motion.div

@@ -2,6 +2,8 @@
 
 This guide documents how to integrate Knowledge Base (KB) queries into agent instruction files.
 
+> **See also:** [MCP-TOOLS.md](./MCP-TOOLS.md) for external documentation tools (Context7, Perplexity).
+
 ## Overview
 
 KB integration enables agents to query institutional knowledge before performing tasks. This "KB-first" approach ensures agents build on team learnings rather than starting from scratch.
@@ -63,6 +65,117 @@ Cite KB sources in [output file]: "Per KB entry {ID}: {summary}"
 | Elaboration Analysts | Story patterns, sizing guidelines | Medium |
 | Learnings Workers | Past retrospectives, optimization | Medium |
 | Planning Workers | Implementation approaches | Low |
+
+## Integrated Agents (Current Status)
+
+### Tier 1: Integrated (KBMEM-000a)
+
+| Agent | KB Read | KB Write | Integration Focus |
+|-------|---------|----------|-------------------|
+| `dev-setup-leader` | Yes | No | Setup patterns, common blockers |
+| `pm-story-generation-leader` | Yes | No | Story patterns, sizing guidelines |
+| `qa-verify-setup-leader` | Yes | No | QA setup patterns, test strategies |
+| `architect-setup-leader` | Yes | No | Architecture patterns, common violations |
+| `code-review-security` | Yes | Yes | Security patterns, spawn kb-writer for findings |
+| `kb-writer` | No | Yes | Generic KB write worker |
+| `knowledge-context-loader` | Yes | No | Generic KB read worker |
+| `dev-implement-learnings` | Yes | Yes | Lessons learned capture |
+| `dev-implement-implementation-leader` | Yes | No | Implementation patterns |
+| `dev-implement-planning-leader` | Yes | No | Planning patterns |
+| `dev-plan-leader` | Yes | No | Spawns knowledge-context-loader |
+| `pm-story-seed-agent` | Yes | No | Story patterns, lessons, ADRs |
+| `elab-analyst` | Yes | No | Elaboration patterns |
+| `qa-verify-completion-leader` | No | Yes | Spawns kb-writer for findings |
+| `qa-verify-verification-leader` | No | Yes | Records lessons |
+
+### Tier 2: Pending Integration
+
+| Agent | KB Read | KB Write | Integration Focus | Priority |
+|-------|---------|----------|-------------------|----------|
+| `dev-implement-backend-coder` | Yes | No | Backend patterns, blockers | SHOULD |
+| `dev-implement-frontend-coder` | Yes | No | Frontend patterns, blockers | SHOULD |
+| `architect-component-worker` | Yes | No | Component patterns | SHOULD |
+| `elab-epic-product` | Yes | No | Product patterns, scope guidelines | SHOULD |
+| `commitment-gate-agent` | No | Yes | Record gate decisions | SHOULD |
+
+### Tier 2 Integration Checklist
+
+For each Tier 2 agent, add KB integration by:
+
+- [ ] Add `## Knowledge Base Integration` section after Mission
+- [ ] Define 3+ trigger patterns in "When to Query" table
+- [ ] Provide 2+ example queries specific to agent's domain
+- [ ] Add "Applying Results" section with citation format
+- [ ] Add "Fallback Behavior" section (no-results, unavailable)
+- [ ] For agents that write: add kb-writer spawn pattern
+- [ ] Test agent queries KB successfully in test run
+- [ ] Update this checklist when complete
+
+## Real-World Integration Examples
+
+### Example 1: dev-setup-leader (Read-Only)
+
+```markdown
+## Knowledge Base Integration
+
+Before starting setup, query KB for relevant patterns and common blockers.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Starting implementation setup | `kb_search({ query: "setup blockers common issues", role: "dev", limit: 3 })` |
+| Starting fix setup | `kb_search({ query: "fix iteration patterns lessons", role: "dev", limit: 3 })` |
+| Story domain-specific | `kb_search({ query: "{domain} setup constraints", tags: ["constraint"], limit: 3 })` |
+
+### Applying Results
+
+- If KB returns relevant blockers for the story's domain, include them in SCOPE.yaml `risk_flags`
+- Cite KB sources in setup log: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with setup as-is
+- KB unavailable: Log warning, continue without KB context
+```
+
+### Example 2: code-review-security (Read + Write)
+
+```markdown
+## Knowledge Base Integration
+
+Query KB for relevant security patterns before review, and write significant findings after.
+
+### When to Query (Before Review)
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Starting security review | `kb_search({ query: "security vulnerabilities patterns", role: "dev", limit: 5 })` |
+| Domain-specific | `kb_search({ query: "{domain} security issues", tags: ["security"], limit: 3 })` |
+
+### When to Write (After Review)
+
+If critical or high severity findings are discovered, spawn `kb-writer` to persist them:
+
+\```yaml
+kb_write_request:
+  entry_type: finding
+  source_stage: dev
+  story_id: "{STORY_ID}"
+  category: "security-findings"
+  content: |
+    - **{finding_category}**: {issue description}
+    - **Remediation**: {suggested fix}
+  additional_tags: ["security", "{category_slug}"]
+\```
+
+### Fallback Behavior
+
+- KB unavailable for read: Log warning, continue review without KB context
+- KB unavailable for write: Log warning, do NOT block the review workflow
+```
+
+---
 
 ## Workflow Analysis
 

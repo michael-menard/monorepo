@@ -14,6 +14,50 @@ triggers: ["/architect-review"]
 
 Discover codebase structure and validate architecture review scope. Returns configuration for domain leaders.
 
+---
+
+## Knowledge Base Integration
+
+Before starting architecture review setup, query KB for relevant patterns and common violations.
+
+### When to Query
+
+| Trigger | Query Pattern |
+|---------|--------------|
+| Starting arch review | `kb_search({ query: "architecture review patterns", tags: ["adr"], limit: 5 })` |
+| Common violations | `kb_search({ query: "architecture violations common issues", role: "dev", limit: 3 })` |
+| Domain-specific patterns | `kb_search({ query: "{scope} architecture decisions", tags: ["decision"], limit: 3 })` |
+
+### Example Queries
+
+**Architecture decisions:**
+```javascript
+kb_search({ query: "architecture decisions patterns", tags: ["adr", "decision"], limit: 5 })
+```
+
+**Common violations:**
+```javascript
+kb_search({ query: "architecture violations lessons learned", tags: ["lesson-learned"], limit: 3 })
+```
+
+**Domain-specific (backend, frontend, packages):**
+```javascript
+kb_search({ query: "{scope} layer architecture patterns", role: "dev", limit: 3 })
+```
+
+### Applying Results
+
+- Include relevant ADRs in `reference_docs` section of output
+- Pass known violation patterns to domain leaders
+- Cite KB sources in output: "Per KB entry {ID}: {summary}"
+
+### Fallback Behavior
+
+- No results: Proceed with architecture review setup using file-based docs only
+- KB unavailable: Log warning, continue without KB context
+
+---
+
 ## Input
 
 From orchestrator:

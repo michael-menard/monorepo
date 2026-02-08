@@ -18,12 +18,11 @@ import {
   AppDialogFooter,
   Button,
   Input,
-  Checkbox,
+  AppSelect,
   LoadingSpinner,
 } from '@repo/app-component-library'
-import { CheckCircle, Package, Undo2 } from 'lucide-react'
-import type { WishlistItem, SetItem } from '@repo/api-client/schemas/wishlist'
-import { useMarkAsPurchasedMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
+import type { WishlistItem, BuildStatus } from '@repo/api-client/schemas/wishlist'
+import { useUpdateItemPurchaseMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import type { GotItModalProps } from './__types__'
 
 /**
@@ -60,15 +59,14 @@ const PROGRESS_MESSAGES = ['Creating your set item...', 'Copying image...', 'Fin
  * - Undo capability via toast
  */
 export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps) {
-  const [markAsPurchased, { isLoading: isPurchasing }] = useMarkAsPurchasedMutation()
+  const [updateItemPurchase, { isLoading: isPurchasing }] = useUpdateItemPurchaseMutation()
 
   // Form state
   const [pricePaid, setPricePaid] = useState('')
   const [tax, setTax] = useState('')
   const [shipping, setShipping] = useState('')
-  const [quantity, setQuantity] = useState(1)
   const [purchaseDate, setPurchaseDate] = useState(getTodayDateString())
-  const [keepOnWishlist, setKeepOnWishlist] = useState(false)
+  const [buildStatus, setBuildStatus] = useState<BuildStatus>('not_started')
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -83,9 +81,8 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
       setPricePaid(item.price || '')
       setTax('')
       setShipping('')
-      setQuantity(1)
       setPurchaseDate(getTodayDateString())
-      setKeepOnWishlist(false)
+      setBuildStatus('not_started')
       setErrors({})
     }
   }, [isOpen, item])
@@ -119,13 +116,10 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
     if (shipping && !isValidPrice(shipping)) {
       newErrors.shipping = 'Shipping must be a valid decimal'
     }
-    if (quantity < 1) {
-      newErrors.quantity = 'Quantity must be at least 1'
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
-  }, [pricePaid, tax, shipping, quantity])
+  }, [pricePaid, tax, shipping])
 
   // Handle form submission
   const handleSubmit = useCallback(
@@ -135,18 +129,17 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
       if (!item || !validate()) return
 
       try {
-        // Build API input
+        // Build API input (SETS-MVP-0310: new PurchaseDetailsInput format)
         const input = {
-          pricePaid: pricePaid || undefined,
-          tax: tax || undefined,
-          shipping: shipping || undefined,
-          quantity,
+          purchasePrice: pricePaid || undefined,
+          purchaseTax: tax || undefined,
+          purchaseShipping: shipping || undefined,
           purchaseDate: purchaseDate ? new Date(purchaseDate).toISOString() : undefined,
-          keepOnWishlist,
+          buildStatus,
         }
 
-        // Call API
-        const result = await markAsPurchased({
+        // Call API (SETS-MVP-0310: new PATCH endpoint)
+        await updateItemPurchase({
           itemId: item.id,
           input,
         }).unwrap()
@@ -154,8 +147,8 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
         // Close modal
         onClose()
 
-        // Show success toast with undo button
-        showPurchaseSuccessToast(item, result)
+        // Show success toast
+        showPurchaseSuccessToast(item)
 
         // Call success callback if provided
         onSuccess?.()
@@ -172,62 +165,20 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
       pricePaid,
       tax,
       shipping,
-      quantity,
       purchaseDate,
-      keepOnWishlist,
-      markAsPurchased,
+      buildStatus,
+      updateItemPurchase,
       onClose,
       onSuccess,
     ],
   )
 
-  // Show success toast with undo button
-  const showPurchaseSuccessToast = useCallback((wishlistItem: WishlistItem, setItem: SetItem) => {
-    const toastId = toast.custom(
-      () => (
-        <div
-          className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg max-w-md"
-          role="alert"
-          aria-live="polite"
-        >
-          <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900">Item added to your collection</p>
-            <p className="text-sm text-gray-600 mt-1 truncate">{wishlistItem.title}</p>
-            <div className="flex items-center gap-2 mt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  // Undo not fully implemented in MVP
-                  toast.info('Undo feature coming soon')
-                  toast.dismiss(toastId)
-                }}
-                className="flex items-center gap-1"
-              >
-                <Undo2 className="h-3 w-3" />
-                Undo
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  window.location.href = `/sets/${setItem.id}`
-                }}
-                className="flex items-center gap-1"
-              >
-                <Package className="h-3 w-3" />
-                View in Sets
-              </Button>
-            </div>
-          </div>
-        </div>
-      ),
-      {
-        duration: 5000,
-        position: 'bottom-right',
-      },
-    )
+  // Show success toast (SETS-MVP-0310: simplified - no Set navigation)
+  const showPurchaseSuccessToast = useCallback((wishlistItem: WishlistItem) => {
+    toast.success('Item marked as owned', {
+      description: wishlistItem.title,
+      duration: 5000,
+    })
   }, [])
 
   // Don't render if no item
@@ -242,6 +193,7 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
         className="sm:max-w-md"
         onEscapeKeyDown={e => isPurchasing && e.preventDefault()}
         onPointerDownOutside={e => isPurchasing && e.preventDefault()}
+        data-testid="got-it-modal"
       >
         <AppDialogHeader>
           <AppDialogTitle>Got It!</AppDialogTitle>
@@ -324,24 +276,8 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
             </div>
           </div>
 
-          {/* Quantity and Purchase Date Row */}
+          {/* Purchase Date and Build Status Row */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="quantity" className="text-sm font-medium">
-                Quantity
-              </label>
-              <Input
-                id="quantity"
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={e => setQuantity(parseInt(e.target.value, 10) || 1)}
-                disabled={isPurchasing}
-                data-testid="quantity-input"
-              />
-              {errors.quantity ? <p className="text-sm text-red-500">{errors.quantity}</p> : null}
-            </div>
-
             <div className="space-y-2">
               <label htmlFor="purchaseDate" className="text-sm font-medium">
                 Purchase Date
@@ -356,24 +292,22 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
                 data-testid="purchase-date-input"
               />
             </div>
-          </div>
 
-          {/* Keep on Wishlist Checkbox */}
-          <div className="flex flex-row items-start space-x-3">
-            <Checkbox
-              id="keepOnWishlist"
-              checked={keepOnWishlist}
-              onCheckedChange={checked => setKeepOnWishlist(checked === true)}
-              disabled={isPurchasing}
-              data-testid="keep-on-wishlist-checkbox"
-            />
-            <div className="space-y-1 leading-none">
-              <label htmlFor="keepOnWishlist" className="text-sm font-normal cursor-pointer">
-                Keep on wishlist
+            <div className="space-y-2">
+              <label htmlFor="buildStatus" className="text-sm font-medium">
+                Build Status
               </label>
-              <p className="text-xs text-muted-foreground">
-                Item will remain on your wishlist after adding to collection
-              </p>
+              <AppSelect
+                value={buildStatus}
+                onValueChange={value => setBuildStatus(value as BuildStatus)}
+                disabled={isPurchasing}
+                placeholder="Select build status"
+                options={[
+                  { value: 'not_started', label: 'Not Started' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'completed', label: 'Completed' },
+                ]}
+              />
             </div>
           </div>
 

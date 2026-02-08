@@ -1,0 +1,170 @@
+schema: 1
+story_id: INST-1100
+timestamp: '2026-02-05T00:00:00Z'
+
+# What story touches (architecture map)
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+# Files that will be modified or created
+touched_paths_globs:
+  - "apps/web/app-instructions-gallery/src/pages/**"
+  - "apps/web/app-instructions-gallery/src/components/InstructionCard/**"
+  - "apps/web/app-instructions-gallery/src/__tests__/**"
+  - "apps/web/main-app/src/routes/**"
+  - "packages/core/api-client/src/rtk/**"
+
+# Protected paths (do NOT modify under any circumstances)
+protected_paths_globs:
+  - "apps/api/lego-api/domains/instructions/routes.ts"
+  - "apps/api/lego-api/domains/instructions/types.ts"
+  - "packages/backend/database-schema/src/schema/**"
+  - "packages/backend/database-schema/src/seeds/mocs.ts"
+
+# Risk assessment
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+# Summary of what this story implements
+summary: >
+  Refactor and enhance the MOC gallery page in app-instructions-gallery to display user's MOC collection
+  using RTK Query hooks, responsive grid layout, loading states, empty state handling, and comprehensive
+  testing (unit, integration, E2E) following patterns from wishlist-gallery.
+
+# Detailed scope breakdown
+implementation_scope:
+  # Frontend changes
+  frontend:
+    - >
+      apps/web/app-instructions-gallery/src/pages/main-page.tsx:
+      - Verify uses useGetInstructionsQuery with correct parameters
+      - Ensure responsive grid layout (1 col mobile, 2 col tablet, 3-4 col desktop)
+      - Implement loading skeleton states (GallerySkeleton from @repo/gallery)
+      - Implement empty state with CTA button (GalleryEmptyState from @repo/gallery)
+      - Add error state handling with retry option
+      - Ensure accessibility: role="region", aria-label, aria-live regions
+    - >
+      apps/web/app-instructions-gallery/src/components/InstructionCard/index.tsx:
+      - Update to display thumbnail, title, piece count, theme
+      - Ensure keyboard navigation (Tab key activation)
+      - Add proper ARIA labels for screen readers
+      - Match design from wishlist-gallery card pattern
+    - >
+      apps/web/main-app/src/routes/:
+      - Verify /mocs route is properly wired in Router configuration
+      - Ensure authentication is enforced on this route
+
+  # API client changes
+  api_client:
+    - >
+      packages/core/api-client/src/rtk/instructions-api.ts:
+      - Verify useGetInstructionsQuery hook exports and signature
+      - Confirm RTK Query mutation hooks exist (createMoc, updateMoc, deleteMoc, etc.)
+      - Validate transformResponse uses Zod schema parsing (MocListResponseSchema)
+      - Check providesTags configuration for proper cache invalidation
+      - Verify getServerlessCacheConfig usage for performance
+
+  # Testing requirements
+  testing:
+    - >
+      Unit tests (apps/web/app-instructions-gallery/src/pages/__tests__/):
+      - Renders grid layout with GalleryGrid component
+      - Shows empty state when no MOCs
+      - Displays MOC cards with correct data
+      - Shows loading skeletons during fetch
+      - Handles missing thumbnailUrl with placeholder
+      - Responsive layout verification
+    - >
+      Integration tests:
+      - API call fetches MOC list via useGetInstructionsQuery
+      - Error state displays on API failure (500)
+      - Auth error (401) triggers redirect to login
+      - Zod validation error handled gracefully
+      - MSW mock handlers configured for API responses
+    - >
+      E2E tests (apps/web/playwright/):
+      - Feature file: apps/web/playwright/features/instructions/inst-1100-gallery.feature
+      - Scenario 1: Display user's MOC collection (5 MOCs in grid)
+      - Scenario 2: Empty gallery state with CTA
+      - Scenario 3: Gallery loading state with skeleton
+      - Responsive testing at breakpoints (375px, 768px, 1024px)
+
+# Component reuse inventory
+reuse_components:
+  from_gallery:
+    - GalleryGrid: Layout container for responsive grid
+    - GalleryEmptyState: Empty state UI with icon and CTA
+    - GallerySkeleton: Loading skeleton pattern
+    - GalleryFilterBar: Optional filter/search bar
+    - GalleryViewToggle: Optional grid/table view toggle
+    - GalleryDataTable: Optional data table view
+  from_app_component_library:
+    - CustomButton: CTA button for empty state
+    - Card: Optional card wrapper if needed
+  existing_local:
+    - InstructionCard: Display individual MOC card
+    - mocsColumns: Data table column definitions
+    - InstructionTableItem: Data table item schema
+
+# Dependency analysis
+dependencies:
+  blockers:
+    - INST-1008: "RTK Query mutations (ready-to-work) - but hooks already exist in codebase"
+  unblocks:
+    - INST-1101: "View MOC Details (depends on gallery for navigation)"
+    - INST-1102: "Create Basic MOC (CTA from empty state)"
+  internal:
+    - "@repo/gallery": Gallery components for layout
+    - "@repo/app-component-library": UI primitives
+    - "@repo/api-client": RTK Query hooks
+    - "@repo/logger": Logging utility
+
+# Performance targets
+performance_targets:
+  - "Load time < 2 seconds with 50 MOCs"
+  - "Lighthouse performance score > 70"
+  - "No memory leaks (React DevTools Profiler)"
+  - "Skeleton animation smooth (60 FPS)"
+
+# Accessibility requirements
+accessibility:
+  - Gallery region has role="region" and aria-label="MOC Gallery"
+  - Loading state announced to screen readers: "Loading MOCs..."
+  - Empty state message announced to screen readers
+  - MOC cards keyboard navigable (Tab key)
+  - Cards activate with Enter or Space key
+  - All images have alt text
+  - Focus visible with focus ring styling
+
+# Test coverage requirements
+coverage:
+  - Minimum 45% global coverage (CLAUDE.md requirement)
+  - Unit test focus: Component rendering and state management
+  - Integration test focus: API interaction and data flow
+  - E2E test focus: User workflows and responsive behavior
+
+# Schema validation notes
+schemas:
+  input: "ListMocsQuery from packages/core/api-client/src/schemas/instructions"
+  output: "MocListResponseSchema with items, total, page, limit, pagination"
+  transformation: "transformResponse uses Zod validation via MocListResponseSchema.parse()"
+
+# Build and lint notes
+quality_gates:
+  - "Must pass pnpm lint (ESLint, Prettier)"
+  - "Must pass pnpm check-types (TypeScript strict mode)"
+  - "Must pass pnpm test for this app"
+  - "No barrel files in new code"
+  - "All imports use exact paths (no @repo/ui, use @repo/app-component-library)"
+  - "All logging via @repo/logger, never console.log"

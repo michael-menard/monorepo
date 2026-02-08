@@ -109,6 +109,26 @@ export function AddItemPage() {
     }
   }, []) // Only run on mount
 
+  // WISH-2006: Focus title input on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement
+      titleInput?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // WISH-2006: Handle Escape key to navigate back
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isLoading && !hasSubmitted) {
+        void navigate({ to: '/' })
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [navigate, isLoading, hasSubmitted])
+
   /**
    * WISH-2032: Retry submission with stored form data
    */
@@ -175,7 +195,7 @@ export function AddItemPage() {
   )
 
   return (
-    <div className="container max-w-2xl py-8">
+    <div className="container max-w-2xl py-8" data-testid="add-item-modal">
       {/* Back link */}
       <RouterLink to="/">
         <Button variant="ghost" size="sm" className="mb-4">

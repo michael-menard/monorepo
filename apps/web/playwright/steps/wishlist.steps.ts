@@ -162,13 +162,7 @@ Then('the item count should update', async ({ page }) => {
 // Search Steps
 // ============================================================================
 
-When('I search for {string}', async ({ page }, query: string) => {
-  const searchInput = page.getByPlaceholder(/search/i)
-  await searchInput.fill(query)
-  await searchInput.press('Enter')
-  // Wait for results to update
-  await page.waitForTimeout(500)
-})
+// Note: 'I search for {string}' step is defined in inspiration-gallery.steps.ts
 
 Then('I should see items matching {string}', async ({ page }, query: string) => {
   const matchingText = page.getByText(new RegExp(query, 'i'))
@@ -271,11 +265,7 @@ When('I press Tab to focus on the first card', async ({ page }) => {
   await page.keyboard.press('Tab') // May need multiple tabs to reach card
 })
 
-Then('the first wishlist card should be focused', async ({ page }) => {
-  // Check that some element within the gallery has focus
-  const focusedElement = page.locator(':focus')
-  await expect(focusedElement).toBeVisible()
-})
+// 'the first wishlist card should be focused' step is defined in wishlist-keyboard.steps.ts
 
 When('I press Tab again', async ({ page }) => {
   await page.keyboard.press('Tab')
@@ -312,11 +302,7 @@ Then('I should see pagination controls', async ({ page }) => {
   await expect(pagination.first()).toBeVisible()
 })
 
-When('I click {string}', async ({ page }, buttonText: string) => {
-  const button = page.getByRole('button', { name: new RegExp(buttonText, 'i') })
-  await button.click()
-  await page.waitForTimeout(500)
-})
+// Note: 'I click {string}' step is defined in common.steps.ts
 
 Then('I should see the next page of items', async ({ page }) => {
   // Verify page changed (cards should still be visible)

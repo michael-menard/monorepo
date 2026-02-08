@@ -12,7 +12,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": true, "types": ["node"],
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",

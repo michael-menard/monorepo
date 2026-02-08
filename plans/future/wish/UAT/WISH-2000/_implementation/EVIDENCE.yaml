@@ -1,0 +1,204 @@
+schema: 2
+story_id: "WISH-2000"
+version: 1
+timestamp: "2026-01-27T18:45:00-07:00"
+
+acceptance_criteria:
+  - ac_id: "AC-001"
+    ac_text: "Drizzle schema includes all fields: id, userId, title, store, setNumber, sourceUrl, imageUrl, price, currency, pieceCount, releaseDate, tags, priority, notes, sortOrder, timestamps"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "Lines 381-435 - All 19 fields present with correct types"
+
+  - ac_id: "AC-002"
+    ac_text: "Zod schemas created: WishlistItemSchema, CreateWishlistItemSchema, UpdateWishlistItemSchema, WishlistQueryParamsSchema, WishlistListResponseSchema"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/core/api-client/src/schemas/wishlist.ts"
+        description: "All 5 schemas implemented with additional ReorderWishlistItemSchema and BatchReorderSchema"
+
+  - ac_id: "AC-003"
+    ac_text: "31+ unit tests for schema validation"
+    status: PASS
+    evidence_items:
+      - type: test
+        description: "104 tests total: wishlist.test.ts (56), wishlist-schema-alignment.test.ts (22), wishlist-schema.test.ts (26)"
+
+  - ac_id: "AC-004"
+    ac_text: "TypeScript types inferred via z.infer"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/core/api-client/src/schemas/wishlist.ts"
+        description: "Lines 14,17,61,86,94,107,120,130,144 - All types use z.infer<>"
+
+  - ac_id: "GAP-001"
+    ac_text: "Schema validation tests (compile, exports, indexes)"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts"
+        description: "Lines 14-152 - Tests verify table export, column definitions, enums, and column count"
+
+  - ac_id: "GAP-002"
+    ac_text: "Schema/Zod alignment tests"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/core/api-client/src/schemas/__tests__/wishlist-schema-alignment.test.ts"
+        description: "22 tests verify all 19 fields present in both schemas"
+
+  - ac_id: "GAP-003"
+    ac_text: "Large decimal value tests (999999.99)"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+        description: "Lines 431-437 - Tests large price (999999.99), small price (0.01), zero, and precision validation"
+
+  - ac_id: "GAP-004"
+    ac_text: "Tags array handling tests"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+        description: "Lines 469-497 - Tests empty arrays, large arrays (15+ items), special characters"
+
+  - ac_id: "GAP-005"
+    ac_text: "sortOrder conflict behavior tests"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+        description: "Lines 529-554 - Tests sortOrder edge cases including duplicate values"
+
+  - ac_id: "GAP-008"
+    ac_text: "DB-level enum validation tests"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts"
+        description: "Lines 111-138 - Tests for wishlistStoreEnum and wishlistCurrencyEnum with correct values"
+
+  - ac_id: "ENH-001"
+    ac_text: "pgEnum for store field"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "Lines 378-379,389 - wishlistStoreEnum defined and used"
+
+  - ac_id: "ENH-002"
+    ac_text: "Priority check constraint (0-5)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "Line 433 - CHECK constraint: priority >= 0 AND priority <= 5"
+
+  - ac_id: "ENH-004"
+    ac_text: "Composite index for common queries"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "Lines 427-431 - idx_wishlist_user_store_priority on (userId, store, priority)"
+
+  - ac_id: "ENH-005"
+    ac_text: "Schema evolution documentation"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/docs/WISHLIST-SCHEMA-EVOLUTION.md"
+        description: "Complete migration and rollback procedures"
+
+  - ac_id: "ENH-006"
+    ac_text: "Seed data generation"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/seeds/wishlist.ts"
+        description: "Existing seed data factory for local dev/testing"
+
+  - ac_id: "ENH-008"
+    ac_text: "created_by/updated_by audit fields"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "Lines 417-418 - createdBy and updatedBy columns (nullable)"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modified
+    description: "Added wishlist schema with constraints, indexes, and audit fields"
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    action: modified
+    description: "Zod schemas for wishlist validation"
+  - path: "packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts"
+    action: created
+    description: "26 schema validation tests"
+  - path: "packages/core/api-client/src/schemas/__tests__/wishlist-schema-alignment.test.ts"
+    action: created
+    description: "22 schema alignment tests"
+  - path: "packages/backend/database-schema/docs/WISHLIST-SCHEMA-EVOLUTION.md"
+    action: created
+    description: "Schema evolution documentation"
+  - path: "packages/backend/database-schema/src/seeds/wishlist.ts"
+    action: modified
+    description: "Seed data factory"
+
+commands_run:
+  - command: "pnpm test --filter=@repo/database-schema"
+    result: SUCCESS
+    timestamp: "2026-01-27T18:40:00-07:00"
+    output: "26 tests passed"
+  - command: "pnpm test --filter=@repo/api-client -- wishlist"
+    result: SUCCESS
+    timestamp: "2026-01-27T18:41:00-07:00"
+    output: "78 tests passed"
+  - command: "pnpm build --filter=@repo/database-schema --filter=@repo/api-client"
+    result: SUCCESS
+    timestamp: "2026-01-27T18:43:00-07:00"
+  - command: "pnpm tsc --noEmit"
+    result: SUCCESS
+    timestamp: "2026-01-27T18:44:00-07:00"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "Used text field for price instead of decimal for flexibility"
+  - "Added pgEnum for store field to enforce values at DB level"
+  - "Priority range constraint (0-5) added as CHECK constraint"
+
+known_deviations: []
+
+test_summary:
+  unit:
+    pass: 104
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+
+e2e_tests:
+  status: skipped
+  skip_reason: "Infrastructure story (story_type: infra) - no UI or API endpoints to test via E2E. Database schema and types only."
+  config: "playwright.legacy.config.ts"
+  project: "chromium-live"
+  mode: live
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []

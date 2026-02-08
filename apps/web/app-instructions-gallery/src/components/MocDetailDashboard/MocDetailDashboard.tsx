@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type React from 'react'
+import { ThumbnailUpload } from '../ThumbnailUpload'
 import type { Moc } from './__types__/moc'
 import { CoverCard } from './CoverCard'
 import { MetaCard } from './MetaCard'
@@ -18,10 +19,21 @@ const DEFAULT_CARD_ORDER: DashboardCardId[] = ['orders', 'partsLists', 'instruct
 
 interface MocDetailDashboardProps {
   moc: Moc
+  onThumbnailUpdated?: (newUrl: string) => void
 }
 
-export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
+export function MocDetailDashboard({ moc, onThumbnailUpdated }: MocDetailDashboardProps) {
   const [cardOrder, setCardOrder] = useState<DashboardCardId[]>(DEFAULT_CARD_ORDER)
+  const [currentThumbnailUrl, setCurrentThumbnailUrl] = useState(moc.coverImageUrl)
+
+  // Update local state when thumbnail is uploaded
+  const handleThumbnailSuccess = useCallback(
+    (newUrl: string) => {
+      setCurrentThumbnailUrl(newUrl)
+      onThumbnailUpdated?.(newUrl)
+    },
+    [onThumbnailUpdated],
+  )
   const [draggedCardId, setDraggedCardId] = useState<DashboardCardId | null>(null)
   const [dragOverCardId, setDragOverCardId] = useState<DashboardCardId | null>(null)
 
@@ -103,6 +115,13 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
     [draggedCardId, persistOrder],
   )
 
+  // Handle successful file upload - refresh data
+  const handleFilesUploaded = useCallback(() => {
+    // In a real app, this would trigger a refetch of MOC data
+    // For now, we just show success - the data will refresh on next page load
+    // Future: Add RTK Query invalidation here
+  }, [])
+
   const renderCard = (cardId: DashboardCardId) => {
     switch (cardId) {
       case 'orders':
@@ -110,7 +129,13 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
       case 'partsLists':
         return <PartsListsCard partsLists={moc.partsLists} />
       case 'instructions':
-        return <InstructionsCard instructionsPdfUrls={moc.instructionsPdfUrls} />
+        return (
+          <InstructionsCard
+            mocId={moc.id}
+            instructionsPdfUrls={moc.instructionsPdfUrls}
+            onFilesUploaded={handleFilesUploaded}
+          />
+        )
       case 'gallery':
         return <GalleryCard galleryImages={moc.galleryImages} />
     }
@@ -142,7 +167,12 @@ export function MocDetailDashboard({ moc }: MocDetailDashboardProps) {
     <div className="container mx-auto px-4 py-6 xl:py-8" data-testid="moc-detail-dashboard">
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-8">
         <aside className="xl:col-span-4 2xl:col-span-3 space-y-6 xl:sticky xl:top-20 xl:self-start">
-          <CoverCard moc={{ title: moc.title, coverImageUrl: moc.coverImageUrl }} />
+          <CoverCard moc={{ title: moc.title, coverImageUrl: currentThumbnailUrl }} />
+          <ThumbnailUpload
+            mocId={moc.id}
+            existingThumbnailUrl={currentThumbnailUrl}
+            onSuccess={handleThumbnailSuccess}
+          />
           <MetaCard
             moc={{
               title: moc.title,

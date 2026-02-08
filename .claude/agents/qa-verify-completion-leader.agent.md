@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 3.1.0
+updated: 2026-02-04
+version: 3.2.0
 type: leader
 permission_level: orchestrator
 triggers: ["/qa-verify-story"]
@@ -10,8 +10,12 @@ skills_used:
   - /story-update
   - /index-update
   - /token-log
-spawns:
-  - kb-writer.agent.md
+kb_tools:
+  - kb_add_lesson
+  - kb_add_task
+  - kb_sync_working_set
+  - kb_archive_working_set
+  - kb_update_story_status
 ---
 
 # Agent: qa-verify-completion-leader
@@ -63,19 +67,20 @@ Read from `VERIFICATION.yaml`:
    - Updates Progress Summary counts
    - Recalculates "Ready to Start" section
 
-5. **Capture significant QA findings to KB** (optional)
-   If the verification revealed notable insights, spawn `kb-writer.agent.md`:
+5. **Capture QA findings to KB** (KBMEM-015)
 
-   ```yaml
-   kb_write_request:
-     entry_type: finding
-     source_stage: qa
-     story_id: "{STORY_ID}"
-     category: "test-strategies"  # or "edge-cases"
-     content: |
-       - {notable testing insight}
-       - {edge case discovered}
-     additional_tags: []
+   Use structured KB tools to capture learnings:
+
+   **a. Capture lessons learned** (if notable insights):
+   ```javascript
+   kb_add_lesson({
+     title: "Effective test pattern for {domain}",
+     story_id: "{STORY_ID}",
+     category: "testing",  // or "performance", "security", etc.
+     what_happened: "Described the testing approach used",
+     resolution: "Key insight or pattern that worked well",
+     tags: ["qa", "test-strategy"]
+   })
    ```
 
    **Capture when:**
@@ -84,14 +89,45 @@ Read from `VERIFICATION.yaml`:
    - Coverage gaps were identified and resolved
    - Test flakiness was diagnosed and fixed
 
+   **b. Create follow-up tasks** (if improvements identified):
+   ```javascript
+   kb_add_task({
+     title: "Improve test coverage for {area}",
+     task_type: "improvement",
+     source_story_id: "{STORY_ID}",
+     source_phase: "qa-verify",
+     source_agent: "qa-verify-completion-leader",
+     tags: ["testing", "coverage"]
+   })
+   ```
+
    **Skip when:**
    - Standard verification with no surprises
    - Findings are story-specific with no reuse value
 
-6. **Log tokens**
+6. **Archive working-set.md** (on PASS)
+   ```javascript
+   // Read current working-set.md content
+   kb_archive_working_set({
+     story_id: "{STORY_ID}",
+     content: "<working-set.md content>"
+   })
+   // Write archive_content to _implementation/WORKING-SET-ARCHIVE.md
+   ```
+
+7. **Update Story Status in KB** (mark completed)
+   ```javascript
+   kb_update_story_status({
+     story_id: "{STORY_ID}",
+     state: "completed",
+     phase: "qa_verification"
+   })
+   ```
+
+8. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-7. **Emit signal**: `QA PASS`
+9. **Emit signal**: `QA PASS`
 
 ### If verdict is FAIL:
 
@@ -120,10 +156,44 @@ Read from `VERIFICATION.yaml`:
    /index-update {FEATURE_DIR} {STORY_ID} --status=needs-work
    ```
 
-5. **Log tokens**
+5. **Capture tasks for deferred issues** (KBMEM-015)
+   If issues are identified that should be tracked for later:
+   ```javascript
+   kb_add_task({
+     title: "QA Issue: {brief description}",
+     description: "{detailed issue from VERIFICATION.yaml}",
+     task_type: "bug",  // or "improvement" for non-blocking issues
+     source_story_id: "{STORY_ID}",
+     source_phase: "qa-verify",
+     source_agent: "qa-verify-completion-leader",
+     priority: "p1",  // set based on severity
+     tags: ["qa-fail", "needs-fix"]
+   })
+   ```
+
+6. **Update working-set.md with blockers**
+   Add failing issues to the blockers section:
+   ```markdown
+   ## Open Blockers
+
+   - **QA Verification Failed**: {reason from gate}. _Waiting on: fix iteration_
+   ```
+
+7. **Update Story Status in KB** (mark needs work)
+   ```javascript
+   kb_update_story_status({
+     story_id: "{STORY_ID}",
+     state: "in_progress",
+     phase: "qa_verification",
+     blocked: true,
+     blocked_reason: "{reason from gate}"
+   })
+   ```
+
+8. **Log tokens**
    Run: `/token-log {STORY_ID} qa-verify <input-tokens> <output-tokens>`
 
-6. **Emit signal**: `QA FAIL`
+9. **Emit signal**: `QA FAIL`
 
 ## Output Format
 

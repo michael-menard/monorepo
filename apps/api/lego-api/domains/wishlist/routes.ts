@@ -1,6 +1,8 @@
 import { Hono, Context } from 'hono'
 import { logger } from '@repo/logger'
 import { auth } from '../../middleware/auth.js'
+import { loadPermissions } from '../../middleware/load-permissions.js'
+import { requireFeature } from '../../middleware/require-feature.js'
 import { db, schema } from '../../composition/index.js'
 import { createSetsService } from '../sets/application/index.js'
 import {
@@ -19,6 +21,7 @@ import {
   ReorderWishlistInputSchema,
   PresignRequestSchema,
   MarkAsPurchasedInputSchema,
+  PurchaseDetailsInputSchema,
 } from './types.js'
 // IP extraction and geolocation (WISH-2047)
 // Cross-domain dependencies for purchase flow (WISH-2042)
@@ -123,8 +126,10 @@ const wishlistService = createWishlistService({
 
 const wishlist = new Hono()
 
-// All wishlist routes require authentication
+// All wishlist routes require authentication and wishlist feature (free-tier+)
 wishlist.use('*', auth)
+wishlist.use('*', loadPermissions)
+wishlist.use('*', requireFeature('wishlist'))
 
 // ─────────────────────────────────────────────────────────────────────────
 // List & Reorder Routes
@@ -375,6 +380,9 @@ wishlist.delete('/:id', async c => {
 /**
  * POST /:id/purchased - Mark wishlist item as purchased
  *
+ * @deprecated Use PATCH /:id/purchase instead (SETS-MVP-0310)
+ * This endpoint will be removed after 2-week deprecation period.
+ *
  * Creates a Set item from the wishlist item with purchase details.
  * Optionally removes the item from the wishlist.
  *
@@ -422,7 +430,57 @@ wishlist.post('/:id/purchased', async c => {
     return c.json({ error: result.error }, status)
   }
 
+  // Add deprecation warning header
+  c.header('Deprecated', 'true')
+  c.header('Sunset', new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toUTCString())
+  c.header('Link', '</api/v2/wishlist/:id/purchase>; rel="alternate"')
+
   return c.json(result.data, 201)
+})
+
+/**
+ * PATCH /:id/purchase - Update item status to 'owned' with purchase details
+ *
+ * SETS-MVP-0310: Unified model status transition approach.
+ * Updates the item's status to 'owned' and captures purchase metadata.
+ *
+ * Returns 200 with the updated item on success.
+ * Returns 400 for validation errors.
+ * Returns 403 if user doesn't own the item.
+ * Returns 404 if item doesn't exist.
+ */
+wishlist.patch('/:id/purchase', async c => {
+  const userId = c.get('userId')
+  const itemId = c.req.param('id')
+  const body = await c.req.json()
+  const input = PurchaseDetailsInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await wishlistService.updateItemStatus(userId, itemId, input.data)
+
+  if (!result.ok) {
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    // Log authorization failures for audit trail
+    if (status === 403 || status === 404) {
+      const { clientIp, geolocation } = await getAuthFailureContext(c)
+      logAuthorizationFailure(
+        userId,
+        itemId,
+        '/wishlist/:id/purchase',
+        'PATCH',
+        status as 403 | 404,
+        result.error,
+        clientIp,
+        geolocation,
+      )
+    }
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data)
 })
 
 export default wishlist

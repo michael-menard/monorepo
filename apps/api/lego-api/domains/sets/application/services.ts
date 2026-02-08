@@ -40,10 +40,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     /**
      * Create a new set
      */
-    async createSet(
-      userId: string,
-      input: CreateSetInput
-    ): Promise<Result<Set, SetError>> {
+    async createSet(userId: string, input: CreateSetInput): Promise<Result<Set, SetError>> {
       try {
         const set = await setRepo.insert({
           userId,
@@ -75,10 +72,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     /**
      * Get set by ID (with ownership check)
      */
-    async getSet(
-      userId: string,
-      setId: string
-    ): Promise<Result<Set, SetError>> {
+    async getSet(userId: string, setId: string): Promise<Result<Set, SetError>> {
       const result = await setRepo.findById(setId)
 
       if (!result.ok) {
@@ -98,7 +92,7 @@ export function createSetsService(deps: SetsServiceDeps) {
      */
     async getSetWithImages(
       userId: string,
-      setId: string
+      setId: string,
     ): Promise<Result<{ set: Set; images: SetImage[] }, SetError>> {
       const setResult = await this.getSet(userId, setId)
       if (!setResult.ok) {
@@ -119,7 +113,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     async listSets(
       userId: string,
       pagination: PaginationInput,
-      filters?: { search?: string; theme?: string; isBuilt?: boolean }
+      filters?: { search?: string; theme?: string; isBuilt?: boolean },
     ): Promise<PaginatedResult<Set>> {
       return setRepo.findByUserId(userId, pagination, filters)
     },
@@ -130,7 +124,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     async updateSet(
       userId: string,
       setId: string,
-      input: UpdateSetInput
+      input: UpdateSetInput,
     ): Promise<Result<Set, SetError>> {
       // Check ownership first
       const existing = await setRepo.findById(setId)
@@ -147,10 +141,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     /**
      * Delete a set (also deletes all images)
      */
-    async deleteSet(
-      userId: string,
-      setId: string
-    ): Promise<Result<void, SetError>> {
+    async deleteSet(userId: string, setId: string): Promise<Result<void, SetError>> {
       // Check ownership first
       const existing = await setRepo.findById(setId)
       if (!existing.ok) {
@@ -194,7 +185,7 @@ export function createSetsService(deps: SetsServiceDeps) {
       userId: string,
       setId: string,
       file: UploadedFile,
-      input?: Partial<CreateSetImageInput>
+      input?: Partial<CreateSetImageInput>,
     ): Promise<Result<SetImage, SetError>> {
       // Validate set ownership
       const setResult = await this.getSet(userId, setId)
@@ -236,7 +227,7 @@ export function createSetsService(deps: SetsServiceDeps) {
       }
 
       // Get next position if not specified
-      const position = input?.position ?? await setImageRepo.getNextPosition(setId)
+      const position = input?.position ?? (await setImageRepo.getNextPosition(setId))
 
       // Save to database
       try {
@@ -260,10 +251,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     /**
      * Get a set image (with ownership check via parent set)
      */
-    async getSetImage(
-      userId: string,
-      imageId: string
-    ): Promise<Result<SetImage, SetError>> {
+    async getSetImage(userId: string, imageId: string): Promise<Result<SetImage, SetError>> {
       const imageResult = await setImageRepo.findById(imageId)
 
       if (!imageResult.ok) {
@@ -285,10 +273,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     /**
      * List images for a set
      */
-    async listSetImages(
-      userId: string,
-      setId: string
-    ): Promise<Result<SetImage[], SetError>> {
+    async listSetImages(userId: string, setId: string): Promise<Result<SetImage[], SetError>> {
       // Check ownership
       const setResult = await this.getSet(userId, setId)
       if (!setResult.ok) {
@@ -305,7 +290,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     async updateSetImage(
       userId: string,
       imageId: string,
-      input: { position?: number }
+      input: { position?: number },
     ): Promise<Result<SetImage, SetError>> {
       // Get image and verify ownership
       const imageResult = await this.getSetImage(userId, imageId)
@@ -319,10 +304,7 @@ export function createSetsService(deps: SetsServiceDeps) {
     /**
      * Delete a set image
      */
-    async deleteSetImage(
-      userId: string,
-      imageId: string
-    ): Promise<Result<void, SetError>> {
+    async deleteSetImage(userId: string, imageId: string): Promise<Result<void, SetError>> {
       // Get image and verify ownership
       const imageResult = await this.getSetImage(userId, imageId)
       if (!imageResult.ok) {

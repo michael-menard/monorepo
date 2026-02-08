@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useSelector } from 'react-redux'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
@@ -21,8 +22,9 @@ import {
 } from '@repo/app-component-library'
 import { Lock, Mail, Eye, EyeOff, ArrowLeft, AlertCircle } from 'lucide-react'
 import { useAuth, type SocialProvider } from '@/services/auth/AuthProvider'
-import { useNavigation } from '@/components/Navigation/NavigationProvider'
+import { useNavigationOptional } from '@/components/Navigation/NavigationProvider'
 import { AuthLayout } from '@/components/Layout/RootLayout'
+import { selectAuth } from '@/store/slices/authSlice'
 
 // Login form validation schema
 const LoginSchema = z.object({
@@ -87,13 +89,23 @@ export function LoginPage() {
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as { redirect?: string; expired?: string }
   const { signIn, signInWithSocial, isLoading } = useAuth()
-  const { trackNavigation } = useNavigation()
+  const auth = useSelector(selectAuth)
+  const navigationContext = useNavigationOptional()
+  const trackNavigation = navigationContext?.trackNavigation ?? (() => {})
   const { toast } = useToast()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
   // Get redirect URL from search params (set by protected route guard or auth failure handler)
   const redirectTo = search.redirect || '/dashboard'
+
+  // Redirect authenticated users to dashboard
+  // This handles the case where auth state resolves after the route guard already ran
+  useEffect(() => {
+    if (auth.isAuthenticated && !auth.isLoading) {
+      navigate({ to: '/dashboard' })
+    }
+  }, [auth.isAuthenticated, auth.isLoading, navigate])
 
   // Show session expired notification if redirected from 401 handler (Story 1.29)
   useEffect(() => {

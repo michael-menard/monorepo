@@ -43,6 +43,14 @@ function createMockItem(overrides: Partial<WishlistItem> = {}): WishlistItem {
     sortOrder: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
+    // SETS-MVP-001: Collection management fields
+    status: 'wishlist',
+    statusChangedAt: null,
+    purchaseDate: null,
+    purchasePrice: null,
+    purchaseTax: null,
+    purchaseShipping: null,
+    buildStatus: null,
     ...overrides,
   }
 }
@@ -130,7 +138,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'bestValue', order: 'asc' },
+        { sort: 'bestValue', order: 'asc', status: 'wishlist' },
       )
     })
 
@@ -144,7 +152,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'bestValue' },
+        { sort: 'bestValue', status: 'wishlist' },
       )
     })
 
@@ -158,7 +166,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'bestValue', order: 'desc' },
+        { sort: 'bestValue', order: 'desc', status: 'wishlist' },
       )
     })
 
@@ -182,7 +190,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 2, limit: 5 },
-        { sort: 'bestValue', order: 'asc' },
+        { sort: 'bestValue', order: 'asc', status: 'wishlist' },
       )
     })
   })
@@ -202,7 +210,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'expiringSoon', order: 'asc' },
+        { sort: 'expiringSoon', order: 'asc', status: 'wishlist' },
       )
     })
 
@@ -216,7 +224,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'expiringSoon' },
+        { sort: 'expiringSoon', status: 'wishlist' },
       )
     })
 
@@ -230,7 +238,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'expiringSoon', order: 'desc' },
+        { sort: 'expiringSoon', order: 'desc', status: 'wishlist' },
       )
     })
 
@@ -254,7 +262,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 3, limit: 10 },
-        { sort: 'expiringSoon', order: 'asc' },
+        { sort: 'expiringSoon', order: 'asc', status: 'wishlist' },
       )
     })
   })
@@ -274,7 +282,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'hiddenGems', order: 'desc' },
+        { sort: 'hiddenGems', order: 'desc', status: 'wishlist' },
       )
     })
 
@@ -288,7 +296,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'hiddenGems', order: 'asc' },
+        { sort: 'hiddenGems', order: 'asc', status: 'wishlist' },
       )
     })
 
@@ -312,7 +320,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 50 },
-        { sort: 'hiddenGems', order: 'desc' },
+        { sort: 'hiddenGems', order: 'desc', status: 'wishlist' },
       )
     })
 
@@ -330,7 +338,7 @@ describe('WISH-2014: Smart Sorting Algorithms', () => {
       expect(wishlistRepo.findByUserId).toHaveBeenCalledWith(
         'user-123',
         { page: 1, limit: 20 },
-        { sort: 'hiddenGems', order: 'desc', store: 'LEGO', search: 'Star Wars' },
+        { sort: 'hiddenGems', order: 'desc', store: 'LEGO', search: 'Star Wars', status: 'wishlist' },
       )
     })
   })

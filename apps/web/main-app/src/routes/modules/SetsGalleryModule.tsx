@@ -7,7 +7,7 @@
 
 import { Suspense } from 'react'
 import { AppSetsGalleryModule } from '@repo/app-sets-gallery'
-import { LoadingPage } from '../..//pages/LoadingPage'
+import { LoadingPage } from '../pages/LoadingPage'
 
 export function SetsGalleryModule() {
   return (

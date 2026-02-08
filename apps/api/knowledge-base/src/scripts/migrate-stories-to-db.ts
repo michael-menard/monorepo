@@ -159,20 +159,16 @@ interface MigrationStats {
 
 async function ensureFeature(db: any, featureName: string): Promise<string> {
   // Check if exists
-  const existing = await db.execute(
-    `SELECT id FROM features WHERE name = $1`,
-    [featureName]
-  )
+  const existing = await db.execute(`SELECT id FROM features WHERE name = $1`, [featureName])
 
   if (existing.rows.length > 0) {
     return existing.rows[0].id
   }
 
   // Create new
-  const result = await db.execute(
-    `INSERT INTO features (name) VALUES ($1) RETURNING id`,
-    [featureName]
-  )
+  const result = await db.execute(`INSERT INTO features (name) VALUES ($1) RETURNING id`, [
+    featureName,
+  ])
 
   return result.rows[0].id
 }
@@ -181,7 +177,7 @@ async function importStory(
   db: any,
   embeddingClient: EmbeddingClient,
   story: StoryYaml,
-  featureId: string
+  featureId: string,
 ): Promise<string> {
   // Generate embedding for searchable content
   const searchableContent = `${story.title} ${story.goal} ${story.acs.map(ac => ac.text).join(' ')}`
@@ -233,7 +229,7 @@ async function importStory(
       JSON.stringify(embedding),
       story.created_at,
       story.updated_at,
-    ]
+    ],
   )
 
   return result.rows[0].id
@@ -248,7 +244,7 @@ async function importACs(db: any, storyUuid: string, acs: StoryYaml['acs']): Pro
        ON CONFLICT (story_id, ac_id) DO UPDATE SET
          text = EXCLUDED.text,
          type = EXCLUDED.type`,
-      [storyUuid, ac.id, ac.text, ac.type || 'functional']
+      [storyUuid, ac.id, ac.text, ac.type || 'functional'],
     )
     count++
   }
@@ -264,7 +260,7 @@ async function importRisks(db: any, storyUuid: string, risks: StoryYaml['risks']
     await db.execute(
       `INSERT INTO story_risks (story_id, risk, mitigation)
        VALUES ($1, $2, $3)`,
-      [storyUuid, risk.risk, risk.mitigation]
+      [storyUuid, risk.risk, risk.mitigation],
     )
     count++
   }
@@ -274,7 +270,7 @@ async function importRisks(db: any, storyUuid: string, risks: StoryYaml['risks']
 async function importElaboration(
   db: any,
   storyUuid: string,
-  elab: ElaborationYaml
+  elab: ElaborationYaml,
 ): Promise<{ elaborationId: string; gapsCount: number; followUpsCount: number }> {
   // Insert elaboration
   const result = await db.execute(
@@ -291,7 +287,7 @@ async function importElaboration(
       elab.split_required || false,
       elab.tokens?.input || 0,
       elab.tokens?.output || 0,
-    ]
+    ],
   )
 
   if (result.rows.length === 0) {
@@ -314,7 +310,7 @@ async function importElaboration(
         gap.severity || 'important',
         gap.finding,
         gap.recommendation,
-      ]
+      ],
     )
     gapsCount++
   }
@@ -325,7 +321,7 @@ async function importElaboration(
     await db.execute(
       `INSERT INTO follow_ups (source_story_id, finding)
        VALUES ($1, $2)`,
-      [storyUuid, followUp.finding]
+      [storyUuid, followUp.finding],
     )
     followUpsCount++
   }
@@ -347,11 +343,15 @@ async function importPlan(db: any, storyUuid: string, plan: PlanYaml): Promise<v
       plan.estimates?.tokens || 0,
       plan.reuse || [],
       JSON.stringify(plan.chunks || []),
-    ]
+    ],
   )
 }
 
-async function importVerification(db: any, storyUuid: string, verify: VerificationYaml): Promise<void> {
+async function importVerification(
+  db: any,
+  storyUuid: string,
+  verify: VerificationYaml,
+): Promise<void> {
   await db.execute(
     `INSERT INTO verifications (
       story_id,
@@ -386,7 +386,7 @@ async function importVerification(db: any, storyUuid: string, verify: Verificati
       verify.qa?.verified_at,
       verify.qa?.blocking_issues || [],
       JSON.stringify(verify.acs || []),
-    ]
+    ],
   )
 }
 
@@ -405,7 +405,7 @@ async function importProof(db: any, storyUuid: string, proof: ProofYaml): Promis
       proof.verification?.tests_passed || 0,
       proof.verification?.all_acs_verified || false,
       JSON.stringify(proof.deliverables || []),
-    ]
+    ],
   )
 }
 
@@ -415,7 +415,7 @@ async function importTokenUsage(db: any, storyUuid: string, tokens: TokensYaml):
     await db.execute(
       `INSERT INTO token_usage (story_id, phase, tokens_input, tokens_output)
        VALUES ($1, $2, $3, $4)`,
-      [storyUuid, phase.phase, phase.input || 0, phase.output || 0]
+      [storyUuid, phase.phase, phase.input || 0, phase.output || 0],
     )
     count++
   }
@@ -424,7 +424,7 @@ async function importTokenUsage(db: any, storyUuid: string, tokens: TokensYaml):
     await db.execute(
       `INSERT INTO token_usage (story_id, phase, tokens_input, operation, avoidable)
        VALUES ($1, 'high-cost', $2, $3, $4)`,
-      [storyUuid, highCost.tokens || 0, highCost.operation, highCost.avoidable || false]
+      [storyUuid, highCost.tokens || 0, highCost.operation, highCost.avoidable || false],
     )
     count++
   }
@@ -436,7 +436,7 @@ async function importFeedback(
   db: any,
   embeddingClient: EmbeddingClient,
   storyUuid: string,
-  feedback: FeedbackYaml
+  feedback: FeedbackYaml,
 ): Promise<number> {
   let count = 0
   for (const entry of feedback.entries || []) {
@@ -456,7 +456,7 @@ async function importFeedback(
         entry.root_cause,
         entry.recommendation,
         JSON.stringify(embedding),
-      ]
+      ],
     )
     count++
   }
@@ -480,7 +480,15 @@ async function findStoryDirectories(basePath: string): Promise<string[]> {
       continue
     }
 
-    const stages = ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed']
+    const stages = [
+      'backlog',
+      'ready-to-work',
+      'in-progress',
+      'ready-for-qa',
+      'uat',
+      'UAT',
+      'completed',
+    ]
     for (const stage of stages) {
       const stagePath = path.join(featurePath, stage)
       try {
@@ -517,12 +525,14 @@ async function migrateStoryToDb(
   embeddingClient: EmbeddingClient,
   storyDir: string,
   stats: MigrationStats,
-  dryRun: boolean
+  dryRun: boolean,
 ): Promise<void> {
   const storyId = path.basename(storyDir)
   const pathParts = storyDir.split(path.sep)
   const stageIndex = pathParts.findIndex(p =>
-    ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed'].includes(p)
+    ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed'].includes(
+      p,
+    ),
   )
   const featureName = pathParts[stageIndex - 1] || 'unknown'
 

@@ -44,7 +44,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     async uploadImage(
       userId: string,
       file: UploadedFile,
-      input: CreateImageInput
+      input: CreateImageInput,
     ): Promise<Result<GalleryImage, GalleryError>> {
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -105,10 +105,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     /**
      * Get image by ID (with ownership check)
      */
-    async getImage(
-      userId: string,
-      imageId: string
-    ): Promise<Result<GalleryImage, GalleryError>> {
+    async getImage(userId: string, imageId: string): Promise<Result<GalleryImage, GalleryError>> {
       const result = await imageRepo.findById(imageId)
 
       if (!result.ok) {
@@ -129,7 +126,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     async listImages(
       userId: string,
       pagination: PaginationInput,
-      filters?: { albumId?: string | null; search?: string }
+      filters?: { albumId?: string | null; search?: string },
     ): Promise<PaginatedResult<GalleryImage>> {
       return imageRepo.findByUserId(userId, pagination, filters)
     },
@@ -140,7 +137,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     async updateImage(
       userId: string,
       imageId: string,
-      input: UpdateImageInput
+      input: UpdateImageInput,
     ): Promise<Result<GalleryImage, GalleryError>> {
       // Check ownership first
       const existing = await imageRepo.findById(imageId)
@@ -157,10 +154,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     /**
      * Delete an image
      */
-    async deleteImage(
-      userId: string,
-      imageId: string
-    ): Promise<Result<void, GalleryError>> {
+    async deleteImage(userId: string, imageId: string): Promise<Result<void, GalleryError>> {
       // Check ownership first
       const existing = await imageRepo.findById(imageId)
       if (!existing.ok) {
@@ -196,7 +190,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
      */
     async createAlbum(
       userId: string,
-      input: CreateAlbumInput
+      input: CreateAlbumInput,
     ): Promise<Result<GalleryAlbum, GalleryError>> {
       // Validate cover image if provided
       if (input.coverImageId) {
@@ -227,10 +221,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     /**
      * Get album by ID (with ownership check)
      */
-    async getAlbum(
-      userId: string,
-      albumId: string
-    ): Promise<Result<GalleryAlbum, GalleryError>> {
+    async getAlbum(userId: string, albumId: string): Promise<Result<GalleryAlbum, GalleryError>> {
       const result = await albumRepo.findById(albumId)
 
       if (!result.ok) {
@@ -249,7 +240,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
      */
     async getAlbumWithImages(
       userId: string,
-      albumId: string
+      albumId: string,
     ): Promise<Result<{ album: GalleryAlbum; images: GalleryImage[] }, GalleryError>> {
       const albumResult = await this.getAlbum(userId, albumId)
       if (!albumResult.ok) {
@@ -259,7 +250,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
       const imagesResult = await imageRepo.findByUserId(
         userId,
         { page: 1, limit: 100 },
-        { albumId }
+        { albumId },
       )
 
       return ok({
@@ -274,7 +265,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     async listAlbums(
       userId: string,
       pagination: PaginationInput,
-      filters?: { search?: string }
+      filters?: { search?: string },
     ): Promise<PaginatedResult<GalleryAlbum>> {
       return albumRepo.findByUserId(userId, pagination, filters)
     },
@@ -285,7 +276,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     async updateAlbum(
       userId: string,
       albumId: string,
-      input: UpdateAlbumInput
+      input: UpdateAlbumInput,
     ): Promise<Result<GalleryAlbum, GalleryError>> {
       // Check ownership first
       const existing = await albumRepo.findById(albumId)
@@ -313,10 +304,7 @@ export function createGalleryService(deps: GalleryServiceDeps) {
     /**
      * Delete an album (orphans images, doesn't delete them)
      */
-    async deleteAlbum(
-      userId: string,
-      albumId: string
-    ): Promise<Result<void, GalleryError>> {
+    async deleteAlbum(userId: string, albumId: string): Promise<Result<void, GalleryError>> {
       // Check ownership first
       const existing = await albumRepo.findById(albumId)
       if (!existing.ok) {

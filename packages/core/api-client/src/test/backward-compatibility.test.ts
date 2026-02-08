@@ -16,7 +16,7 @@ import { createWishlistApi } from '../rtk/wishlist-api'
 
 // Mock server for backward compatibility testing
 const server = setupServer(
-  http.get('/api/v2/gallery/search', () => {
+  http.get('/api/gallery/search', () => {
     return HttpResponse.json({
       success: true,
       data: {
@@ -34,7 +34,7 @@ const server = setupServer(
     })
   }),
 
-  http.get('/api/v2/wishlist/items', () => {
+  http.get('/api/wishlist', () => {
     return HttpResponse.json({
       success: true,
       data: {

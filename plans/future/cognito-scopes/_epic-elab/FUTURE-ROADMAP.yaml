@@ -1,0 +1,142 @@
+schema: 1
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/cognito-scopes"
+prefix: "COGN"
+reviewed: "2026-02-04T18:30:00Z"
+
+summary: "Post-MVP opportunities and deferred enhancements for tier management, monitoring, and compliance"
+
+enhancements:
+  high_value:
+    - id: ENG-F-001
+      source: engineering
+      suggestion: "Implement circuit breaker pattern for database failures in COGN-004"
+      impact: high
+      effort: medium
+
+    - id: ENG-F-002
+      source: engineering
+      suggestion: "Add chaos engineering tests for failure scenarios in COGN-025"
+      impact: high
+      effort: high
+
+    - id: PROD-F-001
+      source: product
+      suggestion: "Add tier comparison modal showing upgrade benefits (COGN-016)"
+      impact: high
+      effort: medium
+
+    - id: UX-F-001
+      source: ux
+      suggestion: "Tier comparison modal showing features side-by-side (COGN-016)"
+      impact: high
+      effort: medium
+
+    - id: UX-F-002
+      source: ux
+      suggestion: "Storage usage visualization (pie chart) for power users (COGN-017)"
+      impact: medium
+      effort: medium
+
+    - id: PLAT-F-001
+      source: platform
+      suggestion: "Multi-region deployment Post-MVP for global scale"
+      impact: high
+      effort: high
+
+    - id: PLAT-F-002
+      source: platform
+      suggestion: "Database read replicas for analytics Post-MVP"
+      impact: medium
+      effort: high
+
+    - id: PLAT-F-003
+      source: platform
+      suggestion: "Caching layer (Redis) for scope lookups Post-MVP"
+      impact: medium
+      effort: medium
+
+    - id: SEC-F-001
+      source: security
+      suggestion: "MFA enforcement for power tier Post-MVP"
+      impact: high
+      effort: medium
+
+    - id: SEC-F-002
+      source: security
+      suggestion: "3rd party age verification service for COPPA compliance Post-MVP"
+      impact: high
+      effort: high
+
+    - id: SEC-F-003
+      source: security
+      suggestion: "Regional compliance (GDPR, state-level age of consent) Post-MVP"
+      impact: high
+      effort: high
+
+  nice_to_have:
+    - id: PROD-F-002
+      source: product
+      suggestion: "Progress bars showing storage usage trending toward limits (COGN-017)"
+      impact: medium
+
+    - id: PROD-F-003
+      source: product
+      suggestion: "Trial period for pro tier to increase conversion"
+      impact: medium
+
+    - id: UX-F-003
+      source: ux
+      suggestion: "Tier upgrade guided tour to onboard users to pro features after upgrade"
+      impact: medium
+
+    - id: SEC-F-004
+      source: security
+      suggestion: "Encryption key rotation automation Post-MVP"
+      impact: medium
+
+suggested_stories:
+  - title: "Analytics for tier upgrade conversion"
+    source: product
+    priority: P1
+    reason: "Measure monetization effectiveness and upgrade funnel performance; Post-MVP"
+
+  - title: "Tier downgrade flow and data retention"
+    source: product
+    priority: P2
+    reason: "Handle power users downgrading to pro tier; requires UX consideration for quota compliance"
+
+  - title: "Trial period for pro tier"
+    source: product
+    priority: P2
+    reason: "Increase conversion rates; Post-MVP feature"
+
+  - title: "Tier upgrade guided tour"
+    source: ux
+    priority: P1
+    reason: "Onboard users to pro features after upgrade completion"
+
+  - title: "Account deletion flow with PII cleanup"
+    source: security
+    priority: P1
+    reason: "CCPA compliance requirement for data deletion rights; add to user settings Post-MVP"
+
+  - title: "Penetration testing on quota enforcement"
+    source: security
+    priority: P1
+    reason: "Validate COGN-007 quota operations against attacker scenarios before production"
+
+  - title: "Security audit before production launch"
+    source: security
+    priority: P1
+    reason: "Comprehensive review of COGN-005, COGN-006 scope/auth code and incident response procedures"
+
+stories_to_defer:
+  - story: COGN-024
+    reason: "Reconciliation jobs can be Post-MVP; not required for core authorization flow but needed for quota consistency"
+
+metrics:
+  total_suggestions: 20
+  high_value_enhancements: 9
+  nice_to_have_enhancements: 4
+  suggested_stories: 7
+  deferred_stories: 1

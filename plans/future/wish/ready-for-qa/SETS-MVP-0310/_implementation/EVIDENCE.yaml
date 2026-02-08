@@ -1,0 +1,185 @@
+schema: 1
+story_id: "SETS-MVP-0310"
+version: 2
+timestamp: "2026-02-01T21:00:00-07:00"
+
+acceptance_criteria:
+  - ac_id: "AC1"
+    ac_text: "Got it button opens confirmation step (existing)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+        description: "Existing modal flow preserved - no regression"
+
+  - ac_id: "AC2"
+    ac_text: "After confirmation, shows purchase details form (NEW)"
+    status: PARTIAL
+    evidence_items:
+      - type: file
+        path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+        description: "ARCHITECTURAL DECISION: Option B chosen - extended existing single-step form instead of creating new step component"
+    notes: "Per user decision, NO new PurchaseDetailsStep component created. Single-step form extended with buildStatus field."
+
+  - ac_id: "AC3"
+    ac_text: "Purchase details form includes required fields"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+        description: "Form includes: purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus (replaces quantity)"
+      - type: code
+        description: "buildStatus select with options: not_started, in_progress, completed"
+
+  - ac_id: "AC4"
+    ac_text: "Skip button saves with minimal data"
+    status: DEFERRED
+    evidence_items:
+      - type: note
+        description: "Skip button functionality not implemented in Option B - single submit button only"
+
+  - ac_id: "AC5"
+    ac_text: "Save button validates and saves all entered data"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+        description: "Submit button calls updateItemPurchase mutation with validated input"
+
+  - ac_id: "AC6"
+    ac_text: "Form shows calculated total (price + tax + shipping)"
+    status: MISSING
+    evidence_items:
+      - type: note
+        description: "Total calculation not implemented - deferred to future story"
+
+  - ac_id: "AC7"
+    ac_text: "PATCH /api/wishlist/:id/purchase endpoint accepts purchase details"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/lego-api/domains/wishlist/routes.ts"
+        description: "PATCH /:id/purchase endpoint implemented with PurchaseDetailsInputSchema validation"
+
+  - ac_id: "AC8"
+    ac_text: "Endpoint updates: status='owned', statusChangedAt=now(), plus purchase fields"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+        description: "updateItemStatus() service method updates status, statusChangedAt, and purchase metadata"
+
+  - ac_id: "AC9"
+    ac_text: "Endpoint validates ownership (existing auth middleware)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+        description: "Service verifies userId matches item.userId before update"
+
+  - ac_id: "AC10"
+    ac_text: "Returns updated item with new status"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/lego-api/domains/wishlist/routes.ts"
+        description: "Endpoint returns WishlistItem (not SetItem) with updated status"
+
+touched_files:
+  # Backend
+  - path: "apps/api/lego-api/domains/wishlist/types.ts"
+    action: modified
+    lines: 440
+    description: "Added PurchaseDetailsInputSchema for PATCH endpoint"
+
+  - path: "apps/api/lego-api/domains/wishlist/routes.ts"
+    action: modified
+    lines: 478
+    description: "Added PATCH /:id/purchase endpoint, deprecated POST /:id/purchased with Sunset header"
+
+  - path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+    action: modified
+    lines: 450
+    description: "Added updateItemStatus() service method for status transition to 'owned'"
+
+  - path: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+    action: modified
+    lines: 310
+    description: "Extended update() method to support status, statusChangedAt, purchase fields, and buildStatus"
+
+  # Packages - Schemas
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    action: modified
+    lines: 590
+    description: "PurchaseDetailsInputSchema already existed from prior work"
+
+  # Packages - RTK Query
+  - path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    action: modified
+    lines: 412
+    description: "Added updateItemPurchase mutation for PATCH endpoint, exported useUpdateItemPurchaseMutation hook"
+
+  # Frontend
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    action: modified
+    lines: 350
+    description: "Added buildStatus field, switched from markAsPurchased to updateItemPurchase mutation, removed quantity and keepOnWishlist"
+
+commands_run:
+  - command: "pnpm build --filter @repo/api-client"
+    result: SUCCESS
+    timestamp: "2026-02-01T20:45:00-07:00"
+    output: "Built in 39.60s"
+
+  - command: "pnpm build --filter app-wishlist-gallery"
+    result: SUCCESS
+    timestamp: "2026-02-01T20:50:00-07:00"
+    output: "Built in 29.34s"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "ARCHITECTURAL DECISION: User chose Option B - Extend existing GotItModal with buildStatus field, keep single-step form"
+  - "NO PurchaseDetailsStep component created per user decision"
+  - "Removed quantity field (not supported in unified model status transition)"
+  - "Removed keepOnWishlist checkbox (unified model doesn't delete items)"
+  - "Simplified success toast (no Set navigation since item stays in wishlist)"
+  - "Added deprecation headers to POST /:id/purchased (Sunset, Link headers)"
+  - "markAsPurchased() service method remains for backward compatibility during 2-week deprecation period"
+
+known_deviations:
+  - "AC4: Skip button not implemented - single submit button only in Option B"
+  - "AC6: Total calculation not implemented - deferred to future story"
+  - "E2E tests not written - would require live API and database"
+  - "Unit/integration tests not written - deferred per implementation focus"
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: skipped
+  skip_reason: "E2E tests deferred - implementation focused on core API migration per Option B decision"
+  config: null
+  project: null
+  mode: null
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: 0
+  branches: 0
+
+implementation_approach: "Option B - Minimal API migration"
+architectural_decisions_resolved:
+  - ARCH-001: "Endpoint is /purchase (purchase-specific)"
+  - ARCH-002: "New service method updateItemStatus(), markAsPurchased() deprecated"
+  - ARCH-003: "2-week deprecation period for POST :id/purchased"

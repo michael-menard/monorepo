@@ -26,6 +26,22 @@ export type WishlistStore = z.infer<typeof WishlistStoreSchema>
 export const CurrencySchema = z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD'])
 export type Currency = z.infer<typeof CurrencySchema>
 
+/**
+ * Item status enum schema for lifecycle tracking.
+ * Matches the `item_status` PostgreSQL enum from SETS-MVP-001.
+ * @example ItemStatusSchema.parse('wishlist') // 'wishlist'
+ */
+export const ItemStatusSchema = z.enum(['wishlist', 'owned'])
+export type ItemStatus = z.infer<typeof ItemStatusSchema>
+
+/**
+ * Build status enum schema for owned items.
+ * Matches the `build_status` PostgreSQL enum from SETS-MVP-001.
+ * @example BuildStatusSchema.parse('in_progress') // 'in_progress'
+ */
+export const BuildStatusSchema = z.enum(['not_started', 'in_progress', 'completed'])
+export type BuildStatus = z.infer<typeof BuildStatusSchema>
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Image Variants Schema (WISH-2016)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,9 +113,12 @@ export type ImageVariants = z.infer<typeof ImageVariantsSchema>
  * - Audit fields (`createdBy`, `updatedBy`) track who modified the record
  * - `imageVariants` added in WISH-2016 for optimized images
  */
+// UUID pattern that accepts any valid UUID format (including test UUIDs)
+const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+
 export const WishlistItemSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string().regex(uuidPattern, 'Invalid UUID format'),
+  userId: z.string().min(1),
 
   // Core fields (required)
   title: z.string().min(1),
@@ -137,6 +156,23 @@ export const WishlistItemSchema = z.object({
   // These are optional because legacy data may not have them, and nullable for explicit null values
   createdBy: z.string().nullable().optional(),
   updatedBy: z.string().nullable().optional(),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Collection Management (SETS-MVP-001)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Lifecycle tracking
+  status: ItemStatusSchema.default('wishlist'),
+  statusChangedAt: z.string().datetime().nullable().optional(),
+
+  // Purchase tracking (for owned items)
+  purchaseDate: z.string().datetime().nullable().optional(),
+  purchasePrice: z.string().nullable().optional(),
+  purchaseTax: z.string().nullable().optional(),
+  purchaseShipping: z.string().nullable().optional(),
+
+  // Build tracking (for owned items)
+  buildStatus: BuildStatusSchema.nullable().optional(),
 })
 
 export type WishlistItem = z.infer<typeof WishlistItemSchema>
@@ -219,6 +255,7 @@ export type WishlistSortField = z.infer<typeof WishlistSortFieldSchema>
  * @remarks
  * - `q` is the search string for title matching
  * - `tags` is comma-separated for multi-tag filtering
+ * - `status` defaults to 'wishlist' for backward compatibility (SETS-MVP-001)
  * - `page` defaults to 1, `limit` defaults to 20 (max 100)
  * - All number params use coerce for query string conversion
  * - Smart sort modes (WISH-2014): bestValue, expiringSoon, hiddenGems
@@ -231,6 +268,7 @@ export const WishlistQueryParamsSchema = z.object({
   store: z.string().optional(),
   tags: z.string().optional(), // comma-separated
   priority: z.coerce.number().int().min(0).max(5).optional(),
+  status: ItemStatusSchema.optional().default('wishlist'), // SETS-MVP-001: Filter by lifecycle status
 
   // Sorting
   sort: WishlistSortFieldSchema.optional(),
@@ -296,7 +334,7 @@ export type WishlistListResponse = z.infer<typeof WishlistListResponseSchema>
  * @deprecated Use BatchReorderSchema for batch operations.
  */
 export const ReorderWishlistItemSchema = z.object({
-  itemId: z.string().uuid(),
+  itemId: z.string().regex(uuidPattern, 'Invalid UUID format'),
   newSortOrder: z.number().int().min(0),
 })
 
@@ -310,7 +348,7 @@ export type ReorderWishlistItem = z.infer<typeof ReorderWishlistItemSchema>
 export const BatchReorderSchema = z.object({
   items: z.array(
     z.object({
-      id: z.string().uuid(),
+      id: z.string().regex(uuidPattern, 'Invalid UUID format'),
       sortOrder: z.number().int().min(0),
     }),
   ),
@@ -453,8 +491,8 @@ export type GotItFormValues = z.infer<typeof GotItFormSchema>
  * Set item schema (response from purchase endpoint)
  */
 export const SetItemSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.string().regex(uuidPattern, 'Invalid UUID format'),
+  userId: z.string().regex(uuidPattern, 'Invalid UUID format'),
   title: z.string(),
   setNumber: z.string().nullable(),
   store: z.string().nullable(),
@@ -470,9 +508,86 @@ export const SetItemSchema = z.object({
   tax: z.string().nullable(),
   shipping: z.string().nullable(),
   purchaseDate: z.string().datetime().nullable(),
-  wishlistItemId: z.string().uuid().nullable(),
+  wishlistItemId: z.string().regex(uuidPattern, 'Invalid UUID format').nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
 
 export type SetItem = z.infer<typeof SetItemSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Collection Management Operations (SETS-MVP-001)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Schema for marking a wishlist item as purchased/owned.
+ * PATCH /wishlist/:id/purchase
+ *
+ * Sets status='owned' and records purchase details.
+ */
+export const MarkAsPurchasedSchema = z.object({
+  purchaseDate: z.string().datetime().optional(),
+  purchasePrice: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid decimal')
+    .optional()
+    .or(z.literal('')),
+  purchaseTax: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Tax must be a valid decimal')
+    .optional()
+    .or(z.literal('')),
+  purchaseShipping: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Shipping must be a valid decimal')
+    .optional()
+    .or(z.literal('')),
+})
+
+export type MarkAsPurchased = z.infer<typeof MarkAsPurchasedSchema>
+
+/**
+ * Schema for purchase details input in GotItModal purchase flow.
+ * SETS-MVP-0310: Extended purchase flow with build status tracking.
+ *
+ * This schema is used for the purchase details step where users can:
+ * - Enter purchase date (defaults to today)
+ * - Enter purchase price (pre-filled with retail price if available)
+ * - Enter tax and shipping costs
+ * - Set initial build status (defaults to 'not_started')
+ *
+ * All fields are optional to support "Skip" flow with minimal data.
+ */
+export const PurchaseDetailsInputSchema = z.object({
+  purchaseDate: z.string().datetime().optional(),
+  purchasePrice: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid decimal')
+    .optional()
+    .or(z.literal('')),
+  purchaseTax: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Tax must be a valid decimal')
+    .optional()
+    .or(z.literal('')),
+  purchaseShipping: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Shipping must be a valid decimal')
+    .optional()
+    .or(z.literal('')),
+  buildStatus: BuildStatusSchema.optional().default('not_started'),
+})
+
+export type PurchaseDetailsInput = z.infer<typeof PurchaseDetailsInputSchema>
+
+/**
+ * Schema for updating build status of owned items.
+ * PATCH /wishlist/:id/build-status
+ *
+ * Only valid when status='owned'.
+ */
+export const UpdateBuildStatusSchema = z.object({
+  buildStatus: BuildStatusSchema,
+})
+
+export type UpdateBuildStatus = z.infer<typeof UpdateBuildStatusSchema>

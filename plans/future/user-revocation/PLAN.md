@@ -1,6 +1,10 @@
 # Project Brief: Admin User Access Revocation
 
-## Executive Summary
+> **DEPRECATED (2026-02-04):** This plan has been merged into the `admin-panel` epic. The functionality described here is now part of the Admin Panel MVP scope. See `plans/future/admin-panel/PLAN.md` for the consolidated plan.
+
+---
+
+## Executive Summary (ARCHIVED)
 
 This project introduces an administrative security feature that enables authorized administrators to immediately revoke user access by invalidating their Cognito refresh tokens and blocking them from the site. This capability addresses critical security and compliance needs by providing instant user access termination for scenarios including security incidents, policy violations, account compromises, or regulatory requirements. The feature targets system administrators and security personnel who need immediate, reliable user access control without waiting for token expiration.
 

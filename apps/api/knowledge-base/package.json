@@ -39,7 +39,9 @@
     "mcp:start": "node dist/mcp-server/index.js",
     "kb:generate-config": "tsx scripts/generate-config.ts",
     "kb:validate-connection": "tsx scripts/validate-connection.ts",
-    "kb:chunk": "tsx src/scripts/chunk-document.ts"
+    "kb:chunk": "tsx src/scripts/chunk-document.ts",
+    "kb:migrate-docs": "tsx src/scripts/migrate-docs-to-kb.ts",
+    "migrate:plans": "tsx scripts/migrate-plans.ts"
   },
   "keywords": [
     "knowledge-base",

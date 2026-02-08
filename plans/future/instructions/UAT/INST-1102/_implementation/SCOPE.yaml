@@ -1,0 +1,301 @@
+schema: 1
+story_id: INST-1102
+timestamp: 2026-02-07T02:46:36Z
+
+touches:
+  backend: true
+  frontend: true
+  packages: false
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-instructions-gallery/src/pages/**"
+  - "apps/web/app-instructions-gallery/src/components/**"
+  - "apps/api/lego-api/domains/mocs/**"
+  - "packages/core/api-client/src/rtk/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Implement end-to-end MOC creation flow with validated form (frontend), RTK mutation + API endpoint (backend), and error recovery patterns from wishlist domain"
+
+---
+
+## File-Level Scope Analysis
+
+### Frontend - App Level
+
+**Primary Files**:
+- `apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx` (NEW, ~250 lines)
+  - Page component following AddItemPage pattern
+  - Form with title, description, theme select, tags input
+  - RTK mutation integration
+  - Error toast + recovery with localStorage
+  - Navigation on success
+
+- `apps/web/app-instructions-gallery/src/pages/__tests__/CreateMocPage.test.tsx` (NEW, ~300 lines)
+  - Unit tests for all form interactions
+  - Auto-focus behavior
+  - Escape key dismiss
+  - Validation errors
+  - Submit button disabled states
+  - localStorage recovery
+
+**Secondary Files** (Minimal Changes):
+- `apps/web/app-instructions-gallery/src/pages/main-page.tsx` (MINOR CHANGE)
+  - Update empty state CTA to point to `/mocs/new` (verify status-quo)
+
+**Component Reuse** (No New Files):
+- `src/components/MocEdit/TagInput.tsx` (EXISTING - verified in ELAB)
+  - Use existing for multi-select tags input
+  - API: accepts `tags: string[]` and `onChange: (tags) => void`
+
+### Backend - API Layer
+
+**Domain Structure** (`apps/api/lego-api/domains/mocs/`):
+
+- `types.ts` (NEW, ~80 lines)
+  - `CreateMocRequestSchema` (Zod)
+    - title: string, min(1), max(200)
+    - description: string, max(2000), optional
+    - theme: enum of 11 theme options
+    - tags: string[], max 20 items, max 30 chars per tag
+  - `CreateMocResponseSchema` (Zod)
+    - id, userId, title, description, theme, tags, slug, type, createdAt
+  - Type inference: `type CreateMocRequest = z.infer<typeof CreateMocRequestSchema>`
+
+- `ports/index.ts` (NEW, ~50 lines)
+  - `MocRepository` interface
+    - `create(userId: string, data: CreateMocRequest): Promise<Moc>`
+    - `findBySlug(slug: string, userId: string): Promise<Moc | null>`
+
+- `adapters/repositories.ts` (NEW, ~120 lines)
+  - Drizzle ORM implementation
+  - `createMoc(userId, data)` method
+  - Slug generation: `slugifyTitle(title)` with UUID suffix on collision
+  - Error handling: catch unique constraint violation on (userId, title)
+
+- `application/services.ts` (NEW, ~80 lines)
+  - `createMoc(userId: string, data: CreateMocRequest)`
+  - Validate request data (Zod parsing)
+  - Call repository.create()
+  - Handle duplicate title errors (409 Conflict or 400 with error code)
+
+- `routes.ts` (NEW, ~60 lines)
+  - POST `/mocs` endpoint
+  - Extract `userId` from `c.get('userId')`
+  - Call `createMoc()` service
+  - Return `CreateMocResponseSchema` as JSON (200) or error (400/409)
+  - Thin HTTP adapter (no business logic)
+
+- `__tests__/services.test.ts` (NEW, ~180 lines)
+  - Test service layer in isolation
+  - Mock repository
+  - Test slug generation with collision handling
+  - Test validation errors
+  - Test duplicate title error
+
+- `__tests__/routes.test.ts` (NEW, ~200 lines)
+  - Test HTTP layer
+  - Mock service layer
+  - POST /mocs happy path
+  - Error responses (400, 409)
+  - Auth middleware integration
+
+### Database
+
+**Schema** (EXISTING):
+- `moc_instructions` table exists with all required fields
+  - id (uuid, PK)
+  - userId (text, notNull)
+  - title (text, notNull)
+  - description (text, nullable)
+  - theme (text, nullable)
+  - tags (jsonb, array of strings)
+  - slug (text, nullable)
+  - type (text, notNull) = "MOC"
+  - createdAt / updatedAt (timestamps)
+  - Unique constraint: `uniqueUserTitle` on (userId, title)
+
+**No Migrations Required**: Schema already supports this story.
+
+### RTK Query Integration
+
+**API Layer** (`packages/core/api-client/src/rtk/`):
+
+- `instructions-api.ts` (EXISTING, MINOR CHANGE if needed)
+  - Verify `useCreateMocMutation` hook exists (per ELAB-INST-1102)
+  - Hook must accept `CreateMocRequest` payload
+  - Hook must return mutation result with `{ data, isLoading, error }`
+  - If hook doesn't exist or needs adjustment, implement per ADR-001
+
+### Types & Contracts
+
+- `packages/core/api-client/src/schemas/moc.ts` (NEW, ~40 lines)
+  - Reusable Zod schemas for frontend validation
+  - `CreateMocFormSchema` for form validation
+  - `MocResponseSchema` for API response typing
+
+---
+
+## Key Dependencies
+
+### Blocked By
+- **INST-1008**: RTK Query Mutations setup
+  - Must have `useCreateMocMutation` exported from `instructions-api.ts`
+  - **Status**: VERIFIED - Hook exists in codebase
+
+### Unblocks
+- **INST-1101**: MOC Detail Page (needs created MOCs to display)
+- **INST-1103**: File Upload for MOCs
+- **INST-1104**: Parts Lists Upload
+- **INST-1106**: Instructions Upload
+- **INST-1108**: Edit MOC
+- **INST-1109**: Delete MOC
+
+### Reuses
+- **AddItemPage.tsx** pattern (80% reuse)
+  - Navigation, form setup, error recovery
+  - localStorage auto-save strategy
+  - Optimistic UI with immediate redirect
+- **TagInput component** (100% reuse)
+  - Use `app-instructions-gallery/src/components/MocEdit/TagInput.tsx`
+- **useLocalStorage** hook (100% reuse)
+- **useFormRecovery pattern** (80% reuse)
+
+---
+
+## Test Coverage Requirements
+
+### Frontend Unit Tests
+- Form rendering with all fields
+- Input change handlers
+- Validation error display
+- Submit button disabled when form invalid
+- Auto-focus on mount
+- Escape key dismiss (clear form + optional navigation)
+- localStorage save/restore on error
+- Success toast + redirect
+
+**Target Coverage**: 95%+ for CreateMocPage
+
+### Frontend Integration Tests
+- RTK mutation call with correct payload
+- Error handling from API (400, 409)
+- Success flow: create -> toast -> redirect to detail
+- localStorage recovery after page reload
+
+### Backend Unit Tests - Services
+- Request validation (Zod schema)
+- Slug generation from title
+- UUID collision handling
+- Duplicate title detection
+- Service calls repository correctly
+
+**Target Coverage**: 90%+ for services.ts
+
+### Backend Unit Tests - Routes
+- POST /mocs endpoint exists
+- Auth middleware enforces userId
+- Happy path: valid request -> 200 response
+- Error responses: 400 (validation), 409 (duplicate)
+- Response matches schema
+
+**Target Coverage**: 90%+ for routes.ts
+
+### E2E Tests
+- Happy path: navigate -> fill form -> submit -> redirect to detail
+- Validation error recovery
+- Duplicate title error handling
+- Tag input interaction
+
+---
+
+## Implementation Notes
+
+### Slug Generation Strategy (ELABORATION DECISION)
+- **Strategy**: Append short UUID suffix on collision
+- **Format**: `title-slug-abc123` (6-char suffix)
+- **Example**: "My Castle MOC" -> "my-castle-moc" -> on collision -> "my-castle-moc-a1b2"
+
+### Theme Options (11 confirmed)
+1. Castle
+2. Space
+3. City
+4. Technic
+5. Creator
+6. Star Wars
+7. Harry Potter
+8. Marvel
+9. DC
+10. Friends
+11. Other
+
+### TagInput Component
+- **Source**: `apps/web/app-instructions-gallery/src/components/MocEdit/TagInput.tsx`
+- **API**: Accepts `tags: string[]` and `onChange: (tags) => void`
+- **Constraints**: Max 20 tags, max 30 chars per tag
+
+### Form Validation Constraints
+- **Title**: Required, 1-200 chars
+- **Description**: Optional, max 2000 chars
+- **Theme**: Required, one of 11 options
+- **Tags**: Optional, max 20 items, max 30 chars per tag
+
+### Error Handling
+- **Duplicate Title**: HTTP 409 with error message
+  - User sees: "A MOC with this title already exists. Please try another title."
+  - Recovery: Preserve form data in localStorage, show error toast with retry button
+- **Network Error**: Generic "Failed to create MOC. Please try again."
+  - Recovery: localStorage + retry button in toast
+- **Validation Error** (400): Show field-specific validation errors
+
+### Feature Gate
+- **Gate Name**: `instructions` (per epic consistency)
+- **Implementation**: Use middleware pattern from wishlist domain
+- **Verification**: Confirm in story acceptance
+
+---
+
+## Risk Assessment
+
+### Medium Risk
+- **Dependency on INST-1008**: RTK hooks must exist and export correctly
+  - **Mitigation**: Already verified in elaboration
+  - **Action**: Verify on implementation start
+
+### Low Risk
+- **Slug collision handling**: UUID approach is straightforward
+  - **Mitigation**: Test collision scenarios
+- **Unique title constraint**: Database enforces, API must handle
+  - **Mitigation**: Return 409 error, show user-friendly message
+
+---
+
+## Acceptance Criteria Coverage
+
+| AC # | Requirement | Files Affected | Test Coverage |
+|------|-------------|-----------------|----------------|
+| AC-1 | Navigate to /mocs/new | CreateMocPage.tsx | E2E |
+| AC-2 | Form fields visible | CreateMocPage.tsx | Unit |
+| AC-3 | Auto-focus title input | CreateMocPage.tsx | Unit |
+| AC-4 | Validation errors shown | CreateMocPage.tsx | Unit |
+| AC-5 | Submit disabled when invalid | CreateMocPage.tsx | Unit |
+| AC-6 | Call useCreateMocMutation | CreateMocPage.tsx | Integration |
+| AC-7 | Success toast + redirect | CreateMocPage.tsx | Integration + E2E |
+| AC-8 | POST /mocs endpoint | routes.ts | Backend Unit |
+| AC-9 | Validate input | services.ts | Backend Unit |
+| AC-10 | Generate slug from title | repositories.ts | Backend Unit |
+| AC-11 | Store with type="MOC" | services.ts | Backend Unit |
+| AC-12 | Return created MOC | routes.ts | Backend Unit |
+| AC-13 | Handle duplicate title | services.ts | Backend Unit + Integration |
+| AC-14 | Escape key clears form | CreateMocPage.tsx | Unit |
+| AC-15 | localStorage recovery | CreateMocPage.tsx | Integration |

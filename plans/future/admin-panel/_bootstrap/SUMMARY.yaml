@@ -1,0 +1,77 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel"
+prefix: "ADMI"
+project_name: "admin-panel"
+completed: "2026-02-04T00:00:00Z"
+
+files_created:
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/stories.index.md"
+    stories: 25
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/PLAN.meta.md"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/PLAN.exec.md"
+  - path: "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/roadmap.md"
+
+directories_created:
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/backlog"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/elaboration"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/ready-to-work"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/in-progress"
+  - "/Users/michaelmenard/Development/Monorepo/plans/future/admin-panel/UAT"
+
+metrics:
+  total_stories: 25
+  ready_to_start: 3
+  critical_path_length: 13
+  max_parallel: 5
+  phases: 5
+  backend_stories: 9
+  frontend_stories: 10
+  infrastructure_stories: 2
+  testing_stories: 4
+  estimated_weeks: "2-3"
+
+roadmap_highlights:
+  critical_path:
+    - "ADMI-001"
+    - "ADMI-002"
+    - "ADMI-003"
+    - "ADMI-004"
+    - "ADMI-012"
+    - "ADMI-013"
+    - "ADMI-019"
+    - "ADMI-020"
+    - "ADMI-021"
+    - "ADMI-022"
+    - "ADMI-023"
+    - "ADMI-024"
+    - "ADMI-025"
+  parallel_groups: 10
+  phase_distribution:
+    phase_1_foundation: 3
+    phase_2_backend: 6
+    phase_3_frontend_core: 5
+    phase_4_user_actions: 7
+    phase_5_testing_deployment: 4
+
+risk_summary:
+  high_risk_stories:
+    - "ADMI-006"
+    - "ADMI-007"
+  medium_risk_stories:
+    - "ADMI-002"
+    - "ADMI-003"
+    - "ADMI-004"
+    - "ADMI-013"
+    - "ADMI-016"
+  sizing_warnings: 1
+
+next_step: "/elab-epic plans/future/admin-panel"
+
+notes:
+  - "Bootstrap generation complete for ADMI epic"
+  - "All 25 stories generated with dependencies resolved"
+  - "Ready to begin elaboration phase on ADMI-001, ADMI-002, ADMI-010"
+  - "Critical path is 13 stories long"
+  - "Maximum parallel execution capacity is 5-6 stories"
+  - "Estimated project duration: 2-3 weeks"
+  - "Key external dependency: cognito-scopes epic must complete first"

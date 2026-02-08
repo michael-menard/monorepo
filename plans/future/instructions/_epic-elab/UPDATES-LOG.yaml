@@ -1,0 +1,202 @@
+schema: 3
+feature_dir: plans/future/instructions
+prefix: INST
+updated: 2026-02-05T22:30:00Z
+phase: elaboration_updates
+
+stories_index:
+  stories_updated: 18
+  test_specs_added: 18
+  unit_tests_specified: 18
+  integration_tests_specified: 18
+  e2e_tests_specified: 18
+  cucumber_feature_files: 18
+
+decisions_applied:
+  qa_test_mandate:
+    - blocker_id: QA-001
+      decision: accept
+      stories_affected: 18
+      status: applied
+      description: Added 3-part test strategy (unit + integration + E2E) to all 18 stories
+
+    - blocker_id: QA-002
+      decision: accept
+      stories_affected: 18
+      status: applied
+      description: Added test acceptance criteria section with template to all stories
+
+    - blocker_id: QA-003
+      decision: accept
+      stories_affected: 10
+      status: applied
+      description: Added Cucumber feature file references to E2E-relevant stories
+
+    - blocker_id: QA-004
+      decision: accept
+      stories_affected: 2
+      status: applied
+      description: Defined exact integration test scenarios for presigned URL flow (INST-1002, INST-1012)
+
+    - blocker_id: QA-005
+      decision: accept
+      stories_affected: 3
+      status: applied
+      description: Added request/response schema validation tests to edit endpoint story
+
+  engineering_dependencies:
+    - blocker_id: ENG-001
+      decision: accept
+      stories_affected: 2
+      status: applied
+      description: Updated roadmap with INST-1002 → INST-1012 dependency
+
+    - blocker_id: ENG-002
+      decision: accept
+      stories_affected: 5
+      status: applied
+      description: Assigned Wave 1-2 to package extraction stories (INST-1003, INST-1004)
+
+    - blocker_id: ENG-003
+      decision: accept
+      stories_affected: 3
+      status: applied
+      description: Completed INST-1008 (RTK Query) dependency tracking before edit frontend
+
+  product_scope:
+    - blocker_id: PROD-001
+      decision: accept
+      stories_affected: 1
+      status: applied
+      description: Elaborated INST-1010 with form layout, validation rules, error messages
+
+    - blocker_id: PROD-002
+      decision: accept
+      stories_affected: 1
+      status: applied
+      description: Documented file size thresholds in INST-1012 acceptance criteria
+
+    - blocker_id: PROD-003
+      decision: accept
+      stories_affected: 1
+      status: applied
+      description: Specified edit flow entry point and routing in INST-1009
+
+  ux_specifications:
+    - blocker_id: UX-001
+      decision: accept
+      stories_affected: 1
+      status: applied
+      description: Added UX specification for file picker and remove confirmation to INST-1011
+
+    - blocker_id: UX-002
+      decision: accept
+      stories_affected: 1
+      status: applied
+      description: Defined unsaved changes modal UX in INST-1013
+
+    - blocker_id: UX-003
+      decision: accept
+      stories_affected: 1
+      status: applied
+      description: Added upload progress indicator specs to INST-1012
+
+roadmap:
+  waves_updated: 11
+  wave_descriptions_added: true
+  test_mandate_annotations: 11
+  dependencies_clarified: true
+  critical_path_unchanged: true
+  high_risk_stories_updated: 5
+
+checkpoint:
+  phase_updates_completed: true
+  test_mandate_applied: true
+  stories_with_specs: 18
+  verification_status: pass
+
+epic_review:
+  verdict_changed: true
+  from: BLOCKED
+  to: READY
+  reason: All critical blockers resolved. Complete test specification applied to all 18 stories.
+
+files_modified:
+  - path: plans/future/instructions/stories.index.md
+    change_type: update
+    lines_added: 1247
+    sections: 18 (one per story)
+    description: Added testing requirements section to all 18 stories
+
+  - path: plans/future/instructions/roadmap.md
+    change_type: update
+    lines_added: 15
+    sections: 2 (Execution Waves, High Risk Stories)
+    description: Updated wave sequencing and risk mitigations with test mandate annotations
+
+  - path: plans/future/instructions/_epic-elab/CHECKPOINT.md
+    change_type: update
+    sections: 2 (phases, test_mandate tracking)
+    description: Marked updates phase complete, added test mandate metrics
+
+  - path: plans/future/instructions/_epic-elab/EPIC-REVIEW.yaml
+    change_type: update
+    sections: 2 (verdict, summary)
+    description: Changed verdict from BLOCKED to READY
+
+  - path: plans/future/instructions/_epic-elab/UPDATES-COMPLETE.md
+    change_type: create
+    size: 4.2 KB
+    description: Comprehensive summary of all updates applied
+
+  - path: plans/future/instructions/_epic-elab/UPDATES-LOG.yaml
+    change_type: create
+    size: Current file
+    description: Structured change tracking
+
+quality_gates:
+  all_stories_have_unit_tests: true
+  all_stories_have_integration_tests: true
+  all_stories_have_e2e_tests: true
+  all_e2e_stories_have_cucumber: true
+  presigned_url_specs_complete: true
+  edit_endpoint_specs_complete: true
+  form_validation_specs_complete: true
+  file_manager_specs_complete: true
+  unsaved_changes_specs_complete: true
+  upload_progress_specs_complete: true
+
+test_coverage_summary:
+  unit_tests:
+    count: 18
+    coverage_target: 45% minimum per story
+    framework: Vitest + React Testing Library
+
+  integration_tests:
+    count: 18
+    api_mocking: MSW
+    framework: Vitest
+
+  e2e_tests:
+    count: 18
+    feature_file_count: 18
+    step_definitions_required: 18
+    framework: Playwright + Cucumber
+
+critical_path_coverage:
+  stories_in_path: 13
+  all_have_test_specs: true
+  presigned_url_critical: INST-1002 (foundational for INST-1012)
+  edit_form_critical: INST-1010 (blocks INST-1012)
+  save_flow_critical: INST-1012 (end-to-end verification)
+
+metrics:
+  stories_updated: 18/18 (100%)
+  test_mandates_applied: 18/18 (100%)
+  decisions_implemented: 17/17 (100%)
+  blockers_resolved: 13/13 (100%)
+  files_modified: 6
+  phase_duration: 1 day (elaboration only)
+
+verdict: PASS
+reason: All decisions applied successfully. Epic now READY for implementation with complete test specifications across all 18 stories.

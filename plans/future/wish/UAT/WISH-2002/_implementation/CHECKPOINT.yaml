@@ -1,0 +1,13 @@
+schema: 1
+story_id: WISH-2002
+feature_dir: plans/future/wish
+timestamp: "2026-02-04T12:00:00Z"
+
+current_phase: done
+last_successful_phase: proof
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+completed_at: "2026-02-04T12:00:00Z"

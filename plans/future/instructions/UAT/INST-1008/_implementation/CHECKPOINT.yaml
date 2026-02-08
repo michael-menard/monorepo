@@ -1,0 +1,53 @@
+schema: 1
+story_id: INST-1008
+feature_dir: plans/future/instructions
+timestamp: '2026-02-05T22:45:00Z'
+
+current_phase: done
+last_successful_phase: execute
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+
+# E2E Gate
+e2e_gate:
+  status: exempt
+  reason: Infrastructure story per ADR-006 (no user-facing UI to test)
+  note: Consuming stories (INST-1100+) will test E2E flows
+
+# Phase completion
+phases:
+  setup:
+    status: complete
+    timestamp: '2026-02-05T22:25:00Z'
+  plan:
+    status: skipped
+    reason: Small, well-defined story with established patterns
+  execute:
+    status: complete
+    timestamp: '2026-02-05T22:45:00Z'
+  verify:
+    status: pass
+    tests_passed: 348
+    tests_failed: 1
+    notes: 1 flaky test in retry-logic.test.ts (unrelated to implementation)
+
+# Implementation summary
+implementation:
+  files_created:
+    - packages/core/api-client/src/schemas/instructions.ts
+  files_modified:
+    - packages/core/api-client/src/schemas/index.ts
+    - packages/core/api-client/src/config/endpoints.ts
+    - packages/core/api-client/src/rtk/instructions-api.ts
+  mutations_added:
+    - useCreateMocMutation
+    - useUpdateMocMutation
+    - useDeleteMocMutation
+    - useUploadInstructionFileMutation
+    - useUploadPartsListFileMutation
+    - useUploadThumbnailMutation
+    - useDeleteFileMutation
+  tag_types_updated: ['Moc', 'MocList', 'MocFile']

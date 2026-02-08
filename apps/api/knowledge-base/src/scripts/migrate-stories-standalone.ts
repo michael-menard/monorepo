@@ -178,7 +178,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
   const response = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -192,7 +192,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error(`OpenAI API error: ${response.status} - ${error}`)
   }
 
-  const data = await response.json() as { data: Array<{ embedding: number[] }> }
+  const data = (await response.json()) as { data: Array<{ embedding: number[] }> }
   return data.data[0].embedding
 }
 
@@ -218,28 +218,20 @@ function createPool(): Pool {
 // ============================================================================
 
 async function ensureFeature(pool: Pool, featureName: string): Promise<string> {
-  const existing = await pool.query(
-    `SELECT id FROM features WHERE name = $1`,
-    [featureName]
-  )
+  const existing = await pool.query(`SELECT id FROM features WHERE name = $1`, [featureName])
 
   if (existing.rows.length > 0) {
     return existing.rows[0].id
   }
 
-  const result = await pool.query(
-    `INSERT INTO features (name) VALUES ($1) RETURNING id`,
-    [featureName]
-  )
+  const result = await pool.query(`INSERT INTO features (name) VALUES ($1) RETURNING id`, [
+    featureName,
+  ])
 
   return result.rows[0].id
 }
 
-async function importStory(
-  pool: Pool,
-  story: StoryYaml,
-  featureId: string
-): Promise<string> {
+async function importStory(pool: Pool, story: StoryYaml, featureId: string): Promise<string> {
   const searchableContent = `${story.title} ${story.goal} ${(story.acs || []).map(ac => ac.text).join(' ')}`
   const embedding = await generateEmbedding(searchableContent)
 
@@ -288,7 +280,7 @@ async function importStory(
       JSON.stringify(embedding),
       story.created_at,
       story.updated_at,
-    ]
+    ],
   )
 
   return result.rows[0].id
@@ -303,14 +295,18 @@ async function importACs(pool: Pool, storyUuid: string, acs: StoryYaml['acs']): 
        ON CONFLICT (story_id, ac_id) DO UPDATE SET
          text = EXCLUDED.text,
          type = EXCLUDED.type`,
-      [storyUuid, ac.id, ac.text, ac.type || 'functional']
+      [storyUuid, ac.id, ac.text, ac.type || 'functional'],
     )
     count++
   }
   return count
 }
 
-async function importRisks(pool: Pool, storyUuid: string, risks: StoryYaml['risks']): Promise<number> {
+async function importRisks(
+  pool: Pool,
+  storyUuid: string,
+  risks: StoryYaml['risks'],
+): Promise<number> {
   await pool.query(`DELETE FROM story_risks WHERE story_id = $1`, [storyUuid])
 
   let count = 0
@@ -318,7 +314,7 @@ async function importRisks(pool: Pool, storyUuid: string, risks: StoryYaml['risk
     await pool.query(
       `INSERT INTO story_risks (story_id, risk, mitigation)
        VALUES ($1, $2, $3)`,
-      [storyUuid, risk.risk, risk.mitigation]
+      [storyUuid, risk.risk, risk.mitigation],
     )
     count++
   }
@@ -328,7 +324,7 @@ async function importRisks(pool: Pool, storyUuid: string, risks: StoryYaml['risk
 async function importElaboration(
   pool: Pool,
   storyUuid: string,
-  elab: ElaborationYaml
+  elab: ElaborationYaml,
 ): Promise<{ elaborationId: string; gapsCount: number; followUpsCount: number }> {
   const result = await pool.query(
     `INSERT INTO elaborations (
@@ -344,7 +340,7 @@ async function importElaboration(
       elab.split_required || false,
       elab.tokens?.input || 0,
       elab.tokens?.output || 0,
-    ]
+    ],
   )
 
   if (result.rows.length === 0) {
@@ -366,7 +362,7 @@ async function importElaboration(
         gap.severity || 'important',
         gap.finding,
         gap.recommendation,
-      ]
+      ],
     )
     gapsCount++
   }
@@ -376,7 +372,7 @@ async function importElaboration(
     await pool.query(
       `INSERT INTO follow_ups (source_story_id, finding)
        VALUES ($1, $2)`,
-      [storyUuid, followUp.finding]
+      [storyUuid, followUp.finding],
     )
     followUpsCount++
   }
@@ -398,11 +394,15 @@ async function importPlan(pool: Pool, storyUuid: string, plan: PlanYaml): Promis
       plan.estimates?.tokens || 0,
       plan.reuse || [],
       JSON.stringify(plan.chunks || []),
-    ]
+    ],
   )
 }
 
-async function importVerification(pool: Pool, storyUuid: string, verify: VerificationYaml): Promise<void> {
+async function importVerification(
+  pool: Pool,
+  storyUuid: string,
+  verify: VerificationYaml,
+): Promise<void> {
   await pool.query(
     `INSERT INTO verifications (
       story_id,
@@ -437,7 +437,7 @@ async function importVerification(pool: Pool, storyUuid: string, verify: Verific
       verify.qa?.verified_at,
       verify.qa?.blocking_issues || [],
       JSON.stringify(verify.acs || []),
-    ]
+    ],
   )
 }
 
@@ -456,17 +456,21 @@ async function importProof(pool: Pool, storyUuid: string, proof: ProofYaml): Pro
       proof.verification?.tests_passed || 0,
       proof.verification?.all_acs_verified || false,
       JSON.stringify(proof.deliverables || []),
-    ]
+    ],
   )
 }
 
-async function importTokenUsage(pool: Pool, storyUuid: string, tokens: TokensYaml): Promise<number> {
+async function importTokenUsage(
+  pool: Pool,
+  storyUuid: string,
+  tokens: TokensYaml,
+): Promise<number> {
   let count = 0
   for (const phase of tokens.phases || []) {
     await pool.query(
       `INSERT INTO token_usage (story_id, phase, tokens_input, tokens_output)
        VALUES ($1, $2, $3, $4)`,
-      [storyUuid, phase.phase, phase.input || 0, phase.output || 0]
+      [storyUuid, phase.phase, phase.input || 0, phase.output || 0],
     )
     count++
   }
@@ -475,7 +479,7 @@ async function importTokenUsage(pool: Pool, storyUuid: string, tokens: TokensYam
     await pool.query(
       `INSERT INTO token_usage (story_id, phase, tokens_input, operation, avoidable)
        VALUES ($1, 'high-cost', $2, $3, $4)`,
-      [storyUuid, highCost.tokens || 0, highCost.operation, highCost.avoidable || false]
+      [storyUuid, highCost.tokens || 0, highCost.operation, highCost.avoidable || false],
     )
     count++
   }
@@ -486,7 +490,7 @@ async function importTokenUsage(pool: Pool, storyUuid: string, tokens: TokensYam
 async function importFeedback(
   pool: Pool,
   storyUuid: string,
-  feedback: FeedbackYaml
+  feedback: FeedbackYaml,
 ): Promise<number> {
   let count = 0
   for (const entry of feedback.entries || []) {
@@ -505,7 +509,7 @@ async function importFeedback(
         entry.root_cause,
         entry.recommendation,
         JSON.stringify(embedding),
-      ]
+      ],
     )
     count++
   }
@@ -536,7 +540,15 @@ async function findStoryDirectories(basePath: string): Promise<string[]> {
       continue
     }
 
-    const stages = ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed']
+    const stages = [
+      'backlog',
+      'ready-to-work',
+      'in-progress',
+      'ready-for-qa',
+      'uat',
+      'UAT',
+      'completed',
+    ]
     for (const stage of stages) {
       const stagePath = path.join(featurePath, stage)
       try {
@@ -572,12 +584,14 @@ async function migrateStoryToDb(
   pool: Pool,
   storyDir: string,
   stats: MigrationStats,
-  dryRun: boolean
+  dryRun: boolean,
 ): Promise<void> {
   const storyId = path.basename(storyDir)
   const pathParts = storyDir.split(path.sep)
   const stageIndex = pathParts.findIndex(p =>
-    ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed'].includes(p)
+    ['backlog', 'ready-to-work', 'in-progress', 'ready-for-qa', 'uat', 'UAT', 'completed'].includes(
+      p,
+    ),
   )
   const featureName = pathParts[stageIndex - 1] || 'unknown'
 

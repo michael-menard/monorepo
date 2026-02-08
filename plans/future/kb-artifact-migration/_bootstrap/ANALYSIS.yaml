@@ -1,0 +1,494 @@
+schema: 2
+feature_dir: /Users/michaelmenard/Development/Monorepo/plans/future/kb-artifact-migration
+prefix: KBAR
+project_name: kb-artifact-migration
+analyzed: "2026-02-04T00:00:00Z"
+
+overall_goal: |
+  Implement a hybrid storage architecture where files remain human-editable (story.yaml, *.md),
+  the database enables fast status/dependency queries, and the knowledge base provides semantic search
+  for artifacts, lessons learned, and cross-story patterns.
+
+phases:
+  - id: 1
+    name: "Database Schema"
+    description: "Create migrations and Drizzle schema for stories, story_dependencies, and story_artifacts tables"
+  - id: 2
+    name: "Sync Infrastructure"
+    description: "Implement file-to-DB sync functions and CLI commands for story and epic synchronization"
+  - id: 3
+    name: "MCP Tools - Stories"
+    description: "Implement story management tools (story_get, story_list, story_update, story_ready_to_start)"
+  - id: 4
+    name: "MCP Tools - Artifacts"
+    description: "Implement artifact tools with dual-write to files and KB (artifact_write, artifact_read, artifact_search)"
+  - id: 5
+    name: "Agent Updates"
+    description: "Update all agents to use new MCP tools instead of direct file operations"
+  - id: 6
+    name: "Index Generation"
+    description: "Implement DB-driven index generation to replace manual stories.index.md creation"
+  - id: 7
+    name: "Lesson Extraction"
+    description: "Implement automatic lesson extraction from completed stories and architectural decisions"
+
+stories:
+  - id: "KBAR-001"
+    title: "Database Schema Migrations"
+    feature: "Create migrations for stories, story_dependencies, and story_artifacts tables"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["PostgreSQL migration", "Drizzle schema"]
+    goal: "Establish database schema foundation for hybrid storage architecture"
+    risk_notes: "Schema design must support future extensibility; migration rollback must preserve file-based workflow"
+    sizing_warning: false
+
+  - id: "KBAR-002"
+    title: "Schema Tests & Validation"
+    feature: "Write comprehensive tests for new database schema and relationships"
+    phase: 1
+    depends_on: ["KBAR-001"]
+    endpoints: []
+    infrastructure: ["Vitest tests"]
+    goal: "Ensure schema integrity, constraints, and indexes work correctly"
+    risk_notes: "Must validate foreign key cascades and index performance"
+    sizing_warning: false
+
+  - id: "KBAR-003"
+    title: "Story Sync Functions"
+    feature: "Implement syncStoryFromFiles() to read story.yaml and populate DB tables"
+    phase: 2
+    depends_on: ["KBAR-002"]
+    endpoints: []
+    infrastructure: ["TypeScript utilities"]
+    goal: "Enable one-way sync from file system to database for story metadata"
+    risk_notes: "Must handle file parsing errors gracefully; hash-based change detection required"
+    sizing_warning: false
+
+  - id: "KBAR-004"
+    title: "Artifact Sync Functions"
+    feature: "Implement syncArtifactsFromFiles() to discover and index artifacts in _implementation/"
+    phase: 2
+    depends_on: ["KBAR-003"]
+    endpoints: []
+    infrastructure: ["File system scanner"]
+    goal: "Automatically detect and catalog existing artifacts from file system"
+    risk_notes: "Must handle missing files, corrupt YAML, and nested directory structures"
+    sizing_warning: false
+
+  - id: "KBAR-005"
+    title: "CLI Sync Commands"
+    feature: "Create sync:story and sync:epic CLI commands with dry-run support"
+    phase: 2
+    depends_on: ["KBAR-004"]
+    endpoints: []
+    infrastructure: ["CLI scripts in scripts/"]
+    goal: "Provide command-line interface for manual and automated story synchronization"
+    risk_notes: "Must support incremental sync and provide clear progress/error reporting"
+    sizing_warning: false
+
+  - id: "KBAR-006"
+    title: "Sync Integration Tests"
+    feature: "Test sync functions with real wish epic stories and edge cases"
+    phase: 2
+    depends_on: ["KBAR-005"]
+    endpoints: []
+    infrastructure: ["Integration test suite"]
+    goal: "Validate sync accuracy and performance with production-like data"
+    risk_notes: "Test data must cover all story states, dependencies, and artifact types"
+    sizing_warning: false
+
+  - id: "KBAR-007"
+    title: "story_get Tool"
+    feature: "Implement MCP tool to retrieve story with optional artifacts and dependencies"
+    phase: 3
+    depends_on: ["KBAR-006"]
+    endpoints: []
+    infrastructure: ["MCP tool handler"]
+    goal: "Enable agents to query story metadata from database efficiently"
+    risk_notes: "Must handle missing stories and support eager loading of relations"
+    sizing_warning: false
+
+  - id: "KBAR-008"
+    title: "story_list & story_update Tools"
+    feature: "Implement MCP tools for listing stories with filters and updating status/phase"
+    phase: 3
+    depends_on: ["KBAR-007"]
+    endpoints: []
+    infrastructure: ["MCP tool handlers"]
+    goal: "Enable agents to query and update story state without file operations"
+    risk_notes: "Updates must validate state transitions; filters must support complex queries"
+    sizing_warning: false
+
+  - id: "KBAR-009"
+    title: "story_ready_to_start Tool"
+    feature: "Implement MCP tool to find stories ready to work (unblocked, dependencies satisfied)"
+    phase: 3
+    depends_on: ["KBAR-008"]
+    endpoints: []
+    infrastructure: ["MCP tool handler with dependency resolution"]
+    goal: "Enable agents to discover next actionable story automatically"
+    risk_notes: "Dependency resolution must handle circular dependencies and missing stories"
+    sizing_warning: false
+
+  - id: "KBAR-010"
+    title: "Story Tools Integration Tests"
+    feature: "Write integration tests for all story MCP tools"
+    phase: 3
+    depends_on: ["KBAR-009"]
+    endpoints: []
+    infrastructure: ["MCP integration tests"]
+    goal: "Ensure story tools work correctly via MCP server"
+    risk_notes: "Must test error handling and edge cases via MCP protocol"
+    sizing_warning: false
+
+  - id: "KBAR-011"
+    title: "artifact_write Tool"
+    feature: "Implement dual-write tool to save artifacts to file + optionally KB"
+    phase: 4
+    depends_on: ["KBAR-010"]
+    endpoints: []
+    infrastructure: ["MCP tool handler", "KB integration"]
+    goal: "Enable agents to write artifacts with automatic KB indexing based on type"
+    risk_notes: "Must handle write failures gracefully; KB write should not block file write"
+    sizing_warning: true
+
+  - id: "KBAR-012"
+    title: "artifact_read Tool"
+    feature: "Implement artifact reading with fallback from DB → file system"
+    phase: 4
+    depends_on: ["KBAR-011"]
+    endpoints: []
+    infrastructure: ["MCP tool handler"]
+    goal: "Enable agents to read artifacts from database or files transparently"
+    risk_notes: "Fallback logic must be fast; cache strategy needed for frequent reads"
+    sizing_warning: false
+
+  - id: "KBAR-013"
+    title: "artifact_search Tool"
+    feature: "Implement semantic search across artifacts using KB embeddings"
+    phase: 4
+    depends_on: ["KBAR-011"]
+    endpoints: []
+    infrastructure: ["MCP tool handler", "KB semantic search"]
+    goal: "Enable agents to find relevant artifacts across all stories using natural language"
+    risk_notes: "Search quality depends on KB tagging consistency; must handle no-results gracefully"
+    sizing_warning: false
+
+  - id: "KBAR-014"
+    title: "Artifact Summary Extraction"
+    feature: "Implement summary extraction for each artifact type (plan, evidence, review, etc.)"
+    phase: 4
+    depends_on: ["KBAR-012", "KBAR-013"]
+    endpoints: []
+    infrastructure: ["TypeScript utilities"]
+    goal: "Automatically generate concise summaries for artifact search results"
+    risk_notes: "Summary logic must handle varying artifact structures; JSON schema validation needed"
+    sizing_warning: false
+
+  - id: "KBAR-015"
+    title: "Artifact Tools Integration Tests"
+    feature: "Write integration tests for artifact_write, artifact_read, artifact_search"
+    phase: 4
+    depends_on: ["KBAR-014"]
+    endpoints: []
+    infrastructure: ["MCP integration tests"]
+    goal: "Ensure artifact tools work correctly via MCP server with KB integration"
+    risk_notes: "Must test KB write failures and file system errors"
+    sizing_warning: false
+
+  - id: "KBAR-016"
+    title: "Update Setup & Plan Leaders"
+    feature: "Update dev-setup-leader and dev-plan-leader to use artifact_write for CHECKPOINT, SCOPE, PLAN"
+    phase: 5
+    depends_on: ["KBAR-015"]
+    endpoints: []
+    infrastructure: ["Agent markdown files"]
+    goal: "Migrate setup and planning agents to use new MCP tools"
+    risk_notes: "Must maintain backward compatibility during transition"
+    sizing_warning: false
+
+  - id: "KBAR-017"
+    title: "Update Execute & Worker Agents"
+    feature: "Update dev-execute-leader, backend-coder, frontend-coder to use artifact_write for EVIDENCE, logs"
+    phase: 5
+    depends_on: ["KBAR-016"]
+    endpoints: []
+    infrastructure: ["Agent markdown files"]
+    goal: "Migrate execution agents to use new MCP tools"
+    risk_notes: "BACKEND-LOG and FRONTEND-LOG are high-frequency writes; performance critical"
+    sizing_warning: false
+
+  - id: "KBAR-018"
+    title: "Update Code Review Agents"
+    feature: "Update all code-review-*.agent.md files to use artifact_write for REVIEW artifacts"
+    phase: 5
+    depends_on: ["KBAR-016"]
+    endpoints: []
+    infrastructure: ["Agent markdown files"]
+    goal: "Migrate code review agents to use new MCP tools"
+    risk_notes: "Review artifacts must be searchable in KB for pattern analysis"
+    sizing_warning: false
+
+  - id: "KBAR-019"
+    title: "Update QA & Fix Agents"
+    feature: "Update qa-verify-*.agent.md and dev-fix-fix-leader to use artifact_write"
+    phase: 5
+    depends_on: ["KBAR-017", "KBAR-018"]
+    endpoints: []
+    infrastructure: ["Agent markdown files"]
+    goal: "Migrate QA and fix agents to use new MCP tools"
+    risk_notes: "FIX-CONTEXT must link to original failure evidence"
+    sizing_warning: false
+
+  - id: "KBAR-020"
+    title: "Update Knowledge Context Loader"
+    feature: "Update knowledge-context-loader to use artifact_search for pattern discovery"
+    phase: 5
+    depends_on: ["KBAR-019"]
+    endpoints: []
+    infrastructure: ["Agent markdown file"]
+    goal: "Enable semantic search for relevant past solutions and patterns"
+    risk_notes: "Search query construction critical for relevance"
+    sizing_warning: false
+
+  - id: "KBAR-021"
+    title: "Update Orchestrator Commands"
+    feature: "Update workflow commands (dev-implement-story, elab-story, etc.) to use story_update"
+    phase: 5
+    depends_on: ["KBAR-020"]
+    endpoints: []
+    infrastructure: ["Command markdown files"]
+    goal: "Migrate orchestrator commands to use new MCP tools for state management"
+    risk_notes: "State transition validation must prevent invalid workflows"
+    sizing_warning: false
+
+  - id: "KBAR-022"
+    title: "Agent Migration Testing"
+    feature: "End-to-end test of full story workflow using updated agents"
+    phase: 5
+    depends_on: ["KBAR-021"]
+    endpoints: []
+    infrastructure: ["E2E test suite"]
+    goal: "Validate that updated agents work correctly in production workflow"
+    risk_notes: "Must test with real story to catch integration issues"
+    sizing_warning: false
+
+  - id: "KBAR-023"
+    title: "DB-Driven Index Generation"
+    feature: "Implement generateStoriesIndex() to create stories.index.md from database"
+    phase: 6
+    depends_on: ["KBAR-022"]
+    endpoints: []
+    infrastructure: ["TypeScript utility"]
+    goal: "Replace manual index maintenance with automated DB-driven generation"
+    risk_notes: "Index format must match existing manual format for backward compatibility"
+    sizing_warning: false
+
+  - id: "KBAR-024"
+    title: "Regenerate Index CLI"
+    feature: "Create regenerate:index CLI command and integrate into workflow"
+    phase: 6
+    depends_on: ["KBAR-023"]
+    endpoints: []
+    infrastructure: ["CLI script"]
+    goal: "Provide command-line interface for index regeneration"
+    risk_notes: "Must run on pre-commit hook or workflow transitions"
+    sizing_warning: false
+
+  - id: "KBAR-025"
+    title: "Lesson Extraction from Evidence"
+    feature: "Implement automatic extraction of lessons learned from completed EVIDENCE artifacts"
+    phase: 7
+    depends_on: ["KBAR-024"]
+    endpoints: []
+    infrastructure: ["NLP utilities", "KB integration"]
+    goal: "Automatically capture reusable patterns from completed story execution"
+    risk_notes: "Extraction quality depends on evidence structure; may need LLM summarization"
+    sizing_warning: false
+
+  - id: "KBAR-026"
+    title: "Architectural Decision Extraction"
+    feature: "Extract and index architectural decisions for cross-story pattern search"
+    phase: 7
+    depends_on: ["KBAR-025"]
+    endpoints: []
+    infrastructure: ["KB integration"]
+    goal: "Make architectural decisions searchable across all stories"
+    risk_notes: "Decision format must be standardized for effective extraction"
+    sizing_warning: false
+
+  - id: "KBAR-027"
+    title: "Lesson Extraction Integration"
+    feature: "Integrate lesson extraction into story completion workflow"
+    phase: 7
+    depends_on: ["KBAR-026"]
+    endpoints: []
+    infrastructure: ["Workflow hook"]
+    goal: "Automatically run lesson extraction when story transitions to completed state"
+    risk_notes: "Extraction must not block story completion; async processing preferred"
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "KBAR-001": []
+    "KBAR-002": ["KBAR-001"]
+    "KBAR-003": ["KBAR-002"]
+    "KBAR-004": ["KBAR-003"]
+    "KBAR-005": ["KBAR-004"]
+    "KBAR-006": ["KBAR-005"]
+    "KBAR-007": ["KBAR-006"]
+    "KBAR-008": ["KBAR-007"]
+    "KBAR-009": ["KBAR-008"]
+    "KBAR-010": ["KBAR-009"]
+    "KBAR-011": ["KBAR-010"]
+    "KBAR-012": ["KBAR-011"]
+    "KBAR-013": ["KBAR-011"]
+    "KBAR-014": ["KBAR-012", "KBAR-013"]
+    "KBAR-015": ["KBAR-014"]
+    "KBAR-016": ["KBAR-015"]
+    "KBAR-017": ["KBAR-016"]
+    "KBAR-018": ["KBAR-016"]
+    "KBAR-019": ["KBAR-017", "KBAR-018"]
+    "KBAR-020": ["KBAR-019"]
+    "KBAR-021": ["KBAR-020"]
+    "KBAR-022": ["KBAR-021"]
+    "KBAR-023": ["KBAR-022"]
+    "KBAR-024": ["KBAR-023"]
+    "KBAR-025": ["KBAR-024"]
+    "KBAR-026": ["KBAR-025"]
+    "KBAR-027": ["KBAR-026"]
+
+  critical_path:
+    - "KBAR-001"
+    - "KBAR-002"
+    - "KBAR-003"
+    - "KBAR-004"
+    - "KBAR-005"
+    - "KBAR-006"
+    - "KBAR-007"
+    - "KBAR-008"
+    - "KBAR-009"
+    - "KBAR-010"
+    - "KBAR-011"
+    - "KBAR-012"
+    - "KBAR-014"
+    - "KBAR-015"
+    - "KBAR-016"
+    - "KBAR-017"
+    - "KBAR-019"
+    - "KBAR-020"
+    - "KBAR-021"
+    - "KBAR-022"
+    - "KBAR-023"
+    - "KBAR-024"
+    - "KBAR-025"
+    - "KBAR-026"
+    - "KBAR-027"
+
+  critical_path_length: 27
+
+parallelization:
+  max_parallel: 2
+  groups:
+    - stories: ["KBAR-001"]
+      after: null
+    - stories: ["KBAR-002"]
+      after: "group_1"
+    - stories: ["KBAR-003"]
+      after: "group_2"
+    - stories: ["KBAR-004"]
+      after: "group_3"
+    - stories: ["KBAR-005"]
+      after: "group_4"
+    - stories: ["KBAR-006"]
+      after: "group_5"
+    - stories: ["KBAR-007"]
+      after: "group_6"
+    - stories: ["KBAR-008"]
+      after: "group_7"
+    - stories: ["KBAR-009"]
+      after: "group_8"
+    - stories: ["KBAR-010"]
+      after: "group_9"
+    - stories: ["KBAR-011"]
+      after: "group_10"
+    - stories: ["KBAR-012", "KBAR-013"]
+      after: "group_11"
+    - stories: ["KBAR-014"]
+      after: "group_12"
+    - stories: ["KBAR-015"]
+      after: "group_13"
+    - stories: ["KBAR-016"]
+      after: "group_14"
+    - stories: ["KBAR-017", "KBAR-018"]
+      after: "group_15"
+    - stories: ["KBAR-019"]
+      after: "group_16"
+    - stories: ["KBAR-020"]
+      after: "group_17"
+    - stories: ["KBAR-021"]
+      after: "group_18"
+    - stories: ["KBAR-022"]
+      after: "group_19"
+    - stories: ["KBAR-023"]
+      after: "group_20"
+    - stories: ["KBAR-024"]
+      after: "group_21"
+    - stories: ["KBAR-025"]
+      after: "group_22"
+    - stories: ["KBAR-026"]
+      after: "group_23"
+    - stories: ["KBAR-027"]
+      after: "group_24"
+
+risks:
+  - id: "RISK-001"
+    description: "Database schema changes may break existing file-based workflow if migration fails"
+    affected_stories: ["KBAR-001", "KBAR-002"]
+    severity: high
+    mitigation: "Rollback plan preserves file-only operations; agents fall back automatically"
+
+  - id: "RISK-002"
+    description: "File-to-DB sync may drift over time if not run regularly"
+    affected_stories: ["KBAR-003", "KBAR-004", "KBAR-005"]
+    severity: medium
+    mitigation: "Add pre-commit hooks and workflow triggers for automatic sync"
+
+  - id: "RISK-003"
+    description: "KB write failures could cause artifact_write to fail or block"
+    affected_stories: ["KBAR-011", "KBAR-015"]
+    severity: medium
+    mitigation: "KB writes are non-blocking; file write always succeeds even if KB fails"
+
+  - id: "RISK-004"
+    description: "Agent updates are high-risk changes affecting production workflows"
+    affected_stories: ["KBAR-016", "KBAR-017", "KBAR-018", "KBAR-019", "KBAR-020", "KBAR-021"]
+    severity: high
+    mitigation: "Gradual rollout with fallback to file operations; comprehensive E2E testing before production use"
+
+  - id: "RISK-005"
+    description: "Lesson extraction quality depends on evidence structure consistency"
+    affected_stories: ["KBAR-025", "KBAR-026", "KBAR-027"]
+    severity: low
+    mitigation: "Start with rule-based extraction; add LLM summarization if needed"
+
+  - id: "RISK-006"
+    description: "Performance degradation if sync operations become slow at scale"
+    affected_stories: ["KBAR-003", "KBAR-004", "KBAR-005"]
+    severity: medium
+    mitigation: "Implement incremental sync with hash-based change detection; add caching for frequent reads"
+
+  - id: "RISK-007"
+    description: "Circular dependencies in story graph could cause deadlocks in story_ready_to_start"
+    affected_stories: ["KBAR-009"]
+    severity: medium
+    mitigation: "Implement cycle detection in dependency resolution; fail fast with clear error message"
+
+metrics:
+  total_stories: 27
+  phases: 7
+  max_parallel: 2
+  critical_path_length: 27
+  stories_with_sizing_warnings: 1

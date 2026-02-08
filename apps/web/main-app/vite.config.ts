@@ -1,14 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -25,45 +21,12 @@ export default defineConfig({
     port: 3000,
     host: true,
     proxy: {
-      // Proxy API requests to the backend server (localhost:3001)
-      // V1-style paths: /api/wishlist -> /wishlist (used by wishlist-gallery-api.ts)
-      '/api/wishlist': {
-        target: 'http://localhost:3001',
+      // Proxy all /api/* requests to the backend server (localhost:9000)
+      // Strips the /api prefix: /api/wishlist -> /wishlist
+      '/api': {
+        target: 'http://localhost:9000',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
-        configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq, req) => {
-            console.log(`[Proxy] ${req.method} ${req.url} -> ${proxyReq.path}`)
-            console.log(`[Proxy] Auth header: ${req.headers.authorization ? 'present' : 'missing'}`)
-          })
-          proxy.on('proxyRes', (proxyRes, req) => {
-            console.log(`[Proxy] Response ${proxyRes.statusCode} for ${req.url}`)
-          })
-          proxy.on('error', (err, req) => {
-            console.error(`[Proxy] Error for ${req.url}:`, err.message)
-          })
-        },
-      },
-      // V2-style paths: /api/v2/wishlist/items -> /wishlist (used by wishlist-api.ts)
-      '/api/v2/wishlist': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/v2\/wishlist\/items/, '/wishlist').replace(/^\/api\/v2\/wishlist/, '/wishlist'),
-      },
-      '/api/v2/health': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/v2/, ''),
-      },
-      '/api/v2/gallery': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/v2/, ''),
-      },
-      '/api/v2/sets': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/v2/, ''),
       },
     },
   },
@@ -86,9 +49,17 @@ export default defineConfig({
       'react',
       'react-dom',
       '@tanstack/react-router',
-      // UI components are imported directly, no barrel file
-      // API client uses direct imports, no barrel file
+    ],
+    exclude: [
+      // Exclude all workspace packages from pre-bundling
+      '@repo/api-client',
+      '@repo/app-component-library',
       '@repo/cache',
+      '@repo/logger',
+      '@repo/upload-types',
+      '@repo/accessibility',
+      '@repo/charts',
+      '@repo/mock-data',
     ],
   },
   define: {

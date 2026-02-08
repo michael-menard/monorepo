@@ -1,0 +1,65 @@
+perspective: product
+verdict: CONCERNS
+
+scope:
+  core_journey_complete: false
+  mvp_defined: true
+
+mvp_blockers:
+  - id: PROD-001
+    issue: Edit form and validation (INST-1010) is essential for users to modify instructions
+    stories: [INST-1010]
+    action: Ensure edit form story is well-defined with clear acceptance criteria
+
+  - id: PROD-002
+    issue: Presigned URL upload handling (INST-1012) required for users to save large instruction files
+    stories: [INST-1012]
+    action: Story must clarify file size thresholds (≤10MB direct, >10MB presigned URL)
+
+  - id: PROD-003
+    issue: Unsaved changes guard (INST-1013) prevents data loss on accidental navigation
+    stories: [INST-1013]
+    action: Define UX for unsaved changes modal and navigation flow
+
+missing_mvp_stories:
+  - title: Edit flow entry point documentation
+    user_journey: User accessing edit page from MOC detail view
+    reason: Story INST-1009 mentions data fetching but entry point routing unclear
+
+value_alignment:
+  instruction_editing: Core user value - users need ability to fix and improve instructions
+  file_management: Essential - users must add, remove, or replace files
+  error_recovery: Important - users need protection against data loss scenarios
+
+future:
+  value_improvements:
+    - story: INST-1006
+      suggestion: Add rate limit observability to detect abuse patterns
+      impact: medium
+    - story: INST-1007
+      suggestion: S3 cleanup job prevents wasted storage from failed uploads
+      impact: low
+    - suggestion: Post-MVP consider file reordering UI for better organization
+      impact: medium
+
+  suggested_stories:
+    - title: Soft delete with restore (30-day retention)
+      user_journey: User accidentally deletes instruction set
+      priority: P2
+      reason: Users protected against accidental deletion
+
+    - title: Bulk edit operations
+      user_journey: User wants to update multiple MOCs metadata
+      priority: P2
+      reason: Increases efficiency for power users
+
+  recommendations:
+    - Clarify MVP scope document to explicitly list which stories are required for edit feature launch
+    - Add user acceptance testing criteria to each story (not just technical AC)
+    - Ensure each story addresses user value, not just technical requirements
+    - Define what happens when presigned URL expires during upload (recovery flow)
+
+scope_notes:
+  in_scope: Edit metadata (title, description, theme, tags), file add/remove, save with validation
+  out_of_scope: File reordering, soft delete with restore (post-MVP), multipart uploads >100MB, gallery image uploads
+  assumptions: PATCH endpoint exists and can handle metadata updates without file operations

@@ -1,0 +1,113 @@
+schema: 1
+story_id: SETS-MVP-0310
+timestamp: "2026-02-01T20:00:00-07:00"
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/**"
+  - "apps/web/app-wishlist-gallery/**"
+  - "packages/core/app-component-library/**"
+  - "packages/backend/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Extend GotItModal with purchase details form and implement PATCH endpoint to update wishlist items from 'wishlist' to 'owned' status with purchase metadata (price, tax, shipping, date, build status)"
+
+dependencies:
+  blocking:
+    - story_id: SETS-MVP-001
+      reason: "Unified model schema must include status, purchaseDate, buildStatus, purchasePrice, purchaseTax, purchaseShipping, statusChangedAt fields"
+  implicit:
+    - WISH-2004
+    - WISH-2001
+
+critical_decisions:
+  - decision: "Endpoint naming (AC11)"
+    question: "Is this a status transition endpoint (/status or /transition) or purchase-specific endpoint (/purchase)?"
+    current_choice: "/purchase"
+    impact: "Frontend and API consumers will need to know correct endpoint"
+
+  - decision: "Service method approach (AC12)"
+    question: "Replace existing markAsPurchased() from WISH-2004 or rename/feature-flag?"
+    current_choice: "TBD - must resolve before implementation"
+    impact: "Affects service layer architecture and backward compatibility"
+
+  - decision: "WISH-2004 migration strategy (AC13)"
+    question: "Deprecate POST :id/purchased? Timeline? Feature flag? Backward compatibility?"
+    current_choice: "TBD - must resolve before implementation"
+    impact: "Affects consumer migration path for existing GotItModal endpoint"
+
+pre_implementation_blockers:
+  - id: AC14
+    title: "Verify SETS-MVP-001 implementation"
+    description: "SETS-MVP-001 currently in-qa, not implemented. Must verify schema fields exist before starting implementation."
+    required_fields:
+      - status enum (must include 'owned')
+      - purchaseDate column
+      - buildStatus enum ('in_pieces' | 'built')
+      - purchasePrice decimal
+      - purchaseTax decimal
+      - purchaseShipping decimal
+      - statusChangedAt timestamp
+
+implementation_focus:
+  - Focus Area 1: "PurchaseDetailsStep component"
+    - New React component in apps/web/app-wishlist-gallery/src/components/GotItModal/PurchaseDetailsStep/
+    - Form fields: purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus
+    - Logic: pre-fill date with today, pre-fill price with retail price if available, calculate total
+
+  - Focus Area 2: "Backend PATCH endpoint"
+    - Route: PATCH /api/wishlist/:id/purchase
+    - Handler: apps/api/lego-api/domains/wishlist/routes.ts
+    - Service method: markAsPurchased(userId, itemId, purchaseDetails)
+    - Business logic: validate ownership, update status to 'owned', set statusChangedAt, apply purchase fields
+
+  - Focus Area 3: "Modal flow extension"
+    - Extend existing GotItModal from WISH-2004
+    - Add new step after confirmation: PurchaseDetailsStep
+    - "Skip" button path: minimal data (status='owned', buildStatus='in_pieces', purchaseDate=today)
+    - "Save" button path: all entered data
+
+test_requirements:
+  unit:
+    - PurchaseDetailsStep renders form with all fields
+    - Pre-fills purchase date with today
+    - Pre-fills price with retail price if available
+    - Calculates total correctly (price + tax + shipping)
+    - Skip button calls onSave with minimal data
+    - Save button calls onSave with entered data
+
+  integration:
+    - Backend service markAsPurchased() updates status to 'owned'
+    - Sets statusChangedAt to current timestamp
+    - Applies purchase details correctly
+    - Validates ownership (rejects if userId mismatch)
+
+  e2e:
+    - Happy path: User clicks "Got it" → fills purchase details → item status updates
+    - Skip path: User clicks "Got it" → clicks "Skip" → item status updates with minimal data
+    - Ownership validation: User cannot mark another user's item as purchased
+    - No regression in existing "Got it" flow
+
+acceptance_criteria_count: 17
+  - AC1-AC10: Original story ACs
+  - AC11-AC17: Added by QA elaboration (gaps and edge cases)
+
+elaboration_verdict: CONDITIONAL_PASS
+  reason: "Story has solid architecture but 7 critical findings that must be resolved via added ACs before implementation"
+  added_by_qa: true
+  added_date: "2026-02-01"

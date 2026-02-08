@@ -1,13 +1,39 @@
 schema: 1
 story_id: WISH-2000
 completed_at: 2026-02-01T20:52:37.235Z
-summary: []
+summary:
+  - "Database schema foundation with 19-field wishlist_items table"
+  - "Comprehensive Zod validation schemas with type inference"
+  - "104 unit tests (335% of requirement)"
+  - "DB-level constraints (store enum, priority check)"
+  - "Audit fields and composite indexes added"
 deliverables:
+  - path: packages/backend/database-schema/src/schema/index.ts
+    type: code
+    description: "Drizzle schema with wishlist_items table and constraints"
+  - path: packages/core/api-client/src/schemas/wishlist.ts
+    type: code
+    description: "Zod validation schemas with TypeScript type inference"
   - path: packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts
     type: tests
+    description: "26 schema validation tests"
   - path: packages/core/api-client/src/schemas/__tests__/wishlist-schema-alignment.test.ts
     type: tests
+    description: "22 schema/Zod alignment tests"
+  - path: packages/core/api-client/src/schemas/__tests__/wishlist.test.ts
+    type: tests
+    description: "56 Zod validation tests"
+  - path: packages/backend/database-schema/docs/WISHLIST-SCHEMA-EVOLUTION.md
+    type: documentation
+    description: "Schema evolution and migration guide"
+  - path: packages/backend/database-schema/src/seeds/wishlist.ts
+    type: code
+    description: "Seed data factory for testing"
 verification:
   tests_passed: 104
   all_acs_verified: true
-limitations: []
+  e2e_status: exempt
+  e2e_exempt_reason: "Infrastructure story - database schema and types only"
+limitations:
+  - "Migration not yet deployed (WISH-2007 dependency)"
+  - "Audit fields (createdBy/updatedBy) are nullable pending auth integration"

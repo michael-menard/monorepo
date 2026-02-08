@@ -285,3 +285,39 @@ Some permission levels require specific MCP tools:
 | `test-run` | HTTP Client MCP (for .http files) |
 | `code-write` | None required |
 | `orchestrator` | None required |
+
+---
+
+## Tool Restriction Profiles
+
+Shorthand tool profiles for agent frontmatter:
+
+### ReadOnly Profile
+```yaml
+tools: [Read, Grep, Glob]
+```
+For: Review agents, analysis, audit
+
+### Standard Profile
+```yaml
+tools: [Read, Grep, Glob, Write, Edit, Bash]
+```
+For: Most development agents
+
+### Full Profile
+```yaml
+tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput, AskUserQuestion]
+```
+For: Orchestrators, leaders
+
+### Test Profile
+```yaml
+tools: [Read, Grep, Glob, Bash]
+```
+For: Test runners (Bash for pnpm commands)
+
+### Docs Profile
+```yaml
+tools: [Read, Grep, Glob, Write, Edit]
+```
+For: Documentation writers (no Bash)

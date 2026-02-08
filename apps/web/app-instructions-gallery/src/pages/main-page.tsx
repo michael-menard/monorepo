@@ -6,6 +6,7 @@
  * Story 3.1.2: Instructions Card Component
  */
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import { z } from 'zod'
 import { BookOpen } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -14,6 +15,7 @@ import {
   GalleryFilterBar,
   GalleryViewToggle,
   GalleryDataTable,
+  GallerySkeleton,
   useViewMode,
   useFirstTimeHint,
 } from '@repo/gallery'
@@ -27,9 +29,14 @@ import {
   mocsColumns,
 } from '../columns/mocs-columns'
 
-export interface MainPageProps {
-  className?: string
-}
+/**
+ * Main page props schema
+ */
+const MainPagePropsSchema = z.object({
+  className: z.string().optional(),
+})
+
+export type MainPageProps = z.infer<typeof MainPagePropsSchema>
 
 /**
  * Main Page Component
@@ -41,24 +48,29 @@ export function MainPage({ className }: MainPageProps) {
   const [instructions, setInstructions] = useState<Instruction[]>([])
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { data, isLoading, isError, error } = useGetInstructionsQuery({ page: 1, limit: 50 })
+  const { data, isLoading, isError, error, refetch } = useGetInstructionsQuery({
+    page: 1,
+    limit: 50,
+  })
 
   // Hydrate local instructions state from API response when it changes
+  // INST-1100: Fixed schema alignment - API returns { items, pagination }, not { data: { items } }
+  // API field mapping: title→name, partsCount→pieceCount, thumbnailUrl→thumbnail, isFeatured→isFavorite
   useEffect(() => {
     if (!data) return
-    const next: Instruction[] = data.data.items.map(api => ({
+    const next: Instruction[] = data.items.map(api => ({
       id: api.id,
-      name: api.name,
-      description: api.description,
-      thumbnail: api.thumbnail,
-      images: api.images ?? [],
-      pieceCount: api.pieceCount,
-      theme: api.theme,
-      tags: api.tags,
-      pdfUrl: api.pdfUrl,
-      createdAt: api.createdAt,
-      updatedAt: api.updatedAt,
-      isFavorite: api.isFavorite,
+      name: api.title,
+      description: api.description ?? undefined,
+      thumbnail: api.thumbnailUrl ?? '',
+      images: [],
+      pieceCount: api.partsCount ?? 0,
+      theme: api.theme ?? '',
+      tags: api.tags ?? [],
+      pdfUrl: undefined,
+      createdAt: api.createdAt.toISOString(),
+      updatedAt: api.updatedAt?.toISOString(),
+      isFavorite: api.isFeatured,
     }))
     setInstructions(next)
   }, [data])
@@ -126,6 +138,9 @@ export function MainPage({ className }: MainPageProps) {
     return tableItems.filter(item => item.name.toLowerCase().includes(query))
   }, [tableItems, searchTerm])
 
+  // Create Map for O(1) instruction lookups (PERF-001: avoid O(n²) in grid rendering)
+  const instructionsMap = useMemo(() => new Map(instructions.map(i => [i.id, i])), [instructions])
+
   const isEmpty = filteredTableItems.length === 0
 
   const showLoadingState = isLoading && !instructions.length
@@ -147,10 +162,23 @@ export function MainPage({ className }: MainPageProps) {
 
     return (
       <div className={className}>
-        <div className="container mx-auto py-6 space-y-6">
-          <p className="text-destructive" role="alert">
-            {message}
-          </p>
+        <div
+          className="container mx-auto py-6 space-y-6"
+          role="region"
+          aria-label="MOC Gallery"
+          data-testid="moc-gallery-error"
+        >
+          <div className="flex flex-col items-center justify-center py-16 text-center" role="alert">
+            <p className="text-destructive mb-4">{message}</p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              data-testid="retry-button"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -158,7 +186,12 @@ export function MainPage({ className }: MainPageProps) {
 
   return (
     <div className={className}>
-      <div className="container mx-auto py-6 space-y-6">
+      <div
+        className="container mx-auto py-6 space-y-6"
+        role="region"
+        aria-label="MOC Gallery"
+        data-testid="moc-gallery-region"
+      >
         {/* Page Header */}
         <div className="space-y-2">
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -173,6 +206,7 @@ export function MainPage({ className }: MainPageProps) {
           search={searchTerm}
           onSearchChange={setSearchTerm}
           searchPlaceholder="Search instructions..."
+          searchAriaLabel="Search instructions"
           data-testid="instructions-gallery-filter-bar"
           rightSlot={
             <GalleryViewToggle
@@ -195,17 +229,31 @@ export function MainPage({ className }: MainPageProps) {
               transition={{ duration: 0.15, ease: 'easeOut' }}
             >
               {showLoadingState ? (
-                <p className="text-muted-foreground">Loading instructions...</p>
+                <div aria-live="polite" aria-busy="true">
+                  <span className="sr-only">Loading MOCs...</span>
+                  <GallerySkeleton count={12} data-testid="gallery-loading-skeleton" />
+                </div>
               ) : isEmpty ? (
-                <GalleryEmptyState
-                  icon={BookOpen}
-                  title="No instructions yet"
-                  description="Upload your first MOC instructions to start your collection."
-                />
+                <div aria-live="polite">
+                  <GalleryEmptyState
+                    icon={BookOpen}
+                    title="No instructions yet"
+                    description="Upload your first MOC instructions to start your collection."
+                    action={{
+                      label: 'Create your first MOC',
+                      onClick: () => {
+                        if (typeof window !== 'undefined') {
+                          window.location.href = '/mocs/new'
+                        }
+                      },
+                    }}
+                    data-testid="gallery-empty-state"
+                  />
+                </div>
               ) : (
                 <GalleryGrid>
                   {filteredTableItems.map(item => {
-                    const instruction = instructions.find(i => i.id === item.id)
+                    const instruction = instructionsMap.get(item.id)
                     if (!instruction) return null
                     return (
                       <InstructionCard

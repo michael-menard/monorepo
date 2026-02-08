@@ -48,6 +48,70 @@ import {
 } from '../audit/index.js'
 import { knowledgeEntries } from '../db/schema.js'
 import { computeContentHash } from '../embedding-client/cache-manager.js'
+import {
+  kb_add_task,
+  kb_get_task,
+  kb_update_task,
+  kb_list_tasks,
+} from '../crud-operations/task-operations.js'
+import {
+  kb_triage_tasks,
+  kb_promote_task,
+  kb_list_promotable_tasks,
+  kb_cleanup_stale_tasks,
+  KbTriageTasksInputSchema,
+  KbPromoteTaskInputSchema,
+  KbListPromotableTasksInputSchema,
+  KbCleanupStaleTasksInputSchema,
+  kb_queue_deferred_write,
+  kb_list_deferred_writes,
+  kb_process_deferred_writes,
+  KbQueueDeferredWriteInputSchema,
+  KbListDeferredWritesInputSchema,
+  KbProcessDeferredWritesInputSchema,
+} from '../crud-operations/index.js'
+import {
+  kb_get_work_state,
+  kb_update_work_state,
+  kb_archive_work_state,
+} from '../crud-operations/work-state-operations.js'
+import {
+  kb_write_artifact,
+  kb_read_artifact,
+  kb_list_artifacts,
+  KbWriteArtifactInputSchema,
+  KbReadArtifactInputSchema,
+  KbListArtifactsInputSchema,
+} from '../crud-operations/artifact-operations.js'
+import {
+  kb_get_story,
+  kb_list_stories,
+  kb_update_story_status,
+  kb_get_next_story,
+  KbGetStoryInputSchema,
+  KbListStoriesInputSchema,
+  KbUpdateStoryStatusInputSchema,
+  KbGetNextStoryInputSchema,
+} from '../crud-operations/story-crud-operations.js'
+import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-operations.js'
+import {
+  kb_get_token_summary,
+  kb_get_bottleneck_analysis,
+  kb_get_churn_analysis,
+  KbGetTokenSummaryInputSchema,
+  KbGetBottleneckAnalysisInputSchema,
+  KbGetChurnAnalysisInputSchema,
+} from '../crud-operations/analytics-operations.js'
+import {
+  kb_sync_working_set,
+  KbSyncWorkingSetInputSchema,
+  kb_generate_working_set,
+  KbGenerateWorkingSetInputSchema,
+  kb_inherit_constraints,
+  KbInheritConstraintsInputSchema,
+  kb_archive_working_set,
+  KbArchiveWorkingSetInputSchema,
+} from '../working-set/index.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
 import { createMcpLogger } from './logger.js'
@@ -66,7 +130,26 @@ import {
   KbAuditByEntryInputSchema,
   KbAuditQueryInputSchema,
   KbAuditRetentionInputSchema,
+  // Bucket A typed entry tools (KBMEM-004)
+  KbAddDecisionInputSchema,
+  KbAddConstraintInputSchema,
+  KbAddLessonInputSchema,
+  KbAddRunbookInputSchema,
+  // Bucket B work state tools (KBMEM-006)
+  KbGetWorkStateInputSchema,
+  KbUpdateWorkStateInputSchema,
+  KbArchiveWorkStateInputSchema,
+  // Bucket C task tools (KBMEM-005)
+  KbAddTaskInputSchema,
+  KbGetTaskInputSchema,
+  KbUpdateTaskInputSchema,
+  KbListTasksInputSchema,
 } from './tool-schemas.js'
+// Bucket C task operations (KBMEM-005)
+// Bucket C task triage and lifecycle (KBMEM-018, 019, 020)
+// Deferred writes (KBMEM-022)
+// Bucket B work state operations (KBMEM-006)
+// Bucket B working set sync (KBMEM-008), fallback (KBMEM-011), constraint inheritance (KBMEM-016), and archive (KBMEM-021)
 
 const logger = createMcpLogger('tool-handlers')
 
@@ -1711,6 +1794,2063 @@ export async function handleKbAuditRetentionCleanup(
   }
 }
 
+// ============================================================================
+// Bucket A Typed Entry Tool Handlers (KBMEM-004)
+// ============================================================================
+
+/**
+ * Generate markdown content for a decision (ADR).
+ */
+function formatDecisionContent(input: {
+  title: string
+  context: string
+  decision: string
+  consequences?: string
+}): string {
+  let content = `# Decision: ${input.title}\n\n`
+  content += `## Context\n\n${input.context}\n\n`
+  content += `## Decision\n\n${input.decision}\n`
+
+  if (input.consequences) {
+    content += `\n## Consequences\n\n${input.consequences}\n`
+  }
+
+  return content
+}
+
+/**
+ * Generate markdown content for a constraint.
+ */
+function formatConstraintContent(input: {
+  constraint: string
+  rationale: string
+  scope: string
+  source?: string
+}): string {
+  let content = `# Constraint\n\n${input.constraint}\n\n`
+  content += `## Rationale\n\n${input.rationale}\n\n`
+  content += `**Scope:** ${input.scope}\n`
+
+  if (input.source) {
+    content += `**Source:** ${input.source}\n`
+  }
+
+  return content
+}
+
+/**
+ * Generate markdown content for a lesson.
+ */
+function formatLessonContent(input: {
+  title: string
+  what_happened: string
+  why?: string
+  resolution: string
+  category: string
+}): string {
+  let content = `# Lesson: ${input.title}\n\n`
+  content += `## What Happened\n\n${input.what_happened}\n\n`
+
+  if (input.why) {
+    content += `## Why\n\n${input.why}\n\n`
+  }
+
+  content += `## Resolution\n\n${input.resolution}\n\n`
+  content += `**Category:** ${input.category}\n`
+
+  return content
+}
+
+/**
+ * Generate markdown content for a runbook.
+ */
+function formatRunbookContent(input: {
+  title: string
+  purpose: string
+  prerequisites?: string[]
+  steps: string[]
+  notes?: string
+}): string {
+  let content = `# Runbook: ${input.title}\n\n`
+  content += `## Purpose\n\n${input.purpose}\n\n`
+
+  if (input.prerequisites && input.prerequisites.length > 0) {
+    content += `## Prerequisites\n\n`
+    for (const prereq of input.prerequisites) {
+      content += `- ${prereq}\n`
+    }
+    content += '\n'
+  }
+
+  content += `## Steps\n\n`
+  for (let i = 0; i < input.steps.length; i++) {
+    content += `${i + 1}. ${input.steps[i]}\n`
+  }
+
+  if (input.notes) {
+    content += `\n## Notes\n\n${input.notes}\n`
+  }
+
+  return content
+}
+
+/**
+ * Handle kb_add_decision tool invocation.
+ *
+ * Creates an Architecture Decision Record (ADR) entry.
+ *
+ * @see KBMEM-004 for implementation requirements
+ */
+export async function handleKbAddDecision(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_add_decision tool invoked', {
+    correlation_id: correlationId,
+    title: inputObj?.title,
+    role: inputObj?.role,
+  })
+
+  try {
+    enforceAuthorization('kb_add', context) // Uses kb_add permissions
+    const validated = KbAddDecisionInputSchema.parse(input)
+
+    // Format content for optimal embedding
+    const content = formatDecisionContent(validated)
+
+    // Build tags array (auto-add 'adr', 'decision')
+    const tags = new Set<string>(['adr', 'decision'])
+    if (validated.tags) {
+      for (const tag of validated.tags) {
+        tags.add(tag)
+      }
+    }
+
+    // Create entry via kb_add
+    const entryId = await kb_add(
+      {
+        content,
+        role: validated.role,
+        entry_type: 'decision',
+        story_id: validated.story_id,
+        tags: Array.from(tags),
+      },
+      deps,
+    )
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_add_decision succeeded', {
+      correlation_id: correlationId,
+      entry_id: entryId,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: entryId,
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_add_decision failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_add_constraint tool invocation.
+ *
+ * Creates a constraint entry with scope.
+ *
+ * @see KBMEM-004 for implementation requirements
+ */
+export async function handleKbAddConstraint(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_add_constraint tool invoked', {
+    correlation_id: correlationId,
+    scope: inputObj?.scope,
+    role: inputObj?.role,
+  })
+
+  try {
+    enforceAuthorization('kb_add', context) // Uses kb_add permissions
+    const validated = KbAddConstraintInputSchema.parse(input)
+
+    // Format content for optimal embedding
+    const content = formatConstraintContent(validated)
+
+    // Build tags array (auto-add 'constraint', scope)
+    const tags = new Set<string>(['constraint', `scope:${validated.scope}`])
+    if (validated.tags) {
+      for (const tag of validated.tags) {
+        tags.add(tag)
+      }
+    }
+
+    // Create entry via kb_add
+    const entryId = await kb_add(
+      {
+        content,
+        role: validated.role,
+        entry_type: 'constraint',
+        story_id: validated.story_id,
+        tags: Array.from(tags),
+      },
+      deps,
+    )
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_add_constraint succeeded', {
+      correlation_id: correlationId,
+      entry_id: entryId,
+      scope: validated.scope,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: entryId,
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_add_constraint failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_add_lesson tool invocation.
+ *
+ * Creates a lessons learned entry.
+ *
+ * @see KBMEM-004 for implementation requirements
+ */
+export async function handleKbAddLesson(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_add_lesson tool invoked', {
+    correlation_id: correlationId,
+    title: inputObj?.title,
+    category: inputObj?.category,
+    role: inputObj?.role,
+  })
+
+  try {
+    enforceAuthorization('kb_add', context) // Uses kb_add permissions
+    const validated = KbAddLessonInputSchema.parse(input)
+
+    // Format content for optimal embedding
+    const content = formatLessonContent(validated)
+
+    // Build tags array (auto-add 'lesson', category)
+    const tags = new Set<string>(['lesson', `category:${validated.category}`])
+    if (validated.tags) {
+      for (const tag of validated.tags) {
+        tags.add(tag)
+      }
+    }
+
+    // Create entry via kb_add
+    const entryId = await kb_add(
+      {
+        content,
+        role: validated.role,
+        entry_type: 'lesson',
+        story_id: validated.story_id,
+        tags: Array.from(tags),
+      },
+      deps,
+    )
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_add_lesson succeeded', {
+      correlation_id: correlationId,
+      entry_id: entryId,
+      category: validated.category,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: entryId,
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_add_lesson failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_add_runbook tool invocation.
+ *
+ * Creates a runbook/procedure entry.
+ *
+ * @see KBMEM-004 for implementation requirements
+ */
+export async function handleKbAddRunbook(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_add_runbook tool invoked', {
+    correlation_id: correlationId,
+    title: inputObj?.title,
+    role: inputObj?.role,
+  })
+
+  try {
+    enforceAuthorization('kb_add', context) // Uses kb_add permissions
+    const validated = KbAddRunbookInputSchema.parse(input)
+
+    // Format content for optimal embedding
+    const content = formatRunbookContent(validated)
+
+    // Build tags array (auto-add 'runbook', 'procedure')
+    const tags = new Set<string>(['runbook', 'procedure'])
+    if (validated.tags) {
+      for (const tag of validated.tags) {
+        tags.add(tag)
+      }
+    }
+
+    // Create entry via kb_add
+    const entryId = await kb_add(
+      {
+        content,
+        role: validated.role,
+        entry_type: 'runbook',
+        story_id: validated.story_id,
+        tags: Array.from(tags),
+      },
+      deps,
+    )
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_add_runbook succeeded', {
+      correlation_id: correlationId,
+      entry_id: entryId,
+      steps_count: validated.steps.length,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: entryId,
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_add_runbook failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Bucket C Task Tool Handlers (KBMEM-005)
+// ============================================================================
+
+/**
+ * Handle kb_add_task tool invocation.
+ *
+ * Creates a new task in the backlog.
+ *
+ * @see KBMEM-005 for implementation requirements
+ */
+export async function handleKbAddTask(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_add_task tool invoked', {
+    correlation_id: correlationId,
+    title: inputObj?.title,
+    task_type: inputObj?.task_type,
+  })
+
+  try {
+    const validated = KbAddTaskInputSchema.parse(input)
+
+    const taskId = await kb_add_task(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_add_task succeeded', {
+      correlation_id: correlationId,
+      task_id: taskId,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: taskId,
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_add_task failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_task tool invocation.
+ *
+ * Retrieves a task by ID.
+ *
+ * @see KBMEM-005 for implementation requirements
+ */
+export async function handleKbGetTask(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_task tool invoked', {
+    correlation_id: correlationId,
+    id: inputObj?.id,
+  })
+
+  try {
+    const validated = KbGetTaskInputSchema.parse(input)
+
+    const task = await kb_get_task(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_get_task succeeded', {
+      correlation_id: correlationId,
+      found: task !== null,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: task ? JSON.stringify(task, null, 2) : 'null',
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_get_task failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_update_task tool invocation.
+ *
+ * Updates an existing task.
+ *
+ * @see KBMEM-005 for implementation requirements
+ */
+export async function handleKbUpdateTask(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_update_task tool invoked', {
+    correlation_id: correlationId,
+    id: inputObj?.id,
+  })
+
+  try {
+    const validated = KbUpdateTaskInputSchema.parse(input)
+
+    const task = await kb_update_task(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_update_task succeeded', {
+      correlation_id: correlationId,
+      task_id: task.id,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(task, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_update_task failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_list_tasks tool invocation.
+ *
+ * Lists tasks with optional filters.
+ *
+ * @see KBMEM-005 for implementation requirements
+ */
+export async function handleKbListTasks(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_list_tasks tool invoked', {
+    correlation_id: correlationId,
+    status: inputObj?.status,
+    task_type: inputObj?.task_type,
+    limit: inputObj?.limit,
+  })
+
+  try {
+    const validated = KbListTasksInputSchema.parse(input)
+
+    const result = await kb_list_tasks(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_list_tasks succeeded', {
+      correlation_id: correlationId,
+      count: result.tasks.length,
+      total: result.total,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_list_tasks failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Bucket C Task Triage Handler (KBMEM-018)
+// ============================================================================
+
+/**
+ * Handle kb_triage_tasks tool invocation.
+ *
+ * Triages tasks with auto-priority heuristics.
+ *
+ * @see KBMEM-018 for implementation requirements
+ */
+export async function handleKbTriageTasks(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_triage_tasks tool invoked', {
+    correlation_id: correlationId,
+    status: inputObj?.status,
+    task_type: inputObj?.task_type,
+    dry_run: inputObj?.dry_run,
+    limit: inputObj?.limit,
+  })
+
+  try {
+    const validated = KbTriageTasksInputSchema.parse(input)
+
+    const result = await kb_triage_tasks(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_triage_tasks succeeded', {
+      correlation_id: correlationId,
+      analyzed: result.analyzed,
+      updated: result.updated,
+      unchanged: result.unchanged,
+      dry_run: result.dry_run,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_triage_tasks failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Bucket C Task Promotion Handlers (KBMEM-019)
+// ============================================================================
+
+/**
+ * Handle kb_promote_task tool invocation.
+ *
+ * Promotes a task to a story.
+ *
+ * @see KBMEM-019 for implementation requirements
+ */
+export async function handleKbPromoteTask(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_promote_task tool invoked', {
+    correlation_id: correlationId,
+    task_id: inputObj?.task_id,
+    promoted_to_story: inputObj?.promoted_to_story,
+    force: inputObj?.force,
+  })
+
+  try {
+    const validated = KbPromoteTaskInputSchema.parse(input)
+
+    const result = await kb_promote_task(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_promote_task succeeded', {
+      correlation_id: correlationId,
+      success: result.success,
+      task_id: result.task_id,
+      promoted_to_story: result.promoted_to_story,
+      forced: result.forced,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_promote_task failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_list_promotable_tasks tool invocation.
+ *
+ * Lists tasks that are candidates for promotion.
+ *
+ * @see KBMEM-019 for implementation requirements
+ */
+export async function handleKbListPromotableTasks(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_list_promotable_tasks tool invoked', {
+    correlation_id: correlationId,
+    limit: inputObj?.limit,
+    include_partial_matches: inputObj?.include_partial_matches,
+  })
+
+  try {
+    const validated = KbListPromotableTasksInputSchema.parse(input)
+
+    const result = await kb_list_promotable_tasks(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_list_promotable_tasks succeeded', {
+      correlation_id: correlationId,
+      count: result.tasks.length,
+      total: result.total,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_list_promotable_tasks failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Bucket C Stale Task Cleanup Handler (KBMEM-020)
+// ============================================================================
+
+/**
+ * Handle kb_cleanup_stale_tasks tool invocation.
+ *
+ * Finds and optionally cleans up stale tasks.
+ *
+ * @see KBMEM-020 for implementation requirements
+ */
+export async function handleKbCleanupStaleTasks(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_cleanup_stale_tasks tool invoked', {
+    correlation_id: correlationId,
+    dry_run: inputObj?.dry_run,
+    auto_close_low_priority: inputObj?.auto_close_low_priority,
+    limit: inputObj?.limit,
+  })
+
+  try {
+    const validated = KbCleanupStaleTasksInputSchema.parse(input)
+
+    const result = await kb_cleanup_stale_tasks(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_cleanup_stale_tasks succeeded', {
+      correlation_id: correlationId,
+      total_stale: result.total_stale,
+      closed: result.closed,
+      needs_attention: result.needs_attention,
+      dry_run: result.dry_run,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_cleanup_stale_tasks failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Deferred Writes Tool Handlers (KBMEM-022)
+// ============================================================================
+
+/**
+ * Handle kb_queue_deferred_write tool invocation.
+ *
+ * Queue a failed write for later processing.
+ *
+ * @see KBMEM-022 for implementation requirements
+ */
+export async function handleKbQueueDeferredWrite(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_queue_deferred_write tool invoked', {
+    correlation_id: correlationId,
+    operation: inputObj?.operation,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    const validated = KbQueueDeferredWriteInputSchema.parse(input)
+
+    const result = await kb_queue_deferred_write(validated)
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_queue_deferred_write succeeded', {
+      correlation_id: correlationId,
+      id: result.id,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_queue_deferred_write failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_list_deferred_writes tool invocation.
+ *
+ * List pending deferred writes.
+ *
+ * @see KBMEM-022 for implementation requirements
+ */
+export async function handleKbListDeferredWrites(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_list_deferred_writes tool invoked', {
+    correlation_id: correlationId,
+    operation: inputObj?.operation,
+    story_id: inputObj?.story_id,
+    limit: inputObj?.limit,
+  })
+
+  try {
+    const validated = KbListDeferredWritesInputSchema.parse(input)
+
+    const result = await kb_list_deferred_writes(validated)
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_list_deferred_writes succeeded', {
+      correlation_id: correlationId,
+      count: result.writes.length,
+      total: result.total,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_list_deferred_writes failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_process_deferred_writes tool invocation.
+ *
+ * Process pending deferred writes.
+ *
+ * @see KBMEM-022 for implementation requirements
+ */
+export async function handleKbProcessDeferredWrites(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('kb_process_deferred_writes tool invoked', {
+    correlation_id: correlationId,
+    dry_run: inputObj?.dry_run,
+    operation: inputObj?.operation,
+    story_id: inputObj?.story_id,
+    limit: inputObj?.limit,
+  })
+
+  try {
+    const validated = KbProcessDeferredWritesInputSchema.parse(input)
+
+    // Note: This handler doesn't have access to a processor callback
+    // since we can't inject the KB operations dynamically.
+    // In practice, a separate CLI command or scheduled job would handle processing.
+    const result = await kb_process_deferred_writes(validated)
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_process_deferred_writes succeeded', {
+      correlation_id: correlationId,
+      total: result.total,
+      processed: result.processed,
+      succeeded: result.succeeded,
+      failed: result.failed,
+      dry_run: result.dry_run,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_process_deferred_writes failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Bucket B Work State Tool Handlers (KBMEM-006)
+// ============================================================================
+
+/**
+ * Handle kb_get_work_state tool invocation.
+ *
+ * Gets work state for a story.
+ *
+ * @see KBMEM-006 for implementation requirements
+ */
+export async function handleKbGetWorkState(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_work_state tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    const validated = KbGetWorkStateInputSchema.parse(input)
+
+    const workState = await kb_get_work_state(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_get_work_state succeeded', {
+      correlation_id: correlationId,
+      found: workState !== null,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: workState ? JSON.stringify(workState, null, 2) : 'null',
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_get_work_state failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_update_work_state tool invocation.
+ *
+ * Updates or creates work state for a story (upsert).
+ *
+ * @see KBMEM-006 for implementation requirements
+ */
+export async function handleKbUpdateWorkState(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_update_work_state tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    phase: inputObj?.phase,
+  })
+
+  try {
+    const validated = KbUpdateWorkStateInputSchema.parse(input)
+
+    const workState = await kb_update_work_state(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_update_work_state succeeded', {
+      correlation_id: correlationId,
+      story_id: workState.story_id,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(workState, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_update_work_state failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_archive_work_state tool invocation.
+ *
+ * Archives work state for a completed story.
+ *
+ * @see KBMEM-006 for implementation requirements
+ */
+export async function handleKbArchiveWorkState(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_archive_work_state tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    const validated = KbArchiveWorkStateInputSchema.parse(input)
+
+    const result = await kb_archive_work_state(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_archive_work_state succeeded', {
+      correlation_id: correlationId,
+      archived: result.archived,
+      history_id: result.history_id,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_archive_work_state failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_sync_working_set tool invocation.
+ *
+ * Syncs working-set.md file to/from KB.
+ *
+ * @see KBMEM-008 for implementation requirements
+ */
+export async function handleKbSyncWorkingSet(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_sync_working_set tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    direction: inputObj?.direction,
+  })
+
+  try {
+    const validated = KbSyncWorkingSetInputSchema.parse(input)
+
+    const result = await kb_sync_working_set(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_sync_working_set succeeded', {
+      correlation_id: correlationId,
+      success: result.success,
+      story_id: result.story_id,
+      direction: result.direction,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_sync_working_set failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_generate_working_set tool invocation.
+ *
+ * Generates working-set.md from KB when file is missing.
+ *
+ * @see KBMEM-011 for implementation requirements
+ */
+export async function handleKbGenerateWorkingSet(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_generate_working_set tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    epic_id: inputObj?.epic_id,
+  })
+
+  try {
+    const validated = KbGenerateWorkingSetInputSchema.parse(input)
+
+    const result = await kb_generate_working_set(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_generate_working_set succeeded', {
+      correlation_id: correlationId,
+      success: result.success,
+      story_id: result.story_id,
+      source: result.source,
+      constraints_count: result.summary.constraints_count,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_generate_working_set failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_inherit_constraints tool invocation.
+ *
+ * Inherits constraints from project and epic scopes with conflict detection.
+ *
+ * @see KBMEM-016 for implementation requirements
+ */
+export async function handleKbInheritConstraints(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_inherit_constraints tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    epic_id: inputObj?.epic_id,
+  })
+
+  try {
+    const validated = KbInheritConstraintsInputSchema.parse(input)
+
+    const result = await kb_inherit_constraints(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_inherit_constraints succeeded', {
+      correlation_id: correlationId,
+      success: result.success,
+      story_id: result.story_id,
+      epic_id: result.epic_id,
+      total_constraints: result.summary.total,
+      conflicts_resolved: result.summary.conflicts_resolved,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_inherit_constraints failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_archive_working_set tool invocation.
+ *
+ * Archives working-set.md content on story completion.
+ *
+ * @see KBMEM-021 for implementation requirements
+ */
+export async function handleKbArchiveWorkingSet(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_archive_working_set tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    const validated = KbArchiveWorkingSetInputSchema.parse(input)
+
+    const result = await kb_archive_working_set(validated)
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_archive_working_set succeeded', {
+      correlation_id: correlationId,
+      story_id: result.story_id,
+      content_length: result.content_length,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_archive_working_set failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Artifact Tools (DB-First Artifact Storage)
+// ============================================================================
+
+/**
+ * Handle kb_write_artifact tool invocation.
+ *
+ * Write (create or update) a workflow artifact to the database.
+ * Uses upsert behavior based on story_id + artifact_type + iteration.
+ */
+export async function handleKbWriteArtifact(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_write_artifact tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    artifact_type: inputObj?.artifact_type,
+    iteration: inputObj?.iteration,
+  })
+
+  try {
+    // Authorization check
+    enforceAuthorization('kb_write_artifact', context)
+
+    const validated = KbWriteArtifactInputSchema.parse(input)
+
+    const result = await kb_write_artifact(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_write_artifact succeeded', {
+      correlation_id: correlationId,
+      story_id: result.story_id,
+      artifact_type: result.artifact_type,
+      artifact_id: result.id,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_write_artifact failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_read_artifact tool invocation.
+ *
+ * Read a workflow artifact from the database.
+ */
+export async function handleKbReadArtifact(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_read_artifact tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    artifact_type: inputObj?.artifact_type,
+    iteration: inputObj?.iteration,
+  })
+
+  try {
+    // Authorization check
+    enforceAuthorization('kb_read_artifact', context)
+
+    const validated = KbReadArtifactInputSchema.parse(input)
+
+    const result = await kb_read_artifact(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_read_artifact succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      artifact_type: validated.artifact_type,
+      found: result !== null,
+      total_time_ms: totalTimeMs,
+    })
+
+    // Return null as JSON string if not found
+    if (result === null) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'null',
+          },
+        ],
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_read_artifact failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_list_artifacts tool invocation.
+ *
+ * List artifacts for a story with optional filters.
+ */
+export async function handleKbListArtifacts(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_list_artifacts tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    phase: inputObj?.phase,
+    artifact_type: inputObj?.artifact_type,
+  })
+
+  try {
+    // Authorization check
+    enforceAuthorization('kb_list_artifacts', context)
+
+    const validated = KbListArtifactsInputSchema.parse(input)
+
+    const result = await kb_list_artifacts(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_list_artifacts succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      count: result.total,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_list_artifacts failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Story Status Handlers
+// ============================================================================
+
+/**
+ * Handle kb_get_story tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with story or null
+ */
+export async function handleKbGetStory(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_story tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+  })
+
+  try {
+    enforceAuthorization('kb_get_story' as ToolName, context)
+    const validated = KbGetStoryInputSchema.parse(input)
+    const result = await kb_get_story({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_story succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      found: result.story !== null,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_story failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_list_stories tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with stories array
+ */
+export async function handleKbListStories(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_list_stories tool invoked', {
+    correlation_id: correlationId,
+    feature: inputObj?.feature,
+    state: inputObj?.state,
+    phase: inputObj?.phase,
+  })
+
+  try {
+    enforceAuthorization('kb_list_stories' as ToolName, context)
+    const validated = KbListStoriesInputSchema.parse(input)
+    const result = await kb_list_stories({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_list_stories succeeded', {
+      correlation_id: correlationId,
+      count: result.stories.length,
+      total: result.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_list_stories failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_update_story_status tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with updated story
+ */
+export async function handleKbUpdateStoryStatus(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_update_story_status tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    state: inputObj?.state,
+    phase: inputObj?.phase,
+  })
+
+  try {
+    enforceAuthorization('kb_update_story_status' as ToolName, context)
+    const validated = KbUpdateStoryStatusInputSchema.parse(input)
+    const result = await kb_update_story_status({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_update_story_status succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      updated: result.updated,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_update_story_status failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_next_story tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with next available story
+ */
+export async function handleKbGetNextStory(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_next_story tool invoked', {
+    correlation_id: correlationId,
+    epic: inputObj?.epic,
+    feature: inputObj?.feature,
+    include_backlog: inputObj?.include_backlog,
+  })
+
+  try {
+    enforceAuthorization('kb_get_next_story' as ToolName, context)
+    const validated = KbGetNextStoryInputSchema.parse(input)
+    const result = await kb_get_next_story({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_next_story succeeded', {
+      correlation_id: correlationId,
+      epic: validated.epic,
+      found: result.story !== null,
+      story_id: result.story?.storyId,
+      candidates_count: result.candidates_count,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_next_story failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Token Logging Handler
+// ============================================================================
+
+/**
+ * Handle kb_log_tokens tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with logged entry ID and cumulative total
+ */
+export async function handleKbLogTokens(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_log_tokens tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    phase: inputObj?.phase,
+    input_tokens: inputObj?.input_tokens,
+    output_tokens: inputObj?.output_tokens,
+  })
+
+  try {
+    enforceAuthorization('kb_log_tokens' as ToolName, context)
+    const validated = KbLogTokensInputSchema.parse(input)
+    const result = await kb_log_tokens({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_log_tokens succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      id: result.id,
+      cumulative: result.cumulative,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_log_tokens failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
+// Analytics Handlers
+// ============================================================================
+
+/**
+ * Handle kb_get_token_summary tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with token summary
+ */
+export async function handleKbGetTokenSummary(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_token_summary tool invoked', {
+    correlation_id: correlationId,
+    group_by: inputObj?.group_by,
+    feature: inputObj?.feature,
+  })
+
+  try {
+    enforceAuthorization('kb_get_token_summary' as ToolName, context)
+    const validated = KbGetTokenSummaryInputSchema.parse(input)
+    const result = await kb_get_token_summary({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_token_summary succeeded', {
+      correlation_id: correlationId,
+      group_by: validated.group_by,
+      result_count: result.results.length,
+      total_tokens: result.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_token_summary failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_bottleneck_analysis tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with bottleneck analysis
+ */
+export async function handleKbGetBottleneckAnalysis(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_bottleneck_analysis tool invoked', {
+    correlation_id: correlationId,
+    stuck_threshold_days: inputObj?.stuck_threshold_days,
+    feature: inputObj?.feature,
+  })
+
+  try {
+    enforceAuthorization('kb_get_bottleneck_analysis' as ToolName, context)
+    const validated = KbGetBottleneckAnalysisInputSchema.parse(input)
+    const result = await kb_get_bottleneck_analysis({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_bottleneck_analysis succeeded', {
+      correlation_id: correlationId,
+      stuck_stories_count: result.stuck_stories.length,
+      phase_distribution_count: result.phase_distribution.length,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_bottleneck_analysis failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_get_churn_analysis tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with churn analysis
+ */
+export async function handleKbGetChurnAnalysis(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_churn_analysis tool invoked', {
+    correlation_id: correlationId,
+    min_iterations: inputObj?.min_iterations,
+    feature: inputObj?.feature,
+  })
+
+  try {
+    enforceAuthorization('kb_get_churn_analysis' as ToolName, context)
+    const validated = KbGetChurnAnalysisInputSchema.parse(input)
+    const result = await kb_get_churn_analysis({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_churn_analysis succeeded', {
+      correlation_id: correlationId,
+      high_churn_stories_count: result.high_churn_stories.length,
+      feature_averages_count: result.feature_averages.length,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_churn_analysis failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -1731,6 +3871,39 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_list: handleKbList,
   kb_search: handleKbSearch,
   kb_get_related: handleKbGetRelated,
+  // Bucket A typed entry tools (KBMEM-004)
+  kb_add_decision: handleKbAddDecision,
+  kb_add_constraint: handleKbAddConstraint,
+  kb_add_lesson: handleKbAddLesson,
+  kb_add_runbook: handleKbAddRunbook,
+  // Bucket B work state tools (KBMEM-006)
+  kb_get_work_state: handleKbGetWorkState,
+  kb_update_work_state: handleKbUpdateWorkState,
+  kb_archive_work_state: handleKbArchiveWorkState,
+  // Bucket B working set sync (KBMEM-008)
+  kb_sync_working_set: handleKbSyncWorkingSet,
+  // Bucket B working set fallback (KBMEM-011)
+  kb_generate_working_set: handleKbGenerateWorkingSet,
+  // Bucket B constraint inheritance (KBMEM-016)
+  kb_inherit_constraints: handleKbInheritConstraints,
+  // Bucket B working set archive (KBMEM-021)
+  kb_archive_working_set: handleKbArchiveWorkingSet,
+  // Bucket C task tools (KBMEM-005)
+  kb_add_task: handleKbAddTask,
+  kb_get_task: handleKbGetTask,
+  kb_update_task: handleKbUpdateTask,
+  kb_list_tasks: handleKbListTasks,
+  // Bucket C task triage (KBMEM-018)
+  kb_triage_tasks: handleKbTriageTasks,
+  // Bucket C task promotion (KBMEM-019)
+  kb_promote_task: handleKbPromoteTask,
+  kb_list_promotable_tasks: handleKbListPromotableTasks,
+  // Bucket C stale task cleanup (KBMEM-020)
+  kb_cleanup_stale_tasks: handleKbCleanupStaleTasks,
+  // Deferred writes (KBMEM-022)
+  kb_queue_deferred_write: handleKbQueueDeferredWrite,
+  kb_list_deferred_writes: handleKbListDeferredWrites,
+  kb_process_deferred_writes: handleKbProcessDeferredWrites,
   // Admin tools (KNOW-0053)
   kb_bulk_import: handleKbBulkImport,
   kb_rebuild_embeddings: handleKbRebuildEmbeddings,
@@ -1740,6 +3913,21 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_audit_by_entry: handleKbAuditByEntry,
   kb_audit_query: handleKbAuditQuery,
   kb_audit_retention_cleanup: handleKbAuditRetentionCleanup,
+  // Artifact tools (DB-first artifact storage)
+  kb_write_artifact: handleKbWriteArtifact,
+  kb_read_artifact: handleKbReadArtifact,
+  kb_list_artifacts: handleKbListArtifacts,
+  // Story status tools
+  kb_get_story: handleKbGetStory,
+  kb_list_stories: handleKbListStories,
+  kb_update_story_status: handleKbUpdateStoryStatus,
+  kb_get_next_story: handleKbGetNextStory,
+  // Token logging tools
+  kb_log_tokens: handleKbLogTokens,
+  // Analytics tools
+  kb_get_token_summary: handleKbGetTokenSummary,
+  kb_get_bottleneck_analysis: handleKbGetBottleneckAnalysis,
+  kb_get_churn_analysis: handleKbGetChurnAnalysis,
 }
 
 /**

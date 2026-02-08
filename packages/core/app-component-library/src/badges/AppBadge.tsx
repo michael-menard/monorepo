@@ -29,9 +29,9 @@ export interface AppBadgeProps extends Omit<BadgeProps, 'variant'> {
 }
 
 const sizeStyles = {
-  sm: 'px-1.5 py-0 text-[10px]',
-  default: '',
-  lg: 'px-3 py-1 text-sm',
+  sm: 'px-2 py-0.5 text-[10px]',
+  default: 'px-3 py-0.5',
+  lg: 'px-4 py-1.5 text-sm',
 }
 
 const customVariantStyles: Record<string, string> = {
