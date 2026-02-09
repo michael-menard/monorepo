@@ -1,0 +1,131 @@
+perspective: qa
+verdict: READY
+testability:
+  core_journey_testable: true
+  core_acs_clear: true
+  test_strategy_complete: true
+test_coverage_by_phase:
+  phase_0:
+    unit: Schema migrations, MCP tool implementations
+    integration: End-to-end schema creation with existing KB
+    e2e: Manual validation of database state
+  phase_1:
+    unit: Compatibility shim module, directory flattening logic
+    integration: Agents querying both DB and directory (shim)
+    e2e: Full story workflow using database queries
+  phase_2:
+    unit: Cache warming, session management
+    integration: Agents retrieving cached context
+    e2e: Agent startup performance with/without cache
+  phase_3:
+    unit: Telemetry logging, decision capture
+    integration: Agent invocations logged to database
+    e2e: Full workflow with telemetry collection and query
+  phase_4:
+    unit: Graph checker, cohesion rules
+    integration: Agents querying graph views
+    e2e: Feature completeness detection on known franken-features
+  phase_5:
+    unit: Classification, model training, inference
+    integration: ML models serving predictions
+    e2e: Workflow with auto-accept predictions at confidence >90%
+  phase_6:
+    unit: Batch coordinator, queue management
+    integration: Batch processing with approval gate
+    e2e: 5-story and 10-story batch runs with summary reports
+  phase_7:
+    unit: Agent code migrations, doc-sync
+    integration: All agents using DB exclusively
+    e2e: Full workflow with zero directory references
+critical_acceptance_criteria:
+  phase_0_gate:
+    - PostgreSQL schemas created without breaking existing KB
+    - All 14 MCP tools functional and queryable
+    - doc-sync skill produces correct updates
+  phase_1_gate:
+    - Stories queryable from database with <100ms latency
+    - Compatibility shim correctly falls back to directory
+    - All story CRUD operations maintain consistency
+  phase_2_gate:
+    - Context cache reduces agent startup tokens by 80%
+    - Cache invalidation strategy prevents stale data
+  phase_3_gate:
+    - Telemetry captures all agent invocations and decisions
+    - Query performance acceptable for analysis
+  phase_4_gate:
+    - Graph cohesion checks detect franken-features
+    - Rules engine correctly identifies missing capabilities
+  phase_5_gate:
+    - Model router achieves 85%+ accuracy on model selection
+    - Preference predictor achieves 90%+ confidence threshold
+  phase_6_gate:
+    - Batch mode processes 5 stories successfully
+    - Batch mode processes 10 stories with token tracking
+  phase_7_gate:
+    - All 52 migrated agents use DB queries exclusively
+    - Full workflow test passes end-to-end
+test_infrastructure:
+  unit_tests:
+    - Vitest for TypeScript (compatibility shim, agents)
+    - Python pytest for ML training scripts
+  integration_tests:
+    - Database state validation after schema creation
+    - Agent shim behavior (DB vs directory fallback)
+    - MCP tool integration tests
+  e2e_tests:
+    - Full story workflows (elaborate → implement → QA → done)
+    - Batch processing workflows
+    - ML model training and inference
+  test_data:
+    - Seed database with existing story metadata
+    - Synthetic telemetry data for ML training (30-50 stories)
+    - Known franken-features for cohesion detection testing
+test_milestones:
+  phase_0_validation: Database integrity, MCP tools operational
+  phase_1_validation: Story CRUD via DB, compatibility shim working
+  phase_2_validation: Token reduction benchmarks
+  phase_3_validation: Telemetry completeness
+  phase_4_validation: Cohesion rule accuracy
+  phase_5_validation: ML model accuracy
+  phase_6_validation: Batch processing reliability
+  phase_7_validation: Zero directory references, full workflow
+test_risks:
+  data_consistency:
+    risk: Phase 1 story migration introduces inconsistencies
+    mitigation: Validation script, comprehensive unit tests
+  performance_regression:
+    risk: Database queries slower than directory lookups
+    mitigation: Benchmarking at each phase, caching strategy
+  ml_model_accuracy:
+    risk: Insufficient training data in Phase 5
+    mitigation: Wait for 30-50 stories of telemetry (Phase 3 completion)
+  concurrent_updates:
+    risk: Race conditions on story status updates
+    mitigation: Database transactions, pessimistic locking
+  backwards_compatibility:
+    risk: Shim complexity breaks existing agent logic
+    mitigation: Extensive integration tests, careful rollout
+future:
+  test_improvements:
+    - story: Multiple (all phases)
+      suggestion: "Implement continuous integration testing for each phase gate"
+      impact: high
+    - story: WINT-3070, WINT-5130, WINT-6090
+      suggestion: "Add performance regression tests to catch slowdowns"
+      impact: medium
+  suggested_stories:
+    - title: "Chaos testing for database connection failures"
+      gap: "Agents need graceful degradation when DB unavailable"
+      priority: P1
+    - title: "Load testing for telemetry writes at 10x current volume"
+      gap: "Validate batching strategy before Phase 3 agent migration"
+      priority: P1
+    - title: "ML model accuracy validation on production data"
+      gap: "Test models on real-world story data before Phase 5 rollout"
+      priority: P1
+  recommendations:
+    - "Establish test infrastructure (CI/CD, databases) for Phase 0 schema work"
+    - "Create comprehensive compatibility shim tests before Phase 1 rollout"
+    - "Build telemetry monitoring to catch data quality issues early"
+    - "Define clear acceptance criteria for each phase before starting work"
+review_complete: true

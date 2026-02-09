@@ -1,0 +1,106 @@
+feature_dir: "plans/future/wint"
+prefix: "WINT"
+completed: "2026-02-09T22:40:00Z"
+review_phase: 1
+story_count: 88
+phase_count: 8
+perspectives:
+  product: complete
+  engineering: complete
+  qa: complete
+  ux: complete
+  platform: complete
+  security: complete
+success_count: 6
+failed_count: 0
+overall_verdict: READY
+confidence: high
+key_findings:
+  strengths:
+    - Well-structured 8-phase roadmap with clear dependencies
+    - Single source of truth in database solves critical pain point
+    - Incremental rollout strategy with compatibility shim reduces risk
+    - Comprehensive scope covers infrastructure, observability, learning, and migration
+    - All core user journeys supported (PM, Dev, QA, Ops)
+  areas_requiring_attention:
+    - Database RBAC and authorization strategy needs documentation (Security)
+    - Input validation for MCP tools must be explicitly required (Security)
+    - Performance benchmarking needed for Phase 1 (<100ms latency target)
+    - ML training requires 30-50 stories of telemetry data (Phase 5 dependency)
+    - Database schema migration rollback procedure must be pre-tested (Platform)
+  recommendations:
+    - Prioritize Phase 1 (Foundation) - unblocks all downstream value
+    - Establish test infrastructure for Phase 0 schema work
+    - Define database access control policy before Phase 0 implementation
+    - Create comprehensive Phase 0 migration script with rollback
+    - Document compatibility shim behavior thoroughly for Phase 1 rollout
+critical_path:
+  phase_0: Bootstrap infrastructure (17 stories) - No dependencies, can start immediately
+  phase_1: Single source of truth (8 stories) - Depends on Phase 0, unblocks all subsequent phases
+  phase_2_5: Context cache, telemetry, graph, ML (42 stories) - Can proceed in parallel after Phase 1
+  phase_6: Batch mode (9 stories) - Depends on Phases 2-4, improves ops efficiency
+  phase_7: Migration (13 stories) - Final cleanup, depends on all prior phases
+risk_assessment:
+  technical_risk: LOW
+    - All technologies proven and available
+    - Familiar patterns (PostgreSQL, MCP, agents)
+    - Incremental approach reduces blast radius
+  schedule_risk: MEDIUM
+    - ML training data accumulation (Phase 5) adds timeline dependency
+    - Large number of agents to migrate (Phase 7) could take time
+  operational_risk: MEDIUM
+    - Compatibility shim adds complexity during Phase 1
+    - Database migration requires careful execution
+    - Telemetry volume growth could impact performance
+  security_risk: MEDIUM
+    - RBAC strategy and input validation must be implemented (Phase 0)
+    - Telemetry data sensitivity not yet classified
+  mitigation: Comprehensive phase gate validation (WINT-1080, WINT-3070, WINT-6090, WINT-7110)
+estimated_effort:
+  phase_0: 2-3 weeks (manual setup, heavy documentation)
+  phase_1: 3-4 weeks (data migration, agent updates)
+  phase_2: 2 weeks (cache implementation)
+  phase_3: 2 weeks (telemetry integration)
+  phase_4: 2-3 weeks (graph and cohesion)
+  phase_5: 3-4 weeks (ML pipeline training and integration)
+  phase_6: 1-2 weeks (batch mode)
+  phase_7: 4-6 weeks (52 agents × testing)
+  total: 20-26 weeks (5-6 months)
+success_metrics:
+  phase_1: Single source of truth operational, all story queries via DB
+  phase_2: 80% token reduction achieved
+  phase_3: Full telemetry collection with 100% completeness
+  phase_4: Cohesion checks detecting all known franken-features
+  phase_5: ML models at 85%+ accuracy
+  phase_6: 5-10 stories processable in batch mode
+  phase_7: Zero directory references, all agents migrated
+next_steps:
+  immediate:
+    - Review Phase 0 database schema design with Platform team
+    - Plan Phase 0 infrastructure (migrations, testing environment)
+    - Document RBAC strategy and security requirements
+  week_1:
+    - Finalize Phase 0 stories and acceptance criteria
+    - Create database migration script and rollback plan
+    - Set up CI/CD for Phase 0 testing
+  week_2:
+    - Begin Phase 0 bootstrap (schema creation, MCP tools)
+    - Implement doc-sync skill and validate
+  week_3:
+    - Complete Phase 0 validation (WINT-0170)
+    - Prepare Phase 1 kickoff (flatten directories, compatibility shim)
+review_sources:
+  product_review: REVIEW-PRODUCT.yaml
+  engineering_review: REVIEW-ENGINEERING.yaml
+  qa_review: REVIEW-QA.yaml
+  ux_review: REVIEW-UX.yaml
+  platform_review: REVIEW-PLATFORM.yaml
+  security_review: REVIEW-SECURITY.yaml
+approval_status: APPROVED FOR PHASE 1 (Reviews Complete)
+approvers:
+  product: Ready
+  engineering: Ready
+  qa: Ready
+  ux: Ready
+  platform: Ready
+  security: Ready

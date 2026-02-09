@@ -1,0 +1,1303 @@
+schema: 2
+feature_dir: "plans/future/wint"
+prefix: "WINT"
+project_name: "Workflow Intelligence System"
+analyzed: "2026-02-09T22:25:00Z"
+
+overall_goal: |
+  Transform the development workflow from file-based to database-driven with PostgreSQL as single source of truth, enabling agents to learn from outcomes, automatically sync documentation, and process 5-10 stories hands-off in batch mode.
+
+phases:
+  - id: 0
+    name: "Bootstrap"
+    description: "Manual setup of database schemas, MCP tools, and doc-sync infrastructure (untracked, prerequisite for all other phases)"
+
+  - id: 1
+    name: "Foundation"
+    description: "Story flattening, core tables, compatibility shim for directory→DB fallback, single source of truth"
+
+  - id: 2
+    name: "Context Cache"
+    description: "Agent missions, KB cache, sessions in DB to achieve 80% token reduction"
+
+  - id: 3
+    name: "Telemetry"
+    description: "Invocation logging, HiTL capture, full observability for all agent actions"
+
+  - id: 4
+    name: "Graph & Cohesion"
+    description: "Capabilities, rules, PO agent for completeness detection and franken-feature prevention"
+
+  - id: 5
+    name: "ML Pipeline"
+    description: "Router, quality predictor, preferences for smart automation with 85%+ accuracy"
+
+  - id: 6
+    name: "Batch Mode"
+    description: "Unattended processing, weekly reports, 5-10 stories hands-off"
+
+  - id: 7
+    name: "Migration"
+    description: "Update all 52 agents, sync docs, achieve zero directory references"
+
+stories:
+  # Phase 0: Bootstrap (Manual Infrastructure Setup)
+  - id: "WINT-0010"
+    title: "Create Core Database Schemas"
+    feature: "Create 6 database schemas in existing postgres-knowledgebase: core, context_cache, telemetry, ml, graph, workflow with pgvector already available"
+    phase: 0
+    depends_on: []
+    endpoints: []
+    infrastructure: ["postgres-knowledgebase database", "pgvector extension"]
+    goal: "Establish schema structure for all workflow data storage"
+    risk_notes: "Requires database migration script, must not break existing KB functionality"
+    sizing_warning: false
+
+  - id: "WINT-0020"
+    title: "Create Story Management Tables"
+    feature: "Create stories table (id, feature_id, title, status, priority, assignee) and story_outcomes table in core schema"
+    phase: 0
+    depends_on: ["WINT-0010"]
+    endpoints: []
+    infrastructure: ["core schema tables"]
+    goal: "Enable database-driven story tracking to replace file-based status"
+    risk_notes: "Schema must support existing story ID format and status transitions"
+    sizing_warning: false
+
+  - id: "WINT-0030"
+    title: "Create Context Cache Tables"
+    feature: "Create project_context, agent_missions, domain_kb, library_cache, and sessions tables in context_cache schema"
+    phase: 0
+    depends_on: ["WINT-0010"]
+    endpoints: []
+    infrastructure: ["context_cache schema tables", "JSONB columns"]
+    goal: "Replace .cache/ files with database storage for agent context"
+    risk_notes: "Must support complex nested JSONB structures efficiently"
+    sizing_warning: false
+
+  - id: "WINT-0040"
+    title: "Create Telemetry Tables"
+    feature: "Create agent_invocations, hitl_decisions (with embeddings), and story_outcomes tables in telemetry schema"
+    phase: 0
+    depends_on: ["WINT-0010"]
+    endpoints: []
+    infrastructure: ["telemetry schema tables", "pgvector for embeddings"]
+    goal: "Enable full observability of agent invocations and human decisions"
+    risk_notes: "Volume could be high, needs indexing strategy for performance"
+    sizing_warning: false
+
+  - id: "WINT-0050"
+    title: "Create ML Pipeline Tables"
+    feature: "Create router_training, models (bytea storage), and predictions tables in ml schema"
+    phase: 0
+    depends_on: ["WINT-0010"]
+    endpoints: []
+    infrastructure: ["ml schema tables", "bytea for model binaries"]
+    goal: "Support model training and prediction storage for ML automation"
+    risk_notes: "Model binary storage may require size limits or external storage"
+    sizing_warning: false
+
+  - id: "WINT-0060"
+    title: "Create Graph Relational Tables"
+    feature: "Create capabilities, features, epics, feature_capabilities, and views (feature_cohesion, franken_features) in graph schema using relational approach (no AGE)"
+    phase: 0
+    depends_on: ["WINT-0010"]
+    endpoints: []
+    infrastructure: ["graph schema tables", "materialized views"]
+    goal: "Enable graph-based cohesion checks using standard SQL"
+    risk_notes: "View performance needs monitoring as graph grows"
+    sizing_warning: false
+
+  - id: "WINT-0070"
+    title: "Create Workflow Tracking Tables"
+    feature: "Create phases and components tables in workflow schema with status, dependencies, and timestamps"
+    phase: 0
+    depends_on: ["WINT-0010"]
+    endpoints: []
+    infrastructure: ["workflow schema tables"]
+    goal: "Track phase and component status in database instead of files"
+    risk_notes: "Must handle circular dependency detection"
+    sizing_warning: false
+
+  - id: "WINT-0080"
+    title: "Seed Initial Workflow Data"
+    feature: "Seed workflow.phases with 8 phases (0-7), seed graph.capabilities with standard CRUD operations, seed current 115 agents, 28 commands, 13 skills"
+    phase: 0
+    depends_on: ["WINT-0070", "WINT-0060"]
+    endpoints: []
+    infrastructure: ["seed data scripts"]
+    goal: "Populate foundational reference data for workflow tracking"
+    risk_notes: "Agent metadata extraction may require parsing .agent.md files"
+    sizing_warning: false
+
+  - id: "WINT-0090"
+    title: "Create Story Management MCP Tools"
+    feature: "Add MCP tools to postgres-knowledgebase: story_get_status, story_update_status, story_get_by_status, story_get_by_feature"
+    phase: 0
+    depends_on: ["WINT-0020"]
+    endpoints: []
+    infrastructure: ["MCP server extension"]
+    goal: "Enable agents to query and update story status via MCP"
+    risk_notes: "MCP tool API must align with existing knowledgebase tools"
+    sizing_warning: false
+
+  - id: "WINT-0100"
+    title: "Create Context Cache MCP Tools"
+    feature: "Add MCP tools: workflow_get_project_context, workflow_get_agent_mission, workflow_get_domain_kb, workflow_get_library_cache"
+    phase: 0
+    depends_on: ["WINT-0030"]
+    endpoints: []
+    infrastructure: ["MCP server extension"]
+    goal: "Enable agents to retrieve cached context from database"
+    risk_notes: "Cache invalidation strategy needs careful design"
+    sizing_warning: false
+
+  - id: "WINT-0110"
+    title: "Create Session Management MCP Tools"
+    feature: "Add MCP tools: workflow_create_session, workflow_get_session, workflow_update_session, workflow_add_decision"
+    phase: 0
+    depends_on: ["WINT-0030"]
+    endpoints: []
+    infrastructure: ["MCP server extension"]
+    goal: "Enable leader→worker context sharing via database sessions"
+    risk_notes: "Session lifecycle management needs clear ownership rules"
+    sizing_warning: false
+
+  - id: "WINT-0120"
+    title: "Create Telemetry MCP Tools"
+    feature: "Add MCP tools: workflow_log_invocation, workflow_log_decision, workflow_log_outcome, workflow_get_story_telemetry"
+    phase: 0
+    depends_on: ["WINT-0040"]
+    endpoints: []
+    infrastructure: ["MCP server extension"]
+    goal: "Enable agents to log telemetry data for observability and ML training"
+    risk_notes: "High-frequency writes need batching or async strategy"
+    sizing_warning: false
+
+  - id: "WINT-0130"
+    title: "Create Graph Query MCP Tools"
+    feature: "Add MCP tools: graph_check_cohesion, graph_get_franken_features, graph_get_capability_coverage, graph_apply_rules"
+    phase: 0
+    depends_on: ["WINT-0060"]
+    endpoints: []
+    infrastructure: ["MCP server extension"]
+    goal: "Enable agents to query graph for cohesion and completeness checks"
+    risk_notes: "Complex graph queries may need optimization or caching"
+    sizing_warning: false
+
+  - id: "WINT-0140"
+    title: "Create ML Pipeline MCP Tools"
+    feature: "Add MCP tools: workflow_get_model_recommendation, workflow_get_preference_prediction, workflow_get_similar_tasks, workflow_should_auto_accept"
+    phase: 0
+    depends_on: ["WINT-0050"]
+    endpoints: []
+    infrastructure: ["MCP server extension"]
+    goal: "Enable agents to query ML models for predictions and recommendations"
+    risk_notes: "ML models won't exist until Phase 5, tools need graceful degradation"
+    sizing_warning: false
+
+  - id: "WINT-0150"
+    title: "Create doc-sync Skill"
+    feature: "Create skill that updates AGENTS.md, COMMANDS.md, SKILLS.md, and docs/workflow/ by reading current state from database and .agent.md/.command.md/.skill.md files"
+    phase: 0
+    depends_on: []
+    endpoints: []
+    infrastructure: ["new skill file"]
+    goal: "Automate documentation sync at phase/story completion"
+    risk_notes: "Must parse various metadata formats correctly"
+    sizing_warning: false
+
+  - id: "WINT-0160"
+    title: "Create doc-sync Agent"
+    feature: "Create haiku-powered worker agent that implements doc-sync skill logic"
+    phase: 0
+    depends_on: ["WINT-0150"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Execute documentation updates when triggered"
+    risk_notes: "Must handle concurrent edits to docs gracefully"
+    sizing_warning: false
+
+  - id: "WINT-0170"
+    title: "Add Doc-Sync Gate to Phase/Story Completion"
+    feature: "Modify phase/story completion workflows to require doc-sync check before marking complete"
+    phase: 0
+    depends_on: ["WINT-0160"]
+    endpoints: []
+    infrastructure: ["workflow orchestration updates"]
+    goal: "Enforce documentation currency at all completion points"
+    risk_notes: "May slow down completion if doc-sync is slow"
+    sizing_warning: false
+
+  # Phase 1: Foundation (Single Source of Truth)
+  - id: "WINT-1010"
+    title: "Create Compatibility Shim Module"
+    feature: "Create shared module that checks DB first, falls back to directory structure, used by all agents during migration"
+    phase: 1
+    depends_on: ["WINT-0090"]
+    endpoints: []
+    infrastructure: ["shared TypeScript/Python module"]
+    goal: "Enable gradual migration without breaking existing agents"
+    risk_notes: "Must maintain performance, avoid double-reads"
+    sizing_warning: false
+
+  - id: "WINT-1020"
+    title: "Flatten Story Directories"
+    feature: "Move all stories from swim-lane structure (backlog/ready/in-progress/UAT/done) to flat /stories/ directory under each epic"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["file system migration script"]
+    goal: "Simplify directory structure with status in database"
+    risk_notes: "Must preserve git history, update all references"
+    sizing_warning: false
+
+  - id: "WINT-1030"
+    title: "Populate Story Status from Directories"
+    feature: "Scan existing story directories, infer status from location (backlog/ready/UAT/done), populate core.stories table"
+    phase: 1
+    depends_on: ["WINT-1020", "WINT-0020"]
+    endpoints: []
+    infrastructure: ["migration script"]
+    goal: "Initialize database with current story status"
+    risk_notes: "Edge cases like stories in wrong directories need handling"
+    sizing_warning: false
+
+  - id: "WINT-1040"
+    title: "Update story-status Command to Use DB"
+    feature: "Modify /story-status command to query core.stories table instead of directory structure"
+    phase: 1
+    depends_on: ["WINT-1010", "WINT-1030"]
+    endpoints: []
+    infrastructure: []
+    goal: "First command to use database as source of truth"
+    risk_notes: "Must maintain backward compatibility via shim"
+    sizing_warning: false
+
+  - id: "WINT-1050"
+    title: "Update story-update Command to Use DB"
+    feature: "Modify /story-update command to update core.stories table instead of moving directories"
+    phase: 1
+    depends_on: ["WINT-1010", "WINT-1030"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enable status updates via database"
+    risk_notes: "Must handle concurrent updates correctly"
+    sizing_warning: false
+
+  - id: "WINT-1060"
+    title: "Update story-move Command to Use DB"
+    feature: "Modify /story-move command to update database status instead of moving directories"
+    phase: 1
+    depends_on: ["WINT-1010", "WINT-1030"]
+    endpoints: []
+    infrastructure: []
+    goal: "Deprecate directory-based story movement"
+    risk_notes: "May still need to move directories for backward compatibility"
+    sizing_warning: false
+
+  - id: "WINT-1070"
+    title: "Deprecate stories.index.md as Source of Truth"
+    feature: "Change stories.index.md to generated/read-only, create generation script that reads from database"
+    phase: 1
+    depends_on: ["WINT-1030"]
+    endpoints: []
+    infrastructure: ["generation script"]
+    goal: "Make index file reflect database state, not define it"
+    risk_notes: "Must run generation automatically after DB changes"
+    sizing_warning: false
+
+  - id: "WINT-1080"
+    title: "Validate Foundation Phase"
+    feature: "Verify all story CRUD operations work via DB, shim fallback functions correctly, and 3 updated commands use DB"
+    phase: 1
+    depends_on: ["WINT-1040", "WINT-1050", "WINT-1060", "WINT-1070"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure foundation is solid before context cache work"
+    risk_notes: "Integration testing required"
+    sizing_warning: false
+
+  # Phase 2: Context Cache (Token Reduction)
+  - id: "WINT-2010"
+    title: "Populate Project Context Cache"
+    feature: "Extract conventions, patterns, tech stack from CLAUDE.md, tech-stack docs, testing docs and populate context_cache.project_context"
+    phase: 2
+    depends_on: ["WINT-0030", "WINT-0100"]
+    endpoints: []
+    infrastructure: []
+    goal: "Cache static project knowledge for agent retrieval"
+    risk_notes: "Must keep cache in sync when docs change"
+    sizing_warning: false
+
+  - id: "WINT-2020"
+    title: "Populate Agent Mission Cache"
+    feature: "Parse all 115 .agent.md files, extract mission/scope/signals, populate context_cache.agent_missions"
+    phase: 2
+    depends_on: ["WINT-0030", "WINT-0100"]
+    endpoints: []
+    infrastructure: ["agent metadata parser"]
+    goal: "Cache agent identity for quick retrieval"
+    risk_notes: "Parser must handle various frontmatter formats"
+    sizing_warning: false
+
+  - id: "WINT-2030"
+    title: "Populate Domain Knowledge Cache"
+    feature: "Extract domain patterns, ADRs, blockers, lessons from docs/ and populate context_cache.domain_kb"
+    phase: 2
+    depends_on: ["WINT-0030", "WINT-0100"]
+    endpoints: []
+    infrastructure: ["docs parser"]
+    goal: "Cache domain knowledge by area (frontend, backend, testing, etc.)"
+    risk_notes: "Domain categorization may need manual review"
+    sizing_warning: false
+
+  - id: "WINT-2040"
+    title: "Populate Library Cache"
+    feature: "Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs"
+    phase: 2
+    depends_on: ["WINT-0030", "WINT-0100"]
+    endpoints: []
+    infrastructure: ["code example extractor"]
+    goal: "Cache library usage patterns for agent reference"
+    risk_notes: "Must stay current with library updates"
+    sizing_warning: false
+
+  - id: "WINT-2050"
+    title: "Implement Cache Warming Strategy"
+    feature: "Create cache-warm skill that pre-populates all caches before workflow starts"
+    phase: 2
+    depends_on: ["WINT-2010", "WINT-2020", "WINT-2030", "WINT-2040"]
+    endpoints: []
+    infrastructure: ["new skill"]
+    goal: "Ensure caches are fresh before high-volume operations"
+    risk_notes: "Warming all caches may be slow"
+    sizing_warning: false
+
+  - id: "WINT-2060"
+    title: "Create context-warmer Agent"
+    feature: "Create haiku-powered worker agent that implements cache-warm skill"
+    phase: 2
+    depends_on: ["WINT-2050"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Execute cache warming when triggered"
+    risk_notes: "Must handle partial failures gracefully"
+    sizing_warning: false
+
+  - id: "WINT-2070"
+    title: "Implement Session Context Management"
+    feature: "Create session-create, session-inherit skills for leader→worker context sharing"
+    phase: 2
+    depends_on: ["WINT-0110"]
+    endpoints: []
+    infrastructure: ["new skills"]
+    goal: "Enable stateful workflows with shared context"
+    risk_notes: "Session cleanup strategy needed"
+    sizing_warning: false
+
+  - id: "WINT-2080"
+    title: "Create session-manager Agent"
+    feature: "Create haiku-powered worker agent that manages session lifecycle"
+    phase: 2
+    depends_on: ["WINT-2070"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Handle session creation, updates, cleanup"
+    risk_notes: "Must prevent session leaks"
+    sizing_warning: false
+
+  - id: "WINT-2090"
+    title: "Update 5 High-Volume Agents to Use Cache"
+    feature: "Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache"
+    phase: 2
+    depends_on: ["WINT-2010", "WINT-2020", "WINT-2030", "WINT-2040", "WINT-0100"]
+    endpoints: []
+    infrastructure: []
+    goal: "Achieve initial token reduction in most active agents"
+    risk_notes: "Must measure token usage before/after"
+    sizing_warning: true
+
+  - id: "WINT-2100"
+    title: "Measure Token Reduction"
+    feature: "Run benchmark comparing token usage before/after cache implementation, target 80% reduction"
+    phase: 2
+    depends_on: ["WINT-2090"]
+    endpoints: []
+    infrastructure: ["benchmark scripts"]
+    goal: "Validate cache effectiveness"
+    risk_notes: "May need cache tuning if targets not met"
+    sizing_warning: false
+
+  # Phase 3: Telemetry (Full Observability)
+  - id: "WINT-3010"
+    title: "Implement Invocation Logging"
+    feature: "Create telemetry-log skill that logs every agent spawn with tokens, latency, success/failure to telemetry.agent_invocations"
+    phase: 3
+    depends_on: ["WINT-0120"]
+    endpoints: []
+    infrastructure: ["new skill"]
+    goal: "Track all agent activity for analysis"
+    risk_notes: "High-frequency writes need batching"
+    sizing_warning: false
+
+  - id: "WINT-3020"
+    title: "Create telemetry-logger Agent"
+    feature: "Create haiku-powered worker agent that implements telemetry logging"
+    phase: 3
+    depends_on: ["WINT-3010"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Execute telemetry logging when triggered"
+    risk_notes: "Must not add significant latency to workflows"
+    sizing_warning: false
+
+  - id: "WINT-3030"
+    title: "Implement Decision Logging with Embeddings"
+    feature: "Create telemetry-decision skill that logs HiTL decisions with context embeddings to telemetry.hitl_decisions"
+    phase: 3
+    depends_on: ["WINT-0120"]
+    endpoints: []
+    infrastructure: ["new skill", "embedding generation"]
+    goal: "Capture human decisions for preference learning"
+    risk_notes: "Embedding generation adds latency"
+    sizing_warning: false
+
+  - id: "WINT-3040"
+    title: "Implement Outcome Logging"
+    feature: "Add workflow_log_outcome calls at story completion to track quality_score, tokens, cost, churn"
+    phase: 3
+    depends_on: ["WINT-0120"]
+    endpoints: []
+    infrastructure: []
+    goal: "Track story-level outcomes for quality prediction"
+    risk_notes: "Quality scoring needs clear definition"
+    sizing_warning: false
+
+  - id: "WINT-3050"
+    title: "Create Telemetry Query Command"
+    feature: "Create /telemetry command that shows story-level telemetry: agent invocations, decisions, outcomes"
+    phase: 3
+    depends_on: ["WINT-3010", "WINT-3030", "WINT-3040"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Enable human review of telemetry data"
+    risk_notes: "Query performance needs optimization"
+    sizing_warning: false
+
+  - id: "WINT-3060"
+    title: "Update 10 Core Workflow Agents with Telemetry"
+    feature: "Add telemetry-log calls to workflow orchestrators: pm-bootstrap-workflow, elab-epic, elab-story, dev-implement-story, dev-fix-story, qa-verify-story, pm-refine-story, story-status, story-update, story-move"
+    phase: 3
+    depends_on: ["WINT-3020"]
+    endpoints: []
+    infrastructure: []
+    goal: "Capture telemetry from primary workflow paths"
+    risk_notes: "Must not break existing workflows"
+    sizing_warning: true
+
+  - id: "WINT-3070"
+    title: "Validate Telemetry Collection"
+    feature: "Run full story workflow, verify all invocations and decisions are logged correctly"
+    phase: 3
+    depends_on: ["WINT-3060"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure telemetry system is working end-to-end"
+    risk_notes: "May discover missing instrumentation points"
+    sizing_warning: false
+
+  # Phase 4: Graph & Cohesion (Completeness Detection)
+  - id: "WINT-4010"
+    title: "Populate Graph with Existing Features"
+    feature: "Scan all existing features, populate graph.epics and graph.features tables"
+    phase: 4
+    depends_on: ["WINT-0060", "WINT-0130"]
+    endpoints: []
+    infrastructure: ["graph population script"]
+    goal: "Build initial graph from current codebase"
+    risk_notes: "Feature extraction may need manual validation"
+    sizing_warning: false
+
+  - id: "WINT-4020"
+    title: "Infer Existing Capabilities"
+    feature: "Analyze existing stories to infer which capabilities (create/view/edit/delete/upload/replace/download) each feature has, populate graph.feature_capabilities"
+    phase: 4
+    depends_on: ["WINT-4010"]
+    endpoints: []
+    infrastructure: ["capability inference script"]
+    goal: "Build capability graph from historical data"
+    risk_notes: "Inference may miss capabilities, need validation"
+    sizing_warning: false
+
+  - id: "WINT-4030"
+    title: "Create Cohesion Rules"
+    feature: "Define rules: features with 'create' need 'delete', features with 'upload' need 'replace', etc."
+    phase: 4
+    depends_on: ["WINT-4020"]
+    endpoints: []
+    infrastructure: ["rules table"]
+    goal: "Formalize cohesion requirements"
+    risk_notes: "Rules may need exceptions"
+    sizing_warning: false
+
+  - id: "WINT-4040"
+    title: "Create graph-checker Agent"
+    feature: "Create haiku-powered worker agent that queries graph views (franken_features, capability_coverage) and applies rules"
+    phase: 4
+    depends_on: ["WINT-4030", "WINT-0130"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Detect incomplete features automatically"
+    risk_notes: "Must provide actionable feedback"
+    sizing_warning: false
+
+  - id: "WINT-4050"
+    title: "Create cohesion-prosecutor Agent (PO Role)"
+    feature: "Create sonnet-powered worker agent that acts as Product Owner, ensuring features have all necessary CRUD capabilities before marking complete"
+    phase: 4
+    depends_on: ["WINT-4040"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Enforce feature completeness at workflow gates"
+    risk_notes: "May create friction if too strict"
+    sizing_warning: false
+
+  - id: "WINT-4060"
+    title: "Create scope-defender Agent (Devil's Advocate)"
+    feature: "Create haiku-powered worker agent that challenges non-MVP features and defers to backlog"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Prevent scope creep during implementation"
+    risk_notes: "Needs clear MVP definition"
+    sizing_warning: false
+
+  - id: "WINT-4070"
+    title: "Create evidence-judge Agent"
+    feature: "Create haiku-powered worker agent that requires proof for all acceptance criteria, no vibes-based approval"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Ensure rigorous QA standards"
+    risk_notes: "May slow down approvals"
+    sizing_warning: false
+
+  - id: "WINT-4080"
+    title: "Create backlog-curator Agent"
+    feature: "Create haiku-powered worker agent that manages deferred items and surfaces for PM review"
+    phase: 4
+    depends_on: ["WINT-4060"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Properly capture and track deferred work"
+    risk_notes: "Backlog management strategy needed"
+    sizing_warning: false
+
+  - id: "WINT-4090"
+    title: "Create Cohesion Check Command"
+    feature: "Create /cohesion-check command that spawns graph-checker agent for a given feature"
+    phase: 4
+    depends_on: ["WINT-4040"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Enable manual cohesion verification"
+    risk_notes: "Should auto-run at story completion"
+    sizing_warning: false
+
+  - id: "WINT-4100"
+    title: "Integrate Cohesion Checks into Workflow"
+    feature: "Add cohesion-prosecutor calls to qa-verify-story and dev-implement-story workflows"
+    phase: 4
+    depends_on: ["WINT-4050", "WINT-4090"]
+    endpoints: []
+    infrastructure: []
+    goal: "Automate cohesion enforcement"
+    risk_notes: "Must handle failures gracefully"
+    sizing_warning: false
+
+  - id: "WINT-4110"
+    title: "Validate Graph & Cohesion System"
+    feature: "Test on existing franken-features (upload without replace, create without delete), verify detection and enforcement"
+    phase: 4
+    depends_on: ["WINT-4100"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure graph system catches real issues"
+    risk_notes: "May need rule tuning"
+    sizing_warning: false
+
+  # Phase 5: ML Pipeline (Smart Automation)
+  - id: "WINT-5010"
+    title: "Create Classification Agent"
+    feature: "Create haiku-powered worker agent that classifies decisions as MVP/Feature/Moonshot/Critical"
+    phase: 5
+    depends_on: ["WINT-3030"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Categorize decisions for routing and learning"
+    risk_notes: "Classification accuracy needs validation"
+    sizing_warning: false
+
+  - id: "WINT-5020"
+    title: "Create classify-decision Skill"
+    feature: "Create skill that invokes classification agent at decision points"
+    phase: 5
+    depends_on: ["WINT-5010"]
+    endpoints: []
+    infrastructure: ["new skill"]
+    goal: "Integrate classification into workflows"
+    risk_notes: "Adds latency to decision flow"
+    sizing_warning: false
+
+  - id: "WINT-5030"
+    title: "Collect ML Training Data"
+    feature: "Wait for 30-50 stories of telemetry data (invocations, decisions, outcomes) before training models"
+    phase: 5
+    depends_on: ["WINT-3070"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure sufficient training data"
+    risk_notes: "May take several weeks to accumulate"
+    sizing_warning: false
+
+  - id: "WINT-5040"
+    title: "Train Model Router (LightGBM)"
+    feature: "Train LightGBM model on task features → model choice (haiku/sonnet) with 85%+ accuracy target"
+    phase: 5
+    depends_on: ["WINT-5030"]
+    endpoints: []
+    infrastructure: ["Python ML environment", "model storage"]
+    goal: "Automate model selection for agents"
+    risk_notes: "Model accuracy depends on training data quality"
+    sizing_warning: false
+
+  - id: "WINT-5050"
+    title: "Train Quality Predictor (XGBoost)"
+    feature: "Train XGBoost model on story features → quality_score prediction"
+    phase: 5
+    depends_on: ["WINT-5030"]
+    endpoints: []
+    infrastructure: ["Python ML environment", "model storage"]
+    goal: "Predict story outcomes before starting"
+    risk_notes: "Quality scoring needs clear definition"
+    sizing_warning: false
+
+  - id: "WINT-5060"
+    title: "Train Preference Learner (Random Forest)"
+    feature: "Train Random Forest on decision context embeddings → user choice with confidence"
+    phase: 5
+    depends_on: ["WINT-5030"]
+    endpoints: []
+    infrastructure: ["Python ML environment", "model storage"]
+    goal: "Enable auto-accept for high-confidence predictions"
+    risk_notes: "Must avoid dangerous auto-accepts"
+    sizing_warning: false
+
+  - id: "WINT-5070"
+    title: "Create model-recommender Agent"
+    feature: "Create haiku-powered worker agent that queries trained model router"
+    phase: 5
+    depends_on: ["WINT-5040", "WINT-0140"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Serve model recommendations to workflows"
+    risk_notes: "Must handle cold-start (no model yet)"
+    sizing_warning: false
+
+  - id: "WINT-5080"
+    title: "Create preference-predictor Agent"
+    feature: "Create haiku-powered worker agent that queries preference learner"
+    phase: 5
+    depends_on: ["WINT-5060", "WINT-0140"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Predict user choices at decision points"
+    risk_notes: "Must show confidence level"
+    sizing_warning: false
+
+  - id: "WINT-5090"
+    title: "Create predict-preference Skill"
+    feature: "Create skill that calls preference-predictor before HiTL prompts, auto-accepts if confidence > 90%"
+    phase: 5
+    depends_on: ["WINT-5080"]
+    endpoints: []
+    infrastructure: ["new skill"]
+    goal: "Reduce HiTL prompts from 10-15 to 3-5 per story"
+    risk_notes: "Must allow override of auto-accepts"
+    sizing_warning: false
+
+  - id: "WINT-5100"
+    title: "Create Model Recommendation Command"
+    feature: "Create /model-recommend command for manual model selection queries"
+    phase: 5
+    depends_on: ["WINT-5070"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Enable explicit model recommendations"
+    risk_notes: "Should integrate into agent spawning"
+    sizing_warning: false
+
+  - id: "WINT-5110"
+    title: "Create Preference Check Command"
+    feature: "Create /preference-check command to test predictions before committing"
+    phase: 5
+    depends_on: ["WINT-5080"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Allow testing of preference predictions"
+    risk_notes: "Useful for debugging but not for production"
+    sizing_warning: false
+
+  - id: "WINT-5120"
+    title: "Integrate ML into 5 High-Volume Workflows"
+    feature: "Add predict-preference skill to pm-refine-story, dev-implement-story, qa-verify-story, dev-fix-story, elab-story"
+    phase: 5
+    depends_on: ["WINT-5090"]
+    endpoints: []
+    infrastructure: []
+    goal: "Achieve HiTL reduction in primary workflows"
+    risk_notes: "Must measure HiTL reduction before/after"
+    sizing_warning: true
+
+  - id: "WINT-5130"
+    title: "Measure ML Effectiveness"
+    feature: "Run benchmark comparing HiTL prompts, auto-accept accuracy (target 90%), model routing accuracy (target 85%)"
+    phase: 5
+    depends_on: ["WINT-5120"]
+    endpoints: []
+    infrastructure: ["benchmark scripts"]
+    goal: "Validate ML pipeline effectiveness"
+    risk_notes: "May need model retraining if targets not met"
+    sizing_warning: false
+
+  # Phase 6: Batch Mode (Unattended Processing)
+  - id: "WINT-6010"
+    title: "Create batch-coordinator Agent"
+    feature: "Create sonnet-powered leader agent that orchestrates multi-story processing with minimal human intervention"
+    phase: 6
+    depends_on: ["WINT-5090"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Enable batch processing of 5-10 stories"
+    risk_notes: "Error handling must be robust"
+    sizing_warning: false
+
+  - id: "WINT-6020"
+    title: "Create Batch Process Command"
+    feature: "Create /batch-process command that takes epic + count, spawns batch-coordinator with story queue"
+    phase: 6
+    depends_on: ["WINT-6010"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Trigger unattended batch workflows"
+    risk_notes: "Must handle partial failures gracefully"
+    sizing_warning: false
+
+  - id: "WINT-6030"
+    title: "Create Batch Status Command"
+    feature: "Create /batch-status command that shows progress of current batch operation"
+    phase: 6
+    depends_on: ["WINT-6020"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Monitor batch progress without interruption"
+    risk_notes: "Needs real-time updates"
+    sizing_warning: false
+
+  - id: "WINT-6040"
+    title: "Create batch-summary Skill"
+    feature: "Create skill that generates completion report after batch run: successes, failures, tokens, time"
+    phase: 6
+    depends_on: ["WINT-6010"]
+    endpoints: []
+    infrastructure: ["new skill"]
+    goal: "Provide batch outcome summary"
+    risk_notes: "Summary needs actionable insights"
+    sizing_warning: false
+
+  - id: "WINT-6050"
+    title: "Implement Batch Queue with Approval Gate"
+    feature: "Queue completed stories for review before merge, with summary report"
+    phase: 6
+    depends_on: ["WINT-6040"]
+    endpoints: []
+    infrastructure: ["queue management"]
+    goal: "Allow human review before batch merge"
+    risk_notes: "Queue may grow if not reviewed regularly"
+    sizing_warning: false
+
+  - id: "WINT-6060"
+    title: "Create weekly-analyst Agent"
+    feature: "Create sonnet-powered worker agent that analyzes week's telemetry and generates improvement recommendations"
+    phase: 6
+    depends_on: ["WINT-3070"]
+    endpoints: []
+    infrastructure: ["new agent file"]
+    goal: "Enable continuous workflow improvement"
+    risk_notes: "Analysis quality depends on telemetry richness"
+    sizing_warning: false
+
+  - id: "WINT-6070"
+    title: "Create Weekly Report Command"
+    feature: "Create /weekly-report command that spawns weekly-analyst"
+    phase: 6
+    depends_on: ["WINT-6060"]
+    endpoints: []
+    infrastructure: ["new command"]
+    goal: "Trigger weekly analysis on demand"
+    risk_notes: "Should also run automatically"
+    sizing_warning: false
+
+  - id: "WINT-6080"
+    title: "Test Batch Processing on 5 Stories"
+    feature: "Run batch-process on small epic with 5 stories, validate end-to-end flow"
+    phase: 6
+    depends_on: ["WINT-6050"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure batch mode works before scaling"
+    risk_notes: "May reveal edge cases"
+    sizing_warning: false
+
+  - id: "WINT-6090"
+    title: "Test Batch Processing on 10 Stories"
+    feature: "Run batch-process on medium epic with 10 stories, measure token usage and time"
+    phase: 6
+    depends_on: ["WINT-6080"]
+    endpoints: []
+    infrastructure: []
+    goal: "Validate batch scalability"
+    risk_notes: "May hit rate limits or performance issues"
+    sizing_warning: false
+
+  # Phase 7: Migration (Update All Agents)
+  - id: "WINT-7010"
+    title: "Audit Agent Directory References"
+    feature: "Scan all 115 .agent.md files for references to swim-lane directories (backlog/ready/in-progress/UAT/done)"
+    phase: 7
+    depends_on: []
+    endpoints: []
+    infrastructure: ["audit script"]
+    goal: "Identify all agents needing migration"
+    risk_notes: "Some references may be in comments or examples"
+    sizing_warning: false
+
+  - id: "WINT-7020"
+    title: "Create Agent Migration Plan"
+    feature: "Categorize 52 agents by risk, create migration order (5-10 per iteration)"
+    phase: 7
+    depends_on: ["WINT-7010"]
+    endpoints: []
+    infrastructure: ["migration plan doc"]
+    goal: "Systematic migration strategy"
+    risk_notes: "High-risk agents need careful testing"
+    sizing_warning: false
+
+  - id: "WINT-7030"
+    title: "Migrate Batch 1 Agents (Story Management)"
+    feature: "Update story-status, story-update, story-move, index-update agents to use DB exclusively"
+    phase: 7
+    depends_on: ["WINT-7020", "WINT-1080"]
+    endpoints: []
+    infrastructure: []
+    goal: "Migrate core story management agents"
+    risk_notes: "Critical path agents, need thorough testing"
+    sizing_warning: false
+
+  - id: "WINT-7040"
+    title: "Migrate Batch 2 Agents (Workflow Orchestration)"
+    feature: "Update pm-bootstrap-workflow, elab-epic, elab-story, pm-refine-story, workflow-batch agents"
+    phase: 7
+    depends_on: ["WINT-7030"]
+    endpoints: []
+    infrastructure: []
+    goal: "Migrate workflow orchestrators"
+    risk_notes: "Complex agents, may need extensive changes"
+    sizing_warning: false
+
+  - id: "WINT-7050"
+    title: "Migrate Batch 3 Agents (Development)"
+    feature: "Update dev-implement-story, dev-code-review, dev-fix-story agents"
+    phase: 7
+    depends_on: ["WINT-7040"]
+    endpoints: []
+    infrastructure: []
+    goal: "Migrate development workflow agents"
+    risk_notes: "High-volume agents, performance critical"
+    sizing_warning: false
+
+  - id: "WINT-7060"
+    title: "Migrate Batch 4 Agents (QA)"
+    feature: "Update qa-verify-story, qa-gate, evidence-judge agents"
+    phase: 7
+    depends_on: ["WINT-7050"]
+    endpoints: []
+    infrastructure: []
+    goal: "Migrate QA workflow agents"
+    risk_notes: "Quality gates must remain rigorous"
+    sizing_warning: false
+
+  - id: "WINT-7070"
+    title: "Migrate Batch 5 Agents (Review)"
+    feature: "Update review, review-draft-story, architect-review, ui-ux-review agents"
+    phase: 7
+    depends_on: ["WINT-7060"]
+    endpoints: []
+    infrastructure: []
+    goal: "Migrate review workflow agents"
+    risk_notes: "Review quality must not degrade"
+    sizing_warning: false
+
+  - id: "WINT-7080"
+    title: "Migrate Batch 6 Agents (Reporting)"
+    feature: "Update token-log, token-report, calibration-report, workflow-retro, scrum-master agents"
+    phase: 7
+    depends_on: ["WINT-7070"]
+    endpoints: []
+    infrastructure: []
+    goal: "Migrate reporting and analysis agents"
+    risk_notes: "Historical data queries may need adjustment"
+    sizing_warning: false
+
+  - id: "WINT-7090"
+    title: "Migrate Batch 7 Agents (Utility)"
+    feature: "Update remaining agents: feedback, checkpoint, precondition-check, context-init, pm-fix-story, pm-generate-story-000-harness"
+    phase: 7
+    depends_on: ["WINT-7080"]
+    endpoints: []
+    infrastructure: []
+    goal: "Complete agent migration"
+    risk_notes: "Final cleanup of low-frequency agents"
+    sizing_warning: false
+
+  - id: "WINT-7100"
+    title: "Remove Compatibility Shim"
+    feature: "Remove directory fallback code from compatibility shim, make DB-only"
+    phase: 7
+    depends_on: ["WINT-7090"]
+    endpoints: []
+    infrastructure: []
+    goal: "Eliminate dual-source complexity"
+    risk_notes: "Must ensure all agents migrated first"
+    sizing_warning: false
+
+  - id: "WINT-7110"
+    title: "Run Full Workflow Test Suite"
+    feature: "Execute complete story workflow (bootstrap → elab → dev → QA → done) using only DB queries"
+    phase: 7
+    depends_on: ["WINT-7100"]
+    endpoints: []
+    infrastructure: []
+    goal: "Validate end-to-end migration"
+    risk_notes: "May discover edge cases or regressions"
+    sizing_warning: false
+
+  - id: "WINT-7120"
+    title: "Final Documentation Sync"
+    feature: "Run doc-sync to update all docs with final agent states, workflow changes, and new capabilities"
+    phase: 7
+    depends_on: ["WINT-7110"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure docs reflect completed migration"
+    risk_notes: "Large doc update, need careful review"
+    sizing_warning: false
+
+  - id: "WINT-7130"
+    title: "Archive Legacy Directory Structure"
+    feature: "Document legacy swim-lane structure for reference, mark as deprecated"
+    phase: 7
+    depends_on: ["WINT-7120"]
+    endpoints: []
+    infrastructure: []
+    goal: "Preserve historical context"
+    risk_notes: "Don't delete directories, just document"
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "WINT-0010": []
+    "WINT-0020": ["WINT-0010"]
+    "WINT-0030": ["WINT-0010"]
+    "WINT-0040": ["WINT-0010"]
+    "WINT-0050": ["WINT-0010"]
+    "WINT-0060": ["WINT-0010"]
+    "WINT-0070": ["WINT-0010"]
+    "WINT-0080": ["WINT-0070", "WINT-0060"]
+    "WINT-0090": ["WINT-0020"]
+    "WINT-0100": ["WINT-0030"]
+    "WINT-0110": ["WINT-0030"]
+    "WINT-0120": ["WINT-0040"]
+    "WINT-0130": ["WINT-0060"]
+    "WINT-0140": ["WINT-0050"]
+    "WINT-0150": []
+    "WINT-0160": ["WINT-0150"]
+    "WINT-0170": ["WINT-0160"]
+    "WINT-1010": ["WINT-0090"]
+    "WINT-1020": []
+    "WINT-1030": ["WINT-1020", "WINT-0020"]
+    "WINT-1040": ["WINT-1010", "WINT-1030"]
+    "WINT-1050": ["WINT-1010", "WINT-1030"]
+    "WINT-1060": ["WINT-1010", "WINT-1030"]
+    "WINT-1070": ["WINT-1030"]
+    "WINT-1080": ["WINT-1040", "WINT-1050", "WINT-1060", "WINT-1070"]
+    "WINT-2010": ["WINT-0030", "WINT-0100"]
+    "WINT-2020": ["WINT-0030", "WINT-0100"]
+    "WINT-2030": ["WINT-0030", "WINT-0100"]
+    "WINT-2040": ["WINT-0030", "WINT-0100"]
+    "WINT-2050": ["WINT-2010", "WINT-2020", "WINT-2030", "WINT-2040"]
+    "WINT-2060": ["WINT-2050"]
+    "WINT-2070": ["WINT-0110"]
+    "WINT-2080": ["WINT-2070"]
+    "WINT-2090": ["WINT-2010", "WINT-2020", "WINT-2030", "WINT-2040", "WINT-0100"]
+    "WINT-2100": ["WINT-2090"]
+    "WINT-3010": ["WINT-0120"]
+    "WINT-3020": ["WINT-3010"]
+    "WINT-3030": ["WINT-0120"]
+    "WINT-3040": ["WINT-0120"]
+    "WINT-3050": ["WINT-3010", "WINT-3030", "WINT-3040"]
+    "WINT-3060": ["WINT-3020"]
+    "WINT-3070": ["WINT-3060"]
+    "WINT-4010": ["WINT-0060", "WINT-0130"]
+    "WINT-4020": ["WINT-4010"]
+    "WINT-4030": ["WINT-4020"]
+    "WINT-4040": ["WINT-4030", "WINT-0130"]
+    "WINT-4050": ["WINT-4040"]
+    "WINT-4060": []
+    "WINT-4070": []
+    "WINT-4080": ["WINT-4060"]
+    "WINT-4090": ["WINT-4040"]
+    "WINT-4100": ["WINT-4050", "WINT-4090"]
+    "WINT-4110": ["WINT-4100"]
+    "WINT-5010": ["WINT-3030"]
+    "WINT-5020": ["WINT-5010"]
+    "WINT-5030": ["WINT-3070"]
+    "WINT-5040": ["WINT-5030"]
+    "WINT-5050": ["WINT-5030"]
+    "WINT-5060": ["WINT-5030"]
+    "WINT-5070": ["WINT-5040", "WINT-0140"]
+    "WINT-5080": ["WINT-5060", "WINT-0140"]
+    "WINT-5090": ["WINT-5080"]
+    "WINT-5100": ["WINT-5070"]
+    "WINT-5110": ["WINT-5080"]
+    "WINT-5120": ["WINT-5090"]
+    "WINT-5130": ["WINT-5120"]
+    "WINT-6010": ["WINT-5090"]
+    "WINT-6020": ["WINT-6010"]
+    "WINT-6030": ["WINT-6020"]
+    "WINT-6040": ["WINT-6010"]
+    "WINT-6050": ["WINT-6040"]
+    "WINT-6060": ["WINT-3070"]
+    "WINT-6070": ["WINT-6060"]
+    "WINT-6080": ["WINT-6050"]
+    "WINT-6090": ["WINT-6080"]
+    "WINT-7010": []
+    "WINT-7020": ["WINT-7010"]
+    "WINT-7030": ["WINT-7020", "WINT-1080"]
+    "WINT-7040": ["WINT-7030"]
+    "WINT-7050": ["WINT-7040"]
+    "WINT-7060": ["WINT-7050"]
+    "WINT-7070": ["WINT-7060"]
+    "WINT-7080": ["WINT-7070"]
+    "WINT-7090": ["WINT-7080"]
+    "WINT-7100": ["WINT-7090"]
+    "WINT-7110": ["WINT-7100"]
+    "WINT-7120": ["WINT-7110"]
+    "WINT-7130": ["WINT-7120"]
+
+  critical_path:
+    - "WINT-0010"
+    - "WINT-0020"
+    - "WINT-0090"
+    - "WINT-1010"
+    - "WINT-1020"
+    - "WINT-1030"
+    - "WINT-1040"
+    - "WINT-1080"
+    - "WINT-2010"
+    - "WINT-2090"
+    - "WINT-2100"
+    - "WINT-3010"
+    - "WINT-3020"
+    - "WINT-3060"
+    - "WINT-3070"
+    - "WINT-5030"
+    - "WINT-5040"
+    - "WINT-5070"
+    - "WINT-5090"
+    - "WINT-5120"
+    - "WINT-5130"
+    - "WINT-6010"
+    - "WINT-6020"
+    - "WINT-6050"
+    - "WINT-6080"
+    - "WINT-6090"
+    - "WINT-7020"
+    - "WINT-7030"
+    - "WINT-7040"
+    - "WINT-7050"
+    - "WINT-7060"
+    - "WINT-7070"
+    - "WINT-7080"
+    - "WINT-7090"
+    - "WINT-7100"
+    - "WINT-7110"
+    - "WINT-7120"
+    - "WINT-7130"
+
+  critical_path_length: 39
+
+parallelization:
+  max_parallel: 6
+  groups:
+    - stories: ["WINT-0010"]
+      after: null
+    - stories: ["WINT-0020", "WINT-0030", "WINT-0040", "WINT-0050", "WINT-0060", "WINT-0070"]
+      after: "group_1"
+    - stories: ["WINT-0080", "WINT-0090", "WINT-0100", "WINT-0110", "WINT-0120", "WINT-0130", "WINT-0140", "WINT-0150"]
+      after: "group_2"
+    - stories: ["WINT-0160", "WINT-1020"]
+      after: "group_3"
+    - stories: ["WINT-0170", "WINT-1010", "WINT-1030"]
+      after: "group_4"
+    - stories: ["WINT-1040", "WINT-1050", "WINT-1060", "WINT-1070"]
+      after: "group_5"
+    - stories: ["WINT-1080"]
+      after: "group_6"
+    - stories: ["WINT-2010", "WINT-2020", "WINT-2030", "WINT-2040", "WINT-2070"]
+      after: "group_7"
+    - stories: ["WINT-2050", "WINT-2080"]
+      after: "group_8"
+    - stories: ["WINT-2060", "WINT-2090"]
+      after: "group_9"
+    - stories: ["WINT-2100"]
+      after: "group_10"
+    - stories: ["WINT-3010", "WINT-3030", "WINT-3040"]
+      after: "group_11"
+    - stories: ["WINT-3020", "WINT-3050"]
+      after: "group_12"
+    - stories: ["WINT-3060"]
+      after: "group_13"
+    - stories: ["WINT-3070"]
+      after: "group_14"
+    - stories: ["WINT-4010"]
+      after: "group_15"
+    - stories: ["WINT-4020"]
+      after: "group_16"
+    - stories: ["WINT-4030"]
+      after: "group_17"
+    - stories: ["WINT-4040", "WINT-4060", "WINT-4070"]
+      after: "group_18"
+    - stories: ["WINT-4050", "WINT-4080", "WINT-4090"]
+      after: "group_19"
+    - stories: ["WINT-4100"]
+      after: "group_20"
+    - stories: ["WINT-4110", "WINT-5010"]
+      after: "group_21"
+    - stories: ["WINT-5020"]
+      after: "group_22"
+    - stories: ["WINT-5030"]
+      after: "group_23"
+    - stories: ["WINT-5040", "WINT-5050", "WINT-5060"]
+      after: "group_24"
+    - stories: ["WINT-5070", "WINT-5080"]
+      after: "group_25"
+    - stories: ["WINT-5090", "WINT-5100", "WINT-5110"]
+      after: "group_26"
+    - stories: ["WINT-5120"]
+      after: "group_27"
+    - stories: ["WINT-5130", "WINT-6060"]
+      after: "group_28"
+    - stories: ["WINT-6010", "WINT-6070"]
+      after: "group_29"
+    - stories: ["WINT-6020", "WINT-6040"]
+      after: "group_30"
+    - stories: ["WINT-6030", "WINT-6050"]
+      after: "group_31"
+    - stories: ["WINT-6080", "WINT-7010"]
+      after: "group_32"
+    - stories: ["WINT-6090", "WINT-7020"]
+      after: "group_33"
+    - stories: ["WINT-7030"]
+      after: "group_34"
+    - stories: ["WINT-7040"]
+      after: "group_35"
+    - stories: ["WINT-7050"]
+      after: "group_36"
+    - stories: ["WINT-7060"]
+      after: "group_37"
+    - stories: ["WINT-7070"]
+      after: "group_38"
+    - stories: ["WINT-7080"]
+      after: "group_39"
+    - stories: ["WINT-7090"]
+      after: "group_40"
+    - stories: ["WINT-7100"]
+      after: "group_41"
+    - stories: ["WINT-7110"]
+      after: "group_42"
+    - stories: ["WINT-7120"]
+      after: "group_43"
+    - stories: ["WINT-7130"]
+      after: "group_44"
+
+risks:
+  - id: "RISK-001"
+    description: "Database migration complexity - modifying existing postgres-knowledgebase could break current functionality"
+    affected_stories: ["WINT-0010", "WINT-0020", "WINT-0030", "WINT-0040", "WINT-0050", "WINT-0060", "WINT-0070"]
+    severity: high
+
+  - id: "RISK-002"
+    description: "Insufficient training data - need 30-50 stories before ML models are meaningful, may take weeks to accumulate"
+    affected_stories: ["WINT-5030", "WINT-5040", "WINT-5050", "WINT-5060"]
+    severity: medium
+
+  - id: "RISK-003"
+    description: "Model accuracy targets - 85% routing, 90% auto-accept may not be achievable, requiring threshold adjustments"
+    affected_stories: ["WINT-5040", "WINT-5060", "WINT-5130"]
+    severity: medium
+
+  - id: "RISK-004"
+    description: "Compatibility shim performance - dual-read pattern could slow down agents during migration period"
+    affected_stories: ["WINT-1010"]
+    severity: low
+
+  - id: "RISK-005"
+    description: "Agent migration scope - 52 agents to update is large, may discover edge cases or need for additional phases"
+    affected_stories: ["WINT-7030", "WINT-7040", "WINT-7050", "WINT-7060", "WINT-7070", "WINT-7080", "WINT-7090"]
+    severity: high
+
+  - id: "RISK-006"
+    description: "Telemetry volume - high-frequency writes to invocations/decisions tables need batching or may impact performance"
+    affected_stories: ["WINT-3010", "WINT-3030"]
+    severity: medium
+
+  - id: "RISK-007"
+    description: "Graph query performance - complex cohesion checks may be slow as graph grows, materialized views may need tuning"
+    affected_stories: ["WINT-4040", "WINT-4090"]
+    severity: low
+
+  - id: "RISK-008"
+    description: "Batch mode error handling - partial failures in 5-10 story batches need robust rollback/recovery strategy"
+    affected_stories: ["WINT-6010", "WINT-6020", "WINT-6080", "WINT-6090"]
+    severity: medium
+
+  - id: "RISK-009"
+    description: "Auto-accept safety - 90% confidence threshold for auto-accepts must not allow dangerous decisions through"
+    affected_stories: ["WINT-5090", "WINT-5120"]
+    severity: high
+
+  - id: "RISK-010"
+    description: "Doc-sync latency - mandatory doc-sync at every phase/story completion could slow workflows if not optimized"
+    affected_stories: ["WINT-0170", "WINT-7120"]
+    severity: low
+
+metrics:
+  total_stories: 93
+  phases: 8
+  max_parallel: 6
+  critical_path_length: 39
+  stories_with_sizing_warnings: 4

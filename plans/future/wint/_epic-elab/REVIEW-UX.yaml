@@ -1,0 +1,127 @@
+perspective: ux
+verdict: READY
+core_flow:
+  complete: true
+  usable: true
+core_user_journeys:
+  pm_story_creation:
+    steps:
+      - Bootstrap epic with database schemas (Phase 0)
+      - Stories tracked in database with single source of truth (Phase 1)
+      - Cohesion checks identify incomplete features (Phase 4)
+    usability: Core journey supported, clear workflow progression
+  dev_story_implementation:
+    steps:
+      - Query story status from database (Phase 1)
+      - Access cached context to reduce context loading (Phase 2)
+      - View telemetry for decisions and outcomes (Phase 3)
+      - Receive ML predictions for model selection (Phase 5)
+      - Optionally process multiple stories in batch (Phase 6)
+    usability: Clear progression, information architecture sound
+  qa_story_verification:
+    steps:
+      - Query story status and acceptance criteria (Phase 1)
+      - Run cohesion checks on completed features (Phase 4)
+      - Review telemetry logs of decisions (Phase 3)
+      - View quality predictions before approval (Phase 5)
+    usability: Story verification supported, data accessible
+  ops_workflow_monitoring:
+    steps:
+      - View phase completion status in database (Phase 1)
+      - Monitor batch processing progress (Phase 6)
+      - Generate weekly reports of workflow performance (Phase 6)
+    usability: Monitoring information available, limited UI
+information_architecture:
+  database_schema:
+    navigation: SQL queries expose core, context_cache, telemetry, graph, workflow schemas
+    discoverability: MCP tools provide structured access
+    clarity: Schema names and tool names clearly indicate purpose
+  command_interface:
+    story_status: Query story state
+    story_update: Modify story state
+    story_move: Change story phase
+    telemetry: View invocation logs
+    cohesion_check: Detect incomplete features
+    batch_process: Run multi-story workflows
+    clarity: Commands map clearly to workflows
+  agent_interfaces:
+    compatibility_shim: Transparent fallback from DB to directory
+    ml_predictions: Auto-accept with confidence display
+    batch_coordinator: Status visible during processing
+    clarity: Agent behaviors understandable through outputs
+accessibility:
+  database_queries:
+    assessment: Accessible via MCP tools and SQL
+    concern: SQL knowledge required for custom queries
+    mitigation: Pre-built commands cover common scenarios
+  ml_auto_accept:
+    assessment: Confidence scores provided for predictions
+    concern: Users may not understand ML model reasoning
+    mitigation: Show confidence and allow override
+  batch_processing:
+    assessment: Progress visible via batch-status command
+    concern: Limited real-time feedback
+    mitigation: Summary reports after completion
+  navigation:
+    assessment: File-based system migrated to database
+    concern: Users accustomed to directory structure lose visual navigation
+    mitigation: Flat /stories/ directory provides continuity
+information_visualization:
+  current_state:
+    - stories.index.md (generated from database)
+    - telemetry command (query results)
+    - batch-status command (progress report)
+    - weekly-report command (analysis and recommendations)
+  clarity: Basic text-based reporting, sufficient for current needs
+  future_enhancement: Dashboard UI could improve visibility (Phase 7+)
+user_education:
+  phases_0_1:
+    learning_curve: Moderate - database schema introduction
+    mitigation: Clear documentation, migration guide
+  phases_2_3:
+    learning_curve: Low - context cache transparent to users
+    mitigation: Automated telemetry collection
+  phases_4_5:
+    learning_curve: Moderate - new cohesion checks and ML predictions
+    mitigation: Confidence scores, ability to override
+  phases_6_7:
+    learning_curve: Low - batch processing is convenience feature
+    mitigation: Clear batch commands and status reporting
+error_handling:
+  database_unavailable:
+    current: Compatibility shim falls back to directory
+    risk: Users may not know which source is active
+    mitigation: Document fallback behavior clearly
+  ml_prediction_unavailable:
+    current: Phase 5 tools gracefully degrade (cold start)
+    risk: Users see different behavior during rollout
+    mitigation: Show "model not ready yet" message
+  cohesion_rule_violations:
+    current: Graph checker provides feedback
+    concern: Users may not understand rules
+    mitigation: Clear rule documentation
+future:
+  ux_polish:
+    - story: WINT-6070
+      suggestion: "Weekly report command could highlight actionable improvements"
+      impact: medium
+  accessibility_improvements:
+    - story: WINT-3050, WINT-6070
+      suggestion: "Add query templates for common telemetry questions"
+      impact: medium
+  suggested_stories:
+    - title: "Dashboard UI for batch processing status"
+      gap: "Current text-based batch-status lacks visibility"
+      priority: P2
+    - title: "Interactive cohesion rule explorer"
+      gap: "Users don't understand why features marked incomplete"
+      priority: P2
+    - title: "Preference prediction explainer"
+      gap: "Users should understand why ML auto-accepts stories"
+      priority: P2
+  recommendations:
+    - "Maintain clear documentation of single source of truth concept"
+    - "Show database query results with context (not just raw data)"
+    - "Provide clear status indicators during batch processing"
+    - "Document all ML predictions with confidence and reasoning"
+review_complete: true

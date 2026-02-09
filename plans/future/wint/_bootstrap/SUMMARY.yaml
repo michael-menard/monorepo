@@ -1,0 +1,131 @@
+schema: 2
+feature_dir: "plans/future/wint"
+prefix: "WINT"
+completed: "2026-02-09T22:30:00Z"
+
+files_created:
+  - path: "plans/future/wint/stories.index.md"
+    stories: 93
+  - path: "plans/future/wint/PLAN.meta.md"
+  - path: "plans/future/wint/PLAN.exec.md"
+  - path: "plans/future/wint/roadmap.md"
+  - path: "plans/future/wint/backlog/"
+  - path: "plans/future/wint/elaboration/"
+  - path: "plans/future/wint/ready-to-work/"
+  - path: "plans/future/wint/in-progress/"
+  - path: "plans/future/wint/UAT/"
+
+metrics:
+  total_stories: 121
+  ready_to_start: 6
+  critical_path_length: 50
+  max_parallel: 6
+  phases: 10
+  high_risk_stories: 6
+  sizing_warnings: 4
+
+roadmap_highlights:
+  critical_path:
+    - "WINT-0010"
+    - "WINT-0020"
+    - "WINT-0090"
+    - "WINT-1010"
+    - "WINT-1020"
+    - "WINT-1030"
+    - "WINT-1040"
+    - "WINT-1080"
+    - "WINT-2010"
+    - "WINT-2090"
+    - "WINT-2100"
+    - "WINT-3010"
+    - "WINT-3020"
+    - "WINT-3060"
+    - "WINT-3070"
+    - "WINT-5030"
+    - "WINT-5040"
+    - "WINT-5070"
+    - "WINT-5090"
+    - "WINT-5120"
+    - "WINT-5130"
+    - "WINT-6010"
+    - "WINT-6020"
+    - "WINT-6050"
+    - "WINT-6080"
+    - "WINT-6090"
+    - "WINT-7020"
+    - "WINT-7030"
+    - "WINT-7040"
+    - "WINT-7050"
+    - "WINT-7060"
+    - "WINT-7070"
+    - "WINT-7080"
+    - "WINT-7090"
+    - "WINT-7100"
+    - "WINT-7110"
+    - "WINT-7120"
+    - "WINT-7130"
+
+  parallel_groups: 11
+
+next_step: "/elab-epic plans/future/wint"
+
+phase_summaries:
+  phase_0:
+    name: "Bootstrap"
+    stories: 17
+    description: "Manual setup of database schemas, MCP tools, and doc-sync infrastructure"
+    ready_to_start: 2
+
+  phase_1:
+    name: "Foundation"
+    stories: 12
+    description: "Story flattening, core tables, compatibility shim, LangGraph unification"
+    ready_to_start: 1
+
+  phase_2:
+    name: "Context Cache"
+    stories: 10
+    description: "Agent missions, KB cache, sessions in DB to achieve 80% token reduction"
+    ready_to_start: 0
+
+  phase_3:
+    name: "Telemetry"
+    stories: 7
+    description: "Invocation logging, HiTL capture, full observability for all agent actions"
+    ready_to_start: 0
+
+  phase_4:
+    name: "Graph & Cohesion"
+    stories: 11
+    description: "Capabilities, rules, PO agent for completeness detection"
+    ready_to_start: 3
+
+  phase_5:
+    name: "ML Pipeline"
+    stories: 13
+    description: "Router, quality predictor, preferences for smart automation"
+    ready_to_start: 0
+
+  phase_6:
+    name: "Batch Mode"
+    stories: 9
+    description: "Unattended processing, weekly reports, 5-10 stories hands-off"
+    ready_to_start: 0
+
+  phase_7:
+    name: "Migration"
+    stories: 13
+    description: "Update all 52 agents, sync docs, achieve zero directory references"
+    ready_to_start: 0
+
+  phase_8:
+    name: "Backlog Management"
+    stories: 9
+    description: "Unified backlog storage, on-demand refinement, promotion to active stories"
+    ready_to_start: 0
+
+  phase_9:
+    name: "LangGraph Parity"
+    stories: 14
+    description: "Port all WINT agents to LangGraph nodes for full feature parity"
+    ready_to_start: 0
