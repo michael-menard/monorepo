@@ -17,7 +17,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 |--------|-------|
 | completed | 0 |
 | in-progress | 0 |
-| pending | 129 |
+| pending | 134 |
 
 ---
 
@@ -575,14 +575,95 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1110
+**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1110, WINT-1160
 **Phase:** 1
-**Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, AND both LangGraph and Claude Code agents operate on unified schema
+**Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
 
 **Goal:** Ensure foundation is solid before context cache work
 
 **Risk Notes:** Integration testing required for both systems
+
+---
+
+### WINT-1130: Track Worktree-to-Story Mapping in Database
+
+**Status:** pending
+**Depends On:** WINT-0020
+**Phase:** 1
+**Feature:** Add worktree tracking table to core schema: story_id, worktree_path, branch_name, created_at, status (active/merged/abandoned). Create MCP tools: worktree_register, worktree_get_by_story, worktree_list_active, worktree_mark_complete.
+**Infrastructure:**
+- core.worktrees table
+- MCP tools for worktree tracking
+
+**Goal:** Enable database-driven coordination of parallel work across multiple sessions
+
+**Risk Notes:** Must handle orphaned worktrees (session died without cleanup)
+
+---
+
+### WINT-1140: Integrate Worktree Creation into dev-implement-story
+
+**Status:** pending
+**Depends On:** WINT-1130
+**Phase:** 1
+**Feature:** Modify dev-implement-story to automatically create worktree via /wt-new at story start. Register worktree in database. If worktree already exists for story, switch to it instead of creating new. Add pre-flight check: if story has active worktree in different session, warn and confirm.
+**Infrastructure:**
+- dev-implement-story agent update
+- Integration with wt-new skill
+
+**Goal:** Automatic isolation for every story implementation
+
+**Risk Notes:** Must handle case where user wants to continue in existing worktree
+
+---
+
+### WINT-1150: Integrate Worktree Cleanup into Story Completion
+
+**Status:** pending
+**Depends On:** WINT-1130
+**Phase:** 1
+**Feature:** Modify story completion workflow (qa-verify-story success, story-update to 'done') to automatically run /wt-finish: merge branch, push, cleanup worktree, update database status. Add option to defer cleanup if PR review pending.
+**Infrastructure:**
+- qa-verify-story agent update
+- story-update command update
+- Integration with wt-finish skill
+
+**Goal:** Automatic cleanup prevents worktree sprawl and ensures branches are merged
+
+**Risk Notes:** Must not auto-merge if CI is failing or PR has requested changes
+
+---
+
+### WINT-1160: Add Parallel Work Conflict Prevention
+
+**Status:** pending
+**Depends On:** WINT-1130, WINT-1140
+**Phase:** 1
+**Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.
+**Infrastructure:**
+- Conflict detection logic
+- wt-status command enhancement
+
+**Goal:** Prevent two sessions from working on the same story simultaneously
+
+**Risk Notes:** "Take over" option must be explicit to avoid accidental work loss
+
+---
+
+### WINT-1170: Add Worktree-Aware Batch Processing
+
+**Status:** pending
+**Depends On:** WINT-1160, WINT-6010
+**Phase:** 1
+**Feature:** Enhance batch-coordinator to create separate worktrees for each story in batch. Track all worktrees in database. On batch completion, offer bulk merge or individual review. Add /batch-status enhancement to show worktree status per story.
+**Infrastructure:**
+- batch-coordinator agent update
+- Bulk worktree operations
+
+**Goal:** Enable true parallel execution of batch stories across worktrees
+
+**Risk Notes:** Many worktrees consume disk space; add cleanup recommendations
 
 ---
 
