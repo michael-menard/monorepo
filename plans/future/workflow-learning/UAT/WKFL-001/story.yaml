@@ -1,0 +1,239 @@
+id: WKFL-001
+title: "Meta-Learning Loop: Retrospective Agent"
+status: uat
+priority: P0
+phase: foundation
+created_at: 2026-02-06T17:00:00-07:00
+updated_at: 2026-02-07T22:05:00Z
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies: []
+blocks:
+  - WKFL-002
+  - WKFL-006
+  - WKFL-008
+
+owner: null
+estimated_tokens: 80000
+
+tags:
+  - foundation
+  - data-capture
+  - kb-integration
+
+summary: |
+  Create a retrospective agent that analyzes every completed story,
+  captures structured outcomes, and proposes workflow improvements
+  based on patterns detected.
+
+goal: |
+  Establish the data foundation for all learning by:
+  1. Defining OUTCOME.yaml schema for story metrics
+  2. Creating workflow-retro agent to analyze outcomes
+  3. Writing significant findings to Knowledge Base
+  4. Generating improvement proposals for human review
+
+non_goals:
+  - Auto-applying changes (proposals only)
+  - Cross-project learning
+  - Real-time analysis (batch only)
+
+scope:
+  in:
+    - OUTCOME.yaml schema definition
+    - Outcome writer integration in dev-documentation-leader
+    - workflow-retro.agent.md creation
+    - /workflow-retro command or auto-trigger
+    - KB writes for detected patterns
+    - WORKFLOW-RECOMMENDATIONS.md generation
+
+  out:
+    - Calibration calculation (WKFL-002)
+    - Pattern mining across stories (WKFL-006)
+    - Experiment framework (WKFL-008)
+
+acceptance_criteria:
+  - id: AC-1
+    description: "OUTCOME.yaml schema defined in .claude/schemas/"
+    verification: "Schema file exists with all required fields documented"
+
+  - id: AC-2
+    description: "Every completed story generates OUTCOME.yaml"
+    verification: "Run /wt-finish on test story, verify OUTCOME.yaml created in _implementation/"
+
+  - id: AC-3
+    description: "Retro agent analyzes outcomes and detects patterns"
+    verification: "Run /workflow-retro, verify analysis compares estimated vs actual tokens/cycles"
+
+  - id: AC-4
+    description: "Repeated failure patterns are logged to KB"
+    verification: "Query kb_search with tags: ['retro', 'pattern'], verify entries exist"
+
+  - id: AC-5
+    description: "Proposals written to WORKFLOW-RECOMMENDATIONS.md"
+    verification: "File exists in plans/future/workflow-learning/ with actionable proposals"
+
+  - id: AC-6
+    description: "Retro runs automatically or via command after story completion"
+    verification: "Either auto-trigger on /wt-finish OR /workflow-retro {STORY-ID} works"
+
+technical_notes: |
+  ## OUTCOME.yaml Schema (v1)
+
+  ```yaml
+  schema_version: 1
+  story_id: WISH-2045
+  completed_at: 2026-02-06T15:00:00Z
+
+  phases:
+    pm_story:
+      tokens_in: 5000
+      tokens_out: 7340
+      duration_ms: 45000
+      status: complete
+
+    elaboration:
+      tokens_in: 4000
+      tokens_out: 4900
+      duration_ms: 32000
+      verdict: PASS
+      cycles: 1
+
+    dev_implementation:
+      tokens_in: 80000
+      tokens_out: 76000
+      duration_ms: 890000
+      review_cycles: 2
+      findings:
+        code-review-security: 3
+        code-review-lint: 1
+        code-review-build: 0
+
+    qa_verify:
+      tokens_in: 12000
+      tokens_out: 11000
+      duration_ms: 120000
+      verdict: PASS
+
+    qa_gate:
+      verdict: PASS
+      concerns: 0
+
+  totals:
+    tokens: 200240
+    duration_ms: 1087000
+    review_cycles: 2
+    gate_attempts: 1
+
+  decisions:
+    auto_accepted: 8
+    escalated: 1
+    overridden: 0
+    deferred: 2
+
+  predictions: null  # Added in WKFL-007
+  human_feedback: [] # Populated via WKFL-004
+  ```
+
+  ## Retro Agent Analysis
+
+  The agent should:
+  1. Load OUTCOME.yaml and story artifacts
+  2. Compare actual tokens vs story budget
+  3. Compare actual cycles vs typical (baseline: 2)
+  4. Identify agent pairs with high correlation on failures
+  5. Detect ACs that always pass/fail first try
+  6. Write patterns to KB
+  7. Generate proposals
+
+  ## KB Integration
+
+  ```javascript
+  // Pattern detected
+  kb_add_lesson({
+    title: "Pattern: routes.ts always fails lint on first review",
+    story_id: "WKFL-001",
+    category: "pattern",
+    what_happened: "Lint failures in route files across 5 stories",
+    recommendation: "Add lint pre-check to backend-coder",
+    tags: ["retro", "pattern", "lint", "date:2026-02", "source:wkfl-001"]
+  })
+  ```
+
+  ## Integration Point
+
+  In dev-documentation-leader.agent.md, after proof writing:
+
+  ```markdown
+  ## Step 6: Write Outcome
+
+  Write OUTCOME.yaml to _implementation/ with:
+  - Aggregate tokens from TOKEN-LOG.md
+  - Extract verdicts from VERIFICATION.yaml
+  - Count review cycles from CHECKPOINT.md
+  - Count decisions from DECISIONS.yaml (if exists)
+  ```
+
+reuse_plan:
+  must_reuse:
+    - KB tools (kb_search, kb_add_lesson)
+    - Token logging patterns
+    - Agent frontmatter standards
+    - Existing phase leader pattern
+
+  may_create:
+    - OUTCOME.yaml schema
+    - workflow-retro.agent.md
+    - /workflow-retro command
+
+local_testing:
+  - Run on completed WISH-2045 or similar
+  - Verify OUTCOME.yaml generated correctly
+  - Verify KB entries created
+  - Verify WORKFLOW-RECOMMENDATIONS.md populated
+
+token_budget:
+  estimated: 80000
+  enforcement: warning
+
+---
+
+## QA Discovery Notes (Auto-Generated)
+
+_Added by Autonomous Elaboration on 2026-02-06_
+
+### MVP Gaps Resolved
+
+All non-blocking gaps identified and logged to KB for future reference:
+
+| # | Finding | Category | Impact | Effort |
+|---|---------|----------|--------|--------|
+| 1 | OUTCOME.yaml validation | edge-case | Low | Low |
+| 2 | Error handling for malformed artifacts | edge-case | Low | Low |
+| 3 | Sampling strategy for patterns | edge-case | Low | Medium |
+| 4 | KB deduplication strategy | edge-case | Medium | Low |
+| 5 | OUTCOME.yaml schema versioning | edge-case | Low | Low |
+
+### Enhancement Opportunities (Logged to KB)
+
+| # | Finding | Category | Priority | Notes |
+|---|---------|----------|----------|-------|
+| 1 | Rich diff visualization | UX | Medium | Charts/graphs for metrics |
+| 2 | Confidence scoring | observability | Medium | Based on sample size |
+| 3 | Cross-epic pattern detection | integration | High | Depends on WKFL-006 |
+| 4 | Auto-tagging enhancement | quick-win | Medium | Regex-based tag inference |
+| 5 | Retrospective templates | UX | Low | Pre-built analysis templates |
+| 6 | Real-time alerts | observability | Medium | Budget overrun notifications |
+| 7 | Historical trend analysis | critical | High | Workflow improvement tracking |
+| 8 | Agent performance profiling | optimization | Medium | Token usage breakdown |
+| 9 | Interactive retro reports | UX | Medium | HTML dashboard alternative |
+| 10 | Proposal prioritization | observability | Medium | Impact-based scoring |
+
+### Summary
+
+- **ACs added**: 0 (all 6 existing ACs are complete and testable)
+- **KB entries created**: 15 (documented in _implementation/DECISIONS.yaml)
+- **Mode**: autonomous
+- **Verdict**: PASS (ready for implementation)

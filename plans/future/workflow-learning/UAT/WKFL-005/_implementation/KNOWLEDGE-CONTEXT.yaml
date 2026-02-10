@@ -1,0 +1,431 @@
+schema_version: 1.0.0
+story_id: WKFL-005
+created_at: 2026-02-07T15:00:00-07:00
+
+# Knowledge context from codebase and knowledge base for WKFL-005 implementation
+
+codebase_context:
+  documentation_structure:
+    overview: |
+      The workflow documentation was split from a monolithic FULL_WORKFLOW.md into 9 focused files
+      as of version 3.0.0 (2026-02-06). This split created the documentation structure that
+      doc-sync will need to maintain.
+
+    key_files:
+      - file: docs/workflow/README.md
+        purpose: Overview, commands, state diagrams
+        version: 3.1.0
+        sections_to_update:
+          - Documentation Structure table (if new docs added)
+          - Commands Overview table (if new commands added)
+
+      - file: docs/workflow/phases.md
+        purpose: Detailed phase documentation for phases 1-8
+        version: 3.1.0
+        sections_to_update:
+          - "Agents & Sub-Agents" tables per phase
+          - Model assignment references
+          - Mermaid diagrams showing agent spawn relationships
+
+      - file: docs/workflow/agent-system.md
+        purpose: Expert intelligence framework, agent architecture
+        version: 3.1.0
+        sections_to_update:
+          - Expert Personas tables
+          - Agent Enhancement Checklist
+
+      - file: docs/workflow/changelog.md
+        purpose: Version history
+        version: 3.1.0
+        current_version: 3.1.0
+        format: |
+          ## [X.Y.Z] - YYYY-MM-DD MST
+
+          ### Added/Changed/Fixed
+          - Description
+        notes: |
+          Version numbering follows semver:
+          - Major: Breaking changes (doc structure, workflow phases)
+          - Minor: New features (new agents, commands, phases)
+          - Patch: Bug fixes, clarifications, typo fixes
+
+  frontmatter_standard:
+    source: .claude/agents/_shared/FRONTMATTER.md
+    version: Current as of 2026-02-07
+    required_fields:
+      - created: ISO date YYYY-MM-DD
+      - updated: ISO date YYYY-MM-DD
+      - version: Semantic version X.Y.Z
+
+    optional_fields:
+      - type: orchestrator | leader | worker
+      - triggers: array of command names
+      - name: Human-readable identifier
+      - description: 1-line description
+      - model: haiku | sonnet | opus
+      - tools: Array of allowed tools
+      - spawns: Array of worker agent names (KEY for diagram generation)
+      - kb_tools: Array of KB tools used
+      - mcp_tools: Array of MCP tools used
+
+    parsing_notes: |
+      - All agent and command files MUST have YAML frontmatter
+      - Frontmatter delimited by --- lines at top of file
+      - Invalid YAML should be skipped gracefully with warning
+      - Missing optional fields should not cause failures
+
+  agent_ecosystem:
+    total_agents: 90+
+    agent_files_location: .claude/agents/
+    naming_pattern: "{domain}-{purpose}-{type}.agent.md"
+
+    examples:
+      - pm-story-generation-leader.agent.md
+      - dev-implement-backend-coder.agent.md
+      - elab-completion-leader.agent.md
+      - code-review-security.agent.md
+      - qa-verify-verification-leader.agent.md
+
+    section_mapping:
+      pm-*.agent.md:
+        file: docs/workflow/phases.md
+        section: "Phase 2: PM Story Generation"
+        table: "Agents & Sub-Agents"
+
+      elab-*.agent.md:
+        file: docs/workflow/phases.md
+        section: "Phase 3: QA Elaboration"
+        table: "Agents & Sub-Agents"
+
+      dev-*.agent.md:
+        file: docs/workflow/phases.md
+        section: "Phase 4: Dev Implementation"
+        table: "Agents & Sub-Agents"
+
+      code-review-*.agent.md:
+        file: docs/workflow/phases.md
+        section: "Phase 5: Code Review"
+        table: "Agents & Sub-Agents"
+
+      qa-*.agent.md:
+        file: docs/workflow/phases.md
+        section: "Phase 6/7: QA Verification"
+        table: "Agents & Sub-Agents"
+
+      architect-*.agent.md:
+        file: docs/workflow/agent-system.md
+        section: "Architecture Agents"
+        table: "Specialist Agents"
+
+      workflow-*.agent.md:
+        file: docs/workflow/orchestration.md
+        section: "Cross-Cutting Concerns"
+        table: "Workflow Agents"
+
+  command_ecosystem:
+    total_commands: 23+
+    command_files_location: .claude/commands/
+    naming_pattern: "{command-name}.md"
+
+    examples:
+      - pm-story.md
+      - elab-story.md
+      - dev-implement-story.md
+      - qa-verify-story.md
+      - doc-sync.md (to be created)
+
+    frontmatter_pattern:
+      required:
+        - created
+        - updated
+        - version
+        - agents: array of agent filenames
+
+  spawn_relationships:
+    description: |
+      Agents use the 'spawns' frontmatter field to declare which worker agents they orchestrate.
+      This creates a hierarchy that should be visualized in Mermaid diagrams.
+
+    examples:
+      architect-types-leader:
+        spawns: ["architect-zod-worker", "architect-interface-worker", "architect-schema-worker"]
+
+      architect-packages-leader:
+        spawns: ["architect-boundary-worker", "architect-circular-worker", "architect-workspace-worker"]
+
+      architect-frontend-leader:
+        spawns: ["architect-component-worker", "architect-import-worker", "architect-barrel-worker"]
+
+      architect-api-leader:
+        spawns: ["architect-hexagonal-worker", "architect-route-worker", "architect-service-worker"]
+
+    mermaid_generation:
+      format: graph TD
+      pattern: |
+        graph TD
+            leader[Leader Agent] --> worker1[Worker 1]
+            leader --> worker2[Worker 2]
+            worker1 --> subagent[Sub-Agent]
+
+      notes: |
+        - Use graph TD (top-down) for hierarchical relationships
+        - Group by phase or domain when logical
+        - Include model labels if helpful (e.g., "Leader (sonnet)")
+        - Validate syntax: balanced brackets, valid arrows (-->), node declarations
+        - On validation failure: preserve existing diagram, add to manual_review_needed
+
+  existing_patterns:
+    kb_writer_agent:
+      file: .claude/agents/kb-writer.agent.md
+      relevance: Example of a simple worker agent with clear input/output schema
+      model: Not specified (inherits default)
+      pattern: |
+        - Simple frontmatter
+        - Clear mission statement
+        - Input/output schema documentation
+        - Fallback behavior documented
+        - Completion signals defined
+
+    command_patterns:
+      pm-story.md:
+        frontmatter_example: |
+          ---
+          created: 2026-01-24
+          updated: 2026-02-06
+          version: 3.4.0
+          type: orchestrator
+          agents: ["pm-story-seed-agent.agent.md", "pm-story-generation-leader.agent.md", ...]
+          ---
+
+        structure:
+          - Command usage documentation
+          - Flags and options
+          - Examples
+          - Phase breakdown
+          - Agent list in frontmatter
+
+      elab-story.md:
+        frontmatter_example: |
+          ---
+          created: 2026-01-20
+          updated: 2026-02-06
+          version: 5.0.0
+          type: orchestrator
+          agents: ["elab-setup-leader.agent.md", "elab-analyst.agent.md", ...]
+          ---
+
+        notable_features:
+          - --autonomous flag documented
+          - Clear phase breakdown
+          - Mode selection (interactive vs autonomous)
+
+implementation_guidance:
+  change_detection:
+    primary_method: git diff
+    commands:
+      staged_changes: "git diff --cached --name-only | grep -E '\\.claude/(agents|commands)/'"
+      uncommitted_changes: "git diff HEAD --name-only .claude/agents/ .claude/commands/"
+      all_files_fallback: "find .claude/agents/ .claude/commands/ -name '*.agent.md' -o -name '*.md'"
+
+    notes: |
+      - Use git diff for pre-commit hook scenario (staged changes)
+      - Use git diff HEAD for manual runs (uncommitted changes)
+      - Fallback to find if git unavailable
+      - Filter for *.agent.md and *.md files only
+
+  yaml_parsing:
+    approach: Use bash/grep/awk or invoke simple parser
+    frontmatter_extraction: |
+      # Extract YAML between --- delimiters
+      sed -n '/^---$/,/^---$/p' file.agent.md | sed '1d;$d'
+
+    error_handling: |
+      - Invalid YAML: Skip file, add to manual_review_needed section
+      - Missing required fields: Warn but continue
+      - Missing optional fields: Use defaults or omit from output
+
+  table_updates:
+    strategy: Use Edit tool for surgical updates
+
+    example_table_format: |
+      | Phase | Agent | Output |
+      |-------|-------|--------|
+      | 0 | `pm-bootstrap-setup-leader.agent.md` | `AGENT-CONTEXT.md`, `CHECKPOINT.md` |
+      | 1 | `pm-bootstrap-analysis-leader.agent.md` | `ANALYSIS.yaml` |
+
+    notes: |
+      - Preserve existing formatting (spacing, alignment)
+      - Add new rows in appropriate position (usually at end of section)
+      - Update existing rows if agent metadata changed
+      - Use backticks for code/filenames
+
+  mermaid_validation:
+    basic_checks:
+      - Starts with graph TD, flowchart, or sequenceDiagram
+      - Balanced brackets [ ]
+      - Valid arrows (-->, ---|, etc.)
+      - Node declarations before references
+
+    regex_patterns:
+      diagram_type: "^(graph|flowchart|sequenceDiagram)"
+      node_declaration: "\\w+\\[.+\\]"
+      arrow: "-->"
+      balanced_brackets: Count [ and ] should match
+
+    failure_handling: |
+      If validation fails:
+      1. Preserve existing diagram in documentation
+      2. Add entry to manual_review_needed:
+         - reason: "Mermaid validation failed"
+         - affected_files: [diagram location]
+         - suggestion: "Manually review spawn relationships and regenerate"
+
+  version_bumping:
+    logic:
+      major: |
+        - Breaking changes to workflow phases
+        - Removal of agents or commands
+        - Documentation structure changes
+
+      minor: |
+        - New agent files added
+        - New command files added
+        - Agent deletion (deprecated agents)
+
+      patch: |
+        - Frontmatter metadata changes (model, description, etc.)
+        - Documentation clarifications
+        - Typo fixes
+
+    implementation: |
+      # Parse current version from docs/workflow/changelog.md
+      current_version=$(grep -m1 "^## \\[" docs/workflow/changelog.md | sed 's/.*\\[\\(.*\\)\\].*/\\1/')
+
+      # Increment based on change type
+      # major: X+1.0.0
+      # minor: X.Y+1.0
+      # patch: X.Y.Z+1
+
+  sync_report_format:
+    structure: |
+      # Documentation Sync Report
+
+      **Run Date:** YYYY-MM-DD HH:MM:SS MST
+      **Run Mode:** Full sync | Check only
+
+      ## Files Changed
+
+      - `.claude/agents/new-agent.agent.md` (added)
+      - `.claude/agents/existing-agent.agent.md` (modified)
+      - `.claude/agents/old-agent.agent.md` (deleted)
+
+      ## Sections Updated
+
+      - `docs/workflow/phases.md` - Phase 4: Dev Implementation - Agents & Sub-Agents table
+      - `docs/workflow/phases.md` - Model Assignments
+
+      ## Diagrams Regenerated
+
+      - Agent Spawn Relationships (docs/workflow/phases.md, Phase 4)
+
+      ## Manual Review Needed
+
+      - Invalid YAML in `.claude/agents/broken-agent.agent.md` - skipped
+      - Mermaid validation failed for Agent Spawn Relationships - preserved existing
+
+      ## Changelog Entry
+
+      **Version:** 3.2.0 (minor)
+      **Description:** Added dev-implement-new-feature agent
+      **Status:** [DRAFT]
+
+      ## Summary
+
+      - Total files changed: 3
+      - Total sections updated: 2
+      - Total diagrams regenerated: 1
+      - Manual review items: 2
+      - **Success:** Yes (with warnings)
+
+pre_commit_hook:
+  purpose: Optional validation that docs are in sync before committing agent/command changes
+
+  installation: Manual (not auto-installed)
+
+  script_template: |
+    #!/bin/bash
+    # .git/hooks/pre-commit
+
+    # Check if agent/command files changed
+    if git diff --cached --name-only | grep -q ".claude/agents/\\|.claude/commands/"; then
+      echo "Agent/command files changed, checking documentation sync..."
+
+      # Run doc-sync in check-only mode
+      /doc-sync --check-only
+
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Documentation out of sync with agent changes."
+        echo "Run '/doc-sync' to update documentation, then stage and commit."
+        exit 1
+      fi
+    fi
+
+    exit 0
+
+  documentation_location: .claude/commands/doc-sync.md or separate docs/workflow/doc-sync-hook.md
+
+testing_approach:
+  test_agents:
+    - Create temporary test agents in .claude/agents/
+    - Use various frontmatter configurations (minimal, full, with spawns)
+    - Test with invalid YAML to verify error handling
+    - Clean up test agents after verification
+
+  verification_steps:
+    - Run /doc-sync after each test change
+    - Verify git diff shows expected documentation updates
+    - Verify SYNC-REPORT.md contains accurate information
+    - Verify no unintended side effects
+
+  acceptance_criteria_mapping:
+    AC-1: Test with new agent creation
+    AC-2: Test with frontmatter modification
+    AC-3: Test with spawns field
+    AC-4: Test changelog generation
+    AC-5: Test SYNC-REPORT.md completeness
+    AC-6: Test command execution and --check-only flag
+
+edge_cases:
+  - Agent file with no frontmatter: Skip, log to manual_review_needed
+  - Frontmatter with extra unknown fields: Ignore, don't fail
+  - Multiple agents added simultaneously: Process all, update all sections
+  - Agent moved between domains (e.g., pm-* to dev-*): Update both old and new sections
+  - Spawns field references non-existent agent: Include in diagram anyway, add warning
+  - Docs already up-to-date: SYNC-REPORT should show "No changes needed"
+  - Concurrent /doc-sync runs: Check git working directory clean, fail if dirty
+
+known_constraints:
+  - Must not modify .claude/agents/_shared/FRONTMATTER.md
+  - Must preserve existing docs/workflow/ structure (9 files)
+  - Must not auto-commit changes (manual review preferred)
+  - Must support both manual runs and pre-commit hook usage
+  - Must be fast enough for pre-commit hook (haiku model choice)
+
+reuse_opportunities:
+  - Pattern matching logic similar to existing agents
+  - YAML parsing techniques from other agents
+  - Table update patterns from workflow documentation
+  - Error handling patterns from existing commands
+  - Completion signal conventions from agent ecosystem
+
+related_stories:
+  - WKFL-004: Knowledge Base Integration (completed) - shows KB write patterns
+  - Future: WKFL-006 could be doc-sync enhancements (watch mode, config file, etc.)
+
+lessons_from_codebase:
+  - Use Edit tool for surgical updates, not Write for entire file rewrites
+  - Preserve formatting and structure when updating documentation
+  - Always provide fallback behavior for optional dependencies (git, mermaid-cli)
+  - Use clear completion signals (DOC-SYNC COMPLETE vs DOC-SYNC FAILED)
+  - Generate reports in consistent YAML/Markdown format
+  - Document pre-commit hook as opt-in, not mandatory

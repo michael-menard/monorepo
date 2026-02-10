@@ -1,0 +1,237 @@
+schema: 1
+story_id: "WKFL-004"
+timestamp: "2026-02-07T19:50:00Z"
+
+steps:
+  - id: 1
+    description: "Extend KnowledgeEntryTypeSchema to include 'feedback' type"
+    files:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    dependencies: []
+    slice: packages
+    rationale: "Add 'feedback' to the enum at line 36-42 to enable feedback entries in KB"
+
+  - id: 2
+    description: "Create FeedbackContentSchema with Zod validation"
+    files:
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "Define schema for feedback entry content with finding_id, agent_id, story_id, feedback_type, severity fields, and refine() for conditional validation"
+
+  - id: 3
+    description: "Update KB tool schemas to support feedback type"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    dependencies: [2]
+    slice: backend
+    rationale: "Ensure kb_add tool schema recognizes 'feedback' as valid entry type"
+
+  - id: 4
+    description: "Create /feedback command file with CLI interface"
+    files:
+      - ".claude/commands/feedback.md"
+    dependencies: [2]
+    slice: packages
+    rationale: "Implement command with argument parsing for finding ID and feedback type flags (--false-positive, --helpful, --missing, --severity-wrong)"
+
+  - id: 5
+    description: "Implement VERIFICATION.yaml parsing logic"
+    files:
+      - ".claude/commands/feedback.md"
+    dependencies: [4]
+    slice: packages
+    rationale: "Parse VERIFICATION.yaml to extract finding metadata (agent_id, severity) from code_review.security.findings[], code_review.architecture.findings[], qa_verify.findings[]"
+
+  - id: 6
+    description: "Implement KB entry creation via kb_add"
+    files:
+      - ".claude/commands/feedback.md"
+    dependencies: [5]
+    slice: packages
+    rationale: "Build feedback KB entry with type='feedback', content validated by FeedbackContentSchema, and tags for filtering"
+
+  - id: 7
+    description: "Add unit tests for FeedbackContentSchema validation"
+    files:
+      - "apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts"
+    dependencies: [2]
+    slice: packages
+    rationale: "Test valid feedback types, missing required fields, severity_wrong validation, and edge cases"
+
+  - id: 8
+    description: "Add integration tests for KB roundtrip"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts"
+    dependencies: [3, 6]
+    slice: backend
+    rationale: "Test kb_add with feedback entries, kb_search with tag filtering, and error handling"
+
+  - id: 9
+    description: "Create test fixtures for VERIFICATION.yaml"
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/fixtures/verification-sample.yaml"
+    dependencies: [7]
+    slice: backend
+    rationale: "Mock VERIFICATION.yaml with security, architecture, and QA findings for testing"
+
+files_to_change:
+  - path: "apps/api/knowledge-base/src/__types__/index.ts"
+    action: modify
+    reason: "Add 'feedback' to KnowledgeEntryTypeSchema enum and define FeedbackContentSchema"
+    lines: "~50 lines (new schema + export)"
+
+  - path: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    action: modify
+    reason: "Update kb_add tool schema to accept 'feedback' entry type"
+    lines: "~5 lines (enum update)"
+
+  - path: ".claude/commands/feedback.md"
+    action: create
+    reason: "New command file with CLI interface, argument parsing, VERIFICATION.yaml parsing, and KB integration"
+    lines: "~200 lines (command doc + implementation logic)"
+
+  - path: "apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts"
+    action: create
+    reason: "Unit tests for FeedbackContentSchema validation"
+    lines: "~150 lines (test suite)"
+
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts"
+    action: create
+    reason: "Integration tests for KB roundtrip with feedback entries"
+    lines: "~200 lines (test suite)"
+
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/fixtures/verification-sample.yaml"
+    action: create
+    reason: "Test fixture for VERIFICATION.yaml parsing"
+    lines: "~50 lines (mock YAML)"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/knowledge-base"
+    when: "after schema changes in __types__/index.ts"
+    required: true
+    rationale: "Verify TypeScript compilation with new schemas"
+
+  - command: "pnpm test --filter @repo/knowledge-base apps/api/knowledge-base/src/__types__/__tests__/feedback-schema.test.ts"
+    when: "after creating FeedbackContentSchema tests"
+    required: true
+    rationale: "Verify schema validation logic"
+
+  - command: "pnpm test --filter @repo/knowledge-base apps/api/knowledge-base/src/mcp-server/__tests__/feedback-integration.test.ts"
+    when: "after creating integration tests"
+    required: true
+    rationale: "Verify KB roundtrip and tag filtering"
+
+  - command: "pnpm lint --filter @repo/knowledge-base"
+    when: "after all code changes"
+    required: true
+    rationale: "Check for unused imports and formatting issues"
+
+  - command: "pnpm check-types --filter @repo/knowledge-base"
+    when: "after all code changes"
+    required: true
+    rationale: "Verify TypeScript strict mode compliance"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    description: "/feedback SEC-042 --false-positive 'reason' captures to KB"
+    planned_evidence: "Integration test: Create feedback entry with false_positive type, verify kb_search returns it"
+    evidence_type: test
+    implementation_steps: [4, 5, 6, 8]
+
+  - ac_id: "AC-2"
+    description: "/feedback ARCH-015 --helpful 'note' captures to KB"
+    planned_evidence: "Integration test: Create feedback entry with helpful type, verify content"
+    evidence_type: test
+    implementation_steps: [4, 6, 8]
+
+  - ac_id: "AC-3"
+    description: "Feedback linked to agent, story, and finding"
+    planned_evidence: "Unit test: Validate FeedbackContentSchema includes finding_id, agent_id, story_id fields"
+    evidence_type: test
+    implementation_steps: [2, 7]
+
+  - ac_id: "AC-4"
+    description: "Queryable via kb_search with feedback tags"
+    planned_evidence: "Integration test: Query kb_search with tags=['feedback', 'agent:code-review-security'], verify filtering works"
+    evidence_type: test
+    implementation_steps: [8]
+
+  - ac_id: "AC-5"
+    description: "Multiple feedback types supported"
+    planned_evidence: "Unit test: Test all 4 feedback types (false_positive, helpful, missing, severity_wrong) with validation"
+    evidence_type: test
+    implementation_steps: [2, 7]
+
+architectural_decisions:
+  - id: ARCH-WKFL-004-001
+    question: "Should /feedback command be in .claude/commands/ or as a separate script?"
+    decision: "Place in .claude/commands/ following established pattern"
+    rationale: "Consistency with other commands like /story-status. Commands in .claude/commands/ are auto-discovered by CLI."
+    decided_by: agent
+    status: accepted
+
+  - id: ARCH-WKFL-004-002
+    question: "Should FeedbackContentSchema be a separate file or in __types__/index.ts?"
+    decision: "Add to __types__/index.ts with other schemas"
+    rationale: "Follows monorepo convention - all KB schemas in single file for easier import and maintenance"
+    decided_by: agent
+    status: accepted
+
+  - id: ARCH-WKFL-004-003
+    question: "Should feedback entries use 'type' or 'entry_type' field in KB?"
+    decision: "Use existing 'entry_type' field (column name is entry_type, not type)"
+    rationale: "DB schema analysis shows column is 'entry_type'. Must match existing schema."
+    decided_by: agent
+    status: accepted
+
+complexity: moderate
+
+notes:
+  - "Story involves schema extension (low risk), command creation (moderate complexity), and KB integration (reuses existing tools)"
+  - "VERIFICATION.yaml parsing requires searching across multiple sections (code_review.security, code_review.architecture, qa_verify)"
+  - "Zod refine() used for conditional validation: severity_wrong requires suggested_severity"
+  - "Following ADR-005: UAT must use real KB MCP Server, not mocks"
+  - "Command file will include both documentation and implementation logic (similar to story-status.md pattern)"
+  - "No new MCP tools needed - reuse kb_add and kb_search"
+  - "Tags pattern: ['feedback', 'agent:{name}', 'story:{id}', 'type:{feedback_type}', 'date:{YYYY-MM}']"
+  - "Per knowledge context: run scoped lint after each file creation to catch unused imports early"
+
+validation_checks:
+  - check: "Every AC has planned evidence"
+    result: "PASS - All 5 ACs have test evidence"
+
+  - check: "All files_to_change match SCOPE.yaml globs"
+    result: "PASS - apps/api/** and .claude/commands/ paths match scope"
+
+  - check: "No circular dependencies in steps"
+    result: "PASS - Linear dependency chain: 1→2→3→4→5→6→8, parallel step 7"
+
+  - check: "Required commands present"
+    result: "PASS - build, test, lint, check-types all included"
+
+  - check: "Architectural decisions resolved"
+    result: "PASS - 3 decisions made by agent, all accepted"
+
+risks:
+  - risk: "VERIFICATION.yaml format may vary across stories"
+    mitigation: "Test with multiple fixture formats; handle missing sections gracefully"
+    severity: low
+
+  - risk: "Finding IDs may not be unique across all stories"
+    mitigation: "Scope feedback by story_id in tags; finding_id is scoped to story context"
+    severity: low
+
+  - risk: "Zod refine() for severity_wrong may have edge cases"
+    mitigation: "Comprehensive unit tests covering all validation paths"
+    severity: low
+
+estimated_tokens:
+  total: 28000
+  breakdown:
+    schema_changes: 3000
+    command_implementation: 8000
+    verification_parsing: 5000
+    kb_integration: 4000
+    unit_tests: 5000
+    integration_tests: 3000

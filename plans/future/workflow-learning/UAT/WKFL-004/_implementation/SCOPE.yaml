@@ -1,0 +1,27 @@
+schema: 1
+story_id: WKFL-004
+timestamp: 2026-02-07T14:40:00Z
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/**"
+  - "packages/backend/**"
+  - "apps/api/knowledge-base/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Implement /feedback command with KB schema for capturing human judgment on agent findings

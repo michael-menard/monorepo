@@ -1,0 +1,49 @@
+---
+# Deferred KB writes for WKFL-004
+# KB was unavailable during story generation
+# Retry when KB is operational
+---
+
+deferred_writes:
+  - timestamp: 2026-02-07T00:00:00Z
+    operation: insert_story
+    table: stories
+    reason: "KB postgres service not running"
+    data:
+      story_id: WKFL-004
+      feature: workflow-learning
+      title: "Human Feedback Capture"
+      story_dir: plans/future/workflow-learning/backlog/WKFL-004
+      story_file: plans/future/workflow-learning/backlog/WKFL-004/WKFL-004.md
+      story_type: feature
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+    sql: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra
+      ) VALUES (
+        'WKFL-004', 'workflow-learning', 'Human Feedback Capture',
+        'plans/future/workflow-learning/backlog/WKFL-004',
+        'plans/future/workflow-learning/backlog/WKFL-004/WKFL-004.md',
+        'feature', 5, 'high', 'backlog', true, false, false, false
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra,
+        updated_at = CURRENT_TIMESTAMP;

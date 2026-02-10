@@ -1,0 +1,135 @@
+schema: 1
+story_id: "WKFL-001"
+version: 1
+timestamp: "2026-02-07T21:30:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "OUTCOME.yaml schema defined in .claude/schemas/"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/schemas/outcome-schema.md"
+        description: "307-line schema definition with full field documentation, examples, and validation rules"
+
+  - ac_id: "AC-2"
+    ac_text: "Every completed story generates OUTCOME.yaml"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-documentation-leader.agent.md"
+        description: "Modified to include Step 5: Generate OUTCOME.yaml with full phase mapping"
+      - type: grep
+        command: "grep -n 'OUTCOME.yaml' .claude/agents/dev-documentation-leader.agent.md"
+        description: "7 references added including generation logic at lines 132-221"
+
+  - ac_id: "AC-3"
+    ac_text: "Retro agent analyzes outcomes and detects patterns"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/workflow-retro.agent.md"
+        description: "394-line agent with pattern detection for tokens, review cycles, agent correlations, and AC success rates"
+
+  - ac_id: "AC-4"
+    ac_text: "Repeated failure patterns are logged to KB"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/workflow-retro.agent.md"
+        description: "KB integration via kb_add_lesson with significance thresholds (3+ occurrences, 20% variance)"
+      - type: grep
+        command: "grep -n 'kb_add_lesson' .claude/agents/workflow-retro.agent.md"
+        description: "kb_add_lesson calls with pattern logging at lines 63-75, 246-263"
+
+  - ac_id: "AC-5"
+    ac_text: "Proposals written to WORKFLOW-RECOMMENDATIONS.md"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/workflow-learning/WORKFLOW-RECOMMENDATIONS.md"
+        description: "74-line recommendations template with priority sections and KB entry tracking"
+      - type: file
+        path: ".claude/agents/workflow-retro.agent.md"
+        description: "Agent outputs to WORKFLOW-RECOMMENDATIONS.md per lines 268-320"
+
+  - ac_id: "AC-6"
+    ac_text: "Retro runs automatically or via command after story completion"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/workflow-retro.md"
+        description: "208-line command with single, batch, and epic scope modes"
+      - type: documentation
+        path: ".claude/commands/workflow-retro.md"
+        description: "Usage examples: /workflow-retro WISH-2045, --batch, --scope=epic"
+
+touched_files:
+  - path: ".claude/schemas/outcome-schema.md"
+    action: created
+    lines: 307
+    description: "OUTCOME.yaml schema definition with validation rules and examples"
+
+  - path: ".claude/agents/workflow-retro.agent.md"
+    action: created
+    lines: 394
+    description: "Retrospective agent for pattern detection and KB integration"
+
+  - path: ".claude/commands/workflow-retro.md"
+    action: created
+    lines: 208
+    description: "Command definition for /workflow-retro with multiple modes"
+
+  - path: ".claude/agents/dev-documentation-leader.agent.md"
+    action: modified
+    lines: 15
+    description: "Added Step 5: Generate OUTCOME.yaml with phase mapping"
+
+  - path: "plans/future/workflow-learning/WORKFLOW-RECOMMENDATIONS.md"
+    action: created
+    lines: 74
+    description: "Recommendations aggregation file for human review"
+
+commands_run:
+  - command: "wc -l <deliverables>"
+    result: SUCCESS
+    output: "983 total lines across 4 deliverable files"
+    timestamp: "2026-02-07T21:30:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra - Creates workflow agents and schemas, no application code"
+  mode: "live"
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  lines: null
+  branches: null
+  note: "Infrastructure story - no application code to cover"
+
+notable_decisions:
+  - "OUTCOME.yaml schema designed for backward-compatible evolution"
+  - "Pattern significance thresholds set at 3 occurrences to avoid noise"
+  - "KB writes only for patterns meeting thresholds, observations go to WORKFLOW-RECOMMENDATIONS.md"
+  - "Retro agent uses sonnet model for cross-story pattern analysis"
+  - "Integration point added to dev-documentation-leader as Step 5"
+
+known_deviations: []
+
+token_summary:
+  setup: { in: 2000, out: 1500 }
+  plan: { in: 3000, out: 2500 }
+  execute: { in: 15000, out: 12000 }
+  note: "Regenerated evidence for evidence-first QA"

@@ -1,0 +1,27 @@
+schema: 1
+story_id: "WKFL-005"
+timestamp: "2026-02-07T14:47:00Z"
+
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/agents/**"
+  - ".claude/commands/**"
+  - "docs/workflow/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create doc-sync agent to automatically update FULL_WORKFLOW.md when agent/command files change"

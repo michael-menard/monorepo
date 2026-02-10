@@ -1,0 +1,133 @@
+schema: 1
+story_id: WKFL-002
+version: 1
+timestamp: '2026-02-08T01:33:57.954888Z'
+acceptance_criteria:
+- ac_id: AC-1
+  ac_text: Calibration entry schema captures all required fields
+  status: PASS
+  evidence_items:
+  - type: test
+    path: apps/api/knowledge-base/src/__types__/__tests__/calibration-schema.test.ts
+    description: 26 unit tests pass - validates CalibrationEntrySchema with all fields,
+      formats, and edge cases
+  - type: file
+    path: apps/api/knowledge-base/src/__types__/index.ts
+    description: 'CalibrationEntrySchema defined with Zod: agent_id, finding_id, story_id,
+      stated_confidence, actual_outcome, timestamp'
+- ac_id: AC-2
+  ac_text: Compute accuracy per agent per confidence level
+  status: PASS
+  evidence_items:
+  - type: file
+    path: .claude/agents/confidence-calibrator.agent.md
+    description: Phase 3 implements grouping by (agent_id, stated_confidence) and
+      computes accuracy = correct / total
+- ac_id: AC-3
+  ac_text: Alert when high accuracy drops below 90%
+  status: PASS
+  evidence_items:
+  - type: file
+    path: .claude/agents/confidence-calibrator.agent.md
+    description: Phase 3 identifies alerts when confidence_level === high AND accuracy
+      < 0.90 AND total >= 10
+  - type: file
+    path: .claude/agents/confidence-calibrator.agent.md
+    description: Thresholds section defines ALERT_THRESHOLD_HIGH = 0.90
+- ac_id: AC-4
+  ac_text: Generate threshold adjustment recommendations
+  status: PASS
+  evidence_items:
+  - type: file
+    path: .claude/agents/confidence-calibrator.agent.md
+    description: Recommendations Logic section provides specific recommendations per
+      accuracy range (e.g., < 0.80 = urgently tighten threshold)
+  - type: file
+    path: .claude/agents/confidence-calibrator.agent.md
+    description: Phase 4 includes recommendations section in CALIBRATION.yaml report
+      with agent, current_state, recommendation, rationale, priority
+- ac_id: AC-5
+  ac_text: Weekly job runs and produces report
+  status: PASS
+  evidence_items:
+  - type: command
+    path: .claude/commands/calibration-report.md
+    description: /calibration-report command spawns confidence-calibrator agent and
+      generates CALIBRATION-{date}.yaml
+  - type: file
+    path: .claude/agents/confidence-calibrator.agent.md
+    description: Agent produces CALIBRATION-{until-date}.yaml in _implementation directory
+touched_files:
+- path: apps/api/knowledge-base/src/__types__/index.ts
+  action: modified
+  lines: 70
+  description: Added calibration to KnowledgeEntryTypeSchema enum + CalibrationEntrySchema
+    with ConfidenceLevelSchema and ActualOutcomeSchema
+- path: apps/api/knowledge-base/src/__types__/__tests__/calibration-schema.test.ts
+  action: created
+  lines: 431
+  description: Unit tests for CalibrationEntrySchema (26 tests covering validation,
+    enum checks, ID format, timestamps)
+- path: .claude/agents/confidence-calibrator.agent.md
+  action: created
+  lines: 650
+  description: 'Haiku-model agent for calibration analysis with 5 phases: setup, query,
+    aggregate, report, log systemic issues'
+- path: .claude/commands/calibration-report.md
+  action: created
+  lines: 550
+  description: 'Command to spawn confidence-calibrator with args: --since, --until,
+    --agent, --alert-threshold'
+- path: .claude/commands/feedback.md
+  action: modified
+  lines: 60
+  description: 'Added Step 5.5 to create calibration entry after feedback entry (outcome
+    mapping: helpful→correct, false_positive→false_positive, severity_wrong→severity_wrong,
+    missing→skip)'
+commands_run:
+- command: pnpm build
+  result: SUCCESS
+  timestamp: '2026-02-08T01:33:57.955023Z'
+- command: pnpm check-types
+  result: SUCCESS
+  timestamp: '2026-02-08T01:33:57.955028Z'
+- command: pnpm test src/__types__/__tests__/calibration-schema.test.ts
+  result: SUCCESS
+  output: 26 tests passed
+  timestamp: '2026-02-08T01:33:57.955032Z'
+- command: pnpm test src/__types__/__tests__/
+  result: SUCCESS
+  output: 151 tests passed (4 test files)
+  timestamp: '2026-02-08T01:33:57.955036Z'
+endpoints_exercised: []
+notable_decisions:
+- CalibrationEntrySchema uses regex validation for finding_id and story_id (^[A-Z]+-\d+$)
+  to ensure format consistency
+- 'Calibration entries use outcome mapping: helpful→correct, false_positive→false_positive,
+  severity_wrong→severity_wrong, missing→skip'
+- Confidence-calibrator agent uses haiku model (simple aggregation, no complex reasoning
+  needed)
+- Alert threshold for high confidence set to 0.90 (90%), configurable via --alert-threshold
+  arg
+- 'Minimum sample size: 5 for reporting, 10 for alerts (prevents noise from small
+  samples)'
+- 'Systemic pattern threshold: 3+ agents with same issue triggers KB lesson logging'
+known_deviations: []
+test_summary:
+  unit:
+    pass: 151
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+e2e_tests:
+  status: exempt
+  exempt_reason: 'story_type: infra'
+  tests_written: false
+coverage:
+  lines: 0
+  branches: 0
+token_summary: {}

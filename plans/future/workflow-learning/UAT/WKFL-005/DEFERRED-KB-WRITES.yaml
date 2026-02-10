@@ -1,0 +1,9 @@
+deferred_writes:
+  - timestamp: 2026-02-07T12:00:00-07:00
+    story_id: WKFL-005
+    reason: "KB postgres service not running during story generation"
+    sql_file: /tmp/kb-insert-wkfl-005.sql
+    retry_command: |
+      cd apps/api/knowledge-base && \
+      docker-compose exec -T postgres psql -U kb_user -d knowledge_base < /tmp/kb-insert-wkfl-005.sql
+    status: pending

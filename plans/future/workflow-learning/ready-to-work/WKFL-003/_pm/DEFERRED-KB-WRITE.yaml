@@ -1,0 +1,65 @@
+---
+story_id: WKFL-003
+status: pending
+created_at: 2026-02-07T17:35:00-07:00
+reason: KB write deferred - to be executed via migration script
+
+kb_insert_sql: |
+  INSERT INTO stories (
+    story_id,
+    feature,
+    title,
+    story_dir,
+    story_file,
+    story_type,
+    points,
+    priority,
+    state,
+    touches_backend,
+    touches_frontend,
+    touches_database,
+    touches_infra
+  ) VALUES (
+    'WKFL-003',
+    'workflow-learning',
+    'Emergent Heuristic Discovery',
+    'plans/future/workflow-learning/backlog/WKFL-003',
+    'plans/future/workflow-learning/backlog/WKFL-003/WKFL-003.md',
+    'feature',
+    3,
+    'medium',
+    'backlog',
+    false,
+    false,
+    true,
+    false
+  )
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_dir = EXCLUDED.story_dir,
+    story_file = EXCLUDED.story_file,
+    story_type = EXCLUDED.story_type,
+    points = EXCLUDED.points,
+    priority = EXCLUDED.priority,
+    state = EXCLUDED.state,
+    touches_backend = EXCLUDED.touches_backend,
+    touches_frontend = EXCLUDED.touches_frontend,
+    touches_database = EXCLUDED.touches_database,
+    touches_infra = EXCLUDED.touches_infra,
+    updated_at = CURRENT_TIMESTAMP;
+
+story_data:
+  story_id: WKFL-003
+  feature: workflow-learning
+  title: Emergent Heuristic Discovery
+  story_dir: plans/future/workflow-learning/backlog/WKFL-003
+  story_file: plans/future/workflow-learning/backlog/WKFL-003/WKFL-003.md
+  story_type: feature
+  points: 3
+  priority: medium
+  state: backlog
+  touches_backend: false
+  touches_frontend: false
+  touches_database: true  # KB writes for decision outcomes
+  touches_infra: false
+---
