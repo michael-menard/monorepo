@@ -17,8 +17,8 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 |--------|-------|
 | completed | 12 |
 | in-progress | 10 |
-| uat | 5 |
-| in-qa | 3 |
+| uat | 6 |
+| in-qa | 4 |
 | ready-for-qa | 0 |
 | ready-to-work | 10 |
 | pending | 6 |
@@ -211,7 +211,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005c: Drag preview thumbnail
 
-**Status:** in-progress
+**Status:** uat
 **Depends On:** WISH-2005a
 **Phase:** 4 - UX Polish
 
@@ -225,7 +225,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** WISH-2005a QA Elaboration (Enhancement Opportunity #1)
 
-**Story File:** `plans/future/wish/in-progress/WISH-2005c/WISH-2005c.md`
+**Story File:** `plans/future/wish/UAT/WISH-2005c/WISH-2005c.md`
 
 ---
 
@@ -413,7 +413,7 @@ Follow-up from QA Elaboration of WISH-2009 (Items Marked Out-of-Scope)
 
 ## WISH-20260: Automatic Retry Mechanism for Failed Flag Schedules
 
-**Status:** ready-for-qa
+**Status:** completed
 **Depends On:** WISH-2119
 **Follow-up From:** WISH-2119
 **Phase:** 3 - Infrastructure
@@ -461,7 +461,7 @@ Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #4)
 **Impact:** Medium (improves reliability and reduces admin toil)
 **Effort:** Medium (retry logic + database schema + backoff calculation)
 
-**Story File:** `plans/future/wish/ready-for-qa/WISH-20260/WISH-20260.md`
+**Story File:** `plans/future/wish/UAT/WISH-20260/WISH-20260.md`
 
 ---
 
@@ -829,7 +829,7 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 
 ## WISH-2124: Redis infrastructure setup and migration from in-memory cache
 
-**Status:** ready-for-qa
+**Status:** completed
 **Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 2 - Core Infrastructure
@@ -1017,7 +1017,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 ## WISH-2014: Smart Sorting Algorithms
 
-**Status:** in-progress
+**Status:** uat
 **Depends On:** none
 **Follow-up From:** WISH-2001
 **Phase:** 4 - UX Polish
@@ -1049,7 +1049,9 @@ Add three smart sorting modes to help users discover wishlist items in meaningfu
 
 **Code Review Verdict:** PASS (iteration 3) - All 6 review workers passed (lint, style, syntax, security, typecheck, build).
 
-**Story File:** `plans/future/wish/in-progress/WISH-2014/WISH-2014.md`
+**QA Verdict:** PASS (2026-02-09) - All acceptance criteria verified, 155 tests pass (15 backend + 6 frontend + 134 regression), architecture compliant
+
+**Story File:** `plans/future/wish/UAT/WISH-2014/WISH-2014.md`
 
 ---
 
@@ -1232,10 +1234,11 @@ Code review PASSED (iteration 2) - All quality gates met: linting (0 errors), te
 
 ## WISH-20172: Frontend Filter Panel UI
 
-**Status:** ready-for-qa
+**Status:** uat
 **Depends On:** WISH-20171
 **Split From:** WISH-2017
 **Phase:** 6 - Advanced Features
+**Story File:** plans/future/wish/UAT/WISH-20172/WISH-20172.md
 
 ### Scope
 

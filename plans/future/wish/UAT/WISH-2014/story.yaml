@@ -1,0 +1,30 @@
+schema: 1
+id: WISH-2014
+feature: wish
+type: feature
+state: uat
+title: Smart Sorting Algorithms
+points: 3
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2001
+follow_up_from: WISH-2001
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: "Enable users to discover wishlist items using three smart sorting modes:"
+non_goals:
+  - Algorithm customization (user-defined weights or formulas) - deferred to future story
+  - Multi-currency exchange rate handling for Best Value - deferred to Phase 6 (Internationalization)
+  - Secondary/combined sort modes (e.g., "Best Value among High Priority") - deferred to future story
+  - Sort mode persistence in localStorage - deferred to Phase 5 (UX Polish)
+  - Advanced filtering combined with smart sorting - deferred to future story
+  - Real-time sort updates via WebSocket - deferred to Phase 5
+acs: []
+risks: []
+created_at: 2026-01-27T12:30:00-07:00
+updated_at: 2026-02-09T18:15:00-07:00
