@@ -1,0 +1,656 @@
+schema: 1
+story_id: "INST-1108"
+timestamp: "2026-02-09T21:00:00Z"
+
+steps:
+  - id: 1
+    description: "Add UpdateMocInputSchema to backend types and create service layer updateMoc method"
+    files:
+      - "apps/api/lego-api/domains/mocs/types.ts"
+      - "apps/api/lego-api/domains/mocs/application/services.ts"
+    dependencies: []
+    slice: backend
+    rationale: "Service layer must exist before route handler (Ports & Adapters). Schema needed for validation."
+
+  - id: 2
+    description: "Implement PATCH /mocs/:id route handler as thin adapter"
+    files:
+      - "apps/api/lego-api/domains/mocs/routes.ts"
+    dependencies: [1]
+    slice: backend
+    rationale: "Route handler depends on service method. Must be thin adapter calling service layer."
+
+  - id: 3
+    description: "Add repository method for updating MOC metadata"
+    files:
+      - "apps/api/lego-api/domains/mocs/adapters/moc-repository.ts"
+    dependencies: [1]
+    slice: backend
+    rationale: "Repository update method needed by service layer. Implements partial update semantics."
+
+  - id: 4
+    description: "Write backend unit tests for service layer and route handler"
+    files:
+      - "apps/api/lego-api/domains/mocs/__tests__/services.test.ts"
+      - "apps/api/lego-api/domains/mocs/__tests__/routes.test.ts"
+    dependencies: [2, 3]
+    slice: backend
+    rationale: "Test service layer authorization, validation, partial update. Test route handler as thin adapter."
+
+  - id: 5
+    description: "Create EditMocPage component with data fetching and loading states"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx"
+      - "apps/web/app-instructions-gallery/src/pages/EditMocPage/__types__/index.ts"
+    dependencies: []
+    slice: frontend
+    rationale: "Can start frontend in parallel with backend. Uses existing useUpdateMocMutation hook."
+
+  - id: 6
+    description: "Add /mocs/:id/edit route to router"
+    files:
+      - "apps/web/app-instructions-gallery/src/router.tsx"
+    dependencies: [5]
+    slice: frontend
+    rationale: "Route registration depends on EditMocPage component existing."
+
+  - id: 7
+    description: "Implement form recovery with localStorage"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx"
+      - "apps/web/app-instructions-gallery/src/pages/EditMocPage/utils/index.ts"
+    dependencies: [5]
+    slice: frontend
+    rationale: "Form recovery pattern from CreateMocPage. Save draft on error, restore on return."
+
+  - id: 8
+    description: "Write frontend unit tests for EditMocPage"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/EditMocPage/__tests__/EditMocPage.test.tsx"
+    dependencies: [7]
+    slice: frontend
+    rationale: "Test rendering, validation, navigation, submission, form recovery. Target 80% coverage."
+
+  - id: 9
+    description: "Write frontend integration tests for RTK Query mutation flow"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/EditMocPage/__tests__/EditMocPage.integration.test.tsx"
+    dependencies: [7]
+    slice: frontend
+    rationale: "Test PATCH request, cache invalidation, error handling with MSW."
+
+  - id: 10
+    description: "Write E2E tests for edit flow (edit + save, cancel, validation, recovery)"
+    files:
+      - "apps/web/playwright/features/instructions/inst-1108-edit.spec.ts"
+    dependencies: [2, 3, 7]
+    slice: frontend
+    rationale: "E2E tests require backend PATCH endpoint and frontend EditMocPage. Test with live API per ADR-006."
+
+  - id: 11
+    description: "Add Edit button to MocDetailPage (INST-1101 integration - DEFERRED)"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/MocDetailPage/index.tsx"
+    dependencies: [6]
+    slice: frontend
+    rationale: "DEFERRED until INST-1101 implemented. E2E tests use direct URL navigation as workaround."
+
+files_to_change:
+  # Backend Service Layer
+  - path: "apps/api/lego-api/domains/mocs/application/services.ts"
+    action: modify
+    reason: "Add updateMoc service method with business logic: authorization check, partial update, returns Result<Moc, ErrorType>"
+
+  # Backend Types
+  - path: "apps/api/lego-api/domains/mocs/types.ts"
+    action: modify
+    reason: "Add UpdateMocInputSchema and UpdateMocRequestSchema (derives from CreateMocRequestSchema with all fields optional)"
+
+  # Backend Routes
+  - path: "apps/api/lego-api/domains/mocs/routes.ts"
+    action: modify
+    reason: "Add PATCH /mocs/:id route handler as thin adapter calling mocService.updateMoc()"
+
+  # Backend Repository
+  - path: "apps/api/lego-api/domains/mocs/adapters/moc-repository.ts"
+    action: modify
+    reason: "Add updateMoc repository method for partial update with updatedAt timestamp"
+
+  # Backend Ports
+  - path: "apps/api/lego-api/domains/mocs/ports/index.ts"
+    action: modify
+    reason: "Add updateMoc method signature to MocRepository interface"
+
+  # Backend Tests - Service
+  - path: "apps/api/lego-api/domains/mocs/__tests__/services.test.ts"
+    action: modify
+    reason: "Add tests for updateMoc service method (authorization, validation, partial update, errors)"
+
+  # Backend Tests - Routes
+  - path: "apps/api/lego-api/domains/mocs/__tests__/routes.test.ts"
+    action: modify
+    reason: "Add tests for PATCH /mocs/:id route (success, validation errors, authorization, 404)"
+
+  # Frontend Page
+  - path: "apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx"
+    action: create
+    reason: "New EditMocPage component with data fetching, loading skeleton, 404 error, form submission, form recovery"
+
+  # Frontend Page Types
+  - path: "apps/web/app-instructions-gallery/src/pages/EditMocPage/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for EditMocPage component props and state"
+
+  # Frontend Page Utils
+  - path: "apps/web/app-instructions-gallery/src/pages/EditMocPage/utils/index.ts"
+    action: create
+    reason: "Form recovery utilities (save draft to localStorage, restore draft, clear draft)"
+
+  # Frontend Router
+  - path: "apps/web/app-instructions-gallery/src/router.tsx"
+    action: modify
+    reason: "Add /mocs/:id/edit route mapping to EditMocPage component"
+
+  # Frontend Unit Tests
+  - path: "apps/web/app-instructions-gallery/src/pages/EditMocPage/__tests__/EditMocPage.test.tsx"
+    action: create
+    reason: "Unit tests for EditMocPage rendering, validation, navigation, submission (80% coverage target)"
+
+  # Frontend Integration Tests
+  - path: "apps/web/app-instructions-gallery/src/pages/EditMocPage/__tests__/EditMocPage.integration.test.tsx"
+    action: create
+    reason: "Integration tests for RTK Query mutation flow with MSW (cache invalidation, error handling)"
+
+  # E2E Tests
+  - path: "apps/web/playwright/features/instructions/inst-1108-edit.spec.ts"
+    action: create
+    reason: "E2E tests with live API: edit + save, cancel, validation, form recovery (3+ critical paths)"
+
+  # MocDetailPage Integration (DEFERRED)
+  - path: "apps/web/app-instructions-gallery/src/pages/MocDetailPage/index.tsx"
+    action: modify
+    reason: "Add Edit button (DEFERRED until INST-1101 implemented). Conditional render based on ownership."
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after backend and frontend code changes (steps 1-7 complete)"
+    required: true
+    reason: "Verify TypeScript compilation passes, no type errors"
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+    reason: "Ensure ESLint passes with no errors, warnings addressed"
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+    reason: "Type check all new code (backend service, routes, frontend page)"
+
+  - command: "pnpm test --filter @repo/api -- apps/api/lego-api/domains/mocs/__tests__"
+    when: "after backend implementation (steps 1-4 complete)"
+    required: true
+    reason: "Run backend unit tests for service layer and route handler (90% coverage target)"
+
+  - command: "pnpm test --filter app-instructions-gallery -- src/pages/EditMocPage"
+    when: "after frontend implementation (steps 5-9 complete)"
+    required: true
+    reason: "Run frontend unit and integration tests (80% coverage target)"
+
+  - command: "pnpm test:e2e -- inst-1108-edit"
+    when: "after all implementation complete (step 10)"
+    required: true
+    reason: "Run E2E tests with live API (3+ critical paths per ADR-006)"
+
+acceptance_criteria_map:
+  # Backend Service Layer (AC-1, AC-3)
+  - ac_id: "AC-1"
+    planned_evidence: "Service method mocService.updateMoc() in services.ts with business logic"
+    evidence_type: file
+    step_id: 1
+
+  - ac_id: "AC-3"
+    planned_evidence: "PATCH route handler as thin adapter calling service layer"
+    evidence_type: file
+    step_id: 2
+
+  # Backend Endpoint Structure (AC-2, AC-5)
+  - ac_id: "AC-2"
+    planned_evidence: "PATCH /mocs/:id route accepts partial update body"
+    evidence_type: file
+    step_id: 2
+
+  - ac_id: "AC-5"
+    planned_evidence: "UpdateMocInputSchema validation in route handler"
+    evidence_type: file
+    step_id: 2
+
+  # Authorization (AC-4, AC-13)
+  - ac_id: "AC-4"
+    planned_evidence: "Service layer authorization check, 404 on mismatch"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-13"
+    planned_evidence: "Backend test: 404 when MOC not found or unauthorized"
+    evidence_type: test
+    step_id: 4
+
+  # Validation (AC-6 to AC-9)
+  - ac_id: "AC-6"
+    planned_evidence: "Backend test: Title validation (min 3, max 500)"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-7"
+    planned_evidence: "Backend test: Description validation (max 5000)"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-8"
+    planned_evidence: "Backend test: Theme validation (non-empty if provided)"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-9"
+    planned_evidence: "Backend test: Tags validation (max 20 items)"
+    evidence_type: test
+    step_id: 4
+
+  # Response Handling (AC-10 to AC-14)
+  - ac_id: "AC-10"
+    planned_evidence: "Repository updateMoc sets updatedAt timestamp"
+    evidence_type: file
+    step_id: 3
+
+  - ac_id: "AC-11"
+    planned_evidence: "Backend test: 200 with updated MOC data"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-12"
+    planned_evidence: "Backend test: 400 with validation error details"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-14"
+    planned_evidence: "Backend test: 500 on database errors"
+    evidence_type: test
+    step_id: 4
+
+  # Frontend Component (AC-75, AC-76 alternating pattern)
+  - ac_id: "AC-75"
+    planned_evidence: "EditMocPage component at /mocs/:id/edit route"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-76"
+    planned_evidence: "useGetMocDetailQuery fetches MOC data on mount"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-75"
+    planned_evidence: "Loading skeleton while fetching MOC data"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-76"
+    planned_evidence: "404 error state if MOC not found or unauthorized"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-75"
+    planned_evidence: "MocForm component reused with initialValues prop"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-76"
+    planned_evidence: "Form fields pre-populated with current MOC values"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Save button triggers useUpdateMocMutation"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Cancel button navigates to detail page"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Success shows toast and navigates to detail page"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Error shows toast with retry button"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Form recovery saves draft to localStorage on error"
+    evidence_type: file
+    step_id: 7
+
+  - ac_id: "AC-76"
+    planned_evidence: "Frontend test: Validation matches create page rules"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Submit button disabled while submitting or invalid"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Escape key cancels and returns to detail page"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Cmd/Ctrl+Enter submits form (MocForm already implements)"
+    evidence_type: file
+    step_id: 5
+
+  # Detail Page Integration (AC-76, AC-75 for edit button - DEFERRED)
+  - ac_id: "AC-76"
+    planned_evidence: "Edit button on detail page (DEFERRED - INST-1101 dependency)"
+    evidence_type: manual
+    step_id: 11
+
+  - ac_id: "AC-75"
+    planned_evidence: "Edit button navigates to /mocs/:id/edit (DEFERRED)"
+    evidence_type: manual
+    step_id: 11
+
+  - ac_id: "AC-76"
+    planned_evidence: "Edit button hidden if not MOC owner (DEFERRED)"
+    evidence_type: manual
+    step_id: 11
+
+  # RTK Query Integration (AC-75, AC-76)
+  - ac_id: "AC-75"
+    planned_evidence: "useUpdateMocMutation called with correct payload"
+    evidence_type: test
+    step_id: 9
+
+  - ac_id: "AC-76"
+    planned_evidence: "Integration test: Cache invalidated for Moc tag by id"
+    evidence_type: test
+    step_id: 9
+
+  - ac_id: "AC-75"
+    planned_evidence: "Integration test: Cache invalidated for MocList tag"
+    evidence_type: test
+    step_id: 9
+
+  # Backend Testing (AC-75, AC-76)
+  - ac_id: "AC-75"
+    planned_evidence: "Backend test: PATCH with valid data returns 200"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-76"
+    planned_evidence: "Backend test: Authorization failure returns 404"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-75"
+    planned_evidence: "Backend test: Validation error (title too short) returns 400"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-76"
+    planned_evidence: "Backend test: Validation error (too many tags) returns 400"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-75"
+    planned_evidence: "Backend test: MOC not found returns 404"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-76"
+    planned_evidence: "Backend test: Partial update (only tags) succeeds"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-75"
+    planned_evidence: "Backend test: updatedAt timestamp updated on PATCH"
+    evidence_type: test
+    step_id: 4
+
+  - ac_id: "AC-76"
+    planned_evidence: "Backend test coverage >=90% for PATCH route + service"
+    evidence_type: test
+    step_id: 4
+
+  # Frontend Unit Testing (AC-75, AC-76)
+  - ac_id: "AC-75"
+    planned_evidence: "Frontend test: Renders loading skeleton while fetching"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Frontend test: Renders form pre-populated with MOC data"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Frontend test: Save button disabled when form invalid"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Frontend test: Cancel button navigates to detail page"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Frontend test: Save button triggers mutation"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Frontend test: Success shows toast and navigates"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Frontend test: Error shows toast with retry"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Frontend test: Form recovery from localStorage"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-75"
+    planned_evidence: "Frontend test: 404 error state when MOC not found"
+    evidence_type: test
+    step_id: 8
+
+  - ac_id: "AC-76"
+    planned_evidence: "Frontend test coverage >=80% for EditMocPage"
+    evidence_type: test
+    step_id: 8
+
+  # Frontend Integration Testing (AC-75, AC-76)
+  - ac_id: "AC-75"
+    planned_evidence: "Integration test: Fetches MOC data on mount (MSW)"
+    evidence_type: test
+    step_id: 9
+
+  - ac_id: "AC-76"
+    planned_evidence: "Integration test: PATCH request sent on save (MSW)"
+    evidence_type: test
+    step_id: 9
+
+  - ac_id: "AC-75"
+    planned_evidence: "Integration test: Handles validation error from backend"
+    evidence_type: test
+    step_id: 9
+
+  - ac_id: "AC-76"
+    planned_evidence: "Integration test coverage >=80% for RTK Query flow"
+    evidence_type: test
+    step_id: 9
+
+  # E2E Testing (AC-75, AC-76)
+  - ac_id: "AC-75"
+    planned_evidence: "E2E test: Change title, save, verify detail page shows new title"
+    evidence_type: test
+    step_id: 10
+
+  - ac_id: "AC-76"
+    planned_evidence: "E2E test: Cancel returns to detail page without saving"
+    evidence_type: test
+    step_id: 10
+
+  - ac_id: "AC-75"
+    planned_evidence: "E2E test: Validation error prevents submission"
+    evidence_type: test
+    step_id: 10
+
+  - ac_id: "AC-76"
+    planned_evidence: "E2E test: Form recovery restores unsaved changes"
+    evidence_type: test
+    step_id: 10
+
+  - ac_id: "AC-75"
+    planned_evidence: "E2E test: Edit button navigates to edit page (DEFERRED - INST-1101)"
+    evidence_type: manual
+    step_id: 11
+
+  - ac_id: "AC-76"
+    planned_evidence: "E2E tests run against live API per ADR-006"
+    evidence_type: test
+    step_id: 10
+
+  - ac_id: "AC-75"
+    planned_evidence: "E2E test coverage: At least 3 critical paths pass"
+    evidence_type: test
+    step_id: 10
+
+  # Quality Gates (AC-76, AC-75)
+  - ac_id: "AC-76"
+    planned_evidence: "TypeScript compilation passes (pnpm check-types)"
+    evidence_type: command
+    step_id: 1
+
+  - ac_id: "AC-75"
+    planned_evidence: "ESLint passes (pnpm lint)"
+    evidence_type: command
+    step_id: 2
+
+  - ac_id: "AC-76"
+    planned_evidence: "Prettier formatting applied"
+    evidence_type: command
+    step_id: 2
+
+  - ac_id: "AC-75"
+    planned_evidence: "No hardcoded colors (Tailwind tokens only)"
+    evidence_type: manual
+    step_id: 5
+
+  - ac_id: "AC-76"
+    planned_evidence: "Imports from @repo/app-component-library (not _primitives/)"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-75"
+    planned_evidence: "MocForm component reused without duplication"
+    evidence_type: file
+    step_id: 5
+
+  - ac_id: "AC-76"
+    planned_evidence: "Zod schemas for all types (UpdateMocInputSchema)"
+    evidence_type: file
+    step_id: 1
+
+  - ac_id: "AC-75"
+    planned_evidence: "Keyboard accessible (Tab, Escape, Cmd+Enter)"
+    evidence_type: manual
+    step_id: 5
+
+  - ac_id: "AC-76"
+    planned_evidence: "Screen reader support (ARIA labels, live regions)"
+    evidence_type: manual
+    step_id: 5
+
+  - ac_id: "AC-75"
+    planned_evidence: "No console.log (use @repo/logger)"
+    evidence_type: manual
+    step_id: 2
+
+  - ac_id: "AC-76"
+    planned_evidence: "Pre-commit hooks pass (lint, type-check, tests)"
+    evidence_type: command
+    step_id: 10
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Schema design for UpdateMocInputSchema - derive from CreateMocInputSchema or define separately?"
+    decision: "Derive from CreateMocInputSchema with all fields optional (partial update semantics)"
+    rationale: "Story explicitly states UpdateMocInputSchema = CreateMocInputSchema.partial(). Ensures validation rules stay in sync. Frontend UpdateMocInput schema already exists in @repo/api-client."
+    decided_by: story
+    confidence: high
+
+  - id: ARCH-002
+    question: "Where to implement business logic - route handler or service layer?"
+    decision: "Service layer (Ports & Adapters architecture)"
+    rationale: "AC-1 requires service layer method. AC-3 requires thin adapter route. Ports & Adapters is non-negotiable project constraint (docs/architecture/api-layer.md)."
+    decided_by: story
+    confidence: high
+
+  - id: ARCH-003
+    question: "Authorization error response - 403 Forbidden or 404 Not Found?"
+    decision: "404 Not Found for both not found and unauthorized"
+    rationale: "AC-4, AC-13 explicitly require 404 to avoid leaking MOC existence. Story architecture notes state 'Authorization as 404: do not distinguish not found from unauthorized'."
+    decided_by: story
+    confidence: high
+
+  - id: ARCH-004
+    question: "Form recovery - when to save draft to localStorage?"
+    decision: "Save draft on PATCH request error (network failure, 500, etc). Clear draft on successful save or explicit cancel."
+    rationale: "Pattern from CreateMocPage (story references). Resilience feature for error cases only. Don't save on every keystroke (performance)."
+    decided_by: pattern
+    confidence: high
+
+  - id: ARCH-005
+    question: "MocForm reuse - copy component or import?"
+    decision: "Import MocForm from existing location, configure with initialValues prop"
+    rationale: "AC-75 states 'MocForm component is reused (imported from apps/web/app-instructions-gallery/src/components/MocForm/) with initialValues prop. Do NOT duplicate MocForm code.'"
+    decided_by: story
+    confidence: high
+
+  - id: ARCH-006
+    question: "Edit button on detail page - implement now or defer?"
+    decision: "Defer to INST-1101 (View MOC Details) story"
+    rationale: "Story dependency on INST-1101. E2E tests use direct URL navigation (/mocs/:id/edit) as workaround. AC-30 to AC-32 marked as INST-1101 integration point."
+    decided_by: story
+    confidence: high
+
+complexity: moderate
+
+notes:
+  - "UpdateMocInput schema already exists in packages/core/api-client/src/schemas/instructions.ts (lines 248-277). Backend needs UpdateMocRequestSchema in apps/api types.ts to match CreateMocRequestSchema pattern."
+  - "useUpdateMocMutation already exists in packages/core/api-client/src/rtk/instructions-api.ts (line 233). Frontend can use immediately."
+  - "INST-1101 (View MOC Details) is blocked-by dependency for Edit button integration. Core edit flow is testable via direct URL navigation."
+  - "Backend repository pattern: apps/api/lego-api/domains/mocs/adapters/moc-repository.ts has create method. Add updateMoc method following same pattern."
+  - "Service layer pattern: createMoc method in services.ts returns Result<Moc, ErrorType>. updateMoc should follow same pattern."
+  - "Partial update semantics: Only fields provided in request body are updated. Omitted fields remain unchanged. Repository uses db.mocs.update() which handles this automatically."
+  - "Frontend pattern: CreateMocPage shows form recovery with localStorage. EditMocPage reuses this pattern with key 'moc-edit-draft-${mocId}'."
+  - "E2E tests must run against live API per ADR-006. No MSW mocking in Playwright tests. Minimum 3 critical paths required."
+  - "Test coverage targets: Backend >=90%, Frontend unit >=80%, Frontend integration >=80%."
+  - "DEFERRED: Edit button on MocDetailPage (step 11). Can complete story without this. Direct URL navigation works for testing."
+
+warnings:
+  - "INST-1101 dependency: Edit button integration deferred. E2E tests must use direct navigation to /mocs/:id/edit URL."
+  - "Backend UpdateMocRequestSchema must match frontend UpdateMocInput schema (already exists). Verify field names and validation rules align."
+  - "Form recovery localStorage key pattern: 'moc-edit-draft-${mocId}' not 'moc-draft-${mocId}' (avoid collision with create draft)."
+  - "Repository updateMoc method must set updatedAt timestamp (AC-10). Check if database trigger exists or set manually."
+  - "MocForm component from INST-1102 currently in QA. Verify initialValues prop exists and works as expected before implementing EditMocPage."

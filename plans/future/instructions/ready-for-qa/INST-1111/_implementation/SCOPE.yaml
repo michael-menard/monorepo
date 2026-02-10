@@ -1,0 +1,106 @@
+schema: 1
+story_id: INST-1111
+timestamp: "2026-02-09T00:00:00Z"
+
+description: |
+  Implement 245 missing Playwright BDD step definitions across inspiration and
+  gallery feature files to allow pnpm bdd:gen to complete successfully without
+  errors.
+
+acceptance_criteria:
+  - id: AC1
+    title: "Audit Missing Steps"
+    description: |
+      Run bddgen and capture full list of missing step definitions.
+      Categorize missing steps by feature file and identify shared vs feature-specific steps.
+    status: pending
+
+  - id: AC2
+    title: "Fix Inspiration Keyboard Steps"
+    description: |
+      Implement missing steps for inspiration-keyboard.feature including:
+      gallery loaded, modal open, multi-select mode, bulk actions, tab navigation.
+    status: pending
+
+  - id: AC3
+    title: "Fix Other Inspiration Steps"
+    description: |
+      Implement missing steps for other inspiration features (gallery, upload, albums, accessibility).
+      Ensure no duplicate step definitions.
+    status: pending
+
+  - id: AC4
+    title: "Fix Gallery Steps"
+    description: |
+      Implement missing steps for gallery features. Reuse existing patterns where possible.
+    status: pending
+
+  - id: AC5
+    title: "Verify No Duplicates"
+    description: |
+      Run bddgen successfully with no duplicate step errors.
+      Run bddgen successfully with no missing step errors.
+    status: pending
+
+  - id: AC6
+    title: "E2E Tests Run"
+    description: |
+      pnpm bdd:gen completes successfully. pnpm test:bdd runs without errors.
+      INST-1105 E2E tests can execute.
+    status: pending
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/playwright/steps/**"
+  - "apps/web/playwright/features/inspiration/**"
+  - "apps/web/playwright/features/instructions/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+dependencies:
+  blocks:
+    - INST-1105  # E2E tests cannot run until this is fixed
+  blocked_by: []
+
+key_files_to_modify:
+  - apps/web/playwright/steps/inspiration-keyboard.steps.ts (new file)
+  - apps/web/playwright/steps/inspiration-gallery.steps.ts (update)
+  - apps/web/playwright/steps/inspiration-albums.steps.ts (update)
+  - apps/web/playwright/steps/inspiration-upload.steps.ts (update)
+  - apps/web/playwright/steps/inspiration-accessibility.steps.ts (update)
+  - apps/web/playwright/steps/inst-1100-gallery.steps.ts (update)
+  - apps/web/playwright/steps/inst-1105-presigned-upload.steps.ts (update)
+  - apps/web/playwright/steps/common.steps.ts (review for shared steps)
+
+definition_of_done:
+  - pnpm bdd:gen completes with 0 errors
+  - No duplicate step definition errors reported
+  - No missing step definition errors reported
+  - All 245 missing steps are now implemented
+  - INST-1105 E2E tests can be executed
+  - All existing E2E tests pass
+
+effort_estimate:
+  size: medium
+  days: 2-3
+  complexity: low
+  risk: low
+
+out_of_scope:
+  - Adding new E2E test scenarios
+  - Modifying existing feature files
+  - Changing playwright configuration

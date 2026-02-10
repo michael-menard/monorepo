@@ -1,0 +1,288 @@
+schema: 1
+story_id: "INST-1105"
+timestamp: "2026-02-09T22:38:33Z"
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: true
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-instructions-gallery/**"
+  - "apps/api/lego-api/**"
+  - "packages/core/upload-client/**"
+  - "packages/core/upload-types/**"
+  - "packages/backend/upload-config/**"
+  - "packages/backend/database-schema/**"
+  - "packages/backend/moc-instructions-core/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: true
+  security: false
+  performance: true
+
+summary: "Presigned URL upload for PDFs 10-50MB with progress tracking, session expiry, concurrent uploads"
+
+scope:
+  frontend:
+    changes:
+      - "Detect files >10MB in InstructionsUpload component, route to presigned flow"
+      - "Call useCreateUploadSession mutation to get presigned URL + sessionId"
+      - "Use useUploadManager hook for concurrent uploads with progress, cancel, retry"
+      - "Upload directly to S3 via XHR with progress events (uploadToPresignedUrl from @repo/upload-client)"
+      - "Call useCompleteUploadSession mutation to finalize and create moc_files record"
+      - "Handle session expiry: detect via API error or local TTL, refresh URLs, resume uploads"
+
+    components:
+      - "InstructionsUpload (enhanced): Route >10MB to presigned flow"
+      - "UploadProgress (new): Progress bar with cancel/retry buttons"
+      - "SessionExpiryWarning (new): 5-minute warning banner"
+      - "UploadFileList (new): Batch upload display with state per file"
+
+    hooks:
+      - "useCreateUploadSession (RTK Query mutation)"
+      - "useCompleteUploadSession (RTK Query mutation)"
+      - "useUploadManager (existing, enhanced for presigned flow)"
+
+    utilities:
+      - "shouldUsePresignedUpload(fileSize) - @repo/upload-config"
+      - "uploadToPresignedUrl(url, file, onProgress) - @repo/upload-client"
+      - "calculateBatchState(files) - @repo/upload-types"
+      - "mapHttpErrorToUploadError(error) - @repo/upload-types"
+
+    tests:
+      - "Unit: useCreateUploadSession, useCompleteUploadSession mutations"
+      - "Unit: UploadProgress component state transitions"
+      - "Unit: SessionExpiryWarning expiry detection logic"
+      - "Integration: File >10MB route to presigned, <10MB direct"
+      - "Integration: Session expiry during multi-file upload"
+      - "E2E: Upload >10MB file with real S3, verify progress, verify finalization"
+      - "Target coverage: 80%"
+
+  backend:
+    changes:
+      - "POST /mocs/:id/upload-sessions - Create session, validate file metadata, generate presigned S3 URL"
+      - "POST /mocs/:id/upload-sessions/:sessionId/complete - Verify S3 upload, create moc_files record"
+
+    endpoints:
+      - path: "POST /mocs/:id/upload-sessions"
+        description: "Create presigned upload session"
+        authorization: "User must own MOC"
+        rate_limit: "Per-user rate limiter"
+        request_schema: |
+          {
+            filename: string (max 255)
+            fileSize: number (10MB < fileSize <= 50MB)
+            mimeType: string ('application/pdf')
+          }
+        response_schema: |
+          {
+            sessionId: uuid
+            presignedUrl: string (expires in 15 minutes)
+            expiresAt: ISO8601 timestamp
+          }
+
+      - path: "POST /mocs/:id/upload-sessions/:sessionId/complete"
+        description: "Verify S3 upload, finalize session, create moc_files record"
+        authorization: "User must own session"
+        request_schema: "{ }"
+        response_schema: |
+          {
+            fileId: uuid
+            mocId: uuid
+            fileType: 'instruction'
+            s3Key: string
+            cloudFrontUrl: string
+            createdAt: ISO8601
+          }
+
+    services:
+      - file: "apps/api/lego-api/domains/mocs/application/services.ts"
+        functions:
+          - "createUploadSession(mocId, filename, fileSize, userId, deps)"
+          - "completeUploadSession(sessionId, userId, deps)"
+
+      - pattern: "Reuse editPresign/editFinalize from @repo/moc-instructions-core"
+        adaptation: "Presigned flow uses POST /upload-sessions instead of PUT /edit/presign"
+
+    ports:
+      - name: "UploadSessionRepository"
+        location: "apps/api/lego-api/domains/mocs/ports/index.ts"
+        methods:
+          - "createSession(id, userId, mocId, s3Key, expiresAt): Promise<void>"
+          - "getSession(sessionId): Promise<UploadSession | null>"
+          - "updateSessionStatus(sessionId, status): Promise<void>"
+          - "expireOldSessions(beforeDate): Promise<number>"
+
+      - name: "S3StoragePort"
+        location: "apps/api/lego-api/domains/mocs/ports/index.ts"
+        methods:
+          - "generatePresignedUrl(bucket, key, options): Promise<string>"
+          - "headObject(bucket, key): Promise<HeadObjectOutput>"
+          - "copyObject(source, destination): Promise<void>"
+          - "deleteObject(bucket, key): Promise<void>"
+
+    tests:
+      - "Unit: createUploadSession validation (file size, authorization, rate limit)"
+      - "Unit: completeUploadSession verification logic (S3 headObject, session status)"
+      - "Unit: Error mapping (FILE_TOO_LARGE, INVALID_MIME_TYPE, RATE_LIMIT_EXCEEDED)"
+      - "Integration: Full presigned flow via .http tests"
+      - "Integration: S3 verification edge cases (missing file, size mismatch)"
+      - "Integration: Session expiry edge case (expired before completion)"
+      - "Target coverage: 90%"
+
+  database:
+    tables:
+      - name: "upload_sessions"
+        status: "Exists (schema from INST-1003)"
+        columns_to_add:
+          - "originalFilename: varchar(255) NOT NULL"
+          - "originalFileSize: bigint NOT NULL"
+        existing_columns:
+          - "id: uuid PRIMARY KEY"
+          - "userId: uuid NOT NULL"
+          - "mocInstructionId: uuid NOT NULL"
+          - "status: enum('pending', 'completed', 'failed', 'expired')"
+          - "s3Key: varchar(500) NOT NULL"
+          - "expiresAt: timestamp NOT NULL"
+          - "createdAt: timestamp NOT NULL DEFAULT now()"
+          - "completedAt: timestamp NULL"
+
+      - name: "moc_files"
+        status: "Exists (from INST-1103)"
+        usage: "No schema changes. Insert record with type='instruction' when session completes"
+
+    migrations:
+      - file: "packages/backend/database-schema/migrations/{timestamp}_add_upload_session_metadata.sql"
+        changes:
+          - "ALTER TABLE upload_sessions ADD COLUMN originalFilename varchar(255) NOT NULL"
+          - "ALTER TABLE upload_sessions ADD COLUMN originalFileSize bigint NOT NULL"
+        notes: |
+          Tracks original file metadata for verification.
+          Migration must be run before backend deployment.
+          Reversible: DROP COLUMN originalFilename, originalFileSize
+
+    tests:
+      - "Migration: Verify columns added, old sessions still readable"
+      - "Integration: Session records persist across upload lifecycle"
+      - "Integration: Unique constraint prevents duplicate files per MOC"
+      - "Target coverage: 95% state machine"
+
+  packages_to_reuse:
+    - name: "@repo/upload-types"
+      reuse_rate: "100%"
+      exports: |
+        - UploadStatusSchema
+        - UploadErrorCodeSchema
+        - UploaderFileItemSchema
+        - UploadBatchStateSchema
+        - calculateBatchState()
+        - createFileItem()
+        - mapHttpErrorToUploadError()
+
+    - name: "@repo/upload-config"
+      reuse_rate: "95%"
+      exports: |
+        - pdfMaxBytes (50MB)
+        - presignTtlMinutes (15)
+        - sessionTtlMinutes (15)
+        - rateLimitPerDay (100)
+        - concurrentUploadLimit (3)
+      additions: |
+        - pdfMinBytesForPresigned (10MB) [NEW]
+        - shouldUsePresignedUpload(fileSize) [NEW]
+
+    - name: "@repo/upload-client"
+      reuse_rate: "100%"
+      exports: |
+        - uploadToPresignedUrl(url, file, onProgress, signal)
+        - createUploadManager(options)
+        - calculateUploadSpeed(loaded, total, startTime)
+
+    - name: "@repo/moc-instructions-core"
+      reuse_rate: "85%"
+      exports: |
+        - editPresign() [adapt for /upload-sessions endpoint]
+        - editFinalize() [adapt for /upload-sessions/:id/complete]
+        - validatePdfMimeType(filename)
+        - sanitizeFilename(filename)
+        - generatePresignedUrl(s3, options)
+
+architectural_decisions:
+  - id: "AC1"
+    title: "Two-phase presigned URL flow for >10MB files"
+    rationale: "Avoids Lambda payload limits, enables progress tracking, supports cancellation"
+
+  - id: "AC2"
+    title: "XHR-based S3 upload (not fetch)"
+    rationale: "Progress events required, proven implementation in @repo/upload-client"
+
+  - id: "AC3"
+    title: "Session expiry detection with 30-second buffer"
+    rationale: "Prevents uploads with expired URLs, auto-refresh before expiry"
+
+  - id: "AC4"
+    title: "Concurrent upload limit: max 3 files"
+    rationale: "Prevents resource exhaustion, matches @repo/upload-config"
+
+  - id: "AC5"
+    title: "File size verification with 5% tolerance"
+    rationale: "Accounts for multipart encoding, proven in editFinalize pattern"
+
+  - id: "AC86"
+    title: "Define UploadSessionRepository port interface"
+    rationale: "Services depend on interfaces per Ports & Adapters architecture"
+
+  - id: "AC87"
+    title: "Define S3StoragePort interface"
+    rationale: "Testability: Mock S3 in unit tests, real S3 in integration tests"
+
+  - id: "AC88"
+    title: "Services depend on port interfaces, not concrete implementations"
+    rationale: "Dependency injection pattern enables test isolation"
+
+  - id: "AC89"
+    title: "Explicit service file at apps/api/lego-api/domains/mocs/application/services.ts"
+    rationale: "DDD pattern: service layer separates business logic from HTTP handlers"
+
+  - id: "AC90"
+    title: "createUploadSession() service function"
+    rationale: "Reusable business logic: authorization, rate limit, validation, S3 presign"
+
+  - id: "AC91"
+    title: "completeUploadSession() service function"
+    rationale: "Reusable business logic: session verification, S3 check, file record creation"
+
+  - id: "AC92"
+    title: "Migration: add originalFilename to upload_sessions"
+    rationale: "Track original filename for user-facing display"
+
+  - id: "AC93"
+    title: "Migration: add originalFileSize to upload_sessions"
+    rationale: "Verification: S3 headObject response compared against stored value"
+
+  - id: "AC94"
+    title: "Migration file path explicit in Scope"
+    rationale: "DevOps clarity: packages/backend/database-schema/migrations/{ts}_add_upload_session_metadata.sql"
+
+blockers: []
+
+notes: |
+  Elaboration verdict: PASS with 9 architectural ACs added
+  - Port interfaces defined (AC86-88)
+  - Service layer explicit (AC89-91)
+  - Migration path specified (AC92-94)
+
+  All MVP-critical acceptance criteria present.
+  Ready for implementation.
+
+  Estimated effort: 4-5 days (32-40 hours)
+  Complexity: Medium-High
+  Reuse potential: 80-100%

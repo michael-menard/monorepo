@@ -1,0 +1,29 @@
+---
+# Deferred Knowledge Base Writes for INST-1105
+# These writes failed due to KB unavailability (read-only transaction)
+# Retry manually or via batch KB sync job
+---
+
+stories:
+  - story_id: "INST-1105"
+    feature: "instructions"
+    title: "Upload Instructions (Presigned >10MB)"
+    story_dir: "plans/future/instructions/backlog/INST-1105"
+    story_file: "plans/future/instructions/backlog/INST-1105/INST-1105.md"
+    story_type: "feature"
+    points: 5
+    priority: "high"
+    state: "backlog"
+    touches_backend: true
+    touches_frontend: true
+    touches_database: true
+    touches_infra: false
+    created_at: "2026-02-09T12:00:00-07:00"
+    updated_at: "2026-02-09T12:00:00-07:00"
+
+# Reason: KB query tool is read-only (cannot execute INSERT)
+# Action Required: Manually insert or run batch KB sync
+# SQL:
+#   INSERT INTO stories (story_id, feature, title, story_dir, story_file, story_type, points, priority, state, touches_backend, touches_frontend, touches_database, touches_infra)
+#   VALUES ('INST-1105', 'instructions', 'Upload Instructions (Presigned >10MB)', 'plans/future/instructions/backlog/INST-1105', 'plans/future/instructions/backlog/INST-1105/INST-1105.md', 'feature', 5, 'high', 'backlog', true, true, true, false)
+#   ON CONFLICT (story_id) DO UPDATE SET title = EXCLUDED.title, story_dir = EXCLUDED.story_dir, story_file = EXCLUDED.story_file, story_type = EXCLUDED.story_type, points = EXCLUDED.points, priority = EXCLUDED.priority, state = EXCLUDED.state, touches_backend = EXCLUDED.touches_backend, touches_frontend = EXCLUDED.touches_frontend, touches_database = EXCLUDED.touches_database, touches_infra = EXCLUDED.touches_infra, updated_at = NOW();

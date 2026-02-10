@@ -1,0 +1,297 @@
+schema: 1
+story_id: "INST-1108"
+timestamp: "2026-02-09T19:45:00.000Z"
+iteration: 4
+
+verdict: FAIL
+
+workers_run:
+  - lint
+  - typecheck
+  - build
+  - security
+  - syntax
+workers_skipped:
+  - style  # Agent file does not exist
+
+ranked_patches:
+  # Priority 1 (CRITICAL): Type mismatch in EditMocPage
+  - priority: 1
+    severity: critical
+    file: "apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx"
+    line: 308
+    code: TS2322
+    issue: "Type mismatch: Partial<UpdateMocInput> assigned to Partial<CreateMocInput> parameter"
+    detail: "UpdateMocInput has nullable fields (nullable.optional()) but MocForm expects CreateMocInput without nullable wrappers. Example: theme field is string.nullable.optional in UpdateMocInput but string.optional in CreateMocInput"
+    context: "EditMocPage passes initialValues (from mutable UpdateMocInput mutation) to MocForm component"
+    fix_options:
+      - "Normalize UpdateMocInput schema to match CreateMocInput nullability"
+      - "Update MocForm to accept Partial<UpdateMocInput> instead"
+      - "Create adapter function to transform UpdateMocInput → CreateMocInput"
+    effort: "Low (30 min)"
+    worker: typecheck
+
+  # Priority 2 (HIGH): Duplicate object properties in test files
+  - priority: 2
+    severity: high
+    issue: "Duplicate 'length' property in test mock objects"
+    code: TS2783
+    files:
+      - file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+        line: 31
+      - file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+        line: 125
+    detail: "Object literals have duplicate 'length' keys - second assignment overwrites first"
+    fix: "Remove or consolidate duplicate 'length' properties"
+    effort: "Low (15 min)"
+    worker: typecheck
+
+  # Priority 3 (MEDIUM): Unused test variables
+  - priority: 3
+    severity: medium
+    code: TS6133
+    issue: "Unused variables in test files"
+    files:
+      - file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+        line: 17
+        variable: "MAX_FILE_SIZE"
+      - file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+        line: 195
+        variable: "user"
+      - file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+        line: 445
+        variable: "abortSignal"
+    fix: "Remove unused variable declarations"
+    effort: "Low (10 min)"
+    worker: typecheck
+
+  # Priority 4 (MEDIUM): Test mock function signature
+  - priority: 4
+    severity: medium
+    code: TS2345
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+    line: 298
+    issue: "Incompatible function signature in test mock"
+    fix: "Align mock function signature with expected type"
+    effort: "Medium (30 min)"
+    worker: typecheck
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    message: "All 8 files checked - no linting errors or warnings"
+    command: "pnpm eslint ... --format stylish"
+    note: "Lint passed in this iteration after formatting fixes from previous iteration"
+    findings: []
+
+  style:
+    verdict: SKIP
+    skipped: true
+    reason: "code-review-style.agent.md not found"
+    errors: 0
+    warnings: 0
+    findings: []
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    blocking: 0
+    suggestions: 15
+    note: "All files ES7+ compliant. 15 non-blocking suggestions for optional chaining and nullish coalescing."
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: false
+    confidence: high
+    errors: 0
+    warnings: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+    checks:
+      hardcoded_secrets: PASS
+      sql_injection: PASS
+      command_injection: PASS
+      xss: PASS
+      auth_present: PASS
+      input_validation: PASS
+      sensitive_logging: PASS
+      authorization_enforcement: PASS
+    summary: |
+      Authorization enforced at multiple layers (route/service/repository).
+      Returns 404 for unauthorized (prevents info leakage).
+      All inputs validated with Zod schemas.
+      No hardcoded secrets found.
+    findings: []
+
+  typecheck:
+    verdict: FAIL
+    skipped: false
+    files_checked: 9
+    errors: 7
+    pre_existing_errors: 48
+    note: |
+      7 NEW errors found in INST-1108 files (iteration 3 vs iteration 2).
+      Critical: EditMocPage type mismatch with MocForm initialValues parameter.
+      High: Duplicate object properties in test files.
+      All INST-1108 core backend files (services.ts, routes.ts, types.ts) pass type checking.
+    blockers:
+      - "EditMocPage→MocForm type mismatch (TS2322): UpdateMocInput has nullable fields, MocForm expects CreateMocInput without nullable wrappers"
+      - "Test files contain duplicate 'length' properties and unused variables"
+      - "Mock function signature incompatibility in presigned-integration.test.tsx"
+    findings:
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx
+        line: 308
+        code: TS2322
+        message: "Type 'Partial<UpdateMocInput | undefined>' is not assignable to type 'Partial<CreateMocInput> | undefined'"
+        detail: "UpdateMocInput schema has nullable fields (e.g., theme: string.nullable.optional) while CreateMocInput has non-nullable (theme: string.optional). MocForm parameter type expects CreateMocInput."
+        impact: CRITICAL
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx
+        line: 17
+        code: TS6133
+        message: "'MAX_FILE_SIZE' is declared but its value is never read."
+        impact: LOW
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx
+        line: 31
+        code: TS2783
+        message: "'length' is specified more than once, so this usage will be overwritten."
+        detail: "Object literal has duplicate 'length' property"
+        impact: MEDIUM
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx
+        line: 125
+        code: TS2783
+        message: "'length' is specified more than once"
+        impact: MEDIUM
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx
+        line: 195
+        code: TS6133
+        message: "'user' is declared but its value is never read."
+        impact: LOW
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx
+        line: 298
+        code: TS2345
+        message: "Incompatible function signature in test mock"
+        impact: MEDIUM
+      - severity: error
+        file: apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx
+        line: 445
+        code: TS6133
+        message: "'abortSignal' is declared but its value is never read."
+        impact: LOW
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 3
+    packages_built: 48
+    packages_cached: 48
+    build_time_ms: 402
+    note: |
+      Build completed successfully for all 48 packages.
+      3 warnings are pre-existing in @repo/app-component-library (AppToggleGroup.tsx).
+      Despite typecheck errors, build passes because Turbo caches previous compiled state.
+      Recommend running full type check and address TS errors before merge.
+    findings:
+      - severity: warning
+        package: "@repo/app-component-library"
+        file: "src/toggles/AppToggleGroup.tsx"
+        line: 11
+        code: TS2430
+        message: "Interface extends issue (pre-existing)"
+      - severity: warning
+        package: "@repo/app-component-library"
+        file: "src/toggles/AppToggleGroup.tsx"
+        line: 52
+        code: TS2322
+        message: "Type assignment issue (pre-existing)"
+
+total_errors: 7
+total_warnings: 3
+auto_fixable_count: 2
+
+summary: |
+  INST-1108 Code Review Summary (Iteration 3):
+
+  ## Status: FAIL - Requires Type System Fixes
+
+  The INST-1108 implementation (Edit MOC Metadata) is FUNCTIONALLY COMPLETE but has blocking type errors:
+  - Backend PATCH endpoint works correctly (all backend tests pass)
+  - Service layer authorization enforced
+  - EditMocPage component created and integrated
+  - Build succeeds for all 48 packages
+  - Security checks PASS (all OWASP checks passed)
+  - Syntax checks PASS (ES7+ compliant)
+  - Lint checks PASS (0 errors, 0 warnings - fixed in iteration 2)
+
+  ## Blocking Issues (Must Fix Before Merge)
+
+  1. **Type System Errors (7 new errors in iteration 3)**
+
+     ### Critical (1 error):
+     - EditMocPage line 308: Type mismatch passing Partial<UpdateMocInput> to MocForm expecting Partial<CreateMocInput>
+       - UpdateMocInput schema has nullable fields (string.nullable.optional)
+       - CreateMocInput schema does not (string.optional)
+       - Impact: Type safety violation, MocForm will receive unexpected nullable values
+
+     ### High Priority (2 errors):
+     - Duplicate 'length' properties in test object literals (lines 31, 125)
+     - Second assignment overwrites first - will cause test data corruption
+
+     ### Medium Priority (1 error):
+     - Function mock signature incompatibility in presigned-integration.test.tsx:298
+
+     ### Low Priority (3 errors):
+     - Unused variables: MAX_FILE_SIZE, user, abortSignal (test cleanup only)
+
+  ## Why Build Still Passes
+
+  Turborepo caches compiled packages from previous successful builds.
+  Despite typecheck errors, build command succeeds because it uses cached state.
+  Full typecheck catches errors that build misses.
+
+  ## Recommended Fix Order (1.5 hours estimated)
+
+  1. **Priority 1 (30 min)**: Fix EditMocPage type mismatch
+     - Option A: Normalize UpdateMocInput to remove nullable wrappers
+     - Option B: Update MocForm to accept UpdateMocInput
+     - Option C: Create adapter function in EditMocPage
+
+  2. **Priority 2 (15 min)**: Remove duplicate 'length' properties in test files
+
+  3. **Priority 3 (10 min)**: Remove unused test variables (cleanup)
+
+  4. **Priority 4 (30 min)**: Fix presigned-integration test mock signature
+
+  5. **Final (5 min)**: Run typecheck again to verify all resolved
+
+  ## Next Steps
+
+  - Review fix options for EditMocPage type mismatch
+  - Create patch commits for each priority level
+  - Re-run typecheck to confirm resolution
+  - Proceed to QA phase once typecheck passes
+
+comparison_to_iteration_2: |
+  Iteration 2: 13 lint errors (auto-fixable), 24 typecheck errors (mostly pre-existing)
+  Iteration 3: 0 lint errors (passed), 7 typecheck errors (new, in INST-1108 code)
+
+  Lint improvements fixed. New typecheck errors introduced by schema type propagation
+  (UpdateMocInput vs CreateMocInput mismatch, test file issues).
+
+tokens:
+  in: 18000
+  out: 4200

@@ -1,0 +1,213 @@
+schema: 1
+story_id: "INST-1105"
+created: "2026-02-09T22:40:00Z"
+
+summary: |
+  Presigned URL upload for PDFs 10-50MB with progress tracking, session expiry handling,
+  and concurrent upload support. Two-phase flow: create session → S3 upload → complete session.
+
+phases:
+  - id: 1
+    name: "Database Migration"
+    priority: highest
+    description: "Add originalFilename and originalFileSize columns to upload_sessions table"
+    files:
+      - action: create
+        path: "packages/backend/database-schema/src/migrations/app/0011_add_upload_session_metadata.sql"
+        description: "Add originalFilename VARCHAR(255) and originalFileSize BIGINT columns"
+    acs: ["AC92", "AC93", "AC94"]
+    depends_on: []
+
+  - id: 2
+    name: "Backend Port Interfaces"
+    priority: high
+    description: "Define UploadSessionRepository and S3StoragePort port interfaces"
+    files:
+      - action: modify
+        path: "apps/api/lego-api/domains/mocs/ports/index.ts"
+        description: "Add UploadSessionRepository and S3StoragePort interfaces"
+    acs: ["AC86", "AC87", "AC88"]
+    depends_on: [1]
+
+  - id: 3
+    name: "Backend Services"
+    priority: high
+    description: "Implement createUploadSession and completeUploadSession service functions"
+    files:
+      - action: modify
+        path: "apps/api/lego-api/domains/mocs/application/services.ts"
+        description: "Add createUploadSession() and completeUploadSession() functions"
+      - action: modify
+        path: "apps/api/lego-api/domains/mocs/application/validation.ts"
+        description: "Add CreateUploadSessionRequestSchema and CompleteUploadSessionRequestSchema"
+    patterns_to_reuse:
+      - source: "packages/backend/moc-instructions-core/src/edit-presign.ts"
+        usage: "Authorization → Rate limit → File validation → Presigned URL generation"
+      - source: "packages/backend/moc-instructions-core/src/edit-finalize.ts"
+        usage: "Session verification → S3 headObject → Transaction → Update status"
+    acs: ["AC31-AC48", "AC49-AC65", "AC89", "AC90", "AC91"]
+    depends_on: [2]
+
+  - id: 4
+    name: "Backend Routes"
+    priority: high
+    description: "Add POST /upload-sessions and POST /upload-sessions/:sessionId/complete endpoints"
+    files:
+      - action: modify
+        path: "apps/api/lego-api/domains/mocs/routes.ts"
+        description: "Add upload session routes with auth middleware"
+      - action: modify
+        path: "apps/api/lego-api/domains/mocs/types.ts"
+        description: "Add request/response type schemas"
+    acs: ["AC31", "AC32", "AC33", "AC34", "AC35", "AC49", "AC50", "AC51"]
+    depends_on: [3]
+
+  - id: 5
+    name: "Frontend RTK Query Mutations"
+    priority: high
+    description: "Add useCreateUploadSessionMutation and useCompleteUploadSessionMutation"
+    files:
+      - action: modify
+        path: "packages/core/api-client/src/rtk/instructions-api.ts"
+        description: "Add createUploadSession and completeUploadSession mutations"
+      - action: modify
+        path: "packages/core/api-client/src/config/endpoints.ts"
+        description: "Add CREATE_UPLOAD_SESSION and COMPLETE_UPLOAD_SESSION endpoints"
+    acs: ["AC5", "AC6", "AC7", "AC15", "AC16", "AC17"]
+    depends_on: [4]
+
+  - id: 6
+    name: "Frontend Hook Integration"
+    priority: high
+    description: "Enhance useUploadManager hook for presigned flow"
+    files:
+      - action: modify
+        path: "apps/web/app-instructions-gallery/src/hooks/useUploadManager.ts"
+        description: "Add usePresignedUpload() integration with RTK Query mutations"
+    patterns_to_reuse:
+      - source: "packages/core/upload-client/src/xhr.ts"
+        usage: "uploadToPresignedUrl() for XHR-based S3 upload with progress"
+    acs: ["AC9", "AC10", "AC11", "AC12", "AC13", "AC14", "AC20", "AC21", "AC22", "AC23", "AC24", "AC25"]
+    depends_on: [5]
+
+  - id: 7
+    name: "Frontend Components"
+    priority: medium
+    description: "Update InstructionsUpload with file size routing and presigned progress UI"
+    files:
+      - action: modify
+        path: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/index.tsx"
+        description: "Add file size routing: >10MB → presigned, ≤10MB → direct"
+      - action: create
+        path: "apps/web/app-instructions-gallery/src/components/PresignedUploadProgress/index.tsx"
+        description: "Progress bar with cancel/retry buttons"
+      - action: create
+        path: "apps/web/app-instructions-gallery/src/components/SessionExpiryWarning/index.tsx"
+        description: "5-minute warning banner component"
+    acs: ["AC1", "AC2", "AC3", "AC4", "AC8", "AC18", "AC19", "AC26", "AC27", "AC28", "AC29", "AC30"]
+    depends_on: [6]
+
+  - id: 8
+    name: "Upload Config Enhancement"
+    priority: medium
+    description: "Add pdfMinBytesForPresigned constant and shouldUsePresignedUpload utility"
+    files:
+      - action: modify
+        path: "packages/tools/upload-config/src/schema.ts"
+        description: "Add pdfMinBytesForPresigned constant (10MB)"
+      - action: modify
+        path: "packages/tools/upload-config/src/index.ts"
+        description: "Add shouldUsePresignedUpload(fileSize) utility function"
+    acs: ["AC1", "AC2"]
+    depends_on: []
+
+  - id: 9
+    name: "Unit Tests"
+    priority: high
+    description: "Unit tests for services, hooks, and components"
+    files:
+      - action: create
+        path: "apps/api/lego-api/domains/mocs/application/__tests__/upload-session-services.test.ts"
+        description: "Unit tests for createUploadSession and completeUploadSession"
+      - action: create
+        path: "apps/web/app-instructions-gallery/src/components/PresignedUploadProgress/__tests__/index.test.tsx"
+        description: "Component tests for progress UI"
+      - action: create
+        path: "apps/web/app-instructions-gallery/src/hooks/__tests__/usePresignedUpload.test.ts"
+        description: "Hook tests for presigned flow"
+    acs: ["AC70", "AC71", "AC72", "AC73", "AC74"]
+    depends_on: [7]
+
+  - id: 10
+    name: "Integration Tests"
+    priority: high
+    description: "MSW handlers and full flow integration tests"
+    files:
+      - action: modify
+        path: "apps/web/app-instructions-gallery/src/test/handlers/index.ts"
+        description: "Add MSW handlers for upload-sessions endpoints"
+      - action: create
+        path: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+        description: "Integration tests for presigned flow"
+    acs: ["AC75", "AC76", "AC77", "AC78", "AC79"]
+    depends_on: [9]
+
+  - id: 11
+    name: "E2E Tests"
+    priority: high
+    description: "Playwright tests with real S3 per ADR-006"
+    files:
+      - action: create
+        path: "apps/web/playwright/tests/instructions/presigned-upload.spec.ts"
+        description: "E2E tests for presigned upload flow"
+      - action: create
+        path: "apps/web/playwright/features/presigned-upload.feature"
+        description: "Cucumber BDD scenarios for presigned upload"
+    acs: ["AC80", "AC81", "AC82", "AC83", "AC84", "AC85"]
+    depends_on: [10]
+
+  - id: 12
+    name: "Database Tests"
+    priority: medium
+    description: "Tests for upload session state machine and migration"
+    files:
+      - action: create
+        path: "packages/backend/database-schema/src/migrations/app/__tests__/0011_add_upload_session_metadata.test.ts"
+        description: "Migration verification tests"
+    acs: ["AC66", "AC67", "AC68", "AC69"]
+    depends_on: [1]
+
+execution_order:
+  wave_1_parallel: [1, 8]
+  wave_2_parallel: [2, 12]
+  wave_3_sequential: [3]
+  wave_4_sequential: [4]
+  wave_5_sequential: [5]
+  wave_6_sequential: [6]
+  wave_7_sequential: [7]
+  wave_8_parallel: [9]
+  wave_9_sequential: [10]
+  wave_10_sequential: [11]
+
+estimated_effort:
+  total_hours: 40
+  breakdown:
+    database: 2
+    backend_ports: 2
+    backend_services: 6
+    backend_routes: 4
+    frontend_rtk: 2
+    frontend_hooks: 4
+    frontend_components: 8
+    unit_tests: 6
+    integration_tests: 4
+    e2e_tests: 6
+
+acceptance_criteria_coverage:
+  total: 94
+  covered_by_plan: 94
+  frontend: "AC1-AC30 (30 ACs)"
+  backend: "AC31-AC65 (35 ACs)"
+  database: "AC66-AC69 (4 ACs)"
+  testing: "AC70-AC85 (16 ACs)"
+  architecture: "AC86-AC94 (9 ACs)"

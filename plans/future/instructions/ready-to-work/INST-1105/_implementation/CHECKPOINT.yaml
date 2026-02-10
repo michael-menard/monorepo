@@ -1,0 +1,65 @@
+schema: 1
+story_id: "INST-1105"
+feature_dir: "plans/future/instructions"
+timestamp: "2026-02-09T22:38:33Z"
+
+current_phase: 3
+last_successful_phase: 2
+iteration: 0
+max_iterations: 3
+blocked: true
+blocked_by: "INST-1111"
+blocked_reason: "E2E tests cannot run due to 245 missing step definitions in other features"
+forced: false
+warnings: []
+e2e_gate: blocked
+e2e_gate_notes: |
+  E2E tests created and ready for INST-1105.
+  BLOCKER: bddgen fails with 245 missing step definitions for OTHER features.
+  This is a pre-existing codebase issue, not related to INST-1105.
+
+  INST-1105 files are complete:
+  - features/instructions/inst-1105-presigned-upload.feature (12 scenarios)
+  - steps/inst-1105-presigned-upload.steps.ts (all steps defined)
+
+  Resolution: Fix missing steps in other features, then run E2E.
+
+phases:
+  - name: setup
+    status: completed
+    started_at: "2026-02-09T22:38:33Z"
+    completed_at: "2026-02-09T22:39:00Z"
+  - name: implementation
+    status: completed
+    started_at: "2026-02-09T22:41:00Z"
+    completed_at: "2026-02-09T23:45:00Z"
+  - name: review
+    status: in-progress
+    started_at: "2026-02-09T23:45:00Z"
+    completed_at: null
+  - name: qa
+    status: pending
+    started_at: null
+    completed_at: null
+
+description: |
+  Phase 2 implementation in progress for INST-1105: Upload Instructions (Presigned >10MB)
+
+  COMPLETED:
+  - Database migration (AC92-94)
+  - Backend port interfaces (AC86-88)
+  - Backend services (AC89-91, AC31-65)
+  - Backend routes (endpoints return 501 until adapters wired)
+  - Frontend RTK Query mutations (AC5-7, AC15-17)
+  - Frontend hooks (AC9-14, AC20-25)
+  - Frontend components (AC1-4, AC8, AC18-19, AC26-30)
+  - Upload config enhancement (AC1-2)
+
+  PENDING:
+  - Wire adapters to routes
+  - Unit tests (AC70-74)
+  - Integration tests (AC75-79)
+  - E2E tests with real S3 (AC80-85)
+
+  Type check: PASS (no errors in INST-1105 files)
+  Lint: PASS

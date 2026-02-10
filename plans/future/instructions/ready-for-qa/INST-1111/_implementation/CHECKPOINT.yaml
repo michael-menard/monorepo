@@ -1,0 +1,17 @@
+schema: 1
+story_id: INST-1111
+feature_dir: plans/future/instructions
+timestamp: "2026-02-09T00:00:00Z"
+
+current_phase: done
+last_successful_phase: execute
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+e2e_gate: passed
+warnings: []
+
+description: |
+  Fixed all 245 missing Playwright BDD step definitions. The bddgen tool now
+  completes successfully with exit code 0 and no errors.

@@ -1,0 +1,74 @@
+schema: 1
+story_id: INST-1111
+title: "Fix 245 Missing Playwright BDD Step Definitions"
+created: "2026-02-09"
+status: plan
+
+summary: |
+  Create missing step definition files and implement all required steps to make
+  bddgen complete successfully. The 245 "missing" count represents total usages
+  across all feature files, but maps to approximately 95 unique step definitions
+  across 3 new files plus minor additions to existing files.
+
+phases:
+  - name: "Phase 1: Create inspiration-keyboard.steps.ts"
+    description: "Implement all missing steps for keyboard navigation in inspiration gallery"
+    priority: 1
+    estimated_steps: 35
+    steps:
+      - Create new file with BDD imports and createBdd()
+      - "Implement 'the inspiration gallery has loaded'"
+      - "Implement 'a modal is open'"
+      - "Implement multi-select and bulk actions steps"
+      - "Implement tab navigation and focus steps"
+      - "Implement card focus steps"
+      - "Implement modal focus trap steps"
+      - "Implement search field steps"
+
+  - name: "Phase 2: Create inst-moc-detail.steps.ts"
+    description: "Implement steps for MOC detail page tests"
+    priority: 2
+    estimated_steps: 40
+    steps:
+      - Create new file with BDD imports
+      - "Implement page navigation and verification steps"
+      - "Implement sidebar and main area steps"
+      - "Implement dashboard card steps"
+      - "Implement drag-and-drop reordering steps"
+      - "Implement mobile responsive steps"
+      - "Implement accessibility steps"
+
+  - name: "Phase 3: Create inst-create-moc.steps.ts"
+    description: "Implement steps for MOC creation form tests"
+    priority: 3
+    estimated_steps: 20
+    steps:
+      - Create new file with BDD imports
+      - "Implement form navigation and visibility steps"
+      - "Implement form fill and validation steps"
+      - "Implement submit and success steps"
+      - "Implement API verification steps"
+
+  - name: "Phase 4: Verification"
+    description: "Run bddgen and fix any remaining issues"
+    priority: 4
+    steps:
+      - "Run pnpm bddgen to verify 0 missing steps"
+      - "Fix any duplicate step conflicts"
+
+files_to_create:
+  - path: apps/web/playwright/steps/inspiration-keyboard.steps.ts
+    purpose: "Keyboard navigation steps for inspiration gallery"
+    estimated_steps: 35
+
+  - path: apps/web/playwright/steps/inst-moc-detail.steps.ts
+    purpose: "MOC detail page steps"
+    estimated_steps: 40
+
+  - path: apps/web/playwright/steps/inst-create-moc.steps.ts
+    purpose: "MOC creation form steps"
+    estimated_steps: 20
+
+verification:
+  command: "pnpm bddgen"
+  success_criteria: "Missing step definitions: 0"

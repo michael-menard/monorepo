@@ -1,0 +1,163 @@
+security:
+  verdict: PASS
+  confidence: high
+
+  story_id: INST-1108
+  files_checked: 8
+
+  counts:
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+
+  kb_context:
+    queries_made: 0
+    relevant_entries: []
+    exceptions_applied: []
+
+  findings: []
+
+  cross_domain:
+    siblings_checked: []
+    correlations: []
+    conflicts: []
+
+  checks:
+    hardcoded_secrets: PASS
+    sql_injection: PASS
+    command_injection: PASS
+    xss: PASS
+    auth_present: PASS
+    input_validation: PASS
+    sensitive_logging: PASS
+    authorization_enforcement: PASS
+
+  security_summary: |
+    ## INST-1108 Security Review - PASS
+
+    ### Scope
+    Story INST-1108 implements the "Edit MOC Metadata" feature with a PATCH /mocs/:id endpoint
+    and corresponding frontend EditMocPage component.
+
+    ### Key Security Strengths
+
+    **1. Authorization (AC-4, AC-13)**
+    - PATCH endpoint enforces user ownership via service layer
+    - Repository.getMocById() filters by userId + mocId
+    - Returns 404 for both "not found" and "unauthorized" (prevents info leakage)
+    - Authorization check occurs before any update: line 142-147 in services.ts
+    ```
+    const existingMoc = await mocRepo.getMocById(mocId, userId)
+    if (!existingMoc) {
+      return err('NOT_FOUND')
+    }
+    ```
+    - Repository enforces userId filter on UPDATE: line 208 in repositories.ts
+    ```
+    .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+    ```
+
+    **2. Input Validation**
+    - All inputs validated with Zod schemas before processing
+    - UpdateMocRequestSchema (line 28 in types.ts): partial update with field constraints
+    - Title: min 1, max 200 chars
+    - Description: max 2000 chars
+    - Theme: enum validation (11 valid themes)
+    - Tags: max 20 items, each max 30 chars
+    - Validation occurs at both route (line 343 in routes.ts) and service layers (line 129 in services.ts)
+
+    **3. Proper Error Handling**
+    - 404 returned for authorization failures (no 403 leakage)
+    - 400 for validation errors with details
+    - 500 for database errors
+    - Error messages don't leak internal system details
+    - Route handler mapping (line 362-375 in routes.ts) correctly handles all error cases
+
+    **4. No Hardcoded Secrets**
+    - No API keys, passwords, or tokens in code
+    - Environment variables used for AWS configuration (AWS_REGION, S3_BUCKET, CLOUDFRONT_DOMAIN)
+    - S3 client initialized with region from env (line 46-48 in services.ts)
+
+    **5. Database Security**
+    - Parameterized queries via Drizzle ORM (no string concatenation)
+    - userId filter enforced at SQL level
+    - Unique constraint on (userId, title) properly handles duplicates
+
+    **6. Logging**
+    - Logger configured for non-sensitive data
+    - No passwords, tokens, or user emails logged
+    - Logs include context (userId, mocId) for audit trail
+    - Warning level for validation failures
+    - Info level for successful operations
+
+    **7. Frontend Security**
+    - EditMocPage component properly handles auth state
+    - Form data stored in localStorage only on error (recovery mechanism)
+    - Recovery data cleared after use (line 187 in EditMocPage/index.tsx)
+    - No sensitive data exposed in UI
+    - Navigation validates MOC exists before rendering form
+
+    **8. Session Management**
+    - Authentication enforced via auth middleware (line 142 in routes.ts)
+    - All routes require `auth` middleware
+    - userId extracted from JWT context (line 332 in routes.ts)
+    - Missing userId returns 401 (line 335-337)
+
+    ### No Vulnerabilities Found
+
+    All OWASP categories checked:
+    - Injection: PASS (Drizzle ORM parameterization, Zod validation)
+    - Broken Auth: PASS (JWT enforced, userId checks at all layers)
+    - Sensitive Data: PASS (No PII logged, no secrets in code)
+    - XML/Injection: PASS (N/A - no XML processing)
+    - Broken Access Control: PASS (Row-level security enforced)
+    - Security Misconfiguration: PASS (Auth middleware on all routes)
+    - XSS: PASS (React/React 19 auto-escapes, no dangerouslySetInnerHTML)
+    - Deserialization: PASS (No unsafe deserialization)
+    - Using Components with Known Vulnerabilities: PASS (Zod, Drizzle are maintained)
+    - Insufficient Logging: PASS (Comprehensive audit logging)
+
+  kb_writes:
+    lessons_to_add: 0
+    decisions_to_add: 0
+
+  tokens:
+    in: 0
+    out: 0
+
+  notes: |
+    ## Implementation Excellence Observed
+
+    1. **Defense in Depth**: Authorization checks at multiple layers
+       - Route middleware enforces auth
+       - Service layer verifies ownership
+       - Repository enforces userId filter
+
+    2. **Fail-Secure Design**: Returns 404 for both missing and unauthorized
+       - Prevents attacker from enumerating other users' MOCs
+       - Per CLAUDE.md guidelines on proper error handling
+
+    3. **Validation Best Practices**: Zod schemas with clear constraints
+       - Field length limits prevent DoS attacks
+       - Enum validation prevents invalid themes
+       - Tag count limits prevent abuse
+
+    4. **Audit Trail**: Comprehensive logging for debugging and compliance
+       - Updated fields logged (line 154 in services.ts)
+       - User actions traceable
+       - Timestamps set on updates
+
+    5. **Frontend Error Recovery**: Elegant form recovery pattern
+       - Failed submissions saved to localStorage
+       - Users can retry without re-entering data
+       - Recovery data cleared on success
+       - No sensitive data stored in recovery
+
+    ## Test Coverage Verification
+
+    services.test.ts includes comprehensive security-focused tests:
+    - AC-4, AC-13: Authorization tests (line 612-624)
+    - AC-5, AC-6, AC-7, AC-8, AC-9: Validation tests (line 544-598)
+    - Partial update semantics tested (line 626-651)
+    - Edge cases handled (empty updates, malformed IDs)

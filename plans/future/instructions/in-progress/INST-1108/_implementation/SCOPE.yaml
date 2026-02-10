@@ -1,0 +1,83 @@
+schema: 1
+story_id: INST-1108
+timestamp: "2026-02-09T20:48:30Z"
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: true
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/lego-api/domains/mocs/**"
+  - "apps/web/app-instructions-gallery/src/pages/**"
+  - "apps/web/app-instructions-gallery/src/components/MocForm/**"
+  - "packages/core/api-client/**"
+  - "packages/backend/database-schema/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Implement PATCH /mocs/:id endpoint and EditMocPage component for editing MOC metadata (title, description, theme, tags) with form recovery and validation"
+
+key_dependencies:
+  - "INST-1101 blocked-by (Edit button integration deferred, core edit flow testable via direct URL)"
+  - "MocForm component from INST-1102 (reused for pre-population)"
+  - "useUpdateMocMutation RTK Query hook (already exists)"
+  - "@repo/api-client schemas (UpdateMocInputSchema)"
+
+critical_files_to_implement:
+  backend:
+    - "apps/api/lego-api/domains/mocs/application/services.ts (updateMoc service method)"
+    - "apps/api/lego-api/domains/mocs/routes.ts (PATCH /mocs/:id endpoint)"
+    - "apps/api/lego-api/domains/mocs/types.ts (UpdateMocInput schema)"
+  frontend:
+    - "apps/web/app-instructions-gallery/src/pages/EditMocPage.tsx (NEW)"
+    - "apps/web/app-instructions-gallery/src/pages/MocDetailPage.tsx (add Edit button - deferred INST-1101)"
+    - "apps/web/app-instructions-gallery/src/router.tsx (add /mocs/:id/edit route)"
+  shared:
+    - "packages/core/api-client/src/rtk/instructions-api.ts (verify useUpdateMocMutation exists)"
+    - "packages/core/api-client/src/schemas/instructions.ts (add UpdateMocInputSchema if needed)"
+
+out_of_scope:
+  - "Edit button on detail page (INST-1101 dependency - deferred)"
+  - "Unsaved changes navigation guard (INST-1200 - future)"
+  - "Optimistic UI updates (optional enhancement - deferred)"
+  - "Edit history/audit trail (non-MVP)"
+  - "Concurrent edit detection (last-write-wins MVP)"
+  - "OpenSearch re-indexing (Phase 6 - future)"
+  - "Slug regeneration on title change (future)"
+  - "Bulk edit multiple MOCs (future)"
+
+constraints_from_claude_md:
+  - "Use Zod schemas for all types (no TypeScript interfaces)"
+  - "No barrel files - import from source"
+  - "Use @repo/logger, not console.log"
+  - "Import UI from @repo/app-component-library, not _primitives/"
+  - "Minimum 45% test coverage (target 80-90% for this story)"
+  - "Ports & Adapters architecture: business logic in service layer, NOT route handler"
+  - "RTK Query cache invalidation: Moc (by id) and MocList tags"
+  - "Partial update semantics: only provided fields updated"
+  - "Authorization as 404: do not distinguish 'not found' from 'unauthorized'"
+
+testing_expectations:
+  backend_coverage: ">= 90% for PATCH route + service layer"
+  frontend_unit_coverage: ">= 80% for EditMocPage"
+  frontend_integration_coverage: ">= 80% for RTK Query integration"
+  e2e_minimum_paths: 3
+  e2e_live_api: true
+
+reuse_analysis:
+  moc_form_component: "100% reuse from INST-1102 (no modifications needed)"
+  rtk_query_hooks: "100% reuse (useGetMocDetailQuery, useUpdateMocMutation)"
+  backend_patterns: "70% reuse from POST /mocs (routes, validation, error handling)"
+  frontend_patterns: "70% reuse from CreateMocPage (form recovery, error toast, navigation)"
+  validation_schema: "Derive UpdateMocInputSchema from CreateMocInputSchema with all fields optional"

@@ -1,0 +1,149 @@
+schema: 1
+story_id: "INST-1108"
+timestamp: "2026-02-10T17:35:00Z"
+failure_source: code-review-failed
+iteration: 2
+
+issues_to_fix:
+  - id: 1
+    file: "apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx"
+    line: 308
+    issue: "Type mismatch: Partial<UpdateMocInput> assigned to Partial<CreateMocInput> parameter"
+    detail: "UpdateMocInput has nullable fields (string.nullable.optional()) but MocForm expects CreateMocInput without nullable wrappers. Example: theme field is string.nullable.optional in UpdateMocInput but string.optional in CreateMocInput"
+    severity: critical
+    auto_fixable: false
+    context: "EditMocPage passes initialValues (from useUpdateMocMutation) to MocForm component"
+    code: "TS2322"
+    fix_options:
+      - "Normalize UpdateMocInput schema to match CreateMocInput nullability (remove nullable wrappers)"
+      - "Update MocForm to accept Partial<UpdateMocInput> instead of Partial<CreateMocInput>"
+      - "Create adapter function to transform UpdateMocInput → CreateMocInput in EditMocPage"
+
+  - id: 2
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+    line: 31
+    issue: "Duplicate 'length' property in test mock object"
+    detail: "Object literal has duplicate 'length' key - second assignment overwrites first, corrupting test data"
+    severity: high
+    auto_fixable: true
+    code: "TS2783"
+    context: "Test mock object for file/blob handling"
+    fix_options:
+      - "Remove or consolidate duplicate 'length' properties"
+      - "Check if both length assignments are intentional, merge or remove"
+
+  - id: 3
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+    line: 125
+    issue: "Duplicate 'length' property in test mock object"
+    detail: "Object literal has duplicate 'length' key - second assignment overwrites first, corrupting test data"
+    severity: high
+    auto_fixable: true
+    code: "TS2783"
+    context: "Test mock object for presigned upload"
+    fix_options:
+      - "Remove or consolidate duplicate 'length' properties"
+
+  - id: 4
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+    line: 17
+    issue: "Unused variable: MAX_FILE_SIZE"
+    detail: "Variable is declared but never used in test"
+    severity: medium
+    auto_fixable: true
+    code: "TS6133"
+    context: "Test file cleanup"
+
+  - id: 5
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+    line: 195
+    issue: "Unused variable: user"
+    detail: "Variable is declared but never used in test"
+    severity: medium
+    auto_fixable: true
+    code: "TS6133"
+    context: "Test file cleanup"
+
+  - id: 6
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+    line: 445
+    issue: "Unused variable: abortSignal"
+    detail: "Variable is declared but never used in test"
+    severity: medium
+    auto_fixable: true
+    code: "TS6133"
+    context: "Test file cleanup"
+
+  - id: 7
+    file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+    line: 298
+    issue: "Incompatible function signature in test mock"
+    detail: "Mock function signature does not match expected type signature"
+    severity: medium
+    auto_fixable: false
+    code: "TS2345"
+    context: "Test mock configuration"
+    fix_options:
+      - "Align mock function signature with expected parameter types"
+      - "Verify mock matches actual function signature used in tests"
+
+focus_files:
+  - "apps/web/app-instructions-gallery/src/pages/EditMocPage/index.tsx"
+  - "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+  - "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__tests__/presigned-integration.test.tsx"
+
+priority_order:
+  - priority: 1
+    id: 1
+    effort_minutes: 30
+    category: "type-system"
+  - priority: 2
+    id: [2, 3]
+    effort_minutes: 15
+    category: "test-cleanup"
+  - priority: 3
+    id: [4, 5, 6]
+    effort_minutes: 10
+    category: "unused-variables"
+  - priority: 4
+    id: 7
+    effort_minutes: 30
+    category: "function-signature"
+
+summary: |
+  INST-1108 Fix Iteration 2: Address TypeScript errors from code review (Iteration 3)
+
+  ## Overview
+  Code review found 7 TypeScript errors preventing merge:
+  - 1 Critical: EditMocPage type mismatch with MocForm (UpdateMocInput vs CreateMocInput)
+  - 2 High: Duplicate properties in test mock objects
+  - 3 Medium: Unused test variables
+  - 1 Medium: Test function signature mismatch
+
+  ## Root Cause
+  UpdateMocInput schema includes nullable field wrappers (string.nullable.optional())
+  while CreateMocInput has non-nullable wrappers (string.optional()).
+  MocForm component expects CreateMocInput type signature.
+
+  ## Fix Strategy
+  1. Resolve UpdateMocInput schema type compatibility (30 min) - CRITICAL PATH
+  2. Clean up duplicate object properties in tests (15 min)
+  3. Remove unused test variables (10 min)
+  4. Fix test mock function signature (30 min)
+  5. Re-run typecheck to verify all resolved
+
+  ## Success Criteria
+  - All 7 TypeScript errors resolved
+  - pnpm check-types:all passes with 0 errors
+  - No new type errors introduced
+  - All existing tests still pass
+  - Build succeeds without errors
+
+  ## Estimated Time
+  Total: ~85 minutes (1.5 hours)
+
+  ## Context from Previous Iterations
+  - Iteration 1: 13 lint errors (FIXED - pnpm prettier --write applied)
+  - Iteration 2 (Code Review): 0 lint errors, 24 pre-existing typecheck errors
+  - Iteration 3 (Code Review): 7 NEW typecheck errors in INST-1108 code (THIS ITERATION)
+  - Security/Syntax/Build: All PASS

@@ -1,0 +1,153 @@
+schema: 1
+story_id: "INST-1111"
+timestamp: "2026-02-10T01:15:00.000Z"
+iteration: 1
+
+verdict: FAIL
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+workers_skipped: []
+
+ranked_patches:
+  - priority: 1
+    file: "apps/web/playwright/steps/inspiration-keyboard.steps.ts"
+    issue: "'Element' is not defined (no-undef) - 3 occurrences"
+    severity: high
+    auto_fixable: false
+    worker: lint
+  - priority: 2
+    file: "apps/web/playwright/steps/inst-create-moc.steps.ts"
+    issue: "'Element' is not defined (no-undef)"
+    severity: high
+    auto_fixable: false
+    worker: lint
+  - priority: 3
+    file: "apps/web/playwright/steps/inst-create-moc.steps.ts"
+    issue: "'hasError' is assigned a value but never used (@typescript-eslint/no-unused-vars)"
+    severity: medium
+    auto_fixable: true
+    worker: lint
+  - priority: 4
+    file: "apps/web/playwright/steps/*.steps.ts"
+    issue: "178 prettier/prettier formatting violations (Delete, Replace, Insert)"
+    severity: medium
+    auto_fixable: true
+    worker: lint
+
+findings:
+  lint:
+    verdict: FAIL
+    skipped: false
+    errors: 187
+    warnings: 0
+    summary:
+      by_rule:
+        prettier/prettier: 178
+        no-undef: 6
+        "@typescript-eslint/no-unused-vars": 3
+    top_findings:
+      - severity: error
+        file: apps/web/playwright/steps/inspiration-keyboard.steps.ts
+        line: 141
+        rule: no-undef
+        message: "'Element' is not defined"
+      - severity: error
+        file: apps/web/playwright/steps/inspiration-keyboard.steps.ts
+        line: 147
+        rule: no-undef
+        message: "'Element' is not defined"
+      - severity: error
+        file: apps/web/playwright/steps/inspiration-keyboard.steps.ts
+        line: 181
+        rule: no-undef
+        message: "'Element' is not defined"
+      - severity: error
+        file: apps/web/playwright/steps/inst-create-moc.steps.ts
+        line: 98
+        rule: no-undef
+        message: "'Element' is not defined"
+      - severity: error
+        file: apps/web/playwright/steps/inst-create-moc.steps.ts
+        line: 126
+        rule: "@typescript-eslint/no-unused-vars"
+        message: "'hasError' is assigned a value but never used"
+    command: "pnpm eslint [11 files] --format json"
+
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    notes: "All touched files are Playwright BDD step definitions - not React components. No styling violations."
+    findings: []
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    blocking: 0
+    suggestions: 11
+    notes: "All files use modern ES7+ syntax. Minor suggestions for optional chaining and for...of loops."
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: false
+    counts:
+      critical: 0
+      high: 0
+      medium: 0
+      low: 0
+    checks:
+      hardcoded_secrets: PASS
+      sql_injection: PASS
+      command_injection: PASS
+      xss: PASS
+      auth_present: PASS
+      input_validation: PASS
+      sensitive_logging: PASS
+    notes: "Test infrastructure files - no security vulnerabilities"
+    findings: []
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    notes: "All files pass JavaScript syntax validation. Imports reference valid packages."
+    findings: []
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 4
+    packages_built: 48
+    cached_tasks: 46
+    build_time_ms: 11922
+    notes: "All packages built successfully. Warnings are chunk size warnings (existing, not from this story)."
+    findings: []
+
+total_errors: 187
+total_warnings: 4
+auto_fixable_count: 181
+
+fix_commands:
+  - command: "pnpm exec prettier --write apps/web/playwright/steps/*.steps.ts"
+    fixes: 178
+    description: "Auto-fix all prettier formatting issues"
+  - command: "Manual fix required"
+    fixes: 6
+    description: "Add 'Element' type import from DOM lib or use proper Playwright types"
+  - command: "Manual fix required"
+    fixes: 3
+    description: "Remove or use unused variables"
+
+tokens:
+  in: 25000
+  out: 2000

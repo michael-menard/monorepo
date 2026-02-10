@@ -1,0 +1,168 @@
+schema: 1
+story_id: "INST-1105"
+created: "2026-02-09T22:40:00Z"
+
+key_files:
+  presign_pattern:
+    path: "packages/backend/moc-instructions-core/src/edit-presign.ts"
+    purpose: "Template for session creation: auth → rate limit → validation → S3 presign"
+    reuse_rate: "85%"
+
+  finalize_pattern:
+    path: "packages/backend/moc-instructions-core/src/edit-finalize.ts"
+    purpose: "Template for S3 verification: session check → headObject → transaction"
+    reuse_rate: "85%"
+
+  upload_manager:
+    path: "apps/web/app-instructions-gallery/src/hooks/useUploadManager.ts"
+    purpose: "Session expiry (30s buffer), progress tracking, cancel, retry"
+    reuse_rate: "90%"
+
+  xhr_upload:
+    path: "packages/core/upload-client/src/xhr.ts"
+    purpose: "uploadToPresignedUrl() function with progress events"
+    reuse_rate: "100%"
+
+  upload_config:
+    path: "packages/tools/upload-config/src/schema.ts"
+    purpose: "pdfMaxBytes=50MB, presignTtlMinutes=15, sessionTtlMinutes=15"
+    reuse_rate: "95%"
+
+  db_schema:
+    path: "packages/backend/database-schema/src/schema/index.ts"
+    purpose: "uploadSessions table definition (line ~652)"
+    reuse_rate: "100%"
+
+  moc_routes:
+    path: "apps/api/lego-api/domains/mocs/routes.ts"
+    purpose: "Existing Hono router with auth middleware chain"
+    reuse_rate: "100%"
+
+  moc_services:
+    path: "apps/api/lego-api/domains/mocs/application/services.ts"
+    purpose: "createMocService() pattern for service layer"
+    reuse_rate: "100%"
+
+  moc_ports:
+    path: "apps/api/lego-api/domains/mocs/ports/index.ts"
+    purpose: "MocImageStorage interface pattern for ports"
+    reuse_rate: "100%"
+
+  rtk_query:
+    path: "packages/core/api-client/src/rtk/instructions-api.ts"
+    purpose: "Mutation patterns with invalidatesTags"
+    reuse_rate: "100%"
+
+  instructions_component:
+    path: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/index.tsx"
+    purpose: "Direct upload UI to extend with presigned flow"
+    reuse_rate: "60%"
+
+patterns_to_reuse:
+  - name: "editPresign pattern"
+    reuse: "85%"
+    flow: "Authorization → Rate limit → File validation → Presigned URL generation"
+    source: "packages/backend/moc-instructions-core/src/edit-presign.ts"
+
+  - name: "editFinalize pattern"
+    reuse: "85%"
+    flow: "Session verification → S3 headObject → Transaction → Update status"
+    source: "packages/backend/moc-instructions-core/src/edit-finalize.ts"
+
+  - name: "useUploadManager hook"
+    reuse: "90%"
+    features: "Session expiry (30s buffer), progress tracking, cancel, retry"
+    source: "apps/web/app-instructions-gallery/src/hooks/useUploadManager.ts"
+
+  - name: "uploadToPresignedUrl"
+    reuse: "100%"
+    features: "XHR-based S3 upload with progress events"
+    source: "packages/core/upload-client/src/xhr.ts"
+
+  - name: "Hono route pattern"
+    reuse: "100%"
+    features: "Middleware chain (auth → loadPermissions → requireFeature)"
+    source: "apps/api/lego-api/domains/mocs/routes.ts"
+
+  - name: "RTK Query mutations"
+    reuse: "100%"
+    features: "invalidatesTags pattern for cache management"
+    source: "packages/core/api-client/src/rtk/instructions-api.ts"
+
+dependency_graph:
+  migration:
+    provides: ["upload_sessions.originalFilename", "upload_sessions.originalFileSize"]
+    required_by: ["backend_services"]
+
+  port_interfaces:
+    provides: ["UploadSessionRepository", "S3StoragePort"]
+    required_by: ["backend_services"]
+
+  backend_services:
+    provides: ["createUploadSession()", "completeUploadSession()"]
+    required_by: ["backend_routes"]
+
+  backend_routes:
+    provides: ["POST /upload-sessions", "POST /upload-sessions/:id/complete"]
+    required_by: ["frontend_rtk"]
+
+  frontend_rtk:
+    provides: ["useCreateUploadSessionMutation", "useCompleteUploadSessionMutation"]
+    required_by: ["frontend_hooks"]
+
+  frontend_hooks:
+    provides: ["usePresignedUpload()"]
+    required_by: ["frontend_components"]
+
+  frontend_components:
+    provides: ["PresignedUploadProgress", "SessionExpiryWarning"]
+    required_by: ["e2e_tests"]
+
+risk_areas:
+  - area: "Session expiry during multi-file upload"
+    severity: "medium"
+    mitigation: "30-second buffer + auto-refresh flow (already in useUploadManager)"
+    status: "mitigated"
+
+  - area: "S3 upload succeeds but completion fails"
+    severity: "medium"
+    mitigation: "Idempotent completion + INST-1204 orphan cleanup job"
+    status: "mitigated"
+
+  - area: "CORS configuration"
+    severity: "low"
+    mitigation: "Verify S3 bucket allows PUT from app domain before testing"
+    status: "to_verify"
+
+  - area: "Migration deployment order"
+    severity: "low"
+    mitigation: "Migration must run before backend deployment"
+    status: "documented"
+
+  - area: "File handle lost after page reload"
+    severity: "low"
+    mitigation: "hasFileHandle() check + prompt re-selection"
+    status: "mitigated"
+
+constants:
+  from_upload_config:
+    pdfMaxBytes: 52428800  # 50MB
+    presignTtlMinutes: 15
+    sessionTtlMinutes: 15
+    rateLimitPerDay: 100
+    concurrentUploadLimit: 3
+
+  to_add:
+    pdfMinBytesForPresigned: 10485760  # 10MB threshold
+
+existing_infrastructure:
+  s3_bucket: "Uses existing S3 bucket from environment variables"
+  cloudfront: "Uses existing CloudFront distribution for download URLs"
+  rate_limiter: "Uses existing rate limit middleware from api-core"
+  auth_middleware: "Uses existing Hono auth middleware chain"
+
+notes: |
+  All critical patterns exist in codebase with 85-100% reuse potential.
+  Primary implementation work is integration and wiring, not new patterns.
+  E2E tests require real S3 per ADR-006 (no mocks in E2E).
+  Session expiry handling already implemented in useUploadManager.
