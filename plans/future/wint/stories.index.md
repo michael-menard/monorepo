@@ -17,7 +17,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 |--------|-------|
 | completed | 0 |
 | in-progress | 0 |
-| pending | 134 |
+| pending | 140 |
 
 ---
 
@@ -30,6 +30,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | WINT-0010 | Create Core Database Schemas | — |
 | WINT-0150 | Create doc-sync Skill | — |
 | WINT-0180 | Define Examples + Negative Examples Framework | — |
+| WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-1020 | Flatten Story Directories | — |
 | WINT-4060 | Create scope-defender Agent | — |
 | WINT-4070 | Create evidence-judge Agent | — |
@@ -383,6 +384,133 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Provide focused 150-300 token role instructions with canonical examples
 
 **Risk Notes:** Must keep under token budget while being actionable
+
+---
+
+### WINT-0220: Define Model-per-Task Strategy
+
+**Status:** pending
+**Depends On:** none
+**Phase:** 0
+**Feature:** Document which model to use for each workflow task. Create model-strategy.yaml with task→model mappings. Initial recommendations:
+
+| Task | Model Tier | Candidates |
+|------|------------|------------|
+| File reading, grep, simple edits | Local-Small | Qwen2.5-7B-Coder, DeepSeek-Coder-6.7B |
+| Code generation, refactoring | Local-Large | Qwen2.5-32B-Coder, DeepSeek-Coder-33B, CodeLlama-34B |
+| Repair loops (lint/typecheck) | Local-Small | Qwen2.5-7B-Coder (fast, focused) |
+| Test generation | Local-Large | Qwen2.5-32B-Coder, DeepSeek-Coder-33B |
+| PO cohesion analysis | API-Cheap | Kimi (Moonshot), DeepSeek-Chat, Claude Haiku |
+| DA scope challenges | API-Cheap | Kimi, DeepSeek-Chat, Claude Haiku |
+| Complex reasoning, synthesis | API-Mid | DeepSeek-R1, Claude Sonnet |
+| Architecture, critical decisions | API-High | Claude Opus (escalation only) |
+
+**Infrastructure:**
+- .claude/config/model-strategy.yaml
+- Documentation of model strengths
+
+**Goal:** Clear guidance on which model for which task, local-first by default
+
+**Risk Notes:** Model capabilities change fast, needs periodic review
+
+---
+
+### WINT-0230: Create Unified Model Interface
+
+**Status:** pending
+**Depends On:** WINT-0220
+**Phase:** 0
+**Feature:** Create abstraction layer that routes to Ollama (local), Hugging Face (local), or cloud APIs (Kimi, DeepSeek, Anthropic) based on model-strategy.yaml. Use LiteLLM or custom adapter. Interface: `const response = await llm.complete({ task: "code-generation", prompt, context })`. Automatic model selection based on task type.
+**Infrastructure:**
+- packages/backend/llm-router/
+- LiteLLM or custom adapter
+- Ollama integration
+- HuggingFace Transformers integration
+
+**Goal:** One interface to rule all models, automatic routing based on task
+
+**Risk Notes:** Different models have different prompt formats, need normalization
+
+---
+
+### WINT-0240: Configure Ollama Model Fleet
+
+**Status:** pending
+**Depends On:** WINT-0220
+**Phase:** 0
+**Feature:** Document and script Ollama model setup. Pull recommended models:
+```bash
+ollama pull qwen2.5-coder:7b    # Fast, repair loops
+ollama pull qwen2.5-coder:32b   # Code generation
+ollama pull deepseek-coder:33b  # Alternative for code
+ollama pull deepseek-r1:14b     # Reasoning tasks
+```
+Create health check script. Document VRAM requirements per model. Create model switching based on available resources.
+**Infrastructure:**
+- scripts/setup-ollama-models.sh
+- Model VRAM documentation
+- Health check endpoint
+
+**Goal:** One-command setup of local model fleet
+
+**Risk Notes:** Large models need significant VRAM (32B needs ~20GB)
+
+---
+
+### WINT-0250: Define Escalation Triggers
+
+**Status:** pending
+**Depends On:** WINT-0220, WINT-0230
+**Phase:** 0
+**Feature:** Define when to escalate from cheaper to more expensive model:
+- Local fails 2x on same task → escalate to API-Cheap
+- API-Cheap confidence < 70% → escalate to API-Mid
+- API-Mid fails or flags uncertainty → escalate to Claude
+- Any security/architecture decision → Claude directly
+- Task explicitly marked "critical" → Claude directly
+
+Create escalation-rules.yaml. Log all escalations for analysis.
+**Infrastructure:**
+- .claude/config/escalation-rules.yaml
+- Escalation logging
+
+**Goal:** Automatic escalation with clear rules, minimize Claude usage
+
+**Risk Notes:** Bad escalation rules = wasted money or failed tasks
+
+---
+
+### WINT-0260: Create Model Cost Tracking
+
+**Status:** pending
+**Depends On:** WINT-0230, WINT-0040
+**Phase:** 0
+**Feature:** Track costs per model tier: local (electricity estimate), API-Cheap (Kimi/DeepSeek rates), API-Mid (Sonnet), API-High (Opus). Log to telemetry.model_costs table. Dashboard showing: cost by tier, escalation frequency, cost savings vs all-Claude baseline.
+**Infrastructure:**
+- telemetry.model_costs table
+- Cost calculation per provider
+- Savings dashboard
+
+**Goal:** Prove the multi-model approach saves money
+
+**Risk Notes:** Local "cost" is an estimate, API costs need real-time rate lookup
+
+---
+
+### WINT-0270: Benchmark Local Models on Codebase
+
+**Status:** pending
+**Depends On:** WINT-0240
+**Phase:** 0
+**Feature:** Run benchmark of local models against your actual codebase tasks: TypeScript code completion, React component generation, test writing, lint fixing. Score each model on accuracy, speed, token efficiency. Update model-strategy.yaml with benchmark results.
+**Infrastructure:**
+- Benchmark suite
+- Scoring methodology
+- Results documentation
+
+**Goal:** Data-driven model selection, not guessing
+
+**Risk Notes:** Benchmarks take time, models may perform differently on your code style
 
 ---
 

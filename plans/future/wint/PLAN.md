@@ -478,6 +478,28 @@ docs/
 - PostgreSQL full-text search (tsvector) for keyword queries
 - Combined semantic + keyword search
 - **Standardized Elab Outputs** - gaps.json, user-flows.json, cohesion-findings.json, mvp-slice.json, scope-challenges.json, final-scope.json, evidence-expectations.json
+- **Worktree Integration** - auto-create worktree per story, parallel execution, conflict prevention
+
+### Local-First Model Strategy
+
+Minimize Claude API usage by defaulting to local/cheap models:
+
+| Task Type | Model Tier | Examples | Cost |
+|-----------|------------|----------|------|
+| File ops, simple edits, repair loops | Local-Small | Qwen2.5-Coder-7B, DeepSeek-Coder-6.7B | Free |
+| Code generation, refactoring, tests | Local-Large | Qwen2.5-Coder-32B, DeepSeek-Coder-33B | Free |
+| PO/DA analysis, routine reasoning | API-Cheap | Kimi (Moonshot), DeepSeek-Chat | ~$0.50/M |
+| Complex reasoning, synthesis | API-Mid | DeepSeek-R1, Claude Sonnet | ~$3-15/M |
+| Architecture, critical decisions | API-High | Claude Opus | ~$15-75/M |
+
+**Escalation rules:**
+- Local fails 2x → API-Cheap
+- API-Cheap confidence < 70% → API-Mid
+- Security/architecture → Claude directly
+
+**Target distribution:** 90% local, 8% cheap API, 2% Claude
+
+**Infrastructure:** Ollama + HuggingFace (already installed)
 
 ---
 
