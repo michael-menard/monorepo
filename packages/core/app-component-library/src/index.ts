@@ -320,6 +320,18 @@ export {
 export { ThrashIcon } from './icons/ThrashIcon'
 export type { ThrashIconProps } from './icons/ThrashIcon'
 
+// Stacks
+export { OrganicPile } from './stacks/OrganicPile'
+export { PerspectiveStack } from './stacks/PerspectiveStack'
+export { CardFan } from './stacks/CardFan'
+export { ExpandableStack } from './stacks/ExpandableStack'
+export {
+  StackItemSchema,
+  BaseStackPropsSchema,
+  ExpandableStackPropsSchema,
+} from './stacks/__types__'
+export type { StackItem, BaseStackProps, ExpandableStackProps } from './stacks/__types__'
+
 // =============================================================================
 // HOOKS
 // =============================================================================
