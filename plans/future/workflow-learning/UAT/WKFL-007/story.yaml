@@ -1,0 +1,164 @@
+id: WKFL-007
+title: "Story Risk Predictor"
+status: in-qa
+priority: P2
+phase: adaptation
+created_at: 2026-02-06T17:00:00-07:00
+updated_at: 2026-02-07T23:30:00Z
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies: []
+blocks: []
+
+owner: null
+estimated_tokens: 45000
+
+tags:
+  - adaptation
+  - prediction
+  - risk
+
+summary: |
+  Before elaboration, predict story risk (split likelihood, review cycles,
+  token cost) based on historical patterns from mined data.
+
+goal: |
+  Add predictive signals to story generation:
+  1. Predict split_risk (0-1) based on AC count and scope
+  2. Predict review_cycles based on complexity signals
+  3. Predict token_estimate based on similar stories
+  4. Include similar_stories array for reference
+
+non_goals:
+  - Blocking based on predictions
+  - Real-time prediction updates
+  - ML model training (heuristic-based first)
+
+scope:
+  in:
+    - risk-predictor.agent.md (haiku)
+    - Prediction schema in story output
+    - Similar story finder via KB query
+    - Integration with /pm-story generate output
+    - Prediction accuracy tracking for model improvement
+
+  out:
+    - Pattern mining (WKFL-006 provides input)
+    - Blocking workflow based on risk
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Predict split_risk (0-1) based on AC count and scope"
+    verification: "Story output includes predictions.split_risk field"
+
+  - id: AC-2
+    description: "Predict review_cycles based on complexity signals"
+    verification: "Story output includes predictions.review_cycles field"
+
+  - id: AC-3
+    description: "Predict token_estimate based on similar stories"
+    verification: "Story output includes predictions.token_estimate field"
+
+  - id: AC-4
+    description: "Include similar_stories array for reference"
+    verification: "Story output includes predictions.similar_stories with IDs"
+
+  - id: AC-5
+    description: "Track prediction accuracy for improvement"
+    verification: "OUTCOME.yaml compares predictions vs actuals"
+
+technical_notes: |
+  ## Prediction Schema (in story YAML)
+
+  ```yaml
+  predictions:
+    split_risk: 0.72
+    review_cycles: 2.3
+    token_estimate: 180000
+    confidence: medium
+    similar_stories:
+      - id: WISH-031
+        similarity: 0.89
+        actual_tokens: 167000
+      - id: AUTH-015
+        similarity: 0.82
+        actual_tokens: 195000
+    model_version: 1.0.0
+  ```
+
+  ## Prediction Heuristics (v1)
+
+  ```
+  split_risk:
+    base = 0.1
+    if ac_count > 5: base += 0.2
+    if ac_count > 8: base += 0.3
+    if scope.backend AND scope.frontend: base += 0.2
+    if "refactor" in title: base += 0.15
+    return min(base, 1.0)
+
+  review_cycles:
+    base = 1.5
+    if files_touched_estimate > 5: base += 0.5
+    if scope.security: base += 0.3
+    if similar_story_avg_cycles: base = weighted_avg(base, similar_avg)
+    return base
+
+  token_estimate:
+    if similar_stories:
+      return avg(similar_story_tokens) * 1.1  # 10% buffer
+    else:
+      return 150000  # default
+  ```
+
+  ## Similar Story Finding
+
+  ```javascript
+  // Query KB for stories with similar scope
+  kb_search({
+    query: story.title + " " + story.scope.join(" "),
+    tags: ["outcome"],
+    limit: 5
+  })
+
+  // Filter by completed stories with OUTCOME.yaml
+  // Rank by embedding similarity
+  ```
+
+  ## Accuracy Tracking
+
+  In OUTCOME.yaml (from WKFL-001):
+
+  ```yaml
+  predictions:
+    split_risk: 0.72
+    review_cycles: 2.3
+    token_estimate: 180000
+
+  actuals:
+    split: false
+    review_cycles: 3
+    tokens: 167000
+
+  prediction_accuracy:
+    split_risk: correct  # predicted high risk, didn't split (false positive)
+    review_cycles: -0.7  # off by 0.7 cycles
+    token_estimate: 0.93  # 93% accurate
+  ```
+
+reuse_plan:
+  must_reuse:
+    - Pattern data from WKFL-006
+    - OUTCOME.yaml schema from WKFL-001
+    - KB search for similar stories
+
+  may_create:
+    - risk-predictor.agent.md
+    - Prediction schema
+    - Accuracy tracking fields
+
+token_budget:
+  estimated: 45000
+  enforcement: warning

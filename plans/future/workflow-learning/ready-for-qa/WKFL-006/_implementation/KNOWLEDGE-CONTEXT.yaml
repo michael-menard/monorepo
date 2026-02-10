@@ -1,0 +1,94 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-07T20:55:00-07:00"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "OUTCOME.yaml generation is defined but not yet active (0 files available)"
+      - "Reading full serverless.yml when only one resource needed (17.5k tokens)"
+      - "Full codebase Explore operations (~25k+ tokens)"
+    patterns_to_follow:
+      - "Use targeted file reads over full files"
+      - "Grep before Read to locate specific content"
+      - "Batch related operations to minimize tool calls"
+      - "Support graceful degradation with fallback data sources"
+      - "Define significance thresholds before declaring patterns"
+    patterns_to_avoid:
+      - "Implementing features that depend on unavailable data without fallback"
+      - "Over-engineering MVP solutions (embeddings can be deferred)"
+      - "Reading large config files unnecessarily"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT must use real services, not mocks"
+        applies_to: ["testing", "qa"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per story during dev"
+        applies_to: ["testing", "dev"]
+    constraints:
+      api_paths: "Not applicable - no API endpoints in this story"
+      infrastructure: "Not applicable - no infrastructure changes"
+      storage: "File system only - pattern outputs to .claude/patterns/"
+      auth: "Not applicable - no authentication work"
+      testing: "Agent logic testing required - no E2E/UAT for workflow agents"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read serverless.yml"
+        typical_tokens: 17500
+        mitigation: "Not applicable to this story - no serverless config reads"
+      - operation: "Full codebase Explore"
+        typical_tokens: 25000
+        mitigation: "Use targeted Glob and Grep instead"
+      - operation: "Reading all VERIFICATION.yaml files at once"
+        typical_tokens: 15000
+        mitigation: "Read files in batches, extract only needed fields"
+    recommended_patterns:
+      - "Define schemas FIRST before agent implementation"
+      - "Use Grep to locate OUTCOME.yaml and VERIFICATION.yaml files"
+      - "Extract only necessary fields from each file (not full content)"
+      - "Batch file reads where possible"
+      - "Use streaming/iterative processing for large datasets"
+
+  warnings:
+    - "OUTCOME.yaml data unavailable (0 files) - must implement VERIFICATION.yaml fallback"
+    - "Embedding-based clustering deferred for MVP - use text similarity instead"
+    - "Weekly cron automation out of scope - manual command only for MVP"
+    - "No existing pattern mining baseline - this is greenfield implementation"
+    - "Story blocks WKFL-007, WKFL-009, WKFL-010 - critical path dependency"
+
+  story_specific_context:
+    domain: "workflow-learning"
+    scope: "Create pattern-miner agent for cross-story analysis"
+    data_sources:
+      primary: "OUTCOME.yaml (0 files available - future)"
+      fallback: "VERIFICATION.yaml (37 files available - MVP)"
+    dependencies:
+      completed:
+        - "WKFL-001: OUTCOME.yaml schema defined"
+        - "workflow-retro agent: Single-story pattern detection"
+      required_for_mvp:
+        - "VERIFICATION.yaml files (37 available)"
+        - "KB tools (kb_add_lesson available)"
+    reuse_opportunities:
+      - "OUTCOME.yaml schema from WKFL-001"
+      - "Pattern detection thresholds (3+ occurrences, 0.60+ correlation)"
+      - "WORKFLOW-RECOMMENDATIONS.md format for ANTI-PATTERNS.md"
+      - "workflow-retro agent pattern detection logic"
+
+  tokens:
+    in: 0
+    out: 0

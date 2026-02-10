@@ -144,6 +144,18 @@ export const KbUpdateInputSchema = z
 
     /** Who verified the entry */
     verified_by: z.string().optional().nullable(),
+
+    /** Mark entry as archived (superseded by a canonical entry) */
+    archived: z.boolean().optional(),
+
+    /** Timestamp when the entry was archived */
+    archived_at: z.date().optional().nullable(),
+
+    /** UUID of the canonical entry that replaced this archived entry */
+    canonical_id: z.string().uuid().optional().nullable(),
+
+    /** Whether this entry is a canonical (merged) entry from compression */
+    is_canonical: z.boolean().optional(),
   })
   .refine(
     data =>
@@ -153,7 +165,11 @@ export const KbUpdateInputSchema = z
       data.story_id !== undefined ||
       data.tags !== undefined ||
       data.verified !== undefined ||
-      data.verified_by !== undefined,
+      data.verified_by !== undefined ||
+      data.archived !== undefined ||
+      data.archived_at !== undefined ||
+      data.canonical_id !== undefined ||
+      data.is_canonical !== undefined,
     {
       message: 'At least one field must be provided for update',
     },

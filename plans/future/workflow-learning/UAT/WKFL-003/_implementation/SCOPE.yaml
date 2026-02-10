@@ -1,0 +1,27 @@
+schema: 1
+story_id: "WKFL-003"
+timestamp: "2026-02-07T20:00:00Z"
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: true  # agent config, workflow config files
+
+touched_paths_globs:
+  - ".claude/agents/**"
+  - ".claude/schemas/**"
+  - ".claude/config/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create heuristic evolver agent that tracks decision outcomes and proposes tier adjustments"

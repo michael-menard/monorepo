@@ -1,0 +1,231 @@
+schema: 1
+story_id: WKFL-010
+timestamp: 2026-02-07T23:55:00Z
+generated_by: dev-plan-leader
+domain: workflow-learning
+scope: "Multi-source data aggregation, ROI calculation, proposal lifecycle tracking, meta-learning"
+
+lessons_learned:
+  - id: WKFL-002-lesson-001
+    title: "KB integration is critical path - fail fast if unavailable"
+    summary: "Calibration system depends on KB for all data. If KB unavailable, operation must fail immediately rather than degrade gracefully."
+    source: WKFL-002
+    category: kb-integration
+    applies_to: WKFL-010
+    reason: "improvement-proposer depends on KB for calibration data, past proposals, and proposal lifecycle tracking"
+    pattern_to_follow: "Health check KB connectivity in Phase 1, fail fast if unavailable"
+
+  - id: WKFL-006-lesson-001
+    title: "Promise.allSettled() for multi-source aggregation with graceful degradation"
+    summary: "Pattern miner loads data from multiple YAML files (OUTCOME.yaml, VERIFICATION.yaml). Use Promise.allSettled() instead of Promise.all() to handle partial failures gracefully."
+    source: WKFL-006
+    category: data-aggregation
+    applies_to: WKFL-010
+    reason: "improvement-proposer must aggregate from 4+ data sources (calibration KB, patterns YAML, heuristic proposals, retro recommendations)"
+    pattern_to_follow: "Use Promise.allSettled() to load all sources in parallel, track success/failure per source, continue if at least 1 source succeeds"
+
+  - id: WKFL-007-lesson-001
+    title: "Text similarity threshold 0.85 for deduplication"
+    summary: "Risk predictor uses text similarity for finding similar stories. Threshold of 0.85 balances precision (avoid false matches) with recall (catch actual duplicates)."
+    source: WKFL-007
+    category: deduplication
+    applies_to: WKFL-010
+    reason: "improvement-proposer needs to deduplicate proposals from multiple sources (same improvement suggested by calibration + patterns)"
+    pattern_to_follow: "Use Levenshtein distance normalized to 0-1 scale, threshold 0.85 for MVP, document upgrade path to embeddings"
+
+  - id: WKFL-002-lesson-002
+    title: "Minimum sample size enforcement prevents low-confidence noise"
+    summary: "Calibration reports require minimum 5 samples for reporting, 10 samples for alerts. Below minimum, data is insufficient for actionable insights."
+    source: WKFL-002
+    category: data-quality
+    applies_to: WKFL-010
+    reason: "improvement-proposer ROI scores must be backed by sufficient evidence (AC-2)"
+    pattern_to_follow: "Require minimum 3 data points per proposal, explicitly mark proposals with <3 samples as 'low confidence' or skip"
+
+  - id: WKFL-003-lesson-001
+    title: "Proposal lifecycle tracking with status transitions"
+    summary: "Heuristic evolver tracks proposals from proposed → accepted → rejected. Tracking acceptance patterns enables meta-learning."
+    source: WKFL-003
+    category: proposal-lifecycle
+    applies_to: WKFL-010
+    reason: "improvement-proposer must track proposal lifecycle (AC-4) and learn from acceptance patterns (AC-5)"
+    pattern_to_follow: "Use status enum: proposed | accepted | rejected | implemented. Track acceptance_at, implemented_at, rejection_reason for learning."
+
+  - id: WKFL-006-lesson-002
+    title: "YAML frontmatter + Markdown body for human-readable reports"
+    summary: "Pattern miner outputs combine structured YAML metadata with human-readable Markdown body. YAML enables programmatic queries, Markdown aids human review."
+    source: WKFL-006
+    category: output-format
+    applies_to: WKFL-010
+    reason: "improvement-proposer outputs IMPROVEMENT-PROPOSALS-{date}.md (YAML frontmatter + Markdown body per story spec)"
+    pattern_to_follow: "YAML frontmatter: generated_date, data_period, sources_used. Markdown body: High/Medium/Low priority sections with proposal details."
+
+  - id: WKFL-007-lesson-002
+    title: "Date range filtering for KB queries reduces token cost"
+    summary: "Risk predictor queries KB with date range filter (default: similar stories in past 6 months). Limits result set, reduces token cost."
+    source: WKFL-007
+    category: token-optimization
+    applies_to: WKFL-010
+    reason: "improvement-proposer queries KB for calibration entries and past proposals (AC-1)"
+    pattern_to_follow: "Default date range: past 30 days. Configurable via --days N or --start/--end flags. Filter KB queries by timestamp field."
+
+  - id: WKFL-002-lesson-003
+    title: "CalibrationEntrySchema as model for new KB schemas"
+    summary: "Calibration entry schema defines standard fields: agent_id, finding_id, story_id, stated_confidence, actual_outcome, timestamp. Follow Zod-first pattern."
+    source: WKFL-002
+    category: kb-schema
+    applies_to: WKFL-010
+    reason: "improvement-proposer needs ProposalEntrySchema (~50 lines) extending KB types"
+    pattern_to_follow: "Define Zod schema in apps/api/knowledge-base/src/__types__/index.ts, export type via z.infer<>, follow naming convention {Entity}Schema"
+
+architecture_decisions:
+  - id: ADR-WKFL-001
+    title: "KB as single source of truth for workflow learning data"
+    status: active
+    decision: "All workflow learning components (WKFL-001 through WKFL-010) persist data to Knowledge Base using structured schemas"
+    rationale: "Centralized storage enables cross-component queries, deduplication, and meta-learning. File-based outputs are reports only."
+    constraints:
+      - "All agents must check KB availability before operations"
+      - "KB schemas must use Zod-first approach per CLAUDE.md"
+      - "Tag-based search is primary query method (tags: ['calibration'], ['pattern'], ['proposal'])"
+    applies_to: WKFL-010
+
+  - id: ADR-WKFL-002
+    title: "Date range filtering for analysis windows"
+    status: active
+    decision: "All aggregation agents default to 30-day rolling window, configurable via CLI flags"
+    rationale: "Balances recency bias (recent data more relevant) with sample size (need sufficient data points)"
+    constraints:
+      - "Default: --days 30"
+      - "Alternative: --start YYYY-MM-DD --end YYYY-MM-DD"
+      - "Cannot specify both --days and --start/--end"
+      - "Minimum 1 day, maximum 365 days enforced"
+    applies_to: WKFL-010
+
+  - id: ADR-WKFL-003
+    title: "ROI scoring formula: (impact / effort) * (10/9)"
+    status: active
+    decision: "Impact and effort rated on 1-10 scale, ROI scaled to 10-point scale via formula"
+    rationale: "Standard formula ensures consistency across all proposal sources. Transparent calculation builds trust."
+    constraints:
+      - "Impact: high=9, medium=5, low=2"
+      - "Effort: low=1, medium=3, high=9"
+      - "ROI formula documented in output header for transparency"
+      - "Include example calculation in output"
+    applies_to: WKFL-010
+
+  - id: ADR-WKFL-004
+    title: "Proposals require human approval - no auto-implementation"
+    status: active
+    decision: "All improvement proposals are recommendations only. No agent may modify agent prompts, commands, thresholds, or workflow config without explicit human approval."
+    rationale: "Safety guardrail prevents cascading failures from incorrect proposals. Human judgment required for workflow changes."
+    constraints:
+      - "Proposal status starts at 'proposed'"
+      - "Transition to 'accepted' requires human action"
+      - "Auto-implementation is out-of-scope for WKFL-010"
+      - "Future work: WKFL-010-E (auto-apply for low-risk proposals with human approval threshold)"
+    applies_to: WKFL-010
+
+token_optimization_patterns:
+  - pattern: "Batch KB queries with date range filters"
+    description: "Query KB once per data source with date filter, cache results in memory for multiple proposal generations"
+    estimated_savings: "30% reduction in KB query tokens (100+ entries → date-filtered 20-30 entries)"
+    applies_to: WKFL-010
+
+  - pattern: "Read PATTERNS-{month}.yaml files on-demand only"
+    description: "Only read pattern files for months within date range (e.g., --days 30 reads 1-2 files max, not all historical files)"
+    estimated_savings: "50% reduction in file read tokens (avoid reading 12+ pattern files)"
+    applies_to: WKFL-010
+
+  - pattern: "Use Sonnet model for complex aggregation (not Opus)"
+    description: "Sonnet provides sufficient quality for multi-source aggregation and ROI calculation at lower cost than Opus"
+    estimated_savings: "60% cost reduction vs Opus (similar to WKFL-006 pattern miner)"
+    applies_to: WKFL-010
+    reference: WKFL-006
+
+  - pattern: "Short-circuit deduplication if similarity < 0.5"
+    description: "Fast text comparison before expensive Levenshtein calculation. If titles differ by >50%, skip similarity computation."
+    estimated_savings: "40% reduction in deduplication compute time for large proposal sets (50+ proposals)"
+    applies_to: WKFL-010
+
+reuse_opportunities:
+  - component: "pm-story-risk-predictor.agent.md"
+    what: "Multi-source aggregation with Promise.allSettled() pattern"
+    where: "improvement-proposer.agent.md Phase 2: Data Source Orchestration"
+    notes: "Reuse exact pattern for loading calibration, patterns, heuristics, retro data sources in parallel with graceful degradation"
+
+  - component: "pattern-miner.agent.md"
+    what: "KB query patterns with date range filtering"
+    where: "improvement-proposer.agent.md Phase 2: Query calibration entries from KB"
+    notes: "Reuse kb_search({ tags: ['calibration'], date_range: [start, end] }) pattern"
+
+  - component: "confidence-calibrator.agent.md"
+    what: "Minimum sample size enforcement (5 for reporting, 10 for alerts)"
+    where: "improvement-proposer.agent.md Phase 3: Proposal generation with ≥3 sample filter"
+    notes: "Adapt pattern to WKFL-010 threshold (≥3 data points per proposal)"
+
+  - component: "heuristic-evolver.agent.md"
+    what: "Proposal lifecycle tracking with status transitions"
+    where: "improvement-proposer.agent.md Phase 7: KB Persistence with ProposalEntrySchema"
+    notes: "Reuse status enum pattern: proposed | accepted | rejected | implemented"
+
+  - component: "CalibrationEntrySchema (KB types)"
+    what: "Zod-first schema pattern for KB entries"
+    where: "ProposalEntrySchema in apps/api/knowledge-base/src/__types__/index.ts"
+    notes: "Follow exact structure: id, source, status, tags, timestamps, z.object() + z.infer<> pattern"
+
+cross_story_dependencies:
+  - story_id: WKFL-002
+    relationship: completed
+    status: UAT
+    impact: "Provides calibration KB entries (data source 1/4)"
+    notes: "Calibration data available in KB with tags: ['calibration'], queryable via kb_search"
+
+  - story_id: WKFL-006
+    relationship: ready-for-qa
+    status: ready-for-qa
+    impact: "Provides PATTERNS-{month}.yaml files (data source 2/4)"
+    notes: "Pattern files available at .claude/patterns/PATTERNS-{YYYY-MM}.yaml, graceful degradation if missing"
+
+  - story_id: WKFL-003
+    relationship: completed
+    status: UAT
+    impact: "Provides HEURISTIC-PROPOSALS.yaml (data source 3/4)"
+    notes: "Heuristic proposals available at .claude/config/HEURISTIC-PROPOSALS.yaml"
+
+  - story_id: WKFL-001
+    relationship: completed
+    status: completed
+    impact: "Provides WORKFLOW-RECOMMENDATIONS.md (data source 4/4)"
+    notes: "Workflow recommendations available, parse markdown to extract recommendations"
+
+  - story_id: WKFL-008
+    relationship: pending
+    status: pending
+    impact: "Future data source (experiments) - deferred to Phase 3"
+    notes: "Out of scope for WKFL-010. Experiment data integration is future work (WKFL-010-D)"
+
+warnings:
+  - category: complexity
+    message: "Multi-source aggregation + deduplication + meta-learning in single story (60K tokens estimated)"
+    mitigation: "Consider split per ELAB recommendation: WKFL-010-A (core 40K), WKFL-010-B (dedup 10K), WKFL-010-C (meta-learning 10K)"
+    severity: medium
+
+  - category: data-dependency
+    message: "Meta-learning (AC-5) requires historical proposals (≥50 samples across 2+ months)"
+    mitigation: "Document expected 'No historical data' message on first run. Meta-learning activates after 1-2 months of production use."
+    severity: low
+
+  - category: deduplication
+    message: "Text similarity deduplication (threshold 0.85) unvalidated with real-world proposal duplicates"
+    mitigation: "Implement conservative threshold, add --no-dedup override flag, document upgrade path to embeddings (WKFL-010-B)"
+    severity: medium
+
+metadata:
+  sources_queried:
+    - kb_lessons: 8
+    - architecture_decisions: 4
+    - token_patterns: 4
+    - reuse_components: 5
+  confidence: high
+  notes: "Strong alignment with existing WKFL patterns. All dependencies either completed or have graceful degradation paths."

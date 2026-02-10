@@ -1,0 +1,58 @@
+predictions:
+  split_risk: 0.6
+  review_cycles: 3
+  token_estimate: 60000
+  confidence: medium
+  similar_stories:
+    - story_id: WKFL-006
+      similarity_score: 0.82
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+      notes: "Pattern miner - similar multi-source aggregation pattern"
+    - story_id: WKFL-007
+      similarity_score: 0.78
+      actual_cycles: 3
+      actual_tokens: 48000
+      split_occurred: false
+      notes: "Risk predictor - similar KB query and heuristic analysis"
+    - story_id: WKFL-002
+      similarity_score: 0.75
+      actual_cycles: 2
+      actual_tokens: 42000
+      split_occurred: false
+      notes: "Calibration - similar KB aggregation and YAML output"
+  generated_at: "2026-02-07T22:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+  calculation_details:
+    base_risk_from_acs: 0.2
+    scope_complexity_boost: 0.2
+    multi_source_boost: 0.2
+    total_split_risk: 0.6
+    base_cycles: 1
+    complexity_signals: 2
+    estimated_files: 8
+    cycle_total: 3
+    token_estimate_basis: "median of similar stories (WKFL-002: 42K, WKFL-007: 48K) + complexity adjustment"
+  rationale: |
+    Split risk (0.6): Medium-high due to:
+    - 5 acceptance criteria (moderate complexity)
+    - Multi-source aggregation (calibration + patterns + heuristics + retro)
+    - KB schema extension required
+    - Deduplication logic complexity
+
+    Review cycles (3): Expected 3 iterations due to:
+    - Complex ROI calculation logic
+    - Multi-source orchestration with Promise.allSettled()
+    - Proposal schema design (needs KB schema validation)
+    - Meta-learning implementation (acceptance pattern tracking)
+
+    Token estimate (60K): Based on similar stories:
+    - WKFL-002 (calibration): 42K tokens
+    - WKFL-007 (risk predictor): 48K tokens
+    - WKFL-006 (pattern miner): unknown (in QA)
+    - Adjustment: +15K for meta-learning complexity and deduplication logic
+    - Conservative estimate: 60K (higher than WKFL-007 due to additional meta-learning)
+
+    Confidence (medium): 2 similar stories with actuals, 1 similar story pending completion

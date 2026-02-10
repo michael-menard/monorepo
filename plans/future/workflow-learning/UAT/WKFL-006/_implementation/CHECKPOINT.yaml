@@ -1,0 +1,25 @@
+schema: 1
+story_id: WKFL-006
+feature_dir: plans/future/workflow-learning
+timestamp: '2026-02-07T21:32:00-07:00'
+
+current_phase: completion
+last_successful_phase: qa-verify
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+qa_setup_at: '2026-02-07T21:26:00-07:00'
+qa_verify_at: '2026-02-07T21:30:00-07:00'
+qa_completion_at: '2026-02-07T21:32:00-07:00'
+e2e_gate: exempt
+warnings:
+  - "Schemas (patterns-schema.yaml, agent-hints-schema.yaml) already existed before execution"
+  - "No build/lint/test commands needed - documentation/schema files only"
+  - "E2E exempt: agent/schema/command files only, no executable application code"
+  - "Review waived: documentation-only story, no executable code"
+review_result: PASS
+review_fixtures: waived
+completion_result: PASS
+completion_status: uat
+completion_note: "Story moved to UAT, index updated, downstream dependencies cleared"

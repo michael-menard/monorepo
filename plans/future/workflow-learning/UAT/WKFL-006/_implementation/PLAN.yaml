@@ -1,0 +1,212 @@
+schema: 1
+story_id: "WKFL-006"
+timestamp: "2026-02-07T20:56:00-07:00"
+
+steps:
+  - id: 1
+    description: "Define PATTERNS-{month}.yaml schema"
+    files:
+      - ".claude/schemas/patterns-schema.yaml"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Define AGENT-HINTS.yaml schema"
+    files:
+      - ".claude/schemas/agent-hints-schema.yaml"
+    dependencies: []
+    slice: packages
+
+  - id: 3
+    description: "Create pattern-miner agent with data loading logic"
+    files:
+      - ".claude/agents/pattern-miner.agent.md"
+    dependencies: [1, 2]
+    slice: packages
+
+  - id: 4
+    description: "Implement file pattern detection logic in agent"
+    files:
+      - ".claude/agents/pattern-miner.agent.md"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Implement AC pattern detection logic in agent"
+    files:
+      - ".claude/agents/pattern-miner.agent.md"
+    dependencies: [3]
+    slice: packages
+
+  - id: 6
+    description: "Implement clustering algorithm (text similarity) in agent"
+    files:
+      - ".claude/agents/pattern-miner.agent.md"
+    dependencies: [4, 5]
+    slice: packages
+
+  - id: 7
+    description: "Implement output generation (PATTERNS, AGENT-HINTS, ANTI-PATTERNS) in agent"
+    files:
+      - ".claude/agents/pattern-miner.agent.md"
+    dependencies: [6]
+    slice: packages
+
+  - id: 8
+    description: "Implement KB integration for pattern persistence"
+    files:
+      - ".claude/agents/pattern-miner.agent.md"
+    dependencies: [7]
+    slice: packages
+
+  - id: 9
+    description: "Create /pattern-mine command specification"
+    files:
+      - ".claude/commands/pattern-mine.md"
+    dependencies: [3]
+    slice: packages
+
+  - id: 10
+    description: "Create test fixtures (synthetic OUTCOME.yaml and VERIFICATION.yaml files)"
+    files:
+      - "plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/outcome-samples.yaml"
+      - "plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/verification-samples.yaml"
+    dependencies: [1, 2]
+    slice: packages
+
+  - id: 11
+    description: "Write unit tests for pattern detection algorithms"
+    files:
+      - "plans/future/workflow-learning/in-progress/WKFL-006/_testing/pattern-detection.test.md"
+    dependencies: [10]
+    slice: packages
+
+  - id: 12
+    description: "Write integration tests for full pattern mining flow"
+    files:
+      - "plans/future/workflow-learning/in-progress/WKFL-006/_testing/integration.test.md"
+    dependencies: [8, 10]
+    slice: packages
+
+files_to_change:
+  - path: ".claude/schemas/patterns-schema.yaml"
+    action: create
+    reason: "Define structure for PATTERNS-{month}.yaml output (AC-2, AC-3)"
+
+  - path: ".claude/schemas/agent-hints-schema.yaml"
+    action: create
+    reason: "Define structure for AGENT-HINTS.yaml output (AC-5)"
+
+  - path: ".claude/agents/pattern-miner.agent.md"
+    action: create
+    reason: "Main agent implementation for cross-story pattern mining (all ACs)"
+
+  - path: ".claude/commands/pattern-mine.md"
+    action: create
+    reason: "Command specification for manual pattern mining runs"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/outcome-samples.yaml"
+    action: create
+    reason: "Test data for OUTCOME.yaml-based pattern mining tests"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/verification-samples.yaml"
+    action: create
+    reason: "Test data for VERIFICATION.yaml fallback mode tests (AC-8)"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/pattern-detection.test.md"
+    action: create
+    reason: "Unit tests for pattern detection algorithms"
+
+  - path: "plans/future/workflow-learning/in-progress/WKFL-006/_testing/integration.test.md"
+    action: create
+    reason: "Integration tests for full mining flow with KB integration"
+
+commands_to_run:
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: false
+    reason: "No TypeScript code in this story - agent markdown only"
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: false
+    reason: "No lintable code - agent markdown only"
+
+  - command: "pnpm test"
+    when: "after test files created"
+    required: false
+    reason: "Tests are documentation/validation files, not executable unit tests"
+
+  - command: "/pattern-mine --days 30 --use-verifications"
+    when: "after agent implementation complete"
+    required: true
+    reason: "Manual validation against 37 existing VERIFICATION.yaml files (AC-1, AC-8)"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Manual run: /pattern-mine with <10 stories shows warning, ≥10 stories proceeds"
+    evidence_type: command
+
+  - ac_id: "AC-2"
+    planned_evidence: "PATTERNS-{month}.yaml has file_patterns section with correlation data"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "PATTERNS-{month}.yaml has ac_patterns section with vague phrase detection"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Clustering algorithm documented in agent, similar findings grouped in output"
+    evidence_type: file
+
+  - ac_id: "AC-5"
+    planned_evidence: "AGENT-HINTS.yaml exists with per-agent actionable recommendations"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "ANTI-PATTERNS.md exists with human-readable pattern documentation"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "KB entries created via kb_add_lesson, queryable with pattern tags"
+    evidence_type: manual
+
+  - ac_id: "AC-8"
+    planned_evidence: "Agent successfully loads VERIFICATION.yaml when OUTCOME.yaml unavailable, warning logged"
+    evidence_type: command
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Use text similarity (Levenshtein) or defer clustering entirely for MVP?"
+    decision: "Use text similarity with 0.70 threshold for MVP clustering"
+    rationale: "Provides meaningful clustering without external embedding dependencies. Text similarity threshold 0.70 calibrated to approximate embedding similarity 0.85. Documented as interim solution with clear upgrade path to embeddings in future story."
+    decided_by: autonomous
+    source: "DEV-FEASIBILITY.md recommendation + AC-4 MVP note"
+
+  - id: ARCH-002
+    question: "Define pattern significance thresholds upfront or make fully configurable?"
+    decision: "Use reasonable defaults (3 occurrences, 0.60 correlation) with command-line configurability"
+    rationale: "Defaults based on workflow-retro agent patterns enable immediate use. CLI parameters (--min-occurrences, --min-correlation) allow tuning without code changes. Balances MVP speed with future flexibility."
+    decided_by: autonomous
+    source: "DEV-FEASIBILITY.md + AC-2/AC-3 thresholds"
+
+  - id: ARCH-003
+    question: "Weekly cron automation in scope for MVP?"
+    decision: "Manual /pattern-mine command only for MVP, cron documented for future"
+    rationale: "Weekly cron requires infrastructure not yet defined. Manual command sufficient for MVP validation. Infrastructure Notes section documents cron setup for future activation. Matches story Non-Goals."
+    decided_by: autonomous
+    source: "Story Non-Goals + DEV-FEASIBILITY.md"
+
+complexity: moderate
+
+notes:
+  - "OUTCOME.yaml data unavailable (0 files) - VERIFICATION.yaml fallback CRITICAL for MVP testing"
+  - "Text similarity clustering (Levenshtein distance) used instead of embeddings for MVP"
+  - "Schemas must be defined BEFORE agent implementation begins (dependency critical)"
+  - "Agent is markdown documentation, not executable code - no build/lint/test commands needed"
+  - "Manual validation against 37 existing VERIFICATION.yaml files required for AC evidence"
+  - "Story blocks WKFL-007, WKFL-009, WKFL-010 - pattern output is critical dependency"
+  - "Pattern mining period defaults: --days 30 (rolling) or --month YYYY-MM (fixed)"
+  - "KB integration uses kb_add_lesson with category='pattern' and tags=['pattern', 'workflow', 'cross-story']"
+  - "Output directory .claude/patterns/ must exist or be created by agent"
+  - "ANTI-PATTERNS.md format follows WORKFLOW-RECOMMENDATIONS.md structure from WKFL-001"

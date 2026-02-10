@@ -125,6 +125,10 @@ export async function kb_update(input: KbUpdateInput, deps: KbUpdateDeps): Promi
     role: string
     tags: string[] | null
     updatedAt: Date
+    archived: boolean
+    archivedAt: Date | null
+    canonicalId: string | null
+    isCanonical: boolean
   }> = {
     updatedAt: new Date(),
   }
@@ -144,6 +148,23 @@ export async function kb_update(input: KbUpdateInput, deps: KbUpdateDeps): Promi
   // Handle tags: null explicitly sets to null, undefined means no change
   if (validatedInput.tags !== undefined) {
     updateData.tags = validatedInput.tags
+  }
+
+  // Handle archival fields (WKFL-009)
+  if (validatedInput.archived !== undefined) {
+    updateData.archived = validatedInput.archived
+  }
+
+  if (validatedInput.archived_at !== undefined) {
+    updateData.archivedAt = validatedInput.archived_at
+  }
+
+  if (validatedInput.canonical_id !== undefined) {
+    updateData.canonicalId = validatedInput.canonical_id
+  }
+
+  if (validatedInput.is_canonical !== undefined) {
+    updateData.isCanonical = validatedInput.is_canonical
   }
 
   // Step 5: Update entry

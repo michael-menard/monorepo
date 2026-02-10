@@ -1,0 +1,39 @@
+schema: 1
+story_id: "WKFL-002"
+timestamp: "2026-02-07T21:20:00Z"
+
+verdict: PASS
+
+findings: []
+
+review_notes: |
+  All 7 acceptance criteria satisfied:
+  - AC-1: CalibrationEntrySchema with all required fields, 25 unit tests passing
+  - AC-2: Feedback integration with outcome mapping in feedback.md Step 5b
+  - AC-3: Accuracy computation per (agent_id, confidence_level) in agent Phase 3
+  - AC-4: Alert logic for high confidence < 90% with 10+ sample minimum
+  - AC-5: Conceptual threshold recommendations (per ARCH-WKFL-002-002)
+  - AC-6: /calibration-report command with --since and --agent args
+  - AC-7: Agent frontmatter specifies model: haiku, type: worker
+
+  Schema design is clean:
+  - Separate ConfidenceLevelSchema and ActualOutcomeSchema for reuse
+  - CalibrationEntrySchema uses .min(1) for flexible ID validation
+  - 'calibration' added to KnowledgeEntryTypeSchema enum
+  - No tool handler changes needed (generic validation via enum)
+
+  Agent design follows established patterns:
+  - Frontmatter matches workflow-retro.agent.md structure
+  - KB integration documented with query/write patterns
+  - Error handling and fallback behavior specified
+  - Non-negotiables enforced (read-only, proposals only)
+
+  No regressions:
+  - 25 new calibration tests pass
+  - 122 existing schema tests pass
+  - 3 pre-existing failures in story-schemas (Zod v4 compat, unrelated)
+
+gate:
+  decision: PASS
+  reason: "All 7 ACs satisfied, 25 tests passing, no regressions, clean architecture"
+  blocking_issues: []

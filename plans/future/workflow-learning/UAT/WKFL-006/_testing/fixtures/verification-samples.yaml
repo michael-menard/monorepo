@@ -1,0 +1,272 @@
+# Test Fixtures: VERIFICATION.yaml Samples
+# Synthetic data for pattern-miner testing
+# Each sample represents a completed story with varying patterns
+
+---
+# Sample 1: Backend API - Lint failures in route handlers
+- schema: 4
+  feature_dir: "plans/features/wishlist"
+  story_id: "WISH-TEST-001"
+  updated: "2026-02-05T10:00:00-07:00"
+  iteration: 1
+
+  code_review:
+    verdict: PASS
+    workers_run: [lint, style, syntax, security, typecheck, build]
+
+    lint:
+      verdict: FAIL
+      errors: 3
+      findings:
+        - "apps/api/wishlist/routes.ts: Missing type annotations on handler params"
+        - "apps/api/wishlist/routes.ts: Implicit any on request object"
+        - "apps/api/wishlist/routes.ts: Unused variable 'userId'"
+      notes: "Multiple ESLint errors in route handlers"
+
+    typecheck:
+      verdict: PASS
+      errors: 0
+
+    security:
+      verdict: PASS
+      errors: 0
+
+    build:
+      verdict: PASS
+      errors: 0
+
+  touched_files:
+    - "apps/api/wishlist/routes.ts"
+    - "apps/api/wishlist/handler.ts"
+    - "packages/core/wishlist/schemas.ts"
+
+  qa_verify:
+    verdict: PASS
+    acs_verified:
+      - ac: "AC-1: Endpoint must properly validate user input"
+        status: PASS
+        evidence: "apps/api/wishlist/routes.ts lines 45-60"
+      - ac: "AC-2: Response should be correctly formatted"
+        status: PASS
+        evidence: "apps/api/wishlist/handler.ts lines 20-35"
+
+  gate:
+    decision: PASS
+    gate_passed: true
+
+---
+# Sample 2: Frontend component - Vague AC with multiple review cycles
+- schema: 4
+  feature_dir: "plans/features/gallery"
+  story_id: "GAL-TEST-002"
+  updated: "2026-02-03T14:30:00-07:00"
+  iteration: 3
+
+  code_review:
+    verdict: PASS
+    workers_run: [lint, style, syntax, security, typecheck, build]
+
+    lint:
+      verdict: PASS
+      errors: 0
+
+    typecheck:
+      verdict: FAIL
+      errors: 2
+      findings:
+        - "apps/web/main-app/components/GalleryCard/index.tsx: Type 'undefined' is not assignable to type 'string'"
+        - "apps/web/main-app/components/GalleryCard/utils/formatDate.ts: Argument of type 'number' is not assignable to parameter of type 'Date'"
+
+    security:
+      verdict: PASS
+      errors: 0
+
+    build:
+      verdict: PASS
+      errors: 0
+
+  touched_files:
+    - "apps/web/main-app/components/GalleryCard/index.tsx"
+    - "apps/web/main-app/components/GalleryCard/utils/formatDate.ts"
+    - "packages/core/app-component-library/cards/StatsCard.tsx"
+
+  qa_verify:
+    verdict: PASS
+    acs_verified:
+      - ac: "AC-1: Component must render efficiently"
+        status: PASS
+        evidence: "apps/web/main-app/components/GalleryCard/index.tsx lines 15-40"
+      - ac: "AC-2: Image loading should work properly"
+        status: PASS
+        evidence: "apps/web/main-app/components/GalleryCard/index.tsx lines 50-65"
+      - ac: "AC-3: Date formatting must be appropriate for all locales"
+        status: PARTIAL
+        evidence: "utils/formatDate.ts has basic implementation, lacks full locale support"
+
+  gate:
+    decision: PASS
+    gate_passed: true
+
+---
+# Sample 3: Security review failure - Auth routes
+- schema: 4
+  feature_dir: "plans/features/auth"
+  story_id: "AUTH-TEST-003"
+  updated: "2026-02-01T09:15:00-07:00"
+  iteration: 2
+
+  code_review:
+    verdict: FAIL
+    workers_run: [lint, style, syntax, security, typecheck, build]
+
+    lint:
+      verdict: PASS
+      errors: 0
+
+    typecheck:
+      verdict: PASS
+      errors: 0
+
+    security:
+      verdict: FAIL
+      errors: 2
+      findings:
+        - "apps/api/auth/routes.ts: Missing input sanitization before processing credentials"
+        - "apps/api/auth/routes.ts: Potential SQL injection in raw query"
+      checks:
+        hardcoded_secrets: PASS
+        sql_injection: FAIL
+        input_validation: FAIL
+        auth_present: PASS
+      notes: "Security issues in auth handler - must fix before deployment"
+
+    build:
+      verdict: PASS
+      errors: 0
+
+  touched_files:
+    - "apps/api/auth/routes.ts"
+    - "apps/api/auth/middleware/validate.ts"
+    - "packages/backend/auth-utils/jwt.ts"
+
+  qa_verify:
+    verdict: FAIL
+    acs_verified:
+      - ac: "AC-1: Login endpoint must validate credentials correctly"
+        status: FAIL
+        evidence: "Missing Zod validation - AC-1 security requirement not met"
+      - ac: "AC-2: JWT tokens should be generated properly"
+        status: PASS
+        evidence: "packages/backend/auth-utils/jwt.ts lines 12-35"
+
+  gate:
+    decision: FAIL
+    gate_passed: false
+    reason: "Security vulnerabilities must be addressed"
+
+---
+# Sample 4: Build failure - Shared package
+- schema: 4
+  feature_dir: "plans/features/shared"
+  story_id: "SHARED-TEST-004"
+  updated: "2026-01-30T16:45:00-07:00"
+  iteration: 1
+
+  code_review:
+    verdict: FAIL
+    workers_run: [lint, style, syntax, security, typecheck, build]
+
+    lint:
+      verdict: PASS
+      errors: 0
+
+    typecheck:
+      verdict: PASS
+      errors: 0
+
+    security:
+      verdict: PASS
+      errors: 0
+
+    build:
+      verdict: FAIL
+      errors: 1
+      findings:
+        - "packages/core/utils/src/format.ts: Cannot find module '@repo/logger'"
+      notes: "Missing dependency causing build failure"
+
+  touched_files:
+    - "packages/core/utils/src/format.ts"
+    - "packages/core/utils/src/__tests__/format.test.ts"
+
+  qa_verify:
+    verdict: FAIL
+    acs_verified:
+      - ac: "AC-1: Format function should work for all date formats"
+        status: FAIL
+        evidence: "Build failure prevents verification"
+
+  gate:
+    decision: FAIL
+    gate_passed: false
+    reason: "Build errors must be resolved"
+
+---
+# Sample 5: Clean implementation - No failures
+- schema: 4
+  feature_dir: "plans/features/wishlist"
+  story_id: "WISH-TEST-005"
+  updated: "2026-01-28T11:20:00-07:00"
+  iteration: 1
+
+  code_review:
+    verdict: PASS
+    workers_run: [lint, style, syntax, security, typecheck, build]
+
+    lint:
+      verdict: PASS
+      errors: 0
+      notes: "Clean - no lint errors"
+
+    typecheck:
+      verdict: PASS
+      errors: 0
+      notes: "All types correct"
+
+    security:
+      verdict: PASS
+      errors: 0
+      checks:
+        hardcoded_secrets: PASS
+        sql_injection: PASS
+        input_validation: PASS
+        auth_present: PASS
+      notes: "All security checks passed"
+
+    build:
+      verdict: PASS
+      errors: 0
+      notes: "Build successful"
+
+  touched_files:
+    - "apps/web/main-app/features/wishlist/WishlistView.tsx"
+    - "apps/web/main-app/features/wishlist/hooks/useWishlist.ts"
+    - "packages/core/app-component-library/buttons/CustomButton.tsx"
+
+  qa_verify:
+    verdict: PASS
+    acs_verified:
+      - ac: "AC-1: Display user's wishlist items with pagination"
+        status: PASS
+        evidence: "WishlistView.tsx lines 25-80, pagination component lines 90-120"
+      - ac: "AC-2: Allow adding/removing items"
+        status: PASS
+        evidence: "useWishlist.ts hook methods lines 15-45"
+      - ac: "AC-3: Show loading states and error messages"
+        status: PASS
+        evidence: "WishlistView.tsx error handling lines 85-100"
+
+  gate:
+    decision: PASS
+    gate_passed: true
+    reason: "All quality gates passed"

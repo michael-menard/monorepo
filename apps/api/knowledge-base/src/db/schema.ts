@@ -159,6 +159,32 @@ export const knowledgeEntries = pgTable(
 
     /** When the entry was last updated */
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
+
+    /**
+     * Whether this entry has been archived (superseded by a canonical entry).
+     * Archived entries are excluded from compression runs and search by default.
+     *
+     * @see WKFL-009 for KB compression implementation
+     */
+    archived: boolean('archived').default(false).notNull(),
+
+    /**
+     * Timestamp when the entry was archived.
+     * Set when archived is changed to true.
+     */
+    archivedAt: timestamp('archived_at'),
+
+    /**
+     * UUID of the canonical entry that replaced this archived entry.
+     * Self-referential FK to knowledge_entries.id.
+     */
+    canonicalId: uuid('canonical_id').references(() => knowledgeEntries.id),
+
+    /**
+     * Whether this entry is a canonical (merged) entry created by compression.
+     * Canonical entries represent the deduplicated, merged version of similar entries.
+     */
+    isCanonical: boolean('is_canonical').default(false).notNull(),
   },
   table => ({
     /**
@@ -182,6 +208,12 @@ export const knowledgeEntries = pgTable(
 
     /** Index for created_at for ordering */
     createdAtIdx: index('knowledge_entries_created_at_idx').on(table.createdAt),
+
+    /** Partial index for non-archived entries (used by compression queries) */
+    archivedIdx: index('knowledge_entries_archived_idx').on(table.archived),
+
+    /** Partial index for canonical entries */
+    isCanonicalIdx: index('knowledge_entries_is_canonical_idx').on(table.isCanonical),
   }),
 )
 

@@ -1,0 +1,201 @@
+schema: 1
+story_id: "WKFL-007"
+timestamp: "2026-02-07T19:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create pm-story-risk-predictor.agent.md with Zod schemas for prediction output"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: []
+    slice: backend
+
+  - id: 2
+    description: "Add similar story finder logic using KB search with similarity filtering"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [1]
+    slice: backend
+
+  - id: 3
+    description: "Implement split_risk calculation with AC count, scope keywords, and WKFL-006 pattern boost"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [1]
+    slice: backend
+
+  - id: 4
+    description: "Implement review_cycles prediction with complexity signals and cycle predictors"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [1]
+    slice: backend
+
+  - id: 5
+    description: "Implement token_estimate calculation using similar story median/average with fallbacks"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [1, 2]
+    slice: backend
+
+  - id: 6
+    description: "Build similar_stories array extraction from KB results and OUTCOME.yaml loading"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [2]
+    slice: backend
+
+  - id: 7
+    description: "Implement confidence level calculation based on data availability"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [2, 5]
+    slice: backend
+
+  - id: 8
+    description: "Add graceful degradation handlers for KB unavailable, no patterns, no similar stories"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [2, 3, 4, 5, 6, 7]
+    slice: backend
+
+  - id: 9
+    description: "Integrate risk predictor worker spawn in pm-story-generation-leader.agent.md"
+    files:
+      - ".claude/agents/pm-story-generation-leader.agent.md"
+    dependencies: [1]
+    slice: backend
+
+  - id: 10
+    description: "Create accuracy tracker logic as inline function in risk predictor agent"
+    files:
+      - ".claude/agents/pm-story-risk-predictor.agent.md"
+    dependencies: [1]
+    slice: backend
+
+  - id: 11
+    description: "Add accuracy tracking trigger in dev-documentation-leader after OUTCOME.yaml write"
+    files:
+      - ".claude/agents/dev-documentation-leader.agent.md"
+    dependencies: [10]
+    slice: backend
+
+  - id: 12
+    description: "Write unit tests for split_risk calculation with varying AC counts and scope keywords"
+    files:
+      - ".claude/agents/__tests__/pm-story-risk-predictor.test.md"
+    dependencies: [3]
+    slice: backend
+
+  - id: 13
+    description: "Write unit tests for review_cycles prediction with complexity signals"
+    files:
+      - ".claude/agents/__tests__/pm-story-risk-predictor.test.md"
+    dependencies: [4]
+    slice: backend
+
+  - id: 14
+    description: "Write unit tests for token_estimate with various similar story scenarios"
+    files:
+      - ".claude/agents/__tests__/pm-story-risk-predictor.test.md"
+    dependencies: [5]
+    slice: backend
+
+  - id: 15
+    description: "Write integration test for full PM pipeline with risk predictor"
+    files:
+      - ".claude/agents/__tests__/pm-story-risk-predictor-integration.test.md"
+    dependencies: [9]
+    slice: backend
+
+files_to_change:
+  - path: ".claude/agents/pm-story-risk-predictor.agent.md"
+    action: create
+    reason: "New haiku worker agent for story risk prediction (AC-1 through AC-7)"
+
+  - path: ".claude/agents/pm-story-generation-leader.agent.md"
+    action: modify
+    reason: "Integrate risk predictor worker spawn in parallel workers phase (AC-7)"
+
+  - path: ".claude/agents/dev-documentation-leader.agent.md"
+    action: modify
+    reason: "Add accuracy tracking trigger after OUTCOME.yaml generation (AC-6)"
+
+  - path: ".claude/agents/__tests__/pm-story-risk-predictor.test.md"
+    action: create
+    reason: "Unit tests for risk calculation algorithms (AC-1, AC-2, AC-3)"
+
+  - path: ".claude/agents/__tests__/pm-story-risk-predictor-integration.test.md"
+    action: create
+    reason: "Integration test for full PM pipeline with graceful degradation (AC-7)"
+
+commands_to_run:
+  - command: "grep -r 'pm-story-risk-predictor' .claude/agents/"
+    when: "after implementation"
+    required: true
+
+  - command: "grep -r 'predictions:' plans/future/workflow-learning/"
+    when: "after integration test"
+    required: false
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: split_risk calculation with AC count, scope keywords, pattern boost"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: review_cycles prediction with complexity signals"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: token_estimate with KB similar stories, fallbacks"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: similar_stories array extraction and sorting by similarity_score"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: accuracy calculation with known predictions vs actuals, KB write"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Manual verification: dev-documentation-leader triggers accuracy tracking after OUTCOME.yaml"
+    evidence_type: manual
+
+  - ac_id: "AC-7"
+    planned_evidence: "Integration test: PM pipeline completes when predictor crashes or returns fallback"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should risk predictor be haiku or sonnet model?"
+    decision: "haiku"
+    rationale: "Lightweight analysis similar to gap-analytics-agent, heuristic algorithms don't require sonnet complexity, cost optimization for frequently-run worker"
+    decided_by: auto-accepted
+
+  - id: ARCH-002
+    question: "Where should accuracy tracking logic live - separate agent or inline in risk predictor?"
+    decision: "inline in risk predictor"
+    rationale: "Simple calculation, no need for separate agent file, triggered by dev-documentation-leader passing story_id and OUTCOME.yaml path"
+    decided_by: auto-accepted
+
+  - id: ARCH-003
+    question: "How to handle WKFL-006 dependency when patterns not yet available?"
+    decision: "graceful degradation with heuristics-only mode"
+    rationale: "Per story non-goals and dependency mitigation, predictor must work without WKFL-006 patterns, confidence level = low when patterns unavailable"
+    decided_by: auto-accepted
+
+complexity: moderate
+
+notes:
+  - "WKFL-006 dependency is pending, implement degraded mode first (heuristics-only)"
+  - "Per PLAN.meta.md: predictions are advisory only, never block workflow"
+  - "Follow ADR-001 for API path schemas if any integration points needed"
+  - "Haiku model per gap-analytics-agent pattern (lightweight analysis)"
+  - "Zod-first types per CLAUDE.md requirements"
+  - "No new packages required, all logic in agent markdown files"
+  - "Similar to knowledge-context-loader pattern: spawned worker, YAML output, completion signal"
+  - "Integration test should validate PM pipeline continues on predictor failure (AC-7)"
+  - "Accuracy tracking writes to KB with tags: ['prediction-accuracy', 'wkfl-007', 'story:{id}', 'date:{YYYY-MM}']"
+  - "Token optimization: predictor runs after STORY-SEED.md only (fast, sufficient context)"
