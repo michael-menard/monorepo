@@ -5,7 +5,7 @@
  * Uses MSW handlers for API mocking (handlers.ts).
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useFeatureFlag, useFeatureFlags } from '../useFeatureFlag'
 import { FeatureFlagProvider } from '../../contexts/FeatureFlagContext'

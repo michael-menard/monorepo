@@ -55,7 +55,6 @@ export function GalleryViewToggle({
             value={currentView}
             onValueChange={handleViewChange}
             aria-label="View mode selector"
-            style="surface"
           >
             <AppToggleGroupItem value="grid" aria-label="Grid view">
               <LayoutGrid className="h-5 w-5" aria-hidden="true" />

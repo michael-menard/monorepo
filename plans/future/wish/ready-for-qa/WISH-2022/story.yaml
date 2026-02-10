@@ -1,0 +1,30 @@
+schema: 1
+id: WISH-2022
+feature: wish
+type: feature
+state: ready-for-qa
+title: Client-side Image Compression
+points: 3
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2002
+follow_up_from: WISH-2002
+scope:
+  packages: []
+  surfaces:
+    - backend
+    - frontend
+    - infra
+goal: Automatically compress images on the client side before uploading to S3, reducing upload time and storage costs
+  while maintaining acceptable visual quality.
+non_goals:
+  - Not implementing server-side image processing or resizing
+  - Not implementing multiple image size variants (thumbnail, medium, large)
+  - Not implementing progressive JPEG or advanced format optimization
+  - Not re-implementing the S3 upload flow from WISH-2002
+  - Not implementing compression for other file types (PDFs, etc.)
+acs: []
+risks: []
+created_at: 2026-01-27T00:00:00-07:00
+updated_at: 2026-01-31T16:50:00-07:00

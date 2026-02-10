@@ -1,0 +1,805 @@
+schema: 1
+story_id: WISH-2016
+timestamp: "2026-02-09T18:15:00Z"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Codebase Patterns & Conventions
+# ═══════════════════════════════════════════════════════════════════════════
+
+project_patterns:
+  architecture:
+    - pattern: "Hexagonal Architecture (Ports & Adapters)"
+      description: "Core business logic behind interfaces, infrastructure as adapters"
+      example_location: "apps/api/lego-api/core/image-processing/optimizer.ts"
+      example:
+        port: |
+          // Port interface (lines 66-86)
+          export interface ImageOptimizerPort {
+            resize(input: Buffer, config: ImageSizeConfig): Promise<ProcessedImage>
+            getImageMetadata(input: Buffer): Promise<ImageMetadata>
+            processAllSizes(input: Buffer, watermarkBuffer?: Buffer): Promise<ProcessedImage[]>
+          }
+        adapter: |
+          // Adapter implementation (lines 165-266)
+          export function createSharpImageOptimizer(): ImageOptimizerPort {
+            return {
+              async resize(input: Buffer, config: ImageSizeConfig): Promise<ProcessedImage> { ... }
+            }
+          }
+      benefits:
+        - "Testable without external dependencies"
+        - "Swappable implementations (Sharp -> ImageMagick)"
+        - "Clear separation of concerns"
+      when_to_use: "Any infrastructure integration (S3, databases, third-party APIs)"
+
+    - pattern: "Zod-First Types (REQUIRED)"
+      description: "All types derived from Zod schemas using z.infer<>"
+      rule: "NEVER use TypeScript interfaces or type aliases without Zod"
+      example_location: "apps/api/lego-api/core/image-processing/__types__/index.ts"
+      example: |
+        // CORRECT
+        import { z } from 'zod'
+
+        export const ImageSizeSchema = z.enum(['thumbnail', 'medium', 'large'])
+        export type ImageSize = z.infer<typeof ImageSizeSchema>
+
+        export const ImageSizeConfigSchema = z.object({
+          name: ImageSizeSchema,
+          maxWidth: z.number().int().positive(),
+          maxHeight: z.number().int().positive(),
+          quality: z.number().int().min(1).max(100),
+          applyWatermark: z.boolean(),
+        })
+        export type ImageSizeConfig = z.infer<typeof ImageSizeConfigSchema>
+
+        // WRONG - never do this
+        interface ImageSize {
+          name: string
+          maxWidth: number
+        }
+      benefits:
+        - "Runtime validation at boundaries"
+        - "Self-documenting constraints"
+        - "Automatic type inference"
+        - "Single source of truth"
+      enforcement: "Strictly enforced per CLAUDE.md"
+
+    - pattern: "No Barrel Files (REQUIRED)"
+      description: "Never create index.ts files that re-export from multiple modules"
+      rule: "Import directly from source files, not through index.ts"
+      example_location: "apps/web/app-wishlist-gallery/src/components/ResponsiveImage/"
+      example: |
+        // CORRECT (direct import)
+        import { ResponsiveImage } from '../ResponsiveImage/index.js'
+
+        // WRONG (barrel file import - DO NOT DO THIS)
+        // src/components/index.ts exports everything
+        import { ResponsiveImage } from '../components'
+      exception: |
+        Module-level index.ts exports are OK (e.g., image-processing/index.ts)
+        when exporting public API of a single module. No cross-module re-exports.
+      rationale: "Improves tree-shaking, makes imports explicit, reduces circular dependencies"
+
+  component_structure:
+    - pattern: "Component Directory Structure"
+      required: true
+      structure: |
+        MyComponent/
+          index.tsx              # Main component file
+          __tests__/
+            MyComponent.test.tsx # Component tests
+          __types__/
+            index.ts             # Zod schemas for this component (unless shared)
+          utils/
+            index.ts             # Component-specific utilities
+      example_location: "apps/web/app-wishlist-gallery/src/components/ResponsiveImage/"
+      notes:
+        - "Shared types go in central __types__ directory, not component-local"
+        - "Import component via parent directory: import { X } from './MyComponent'"
+        - "__types__ only if types are component-specific, otherwise use shared location"
+
+  import_rules:
+    - rule: "UI Components - ALWAYS use @repo/ui"
+      required: true
+      example: |
+        // CORRECT
+        import { Button, Card, Table } from '@repo/ui'
+
+        // WRONG - never import from individual paths
+        import { Button } from '@repo/ui/button'
+      location: "Any frontend component"
+
+    - rule: "Logging - ALWAYS use @repo/logger"
+      required: true
+      example: |
+        // CORRECT
+        import { logger } from '@repo/logger'
+        logger.info('message', { context })
+
+        // WRONG - never use console
+        console.log('message')
+      enforcement: "Strictly enforced, console.log will fail linting"
+
+  file_naming:
+    - pattern: "Zod Schemas Location"
+      description: "Shared schemas in packages/core/api-client/src/schemas/"
+      example: "wishlist.ts exports WishlistItemSchema, ImageVariantsSchema"
+      when_to_use: "Any type shared between frontend and backend"
+
+    - pattern: "Module-specific Schemas"
+      description: "Module-level schemas in __types__/index.ts"
+      example: "apps/api/lego-api/core/image-processing/__types__/index.ts"
+      when_to_use: "Types only used within a single backend module"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Technology Stack (Relevant to WISH-2016)
+# ═══════════════════════════════════════════════════════════════════════════
+
+tech_stack:
+  image_processing:
+    library: "Sharp"
+    version: "^0.33.0 (or latest compatible with Lambda)"
+    rationale:
+      - "5-10x faster than ImageMagick"
+      - "Streaming-based processing (low memory)"
+      - "Lambda compatible with Node.js 18.x+"
+      - "Battle-tested by Vercel, Cloudflare"
+    alternative_considered: "ImageMagick"
+    why_not_imagemagick:
+      - "Slower performance"
+      - "Larger memory footprint"
+      - "Harder to deploy on Lambda"
+    documentation: "https://sharp.pixelplumbing.com/"
+    lambda_layer: "~50MB layer required (libvips dependencies)"
+
+  frontend_components:
+    ui_library: "@repo/app-component-library"
+    base: "shadcn/ui + Radix primitives"
+    styling: "Tailwind CSS utility classes"
+    testing: "Vitest + React Testing Library"
+    image_optimization: "Picture element with WebP/JPEG fallback"
+    note: |
+      ResponsiveImage component uses native HTML picture element,
+      not a third-party library. This provides maximum browser compatibility.
+
+  backend_runtime:
+    runtime: "Node.js 18.x on AWS Lambda"
+    serverless: true
+    event_source: "S3 ObjectCreated:Put events"
+    deployment: "Terraform or AWS CDK (not implemented in this story)"
+
+  database:
+    orm: "Drizzle ORM"
+    migration_tool: "drizzle-kit"
+    schema_location: "packages/backend/database-schema/src/schema/"
+    migration_location: "packages/backend/database-schema/src/migrations/app/"
+    commands:
+      generate: "pnpm drizzle-kit generate:pg"
+      push: "pnpm drizzle-kit push:pg"
+      migrate: "pnpm drizzle-kit migrate"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Testing Patterns
+# ═══════════════════════════════════════════════════════════════════════════
+
+testing_patterns:
+  unit_tests:
+    framework: "Vitest"
+    location: "__tests__/ directory alongside code"
+    naming: "*.test.ts or *.test.tsx"
+    example_location: "apps/api/lego-api/core/image-processing/__tests__/optimizer.test.ts"
+    patterns:
+      - pattern: "Mock external dependencies"
+        example: |
+          // Mock Sharp module
+          vi.mock('sharp', () => {
+            const mockSharp = vi.fn(() => ({
+              metadata: vi.fn().mockResolvedValue({ width: 4032, height: 3024 }),
+              resize: vi.fn().mockReturnThis(),
+              webp: vi.fn().mockReturnThis(),
+              toBuffer: vi.fn().mockResolvedValue(Buffer.from('mock-image')),
+            }))
+            return { default: mockSharp }
+          })
+
+      - pattern: "Mock @repo/logger"
+        example: |
+          vi.mock('@repo/logger', () => ({
+            logger: {
+              debug: vi.fn(),
+              info: vi.fn(),
+              warn: vi.fn(),
+              error: vi.fn(),
+            },
+          }))
+
+      - pattern: "Test edge cases explicitly"
+        examples:
+          - "1x1 pixel images"
+          - "Panoramic (10000x500) images"
+          - "Very tall (500x10000) images"
+          - "Exact size match"
+          - "No upscaling for small images"
+
+  integration_tests:
+    framework: "Vitest"
+    location: "functions/{function-name}/__tests__/"
+    focus: "Test inter-module interactions, not external services"
+    example_location: "apps/api/lego-api/functions/image-processor/__tests__/handler.test.ts"
+    patterns:
+      - pattern: "Mock AWS SDK clients"
+        example: |
+          vi.mock('@aws-sdk/client-s3', () => ({
+            S3Client: vi.fn(() => ({ send: vi.fn() })),
+            GetObjectCommand: vi.fn(),
+            PutObjectCommand: vi.fn(),
+          }))
+
+      - pattern: "Test helper functions exhaustively"
+        reason: "Helpers are reusable, bugs propagate"
+        examples:
+          - "isVariantKey: 5 tests (thumbnail, medium, large, originals, non-variants)"
+          - "isImageKey: 5 tests (JPEG/PNG/WebP, case-insensitive, non-images)"
+          - "generateVariantKey: 5 tests (all sizes, no extension, complex paths)"
+
+  frontend_tests:
+    framework: "Vitest + React Testing Library"
+    location: "components/{ComponentName}/__tests__/"
+    patterns:
+      - pattern: "Use semantic queries"
+        prefer: "getByRole, getByLabelText, getByText"
+        avoid: "getByTestId (use only when necessary)"
+        example: |
+          const img = screen.getByRole('img')
+          expect(img).toHaveAttribute('alt', 'LEGO Technic Bugatti')
+
+      - pattern: "Test accessibility"
+        example: |
+          expect(img).toHaveAttribute('loading', 'lazy')
+          expect(img).toHaveAttribute('alt', 'Test image')
+
+      - pattern: "Test fallback behavior"
+        reason: "Legacy data must not break UI"
+        example: |
+          render(<ResponsiveImage variants={null} fallbackUrl="legacy.jpg" alt="Legacy" />)
+          const img = screen.getByTestId('responsive-image-fallback')
+          expect(img).toHaveAttribute('src', 'legacy.jpg')
+
+  test_quality_gates:
+    - gate: "No skipped tests"
+      rule: "Never commit tests with .skip() or .only()"
+      enforcement: "Manual review"
+
+    - gate: "Meaningful assertions"
+      rule: "Tests must verify business logic, not just execution"
+      bad_example: "expect(result).toBeDefined()"
+      good_example: "expect(result.width).toBe(200) && expect(result.height).toBe(150)"
+
+    - gate: "Coverage threshold"
+      minimum: "45% global"
+      recommendation: "80%+ for new code"
+      note: "WISH-2016 exceeds minimum with 54 tests across 3 test files"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Lambda Best Practices (from WISH-2016)
+# ═══════════════════════════════════════════════════════════════════════════
+
+lambda_patterns:
+  s3_event_handler:
+    - pattern: "Event parsing"
+      example_location: "apps/api/lego-api/functions/image-processor/handler.ts lines 42-88"
+      key_points:
+        - "Decode URI components: decodeURIComponent(key.replace(/\+/g, ' '))"
+        - "Handle multiple records in single event"
+        - "Skip already-processed files (isVariantKey check)"
+        - "Validate file type (isImageKey check)"
+
+    - pattern: "Error handling for retries"
+      rule: "Throw errors to trigger Lambda retry, don't swallow"
+      example: |
+        try {
+          await processImage(bucket, key)
+        } catch (error) {
+          logger.error('Image processing failed', { bucket, key, error })
+          throw error // Re-throw to trigger Lambda retry (AC11)
+        }
+      rationale: "Lambda will retry 3 times with exponential backoff"
+
+    - pattern: "Graceful degradation"
+      example: "Watermark loading fails → proceed without watermark"
+      code: |
+        try {
+          watermarkBuffer = await downloadFromS3(bucket, WATERMARK_S3_KEY)
+        } catch {
+          logger.warn('Watermark not found, proceeding without')
+        }
+      benefit: "Core functionality not blocked by missing optional resources"
+
+  performance:
+    - pattern: "Reuse clients across invocations"
+      example: |
+        // Outside handler function (reused)
+        const s3Client = new S3Client({})
+        const optimizer = createSharpImageOptimizer()
+
+        export const handler: S3Handler = async (event, context) => {
+          // Use s3Client and optimizer here
+        }
+      benefit: "Warm Lambda invocations avoid client initialization overhead"
+
+    - pattern: "Streaming for large files"
+      example_location: "handler.ts lines 223-231"
+      example: |
+        const stream = response.Body as NodeJS.ReadableStream
+        const chunks: Buffer[] = []
+        for await (const chunk of stream) {
+          chunks.push(Buffer.from(chunk))
+        }
+        return Buffer.concat(chunks)
+      benefit: "Handles files larger than Lambda memory efficiently"
+
+  monitoring:
+    - pattern: "Structured logging"
+      example: |
+        logger.info('Image processing completed', {
+          bucket,
+          key,
+          originalSize: size,
+          durationMs: Date.now() - startTime,
+        })
+      benefit: "CloudWatch Insights can query structured logs"
+
+    - pattern: "Custom metrics emission"
+      example_location: "handler.ts lines 341-359"
+      fields:
+        - originalSizeBytes
+        - totalOptimizedSizeBytes
+        - compressionRatio
+        - variants (array with size/sizeBytes/watermarked)
+      note: "Logged as structured data; CloudWatch SDK integration for metrics TBD"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Database Migration Patterns
+# ═══════════════════════════════════════════════════════════════════════════
+
+database_patterns:
+  drizzle_schema:
+    location: "packages/backend/database-schema/src/schema/index.ts"
+    pattern: "Define schema in TypeScript, generate SQL"
+    example: |
+      import { pgTable, uuid, text, jsonb, timestamp } from 'drizzle-orm/pg-core'
+
+      export const wishlistItemsTable = pgTable('wishlist_items', {
+        id: uuid('id').primaryKey().defaultRandom(),
+        userId: text('user_id').notNull(),
+        // ... existing fields
+
+        // WISH-2016: Add this
+        imageVariants: jsonb('image_variants').$type<ImageVariants>(),
+      })
+    note: "Use .$type<T>() for typed JSONB columns"
+
+  migration_workflow:
+    steps:
+      - step: "1. Update Drizzle schema"
+        file: "packages/backend/database-schema/src/schema/index.ts"
+        action: "Add new column definition"
+
+      - step: "2. Generate migration"
+        command: "pnpm drizzle-kit generate:pg"
+        output: "New file in migrations/app/ directory"
+
+      - step: "3. Review generated SQL"
+        verify:
+          - "ALTER TABLE statement correct"
+          - "Indexes added if needed"
+          - "Constraints correct"
+
+      - step: "4. Apply to development"
+        command: "pnpm drizzle-kit push:pg"
+        or: "pnpm drizzle-kit migrate"
+
+      - step: "5. Verify in database"
+        query: "SELECT column_name FROM information_schema.columns WHERE table_name = 'wishlist_items'"
+
+  jsonb_patterns:
+    - pattern: "Typed JSONB columns"
+      example: |
+        imageVariants: jsonb('image_variants').$type<ImageVariants>()
+      benefit: "Type safety at compile time, flexibility at runtime"
+
+    - pattern: "GIN index for JSONB"
+      when: "Querying nested JSONB fields"
+      example: |
+        CREATE INDEX idx_wishlist_items_image_variants
+          ON wishlist_items USING GIN (image_variants);
+      benefit: "Fast queries on JSONB contents"
+
+    - pattern: "Nullable JSONB for backward compatibility"
+      rule: "JSONB columns should be nullable for gradual rollout"
+      example: "imageVariants: jsonb('image_variants').$type<ImageVariants>().nullable()"
+      rationale: "Existing rows without data won't fail constraints"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Infrastructure Deployment Patterns
+# ═══════════════════════════════════════════════════════════════════════════
+
+infrastructure_patterns:
+  s3_event_triggers:
+    configuration:
+      event_type: "s3:ObjectCreated:Put"
+      filter_prefix: "uploads/wishlist/"
+      destination: "Lambda function ARN"
+    terraform_example: |
+      resource "aws_s3_bucket_notification" "wishlist_uploads" {
+        bucket = aws_s3_bucket.wishlist_uploads.id
+
+        lambda_function {
+          lambda_function_arn = aws_lambda_function.image_processor.arn
+          events              = ["s3:ObjectCreated:Put"]
+          filter_prefix       = "uploads/wishlist/"
+        }
+      }
+    permissions_required:
+      - "Lambda execution role with s3:GetObject, s3:PutObject"
+      - "S3 bucket policy allowing Lambda invocation"
+
+  lambda_layers:
+    sharp_layer:
+      size: "~50MB"
+      contents: "Sharp binary + libvips dependencies"
+      runtime: "nodejs18.x or later"
+      build_source: "github.com/Umkus/lambda-layer-sharp"
+      alternative: "Build from source with Lambda Amazon Linux 2 Docker image"
+      attachment: |
+        resource "aws_lambda_function" "image_processor" {
+          layers = [aws_lambda_layer_version.sharp.arn]
+        }
+
+  lambda_configuration:
+    recommended_settings:
+      memory: "1024MB (sufficient for Sharp operations)"
+      timeout: "30s (handles worst-case large images)"
+      reserved_concurrency: "10 (control costs)"
+      environment_variables:
+        S3_BUCKET: "lego-moc-wishlist-uploads"
+        WATERMARK_S3_KEY: "assets/watermark-logo.png"
+        COMPRESSION_QUALITY: "85"
+        THUMBNAIL_SIZE: "200"
+        MEDIUM_SIZE: "800"
+        LARGE_SIZE: "1600"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Lessons Learned (from WISH-2016 Implementation)
+# ═══════════════════════════════════════════════════════════════════════════
+
+lessons_learned:
+  - lesson: "Async image processing via S3 events is the right choice"
+    context: "Alternative was synchronous processing during upload"
+    outcome: "User sees original image immediately, no upload timeout"
+    recommendation: "Use S3 events for any file processing > 1 second"
+
+  - lesson: "Graceful degradation for optional resources"
+    context: "Watermark PNG file might be missing"
+    implementation: "Try/catch around watermark loading, proceed without if missing"
+    outcome: "Core functionality not blocked by missing optional file"
+    recommendation: "Always provide fallback for non-critical dependencies"
+
+  - lesson: "WebP with JPEG fallback is industry best practice"
+    context: "WebP provides 25-30% better compression than JPEG"
+    implementation: "Picture element with source type=image/webp, img with JPEG src"
+    outcome: "90%+ browser support, 97% storage reduction"
+    recommendation: "Use for all optimized images going forward"
+
+  - lesson: "Watermark only on large images is practical"
+    context: "Thumbnail/medium too small for readable watermark"
+    implementation: "applyWatermark: true only on large size (1600x1600)"
+    outcome: "Performance benefit, better UX in gallery view"
+    recommendation: "Apply watermarks judiciously based on use case"
+
+  - lesson: "Database migration can be deferred if schema defined"
+    context: "Schema defined in api-client, migration not yet created"
+    outcome: "Code is testable and reviewable, migration can be generated later"
+    caution: "Don't deploy to production without migration"
+    recommendation: "Define schemas early, generate migration before deployment"
+
+  - lesson: "Test coverage exceeding requirements provides confidence"
+    context: "AC required 20+ unit tests, delivered 26"
+    outcome: "All edge cases covered, no surprises during review"
+    recommendation: "Aim for 80%+ coverage on new code, test edge cases explicitly"
+
+  - lesson: "Pre-existing test failures must be documented"
+    context: "5 Redis tests + 5 feature flag tests failing (unrelated)"
+    outcome: "Reviewer understands failures are pre-existing, not story-related"
+    recommendation: "Document pre-existing failures in PROOF.md and VERIFICATION.yaml"
+
+  - lesson: "Infrastructure as code is critical for Lambda"
+    context: "Manual Lambda configuration is error-prone and not repeatable"
+    gap: "WISH-2016 documented requirements but did not implement IaC"
+    recommendation: "Create Terraform or CDK modules for Lambda deployment"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Architectural Decisions (ADRs)
+# ═══════════════════════════════════════════════════════════════════════════
+
+adrs:
+  - id: ADR-WISH-2016-001
+    title: "Use Sharp over ImageMagick for Lambda image processing"
+    status: ACCEPTED
+    date: "2026-01-31"
+    context: |
+      Need high-performance image processing in AWS Lambda with Node.js runtime.
+      Two options: Sharp (libvips) or ImageMagick (via Lambda layer).
+    decision: "Use Sharp"
+    rationale:
+      - "5-10x faster than ImageMagick"
+      - "Lower memory footprint (streaming-based)"
+      - "Better Lambda compatibility"
+      - "Battle-tested by Vercel, Cloudflare"
+    consequences:
+      positive:
+        - "Processing completes in < 10s for typical 10MB images"
+        - "1024MB Lambda memory sufficient"
+        - "Lambda layer only ~50MB"
+      negative:
+        - "Requires Lambda layer (~50MB overhead)"
+        - "Less feature-rich than ImageMagick (but sufficient for requirements)"
+    alternatives_considered:
+      - option: "ImageMagick"
+        rejected_because: "Slower, larger memory footprint, harder Lambda deployment"
+      - option: "Cloud service (Cloudinary, Imgix)"
+        rejected_because: "Cost, vendor lock-in, latency for async processing"
+
+  - id: ADR-WISH-2016-002
+    title: "Async processing via S3 events, not synchronous during upload"
+    status: ACCEPTED
+    date: "2026-01-31"
+    context: |
+      Image optimization takes 5-10 seconds for 10MB images. Need to decide:
+      sync during upload or async post-upload.
+    decision: "Async post-upload via S3 event triggers"
+    rationale:
+      - "User sees original image immediately (better UX)"
+      - "No upload timeout issues"
+      - "Decoupled from upload API"
+      - "S3 events are reliable and scalable"
+    consequences:
+      positive:
+        - "Upload flow remains fast and responsive"
+        - "No Lambda cold start impact on user-facing latency"
+        - "Scales independently of upload volume"
+      negative:
+        - "Optimized images not available immediately"
+        - "Frontend must handle pending/processing states"
+        - "Requires graceful degradation for legacy items"
+    alternatives_considered:
+      - option: "Synchronous processing during upload"
+        rejected_because: "10s upload would be unacceptable UX"
+      - option: "Background job queue (SQS)"
+        rejected_because: "S3 events simpler, no additional queue to manage"
+
+  - id: ADR-WISH-2016-003
+    title: "WebP format with picture element fallback"
+    status: ACCEPTED
+    date: "2026-01-31"
+    context: |
+      Need to choose output format for optimized images. WebP provides better
+      compression but not universally supported (IE11, older Safari).
+    decision: "WebP with picture element JPEG fallback"
+    rationale:
+      - "WebP: 25-30% better compression than JPEG"
+      - "90%+ browser support in 2026"
+      - "Picture element provides automatic fallback"
+      - "Industry best practice"
+    consequences:
+      positive:
+        - "97% storage reduction (10MB → 300KB)"
+        - "Broad browser support with fallback"
+        - "Future-proof format"
+      negative:
+        - "Must maintain original JPEG for fallback"
+        - "Slightly more complex frontend code"
+    implementation: |
+      <picture>
+        <source type="image/webp" srcSet="thumbnail.webp" />
+        <img src="thumbnail.jpg" alt="..." loading="lazy" />
+      </picture>
+
+  - id: ADR-WISH-2016-004
+    title: "Database update via SQS message (recommended, not implemented)"
+    status: PROPOSED
+    date: "2026-02-09"
+    context: |
+      Lambda must update wishlist_items.image_variants after processing.
+      Options: direct DB connection, API call, SQS message.
+    decision: "Recommend SQS message to async processor (NOT YET IMPLEMENTED)"
+    rationale:
+      - "Decouples Lambda from database connection management"
+      - "Lambda completes quickly (< 10s)"
+      - "Backend can batch database updates"
+      - "Handles DB failures gracefully with retry"
+    consequences:
+      positive:
+        - "Lambda doesn't hold DB connections"
+        - "Database failures don't block S3 variant uploads"
+        - "Backend controls database update logic"
+      negative:
+        - "Additional component to deploy (SQS queue + consumer)"
+        - "Eventual consistency (variants uploaded before DB update)"
+    alternatives_considered:
+      - option: "Direct database connection in Lambda"
+        concern: "Connection pooling difficult in Lambda"
+      - option: "HTTP API call to backend"
+        concern: "Adds latency, coupling to backend API"
+    status_note: "Decision documented but not implemented in WISH-2016"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Related Stories & Dependencies
+# ═══════════════════════════════════════════════════════════════════════════
+
+related_stories:
+  upstream:
+    - story: WISH-2013
+      title: "File Upload Security Hardening"
+      relationship: "Provides S3 bucket and upload infrastructure"
+      completed: true
+      reused:
+        - "S3 bucket: lego-moc-wishlist-uploads"
+        - "IAM policies for S3 access"
+        - "Presigned URL flow (unchanged)"
+
+  downstream:
+    - story: WISH-2018
+      title: "CDN Integration"
+      relationship: "Will serve optimized images from CDN"
+      blocked: false
+      will_consume:
+        - "Image variants generated by WISH-2016"
+        - "WebP format with JPEG fallback"
+
+  parallel:
+    - story: WISH-2042
+      title: "Purchase/Got It Flow"
+      relationship: "Both modify WishlistCard component"
+      integration_point: "WishlistCard uses ResponsiveImage for optimized display"
+      conflict: none
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Reusable Components
+# ═══════════════════════════════════════════════════════════════════════════
+
+reusable_components:
+  - component: "Image Optimizer Service"
+    location: "apps/api/lego-api/core/image-processing/"
+    exports:
+      - createSharpImageOptimizer
+      - SIZE_CONFIGS (customizable)
+      - applyWatermarkToImage
+      - calculateDimensions
+      - calculateWatermarkPosition
+    reusable_for:
+      - "Gallery image uploads (WISH-2018)"
+      - "MOC instructions cover images"
+      - "User profile avatars"
+    customization_points:
+      - "SIZE_CONFIGS can be overridden for different dimensions"
+      - "Watermark options can be customized per use case"
+
+  - component: "ResponsiveImage Component"
+    location: "apps/web/app-wishlist-gallery/src/components/ResponsiveImage/"
+    exports:
+      - ResponsiveImage
+      - getBestImageUrl
+      - areVariantsReady
+    reusable_for:
+      - "All image displays across platform"
+      - "Gallery thumbnails"
+      - "Detail page images"
+      - "MOC instructions images"
+    features:
+      - "WebP/JPEG fallback pattern"
+      - "Lazy loading built-in"
+      - "Processing status handling"
+      - "Legacy item fallback"
+
+  - component: "S3 Event Handler Pattern"
+    location: "apps/api/lego-api/functions/image-processor/"
+    exports:
+      - "S3 event parsing logic"
+      - "Retry error handling"
+      - "CloudWatch metrics emission"
+    reusable_for:
+      - "Virus scanning result processing"
+      - "File validation workflows"
+      - "Any S3-triggered async processing"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Command Reference
+# ═══════════════════════════════════════════════════════════════════════════
+
+commands:
+  development:
+    - command: "pnpm dev"
+      description: "Start full dev environment"
+
+    - command: "pnpm build"
+      description: "Build all packages"
+
+    - command: "pnpm test"
+      description: "Run tests on changed files"
+
+    - command: "pnpm test:all"
+      description: "Run all tests"
+
+  linting:
+    - command: "pnpm lint"
+      description: "Lint changed files"
+
+    - command: "pnpm lint:all"
+      description: "Lint everything"
+
+    - command: "pnpm check-types"
+      description: "Type check changed files"
+
+    - command: "pnpm check-types:all"
+      description: "Type check everything"
+
+  database:
+    - command: "pnpm drizzle-kit generate:pg"
+      description: "Generate migration from schema changes"
+      directory: "packages/backend/database-schema"
+
+    - command: "pnpm drizzle-kit push:pg"
+      description: "Apply migrations to database"
+      directory: "packages/backend/database-schema"
+
+    - command: "pnpm drizzle-kit migrate"
+      description: "Run migrations"
+      directory: "packages/backend/database-schema"
+
+  testing:
+    - command: "pnpm test apps/api/lego-api/core/image-processing"
+      description: "Run unit tests for image optimizer"
+
+    - command: "pnpm test apps/api/lego-api/functions/image-processor"
+      description: "Run integration tests for Lambda handler"
+
+    - command: "pnpm test apps/web/app-wishlist-gallery/src/components/ResponsiveImage"
+      description: "Run frontend component tests"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Summary
+# ═══════════════════════════════════════════════════════════════════════════
+
+summary: |
+  WISH-2016 knowledge context captured from existing implementation.
+
+  Key Patterns Applied:
+  - ✅ Hexagonal architecture (ports & adapters)
+  - ✅ Zod-first types (no TypeScript interfaces)
+  - ✅ No barrel files
+  - ✅ @repo/logger for all logging
+  - ✅ Component directory structure
+  - ✅ Unit + integration + frontend tests
+
+  Technology Stack:
+  - Sharp for image processing (5-10x faster than ImageMagick)
+  - AWS Lambda with S3 event triggers
+  - Drizzle ORM for database
+  - Vitest + React Testing Library for tests
+  - Picture element for WebP/JPEG fallback
+
+  Reusable Components:
+  - Image optimizer service (customizable sizes)
+  - ResponsiveImage component (WebP fallback, lazy loading)
+  - S3 event handler pattern (error handling, metrics)
+
+  Next Story Considerations:
+  - ResponsiveImage component ready for reuse
+  - Image variants schema can be extended
+  - Sharp optimizer can be customized for different sizes
+
+signal: KNOWLEDGE-CONTEXT COMPLETE
+status: READY_FOR_PLANNING
+completed_at: "2026-02-09T18:15:00Z"
+agent: dev-plan-leader

@@ -31,7 +31,11 @@ import {
 } from '@repo/gallery'
 import { Tabs, TabsList, TabsTrigger, CustomButton } from '@repo/app-component-library'
 import { Heart, Plus } from 'lucide-react'
-import type { WishlistItem, CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
+import type {
+  WishlistItem,
+  CreateWishlistItem,
+  WishlistStore,
+} from '@repo/api-client/schemas/wishlist'
 import {
   useGetWishlistQuery,
   useRemoveFromWishlistMutation,
@@ -45,9 +49,11 @@ import { useWishlistSortPersistence, DEFAULT_SORT_MODE } from '../hooks/useWishl
 import { useAnnouncer, Announcer } from '../hooks/useAnnouncer'
 import { FilterPanel } from '../components/FilterPanel'
 import { FilterBadge } from '../components/FilterPanel/FilterBadge'
-import type { PriorityRange, PriceRange, FilterPanelState } from '../components/FilterPanel/__types__'
-import type { WishlistStore } from '@repo/api-client/schemas/wishlist'
-
+import type {
+  PriorityRange,
+  PriceRange,
+  FilterPanelState,
+} from '../components/FilterPanel/__types__'
 
 /**
  * Main page props schema
@@ -262,9 +268,12 @@ function WishlistMainPageContent({
   } = useGetWishlistQuery({
     q: search || undefined,
     // WISH-20172: Combine tab filter (store) and FilterPanel (stores) into array
-    store: filterStores.length > 0 
-      ? filterStores 
-      : (selectedStore ? [selectedStore as WishlistStore] : undefined),
+    store:
+      filterStores.length > 0
+        ? filterStores
+        : selectedStore
+          ? [selectedStore as WishlistStore]
+          : undefined,
     tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
     // WISH-20172: Advanced filter criteria
     priorityRange: priorityRange || undefined,
@@ -316,8 +325,8 @@ function WishlistMainPageContent({
 
   const hasActiveFilters = Boolean(
     (search && search.trim().length > 0) ||
-      selectedStore ||
-      (selectedTags && selectedTags.length > 0),
+    selectedStore ||
+    (selectedTags && selectedTags.length > 0),
   )
 
   // Handle search
@@ -398,13 +407,13 @@ function WishlistMainPageContent({
       updateFilter('priorityRange', panelState.priorityRange)
       updateFilter('priceRange', panelState.priceRange)
       updateFilter('page', 1)
-      
+
       // WISH-2006 AC10: Announce filter application
-      const filterCount = 
+      const filterCount =
         (panelState.stores.length > 0 ? 1 : 0) +
         (panelState.priorityRange ? 1 : 0) +
         (panelState.priceRange ? 1 : 0)
-      
+
       if (filterCount > 0) {
         setTimeout(() => {
           const count = wishlistData?.items.length ?? 0
@@ -420,7 +429,7 @@ function WishlistMainPageContent({
     updateFilter('priorityRange', null)
     updateFilter('priceRange', null)
     updateFilter('page', 1)
-    
+
     // WISH-2006 AC10: Announce clear
     setTimeout(() => {
       const count = wishlistData?.items.length ?? 0
@@ -656,12 +665,10 @@ function WishlistMainPageContent({
                   priceRange: priceRange,
                 }}
               />
-              <FilterBadge 
+              <FilterBadge
                 count={
-                  (filterStores.length > 0 ? 1 : 0) +
-                  (priorityRange ? 1 : 0) +
-                  (priceRange ? 1 : 0)
-                } 
+                  (filterStores.length > 0 ? 1 : 0) + (priorityRange ? 1 : 0) + (priceRange ? 1 : 0)
+                }
               />
               <GalleryViewToggle
                 currentView={viewMode}

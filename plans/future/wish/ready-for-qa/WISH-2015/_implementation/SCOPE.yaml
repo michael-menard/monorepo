@@ -1,0 +1,29 @@
+schema: 1
+story_id: "WISH-2015"
+timestamp: "2026-02-08T10:00:00-07:00"
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-wishlist-gallery/src/store/**"
+  - "apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx"
+  - "apps/web/app-wishlist-gallery/src/components/WishlistForm/**"
+  - "apps/web/playwright/features/wishlist/wishlist-form-autosave.feature"
+  - "apps/web/playwright/steps/wishlist-form-autosave.steps.ts"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "RTK slice + localStorage persistence middleware for wishlist add-item form autosave with full test suite including Cucumber E2E"

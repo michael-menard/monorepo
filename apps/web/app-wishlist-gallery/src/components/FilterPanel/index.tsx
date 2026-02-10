@@ -26,8 +26,8 @@ import {
   PopoverTrigger,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
-import type { FilterPanelState, FilterPanelProps, PriorityRange, PriceRange } from './__types__'
 import type { WishlistStore } from '@repo/api-client/schemas/wishlist'
+import type { FilterPanelState, FilterPanelProps, PriorityRange, PriceRange } from './__types__'
 
 export type { FilterPanelProps }
 
@@ -81,16 +81,16 @@ export function FilterPanel({
 
   // Handle store checkbox toggle
   const handleStoreToggle = useCallback((store: WishlistStore) => {
-    setStores(prev =>
-      prev.includes(store) ? prev.filter(s => s !== store) : [...prev, store],
-    )
+    setStores(prev => (prev.includes(store) ? prev.filter(s => s !== store) : [...prev, store]))
   }, [])
 
   // Handle priority range change
   const handlePriorityMinChange = useCallback((value: string) => {
     if (value === '') {
       // Keep max if it exists, otherwise null
-      setPriorityRange(prev => (prev?.max !== undefined && prev.max !== null) ? { min: 0, max: prev.max } : null)
+      setPriorityRange(prev =>
+        prev?.max !== undefined && prev.max !== null ? { min: 0, max: prev.max } : null,
+      )
       return
     }
 
@@ -106,7 +106,9 @@ export function FilterPanel({
   const handlePriorityMaxChange = useCallback((value: string) => {
     if (value === '') {
       // Keep min if it exists, otherwise null
-      setPriorityRange(prev => (prev?.min !== undefined && prev.min !== null) ? { min: prev.min, max: 5 } : null)
+      setPriorityRange(prev =>
+        prev?.min !== undefined && prev.min !== null ? { min: prev.min, max: 5 } : null,
+      )
       return
     }
 
@@ -123,7 +125,9 @@ export function FilterPanel({
   const handlePriceMinChange = useCallback((value: string) => {
     if (value === '') {
       // Keep max if it exists, otherwise null
-      setPriceRange(prev => (prev?.max !== undefined && prev.max !== null) ? { min: 0, max: prev.max } : null)
+      setPriceRange(prev =>
+        prev?.max !== undefined && prev.max !== null ? { min: 0, max: prev.max } : null,
+      )
       return
     }
 
@@ -139,7 +143,9 @@ export function FilterPanel({
   const handlePriceMaxChange = useCallback((value: string) => {
     if (value === '') {
       // Keep min if it exists, otherwise null
-      setPriceRange(prev => (prev?.min !== undefined && prev.min !== null) ? { min: prev.min, max: 1000 } : null)
+      setPriceRange(prev =>
+        prev?.min !== undefined && prev.min !== null ? { min: prev.min, max: 1000 } : null,
+      )
       return
     }
 
@@ -243,10 +249,7 @@ export function FilterPanel({
                     aria-label={`Filter by ${store} store`}
                     data-testid={`store-checkbox-${store}`}
                   />
-                  <Label
-                    htmlFor={`store-${store}`}
-                    className="text-sm cursor-pointer"
-                  >
+                  <Label htmlFor={`store-${store}`} className="text-sm cursor-pointer">
                     {store}
                   </Label>
                 </div>

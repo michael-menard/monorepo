@@ -1,0 +1,270 @@
+schema: 1
+story_id: "WISH-20280"
+timestamp: "2026-02-09T23:35:00Z"
+
+steps:
+  - id: 1
+    description: "Add admin tracking columns to feature_flag_schedules table schema"
+    files:
+      - "packages/backend/database-schema/src/schema/feature-flags.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Generate database migration for admin tracking columns"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0013_*.sql"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Create audit logging infrastructure in core/audit/"
+    files:
+      - "apps/api/lego-api/core/audit/types.ts"
+      - "apps/api/lego-api/core/audit/ports.ts"
+      - "apps/api/lego-api/core/audit/audit-logger.ts"
+    dependencies: []
+    slice: backend
+
+  - id: 4
+    description: "Update schedule service to accept admin context and log audit events"
+    files:
+      - "apps/api/lego-api/domains/config/application/schedule-service.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 5
+    description: "Update schedule repository to persist admin tracking fields"
+    files:
+      - "apps/api/lego-api/domains/config/adapters/schedule-repository.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 6
+    description: "Update schedule routes to extract admin context and pass to service"
+    files:
+      - "apps/api/lego-api/domains/config/routes.ts"
+    dependencies: [4]
+    slice: backend
+
+  - id: 7
+    description: "Update schedule Zod schemas with admin tracking fields"
+    files:
+      - "apps/api/lego-api/domains/config/types.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 8
+    description: "Export updated schedule schemas to api-client package"
+    files:
+      - "packages/core/api-client/src/schemas/feature-flags.ts"
+    dependencies: [7]
+    slice: packages
+
+  - id: 9
+    description: "Update cron job to log schedule application/failure events"
+    files:
+      - "apps/api/lego-api/jobs/process-flag-schedules.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 10
+    description: "Write unit tests for audit logger"
+    files:
+      - "apps/api/lego-api/core/audit/__tests__/audit-logger.test.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 11
+    description: "Write unit tests for schedule service audit integration"
+    files:
+      - "apps/api/lego-api/domains/config/__tests__/schedule-service.test.ts"
+    dependencies: [4]
+    slice: backend
+
+  - id: 12
+    description: "Write unit tests for cron job audit logging"
+    files:
+      - "apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts"
+    dependencies: [9]
+    slice: backend
+
+  - id: 13
+    description: "Extend HTTP integration tests for admin tracking fields"
+    files:
+      - "apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http"
+    dependencies: [6, 8]
+    slice: backend
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/feature-flags.ts"
+    action: modify
+    reason: "Add created_by, cancelled_by, cancelled_at columns to featureFlagSchedules table (AC1)"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0013_*.sql"
+    action: create
+    reason: "Migration for admin tracking columns with nullable constraints (AC1)"
+
+  - path: "apps/api/lego-api/core/audit/types.ts"
+    action: create
+    reason: "Audit event type definitions and Zod schemas (AC2-AC5)"
+
+  - path: "apps/api/lego-api/core/audit/ports.ts"
+    action: create
+    reason: "AuditLoggerPort interface for dependency injection (hexagonal architecture)"
+
+  - path: "apps/api/lego-api/core/audit/audit-logger.ts"
+    action: create
+    reason: "CloudWatch audit logger implementation (AC2-AC5, AC7)"
+
+  - path: "apps/api/lego-api/core/audit/__tests__/audit-logger.test.ts"
+    action: create
+    reason: "Unit tests for audit logger (AC11)"
+
+  - path: "apps/api/lego-api/domains/config/application/schedule-service.ts"
+    action: modify
+    reason: "Add audit logging calls before database commits (AC2, AC3, AC6, AC7)"
+
+  - path: "apps/api/lego-api/domains/config/adapters/schedule-repository.ts"
+    action: modify
+    reason: "Update INSERT/UPDATE queries for admin tracking columns (AC1, AC6)"
+
+  - path: "apps/api/lego-api/domains/config/routes.ts"
+    action: modify
+    reason: "Extract admin context from JWT and pass to service (AC6)"
+
+  - path: "apps/api/lego-api/domains/config/types.ts"
+    action: modify
+    reason: "Extend schedule schemas with createdBy, cancelledBy, cancelledAt (AC9)"
+
+  - path: "packages/core/api-client/src/schemas/feature-flags.ts"
+    action: modify
+    reason: "Export updated schedule schemas for frontend (AC10)"
+
+  - path: "apps/api/lego-api/jobs/process-flag-schedules.ts"
+    action: modify
+    reason: "Add audit logging for applied/failed events (AC4, AC5)"
+
+  - path: "apps/api/lego-api/domains/config/__tests__/schedule-service.test.ts"
+    action: modify
+    reason: "Add tests for audit logging integration (AC11)"
+
+  - path: "apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts"
+    action: modify
+    reason: "Add tests for cron job audit events (AC11)"
+
+  - path: "apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http"
+    action: modify
+    reason: "Add HTTP tests for admin tracking fields in responses (AC12)"
+
+commands_to_run:
+  - command: "pnpm drizzle-kit generate"
+    when: "after database schema changes (step 1)"
+    required: true
+
+  - command: "pnpm build --filter @repo/database-schema"
+    when: "after migration generation (step 2)"
+    required: true
+
+  - command: "pnpm build --filter lego-api"
+    when: "after all backend code changes (step 9)"
+    required: true
+
+  - command: "pnpm test --filter lego-api -- core/audit"
+    when: "after audit logger implementation (step 10)"
+    required: true
+
+  - command: "pnpm test --filter lego-api -- domains/config/__tests__/schedule"
+    when: "after schedule service tests (step 11)"
+    required: true
+
+  - command: "pnpm test --filter lego-api -- jobs/__tests__/process-flag-schedules"
+    when: "after cron job tests (step 12)"
+    required: true
+
+  - command: "pnpm lint --filter lego-api"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter lego-api"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Migration file: 0013_*.sql - adds created_by, cancelled_by, cancelled_at columns (all nullable)"
+    evidence_type: file
+
+  - ac_id: "AC2"
+    planned_evidence: "Unit test: audit-logger.test.ts - logs flag_schedule.created event with correct metadata"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "Unit test: audit-logger.test.ts - logs flag_schedule.cancelled event with admin context"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - logs flag_schedule.applied event (no admin)"
+    evidence_type: test
+
+  - ac_id: "AC5"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - logs flag_schedule.failed event with error message"
+    evidence_type: test
+
+  - ac_id: "AC6"
+    planned_evidence: "Unit test: schedule-service.test.ts - service persists created_by and cancelled_by from admin context"
+    evidence_type: test
+
+  - ac_id: "AC7"
+    planned_evidence: "Unit test: schedule-service.test.ts - audit logging failure does not fail schedule creation"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "HTTP test: feature-flag-scheduling.http - GET returns created_by, cancelled_by, cancelled_at"
+    evidence_type: http
+
+  - ac_id: "AC9"
+    planned_evidence: "File: apps/api/lego-api/domains/config/types.ts - ScheduleSchema with admin fields"
+    evidence_type: file
+
+  - ac_id: "AC10"
+    planned_evidence: "File: packages/core/api-client/src/schemas/feature-flags.ts - schemas exported"
+    evidence_type: file
+
+  - ac_id: "AC11"
+    planned_evidence: "Command: pnpm test --filter lego-api - minimum 8 new tests pass"
+    evidence_type: command
+
+  - ac_id: "AC12"
+    planned_evidence: "HTTP test: feature-flag-scheduling.http - 3+ requests verify admin fields"
+    evidence_type: http
+
+  - ac_id: "AC13"
+    planned_evidence: "Unit test: schedule-service.test.ts - existing schedules with NULL admin fields function correctly"
+    evidence_type: test
+
+  - ac_id: "AC14"
+    planned_evidence: "Note: API documentation updated in PROOF.md with admin tracking fields and audit event types"
+    evidence_type: manual
+
+  - ac_id: "AC15"
+    planned_evidence: "Note: Architecture documentation updated in PROOF.md with audit patterns and admin context flow"
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Extends WISH-2119 schedule infrastructure with audit logging"
+  - "Follows admin domain audit patterns but CloudWatch-only (no database persistence)"
+  - "Database migration required before deploying code changes"
+  - "Fire-and-forget audit pattern - errors don't fail operations"
+  - "Admin context extracted from JWT claims (userId, email) via auth middleware"
+  - "All admin tracking columns nullable for backward compatibility"
+  - "Audit logger injected as port into schedule service (hexagonal architecture)"
+  - "Cron job logs automatic events without admin context"
+  - "CloudWatch structured logging via @repo/logger"
+  - "No architectural decisions requiring user input - all patterns established"
+  - "Migration will be 0013_*.sql (next in sequence after 0012)"
+  - "Reuses existing schedule service/repository from WISH-2119"

@@ -1,0 +1,41 @@
+schema: 1
+story_id: "SETS-MVP-0321"
+timestamp: "2026-02-10T03:51:00Z"
+status: complete
+
+acceptance_criteria:
+  AC1:
+    status: PASS
+    evidence: |
+      5 unit tests added to GotItModal.test.tsx in `describe('SETS-MVP-0320: Success Toast')`:
+      - calls toast.success with "Added to your collection!" after purchase
+      - includes "View in Collection" action button with 5000ms duration
+      - calls onSuccess callback after successful purchase
+      - closes modal after successful purchase
+      - shows error toast when purchase fails
+    files:
+      - apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx
+
+  AC2:
+    status: PASS
+    evidence: |
+      Test "includes 'View in Collection' action button with 5000ms duration" verifies:
+      - toast.success called with duration: 5000
+      - action object with label: 'View in Collection'
+      Test "calls toast.success with correct message" verifies description: item.title
+    files:
+      - apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx
+
+test_results:
+  unit:
+    command: "pnpm vitest run src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    result: "27 passed, 0 failed"
+    new_tests: 5
+
+files_changed:
+  - path: apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx
+    action: modified
+    description: "Added 5 unit tests for SETS-MVP-0320 success toast, added toast import, added RTK mutation mock"
+  - path: apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx
+    action: modified
+    description: "Fixed import type syntax error (pre-existing from SETS-MVP-0340)"

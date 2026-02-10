@@ -1,6 +1,6 @@
 /**
  * FilterPanel Type Schemas
- * 
+ *
  * Zod schemas for FilterPanel component props and state.
  * Story WISH-20172: Frontend Filter Panel UI
  */
@@ -12,12 +12,14 @@ import { WishlistStoreSchema } from '@repo/api-client/schemas/wishlist'
  * Priority range schema for filter state
  * Range from 0-5 matching wishlist priority values
  */
-export const PriorityRangeSchema = z.object({
-  min: z.number().int().min(0).max(5),
-  max: z.number().int().min(0).max(5),
-}).refine(val => val.min <= val.max, {
-  message: 'Priority min must be <= max',
-})
+export const PriorityRangeSchema = z
+  .object({
+    min: z.number().int().min(0).max(5),
+    max: z.number().int().min(0).max(5),
+  })
+  .refine(val => val.min <= val.max, {
+    message: 'Priority min must be <= max',
+  })
 
 export type PriorityRange = z.infer<typeof PriorityRangeSchema>
 
@@ -25,12 +27,14 @@ export type PriorityRange = z.infer<typeof PriorityRangeSchema>
  * Price range schema for filter state
  * Allows positive decimal values
  */
-export const PriceRangeSchema = z.object({
-  min: z.number().min(0),
-  max: z.number().min(0),
-}).refine(val => val.min <= val.max, {
-  message: 'Price min must be <= max',
-})
+export const PriceRangeSchema = z
+  .object({
+    min: z.number().min(0),
+    max: z.number().min(0),
+  })
+  .refine(val => val.min <= val.max, {
+    message: 'Price min must be <= max',
+  })
 
 export type PriceRange = z.infer<typeof PriceRangeSchema>
 

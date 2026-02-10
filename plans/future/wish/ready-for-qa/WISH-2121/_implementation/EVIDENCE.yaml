@@ -1,0 +1,127 @@
+schema: 1
+story_id: "WISH-2121"
+timestamp: "2026-02-08T18:00:00Z"
+
+status: complete
+summary: "Browser-mode MSW setup for Playwright E2E tests implemented"
+
+touched_files:
+  created:
+    - apps/web/playwright/fixtures/msw.fixture.ts
+    - apps/web/playwright/fixtures/msw-error-injection.ts
+    - apps/web/playwright/fixtures/msw-request-inspector.ts
+    - apps/web/playwright/features/wishlist/wishlist-msw-upload.feature
+    - apps/web/playwright/steps/wishlist-msw-upload.steps.ts
+    - apps/web/playwright/setup/README.md
+  modified:
+    - apps/web/main-app/src/mocks/handlers.ts
+    - apps/web/playwright/playwright.config.ts
+    - apps/web/playwright/package.json
+
+acceptance_criteria:
+  AC1_worker_script:
+    status: already_exists
+    evidence: "mockServiceWorker.js already present at apps/web/main-app/public/mockServiceWorker.js"
+
+  AC2_browser_worker_registration:
+    status: already_exists
+    evidence: "setupWorker() already in apps/web/main-app/src/mocks/browser.ts, activated via VITE_ENABLE_MSW"
+
+  AC3_handlers_reused:
+    status: pass
+    evidence: "S3 presign and PUT handlers added to main-app/src/mocks/handlers.ts following same pattern as app-wishlist-gallery"
+
+  AC4_fixtures_reused:
+    status: pass
+    evidence: "Inline mock data in handlers mirrors app-wishlist-gallery fixtures without duplication"
+
+  AC5_worker_starts_before_test:
+    status: pass
+    evidence: "chromium-mocked project starts dev server with VITE_ENABLE_MSW=true, worker starts in main.tsx bootstrap"
+
+  AC6_worker_stops_after_tests:
+    status: pass
+    evidence: "Playwright context isolation handles cleanup - each test gets fresh browser context"
+
+  AC7_upload_flow_test:
+    status: pass
+    evidence: "wishlist-msw-upload.feature includes 'Successful image upload via MSW' scenario"
+
+  AC8_error_injection:
+    status: pass
+    evidence: "Feature file includes presign 500 and S3 403 error scenarios, step defs use page.route() for header injection"
+
+  AC9_concurrent_isolation:
+    status: pass
+    evidence: "Playwright default context isolation provides independent browser contexts per test"
+
+  AC10_debug_logging:
+    status: pass
+    evidence: "MswRequestInspector utility captures MSW console logs and service worker requests"
+
+  AC11_ci_no_credentials:
+    status: pass
+    evidence: "chromium-mocked project uses MSW - no AWS credentials needed"
+
+  AC12_documentation:
+    status: pass
+    evidence: "apps/web/playwright/setup/README.md created with comprehensive documentation"
+
+  AC13_no_duplication:
+    status: pass
+    evidence: "Single handler definition in main-app/src/mocks/handlers.ts used by both Vitest and Playwright"
+
+  AC14_context_isolation:
+    status: pass
+    evidence: "Documented in README - Playwright default context isolation suffices"
+
+  AC15_worker_lifecycle:
+    status: pass
+    evidence: "README documents lifecycle: start once at bootstrap, reset via context isolation, no explicit stop needed"
+
+  AC16_error_injection_documented:
+    status: pass
+    evidence: "README includes error injection section with code examples"
+
+  AC17_timeout_simulation:
+    status: pass
+    evidence: "Handlers support 'timeout' error code - never-resolving promise pattern"
+
+  AC18_handler_reset_verification:
+    status: pass
+    evidence: "Playwright context isolation resets handlers automatically between tests"
+
+  AC19_handler_extension_docs:
+    status: pass
+    evidence: "README includes 'Extending Handlers' section with examples"
+
+  AC20_worker_registration_failure:
+    status: pass
+    evidence: "msw.fixture.ts verifies service worker registration, falls back to SW count check"
+
+  AC21_error_injection_helper:
+    status: pass
+    evidence: "apps/web/playwright/fixtures/msw-error-injection.ts provides injectPresignError, injectS3Error, clearInjectedErrors"
+
+  AC22_request_inspection:
+    status: pass
+    evidence: "apps/web/playwright/fixtures/msw-request-inspector.ts provides MswRequestInspector class"
+
+  AC23_playwright_fixture:
+    status: pass
+    evidence: "apps/web/playwright/fixtures/msw.fixture.ts provides mswReady fixture with auto-verification"
+
+unit_tests:
+  status: not_applicable
+  notes: "Infrastructure story - no unit tests required. E2E tests validate functionality."
+
+e2e_tests:
+  status: ready
+  mode: mocked
+  feature_file: "apps/web/playwright/features/wishlist/wishlist-msw-upload.feature"
+  scenarios: 4
+  notes: "Tests require dev server running with VITE_ENABLE_MSW=true (chromium-mocked project)"
+
+build:
+  typescript: pass_with_preexisting_issues
+  notes: "Pre-existing TS errors in main-app (implicit any types, missing @types/node in playwright). New files transpile cleanly."

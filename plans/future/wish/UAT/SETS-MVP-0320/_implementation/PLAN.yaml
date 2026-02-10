@@ -1,0 +1,188 @@
+schema: 1
+story_id: "SETS-MVP-0320"
+timestamp: "2026-02-09T21:30:00Z"
+
+steps:
+  - id: 1
+    description: "Enhance GotItModal success toast with action button"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    dependencies: []
+    slice: frontend
+    details: |
+      Replace showPurchaseSuccessToast function (lines 177-182) with enhanced version:
+      - Change message to "Added to your collection!"
+      - Add action button with "View in Collection" label
+      - Add useNavigate() hook for navigation to /collection
+      - Wrap navigate() in try-catch for error handling
+      - Keep 5000ms duration (existing default)
+
+  - id: 2
+    description: "Trigger item removal from wishlist after purchase"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    dependencies: [1]
+    slice: frontend
+    details: |
+      Update handleSave callback (line 154) to trigger item removal:
+      - Call onSuccess callback after successful mutation and toast
+      - Parent component should handle RTK Query cache invalidation
+      - This triggers automatic refetch of wishlist items
+      - Purchased item will be excluded (status='owned' filter)
+
+  - id: 3
+    description: "Add AnimatePresence wrapper for exit animations"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/index.tsx"
+    dependencies: [2]
+    slice: frontend
+    details: |
+      Wrap item rendering with AnimatePresence:
+      - Import AnimatePresence and motion from framer-motion
+      - Wrap GalleryGrid items with AnimatePresence mode="popLayout"
+      - Add motion.div wrapper to each SortableWishlistCard
+      - Add exit={{ opacity: 0, height: 0 }} animation
+      - Add transition={{ duration: 0.3 }} for smooth animation
+      - Respect prefers-reduced-motion media query
+
+  - id: 4
+    description: "Write unit tests for enhanced toast"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    details: |
+      Add tests to existing GotItModal test suite:
+      - Toast appears with correct message after purchase
+      - Toast includes "View in Collection" action button
+      - Action button onClick triggers navigation to /collection
+      - Navigation error handling shows error toast
+      - Toast duration is 5000ms
+
+  - id: 5
+    description: "Write integration tests for item removal"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/__tests__/item-removal.test.tsx"
+    dependencies: [2, 3]
+    slice: frontend
+    details: |
+      Create new test file for item removal flow:
+      - Item is removed from list after purchase
+      - RTK Query cache invalidation works correctly
+      - List updates without the purchased item
+      - Animation completes without errors
+
+  - id: 6
+    description: "Write E2E test for purchase flow with navigation"
+    files:
+      - "apps/web/playwright/features/wishlist/purchase-ux.feature"
+      - "apps/web/playwright/steps/wishlist/purchase-ux.steps.ts"
+    dependencies: [1, 2, 3]
+    slice: frontend
+    details: |
+      Create E2E test per ADR-006:
+      - User marks item as purchased
+      - Success toast appears with correct message
+      - "View in Collection" link is visible and clickable
+      - Clicking link navigates to /collection page
+      - Item disappears from wishlist view
+      - Item appears in collection view
+      - Toast auto-dismisses after 5 seconds
+
+files_to_change:
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    action: modify
+    reason: "AC11-12: Enhance success toast with action button and navigation"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/index.tsx"
+    action: modify
+    reason: "AC14: Add AnimatePresence wrapper for exit animations"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    action: modify
+    reason: "Unit tests for enhanced toast functionality"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/__tests__/item-removal.test.tsx"
+    action: create
+    reason: "Integration tests for item removal and animation"
+
+  - path: "apps/web/playwright/features/wishlist/purchase-ux.feature"
+    action: create
+    reason: "E2E test for happy path (ADR-006)"
+
+  - path: "apps/web/playwright/steps/wishlist/purchase-ux.steps.ts"
+    action: create
+    reason: "E2E test step definitions"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm playwright test features/wishlist/purchase-ux.feature"
+    when: "after all changes and unit tests pass"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC11"
+    step_ids: [1, 4, 6]
+    planned_evidence: "Unit test: GotItModal.test.tsx verifies toast message"
+    evidence_type: test
+
+  - ac_id: "AC12"
+    step_ids: [1, 4, 6]
+    planned_evidence: "Unit test: GotItModal.test.tsx verifies action button and navigation"
+    evidence_type: test
+
+  - ac_id: "AC13"
+    step_ids: [2, 5, 6]
+    planned_evidence: "Integration test: item-removal.test.tsx verifies item removed from list"
+    evidence_type: test
+
+  - ac_id: "AC14"
+    step_ids: [3, 5, 6]
+    planned_evidence: "E2E test: purchase-ux.feature verifies animation on wishlist page"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "How to trigger item removal from wishlist after purchase?"
+    decision: "Use RTK Query cache invalidation via onSuccess callback"
+    rationale: "Simplest approach with existing infrastructure. Parent component calls onSuccess which triggers cache invalidation, causing automatic refetch of wishlist items. Purchased item excluded by status filter."
+    decided_by: analysis
+
+  - id: ARCH-002
+    question: "Where to add AnimatePresence wrapper for exit animations?"
+    decision: "DraggableWishlistGallery component (list-level)"
+    rationale: "Centralized control, reusable pattern, cleaner separation of concerns. AnimatePresence should be compatible with dnd-kit drag-and-drop."
+    decided_by: analysis
+
+  - id: ARCH-003
+    question: "How to handle navigation errors in toast action?"
+    decision: "Wrap navigate() in try-catch, show error toast on failure"
+    rationale: "Defensive programming for edge cases. Collection route exists but navigation could theoretically fail."
+    decided_by: analysis
+
+complexity: simple
+
+notes:
+  - "All infrastructure exists - minimal new code required"
+  - "Toast action button pattern already demonstrated in BuildStatusToggle"
+  - "RTK Query cache invalidation is existing pattern in codebase"
+  - "AnimatePresence pattern exists in multiple components"
+  - "Collection route confirmed working (SETS-MVP-002 in UAT)"
+  - "1 story point estimate confirmed appropriate"
+  - "No backend changes required"
+  - "No database migrations required"

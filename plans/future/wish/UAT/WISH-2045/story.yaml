@@ -1,0 +1,29 @@
+schema: 1
+id: WISH-2045
+feature: wish
+type: feature
+state: uat
+title: HEIC/HEIF Image Format Support
+points: 3
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2022
+follow_up_from: WISH-2022
+scope:
+  packages: []
+  surfaces:
+    - frontend
+    - infra
+goal: Enable HEIC/HEIF image uploads with automatic conversion to JPEG during the compression workflow, ensuring all
+  users can upload iPhone photos with compression benefits.
+non_goals:
+  - Not implementing native HEIC storage (convert to JPEG for compatibility)
+  - Not implementing HEIC display in browsers (rely on JPEG conversion)
+  - Not supporting other exotic image formats (focus on HEIC/HEIF only)
+  - Not re-implementing the core compression logic from WISH-2022
+  - Not implementing server-side HEIC conversion (client-side conversion only for MVP)
+acs: []
+risks: []
+created_at: 2026-01-29T00:00:00-07:00
+updated_at: 2026-02-09T00:00:00Z

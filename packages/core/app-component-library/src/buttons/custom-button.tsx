@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import { Button, buttonVariants } from '../_primitives/button'
+import { Button } from '../_primitives/button'
 import { cn } from '../_lib/utils'
 
 const customButtonVariants = cva('flex items-center gap-1.5', {

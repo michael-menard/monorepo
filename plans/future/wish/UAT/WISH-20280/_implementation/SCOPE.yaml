@@ -1,0 +1,28 @@
+schema: 1
+story_id: WISH-20280
+timestamp: "2026-02-09T22:55:00Z"
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/lego-api/domains/config/**"
+  - "apps/api/lego-api/core/audit/**"
+  - "packages/backend/database-schema/**"
+  - "packages/core/api-client/src/schemas/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: true
+  performance: false
+
+summary: "Add comprehensive audit logging to flag schedule operations (create, cancel) with database schema updates for admin tracking and CloudWatch integration"

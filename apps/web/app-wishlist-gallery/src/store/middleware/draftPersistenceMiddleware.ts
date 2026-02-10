@@ -14,7 +14,6 @@
 import { Middleware } from '@reduxjs/toolkit'
 import { logger } from '@repo/logger'
 import { DraftStateSchema, type DraftFormData, clearDraft } from '../slices/wishlistDraftSlice'
-// import type { RootState } from '../index'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -41,7 +40,7 @@ function saveDraftToLocalStorage(userId: string, formData: DraftFormData, timest
     const data = { formData, timestamp }
     localStorage.setItem(key, JSON.stringify(data))
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+    if (error instanceof globalThis.DOMException && error.name === 'QuotaExceededError') {
       logger.warn('localStorage quota exceeded, draft not saved')
     } else {
       logger.error('Failed to save draft to localStorage', { error })
@@ -65,9 +64,7 @@ function removeDraftFromLocalStorage(userId: string): void {
  * Load draft from localStorage with validation
  * Returns null if draft is invalid, expired, or doesn't exist
  */
-export function loadDraftFromLocalStorage(
-  userId: string | null,
-): {
+export function loadDraftFromLocalStorage(userId: string | null): {
   formData: DraftFormData
   timestamp: number
 } | null {
@@ -106,7 +103,9 @@ export function loadDraftFromLocalStorage(
     try {
       const key = getDraftKey(userId)
       localStorage.removeItem(key)
-    } catch {}
+    } catch {
+      // Ignore - best-effort cleanup of corrupted data
+    }
     return null
   }
 }
@@ -121,60 +120,59 @@ let debounceTimer: NodeJS.Timeout | null = null
  * Draft persistence middleware
  * Listens for wishlistDraft/* actions and persists to localStorage
  */
-export const draftPersistenceMiddleware: Middleware =
-  store => next => action => {
-    // Pass action through first
-    const result = next(action)
+export const draftPersistenceMiddleware: Middleware = store => next => action => {
+  // Pass action through first
+  const result = next(action)
 
-    // Only process actions with a type property
-    if (!action || typeof action !== 'object' || !('type' in action)) {
-      return result
-    }
-
-    const actionType = (action as { type: string }).type
-
-    // Only process wishlistDraft actions
-    if (typeof actionType !== 'string' || !actionType.startsWith('wishlistDraft/')) {
-      return result
-    }
-
-    // Get current state after action
-    const state = store.getState() as any
-    const userId = state.auth?.user?.id
-
-    // Skip if user is not authenticated
-    if (!userId) {
-      return result
-    }
-
-    // Handle clearDraft action immediately (no debounce)
-    if (actionType === clearDraft.type) {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer)
-        debounceTimer = null
-      }
-      removeDraftFromLocalStorage(userId)
-      return result
-    }
-
-    // Debounce all other draft actions
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-    }
-
-    debounceTimer = setTimeout(() => {
-      const currentState = store.getState() as any
-      const currentUserId = currentState.auth?.user?.id
-
-      if (currentUserId && currentState.wishlistDraft) {
-        const { formData, timestamp } = currentState.wishlistDraft
-        if (timestamp) {
-          saveDraftToLocalStorage(currentUserId, formData, timestamp)
-        }
-      }
-
-      debounceTimer = null
-    }, DEBOUNCE_MS)
-
+  // Only process actions with a type property
+  if (!action || typeof action !== 'object' || !('type' in action)) {
     return result
   }
+
+  const actionType = (action as { type: string }).type
+
+  // Only process wishlistDraft actions
+  if (typeof actionType !== 'string' || !actionType.startsWith('wishlistDraft/')) {
+    return result
+  }
+
+  // Get current state after action
+  const state = store.getState() as any
+  const userId = state.auth?.user?.id
+
+  // Skip if user is not authenticated or userId is not a string
+  if (!userId || typeof userId !== 'string') {
+    return result
+  }
+
+  // Handle clearDraft action immediately (no debounce)
+  if (actionType === clearDraft.type) {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+      debounceTimer = null
+    }
+    removeDraftFromLocalStorage(userId)
+    return result
+  }
+
+  // Debounce all other draft actions
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+  }
+
+  debounceTimer = setTimeout(() => {
+    const currentState = store.getState() as any
+    const currentUserId = currentState.auth?.user?.id
+
+    if (currentUserId && currentState.wishlistDraft) {
+      const { formData, timestamp } = currentState.wishlistDraft
+      if (timestamp) {
+        saveDraftToLocalStorage(currentUserId, formData, timestamp)
+      }
+    }
+
+    debounceTimer = null
+  }, DEBOUNCE_MS)
+
+  return result
+}

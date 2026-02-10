@@ -1,0 +1,116 @@
+schema: 1
+story_id: "WISH-20280"
+timestamp: "2026-02-10T04:17:00Z"
+
+touched_files:
+  created:
+    - path: "apps/api/lego-api/core/audit/types.ts"
+      reason: "Audit event type definitions and Zod schemas (AC2-AC5)"
+    - path: "apps/api/lego-api/core/audit/ports.ts"
+      reason: "AuditLoggerPort interface for dependency injection"
+    - path: "apps/api/lego-api/core/audit/audit-logger.ts"
+      reason: "CloudWatch audit logger implementation (AC2-AC5, AC7)"
+    - path: "apps/api/lego-api/core/audit/__tests__/audit-logger.test.ts"
+      reason: "Unit tests for audit logger (AC11)"
+    - path: "packages/backend/database-schema/src/migrations/app/0013_bright_captain_stacy.sql"
+      reason: "Migration for admin tracking columns (AC1)"
+
+  modified:
+    - path: "packages/backend/database-schema/src/schema/feature-flags.ts"
+      reason: "Add created_by, cancelled_by, cancelled_at columns (AC1)"
+    - path: "apps/api/lego-api/domains/config/application/schedule-service.ts"
+      reason: "Add audit logging and admin context support (AC2, AC3, AC6, AC7)"
+    - path: "apps/api/lego-api/domains/config/adapters/schedule-repository.ts"
+      reason: "Update INSERT/UPDATE for admin tracking columns (AC1, AC6)"
+    - path: "apps/api/lego-api/domains/config/ports/index.ts"
+      reason: "Add createdBy/cancelledBy to repository interface (AC6)"
+    - path: "apps/api/lego-api/domains/config/routes.ts"
+      reason: "Extract admin context from JWT and pass to service (AC6)"
+    - path: "apps/api/lego-api/domains/config/types.ts"
+      reason: "Extend schedule schemas with admin tracking fields (AC9)"
+    - path: "packages/core/api-client/src/schemas/feature-flags.ts"
+      reason: "Export updated schedule schemas (AC10)"
+    - path: "apps/api/lego-api/jobs/process-flag-schedules.ts"
+      reason: "Add audit logging for applied/failed events (AC4, AC5)"
+    - path: "apps/api/lego-api/domains/config/__tests__/schedule-service.test.ts"
+      reason: "Add audit logging integration tests (AC11)"
+    - path: "apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts"
+      reason: "Add cron job audit logging tests (AC11)"
+    - path: "apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http"
+      reason: "Extend HTTP tests with admin tracking fields (AC12)"
+
+unit_tests:
+  status: pass
+  results:
+    - file: "core/audit/__tests__/audit-logger.test.ts"
+      passed: 9
+      failed: 0
+    - file: "domains/config/__tests__/schedule-service.test.ts"
+      passed: 12
+      failed: 0
+    - file: "jobs/__tests__/process-flag-schedules.test.ts"
+      passed: 14
+      failed: 0
+  total_passed: 35
+  total_failed: 0
+  minimum_required: 8
+
+type_check:
+  status: pass
+  errors_in_scope: 0
+
+lint:
+  status: pass
+  errors_in_scope: 0
+
+e2e_tests:
+  status: exempt
+  mode: n/a
+  reason: "Backend-only story - no UI changes, CloudWatch-only audit infrastructure"
+
+acceptance_criteria:
+  - ac_id: "AC1"
+    status: pass
+    evidence: "Migration 0013 adds created_by, cancelled_by, cancelled_at (all nullable)"
+  - ac_id: "AC2"
+    status: pass
+    evidence: "audit-logger.test.ts: logs created event at INFO level"
+  - ac_id: "AC3"
+    status: pass
+    evidence: "audit-logger.test.ts: logs cancelled event at INFO level"
+  - ac_id: "AC4"
+    status: pass
+    evidence: "process-flag-schedules.test.ts: logs applied audit event"
+  - ac_id: "AC5"
+    status: pass
+    evidence: "process-flag-schedules.test.ts: logs failed audit event"
+  - ac_id: "AC6"
+    status: pass
+    evidence: "schedule-service.test.ts: persists createdBy/cancelledBy"
+  - ac_id: "AC7"
+    status: pass
+    evidence: "schedule-service.test.ts: audit failure does not fail operations"
+  - ac_id: "AC8"
+    status: pass
+    evidence: "mapToResponse includes createdBy, cancelledBy, cancelledAt"
+  - ac_id: "AC9"
+    status: pass
+    evidence: "types.ts: ScheduleResponseSchema extended with admin fields"
+  - ac_id: "AC10"
+    status: pass
+    evidence: "api-client schemas updated and re-exported"
+  - ac_id: "AC11"
+    status: pass
+    evidence: "35 tests pass across 3 files (minimum 8 required)"
+  - ac_id: "AC12"
+    status: pass
+    evidence: "HTTP file extended with 3 admin tracking requests"
+  - ac_id: "AC13"
+    status: pass
+    evidence: "schedule-service.test.ts: handles null admin fields"
+  - ac_id: "AC14"
+    status: deferred
+    evidence: "Documentation deferred to PROOF phase"
+  - ac_id: "AC15"
+    status: deferred
+    evidence: "Documentation deferred to PROOF phase"

@@ -5,10 +5,15 @@
  * Collects purchase details and creates a Set item.
  *
  * Story WISH-2042: Purchase/Got It Flow
+ * Story SETS-MVP-0320: Enhanced success toast with navigation
+ * Story SETS-MVP-0340: Form validation and accessibility
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useForm, type FieldErrors } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { useNavigate } from '@tanstack/react-router'
 import {
   AppDialog,
   AppDialogContent,
@@ -20,24 +25,19 @@ import {
   Input,
   AppSelect,
   LoadingSpinner,
+  cn,
 } from '@repo/app-component-library'
 import type { WishlistItem, BuildStatus } from '@repo/api-client/schemas/wishlist'
 import { useUpdateItemPurchaseMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
-import type { GotItModalProps } from './__types__'
+import { focusRingClasses } from '../../utils/a11y'
+import type { GotItModalProps, PurchaseDetailsForm } from './__types__'
+import { PurchaseDetailsFormSchema } from './__types__'
 
 /**
  * Format today's date as YYYY-MM-DD for date input
  */
 function getTodayDateString(): string {
   return new Date().toISOString().split('T')[0]
-}
-
-/**
- * Validate price format
- */
-function isValidPrice(value: string): boolean {
-  if (!value) return true
-  return /^\d+(\.\d{1,2})?$/.test(value)
 }
 
 /**
@@ -50,26 +50,37 @@ const PROGRESS_MESSAGES = ['Creating your set item...', 'Copying image...', 'Fin
  *
  * Modal form for marking a wishlist item as purchased.
  * Features:
- * - Purchase price, tax, shipping fields
- * - Quantity with stepper
- * - Purchase date (defaults to today)
- * - "Keep on wishlist" checkbox
+ * - Purchase price, tax, shipping fields with Zod validation (AC18, AC21)
+ * - Purchase date with future date prevention (AC19)
+ * - Keyboard accessible (Enter to submit, proper tab order) (AC20)
+ * - ARIA attributes for screen readers (AC20)
  * - Loading states with progress messages
- * - Keyboard accessible (ESC to cancel, focus trap)
- * - Undo capability via toast
+ * - Success toast with "View in Collection" navigation (SETS-MVP-0320)
  */
 export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps) {
   const [updateItemPurchase, { isLoading: isPurchasing }] = useUpdateItemPurchaseMutation()
+  const navigate = useNavigate()
 
-  // Form state
-  const [pricePaid, setPricePaid] = useState('')
-  const [tax, setTax] = useState('')
-  const [shipping, setShipping] = useState('')
-  const [purchaseDate, setPurchaseDate] = useState(getTodayDateString())
-  const [buildStatus, setBuildStatus] = useState<BuildStatus>('not_started')
-
-  // Validation errors
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  // React Hook Form setup (AC18, AC19, AC21)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setFocus,
+    setValue,
+  } = useForm<PurchaseDetailsForm>({
+    resolver: zodResolver(PurchaseDetailsFormSchema),
+    mode: 'onBlur', // Validate on blur (non-intrusive)
+    reValidateMode: 'onChange', // Re-validate on change after first error
+    defaultValues: {
+      purchaseDate: getTodayDateString(),
+      pricePaid: undefined,
+      tax: undefined,
+      shipping: undefined,
+      buildStatus: 'not_started',
+    },
+  })
 
   // Loading progress state
   const [progressMessage, setProgressMessage] = useState(PROGRESS_MESSAGES[0])
@@ -78,14 +89,15 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
   // Reset form when modal opens with new item
   useEffect(() => {
     if (isOpen && item) {
-      setPricePaid(item.price || '')
-      setTax('')
-      setShipping('')
-      setPurchaseDate(getTodayDateString())
-      setBuildStatus('not_started')
-      setErrors({})
+      reset({
+        purchaseDate: getTodayDateString(),
+        pricePaid: item.price ? parseFloat(item.price) : undefined,
+        tax: undefined,
+        shipping: undefined,
+        buildStatus: 'not_started',
+      })
     }
-  }, [isOpen, item])
+  }, [isOpen, item, reset])
 
   // Progress message cycling during loading
   useEffect(() => {
@@ -103,39 +115,47 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
     return () => clearInterval(interval)
   }, [isPurchasing])
 
-  // Validate form
-  const validate = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {}
+  /**
+   * Show success toast with navigation to collection
+   * SETS-MVP-0320 AC11-12: Enhanced toast with "View in Collection" action button
+   */
+  const showPurchaseSuccessToast = useCallback(
+    (wishlistItem: WishlistItem) => {
+      toast.success('Added to your collection!', {
+        description: wishlistItem.title,
+        duration: 5000,
+        action: {
+          label: 'View in Collection',
+          onClick: () => {
+            try {
+              navigate({ to: '/collection' })
+            } catch (error) {
+              toast.error('Could not navigate to collection', {
+                description: 'Please navigate manually',
+              })
+            }
+          },
+        },
+      })
+    },
+    [navigate],
+  )
 
-    if (pricePaid && !isValidPrice(pricePaid)) {
-      newErrors.pricePaid = 'Price must be a valid decimal (e.g., 99.99)'
-    }
-    if (tax && !isValidPrice(tax)) {
-      newErrors.tax = 'Tax must be a valid decimal'
-    }
-    if (shipping && !isValidPrice(shipping)) {
-      newErrors.shipping = 'Shipping must be a valid decimal'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [pricePaid, tax, shipping])
-
-  // Handle form submission
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-
-      if (!item || !validate()) return
+  /**
+   * Handle form submission with focus management on validation errors (AC20)
+   */
+  const onSubmit = useCallback(
+    async (data: PurchaseDetailsForm) => {
+      if (!item) return
 
       try {
         // Build API input (SETS-MVP-0310: new PurchaseDetailsInput format)
         const input = {
-          purchasePrice: pricePaid || undefined,
-          purchaseTax: tax || undefined,
-          purchaseShipping: shipping || undefined,
-          purchaseDate: purchaseDate ? new Date(purchaseDate).toISOString() : undefined,
-          buildStatus,
+          purchasePrice: data.pricePaid?.toString() || undefined,
+          purchaseTax: data.tax?.toString() || undefined,
+          purchaseShipping: data.shipping?.toString() || undefined,
+          purchaseDate: data.purchaseDate ? new Date(data.purchaseDate).toISOString() : undefined,
+          buildStatus: data.buildStatus,
         }
 
         // Call API (SETS-MVP-0310: new PATCH endpoint)
@@ -147,10 +167,10 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
         // Close modal
         onClose()
 
-        // Show success toast
+        // Show success toast (SETS-MVP-0320: enhanced with navigation)
         showPurchaseSuccessToast(item)
 
-        // Call success callback if provided
+        // Call success callback if provided (SETS-MVP-0320: triggers item removal)
         onSuccess?.()
       } catch (error) {
         // Show error toast
@@ -159,27 +179,34 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
         })
       }
     },
-    [
-      item,
-      validate,
-      pricePaid,
-      tax,
-      shipping,
-      purchaseDate,
-      buildStatus,
-      updateItemPurchase,
-      onClose,
-      onSuccess,
-    ],
+    [item, updateItemPurchase, onClose, onSuccess, showPurchaseSuccessToast],
   )
 
-  // Show success toast (SETS-MVP-0310: simplified - no Set navigation)
-  const showPurchaseSuccessToast = useCallback((wishlistItem: WishlistItem) => {
-    toast.success('Item marked as owned', {
-      description: wishlistItem.title,
-      duration: 5000,
-    })
-  }, [])
+  /**
+   * Handle validation errors by focusing first error field (AC20)
+   */
+  const onSubmitError = useCallback(
+    (validationErrors: FieldErrors<PurchaseDetailsForm>) => {
+      const firstErrorField = Object.keys(validationErrors)[0] as keyof PurchaseDetailsForm
+      if (firstErrorField) {
+        setFocus(firstErrorField)
+      }
+    },
+    [setFocus],
+  )
+
+  /**
+   * Handle Enter key to submit form (AC20)
+   */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLFormElement>) => {
+      if (e.key === 'Enter' && !isPurchasing) {
+        e.preventDefault()
+        handleSubmit(onSubmit, onSubmitError)()
+      }
+    },
+    [isPurchasing, handleSubmit, onSubmit, onSubmitError],
+  )
 
   // Don't render if no item
   if (!item) {
@@ -202,8 +229,12 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
           </AppDialogDescription>
         </AppDialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Price Paid */}
+        <form
+          onSubmit={handleSubmit(onSubmit, onSubmitError)}
+          onKeyDown={handleKeyDown}
+          className="space-y-4"
+        >
+          {/* Price Paid (AC18, AC21) */}
           <div className="space-y-2">
             <label htmlFor="pricePaid" className="text-sm font-medium">
               Price Paid
@@ -213,21 +244,36 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
                 $
               </span>
               <Input
+                {...register('pricePaid', { valueAsNumber: true })}
                 id="pricePaid"
-                type="text"
-                inputMode="decimal"
+                type="number"
+                step="0.01"
+                min="0"
+                max="999999.99"
                 placeholder="0.00"
-                className="pl-7"
-                value={pricePaid}
-                onChange={e => setPricePaid(e.target.value)}
+                className={cn(
+                  'pl-7',
+                  focusRingClasses,
+                  errors.pricePaid && 'border-red-500 focus-visible:ring-red-500',
+                )}
                 disabled={isPurchasing}
+                aria-invalid={!!errors.pricePaid}
+                aria-describedby={errors.pricePaid ? 'pricePaid-error' : undefined}
                 data-testid="price-paid-input"
               />
             </div>
-            {errors.pricePaid ? <p className="text-sm text-red-500">{errors.pricePaid}</p> : null}
+            {errors.pricePaid ? (
+              <p
+                id="pricePaid-error"
+                className="text-sm text-red-600 dark:text-red-400 mt-1"
+                role="alert"
+              >
+                {errors.pricePaid.message}
+              </p>
+            ) : null}
           </div>
 
-          {/* Tax and Shipping Row */}
+          {/* Tax and Shipping Row (AC18, AC21) */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="tax" className="text-sm font-medium">
@@ -238,18 +284,33 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
                   $
                 </span>
                 <Input
+                  {...register('tax', { valueAsNumber: true })}
                   id="tax"
-                  type="text"
-                  inputMode="decimal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="999999.99"
                   placeholder="0.00"
-                  className="pl-7"
-                  value={tax}
-                  onChange={e => setTax(e.target.value)}
+                  className={cn(
+                    'pl-7',
+                    focusRingClasses,
+                    errors.tax && 'border-red-500 focus-visible:ring-red-500',
+                  )}
                   disabled={isPurchasing}
+                  aria-invalid={!!errors.tax}
+                  aria-describedby={errors.tax ? 'tax-error' : undefined}
                   data-testid="tax-input"
                 />
               </div>
-              {errors.tax ? <p className="text-sm text-red-500">{errors.tax}</p> : null}
+              {errors.tax ? (
+                <p
+                  id="tax-error"
+                  className="text-sm text-red-600 dark:text-red-400 mt-1"
+                  role="alert"
+                >
+                  {errors.tax.message}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -261,36 +322,65 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
                   $
                 </span>
                 <Input
+                  {...register('shipping', { valueAsNumber: true })}
                   id="shipping"
-                  type="text"
-                  inputMode="decimal"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="999999.99"
                   placeholder="0.00"
-                  className="pl-7"
-                  value={shipping}
-                  onChange={e => setShipping(e.target.value)}
+                  className={cn(
+                    'pl-7',
+                    focusRingClasses,
+                    errors.shipping && 'border-red-500 focus-visible:ring-red-500',
+                  )}
                   disabled={isPurchasing}
+                  aria-invalid={!!errors.shipping}
+                  aria-describedby={errors.shipping ? 'shipping-error' : undefined}
                   data-testid="shipping-input"
                 />
               </div>
-              {errors.shipping ? <p className="text-sm text-red-500">{errors.shipping}</p> : null}
+              {errors.shipping ? (
+                <p
+                  id="shipping-error"
+                  className="text-sm text-red-600 dark:text-red-400 mt-1"
+                  role="alert"
+                >
+                  {errors.shipping.message}
+                </p>
+              ) : null}
             </div>
           </div>
 
-          {/* Purchase Date and Build Status Row */}
+          {/* Purchase Date and Build Status Row (AC19) */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="purchaseDate" className="text-sm font-medium">
                 Purchase Date
               </label>
               <Input
+                {...register('purchaseDate')}
                 id="purchaseDate"
                 type="date"
                 max={getTodayDateString()}
-                value={purchaseDate}
-                onChange={e => setPurchaseDate(e.target.value)}
+                className={cn(
+                  focusRingClasses,
+                  errors.purchaseDate && 'border-red-500 focus-visible:ring-red-500',
+                )}
                 disabled={isPurchasing}
+                aria-invalid={!!errors.purchaseDate}
+                aria-describedby={errors.purchaseDate ? 'purchaseDate-error' : undefined}
                 data-testid="purchase-date-input"
               />
+              {errors.purchaseDate ? (
+                <p
+                  id="purchaseDate-error"
+                  className="text-sm text-red-600 dark:text-red-400 mt-1"
+                  role="alert"
+                >
+                  {errors.purchaseDate.message}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -298,8 +388,8 @@ export function GotItModal({ isOpen, onClose, item, onSuccess }: GotItModalProps
                 Build Status
               </label>
               <AppSelect
-                value={buildStatus}
-                onValueChange={value => setBuildStatus(value as BuildStatus)}
+                value={item.buildStatus || 'not_started'}
+                onValueChange={value => setValue('buildStatus', value as BuildStatus)}
                 disabled={isPurchasing}
                 placeholder="Select build status"
                 options={[

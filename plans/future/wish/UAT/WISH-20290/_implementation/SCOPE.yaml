@@ -1,0 +1,26 @@
+schema: 1
+story_id: WISH-20290
+timestamp: 2026-02-10T01:37:34Z
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - apps/web/app-wishlist-gallery/vitest.config.ts
+  - apps/web/app-wishlist-gallery/src/test/utils/**/*.ts
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Add Vitest coverage threshold enforcement (80%) for test utilities in src/test/utils/**/*.ts with two-tier strategy (global 45%, test utils 80%)

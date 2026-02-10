@@ -10,7 +10,7 @@
  * and component rendering. Interaction tests with Radix UI Select
  * are deferred to Playwright E2E tests due to JSDOM limitations.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -18,6 +18,17 @@ import { TooltipProvider } from '@repo/app-component-library'
 
 import { MainPage } from '../main-page'
 import type { WishlistListResponse } from '@repo/api-client/schemas/wishlist'
+
+// Polyfill ResizeObserver for JSDOM (used by useRovingTabIndex)
+beforeAll(() => {
+  if (!window.ResizeObserver) {
+    window.ResizeObserver = vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    }))
+  }
+})
 
 // -----------------------------------------------------------------------------
 // Mocks
@@ -165,6 +176,8 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => {
     useAddWishlistItemMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
     // WISH-2042: Mock for purchase mutation
     useMarkAsPurchasedMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
+    // WISH-20172: Mock for update item purchase mutation (used by GotItModal)
+    useUpdateItemPurchaseMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
     // WISH-2005a: Mock for reorder mutation (used by DraggableWishlistGallery)
     useReorderWishlistMutation: vi.fn().mockReturnValue([vi.fn(), { isLoading: false }]),
     wishlistGalleryApi: {

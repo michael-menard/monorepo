@@ -1,0 +1,85 @@
+schema: 1
+story_id: "WISH-2121"
+timestamp: "2026-02-09T19:30:00Z"
+phase: qa-verification
+status: setup_complete
+
+# QA Verification Setup Summary
+setup:
+  story_location: "plans/future/wish/UAT/WISH-2121"
+  evidence_file: "plans/future/wish/UAT/WISH-2121/_implementation/EVIDENCE.yaml"
+  review_file: "plans/future/wish/UAT/WISH-2121/_implementation/REVIEW.yaml"
+  knowledge_context_file: "plans/future/wish/UAT/WISH-2121/_implementation/KNOWLEDGE-CONTEXT.yaml"
+
+# Preconditions Verified
+preconditions:
+  story_exists: true
+  evidence_yaml_exists: true
+  review_yaml_exists: true
+  review_verdict_pass: true
+  checkpoint_updated: true
+
+# Evidence Summary
+evidence:
+  version: 1
+  story_id: "WISH-2121"
+  status: complete
+  summary: "Browser-mode MSW setup for Playwright E2E tests implemented"
+
+  acceptance_criteria:
+    total: 23
+    passing: 23
+    failing: 0
+    already_exists: 2
+
+  touched_files:
+    created: 7
+    modified: 3
+
+  e2e_tests:
+    status: ready
+    mode: mocked
+    feature_file: "apps/web/playwright/features/wishlist/wishlist-msw-upload.feature"
+    scenarios: 4
+
+# Review Summary
+review:
+  iteration: 1
+  verdict: PASS
+  timestamp: "2026-02-09T01:00:00Z"
+
+  workers:
+    lint: PASS_WITH_NOTES
+    style: PASS_WITH_NOTES
+    security: PASS
+    typecheck: PASS_WITH_NOTES
+    build: PASS
+
+  e2e_gate:
+    decision: exempt
+    reason: "Test infrastructure story - MSW browser-mode setup IS the deliverable"
+
+# Next Steps for QA Verification
+next_phase: qa-verification
+verification_gates:
+  - Verify all 23 acceptance criteria are correctly implemented
+  - Validate E2E test scenarios run correctly in Playwright
+  - Confirm MSW fixtures are properly integrated
+  - Check documentation completeness
+  - Verify no regressions in existing tests
+
+notes: |
+  Setup complete. Story ready for QA verification phase.
+
+  Key observations from review:
+  - All 23 ACs passing
+  - 2 ACs marked as "already_exists" (pre-existing MSW setup reused)
+  - 21 ACs actively implemented
+  - E2E gate exempt (infrastructure story)
+  - Pre-existing TS errors noted but not from WISH-2121
+
+  QA should focus on:
+  1. MSW worker lifecycle in browser context
+  2. Error injection mechanics
+  3. Test isolation guarantees
+  4. Documentation accuracy

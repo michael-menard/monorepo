@@ -1,0 +1,29 @@
+schema: 1
+story_id: "SETS-MVP-0320"
+timestamp: "2026-02-09T14:32:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-wishlist-gallery/src/components/GotItModal/**"
+  - "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/**"
+  - "apps/web/app-wishlist-gallery/src/pages/**"
+  - "apps/web/app-wishlist-gallery/src/__tests__/**"
+  - "packages/core/app-component-library/src/toasts/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Add success toast with navigation link and item removal animation after purchase, improving purchase flow UX"

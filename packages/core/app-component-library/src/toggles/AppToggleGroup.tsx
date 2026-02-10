@@ -8,13 +8,13 @@ import { ToggleGroup, ToggleGroupItem } from '../_primitives/toggle-group'
 import type { ToggleGroupProps, ToggleGroupItemProps } from '../_primitives/toggle-group'
 import { cn } from '../_lib/utils'
 
-export interface AppToggleGroupProps extends Omit<ToggleGroupProps, 'type'> {
+export type AppToggleGroupProps = Omit<ToggleGroupProps, 'type'> & {
   /** Whether multiple items can be selected */
   multiple?: boolean
   /** Size of the toggle items */
   size?: 'sm' | 'default' | 'lg'
   /** Style variant */
-  style?: 'default' | 'outline' | 'surface'
+  variant?: 'default' | 'outline' | 'surface'
 }
 
 export interface AppToggleGroupItemProps extends Omit<ToggleGroupItemProps, 'variant' | 'size'> {
@@ -40,19 +40,27 @@ const AppToggleGroupContext = React.createContext<{
 export function AppToggleGroup({
   multiple = false,
   size = 'default',
-  style = 'surface',
+  variant,
   className,
   children,
   ...props
 }: AppToggleGroupProps) {
   const contextValue = React.useMemo(() => ({ size }), [size])
 
+  // Default variant to 'surface' if not provided
+  const effectiveVariant = variant ?? 'surface'
+  
+  // Map our custom variant to primitive variants  
+  const primitiveVariant: 'default' | 'outline' = effectiveVariant === 'default' ? 'default' : 'outline'
+  const composedClassName = cn(groupStyles[effectiveVariant], className)
+
   return (
     <AppToggleGroupContext.Provider value={contextValue}>
       <ToggleGroup
         type={multiple ? 'multiple' : 'single'}
-        className={cn(groupStyles[style], className)}
-        {...props}
+        variant={primitiveVariant}
+        className={composedClassName}
+        {...(props as any)}
       >
         {children}
       </ToggleGroup>

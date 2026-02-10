@@ -162,6 +162,11 @@ export const featureFlagSchedules = pgTable(
     nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
     lastError: text('last_error'),
 
+    /** Admin tracking (WISH-20280) */
+    createdBy: text('created_by'),
+    cancelledBy: text('cancelled_by'),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+
     /** Timestamps */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

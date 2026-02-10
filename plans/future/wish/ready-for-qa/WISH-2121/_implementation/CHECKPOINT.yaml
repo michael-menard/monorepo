@@ -1,0 +1,16 @@
+schema: 1
+story_id: "WISH-2121"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-09T01:00:00Z"
+
+current_phase: done
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+blocked_reason: null
+forced: false
+warnings:
+  - "Pre-existing TS errors in main-app (implicit any, missing @types/node) - not introduced by this story"
+completed_at: "2026-02-09T01:00:00Z"
+e2e_gate: exempt

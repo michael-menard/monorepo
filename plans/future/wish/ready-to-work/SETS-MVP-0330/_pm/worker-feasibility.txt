@@ -1,0 +1,30 @@
+Read: .claude/agents/pm-dev-feasibility-review.agent.md
+
+STORY CONTEXT:
+Index path: plans/future/wish/stories.index.md
+Story ID: SETS-MVP-0330
+Story prefix: SETS-MVP
+Epic: wish
+Output file: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/_pm/DEV-FEASIBILITY.md
+
+EXISTING STORY:
+Story file exists at: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/SETS-MVP-0330.md
+This story already has architecture notes and implementation notes. Your job is to provide technical feasibility analysis, complexity estimates, and implementation risks.
+
+SEED CONTEXT:
+- Reuse candidates: Sonner toast system, existing auth middleware, RTK Query pattern, Ports & Adapters service layer
+- Relevant packages: @repo/app-component-library, @repo/api-client, @repo/api-core, @repo/logger
+- Active work: SETS-MVP-0310 (UAT - purchase flow dependency), SETS-MVP-0320 (Backlog - complementary success toast features)
+- Constraints: Ports & Adapters pattern, Zod-first types, No barrel files, client-side timer approach
+
+Implementation priorities from seed:
+1. Start with backend: Implement unpurchase endpoint first
+2. Service layer first: Implement revertPurchase() method
+3. Frontend integration: Extend GotItModal toast last
+
+Technical risks from seed:
+1. Toast Lifecycle: Verify toast doesn't auto-dismiss before user can click
+2. State Synchronization: RTK Query cache invalidation after undo
+3. Database Transaction: Ensure status revert is atomic
+
+Estimated complexity: 5-7 hours total (1-point story)

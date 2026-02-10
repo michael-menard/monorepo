@@ -1,0 +1,166 @@
+schema: 1
+story_id: WISH-20290
+timestamp: 2026-02-09T19:00:00Z
+
+steps:
+  - id: 1
+    description: "Add per-directory coverage thresholds to vitest.config.ts"
+    files:
+      - apps/web/app-wishlist-gallery/vitest.config.ts
+    dependencies: []
+    slice: infra
+    details: |
+      Add coverage.thresholds object with 80% enforcement for src/test/utils/**/*.ts.
+      Thresholds: lines: 80, functions: 80, branches: 80, statements: 80
+      Keep existing coverage configuration (provider, reporters, excludes) unchanged.
+
+  - id: 2
+    description: "Create README.md documenting coverage requirements"
+    files:
+      - apps/web/app-wishlist-gallery/src/test/utils/README.md
+    dependencies: []
+    slice: infra
+    details: |
+      Document 80% coverage requirement, local commands for coverage checks,
+      HTML report location, and guidance for maintaining coverage when adding utilities.
+
+  - id: 3
+    description: "Validate coverage thresholds are enforced"
+    files: []
+    dependencies: [1]
+    slice: infra
+    details: |
+      Run coverage locally to verify thresholds pass with existing 100% coverage.
+      Test failure scenario by temporarily reducing coverage to verify error messaging.
+      Verify HTML coverage report generation and per-directory breakdown.
+
+files_to_change:
+  - path: apps/web/app-wishlist-gallery/vitest.config.ts
+    action: modify
+    reason: Add coverage.thresholds object for src/test/utils/**/*.ts with 80% enforcement
+
+  - path: apps/web/app-wishlist-gallery/src/test/utils/README.md
+    action: create
+    reason: Document coverage requirements, commands, and guidance per AC6-AC9
+
+commands_to_run:
+  - command: pnpm --filter app-wishlist-gallery vitest run src/test/utils --coverage
+    when: after vitest.config.ts modification
+    required: true
+    purpose: Verify coverage thresholds pass with existing utilities
+
+  - command: pnpm --filter app-wishlist-gallery vitest run --coverage
+    when: after vitest.config.ts modification
+    required: true
+    purpose: Verify global coverage unaffected and per-directory breakdown shown
+
+  - command: pnpm --filter app-wishlist-gallery build
+    when: after all changes
+    required: true
+    purpose: Ensure no TypeScript compilation issues
+
+  - command: pnpm lint --filter app-wishlist-gallery
+    when: after all changes
+    required: true
+    purpose: Ensure linting passes for modified files
+
+acceptance_criteria_map:
+  - ac_id: AC1
+    planned_evidence: vitest.config.ts modification with thresholds object
+    evidence_type: file
+    validation_steps:
+      - Check coverage.thresholds['src/test/utils/**/*.ts'] exists
+      - Verify all four metrics (lines, functions, branches, statements) set to 80
+
+  - ac_id: AC2
+    planned_evidence: Command execution showing coverage failure when threshold violated
+    evidence_type: command
+    validation_steps:
+      - Temporarily reduce coverage to <80%
+      - Run pnpm test:coverage and verify exit code 1
+      - Restore coverage
+
+  - ac_id: AC3
+    planned_evidence: vitest.config.ts showing glob pattern targets only src/test/utils/
+    evidence_type: file
+    validation_steps:
+      - Review threshold key matches src/test/utils/**/*.ts pattern
+      - Verify no global thresholds applied
+
+  - ac_id: AC4
+    planned_evidence: Terminal output from coverage command showing per-directory breakdown
+    evidence_type: command
+    validation_steps:
+      - Run pnpm vitest run --coverage
+      - Check output includes separate section for test utilities
+
+  - ac_id: AC5
+    planned_evidence: vitest.config.ts showing global config unchanged
+    evidence_type: file
+    validation_steps:
+      - Verify provider, reporter, and exclude remain identical
+      - No global thresholds object added
+
+  - ac_id: AC6
+    planned_evidence: README.md created with coverage requirement documentation
+    evidence_type: file
+    validation_steps:
+      - Check file exists at src/test/utils/README.md
+      - Verify documents 80% requirement clearly
+
+  - ac_id: AC7
+    planned_evidence: README.md includes coverage commands
+    evidence_type: file
+    validation_steps:
+      - Check includes pnpm test:coverage command
+      - Check includes pnpm vitest run src/test/utils --coverage command
+
+  - ac_id: AC8
+    planned_evidence: README.md explains HTML report viewing
+    evidence_type: file
+    validation_steps:
+      - Check mentions coverage/index.html location
+      - Check explains how to open HTML report
+
+  - ac_id: AC9
+    planned_evidence: README.md provides maintenance guidance
+    evidence_type: file
+    validation_steps:
+      - Check includes guidance on maintaining coverage
+      - Check mentions adding tests for new utilities
+
+  - ac_id: AC10
+    planned_evidence: Coverage report showing existing utilities at ≥80%
+    evidence_type: command
+    validation_steps:
+      - Run coverage command
+      - Verify createMockFile.ts and mockS3Upload.ts meet threshold
+
+  - ac_id: AC11
+    planned_evidence: CI pipeline enforces thresholds
+    evidence_type: manual
+    validation_steps:
+      - Verify existing CI test commands will fail on threshold violation
+      - No CI config changes needed (uses existing test scripts)
+
+  - ac_id: AC12
+    planned_evidence: Error messages from Vitest when thresholds violated
+    evidence_type: command
+    validation_steps:
+      - Temporarily violate threshold
+      - Verify error includes percentage, threshold, and file path
+      - Restore coverage
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - No new dependencies required - uses existing Vitest 3.0.5 with v8 coverage
+  - Parent story WISH-2120 provides test utilities with 100% current coverage
+  - Two-tier strategy: global 45% unchanged, test utilities 80%
+  - Configuration-only change with no production code impact
+  - CI enforcement automatic via existing test scripts
+  - Glob pattern 'src/test/utils/**/*.ts' targets utility files only, not tests
+  - HTML coverage reports already generated via existing config
+  - Documentation pattern follows apps/web/app-wishlist-gallery/README.md style

@@ -13,8 +13,8 @@ import { z } from 'zod'
 
 const ResumeDraftBannerPropsSchema = z.object({
   timestamp: z.number().nullable(),
-  onResume: z.function(),
-  onDiscard: z.function(),
+  onResume: z.function(z.tuple([]), z.void()),
+  onDiscard: z.function(z.tuple([]), z.void()),
   className: z.string().optional(),
 })
 

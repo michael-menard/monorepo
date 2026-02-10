@@ -1,0 +1,26 @@
+Read: .claude/agents/pm-uiux-recommendations.agent.md
+
+STORY CONTEXT:
+Index path: plans/future/wish/stories.index.md
+Story ID: SETS-MVP-0330
+Story prefix: SETS-MVP
+Epic: wish
+Output file: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/_pm/UIUX-NOTES.md
+
+EXISTING STORY:
+Story file exists at: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/SETS-MVP-0330.md
+This story already has architecture notes. Your job is to provide UI/UX recommendations focusing on user experience, accessibility, and interaction patterns.
+
+SEED CONTEXT:
+- Related components: GotItModal (success toast), BuildStatusToggle (reference undo pattern)
+- Reuse candidates: Sonner toast with action buttons, existing 5s duration standard
+- Established patterns: Toast action buttons from BuildStatusToggle
+
+UI/UX considerations from seed:
+1. Undo Button Visibility: 5-second window may feel short - consider visual countdown
+2. Item Re-appearance Position: After undo, item may move to bottom of list
+3. Success Message Clarity: "Purchase reverted" vs "Item returned to wishlist"
+4. Undo Chain: What if user wants to undo the undo?
+5. Mobile Touch Targets: Ensure undo button has sufficient tap target size (44x44px minimum)
+
+Focus on accessibility, mobile usability, and clear user feedback patterns.

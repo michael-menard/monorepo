@@ -1,0 +1,55 @@
+schema: 1
+story_id: "WISH-2070"
+version: 1
+approved: true
+estimates:
+  files: 12
+  tokens: 15000
+
+chunks:
+  - id: "C1"
+    title: "Fix @repo/logger missing .d.ts declarations"
+    files:
+      - packages/core/logger/dist/  # rebuild to generate .d.ts files
+    approach: "Rebuild @repo/logger to generate .d.ts declaration files - tsconfig already has declaration:true but dist/ is missing .d.ts files (only has .js and .d.ts.map)"
+
+  - id: "C2"
+    title: "Remove unused imports in test files"
+    files:
+      - apps/web/app-wishlist-gallery/src/contexts/__tests__/FeatureFlagContext.test.tsx
+      - apps/web/app-wishlist-gallery/src/hooks/__tests__/useAnnouncer.test.tsx
+      - apps/web/app-wishlist-gallery/src/hooks/__tests__/useFeatureFlag.test.tsx
+      - apps/web/app-wishlist-gallery/src/hooks/__tests__/useKeyboardShortcuts.test.tsx
+    approach: "Remove unused imports: delay, waitFor, vi, renderHook"
+
+  - id: "C3"
+    title: "Fix CollectionPage component prop types"
+    files:
+      - apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx
+    approach: "Fix action prop to match GalleryEmptyState expected type; fix DeleteConfirmModal to use item prop instead of itemTitle"
+
+  - id: "C4"
+    title: "Fix draftPersistenceMiddleware test types"
+    files:
+      - apps/web/app-wishlist-gallery/src/store/middleware/__tests__/draftPersistenceMiddleware.test.ts
+    approach: "Type the spy variables properly instead of ReturnType<typeof vi.spyOn>"
+
+  - id: "C5"
+    title: "Fix wishlistDraftSlice test state types"
+    files:
+      - apps/web/app-wishlist-gallery/src/store/slices/__tests__/wishlistDraftSlice.test.ts
+    approach: "Add proper state type to store or use type assertions for getState()"
+
+  - id: "C6"
+    title: "Fix AppToggleGroup Radix type mismatch"
+    files:
+      - packages/core/app-component-library/src/toggles/AppToggleGroup.tsx
+    approach: "Change interface extends to type intersection; fix value/style prop types"
+
+  - id: "C7"
+    title: "Remove unused imports in api-client"
+    files:
+      - packages/core/api-client/src/utils/authorization-errors.ts
+    approach: "Remove unused z and AuthorizationErrorCode imports"
+
+reuse: []

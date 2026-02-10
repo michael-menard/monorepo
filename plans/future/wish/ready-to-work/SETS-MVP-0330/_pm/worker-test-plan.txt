@@ -1,0 +1,32 @@
+Read: .claude/agents/pm-draft-test-plan.agent.md
+
+STORY CONTEXT:
+Index path: plans/future/wish/stories.index.md
+Story ID: SETS-MVP-0330
+Story prefix: SETS-MVP
+Epic: wish
+Output file: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/_pm/TEST-PLAN.md
+
+EXISTING STORY:
+Story file exists at: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/SETS-MVP-0330.md
+This story already has initial ACs, architecture notes, and test plan. Your job is to ENHANCE the test plan with deeper coverage, edge cases, and specific test scenarios.
+
+SEED CONTEXT:
+Seed file: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/_pm/STORY-SEED.md
+
+Reality context:
+- Related endpoints: PATCH /api/v2/wishlist/:id/purchase (existing), PATCH /api/v2/wishlist/:id/unpurchase (new)
+- Related components: GotItModal (extend success toast), BuildStatusToggle (reference pattern for undo)
+- Established patterns: Client-side timer approach (5s toast duration), Sonner toast with action buttons, Ports & Adapters service layer
+- Constraints: Dependency on SETS-MVP-0310 (UAT), Zod-first types, No barrel files
+
+Test Plan recommendations from seed:
+1. Race Condition Testing: User closes modal/navigates away during undo window
+2. Double-Click Prevention: User rapidly clicks "Undo" multiple times
+3. Optimistic Update Handling: If RTK Query uses optimistic updates
+4. Toast Persistence: Verify toast remains visible across modal close/navigation
+5. Test with various purchase detail combinations
+6. Test with items at different positions in list
+7. Manual timing tests for undo window expiry
+
+Focus on E2E scenarios with Playwright and integration tests for backend service layer.

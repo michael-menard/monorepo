@@ -203,6 +203,7 @@ export interface ScheduleRepository {
     flagId: string
     scheduledAt: Date
     updates: ScheduleUpdates
+    createdBy?: string // WISH-20280
   }): Promise<Result<Schedule, ScheduleError>>
 
   /**
@@ -245,7 +246,7 @@ export interface ScheduleRepository {
   /**
    * Cancel a schedule
    */
-  cancel(scheduleId: string): Promise<Result<Schedule, ScheduleError>>
+  cancel(scheduleId: string, cancelledBy?: string): Promise<Result<Schedule, ScheduleError>>
 }
 
 // ─────────────────────────────────────────────────────────────────────────

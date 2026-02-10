@@ -1,0 +1,26 @@
+schema: 1
+id: WISH-20450
+feature: wish
+type: test
+state: backlog
+title: "HEIC/HEIF Upload E2E Tests (Playwright + Cucumber)"
+points: 1
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2045
+follow_up_from: WISH-2045
+scope:
+  packages: []
+  surfaces:
+    - test
+goal: Write Playwright E2E tests in Cucumber/Gherkin format covering the HEIC upload happy path, conversion
+  failure handling, and browser compatibility fallback.
+non_goals:
+  - Not modifying any HEIC conversion implementation code
+  - Not adding new features to the HEIC workflow
+  - Not testing server-side conversion (that's WISH-20530)
+acs: []
+risks: []
+created_at: 2026-02-09T00:00:00-07:00
+updated_at: 2026-02-09T00:00:00-07:00

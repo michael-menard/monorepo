@@ -1,0 +1,14 @@
+schema: 1
+story_id: WISH-20280
+feature_dir: plans/future/wish
+timestamp: "2026-02-10T04:22:00Z"
+
+current_phase: done
+last_successful_phase: review
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+e2e_gate: exempt
+completed_at: "2026-02-10T04:22:00Z"

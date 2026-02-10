@@ -6,6 +6,7 @@ import { createFeatureFlagRepository } from '../domains/config/adapters/reposito
 import { getRedisClient } from '../core/cache/index.js'
 import { createInMemoryCache } from '../domains/config/adapters/cache.js'
 import { createRedisCacheAdapter } from '../domains/config/adapters/redis-cache.js'
+import { createAuditLogger } from '../core/audit/audit-logger.js'
 
 /**
  * Process Flag Schedules Cron Job (WISH-2119, WISH-20260)
@@ -85,6 +86,7 @@ export async function handler(event: ScheduledEvent) {
     const flagRepo = createFeatureFlagRepository(db, schema)
     const redisClient = getRedisClient()
     const cache = redisClient ? createRedisCacheAdapter(redisClient) : createInMemoryCache()
+    const auditLogger = createAuditLogger()
 
     // AC7: Fetch pending schedules with row-level locking (WISH-20260: includes failed schedules ready for retry)
     // Query: WHERE (status = 'pending' AND scheduled_at <= NOW())
@@ -135,6 +137,21 @@ export async function handler(event: ScheduledEvent) {
             errorMessage,
           )
 
+          // Audit logging for permanent failure (WISH-20280: AC5)
+          try {
+            await auditLogger.logEvent('flag_schedule.failed', {
+              scheduleId: schedule.id,
+              flagKey: 'unknown',
+              errorMessage,
+              failedAt: new Date().toISOString(),
+            })
+          } catch (auditError) {
+            logger.error('Audit logging failed for schedule failure', {
+              scheduleId: schedule.id,
+              error: auditError instanceof Error ? auditError.message : 'Unknown error',
+            })
+          }
+
           failedCount++
           continue
         }
@@ -178,13 +195,29 @@ export async function handler(event: ScheduledEvent) {
               error: errorMessage,
             })
           } else {
-            // Max retries exceeded (AC5)
+            // Max retries exceeded (AC5, WISH-20280)
             await scheduleRepo.updateRetryMetadata(
               schedule.id,
               currentRetryCount,
               null, // Clear next_retry_at
               errorMessage,
             )
+
+            // Audit logging for permanent failure after retries (WISH-20280)
+            try {
+              await auditLogger.logEvent('flag_schedule.failed', {
+                scheduleId: schedule.id,
+                flagKey: flag.flagKey,
+                errorMessage,
+                failedAt: new Date().toISOString(),
+              })
+            } catch (auditError) {
+              logger.error('Audit logging failed for schedule failure', {
+                scheduleId: schedule.id,
+                flagKey: flag.flagKey,
+                error: auditError instanceof Error ? auditError.message : 'Unknown error',
+              })
+            }
 
             logger.error('Flag update retry limit exceeded', {
               scheduleId: schedule.id,
@@ -206,6 +239,27 @@ export async function handler(event: ScheduledEvent) {
         await scheduleRepo.updateStatus(schedule.id, 'applied', {
           appliedAt: new Date(),
         })
+
+        // Audit logging for successful application (WISH-20280: AC4)
+        try {
+          await auditLogger.logEvent('flag_schedule.applied', {
+            scheduleId: schedule.id,
+            flagKey: flag.flagKey,
+            updates: schedule.updates,
+            appliedAt: new Date().toISOString(),
+            flagState: {
+              enabled: updateResult.data.enabled,
+              rolloutPercentage: updateResult.data.rolloutPercentage,
+            },
+          })
+        } catch (auditError) {
+          // Fire-and-forget: Log audit failure but don't fail schedule processing
+          logger.error('Audit logging failed for schedule application', {
+            scheduleId: schedule.id,
+            flagKey: flag.flagKey,
+            error: auditError instanceof Error ? auditError.message : 'Unknown error',
+          })
+        }
 
         // AC6: Clear retry metadata on success (log differently if this was a retry)
         if (schedule.retryCount && schedule.retryCount > 0) {
@@ -260,13 +314,28 @@ export async function handler(event: ScheduledEvent) {
             error: errorMessage,
           })
         } else {
-          // Max retries exceeded (AC5)
+          // Max retries exceeded (AC5, WISH-20280)
           await scheduleRepo.updateRetryMetadata(
             schedule.id,
             currentRetryCount,
             null, // Clear next_retry_at
             errorMessage,
           )
+
+          // Audit logging for permanent failure after retries (WISH-20280)
+          try {
+            await auditLogger.logEvent('flag_schedule.failed', {
+              scheduleId: schedule.id,
+              flagKey: 'unknown',
+              errorMessage,
+              failedAt: new Date().toISOString(),
+            })
+          } catch (auditError) {
+            logger.error('Audit logging failed for schedule failure', {
+              scheduleId: schedule.id,
+              error: auditError instanceof Error ? auditError.message : 'Unknown error',
+            })
+          }
 
           logger.error('Schedule retry limit exceeded', {
             scheduleId: schedule.id,

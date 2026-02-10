@@ -9,11 +9,10 @@
 
 import { useState, useCallback } from 'react'
 import { z } from 'zod'
-import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { GalleryEmptyState, GallerySkeleton, FilterProvider } from '@repo/gallery'
 import { CustomButton } from '@repo/app-component-library'
-import { Package, Heart } from 'lucide-react'
+import { Package } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import {
   useGetWishlistQuery,
@@ -59,19 +58,7 @@ function CollectionPageContent() {
     setItemToDelete(item)
   }, [])
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!itemToDelete) return
-
-    try {
-      await removeFromWishlist(itemToDelete.id).unwrap()
-      toast.success('Item removed from collection')
-      setItemToDelete(null)
-    } catch (error) {
-      toast.error('Failed to remove item')
-    }
-  }, [itemToDelete, removeFromWishlist])
-
-  // Got It handler (for moving back to wishlist if needed)
+    // Got It handler (for moving back to wishlist if needed)
   const handleGotIt = useCallback((item: WishlistItem) => {
     setItemForGotIt(item)
   }, [])
@@ -110,14 +97,10 @@ function CollectionPageContent() {
           icon={Package}
           title="No sets in your collection yet"
           description="Items you mark as purchased will appear here"
-          action={
-            <Link to="/wishlist">
-              <CustomButton variant="default" size="lg">
-                <Heart className="mr-2 h-4 w-4" />
-                Browse your wishlist
-              </CustomButton>
-            </Link>
-          }
+          action={{
+            label: 'Browse your wishlist',
+            onClick: () => window.location.href = '/wishlist',
+          }}
         />
       </div>
     )
@@ -139,9 +122,17 @@ function CollectionPageContent() {
       {/* Modals */}
       <DeleteConfirmModal
         isOpen={!!itemToDelete}
-        itemTitle={itemToDelete?.title || ''}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setItemToDelete(null)}
+        item={itemToDelete}
+        onConfirm={async (item) => {
+          try {
+            await removeFromWishlist(item.id).unwrap()
+            toast.success('Item removed from collection')
+            setItemToDelete(null)
+          } catch (error) {
+            toast.error('Failed to remove item')
+          }
+        }}
+        onClose={() => setItemToDelete(null)}
       />
 
       <GotItModal

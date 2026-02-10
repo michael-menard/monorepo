@@ -7,8 +7,9 @@ current_phase: done
 last_successful_phase: review
 iteration: 0
 max_iterations: 3
-blocked: false
+blocked: true
+blocked_reason: "Pending E2E Playwright tests passing (flag-scheduling.feature)"
 forced: false
 warnings: []
 completed_at: "2026-02-08T18:12:00Z"
-e2e_gate: exempt
+e2e_gate: pending

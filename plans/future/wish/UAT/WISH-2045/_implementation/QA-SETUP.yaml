@@ -1,0 +1,68 @@
+schema: 1
+phase: qa-setup
+status: complete
+story_id: WISH-2045
+feature_dir: plans/future/wish
+timestamp: "2026-02-09T00:00:00Z"
+
+precondition_checks:
+  story_exists: true
+  story_location: "plans/future/wish/UAT/WISH-2045"
+  status_valid: true
+  evidence_file_exists: true
+  review_file_exists: true
+  code_review_passed: true
+  all_gates_passed: true
+
+story_movement:
+  from: "plans/future/wish/ready-for-qa/WISH-2045"
+  to: "plans/future/wish/UAT/WISH-2045"
+  moved_successfully: true
+
+phase_update:
+  previous_phase: review
+  current_phase: qa-setup
+  checkpoint_updated: true
+
+verification_sources:
+  evidence_file: "plans/future/wish/UAT/WISH-2045/_implementation/EVIDENCE.yaml"
+  review_file: "plans/future/wish/UAT/WISH-2045/_implementation/REVIEW.yaml"
+  knowledge_context_file: null
+
+evidence_summary:
+  version: 1
+  story_id: WISH-2045
+  ac_count: 16
+  ac_passing: 14
+  ac_missing: 2
+  missing_acs:
+    - ac_id: "AC15"
+      reason: "Deferred to WISH-20450 - E2E test coverage"
+    - ac_id: "AC16"
+      reason: "Deferred - post-implementation documentation task"
+
+review_summary:
+  verdict: PASS
+  iteration: 1
+  findings: 0
+  ranked_patches: 0
+  workers_passed: 6
+  workers:
+    - lint: PASS
+    - style: PASS
+    - syntax: PASS
+    - security: PASS
+    - typecheck: PASS
+    - build: PASS
+
+test_summary:
+  unit_tests: 116
+  integration_tests: 12
+  e2e_tests: 0
+  e2e_exempt_reason: "E2E tests deferred to WISH-20450"
+  coverage_lines: 100
+  coverage_branches: 95.07
+  all_tests_passed: true
+
+signal: SETUP COMPLETE
+next_phase: qa-verify

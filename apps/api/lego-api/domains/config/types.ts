@@ -216,6 +216,9 @@ export const ScheduleSchema = z.object({
   maxRetries: z.number().int().min(0).max(10).default(3),
   nextRetryAt: z.date().nullable(),
   lastError: z.string().nullable(),
+  createdBy: z.string().nullable(),
+  cancelledBy: z.string().nullable(),
+  cancelledAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -240,6 +243,9 @@ export const ScheduleResponseSchema = z.object({
   maxRetries: z.number().int().min(0).max(10).optional(),
   nextRetryAt: z.string().datetime().nullable().optional(),
   lastError: z.string().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+  cancelledBy: z.string().nullable().optional(),
+  cancelledAt: z.string().datetime().nullable().optional(),
   createdAt: z.string().datetime(),
 })
 

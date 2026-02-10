@@ -1,0 +1,161 @@
+schema: 1
+story_id: "SETS-MVP-0340"
+timestamp: "2026-02-09T22:00:00Z"
+
+steps:
+  - id: 1
+    name: "Create Zod schema"
+    description: "Create PurchaseDetailsFormSchema in GotItModal/__types__/index.ts with Zod validation for price fields (0.00-999999.99), date (no future dates), and build status"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/__types__/index.ts"
+    depends_on: []
+    tests: false
+    slice: frontend
+
+  - id: 2
+    name: "Refactor form to React Hook Form"
+    description: "Replace manual useState with useForm hook, add zodResolver, update onSubmit handler to use handleSubmit, replace validation logic with Zod schema validation"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    depends_on: [1]
+    tests: false
+    slice: frontend
+
+  - id: 3
+    name: "Update input fields with validation props"
+    description: "Update price/tax/shipping inputs to use register() with valueAsNumber option, add HTML5 validation attributes (type='number', min, max, step), add ARIA attributes (aria-invalid, aria-describedby), add error display with role='alert'"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    depends_on: [2]
+    tests: false
+    slice: frontend
+
+  - id: 4
+    name: "Add keyboard accessibility"
+    description: "Add form-level onKeyDown handler for Enter key submission, implement focus management on validation errors (setFocus to first error field), verify natural tab order, add error styling with focusRingClasses"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    depends_on: [3]
+    tests: false
+    slice: frontend
+
+  - id: 5
+    name: "Write validation tests"
+    description: "Create validation.test.tsx with tests for price range (0.00-999999.99), decimal precision (2 places max), date validation (no future dates), boundary tests, empty optional fields"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/validation.test.tsx"
+    depends_on: [4]
+    tests: true
+    slice: frontend
+
+  - id: 6
+    name: "Write keyboard accessibility tests"
+    description: "Create keyboard.test.tsx with tests for tab order, Enter key submission, Esc key modal close, focus management on error"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/keyboard.test.tsx"
+    depends_on: [4]
+    tests: true
+    slice: frontend
+
+  - id: 7
+    name: "Write ARIA accessibility tests"
+    description: "Create accessibility.test.tsx with tests for aria-invalid, aria-describedby, role='alert', error clearing, screen reader announcements"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/accessibility.test.tsx"
+    depends_on: [4]
+    tests: true
+    slice: frontend
+
+  - id: 8
+    name: "Update existing GotItModal tests"
+    description: "Update GotItModal.test.tsx to match new React Hook Form pattern, update validation test expectations to match Zod error messages, ensure all existing tests pass"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    depends_on: [5, 6, 7]
+    tests: true
+    slice: frontend
+
+  - id: 9
+    name: "Verify build and tests pass"
+    description: "Run pnpm build and pnpm test to ensure no regressions, verify TypeScript compilation, verify all tests pass, verify linting passes"
+    files: []
+    depends_on: [8]
+    tests: true
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/__types__/index.ts"
+    action: create
+    reason: "Create Zod schema for form validation (AC18, AC19, AC21) - new file per CLAUDE.md component structure"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    action: modify
+    reason: "Refactor from manual validation to React Hook Form + Zod (AC18, AC19, AC20, AC21)"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/validation.test.tsx"
+    action: create
+    reason: "Comprehensive validation tests for AC18, AC19, AC21"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/keyboard.test.tsx"
+    action: create
+    reason: "Keyboard accessibility tests for AC20"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/accessibility.test.tsx"
+    action: create
+    reason: "ARIA attribute tests for AC20"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    action: modify
+    reason: "Update existing tests to match new React Hook Form pattern"
+
+commands_to_run:
+  - command: "pnpm build --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery -- GotItModal"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC18"
+    planned_evidence: "Unit tests: validation.test.tsx (price range, decimal precision, boundary tests)"
+    evidence_type: test
+    steps: [1, 2, 3, 5]
+
+  - ac_id: "AC19"
+    planned_evidence: "Unit tests: validation.test.tsx (date validation, HTML5 max attribute, Zod fallback)"
+    evidence_type: test
+    steps: [1, 2, 3, 5]
+
+  - ac_id: "AC20"
+    planned_evidence: "Unit tests: keyboard.test.tsx (Enter key, tab order, focus management) + accessibility.test.tsx (ARIA attributes)"
+    evidence_type: test
+    steps: [4, 6, 7]
+
+  - ac_id: "AC21"
+    planned_evidence: "Unit tests: validation.test.tsx (valueAsNumber option, type consistency) + Type checks in build"
+    evidence_type: test
+    steps: [1, 3, 5, 9]
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Uses React Hook Form pattern from LoginPage.tsx and NewPasswordPage.tsx"
+  - "Reuses validation-messages.ts library (createEnhancedSchemas.price())"
+  - "Reuses focusRingClasses from utils/a11y.ts"
+  - "AC21 resolves type mismatch with valueAsNumber option (per DECISIONS.yaml)"
+  - "All packages already installed (react-hook-form v7.71.1, @hookform/resolvers v5.2.2)"
+  - "No architectural changes - isolated to GotItModal component"
+  - "Target coverage: 90% for validation logic, 45% global minimum"
+  - "Manual screen reader testing required before completion (NVDA/JAWS/VoiceOver)"

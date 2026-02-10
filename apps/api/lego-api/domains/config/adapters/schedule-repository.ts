@@ -43,6 +43,9 @@ export function createScheduleRepository(db: unknown, schema: unknown): Schedule
       maxRetries: (r.maxRetries as number) ?? 3,
       nextRetryAt: (r.nextRetryAt as Date | null) ?? null,
       lastError: (r.lastError as string | null) ?? null,
+      createdBy: (r.createdBy as string | null) ?? null,
+      cancelledBy: (r.cancelledBy as string | null) ?? null,
+      cancelledAt: (r.cancelledAt as Date | null) ?? null,
       createdAt: r.createdAt as Date,
       updatedAt: r.updatedAt as Date,
     }
@@ -66,6 +69,7 @@ export function createScheduleRepository(db: unknown, schema: unknown): Schedule
           .insert(schedules)
           .values({
             flagId: input.flagId,
+            createdBy: input.createdBy,
             scheduledAt: input.scheduledAt,
             status: 'pending',
             updates: input.updates,
@@ -237,7 +241,7 @@ export function createScheduleRepository(db: unknown, schema: unknown): Schedule
     /**
      * Cancel a schedule (AC4)
      */
-    async cancel(scheduleId) {
+    async cancel(scheduleId, cancelledBy) {
       try {
         // First check if schedule exists and get current status
         const existingRows = await typedDb
@@ -266,6 +270,8 @@ export function createScheduleRepository(db: unknown, schema: unknown): Schedule
           .update(schedules)
           .set({
             status: 'cancelled',
+            cancelledBy,
+            cancelledAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(schedules.id, scheduleId))

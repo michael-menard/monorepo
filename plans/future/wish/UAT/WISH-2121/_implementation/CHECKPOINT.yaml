@@ -1,0 +1,21 @@
+schema: 1
+story_id: "WISH-2121"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-09T22:00:00Z"
+
+current_phase: completion
+last_successful_phase: qa-verify
+iteration: 1
+max_iterations: 3
+blocked: false
+blocked_reason: null
+forced: false
+warnings:
+  - "Pre-existing TS errors in main-app (implicit any, missing @types/node) - not introduced by this story"
+moved_to_uat_at: "2026-02-09T19:30:00Z"
+e2e_gate: exempt
+
+qa_gate_decision: PASS
+qa_gate_timestamp: "2026-02-09T22:00:00Z"
+story_status_updated_to: uat
+index_updated: true

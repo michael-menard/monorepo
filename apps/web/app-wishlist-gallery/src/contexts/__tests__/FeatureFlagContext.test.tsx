@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { FeatureFlagProvider, useFeatureFlagContext, WishlistFlagKeys } from '../FeatureFlagContext'
 import { server } from '../../test/mocks/server'
-import { http, HttpResponse, delay } from 'msw'
+import { http, HttpResponse } from 'msw'
 import {
   setMockFeatureFlags,
   setFeatureFlagError,

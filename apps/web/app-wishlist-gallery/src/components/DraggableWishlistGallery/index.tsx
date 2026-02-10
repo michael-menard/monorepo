@@ -7,9 +7,11 @@
  * Story WISH-2005a: Drag-and-drop reordering with dnd-kit
  * Story WISH-2005b: Optimistic updates and undo flow
  * Story WISH-2006: Accessibility (keyboard navigation and shortcuts)
+ * Story SETS-MVP-0320: Exit animations for item removal
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from '@tanstack/react-router'
 import {
   DndContext,
@@ -672,23 +674,32 @@ export function DraggableWishlistGallery({
           {/* AC 20: role="list" for accessibility */}
           <div role="list" aria-label="Wishlist items">
             <GalleryGrid columns={{ sm: 1, md: 2, lg: 3, xl: 4 }} gap={6}>
-              {items.map((item, index) => (
-                <SortableWishlistCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  totalItems={items.length}
-                  onClick={() => onCardClick?.(item.id)}
-                  onGotIt={() => onGotIt?.(item)}
-                  onDelete={() => onDelete?.(item)}
-                  isDraggingEnabled={effectiveDraggingEnabled}
-                  tabIndex={getTabIndex(index)}
-                  isSelected={activeIndex === index}
-                  ref={(el: HTMLDivElement | null) => {
-                    itemRefs.current[index] = el
-                  }}
-                />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {items.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <SortableWishlistCard
+                      item={item}
+                      index={index}
+                      totalItems={items.length}
+                      onClick={() => onCardClick?.(item.id)}
+                      onGotIt={() => onGotIt?.(item)}
+                      onDelete={() => onDelete?.(item)}
+                      isDraggingEnabled={effectiveDraggingEnabled}
+                      tabIndex={getTabIndex(index)}
+                      isSelected={activeIndex === index}
+                      ref={(el: HTMLDivElement | null) => {
+                        itemRefs.current[index] = el
+                      }}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </GalleryGrid>
           </div>
         </SortableContext>

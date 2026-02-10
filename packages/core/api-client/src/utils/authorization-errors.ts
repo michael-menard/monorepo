@@ -1,10 +1,8 @@
-import { z } from 'zod'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import {
   type Feature,
   type QuotaType,
   type Tier,
-  type AuthorizationErrorCode,
   FeatureErrorResponseSchema,
   QuotaErrorResponseSchema,
   SuspendedErrorResponseSchema,

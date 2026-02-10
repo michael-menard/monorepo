@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'path'
+import react from '@vitejs/plugin-react-swc'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
@@ -12,7 +12,6 @@ export default defineConfig({
       '@/lib': resolve(__dirname, './src/lib'),
       '@/hooks': resolve(__dirname, './src/hooks'),
       '@/services': resolve(__dirname, './src/services'),
-      
       '@/types': resolve(__dirname, './src/types'),
       '@/routes': resolve(__dirname, './src/routes'),
       '@/pages': resolve(__dirname, './src/pages'),
@@ -28,18 +27,26 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
-        'src/test/',
+        'src/test/**/__tests__/**',
+        'src/test/setup.ts',
         '**/*.d.ts',
         '**/*.config.*',
         'dist/',
       ],
+      thresholds: {
+        'src/test/utils/**/*.ts': {
+          lines: 80,
+          functions: 80,
+          branches: 80,
+          statements: 80,
+        },
+      },
     },
     // Mock environment variables
     env: {
       VITE_APP_NAME: 'App Wishlist Gallery',
       VITE_APP_VERSION: '1.0.0',
       VITE_APP_ENVIRONMENT: 'test',
-      
       VITE_SERVERLESS_API_BASE_URL: 'http://localhost:3001',
       VITE_ENABLE_DEVTOOLS: 'false',
       VITE_ENABLE_PERFORMANCE_MONITORING: 'false',

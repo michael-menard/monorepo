@@ -26,9 +26,9 @@ vi.mock('@repo/logger', () => ({
 
 describe('draftPersistenceMiddleware', () => {
   let store: ReturnType<typeof configureStore>
-  let localStorageSetItemSpy: ReturnType<typeof vi.spyOn>
-  let localStorageGetItemSpy: ReturnType<typeof vi.spyOn>
-  let localStorageRemoveItemSpy: ReturnType<typeof vi.spyOn>
+  let localStorageSetItemSpy: ReturnType<typeof vi.spyOn<Storage, 'setItem'>>
+  let localStorageGetItemSpy: ReturnType<typeof vi.spyOn<Storage, 'getItem'>>
+  let localStorageRemoveItemSpy: ReturnType<typeof vi.spyOn<Storage, 'removeItem'>>
 
   beforeEach(() => {
     // Use fake timers for debounce testing
@@ -79,7 +79,7 @@ describe('draftPersistenceMiddleware', () => {
       )
 
       // Verify the data written
-      const writtenData = JSON.parse(localStorageSetItemSpy.mock.calls[0][1])
+      const writtenData = JSON.parse(localStorageSetItemSpy.mock.calls[0][1] as string)
       expect(writtenData.formData.title).toBe('LEGO Star Wars')
       expect(writtenData.timestamp).toBeTypeOf('number')
     })
@@ -104,7 +104,7 @@ describe('draftPersistenceMiddleware', () => {
       // Should only write once with the latest value
       expect(localStorageSetItemSpy).toHaveBeenCalledTimes(1)
 
-      const writtenData = JSON.parse(localStorageSetItemSpy.mock.calls[0][1])
+      const writtenData = JSON.parse(localStorageSetItemSpy.mock.calls[0][1] as string)
       expect(writtenData.formData.title).toBe('Test 3')
     })
   })
@@ -363,7 +363,7 @@ describe('draftPersistenceMiddleware', () => {
 
       expect(localStorageSetItemSpy).toHaveBeenCalledTimes(1)
 
-      const writtenData = JSON.parse(localStorageSetItemSpy.mock.calls[0][1])
+      const writtenData = JSON.parse(localStorageSetItemSpy.mock.calls[0][1] as string)
       expect(writtenData.formData).toEqual({
         title: 'Millennium Falcon',
         store: 'BrickLink',

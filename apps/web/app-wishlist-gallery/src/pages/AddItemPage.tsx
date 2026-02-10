@@ -14,6 +14,7 @@ import { useNavigate, Link as RouterLink } from '@tanstack/react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { ChevronLeft, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 import { Button, showSuccessToast, cn } from '@repo/app-component-library'
 import { useAddWishlistItemMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
@@ -40,13 +41,12 @@ const FORM_RECOVERY_KEY = 'wishlist:form:recovery'
 /**
  * WISH-2032: Error toast with retry action button
  */
-import { z } from 'zod'
 
 const ErrorToastWithRetryPropsSchema = z.object({
   title: z.string(),
   description: z.string(),
-  onRetry: z.function(),
-  onClose: z.function(),
+  onRetry: z.function(z.tuple([]), z.void()),
+  onClose: z.function(z.tuple([]), z.void()),
 })
 
 type ErrorToastWithRetryProps = z.infer<typeof ErrorToastWithRetryPropsSchema>
@@ -280,7 +280,7 @@ export function AddItemPage() {
       </div>
 
       {/* WISH-2015: Resume draft banner */}
-      {showBanner && (
+      {showBanner === true && (
         <ResumeDraftBanner
           timestamp={draft.timestamp}
           onResume={handleResumeDraft}

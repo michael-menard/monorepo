@@ -88,7 +88,10 @@ export const wishlistDraftSlice = createSlice({
      * Update a single form field
      * Triggered on every field change to enable autosave
      */
-    updateDraftField: (state, action: PayloadAction<{ field: keyof DraftFormData; value: any }>) => {
+    updateDraftField: (
+      state,
+      action: PayloadAction<{ field: keyof DraftFormData; value: any }>,
+    ) => {
       const { field, value } = action.payload
       // @ts-expect-error - Dynamic field assignment
       state.formData[field] = value

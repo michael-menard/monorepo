@@ -1,0 +1,26 @@
+Read: .claude/agents/pm-story-risk-predictor.agent.md
+
+STORY CONTEXT:
+Story ID: SETS-MVP-0330
+Story prefix: SETS-MVP
+Epic: wish
+Story seed path: /Users/michaelmenard/Development/monorepo/plans/future/wish/backlog/SETS-MVP-0330/_pm/STORY-SEED.md
+Output: predictions YAML section (return inline for merge)
+
+ADVISORY MODE:
+- Never block story generation
+- Degrade gracefully if KB or WKFL-006 unavailable
+- Return fallback predictions on any error
+
+Story characteristics:
+- AC count: 20 (from seed)
+- Estimated points: 1
+- Complexity: Medium (undo mechanism, toast integration, new endpoint)
+- Dependencies: SETS-MVP-0310 (UAT)
+- Touches: Frontend (GotItModal), Backend (new endpoint), Database (status update)
+
+Predict:
+- Split risk
+- Review cycles
+- Token estimates
+- QA gate pass probability

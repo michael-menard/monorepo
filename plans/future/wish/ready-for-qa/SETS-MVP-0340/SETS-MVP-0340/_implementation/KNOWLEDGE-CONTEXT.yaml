@@ -1,0 +1,144 @@
+schema: 1
+story_id: "SETS-MVP-0340"
+timestamp: "2026-02-09T22:00:00Z"
+
+# Knowledge context loaded for planning phase
+
+adrs:
+  - id: ADR-001
+    title: "API Path Schema"
+    constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}. Not applicable for this story (frontend-only refactoring)."
+
+  - id: ADR-005
+    title: "Testing Strategy"
+    constraint: "UAT must use real services. E2E tests required in dev phase."
+
+  - id: ADR-006
+    title: "E2E Tests Required in Dev Phase"
+    constraint: "Minimum one happy-path E2E test per story during dev implementation."
+
+lessons_learned:
+  - story_id: "SETS-MVP-0310"
+    lesson: "GotItModal already exists with basic price validation using isValidPrice() regex function"
+    category: reuse
+    applies_because: "Story enhances the GotItModal component with React Hook Form + Zod validation"
+
+  - story_id: "SETS-MVP-0310"
+    lesson: "HTML5 date input has max attribute set to getTodayDateString() to prevent future dates"
+    category: reuse
+    applies_because: "Story adds Zod validation as fallback layer for date validation"
+
+patterns_to_follow:
+  - pattern: "React Hook Form + Zod Pattern"
+    location: "apps/web/main-app/src/routes/pages/LoginPage.tsx:121-134"
+    description: "Use useForm hook with zodResolver, mode: 'onChange', register() for inputs, handleSubmit() for form submission"
+    example: |
+      const {
+        register,
+        handleSubmit,
+        formState: { errors },
+      } = useForm<FormData>({
+        resolver: zodResolver(FormSchema),
+        mode: 'onChange',
+        defaultValues: {...}
+      })
+
+  - pattern: "Enhanced Zod Schemas from validation-messages.ts"
+    location: "packages/core/app-component-library/src/forms/validation-messages.ts:119-124"
+    description: "Use createEnhancedSchemas.price() for price fields (0-999999.99 range with proper error messages)"
+    example: |
+      createEnhancedSchemas.price('Price Paid')
+      // Returns z.number().positive().max(999999.99).optional()
+
+  - pattern: "ARIA Attributes for Form Errors"
+    location: "packages/core/app-component-library/src/forms/validation-messages.ts"
+    description: "Use aria-invalid, aria-describedby, and role='alert' for error messages"
+
+patterns_to_avoid:
+  - pattern: "Manual validation with useState"
+    reason: "Current GotItModal uses isValidPrice() regex + manual error state management - replace with React Hook Form + Zod"
+
+  - pattern: "Barrel Files"
+    reason: "CLAUDE.md prohibition - import directly from source files"
+
+  - pattern: "TypeScript Interfaces"
+    reason: "CLAUDE.md requirement - always use Zod schemas with z.infer<>"
+
+  - pattern: "Console Logging"
+    reason: "CLAUDE.md requirement - use @repo/logger instead"
+
+reusable_components:
+  - component: "validation-messages.ts"
+    location: "packages/core/app-component-library/src/forms/validation-messages.ts"
+    capabilities:
+      - "createEnhancedSchemas.price() - validates 0-999999.99 range"
+      - "validationMessages.date.past() - error message for past date validation"
+      - "validationMessages.number.* - number validation messages"
+
+  - component: "React Hook Form"
+    location: "app-wishlist-gallery package.json"
+    version: "v7.71.1"
+    capabilities:
+      - "useForm hook with zodResolver integration"
+      - "register() for input fields with valueAsNumber option"
+      - "handleSubmit() for form submission"
+      - "setFocus() for focus management on errors"
+
+  - component: "@hookform/resolvers/zod"
+    location: "app-wishlist-gallery package.json"
+    version: "v5.2.2"
+    capabilities:
+      - "zodResolver for React Hook Form integration"
+
+infrastructure_status:
+  react_hook_form:
+    status: "ready"
+    version: "v7.71.1"
+    installed_in: "app-wishlist-gallery"
+
+  hookform_resolvers:
+    status: "ready"
+    version: "v5.2.2"
+    installed_in: "app-wishlist-gallery"
+
+  validation_library:
+    status: "ready"
+    location: "@repo/app-component-library/forms/validation-messages.ts"
+    supports_price_validation: true
+    supports_date_validation: true
+
+  zod:
+    status: "ready"
+    version: "v3.25.76"
+
+dependencies_validated:
+  - story_id: "SETS-MVP-0310"
+    title: "Status Update Flow"
+    status: "UAT"
+    integration_points:
+      - "GotItModal exists at apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+      - "Basic price validation using isValidPrice() regex (line 40-43)"
+      - "Date input with HTML5 max attribute (getTodayDateString())"
+      - "Manual form state management with useState (lines 68-73)"
+      - "Manual validation error state (line 76)"
+
+technical_risks:
+  - risk: "valueAsNumber conversion for price fields"
+    severity: "medium"
+    mitigation: "AC21 explicitly requires using React Hook Form valueAsNumber option for number input fields"
+
+  - risk: "Decimal precision handling (99.999 vs 99.99)"
+    severity: "low"
+    mitigation: "HTML5 step='0.01' + Zod validation work together to enforce 2 decimal places"
+
+  - risk: "Screen reader compatibility for ARIA attributes"
+    severity: "low"
+    mitigation: "Manual testing with NVDA/JAWS/VoiceOver in QA phase"
+
+notes:
+  - "All required infrastructure exists - React Hook Form, Zod, validation library"
+  - "LoginPage.tsx provides working pattern for React Hook Form + Zod integration"
+  - "validation-messages.ts already has createEnhancedSchemas.price() for 0-999999.99 range"
+  - "GotItModal already has basic validation - refactor to React Hook Form + Zod"
+  - "AC21 added by autonomous elaboration to resolve valueAsNumber type conversion issue"
+  - "Story is frontend-only refactoring - no backend or API changes"

@@ -1,0 +1,26 @@
+# Deferred KB writes for SETS-MVP-0330
+# Story generation phase - KB persistence not critical path
+
+story_record:
+  story_id: SETS-MVP-0330
+  feature: wish
+  title: "Undo Support for Purchase Actions"
+  story_dir: plans/future/wish/backlog/SETS-MVP-0330
+  story_file: plans/future/wish/backlog/SETS-MVP-0330/SETS-MVP-0330.md
+  story_type: feature
+  points: 1
+  priority: medium
+  state: backlog
+  touches_backend: true
+  touches_frontend: true
+  touches_database: false  # No schema changes
+  touches_infra: false
+  experiment_variant: control
+  ac_count: 22
+  estimated_hours: 5-7
+  dependencies:
+    - SETS-MVP-0310
+  created_at: "2026-02-09T00:00:00Z"
+
+reason: "KB write deferred - story generation completed successfully without KB dependency"
+retry_after: "2026-02-10T00:00:00Z"

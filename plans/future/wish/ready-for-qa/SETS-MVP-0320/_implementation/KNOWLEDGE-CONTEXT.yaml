@@ -1,0 +1,144 @@
+schema: 1
+story_id: "SETS-MVP-0320"
+timestamp: "2026-02-09T21:30:00Z"
+
+# Knowledge context loaded for planning phase
+
+adrs:
+  - id: ADR-001
+    title: "API Path Schema"
+    constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}. Already handled by API client."
+
+  - id: ADR-005
+    title: "Testing Strategy"
+    constraint: "UAT must use real services. E2E tests required in dev phase."
+
+  - id: ADR-006
+    title: "E2E Tests Required in Dev Phase"
+    constraint: "Minimum one happy-path E2E test per story during dev implementation."
+
+lessons_learned: []
+
+patterns_to_follow:
+  - pattern: "Toast Action Button"
+    location: "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/index.tsx:114-123"
+    description: "Use toast.success() with action prop containing label and onClick"
+    example: |
+      toast.success(`Marked as ${config.label}`, {
+        description: itemTitle,
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => { /* action */ }
+        }
+      })
+
+  - pattern: "Framer Motion Exit Animation"
+    location: "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/index.tsx:172-185"
+    description: "Use AnimatePresence with exit animation and reduced motion support"
+    example: |
+      <AnimatePresence mode="wait">
+        <motion.div
+          exit={{ scale: 0, opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {content}
+        </motion.div>
+      </AnimatePresence>
+
+  - pattern: "TanStack Router Navigation"
+    location: "apps/web/app-wishlist-gallery/src/pages/main-page.tsx:16"
+    description: "Use useNavigate() hook for programmatic navigation"
+    example: |
+      const navigate = useNavigate()
+      navigate({ to: '/collection' })
+
+patterns_to_avoid:
+  - pattern: "Barrel Files"
+    reason: "CLAUDE.md prohibition - import directly from source files"
+
+  - pattern: "TypeScript Interfaces"
+    reason: "CLAUDE.md requirement - always use Zod schemas with z.infer<>"
+
+  - pattern: "Console Logging"
+    reason: "CLAUDE.md requirement - use @repo/logger instead"
+
+reusable_components:
+  - component: "useToast"
+    location: "@repo/app-component-library/src/hooks/useToast.ts"
+    capabilities:
+      - "success/error/warning/info methods"
+      - "Supports action buttons (Sonner v2.0.7)"
+      - "Default 5000ms duration"
+
+  - component: "CustomToast"
+    location: "@repo/app-component-library/src/notifications/toast-utils.tsx"
+    capabilities:
+      - "Title/description/duration support"
+      - "Progress bar with hover pause"
+      - "Icons for different toast types"
+
+  - component: "useNavigate"
+    location: "@tanstack/react-router"
+    capabilities:
+      - "Programmatic navigation"
+      - "Type-safe route parameters"
+
+infrastructure_status:
+  toast_system:
+    status: "ready"
+    version: "Sonner v2.0.7"
+    supports_actions: true
+
+  navigation:
+    status: "ready"
+    router: "TanStack Router"
+    collection_route: "/collection"
+    route_exists: true
+
+  animation:
+    status: "ready"
+    library: "Framer Motion v12.23.24"
+    pattern: "AnimatePresence with exit prop"
+
+  purchase_flow:
+    status: "ready"
+    component: "GotItModal"
+    location: "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+    mutation: "useUpdateItemPurchaseMutation"
+
+dependencies_validated:
+  - story_id: "SETS-MVP-0310"
+    title: "Status Update Flow"
+    status: "ready-for-qa"
+    integration_points:
+      - "GotItModal exists with basic success toast (line 177-182)"
+      - "Purchase mutation implemented and working"
+      - "onSuccess callback available for item removal trigger"
+
+  - story_id: "SETS-MVP-002"
+    title: "Collection View"
+    status: "UAT"
+    integration_points:
+      - "CollectionPage exists at /collection route"
+      - "Route configured and accessible"
+
+technical_risks:
+  - risk: "Item removal timing coordination with toast display"
+    severity: "low"
+    mitigation: "Use RTK Query cache invalidation after mutation success"
+
+  - risk: "Animation compatibility with drag-and-drop"
+    severity: "low"
+    mitigation: "AnimatePresence should be compatible with dnd-kit"
+
+  - risk: "Navigation error handling"
+    severity: "low"
+    mitigation: "Wrap navigate() in try-catch, show error toast on failure"
+
+notes:
+  - "All required infrastructure exists - minimal new code required"
+  - "Toast action button pattern already used in BuildStatusToggle"
+  - "Collection route confirmed working (SETS-MVP-002 in UAT)"
+  - "RTK Query provides built-in cache invalidation for list updates"
+  - "Framer Motion AnimatePresence pattern exists in multiple components"

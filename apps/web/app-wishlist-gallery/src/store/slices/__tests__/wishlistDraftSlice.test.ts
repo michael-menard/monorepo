@@ -17,7 +17,12 @@ import {
   selectIsDraftRestored,
   selectHasDraft,
   type DraftFormData,
+  type DraftState,
 } from '../wishlistDraftSlice'
+
+type RootState = {
+  wishlistDraft: DraftState
+}
 
 describe('wishlistDraftSlice', () => {
   let store: ReturnType<typeof configureStore>
@@ -32,7 +37,7 @@ describe('wishlistDraftSlice', () => {
 
   describe('initial state', () => {
     it('has empty form data', () => {
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectDraftFormData(state)).toEqual({
         title: '',
         store: '',
@@ -49,17 +54,17 @@ describe('wishlistDraftSlice', () => {
     })
 
     it('has null timestamp', () => {
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectDraft(state).timestamp).toBeNull()
     })
 
     it('is not restored', () => {
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectIsDraftRestored(state)).toBe(false)
     })
 
     it('has no draft', () => {
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectHasDraft(state)).toBe(false)
     })
   })
@@ -67,7 +72,7 @@ describe('wishlistDraftSlice', () => {
   describe('updateDraftField', () => {
     it('updates a single field', () => {
       store.dispatch(updateDraftField({ field: 'title', value: 'LEGO Star Wars' }))
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectDraftFormData(state).title).toBe('LEGO Star Wars')
     })
 
@@ -76,7 +81,7 @@ describe('wishlistDraftSlice', () => {
       store.dispatch(updateDraftField({ field: 'title', value: 'Test' }))
       const after = Date.now()
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       const timestamp = selectDraft(state).timestamp
       expect(timestamp).toBeGreaterThanOrEqual(before)
       expect(timestamp).toBeLessThanOrEqual(after)
@@ -87,7 +92,7 @@ describe('wishlistDraftSlice', () => {
       store.dispatch(updateDraftField({ field: 'store', value: 'BrickLink' }))
       store.dispatch(updateDraftField({ field: 'price', value: '99.99' }))
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       const formData = selectDraftFormData(state)
       expect(formData.title).toBe('Test Title')
       expect(formData.store).toBe('BrickLink')
@@ -97,7 +102,7 @@ describe('wishlistDraftSlice', () => {
     it('updates array fields', () => {
       store.dispatch(updateDraftField({ field: 'tags', value: ['star-wars', 'ucs'] }))
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectDraftFormData(state).tags).toEqual(['star-wars', 'ucs'])
     })
 
@@ -105,7 +110,7 @@ describe('wishlistDraftSlice', () => {
       store.dispatch(updateDraftField({ field: 'pieceCount', value: 7541 }))
       store.dispatch(updateDraftField({ field: 'priority', value: 5 }))
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       const formData = selectDraftFormData(state)
       expect(formData.pieceCount).toBe(7541)
       expect(formData.priority).toBe(5)
@@ -130,7 +135,7 @@ describe('wishlistDraftSlice', () => {
 
       store.dispatch(setDraft(draftData))
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       expect(selectDraftFormData(state)).toEqual(draftData)
     })
 
@@ -146,7 +151,7 @@ describe('wishlistDraftSlice', () => {
       store.dispatch(setDraft(draftData))
       const after = Date.now()
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       const timestamp = selectDraft(state).timestamp
       expect(timestamp).toBeGreaterThanOrEqual(before)
       expect(timestamp).toBeLessThanOrEqual(after)
@@ -163,7 +168,7 @@ describe('wishlistDraftSlice', () => {
       // Clear it
       store.dispatch(clearDraft())
 
-      const state = store.getState()
+      const state = store.getState() as RootState
       const formData = selectDraftFormData(state)
       expect(formData.title).toBe('')
       expect(formData.store).toBe('')
@@ -172,62 +177,62 @@ describe('wishlistDraftSlice', () => {
 
     it('resets timestamp to null', () => {
       store.dispatch(updateDraftField({ field: 'title', value: 'Test' }))
-      expect(selectDraft(store.getState()).timestamp).not.toBeNull()
+      expect(selectDraft(store.getState() as RootState).timestamp).not.toBeNull()
 
       store.dispatch(clearDraft())
-      expect(selectDraft(store.getState()).timestamp).toBeNull()
+      expect(selectDraft(store.getState() as RootState).timestamp).toBeNull()
     })
 
     it('resets isRestored flag', () => {
       store.dispatch(setDraftRestored(true))
-      expect(selectIsDraftRestored(store.getState())).toBe(true)
+      expect(selectIsDraftRestored(store.getState() as RootState)).toBe(true)
 
       store.dispatch(clearDraft())
-      expect(selectIsDraftRestored(store.getState())).toBe(false)
+      expect(selectIsDraftRestored(store.getState() as RootState)).toBe(false)
     })
   })
 
   describe('setDraftRestored', () => {
     it('sets isRestored to true', () => {
       store.dispatch(setDraftRestored(true))
-      expect(selectIsDraftRestored(store.getState())).toBe(true)
+      expect(selectIsDraftRestored(store.getState() as RootState)).toBe(true)
     })
 
     it('sets isRestored to false', () => {
       store.dispatch(setDraftRestored(true))
       store.dispatch(setDraftRestored(false))
-      expect(selectIsDraftRestored(store.getState())).toBe(false)
+      expect(selectIsDraftRestored(store.getState() as RootState)).toBe(false)
     })
   })
 
   describe('selectHasDraft', () => {
     it('returns false for empty draft', () => {
-      expect(selectHasDraft(store.getState())).toBe(false)
+      expect(selectHasDraft(store.getState() as RootState)).toBe(false)
     })
 
     it('returns true when title is set', () => {
       store.dispatch(updateDraftField({ field: 'title', value: 'Test' }))
-      expect(selectHasDraft(store.getState())).toBe(true)
+      expect(selectHasDraft(store.getState() as RootState)).toBe(true)
     })
 
     it('returns false when store is default LEGO', () => {
       store.dispatch(updateDraftField({ field: 'store', value: 'LEGO' }))
-      expect(selectHasDraft(store.getState())).toBe(false)
+      expect(selectHasDraft(store.getState() as RootState)).toBe(false)
     })
 
     it('returns true when store is non-default', () => {
       store.dispatch(updateDraftField({ field: 'store', value: 'BrickLink' }))
-      expect(selectHasDraft(store.getState())).toBe(true)
+      expect(selectHasDraft(store.getState() as RootState)).toBe(true)
     })
 
     it('returns true when priority > 0', () => {
       store.dispatch(updateDraftField({ field: 'priority', value: 1 }))
-      expect(selectHasDraft(store.getState())).toBe(true)
+      expect(selectHasDraft(store.getState() as RootState)).toBe(true)
     })
 
     it('returns true when tags are set', () => {
       store.dispatch(updateDraftField({ field: 'tags', value: ['test'] }))
-      expect(selectHasDraft(store.getState())).toBe(true)
+      expect(selectHasDraft(store.getState() as RootState)).toBe(true)
     })
 
     it('returns true for any non-empty optional field', () => {

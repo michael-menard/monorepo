@@ -1,0 +1,135 @@
+schema: 1
+story_id: "WISH-20280"
+timestamp: "2026-02-09T23:30:00Z"
+
+lessons:
+  - id: "L-WISH-2119-001"
+    title: "Schedule service hexagonal architecture pattern"
+    summary: "Schedule service exists in config domain with clear separation between service (business logic), repository (adapters), and routes (ports). Follows same pattern as feature flags."
+    applies_to:
+      - "Audit logging should integrate at service layer"
+      - "Audit logger injected as port dependency"
+    confidence: high
+
+  - id: "L-WISH-2119-002"
+    title: "Schedule database schema with admin tracking"
+    summary: "feature_flag_schedules table exists with retry mechanism (WISH-20260). Need to add created_by, cancelled_by, cancelled_at columns."
+    applies_to:
+      - "Migration will extend existing table (not create new)"
+      - "All admin tracking columns must be nullable for backward compatibility"
+    confidence: high
+
+  - id: "L-ADMIN-001"
+    title: "Admin domain audit logging pattern"
+    summary: "Admin domain uses AuditLogRepository interface for database-backed audit logging. Fire-and-forget pattern - audit failures don't block operations."
+    applies_to:
+      - "Create lightweight CloudWatch-only audit logger (no database persistence in MVP)"
+      - "Follow similar interface pattern but adapted for schedule events"
+    confidence: high
+
+  - id: "L-ADMIN-002"
+    title: "Admin context extraction from JWT"
+    summary: "auth middleware extracts AuthUser with userId, email, username, groups from JWT. adminAuth middleware verifies admin group membership."
+    applies_to:
+      - "Routes extract userId and email from c.get('user')"
+      - "Pass admin context to service layer for audit logging and database persistence"
+    confidence: high
+
+  - id: "L-WISH-2009-001"
+    title: "Zod-first type definitions"
+    summary: "All types derived from Zod schemas with z.infer<>. Backend types in domains/config/types.ts, shared types exported from packages/core/api-client"
+    applies_to:
+      - "Extend schedule schemas with admin tracking fields"
+      - "Export to api-client for frontend alignment"
+    confidence: high
+
+  - id: "L-DB-MIGRATION-001"
+    title: "Migration file naming"
+    summary: "Migrations follow pattern: 0000_adjective_character.sql in packages/backend/database-schema/src/migrations/app/"
+    applies_to:
+      - "Next migration will be 0013_*.sql (0011 and 0012 exist)"
+      - "Include all schema changes with ALTER TABLE statements"
+    confidence: high
+
+adrs:
+  - id: "ADR-CONFIG-001"
+    title: "Hexagonal architecture for config domain"
+    decision: "Use ports & adapters pattern to separate business logic from infrastructure"
+    rationale: "Enables testability and flexibility to change adapters"
+    status: accepted
+    relevant_to:
+      - "Audit logger as port injected into schedule service"
+
+  - id: "ADR-AUTH-001"
+    title: "Admin auth middleware pattern"
+    decision: "Use auth + adminAuth middleware chain for admin endpoints"
+    rationale: "Separates authentication from authorization"
+    status: accepted
+    relevant_to:
+      - "All schedule endpoints already use adminAuth"
+      - "Extract admin user from c.get('user') in routes"
+
+domain_notes:
+  - "Config domain exists at apps/api/lego-api/domains/config/"
+  - "Schedule service and repository already exist from WISH-2119"
+  - "Routes are mounted: admin at /admin/flags/:flagKey/schedule"
+  - "Cron job exists at apps/api/lego-api/jobs/process-flag-schedules.ts"
+  - "AuthUser interface has userId, email, username, groups fields"
+  - "No core/audit/ directory exists yet - need to create"
+
+risks:
+  - risk: "Audit logger port interface not defined"
+    mitigation: "Create AuditLoggerPort interface in core/audit/ports.ts before implementation"
+    severity: medium
+
+  - risk: "Audit logging errors could block schedule operations"
+    mitigation: "Use fire-and-forget pattern with try-catch around audit calls"
+    severity: medium
+
+  - risk: "Database columns might conflict with existing data"
+    mitigation: "All admin tracking columns MUST be nullable for backward compatibility"
+    severity: low
+
+  - risk: "CloudWatch structured logging not consistent"
+    mitigation: "Use @repo/logger for all audit events with consistent metadata structure"
+    severity: low
+
+existing_infrastructure:
+  - location: "apps/api/lego-api/domains/config/"
+    components:
+      - "application/schedule-service.ts - Service layer for schedule CRUD"
+      - "adapters/schedule-repository.ts - Database adapter for schedules"
+      - "routes.ts - Admin endpoints for schedules (POST/GET/DELETE)"
+      - "types.ts - Schedule Zod schemas"
+
+  - location: "apps/api/lego-api/jobs/"
+    components:
+      - "process-flag-schedules.ts - Cron job for automatic schedule processing"
+
+  - location: "packages/backend/database-schema/"
+    components:
+      - "src/schema/feature-flags.ts - featureFlagSchedules table schema"
+      - "src/migrations/app/ - Migration files (0011, 0012 exist)"
+
+  - location: "apps/api/lego-api/middleware/"
+    components:
+      - "auth.ts - Authentication middleware with admin check"
+
+new_components_needed:
+  - location: "apps/api/lego-api/core/audit/"
+    components:
+      - "audit-logger.ts - CloudWatch-only audit logger for schedule events"
+      - "types.ts - Audit event type definitions and Zod schemas"
+      - "ports.ts - AuditLoggerPort interface"
+      - "__tests__/audit-logger.test.ts - Unit tests"
+
+token_optimization:
+  high_cost_operations:
+    - operation: "Reading full schedule service/repository files"
+      typical_tokens: 3000
+      mitigation: "Read only necessary sections during implementation"
+
+  recommended_patterns:
+    - "Targeted file reads for existing schedule patterns"
+    - "Batch related changes (service + repository + routes)"
+    - "Use existing WISH-2119 knowledge context as reference"

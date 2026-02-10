@@ -1,0 +1,82 @@
+schema: 1
+story_id: WISH-20290
+timestamp: 2026-02-09T19:00:00Z
+
+context_summary: |
+  Configuration-only story to add Vitest coverage threshold enforcement (80%) for test utilities.
+  Parent story WISH-2120 established test utility helpers with 100% coverage that needs protection.
+  Uses existing Vitest 3.0.5 infrastructure with v8 coverage provider already installed.
+
+relevant_patterns:
+  - pattern: vitest_coverage_configuration
+    source: apps/web/app-wishlist-gallery/vitest.config.ts
+    description: |
+      Existing Vitest config uses v8 coverage provider with text/json/html reporters.
+      Currently excludes node_modules, src/test/, *.d.ts, *.config.*, and dist/.
+      No per-directory thresholds currently defined - this story adds them.
+
+  - pattern: per_directory_coverage_thresholds
+    source: vitest_documentation
+    description: |
+      Vitest supports glob-based per-directory coverage thresholds in coverage.thresholds object.
+      Syntax: 'path/pattern/**/*.ts': { lines: 80, functions: 80, branches: 80, statements: 80 }
+      Thresholds apply only to matching files and do not affect global coverage.
+
+  - pattern: test_utilities_location
+    source: apps/web/app-wishlist-gallery/src/test/utils/
+    description: |
+      Test utilities established in WISH-2120: createMockFile.ts, mockS3Upload.ts, index.ts
+      Currently have 100% coverage from 34 passing tests in __tests__/ subdirectory.
+      These are critical infrastructure used across multiple test files.
+
+  - pattern: two_tier_coverage_strategy
+    source: CLAUDE.md
+    description: |
+      Project uses 45% global coverage threshold per quality gates.
+      This story establishes higher 80% threshold for test infrastructure only.
+      Allows flexible global coverage while enforcing quality on critical paths.
+
+relevant_adrs: []
+
+relevant_lessons:
+  - lesson: test_utility_coverage_importance
+    source: WISH-2120
+    summary: |
+      Test utilities achieved 100% coverage during implementation. Without enforcement,
+      future modifications could reduce coverage accidentally. Per-directory thresholds
+      prevent regression without impacting global coverage flexibility.
+
+  - lesson: vitest_coverage_commands
+    source: package.json_scripts
+    summary: |
+      Existing test:coverage script works with per-directory thresholds without modification.
+      Command: pnpm vitest run --coverage or pnpm test:coverage
+      Coverage reports generated in coverage/index.html for HTML viewing.
+
+domain_specific_notes:
+  - domain: test_infrastructure
+    note: |
+      This is infrastructure-only change with no production code impact.
+      Validation focuses on configuration accuracy and CI enforcement.
+
+  - domain: vitest_configuration
+    note: |
+      Vitest 3.0.5 with v8 provider supports all required features.
+      Per-directory thresholds use glob patterns matching files under coverage.thresholds.
+      Error messages automatically include violated thresholds and file paths.
+
+tech_stack_notes:
+  - component: vitest
+    version: "3.0.5"
+    note: Fully supports per-directory coverage thresholds with glob patterns
+
+  - component: "@vitest/coverage-v8"
+    version: "3.0.5"
+    note: Already installed and configured as coverage provider
+
+  - component: pnpm
+    note: Monorepo package manager - use pnpm --filter app-wishlist-gallery for scoped commands
+
+warnings: []
+
+confidence: high

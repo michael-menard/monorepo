@@ -191,6 +191,9 @@ export const ScheduleResponseSchema = z.object({
   }),
   appliedAt: z.string().datetime().nullable(),
   errorMessage: z.string().nullable(),
+  createdBy: z.string().nullable().optional(),
+  cancelledBy: z.string().nullable().optional(),
+  cancelledAt: z.string().datetime().nullable().optional(),
   createdAt: z.string().datetime(),
 })
 

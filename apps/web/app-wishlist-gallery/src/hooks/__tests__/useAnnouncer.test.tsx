@@ -4,7 +4,7 @@
  * Story WISH-2006: Accessibility
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useAnnouncer, Announcer } from '../useAnnouncer'

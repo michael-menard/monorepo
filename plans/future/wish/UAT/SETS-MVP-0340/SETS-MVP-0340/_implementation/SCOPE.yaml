@@ -1,0 +1,26 @@
+schema: 1
+story_id: "SETS-MVP-0340"
+timestamp: "2026-02-09T21:35:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/**"
+  - "packages/core/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: false
+
+summary: "Add Zod-based form validation and keyboard accessibility to GotItModal purchase form"

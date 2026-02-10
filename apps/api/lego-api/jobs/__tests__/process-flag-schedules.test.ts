@@ -63,6 +63,14 @@ vi.mock('../../domains/config/adapters/cache.js', () => ({
   createInMemoryCache: vi.fn(() => mockCache),
 }))
 
+const mockAuditLogger = {
+  logEvent: vi.fn().mockResolvedValue({ ok: true, data: undefined }),
+}
+
+vi.mock('../../core/audit/audit-logger.js', () => ({
+  createAuditLogger: vi.fn(() => mockAuditLogger),
+}))
+
 /**
  * Integration tests for cron job retry logic (WISH-20260: AC9)
  */
@@ -76,6 +84,7 @@ describe('Process Flag Schedules - Integration Tests (AC9)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCache.invalidate.mockResolvedValue(undefined)
+    mockAuditLogger.logEvent.mockClear()
   })
 
   it('AC9.1: should increment retry_count and set next_retry_at on first failure', async () => {
@@ -254,6 +263,7 @@ describe('Process Flag Schedules - Edge Cases (AC10)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCache.invalidate.mockResolvedValue(undefined)
+    mockAuditLogger.logEvent.mockClear()
   })
 
   it('AC10.1: should handle concurrent retries with row locking (SKIP LOCKED)', async () => {
@@ -511,6 +521,7 @@ describe('Process Flag Schedules - Handler Basics', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAuditLogger.logEvent.mockClear()
   })
 
   it('should return success when no pending schedules', async () => {
@@ -534,5 +545,177 @@ describe('Process Flag Schedules - Handler Basics', () => {
     const body = JSON.parse(result.body)
     expect(body.error).toBe('Cron job failed')
     expect(body.message).toBe('Critical DB error')
+  })
+})
+
+/**
+ * Audit Logging tests (WISH-20280)
+ */
+describe('Process Flag Schedules - Audit Logging (WISH-20280)', () => {
+  const mockEvent = {
+    'detail-type': 'Scheduled Event' as const,
+    source: 'aws.events' as const,
+    time: new Date().toISOString(),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockCache.invalidate.mockResolvedValue(undefined)
+    mockAuditLogger.logEvent.mockClear()
+    mockAuditLogger.logEvent.mockResolvedValue({ ok: true, data: undefined })
+  })
+
+  it('should log flag_schedule.applied event on successful schedule application', async () => {
+    const mockSchedule = {
+      id: 'schedule-audit-success',
+      flagId: 'flag-audit-success',
+      scheduledAt: new Date(),
+      status: 'pending',
+      updates: { enabled: true, rolloutPercentage: 50 },
+      appliedAt: null,
+      errorMessage: null,
+      retryCount: 0,
+      maxRetries: 3,
+      nextRetryAt: null,
+      lastError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const mockSelectChain = {
+      from: vi.fn(() => mockSelectChain),
+      where: vi.fn(() => Promise.resolve([
+        {
+          id: 'flag-audit-success',
+          flagKey: 'audit-flag',
+          enabled: false,
+          rolloutPercentage: 0,
+          environment: 'production',
+        }
+      ])),
+    }
+    mockDbSelect = vi.fn(() => mockSelectChain)
+
+    mockScheduleRepo.findPendingWithLock.mockResolvedValue([mockSchedule])
+    mockFlagRepo.update.mockResolvedValue(ok({ enabled: true, rolloutPercentage: 50 }))
+    mockScheduleRepo.updateStatus.mockResolvedValue(ok(undefined))
+
+    const result = await handler(mockEvent)
+
+    expect(result.statusCode).toBe(200)
+    const body = JSON.parse(result.body)
+    expect(body.processed).toBe(1)
+
+    // Verify audit logging was called with correct event and metadata
+    expect(mockAuditLogger.logEvent).toHaveBeenCalledWith('flag_schedule.applied', {
+      scheduleId: 'schedule-audit-success',
+      flagKey: 'audit-flag',
+      updates: { enabled: true, rolloutPercentage: 50 },
+      appliedAt: expect.any(String),
+      flagState: {
+        enabled: true,
+        rolloutPercentage: 50,
+      },
+    })
+  })
+
+  it('should log flag_schedule.failed event on permanent failure', async () => {
+    const mockSchedule = {
+      id: 'schedule-audit-failed',
+      flagId: 'flag-audit-failed',
+      scheduledAt: new Date(Date.now() - 20 * 60 * 1000),
+      status: 'failed',
+      updates: { rolloutPercentage: 50 },
+      appliedAt: null,
+      errorMessage: 'Previous failure',
+      retryCount: 3, // At max retries
+      maxRetries: 3,
+      nextRetryAt: new Date(Date.now() - 1000),
+      lastError: 'Flag update failed: DB_ERROR',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const mockSelectChain = {
+      from: vi.fn(() => mockSelectChain),
+      where: vi.fn(() => Promise.resolve([
+        {
+          id: 'flag-audit-failed',
+          flagKey: 'failed-flag',
+          enabled: true,
+          environment: 'production',
+        }
+      ])),
+    }
+    mockDbSelect = vi.fn(() => mockSelectChain)
+
+    mockScheduleRepo.findPendingWithLock.mockResolvedValue([mockSchedule])
+    mockFlagRepo.update.mockResolvedValue(err('DB_ERROR'))
+    mockScheduleRepo.updateRetryMetadata.mockResolvedValue(ok(undefined))
+
+    const result = await handler(mockEvent)
+
+    expect(result.statusCode).toBe(200)
+    const body = JSON.parse(result.body)
+    expect(body.failed).toBe(1)
+
+    // Verify audit logging was called with correct event and metadata
+    expect(mockAuditLogger.logEvent).toHaveBeenCalledWith('flag_schedule.failed', {
+      scheduleId: 'schedule-audit-failed',
+      flagKey: 'failed-flag',
+      errorMessage: 'Flag update failed: DB_ERROR',
+      failedAt: expect.any(String),
+    })
+  })
+
+  it('should not fail schedule processing if audit logging throws', async () => {
+    const mockSchedule = {
+      id: 'schedule-audit-error',
+      flagId: 'flag-audit-error',
+      scheduledAt: new Date(),
+      status: 'pending',
+      updates: { enabled: true },
+      appliedAt: null,
+      errorMessage: null,
+      retryCount: 0,
+      maxRetries: 3,
+      nextRetryAt: null,
+      lastError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const mockSelectChain = {
+      from: vi.fn(() => mockSelectChain),
+      where: vi.fn(() => Promise.resolve([
+        {
+          id: 'flag-audit-error',
+          flagKey: 'error-flag',
+          enabled: false,
+          environment: 'production',
+        }
+      ])),
+    }
+    mockDbSelect = vi.fn(() => mockSelectChain)
+
+    mockScheduleRepo.findPendingWithLock.mockResolvedValue([mockSchedule])
+    mockFlagRepo.update.mockResolvedValue(ok({ enabled: true, rolloutPercentage: 0 }))
+    mockScheduleRepo.updateStatus.mockResolvedValue(ok(undefined))
+    mockAuditLogger.logEvent.mockRejectedValue(new Error('CloudWatch error'))
+
+    const result = await handler(mockEvent)
+
+    // Handler should still succeed despite audit logging failure
+    expect(result.statusCode).toBe(200)
+    const body = JSON.parse(result.body)
+    expect(body.processed).toBe(1)
+    expect(body.failed).toBe(0)
+
+    // Verify the schedule was still marked as applied
+    expect(mockScheduleRepo.updateStatus).toHaveBeenCalledWith(
+      'schedule-audit-error',
+      'applied',
+      { appliedAt: expect.any(Date) },
+    )
   })
 })

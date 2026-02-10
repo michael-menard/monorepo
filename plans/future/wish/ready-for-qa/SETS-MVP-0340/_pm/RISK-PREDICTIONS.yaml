@@ -1,0 +1,154 @@
+# Risk Predictions: SETS-MVP-0340 - Form Validation
+# Generated: 2026-02-09
+# Advisory Mode: Predictions based on story characteristics and historical patterns
+
+---
+story_id: SETS-MVP-0340
+epic: SETS-MVP
+generated_at: "2026-02-09T12:00:00Z"
+confidence: medium
+data_source: heuristic_analysis
+
+# Prediction Model Notes:
+# - No WKFL-006 learnings available (graceful degradation)
+# - Using heuristic analysis based on story characteristics
+# - Predictions are advisory only, not blocking
+
+predictions:
+  split_risk:
+    score: 0.1
+    level: low
+    reasoning: |
+      Story is already well-scoped (1 point, 3 ACs, refactoring existing form).
+      No complex validation rules or multi-surface changes.
+      Clear acceptance criteria focused on validation and keyboard accessibility.
+    indicators:
+      - ac_count: 3 (within healthy range)
+      - estimated_points: 1 (single-point story)
+      - scope_clarity: high (specific validation rules defined)
+      - surface_count: 1 (frontend only)
+      - dependency_count: 1 (SETS-MVP-0310, clear and tracked)
+
+  review_cycles:
+    estimated_cycles: 1
+    confidence: medium
+    reasoning: |
+      Well-established pattern (React Hook Form + Zod used in LoginPage).
+      Clear acceptance criteria with testable outcomes.
+      No complex business logic or edge cases.
+      Existing validation library provides messages.
+
+      Risk factors:
+      - Screen reader compatibility needs manual testing
+      - ARIA attributes must be correct (common review feedback)
+
+      Likely single review cycle if:
+      - Comprehensive tests written
+      - Manual accessibility testing completed
+      - ARIA attributes verified
+    risk_factors:
+      - accessibility_testing: medium (requires manual screen reader testing)
+      - aria_correctness: medium (common source of review feedback)
+      - pattern_adherence: low (well-established React Hook Form pattern)
+
+  token_estimate:
+    planning_tokens: 8000
+    implementation_tokens: 15000
+    review_tokens: 3000
+    total_estimate: 26000
+    confidence: medium
+    reasoning: |
+      Planning: Story seed + worker outputs (8k tokens)
+
+      Implementation estimate (15k tokens):
+      - Schema definition: 1k (simple Zod schema, reuses existing library)
+      - Form refactoring: 6k (replace useState with useForm, update inputs)
+      - Keyboard handler: 2k (Enter key submission, focus management)
+      - Test updates: 6k (validation tests, keyboard tests, ARIA tests)
+
+      Review: 3k (minor feedback on ARIA attributes or test coverage)
+
+      Low complexity refactoring with established patterns.
+      Most time spent on test coverage, not implementation.
+
+  complexity_factors:
+    technical_complexity: low
+    integration_complexity: low
+    testing_complexity: medium
+    reasoning:
+      technical: |
+        React Hook Form + Zod is well-established pattern (LoginPage).
+        Validation library already provides price schema and messages.
+        No custom validation logic needed.
+      integration: |
+        No API changes required.
+        No cross-component dependencies (isolated to GotItModal).
+        No backend work.
+      testing: |
+        Medium complexity due to accessibility testing requirements:
+        - Keyboard navigation tests (Tab order, Enter key)
+        - ARIA attribute verification (aria-invalid, aria-describedby)
+        - Screen reader compatibility (manual testing required)
+        - E2E tests for keyboard flow
+
+        Unit tests are straightforward (boundary values, Zod schema).
+
+  blocking_risks:
+    - risk: SETS-MVP-0310 not merged
+      likelihood: medium
+      impact: high
+      mitigation: Wait for SETS-MVP-0310 UAT completion before starting
+      status: tracked
+
+    - risk: Screen reader compatibility issues
+      likelihood: low
+      impact: medium
+      mitigation: Use standard ARIA patterns, test with NVDA/JAWS/VoiceOver
+      status: mitigated
+
+    - risk: HTML5 input validation bypassed
+      likelihood: low
+      impact: low
+      mitigation: Zod schema validation as fallback, backend also validates
+      status: mitigated
+
+  success_factors:
+    - Established pattern (React Hook Form used in LoginPage)
+    - Existing validation library (createEnhancedSchemas.price())
+    - All packages already installed (no dependency additions)
+    - Clear acceptance criteria (testable outcomes)
+    - Limited scope (refactoring existing component only)
+    - No API changes (no backend coordination needed)
+
+  recommendations:
+    priority: medium
+    sequencing: |
+      1. Wait for SETS-MVP-0310 to merge (blocking dependency)
+      2. Implement schema and form integration first (core logic)
+      3. Add keyboard accessibility (separate concern, easier to test)
+      4. Comprehensive test coverage before review (reduces review cycles)
+      5. Manual accessibility testing (NVDA/JAWS) before submitting for review
+
+    quality_gates:
+      - Write tests for all boundary values (0.00, 999999.99, -0.01, 1000000.00)
+      - Test keyboard navigation (Tab, Enter, Esc)
+      - Test ARIA attributes (aria-invalid, aria-describedby, role="alert")
+      - Manual screen reader testing (NVDA or JAWS)
+      - Run axe-core accessibility audit (E2E test)
+      - Verify no regression in existing purchase flow
+
+    team_readiness:
+      - React Hook Form experience: assumed (pattern exists in LoginPage)
+      - Zod validation experience: assumed (CLAUDE.md requirement)
+      - Accessibility testing: may need guidance (manual screen reader testing)
+      - Playwright E2E: assumed (existing E2E test infrastructure)
+
+---
+
+# Confidence Levels:
+# - high: Based on direct historical data (WKFL-006)
+# - medium: Based on heuristic analysis + codebase patterns
+# - low: Insufficient data, fallback estimates
+
+# Note: These predictions are advisory and should not block story generation.
+# Use as input for prioritization and planning, not as hard constraints.

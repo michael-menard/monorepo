@@ -1,0 +1,18 @@
+schema: 1
+story_id: "WISH-2070"
+feature_dir: "plans/future/wish"
+
+surfaces:
+  frontend: true
+  backend: false
+  infra: false
+
+packages:
+  - apps/web/app-wishlist-gallery
+  - packages/core/logger
+  - packages/core/app-component-library
+  - packages/core/api-client
+  - packages/core/gallery
+
+e2e_required: false
+e2e_exempt_reason: "Chore story - type fixes only, no runtime behavior changes"

@@ -1,0 +1,28 @@
+schema: 1
+id: WISH-20141
+feature: wish
+type: feature
+state: backlog
+title: AppSelect Icon & Tooltip Support for Smart Sort Dropdown
+points: 2
+priority: null
+blocked_by: null
+depends_on:
+  - WISH-2014
+follow_up_from: WISH-2014
+scope:
+  packages:
+    - packages/core/app-component-library
+  surfaces:
+    - frontend
+goal: >
+  Enhance AppSelect component to support optional icon and tooltip rendering per option,
+  then apply to the wishlist smart sorting dropdown (AC8/AC9 from WISH-2014).
+non_goals:
+  - Changing sort algorithm behavior (already implemented in WISH-2014)
+  - Adding new sort modes beyond what WISH-2014 defined
+  - Modifying backend sort logic
+acs: []
+risks: []
+created_at: 2026-02-09T00:00:00-07:00
+updated_at: 2026-02-09T00:00:00-07:00

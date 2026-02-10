@@ -1,0 +1,16 @@
+schema: 1
+story_id: "SETS-MVP-004"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-09T19:45:00Z"
+
+current_phase: qa-verify
+last_successful_phase: qa-verify
+status: qa-complete
+moved_to_uat: true
+uat_location: "plans/future/wish/UAT/SETS-MVP-004"
+iteration: 1
+e2e_gate: exempt
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []

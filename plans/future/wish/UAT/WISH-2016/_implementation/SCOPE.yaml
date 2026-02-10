@@ -1,0 +1,28 @@
+schema: 1
+story_id: WISH-2016
+timestamp: "2026-02-09T17:54:00Z"
+
+touches:
+  backend: true
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: true
+  infra: true
+
+touched_paths_globs:
+  - "apps/api/lego-api/core/image-processing/**"
+  - "apps/api/lego-api/functions/image-processor/**"
+  - "apps/web/app-wishlist-gallery/src/components/ResponsiveImage/**"
+  - "packages/core/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true
+  security: true
+  performance: true
+
+summary: "Image optimization pipeline with automatic resizing, compression, format conversion, and watermarking for wishlist uploads"

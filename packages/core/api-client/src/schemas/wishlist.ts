@@ -283,7 +283,7 @@ export type CreateWishlistItem = z.infer<typeof CreateWishlistItemSchema>
  * Schema for updating existing wishlist items (PATCH /api/wishlist/:id).
  * All fields are optional for partial updates.
  * Derived from CreateWishlistItemSchema using `.partial()` with buildStatus added.
- * 
+ *
  * SETS-MVP-004: Added buildStatus field for toggling build state of owned items.
  */
 export const UpdateWishlistItemSchema = CreateWishlistItemSchema.partial().extend({
@@ -339,9 +339,9 @@ export const WishlistQueryParamsSchema = z.object({
   // Filtering
   // WISH-20171: Store filter as array
   store: z.array(WishlistStoreSchema).optional(),
-  
+
   tags: z.string().optional(), // comma-separated
-  
+
   // Keep single priority for backward compatibility
   priority: z.coerce
     .number()
@@ -349,7 +349,7 @@ export const WishlistQueryParamsSchema = z.object({
     .min(0, { message: 'Priority must be between 0 and 5' })
     .max(5, { message: 'Priority must be between 0 and 5' })
     .optional(),
-  
+
   // WISH-20171: Priority range filter
   priorityRange: z
     .object({
@@ -360,7 +360,7 @@ export const WishlistQueryParamsSchema = z.object({
       message: 'Priority range min must be <= max',
     })
     .optional(),
-  
+
   // WISH-20171: Price range filter
   priceRange: z
     .object({
@@ -371,7 +371,7 @@ export const WishlistQueryParamsSchema = z.object({
       message: 'Price range min must be <= max',
     })
     .optional(),
-  
+
   status: ItemStatusSchema.optional().default('wishlist'), // SETS-MVP-001: Filter by lifecycle status
 
   // Sorting

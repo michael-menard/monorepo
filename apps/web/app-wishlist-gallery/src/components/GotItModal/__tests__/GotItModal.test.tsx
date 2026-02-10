@@ -1,6 +1,8 @@
 /**
  * GotItModal Component Tests
  * Story: SETS-MVP-0310 - Status Update Flow
+ * Story: SETS-MVP-0320 - Purchase UX Polish (success toast, navigation)
+ * Story: SETS-MVP-0340 - Form Validation (updated for React Hook Form)
  *
  * Tests cover:
  * - Form field rendering and defaults
@@ -9,7 +11,7 @@
  * - Form submission and loading states
  * - Keyboard accessibility (ESC, Tab, focus trap)
  * - Error handling
- * - Success toast
+ * - Success toast with "View in Collection" navigation (SETS-MVP-0320)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -19,6 +21,7 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { wishlistGalleryApi } from '@repo/api-client/rtk/wishlist-gallery-api'
+import { toast } from 'sonner'
 import { GotItModal } from '../index'
 
 // Mock toast
@@ -26,6 +29,7 @@ vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
     info: vi.fn(),
+    success: vi.fn(),
     custom: vi.fn(() => 'mock-toast-id'),
     dismiss: vi.fn(),
   },
@@ -118,13 +122,14 @@ describe('GotItModal', () => {
     expect(screen.getByRole('combobox')).toBeInTheDocument()
   })
 
-  // Test 4: Price is pre-filled from wishlist item
+  // Test 4: Price is pre-filled from wishlist item (as number value)
   it('pre-fills price from wishlist item', () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
     const priceInput = screen.getByTestId('price-paid-input') as HTMLInputElement
+    // With valueAsNumber, the value is a number
     expect(priceInput.value).toBe('849.99')
   })
 
@@ -163,57 +168,54 @@ describe('GotItModal', () => {
     })
   })
 
-  // Test 9: Form validation rejects invalid price format
-  it('validates price format (rejects invalid decimal)', async () => {
+  // Test 9: Form validation rejects out-of-range price (SETS-MVP-0340)
+  it('validates price range (rejects values above max)', async () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
     const priceInput = screen.getByTestId('price-paid-input')
-    const submitButton = screen.getByTestId('submit-button')
+    // const submitButton = screen.getByTestId('submit-button')
 
-    // Enter invalid price
+    // Enter invalid price above max
     await userEvent.clear(priceInput)
-    await userEvent.type(priceInput, 'abc')
-
-    fireEvent.click(submitButton)
+    await userEvent.type(priceInput, '1000000')
+    fireEvent.blur(priceInput)
 
     await waitFor(() => {
-      expect(screen.getByText(/Price must be a valid decimal/i)).toBeInTheDocument()
+      expect(screen.getByText(/Price paid cannot exceed 999999.99/i)).toBeInTheDocument()
     })
   })
 
-  // Test 10: Form validation rejects invalid tax format
-  it('validates tax format (rejects invalid decimal)', async () => {
+  // Test 10: Form validation rejects out-of-range tax (SETS-MVP-0340)
+  it('validates tax range (rejects negative values)', async () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
     const taxInput = screen.getByTestId('tax-input')
-    const submitButton = screen.getByTestId('submit-button')
 
-    await userEvent.type(taxInput, '99.999')
-    fireEvent.click(submitButton)
+    await userEvent.type(taxInput, '-1')
+    fireEvent.blur(taxInput)
 
     await waitFor(() => {
-      expect(screen.getByText(/Tax must be a valid decimal/i)).toBeInTheDocument()
+      expect(screen.getByText(/Tax must be at least 0/i)).toBeInTheDocument()
     })
   })
 
-  // Test 11: Form validation rejects invalid shipping format
-  it('validates shipping format (rejects invalid decimal)', async () => {
+  // Test 11: Form validation rejects out-of-range shipping (SETS-MVP-0340)
+  it('validates shipping range (rejects negative values)', async () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
     const shippingInput = screen.getByTestId('shipping-input')
-    const submitButton = screen.getByTestId('submit-button')
 
     await userEvent.type(shippingInput, '-10')
-    fireEvent.click(submitButton)
+    fireEvent.blur(shippingInput)
 
     await waitFor(() => {
-      expect(screen.getByText(/Shipping must be a valid decimal/i)).toBeInTheDocument()
+      expect(screen.getByText(/Shipping must be at least 0/i)).toBeInTheDocument()
     })
   })
 
@@ -338,7 +340,7 @@ describe('GotItModal', () => {
     expect(screen.getByText('Build Status')).toBeInTheDocument()
   })
 
-  // Test 24: Form fields have correct input types
+  // Test 24: Form fields have correct input types (SETS-MVP-0340: type="number")
   it('uses correct input types for form fields', () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
@@ -347,8 +349,9 @@ describe('GotItModal', () => {
     const priceInput = screen.getByTestId('price-paid-input')
     const dateInput = screen.getByTestId('purchase-date-input')
 
-    expect(priceInput).toHaveAttribute('type', 'text')
-    expect(priceInput).toHaveAttribute('inputMode', 'decimal')
+    // SETS-MVP-0340: Changed to type="number" with valueAsNumber
+    expect(priceInput).toHaveAttribute('type', 'number')
+    expect(priceInput).toHaveAttribute('step', '0.01')
     expect(dateInput).toHaveAttribute('type', 'date')
   })
 
@@ -364,7 +367,7 @@ describe('GotItModal', () => {
     fireEvent.change(priceInput, { target: { value: '99.99' } })
 
     expect(priceInput.value).toBe('99.99')
-    expect(priceInput).toHaveAttribute('inputMode', 'decimal')
+    expect(priceInput).toHaveAttribute('type', 'number')
   })
 
   // Test 26: Form can be filled with purchase details
@@ -386,9 +389,10 @@ describe('GotItModal', () => {
     await user.type(shippingInput, '5.00')
 
     // Verify the values were entered
+    // Note: number inputs drop trailing zeros (8.50 → 8.5, 5.00 → 5)
     expect((priceInput as HTMLInputElement).value).toBe('99.99')
-    expect((taxInput as HTMLInputElement).value).toBe('8.50')
-    expect((shippingInput as HTMLInputElement).value).toBe('5.00')
+    expect((taxInput as HTMLInputElement).value).toBe('8.5')
+    expect((shippingInput as HTMLInputElement).value).toBe('5')
   })
 
   // Test 27: Build status defaults to not_started
@@ -399,5 +403,150 @@ describe('GotItModal', () => {
 
     // The default value should be shown in the select
     expect(screen.getAllByText('Not Started').length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * SETS-MVP-0320: Success Toast Tests
+ *
+ * AC1: Success toast shows "Added to your collection!" with item title
+ * AC2: Toast duration is 5000ms with "View in Collection" action button
+ */
+const mockUnwrap = vi.fn()
+const mockMutationTrigger = vi.fn(() => ({ unwrap: mockUnwrap }))
+
+vi.mock('@repo/api-client/rtk/wishlist-gallery-api', async () => {
+  const actual = await vi.importActual('@repo/api-client/rtk/wishlist-gallery-api')
+  return {
+    ...actual,
+    useUpdateItemPurchaseMutation: () => [mockMutationTrigger, { isLoading: false }],
+  }
+})
+
+describe('SETS-MVP-0320: Success Toast', () => {
+  const mockOnClose = vi.fn()
+  const mockOnSuccess = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUnwrap.mockResolvedValue({ id: 'set-123' })
+  })
+
+  // AC1: toast.success called with correct message and item title as description
+  it('calls toast.success with "Added to your collection!" after purchase', async () => {
+    renderWithProviders(
+      <GotItModal
+        isOpen={true}
+        onClose={mockOnClose}
+        item={mockWishlistItem}
+        onSuccess={mockOnSuccess}
+      />,
+    )
+
+    // Submit the form (price is pre-filled from item, date defaults to today)
+    const submitButton = screen.getByTestId('submit-button')
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        'Added to your collection!',
+        expect.objectContaining({
+          description: 'LEGO Star Wars Millennium Falcon',
+          duration: 5000,
+        }),
+      )
+    })
+  })
+
+  // AC2: Toast includes "View in Collection" action button with 5000ms duration
+  it('includes "View in Collection" action button with 5000ms duration', async () => {
+    renderWithProviders(
+      <GotItModal
+        isOpen={true}
+        onClose={mockOnClose}
+        item={mockWishlistItem}
+        onSuccess={mockOnSuccess}
+      />,
+    )
+
+    const submitButton = screen.getByTestId('submit-button')
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        'Added to your collection!',
+        expect.objectContaining({
+          duration: 5000,
+          action: expect.objectContaining({
+            label: 'View in Collection',
+            onClick: expect.any(Function),
+          }),
+        }),
+      )
+    })
+  })
+
+  // AC1 supplement: onSuccess callback is invoked after successful purchase
+  it('calls onSuccess callback after successful purchase', async () => {
+    renderWithProviders(
+      <GotItModal
+        isOpen={true}
+        onClose={mockOnClose}
+        item={mockWishlistItem}
+        onSuccess={mockOnSuccess}
+      />,
+    )
+
+    const submitButton = screen.getByTestId('submit-button')
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockOnSuccess).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // AC1 supplement: modal closes after successful purchase
+  it('closes modal after successful purchase', async () => {
+    renderWithProviders(
+      <GotItModal
+        isOpen={true}
+        onClose={mockOnClose}
+        item={mockWishlistItem}
+        onSuccess={mockOnSuccess}
+      />,
+    )
+
+    const submitButton = screen.getByTestId('submit-button')
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // AC1 supplement: error toast shown on API failure
+  it('shows error toast when purchase fails', async () => {
+    mockUnwrap.mockRejectedValueOnce(new Error('Network error'))
+
+    renderWithProviders(
+      <GotItModal
+        isOpen={true}
+        onClose={mockOnClose}
+        item={mockWishlistItem}
+        onSuccess={mockOnSuccess}
+      />,
+    )
+
+    const submitButton = screen.getByTestId('submit-button')
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to mark as purchased',
+        expect.objectContaining({
+          description: 'Network error',
+        }),
+      )
+    })
   })
 })

@@ -108,4 +108,32 @@ GET {{baseUrl}}/flags/{{flagKey}}/schedule
 GET {{baseUrl}}/flags/{{flagKey}}/schedule
 Authorization: {{userToken}}
 
+### WISH-20280: Admin Tracking Tests
+
+### Test 11: Verify createdBy field in schedule response (WISH-20280)
+# Should return 201 with createdBy field populated
+POST {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-12-31T23:59:59Z",
+  "updates": {
+    "enabled": true
+  }
+}
+
+### Test 12: Verify createdBy in list schedules (WISH-20280)
+# Should return schedules with createdBy field
+GET {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+
+### Test 13: Verify cancelledBy and cancelledAt fields (WISH-20280)
+# Replace {scheduleId} with actual ID from Test 11 response
+# Should return cancelled schedule with cancelledBy and cancelledAt populated
+@scheduleId2 = REPLACE_WITH_SCHEDULE_ID
+
+DELETE {{baseUrl}}/flags/{{flagKey}}/schedule/{{scheduleId2}}
+Authorization: {{adminToken}}
+
 ###

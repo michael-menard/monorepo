@@ -1,0 +1,56 @@
+schema: 1
+story_id: WISH-20280
+phase: qa-setup
+timestamp: "2026-02-10T04:25:00Z"
+
+status: complete
+feature_dir: plans/future/wish
+moved_to: plans/future/wish/UAT/WISH-20280
+
+# Precondition verification results
+preconditions:
+  story_location: pass
+  evidence_file: pass
+  review_file: pass
+  code_review_verdict: pass
+  ready_for_qa_status: pass
+
+# Verification sources for QA phase
+verification_sources:
+  evidence_file: /Users/michaelmenard/Development/monorepo/plans/future/wish/UAT/WISH-20280/_implementation/EVIDENCE.yaml
+  review_file: /Users/michaelmenard/Development/monorepo/plans/future/wish/UAT/WISH-20280/_implementation/REVIEW.yaml
+  knowledge_context_file: /Users/michaelmenard/Development/monorepo/plans/future/wish/UAT/WISH-20280/_implementation/KNOWLEDGE-CONTEXT.yaml
+  proof_file: /Users/michaelmenard/Development/monorepo/plans/future/wish/UAT/WISH-20280/_implementation/PROOF-WISH-20280.md
+
+# Evidence summary
+evidence_summary:
+  version: 1
+  acceptance_criteria_total: 15
+  acceptance_criteria_passing: 14
+  acceptance_criteria_deferred: 1
+  unit_tests_passed: 35
+  unit_tests_failed: 0
+  type_check: pass
+  lint: pass
+  e2e_tests: exempt
+
+# Code review results
+code_review:
+  verdict: PASS
+  iteration: 1
+  reviewers_count: 1
+  reviewers:
+    - type: code-review
+      model: haiku
+      result: PASS
+  security_checked: true
+  owasp_top_10: checked
+  findings_severity: info
+
+# Story characteristics
+story_type: backend-infrastructure
+scope: audit-logging
+domain: config
+ac_count: 15
+passing_rate: 93%
+signal: SETUP COMPLETE

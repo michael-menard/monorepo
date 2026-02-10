@@ -10,9 +10,11 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { wishlistGalleryApi } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { authSlice } from './slices/authSlice'
-import { wishlistDraftSlice } from './slices/wishlistDraftSlice'
-import { draftPersistenceMiddleware, loadDraftFromLocalStorage } from './middleware/draftPersistenceMiddleware'
-import { setDraft, setDraftRestored } from './slices/wishlistDraftSlice'
+import { wishlistDraftSlice, setDraft, setDraftRestored } from './slices/wishlistDraftSlice'
+import {
+  draftPersistenceMiddleware,
+  loadDraftFromLocalStorage,
+} from './middleware/draftPersistenceMiddleware'
 
 /**
  * Create Redux store for wishlist gallery module
@@ -24,9 +26,7 @@ export const store = configureStore({
     [wishlistGalleryApi.reducerPath]: wishlistGalleryApi.reducer,
   },
   middleware: getDefaultMiddleware =>
-    getDefaultMiddleware()
-      .concat(wishlistGalleryApi.middleware)
-      .concat(draftPersistenceMiddleware),
+    getDefaultMiddleware().concat(wishlistGalleryApi.middleware).concat(draftPersistenceMiddleware),
 })
 
 /**

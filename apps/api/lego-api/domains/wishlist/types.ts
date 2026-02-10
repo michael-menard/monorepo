@@ -247,7 +247,6 @@ export const ListWishlistQuerySchema = z.object({
       message: 'Price range must be >= 0 with min <= max',
     }),
 
-
   // SETS-MVP-002: Status filter for collection view
   status: ItemStatusSchema.optional(),
   sort: WishlistSortFieldSchema.default('sortOrder'),

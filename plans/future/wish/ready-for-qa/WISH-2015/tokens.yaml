@@ -1,0 +1,16 @@
+schema: 1
+story_id: WISH-2015
+total:
+  input: 28500
+  output: 9300
+phases:
+  - phase: elab-setup
+    input: 8000
+    output: 4000
+  - phase: elab-analysis
+    input: 8500
+    output: 1800
+  - phase: elab-completion
+    input: 12000
+    output: 3500
+high_cost: []

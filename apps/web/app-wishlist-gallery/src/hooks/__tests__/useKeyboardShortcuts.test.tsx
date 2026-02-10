@@ -4,7 +4,7 @@
  * Story WISH-2006: Accessibility
  */
 
-import { renderHook } from '@testing-library/react'
+
 import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { useRef } from 'react'
