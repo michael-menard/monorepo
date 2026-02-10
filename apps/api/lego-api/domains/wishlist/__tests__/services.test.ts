@@ -523,4 +523,239 @@ describe('WishlistService', () => {
       )
     })
   })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Status Update Tests (SETS-MVP-0310)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('updateItemStatus (SETS-MVP-0310)', () => {
+    it('updates status to owned with purchase details', async () => {
+      const updatedItem: WishlistItem = {
+        ...mockItem,
+        status: 'owned',
+        statusChangedAt: new Date('2024-01-15T12:00:00.000Z'),
+        purchaseDate: new Date('2024-01-15T00:00:00.000Z'),
+        purchasePrice: '99.99',
+        purchaseTax: '8.50',
+        purchaseShipping: '5.00',
+        buildStatus: 'not_started',
+      }
+
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: true, data: updatedItem })
+
+      const result = await service.updateItemStatus('user-123', mockItem.id, {
+        purchasePrice: '99.99',
+        purchaseTax: '8.50',
+        purchaseShipping: '5.00',
+        purchaseDate: '2024-01-15T00:00:00.000Z',
+        buildStatus: 'not_started',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.status).toBe('owned')
+        expect(result.data.purchasePrice).toBe('99.99')
+        expect(result.data.purchaseTax).toBe('8.50')
+        expect(result.data.purchaseShipping).toBe('5.00')
+        expect(result.data.buildStatus).toBe('not_started')
+      }
+
+      expect(wishlistRepo.update).toHaveBeenCalledWith(
+        mockItem.id,
+        expect.objectContaining({
+          status: 'owned',
+          statusChangedAt: expect.any(Date),
+          purchaseDate: expect.any(Date),
+          purchasePrice: '99.99',
+          purchaseTax: '8.50',
+          purchaseShipping: '5.00',
+          buildStatus: 'not_started',
+        }),
+      )
+    })
+
+    it('sets statusChangedAt to current timestamp', async () => {
+      const beforeCall = new Date()
+
+      const updatedItem: WishlistItem = {
+        ...mockItem,
+        status: 'owned',
+        statusChangedAt: new Date(),
+      }
+
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: true, data: updatedItem })
+
+      await service.updateItemStatus('user-123', mockItem.id, {
+        purchasePrice: '99.99',
+      })
+
+      const afterCall = new Date()
+
+      const updateCall = vi.mocked(wishlistRepo.update).mock.calls[0]
+      const statusChangedAt = updateCall[1].statusChangedAt as Date
+
+      expect(statusChangedAt).toBeInstanceOf(Date)
+      expect(statusChangedAt.getTime()).toBeGreaterThanOrEqual(beforeCall.getTime())
+      expect(statusChangedAt.getTime()).toBeLessThanOrEqual(afterCall.getTime())
+    })
+
+    it('applies all purchase fields correctly', async () => {
+      const updatedItem: WishlistItem = {
+        ...mockItem,
+        status: 'owned',
+        statusChangedAt: new Date(),
+        purchaseDate: new Date('2024-01-20T00:00:00.000Z'),
+        purchasePrice: '849.99',
+        purchaseTax: '68.00',
+        purchaseShipping: '0.00',
+        buildStatus: 'in_progress',
+      }
+
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: true, data: updatedItem })
+
+      const result = await service.updateItemStatus('user-123', mockItem.id, {
+        purchaseDate: '2024-01-20T00:00:00.000Z',
+        purchasePrice: '849.99',
+        purchaseTax: '68.00',
+        purchaseShipping: '0.00',
+        buildStatus: 'in_progress',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.purchasePrice).toBe('849.99')
+        expect(result.data.purchaseTax).toBe('68.00')
+        expect(result.data.purchaseShipping).toBe('0.00')
+        expect(result.data.buildStatus).toBe('in_progress')
+      }
+    })
+
+    it('rejects unauthorized users with FORBIDDEN', async () => {
+      const result = await service.updateItemStatus('other-user', mockItem.id, {
+        purchasePrice: '99.99',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('FORBIDDEN')
+      }
+
+      expect(wishlistRepo.update).not.toHaveBeenCalled()
+    })
+
+    it('defaults buildStatus to not_started if not provided', async () => {
+      const updatedItem: WishlistItem = {
+        ...mockItem,
+        status: 'owned',
+        statusChangedAt: new Date(),
+        buildStatus: 'not_started',
+      }
+
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: true, data: updatedItem })
+
+      await service.updateItemStatus('user-123', mockItem.id, {
+        purchasePrice: '99.99',
+      })
+
+      expect(wishlistRepo.update).toHaveBeenCalledWith(
+        mockItem.id,
+        expect.objectContaining({
+          buildStatus: 'not_started',
+        }),
+      )
+    })
+
+    it('returns updated WishlistItem with all new fields', async () => {
+      const updatedItem: WishlistItem = {
+        ...mockItem,
+        status: 'owned',
+        statusChangedAt: new Date('2024-01-15T12:00:00.000Z'),
+        purchaseDate: new Date('2024-01-15T00:00:00.000Z'),
+        purchasePrice: '199.99',
+        purchaseTax: '16.00',
+        purchaseShipping: '10.00',
+        buildStatus: 'completed',
+      }
+
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: true, data: updatedItem })
+
+      const result = await service.updateItemStatus('user-123', mockItem.id, {
+        purchasePrice: '199.99',
+        purchaseTax: '16.00',
+        purchaseShipping: '10.00',
+        purchaseDate: '2024-01-15T00:00:00.000Z',
+        buildStatus: 'completed',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.id).toBe(mockItem.id)
+        expect(result.data.status).toBe('owned')
+        expect(result.data.statusChangedAt).toBeInstanceOf(Date)
+        expect(result.data.purchasePrice).toBe('199.99')
+        expect(result.data.purchaseTax).toBe('16.00')
+        expect(result.data.purchaseShipping).toBe('10.00')
+        expect(result.data.buildStatus).toBe('completed')
+      }
+    })
+
+    it('returns NOT_FOUND when item does not exist', async () => {
+      vi.mocked(wishlistRepo.findById).mockResolvedValue({ ok: false, error: 'NOT_FOUND' })
+
+      const result = await service.updateItemStatus('user-123', 'nonexistent-id', {
+        purchasePrice: '99.99',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+
+      expect(wishlistRepo.update).not.toHaveBeenCalled()
+    })
+
+    it('handles null purchase fields correctly', async () => {
+      const updatedItem: WishlistItem = {
+        ...mockItem,
+        status: 'owned',
+        statusChangedAt: new Date(),
+        purchaseDate: new Date(),
+        purchasePrice: null,
+        purchaseTax: null,
+        purchaseShipping: null,
+        buildStatus: 'not_started',
+      }
+
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: true, data: updatedItem })
+
+      const result = await service.updateItemStatus('user-123', mockItem.id, {})
+
+      expect(result.ok).toBe(true)
+
+      expect(wishlistRepo.update).toHaveBeenCalledWith(
+        mockItem.id,
+        expect.objectContaining({
+          status: 'owned',
+          statusChangedAt: expect.any(Date),
+          purchasePrice: null,
+          purchaseTax: null,
+          purchaseShipping: null,
+          buildStatus: 'not_started',
+        }),
+      )
+    })
+
+    it('propagates repository errors', async () => {
+      vi.mocked(wishlistRepo.update).mockResolvedValue({ ok: false, error: 'DB_ERROR' })
+
+      const result = await service.updateItemStatus('user-123', mockItem.id, {
+        purchasePrice: '99.99',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('DB_ERROR')
+      }
+    })
+  })
 })

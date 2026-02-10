@@ -1,0 +1,25 @@
+schema: 1
+story_id: WISH-2120
+timestamp: 2026-02-08T10:53:00Z
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - apps/web/app-wishlist-gallery/src/test/utils/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Create reusable test utility helpers (createMockFile, mockS3Upload) to reduce S3 upload testing boilerplate and improve test maintainability

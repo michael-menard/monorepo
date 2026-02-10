@@ -2,7 +2,7 @@ schema: 1
 id: WISH-2032
 feature: wish
 type: feature
-state: uat
+state: blocked
 title: Optimistic UI for Form Submission
 points: 3
 priority: null

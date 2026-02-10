@@ -1,0 +1,61 @@
+schema: 1
+story_id: "SETS-MVP-002"
+feature: "Collection View"
+created_at: "2026-02-08T19:15:00Z"
+
+# Evidence-first QA context for verification phase
+story_type: "Feature - MVP"
+domain: "wishlist-collection"
+criticality: "medium"
+
+qa_focus_areas:
+  - "Collection page route rendering at /collection"
+  - "Navigation menu shows 'My Collection' link"
+  - "Gallery displays owned items (status=owned filter)"
+  - "Cards display without priority or drag-drop controls"
+  - "Empty state with CTA to browse wishlist"
+  - "Backend status filtering works with existing filters"
+  - "E2E test coverage with Playwright"
+
+key_files_for_qa:
+  frontend:
+    - "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx"
+    - "apps/web/app-wishlist-gallery/src/pages/CollectionPage/__tests__/CollectionPage.test.tsx"
+    - "apps/web/main-app/src/store/slices/navigationSlice.ts"
+    - "apps/web/app-wishlist-gallery/src/Module.tsx"
+  backend:
+    - "apps/api/lego-api/domains/wishlist/types.ts"
+    - "apps/api/lego-api/domains/wishlist/routes.ts"
+    - "apps/api/lego-api/__http__/collection-view.http"
+  tests:
+    - "apps/web/playwright/features/collection/collection-view.feature"
+    - "apps/web/playwright/steps/collection-view.steps.ts"
+
+deferred_work:
+  - ac_id: "AC5"
+    description: "CollectionCard with build status badge"
+    follow_up: "SETS-MVP-004"
+  - ac_id: "AC6"
+    description: "Purchase date display"
+    follow_up: "SETS-MVP-004"
+
+acceptance_criteria_summary:
+  total: 21
+  implemented: 18
+  deferred: 2
+  already_exists: 1
+
+review_verdict: "PASS"
+issues_found_and_fixed: 2
+  - "Sidebar.tsx iconMap contents restored (critical)"
+  - "CollectionPage duplicate JSDoc removed (medium)"
+
+e2e_gate_status: "exempt"
+e2e_gate_reason: "E2E test feature file and step definitions created. Live execution requires dev server. Ready for CI/CD pipeline."
+
+preconditions_met:
+  - story_exists: true
+  - status_ready_for_qa: true
+  - evidence_yaml_exists: true
+  - review_yaml_exists: true
+  - code_review_passed: true

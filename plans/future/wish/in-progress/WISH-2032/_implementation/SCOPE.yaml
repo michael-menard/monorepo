@@ -1,0 +1,26 @@
+schema: 1
+story_id: "WISH-2032"
+timestamp: "2026-02-08T10:00:00-07:00"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-wishlist-gallery/**"
+  - "packages/core/api-client/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Optimistic UI for wishlist item creation - immediate toast/navigation with rollback on error"

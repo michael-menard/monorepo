@@ -3,12 +3,14 @@ doc_type: story
 title: "SETS-MVP-001: Unified Schema Extension"
 story_id: SETS-MVP-001
 story_prefix: SETS-MVP
-status: code-review-failed
+status: completed
 phase: 1
 created_at: "2026-01-30T12:00:00-07:00"
-updated_at: "2026-02-01T20:25:00Z"
+updated_at: "2026-02-08T18:50:00Z"
 depends_on: [WISH-2000]
 estimated_points: 2
+qa_verdict: PASS
+qa_completed_at: "2026-02-08T18:50:00Z"
 ---
 
 # SETS-MVP-001: Unified Schema Extension

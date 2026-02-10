@@ -79,6 +79,54 @@ Feature: Wishlist Gallery UI
     And drag handles should be available
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # Smart Sorting (WISH-2014)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  @sort @smart-sorting
+  Scenario: Sort dropdown shows smart sorting options
+    Given the wishlist has items loaded
+    Then the sort dropdown should have option "Best Value"
+    And the sort dropdown should have option "Expiring Soon"
+    And the sort dropdown should have option "Hidden Gems"
+
+  @sort @smart-sorting @best-value
+  Scenario: Best Value orders by price-per-piece ratio
+    Given the wishlist has items loaded
+    When I select sort option "Best Value"
+    Then the first card title should be "Imperial Star Destroyer"
+    And the last card title should be "Medieval Castle MOC"
+
+  @sort @smart-sorting @expiring-soon
+  Scenario: Expiring Soon orders by oldest release date
+    Given the wishlist has items loaded
+    When I select sort option "Expiring Soon"
+    Then the first card title should be "Technic Porsche 911 GT3 RS"
+    And the last card title should be "Medieval Castle MOC"
+
+  @sort @smart-sorting @hidden-gems
+  Scenario: Hidden Gems prioritizes low-priority high-piece sets
+    Given the wishlist has items loaded
+    When I select sort option "Hidden Gems"
+    Then the first card title should be "Medieval Castle MOC"
+    And the last card title should be "Millennium Falcon"
+
+  @sort @smart-sorting
+  Scenario: Switching between smart sort modes reorders cards
+    Given the wishlist has items loaded
+    When I select sort option "Best Value"
+    Then the first card title should be "Imperial Star Destroyer"
+    When I select sort option "Hidden Gems"
+    Then the first card title should be "Medieval Castle MOC"
+
+  @sort @smart-sorting @stability
+  Scenario: No console errors during smart sorting
+    Given the wishlist has items loaded
+    When I select sort option "Best Value"
+    And I select sort option "Expiring Soon"
+    And I select sort option "Hidden Gems"
+    Then the page should not crash
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # Card Content
   # ─────────────────────────────────────────────────────────────────────────────
 

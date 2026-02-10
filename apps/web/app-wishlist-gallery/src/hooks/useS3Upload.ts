@@ -9,6 +9,7 @@
  * WISH-2022: Client-side image compression before upload
  * WISH-2046: Client-side image compression quality presets
  * WISH-2045: HEIC/HEIF Image Format Support
+ * WISH-2049: Background image compression during form input
  */
 
 import { useState, useCallback, useRef } from 'react'
@@ -67,6 +68,7 @@ export type UploadState =
  * Options for the upload function
  * WISH-2022: Added skipCompression option
  * WISH-2046: Added preset option for quality presets
+ * WISH-2049: Added compressedFile option for background compression
  */
 export interface UploadOptions {
   /**
@@ -80,6 +82,13 @@ export interface UploadOptions {
    * When true, the preset option is ignored.
    */
   skipCompression?: boolean
+
+  /**
+   * Pre-compressed file to use instead of compressing during upload.
+   * WISH-2049: When provided, skips compression and uses this file directly.
+   * This allows background compression to happen during form input.
+   */
+  compressedFile?: File
 }
 
 export interface UseS3UploadResult {
@@ -203,7 +212,7 @@ export function useS3Upload(): UseS3UploadResult {
 
   const upload = useCallback(
     async (file: File, options: UploadOptions = {}): Promise<string | null> => {
-      const { skipCompression = false, preset = 'balanced' } = options
+      const { skipCompression = false, preset = 'balanced', compressedFile } = options
 
       // Validate file first
       const validationError = validateFile(file)
@@ -259,9 +268,20 @@ export function useS3Upload(): UseS3UploadResult {
 
         let fileToUpload = fileToProcess
 
-        // WISH-2022/2046: Compress image before upload (unless skipped)
-        // Uses the selected preset settings for compression
-        if (!skipCompression) {
+        // WISH-2049: Use pre-compressed file if available (background compression)
+        if (compressedFile) {
+          fileToUpload = compressedFile
+          setCompressionResult({
+            compressed: true,
+            file: compressedFile,
+            originalSize: fileToProcess.size,
+            finalSize: compressedFile.size,
+            ratio: compressedFile.size / fileToProcess.size,
+          })
+          setPresetUsed(preset)
+        } else if (!skipCompression) {
+          // WISH-2022/2046: Compress image before upload (unless skipped)
+          // Uses the selected preset settings for compression
           setState('compressing')
           const presetConfig = getPresetByName(preset)
           const result = await compressImage(fileToProcess, {

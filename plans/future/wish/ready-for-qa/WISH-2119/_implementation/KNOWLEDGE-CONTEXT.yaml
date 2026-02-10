@@ -1,0 +1,88 @@
+schema: 1
+story_id: "WISH-2119"
+timestamp: "2026-02-08T17:45:00Z"
+
+lessons:
+  - id: "L-WISH-2009-001"
+    title: "Feature flags hexagonal architecture pattern"
+    summary: "Feature flags domain uses hexagonal architecture with clear separation between service (business logic), repository (adapters), and routes (ports)"
+    applies_to:
+      - "Schedule service should follow same pattern"
+      - "Schedule repository adapter for database operations"
+    confidence: high
+
+  - id: "L-WISH-2009-002"
+    title: "Zod-first type definitions"
+    summary: "All types are derived from Zod schemas with z.infer<>. Backend types in domains/config/types.ts, shared types exported from packages/core/api-client"
+    applies_to:
+      - "Define schedule schemas in config/types.ts"
+      - "Export to api-client for frontend alignment"
+    confidence: high
+
+  - id: "L-WISH-2009-003"
+    title: "Admin auth middleware pattern"
+    summary: "Admin endpoints use auth + adminAuth middleware chain. adminAuth checks for 'admin' or 'admins' group in JWT"
+    applies_to:
+      - "All schedule endpoints require adminAuth"
+      - "Reuse existing middleware from middleware/auth.ts"
+    confidence: high
+
+  - id: "L-WISH-2019-001"
+    title: "Redis cache with in-memory fallback"
+    summary: "Cache abstraction supports both Redis (async) and in-memory (sync). Service uses await for cache operations. Cache invalidation required on flag updates."
+    applies_to:
+      - "Schedule application must invalidate cache"
+      - "Reuse existing cache adapter pattern"
+    confidence: high
+
+  - id: "L-WISH-2039-001"
+    title: "Repository upsert pattern with Drizzle"
+    summary: "Use onConflictDoUpdate for upsert operations. Row mapping functions convert DB rows to typed objects."
+    applies_to:
+      - "Schedule repository will use similar patterns"
+      - "Map database rows to Schedule type"
+    confidence: high
+
+  - id: "L-DB-MIGRATION-001"
+    title: "Migration file naming"
+    summary: "Migrations follow pattern: 0000_adjective_character.sql in packages/backend/database-schema/src/migrations/app/"
+    applies_to:
+      - "Next migration will be 0011_*.sql"
+      - "Include all schema changes and indexes"
+    confidence: high
+
+adrs:
+  - id: "ADR-CONFIG-001"
+    title: "Hexagonal architecture for config domain"
+    decision: "Use ports & adapters pattern to separate business logic from infrastructure"
+    rationale: "Enables testability and flexibility to change adapters"
+    status: accepted
+    relevant_to:
+      - "Schedule service follows this pattern"
+
+  - id: "ADR-CONFIG-002"
+    title: "Async cache operations"
+    decision: "All cache methods return Promise to support Redis"
+    rationale: "Redis client is async, fallback to in-memory is sync but wrapped"
+    status: accepted
+    relevant_to:
+      - "Schedule processing must await cache invalidation"
+
+domain_notes:
+  - "Config domain exists at apps/api/lego-api/domains/config/"
+  - "Routes are mounted: public at /config, admin at /admin"
+  - "Feature flags table has environment column (default: 'production')"
+  - "Foreign key CASCADE delete ensures schedules deleted when flag deleted"
+
+risks:
+  - risk: "Cron job directory does not exist yet"
+    mitigation: "Create apps/api/lego-api/jobs/ directory structure"
+    severity: low
+
+  - risk: "Row-level locking for concurrent execution"
+    mitigation: "Use FOR UPDATE SKIP LOCKED pattern from PostgreSQL"
+    severity: medium
+
+  - risk: "No existing Lambda cron job patterns in codebase"
+    mitigation: "Follow standard Lambda handler pattern with CloudWatch logging"
+    severity: low

@@ -212,6 +212,36 @@ Then('the items should be sorted by priority descending', async ({ page }) => {
 })
 
 // ============================================================================
+// Smart Sorting Steps (WISH-2014)
+// ============================================================================
+
+Then('the sort dropdown should have option {string}', async ({ page }, optionLabel: string) => {
+  // Open the sort dropdown
+  const sortDropdown = page.getByRole('combobox').first()
+  await sortDropdown.click()
+
+  // Verify the option exists
+  const option = page.getByRole('option', { name: new RegExp(optionLabel, 'i') })
+  await expect(option).toBeVisible()
+
+  // Close the dropdown by pressing Escape
+  await page.keyboard.press('Escape')
+})
+
+Then('the first card title should be {string}', async ({ page }, expectedTitle: string) => {
+  const titles = page.locator('[data-testid="gallery-card-title"]')
+  await expect(titles.first()).toBeVisible({ timeout: 10000 })
+  await expect(titles.first()).toHaveText(expectedTitle)
+})
+
+Then('the last card title should be {string}', async ({ page }, expectedTitle: string) => {
+  const titles = page.locator('[data-testid="gallery-card-title"]')
+  await expect(titles.first()).toBeVisible({ timeout: 10000 })
+  const count = await titles.count()
+  await expect(titles.nth(count - 1)).toHaveText(expectedTitle)
+})
+
+// ============================================================================
 // Empty State Steps
 // ============================================================================
 

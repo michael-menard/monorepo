@@ -1,0 +1,40 @@
+schema: 1
+story_id: WKFL-010
+feature_dir: plans/future/workflow-learning
+timestamp: 2026-02-07T22:15:00Z
+
+current_phase: qa-setup
+last_successful_phase: review
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+e2e_gate: exempt
+completed_at: null
+
+completed_steps:
+  - phase: setup
+    timestamp: 2026-02-07T23:50:00Z
+    status: complete
+
+  - phase: plan
+    timestamp: 2026-02-07T23:56:00Z
+    status: complete
+
+  - phase: execute
+    timestamp: 2026-02-07T22:15:00Z
+    status: complete
+    deliverables:
+      - "apps/api/knowledge-base/src/__types__/index.ts (ProposalEntrySchema + 4 supporting schemas)"
+      - ".claude/agents/improvement-proposer.agent.md (458 lines)"
+      - ".claude/commands/improvement-proposals.md (268 lines)"
+      - ".claude/agents/__tests__/improvement-proposer-roi.test.ts (137 lines, 15/15 passing)"
+      - ".claude/agents/__tests__/improvement-proposer-dedup.test.ts (192 lines, 13/15 passing)"
+      - ".claude/agents/__tests__/improvement-proposer-integration.test.ts (293 lines, 5/9 passing)"
+
+  - phase: qa-setup
+    timestamp: 2026-02-07T23:50:00Z
+    status: complete
+
+next_phase: qa-verification

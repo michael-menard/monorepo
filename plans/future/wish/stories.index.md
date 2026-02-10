@@ -15,22 +15,21 @@ All stories in this epic use the `WISH-XXX` naming convention (starting at 2000)
 
 | Status | Count |
 |--------|-------|
-| completed | 22 |
-| in-progress | 0 |
-| review | 0 |
-| ready-for-code-review | 0 |
+| completed | 12 |
+| in-progress | 10 |
+| uat | 5 |
+| in-qa | 3 |
 | ready-for-qa | 0 |
-| uat | 1 |
-| in-qa | 0 |
-| backlog | 13 |
-| elaboration | 3 |
-| needs-refinement | 1 |
-| deferred | 17 |
-| ready-to-work | 17 |
-| pending | 12 |
-| created | 1 |
-| cancelled | 1 |
-| BLOCKED | 1 |
+| ready-to-work | 10 |
+| pending | 6 |
+| deferred | 34 |
+| Ready for Review | 2 |
+| Approved | 2 |
+| Done | 1 |
+| elaboration | 1 |
+| backlog | 6 |
+| Created | 0 |
+| deleted | 2 |
 
 ---
 
@@ -48,7 +47,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2000: Database Schema & Types
 
-**Status:** Ready for Review
+**Status:** uat
 **Depends On:** none
 **Phase:** 1 - Foundation
 
@@ -212,7 +211,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2005c: Drag preview thumbnail
 
-**Status:** uat
+**Status:** in-progress
 **Depends On:** WISH-2005a
 **Phase:** 4 - UX Polish
 
@@ -226,7 +225,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Source:** WISH-2005a QA Elaboration (Enhancement Opportunity #1)
 
-**Story File:** `plans/future/wish/UAT/WISH-2005c/WISH-2005c.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2005c/WISH-2005c.md`
 
 ---
 
@@ -250,7 +249,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## WISH-2006: Accessibility
 
-**Status:** in-qa
+**Status:** uat
 **Depends On:** WISH-2005
 **Phase:** 5 - Accessibility (Deferred to Phase 2 after core functionality)
 
@@ -356,7 +355,7 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #5)
 
 ## WISH-2119: Flag scheduling (auto-enable/disable at scheduled times)
 
-**Status:** ready-to-work
+**Status:** ready-for-qa
 **Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 3 - Infrastructure
@@ -414,7 +413,7 @@ Follow-up from QA Elaboration of WISH-2009 (Items Marked Out-of-Scope)
 
 ## WISH-20260: Automatic Retry Mechanism for Failed Flag Schedules
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WISH-2119
 **Follow-up From:** WISH-2119
 **Phase:** 3 - Infrastructure
@@ -462,13 +461,13 @@ Follow-up from QA Elaboration of WISH-2119 (Enhancement Opportunity #4)
 **Impact:** Medium (improves reliability and reduces admin toil)
 **Effort:** Medium (retry logic + database schema + backoff calculation)
 
-**Story File:** `plans/future/wish/backlog/WISH-20260/WISH-20260.md`
+**Story File:** `plans/future/wish/ready-for-qa/WISH-20260/WISH-20260.md`
 
 ---
 
 ## WISH-2120: Test utility helpers (createMockFile, mockS3Upload) for S3 upload testing
 
-**Status:** ready-to-work
+**Status:** uat
 **Depends On:** WISH-2011
 **Follow-up From:** WISH-2011
 **Phase:** 2 - Infrastructure
@@ -516,7 +515,7 @@ Follow-up from QA Elaboration of WISH-2011 (Enhancement Opportunity #3)
 
 ## WISH-20290: Coverage metrics integration for test utilities
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WISH-2120
 **Follow-up From:** WISH-2120
 **Phase:** 2 - Infrastructure
@@ -558,7 +557,7 @@ Follow-up from QA Elaboration of WISH-2120 (Gaps Identified - Finding #1)
 **Impact:** Low (prevents future coverage regressions)
 **Effort:** Low (configuration only)
 
-**Story File:** `plans/future/wish/backlog/WISH-20290/WISH-20290.md`
+**Story File:** `plans/future/wish/ready-to-work/WISH-20290/WISH-20290.md`
 
 ---
 
@@ -681,7 +680,7 @@ Follow-up from QA Elaboration of WISH-2011 (Follow-up Stories Suggested - Findin
 
 ## WISH-2110: Custom Zod error messages for better form UX
 
-**Status:** ready-to-work
+**Status:** in-qa
 **Depends On:** none
 **Follow-up From:** WISH-2010
 **Phase:** 2 - Foundation
@@ -830,7 +829,7 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 
 ## WISH-2124: Redis infrastructure setup and migration from in-memory cache
 
-**Status:** ready-to-work
+**Status:** ready-for-qa
 **Depends On:** none
 **Follow-up From:** WISH-2009
 **Phase:** 2 - Core Infrastructure
@@ -995,7 +994,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 ## WISH-2013: File upload security hardening
 
-**Status:** completed
+**Status:** blocked
 **Depends On:** none
 **Follow-up From:** WISH-2011
 **Phase:** 3 - Security
@@ -1010,7 +1009,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 **Source:** Follow-up from QA Elaboration of WISH-2011 (Finding #1)
 
-**Story File:** `plans/future/wish/UAT/WISH-2013/WISH-2013.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2013/WISH-2013.md`
 
 **Elaboration Notes:** CONDITIONAL PASS - Three MVP-critical gaps addressed via additional acceptance criteria (AC18: server-side file size validation), clarified existing criteria (AC5: async virus scanning via S3 event trigger Lambda), and enhanced existing criteria (AC16: structured CloudWatch logging with specific fields).
 
@@ -1018,7 +1017,7 @@ Follow-up from QA Elaboration of WISH-2124 (Enhancement Opportunity #3)
 
 ## WISH-2014: Smart Sorting Algorithms
 
-**Status:** completed
+**Status:** in-progress
 **Depends On:** none
 **Follow-up From:** WISH-2001
 **Phase:** 4 - UX Polish
@@ -1050,13 +1049,13 @@ Add three smart sorting modes to help users discover wishlist items in meaningfu
 
 **Code Review Verdict:** PASS (iteration 3) - All 6 review workers passed (lint, style, syntax, security, typecheck, build).
 
-**Story File:** `plans/future/wish/ready-for-qa/WISH-2014/WISH-2014.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2014/WISH-2014.md`
 
 ---
 
 ## WISH-2015: Sort Mode Persistence (localStorage)
 
-**Status:** completed
+**Status:** in-progress
 **Depends On:** WISH-2001
 **Follow-up From:** WISH-2001
 **Phase:** 4 - UX Polish
@@ -1087,13 +1086,13 @@ Automatically persist wishlist sort mode preference to localStorage and restore 
 
 **QA Verdict:** PASS (2026-01-29) - All 11/14 ACs verified. 2 ACs acceptable partial (logout integration, E2E tests). 33 unit tests pass, TypeScript compilation pass, architecture compliant.
 
-**Story File:** `plans/future/wish/UAT/WISH-2015/WISH-2015-new/WISH-2015.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2015/WISH-2015-new/WISH-2015.md`
 
 ---
 
 ## WISH-2016: Image Optimization - Automatic Resizing, Compression, and Watermarking
 
-**Status:** completed
+**Status:** in-progress
 **Depends On:** none
 **Follow-up From:** WISH-2013
 **Phase:** 4 - Performance & UX Polish
@@ -1144,6 +1143,8 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 **Category:** Enhancement Opportunity
 **Impact:** Medium (Performance optimization, cost reduction, improved UX)
 **Effort:** Medium (Image processing pipeline)
+
+**Story File:** `plans/future/wish/in-progress/WISH-2016/`
 
 ---
 
@@ -1206,8 +1207,8 @@ Follow-up from QA Elaboration of WISH-2013 (Follow-up Stories Suggested - Findin
 
 ## WISH-20171: Backend Combined Filter + Sort Queries
 
-**Status:** ready-to-work
-**Depends On:** none
+**Status:** uat
+**Depends On:** WISH-2014
 **Split From:** WISH-2017
 **Phase:** 6 - Advanced Features
 
@@ -1217,13 +1218,21 @@ Extend backend GET /api/wishlist endpoint with combined filter + sort query para
 
 ### Acceptance Criteria (from parent)
 
-AC1, AC2, AC3, AC4, AC5, AC6, AC15, AC16, AC18 (9 ACs)
+AC0, AC1, AC2, AC3, AC4, AC5, AC6, AC15, AC16, AC18 (9 ACs)
+
+### QA Verification Status
+
+QA PASS: 9/10 ACs verified PASS. AC18 (performance) PENDING manual backend verification (known limitation). All 55 unit tests pass, all 129 schema tests pass, architecture compliant, error handling verified. No blocking issues.
+
+### Review Status
+
+Code review PASSED (iteration 2) - All quality gates met: linting (0 errors), tests (147/147 passed), code quality approved, security validated, architecture compliant.
 
 ---
 
 ## WISH-20172: Frontend Filter Panel UI
 
-**Status:** ready-to-work
+**Status:** ready-for-qa
 **Depends On:** WISH-20171
 **Split From:** WISH-2017
 **Phase:** 6 - Advanced Features
@@ -1495,7 +1504,7 @@ Follow-up from QA Elaboration of WISH-2008 (Enhancement Opportunity #9)
 
 ## WISH-2022: Client-side Image Compression
 
-**Status:** uat
+**Status:** in-progress
 **Depends On:** WISH-2002
 **Follow-up From:** WISH-2002
 **Phase:** 4 - UX Polish
@@ -1526,7 +1535,7 @@ Automatically compress images on the client side before uploading to S3, reducin
 
 **Priority:** P2 (UX enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/UAT/WISH-2022/WISH-2022.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2022/WISH-2022.md`
 
 ### Source
 
@@ -2227,7 +2236,7 @@ Split from WISH-20190 during QA Elaboration. User decisions from enhancements #2
 
 ## WISH-2032: Optimistic UI for Form Submission
 
-**Status:** completed
+**Status:** in-progress
 **Depends On:** none
 **Follow-up From:** WISH-2002
 **Phase:** 4 - UX Polish
@@ -2258,7 +2267,7 @@ Implement optimistic UI for wishlist item creation to provide immediate feedback
 
 **Priority:** P2 (UX enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/ready-for-qa/WISH-2032/WISH-2032.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2032/WISH-2032.md`
 
 ### Source
 
@@ -2274,7 +2283,7 @@ Follow-up from QA Elaboration of WISH-2002 (Enhancement Opportunity)
 
 ## WISH-2045: HEIC/HEIF Image Format Support
 
-**Status:** completed
+**Status:** in-progress
 **Depends On:** none
 **Follow-up From:** WISH-2022
 **Phase:** 4 - UX Polish
@@ -2316,7 +2325,7 @@ Follow-up from QA Elaboration of WISH-2022 (Gap #1)
 **Impact:** High (Modern iPhone users cannot use compression workflow)
 **Effort:** Medium (requires additional library integration)
 
-**Story File:** `plans/future/wish/ready-for-qa/WISH-2045/WISH-2045.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2045/WISH-2045.md`
 
 ---
 
@@ -2473,7 +2482,7 @@ Follow-up from QA Elaboration of WISH-2022 (Enhancement Opportunities - Finding 
 
 ## WISH-2058: Core WebP Conversion
 
-**Status:** completed
+**Status:** in-progress
 **Depends On:** none
 **Split From:** WISH-2048
 **Phase:** 4 - UX Polish
@@ -2505,7 +2514,7 @@ Convert compressed images to WebP format instead of JPEG to achieve 25-35% addit
 
 **Priority:** P2 (Performance enhancement for Phase 4)
 
-**Story File:** `plans/future/wish/UAT/WISH-2058/WISH-2058.md`
+**Story File:** `plans/future/wish/in-progress/WISH-2058/WISH-2058.md`
 
 ### Source
 
@@ -2715,7 +2724,7 @@ Follow-up from QA Elaboration of WISH-20210 (Follow-up Stories Suggested - Findi
 
 **Status:** deferred
 **Depends On:** WISH-2119
-**Blocker:** WISH-2119 not implemented (status: ready-to-work)
+**Blocker:** WISH-2119 in QA (status: ready-for-qa)
 **Split From:** WISH-20220
 **Phase:** 3 - Infrastructure
 
@@ -3620,10 +3629,12 @@ Follow-up from QA Elaboration of WISH-2006 (Enhancement Opportunity #4)
 
 ## SETS-MVP-001: Unified Schema Extension
 
-**Status:** ready-for-qa
+**Status:** completed
 **Depends On:** WISH-2000
 **Phase:** 1 - Foundation
 **Story Prefix:** SETS-MVP
+**QA Verdict:** PASS
+**QA Completed:** 2026-02-08T18:50:00Z
 
 ### Scope
 
@@ -3635,22 +3646,24 @@ Extend the existing wishlist schema to support owned items, enabling a single un
 
 **Dependencies:** WISH-2000 (Database Schema & Types must be completed first)
 
-**Acceptance Criteria:** 23 ACs covering:
+**Acceptance Criteria:** 23 ACs - ALL PASSING (100%)
 - Schema changes (AC1-8): status, purchaseDate, purchasePrice, purchaseTax, purchaseShipping, buildStatus, statusChangedAt, composite index
 - Zod schema updates (AC9-13): ItemStatusSchema, BuildStatusSchema, UserSetSchema, MarkAsPurchasedSchema, UpdateBuildStatusSchema
 - Service layer changes (AC21-23): service methods for status filtering, default filter behavior, integration tests
 - Migration (AC14-16): reversible migration, default values, backward compatibility
 - Tests (AC17-20): schema validation, default values, null field handling, query compatibility
 
-**Risk Notes:** Migration must be backward compatible with no downtime. Service layer must implement default filter behavior for backward compatibility.
+**Test Results:** 756/756 passing (64 database schema + 79 API client + 27 integration + 613 full API)
 
-**Story File:** `plans/future/wish/elaboration/SETS-MVP-001/SETS-MVP-001.md`
+**Risk Notes:** Migration is backward compatible with no downtime. Service layer implements default filter behavior for backward compatibility.
+
+**Story File:** `plans/future/wish/UAT/SETS-MVP-001/SETS-MVP-001.md`
 
 ---
 
 ## SETS-MVP-002: Collection View
 
-**Status:** ready-to-work
+**Status:** uat
 **Depends On:** SETS-MVP-001, WISH-2001
 **Phase:** 2 - MVP Feature
 **Story Prefix:** SETS-MVP
@@ -3676,13 +3689,13 @@ Create a collection view that shows owned items using the same gallery infrastru
 
 **Risk Notes:** Low risk; primarily configuration of existing components. Build status badge is new UI element.
 
-**Story File:** `plans/future/wish/elaboration/SETS-MVP-002/SETS-MVP-002.md`
+**Story File:** `plans/future/wish/UAT/SETS-MVP-002/SETS-MVP-002.md`
 
 ---
 
 ## SETS-MVP-004: Build Status Toggle
 
-**Status:** ready-to-work
+**Status:** in-progress
 **Depends On:** SETS-MVP-002
 **Phase:** 2 - MVP Feature
 **Story Prefix:** SETS-MVP
@@ -3717,9 +3730,9 @@ Allow users to toggle the build status of owned items between "In Pieces" and "B
 
 **Risk Notes:** Low complexity; simple toggle with standard patterns. Celebration animation is nice-to-have, can be deferred. All architecture gaps addressed.
 
-**Elaboration Report:** `plans/future/wish/ready-to-work/SETS-MVP-004/ELAB-SETS-MVP-004.md`
+**Elaboration Report:** `plans/future/wish/in-progress/SETS-MVP-004/ELAB-SETS-MVP-004.md`
 
-**Story File:** `plans/future/wish/ready-to-work/SETS-MVP-004/SETS-MVP-004.md`
+**Story File:** `plans/future/wish/in-progress/SETS-MVP-004/SETS-MVP-004.md`
 
 ---
 
@@ -3763,7 +3776,7 @@ Track and display build completion dates and maintain a history of build status 
 
 ## SETS-MVP-0310: Status Update Flow
 
-**Status:** elaboration
+**Status:** uat
 **Depends On:** SETS-MVP-001
 **Split From:** SETS-MVP-003
 **Phase:** 2 - MVP Feature
@@ -3779,11 +3792,13 @@ Core purchase flow using the unified model - update item status to 'owned' with 
 
 **Dependencies:** SETS-MVP-001 (requires unified schema with status, purchaseDate, buildStatus, purchasePrice, purchaseTax, purchaseShipping fields)
 
+**QA Status:** PASS - 31 tests pass (22 frontend + 9 backend), all ACs verified, architecture compliant, code review PASS
+
 **Acceptance Criteria (from parent):**
 - AC1-6: Modal flow (confirmation step, purchase details form, optional fields, skip/save buttons, calculated total)
 - AC7-10: API changes (PATCH /api/wishlist/:id/purchase endpoint, status update, ownership validation, return updated item)
 
-**Story File:** `plans/future/wish/elaboration/SETS-MVP-0310/SETS-MVP-0310.md`
+**Story File:** `plans/future/wish/UAT/SETS-MVP-0310/SETS-MVP-0310.md`
 
 ---
 

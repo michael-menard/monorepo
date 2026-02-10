@@ -139,6 +139,15 @@ const initialState: NavigationState = {
       shortcut: 'Cmd+W',
       children: [
         {
+          id: 'wishlist-collection',
+          label: 'My Collection',
+          href: '/wishlist/collection',
+          icon: 'Package',
+          description: 'View your owned sets',
+          keywords: ['collection', 'owned', 'purchased', 'have'],
+          category: 'secondary',
+        },
+        {
           id: 'wishlist-priority',
           label: 'High Priority',
           href: '/wishlist/priority',

@@ -1,0 +1,157 @@
+schema: 1
+story_id: "SETS-MVP-0310"
+timestamp: "2026-02-08T19:45:00-07:00"
+failure_source: qa-verify-failed
+iteration: 2
+
+failure_summary: |
+  QA FAIL: Zero test coverage for new SETS-MVP-0310 functionality
+
+  Code implementation is excellent (all ACs implemented). However, per project workflow,
+  stories CANNOT pass QA without test coverage for new functionality.
+
+  The GotItModal tests verify OLD WISH-2042 flow (quantity, keepOnWishlist fields)
+  instead of new SETS-MVP-0310 flow (buildStatus field, PATCH endpoint).
+  Backend updateItemStatus() service has zero test coverage.
+  No E2E tests written for purchase flow.
+
+issues_to_fix:
+  - id: 1
+    severity: critical
+    component: "Frontend Tests"
+    file: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    description: "GotItModal tests are OUTDATED - testing WISH-2042 flow with removed fields (quantity, keepOnWishlist)"
+    auto_fixable: false
+    details:
+      - "Tests reference removed 'quantity' field (lines 115, 141, 147, 231-241, 291-303)"
+      - "Tests reference removed 'keepOnWishlist' checkbox (lines 117, 152-160, 272-289)"
+      - "Tests DO NOT verify 'buildStatus' field (new in SETS-MVP-0310)"
+      - "Tests DO NOT verify PATCH endpoint call (should be /purchase, not /purchased)"
+      - "Tests DO NOT verify PurchaseDetailsInput format"
+    required_action: "Update tests to verify SETS-MVP-0310 flow with buildStatus field"
+
+  - id: 2
+    severity: critical
+    component: "Frontend Tests"
+    file: "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+    description: "NO UNIT TESTS for buildStatus field (new in SETS-MVP-0310)"
+    auto_fixable: false
+    details:
+      - "buildStatus select not verified in tests"
+      - "Options (not_started, in_progress, completed) not tested"
+      - "Form validation for buildStatus not tested"
+    required_action: "Add test cases for buildStatus field interactions"
+
+  - id: 3
+    severity: critical
+    component: "Backend Tests"
+    file: "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+    description: "NO TESTS for updateItemStatus() service method"
+    auto_fixable: false
+    details:
+      - "updateItemStatus() service at apps/api/lego-api/domains/wishlist/application/services.ts lines 392-443 has zero test coverage"
+      - "No tests verify status transitions to 'owned'"
+      - "No tests verify statusChangedAt timestamp set correctly"
+      - "No tests verify purchase fields saved correctly (purchaseDate, purchasePrice, purchaseTax, purchaseShipping)"
+      - "No tests verify buildStatus field saved correctly"
+      - "No tests verify ownership validation (rejects unauthorized users)"
+    required_action: "Write unit/integration tests for updateItemStatus() service"
+
+  - id: 4
+    severity: critical
+    component: "E2E Tests"
+    file: "apps/web/playwright/features/wishlist/"
+    description: "NO E2E TESTS for purchase flow"
+    auto_fixable: false
+    details:
+      - "No end-to-end test for user opening GotItModal and completing purchase"
+      - "No test verifying item status updates to 'owned' after submission"
+      - "No test for buildStatus selection in purchase flow"
+      - "No test for purchase date, price, tax, shipping entry"
+    required_action: "Write E2E test or document valid exemption reason"
+
+focus_files:
+  - "apps/web/app-wishlist-gallery/src/components/GotItModal/__tests__/GotItModal.test.tsx"
+  - "apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx"
+  - "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+  - "apps/api/lego-api/domains/wishlist/application/services.ts"
+  - "apps/web/playwright/features/wishlist/"
+
+qa_gate_verdict: FAIL
+qa_gate_decided_by: "qa-verify-completion-leader"
+qa_gate_decided_at: "2026-02-08T23:15:00Z"
+qa_gate_blocking_issues: 4
+
+required_actions:
+  - title: "Update GotItModal tests"
+    priority: CRITICAL
+    description: |
+      GotItModal/__tests__/GotItModal.test.tsx is testing OLD WISH-2042 flow.
+
+      MUST DO:
+      1. Remove all references to 'quantity' field
+      2. Remove all references to 'keepOnWishlist' checkbox
+      3. Add test cases for buildStatus field (verify all 3 options selectable)
+      4. Verify PATCH /wishlist/:id/purchase endpoint is called
+      5. Verify PurchaseDetailsInput format in API call
+      6. Update mock response to include buildStatus field
+      7. Ensure all tests pass with new implementation
+
+  - title: "Write backend service tests"
+    priority: CRITICAL
+    description: |
+      Create tests for updateItemStatus() service method.
+
+      Create: apps/api/lego-api/domains/wishlist/__tests__/services.test.ts
+
+      MUST VERIFY:
+      1. Status updates to 'owned'
+      2. statusChangedAt set to current timestamp
+      3. All purchase fields saved: purchaseDate, purchasePrice, purchaseTax, purchaseShipping
+      4. buildStatus field saved correctly (defaults to 'not_started' if not provided)
+      5. Ownership validation rejects unauthorized users (returns FORBIDDEN)
+      6. Authorized user can update their own items
+      7. Returns updated WishlistItem with all new fields
+      8. Database persistence verified
+
+  - title: "Write E2E test for purchase flow"
+    priority: CRITICAL
+    description: |
+      Create end-to-end test for purchase flow.
+
+      Option A: Create Playwright feature in apps/web/playwright/features/wishlist/
+         Test: User opens GotItModal → fills purchase details → selects buildStatus → submits
+                Verify: Item status shows 'owned', modal closes, wishlist reflects change
+
+      Option B: Document valid exemption reason in VERIFICATION.yaml if E2E tests are out of scope
+
+      If writing test, MUST VERIFY:
+      1. GotItModal opens from wishlist item "Got It" button
+      2. User can fill all purchase detail fields
+      3. User can select buildStatus option
+      4. Submit button calls API and closes modal
+      5. Item status updated to 'owned' in UI
+      6. No errors on submission
+
+  - title: "Fix type-checking infrastructure"
+    priority: HIGH
+    description: |
+      Resolve dependency issues blocking type verification.
+
+      Issues:
+      1. @repo/cache has type errors blocking monorepo type-check
+      2. api-client tests fail on msw/node imports
+
+      MUST:
+      1. Add msw/node as dev dependency in @repo/api-client if needed
+      2. Fix @repo/logger type declarations in @repo/cache
+      3. Enable "pnpm turbo check-types --filter=@repo/api-client" to pass
+
+next_steps:
+  - Read full implementation code to understand new fields and behavior
+  - Update GotItModal tests to remove WISH-2042 references
+  - Write backend service tests for updateItemStatus()
+  - Write or document exemption for E2E tests
+  - Run test suite and verify 45% minimum coverage on new code
+  - Fix type-checking issues
+  - Re-run QA verification

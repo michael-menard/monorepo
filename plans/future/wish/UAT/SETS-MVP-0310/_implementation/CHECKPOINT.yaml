@@ -1,0 +1,53 @@
+schema: 1
+story_id: "SETS-MVP-0310"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-08T21:00:00-07:00"
+
+current_phase: qa-completion
+last_successful_phase: qa-verify
+phase_completed_at: "2026-02-08T21:00:00-07:00"
+
+iteration: 2
+max_iterations: 3
+
+blocked: false
+blocked_reason: null
+
+forced: false
+warnings: []
+
+fix_initiated_at: "2026-02-08T19:45:00-07:00"
+fix_source: qa-verify-failed
+
+completed_at: "2026-02-08T20:36:00-07:00"
+fix_verified_at: "2026-02-08T20:36:00-07:00"
+fix_verified_by: "verification-leader"
+
+qa_setup_initiated_at: "2026-02-08T20:40:00-07:00"
+qa_setup_by: "qa-verify-setup-leader"
+moved_to_uat: true
+uat_path: "plans/future/wish/UAT/SETS-MVP-0310"
+
+qa_verify_initiated_at: "2026-02-08T20:40:00-07:00"
+qa_verify_completed_at: "2026-02-08T20:41:50-07:00"
+qa_verify_verdict: PASS
+qa_verify_by: "qa-verify-verification-leader"
+
+qa_completion_initiated_at: "2026-02-08T21:00:00-07:00"
+qa_completion_by: "qa-verify-completion-leader"
+qa_completion_status: PASS
+story_status_updated_to: uat
+gate_section_written: true
+story_index_updated: true
+
+setup_artifacts_created:
+  - SCOPE.yaml
+  - CHECKPOINT.yaml (updated)
+  - KNOWLEDGE-CONTEXT.yaml
+  - PLAN.yaml
+  - FIX-CONTEXT.yaml
+
+completion_artifacts:
+  - VERIFICATION.yaml (gate section added)
+  - SETS-MVP-0310.md (status updated to uat)
+  - stories.index.md (status and QA notes updated)

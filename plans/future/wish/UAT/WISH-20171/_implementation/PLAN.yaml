@@ -1,0 +1,987 @@
+schema: 1
+story_id: WISH-20171
+generated_at: "2026-02-08T00:00:00Z"
+estimated_effort: "3 days (1 backend developer)"
+
+# Implementation Plan: WISH-20171
+# Backend Combined Filter + Sort Queries
+
+# ─────────────────────────────────────────────────────────────────────────
+# Overview
+# ─────────────────────────────────────────────────────────────────────────
+
+summary: |
+  Extend GET /api/wishlist endpoint with combined filter + sort query parameters.
+  Support filtering by store (array), priority range, and price range in
+  combination with smart sort algorithms (bestValue, expiringSoon, hiddenGems).
+  Backend-only implementation - no frontend work.
+
+acceptance_criteria_count: 9
+test_requirements:
+  unit_tests: 45
+  integration_tests: 18
+
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 1: Schema Extension
+# ─────────────────────────────────────────────────────────────────────────
+
+phase_1_schema_extension:
+  estimated_time: "0.5 days (Day 1 Morning)"
+
+  tasks:
+    - task_id: "1.1"
+      title: "Extend backend ListWishlistQuerySchema"
+      location: "apps/api/lego-api/domains/wishlist/types.ts"
+      acceptance_criteria: ["AC1"]
+
+      steps:
+        - step: "Add store filter parameter"
+          details: |
+            - Current: `store: z.string().optional()` (single value)
+            - New: Parse comma-separated string to array
+            - Add transformation: `store: z.string().optional().transform(val => val ? val.split(',') : undefined)`
+            - Add validation: `.refine()` to check each value is valid WishlistStoreSchema enum
+
+        - step: "Add priority range parameter"
+          details: |
+            - Add: `priorityRange: z.string().optional()`
+            - Parse format: "3,5" → { min: 3, max: 5 }
+            - Add transformation: `.transform(val => val ? { min: Number(val.split(',')[0]), max: Number(val.split(',')[1]) } : undefined)`
+            - Add validation: `.refine(val => !val || (val.min >= 0 && val.max <= 5 && val.min <= val.max))`
+
+        - step: "Add price range parameter"
+          details: |
+            - Add: `priceRange: z.string().optional()`
+            - Parse format: "50,200" → { min: 50, max: 200 }
+            - Add transformation: `.transform(val => val ? { min: Number(val.split(',')[0]), max: Number(val.split(',')[1]) } : undefined)`
+            - Add validation: `.refine(val => !val || (val.min >= 0 && val.max >= 0 && val.min <= val.max))`
+
+        - step: "Update TypeScript type exports"
+          details: |
+            export type ListWishlistQuery = z.infer<typeof ListWishlistQuerySchema>
+            // Should now include:
+            // - store?: string[]
+            // - priorityRange?: { min: number, max: number }
+            // - priceRange?: { min: number, max: number }
+
+      verification:
+        - "Schema accepts valid combined parameters"
+        - "Schema rejects invalid parameters (min > max, out of range)"
+        - "TypeScript compilation passes"
+
+    - task_id: "1.2"
+      title: "Extend frontend WishlistQueryParamsSchema"
+      location: "packages/core/api-client/src/schemas/wishlist.ts"
+      acceptance_criteria: ["AC1", "AC15"]
+
+      steps:
+        - step: "Add store array parameter"
+          details: |
+            - Change: `store: z.string().optional()` → `store: z.array(WishlistStoreSchema).optional()`
+            - Note: Frontend passes array directly, backend parses from comma-separated
+
+        - step: "Add priorityRange parameter"
+          details: |
+            - Add: `priorityRange: z.object({ min: z.number().min(0).max(5), max: z.number().min(0).max(5) }).optional()`
+            - Add validation: `.refine(val => !val || val.min <= val.max, { message: 'min must be <= max' })`
+
+        - step: "Add priceRange parameter"
+          details: |
+            - Add: `priceRange: z.object({ min: z.number().min(0), max: z.number().min(0) }).optional()`
+            - Add validation: `.refine(val => !val || val.min <= val.max, { message: 'min must be <= max' })`
+
+      verification:
+        - "Frontend schema structure matches backend after parsing"
+        - "TypeScript compilation passes across all packages"
+
+    - task_id: "1.3"
+      title: "Create schema alignment test"
+      location: "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+      acceptance_criteria: ["AC15"]
+
+      steps:
+        - step: "Add test for store filter alignment"
+          details: |
+            test('store filter structure matches between frontend and backend', () => {
+              const frontendParams = { store: ['LEGO', 'BrickLink'] }
+              const backendQueryString = 'store=LEGO,BrickLink'
+              // Verify frontend array maps to backend comma-separated
+              expect(frontendParams.store.join(',')).toBe('LEGO,BrickLink')
+            })
+
+        - step: "Add test for priorityRange alignment"
+          details: |
+            test('priorityRange structure matches', () => {
+              const params = { priorityRange: { min: 3, max: 5 } }
+              expect(WishlistQueryParamsSchema.parse(params)).toMatchObject(params)
+            })
+
+        - step: "Add test for priceRange alignment"
+          details: |
+            test('priceRange structure matches', () => {
+              const params = { priceRange: { min: 50, max: 200 } }
+              expect(WishlistQueryParamsSchema.parse(params)).toMatchObject(params)
+            })
+
+      verification:
+        - "Schema alignment tests pass"
+        - "Test coverage for all new filter parameters"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 2: Repository Implementation
+# ─────────────────────────────────────────────────────────────────────────
+
+phase_2_repository_implementation:
+  estimated_time: "1.5 days (Day 1 Afternoon - Day 2)"
+
+  tasks:
+    - task_id: "2.1"
+      title: "Update WishlistRepository port interface"
+      location: "apps/api/lego-api/domains/wishlist/ports/index.ts"
+      acceptance_criteria: ["AC0", "AC2"]
+
+      steps:
+        - step: "Extend filters interface in findByUserId signature"
+          details: |
+            export interface WishlistRepository {
+              findByUserId(
+                userId: string,
+                pagination: PaginationInput,
+                filters?: {
+                  search?: string
+                  store?: string[]  // Changed from string to string[]
+                  tags?: string[]
+                  priority?: number
+                  priorityRange?: { min: number, max: number }  // New
+                  priceRange?: { min: number, max: number }     // New
+                  status?: 'wishlist' | 'owned'
+                  sort?: 'createdAt' | 'title' | 'price' | 'pieceCount' | 'sortOrder' | 'priority' | 'bestValue' | 'expiringSoon' | 'hiddenGems'
+                  order?: 'asc' | 'desc'
+                }
+              ): Promise<PaginatedResult<WishlistItem>>
+            }
+
+      verification:
+        - "Port interface includes all new filter parameters"
+        - "TypeScript compilation passes"
+
+    - task_id: "2.2"
+      title: "Implement store array filter in repository"
+      location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+      acceptance_criteria: ["AC2", "AC3"]
+
+      steps:
+        - step: "Update store filter logic (line ~73)"
+          details: |
+            // Current:
+            if (filters?.store) {
+              conditions.push(eq(wishlistItems.store, filters.store))
+            }
+
+            // New:
+            if (filters?.store && filters.store.length > 0) {
+              conditions.push(
+                inArray(
+                  wishlistItems.store,
+                  filters.store as (typeof wishlistItems.store.enumValues)[number][]
+                )
+              )
+            }
+
+        - step: "Add null handling documentation"
+          details: |
+            // Note: store is a required field (NOT NULL in database)
+            // No special null handling needed for store filter
+
+      verification:
+        - "Store filter accepts array of enum values"
+        - "Filter uses inArray() for multiple store selection"
+        - "Filter correctly handles empty array (no filter applied)"
+
+    - task_id: "2.3"
+      title: "Implement priority range filter in repository"
+      location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+      acceptance_criteria: ["AC2", "AC3"]
+
+      steps:
+        - step: "Replace single priority filter with range filter"
+          details: |
+            // Current (line ~79):
+            if (filters?.priority !== undefined) {
+              conditions.push(eq(wishlistItems.priority, filters.priority))
+            }
+
+            // New: Add after tags filter, before status filter
+            if (filters?.priorityRange) {
+              conditions.push(
+                and(
+                  sql`${wishlistItems.priority} IS NOT NULL`,  // AC3: Exclude nulls
+                  sql`${wishlistItems.priority} >= ${filters.priorityRange.min}`,
+                  sql`${wishlistItems.priority} <= ${filters.priorityRange.max}`
+                )!
+              )
+            }
+
+            // Keep single priority filter for backward compatibility
+            if (filters?.priority !== undefined && !filters?.priorityRange) {
+              conditions.push(eq(wishlistItems.priority, filters.priority))
+            }
+
+      verification:
+        - "Priority range filter uses AND logic for min/max"
+        - "Null priority values excluded when filter applied (AC3)"
+        - "Backward compatibility with single priority filter maintained"
+
+    - task_id: "2.4"
+      title: "Implement price range filter in repository"
+      location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+      acceptance_criteria: ["AC2", "AC3"]
+
+      steps:
+        - step: "Add price range filter after priority filters"
+          details: |
+            if (filters?.priceRange) {
+              conditions.push(
+                and(
+                  sql`${wishlistItems.price} IS NOT NULL`,  // AC3: Exclude nulls
+                  sql`${wishlistItems.price}::numeric >= ${filters.priceRange.min}`,
+                  sql`${wishlistItems.price}::numeric <= ${filters.priceRange.max}`
+                )!
+              )
+            }
+
+            // Note: Cast price to numeric for comparison (price is stored as string)
+
+      verification:
+        - "Price range filter uses numeric casting for comparison"
+        - "Null price values excluded when filter applied (AC3)"
+        - "Filter correctly handles decimal values"
+
+    - task_id: "2.5"
+      title: "Verify combined filter + sort query construction"
+      location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+      acceptance_criteria: ["AC2", "AC4"]
+
+      steps:
+        - step: "Verify filter order in conditions array"
+          details: |
+            Execution order:
+            1. userId filter (eq)
+            2. search filter (ilike + OR)
+            3. store filter (inArray)
+            4. priorityRange filter (AND + BETWEEN)
+            5. priceRange filter (AND + BETWEEN)
+            6. priority filter (eq, backward compat)
+            7. status filter (eq)
+            8. tags filter (JSONB ?|)
+
+            All combined with: and(...conditions)
+
+        - step: "Verify smart sort applied after filters"
+          details: |
+            // Smart sort logic (lines 104-182) remains unchanged
+            // Order: WHERE clause → ORDER BY clause → LIMIT/OFFSET
+
+            const rows = await db.query.wishlistItems.findMany({
+              where: and(...conditions),  // All filters applied here
+              orderBy: orderByClause,     // Smart sort applied here
+              limit,
+              offset,
+            })
+
+        - step: "Verify pagination count respects filters"
+          details: |
+            // Count query uses same conditions as main query
+            const countResult = await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(wishlistItems)
+              .where(and(...conditions))  // Same filters as main query
+
+      verification:
+        - "All filters combined with AND logic"
+        - "Smart sort applied after filtering"
+        - "Pagination count matches filtered result set (AC4)"
+
+    - task_id: "2.6"
+      title: "Update service layer to pass new filters"
+      location: "apps/api/lego-api/domains/wishlist/application/services.ts"
+      acceptance_criteria: ["AC0", "AC2"]
+
+      steps:
+        - step: "Locate listItems method (if exists, or create wrapper)"
+          details: |
+            // Service layer should pass filters through to repository
+            // No business logic needed - just pass-through
+
+            async listItems(
+              userId: string,
+              pagination: PaginationInput,
+              filters?: {
+                store?: string[]
+                priorityRange?: { min: number, max: number }
+                priceRange?: { min: number, max: number }
+                // ... other filters
+              }
+            ) {
+              return wishlistRepo.findByUserId(userId, pagination, filters)
+            }
+
+        - step: "Verify hexagonal architecture compliance"
+          details: |
+            - Service depends on WishlistRepository port (not adapter)
+            - No direct database access in service layer
+            - Pure business logic - infrastructure in adapter layer
+
+      verification:
+        - "Service passes filters to repository without modification"
+        - "Hexagonal architecture maintained (AC0)"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 3: Route Integration
+# ─────────────────────────────────────────────────────────────────────────
+
+phase_3_route_integration:
+  estimated_time: "0.5 days (Day 2 Afternoon)"
+
+  tasks:
+    - task_id: "3.1"
+      title: "Update GET /api/wishlist route handler"
+      location: "apps/api/lego-api/domains/wishlist/routes.ts"
+      acceptance_criteria: ["AC1", "AC16"]
+
+      steps:
+        - step: "Update query parameter parsing"
+          details: |
+            app.get('/', auth, loadPermissions, async (c: Context) => {
+              // Parse and validate query params
+              const rawQuery = c.req.query()
+              const parseResult = ListWishlistQuerySchema.safeParse(rawQuery)
+
+              if (!parseResult.success) {
+                return c.json(
+                  {
+                    error: 'Validation failed',
+                    details: parseResult.error.flatten().fieldErrors,
+                  },
+                  400  // AC16: Return 400 for invalid parameters
+                )
+              }
+
+              const query = parseResult.data
+              // ... rest of handler
+            })
+
+        - step: "Pass new filters to service"
+          details: |
+            const filters = {
+              search: query.q,
+              store: query.store,           // New: array
+              priorityRange: query.priorityRange,  // New: { min, max }
+              priceRange: query.priceRange,        // New: { min, max }
+              priority: query.priority,
+              tags: query.tags ? query.tags.split(',') : undefined,
+              status: query.status,
+              sort: query.sort,
+              order: query.order,
+            }
+
+            const result = await wishlistService.listItems(userId, pagination, filters)
+
+        - step: "Update response to include appliedFilters metadata"
+          details: |
+            return c.json({
+              items: result.data,
+              pagination: result.pagination,
+              appliedFilters: {
+                store: filters.store,
+                priorityRange: filters.priorityRange,
+                priceRange: filters.priceRange,
+                sort: filters.sort,
+              },
+            })
+
+      verification:
+        - "Route validates query parameters with Zod schema"
+        - "Invalid parameters return 400 with descriptive errors (AC16)"
+        - "Response includes appliedFilters metadata"
+
+    - task_id: "3.2"
+      title: "Add error handling for invalid filter combinations"
+      location: "apps/api/lego-api/domains/wishlist/routes.ts"
+      acceptance_criteria: ["AC16"]
+
+      steps:
+        - step: "Zod schema handles validation"
+          details: |
+            // Zod .refine() in schema (Phase 1) already validates:
+            // - min <= max for ranges
+            // - priority 0-5
+            // - price >= 0
+            // - valid store enum values
+
+            // Route handler just needs to return Zod errors properly
+
+        - step: "Format validation errors for API response"
+          details: |
+            if (!parseResult.success) {
+              return c.json(
+                {
+                  error: 'Validation failed',
+                  details: {
+                    fieldErrors: parseResult.error.flatten().fieldErrors,
+                    message: 'Invalid filter parameters. Check field constraints.',
+                  },
+                },
+                400
+              )
+            }
+
+      verification:
+        - "Validation errors return 400 status"
+        - "Error messages are descriptive and actionable (AC16)"
+        - "All validation rules enforced (min <= max, ranges, enums)"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 4: Unit Testing
+# ─────────────────────────────────────────────────────────────────────────
+
+phase_4_unit_testing:
+  estimated_time: "1 day (Day 3)"
+
+  tasks:
+    - task_id: "4.1"
+      title: "Create unit tests for store filter + bestValue sort"
+      location: "apps/api/lego-api/domains/wishlist/__tests__/advanced-filtering.test.ts"
+      acceptance_criteria: ["AC5"]
+      test_count: 10
+
+      steps:
+        - step: "Create test file and fixtures"
+          details: |
+            import { describe, it, expect, vi, beforeEach } from 'vitest'
+            import { createWishlistRepository } from '../adapters/repositories.js'
+            import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
+
+            // Mock database and schema
+            const mockDb = {} as NodePgDatabase<typeof schema>
+            const mockSchema = {} // Schema import
+
+        - step: "Test: Single store + bestValue"
+          test_cases:
+            - "Filter by LEGO store, sort by bestValue (asc)"
+            - "Filter by BrickLink store, sort by bestValue (desc)"
+            - "Filter returns only items from specified store"
+            - "Best value sorting respects store filter"
+
+        - step: "Test: Multiple stores + bestValue"
+          test_cases:
+            - "Filter by ['LEGO', 'BrickLink'], sort by bestValue"
+            - "Returns items from both stores"
+            - "Items sorted by price/pieceCount across both stores"
+
+        - step: "Test: Empty store array"
+          test_cases:
+            - "Empty array [] returns all items (no filter)"
+            - "Undefined store returns all items"
+
+        - step: "Test: Null handling with store filter"
+          test_cases:
+            - "Null price items appear at end with bestValue sort"
+            - "Null pieceCount items appear at end with bestValue sort"
+
+      verification:
+        - "10+ tests for store + bestValue combinations"
+        - "All tests pass"
+        - "Test coverage includes edge cases"
+
+    - task_id: "4.2"
+      title: "Create unit tests for priority range + hiddenGems sort"
+      location: "apps/api/lego-api/domains/wishlist/__tests__/advanced-filtering.test.ts"
+      acceptance_criteria: ["AC5"]
+      test_count: 10
+
+      steps:
+        - step: "Test: Priority range filter correctness"
+          test_cases:
+            - "Filter priority 0-2, verify only low priority items returned"
+            - "Filter priority 3-5, verify only high priority items returned"
+            - "Filter priority 2-4, verify middle range returned"
+
+        - step: "Test: Priority range + hiddenGems sort"
+          test_cases:
+            - "Filter priority 0-2 with hiddenGems sort (desc)"
+            - "Verify hidden gem score calculation: (5-priority) * pieceCount"
+            - "Items with priority 0 and high piece count score highest"
+
+        - step: "Test: Boundary conditions"
+          test_cases:
+            - "min = max (single priority value)"
+            - "min = 0, max = 5 (entire range)"
+            - "Invalid: min > max (should be caught by schema)"
+
+        - step: "Test: Null handling"
+          test_cases:
+            - "Items with null priority excluded when filter applied (AC3)"
+            - "Null pieceCount handled in hiddenGems score"
+
+      verification:
+        - "10+ tests for priority range + hiddenGems"
+        - "All tests pass"
+        - "Null handling verified (AC3)"
+
+    - task_id: "4.3"
+      title: "Create unit tests for price range + expiringSoon sort"
+      location: "apps/api/lego-api/domains/wishlist/__tests__/advanced-filtering.test.ts"
+      acceptance_criteria: ["AC5"]
+      test_count: 10
+
+      steps:
+        - step: "Test: Price range filter correctness"
+          test_cases:
+            - "Filter price 0-50, verify only low price items"
+            - "Filter price 50-200, verify mid-range items"
+            - "Filter price 200+, verify high price items"
+
+        - step: "Test: Price range + expiringSoon sort"
+          test_cases:
+            - "Filter price 50-200 with expiringSoon sort (asc)"
+            - "Oldest release dates appear first"
+            - "Price filter applies before sort"
+
+        - step: "Test: Decimal price handling"
+          test_cases:
+            - "Price 49.99 included in 0-50 range"
+            - "Price 50.00 included in 50-200 range"
+            - "Price comparison uses numeric casting"
+
+        - step: "Test: Null handling"
+          test_cases:
+            - "Items with null price excluded when filter applied (AC3)"
+            - "Null releaseDate handled in expiringSoon sort"
+
+      verification:
+        - "10+ tests for price range + expiringSoon"
+        - "Decimal comparison works correctly"
+        - "Null handling verified (AC3)"
+
+    - task_id: "4.4"
+      title: "Create unit tests for all filters combined"
+      location: "apps/api/lego-api/domains/wishlist/__tests__/advanced-filtering.test.ts"
+      acceptance_criteria: ["AC5"]
+      test_count: 15
+
+      steps:
+        - step: "Test: All filters + bestValue"
+          test_cases:
+            - "store=['LEGO'] + priority 3-5 + price 50-200 + bestValue"
+            - "Verify all filters applied with AND logic"
+            - "Verify correct item count"
+            - "Verify sort order within filtered set"
+            - "Verify pagination works with all filters"
+
+        - step: "Test: All filters + expiringSoon"
+          test_cases:
+            - "store=['BrickLink', 'Amazon'] + priority 0-2 + price 0-100 + expiringSoon"
+            - "Multiple stores with range filters"
+            - "Oldest dates first within filtered set"
+
+        - step: "Test: All filters + hiddenGems"
+          test_cases:
+            - "store=['LEGO'] + priority 0-3 + price 20-150 + hiddenGems"
+            - "Hidden gem score calculated on filtered set"
+
+        - step: "Test: Edge cases"
+          test_cases:
+            - "All filters result in empty set"
+            - "All filters result in single item"
+            - "Filter order doesn't affect results"
+            - "Pagination boundaries with filters"
+
+        - step: "Test: Null handling with all filters"
+          test_cases:
+            - "Null values excluded from all filtered fields"
+            - "Items with any null filtered field excluded"
+
+      verification:
+        - "15+ tests for combined filter scenarios"
+        - "AND logic verified across all filters"
+        - "Pagination works correctly (AC4)"
+
+    - task_id: "4.5"
+      title: "Add null value handling tests"
+      location: "apps/api/lego-api/domains/wishlist/__tests__/advanced-filtering.test.ts"
+      acceptance_criteria: ["AC3", "AC5"]
+      test_count: 10
+
+      steps:
+        - step: "Test: Null price handling"
+          test_cases:
+            - "Items with null price excluded when priceRange filter applied"
+            - "Null price items included when no priceRange filter"
+            - "Null price items appear at end with bestValue sort"
+
+        - step: "Test: Null priority handling"
+          test_cases:
+            - "Items with null priority excluded when priorityRange filter applied"
+            - "Null priority items included when no priorityRange filter"
+
+        - step: "Test: Null pieceCount handling"
+          test_cases:
+            - "Null pieceCount handled in bestValue calculation"
+            - "Null pieceCount handled in hiddenGems calculation"
+
+        - step: "Test: Null releaseDate handling"
+          test_cases:
+            - "Null releaseDate items appear at end with expiringSoon sort"
+            - "Null releaseDate items included when no date filter"
+
+        - step: "Document null handling behavior"
+          details: |
+            Add JSDoc comments to repository methods:
+            /**
+             * Null value handling:
+             * - priceRange filter: Excludes items with null price
+             * - priorityRange filter: Excludes items with null priority
+             * - Smart sorts: Places null values at end using NULLS LAST
+             */
+
+      verification:
+        - "10+ tests for null handling across all filter types"
+        - "Null behavior documented in code (AC3)"
+        - "All tests pass"
+
+  summary:
+    total_tests: 45
+    breakdown:
+      store_bestValue: 10
+      priority_hiddenGems: 10
+      price_expiringSoon: 10
+      all_combined: 15
+      null_handling: 10
+
+# ─────────────────────────────────────────────────────────────────────────
+# Phase 5: Integration Testing
+# ─────────────────────────────────────────────────────────────────────────
+
+phase_5_integration_testing:
+  estimated_time: "0.5 days (Day 3 Afternoon)"
+
+  tasks:
+    - task_id: "5.1"
+      title: "Create HTTP integration test file"
+      location: "apps/api/lego-api/domains/wishlist/__http__/wishlist-advanced-filtering.http"
+      acceptance_criteria: ["AC6", "AC16", "AC18"]
+      test_count: 18
+
+      steps:
+        - step: "Setup test variables"
+          details: |
+            ### WISH-20171: Advanced Multi-Filter Integration Tests
+            ### Requires: User authentication token
+
+            @baseUrl = http://localhost:3000/api/wishlist
+            @userToken = Bearer YOUR_USER_TOKEN_HERE
+
+        - step: "Happy path tests - Single filter + sort (9 tests)"
+          test_cases:
+            - name: "Test 1: Store filter + bestValue"
+              request: "GET {{baseUrl}}?store=LEGO&sort=bestValue"
+              expected: "200 OK, items filtered by LEGO, sorted by price/pieceCount ratio"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 2: Store filter (multiple) + bestValue"
+              request: "GET {{baseUrl}}?store=LEGO,BrickLink&sort=bestValue"
+              expected: "200 OK, items from LEGO or BrickLink, sorted by bestValue"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 3: Priority range + hiddenGems"
+              request: "GET {{baseUrl}}?priority=3,5&sort=hiddenGems"
+              expected: "200 OK, items with priority 3-5, sorted by hidden gem score"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 4: Price range + expiringSoon"
+              request: "GET {{baseUrl}}?priceRange=50,200&sort=expiringSoon"
+              expected: "200 OK, items priced $50-$200, sorted by oldest releaseDate"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 5: All filters + bestValue"
+              request: "GET {{baseUrl}}?store=LEGO&priority=3,5&priceRange=50,200&sort=bestValue"
+              expected: "200 OK, all filters applied, sorted by bestValue"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 6: All filters + expiringSoon"
+              request: "GET {{baseUrl}}?store=LEGO,BrickLink&priority=0,2&priceRange=20,100&sort=expiringSoon"
+              expected: "200 OK, all filters applied, sorted by expiringSoon"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 7: All filters + hiddenGems"
+              request: "GET {{baseUrl}}?store=LEGO&priority=0,3&priceRange=50,150&sort=hiddenGems"
+              expected: "200 OK, all filters applied, sorted by hiddenGems"
+              ac: "AC1, AC2, AC6"
+
+            - name: "Test 8: Pagination with filters"
+              request: "GET {{baseUrl}}?store=LEGO&page=2&limit=10"
+              expected: "200 OK, second page of LEGO items"
+              ac: "AC4, AC6"
+
+            - name: "Test 9: Empty result set"
+              request: "GET {{baseUrl}}?store=Other&priority=5,5&priceRange=1000,2000"
+              expected: "200 OK, empty items array, total=0"
+              ac: "AC6"
+
+        - step: "Error cases (3 tests)"
+          test_cases:
+            - name: "Test 10: Invalid priority range (out of bounds)"
+              request: "GET {{baseUrl}}?priority=6,10"
+              expected: "400 Bad Request, validation error"
+              ac: "AC16"
+
+            - name: "Test 11: Invalid price range (min > max)"
+              request: "GET {{baseUrl}}?priceRange=200,50"
+              expected: "400 Bad Request, validation error"
+              ac: "AC16"
+
+            - name: "Test 12: Invalid store enum"
+              request: "GET {{baseUrl}}?store=InvalidStore"
+              expected: "400 Bad Request, validation error"
+              ac: "AC16"
+
+        - step: "Edge cases (5 tests)"
+          test_cases:
+            - name: "Test 13: Boundary values (priority 0-5)"
+              request: "GET {{baseUrl}}?priority=0,5"
+              expected: "200 OK, entire priority range"
+              ac: "AC6"
+
+            - name: "Test 14: Boundary values (price 0-0)"
+              request: "GET {{baseUrl}}?priceRange=0,0"
+              expected: "200 OK, free items only"
+              ac: "AC6"
+
+            - name: "Test 15: Single priority value (min=max)"
+              request: "GET {{baseUrl}}?priority=3,3"
+              expected: "200 OK, priority 3 items only"
+              ac: "AC6"
+
+            - name: "Test 16: Null handling - price filter excludes nulls"
+              request: "GET {{baseUrl}}?priceRange=10,100"
+              expected: "200 OK, no items with null price"
+              ac: "AC3, AC6"
+
+            - name: "Test 17: Filters with no sort"
+              request: "GET {{baseUrl}}?store=LEGO&priority=3,5"
+              expected: "200 OK, default sort (sortOrder)"
+              ac: "AC6"
+
+        - step: "Performance test (1 test)"
+          test_cases:
+            - name: "Test 18: Performance with all filters (1000+ items)"
+              request: "GET {{baseUrl}}?store=LEGO,BrickLink&priority=0,5&priceRange=0,500&sort=bestValue"
+              expected: "200 OK, response time < 2s"
+              ac: "AC18"
+              notes: "Measure response time, should be < 2000ms"
+
+      verification:
+        - "18 HTTP test scenarios created"
+        - "All happy path requests return 200"
+        - "Error cases return 400 with validation errors"
+        - "Performance test completes < 2s (AC18)"
+
+    - task_id: "5.2"
+      title: "Document query performance with EXPLAIN ANALYZE"
+      location: "apps/api/lego-api/domains/wishlist/__tests__/QUERY-PERFORMANCE.md"
+      acceptance_criteria: ["AC18"]
+
+      steps:
+        - step: "Create performance documentation file"
+          details: |
+            # Query Performance Analysis - WISH-20171
+
+            ## Test Setup
+            - Dataset: 1000+ wishlist items
+            - Database: PostgreSQL with existing indexes
+
+            ## Test Queries
+
+            ### Query 1: All filters + bestValue sort
+            ```sql
+            SELECT * FROM wishlist_items
+            WHERE user_id = 'user-123'
+              AND store IN ('LEGO', 'BrickLink')
+              AND priority >= 3 AND priority <= 5
+              AND price::numeric >= 50 AND price::numeric <= 200
+            ORDER BY
+              CASE WHEN price IS NULL OR piece_count IS NULL OR piece_count = 0 THEN 1 ELSE 0 END ASC,
+              price::numeric / piece_count ASC NULLS LAST
+            LIMIT 20 OFFSET 0;
+            ```
+
+        - step: "Run EXPLAIN ANALYZE for each filter combination"
+          details: |
+            For each major filter combination:
+            1. Run EXPLAIN ANALYZE in psql
+            2. Document execution time
+            3. Document query plan
+            4. Identify index usage
+            5. Flag any sequential scans
+
+        - step: "Recommend index optimizations if needed"
+          details: |
+            Potential composite indexes:
+            - (user_id, store, priority) for combined filtering
+            - (user_id, price, piece_count) for bestValue sort
+            - (user_id, release_date) for expiringSoon sort
+
+            Note: Only add if query times exceed 2s threshold
+
+      verification:
+        - "EXPLAIN ANALYZE output documented"
+        - "Query plans show efficient execution"
+        - "All queries complete < 2s (AC18)"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Quality Assurance
+# ─────────────────────────────────────────────────────────────────────────
+
+qa_checklist:
+  code_quality:
+    - item: "TypeScript compilation passes across all packages"
+      command: "pnpm check-types:all"
+
+    - item: "ESLint passes with no errors"
+      command: "pnpm lint"
+
+    - item: "All 45+ unit tests pass"
+      command: "pnpm test apps/api/lego-api/domains/wishlist"
+
+    - item: "All 18 HTTP integration tests pass"
+      manual: true
+      location: "wishlist-advanced-filtering.http"
+
+  acceptance_criteria:
+    - id: "AC0"
+      title: "Architecture pattern compliance"
+      verification: "Code in domains/wishlist/application/, adapters/, ports/"
+
+    - id: "AC1"
+      title: "Query schema supports combined parameters"
+      verification: "Schema accepts store[], priorityRange, priceRange + sort"
+
+    - id: "AC2"
+      title: "Repository implements combined WHERE + ORDER BY"
+      verification: "Single Drizzle query with all filters and smart sort"
+
+    - id: "AC3"
+      title: "Null value handling works"
+      verification: "Null values excluded from filtered fields, documented"
+
+    - id: "AC4"
+      title: "Pagination works with filters"
+      verification: "Total count reflects filtered items, pages work correctly"
+
+    - id: "AC5"
+      title: "45+ unit tests pass"
+      verification: "Test coverage for all filter combinations"
+
+    - id: "AC6"
+      title: "18 integration tests pass"
+      verification: "HTTP test file with all scenarios"
+
+    - id: "AC15"
+      title: "Schema alignment test passes"
+      verification: "Frontend and backend schemas match structure"
+
+    - id: "AC16"
+      title: "Invalid filters return 400"
+      verification: "Validation errors return 400 with descriptive messages"
+
+    - id: "AC18"
+      title: "Performance < 2s"
+      verification: "All filter combinations complete in < 2000ms"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Risks and Mitigations
+# ─────────────────────────────────────────────────────────────────────────
+
+risks:
+  - risk: "Query performance degradation with combined filters"
+    likelihood: "Medium"
+    impact: "High"
+    mitigation:
+      - "Use EXPLAIN ANALYZE to verify query plans"
+      - "Add composite indexes if needed: (user_id, store, priority)"
+      - "Performance test with 1000+ items (AC18)"
+      - "Acceptance criteria enforces < 2s response time"
+
+  - risk: "Schema divergence between frontend and backend"
+    likelihood: "Low"
+    impact: "High"
+    mitigation:
+      - "Schema alignment test (AC15) catches divergence"
+      - "Automated test runs on every commit"
+      - "Frontend schema in shared package for visibility"
+
+  - risk: "Null value handling inconsistency"
+    likelihood: "Medium"
+    impact: "Medium"
+    mitigation:
+      - "AC3 requires explicit null handling specification"
+      - "Unit tests verify null behavior (Task 4.5)"
+      - "Document null handling in code comments"
+
+  - risk: "Breaking changes to existing single-value filters"
+    likelihood: "Low"
+    impact: "Medium"
+    mitigation:
+      - "Keep single priority filter for backward compatibility"
+      - "Store filter gracefully handles string or array"
+      - "Integration tests verify backward compatibility"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Success Criteria
+# ─────────────────────────────────────────────────────────────────────────
+
+success_criteria:
+  - "All 9 Acceptance Criteria pass (AC0, AC1-AC6, AC15-AC16, AC18)"
+  - "Backend: 45+ unit tests pass"
+  - "Backend: 18 integration tests pass"
+  - "Query performance < 2s for 1000+ items with all filters"
+  - "Schema alignment test passes (frontend ↔ backend)"
+  - "TypeScript compilation passes across all packages"
+  - "ESLint passes with no errors"
+  - "Code review approved"
+  - "QA verification complete"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Follow-up Work
+# ─────────────────────────────────────────────────────────────────────────
+
+follow_up:
+  - story: "WISH-20172"
+    title: "Frontend Filter Panel UI"
+    dependency: "Depends on this story (WISH-20171)"
+    notes: "Frontend will consume the new filter parameters"
+
+  - optimization: "Composite index creation"
+    condition: "If query performance exceeds 1.5s"
+    indexes:
+      - "(user_id, store, priority) for combined filtering"
+      - "(user_id, price, piece_count) for bestValue with filters"
+
+  - documentation: "API documentation update"
+    location: "docs/api/wishlist.md"
+    content: "Document new filter parameters and null handling behavior"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Notes
+# ─────────────────────────────────────────────────────────────────────────
+
+implementation_notes:
+  - "Backend-only story - no frontend work"
+  - "Extends existing WISH-2014 smart sorting with filtering"
+  - "Maintains backward compatibility with single-value filters"
+  - "Query string parsing: comma-separated → typed objects"
+  - "All filters use AND logic (intersection, not union)"
+  - "Null values excluded when filter applied to that field"
+  - "Performance critical - monitor query plans carefully"
+  - "Schema alignment test prevents frontend/backend divergence"

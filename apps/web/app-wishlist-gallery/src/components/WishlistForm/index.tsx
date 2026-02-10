@@ -7,6 +7,7 @@
  * Story wish-2002: Add Item Flow
  * WISH-2022: Client-side image compression with preference toggle
  * WISH-2046: Client-side image compression quality presets
+ * WISH-2049: Background compression for perceived performance
  */
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -31,6 +32,7 @@ import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
 import { TagInput } from '../TagInput'
 import { useS3Upload, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '../../hooks/useS3Upload'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
+import { useBackgroundCompression } from '../../hooks/useBackgroundCompression'
 import {
   formatFileSize,
   COMPRESSION_PRESETS,
@@ -114,6 +116,12 @@ export interface WishlistFormProps {
    * Additional class names
    */
   className?: string
+
+  /**
+   * Called when any form field changes (for autosave)
+   * WISH-2015: Form Autosave via RTK Slice with localStorage Persistence
+   */
+  onChange?: (field: string, value: any) => void
 }
 
 type FormErrors = Partial<Record<string, string>>
@@ -123,6 +131,7 @@ export function WishlistForm({
   onSubmit,
   isSubmitting = false,
   className,
+  onChange,
 }: WishlistFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -176,6 +185,13 @@ export function WishlistForm({
     validateFile,
   } = useS3Upload()
 
+  const {
+    state: bgCompressionState,
+    startCompression,
+    cancel: cancelCompression,
+    reset: resetBackgroundCompression,
+  } = useBackgroundCompression()
+
   // WISH-2022/2046: Show toast notification after compression with preset name
   useEffect(() => {
     if (compressionResult) {
@@ -197,6 +213,23 @@ export function WishlistForm({
       }
     }
   }, [compressionResult, presetUsed])
+
+  // WISH-2049: Show toast when background compression completes (AC11)
+  useEffect(() => {
+    if (bgCompressionState.status === 'complete' && bgCompressionState.compressionResult) {
+      const result = bgCompressionState.compressionResult
+      if (result.compressed) {
+        const preset = getPresetByName(validPreset)
+        toast.success(
+          `Image compressed with ${preset.label}: ${formatFileSize(result.originalSize)} -> ${formatFileSize(result.finalSize)}`,
+        )
+      } else if (!result.compressed && !result.error) {
+        toast.info('Image already optimized, no compression needed')
+      }
+    } else if (bgCompressionState.status === 'failed') {
+      toast.warning('Compression failed, will use original image')
+    }
+  }, [bgCompressionState.status, bgCompressionState.compressionResult, validPreset])
 
   // Handle keyboard shortcut (Cmd/Ctrl+Enter)
   useEffect(() => {
@@ -257,17 +290,54 @@ export function WishlistForm({
     async (e: FormEvent) => {
       e.preventDefault()
       const data = validateForm()
-      if (data) {
-        await onSubmit(data)
+      if (!data) return
+
+      // WISH-2049: Handle background compression state for upload
+      let uploadResult: string | null = null
+      if (bgCompressionState.originalFile) {
+        if (!skipCompression && bgCompressionState.status === 'complete') {
+          // AC4: Compression already done, pass compressed file to upload
+          uploadResult = await upload(bgCompressionState.originalFile, {
+            skipCompression: false,
+            preset: validPreset,
+            compressedFile: bgCompressionState.compressedFile!,
+          })
+        } else if (!skipCompression && bgCompressionState.status === 'compressing') {
+          // AC5: Still compressing, upload will compress synchronously
+          uploadResult = await upload(bgCompressionState.originalFile, {
+            skipCompression: false,
+            preset: validPreset,
+          })
+        } else if (!skipCompression && bgCompressionState.status === 'failed') {
+          // AC9: Compression failed, upload original
+          uploadResult = await upload(bgCompressionState.originalFile, {
+            skipCompression: true,
+            preset: validPreset,
+          })
+        } else {
+          // skipCompression or idle state: upload original
+          uploadResult = await upload(bgCompressionState.originalFile, {
+            skipCompression: true,
+            preset: validPreset,
+          })
+        }
+
+        // Don't proceed with form submission if upload failed
+        if (!uploadResult) return
       }
+
+      await onSubmit(data)
     },
-    [validateForm, onSubmit],
+    [validateForm, onSubmit, upload, bgCompressionState, skipCompression, validPreset],
   )
 
   // File handling
   // WISH-2022/2046: Pass skipCompression and preset options based on user preferences
   const handleFileSelect = useCallback(
     async (file: File) => {
+      // WISH-2049 AC8: Cancel any in-progress background compression
+      cancelCompression()
+
       const error = validateFile(file)
       if (error) {
         setErrors(prev => ({ ...prev, imageUrl: error }))
@@ -281,13 +351,15 @@ export function WishlistForm({
       }
       reader.readAsDataURL(file)
 
-      // Upload to S3 with compression preset option
-      await upload(file, {
-        skipCompression,
-        preset: validPreset,
-      })
+      // WISH-2049: Start background compression (unless skipCompression is true)
+      if (!skipCompression) {
+        const presetConfig = getPresetByName(validPreset)
+        startCompression(file, presetConfig.settings)
+      }
+      // Note: If skipCompression, we don't start compression here.
+      // Upload will happen on form submit with skipCompression option.
     },
-    [upload, validateFile, skipCompression, validPreset],
+    [validateFile, skipCompression, validPreset, startCompression, cancelCompression],
   )
 
   const handleFileInputChange = useCallback(
@@ -348,10 +420,12 @@ export function WishlistForm({
   const handleRemoveImage = useCallback(() => {
     setImagePreview(null)
     resetUpload()
+    cancelCompression()
+    resetBackgroundCompression()
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }, [resetUpload])
+  }, [resetUpload, cancelCompression, resetBackgroundCompression])
 
   const handleChangeImage = useCallback(() => {
     fileInputRef.current?.click()
@@ -398,14 +472,24 @@ export function WishlistForm({
             placeholder="e.g., LEGO Star Wars Millennium Falcon"
             disabled={isDisabled}
             value={title}
-            onChange={e => setTitle(e.target.value)}
+            onChange={e => {
+              onChange?.('title', e.target.value)
+              setTitle(e.target.value)
+            }}
           />
           {Boolean(errors.title) && <p className="text-sm text-destructive">{errors.title}</p>}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="store">Store *</Label>
-          <Select value={store} onValueChange={setStore} disabled={isDisabled}>
+          <Select
+            value={store}
+            onValueChange={value => {
+              onChange?.('store', value)
+              setStore(value)
+            }}
+            disabled={isDisabled}
+          >
             <SelectTrigger id="store">
               <SelectValue placeholder="Select a store" />
             </SelectTrigger>
@@ -430,7 +514,10 @@ export function WishlistForm({
             placeholder="e.g., 75192"
             disabled={isDisabled}
             value={setNumber}
-            onChange={e => setSetNumber(e.target.value)}
+            onChange={e => {
+              onChange?.('setNumber', e.target.value)
+              setSetNumber(e.target.value)
+            }}
           />
         </div>
 
@@ -442,7 +529,10 @@ export function WishlistForm({
             placeholder="https://..."
             disabled={isDisabled}
             value={sourceUrl}
-            onChange={e => setSourceUrl(e.target.value)}
+            onChange={e => {
+              onChange?.('sourceUrl', e.target.value)
+              setSourceUrl(e.target.value)
+            }}
           />
           {Boolean(errors.sourceUrl) && (
             <p className="text-sm text-destructive">{errors.sourceUrl}</p>
@@ -466,7 +556,10 @@ export function WishlistForm({
               className="pl-7"
               disabled={isDisabled}
               value={price}
-              onChange={e => setPrice(e.target.value)}
+              onChange={e => {
+                onChange?.('price', e.target.value)
+                setPrice(e.target.value)
+              }}
             />
           </div>
           {Boolean(errors.price) && <p className="text-sm text-destructive">{errors.price}</p>}
@@ -481,7 +574,11 @@ export function WishlistForm({
             placeholder="e.g., 7541"
             disabled={isDisabled}
             value={pieceCount ?? ''}
-            onChange={e => setPieceCount(e.target.value ? Number(e.target.value) : undefined)}
+            onChange={e => {
+              const val = e.target.value ? Number(e.target.value) : undefined
+              onChange?.('pieceCount', val)
+              setPieceCount(val)
+            }}
           />
         </div>
 
@@ -489,7 +586,10 @@ export function WishlistForm({
           <Label htmlFor="priority">Priority</Label>
           <Select
             value={String(priority)}
-            onValueChange={value => setPriority(Number(value))}
+            onValueChange={value => {
+              onChange?.('priority', Number(value))
+              setPriority(Number(value))
+            }}
             disabled={isDisabled}
           >
             <SelectTrigger id="priority">
@@ -662,7 +762,10 @@ export function WishlistForm({
         <TagInput
           id="tags"
           value={tags}
-          onChange={setTags}
+          onChange={newTags => {
+            onChange?.('tags', newTags)
+            setTags(newTags)
+          }}
           placeholder="Add tags..."
           disabled={isDisabled}
         />
@@ -677,7 +780,10 @@ export function WishlistForm({
           className="min-h-24 resize-y"
           disabled={isDisabled}
           value={notes}
-          onChange={e => setNotes(e.target.value)}
+          onChange={e => {
+            onChange?.('notes', e.target.value)
+            setNotes(e.target.value)
+          }}
         />
         <p className="text-sm text-muted-foreground">
           Add any additional information about this item.

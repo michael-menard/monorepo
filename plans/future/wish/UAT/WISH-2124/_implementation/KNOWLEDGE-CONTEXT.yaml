@@ -1,0 +1,84 @@
+schema: 1
+story_id: WISH-2124
+timestamp: "2026-02-08T18:15:00Z"
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WISH-2009"
+        lesson: "CacheAdapter interface enables transparent migration from in-memory to Redis without service layer changes"
+        category: reuse
+        applies_because: "This story leverages the adapter pattern from WISH-2009 for Redis migration"
+
+      - story_id: "WISH-2019"
+        lesson: "Redis infrastructure already implemented - redis-client.ts and RedisCacheAdapter exist in codebase"
+        category: reuse
+        applies_because: "Story ACs reference features that already exist - this is verification/gap-filling work"
+
+      - story_id: "GENERAL"
+        lesson: "Infrastructure stories require Docker Compose for local development parity with production"
+        category: pattern
+        applies_because: "AC 11 requires Redis Docker Compose setup for local development"
+
+    blockers_to_avoid:
+      - "VPC security group misconfigurations blocking Redis connectivity (Risk 2 in story)"
+      - "Missing environment variable documentation causing dev environment setup failures"
+
+    patterns_to_follow:
+      - "Use discriminated union Result types for graceful error handling"
+      - "Implement graceful degradation - cache failures should not block requests"
+      - "Use singleton pattern for Redis client to reuse connections across Lambda invocations"
+
+    patterns_to_avoid:
+      - "Skipping E2E tests for infrastructure changes - config drift goes undetected"
+      - "Over-engineering with Redis Cluster when single-instance ElastiCache is sufficient for MVP"
+
+  architecture_decisions:
+    active_count: 3
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain} via proxy"
+        applies_to: ["api", "backend"]
+
+      - id: "ADR-002"
+        title: "Infrastructure-as-Code Strategy"
+        status: active
+        constraint: "Use standalone CloudFormation templates for framework-agnostic IaC"
+        applies_to: ["infra"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "Require at least one happy-path E2E test per story using live services"
+        applies_to: ["testing", "infra"]
+
+    constraints:
+      api_paths: "No API changes - transparent infrastructure migration"
+      infrastructure: "Use CloudFormation for ElastiCache cluster, VPC config, security groups"
+      testing: "E2E tests must use live Redis (no mocking) per ADR-006"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file instead of ACs section only"
+        typical_tokens: 8000
+        mitigation: "Read only ## Acceptance Criteria section"
+
+      - operation: "Reading all infrastructure templates when only Redis needed"
+        typical_tokens: 5000
+        mitigation: "Target specific files - docker-compose.yml, redis-client.ts"
+
+    recommended_patterns:
+      - "Grep for existing Redis implementation before reading full files"
+      - "Use targeted file reads for package.json (grep 'ioredis')"
+      - "Batch related file reads in parallel"
+
+  warnings:
+    - "CRITICAL: Redis infrastructure is ALREADY IMPLEMENTED (WISH-2019). Many ACs are verification/gap-filling, not new implementation."
+    - "Docker Compose for Redis (AC 11) is missing - needs creation"
+    - "Environment variable documentation (AC 16) may be incomplete"
+    - "Infrastructure deployment (ElastiCache, VPC) likely not yet provisioned"

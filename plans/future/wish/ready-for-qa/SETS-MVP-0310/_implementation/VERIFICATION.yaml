@@ -1,0 +1,299 @@
+schema: 1
+story_id: "SETS-MVP-0310"
+timestamp: "2026-02-08T19:30:00-07:00"
+verifier: "qa-verify-verification-leader"
+
+test_execution:
+  command: "pnpm test --filter @repo/api-client && pnpm test --filter app-wishlist-gallery"
+  status: fail
+  details: |
+    api-client tests: 1 test failed (WishlistQueryParamsSchema validation)
+    wishlist-gallery tests: 1 test failed (a11y generateItemAriaLabel)
+    CRITICAL: GotItModal tests are OUTDATED - testing old WISH-2042 flow, not SETS-MVP-0310
+    Tests reference removed fields: quantity, keepOnWishlist
+    Tests DO NOT verify: buildStatus field, PurchaseDetailsInput schema, PATCH endpoint
+
+build_verification:
+  - command: "pnpm turbo check-types --filter=@repo/api-client"
+    status: fail
+    notes: "Dependency issue with @repo/cache blocking type check"
+
+  - command: "Direct tsc check on api-client"
+    status: fail
+    notes: "Missing msw/node in test files"
+
+  - command: "Evidence shows builds succeeded during implementation"
+    status: pass
+    notes: "EVIDENCE.yaml shows successful builds on 2026-02-01"
+
+acceptance_criteria:
+  - id: AC1
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      GotItModal/index.tsx line 61: Modal opens with isOpen prop
+      Modal title "Got It!" present at line 199
+      Form structure preserved from WISH-2042
+    blocking: false
+
+  - id: AC2
+    status: partial
+    verified_by: "Code inspection"
+    evidence: |
+      ARCHITECTURAL DECISION: User chose Option B - single-step form extension
+      No separate "confirmation step" then "purchase details form" flow
+      Instead: Single modal with all purchase fields immediately visible
+      GotItModal/index.tsx lines 206-312: All fields in one form
+    notes: "AC describes two-step flow, implementation uses single-step. This is by design per EVIDENCE.yaml"
+    blocking: false
+
+  - id: AC3
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      GotItModal/index.tsx:
+      - Purchase date: line 282-293 (defaults to today via getTodayDateString())
+      - Price paid: line 207-228 (pre-filled with retail price at line 81)
+      - Tax: line 232-253 (optional)
+      - Shipping: line 255-276 (optional)
+      - Build status: line 296-311 (select with options: not_started, in_progress, completed)
+
+      All fields match AC requirements except "In Pieces" label vs "not_started" value
+    blocking: false
+
+  - id: AC4
+    status: deferred
+    verified_by: "Code inspection"
+    evidence: |
+      GotItModal/index.tsx line 333-335: Only one submit button "Add to Collection"
+      No "Skip" button implemented in Option B architecture
+      User must cancel or fill and submit
+    notes: "Deferred per Option B architectural decision - single submit flow only"
+    blocking: false
+
+  - id: AC5
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      GotItModal/index.tsx:
+      - Validation: lines 107-122 (price, tax, shipping format validation)
+      - Submit handler: lines 125-174
+      - API call: line 142-145 (updateItemPurchase mutation)
+      - Input construction: lines 133-139 (PurchaseDetailsInput format)
+    blocking: false
+
+  - id: AC6
+    status: missing
+    verified_by: "Code inspection"
+    evidence: |
+      GotItModal/index.tsx: No total calculation found
+      No display of price + tax + shipping = total
+      Form shows individual fields only
+    notes: "Missing as documented in EVIDENCE.yaml - deferred to future story"
+    blocking: false
+
+  - id: AC7
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      Backend route: apps/api/lego-api/domains/wishlist/routes.ts line 465-497
+      Endpoint: PATCH /:id/purchase
+      Schema validation: PurchaseDetailsInputSchema at line 469
+      Schema defined: apps/api/lego-api/domains/wishlist/types.ts lines 406-467
+    blocking: false
+
+  - id: AC8
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      Service method: apps/api/lego-api/domains/wishlist/application/services.ts
+      - Method: updateItemStatus() lines 392-443
+      - Status update: line 422 (status: 'owned')
+      - statusChangedAt: line 423 (statusChangedAt: now)
+      - Purchase fields: lines 426-429 (purchaseDate, purchasePrice, purchaseTax, purchaseShipping)
+      - Build status: line 432 (buildStatus, defaults to 'not_started')
+
+      Repository: apps/api/lego-api/domains/wishlist/adapters/repositories.ts
+      - Update method: lines 256-299
+      - Status field support: line 289
+      - statusChangedAt support: line 290
+      - Purchase fields: lines 291-294
+      - Build status: line 295
+    blocking: false
+
+  - id: AC9
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      Service: apps/api/lego-api/domains/wishlist/application/services.ts
+      - Line 398-406: Fetch item and verify ownership
+      - Line 404: if (wishlistItem.userId !== userId) return err('FORBIDDEN')
+
+      Route: apps/api/lego-api/domains/wishlist/routes.ts
+      - Line 130: auth middleware applied to all routes
+      - Line 466: userId extracted from c.get('userId')
+    blocking: false
+
+  - id: AC10
+    status: pass
+    verified_by: "Code inspection"
+    evidence: |
+      Service: returns updated WishlistItem at line 442 (ok(updateResult.data))
+      Route: returns JSON response at line 496 (c.json(result.data))
+      RTK mutation: packages/core/api-client/src/rtk/wishlist-gallery-api.ts line 289
+        Transforms response using WishlistItemSchema.parse(response)
+    blocking: false
+
+overall_verdict: FAIL
+blocking_issues:
+  - "NO TESTS: Tests for SETS-MVP-0310 functionality are MISSING"
+  - "OUTDATED TESTS: GotItModal tests verify OLD WISH-2042 flow (quantity, keepOnWishlist)"
+  - "TEST COVERAGE: New PurchaseDetailsInput schema, buildStatus field, and PATCH endpoint have ZERO test coverage"
+  - "E2E TESTS: No E2E tests written for purchase flow with new unified model approach"
+  - "TYPE SAFETY: Cannot verify type-checking passes due to dependency issues in monorepo"
+
+non_blocking_issues:
+  - "AC2 PARTIAL: Two-step modal flow not implemented (by design per Option B)"
+  - "AC4 DEFERRED: Skip button not implemented (by design per Option B)"
+  - "AC6 MISSING: Total calculation not implemented (deferred to future story)"
+  - "Test infrastructure: MSW dependency missing in api-client tests"
+  - "Dependency issue: @repo/cache has type errors blocking monorepo type-check"
+  - "Minor test failures: WishlistQueryParamsSchema validation, a11y label generation"
+
+code_quality_observations:
+  - "Schema alignment: Backend PurchaseDetailsInputSchema (types.ts) matches frontend (api-client schemas/wishlist.ts)"
+  - "Ports & Adapters: Service layer properly separated from route handlers"
+  - "Type safety: Zod schemas used throughout for validation and type inference"
+  - "Error handling: Proper Result<T, E> pattern with ownership validation"
+  - "Deprecation: Old POST :id/purchased endpoint properly marked deprecated with headers"
+  - "Repository: Update method extended cleanly to support new status transition fields"
+
+test_requirements_per_workflow:
+  required:
+    - "Unit tests for updateItemStatus service method"
+    - "Unit tests for PurchaseDetailsInputSchema validation"
+    - "Integration tests for PATCH /:id/purchase endpoint"
+    - "Frontend tests for GotItModal buildStatus field"
+    - "E2E test for happy path purchase flow"
+
+  missing:
+    - "All of the above"
+
+  verdict: "STORY CANNOT PASS QA WITHOUT TESTS"
+
+verification_notes: |
+  INDEPENDENT VERIFICATION FINDINGS:
+
+  1. CODE IMPLEMENTATION: All ACs are implemented in code (7 PASS, 1 PARTIAL, 1 DEFERRED, 1 MISSING)
+     - Core functionality exists: PATCH endpoint, service method, frontend integration
+     - Schema alignment correct between backend and frontend
+     - Ownership validation working
+     - Status transition logic complete
+
+  2. CRITICAL BLOCKER: ZERO TESTS for new functionality
+     - GotItModal/__tests__/GotItModal.test.tsx tests WRONG flow (WISH-2042 not SETS-MVP-0310)
+     - Tests reference removed fields: quantity (line 115, 141, 147), keepOnWishlist (line 117, 152)
+     - Tests DO NOT verify buildStatus field (new in SETS-MVP-0310)
+     - No backend tests for updateItemStatus() service method
+     - No E2E tests for purchase flow
+
+  3. BUILD/TYPE STATUS: Cannot verify due to dependency issues
+     - @repo/cache has type errors blocking monorepo type-check
+     - Direct tsc on api-client fails on msw/node imports in tests
+     - EVIDENCE.yaml shows builds succeeded during implementation (trusted)
+
+  4. WORKFLOW COMPLIANCE:
+     Per workflow rules, stories CANNOT pass QA without:
+     ✗ E2E tests for user flows
+     ✗ Unit tests for new code
+     ✓ All ACs passing or approved deferred (meets this)
+
+  5. ARCHITECTURAL DECISIONS (from EVIDENCE.yaml):
+     - Option B chosen: Single-step form instead of two-step confirmation flow
+     - This explains AC2 PARTIAL and AC4 DEFERRED
+     - These are acceptable if approved by PM
+
+  RECOMMENDATION: FAIL - Send back to development for test implementation
+
+  Must complete before passing QA:
+  1. Write tests for GotItModal with buildStatus field
+  2. Write backend tests for updateItemStatus() service
+  3. Write E2E test for purchase flow (or document exemption reason)
+  4. Update/remove outdated WISH-2042 tests that reference removed fields
+  5. Fix dependency issues to enable type-checking verification
+
+qa_gate:
+  decision: FAIL
+  decided_at: "2026-02-08T23:15:00Z"
+  decided_by: "qa-verify-completion-leader"
+  blocking_issues:
+    - "NO UNIT TESTS: GotItModal tests missing for buildStatus field (new in SETS-MVP-0310)"
+    - "OUTDATED TESTS: GotItModal/__tests__/GotItModal.test.tsx tests old WISH-2042 flow with removed fields (quantity, keepOnWishlist)"
+    - "NO BACKEND TESTS: updateItemStatus() service method has ZERO unit/integration test coverage"
+    - "NO E2E TESTS: Purchase flow end-to-end test not written"
+    - "WORKFLOW VIOLATION: Per project workflow, stories CANNOT pass QA without tests for new functionality"
+  non_blocking_issues:
+    - "AC2 PARTIAL: Two-step modal flow not implemented (architectural decision per Option B, acceptable if PM approved)"
+    - "AC4 DEFERRED: Skip button not implemented (architectural decision per Option B, acceptable if PM approved)"
+    - "AC6 MISSING: Total calculation not implemented (deferred to future story, acceptable if PM approved)"
+    - "Type-checking blocked by @repo/cache dependency issues (EVIDENCE.yaml shows builds succeeded, acceptable for verification)"
+  required_actions:
+    - "Write/update GotItModal tests to verify buildStatus field (not_started, in_progress, completed)"
+    - "Remove outdated test assertions for removed fields (quantity, keepOnWishlist from WISH-2042)"
+    - "Add backend unit/integration tests for updateItemStatus() service method"
+    - "Add E2E test for purchase flow (open modal, fill purchase details, submit, verify 'owned' status)"
+    - "Enable all tests to pass and achieve minimum 45% coverage on new code"
+  summary: "QA FAIL due to ZERO test coverage for new functionality (PurchaseDetailsInput, buildStatus, PATCH endpoint, updateItemStatus service). Code implementation is excellent (REVIEW PASS), but workflow rules require test coverage before QA passage. All 4 blocking issues must be resolved."
+
+required_actions:
+  - title: "Update GotItModal tests"
+    priority: "CRITICAL"
+    description: |
+      GotItModal/__tests__/GotItModal.test.tsx is testing the OLD WISH-2042 flow.
+      Must update tests to:
+      - Remove references to quantity field (lines 115, 141, 147, 231-241, 291-303)
+      - Remove references to keepOnWishlist checkbox (lines 117, 152-160, 272-289)
+      - Add tests for buildStatus field (not_started, in_progress, completed)
+      - Verify PATCH endpoint is called (not POST)
+      - Verify PurchaseDetailsInput format
+
+  - title: "Write backend service tests"
+    priority: "CRITICAL"
+    description: |
+      Create tests for updateItemStatus() service method in:
+      apps/api/lego-api/domains/wishlist/__tests__/services.test.ts
+      Must verify:
+      - Status updates to 'owned'
+      - statusChangedAt set to now()
+      - Purchase fields saved correctly
+      - Ownership validation rejects unauthorized users
+      - Returns updated WishlistItem
+
+  - title: "Write E2E test or document exemption"
+    priority: "CRITICAL"
+    description: |
+      Either:
+      A) Create E2E test in playwright/features/wishlist/ for purchase flow, OR
+      B) Document valid exemption reason in EVIDENCE.yaml
+
+      If writing test, must verify:
+      - User can open GotItModal
+      - User can fill purchase details
+      - User can select build status
+      - Item status updates to 'owned' after submission
+
+  - title: "Fix type-checking infrastructure"
+    priority: "HIGH"
+    description: |
+      Resolve dependency issues:
+      - @repo/cache: Fix @repo/logger type declarations
+      - api-client: Add msw/node dev dependency or mock in tests
+      - Enable turbo check-types to pass for verification
+
+  - title: "Document architectural decisions"
+    priority: "MEDIUM"
+    description: |
+      AC2 and AC4 deviations (single-step vs two-step) should be:
+      - Documented in story acceptance with PM approval
+      - Reflected in updated acceptance criteria
+      - Explained in VERIFICATION.md for future reference

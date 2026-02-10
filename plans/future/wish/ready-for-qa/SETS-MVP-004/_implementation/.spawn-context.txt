@@ -1,0 +1,5 @@
+Feature directory: plans/future/wish
+Story ID: SETS-MVP-004
+Plan file: plans/future/wish/in-progress/SETS-MVP-004/_implementation/PLAN.yaml
+Autonomy level: conservative
+Batch mode: false

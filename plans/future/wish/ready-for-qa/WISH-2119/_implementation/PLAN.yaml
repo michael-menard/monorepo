@@ -1,0 +1,272 @@
+schema: 1
+story_id: "WISH-2119"
+timestamp: "2026-02-08T17:50:00Z"
+
+steps:
+  - id: 1
+    description: "Extend database schema with feature_flag_schedules table (Drizzle ORM)"
+    files:
+      - "packages/backend/database-schema/src/schema/feature-flags.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Generate database migration for feature_flag_schedules table"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0011_*.sql"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Define schedule Zod schemas in config domain types"
+    files:
+      - "apps/api/lego-api/domains/config/types.ts"
+    dependencies: []
+    slice: backend
+
+  - id: 4
+    description: "Export schedule schemas to shared api-client package"
+    files:
+      - "packages/core/api-client/src/schemas/feature-flags.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Create schedule repository adapter for database operations"
+    files:
+      - "apps/api/lego-api/domains/config/adapters/schedule-repository.ts"
+    dependencies: [1, 3]
+    slice: backend
+
+  - id: 6
+    description: "Create schedule service with CRUD logic"
+    files:
+      - "apps/api/lego-api/domains/config/application/schedule-service.ts"
+    dependencies: [3, 5]
+    slice: backend
+
+  - id: 7
+    description: "Update ports/index.ts with schedule repository and service interfaces"
+    files:
+      - "apps/api/lego-api/domains/config/ports/index.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 8
+    description: "Add schedule routes to config domain (POST/GET/DELETE endpoints)"
+    files:
+      - "apps/api/lego-api/domains/config/routes.ts"
+    dependencies: [6, 7]
+    slice: backend
+
+  - id: 9
+    description: "Create cron job handler for processing pending schedules"
+    files:
+      - "apps/api/lego-api/jobs/process-flag-schedules.ts"
+    dependencies: [5, 6]
+    slice: backend
+
+  - id: 10
+    description: "Write unit tests for schedule service (create, list, cancel)"
+    files:
+      - "apps/api/lego-api/domains/config/__tests__/schedule-service.test.ts"
+    dependencies: [6]
+    slice: backend
+
+  - id: 11
+    description: "Write unit tests for schedule repository adapter"
+    files:
+      - "apps/api/lego-api/domains/config/__tests__/schedule-repository.test.ts"
+    dependencies: [5]
+    slice: backend
+
+  - id: 12
+    description: "Write unit tests for cron job handler"
+    files:
+      - "apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts"
+    dependencies: [9]
+    slice: backend
+
+  - id: 13
+    description: "Create HTTP integration tests for schedule endpoints"
+    files:
+      - "apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http"
+    dependencies: [8]
+    slice: backend
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/feature-flags.ts"
+    action: modify
+    reason: "Add feature_flag_schedules table schema with Drizzle ORM (AC14)"
+
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modify
+    reason: "Export new featureFlagSchedules table"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0011_*.sql"
+    action: create
+    reason: "Migration SQL for feature_flag_schedules table with indexes (AC14)"
+
+  - path: "apps/api/lego-api/domains/config/types.ts"
+    action: modify
+    reason: "Add schedule Zod schemas (AC11, AC12)"
+
+  - path: "packages/core/api-client/src/schemas/feature-flags.ts"
+    action: modify
+    reason: "Export schedule schemas for frontend alignment (AC13)"
+
+  - path: "apps/api/lego-api/domains/config/adapters/schedule-repository.ts"
+    action: create
+    reason: "Database adapter for schedule CRUD operations (AC2, AC3, AC4)"
+
+  - path: "apps/api/lego-api/domains/config/application/schedule-service.ts"
+    action: create
+    reason: "Business logic for schedule CRUD and validation (AC1, AC3, AC4)"
+
+  - path: "apps/api/lego-api/domains/config/ports/index.ts"
+    action: modify
+    reason: "Add ScheduleRepository and ScheduleService port interfaces"
+
+  - path: "apps/api/lego-api/domains/config/routes.ts"
+    action: modify
+    reason: "Add 3 schedule endpoints with admin auth (AC1, AC3, AC4, AC5)"
+
+  - path: "apps/api/lego-api/jobs/process-flag-schedules.ts"
+    action: create
+    reason: "Cron job Lambda handler for schedule processing (AC6, AC7, AC8, AC9, AC10)"
+
+  - path: "apps/api/lego-api/domains/config/__tests__/schedule-service.test.ts"
+    action: create
+    reason: "Unit tests for schedule service (AC17)"
+
+  - path: "apps/api/lego-api/domains/config/__tests__/schedule-repository.test.ts"
+    action: create
+    reason: "Unit tests for schedule repository adapter (AC17)"
+
+  - path: "apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts"
+    action: create
+    reason: "Unit tests for cron job handler (AC17, AC19)"
+
+  - path: "apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http"
+    action: create
+    reason: "HTTP integration tests for schedule endpoints (AC18)"
+
+commands_to_run:
+  - command: "pnpm drizzle-kit generate"
+    when: "after database schema changes (step 1)"
+    required: true
+
+  - command: "pnpm build --filter @repo/database-schema"
+    when: "after migration generation (step 2)"
+    required: true
+
+  - command: "pnpm build --filter lego-api"
+    when: "after all backend code changes (step 9)"
+    required: true
+
+  - command: "pnpm test --filter lego-api -- __tests__/schedule"
+    when: "after test creation (step 12)"
+    required: true
+
+  - command: "pnpm lint --filter lego-api"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter lego-api"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Unit test: schedule-service.test.ts - validates scheduledAt in future, updates validation, rolloutPercentage range"
+    evidence_type: test
+
+  - ac_id: "AC2"
+    planned_evidence: "Unit test: schedule-repository.test.ts - saves schedule with foreign key validation, returns 404 for non-existent flag"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "HTTP test: feature-flag-scheduling.http - GET /api/admin/flags/:flagKey/schedule returns array"
+    evidence_type: http
+
+  - ac_id: "AC4"
+    planned_evidence: "HTTP test: feature-flag-scheduling.http - DELETE returns 200 with cancelled status, 400 if already applied"
+    evidence_type: http
+
+  - ac_id: "AC5"
+    planned_evidence: "HTTP test: feature-flag-scheduling.http - Non-admin user receives 403 on POST/GET/DELETE"
+    evidence_type: http
+
+  - ac_id: "AC6"
+    planned_evidence: "File: apps/api/lego-api/jobs/process-flag-schedules.ts - Lambda handler with environment config"
+    evidence_type: file
+
+  - ac_id: "AC7"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - queries pending schedules with FOR UPDATE SKIP LOCKED"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - applies flag updates in transaction with cache invalidation"
+    evidence_type: test
+
+  - ac_id: "AC9"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - sets status=failed on error, logs to CloudWatch"
+    evidence_type: test
+
+  - ac_id: "AC10"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - concurrent execution processes each schedule once"
+    evidence_type: test
+
+  - ac_id: "AC11"
+    planned_evidence: "File: apps/api/lego-api/domains/config/types.ts - Schedule schemas defined"
+    evidence_type: file
+
+  - ac_id: "AC12"
+    planned_evidence: "Unit test: schedule-service.test.ts - ScheduleUpdatesSchema validates empty object rejection"
+    evidence_type: test
+
+  - ac_id: "AC13"
+    planned_evidence: "File: packages/core/api-client/src/schemas/feature-flags.ts - schemas exported"
+    evidence_type: file
+
+  - ac_id: "AC14"
+    planned_evidence: "File: packages/backend/database-schema/src/migrations/app/0011_*.sql - migration creates table"
+    evidence_type: file
+
+  - ac_id: "AC15"
+    planned_evidence: "Note: Retention policy documented in PLAN.yaml notes, no automatic cleanup in MVP"
+    evidence_type: manual
+
+  - ac_id: "AC16"
+    planned_evidence: "Note: No uniqueness constraint on schedules, documented in API comments"
+    evidence_type: manual
+
+  - ac_id: "AC17"
+    planned_evidence: "Command: pnpm test --filter lego-api -- minimum 10 tests across service/repository/cron"
+    evidence_type: command
+
+  - ac_id: "AC18"
+    planned_evidence: "File: apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http - 7+ HTTP requests"
+    evidence_type: http
+
+  - ac_id: "AC19"
+    planned_evidence: "Unit test: process-flag-schedules.test.ts - integration tests for cron job"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Extends WISH-2009 feature flags domain following hexagonal architecture"
+  - "Reuses admin auth middleware from WISH-2009 (no changes needed)"
+  - "Database migration required before deploying cron job"
+  - "Cron job Lambda configuration in infrastructure (not in code scope)"
+  - "EventBridge rule: rate(1 minute) - configured in infrastructure"
+  - "Row-level locking with FOR UPDATE SKIP LOCKED prevents double-processing"
+  - "Cache invalidation reuses existing feature flag service method"
+  - "Schedule retention policy: applied=90d, failed=indefinite, cancelled=30d (no automatic cleanup in MVP)"
+  - "No architectural decisions requiring user input - all patterns follow WISH-2009"
+  - "Jobs directory does not exist yet - will be created"
+  - "Migration will be 0011_*.sql (next in sequence)"
+  - "CloudWatch structured logging for cron job monitoring"

@@ -14,6 +14,11 @@ import { z } from 'zod'
 import { GalleryCard } from '@repo/gallery'
 import { AppBadge, Button, CustomButton } from '@repo/app-component-library'
 import { Star, Puzzle, Trash2 } from 'lucide-react'
+import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { BuildStatusToggle } from '../BuildStatusToggle'
+import { getBestImageUrl } from '../ResponsiveImage/index.js'
+import { generateItemAriaLabel, focusRingClasses } from '../../utils/a11y'
+
 /**
  * Checkmark icon with circle - based on cool-checkmark.tsx design
  */
@@ -34,9 +39,6 @@ function CheckCircleIcon({ className }: { className?: string }) {
     </svg>
   )
 }
-import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
-import { getBestImageUrl } from '../ResponsiveImage/index.js'
-import { generateItemAriaLabel, focusRingClasses } from '../../utils/a11y'
 
 /**
  * WishlistCard props schema
@@ -193,6 +195,15 @@ export const WishlistCard = forwardRef<HTMLDivElement, WishlistCardProps>(functi
             <Star key={i} className="h-3 w-3 fill-current" aria-hidden="true" />
           ))}
         </span>
+      )}
+
+      {/* Build Status Toggle (SETS-MVP-004) - only for owned items */}
+      {item.status === 'owned' && (
+        <BuildStatusToggle
+          itemId={item.id}
+          currentStatus={item.buildStatus ?? null}
+          itemTitle={item.title}
+        />
       )}
 
       {/* Action Buttons */}

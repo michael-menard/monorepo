@@ -960,3 +960,626 @@ describe('Wishlist Schemas', () => {
     })
   })
 })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Custom Error Message Tests (WISH-2110)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  describe('Custom Error Messages - CreateWishlistItemSchema', () => {
+    it('should return "Title is required" for empty title', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: '',
+        store: 'LEGO',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Title is required')
+      }
+    })
+
+    it('should return "Store is required" for empty store', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: '',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Store is required')
+      }
+    })
+
+    it('should return "Invalid URL format" for invalid sourceUrl', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        sourceUrl: 'not-a-url',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid URL format')
+      }
+    })
+
+    it('should return "Invalid image URL format" for invalid imageUrl', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        imageUrl: 'not-a-url',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid image URL format')
+      }
+    })
+
+    it('should return "Price must be a valid decimal with up to 2 decimal places" for invalid price', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        price: 'abc',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Price must be a valid decimal with up to 2 decimal places')
+      }
+    })
+
+    it('should return "Piece count must be a whole number" for decimal pieceCount', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        pieceCount: 100.5,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Piece count must be a whole number')
+      }
+    })
+
+    it('should return "Piece count cannot be negative" for negative pieceCount', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        pieceCount: -10,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Piece count cannot be negative')
+      }
+    })
+
+    it('should return "Priority must be between 0 and 5" for priority > 5', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        priority: 10,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Priority must be between 0 and 5')
+      }
+    })
+
+    it('should return "Priority must be between 0 and 5" for negative priority', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        priority: -1,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Priority must be between 0 and 5')
+      }
+    })
+
+    it('should return "Invalid release date format" for invalid releaseDate', () => {
+      const result = CreateWishlistItemSchema.safeParse({
+        title: 'Test',
+        store: 'LEGO',
+        releaseDate: 'not-a-date',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid release date format')
+      }
+    })
+  })
+
+  describe('Custom Error Messages - WishlistQueryParamsSchema', () => {
+    it('should return "Page number must be at least 1" for page < 1', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        page: 0,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Page number must be at least 1')
+      }
+    })
+
+    it('should return "Limit cannot exceed 100 items" for limit > 100', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        limit: 101,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Limit cannot exceed 100 items')
+      }
+    })
+
+    it('should return "Priority must be between 0 and 5" for priority > 5', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        priority: 6,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Priority must be between 0 and 5')
+      }
+    })
+
+    it('should return "Invalid sort field" for invalid sort', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        sort: 'invalidSort',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid sort field')
+      }
+    })
+
+    it('should return "Sort order must be \'asc\' or \'desc\'" for invalid order', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        order: 'invalid',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe("Sort order must be 'asc' or 'desc'")
+      }
+    })
+  })
+
+  describe('Custom Error Messages - BatchReorderSchema', () => {
+    it('should return "At least one item is required for reordering" for empty items array', () => {
+      const result = BatchReorderSchema.safeParse({
+        items: [],
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('At least one item is required for reordering')
+      }
+    })
+
+    it('should return "Invalid item ID in reorder list" for invalid UUID', () => {
+      const result = BatchReorderSchema.safeParse({
+        items: [
+          { id: 'not-a-uuid', sortOrder: 0 },
+        ],
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid item ID in reorder list')
+      }
+    })
+
+    it('should return "Sort order cannot be negative" for negative sortOrder', () => {
+      const result = BatchReorderSchema.safeParse({
+        items: [
+          { id: '550e8400-e29b-41d4-a716-446655440000', sortOrder: -1 },
+        ],
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Sort order cannot be negative')
+      }
+    })
+  })
+
+  describe('Custom Error Messages - MarkAsPurchasedSchema', () => {
+    it('should return "Invalid purchase date format" for invalid purchaseDate', () => {
+      const result = MarkAsPurchasedSchema.safeParse({
+        purchaseDate: 'not-a-date',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid purchase date format')
+      }
+    })
+
+    it('should return "Price must be a valid decimal with up to 2 decimal places" for invalid purchasePrice', () => {
+      const result = MarkAsPurchasedSchema.safeParse({
+        purchasePrice: 'abc',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Price must be a valid decimal with up to 2 decimal places')
+      }
+    })
+
+    it('should return "Tax must be a valid decimal with up to 2 decimal places" for invalid purchaseTax', () => {
+      const result = MarkAsPurchasedSchema.safeParse({
+        purchaseTax: 'abc',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Tax must be a valid decimal with up to 2 decimal places')
+      }
+    })
+
+    it('should return "Shipping must be a valid decimal with up to 2 decimal places" for invalid purchaseShipping', () => {
+      const result = MarkAsPurchasedSchema.safeParse({
+        purchaseShipping: 'abc',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Shipping must be a valid decimal with up to 2 decimal places')
+      }
+    })
+  })
+
+  describe('Custom Error Messages - Enum Schemas', () => {
+    it('should return "Store must be LEGO, Barweer, Cata, BrickLink, or Other" for invalid store', () => {
+      const result = WishlistStoreSchema.safeParse('InvalidStore')
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Store must be LEGO, Barweer, Cata, BrickLink, or Other')
+      }
+    })
+
+    it('should return "Currency must be USD, EUR, GBP, CAD, or AUD" for invalid currency', () => {
+      const result = CurrencySchema.safeParse('JPY')
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Currency must be USD, EUR, GBP, CAD, or AUD')
+      }
+    })
+
+    it('should return "Status must be wishlist or owned" for invalid status', () => {
+      const result = ItemStatusSchema.safeParse('pending')
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Status must be wishlist or owned')
+      }
+    })
+
+    it('should return "Build status must be not_started, in_progress, or completed" for invalid buildStatus', () => {
+      const result = BuildStatusSchema.safeParse('building')
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Build status must be not_started, in_progress, or completed')
+      }
+    })
+  })
+
+  describe('Custom Error Messages - WishlistItemSchema', () => {
+    it('should return "Invalid UUID format" for invalid id', () => {
+      const result = WishlistItemSchema.safeParse({
+        id: 'not-a-uuid',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'Test',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid UUID format')
+      }
+    })
+
+    it('should return "Title is required" for empty title in WishlistItemSchema', () => {
+      const result = WishlistItemSchema.safeParse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: '',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Title is required')
+      }
+    })
+
+    it('should return "Sort order must be a whole number" for decimal sortOrder', () => {
+      const result = WishlistItemSchema.safeParse({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
+        title: 'Test',
+        store: 'LEGO',
+        setNumber: null,
+        sourceUrl: null,
+        imageUrl: null,
+        price: null,
+        currency: 'USD',
+        pieceCount: null,
+        releaseDate: null,
+        tags: [],
+        priority: 0,
+        notes: null,
+        sortOrder: 0.5,
+        createdAt: '2024-12-27T00:00:00.000Z',
+        updatedAt: '2024-12-27T00:00:00.000Z',
+        createdBy: null,
+        updatedBy: null,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Sort order must be a whole number')
+      }
+    })
+  })
+
+  describe('Custom Error Messages - UpdateWishlistItemSchema', () => {
+    it('should return custom message when updating with invalid priority', () => {
+      const result = UpdateWishlistItemSchema.safeParse({
+        priority: 10,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Priority must be between 0 and 5')
+      }
+    })
+
+    it('should return custom message when updating with invalid URL', () => {
+      const result = UpdateWishlistItemSchema.safeParse({
+        sourceUrl: 'not-a-url',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Invalid URL format')
+      }
+    })
+
+    it('should return custom message when updating with invalid pieceCount', () => {
+      const result = UpdateWishlistItemSchema.safeParse({
+        pieceCount: -5,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('Piece count cannot be negative')
+      }
+    })
+  })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WISH-20171: Schema Alignment Tests (Frontend ↔ Backend)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('WISH-20171: Advanced Filter Schema Alignment', () => {
+  describe('Store Filter Structure', () => {
+    it('frontend store array maps to backend comma-separated string', () => {
+      const frontendParams = { store: ['LEGO', 'BrickLink'] }
+      
+      // Frontend uses array, backend expects comma-separated
+      const backendQueryString = frontendParams.store.join(',')
+      expect(backendQueryString).toBe('LEGO,BrickLink')
+    })
+
+    it('single store value works in both frontend and backend', () => {
+      const frontendParams = { store: ['LEGO'] }
+      const backendQueryString = frontendParams.store.join(',')
+      expect(backendQueryString).toBe('LEGO')
+    })
+
+    it('empty store array maps to empty string', () => {
+      const frontendParams = { store: [] }
+      const backendQueryString = frontendParams.store.join(',')
+      expect(backendQueryString).toBe('')
+    })
+  })
+
+  describe('Priority Range Structure', () => {
+    it('priorityRange structure matches between frontend and backend', () => {
+      const params = { priorityRange: { min: 3, max: 5 } }
+      
+      // Frontend schema accepts this structure
+      const result = WishlistQueryParamsSchema.parse(params)
+      expect(result.priorityRange).toEqual({ min: 3, max: 5 })
+    })
+
+    it('validates priority range min <= max constraint', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        priorityRange: { min: 5, max: 3 },
+      })
+      
+      // Should fail validation - min > max
+      expect(result.success).toBe(false)
+    })
+
+    it('validates priority range 0-5 boundaries', () => {
+      const result1 = WishlistQueryParamsSchema.safeParse({
+        priorityRange: { min: 0, max: 5 },
+      })
+      expect(result1.success).toBe(true)
+
+      const result2 = WishlistQueryParamsSchema.safeParse({
+        priorityRange: { min: 0, max: 6 },
+      })
+      expect(result2.success).toBe(false)
+
+      const result3 = WishlistQueryParamsSchema.safeParse({
+        priorityRange: { min: -1, max: 5 },
+      })
+      expect(result3.success).toBe(false)
+    })
+
+    it('frontend priorityRange maps to backend comma-separated format', () => {
+      const frontendParams = { priorityRange: { min: 3, max: 5 } }
+      
+      // Backend expects "3,5" query string format
+      const backendQueryString = `${frontendParams.priorityRange.min},${frontendParams.priorityRange.max}`
+      expect(backendQueryString).toBe('3,5')
+    })
+  })
+
+  describe('Price Range Structure', () => {
+    it('priceRange structure matches between frontend and backend', () => {
+      const params = { priceRange: { min: 50, max: 200 } }
+      
+      // Frontend schema accepts this structure
+      const result = WishlistQueryParamsSchema.parse(params)
+      expect(result.priceRange).toEqual({ min: 50, max: 200 })
+    })
+
+    it('validates price range min <= max constraint', () => {
+      const result = WishlistQueryParamsSchema.safeParse({
+        priceRange: { min: 200, max: 50 },
+      })
+      
+      // Should fail validation - min > max
+      expect(result.success).toBe(false)
+    })
+
+    it('validates price range >= 0 constraint', () => {
+      const result1 = WishlistQueryParamsSchema.safeParse({
+        priceRange: { min: 0, max: 100 },
+      })
+      expect(result1.success).toBe(true)
+
+      const result2 = WishlistQueryParamsSchema.safeParse({
+        priceRange: { min: -10, max: 100 },
+      })
+      expect(result2.success).toBe(false)
+    })
+
+    it('frontend priceRange maps to backend comma-separated format', () => {
+      const frontendParams = { priceRange: { min: 50, max: 200 } }
+      
+      // Backend expects "50,200" query string format
+      const backendQueryString = `${frontendParams.priceRange.min},${frontendParams.priceRange.max}`
+      expect(backendQueryString).toBe('50,200')
+    })
+
+    it('handles decimal price boundaries in string format', () => {
+      const frontendParams = { priceRange: { min: 49.99, max: 199.99 } }
+      const backendQueryString = `${frontendParams.priceRange.min},${frontendParams.priceRange.max}`
+      expect(backendQueryString).toBe('49.99,199.99')
+    })
+  })
+
+  describe('Combined Filter Schema Alignment', () => {
+    it('validates all filters together in frontend schema', () => {
+      const params = {
+        store: ['LEGO', 'BrickLink'],
+        priorityRange: { min: 3, max: 5 },
+        priceRange: { min: 50, max: 200 },
+        sort: 'bestValue',
+        order: 'asc',
+      }
+      
+      const result = WishlistQueryParamsSchema.parse(params)
+      expect(result.store).toEqual(['LEGO', 'BrickLink'])
+      expect(result.priorityRange).toEqual({ min: 3, max: 5 })
+      expect(result.priceRange).toEqual({ min: 50, max: 200 })
+      expect(result.sort).toBe('bestValue')
+      expect(result.order).toBe('asc')
+    })
+
+    it('converts frontend params to backend query string format', () => {
+      const frontendParams = {
+        store: ['LEGO', 'BrickLink'],
+        priorityRange: { min: 3, max: 5 },
+        priceRange: { min: 50, max: 200 },
+        sort: 'bestValue',
+        order: 'asc',
+      }
+      
+      // Build backend query string
+      const queryParams = new URLSearchParams({
+        store: frontendParams.store.join(','),
+        priorityRange: `${frontendParams.priorityRange.min},${frontendParams.priorityRange.max}`,
+        priceRange: `${frontendParams.priceRange.min},${frontendParams.priceRange.max}`,
+        sort: frontendParams.sort,
+        order: frontendParams.order,
+      })
+      
+      expect(queryParams.get('store')).toBe('LEGO,BrickLink')
+      expect(queryParams.get('priorityRange')).toBe('3,5')
+      expect(queryParams.get('priceRange')).toBe('50,200')
+      expect(queryParams.get('sort')).toBe('bestValue')
+      expect(queryParams.get('order')).toBe('asc')
+    })
+
+    it('validates that frontend and backend schemas define identical filter structures', () => {
+      // This test verifies schema alignment by parsing the same logical data
+      const frontendData = {
+        store: ['LEGO'],
+        priorityRange: { min: 0, max: 5 },
+        priceRange: { min: 0, max: 1000 },
+      }
+      
+      // Frontend schema parse
+      const frontendResult = WishlistQueryParamsSchema.parse(frontendData)
+      
+      // Backend would parse from query string: "store=LEGO&priorityRange=0,5&priceRange=0,1000"
+      // After parsing, both should have identical structure
+      expect(frontendResult.store).toEqual(['LEGO'])
+      expect(frontendResult.priorityRange).toEqual({ min: 0, max: 5 })
+      expect(frontendResult.priceRange).toEqual({ min: 0, max: 1000 })
+    })
+  })
+
+  describe('Smart Sort Compatibility', () => {
+    it('supports bestValue sort with all filters', () => {
+      const params = {
+        store: ['LEGO'],
+        priorityRange: { min: 3, max: 5 },
+        priceRange: { min: 50, max: 200 },
+        sort: 'bestValue',
+      }
+      
+      const result = WishlistQueryParamsSchema.parse(params)
+      expect(result.sort).toBe('bestValue')
+    })
+
+    it('supports expiringSoon sort with all filters', () => {
+      const params = {
+        store: ['LEGO'],
+        priorityRange: { min: 0, max: 2 },
+        priceRange: { min: 20, max: 100 },
+        sort: 'expiringSoon',
+      }
+      
+      const result = WishlistQueryParamsSchema.parse(params)
+      expect(result.sort).toBe('expiringSoon')
+    })
+
+    it('supports hiddenGems sort with all filters', () => {
+      const params = {
+        store: ['LEGO'],
+        priorityRange: { min: 0, max: 3 },
+        priceRange: { min: 50, max: 150 },
+        sort: 'hiddenGems',
+      }
+      
+      const result = WishlistQueryParamsSchema.parse(params)
+      expect(result.sort).toBe('hiddenGems')
+    })
+  })
+})

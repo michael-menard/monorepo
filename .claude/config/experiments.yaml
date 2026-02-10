@@ -1,0 +1,87 @@
+# Workflow Experimentation Framework Configuration
+# Schema: .claude/schemas/experiment-schema.md
+
+experiments: []
+
+# Example experiment definitions (paused by default):
+#
+# - id: exp-fast-track
+#   description: "Skip elaboration phase for simple stories (<=3 ACs) to reduce cycle time"
+#   status: paused
+#   created_at: "2026-02-01T00:00:00Z"
+#   traffic: 0.2
+#   eligibility:
+#     ac_count_max: 3
+#     complexity: simple
+#   metrics:
+#     primary: cycle_time
+#     secondary:
+#       - gate_pass_rate
+#       - token_cost
+#     min_sample_size: 10
+#
+# - id: exp-parallel-review
+#   description: "Run QA gate and code review in parallel instead of sequentially"
+#   status: paused  
+#   created_at: "2026-02-05T00:00:00Z"
+#   traffic: 0.3
+#   eligibility:
+#     all: true
+#   metrics:
+#     primary: cycle_time
+#     secondary:
+#       - review_cycles
+#       - gate_pass_rate
+#     min_sample_size: 10
+#
+# - id: exp-pattern-hints
+#   description: "Provide pattern-based hints to agents during planning phase"
+#   status: paused
+#   created_at: "2026-02-10T00:00:00Z"
+#   traffic: 0.25
+#   eligibility:
+#     ac_count_min: 2
+#     complexity: medium
+#     domain: 
+#       - workflow-learning
+#       - wishlist
+#   metrics:
+#     primary: gate_pass_rate
+#     secondary:
+#       - review_cycles
+#       - token_cost
+#     min_sample_size: 10
+
+# Eligibility Criteria Options:
+#
+#   ac_count_max: <number>    # Story AC count <= threshold
+#   ac_count_min: <number>    # Story AC count >= threshold  
+#   complexity: simple | medium | complex
+#     - simple: <= 2 ACs
+#     - complex: >= 5 ACs or auth/security keywords
+#     - medium: otherwise
+#   domain: [<string>]        # Story epic matches one of these
+#   all: true                 # Match all stories (ignores other filters)
+#
+# Metrics Options:
+#   - gate_pass_rate    # QA gate pass rate (0.0-1.0)
+#   - cycle_time        # End-to-end duration in hours
+#   - token_cost        # Total tokens consumed
+#   - review_cycles     # Number of review iterations
+#   - rework_rate       # Stories requiring rework (0.0-1.0)
+#
+# To activate an experiment:
+#   1. Set status: active
+#   2. Ensure traffic is between 0.0 and 1.0
+#   3. Verify eligibility criteria match intended stories
+#   4. Commit to git
+#
+# Traffic Routing:
+#   - Only active experiments route traffic
+#   - First match wins (story assigned to first matching experiment)
+#   - Stories not matching any experiment → control group
+#   - Math.random() < traffic → treatment, otherwise control
+#
+# Analysis:
+#   Run: /experiment-report <experiment-id>
+#   Outputs: plans/future/workflow-learning/experiments/EXPERIMENT-REPORT-{id}-{date}.yaml

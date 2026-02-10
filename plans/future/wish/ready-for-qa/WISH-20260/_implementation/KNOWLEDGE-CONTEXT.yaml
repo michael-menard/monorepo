@@ -1,0 +1,183 @@
+schema: 1
+story_id: WISH-20260
+timestamp: '2026-02-08T20:30:00Z'
+
+# Knowledge Context for Retry Mechanism Implementation
+
+existing_patterns:
+
+  database_migrations:
+    - pattern: Drizzle ORM migration files in packages/backend/database-schema/src/migrations/app/
+    - naming: Sequential numbers with generated names (e.g., 0011_mixed_scarlet_witch.sql)
+    - format: Raw SQL with statement breakpoints
+    - journal: meta/_journal.json tracks all migrations
+    - last_migration: 0011_mixed_scarlet_witch.sql (feature_flag_schedules table creation)
+
+  schedule_repository:
+    - file: apps/api/lego-api/domains/config/adapters/schedule-repository.ts
+    - pattern: Uses Drizzle ORM with type casting (DrizzleAny)
+    - locking: Raw SQL for FOR UPDATE SKIP LOCKED (not supported by Drizzle directly)
+    - methods:
+      - findPendingWithLock: Returns schedules WHERE status = 'pending' AND scheduled_at <= NOW()
+      - updateStatus: Updates status, appliedAt, errorMessage
+    - logging: Uses @repo/logger for structured logs
+
+  cron_job:
+    - file: apps/api/lego-api/jobs/process-flag-schedules.ts
+    - pattern: Lambda handler triggered by EventBridge every 1 minute
+    - error_handling: Try-catch per schedule, failures don't block other schedules
+    - batch_size: 100 schedules per execution
+    - current_flow:
+      1. Fetch pending schedules with lock
+      2. For each schedule, get flag by ID
+      3. Update flag via repository
+      4. Invalidate cache
+      5. Mark schedule as applied or failed
+
+  schema_patterns:
+    - file: packages/backend/database-schema/src/schema/feature-flags.ts
+    - table: featureFlagSchedules
+    - existing_columns:
+      - id (uuid, primary key)
+      - flagId (uuid, foreign key)
+      - scheduledAt (timestamp with time zone)
+      - status (text: pending/applied/failed/cancelled)
+      - updates (jsonb)
+      - appliedAt (timestamp with time zone, nullable)
+      - errorMessage (text, nullable)
+      - createdAt, updatedAt (timestamp with time zone)
+    - existing_indexes:
+      - idx_schedules_flag_id
+      - idx_schedules_scheduled_at
+      - idx_schedules_status
+
+  type_definitions:
+    - file: apps/api/lego-api/domains/config/types.ts
+    - schedule_schema: Uses Zod for all types (z.infer pattern)
+    - schedule_type: Contains id, flagId, scheduledAt, status, updates, appliedAt, errorMessage, createdAt, updatedAt
+    - ports: Repository interfaces in domains/config/ports/index.ts
+
+  logging_patterns:
+    - import: import { logger } from '@repo/logger'
+    - format: Structured JSON logs with context objects
+    - levels: info, error, warn, debug
+    - examples:
+      - logger.info('Schedule applied successfully', { scheduleId, flagKey, updates })
+      - logger.error('Schedule processing failed', { scheduleId, error })
+
+  environment_variables:
+    - pattern: No env var utility found in codebase, use process.env directly
+    - parsing: parseInt() for numbers, || operator for defaults
+    - validation: Add to startup validation if critical
+
+related_stories:
+  - WISH-2119: Parent story, implements flag scheduling infrastructure
+  - WISH-2009: Feature flag updates and caching
+  - WISH-2039: User-level targeting (unrelated but in same domain)
+
+implementation_notes:
+
+  retry_backoff:
+    - formula: "2^(retry_count + 1) minutes"
+    - retry_0_first_failure: 2^1 = 2 minutes
+    - retry_1_second_attempt: 2^2 = 4 minutes
+    - retry_2_third_attempt: 2^3 = 8 minutes
+    - jitter: Add random 0-30 seconds to prevent thundering herd
+    - implementation: const backoffMinutes = Math.pow(2, retryCount + 1)
+
+  query_enhancement:
+    - current_query: "WHERE status = 'pending' AND scheduled_at <= NOW()"
+    - new_query: "WHERE (status = 'pending' AND scheduled_at <= NOW()) OR (status = 'failed' AND next_retry_at <= NOW() AND retry_count < max_retries)"
+    - ordering: "ORDER BY next_retry_at ASC, scheduled_at ASC"
+    - rationale: Prioritize retries over new schedules to prevent starvation
+
+  schema_changes:
+    - retry_count: INTEGER DEFAULT 0 NOT NULL (tracks number of retry attempts)
+    - max_retries: INTEGER DEFAULT 3 NOT NULL (configurable limit per schedule)
+    - next_retry_at: TIMESTAMP WITH TIME ZONE (nullable, when to retry next)
+    - last_error: TEXT (nullable, store latest error message for debugging)
+    - new_index: idx_schedules_next_retry_at (for efficient cron queries)
+
+  utility_function:
+    - name: calculateNextRetryAt
+    - signature: "(retryCount: number): Date"
+    - location: Create in cron job file or separate util file
+    - logic:
+      1. Calculate backoffMinutes = 2^(retryCount + 1)
+      2. Calculate jitterSeconds = Math.random() * 30
+      3. Return new Date(Date.now() + backoffMinutes * 60000 + jitterSeconds * 1000)
+
+  failure_handling:
+    - on_failure:
+      1. Increment retry_count
+      2. Calculate next_retry_at using calculateNextRetryAt(retry_count)
+      3. Update last_error with error message
+      4. Keep status = 'failed'
+      5. Log retry attempt to CloudWatch
+    - on_max_retries:
+      1. Keep status = 'failed'
+      2. Set next_retry_at = NULL (no more retries)
+      3. Log final failure to CloudWatch
+    - on_success:
+      1. Set status = 'applied'
+      2. Set applied_at = NOW()
+      3. Set next_retry_at = NULL
+      4. Log success with retry_count
+
+testing_requirements:
+
+  unit_tests:
+    - file: Create apps/api/lego-api/jobs/__tests__/retry-utils.test.ts
+    - framework: Vitest + vi mocking
+    - test_cases:
+      - calculateNextRetryAt returns correct backoff (2, 4, 8 minutes)
+      - Jitter is within 0-30 seconds range
+      - Edge case: retryCount = 0 returns ~2 minutes
+      - Edge case: retryCount = 10 (ensure no overflow)
+
+  integration_tests:
+    - file: Extend apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+    - test_cases:
+      - Failed schedule increments retry_count and sets next_retry_at
+      - Successful retry clears next_retry_at and sets status = 'applied'
+      - Max retries exceeded keeps status = 'failed' and clears next_retry_at
+      - Concurrent retry processing with row locking
+      - Custom max_retries per schedule
+
+  repository_tests:
+    - file: Create apps/api/lego-api/domains/config/__tests__/schedule-repository.test.ts (if not exists)
+    - test_cases:
+      - findPendingWithLock includes failed schedules ready for retry
+      - updateStatus correctly updates retry metadata
+      - Query ordering prioritizes retries
+
+risks_and_mitigations:
+
+  - risk: Cron runs every 1 minute, retry timing may be delayed up to 60s
+    mitigation: Acceptable for retry use case, document in code comments
+    severity: low
+
+  - risk: 100 schedule limit may be exhausted by retries
+    mitigation: Order by next_retry_at ASC to prioritize oldest retries
+    severity: medium
+
+  - risk: Database migration must run before cron job deployment
+    mitigation: Add deployment notes, use CI/CD migration step
+    severity: high
+
+  - risk: Exponential backoff cap needed to prevent excessive delays
+    mitigation: Add cap at 60 minutes (not in MVP, log to deferred)
+    severity: low
+
+dependencies:
+  - "@repo/logger": Logging utility (already imported)
+  - "drizzle-orm": Database ORM (already imported)
+  - "zod": Schema validation (already imported)
+  - No new dependencies required
+
+codebase_conventions:
+  - types: Always use Zod schemas with z.infer<typeof Schema>
+  - logging: Never use console.log, always use @repo/logger
+  - imports: Import from package root (@repo/ui), not subpaths
+  - formatting: Prettier auto-enforced (no semicolons, single quotes, trailing commas)
+  - tests: Vitest + React Testing Library, minimum 45% coverage

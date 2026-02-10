@@ -1,0 +1,28 @@
+schema: 1
+story_id: WISH-2049
+timestamp: 2026-02-08T18:30:00Z
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - apps/web/app-wishlist-gallery/src/components/WishlistForm/**
+  - apps/web/app-wishlist-gallery/src/pages/AddItemPage/**
+  - apps/web/app-wishlist-gallery/src/store/**
+  - packages/core/upload-types/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: Implement background image compression that starts immediately upon image selection, completing before form submission to eliminate compression latency

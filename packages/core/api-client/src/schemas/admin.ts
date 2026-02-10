@@ -96,13 +96,7 @@ export type ListUsersQuery = z.infer<typeof ListUsersQuerySchema>
 // Audit Log Types
 // ─────────────────────────────────────────────────────────────────────────
 
-export const AuditActionTypeSchema = z.enum([
-  'search',
-  'view',
-  'revoke_tokens',
-  'block',
-  'unblock',
-])
+export const AuditActionTypeSchema = z.enum(['search', 'view', 'revoke_tokens', 'block', 'unblock'])
 
 export type AuditActionType = z.infer<typeof AuditActionTypeSchema>
 

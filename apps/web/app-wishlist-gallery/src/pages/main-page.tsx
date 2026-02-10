@@ -43,6 +43,11 @@ import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
 import { DraggableWishlistGallery } from '../components/DraggableWishlistGallery'
 import { useWishlistSortPersistence, DEFAULT_SORT_MODE } from '../hooks/useWishlistSortPersistence'
 import { useAnnouncer, Announcer } from '../hooks/useAnnouncer'
+import { FilterPanel } from '../components/FilterPanel'
+import { FilterBadge } from '../components/FilterPanel/FilterBadge'
+import type { PriorityRange, PriceRange, FilterPanelState } from '../components/FilterPanel/__types__'
+import type { WishlistStore } from '@repo/api-client/schemas/wishlist'
+
 
 /**
  * Main page props schema
@@ -158,6 +163,10 @@ type WishlistFilters = {
   tags: string[]
   sort: string
   page: number
+  // WISH-20172: Advanced filter criteria
+  priorityRange: PriorityRange | null
+  priceRange: PriceRange | null
+  stores: WishlistStore[]
 } & Record<string, unknown>
 
 /**
@@ -193,6 +202,10 @@ function WishlistMainPageContent({
   const selectedTags = filters.tags
   const sortValue = filters.sort
   const page = filters.page
+  // WISH-20172: Advanced filters
+  const priorityRange = filters.priorityRange
+  const priceRange = filters.priceRange
+  const filterStores = filters.stores
 
   // View mode state (grid | datatable) with persistence
   const [viewMode, setViewMode] = useViewMode('wishlist')
@@ -248,8 +261,14 @@ function WishlistMainPageContent({
     refetch,
   } = useGetWishlistQuery({
     q: search || undefined,
-    store: selectedStore || undefined,
+    // WISH-20172: Combine tab filter (store) and FilterPanel (stores) into array
+    store: filterStores.length > 0 
+      ? filterStores 
+      : (selectedStore ? [selectedStore as WishlistStore] : undefined),
     tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
+    // WISH-20172: Advanced filter criteria
+    priorityRange: priorityRange || undefined,
+    priceRange: priceRange || undefined,
     sort: sortField as
       | 'createdAt'
       | 'title'
@@ -372,6 +391,42 @@ function WishlistMainPageContent({
   const handleClearFilters = useCallback(() => {
     clearFilters()
   }, [clearFilters])
+  // WISH-20172: FilterPanel handlers
+  const handleApplyFilters = useCallback(
+    (panelState: FilterPanelState) => {
+      updateFilter('stores', panelState.stores)
+      updateFilter('priorityRange', panelState.priorityRange)
+      updateFilter('priceRange', panelState.priceRange)
+      updateFilter('page', 1)
+      
+      // WISH-2006 AC10: Announce filter application
+      const filterCount = 
+        (panelState.stores.length > 0 ? 1 : 0) +
+        (panelState.priorityRange ? 1 : 0) +
+        (panelState.priceRange ? 1 : 0)
+      
+      if (filterCount > 0) {
+        setTimeout(() => {
+          const count = wishlistData?.items.length ?? 0
+          announce(`${filterCount} filters applied. ${count} items found.`)
+        }, 500)
+      }
+    },
+    [updateFilter, announce, wishlistData],
+  )
+
+  const handleClearFilterPanel = useCallback(() => {
+    updateFilter('stores', [])
+    updateFilter('priorityRange', null)
+    updateFilter('priceRange', null)
+    updateFilter('page', 1)
+    
+    // WISH-2006 AC10: Announce clear
+    setTimeout(() => {
+      const count = wishlistData?.items.length ?? 0
+      announce(`Filters cleared. Showing all ${count} items.`)
+    }, 500)
+  }, [updateFilter, announce, wishlistData])
 
   // Handle card/row click (navigate to detail page)
   const handleCardClick = useCallback((itemId: string) => {
@@ -591,12 +646,30 @@ function WishlistMainPageContent({
           onSortChange={handleSortChange}
           onClearAll={handleClearFilters}
           rightSlot={
-            <GalleryViewToggle
-              currentView={viewMode}
-              onViewChange={setViewMode}
-              showFirstTimeHint={showHint}
-              onDismissHint={dismissHint}
-            />
+            <div className="flex items-center gap-2">
+              <FilterPanel
+                onApplyFilters={handleApplyFilters}
+                onClearFilters={handleClearFilterPanel}
+                initialState={{
+                  stores: filterStores,
+                  priorityRange: priorityRange,
+                  priceRange: priceRange,
+                }}
+              />
+              <FilterBadge 
+                count={
+                  (filterStores.length > 0 ? 1 : 0) +
+                  (priorityRange ? 1 : 0) +
+                  (priceRange ? 1 : 0)
+                } 
+              />
+              <GalleryViewToggle
+                currentView={viewMode}
+                onViewChange={setViewMode}
+                showFirstTimeHint={showHint}
+                onDismissHint={dismissHint}
+              />
+            </div>
           }
           data-testid="wishlist-filter-bar"
         >
@@ -738,6 +811,10 @@ export function MainPage({ className }: MainPageProps) {
       tags: [],
       sort: sortMode,
       page: 1,
+      // WISH-20172: Advanced filters
+      priorityRange: null,
+      priceRange: null,
+      stores: [],
     }),
     [sortMode],
   )

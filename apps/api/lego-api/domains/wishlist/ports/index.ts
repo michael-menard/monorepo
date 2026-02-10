@@ -87,9 +87,11 @@ export interface WishlistRepository {
     pagination: PaginationInput,
     filters?: {
       search?: string
-      store?: string
+      store?: string[] // WISH-20171: Changed from string to string[]
       tags?: string[]
-      priority?: number
+      priority?: number // Backward compatibility
+      priorityRange?: { min: number; max: number } // WISH-20171: New
+      priceRange?: { min: number; max: number } // WISH-20171: New
       status?: 'wishlist' | 'owned' // SETS-MVP-001: Filter by lifecycle status
       sort?:
         | 'createdAt'

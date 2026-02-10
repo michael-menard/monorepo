@@ -158,6 +158,71 @@ const kbEntry = await kb_add({
 })
 ```
 
+### Step 5b: Create Calibration Entry (WKFL-002)
+
+After writing the feedback entry, also write a calibration entry to track confidence accuracy.
+Skip calibration for `missing` feedback type (no confidence to calibrate).
+Skip if finding lacks a `confidence` field in VERIFICATION.yaml.
+
+```typescript
+import { CalibrationEntrySchema } from '@repo/knowledge-base/__types__'
+
+// Map feedback type to calibration outcome
+const outcomeMap = {
+  false_positive: 'false_positive',
+  severity_wrong: 'severity_wrong',
+  helpful: 'correct',
+  missing: null, // Skip - no calibration entry for missing feedback
+}
+
+const actualOutcome = outcomeMap[feedbackType]
+
+if (actualOutcome) {
+  // Look up stated confidence from VERIFICATION.yaml finding
+  const statedConfidence = finding.confidence // 'high' | 'medium' | 'low'
+
+  if (statedConfidence) {
+    const calibrationEntry = {
+      agent_id: agentId,
+      finding_id: findingId,
+      story_id: storyId,
+      stated_confidence: statedConfidence,
+      actual_outcome: actualOutcome,
+      timestamp: new Date().toISOString(),
+    }
+
+    // Validate with Zod
+    const validatedCalibration = CalibrationEntrySchema.parse(calibrationEntry)
+
+    // Build calibration tags
+    const calibrationTags = [
+      'calibration',
+      `agent:${agentId}`,
+      `confidence:${statedConfidence}`,
+      `outcome:${actualOutcome}`,
+      `date:${new Date().toISOString().slice(0, 7)}`,
+    ]
+
+    // Write to KB
+    const calibrationKbEntry = await kb_add({
+      content: JSON.stringify(validatedCalibration, null, 2),
+      role: 'dev',
+      entry_type: 'calibration',
+      story_id: storyId,
+      tags: calibrationTags,
+    })
+
+    logger.info('Calibration entry created', {
+      findingId,
+      agentId,
+      statedConfidence,
+      actualOutcome,
+      calibrationKbEntryId: calibrationKbEntry.id,
+    })
+  }
+}
+```
+
 ### Step 6: Confirm to User
 
 ```typescript
@@ -188,6 +253,7 @@ Note: ${note}
 
 KB Entry ID: ${kbEntry.id}
 Tags: ${tags.join(', ')}
+${actualOutcome ? `\nCalibration Entry: Created (confidence: ${finding.confidence} -> outcome: ${actualOutcome})` : '\nCalibration Entry: Skipped (missing feedback type)'}
 `)
 ```
 

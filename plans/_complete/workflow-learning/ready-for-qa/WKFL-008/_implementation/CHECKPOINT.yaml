@@ -1,0 +1,24 @@
+schema: 1
+story_id: WKFL-008
+feature_dir: plans/future/workflow-learning
+timestamp: '2026-02-07T23:10:00Z'
+
+current_phase: done
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+proof_complete: true
+forced: false
+warnings: []
+e2e_gate: exempt
+
+completed_at: '2026-02-07T23:10:00Z'
+
+progress_summary:
+  steps_completed: 20
+  steps_total: 20
+  percent_complete: 100
+  acs_complete: 5
+  acs_partial: 0
+  acs_missing: 0

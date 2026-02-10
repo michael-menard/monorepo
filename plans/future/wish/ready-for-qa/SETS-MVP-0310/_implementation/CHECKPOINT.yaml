@@ -1,28 +1,31 @@
 schema: 1
 story_id: "SETS-MVP-0310"
 feature_dir: "plans/future/wish"
-timestamp: "2026-02-01T20:30:00-07:00"
+timestamp: "2026-02-08T19:45:00-07:00"
 
-current_phase: done
+current_phase: fix-verified
 last_successful_phase: review
 phase_completed_at: "2026-02-01T20:55:00-07:00"
 
-iteration: 1
+iteration: 2
 max_iterations: 3
 
 blocked: false
 blocked_reason: null
 
 forced: false
-warnings:
-  - "Story has CONDITIONAL_PASS from QA elaboration - 7 ACs added for critical findings (now addressed)"
-  - "SETS-MVP-001 dependency must be verified before implementation (currently in UAT phase)"
-  - "AC11-AC13 architectural decisions RESOLVED - ready for implementation"
+warnings: []
 
-completed_at: "2026-02-01T20:55:00-07:00"
+fix_initiated_at: "2026-02-08T19:45:00-07:00"
+fix_source: qa-verify-failed
+
+completed_at: "2026-02-08T20:36:00-07:00"
+fix_verified_at: "2026-02-08T20:36:00-07:00"
+fix_verified_by: "verification-leader"
 
 setup_artifacts_created:
   - SCOPE.yaml
   - CHECKPOINT.yaml (updated)
   - KNOWLEDGE-CONTEXT.yaml
   - PLAN.yaml
+  - FIX-CONTEXT.yaml

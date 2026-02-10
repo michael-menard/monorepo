@@ -12,6 +12,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useS3Upload, MAX_FILE_SIZE, ALLOWED_MIME_TYPES } from '../useS3Upload'
 
+// WISH-2120: Import test utilities for cleaner File mocking
+import { createMockFile } from '../../test/utils'
+
 // Mock @repo/upload-client
 vi.mock('@repo/upload-client', () => {
   const mockUploadToPresignedUrl = vi.fn()
@@ -132,7 +135,7 @@ describe('useS3Upload', () => {
     it('validates MIME type', () => {
       const { result } = renderHook(() => useS3Upload())
 
-      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' })
+      const invalidFile = createMockFile({ name: 'file.txt', type: 'text/plain' })
 
       const error = result.current.validateFile(invalidFile)
       // WISH-2045: Updated to include HEIC in allowed types
@@ -142,7 +145,7 @@ describe('useS3Upload', () => {
     it('accepts valid files', () => {
       const { result } = renderHook(() => useS3Upload())
 
-      const validFile = new File(['content'], 'image.jpg', { type: 'image/jpeg' })
+      const validFile = createMockFile({ name: 'image.jpg', type: 'image/jpeg' })
 
       const error = result.current.validateFile(validFile)
       expect(error).toBe(null)
@@ -179,7 +182,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
 
       let uploadPromise: Promise<string | null>
       act(() => {
@@ -218,7 +221,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -240,7 +243,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -271,7 +274,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -285,7 +288,7 @@ describe('useS3Upload', () => {
     it('handles validation errors', async () => {
       const { result } = renderHook(() => useS3Upload())
 
-      const invalidFile = new File(['content'], 'file.txt', { type: 'text/plain' })
+      const invalidFile = createMockFile({ name: 'file.txt', type: 'text/plain' })
       let uploadResult
       await act(async () => {
         uploadResult = await result.current.upload(invalidFile)
@@ -302,7 +305,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadResult
       await act(async () => {
         uploadResult = await result.current.upload(file)
@@ -327,7 +330,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadResult
       await act(async () => {
         uploadResult = await result.current.upload(file)
@@ -351,7 +354,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadResult
       await act(async () => {
         uploadResult = await result.current.upload(file)
@@ -372,7 +375,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadResult
       await act(async () => {
         uploadResult = await result.current.upload(file)
@@ -404,7 +407,7 @@ describe('useS3Upload', () => {
 
       expect(result.current.state).toBe('idle')
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadPromise: Promise<string | null>
       act(() => {
         uploadPromise = result.current.upload(file)
@@ -440,7 +443,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadPromise: Promise<string | null>
       act(() => {
         uploadPromise = result.current.upload(file)
@@ -475,7 +478,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -488,7 +491,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -517,7 +520,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       let uploadPromise: Promise<string | null> | undefined
       await act(async () => {
         uploadPromise = result.current.upload(file)
@@ -558,7 +561,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -674,7 +677,7 @@ describe('useS3Upload', () => {
       const { result } = renderHook(() => useS3Upload())
 
       // Create a zero-byte file
-      const emptyFile = new File([], 'empty.jpg', { type: 'image/jpeg' })
+      const emptyFile = createMockFile({ name: 'empty.jpg', size: 0 })
       expect(emptyFile.size).toBe(0)
 
       let uploadResult
@@ -695,7 +698,7 @@ describe('useS3Upload', () => {
     it('does not leave partial state on zero-byte file upload', async () => {
       const { result } = renderHook(() => useS3Upload())
 
-      const emptyFile = new File([], 'empty.jpg', { type: 'image/jpeg' })
+      const emptyFile = createMockFile({ name: 'empty.jpg', size: 0 })
 
       await act(async () => {
         await result.current.upload(emptyFile)
@@ -715,8 +718,8 @@ describe('useS3Upload', () => {
 
   describe('Image Compression (WISH-2022)', () => {
     it('compresses image before upload by default', async () => {
-      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
-      const compressedFile = new File(['compressed'], 'test.jpg', { type: 'image/jpeg' })
+      const originalFile = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
+      const compressedFile = createMockFile({ name: 'test.jpg', content: 'compressed' })
 
       mockCompressImage.mockResolvedValue({
         compressed: true,
@@ -774,7 +777,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { skipCompression: true })
       })
@@ -794,7 +797,7 @@ describe('useS3Upload', () => {
     })
 
     it('transitions through compressing state', async () => {
-      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const originalFile = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
 
       // Slow compression to observe state
       mockCompressImage.mockImplementation(async file => {
@@ -844,7 +847,7 @@ describe('useS3Upload', () => {
     })
 
     it('handles compression errors gracefully', async () => {
-      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const originalFile = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
 
       // Compression fails but returns original file
       mockCompressImage.mockResolvedValue({
@@ -878,7 +881,7 @@ describe('useS3Upload', () => {
     })
 
     it('tracks compression progress', async () => {
-      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const originalFile = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
 
       mockCompressImage.mockImplementation(async (_file, options) => {
         // Simulate progress callbacks
@@ -912,7 +915,7 @@ describe('useS3Upload', () => {
     })
 
     it('resets compression state on cancel', async () => {
-      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const originalFile = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
 
       // Very slow compression
       mockCompressImage.mockImplementation(async file => {
@@ -953,7 +956,7 @@ describe('useS3Upload', () => {
     })
 
     it('resets compression result on reset', async () => {
-      const originalFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const originalFile = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
 
       mockCompressImage.mockResolvedValue({
         compressed: true,
@@ -1007,7 +1010,7 @@ describe('useS3Upload', () => {
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        file: createMockFile({ name: 'test.jpg', type: 'image/jpeg' }),
         originalSize: 1000000,
         finalSize: 500000,
         ratio: 0.5,
@@ -1015,7 +1018,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file)
       })
@@ -1033,7 +1036,7 @@ describe('useS3Upload', () => {
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        file: createMockFile({ name: 'test.jpg', type: 'image/jpeg' }),
         originalSize: 1000000,
         finalSize: 200000,
         ratio: 0.2,
@@ -1041,7 +1044,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { preset: 'low-bandwidth' })
       })
@@ -1059,7 +1062,7 @@ describe('useS3Upload', () => {
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        file: createMockFile({ name: 'test.jpg', type: 'image/jpeg' }),
         originalSize: 2000000,
         finalSize: 1500000,
         ratio: 0.75,
@@ -1067,7 +1070,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { preset: 'high-quality' })
       })
@@ -1084,7 +1087,7 @@ describe('useS3Upload', () => {
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        file: createMockFile({ name: 'test.jpg', type: 'image/jpeg' }),
         originalSize: 1000000,
         finalSize: 500000,
         ratio: 0.5,
@@ -1092,7 +1095,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { preset: 'low-bandwidth' })
       })
@@ -1110,7 +1113,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { skipCompression: true })
       })
@@ -1127,7 +1130,7 @@ describe('useS3Upload', () => {
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.jpg', { type: 'image/jpeg' }),
+        file: createMockFile({ name: 'test.jpg', type: 'image/jpeg' }),
         originalSize: 1000000,
         finalSize: 500000,
         ratio: 0.5,
@@ -1135,7 +1138,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { preset: 'high-quality' })
       })
@@ -1165,7 +1168,7 @@ describe('useS3Upload', () => {
       mockUploadToPresignedUrl.mockResolvedValue({ success: true as const, httpStatus: 200 })
       mockCompressImage.mockResolvedValue({
         compressed: true,
-        file: new File(['content'], 'test.webp', { type: 'image/webp' }),
+        file: createMockFile({ name: 'test.webp', type: 'image/webp' }),
         originalSize: 1000000,
         finalSize: 500000,
         ratio: 0.5,
@@ -1173,7 +1176,7 @@ describe('useS3Upload', () => {
 
       const { result } = renderHook(() => useS3Upload())
 
-      const file = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+      const file = createMockFile({ name: 'test.jpg', type: 'image/jpeg' })
       await act(async () => {
         await result.current.upload(file, { preset: 'low-bandwidth' })
       })
@@ -1209,8 +1212,8 @@ describe('useS3Upload', () => {
     })
 
     it('converts HEIC file to JPEG before compression', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
-      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
+      const convertedFile = createMockFile({ name: 'IMG_1234.jpg', type: 'image/jpeg', content: 'jpeg-content' })
 
       mockConvertHEICToJPEG.mockResolvedValue({
         converted: true,
@@ -1259,8 +1262,8 @@ describe('useS3Upload', () => {
     })
 
     it('transitions through converting state for HEIC files', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
-      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
+      const convertedFile = createMockFile({ name: 'IMG_1234.jpg', type: 'image/jpeg', content: 'jpeg-content' })
 
       // Slow conversion to observe state
       mockConvertHEICToJPEG.mockImplementation(async () => {
@@ -1309,7 +1312,7 @@ describe('useS3Upload', () => {
     })
 
     it('handles HEIC conversion failure gracefully', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
 
       // Conversion fails but returns original file
       mockConvertHEICToJPEG.mockResolvedValue({
@@ -1342,8 +1345,8 @@ describe('useS3Upload', () => {
     })
 
     it('tracks conversion progress', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
-      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
+      const convertedFile = createMockFile({ name: 'IMG_1234.jpg', type: 'image/jpeg', content: 'jpeg-content' })
 
       mockConvertHEICToJPEG.mockImplementation(async (_file, options) => {
         // Simulate progress callbacks
@@ -1375,8 +1378,8 @@ describe('useS3Upload', () => {
     })
 
     it('still converts HEIC even when skipCompression is true', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
-      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
+      const convertedFile = createMockFile({ name: 'IMG_1234.jpg', type: 'image/jpeg', content: 'jpeg-content' })
 
       mockConvertHEICToJPEG.mockResolvedValue({
         converted: true,
@@ -1413,7 +1416,7 @@ describe('useS3Upload', () => {
     })
 
     it('resets conversion state on cancel', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
 
       // Very slow conversion
       mockConvertHEICToJPEG.mockImplementation(async () => {
@@ -1453,8 +1456,8 @@ describe('useS3Upload', () => {
     })
 
     it('resets conversion result on reset', async () => {
-      const heicFile = new File(['heic-content'], 'IMG_1234.heic', { type: 'image/heic' })
-      const convertedFile = new File(['jpeg-content'], 'IMG_1234.jpg', { type: 'image/jpeg' })
+      const heicFile = createMockFile({ name: 'IMG_1234.heic', type: 'image/heic', content: 'heic-content' })
+      const convertedFile = createMockFile({ name: 'IMG_1234.jpg', type: 'image/jpeg', content: 'jpeg-content' })
 
       mockConvertHEICToJPEG.mockResolvedValue({
         converted: true,
@@ -1508,7 +1511,7 @@ describe('useS3Upload', () => {
     })
 
     it('does not convert non-HEIC files', async () => {
-      const jpegFile = new File(['jpeg-content'], 'photo.jpg', { type: 'image/jpeg' })
+      const jpegFile = createMockFile({ name: 'photo.jpg', type: 'image/jpeg', content: 'jpeg-content' })
 
       const mockPresignResponse = {
         presignedUrl: 'https://s3.amazonaws.com/presigned-url',

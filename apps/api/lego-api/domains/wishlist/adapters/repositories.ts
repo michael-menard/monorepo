@@ -36,9 +36,11 @@ export function createWishlistRepository(
       pagination: PaginationInput,
       filters?: {
         search?: string
-        store?: string
+        store?: string[] // WISH-20171: Changed from string to string[]
         tags?: string[]
-        priority?: number
+        priority?: number // Backward compatibility
+        priorityRange?: { min: number; max: number } // WISH-20171: New
+        priceRange?: { min: number; max: number } // WISH-20171: New
         status?: 'wishlist' | 'owned' // SETS-MVP-001: Filter by lifecycle status
         sort?:
           | 'createdAt'
@@ -70,14 +72,41 @@ export function createWishlistRepository(
         )
       }
 
-      if (filters?.store) {
+      // WISH-20171: Store filter now accepts array using inArray()
+      if (filters?.store && filters.store.length > 0) {
         conditions.push(
-          eq(wishlistItems.store, filters.store as (typeof wishlistItems.store.enumValues)[number]),
+          inArray(
+            wishlistItems.store,
+            filters.store as (typeof wishlistItems.store.enumValues)[number][],
+          ),
         )
       }
 
-      if (filters?.priority !== undefined) {
+      // WISH-20171: Priority range filter
+      if (filters?.priorityRange) {
+        conditions.push(
+          and(
+            sql`${wishlistItems.priority} IS NOT NULL`, // AC3: Exclude nulls
+            sql`${wishlistItems.priority} >= ${filters.priorityRange.min}`,
+            sql`${wishlistItems.priority} <= ${filters.priorityRange.max}`,
+          )!,
+        )
+      }
+
+      // Keep single priority filter for backward compatibility
+      if (filters?.priority !== undefined && !filters?.priorityRange) {
         conditions.push(eq(wishlistItems.priority, filters.priority))
+      }
+
+      // WISH-20171: Price range filter
+      if (filters?.priceRange) {
+        conditions.push(
+          and(
+            sql`${wishlistItems.price} IS NOT NULL`, // AC3: Exclude nulls
+            sql`${wishlistItems.price}::numeric >= ${filters.priceRange.min}`,
+            sql`${wishlistItems.price}::numeric <= ${filters.priceRange.max}`,
+          )!,
+        )
       }
 
       // SETS-MVP-001: Filter by status (defaults to 'wishlist' in service layer)

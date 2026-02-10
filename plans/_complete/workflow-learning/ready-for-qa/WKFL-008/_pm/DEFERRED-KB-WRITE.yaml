@@ -1,0 +1,47 @@
+deferred_at: "2026-02-08T04:29:50Z"
+reason: "KB tools not available in current agent context"
+operation: insert_story
+data:
+  story_id: WKFL-008
+  feature: workflow-learning
+  title: "Workflow Experimentation Framework"
+  story_dir: plans/future/workflow-learning/backlog/WKFL-008
+  story_file: plans/future/workflow-learning/backlog/WKFL-008/WKFL-008.md
+  story_type: feature
+  points: null  # Not estimated in points, using tokens (95000)
+  priority: P3
+  state: backlog
+  touches_backend: false
+  touches_frontend: false
+  touches_database: false
+  touches_infra: false
+
+notes: |
+  WKFL-008 is a pure workflow framework story that:
+  - Creates experiment configuration (experiments.yaml)
+  - Adds traffic routing to PM pipeline
+  - Extends story.yaml and OUTCOME.yaml schemas
+  - Creates experiment-analyzer agent for statistical analysis
+  - Generates /experiment-report command
+
+  No traditional backend/frontend/database touches, only workflow agent modifications.
+
+  When KB becomes available, insert this story record to enable searchability
+  in future /story-search and pattern mining operations.
+
+retry_command: |
+  kb_add_story({
+    story_id: "WKFL-008",
+    feature: "workflow-learning",
+    title: "Workflow Experimentation Framework",
+    story_dir: "plans/future/workflow-learning/backlog/WKFL-008",
+    story_file: "plans/future/workflow-learning/backlog/WKFL-008/WKFL-008.md",
+    story_type: "feature",
+    priority: "P3",
+    state: "backlog",
+    touches_backend: false,
+    touches_frontend: false,
+    touches_database: false,
+    touches_infra: false,
+    tags: ["experimentation", "ab-testing", "metrics", "statistical-analysis"]
+  })

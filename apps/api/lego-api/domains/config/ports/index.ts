@@ -5,6 +5,13 @@ import type {
   UpdateFeatureFlagInput,
   UserOverride,
   OverrideType,
+  Schedule,
+  ScheduleStatus,
+  ScheduleUpdates,
+  ScheduleError,
+  CreateScheduleRequest,
+  ScheduleResponse,
+  ScheduleListResponse,
 } from '../types.js'
 
 /**
@@ -179,4 +186,94 @@ export interface UserOverrideRepository {
    * Delete all overrides for a flag
    */
   deleteAllByFlag(flagId: string): Promise<void>
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Schedule Repository Port (WISH-2119, WISH-20260)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Schedule repository interface
+ */
+export interface ScheduleRepository {
+  /**
+   * Create a new schedule for a flag
+   */
+  create(input: {
+    flagId: string
+    scheduledAt: Date
+    updates: ScheduleUpdates
+  }): Promise<Result<Schedule, ScheduleError>>
+
+  /**
+   * Find all schedules for a flag
+   */
+  findAllByFlag(flagId: string): Promise<Schedule[]>
+
+  /**
+   * Find schedule by ID
+   */
+  findById(scheduleId: string): Promise<Result<Schedule, 'NOT_FOUND'>>
+
+  /**
+   * Find pending schedules ready to process with row-level locking
+   */
+  findPendingWithLock(limit?: number): Promise<Schedule[]>
+
+  /**
+   * Update schedule status after processing
+   */
+  updateStatus(
+    scheduleId: string,
+    status: ScheduleStatus,
+    options?: {
+      appliedAt?: Date
+      errorMessage?: string
+    },
+  ): Promise<Result<void, 'NOT_FOUND'>>
+
+  /**
+   * Update retry metadata for failed schedules (WISH-20260)
+   */
+  updateRetryMetadata(
+    scheduleId: string,
+    retryCount: number,
+    nextRetryAt: Date | null,
+    lastError: string,
+  ): Promise<Result<void, ScheduleError>>
+
+  /**
+   * Cancel a schedule
+   */
+  cancel(scheduleId: string): Promise<Result<Schedule, ScheduleError>>
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Schedule Service Port (WISH-2119)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Schedule service interface
+ */
+export interface ScheduleService {
+  /**
+   * Create a new schedule for a flag
+   */
+  createSchedule(
+    flagKey: string,
+    input: CreateScheduleRequest,
+  ): Promise<Result<ScheduleResponse, ScheduleError>>
+
+  /**
+   * List all schedules for a flag
+   */
+  listSchedules(flagKey: string): Promise<Result<ScheduleListResponse, ScheduleError>>
+
+  /**
+   * Cancel a schedule
+   */
+  cancelSchedule(
+    flagKey: string,
+    scheduleId: string,
+  ): Promise<Result<ScheduleResponse, ScheduleError>>
 }

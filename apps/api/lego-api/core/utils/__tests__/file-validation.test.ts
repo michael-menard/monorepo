@@ -4,7 +4,7 @@
  * Story: WISH-2013 - File Upload Security Hardening
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   validateMimeType,
   validateFileSize,

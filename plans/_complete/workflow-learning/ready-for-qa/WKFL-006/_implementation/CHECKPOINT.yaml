@@ -1,0 +1,21 @@
+schema: 1
+story_id: WKFL-006
+feature_dir: plans/future/workflow-learning
+timestamp: '2026-02-07T21:16:00-07:00'
+
+current_phase: done
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+completed_at: '2026-02-07T21:30:00-07:00'
+e2e_gate: exempt
+warnings:
+  - "Schemas (patterns-schema.yaml, agent-hints-schema.yaml) already existed before execution"
+  - "No build/lint/test commands needed - documentation/schema files only"
+  - "E2E exempt: agent/schema/command files only, no executable application code"
+review_result: PASS
+review_fixes:
+  - "Fixed regex pattern for multi-word vague phrase detection"
+  - "Added YAML frontmatter to pattern-mine.md command"

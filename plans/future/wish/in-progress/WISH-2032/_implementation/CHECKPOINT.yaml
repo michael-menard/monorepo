@@ -1,0 +1,18 @@
+schema: 1
+story_id: "WISH-2032"
+feature_dir: "plans/future/wish"
+timestamp: "2026-02-08T10:25:00-07:00"
+
+current_phase: execute
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: true
+blocked_reason: "E2E tests written but cannot be executed - live servers not available"
+forced: false
+warnings:
+  - "Resumed from legacy artifacts - code implementation already complete"
+  - "E2E tests written but not run live (require running servers)"
+  - "Unit test mocks updated for WISH-2015 redux dependencies"
+completed_at: null
+e2e_gate: null

@@ -1,0 +1,40 @@
+# Deferred KB Writes for WKFL-006
+# These writes should be processed when KB becomes available
+
+writes:
+  - type: story
+    action: insert_or_update
+    table: stories
+    data:
+      story_id: WKFL-006
+      feature: workflow-learning
+      title: Cross-Story Pattern Mining
+      story_dir: plans/future/workflow-learning/backlog/WKFL-006
+      story_file: plans/future/workflow-learning/backlog/WKFL-006/WKFL-006.md
+      story_type: feature
+      points: null  # Not sized yet
+      priority: high  # P1
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false  # Workflow analysis only
+      created_at: 2026-02-07
+      metadata:
+        epic: workflow-learning
+        dependencies:
+          - WKFL-001
+        blocks:
+          - WKFL-007
+          - WKFL-009
+          - WKFL-010
+        tags:
+          - analysis
+          - patterns
+          - mining
+          - kb-integration
+        estimated_tokens: 70000
+        phase: analysis
+
+reason: KB direct write not available during story generation
+timestamp: 2026-02-07T18:30:00Z

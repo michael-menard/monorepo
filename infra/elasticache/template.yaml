@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ElastiCache Redis cluster for LEGO API feature flag caching (WISH-2124)'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: staging
+    AllowedValues:
+      - staging
+      - production
+    Description: Deployment environment
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where ElastiCache cluster will be deployed
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs for ElastiCache (min 2 for high availability)
+
+  LambdaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID of Lambda functions that need Redis access
+
+  NodeType:
+    Type: String
+    Default: cache.t3.micro
+    AllowedValues:
+      - cache.t3.micro # $13/month - staging
+      - cache.t3.small # $26/month - production
+      - cache.t3.medium # $52/month - high traffic
+    Description: ElastiCache node type
+
+  RedisVersion:
+    Type: String
+    Default: '7.1'
+    AllowedValues:
+      - '7.1'
+      - '7.0'
+    Description: Redis version
+
+Resources:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Security Group for ElastiCache (AC 9)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${Environment}-lego-api-redis-sg'
+      GroupDescription: Security group for ElastiCache Redis cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref LambdaSecurityGroupId
+          Description: Allow Lambda functions to access Redis
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-lego-api-redis-sg'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ElastiCache
+        - Key: Feature
+          Value: FeatureFlags
+        - Key: Story
+          Value: WISH-2124
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ElastiCache Subnet Group
+  # ─────────────────────────────────────────────────────────────────────────
+
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Sub '${Environment}-lego-api-redis-subnet-group'
+      Description: Subnet group for LEGO API Redis cluster
+      SubnetIds: !Ref SubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-lego-api-redis-subnet-group'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ElastiCache Parameter Group
+  # ─────────────────────────────────────────────────────────────────────────
+
+  CacheParameterGroup:
+    Type: AWS::ElastiCache::ParameterGroup
+    Properties:
+      CacheParameterGroupFamily: redis7
+      Description: Custom parameter group for LEGO API Redis
+      Properties:
+        # Optimize for small cache values (feature flags)
+        maxmemory-policy: allkeys-lru
+        # Enable append-only file for persistence
+        appendonly: 'yes'
+        # Timeout idle connections after 5 minutes
+        timeout: '300'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-lego-api-redis-params'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ElastiCache Redis Cluster (AC 9)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  CacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      CacheNodeType: !Ref NodeType
+      ClusterName: !Sub '${Environment}-lego-api-redis'
+      Engine: redis
+      EngineVersion: !Ref RedisVersion
+      NumCacheNodes: 1 # Single-node for MVP (no replication)
+      Port: 6379
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      CacheParameterGroupName: !Ref CacheParameterGroup
+      VpcSecurityGroupIds:
+        - !Ref CacheSecurityGroup
+      PreferredMaintenanceWindow: sun:05:00-sun:07:00 # Sunday 1-3 AM EST
+      SnapshotRetentionLimit: 5 # Keep 5 daily snapshots
+      SnapshotWindow: 03:00-05:00 # Daily backup 11 PM - 1 AM EST
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-lego-api-redis'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ElastiCache
+        - Key: Feature
+          Value: FeatureFlags
+        - Key: Story
+          Value: WISH-2124
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CloudWatch Alarms for Monitoring
+  # ─────────────────────────────────────────────────────────────────────────
+
+  HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-lego-api-redis-high-cpu'
+      AlarmDescription: Redis CPU utilization > 75% for 5 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300 # 5 minutes
+      EvaluationPeriods: 1
+      Threshold: 75
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: CacheClusterId
+          Value: !Ref CacheCluster
+      TreatMissingData: notBreaching
+
+  HighMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-lego-api-redis-high-memory'
+      AlarmDescription: Redis memory utilization > 80% for 5 minutes
+      MetricName: DatabaseMemoryUsagePercentage
+      Namespace: AWS/ElastiCache
+      Statistic: Average
+      Period: 300 # 5 minutes
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: CacheClusterId
+          Value: !Ref CacheCluster
+      TreatMissingData: notBreaching
+
+  HighEvictionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-lego-api-redis-high-evictions'
+      AlarmDescription: Redis evictions > 100 in 5 minutes
+      MetricName: Evictions
+      Namespace: AWS/ElastiCache
+      Statistic: Sum
+      Period: 300 # 5 minutes
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: CacheClusterId
+          Value: !Ref CacheCluster
+      TreatMissingData: notBreaching
+
+Outputs:
+  CacheEndpoint:
+    Description: Redis cache endpoint
+    Value: !GetAtt CacheCluster.RedisEndpoint.Address
+    Export:
+      Name: !Sub '${Environment}-lego-api-redis-endpoint'
+
+  CachePort:
+    Description: Redis cache port
+    Value: !GetAtt CacheCluster.RedisEndpoint.Port
+    Export:
+      Name: !Sub '${Environment}-lego-api-redis-port'
+
+  RedisUrl:
+    Description: Full Redis connection URL for Lambda environment variable
+    Value: !Sub 'redis://${CacheCluster.RedisEndpoint.Address}:${CacheCluster.RedisEndpoint.Port}'
+    Export:
+      Name: !Sub '${Environment}-lego-api-redis-url'
+
+  CacheSecurityGroupId:
+    Description: Security group ID for Redis cluster
+    Value: !Ref CacheSecurityGroup
+    Export:
+      Name: !Sub '${Environment}-lego-api-redis-sg-id'
+
+  EstimatedMonthlyCost:
+    Description: Estimated monthly cost (t3.micro ~$13, t3.small ~$26)
+    Value: !Sub 'See AWS Cost Explorer for accurate billing'

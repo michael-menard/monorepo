@@ -1,0 +1,215 @@
+schema: 1
+story_id: WISH-20171
+generated_at: "2026-02-08T00:00:00Z"
+worker: knowledge-context-loader
+
+# Knowledge Context for WISH-20171
+# Backend Combined Filter + Sort Queries
+
+# ─────────────────────────────────────────────────────────────────────────
+# Existing Patterns
+# ─────────────────────────────────────────────────────────────────────────
+
+patterns:
+  schema_validation:
+    location: "apps/api/lego-api/domains/wishlist/types.ts"
+    pattern: "Zod schemas for all input/output validation"
+    example: "ListWishlistQuerySchema with z.coerce for query params"
+    notes: "Backend uses z.date() while API client uses z.string().datetime()"
+
+  repository_filtering:
+    location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+    pattern: "Drizzle ORM with sql template for complex queries"
+    current_filters:
+      - "search: ilike() with OR for title/setNumber/notes"
+      - "store: eq() single value filter"
+      - "tags: JSONB ?| operator for array matching"
+      - "priority: eq() single value filter"
+      - "status: eq() for lifecycle filtering"
+    notes: "Conditions built as array and combined with and(...conditions)"
+
+  smart_sorting:
+    location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts lines 104-182"
+    pattern: "SQL template literals for computed ORDER BY"
+    algorithms:
+      bestValue:
+        formula: "price::numeric / pieceCount"
+        null_handling: "CASE WHEN...THEN 1 ELSE 0 for null prioritization"
+        default_order: "asc"
+      expiringSoon:
+        formula: "releaseDate"
+        null_handling: "CASE WHEN...THEN 1 ELSE 0 for null at end"
+        default_order: "asc"
+      hiddenGems:
+        formula: "(5 - priority) * pieceCount"
+        null_handling: "COALESCE for null safety"
+        default_order: "desc"
+    notes: "All smart sorts place null values at end using NULLS LAST"
+
+  test_patterns:
+    unit_tests:
+      location: "apps/api/lego-api/domains/wishlist/__tests__/smart-sorting.test.ts"
+      framework: "vitest"
+      pattern: "Mock repository, verify service passes correct params"
+      fixtures: "createMockItem() helper with overrides"
+    integration_tests:
+      location: "apps/api/lego-api/domains/config/__http__/feature-flag-scheduling.http"
+      framework: "VS Code REST Client (.http files)"
+      pattern: "Variables + test scenarios with AC references"
+      structure: "Setup, happy path, error cases, edge cases, auth checks"
+
+  hexagonal_architecture:
+    application_layer: "domains/wishlist/application/services.ts"
+    adapter_layer: "domains/wishlist/adapters/repositories.ts"
+    ports_layer: "domains/wishlist/ports/index.ts"
+    types_layer: "domains/wishlist/types.ts"
+    routes_layer: "domains/wishlist/routes.ts"
+    pattern: "Service depends on port interfaces, routes inject adapters"
+
+  schema_alignment:
+    backend: "apps/api/lego-api/domains/wishlist/types.ts"
+    frontend: "packages/core/api-client/src/schemas/wishlist.ts"
+    pattern: "Separate schemas with alignment tests"
+    difference: "Backend uses z.date(), frontend uses z.string().datetime()"
+    reference_story: "WISH-2000, WISH-2010"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Dependencies
+# ─────────────────────────────────────────────────────────────────────────
+
+dependencies:
+  stories:
+    WISH-2014:
+      status: "completed"
+      provides: "Smart sorting algorithms (bestValue, expiringSoon, hiddenGems)"
+      location: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+      verification: "Confirmed implementation exists in repository layer"
+
+  packages:
+    drizzle_orm:
+      usage: "Query builder with SQL template support"
+      key_imports: "eq, and, or, ilike, inArray, sql, desc, asc, gte, lte"
+
+    zod:
+      usage: "Schema validation and type inference"
+      pattern: "z.coerce for query params, z.infer for types"
+
+    repo_api_core:
+      provides: "Result, PaginatedResult, PaginationInput types"
+
+    repo_database_schema:
+      provides: "Drizzle schema definitions"
+      table: "wishlistItems"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Implementation Requirements
+# ─────────────────────────────────────────────────────────────────────────
+
+requirements:
+  query_params:
+    store:
+      format: "?store=LEGO,BrickLink"
+      parsing: "Comma-separated string → string[]"
+      validation: "Must be valid WishlistStoreSchema enum values"
+
+    priority_range:
+      format: "?priority=3,5"
+      parsing: "Comma-separated string → { min: number, max: number }"
+      validation: "min >= 0, max <= 5, min <= max"
+
+    price_range:
+      format: "?priceRange=50,200"
+      parsing: "Comma-separated string → { min: number, max: number }"
+      validation: "min >= 0, max >= 0, min <= max"
+
+    combined_example: "?store=LEGO&priority=3,5&priceRange=50,200&sort=bestValue"
+
+  repository_changes:
+    store_filter:
+      method: "inArray(wishlistItems.store, filters.store)"
+      null_handling: "Store is required field, no null handling needed"
+
+    priority_range_filter:
+      method: "and(gte(wishlistItems.priority, min), lte(wishlistItems.priority, max))"
+      null_handling: "Exclude null priority values"
+
+    price_range_filter:
+      method: "and(gte(wishlistItems.price, min), lte(wishlistItems.price, max))"
+      null_handling: "Exclude null price values (price is string, cast to numeric)"
+
+    combined_logic: "All filters use AND logic, applied before ORDER BY"
+
+  test_coverage:
+    unit_tests:
+      minimum: 45
+      breakdown:
+        store_filter_bestValue: 10
+        priority_range_hiddenGems: 10
+        price_range_expiringSoon: 10
+        all_filters_combined: 15
+        null_handling: 10
+
+    integration_tests:
+      minimum: 18
+      file: "__http__/wishlist-advanced-filtering.http"
+      breakdown:
+        happy_path_combinations: 9
+        error_cases: 3
+        edge_cases: 5
+        performance: 1
+
+# ─────────────────────────────────────────────────────────────────────────
+# Risk Factors
+# ─────────────────────────────────────────────────────────────────────────
+
+risks:
+  performance:
+    concern: "Combined WHERE + ORDER BY with 1000+ items"
+    mitigation: "Review existing indexes, add composite if needed"
+    acceptance_criteria: "AC18 requires < 2s query time"
+    recommendation: "Use EXPLAIN ANALYZE to verify query plan"
+
+  schema_sync:
+    concern: "Filter params must match between frontend and backend"
+    mitigation: "AC15 requires alignment test (like WISH-2000)"
+    pattern: "Create schema comparison test in api-client package"
+
+  null_handling:
+    concern: "Inconsistent null value handling across filters"
+    mitigation: "AC3 requires explicit null handling spec"
+    fields_with_nulls: ["price", "priority", "pieceCount", "releaseDate"]
+    strategy: "Exclude nulls when filter applied, document in API contract"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Non-goals (Explicitly Out of Scope)
+# ─────────────────────────────────────────────────────────────────────────
+
+out_of_scope:
+  - "Frontend UI implementation (WISH-20172)"
+  - "Real-time collaborative filtering"
+  - "Saved filter presets"
+  - "Custom user-defined filter logic"
+  - "Machine learning recommendations"
+  - "Cursor-based pagination"
+  - "Filter combination validation beyond basic min <= max"
+  - "Partial filter matches (LIKE queries)"
+  - "Query result caching (Redis)"
+  - "GraphQL-style field selection"
+  - "Faceted search counts"
+  - "Filter analytics/telemetry"
+
+# ─────────────────────────────────────────────────────────────────────────
+# References
+# ─────────────────────────────────────────────────────────────────────────
+
+references:
+  story_file: "plans/future/wish/in-progress/WISH-20171/WISH-20171.md"
+  scope_file: "plans/future/wish/in-progress/WISH-20171/_implementation/SCOPE.yaml"
+  architecture_doc: "docs/architecture/api-layer.md"
+  project_guidelines: "CLAUDE.md"
+
+  related_stories:
+    - "WISH-2014: Smart Sorting Algorithms (dependency)"
+    - "WISH-20172: Frontend Filter Panel UI (depends on this)"
+    - "WISH-2000: Wishlist Migration (schema alignment pattern)"
+    - "WISH-2010: Schema Alignment (pattern reference)"

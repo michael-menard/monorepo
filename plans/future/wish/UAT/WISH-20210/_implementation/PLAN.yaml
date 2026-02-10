@@ -1,0 +1,268 @@
+schema: 1
+story_id: "WISH-20210"
+timestamp: "2026-02-08T19:30:00Z"
+
+steps:
+  - id: 1
+    description: "Install ts-morph dependency and add CLI script registration"
+    files:
+      - "packages/backend/database-schema/package.json"
+      - "packages/backend/database-schema/.gitignore"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create core analysis types and schemas (Zod-first)"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Create AST scanner utilities for codebase analysis"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/utils/ast-scanner.ts"
+      - "packages/backend/database-schema/scripts/impact-analysis/utils/file-scanner.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Create schema introspection utilities for Drizzle schemas"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/utils/schema-introspector.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 5
+    description: "Implement change analyzers (column, enum, constraint)"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts"
+      - "packages/backend/database-schema/scripts/impact-analysis/analyzers/enum-analyzer.ts"
+      - "packages/backend/database-schema/scripts/impact-analysis/analyzers/constraint-analyzer.ts"
+    dependencies: [3, 4]
+    slice: packages
+
+  - id: 6
+    description: "Create impact report generator (Markdown + JSON)"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/reporters/markdown-reporter.ts"
+      - "packages/backend/database-schema/scripts/impact-analysis/reporters/json-reporter.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 7
+    description: "Create CLI entry point with argument parsing"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/index.ts"
+    dependencies: [5, 6]
+    slice: packages
+
+  - id: 8
+    description: "Write unit tests for AST scanner"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/__tests__/ast-scanner.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 9
+    description: "Write unit tests for analyzers (column, enum)"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/__tests__/column-analyzer.test.ts"
+      - "packages/backend/database-schema/scripts/impact-analysis/__tests__/enum-analyzer.test.ts"
+    dependencies: [5]
+    slice: packages
+
+  - id: 10
+    description: "Write integration test for wishlist schema analysis"
+    files:
+      - "packages/backend/database-schema/scripts/impact-analysis/__tests__/integration.test.ts"
+    dependencies: [7]
+    slice: packages
+
+  - id: 11
+    description: "Create tool documentation with usage examples and limitations"
+    files:
+      - "packages/backend/database-schema/docs/IMPACT-ANALYSIS-TOOL.md"
+    dependencies: [7]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/database-schema/package.json"
+    action: modify
+    reason: "Add ts-morph dependency and db:impact-analysis script"
+  - path: "packages/backend/database-schema/.gitignore"
+    action: modify
+    reason: "Add impact-reports/ directory to gitignore"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for CLI options, change types, impact results"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/utils/ast-scanner.ts"
+    action: create
+    reason: "AST-based TypeScript file scanner using ts-morph"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/utils/file-scanner.ts"
+    action: create
+    reason: "File system utilities for glob-based file discovery"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/utils/schema-introspector.ts"
+    action: create
+    reason: "Drizzle schema introspection for table/enum definitions"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts"
+    action: create
+    reason: "Column change analysis (add/remove/rename/type change)"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/analyzers/enum-analyzer.ts"
+    action: create
+    reason: "Enum change analysis (add/remove/rename values)"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/analyzers/constraint-analyzer.ts"
+    action: create
+    reason: "Constraint change analysis (indexes, foreign keys)"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/reporters/markdown-reporter.ts"
+    action: create
+    reason: "Markdown report generation with categorized impact sections"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/reporters/json-reporter.ts"
+    action: create
+    reason: "JSON report generation for CI integration"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/index.ts"
+    action: create
+    reason: "CLI entry point with yargs for argument parsing"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/ast-scanner.test.ts"
+    action: create
+    reason: "Unit tests for AST scanner with mock TypeScript files"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/column-analyzer.test.ts"
+    action: create
+    reason: "Unit tests for column change analysis"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/enum-analyzer.test.ts"
+    action: create
+    reason: "Unit tests for enum change analysis"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/integration.test.ts"
+    action: create
+    reason: "Integration test for real wishlist_items schema analysis"
+  - path: "packages/backend/database-schema/docs/IMPACT-ANALYSIS-TOOL.md"
+    action: create
+    reason: "Tool documentation with usage examples and known limitations"
+
+commands_to_run:
+  - command: "pnpm install --filter @repo/database-schema"
+    when: "after package.json modification (step 1)"
+    required: true
+  - command: "pnpm build --filter @repo/database-schema"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm test --filter @repo/database-schema"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm lint --filter @repo/database-schema"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "CLI script db:impact-analysis in package.json, accepts --table, --enum, --change flags"
+    evidence_type: file
+  - ac_id: "AC2"
+    planned_evidence: "AST scanner analyzes apps/api/lego-api/domains/, apps/web/, packages/"
+    evidence_type: test
+  - ac_id: "AC3"
+    planned_evidence: "Markdown reporter generates impact-reports/{timestamp}-{table}.md"
+    evidence_type: test
+  - ac_id: "AC4"
+    planned_evidence: "CLI exits with code 0 for low-impact, code 1 for high-impact (in CLI entry point)"
+    evidence_type: file
+  - ac_id: "AC5"
+    planned_evidence: "CLI supports --dry-run flag (no report generation)"
+    evidence_type: file
+  - ac_id: "AC6"
+    planned_evidence: "Unit test: column-analyzer.test.ts - adding optional column identifies Drizzle queries and Zod schemas"
+    evidence_type: test
+  - ac_id: "AC7"
+    planned_evidence: "Unit test: column-analyzer.test.ts - adding required column warns about defaults"
+    evidence_type: test
+  - ac_id: "AC8"
+    planned_evidence: "Unit test: column-analyzer.test.ts - renaming column identifies all references"
+    evidence_type: test
+  - ac_id: "AC9"
+    planned_evidence: "Unit test: column-analyzer.test.ts - dropping column identifies orphaned code"
+    evidence_type: test
+  - ac_id: "AC10"
+    planned_evidence: "Unit test: enum-analyzer.test.ts - adding enum value identifies Zod enum schemas"
+    evidence_type: test
+  - ac_id: "AC11"
+    planned_evidence: "Unit test: enum-analyzer.test.ts - removing enum value identifies usage sites"
+    evidence_type: test
+  - ac_id: "AC12"
+    planned_evidence: "Unit test: enum-analyzer.test.ts - renaming enum value identifies hardcoded references"
+    evidence_type: test
+  - ac_id: "AC13"
+    planned_evidence: "Markdown reporter groups files by category (Backend Services, Repositories, Zod Schemas, Frontend Components, API Hooks, Tests)"
+    evidence_type: file
+  - ac_id: "AC14"
+    planned_evidence: "Markdown reporter includes risk assessment section (Breaking/Non-breaking, Rollback Safety, Deployment Order)"
+    evidence_type: file
+  - ac_id: "AC15"
+    planned_evidence: "Markdown reporter provides actionable recommendations per file"
+    evidence_type: file
+  - ac_id: "AC16"
+    planned_evidence: "Impact result schema includes effort estimate (Low/Medium/High) based on file count"
+    evidence_type: file
+  - ac_id: "AC17"
+    planned_evidence: "Unit tests: column-analyzer.test.ts, enum-analyzer.test.ts with mock codebase"
+    evidence_type: test
+  - ac_id: "AC18"
+    planned_evidence: "Integration test: integration.test.ts validates tool against real wishlist_items schema"
+    evidence_type: test
+  - ac_id: "AC19"
+    planned_evidence: "Integration test: integration.test.ts generates impact report for priority column addition"
+    evidence_type: test
+  - ac_id: "AC20"
+    planned_evidence: "Documentation file: IMPACT-ANALYSIS-TOOL.md with CLI usage examples"
+    evidence_type: file
+  - ac_id: "AC21"
+    planned_evidence: "Documentation includes interpretation guide for impact report sections"
+    evidence_type: file
+  - ac_id: "AC22"
+    planned_evidence: "Documentation includes troubleshooting guide and known limitations section"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Which AST library to use for TypeScript code analysis?"
+    decision: "Use ts-morph"
+    rationale: "No existing AST utilities found in turbo/generators. ts-morph provides high-level API over TypeScript Compiler API, easier to use and maintain. Story recommends ts-morph in Reuse Plan section."
+    decided_by: auto
+  - id: ARCH-002
+    question: "Where to store generated impact reports?"
+    decision: "packages/backend/database-schema/impact-reports/ (added to .gitignore)"
+    rationale: "Reports are ephemeral analysis artifacts. Story specifies this location. Gitignoring prevents clutter in version control."
+    decided_by: auto
+  - id: ARCH-003
+    question: "How to register CLI command?"
+    decision: "Add 'db:impact-analysis': 'tsx scripts/impact-analysis/index.ts' to package.json scripts"
+    rationale: "Matches existing db:* command pattern (db:generate, db:migrate, db:seed, db:studio). Uses tsx for direct TypeScript execution."
+    decided_by: auto
+  - id: ARCH-004
+    question: "JSON output format schema"
+    decision: "Define basic JSON schema with categories array, riskAssessment object, and recommendations array"
+    rationale: "Elaboration identified missing JSON schema. Basic structure enables CI integration without over-engineering MVP."
+    decided_by: auto
+  - id: ARCH-005
+    question: "File scanning scope across monorepo"
+    decision: "Scan apps/api/lego-api/domains/**, apps/web/**/src/**, packages/core/api-client/src/**, packages/backend/database-schema/src/**"
+    rationale: "Elaboration identified scope ambiguity. These globs cover backend services, frontend components, shared schemas, and database definitions per Architecture Notes."
+    decided_by: auto
+  - id: ARCH-006
+    question: "False negative documentation approach"
+    decision: "Add 'Known Limitations' section to IMPACT-ANALYSIS-TOOL.md documenting dynamic references and edge cases"
+    rationale: "Elaboration issue #4 requires documenting false negative risks. Tool cannot detect dynamic column references. Documentation prevents false confidence."
+    decided_by: auto
+
+complexity: moderate
+
+notes:
+  - "Reusing existing patterns from validate-schema-changes.ts (git operations, file reading)"
+  - "Existing @typescript-eslint/parser in root package.json, but ts-morph needed for AST manipulation"
+  - "CLI follows db:* command convention already established in database-schema package"
+  - "Impact reports are ephemeral (gitignored) - not committed to version control"
+  - "JSON schema defined to support future CI integration (AC 4 exit codes)"
+  - "Known limitations section addresses elaboration issue #4 on false negatives"
+  - "File scanning globs address elaboration issue #6 on scope clarity"
+  - "Test strategy: Unit tests with mocks (AC 17), integration test with real schema (AC 18-19)"
+  - "Per CLAUDE.md: Use Zod schemas for all types (no TypeScript interfaces)"
+  - "Per CLAUDE.md: Component directory structure with __tests__ and __types__ subdirectories"

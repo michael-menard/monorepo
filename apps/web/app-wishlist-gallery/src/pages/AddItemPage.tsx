@@ -6,17 +6,31 @@
  *
  * Story wish-2002: Add Item Flow
  * Story WISH-2032: Optimistic UI for Form Submission
+ * Story WISH-2015: Form Autosave via RTK Slice with localStorage Persistence
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react'
 import { useNavigate, Link as RouterLink } from '@tanstack/react-router'
+import { useDispatch, useSelector } from 'react-redux'
 import { ChevronLeft, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, showSuccessToast, cn } from '@repo/app-component-library'
 import { useAddWishlistItemMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
 import { WishlistForm } from '../components/WishlistForm'
+import { ResumeDraftBanner } from '../components/ResumeDraftBanner'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import {
+  updateDraftField,
+  clearDraft,
+  selectDraftFormData,
+  selectIsDraftRestored,
+  selectHasDraft,
+  selectDraft,
+  setDraftRestored,
+} from '../store/slices/wishlistDraftSlice'
+import { rehydrateDraftIfNeeded } from '../store'
+import type { AppDispatch } from '../store'
 
 /**
  * WISH-2032: localStorage key for form recovery
@@ -26,12 +40,16 @@ const FORM_RECOVERY_KEY = 'wishlist:form:recovery'
 /**
  * WISH-2032: Error toast with retry action button
  */
-interface ErrorToastWithRetryProps {
-  title: string
-  description: string
-  onRetry: () => void
-  onClose: () => void
-}
+import { z } from 'zod'
+
+const ErrorToastWithRetryPropsSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  onRetry: z.function(),
+  onClose: z.function(),
+})
+
+type ErrorToastWithRetryProps = z.infer<typeof ErrorToastWithRetryPropsSchema>
 
 function ErrorToastWithRetry({ title, description, onRetry, onClose }: ErrorToastWithRetryProps) {
   return (
@@ -83,7 +101,14 @@ function showErrorToastWithRetry(title: string, description: string, onRetry: ()
 
 export function AddItemPage() {
   const navigate = useNavigate()
+  const dispatch = useDispatch<AppDispatch>()
   const [addWishlistItem, { isLoading }] = useAddWishlistItemMutation()
+
+  // WISH-2015: Draft state from Redux
+  const draftFormData = useSelector(selectDraftFormData)
+  const isDraftRestored = useSelector(selectIsDraftRestored)
+  const hasDraft = useSelector(selectHasDraft)
+  const draft = useSelector(selectDraft)
 
   // WISH-2032: Track submitted state for optimistic UI
   const [hasSubmitted, setHasSubmitted] = useState(false)
@@ -95,10 +120,18 @@ export function AddItemPage() {
   // WISH-2032: Store form data for immediate retry (in-memory)
   const lastFormDataRef = useRef<CreateWishlistItem | null>(null)
 
-  // WISH-2032: Track if we need to show recovered form
+  // WISH-2015: Track if user has accepted draft (to hide banner after resume)
+  const [draftAccepted, setDraftAccepted] = useState(false)
+
+  // WISH-2015: Initial values for form (from draft or recovery)
   const [initialValues, setInitialValues] = useState<Partial<CreateWishlistItem> | undefined>(
     undefined,
   )
+
+  // WISH-2015: Rehydrate draft on mount if auth is available
+  useEffect(() => {
+    rehydrateDraftIfNeeded()
+  }, [])
 
   // WISH-2032: On mount, check for recovered form data
   useEffect(() => {
@@ -130,6 +163,33 @@ export function AddItemPage() {
   }, [navigate, isLoading, hasSubmitted])
 
   /**
+   * WISH-2015: Handle form field changes (for autosave)
+   */
+  const handleFieldChange = useCallback(
+    (field: string, value: any) => {
+      dispatch(updateDraftField({ field: field as any, value }))
+    },
+    [dispatch],
+  )
+
+  /**
+   * WISH-2015: Resume draft - populate form and hide banner
+   */
+  const handleResumeDraft = useCallback(() => {
+    setInitialValues(draftFormData)
+    setDraftAccepted(true)
+    dispatch(setDraftRestored(false)) // Hide banner
+  }, [draftFormData, dispatch])
+
+  /**
+   * WISH-2015: Start fresh - clear draft and hide banner
+   */
+  const handleStartFresh = useCallback(() => {
+    dispatch(clearDraft())
+    setDraftAccepted(true)
+  }, [dispatch])
+
+  /**
    * WISH-2032: Retry submission with stored form data
    */
   const handleRetry = useCallback(() => {
@@ -141,6 +201,7 @@ export function AddItemPage() {
 
   /**
    * WISH-2032: Optimistic form submission
+   * WISH-2015: Clear draft on successful submission
    *
    * Flow:
    * 1. Show success toast immediately
@@ -185,14 +246,20 @@ export function AddItemPage() {
             showErrorToastWithRetry('Failed to add item', errorMessage, handleRetry)
           },
         }).unwrap()
+
+        // WISH-2015: Clear draft on successful submission
+        dispatch(clearDraft())
       } catch {
         // Error already handled by onOptimisticError callback
         // Just reset the submitted state
         setHasSubmitted(false)
       }
     },
-    [addWishlistItem, navigate, handleRetry, setRecoveredFormData],
+    [addWishlistItem, navigate, handleRetry, setRecoveredFormData, dispatch],
   )
+
+  // WISH-2015: Show banner if draft is restored and user hasn't accepted yet
+  const showBanner = isDraftRestored && !draftAccepted && hasDraft
 
   return (
     <div className="container max-w-2xl py-8" data-testid="add-item-modal">
@@ -212,11 +279,23 @@ export function AddItemPage() {
         </p>
       </div>
 
+      {/* WISH-2015: Resume draft banner */}
+      {showBanner && (
+        <ResumeDraftBanner
+          timestamp={draft.timestamp}
+          onResume={handleResumeDraft}
+          onDiscard={handleStartFresh}
+          className="mb-6"
+        />
+      )}
+
       {/* Form - WISH-2032: Pass restored form data as initial values */}
+      {/* WISH-2015: Pass onChange callback for autosave */}
       <WishlistForm
         onSubmit={handleSubmit}
         isSubmitting={isLoading || hasSubmitted}
         initialValues={initialValues}
+        onChange={handleFieldChange}
       />
     </div>
   )

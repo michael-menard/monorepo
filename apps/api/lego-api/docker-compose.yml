@@ -1,0 +1,55 @@
+# Docker Compose for LEGO API Local Development
+# WISH-2124: Redis cache support for feature flags
+
+version: '3.9'
+
+services:
+  # Redis 7.2 for feature flag caching (AC 11)
+  redis:
+    image: redis:7.2-alpine
+    container_name: lego-api-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - lego-api-network
+
+  # PostgreSQL database (for future use - currently using external DB)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: lego-api-postgres
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_DB: lego_dev
+  #     POSTGRES_USER: lego
+  #     POSTGRES_PASSWORD: lego_dev_password
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U lego"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
+  #   restart: unless-stopped
+  #   networks:
+  #     - lego-api-network
+
+volumes:
+  redis-data:
+    driver: local
+  # postgres-data:
+  #   driver: local
+
+networks:
+  lego-api-network:
+    driver: bridge

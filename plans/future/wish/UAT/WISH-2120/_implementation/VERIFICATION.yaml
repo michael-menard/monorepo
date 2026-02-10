@@ -1,0 +1,190 @@
+schema: 1
+story_id: WISH-2120
+timestamp: 2026-02-08T11:10:00Z
+verification_type: qa-verify
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 85, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 100
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: |
+    - All tests use proper vitest patterns with describe/it blocks
+    - Proper cleanup with afterEach hooks in mockS3Upload tests
+    - AbortController used correctly for timeout scenario (prevents test hanging)
+    - Performance tests use performance.now() for AC5 verification (< 100ms)
+    - No setTimeout/waitFor anti-patterns found
+    - Pre-existing React act() warnings in useS3Upload.test.ts are outside WISH-2120 scope
+
+acs_verified:
+  - ac_id: AC1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verified_by: test
+    notes: "Test 'returns a valid File object with sensible defaults' verifies File instance, name='test-image.jpg', type='image/jpeg', size=1024"
+
+  - ac_id: AC2
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verified_by: test
+    notes: "4 tests verify custom name, type, size individually and all properties together"
+
+  - ac_id: AC3
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verified_by: test
+    notes: "2 tests verify explicit content with default and custom types. File.size matches content.length"
+
+  - ac_id: AC4
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verified_by: test
+    notes: "2 tests verify zero-byte file creation with size=0"
+
+  - ac_id: AC5
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verified_by: test
+    notes: "2 tests verify 10MB and 20MB files created in < 100ms using performance.now(). Implementation uses ArrayBuffer for files > 10KB"
+
+  - ac_id: AC6
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verified_by: test
+    notes: "2 tests verify success scenario: presign returns 200 with presignedUrl/key/expiresIn, S3 PUT returns 200"
+
+  - ac_id: AC7
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verified_by: test
+    notes: "2 tests verify presign-error with default (500) and custom status codes. Error response includes error/message fields"
+
+  - ac_id: AC8
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verified_by: test
+    notes: "2 tests verify s3-error: presign succeeds (200) while S3 PUT fails with default (403) and custom status codes"
+
+  - ac_id: AC9
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    verified_by: test
+    notes: "1 test verifies timeout scenario using AbortController with 100ms timeout, fetch rejects correctly"
+
+  - ac_id: AC10
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    verified_by: code_review
+    notes: "progressSteps parameter accepted in MockS3UploadOptionsSchema. Documented in JSDoc. Upload client handles progress (not mock handler responsibility)"
+
+  - ac_id: AC11
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    verified_by: test
+    notes: "3 tests verify cleanup function: returns function type, calls server.resetHandlers(), allows sequential scenarios"
+
+  - ac_id: AC12
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    verified_by: test
+    notes: "34 tests total: 18 in createMockFile.test.ts + 16 in mockS3Upload.test.ts. Both test files cover all paths, edge cases, validation"
+
+  - ac_id: AC13
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    verified_by: test
+    notes: "useS3Upload.test.ts imports createMockFile (line 16), uses it ~50 times. All 51 tests pass after refactoring. Backward compatibility verified"
+
+  - ac_id: AC14
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[13]"
+    verified_by: code_review
+    notes: "Comprehensive JSDoc on createMockFile and mockS3Upload: @param descriptions, @returns types, @example blocks with usage patterns"
+
+  - ac_id: AC15
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[14]"
+    verified_by: code_review
+    notes: "Zod schemas used: CreateMockFileOptionsSchema, MockS3UploadOptionsSchema, MockS3UploadScenarioSchema. Types exported via z.infer<>. Full autocomplete available"
+
+architecture_compliant: true
+architecture_notes: |
+  - Follows ADR-005: All utilities use Zod schemas (no TypeScript interfaces)
+  - Pure factory pattern for createMockFile (no side effects)
+  - mockS3Upload returns cleanup function for proper resource management
+  - MSW v2 patterns: http.post, http.put, HttpResponse, delay
+  - Directory structure follows project standards: __tests__/ subdirectory
+  - Barrel file avoided: Direct re-exports in index.ts per CLAUDE.md
+
+code_quality:
+  zod_schemas: PASS
+  jsdoc: PASS
+  no_console_log: PASS
+  msw_patterns: PASS
+  backward_compat: PASS
+  notes: |
+    - Zod schemas defined for all options types (CreateMockFileOptionsSchema, MockS3UploadOptionsSchema)
+    - JSDoc present on all public functions with @param, @returns, @example
+    - No console.log usage found in any implementation files
+    - MSW v2 patterns correctly used: server.use(), server.resetHandlers()
+    - s3-mocks.ts maintains backward compatibility via re-exports (verified in REVIEW.yaml)
+    - Code style: no semicolons, single quotes, trailing commas, 2-space indent, <100 char lines
+    - Named exports preferred, no barrel files (index.ts does direct re-exports only)
+
+issues: []
+
+e2e_gate:
+  status: exempt
+  reason: "Test infrastructure only - no production code changes"
+
+lessons_to_record:
+  - lesson: "ArrayBuffer strategy for large mock files (> 10KB) prevents memory issues and ensures < 100ms creation time for 10-20MB files"
+    category: pattern
+    tags: ["testing", "performance", "s3", "file-mocking"]
+
+  - lesson: "MSW server.use() for runtime handler injection + server.resetHandlers() cleanup function provides test isolation without global handler pollution"
+    category: pattern
+    tags: ["testing", "msw", "test-isolation"]
+
+  - lesson: "AbortController pattern prevents timeout scenario tests from hanging indefinitely when testing delay('infinite') handlers"
+    category: pattern
+    tags: ["testing", "timeout", "abort-controller"]
+
+gate:
+  verdict: PASS
+  rationale: |
+    All 15 acceptance criteria verified and passing. Test execution confirms:
+    - 34 new utility tests pass (18 createMockFile + 16 mockS3Upload)
+    - 51 existing useS3Upload tests pass after refactoring
+    - 100% test coverage for new utilities
+    - Zero test failures
+
+    Code quality excellent:
+    - Zod schemas used throughout (no TypeScript interfaces)
+    - Comprehensive JSDoc documentation
+    - No console.log usage
+    - MSW v2 patterns correctly implemented
+    - Backward compatibility maintained
+
+    Architecture compliant:
+    - Follows ADR-005 (testing requirements)
+    - Pure functions with proper cleanup
+    - No production code changes
+
+    E2E gate exempt: test infrastructure only
+
+    Ready for merge.
+
+tokens:
+  in: 40597
+  out: 1800

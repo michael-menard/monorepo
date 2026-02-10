@@ -1,0 +1,210 @@
+schema: 1
+story_id: "SETS-MVP-002"
+timestamp: "2026-02-08T12:00:00-07:00"
+
+implementation_summary:
+  backend_changes: true
+  frontend_changes: true
+  database_changes: false
+  api_changes: true
+  test_coverage: true
+
+files_created:
+  - path: "apps/api/lego-api/__http__/collection-view.http"
+    purpose: "HTTP test file for collection view API endpoints (AC19)"
+    lines: 122
+    
+  - path: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx"
+    purpose: "Collection page component (AC1, AC3, AC4, AC12, AC13, AC18)"
+    lines: 178
+    
+  - path: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/__tests__/CollectionPage.test.tsx"
+    purpose: "Unit tests for CollectionPage"
+    lines: 72
+    
+  - path: "apps/web/playwright/features/collection/collection-view.feature"
+    purpose: "E2E test scenarios for collection view (AC20)"
+    lines: 61
+    
+  - path: "apps/web/playwright/steps/collection-view.steps.ts"
+    purpose: "Step definitions for collection view E2E tests (AC20)"
+    lines: 279
+
+files_modified:
+  - path: "apps/api/lego-api/domains/wishlist/types.ts"
+    purpose: "Added status field to ListWishlistQuerySchema (AC16, AC17)"
+    changes:
+      - "Line 251-252: Added status: ItemStatusSchema.optional() field"
+    
+  - path: "apps/api/lego-api/domains/wishlist/routes.ts"
+    purpose: "Pass status parameter to service layer (AC17)"
+    changes:
+      - "Line 151: Added status to destructured query.data"
+      - "Line 172: Pass status to service listItems call"
+    
+  - path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    purpose: "Include status in RTK Query params"
+    changes:
+      - "Line 85: Added status: params.status to query params"
+    
+  - path: "apps/web/app-wishlist-gallery/src/Module.tsx"
+    purpose: "Add /collection route (AC1)"
+    changes:
+      - "Line 24: Import CollectionPage"
+      - "Lines 68-72: Add collectionRoute definition"
+      - "Line 74: Add collectionRoute to routeTree"
+    
+  - path: "apps/web/main-app/src/store/slices/navigationSlice.ts"
+    purpose: "Add Collection link to wishlist navigation (AC2)"
+    changes:
+      - "Lines 141-149: Added wishlist-collection child navigation item"
+    
+  - path: "apps/web/main-app/src/components/Layout/Sidebar.tsx"
+    purpose: "Add Package icon for Collection link"
+    changes:
+      - "Line 7: Import Package from lucide-react"
+      - "Line 39: Add Package to iconMap"
+
+verification_results:
+  unit_tests:
+    filter: "CollectionPage"
+    status: "PASS"
+    output: "2 tests passed"
+    
+  lint:
+    filter: "CollectionPage"
+    status: "PASS"
+    output: "0 errors, 0 warnings"
+    
+  build:
+    status: "SKIP"
+    reason: "Pre-existing @repo/cache build errors unrelated to this story"
+    notes: "CollectionPage type-checks successfully in isolation"
+
+acceptance_criteria_coverage:
+  - ac_id: "AC1"
+    status: "IMPLEMENTED"
+    evidence: "Module.tsx adds /collection route rendering CollectionPage"
+    file: "apps/web/app-wishlist-gallery/src/Module.tsx"
+    
+  - ac_id: "AC2"
+    status: "IMPLEMENTED"
+    evidence: "navigationSlice.ts adds 'My Collection' child item under wishlist"
+    file: "apps/web/main-app/src/store/slices/navigationSlice.ts"
+    
+  - ac_id: "AC3"
+    status: "IMPLEMENTED"
+    evidence: "CollectionPage displays 'My Collection' heading"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:92"
+    
+  - ac_id: "AC4"
+    status: "IMPLEMENTED"
+    evidence: "CollectionPage reuses DraggableWishlistGallery with status='owned' via useGetWishlistQuery"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:47-56"
+    
+  - ac_id: "AC5"
+    status: "DEFERRED"
+    notes: "CollectionCard with build status badge deferred - using existing WishlistCard via DraggableWishlistGallery"
+    reason: "Build status display will be added in SETS-MVP-004 (Build Status Toggle)"
+    
+  - ac_id: "AC6"
+    status: "DEFERRED"
+    notes: "Purchase date display deferred"
+    reason: "Will be added with AC5 in follow-up work"
+    
+  - ac_id: "AC7"
+    status: "IMPLEMENTED"
+    evidence: "DraggableWishlistGallery used without showPriority prop (cards use default behavior)"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:145"
+    
+  - ac_id: "AC8"
+    status: "IMPLEMENTED"
+    evidence: "DraggableWishlistGallery isDraggingEnabled={false}"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:146"
+    
+  - ac_id: "AC9"
+    status: "IMPLEMENTED"
+    evidence: "Backend supports status=owned filtering via ListWishlistQuerySchema"
+    files:
+      - "apps/api/lego-api/domains/wishlist/types.ts:251-252"
+      - "apps/api/lego-api/domains/wishlist/routes.ts:151,172"
+      - "apps/api/lego-api/__http__/collection-view.http:20-24"
+    
+  - ac_id: "AC10"
+    status: "IMPLEMENTED"
+    evidence: "Service layer already defaults to purchaseDate DESC for status='owned'"
+    file: "apps/api/lego-api/domains/wishlist/application/services.ts:185-186"
+    
+  - ac_id: "AC11"
+    status: "IMPLEMENTED"
+    evidence: "HTTP tests verify status works with existing filters (store, tags, search, priceRange)"
+    file: "apps/api/lego-api/__http__/collection-view.http:30-84"
+    
+  - ac_id: "AC12"
+    status: "IMPLEMENTED"
+    evidence: "Empty state shows 'No sets in your collection yet'"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:119"
+    
+  - ac_id: "AC13"
+    status: "IMPLEMENTED"
+    evidence: "Empty state has 'Browse your wishlist' CTA linking to /wishlist"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:123-128"
+    
+  - ac_id: "AC16"
+    status: "IMPLEMENTED"
+    evidence: "Service layer already supports status filtering (no changes needed)"
+    file: "apps/api/lego-api/domains/wishlist/application/services.ts:170"
+    
+  - ac_id: "AC17"
+    status: "IMPLEMENTED"
+    evidence: "Routes updated to parse and pass status parameter"
+    file: "apps/api/lego-api/domains/wishlist/routes.ts:151,172"
+    
+  - ac_id: "AC18"
+    status: "IMPLEMENTED"
+    evidence: "CollectionPage explicitly passes status='owned' to useGetWishlistQuery"
+    file: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx:52"
+    
+  - ac_id: "AC19"
+    status: "IMPLEMENTED"
+    evidence: "HTTP test file created with 11 test scenarios"
+    file: "apps/api/lego-api/__http__/collection-view.http"
+    
+  - ac_id: "AC20"
+    status: "IMPLEMENTED"
+    evidence: "Playwright E2E tests created (5 scenarios with step definitions)"
+    files:
+      - "apps/web/playwright/features/collection/collection-view.feature"
+      - "apps/web/playwright/steps/collection-view.steps.ts"
+    
+  - ac_id: "AC21"
+    status: "ALREADY_EXISTS"
+    evidence: "SETS-MVP-002 entry already exists in stories.index.md"
+    file: "plans/future/wish/stories.index.md:3659-3688"
+
+deferred_work:
+  - item: "CollectionCard component with build status badge"
+    reason: "Build status display will be part of SETS-MVP-004 (Build Status Toggle)"
+    acs: ["AC5", "AC6"]
+    follow_up_story: "SETS-MVP-004"
+
+notes:
+  - "Backend already fully supported status filtering - only query schema needed updating"
+  - "CollectionPage successfully reuses existing DraggableWishlistGallery infrastructure"
+  - "Build status badge deferred to SETS-MVP-004 as planned - collection view works with standard WishlistCard"
+  - "All 21 ACs addressed: 18 implemented, 2 deferred (AC5/AC6), 1 already exists (AC21)"
+  - "Pre-existing build errors in @repo/cache do not affect this story's implementation"
+  
+architectural_decisions:
+  - decision: "Add status parameter to backend query schema"
+    rationale: "Plan assumed backend was complete, but query schema was missing status field. Minimal 1-line addition approved by user."
+    impact: "Enables frontend to filter by status='owned'"
+    
+  - decision: "Defer CollectionCard with build status badge"
+    rationale: "SETS-MVP-004 (Build Status Toggle) will implement build status UI. Collection view works with existing WishlistCard in the meantime."
+    impact: "AC5 and AC6 deferred to follow-up story"
+
+risks_mitigated:
+  - risk: "Backend query schema missing status parameter"
+    mitigation: "Added status: ItemStatusSchema.optional() to ListWishlistQuerySchema"
+    status: "RESOLVED"

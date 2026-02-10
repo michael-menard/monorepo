@@ -1,0 +1,108 @@
+### SETS-MVP-002: Collection View API Integration Tests
+###
+### Prerequisites:
+### - API server running on localhost:3000
+### - Valid JWT token in @token variable
+### - Wishlist items seeded with both status='wishlist' and status='owned'
+###
+
+@baseUrl = http://localhost:3000/api
+@token = {{$dotenv JWT_TOKEN}}
+
+### ─────────────────────────────────────────────────────────────────────────
+### Happy Path Tests - Collection Filtering (AC9, AC10, AC11)
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 1: Get owned items (collection view)
+# AC9: GET /api/wishlist?status=owned returns only owned items
+# AC10: Default sort is purchaseDate DESC (most recent first)
+# Expected: 200 OK with only items where status='owned', sorted by purchaseDate DESC
+GET {{baseUrl}}/wishlist?status=owned
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 2: Get wishlist items (default behavior - backward compatibility)
+# Expected: 200 OK with only items where status='wishlist' (service defaults to 'wishlist')
+GET {{baseUrl}}/wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 3: Get owned items with store filter
+# AC11: Supports existing filters with status
+# Expected: 200 OK with filtered owned items from LEGO store
+GET {{baseUrl}}/wishlist?status=owned&store=LEGO
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 4: Get owned items with search filter
+# AC11: Supports search with status filter
+# Expected: 200 OK with owned items matching search term "castle"
+GET {{baseUrl}}/wishlist?status=owned&search=castle
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 5: Get owned items with combined filters
+# AC11: Multiple filters work together
+# Expected: 200 OK with owned items from LEGO store matching "star"
+GET {{baseUrl}}/wishlist?status=owned&store=LEGO&search=star
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 6: Get owned items with tags filter
+# AC11: Tags filter works with status
+# Expected: 200 OK with owned items tagged "space,castle"
+GET {{baseUrl}}/wishlist?status=owned&tags=space,castle
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 7: Get owned items with price range filter
+# AC11: Price range filter works with status
+# Expected: 200 OK with owned items priced between $50-$200
+GET {{baseUrl}}/wishlist?status=owned&priceRange=50,200
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 8: Get owned items with pagination
+# Expected: 200 OK with paginated owned items (page 1, limit 10)
+GET {{baseUrl}}/wishlist?status=owned&page=1&limit=10
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─────────────────────────────────────────────────────────────────────────
+### Edge Cases
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 9: Invalid status value
+# Expected: 400 Bad Request with validation error
+GET {{baseUrl}}/wishlist?status=invalid
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 10: Empty collection (no owned items)
+# Expected: 200 OK with empty items array
+GET {{baseUrl}}/wishlist?status=owned&store=NonExistentStore
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Test 11: Explicit wishlist status
+# Expected: 200 OK with wishlist items only
+GET {{baseUrl}}/wishlist?status=wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ─────────────────────────────────────────────────────────────────────────
+### Manual Verification Checklist
+### ─────────────────────────────────────────────────────────────────────────
+###
+### [ ] Test 1 returns only items with status='owned'
+### [ ] Test 1 items are sorted by purchaseDate DESC (most recent first)
+### [ ] Test 2 returns only items with status='wishlist' (default)
+### [ ] Test 3 filters correctly by store within owned items
+### [ ] Test 4 filters correctly by search within owned items
+### [ ] Test 5 combines store and search filters correctly
+### [ ] Test 6 filters by tags within owned items
+### [ ] Test 7 filters by price range within owned items
+### [ ] Test 8 paginates owned items correctly
+### [ ] Test 9 rejects invalid status with 400
+### [ ] Test 10 handles empty results gracefully
+### [ ] Test 11 explicitly filters to wishlist items

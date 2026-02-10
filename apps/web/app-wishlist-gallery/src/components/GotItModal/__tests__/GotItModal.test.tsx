@@ -1,14 +1,15 @@
 /**
  * GotItModal Component Tests
- * Story: WISH-2042 - Purchase/Got It Flow
+ * Story: SETS-MVP-0310 - Status Update Flow
  *
  * Tests cover:
  * - Form field rendering and defaults
- * - Form validation (price, tax, shipping, quantity)
+ * - Form validation (price, tax, shipping)
+ * - Build status selection
  * - Form submission and loading states
  * - Keyboard accessibility (ESC, Tab, focus trap)
  * - Error handling
- * - Success toast with undo and "View in Sets" buttons
+ * - Success toast
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -112,9 +113,9 @@ describe('GotItModal', () => {
     expect(screen.getByTestId('price-paid-input')).toBeInTheDocument()
     expect(screen.getByTestId('tax-input')).toBeInTheDocument()
     expect(screen.getByTestId('shipping-input')).toBeInTheDocument()
-    expect(screen.getByTestId('quantity-input')).toBeInTheDocument()
     expect(screen.getByTestId('purchase-date-input')).toBeInTheDocument()
-    expect(screen.getByTestId('keep-on-wishlist-checkbox')).toBeInTheDocument()
+    expect(screen.getByText('Build Status')).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
   })
 
   // Test 4: Price is pre-filled from wishlist item
@@ -138,25 +139,14 @@ describe('GotItModal', () => {
     expect(dateInput.value).toBe(today)
   })
 
-  // Test 6: Quantity defaults to 1
-  it('defaults quantity to 1', () => {
+  // Test 6: Build status defaults to 'not_started'
+  it('defaults build status to "Not Started"', () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
-    const quantityInput = screen.getByTestId('quantity-input') as HTMLInputElement
-    expect(quantityInput.value).toBe('1')
-  })
-
-  // Test 7: "Keep on Wishlist" checkbox defaults to unchecked
-  it('defaults "Keep on Wishlist" checkbox to unchecked', () => {
-    renderWithProviders(
-      <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
-    )
-
-    const checkbox = screen.getByTestId('keep-on-wishlist-checkbox')
-    // Radix UI checkbox uses aria-checked instead of checked property
-    expect(checkbox).toHaveAttribute('aria-checked', 'false')
+    // The select should show the default value
+    expect(screen.getAllByText('Not Started').length).toBeGreaterThan(0)
   })
 
   // Test 8: Cancel button closes modal
@@ -227,17 +217,15 @@ describe('GotItModal', () => {
     })
   })
 
-  // Test 12: Quantity input has minimum value constraint
-  it('has quantity input with min value of 1', () => {
+  // Test 12: Build status select is rendered with combobox role
+  it('renders build status select', () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
-    const quantityInput = screen.getByTestId('quantity-input') as HTMLInputElement
-
-    // Input should have min="1" attribute
-    expect(quantityInput).toHaveAttribute('min', '1')
-    expect(quantityInput).toHaveAttribute('type', 'number')
+    // Verify the select is rendered as a combobox
+    const selectTrigger = screen.getByRole('combobox')
+    expect(selectTrigger).toBeInTheDocument()
   })
 
   // Test 13: Form allows optional empty fields
@@ -268,38 +256,14 @@ describe('GotItModal', () => {
     expect(submitButton).toHaveTextContent('Add to Collection')
   })
 
-  // Test 18: Checkbox can be toggled
-  it('toggles "Keep on Wishlist" checkbox', async () => {
+  // Test 18: Build status field has label
+  it('has build status label', () => {
     renderWithProviders(
       <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
     )
 
-    const checkbox = screen.getByTestId('keep-on-wishlist-checkbox')
-
-    // Checkbox should be unchecked initially (check via aria-checked attribute)
-    expect(checkbox).toHaveAttribute('aria-checked', 'false')
-
-    // Click to toggle
-    await userEvent.click(checkbox)
-
-    // Should now be checked
-    await waitFor(() => {
-      expect(checkbox).toHaveAttribute('aria-checked', 'true')
-    })
-  })
-
-  // Test 19: Quantity can be incremented
-  it('allows quantity to be changed', async () => {
-    renderWithProviders(
-      <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
-    )
-
-    const quantityInput = screen.getByTestId('quantity-input') as HTMLInputElement
-
-    // Change quantity via fireEvent
-    fireEvent.change(quantityInput, { target: { value: '5' } })
-
-    expect(quantityInput.value).toBe('5')
+    // Verify the label is present
+    expect(screen.getByText('Build Status')).toBeInTheDocument()
   })
 
   // Test 20: Purchase date can be changed
@@ -370,9 +334,8 @@ describe('GotItModal', () => {
     expect(screen.getByLabelText('Price Paid')).toBeInTheDocument()
     expect(screen.getByLabelText('Tax')).toBeInTheDocument()
     expect(screen.getByLabelText('Shipping')).toBeInTheDocument()
-    expect(screen.getByLabelText('Quantity')).toBeInTheDocument()
     expect(screen.getByLabelText('Purchase Date')).toBeInTheDocument()
-    expect(screen.getByLabelText('Keep on wishlist')).toBeInTheDocument()
+    expect(screen.getByText('Build Status')).toBeInTheDocument()
   })
 
   // Test 24: Form fields have correct input types
@@ -382,12 +345,10 @@ describe('GotItModal', () => {
     )
 
     const priceInput = screen.getByTestId('price-paid-input')
-    const quantityInput = screen.getByTestId('quantity-input')
     const dateInput = screen.getByTestId('purchase-date-input')
 
     expect(priceInput).toHaveAttribute('type', 'text')
     expect(priceInput).toHaveAttribute('inputMode', 'decimal')
-    expect(quantityInput).toHaveAttribute('type', 'number')
     expect(dateInput).toHaveAttribute('type', 'date')
   })
 
@@ -404,5 +365,39 @@ describe('GotItModal', () => {
 
     expect(priceInput.value).toBe('99.99')
     expect(priceInput).toHaveAttribute('inputMode', 'decimal')
+  })
+
+  // Test 26: Form can be filled with purchase details
+  it('allows filling purchase details', async () => {
+    const user = userEvent.setup()
+
+    renderWithProviders(
+      <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
+    )
+
+    // Fill in purchase details
+    const priceInput = screen.getByTestId('price-paid-input')
+    const taxInput = screen.getByTestId('tax-input')
+    const shippingInput = screen.getByTestId('shipping-input')
+
+    await user.clear(priceInput)
+    await user.type(priceInput, '99.99')
+    await user.type(taxInput, '8.50')
+    await user.type(shippingInput, '5.00')
+
+    // Verify the values were entered
+    expect((priceInput as HTMLInputElement).value).toBe('99.99')
+    expect((taxInput as HTMLInputElement).value).toBe('8.50')
+    expect((shippingInput as HTMLInputElement).value).toBe('5.00')
+  })
+
+  // Test 27: Build status defaults to not_started
+  it('defaults buildStatus to not_started', () => {
+    renderWithProviders(
+      <GotItModal isOpen={true} onClose={mockOnClose} item={mockWishlistItem} />,
+    )
+
+    // The default value should be shown in the select
+    expect(screen.getAllByText('Not Started').length).toBeGreaterThan(0)
   })
 })

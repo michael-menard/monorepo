@@ -224,9 +224,10 @@ export function getAuthorizationErrorDescription(error: ParsedAuthorizationError
 /**
  * Get the action button text for an authorization error
  */
-export function getAuthorizationErrorAction(
-  error: ParsedAuthorizationError,
-): { text: string; type: 'upgrade' | 'contact' | 'none' } {
+export function getAuthorizationErrorAction(error: ParsedAuthorizationError): {
+  text: string
+  type: 'upgrade' | 'contact' | 'none'
+} {
   switch (error.type) {
     case 'FEATURE_NOT_AVAILABLE':
       return { text: 'View Upgrade Options', type: 'upgrade' }

@@ -11,6 +11,7 @@ import type {
   PurchaseDetailsInput,
   WishlistError,
   PresignError,
+  BuildStatus,
 } from '../types.js'
 import type { Set as SetItem } from '../../sets/types.js'
 import type { SetsService } from '../../sets/application/services.js'
@@ -162,9 +163,11 @@ export function createWishlistService(deps: WishlistServiceDeps) {
       pagination: PaginationInput,
       filters?: {
         search?: string
-        store?: string
+        store?: string[] // WISH-20171: Changed from string to string[]
         tags?: string[]
-        priority?: number
+        priority?: number // Backward compatibility
+        priorityRange?: { min: number; max: number } // WISH-20171: New
+        priceRange?: { min: number; max: number } // WISH-20171: New
         status?: 'wishlist' | 'owned' // SETS-MVP-001: Filter by lifecycle status
         sort?:
           | 'createdAt'
@@ -182,14 +185,11 @@ export function createWishlistService(deps: WishlistServiceDeps) {
       // SETS-MVP-001: Default to 'wishlist' status for backward compatibility
       const effectiveFilters = filters
         ? { ...filters, status: (filters.status ?? 'wishlist') as 'wishlist' | 'owned' }
-        : { status: 'wishlist' as const }
+        : { status: 'wishlist' as 'wishlist' | 'owned' }
 
+      // Pass all filters through to repository (including WISH-20171 filters)
       return wishlistRepo.findByUserId(userId, pagination, effectiveFilters)
     },
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Update
-    // ─────────────────────────────────────────────────────────────────────
 
     /**
      * Update a wishlist item
@@ -441,6 +441,43 @@ export function createWishlistService(deps: WishlistServiceDeps) {
       }
 
       return ok(updateResult.data)
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Build Status Toggle (SETS-MVP-004)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Update build status for an owned item
+     *
+     * SETS-MVP-004: Build status can only be toggled on items with status='owned'.
+     * Returns INVALID_STATUS error if attempting to update build status on wishlist items.
+     *
+     * Steps:
+     * 1. Fetch and verify item ownership
+     * 2. Validate item is 'owned'
+     * 3. Update buildStatus
+     */
+    async updateBuildStatus(
+      userId: string,
+      itemId: string,
+      buildStatus: BuildStatus,
+    ): Promise<Result<WishlistItem, WishlistError | 'INVALID_STATUS'>> {
+      // Step 1: Fetch and verify ownership
+      const existing = await wishlistRepo.findById(itemId)
+      if (!existing.ok) return existing
+      if (existing.data.userId !== userId) return err('FORBIDDEN')
+
+      // Step 2: Validate item is 'owned' (AC10, AC22)
+      if (existing.data.status !== 'owned') {
+        return err('INVALID_STATUS')
+      }
+
+      // Step 3: Update buildStatus
+      const updateData: UpdateWishlistItemInput & {
+        buildStatus?: BuildStatus
+      } = { buildStatus }
+      return wishlistRepo.update(itemId, updateData)
     },
   }
 }

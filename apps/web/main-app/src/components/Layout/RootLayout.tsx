@@ -9,13 +9,7 @@ import {
   AppTabsList,
   AppTabsTrigger,
 } from '@repo/app-component-library'
-import {
-  LayoutDashboard,
-  Heart,
-  BookOpen,
-  Package,
-  Lightbulb,
-} from 'lucide-react'
+import { LayoutDashboard, Heart, BookOpen, Package, Lightbulb } from 'lucide-react'
 import { NavigationProvider } from '../Navigation/NavigationProvider'
 import { PageTransitionSpinner } from '../PageTransitionSpinner/PageTransitionSpinner'
 import { Header } from './Header'
@@ -151,10 +145,7 @@ function RootLayoutContent() {
   if (!auth.isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
-        <MainArea
-          isPageTransitioning={isPageTransitioning}
-          currentPath={location.pathname}
-        />
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname} />
       </div>
     )
   }
@@ -184,7 +175,10 @@ function RootLayoutContent() {
         <div className="hidden md:block border-b border-border bg-background/80 backdrop-blur-sm sticky top-16 z-40">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <AppTabs value={activeTab} onValueChange={handleTabChange}>
-              <AppTabsList variant="underline" className="h-12 w-full justify-start gap-0 bg-transparent p-0">
+              <AppTabsList
+                variant="underline"
+                className="h-12 w-full justify-start gap-0 bg-transparent p-0"
+              >
                 {mainNavItems.map(item => {
                   const Icon = item.icon
                   return (
@@ -205,10 +199,7 @@ function RootLayoutContent() {
         </div>
 
         {/* Main content area */}
-        <MainArea
-          isPageTransitioning={isPageTransitioning}
-          currentPath={location.pathname}
-        />
+        <MainArea isPageTransitioning={isPageTransitioning} currentPath={location.pathname} />
 
         {/* Footer with slide-up animation */}
         <motion.div

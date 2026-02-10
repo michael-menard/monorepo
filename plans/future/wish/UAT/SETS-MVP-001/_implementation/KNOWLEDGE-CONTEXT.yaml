@@ -1,0 +1,83 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-01T00:00:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WISH-2000"
+        lesson: "Database schema changes require Drizzle schema updates AND Zod schema updates in sync"
+        category: pattern
+        applies_because: "Story extends wishlist schema with new columns and enums"
+      - story_id: "WISH-2004"
+        lesson: "API path mismatch between frontend RTK Query and backend Hono routes caused 404s"
+        category: blocker
+        applies_because: "Story adds new query params to existing API endpoints"
+      - story_id: "SETS-MVP-001-ANALYSIS"
+        lesson: "Service layer changes are required per Ports & Adapters architecture when schema changes affect API"
+        category: pattern
+        applies_because: "Schema changes must be implemented in service layer for proper separation of concerns"
+
+    blockers_to_avoid:
+      - "API path schema mismatch between frontend and backend (ADR-001)"
+      - "Missing service layer specification causing Ports & Adapters violations"
+      - "Backward compatibility breaks in existing endpoints"
+
+    patterns_to_follow:
+      - "Extend existing tables rather than creating parallel structures"
+      - "Use Drizzle pgEnum for database-level constraints on enum fields"
+      - "Add composite indexes for common query patterns (userId, status, date)"
+      - "Default values for new columns ensure existing data compatibility"
+      - "Service layer handles filtering logic, not raw repository queries"
+
+    patterns_to_avoid:
+      - "Creating duplicate schemas for similar entities (reuse wishlist_items)"
+      - "Missing default filter behavior for backward compatibility"
+      - "Schema changes without corresponding Zod schema updates"
+
+  architecture_decisions:
+    active_count: 4
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Integration tests must verify real service behavior, not mocks"
+        applies_to: ["testing", "backend"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per UI-facing AC in dev phase"
+        applies_to: ["testing", "frontend"]
+
+    constraints:
+      api_paths: "/api/v2/wishlist -> /wishlist via proxy"
+      testing: "Integration tests for service layer, UAT must use real services"
+      schema_patterns: "Drizzle schema + Zod schema alignment required"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read full story file"
+        typical_tokens: 3000
+        mitigation: "Only read Acceptance Criteria section for planning"
+      - operation: "Read serverless.yml"
+        typical_tokens: 17500
+        mitigation: "Not needed for database-only changes"
+
+    recommended_patterns:
+      - "Targeted file reads over full files"
+      - "Focus on schema files and service layer only"
+      - "Skip frontend files since frontend_impacted: false in SCOPE"
+
+  warnings:
+    - "Story has CONDITIONAL PASS from elaboration - critical architecture issues identified"
+    - "Missing stories.index.md entry must be addressed"
+    - "Service layer changes required per Ports & Adapters architecture"
+
+  tokens:
+    in: 35000
+    out: 1500

@@ -1,0 +1,28 @@
+schema: 1
+story_id: WISH-20260
+timestamp: '2026-02-08T20:15:00Z'
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: false
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - apps/api/lego-api/jobs/**
+  - apps/api/lego-api/domains/config/adapters/**
+  - packages/backend/database-schema/src/schema/**
+  - packages/backend/database-schema/src/migrations/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Add automatic retry mechanism with exponential backoff to flag scheduling infrastructure for failed schedules

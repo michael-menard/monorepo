@@ -420,7 +420,9 @@ export const inspirationApi = createApi({
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: (_, __, { inspirationId }) => [{ type: 'InspirationItem', id: inspirationId }],
+      invalidatesTags: (_, __, { inspirationId }) => [
+        { type: 'InspirationItem', id: inspirationId },
+      ],
     }),
 
     /**
@@ -431,7 +433,9 @@ export const inspirationApi = createApi({
         url: `/inspiration/${inspirationId}/mocs/${mocId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (_, __, { inspirationId }) => [{ type: 'InspirationItem', id: inspirationId }],
+      invalidatesTags: (_, __, { inspirationId }) => [
+        { type: 'InspirationItem', id: inspirationId },
+      ],
     }),
 
     /**

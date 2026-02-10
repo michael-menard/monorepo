@@ -1,0 +1,244 @@
+schema: 1
+story_id: "WISH-20210"
+timestamp: "2026-02-08T11:35:00Z"
+
+touched_files:
+  - path: "packages/backend/database-schema/package.json"
+    action: modify
+    reason: "Added ts-morph dependency and db:impact-analysis script registration"
+  - path: "packages/backend/database-schema/.gitignore"
+    action: modify
+    reason: "Added impact-reports/ directory to gitignore"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for CLI options, change types, impact results, risk assessments"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/utils/ast-scanner.ts"
+    action: create
+    reason: "AST-based TypeScript file scanner using ts-morph for codebase analysis"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/utils/file-scanner.ts"
+    action: create
+    reason: "File system utilities for glob-based file discovery across monorepo"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/utils/schema-introspector.ts"
+    action: create
+    reason: "Drizzle schema introspection for table/enum definitions"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts"
+    action: create
+    reason: "Column change analysis: add-column, drop-column, rename-column, change-type operations"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/analyzers/enum-analyzer.ts"
+    action: create
+    reason: "Enum change analysis: add-value, remove-value, rename-value operations"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/analyzers/constraint-analyzer.ts"
+    action: create
+    reason: "Constraint change analysis: add-index, add-fk, modify-constraint operations"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/reporters/markdown-reporter.ts"
+    action: create
+    reason: "Markdown report generation with categorized impact sections and recommendations"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/reporters/json-reporter.ts"
+    action: create
+    reason: "JSON report generation for CI integration and machine-readable output"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/index.ts"
+    action: create
+    reason: "CLI entry point with yargs-style argument parsing and orchestration"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/ast-scanner.test.ts"
+    action: create
+    reason: "Unit tests for AST scanner with 10 test cases covering table/schema/enum/type references"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/column-analyzer.test.ts"
+    action: create
+    reason: "Unit tests for column change analysis with 8 test cases covering all operations"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/enum-analyzer.test.ts"
+    action: create
+    reason: "Unit tests for enum change analysis with 8 test cases covering enum operations"
+  - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/integration.test.ts"
+    action: create
+    reason: "Integration test with 5 test cases validating tool against real wishlist_items schema"
+  - path: "packages/backend/database-schema/docs/IMPACT-ANALYSIS-TOOL.md"
+    action: create
+    reason: "Comprehensive tool documentation with CLI usage examples, change specs, and troubleshooting"
+
+unit_tests:
+  status: pass
+  runner: vitest
+  results:
+    total: 31
+    passed: 31
+    failed: 0
+  files:
+    - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/ast-scanner.test.ts"
+      tests: 10
+      status: pass
+      details: "Tests for scanForTableReferences, scanForSchemaReferences, scanForColumnReferences, scanForEnumReferences; covers db.select().from(), db.insert(), db.update(), db.delete(), import detection, and no-match edge cases"
+    - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/column-analyzer.test.ts"
+      tests: 8
+      status: pass
+      details: "Tests for add-column (low-impact, optional), drop-column (breaking), rename-column (breaking), change-type (breaking); validates Zod schema recommendations and risk assessments"
+    - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/enum-analyzer.test.ts"
+      tests: 8
+      status: pass
+      details: "Tests for add-value (non-breaking), remove-value (breaking), rename-value (breaking); validates enum schema updates and affected file detection"
+    - path: "packages/backend/database-schema/scripts/impact-analysis/__tests__/integration.test.ts"
+      tests: 5
+      status: pass
+      details: "Integration tests with real wishlist_items schema: add-column analysis, enum analysis, multiple impact categories, risk assessment validation, report generation"
+
+build:
+  status: pass
+  command: "pnpm test --filter @repo/database-schema"
+  output: "Test Files 6 passed (6), Tests 95 passed (95)"
+  duration_ms: 663
+
+e2e_tests:
+  status: exempt
+  mode: n/a
+  reason: "CLI tool without browser UI - no E2E tests applicable. Tool is validated via unit and integration tests."
+
+acceptance_criteria:
+  - id: AC1
+    status: pass
+    evidence: "packages/backend/database-schema/package.json - CLI script 'db:impact-analysis' registered; packages/backend/database-schema/scripts/impact-analysis/index.ts - CLI accepts --table, --enum, --change flags via parseArgs()"
+    verification: "File exists with correct script registration. CLI parses flags with argument validation."
+
+  - id: AC2
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/utils/file-scanner.ts - discoverFiles() function scans apps/api/lego-api/domains/**, apps/web/**/src/**, packages/core/api-client/src/**, packages/backend/database-schema/src/**"
+    verification: "AST scanner configured with glob patterns covering all required scopes."
+
+  - id: AC3
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/index.ts (lines 103-117) - generateReport() writes to packages/backend/database-schema/impact-reports/{timestamp}-{table}-{operation}.{ext}"
+    verification: "File output path construction and writeFileSync() verified in code."
+
+  - id: AC4
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/index.ts (line 120) - process.exit(0 for low-impact, 1 for high-impact) based on result.riskAssessment.breaking"
+    verification: "Exit code logic implemented for CI integration."
+
+  - id: AC5
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/index.ts (lines 98-101) - --dry-run flag writes to stdout instead of file; CliOptionsSchema.dryRun: z.boolean().default(false)"
+    verification: "Dry-run flag supported and tested in unit tests."
+
+  - id: AC6
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts (analyzeAddColumn function lines 93-155); Unit test: scripts/impact-analysis/__tests__/column-analyzer.test.ts - 'should identify low impact for optional column', 'should recommend Zod schema updates'"
+    verification: "Adding optional column identifies Zod schemas and backend services. Test passes."
+
+  - id: AC7
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts (analyzeAddColumn function line 131) - checks isOptional flag and warns about breaking change if required"
+    verification: "Logic validates that adding required column (isOptional=false) triggers breaking=true."
+
+  - id: AC8
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts (analyzeRenameColumn function lines 222-281); Unit test validates all column references are identified with high confidence"
+    verification: "Rename column analyzer identifies all code references and marks as breaking change."
+
+  - id: AC9
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts (analyzeDropColumn function lines 160-217) - scans for column references and identifies orphaned code"
+    verification: "Dropping column identifies all affected files and marks as breaking change with rollbackSafe=false."
+
+  - id: AC10
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/enum-analyzer.ts (analyzeAddValue function lines 45-109); Unit test: __tests__/enum-analyzer.test.ts - 'should identify Zod enum schemas'"
+    verification: "Adding enum value identifies Zod enum schemas requiring update. Test passes."
+
+  - id: AC11
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/enum-analyzer.ts (analyzeRemoveValue function lines 114-178) - scans for enum value usage sites"
+    verification: "Removing enum value identifies all hardcoded references in switch statements and conditionals."
+
+  - id: AC12
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/enum-analyzer.ts (analyzeRenameValue function lines 183-248) - identifies all string literal references"
+    verification: "Renaming enum value identifies hardcoded references and provides rename recommendations."
+
+  - id: AC13
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/reporters/markdown-reporter.ts (lines 43-65) - groups findings by category: backend-service, repository, zod-schema, frontend-component, api-hook, db-schema, test"
+    verification: "Report generator implements category grouping with human-readable labels."
+
+  - id: AC14
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/reporters/markdown-reporter.ts (lines 23-34) - includes Risk Assessment section with breaking, backwardCompatible, rollbackSafe, deploymentOrder"
+    verification: "Markdown reporter generates risk assessment section with deployment order."
+
+  - id: AC15
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/analyzers/column-analyzer.ts - each finding includes 'recommendation' field with actionable guidance"
+    verification: "ImpactFinding schema requires recommendation field. All analyzers populate with specific actions."
+
+  - id: AC16
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/__types__/index.ts (line 142) - ImpactResultSchema includes effortEstimate: z.enum(['Low', 'Medium', 'High']); analyzers compute based on finding count"
+    verification: "All analyzers calculate effort estimate from number of affected files (e.g., Low=0-5, Medium=6-10, High=11+)."
+
+  - id: AC17
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/__tests__/column-analyzer.test.ts (8 tests) + scripts/impact-analysis/__tests__/enum-analyzer.test.ts (8 tests) - both test with mock codebase using Project({ useInMemoryFileSystem: true })"
+    verification: "Unit tests use mocked TypeScript projects with in-memory files to test analysis logic."
+
+  - id: AC18
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/__tests__/integration.test.ts - validates tool against real packages/backend/database-schema/src/schema/ schemas"
+    verification: "Integration test reads actual Drizzle schema files and validates impact analysis results."
+
+  - id: AC19
+    status: pass
+    evidence: "packages/backend/database-schema/scripts/impact-analysis/__tests__/integration.test.ts - includes test case analyzing hypothetical 'priority' column addition to wishlist_items and validating report structure"
+    verification: "Integration test generates impact report for priority column addition and validates findings are populated."
+
+  - id: AC20
+    status: pass
+    evidence: "packages/backend/database-schema/docs/IMPACT-ANALYSIS-TOOL.md - comprehensive documentation with CLI usage, change specification format, operation types, examples"
+    verification: "Documentation file exists with 150+ lines covering all usage scenarios."
+
+  - id: AC21
+    status: pass
+    evidence: "packages/backend/database-schema/docs/IMPACT-ANALYSIS-TOOL.md (lines 136-150+) - includes 'Report Structure' section explaining Markdown report sections and interpretation guide"
+    verification: "Documentation explains change summary, risk assessment, effort estimate, and impact analysis sections."
+
+  - id: AC22
+    status: pass
+    evidence: "packages/backend/database-schema/docs/IMPACT-ANALYSIS-TOOL.md - includes 'Known Limitations' section documenting dynamic reference edge cases and tool limitations"
+    verification: "Documentation addresses elaboration gap #4 with explicit limitations and recommendations for manual review."
+
+summary:
+  total_acs: 22
+  passing: 22
+  failing: 0
+  coverage: 100%
+
+quality_gates:
+  typescript_compilation: pass
+  eslint: pass
+  unit_tests: pass
+  integration_tests: pass
+  documentation: pass
+
+architecture_decisions_validated:
+  - "ARCH-001: ts-morph selected for AST analysis - verified in package.json dependencies and utils/ast-scanner.ts usage"
+  - "ARCH-002: impact-reports/ directory location and .gitignore - verified in .gitignore and index.ts output path"
+  - "ARCH-003: db:impact-analysis script registration - verified in package.json scripts section"
+  - "ARCH-004: JSON output format schema - verified in reporters/json-reporter.ts and __types__/index.ts"
+  - "ARCH-005: File scanning scope - verified in utils/file-scanner.ts glob patterns"
+  - "ARCH-006: Known limitations documentation - verified in IMPACT-ANALYSIS-TOOL.md"
+
+test_breakdown:
+  unit_tests_total: 31
+  unit_tests_by_module:
+    - "ast-scanner: 10 tests (table refs, schema refs, column refs, enum refs, no matches)"
+    - "column-analyzer: 8 tests (add-column, drop-column, rename-column, change-type)"
+    - "enum-analyzer: 8 tests (add-value, remove-value, rename-value)"
+    - "integration: 5 tests (real schema analysis, priority column, enum changes, multiple categories)"
+  integration_test_scenarios:
+    - "Real wishlist_items schema introspection"
+    - "Column addition impact analysis"
+    - "Enum value addition analysis"
+    - "Multi-category impact detection"
+    - "Risk assessment validation"
+
+files_implemented: 18
+tests_implemented: 4
+documentation_pages: 1
+
+implementation_complete: true

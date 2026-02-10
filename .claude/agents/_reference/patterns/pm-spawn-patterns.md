@@ -100,3 +100,33 @@ Required sections in `{STORY_ID}.md`:
 13. Test Plan
 14. UI/UX Notes (if applicable)
 15. Reality Baseline
+
+---
+
+## Risk Predictor (WKFL-007)
+
+Added 2026-02-07. Spawns after STORY-SEED.md generation to predict split risk, review cycles, and token estimates.
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Predict {STORY_ID} risk metrics"
+  run_in_background: true
+  prompt: |
+    Read: .claude/agents/pm-story-risk-predictor.agent.md
+
+    STORY CONTEXT:
+    Story ID: {STORY_ID}
+    Epic: {EPIC}
+    Story seed path: {OUTPUT_DIR}/_pm/STORY-SEED.md
+    Output: predictions YAML section (return inline for merge)
+
+    ADVISORY MODE:
+    - Never block story generation
+    - Degrade gracefully if KB or WKFL-006 unavailable
+    - Return fallback predictions on any error
+```
+
+**Integration Point**: Spawn in parallel with test plan, UIUX, dev feasibility workers (Phase 1-3).
+
+**Output**: Predictions YAML structure merged into story file during Phase 4 synthesis.

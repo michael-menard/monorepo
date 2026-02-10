@@ -1,0 +1,270 @@
+# Test Fixtures: OUTCOME.yaml Samples
+# Synthetic data for pattern-miner testing
+# NOTE: OUTCOME.yaml format not yet active (as of 2026-02-07)
+# These are PLACEHOLDER samples based on expected schema from WKFL-001
+
+---
+# Sample 1: Backend implementation with lint failures
+- schema: 1
+  story_id: "WISH-OUT-001"
+  feature_dir: "plans/features/wishlist"
+  completed_at: "2026-02-05T12:00:00-07:00"
+  
+  phases:
+    setup:
+      duration_seconds: 120
+      token_usage: { in: 500, out: 300 }
+      outcome: SUCCESS
+      
+    plan:
+      duration_seconds: 450
+      token_usage: { in: 8000, out: 3000 }
+      outcome: SUCCESS
+      
+    execute:
+      duration_seconds: 1800
+      token_usage: { in: 25000, out: 12000 }
+      outcome: SUCCESS
+      retries: 1
+      retry_reason: "Lint failures in route handlers"
+      
+    review:
+      duration_seconds: 600
+      token_usage: { in: 10000, out: 4000 }
+      outcome: PASS
+      
+  quality_metrics:
+    lint_failures: 3
+    typecheck_failures: 0
+    security_issues: 0
+    build_failures: 0
+    test_failures: 0
+    review_cycles: 1
+    
+  touched_files:
+    - "apps/api/wishlist/routes.ts"
+    - "apps/api/wishlist/handler.ts"
+    - "packages/core/wishlist/schemas.ts"
+    
+  acceptance_criteria:
+    - ac_id: "AC-1"
+      ac_text: "Endpoint must properly validate user input"
+      status: PASS
+    - ac_id: "AC-2"
+      ac_text: "Response should be correctly formatted"
+      status: PASS
+      
+  final_verdict: PASS
+
+---
+# Sample 2: Frontend component with vague ACs and multiple review cycles
+- schema: 1
+  story_id: "GAL-OUT-002"
+  feature_dir: "plans/features/gallery"
+  completed_at: "2026-02-03T18:00:00-07:00"
+  
+  phases:
+    setup:
+      duration_seconds: 100
+      token_usage: { in: 400, out: 250 }
+      outcome: SUCCESS
+      
+    plan:
+      duration_seconds: 500
+      token_usage: { in: 9000, out: 3500 }
+      outcome: SUCCESS
+      
+    execute:
+      duration_seconds: 2400
+      token_usage: { in: 30000, out: 15000 }
+      outcome: SUCCESS
+      retries: 2
+      retry_reason: "Typecheck failures, then test failures"
+      
+    review:
+      duration_seconds: 900
+      token_usage: { in: 15000, out: 6000 }
+      outcome: PASS
+      
+  quality_metrics:
+    lint_failures: 0
+    typecheck_failures: 2
+    security_issues: 0
+    build_failures: 0
+    test_failures: 1
+    review_cycles: 3
+    
+  touched_files:
+    - "apps/web/main-app/components/GalleryCard/index.tsx"
+    - "apps/web/main-app/components/GalleryCard/utils/formatDate.ts"
+    - "packages/core/app-component-library/cards/StatsCard.tsx"
+    
+  acceptance_criteria:
+    - ac_id: "AC-1"
+      ac_text: "Component must render efficiently"
+      status: PASS
+    - ac_id: "AC-2"
+      ac_text: "Image loading should work properly"
+      status: PASS
+    - ac_id: "AC-3"
+      ac_text: "Date formatting must be appropriate for all locales"
+      status: PARTIAL
+      
+  final_verdict: PASS
+
+---
+# Sample 3: Security failure in auth routes
+- schema: 1
+  story_id: "AUTH-OUT-003"
+  feature_dir: "plans/features/auth"
+  completed_at: "2026-02-01T15:00:00-07:00"
+  
+  phases:
+    setup:
+      duration_seconds: 90
+      token_usage: { in: 450, out: 280 }
+      outcome: SUCCESS
+      
+    plan:
+      duration_seconds: 600
+      token_usage: { in: 10000, out: 4000 }
+      outcome: SUCCESS
+      
+    execute:
+      duration_seconds: 2100
+      token_usage: { in: 28000, out: 14000 }
+      outcome: BLOCKED
+      block_reason: "Security vulnerabilities detected"
+      
+    review:
+      duration_seconds: 450
+      token_usage: { in: 8000, out: 3000 }
+      outcome: FAIL
+      
+  quality_metrics:
+    lint_failures: 0
+    typecheck_failures: 0
+    security_issues: 2
+    build_failures: 0
+    test_failures: 0
+    review_cycles: 2
+    
+  touched_files:
+    - "apps/api/auth/routes.ts"
+    - "apps/api/auth/middleware/validate.ts"
+    - "packages/backend/auth-utils/jwt.ts"
+    
+  acceptance_criteria:
+    - ac_id: "AC-1"
+      ac_text: "Login endpoint must validate credentials correctly"
+      status: FAIL
+    - ac_id: "AC-2"
+      ac_text: "JWT tokens should be generated properly"
+      status: PASS
+      
+  final_verdict: FAIL
+
+---
+# Sample 4: Build failure in shared package
+- schema: 1
+  story_id: "SHARED-OUT-004"
+  feature_dir: "plans/features/shared"
+  completed_at: "2026-01-30T20:00:00-07:00"
+  
+  phases:
+    setup:
+      duration_seconds: 110
+      token_usage: { in: 500, out: 300 }
+      outcome: SUCCESS
+      
+    plan:
+      duration_seconds: 400
+      token_usage: { in: 7500, out: 2800 }
+      outcome: SUCCESS
+      
+    execute:
+      duration_seconds: 1200
+      token_usage: { in: 18000, out: 9000 }
+      outcome: BLOCKED
+      block_reason: "Build failures - missing dependency"
+      
+    review:
+      duration_seconds: 0
+      token_usage: { in: 0, out: 0 }
+      outcome: SKIPPED
+      
+  quality_metrics:
+    lint_failures: 0
+    typecheck_failures: 0
+    security_issues: 0
+    build_failures: 1
+    test_failures: 0
+    review_cycles: 1
+    
+  touched_files:
+    - "packages/core/utils/src/format.ts"
+    - "packages/core/utils/src/__tests__/format.test.ts"
+    
+  acceptance_criteria:
+    - ac_id: "AC-1"
+      ac_text: "Format function should work for all date formats"
+      status: FAIL
+      
+  final_verdict: FAIL
+
+---
+# Sample 5: Clean implementation - all passing
+- schema: 1
+  story_id: "WISH-OUT-005"
+  feature_dir: "plans/features/wishlist"
+  completed_at: "2026-01-28T16:00:00-07:00"
+  
+  phases:
+    setup:
+      duration_seconds: 100
+      token_usage: { in: 450, out: 270 }
+      outcome: SUCCESS
+      
+    plan:
+      duration_seconds: 480
+      token_usage: { in: 8500, out: 3200 }
+      outcome: SUCCESS
+      
+    execute:
+      duration_seconds: 1500
+      token_usage: { in: 22000, out: 11000 }
+      outcome: SUCCESS
+      retries: 0
+      
+    review:
+      duration_seconds: 550
+      token_usage: { in: 9000, out: 3500 }
+      outcome: PASS
+      
+  quality_metrics:
+    lint_failures: 0
+    typecheck_failures: 0
+    security_issues: 0
+    build_failures: 0
+    test_failures: 0
+    review_cycles: 1
+    
+  touched_files:
+    - "apps/web/main-app/features/wishlist/WishlistView.tsx"
+    - "apps/web/main-app/features/wishlist/hooks/useWishlist.ts"
+    - "packages/core/app-component-library/buttons/CustomButton.tsx"
+    
+  acceptance_criteria:
+    - ac_id: "AC-1"
+      ac_text: "Display user's wishlist items with pagination"
+      status: PASS
+    - ac_id: "AC-2"
+      ac_text: "Allow adding/removing items"
+      status: PASS
+    - ac_id: "AC-3"
+      ac_text: "Show loading states and error messages"
+      status: PASS
+      
+  final_verdict: PASS
+VFIX_EOF
+wc -l /Users/michaelmenard/Development/monorepo/plans/future/workflow-learning/in-progress/WKFL-006/_testing/fixtures/outcome-samples.yaml

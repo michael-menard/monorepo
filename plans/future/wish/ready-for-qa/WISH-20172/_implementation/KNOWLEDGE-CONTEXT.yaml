@@ -1,0 +1,82 @@
+schema: 1
+story_id: "WISH-20172"
+timestamp: "2026-02-08T18:30:00Z"
+
+relevant_lessons:
+  - lesson_id: "WISH-2001"
+    summary: "Use FilterProvider pattern from @repo/gallery for filter state management"
+    relevance: "FilterPanel will integrate with existing FilterProvider pattern used in main-page.tsx"
+
+  - lesson_id: "WISH-2006"
+    summary: "Use useAnnouncer hook for screen reader announcements"
+    relevance: "AC20 requires screen reader announcements for filter state changes"
+
+  - lesson_id: "WISH-2014"
+    summary: "Smart sorting algorithms already implemented in backend"
+    relevance: "FilterPanel must preserve existing sort dropdown functionality"
+
+  - lesson_id: "WISH-2015"
+    summary: "Use localStorage for state persistence with custom hooks"
+    relevance: "Future enhancement - not in MVP scope but pattern available"
+
+relevant_adrs:
+  - adr_id: "ADR-001"
+    title: "Zod-first type definitions"
+    decision: "Always define types using Zod schemas, infer TypeScript types"
+    impact: "FilterPanel props and state must use Zod schemas"
+
+  - adr_id: "ADR-002"
+    title: "Design system primitives from @repo/app-component-library"
+    decision: "Import from _primitives/ for shadcn components"
+    impact: "Use Button, Checkbox, Input, Popover primitives for FilterPanel"
+
+reuse_candidates:
+  - path: "packages/core/gallery/src/contexts/FilterContext.tsx"
+    reason: "Existing FilterProvider pattern - extend filters object to include priorityRange and priceRange"
+
+  - path: "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    reason: "Integration point for FilterPanel - already uses FilterProvider and RTK Query"
+
+  - path: "apps/web/app-wishlist-gallery/src/hooks/useAnnouncer.ts"
+    reason: "Screen reader announcements for AC20"
+
+  - path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    reason: "RTK Query hook - extend useGetWishlistQuery params to include priorityRange and priceRange"
+
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    reason: "Query params schema already has priorityRange and priceRange from WISH-20171"
+
+architectural_constraints:
+  - "Must use FilterProvider pattern from @repo/gallery (no URL state management with useSearchParams)"
+  - "Must import design system primitives from @repo/app-component-library/_primitives/"
+  - "Must use Zod schemas for all type definitions"
+  - "Must use @repo/logger for logging (no console.log)"
+  - "Component structure: FilterPanel/index.tsx, FilterPanel/__tests__/, FilterPanel/__types__/"
+
+integration_points:
+  - component: "main-page.tsx"
+    change: "Add FilterPanel component above GalleryFilterBar"
+
+  - hook: "useGetWishlistQuery"
+    change: "Pass priorityRange and priceRange from filters object"
+
+  - context: "FilterProvider"
+    change: "Extend WishlistFilters type to include priorityRange and priceRange"
+
+test_patterns:
+  - framework: "Vitest + React Testing Library"
+    pattern: "Component tests in __tests__/ directory"
+    example: "apps/web/app-wishlist-gallery/src/components/WishlistCard/__tests__/WishlistCard.test.tsx"
+
+  - framework: "Playwright + Cucumber"
+    pattern: "Feature files in apps/web/playwright/features/wishlist/"
+    example: "wishlist-gallery-ui.feature"
+
+  - accessibility: "Use @axe-core/playwright for accessibility audits"
+    pattern: "Keyboard navigation and screen reader tests"
+
+notes:
+  - "No Slider primitive exists in design system - will need to create or use Input with type=range"
+  - "URL state management NOT in scope - FilterProvider manages state in React context"
+  - "WISH-20171 already added priorityRange and priceRange to WishlistQueryParamsSchema"
+  - "Backend API ready in UAT - safe to integrate"

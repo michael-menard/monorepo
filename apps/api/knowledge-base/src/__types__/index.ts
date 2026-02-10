@@ -40,6 +40,7 @@ export const KnowledgeEntryTypeSchema = z.enum([
   'runbook',
   'lesson',
   'feedback',
+  'calibration',
 ])
 export type KnowledgeEntryType = z.infer<typeof KnowledgeEntryTypeSchema>
 
@@ -116,6 +117,178 @@ export const FeedbackContentSchema = z
   )
 
 export type FeedbackContent = z.infer<typeof FeedbackContentSchema>
+
+// ============================================================================
+// Calibration Schemas (WKFL-002 - Confidence Calibration)
+// ============================================================================
+
+/**
+ * Valid confidence levels for agent findings.
+ *
+ * Part of the WKFL-002 confidence calibration system:
+ * - 'high': Agent was very confident in the finding
+ * - 'medium': Agent had moderate confidence
+ * - 'low': Agent flagged with low confidence
+ *
+ * @see WKFL-002 for implementation details
+ */
+export const ConfidenceLevelSchema = z.enum(['high', 'medium', 'low'])
+export type ConfidenceLevel = z.infer<typeof ConfidenceLevelSchema>
+
+/**
+ * Valid actual outcomes for calibration.
+ *
+ * Part of the WKFL-002 confidence calibration system:
+ * - 'correct': Finding was accurate and valuable
+ * - 'false_positive': Finding was incorrect or not applicable
+ * - 'severity_wrong': Finding severity was inaccurate
+ *
+ * @see WKFL-002 for implementation details
+ */
+export const ActualOutcomeSchema = z.enum(['correct', 'false_positive', 'severity_wrong'])
+export type ActualOutcome = z.infer<typeof ActualOutcomeSchema>
+
+/**
+ * Calibration entry schema for tracking agent confidence accuracy.
+ *
+ * Used to measure how well agent confidence levels match actual outcomes,
+ * enabling threshold adjustment and heuristic improvement.
+ *
+ * @see WKFL-002 AC-1 through AC-5
+ */
+export const CalibrationEntrySchema = z.object({
+  /** Agent that generated the finding */
+  agent_id: z.string().min(1, 'Agent ID required'),
+
+  /** Finding identifier from VERIFICATION.yaml */
+  finding_id: z.string().min(1, 'Finding ID required'),
+
+  /** Story context for the finding */
+  story_id: z.string().min(1, 'Story ID required'),
+
+  /** Confidence level stated by the agent */
+  stated_confidence: ConfidenceLevelSchema,
+
+  /** Actual outcome after human review */
+  actual_outcome: ActualOutcomeSchema,
+
+  /** ISO 8601 timestamp when calibration was recorded */
+  timestamp: z.string().datetime(),
+})
+
+export type CalibrationEntry = z.infer<typeof CalibrationEntrySchema>
+
+// ============================================================================
+// Proposal Schemas (WKFL-010 - Improvement Proposal Generator)
+// ============================================================================
+
+/**
+ * Valid proposal status values.
+ *
+ * Part of the WKFL-010 improvement proposal tracking system:
+ * - 'proposed': Initial state, awaiting review
+ * - 'accepted': Proposal approved for implementation
+ * - 'rejected': Proposal declined
+ * - 'implemented': Proposal has been applied to workflow
+ *
+ * @see WKFL-010 for implementation details
+ */
+export const ProposalStatusSchema = z.enum(['proposed', 'accepted', 'rejected', 'implemented'])
+export type ProposalStatus = z.infer<typeof ProposalStatusSchema>
+
+/**
+ * Valid impact levels for proposals.
+ *
+ * Used in ROI calculation: (impact/effort) * (10/9)
+ * - 'high': Major improvement potential (score: 9)
+ * - 'medium': Moderate improvement (score: 5)
+ * - 'low': Minor improvement (score: 2)
+ */
+export const ProposalImpactSchema = z.enum(['high', 'medium', 'low'])
+export type ProposalImpact = z.infer<typeof ProposalImpactSchema>
+
+/**
+ * Valid effort levels for proposals.
+ *
+ * Used in ROI calculation: (impact/effort) * (10/9)
+ * - 'low': Quick change (score: 1)
+ * - 'medium': Moderate work (score: 3)
+ * - 'high': Significant effort (score: 9)
+ */
+export const ProposalEffortSchema = z.enum(['low', 'medium', 'high'])
+export type ProposalEffort = z.infer<typeof ProposalEffortSchema>
+
+/**
+ * Valid proposal sources.
+ *
+ * Tracks which learning component generated the proposal:
+ * - 'calibration': From confidence calibration analysis (WKFL-002)
+ * - 'pattern': From pattern mining (WKFL-006)
+ * - 'heuristic': From heuristic evolution (WKFL-003)
+ * - 'experiment': From A/B testing (WKFL-008)
+ * - 'feedback': From human feedback (WKFL-004)
+ * - 'retro': From workflow retrospectives (WKFL-001)
+ */
+export const ProposalSourceSchema = z.enum([
+  'calibration',
+  'pattern',
+  'heuristic',
+  'experiment',
+  'feedback',
+  'retro',
+])
+export type ProposalSource = z.infer<typeof ProposalSourceSchema>
+
+/**
+ * Proposal entry schema for tracking workflow improvement proposals.
+ *
+ * Used to persist proposals from improvement-proposer agent,
+ * enabling lifecycle tracking and meta-learning.
+ *
+ * @see WKFL-010 AC-1 through AC-5
+ */
+export const ProposalEntrySchema = z.object({
+  /** Unique proposal ID (e.g., P-001, P-042) */
+  proposal_id: z.string().min(1, 'Proposal ID required'),
+
+  /** Proposal title (1-2 sentences) */
+  title: z.string().min(1, 'Title required'),
+
+  /** Source learning component that generated the proposal */
+  source: ProposalSourceSchema,
+
+  /** Current proposal status */
+  status: ProposalStatusSchema,
+
+  /** Impact level for ROI calculation */
+  impact: ProposalImpactSchema,
+
+  /** Effort level for ROI calculation */
+  effort: ProposalEffortSchema,
+
+  /** ROI score: (impact/effort) * (10/9), range 2.2-10.0 */
+  roi_score: z.number().min(0).max(10),
+
+  /** Evidence backing the proposal (sample count, correlation, etc.) */
+  evidence: z.string().optional(),
+
+  /** ISO 8601 timestamp when proposal was created */
+  created_at: z.string().datetime(),
+
+  /** ISO 8601 timestamp when proposal was accepted */
+  accepted_at: z.string().datetime().optional().nullable(),
+
+  /** ISO 8601 timestamp when proposal was implemented */
+  implemented_at: z.string().datetime().optional().nullable(),
+
+  /** Reason for rejection (required if status is 'rejected') */
+  rejection_reason: z.string().optional().nullable(),
+
+  /** Tags for categorization and querying */
+  tags: z.array(z.string()).optional().default([]),
+})
+
+export type ProposalEntry = z.infer<typeof ProposalEntrySchema>
 
 /**
  * Vector embedding schema.
@@ -243,6 +416,118 @@ export const SimilaritySearchResultSchema = z.object({
 })
 
 export type SimilaritySearchResult = z.infer<typeof SimilaritySearchResultSchema>
+
+// ============================================================================
+// KB Compression Schemas (WKFL-009 - Knowledge Compressor)
+// ============================================================================
+
+/**
+ * Schema for a canonical (merged) KB entry created by compression.
+ *
+ * Canonical entries are the deduplicated version of similar entries,
+ * combining all unique information from the cluster.
+ *
+ * @see WKFL-009 for implementation details
+ */
+export const CanonicalEntrySchema = z.object({
+  /** Title of the canonical entry */
+  title: z.string().min(1),
+
+  /** Unified recommendation combining all cluster members */
+  recommendation: z.string().min(1),
+
+  /** IDs of the original entries that were merged */
+  merged_from: z.array(z.string().uuid()).min(2),
+
+  /** Combined examples from all cluster members */
+  examples: z.array(
+    z.object({
+      /** Story where this example originated */
+      story: z.string(),
+      /** Context describing the example */
+      context: z.string(),
+    }),
+  ),
+
+  /** Union of all tags from cluster members */
+  tags: z.array(z.string()),
+})
+
+export type CanonicalEntry = z.infer<typeof CanonicalEntrySchema>
+
+/**
+ * Schema for archive metadata applied to original entries after compression.
+ *
+ * @see WKFL-009 AC-3
+ */
+export const ArchiveMetadataSchema = z.object({
+  /** Whether the entry has been archived */
+  archived: z.boolean(),
+
+  /** When the entry was archived */
+  archived_at: z.date(),
+
+  /** UUID of the canonical entry that replaced this one */
+  canonical_id: z.string().uuid(),
+})
+
+export type ArchiveMetadata = z.infer<typeof ArchiveMetadataSchema>
+
+/**
+ * Schema for the compression report output.
+ *
+ * @see WKFL-009 AC-4
+ */
+export const CompressionReportSchema = z.object({
+  /** ISO date when compression was run */
+  run_date: z.string(),
+
+  /** Similarity threshold used */
+  threshold: z.number().min(0).max(1),
+
+  /** Entry counts before compression */
+  before: z.object({
+    total_entries: z.number().int().min(0),
+    lessons: z.number().int().min(0),
+    decisions: z.number().int().min(0),
+    feedback: z.number().int().min(0),
+    other: z.number().int().min(0),
+  }),
+
+  /** Entry counts after compression */
+  after: z.object({
+    total_entries: z.number().int().min(0),
+    canonical_entries: z.number().int().min(0),
+    archived_entries: z.number().int().min(0),
+  }),
+
+  /** Compression statistics */
+  compression: z.object({
+    ratio: z.number().min(0).max(1),
+    estimated_token_savings: z.number().int().min(0),
+  }),
+
+  /** Clusters that were created */
+  clusters_created: z.array(
+    z.object({
+      id: z.string().uuid(),
+      size: z.number().int().min(2),
+      topic: z.string(),
+      members: z.array(z.string().uuid()),
+    }),
+  ),
+
+  /** Entries that did not cluster */
+  no_cluster: z.object({
+    count: z.number().int().min(0),
+    reason: z.string(),
+  }),
+
+  /** Whether this was a dry run (no changes made) */
+  dry_run: z.boolean(),
+})
+
+export type CompressionReport = z.infer<typeof CompressionReportSchema>
 
 // ============================================================================
 // Task Schemas (Bucket C - Task Backlog)

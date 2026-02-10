@@ -1,0 +1,225 @@
+id: WKFL-010
+title: "Improvement Proposal Generator"
+status: Ready for QA
+priority: P3
+phase: experimentation
+created_at: 2026-02-06T17:00:00-07:00
+elaborated_at: 2026-02-07T23:45:00Z
+
+epic: workflow-learning
+prefix: WKFL
+
+dependencies:
+  - WKFL-002
+blocks: []
+
+owner: null
+estimated_tokens: 55000
+
+tags:
+  - experimentation
+  - proposals
+  - meta-improvement
+  - automation
+
+summary: |
+  Weekly proactive analysis that generates actionable improvement proposals
+  based on all learning system outputs, closing the self-improvement loop.
+
+goal: |
+  Generate improvement proposals by:
+  1. Aggregating insights from calibration, patterns, experiments
+  2. Generating prioritized proposals with effort/impact ratings
+  3. Tracking proposal outcomes (accepted/rejected/implemented)
+  4. Learning from acceptance patterns to improve proposals
+
+non_goals:
+  - Auto-implementing proposals
+  - Proposals for non-workflow changes
+  - Real-time proposal generation
+
+scope:
+  in:
+    - improvement-proposer.agent.md (sonnet)
+    - /improvement-proposals command
+    - IMPROVEMENT-PROPOSALS-{date}.md output
+    - Proposal tracking (accepted/rejected/implemented)
+    - Integration with all learning components
+    - Meta-learning from proposal acceptance
+
+  out:
+    - Auto-implementing changes
+    - Code changes (workflow config only)
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Aggregate inputs from calibration, patterns, experiments"
+    verification: "Proposer queries all learning data sources"
+
+  - id: AC-2
+    description: "Generate proposals with effort/impact ratings"
+    verification: "IMPROVEMENT-PROPOSALS.md has effort and impact for each"
+
+  - id: AC-3
+    description: "Prioritize by impact/effort ratio"
+    verification: "Proposals sorted by ROI score"
+
+  - id: AC-4
+    description: "Track: proposed, accepted, rejected, implemented"
+    verification: "Proposal tracking in KB, queryable by status"
+
+  - id: AC-5
+    description: "Learn from acceptance patterns"
+    verification: "Over time, acceptance rate of proposals improves"
+
+technical_notes: |
+  ## Input Sources
+
+  The proposer aggregates from:
+
+  1. **Calibration (WKFL-002)**
+     - Agents with low accuracy
+     - Threshold adjustment recommendations
+
+  2. **Patterns (WKFL-006)**
+     - Anti-patterns to address
+     - Agent hints to inject
+
+  3. **Experiments (WKFL-008)**
+     - Winning experiments to roll out
+     - Failed experiments to stop
+
+  4. **Heuristics (WKFL-003)**
+     - Tier promotions/demotions
+
+  5. **Feedback (WKFL-004)**
+     - Recurring false positives
+     - Missing check patterns
+
+  ## IMPROVEMENT-PROPOSALS-{date}.md
+
+  ```markdown
+  # Workflow Improvement Proposals - 2026-02-15
+
+  Generated: 2026-02-15T10:00:00Z
+  Data period: 2026-02-01 to 2026-02-14
+  Stories analyzed: 23
+
+  ## High Priority
+
+  ### [P-001] Add lint pre-check to backend-coder
+
+  **Source:** Pattern mining (WKFL-006)
+  **Evidence:** routes.ts fails lint 78% of first reviews (15 samples)
+
+  **Proposal:**
+  Add step to dev-implement-backend-coder.agent.md:
+  ```
+  Before committing, run: pnpm lint apps/api/
+  If errors, fix before proceeding.
+  ```
+
+  **Impact:** High (reduce 78% of lint failures)
+  **Effort:** Low (single agent edit)
+  **ROI Score:** 9.2/10
+
+  **Status:** proposed
+
+  ---
+
+  ### [P-002] Tighten security agent high-confidence threshold
+
+  **Source:** Calibration (WKFL-002)
+  **Evidence:** High confidence accuracy at 81% (should be 90%+)
+
+  **Proposal:**
+  Update code-review-security.agent.md:
+  ```
+  High confidence requires:
+  - Provable via static analysis
+  - No mitigating factors
+  - Clear OWASP category match
+  ```
+
+  **Impact:** Medium (reduce false positives)
+  **Effort:** Low (prompt update)
+  **ROI Score:** 7.5/10
+
+  **Status:** proposed
+
+  ---
+
+  ## Medium Priority
+
+  ### [P-003] Roll out fast-track experiment
+
+  **Source:** Experiments (WKFL-008)
+  **Evidence:** exp-fast-track shows -33% cycle time, gate pass maintained
+
+  **Proposal:**
+  Expand traffic from 20% to 50%, continue monitoring.
+
+  **Impact:** Medium (faster story completion)
+  **Effort:** Low (config change)
+  **ROI Score:** 6.8/10
+
+  **Status:** proposed
+
+  ---
+
+  ## Tracking Summary
+
+  | Week | Proposed | Accepted | Rejected | Implemented |
+  |------|----------|----------|----------|-------------|
+  | W1 | 5 | 3 | 1 | 2 |
+  | W2 | 4 | 4 | 0 | 3 |
+  | W3 | 6 | - | - | - |
+  ```
+
+  ## Proposal Tracking Schema
+
+  ```yaml
+  type: proposal
+  id: P-001
+  title: "Add lint pre-check to backend-coder"
+  source: pattern_mining
+  evidence_id: pattern-042
+  created_at: 2026-02-15
+  status: proposed  # proposed | accepted | rejected | implemented
+  accepted_at: null
+  implemented_at: null
+  rejection_reason: null
+  impact: high
+  effort: low
+  roi_score: 9.2
+  tags:
+    - proposal
+    - source:pattern
+    - status:proposed
+    - priority:high
+  ```
+
+  ## Meta-Learning
+
+  Track acceptance patterns:
+  - Which sources generate most accepted proposals?
+  - Which effort levels get rejected?
+  - What evidence thresholds correlate with acceptance?
+
+  Use this to improve future proposal quality.
+
+reuse_plan:
+  must_reuse:
+    - Data from all WKFL components
+    - KB for proposal tracking
+    - Existing markdown patterns
+
+  may_create:
+    - improvement-proposer.agent.md
+    - /improvement-proposals command
+    - Proposal tracking schema
+    - Meta-learning on acceptance
+
+token_budget:
+  estimated: 55000
+  enforcement: warning

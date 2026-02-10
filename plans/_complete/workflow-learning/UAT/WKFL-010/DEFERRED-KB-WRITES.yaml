@@ -1,0 +1,69 @@
+---
+created_at: "2026-02-07T22:00:00Z"
+reason: "KB persistence not yet implemented in pm-story-generation-leader"
+retry_command: "Manual KB write required after KB integration story completes"
+---
+
+# Deferred KB Writes for WKFL-010
+
+## Story Entry
+
+**Table**: stories
+
+**SQL**:
+```sql
+INSERT INTO stories (
+  story_id, feature, title, story_dir, story_file, story_type,
+  points, priority, state, touches_backend, touches_frontend,
+  touches_database, touches_infra
+) VALUES (
+  'WKFL-010',
+  'workflow-learning',
+  'Improvement Proposal Generator',
+  'plans/future/workflow-learning/backlog/WKFL-010',
+  'plans/future/workflow-learning/backlog/WKFL-010/WKFL-010.md',
+  'feature',
+  60,
+  'high',
+  'backlog',
+  false,
+  false,
+  true,
+  false
+) ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_dir = EXCLUDED.story_dir,
+  story_file = EXCLUDED.story_file,
+  story_type = EXCLUDED.story_type,
+  points = EXCLUDED.points,
+  priority = EXCLUDED.priority,
+  state = EXCLUDED.state,
+  touches_backend = EXCLUDED.touches_backend,
+  touches_frontend = EXCLUDED.touches_frontend,
+  touches_database = EXCLUDED.touches_database,
+  touches_infra = EXCLUDED.touches_infra;
+```
+
+**Field Derivations**:
+- story_id: WKFL-010 (from story file)
+- feature: workflow-learning (from index path)
+- title: "Improvement Proposal Generator" (from story)
+- story_dir: plans/future/workflow-learning/backlog/WKFL-010
+- story_file: plans/future/workflow-learning/backlog/WKFL-010/WKFL-010.md
+- story_type: feature (from story content)
+- points: 60 (from estimated_tokens / 1000)
+- priority: high (P3 mapped to "high" for experimentation phase)
+- state: backlog (initial state)
+- touches_backend: false (CLI-only, no API changes)
+- touches_frontend: false (CLI-only, no UI changes)
+- touches_database: true (KB schema extension)
+- touches_infra: false (no infrastructure changes)
+
+---
+
+## Retry Instructions
+
+When KB integration is available:
+1. Run SQL statement above to insert story entry
+2. Verify story is queryable: `SELECT * FROM stories WHERE story_id = 'WKFL-010'`
+3. Delete this DEFERRED-KB-WRITES.yaml file after successful write

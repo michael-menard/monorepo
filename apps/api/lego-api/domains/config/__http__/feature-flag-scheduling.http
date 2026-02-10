@@ -1,0 +1,111 @@
+### WISH-2119: Feature Flag Scheduling Integration Tests
+### Requires: Admin authentication token
+
+@baseUrl = http://localhost:3000/api/admin
+@adminToken = Bearer YOUR_ADMIN_TOKEN_HERE
+@flagKey = test-flag-schedule
+
+### Setup: Create test flag first (if needed)
+POST {{baseUrl}}/flags/{{flagKey}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "enabled": false,
+  "rolloutPercentage": 0,
+  "description": "Test flag for scheduling"
+}
+
+### Test 1: Create schedule - Success (AC1, AC18)
+# Should return 201 Created with schedule object
+POST {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-12-31T23:59:59Z",
+  "updates": {
+    "enabled": true,
+    "rolloutPercentage": 100
+  }
+}
+
+### Test 2: Create schedule - Past time (AC1, AC18)
+# Should return 400 Bad Request (scheduledAt must be in future)
+POST {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2020-01-01T00:00:00Z",
+  "updates": {
+    "enabled": true
+  }
+}
+
+### Test 3: Create schedule - Empty updates (AC12, AC18)
+# Should return 400 Bad Request (at least one update required)
+POST {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-12-31T23:59:59Z",
+  "updates": {}
+}
+
+### Test 4: Create schedule - Invalid rolloutPercentage (AC1, AC18)
+# Should return 400 Bad Request (rolloutPercentage out of range)
+POST {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-12-31T23:59:59Z",
+  "updates": {
+    "rolloutPercentage": 150
+  }
+}
+
+### Test 5: Create schedule - Non-existent flag (AC2, AC18)
+# Should return 404 Not Found
+POST {{baseUrl}}/flags/non-existent-flag/schedule
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "scheduledAt": "2026-12-31T23:59:59Z",
+  "updates": {
+    "enabled": true
+  }
+}
+
+### Test 6: List schedules - Success (AC3, AC18)
+# Should return 200 OK with array of schedules
+GET {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{adminToken}}
+
+### Test 7: Cancel schedule - Success (AC4, AC18)
+# Replace {scheduleId} with actual ID from Test 1 response
+@scheduleId = REPLACE_WITH_SCHEDULE_ID
+
+DELETE {{baseUrl}}/flags/{{flagKey}}/schedule/{{scheduleId}}
+Authorization: {{adminToken}}
+
+### Test 8: Cancel schedule - Not found (AC4, AC18)
+# Should return 404 Not Found
+DELETE {{baseUrl}}/flags/{{flagKey}}/schedule/00000000-0000-0000-0000-000000000000
+Authorization: {{adminToken}}
+
+### Test 9: Unauthorized access - No token (AC5, AC18)
+# Should return 401 Unauthorized
+GET {{baseUrl}}/flags/{{flagKey}}/schedule
+
+### Test 10: Non-admin access (AC5, AC18)
+# Replace with non-admin token
+@userToken = Bearer YOUR_USER_TOKEN_HERE
+
+GET {{baseUrl}}/flags/{{flagKey}}/schedule
+Authorization: {{userToken}}
+
+###

@@ -86,3 +86,80 @@ pnpm --filter app-wishlist-gallery test -- --run src/pages/__tests__/AddItemPage
 ## Overall Verdict
 
 **VERIFICATION COMPLETE** - All checks pass. Pre-existing test failures are documented and unrelated to WISH-2032.
+
+## E2E Tests (Playwright + BDD)
+
+### Test Files Created
+
+**Feature File**: `/apps/web/playwright/features/wishlist/wishlist-optimistic-ui.feature`
+- Format: Gherkin/Cucumber BDD
+- Tags: @WISH-2032, @optimistic-ui, @wishlist
+- Scenarios: 7 (covering all 7 acceptance criteria)
+
+**Step Definitions**: `/apps/web/playwright/steps/wishlist-optimistic-ui.steps.ts`
+- New steps created: 14
+- Reused existing steps from: common.steps.ts, wishlist-add-item.steps.ts, wishlist.steps.ts
+
+### Test Coverage by AC
+
+| AC | Scenario | Tags | Steps Created | Steps Reused |
+|----|----------|------|---------------|--------------|
+| AC1 | Success toast appears immediately | @AC1 @smoke @optimistic-toast | 2 | 3 |
+| AC2 | Navigation happens immediately | @AC2 @smoke @optimistic-navigation | 2 | 3 |
+| AC3 | Submit button disabled | @AC3 @button-state | 2 | 3 |
+| AC4 | Error toast with retry | @AC4 @error-handling | 3 | 4 |
+| AC5 | Retry functionality | @AC5 @error-handling @retry | 1 | 5 |
+| AC6 | Form data preserved | @AC6 @error-handling @form-recovery | 4 | 4 |
+| AC7 | Optimistic cache update | @AC7 @cache-update | 1 | 5 |
+
+### Running E2E Tests
+
+**All WISH-2032 tests**:
+```bash
+pnpm --filter playwright test --config=playwright.config.ts --project=chromium-live --grep "@WISH-2032"
+```
+
+**Smoke tests only**:
+```bash
+pnpm --filter playwright test --grep "@WISH-2032.*@smoke"
+```
+
+**Individual AC tests**:
+```bash
+pnpm --filter playwright test --grep "@AC1"  # Success toast
+pnpm --filter playwright test --grep "@AC2"  # Navigation
+pnpm --filter playwright test --grep "@AC3"  # Button state
+pnpm --filter playwright test --grep "@AC4"  # Error toast
+pnpm --filter playwright test --grep "@AC5"  # Retry
+pnpm --filter playwright test --grep "@AC6"  # Form recovery
+pnpm --filter playwright test --grep "@AC7"  # Cache update
+```
+
+### Key Test Behaviors
+
+**Optimistic Success Flow**:
+- Toast appears immediately (< 5 seconds)
+- Navigation happens immediately (< 2 seconds)
+- Submit button disabled during submission
+- Item added to cache optimistically
+
+**Error Rollback Flow**:
+- User navigated back to add item page
+- Form data preserved via localStorage
+- Error toast with retry button shown
+- Retry button resubmits with preserved data
+- Cache rolled back on error
+
+### Test Dependencies
+
+1. Local web app running on `http://localhost:3000`
+2. Test user credentials in `.env`:
+   - Email: `stan.marsh@southpark.test`
+   - Password: `0Xcoffee?`
+3. MSW enabled at application level for API mocking
+
+### Status
+
+**E2E TESTS CREATED** - Test files written but not yet executed per instructions.
+
+For detailed test documentation, see: `_implementation/E2E-TESTS.md`
