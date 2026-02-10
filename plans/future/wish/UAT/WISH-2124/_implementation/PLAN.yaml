@@ -1,0 +1,438 @@
+schema: 1
+story_id: "WISH-2124"
+timestamp: "2026-02-08T18:15:00Z"
+
+# CRITICAL CONTEXT: Redis infrastructure is ALREADY IMPLEMENTED via WISH-2019.
+# This story is primarily GAP-FILLING and VERIFICATION work:
+# - AC 1-8: Already implemented (redis-client.ts, RedisCacheAdapter)
+# - AC 9: Infrastructure provisioning (new work)
+# - AC 10: Load testing (new work)
+# - AC 11: Docker Compose setup (missing - needs creation)
+# - AC 12: Cost monitoring setup (new work)
+# - AC 13: Canary deployment (new work)
+# - AC 14: Already complete (routes.ts lines 42-50)
+# - AC 15: Already implemented (redis-cache.ts line 27)
+# - AC 16: Needs .env documentation updates
+
+steps:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 1: Verify Existing Implementation (ACs 1-8, 14, 15)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 1
+    description: "Audit existing Redis implementation against story ACs"
+    files:
+      - "apps/api/lego-api/core/cache/redis-client.ts"
+      - "apps/api/lego-api/domains/config/adapters/redis-cache.ts"
+      - "apps/api/lego-api/domains/config/routes.ts"
+      - "apps/api/lego-api/domains/config/ports/index.ts"
+    dependencies: []
+    slice: backend
+    details: |
+      Verify that existing implementation satisfies:
+      - AC 1: ioredis v5.x with connection pooling, 2s timeout
+      - AC 2: RedisCacheAdapter implements get/set/delete with proper key pattern
+      - AC 3: Graceful error handling (try-catch, logger.error, return null)
+      - AC 4: Database fallback on cache miss (service layer already handles)
+      - AC 5: Lambda cold start connection (eager connect in redis-client.ts)
+      - AC 6: Retry logic with exponential backoff (retryStrategy in redis-client.ts)
+      - AC 7: TTL configuration (SETEX with 300s in redis-cache.ts)
+      - AC 8: Cache invalidation (DEL after PATCH in service)
+      - AC 14: Service wiring (routes.ts lines 42-50 already uses RedisCacheAdapter)
+      - AC 15: Cache key pattern (envCacheKey function in redis-cache.ts)
+
+  - id: 2
+    description: "Document gaps found during audit in ANALYSIS.md"
+    files:
+      - "plans/future/wish/in-progress/WISH-2124/_implementation/ANALYSIS.md"
+    dependencies: [1]
+    slice: packages
+    details: |
+      Create or update ANALYSIS.md with:
+      - List of ACs fully satisfied by existing code
+      - List of gaps to fill (Docker Compose, infrastructure, monitoring)
+      - File paths for each AC's evidence
+      - Recommendations for minimal changes needed
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 2: Fill Gaps - Docker Compose (AC 11)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 3
+    description: "Create Docker Compose setup for local Redis development"
+    files:
+      - "apps/api/lego-api/docker-compose.yml"
+    dependencies: [2]
+    slice: infra
+    details: |
+      Create docker-compose.yml with:
+      - Redis 7.2-alpine service
+      - Port mapping: 6379:6379
+      - Volume: ./data/redis for persistence
+      - Health check for readiness
+      - Satisfies AC 11
+
+  - id: 4
+    description: "Update .env.local template with REDIS_URL"
+    files:
+      - "apps/api/lego-api/.env.local.example"
+      - "apps/api/lego-api/.env.example"
+    dependencies: [3]
+    slice: backend
+    details: |
+      Add to .env templates:
+      REDIS_URL=redis://localhost:6379
+      Satisfies AC 16
+
+  - id: 5
+    description: "Add Docker Compose setup instructions to README"
+    files:
+      - "apps/api/lego-api/README.md"
+    dependencies: [3, 4]
+    slice: backend
+    details: |
+      Document:
+      - How to start Redis: `docker-compose up redis`
+      - Environment variable setup
+      - Verification steps (redis-cli ping)
+      - Satisfies AC 11
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 3: Integration Tests with Docker Redis (AC 11)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 6
+    description: "Create integration tests for RedisCacheAdapter with Docker Redis"
+    files:
+      - "apps/api/lego-api/domains/config/__tests__/redis-cache-integration.test.ts"
+    dependencies: [3]
+    slice: backend
+    details: |
+      Test scenarios:
+      - Start Docker Compose Redis before tests
+      - Test get/set/delete operations
+      - Test TTL expiration (fast-forward time or short TTL)
+      - Test error handling (stop Redis mid-test)
+      - Test cache key pattern matches AC 15
+      - Cleanup: stop Docker Compose after tests
+      - Satisfies AC 2, AC 11 verification
+
+  - id: 7
+    description: "Update existing Redis tests to cover all error scenarios"
+    files:
+      - "apps/api/lego-api/domains/config/__tests__/redis-cache.test.ts"
+    dependencies: [1]
+    slice: backend
+    details: |
+      Verify unit tests cover:
+      - AC 3: Graceful error handling (mock Redis errors)
+      - AC 4: Database fallback (cache miss returns null)
+      - AC 6: Retry logic (mock connection failures)
+      - Add any missing test cases found in audit
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 4: Infrastructure Setup (AC 9, AC 12)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 8
+    description: "Create CloudFormation template for ElastiCache cluster"
+    files:
+      - "infra/elasticache/template.yaml"
+      - "infra/elasticache/README.md"
+    dependencies: [2]
+    slice: infra
+    details: |
+      CloudFormation resources:
+      - AWS::ElastiCache::CacheCluster (t3.micro, Redis 7.x)
+      - AWS::EC2::SecurityGroup (allow 6379 from Lambda SG)
+      - Outputs: CacheEndpoint, CachePort
+      - Satisfies AC 9 (VPC security groups)
+
+  - id: 9
+    description: "Add CloudWatch billing alarm for ElastiCache costs"
+    files:
+      - "infra/monitoring/billing-alarms.tf"
+    dependencies: [8]
+    slice: infra
+    details: |
+      Terraform alarm:
+      - Threshold: $50/month
+      - Action: SNS notification
+      - Filter: ElastiCache service
+      - Satisfies AC 12
+
+  - id: 10
+    description: "Document infrastructure deployment process"
+    files:
+      - "infra/elasticache/README.md"
+      - "docs/infrastructure/cost-monitoring.md"
+    dependencies: [8, 9]
+    slice: infra
+    details: |
+      README sections:
+      - Prerequisites (VPC, Lambda SG)
+      - Deployment steps (CloudFormation deploy)
+      - Environment variable injection (REDIS_URL)
+      - Cost monitoring setup
+      - Satisfies AC 9, AC 12
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 5: Load Testing (AC 10)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 11
+    description: "Create Artillery load test script for Redis connection pooling"
+    files:
+      - "apps/api/lego-api/__tests__/load/redis-connection-pool.yml"
+    dependencies: [6]
+    slice: backend
+    details: |
+      Artillery config:
+      - Target: local API with Docker Redis
+      - Scenario: 50 concurrent GET /flags requests
+      - Duration: 30 seconds
+      - Success criteria: 0 errors, P95 < 50ms
+      - Satisfies AC 10
+
+  - id: 12
+    description: "Document load testing procedures and expected metrics"
+    files:
+      - "apps/api/lego-api/__tests__/load/README.md"
+    dependencies: [11]
+    slice: backend
+    details: |
+      Document:
+      - How to run load tests
+      - Expected results (0 errors, P95 < 50ms)
+      - How to monitor active connections (CloudWatch or Redis CLI)
+      - Satisfies AC 10
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 6: Deployment Strategy (AC 13)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 13
+    description: "Document canary deployment strategy and rollback plan"
+    files:
+      - "docs/deployment/canary-redis-migration.md"
+    dependencies: [2, 10]
+    slice: infra
+    details: |
+      Documentation:
+      - Canary config: 5% traffic for 1 hour
+      - Metrics to monitor (error rate, cache hit rate, P95 latency)
+      - Success thresholds (error < 0.1%, cache hit > 80%, P95 < 100ms)
+      - Rollback procedure (set REDIS_URL="" to fall back to in-memory)
+      - Satisfies AC 13
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Phase 7: Update EVIDENCE.yaml
+  # ─────────────────────────────────────────────────────────────────────────
+
+  - id: 14
+    description: "Generate EVIDENCE.yaml mapping all ACs to verification artifacts"
+    files:
+      - "plans/future/wish/in-progress/WISH-2124/_implementation/EVIDENCE.yaml"
+    dependencies: [1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13]
+    slice: packages
+    details: |
+      Map each AC to evidence:
+      - AC 1: package.json (ioredis), redis-client.ts (config)
+      - AC 2: redis-cache.ts (RedisCacheAdapter implementation)
+      - AC 3: redis-cache.ts (try-catch blocks, logger.error)
+      - AC 4: services.ts (loadFlags function with fallback)
+      - AC 5: redis-client.ts (lazyConnect: false)
+      - AC 6: redis-client.ts (retryStrategy)
+      - AC 7: redis-cache.ts (setex with ttlSeconds)
+      - AC 8: services.ts (cache.invalidate after update)
+      - AC 9: infra/elasticache/template.yaml
+      - AC 10: load test results
+      - AC 11: docker-compose.yml, integration tests
+      - AC 12: billing-alarms.tf, cost-monitoring.md
+      - AC 13: canary-redis-migration.md
+      - AC 14: routes.ts (DI wiring)
+      - AC 15: redis-cache.ts (envCacheKey pattern)
+      - AC 16: .env.example (REDIS_URL)
+
+files_to_change:
+  # Existing files to verify (read-only audit in step 1)
+  - path: "apps/api/lego-api/core/cache/redis-client.ts"
+    action: verify
+    reason: "AC 1, 5, 6 - verify ioredis config, connection pooling, retry logic"
+
+  - path: "apps/api/lego-api/domains/config/adapters/redis-cache.ts"
+    action: verify
+    reason: "AC 2, 3, 7, 8, 15 - verify RedisCacheAdapter implementation"
+
+  - path: "apps/api/lego-api/domains/config/routes.ts"
+    action: verify
+    reason: "AC 14 - verify service wiring with Redis adapter"
+
+  - path: "apps/api/lego-api/domains/config/application/services.ts"
+    action: verify
+    reason: "AC 4 - verify database fallback on cache miss"
+
+  # New files to create
+  - path: "apps/api/lego-api/docker-compose.yml"
+    action: create
+    reason: "AC 11 - Docker Compose Redis service for local development"
+
+  - path: "apps/api/lego-api/.env.local.example"
+    action: modify
+    reason: "AC 16 - Add REDIS_URL environment variable template"
+
+  - path: "apps/api/lego-api/.env.example"
+    action: modify
+    reason: "AC 16 - Add REDIS_URL environment variable template"
+
+  - path: "apps/api/lego-api/README.md"
+    action: modify
+    reason: "AC 11 - Document Docker Compose Redis setup"
+
+  - path: "apps/api/lego-api/domains/config/__tests__/redis-cache-integration.test.ts"
+    action: create
+    reason: "AC 2, 11 - Integration tests with Docker Redis"
+
+  - path: "apps/api/lego-api/domains/config/__tests__/redis-cache.test.ts"
+    action: modify
+    reason: "AC 3, 4, 6 - Ensure error scenarios are fully tested"
+
+  - path: "infra/elasticache/template.yaml"
+    action: create
+    reason: "AC 9 - CloudFormation template for ElastiCache cluster"
+
+  - path: "infra/elasticache/README.md"
+    action: create
+    reason: "AC 9 - Infrastructure deployment documentation"
+
+  - path: "infra/monitoring/billing-alarms.tf"
+    action: create
+    reason: "AC 12 - CloudWatch billing alarm for cost monitoring"
+
+  - path: "docs/infrastructure/cost-monitoring.md"
+    action: create
+    reason: "AC 12 - Cost monitoring process documentation"
+
+  - path: "apps/api/lego-api/__tests__/load/redis-connection-pool.yml"
+    action: create
+    reason: "AC 10 - Artillery load test for connection pooling"
+
+  - path: "apps/api/lego-api/__tests__/load/README.md"
+    action: create
+    reason: "AC 10 - Load testing documentation"
+
+  - path: "docs/deployment/canary-redis-migration.md"
+    action: create
+    reason: "AC 13 - Canary deployment strategy and rollback plan"
+
+  - path: "plans/future/wish/in-progress/WISH-2124/_implementation/ANALYSIS.md"
+    action: modify
+    reason: "Step 2 - Document audit findings and gaps"
+
+  - path: "plans/future/wish/in-progress/WISH-2124/_implementation/EVIDENCE.yaml"
+    action: create
+    reason: "Step 14 - Map ACs to evidence artifacts"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter lego-api"
+    when: "after code changes, before integration tests"
+    required: true
+
+  - command: "docker-compose -f apps/api/lego-api/docker-compose.yml up -d redis"
+    when: "before integration tests"
+    required: true
+
+  - command: "pnpm test:integration --filter lego-api"
+    when: "after Docker Redis is running"
+    required: true
+
+  - command: "pnpm lint --filter lego-api"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter lego-api"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "package.json shows ioredis v5.x; redis-client.ts shows connection config"
+    evidence_type: file
+
+  - ac_id: "AC2"
+    planned_evidence: "redis-cache.ts implements RedisCacheAdapter with get/set/delete; integration test"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "Unit tests mock Redis errors, verify graceful handling (return null)"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Integration test: stop Redis, verify database fallback succeeds"
+    evidence_type: test
+
+  - ac_id: "AC5"
+    planned_evidence: "redis-client.ts shows lazyConnect: false for eager connection"
+    evidence_type: file
+
+  - ac_id: "AC6"
+    planned_evidence: "redis-client.ts shows retryStrategy with exponential backoff"
+    evidence_type: file
+
+  - ac_id: "AC7"
+    planned_evidence: "redis-cache.ts uses setex with 300s TTL; integration test verifies expiration"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "Integration test: PATCH flag, verify cache invalidated, GET returns fresh value"
+    evidence_type: test
+
+  - ac_id: "AC9"
+    planned_evidence: "infra/elasticache/template.yaml with security groups; deployment README"
+    evidence_type: file
+
+  - ac_id: "AC10"
+    planned_evidence: "Artillery load test results: 50 concurrent requests, 0 errors, P95 < 50ms"
+    evidence_type: command
+
+  - ac_id: "AC11"
+    planned_evidence: "docker-compose.yml with Redis 7.2; integration tests pass against Docker Redis"
+    evidence_type: test
+
+  - ac_id: "AC12"
+    planned_evidence: "billing-alarms.tf shows $50 threshold; cost-monitoring.md documents process"
+    evidence_type: file
+
+  - ac_id: "AC13"
+    planned_evidence: "canary-redis-migration.md documents 5% traffic, metrics, rollback plan"
+    evidence_type: file
+
+  - ac_id: "AC14"
+    planned_evidence: "routes.ts lines 42-50 show RedisCacheAdapter wired via DI"
+    evidence_type: file
+
+  - ac_id: "AC15"
+    planned_evidence: "redis-cache.ts envCacheKey function shows feature_flags:{environment} pattern"
+    evidence_type: file
+
+  - ac_id: "AC16"
+    planned_evidence: ".env.example includes REDIS_URL with example value"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "CRITICAL: Most Redis implementation already exists from WISH-2019"
+  - "This story is primarily verification, gap-filling, and infrastructure provisioning"
+  - "Docker Compose setup (AC 11) is the main missing piece for local development"
+  - "Infrastructure (ElastiCache, monitoring, deployment) needs provisioning"
+  - "Integration and load tests need creation to validate existing implementation"
+  - "Leverage ADR-006: Create E2E tests with live Redis (no mocking)"
+  - "Per SCOPE.yaml: backend=true, packages=true, infra=true, contracts=true"
+  - "No frontend changes - this is backend-only infrastructure work"

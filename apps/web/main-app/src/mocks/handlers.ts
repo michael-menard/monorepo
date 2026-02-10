@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 import type { MockWishlistItem, MockWishlistListResponse } from '../test/mocks/wishlist-types'
 import { mockWishlistItems, wishlistListResponse } from '../test/mocks/wishlist-mocks'
 import { mockSets, buildSetListResponse } from '../test/mocks/sets-mocks'
@@ -65,6 +65,46 @@ export const handlers = [
           item.setNumber?.toLowerCase().includes(lower) ||
           item.tags.some(tag => tag.toLowerCase().includes(lower))
         )
+      })
+    }
+
+    // Apply sorting (WISH-2014: smart sorting support)
+    const sort = url.searchParams.get('sort') || undefined
+    const order = (url.searchParams.get('order') || 'asc') as 'asc' | 'desc'
+
+    if (sort) {
+      const dir = order === 'desc' ? -1 : 1
+      items.sort((a, b) => {
+        switch (sort) {
+          case 'price':
+            return ((a.price ?? Infinity) - (b.price ?? Infinity)) * dir
+          case 'priority':
+            return (a.priority - b.priority) * dir
+          case 'title':
+            return a.title.localeCompare(b.title) * dir
+          case 'sortOrder':
+            return (a.sortOrder - b.sortOrder) * dir
+          case 'createdAt':
+            return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir
+          case 'bestValue': {
+            const ratioA = a.price != null && a.pieceCount ? a.price / a.pieceCount : Infinity
+            const ratioB = b.price != null && b.pieceCount ? b.price / b.pieceCount : Infinity
+            return (ratioA - ratioB) * dir
+          }
+          case 'expiringSoon': {
+            const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : Infinity
+            const dateB = b.releaseDate ? new Date(b.releaseDate).getTime() : Infinity
+            return (dateA - dateB) * dir
+          }
+          case 'hiddenGems': {
+            const maxPriority = 5
+            const scoreA = (a.pieceCount ?? 0) * (maxPriority - a.priority)
+            const scoreB = (b.pieceCount ?? 0) * (maxPriority - b.priority)
+            return (scoreA - scoreB) * dir
+          }
+          default:
+            return 0
+        }
       })
     }
 
@@ -216,7 +256,10 @@ export const handlers = [
     const item = mockMocInstructions.find(i => i.id === id)
 
     if (!item) {
-      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Instruction not found' }, { status: 404 })
+      return HttpResponse.json(
+        { error: 'NOT_FOUND', message: 'Instruction not found' },
+        { status: 404 },
+      )
     }
 
     return HttpResponse.json(item, { status: 200 })
@@ -227,7 +270,10 @@ export const handlers = [
     const id = String(params.id)
     const index = mockMocInstructions.findIndex(i => i.id === id)
     if (index === -1) {
-      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Instruction not found' }, { status: 404 })
+      return HttpResponse.json(
+        { error: 'NOT_FOUND', message: 'Instruction not found' },
+        { status: 404 },
+      )
     }
 
     const body = (await request.json()) as Partial<MockMocInstruction>
@@ -246,7 +292,10 @@ export const handlers = [
     const id = String(params.id)
     const index = mockMocInstructions.findIndex(i => i.id === id)
     if (index === -1) {
-      return HttpResponse.json({ error: 'NOT_FOUND', message: 'Instruction not found' }, { status: 404 })
+      return HttpResponse.json(
+        { error: 'NOT_FOUND', message: 'Instruction not found' },
+        { status: 404 },
+      )
     }
 
     mockMocInstructions.splice(index, 1)
@@ -313,6 +362,47 @@ export const handlers = [
 
     if (store) {
       items = items.filter(item => item.store === store)
+    }
+
+    // Apply sorting (WISH-2014: smart sorting support)
+    const sort = url.searchParams.get('sort') || undefined
+    const order = (url.searchParams.get('order') || 'asc') as 'asc' | 'desc'
+
+    if (sort) {
+      const dir = order === 'desc' ? -1 : 1
+
+      items.sort((a, b) => {
+        switch (sort) {
+          case 'price':
+            return ((a.price ?? Infinity) - (b.price ?? Infinity)) * dir
+          case 'priority':
+            return (a.priority - b.priority) * dir
+          case 'title':
+            return a.title.localeCompare(b.title) * dir
+          case 'sortOrder':
+            return (a.sortOrder - b.sortOrder) * dir
+          case 'createdAt':
+            return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir
+          case 'bestValue': {
+            const ratioA = a.price != null && a.pieceCount ? a.price / a.pieceCount : Infinity
+            const ratioB = b.price != null && b.pieceCount ? b.price / b.pieceCount : Infinity
+            return (ratioA - ratioB) * dir
+          }
+          case 'expiringSoon': {
+            const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : Infinity
+            const dateB = b.releaseDate ? new Date(b.releaseDate).getTime() : Infinity
+            return (dateA - dateB) * dir
+          }
+          case 'hiddenGems': {
+            const maxPriority = 5
+            const scoreA = (a.pieceCount ?? 0) * (maxPriority - a.priority)
+            const scoreB = (b.pieceCount ?? 0) * (maxPriority - b.priority)
+            return (scoreA - scoreB) * dir
+          }
+          default:
+            return 0
+        }
+      })
     }
 
     const response: MockWishlistListResponse = wishlistListResponse(items)
@@ -562,5 +652,118 @@ export const handlers = [
       },
       { status: 201 },
     )
+  }),
+
+  // ---------------------------------------------------------------------------
+  // Feature Flags API Endpoint
+  // ---------------------------------------------------------------------------
+
+  // GET /api/config/flags - Get all feature flags
+  http.get('/api/config/flags', () => {
+    return HttpResponse.json({
+      'wishlist-gallery': true,
+      'wishlist-add-item': true,
+      'sets-gallery': true,
+      'moc-instructions': true,
+    })
+  }),
+
+  // ---------------------------------------------------------------------------
+  // S3 Upload Handlers
+  // ---------------------------------------------------------------------------
+
+  // POST /api/wishlist/images/presign - Get presigned URL for S3 upload
+  http.post('/api/wishlist/images/presign', async ({ request }) => {
+    const mockError = request.headers.get('x-mock-error')
+
+    // Error injection via header
+    if (mockError === '500') {
+      return HttpResponse.json(
+        {
+          error: 'Internal Server Error',
+          message: 'Failed to generate presigned URL',
+          statusCode: 500,
+        },
+        { status: 500 },
+      )
+    }
+
+    if (mockError === '403') {
+      return HttpResponse.json(
+        {
+          error: 'Forbidden',
+          message: 'Access denied',
+          statusCode: 403,
+        },
+        { status: 403 },
+      )
+    }
+
+    if (mockError === 'timeout') {
+      // Never resolve - simulates timeout
+      return new Promise(() => {})
+    }
+
+    // Parse request body to get file name
+    let fileName = 'test.jpg'
+    try {
+      const body = (await request.json()) as { fileName?: string; mimeType?: string }
+      if (body.fileName) {
+        fileName = body.fileName
+      }
+    } catch {
+      // Use default fileName
+    }
+
+    // Simulate network latency
+    await delay(10)
+
+    // Generate unique presigned URL
+    const timestamp = Date.now()
+    const key = `uploads/${timestamp}-${fileName}`
+    const presignedUrl = `https://lego-moc-bucket.s3.amazonaws.com/${key}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=mock-signature-${timestamp}`
+
+    return HttpResponse.json({
+      presignedUrl,
+      key,
+      expiresIn: 3600,
+    })
+  }),
+
+  // PUT to S3 bucket - Intercept presigned URL uploads
+  http.put(/https:\/\/.*\.s3\.amazonaws\.com\/.*/, async ({ request }) => {
+    const mockError = request.headers.get('x-mock-error')
+
+    // Error injection via header
+    if (mockError === '403') {
+      return new HttpResponse('Forbidden', {
+        status: 403,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+
+    if (mockError === '500') {
+      return new HttpResponse('Internal Server Error', {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+
+    if (mockError === 'timeout') {
+      // Never resolve - simulates timeout
+      return new Promise(() => {})
+    }
+
+    // Simulate upload time
+    await delay(10)
+
+    // Return successful S3 upload response
+    return new HttpResponse(null, {
+      status: 200,
+      headers: {
+        'x-amz-request-id': `mock-request-${Date.now()}`,
+        etag: '"mock-etag-12345"',
+      },
+    })
   }),
 ]

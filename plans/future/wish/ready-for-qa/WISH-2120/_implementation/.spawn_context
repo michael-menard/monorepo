@@ -1,0 +1,4 @@
+SPAWN INITIATED: 2026-02-08T17:53:35Z
+WORKER: frontend-coder
+STORY: WISH-2120
+PURPOSE: Implement test utility helpers (createMockFile, mockS3Upload)

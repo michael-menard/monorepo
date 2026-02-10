@@ -1,0 +1,231 @@
+schema: 1
+story_id: "SETS-MVP-001"
+timestamp: "2026-02-01T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Update Drizzle schema with new enum types and wishlist_items columns"
+    files:
+      - "packages/backend/database-schema/src/schema/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Update Zod schemas with new enum types and item fields"
+    files:
+      - "packages/core/api-client/src/schemas/wishlist.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Update wishlist service layer to handle status filtering and new fields"
+    files:
+      - "apps/api/lego-api/domains/wishlist/application/services.ts"
+    dependencies: [2]
+    slice: backend
+
+  - id: 4
+    description: "Create Drizzle migration file for schema changes"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0009_add_owned_status.sql"
+    dependencies: [1]
+    slice: packages
+
+  - id: 5
+    description: "Add schema validation tests for new columns and constraints"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 6
+    description: "Add Zod schema validation tests for new enum fields and validation"
+    files:
+      - "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 7
+    description: "Add service layer integration tests for status filtering and default behavior"
+    files:
+      - "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 8
+    description: "Update wishlist repository mapper to handle new fields"
+    files:
+      - "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+    dependencies: [2]
+    slice: backend
+
+  - id: 9
+    description: "Run all tests and linting"
+    files: []
+    dependencies: [5, 6, 7]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modify
+    reason: "Add pgEnum for status and buildStatus, add new columns to wishlist_items table, add composite index for collection queries (AC1-AC8)"
+
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    action: modify
+    reason: "Add ItemStatusSchema, BuildStatusSchema, update WishlistItemSchema with new fields, create MarkAsPurchasedSchema and UpdateBuildStatusSchema (AC9-AC13)"
+
+  - path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+    action: modify
+    reason: "Add status filtering logic with default 'wishlist' filter for backward compatibility, handle new item status fields in service methods (AC21-AC22)"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0009_add_owned_status.sql"
+    action: create
+    reason: "Create migration that adds columns with default values, constraints, and index. Ensure backward compatibility and reversibility (AC14-AC16)"
+
+  - path: "packages/backend/database-schema/src/schema/__tests__/wishlist-schema.test.ts"
+    action: modify
+    reason: "Add tests for new enum constraints, column existence, default values, and index (AC17-AC18)"
+
+  - path: "packages/core/api-client/src/schemas/__tests__/wishlist.test.ts"
+    action: modify
+    reason: "Add validation tests for enum fields, default values, and null handling for owned-specific fields (AC17-AC19)"
+
+  - path: "apps/api/lego-api/domains/wishlist/__tests__/services.test.ts"
+    action: modify
+    reason: "Add integration tests for default filter behavior and backward compatibility (AC20, AC23)"
+
+  - path: "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+    action: modify
+    reason: "Update repository mapper to include new fields in row-to-domain mapping"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/database-schema"
+    when: "after schema changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after Zod schema changes"
+    required: true
+
+  - command: "pnpm test --filter lego-api"
+    when: "after service layer changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Schema file: index.ts shows status column with enum constraint"
+    evidence_type: file
+
+  - ac_id: "AC2"
+    planned_evidence: "Schema file: index.ts shows purchaseDate timestamp column"
+    evidence_type: file
+
+  - ac_id: "AC3"
+    planned_evidence: "Schema file: index.ts shows purchasePrice text column"
+    evidence_type: file
+
+  - ac_id: "AC4"
+    planned_evidence: "Schema file: index.ts shows purchaseTax text column"
+    evidence_type: file
+
+  - ac_id: "AC5"
+    planned_evidence: "Schema file: index.ts shows purchaseShipping text column"
+    evidence_type: file
+
+  - ac_id: "AC6"
+    planned_evidence: "Schema file: index.ts shows buildStatus column with enum constraint"
+    evidence_type: file
+
+  - ac_id: "AC7"
+    planned_evidence: "Schema file: index.ts shows statusChangedAt timestamp column"
+    evidence_type: file
+
+  - ac_id: "AC8"
+    planned_evidence: "Schema file: index.ts shows composite index on (userId, status, purchaseDate DESC)"
+    evidence_type: file
+
+  - ac_id: "AC9"
+    planned_evidence: "Zod schema file: wishlist.ts exports ItemStatusSchema enum"
+    evidence_type: file
+
+  - ac_id: "AC10"
+    planned_evidence: "Zod schema file: wishlist.ts exports BuildStatusSchema enum"
+    evidence_type: file
+
+  - ac_id: "AC11"
+    planned_evidence: "Zod schema file: wishlist.ts shows UserSetSchema with all new fields"
+    evidence_type: file
+
+  - ac_id: "AC12"
+    planned_evidence: "Zod schema file: wishlist.ts exports MarkAsPurchasedSchema"
+    evidence_type: file
+
+  - ac_id: "AC13"
+    planned_evidence: "Zod schema file: wishlist.ts exports UpdateBuildStatusSchema"
+    evidence_type: file
+
+  - ac_id: "AC14"
+    planned_evidence: "Migration file: 0009_add_owned_status.sql shows column additions with constraints"
+    evidence_type: file
+
+  - ac_id: "AC15"
+    planned_evidence: "Migration file: 0009_add_owned_status.sql shows default value 'wishlist' for status column"
+    evidence_type: file
+
+  - ac_id: "AC16"
+    planned_evidence: "Migration file: 0009_add_owned_status.sql includes DROP column statements for down migration"
+    evidence_type: file
+
+  - ac_id: "AC17"
+    planned_evidence: "Unit test: wishlist-schema.test.ts verifies enum constraints and column types"
+    evidence_type: test
+
+  - ac_id: "AC18"
+    planned_evidence: "Unit test: wishlist.test.ts verifies default values (status='wishlist', buildStatus=null)"
+    evidence_type: test
+
+  - ac_id: "AC19"
+    planned_evidence: "Unit test: wishlist.test.ts verifies owned-specific fields can be null when status='wishlist'"
+    evidence_type: test
+
+  - ac_id: "AC20"
+    planned_evidence: "Integration test: services.test.ts verifies existing wishlist queries return only status='wishlist' items"
+    evidence_type: test
+
+  - ac_id: "AC21"
+    planned_evidence: "Code file: services.ts shows status filtering logic in service methods"
+    evidence_type: file
+
+  - ac_id: "AC22"
+    planned_evidence: "Integration test: services.test.ts verifies GET /api/wishlist with no status param returns only status='wishlist'"
+    evidence_type: test
+
+  - ac_id: "AC23"
+    planned_evidence: "Integration test: services.test.ts verifies service layer handles new status enum correctly"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Per ADR-001, API paths follow /api/v2/wishlist schema"
+  - "Per WISH-2000 lessons, Drizzle schema and Zod schema must stay in sync"
+  - "Story extends existing wishlist_items table per reuse-first principle"
+  - "Default filter behavior (status='wishlist') ensures backward compatibility"
+  - "Service layer changes required per Ports & Adapters architecture (docs/architecture/api-layer.md)"
+  - "Migration must be tested locally before merging"
+  - "No frontend changes required (frontend: false in SCOPE.yaml)"
+  - "Table rename (wishlist_items → user_sets) deferred - keeping existing name"

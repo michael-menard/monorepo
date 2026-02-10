@@ -1,0 +1,347 @@
+schema: 1
+story_id: "SETS-MVP-002"
+timestamp: "2026-02-08T12:00:00-07:00"
+
+steps:
+  - id: 1
+    description: "Update backend types to support status query parameter in ListWishlistQuerySchema"
+    files:
+      - "apps/api/lego-api/domains/wishlist/types.ts"
+    dependencies: []
+    slice: backend
+    notes:
+      - "Status filter already exists in ListWishlistQuerySchema (line 206-258)"
+      - "No changes needed - schema already supports status parameter"
+
+  - id: 2
+    description: "Update backend routes to expose status query parameter in GET /api/wishlist"
+    files:
+      - "apps/api/lego-api/domains/wishlist/routes.ts"
+    dependencies: [1]
+    slice: backend
+    notes:
+      - "Query parameter already parsed via ListWishlistQuerySchema.safeParse()"
+      - "Routes already pass status filter to service layer via listItems() call (line 161-174)"
+      - "No changes needed - route handler already supports status filtering"
+
+  - id: 3
+    description: "Verify service layer supports status filtering with default behavior"
+    files:
+      - "apps/api/lego-api/domains/wishlist/application/services.ts"
+    dependencies: [2]
+    slice: backend
+    notes:
+      - "Service layer already implements status filtering with 'wishlist' default (line 159-191)"
+      - "Default sort logic already handles status='owned' with 'purchaseDate DESC' (line 185-186)"
+      - "No changes needed - service layer fully implements AC9, AC10, AC11"
+
+  - id: 4
+    description: "Create HTTP test file for collection view endpoint verification"
+    files:
+      - "apps/api/lego-api/__http__/collection-view.http"
+    dependencies: [3]
+    slice: backend
+    notes:
+      - "Tests GET /api/wishlist?status=owned per AC19"
+      - "Verifies only owned items returned"
+      - "Tests combined filters (status + store + search)"
+
+  - id: 5
+    description: "Update api-client wishlist schemas to support status query parameter"
+    files:
+      - "packages/core/api-client/src/schemas/wishlist.ts"
+    dependencies: []
+    slice: packages
+    notes:
+      - "WishlistQueryParamsSchema already supports status field (line 371)"
+      - "ItemStatusSchema already exists (line 42-45)"
+      - "No changes needed - schemas already aligned with backend"
+
+  - id: 6
+    description: "Create CollectionPage component with WishlistGallery reuse"
+    files:
+      - "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx"
+      - "apps/web/app-wishlist-gallery/src/pages/CollectionPage/__tests__/CollectionPage.test.tsx"
+    dependencies: [5]
+    slice: frontend
+    notes:
+      - "Reuses DraggableWishlistGallery component with status='owned' prop"
+      - "Passes showPriority={false} and enableDragDrop={false} per AC7, AC8"
+      - "Sets page title to 'My Collection' per AC3"
+      - "Implements empty state per AC12, AC13"
+
+  - id: 7
+    description: "Create CollectionCard component extending WishlistCard with build status badge"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/CollectionCard/index.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/CollectionCard/__tests__/CollectionCard.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Extends WishlistCard with build status badge per AC5"
+      - "Shows purchase date per AC6"
+      - "Hides priority indicator per AC7"
+      - "Build status badge shows 'Built' / 'In Progress' / 'Not Started'"
+
+  - id: 8
+    description: "Update Navigation component to include Collection link"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/Navigation.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Add Collection link alongside Wishlist per AC2"
+      - "Links to /collection route"
+      - "If Navigation.tsx doesn't exist, check main-app for navigation pattern"
+
+  - id: 9
+    description: "Add /collection route to app router configuration"
+    files:
+      - "apps/web/app-wishlist-gallery/src/App.tsx"
+    dependencies: [6]
+    slice: frontend
+    notes:
+      - "Add route for /collection rendering CollectionPage per AC1"
+      - "Verify routing setup in wishlist-gallery app"
+
+  - id: 10
+    description: "Create Playwright E2E test feature file for collection view"
+    files:
+      - "apps/web/playwright/features/collection/collection-view.feature"
+    dependencies: [9]
+    slice: frontend
+    notes:
+      - "Scenarios: View collection, Empty state, Filtering per AC20"
+      - "Verifies owned items display, build status badges, no priority indicators"
+
+  - id: 11
+    description: "Create Playwright step definitions for collection view tests"
+    files:
+      - "apps/web/playwright/steps/collection-view.steps.ts"
+    dependencies: [10]
+    slice: frontend
+    notes:
+      - "Step definitions for collection page interactions"
+      - "Test data setup for owned vs wishlist items"
+      - "Assertions for build status badges and purchase dates"
+
+  - id: 12
+    description: "Add SETS-MVP-002 entry to stories.index.md"
+    files:
+      - "plans/future/wish/stories.index.md"
+    dependencies: []
+    slice: packages
+    notes:
+      - "Document baseline scope per AC21"
+      - "Link to SETS-MVP-002.md"
+      - "Mark dependencies on SETS-MVP-001 and WISH-2001"
+
+files_to_change:
+  - path: "apps/api/lego-api/domains/wishlist/types.ts"
+    action: verify
+    reason: "Verify status query parameter already exists in ListWishlistQuerySchema (no changes needed)"
+
+  - path: "apps/api/lego-api/domains/wishlist/routes.ts"
+    action: verify
+    reason: "Verify route handler already passes status to service layer (no changes needed)"
+
+  - path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+    action: verify
+    reason: "Verify service layer already implements status filtering with defaults (no changes needed)"
+
+  - path: "apps/api/lego-api/__http__/collection-view.http"
+    action: create
+    reason: "HTTP tests for local verification of status=owned filtering per AC19"
+
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    action: verify
+    reason: "Verify WishlistQueryParamsSchema already supports status field (no changes needed)"
+
+  - path: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/index.tsx"
+    action: create
+    reason: "Collection page component per AC1, AC3, AC4, AC12, AC13, AC18"
+
+  - path: "apps/web/app-wishlist-gallery/src/pages/CollectionPage/__tests__/CollectionPage.test.tsx"
+    action: create
+    reason: "Unit tests for CollectionPage component"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/CollectionCard/index.tsx"
+    action: create
+    reason: "Card component with build status badge per AC5, AC6, AC7"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/CollectionCard/__tests__/CollectionCard.test.tsx"
+    action: create
+    reason: "Unit tests for CollectionCard component"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/Navigation.tsx"
+    action: modify
+    reason: "Add Collection link per AC2 (create if doesn't exist)"
+
+  - path: "apps/web/app-wishlist-gallery/src/App.tsx"
+    action: modify
+    reason: "Add /collection route per AC1 (verify router configuration)"
+
+  - path: "apps/web/playwright/features/collection/collection-view.feature"
+    action: create
+    reason: "E2E test scenarios per AC20"
+
+  - path: "apps/web/playwright/steps/collection-view.steps.ts"
+    action: create
+    reason: "Step definitions for collection view E2E tests per AC20"
+
+  - path: "plans/future/wish/stories.index.md"
+    action: modify
+    reason: "Document SETS-MVP-002 baseline scope per AC21"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/api-client"
+    when: "after schema verification"
+    required: true
+
+  - command: "pnpm build --filter lego-api"
+    when: "after backend HTTP test creation"
+    required: true
+
+  - command: "pnpm test --filter lego-api -- collection"
+    when: "after backend verification"
+    required: false
+    notes: "Backend already implements functionality, verification only"
+
+  - command: "pnpm build --filter app-wishlist-gallery"
+    when: "after frontend component creation"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery -- CollectionPage"
+    when: "after CollectionPage creation"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery -- CollectionCard"
+    when: "after CollectionCard creation"
+    required: true
+
+  - command: "pnpm playwright test features/collection/collection-view.feature"
+    when: "after E2E test creation"
+    required: true
+    working_dir: "apps/web/playwright"
+
+  - command: "pnpm lint --filter app-wishlist-gallery"
+    when: "after all frontend changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-wishlist-gallery"
+    when: "after all frontend changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Route test: apps/web/app-wishlist-gallery/src/App.tsx renders CollectionPage at /collection"
+    evidence_type: test
+
+  - ac_id: "AC2"
+    planned_evidence: "Component test: Navigation.tsx includes Collection link"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "E2E test: collection-view.feature verifies 'My Collection' heading"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Component implementation: CollectionPage reuses WishlistGallery with status='owned'"
+    evidence_type: file
+
+  - ac_id: "AC5"
+    planned_evidence: "Component test: CollectionCard shows build status badge"
+    evidence_type: test
+
+  - ac_id: "AC6"
+    planned_evidence: "Component test: CollectionCard shows purchase date"
+    evidence_type: test
+
+  - ac_id: "AC7"
+    planned_evidence: "Component test: CollectionCard does NOT show priority indicator"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "Component implementation: CollectionPage passes enableDragDrop={false}"
+    evidence_type: file
+
+  - ac_id: "AC9"
+    planned_evidence: "HTTP test: collection-view.http verifies GET /api/wishlist?status=owned returns only owned items"
+    evidence_type: http
+
+  - ac_id: "AC10"
+    planned_evidence: "Service implementation: listItems() defaults to purchaseDate DESC when status='owned'"
+    evidence_type: file
+
+  - ac_id: "AC11"
+    planned_evidence: "HTTP test: collection-view.http verifies status=owned works with store, tags, search filters"
+    evidence_type: http
+
+  - ac_id: "AC12"
+    planned_evidence: "E2E test: collection-view.feature verifies empty collection message"
+    evidence_type: test
+
+  - ac_id: "AC13"
+    planned_evidence: "E2E test: collection-view.feature verifies 'Browse your wishlist' CTA links to /wishlist"
+    evidence_type: test
+
+  - ac_id: "AC16"
+    planned_evidence: "Service verification: services.ts already implements status filtering in listItems()"
+    evidence_type: file
+
+  - ac_id: "AC17"
+    planned_evidence: "Route verification: routes.ts already exposes status parameter via ListWishlistQuerySchema"
+    evidence_type: file
+
+  - ac_id: "AC18"
+    planned_evidence: "Component implementation: CollectionPage wiring shows status='owned' passed to WishlistGallery"
+    evidence_type: file
+
+  - ac_id: "AC19"
+    planned_evidence: "HTTP test: collection-view.http at apps/api/lego-api/__http__/collection-view.http"
+    evidence_type: http
+
+  - ac_id: "AC20"
+    planned_evidence: "E2E test: collection-view.feature with scenarios for page rendering, filtering, empty state"
+    evidence_type: test
+
+  - ac_id: "AC21"
+    planned_evidence: "File update: stories.index.md includes SETS-MVP-002 entry"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Backend already implements status filtering - should we add additional service layer documentation or leave as-is?"
+    decision: "Leave as-is - code is self-documenting and already follows api-layer.md architecture"
+    rationale: "Existing implementation in services.ts (lines 159-191) already implements all required functionality with proper defaults and filtering logic. Adding redundant documentation would violate DRY principle."
+    decided_by: "agent"
+
+  - id: ARCH-002
+    question: "Should CollectionCard be a new component or a variant of WishlistCard?"
+    decision: "Create new CollectionCard component that wraps/extends WishlistCard"
+    rationale: "Collection cards have different display requirements (build status badge, no priority) but share most layout. Creating a dedicated component allows collection-specific features while reusing WishlistCard primitives."
+    decided_by: "agent"
+
+  - id: ARCH-003
+    question: "Should we modify WishlistGallery to support collection mode or create CollectionGallery?"
+    decision: "Reuse WishlistGallery with props (status, showPriority, enableDragDrop)"
+    rationale: "Story explicitly states to reuse WishlistGallery with status filter. Adding props is less complex than duplicating gallery logic. If WishlistGallery doesn't support these props yet, we'll add them."
+    decided_by: "story-requirement"
+
+  - id: ARCH-004
+    question: "Where should Navigation component live - wishlist-gallery app or main-app?"
+    decision: "Check both locations - add to wishlist-gallery if it doesn't exist, or update existing navigation in main-app"
+    rationale: "AC2 specifies Navigation.tsx or equivalent. Need to discover existing navigation pattern first before implementing."
+    decided_by: "agent"
+
+complexity: simple
+
+notes:
+  - "Backend already fully implements status filtering - this is primarily a frontend story"
+  - "Service layer (AC16), routes (AC17), and types already support status='owned' filtering"
+  - "Default sort logic already handles purchaseDate DESC for owned items (AC10)"
+  - "Main work is creating CollectionPage, CollectionCard, and E2E tests"
+  - "HTTP tests provide local verification before E2E testing"
+  - "Need to verify if WishlistGallery/DraggableWishlistGallery supports showPriority and enableDragDrop props"
+  - "If props don't exist, will need to add them to WishlistGallery as additional step"
+  - "Navigation component location TBD - check wishlist-gallery app structure"

@@ -1,0 +1,273 @@
+schema: 1
+story_id: WISH-2120
+timestamp: 2026-02-08T11:05:00Z
+
+steps:
+  - id: 1
+    description: Create createMockFile utility with options object API
+    files:
+      - apps/web/app-wishlist-gallery/src/test/utils/createMockFile.ts
+    dependencies: []
+    slice: frontend
+    details: |
+      - Move logic from s3-mocks.ts createMockFile function
+      - New API: createMockFile(options?: { name?, type?, size?, content? })
+      - Default values: name='test-image.jpg', type='image/jpeg', size=1024
+      - Support explicit content via options.content
+      - Lazy ArrayBuffer for large files (size > 10000 bytes)
+      - Export CreateMockFileOptions Zod schema
+
+  - id: 2
+    description: Create mockS3Upload utility for scenario-based MSW handler injection
+    files:
+      - apps/web/app-wishlist-gallery/src/test/utils/mockS3Upload.ts
+    dependencies: []
+    slice: frontend
+    details: |
+      - Function signature: mockS3Upload(options: MockS3UploadOptions): () => void
+      - Scenarios: 'success', 'presign-error', 's3-error', 'timeout'
+      - Options: scenario, statusCode?, delay?, progressSteps?
+      - Uses server.use() from msw to inject runtime handlers
+      - Returns cleanup function that calls server.resetHandlers()
+      - Progress simulation: fires onProgress callbacks at specified percentages
+      - Uses x-mock-error header pattern from existing handlers
+
+  - id: 3
+    description: Create test utils index file with exports
+    files:
+      - apps/web/app-wishlist-gallery/src/test/utils/index.ts
+    dependencies: [1, 2]
+    slice: frontend
+    details: |
+      - Export { createMockFile } from './createMockFile'
+      - Export { mockS3Upload } from './mockS3Upload'
+      - Export type { CreateMockFileOptions, MockS3UploadOptions }
+      - No barrel file anti-pattern - this is the entry point for test utils
+
+  - id: 4
+    description: Write comprehensive tests for createMockFile utility
+    files:
+      - apps/web/app-wishlist-gallery/src/test/utils/__tests__/createMockFile.test.ts
+    dependencies: [1]
+    slice: frontend
+    details: |
+      - Test default behavior (no args)
+      - Test custom properties (name, type, size)
+      - Test explicit content option
+      - Test zero-byte file (size: 0)
+      - Test large file creation (10MB) with performance check (< 100ms)
+      - Test special characters in file name
+      - Verify File object properties (name, type, size)
+      - Coverage target: 100%
+
+  - id: 5
+    description: Write comprehensive tests for mockS3Upload utility
+    files:
+      - apps/web/app-wishlist-gallery/src/test/utils/__tests__/mockS3Upload.test.ts
+    dependencies: [2]
+    slice: frontend
+    details: |
+      - Test success scenario (presign + S3 PUT both succeed)
+      - Test presign-error scenario (presign fails, S3 not called)
+      - Test s3-error scenario (presign succeeds, S3 PUT fails)
+      - Test timeout scenario (never resolves)
+      - Test progress callback simulation
+      - Test cleanup function removes handlers
+      - Test concurrent scenario setups (no handler leaks)
+      - Mock server.use and verify handler injection
+      - Coverage target: 100%
+
+  - id: 6
+    description: Refactor useS3Upload.test.ts to use new utilities
+    files:
+      - apps/web/app-wishlist-gallery/src/hooks/__tests__/useS3Upload.test.ts
+    dependencies: [1, 2, 3]
+    slice: frontend
+    details: |
+      - Replace manual File creation with createMockFile()
+      - Remove inline mock setup where mockS3Upload can be used
+      - Keep existing test assertions unchanged
+      - Verify all tests still pass
+      - Estimate ~30% reduction in boilerplate code
+
+  - id: 7
+    description: Update s3-mocks.ts to re-export new utilities for backward compatibility
+    files:
+      - apps/web/app-wishlist-gallery/src/test/fixtures/s3-mocks.ts
+    dependencies: [1, 3]
+    slice: frontend
+    details: |
+      - Keep existing createMockFile signature as legacy function
+      - Add JSDoc @deprecated tag with migration note
+      - Re-export new createMockFile from test/utils
+      - Update existing file exports to use new utility
+      - No breaking changes to existing consumers
+
+files_to_change:
+  - path: apps/web/app-wishlist-gallery/src/test/utils/createMockFile.ts
+    action: create
+    reason: New test utility for file creation per AC1-5
+
+  - path: apps/web/app-wishlist-gallery/src/test/utils/mockS3Upload.ts
+    action: create
+    reason: New test utility for S3 upload mocking per AC6-11
+
+  - path: apps/web/app-wishlist-gallery/src/test/utils/index.ts
+    action: create
+    reason: Entry point for test utilities per AC14-15
+
+  - path: apps/web/app-wishlist-gallery/src/test/utils/__tests__/createMockFile.test.ts
+    action: create
+    reason: Test coverage for createMockFile per AC12
+
+  - path: apps/web/app-wishlist-gallery/src/test/utils/__tests__/mockS3Upload.test.ts
+    action: create
+    reason: Test coverage for mockS3Upload per AC12
+
+  - path: apps/web/app-wishlist-gallery/src/hooks/__tests__/useS3Upload.test.ts
+    action: modify
+    reason: Refactor to use new utilities per AC13
+
+  - path: apps/web/app-wishlist-gallery/src/test/fixtures/s3-mocks.ts
+    action: modify
+    reason: Add backward compatibility re-exports per Step 7
+
+commands_to_run:
+  - command: pnpm --filter app-wishlist-gallery test src/test/utils
+    when: after creating test utilities (steps 1-5)
+    required: true
+    purpose: Verify new utilities and their tests pass
+
+  - command: pnpm --filter app-wishlist-gallery test src/hooks/__tests__/useS3Upload.test.ts
+    when: after refactoring useS3Upload.test.ts (step 6)
+    required: true
+    purpose: Verify refactored tests still pass
+
+  - command: pnpm --filter app-wishlist-gallery test
+    when: after all code changes
+    required: true
+    purpose: Full test suite verification
+
+  - command: pnpm check-types --filter app-wishlist-gallery
+    when: after all code changes
+    required: true
+    purpose: TypeScript compilation check
+
+  - command: pnpm lint --filter app-wishlist-gallery
+    when: after all code changes
+    required: true
+    purpose: ESLint validation
+
+acceptance_criteria_map:
+  - ac_id: AC1
+    planned_evidence: Unit test - createMockFile.test.ts verifies default behavior
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test createMockFile.test.ts
+
+  - ac_id: AC2
+    planned_evidence: Unit test - createMockFile.test.ts verifies custom properties
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test createMockFile.test.ts
+
+  - ac_id: AC3
+    planned_evidence: Unit test - createMockFile.test.ts verifies explicit content
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test createMockFile.test.ts
+
+  - ac_id: AC4
+    planned_evidence: Unit test - createMockFile.test.ts verifies zero-byte file
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test createMockFile.test.ts
+
+  - ac_id: AC5
+    planned_evidence: Unit test - createMockFile.test.ts verifies large file perf (< 100ms)
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test createMockFile.test.ts
+
+  - ac_id: AC6
+    planned_evidence: Unit test - mockS3Upload.test.ts verifies success scenario
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test mockS3Upload.test.ts
+
+  - ac_id: AC7
+    planned_evidence: Unit test - mockS3Upload.test.ts verifies presign-error scenario
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test mockS3Upload.test.ts
+
+  - ac_id: AC8
+    planned_evidence: Unit test - mockS3Upload.test.ts verifies s3-error scenario
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test mockS3Upload.test.ts
+
+  - ac_id: AC9
+    planned_evidence: Unit test - mockS3Upload.test.ts verifies timeout scenario
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test mockS3Upload.test.ts
+
+  - ac_id: AC10
+    planned_evidence: Unit test - mockS3Upload.test.ts verifies progress callbacks
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test mockS3Upload.test.ts
+
+  - ac_id: AC11
+    planned_evidence: Unit test - mockS3Upload.test.ts verifies cleanup function
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test mockS3Upload.test.ts
+
+  - ac_id: AC12
+    planned_evidence: Test files achieve 100% coverage - verified by vitest coverage report
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test --coverage src/test/utils
+
+  - ac_id: AC13
+    planned_evidence: useS3Upload.test.ts refactored and all tests pass
+    evidence_type: test
+    test_command: pnpm --filter app-wishlist-gallery test useS3Upload.test.ts
+
+  - ac_id: AC14
+    planned_evidence: JSDoc comments present in createMockFile.ts and mockS3Upload.ts
+    evidence_type: file
+    file_path: apps/web/app-wishlist-gallery/src/test/utils/createMockFile.ts
+
+  - ac_id: AC15
+    planned_evidence: TypeScript types provide autocomplete - verified by check-types
+    evidence_type: command
+    test_command: pnpm check-types --filter app-wishlist-gallery
+
+architectural_decisions:
+  - id: ARCH-001
+    question: Should we consolidate existing createMockFile or create parallel version?
+    decision: Consolidate - move to new location with improved API, keep legacy export
+    rationale: |
+      - Existing function in s3-mocks.ts serves same purpose
+      - New location (test/utils) better organizes test infrastructure
+      - Options object API is more maintainable than positional params
+      - Legacy export maintains backward compatibility
+      - No migration burden on existing tests
+    decided_by: auto
+    tier: 1
+
+  - id: ARCH-002
+    question: Should mockS3Upload modify global handlers or use per-test injection?
+    decision: Per-test injection via server.use() with cleanup function
+    rationale: |
+      - Follows existing MSW v2 patterns in codebase
+      - Better test isolation (no global state)
+      - Cleanup function prevents handler leaks
+      - Allows multiple scenarios per test file
+      - Matches existing x-mock-error header pattern
+    decided_by: auto
+    tier: 2
+
+complexity: simple
+
+notes:
+  - All utilities are test-only code, no production impact
+  - No new dependencies - uses existing msw, vitest, browser File API
+  - Backward compatibility maintained via s3-mocks.ts re-exports
+  - Estimated ~50% reduction in boilerplate for S3 upload tests
+  - Follow existing patterns from WISH-2011 MSW handler implementation
+  - JSDoc comments required for all public functions
+  - Zod schemas for all options objects per project standards
+
+warnings: []

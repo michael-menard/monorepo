@@ -1,0 +1,92 @@
+schema: 1
+story_id: WISH-2120
+timestamp: 2026-02-08T11:00:00Z
+
+# Knowledge Context for Test Utility Helpers Story
+
+lessons:
+  - id: WISH-2011-L1
+    source: WISH-2011
+    title: MSW v2 syntax for test handlers
+    summary: Use MSW v2 API (http.get, http.post, http.put, HttpResponse, delay)
+    relevance: Critical - utilities must follow MSW v2 patterns
+
+  - id: WISH-2011-L2
+    source: WISH-2011
+    title: Error injection via headers
+    summary: Use x-mock-error header for error scenario injection (500, 403, timeout)
+    relevance: High - mockS3Upload utility must use this pattern
+
+  - id: WISH-2011-L3
+    source: WISH-2011
+    title: Handler cleanup pattern
+    summary: MSW handlers use server.resetHandlers() in afterEach for test isolation
+    relevance: High - mockS3Upload must return cleanup function
+
+  - id: WISH-2011-L4
+    source: WISH-2011
+    title: Existing createMockFile function
+    summary: There's already a createMockFile in src/test/fixtures/s3-mocks.ts (lines 100-115)
+    relevance: Critical - must refactor/move to new location with improved API
+
+architectural_decisions:
+  - id: WISH-2120-ADR1
+    title: Consolidate file creation utilities
+    decision: Move existing createMockFile from s3-mocks.ts to new src/test/utils/createMockFile.ts with improved API
+    rationale: |
+      - Existing function takes (name, type, size) as separate params
+      - New API should use options object for better DX
+      - Keep existing function as legacy export for backward compatibility
+      - New location centralizes test utilities separate from fixtures
+    impact: Low - existing tests continue to work via s3-mocks.ts re-export
+
+  - id: WISH-2120-ADR2
+    title: MSW handler injection approach
+    decision: mockS3Upload uses server.use() for runtime handler injection, returns cleanup function
+    rationale: |
+      - Follows existing pattern from handlers.ts
+      - Allows per-test scenario configuration
+      - Cleanup function removes handlers via server.resetHandlers()
+      - No global handler state pollution
+    impact: Medium - enables flexible test scenarios
+
+patterns:
+  - pattern: Vitest + React Testing Library
+    usage: All component/hook tests use this stack
+    location: apps/web/app-wishlist-gallery/src/**/__tests__/*.test.ts*
+
+  - pattern: MSW v2 handlers in src/test/mocks/handlers.ts
+    usage: Global handlers for presign and S3 upload endpoints
+    location: apps/web/app-wishlist-gallery/src/test/mocks/handlers.ts
+    notes: Uses server from server.ts (setupServer from msw/node)
+
+  - pattern: Test fixtures in src/test/fixtures/
+    usage: Reusable mock data (s3-mocks.ts, security-mocks.ts)
+    location: apps/web/app-wishlist-gallery/src/test/fixtures/
+
+  - pattern: Component test structure
+    usage: |
+      MyComponent/
+        index.tsx
+        __tests__/
+          MyComponent.test.tsx
+        __types__/
+          index.ts (Zod schemas)
+    location: apps/web/app-wishlist-gallery/src/components/*/
+
+constraints:
+  - Test-only code - no production dependencies
+  - Must work with existing Vitest config (globals: true, jsdom)
+  - Must use existing MSW server instance from src/test/mocks/server.ts
+  - No new npm dependencies (use msw, vitest, existing packages)
+  - Follow Zod-first types pattern (no bare TypeScript interfaces)
+
+risks:
+  - MSW handler leaks between tests if cleanup not called
+  - Large file creation could slow down test suite
+  - Backward compatibility with existing s3-mocks.ts usage
+
+mitigations:
+  - Return cleanup function from mockS3Upload
+  - Lazy ArrayBuffer creation for large files (existing pattern)
+  - Keep s3-mocks.ts exports as facade to new utilities

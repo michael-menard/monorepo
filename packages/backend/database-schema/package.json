@@ -26,6 +26,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/seeds/index.ts",
     "db:studio": "drizzle-kit studio",
+    "db:impact-analysis": "tsx scripts/impact-analysis/index.ts",
     "validate:schema": "tsx scripts/validate-schema-changes.ts",
     "test": "vitest run",
     "clean": "rm -rf dist node_modules .turbo"
@@ -37,9 +38,12 @@
     "zod": "^4.0.5"
   },
   "devDependencies": {
+    "@types/glob": "9.0.0",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.4",
     "drizzle-kit": "^0.31.4",
+    "glob": "^10.3.10",
+    "ts-morph": "27.0.2",
     "tsx": "^4.20.1",
     "typescript": "^5.8.3",
     "vitest": "^3.0.5"

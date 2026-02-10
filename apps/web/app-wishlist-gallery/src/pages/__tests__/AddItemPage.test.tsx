@@ -59,9 +59,19 @@ const mockAddWishlistItem = vi.fn()
 const mockUnwrap = vi.fn()
 const mockUseAddWishlistItemMutation = vi.fn()
 
-vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
-  useAddWishlistItemMutation: () => mockUseAddWishlistItemMutation(),
-}))
+vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => {
+  const mockApi = {
+    reducerPath: 'wishlistGalleryApi',
+    reducer: (state = {}) => state,
+    middleware: () => (next: any) => (action: any) => next(action),
+    util: { updateQueryData: vi.fn() },
+    endpoints: {},
+  }
+  return {
+    useAddWishlistItemMutation: () => mockUseAddWishlistItemMutation(),
+    wishlistGalleryApi: mockApi,
+  }
+})
 
 // Mock WishlistForm
 vi.mock('../../components/WishlistForm', () => ({
@@ -90,12 +100,59 @@ vi.mock('../../hooks/useLocalStorage', () => ({
   useLocalStorage: () => [null, vi.fn(), vi.fn()],
 }))
 
+// Mock react-redux
+const mockDispatch = vi.fn()
+let useSelectorCallIndex = 0
+vi.mock('react-redux', () => ({
+  useDispatch: () => mockDispatch,
+  useSelector: () => {
+    // Return values in order: draftFormData, isDraftRestored, hasDraft, draft
+    const callIndex = useSelectorCallIndex++
+    switch (callIndex % 4) {
+      case 0:
+        return {} // selectDraftFormData
+      case 1:
+        return false // selectIsDraftRestored
+      case 2:
+        return false // selectHasDraft
+      case 3:
+        return { formData: {}, timestamp: null, isRestored: false } // selectDraft
+      default:
+        return undefined
+    }
+  },
+  Provider: ({ children }: any) => children,
+}))
+
+// Mock the store module
+vi.mock('../../store', () => ({
+  rehydrateDraftIfNeeded: vi.fn(),
+}))
+
+// Mock wishlistDraftSlice actions
+vi.mock('../../store/slices/wishlistDraftSlice', () => ({
+  updateDraftField: vi.fn(payload => ({ type: 'wishlistDraft/updateDraftField', payload })),
+  clearDraft: vi.fn(() => ({ type: 'wishlistDraft/clearDraft' })),
+  setDraftRestored: vi.fn(payload => ({ type: 'wishlistDraft/setDraftRestored', payload })),
+  selectDraftFormData: (state: any) => state?.wishlistDraft?.formData ?? {},
+  selectIsDraftRestored: (state: any) => state?.wishlistDraft?.isRestored ?? false,
+  selectHasDraft: (state: any) => !!state?.wishlistDraft?.formData?.title,
+  selectDraft: (state: any) => state?.wishlistDraft ?? { formData: {}, timestamp: null, isRestored: false },
+}))
+
+// Mock ResumeDraftBanner
+vi.mock('../../components/ResumeDraftBanner', () => ({
+  ResumeDraftBanner: () => null,
+}))
+
 describe('AddItemPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockNavigate.mockClear()
     mockAddWishlistItem.mockClear()
     mockUnwrap.mockClear()
+    mockDispatch.mockClear()
+    useSelectorCallIndex = 0
 
     // Default mock implementation
     mockAddWishlistItem.mockReturnValue({ unwrap: mockUnwrap })

@@ -1,0 +1,28 @@
+schema: 1
+story_id: "WISH-2121"
+timestamp: "2026-02-08T12:00:00Z"
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "apps/web/playwright/**"
+  - "apps/web/app-wishlist-gallery/public/**"
+  - "apps/web/app-wishlist-gallery/src/test/mocks/**"
+  - "apps/web/main-app/public/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Browser-mode MSW setup for Playwright E2E tests - enables consistent API/S3 mocking across Vitest and Playwright"

@@ -1,0 +1,226 @@
+schema: 1
+story_id: "WISH-20172"
+timestamp: "2026-02-08T18:35:00Z"
+
+steps:
+  - id: 1
+    description: "Create FilterPanel component structure with Zod schemas"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/index.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/__types__/index.ts"
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Extend WishlistFilters type to include priorityRange and priceRange"
+    files:
+      - "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 3
+    description: "Integrate FilterPanel into main-page.tsx"
+    files:
+      - "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 4
+    description: "Update useGetWishlistQuery call to pass priorityRange and priceRange"
+    files:
+      - "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    dependencies: [3]
+    slice: frontend
+
+  - id: 5
+    description: "Add active filter count badge component"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/FilterBadge.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 6
+    description: "Add screen reader announcements for filter changes"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/index.tsx"
+    dependencies: [3]
+    slice: frontend
+
+  - id: 7
+    description: "Write FilterPanel component tests (15+ tests)"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.test.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.rendering.test.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.interaction.test.tsx"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 8
+    description: "Add Playwright E2E tests for filter panel (4 tests)"
+    files:
+      - "apps/web/playwright/features/wishlist/wishlist-filter-panel.feature"
+      - "apps/web/playwright/steps/wishlist-filter-panel.steps.ts"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 9
+    description: "Add keyboard navigation and accessibility tests"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.accessibility.test.tsx"
+      - "apps/web/playwright/features/wishlist/wishlist-filter-panel-a11y.feature"
+    dependencies: [7, 8]
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/index.tsx"
+    action: create
+    reason: "Main FilterPanel component with store, priority range, and price range filters"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for FilterPanel props and state"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/FilterBadge.tsx"
+    action: create
+    reason: "Active filter count badge component for AC11"
+
+  - path: "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Extend WishlistFilters type, integrate FilterPanel, pass priorityRange/priceRange to RTK Query"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.test.tsx"
+    action: create
+    reason: "Main component tests (rendering, state management, API integration)"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.rendering.test.tsx"
+    action: create
+    reason: "Tests for AC7 - all filter controls render correctly"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.interaction.test.tsx"
+    action: create
+    reason: "Tests for AC10, AC12 - Apply Filters and Clear All functionality"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/FilterPanel/__tests__/FilterPanel.accessibility.test.tsx"
+    action: create
+    reason: "Tests for AC19, AC20 - keyboard navigation and screen reader announcements"
+
+  - path: "apps/web/playwright/features/wishlist/wishlist-filter-panel.feature"
+    action: create
+    reason: "E2E tests for AC14 - combined filter + sort flows"
+
+  - path: "apps/web/playwright/steps/wishlist-filter-panel.steps.ts"
+    action: create
+    reason: "Playwright step definitions for filter panel feature"
+
+  - path: "apps/web/playwright/features/wishlist/wishlist-filter-panel-a11y.feature"
+    action: create
+    reason: "E2E accessibility tests for keyboard navigation"
+
+commands_to_run:
+  - command: "pnpm build --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-wishlist-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm playwright test --grep '@filter-panel'"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC7"
+    planned_evidence: "Unit tests: FilterPanel.rendering.test.tsx - verify all controls render"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "Code review: Verify imports from @repo/app-component-library/_primitives/"
+    evidence_type: manual
+
+  - ac_id: "AC9"
+    planned_evidence: "Unit tests: FilterPanel.test.tsx - verify filter state in FilterProvider context"
+    evidence_type: test
+    notes: "URL state management deferred - using FilterProvider React context instead"
+
+  - ac_id: "AC10"
+    planned_evidence: "Unit tests: FilterPanel.interaction.test.tsx with MSW - verify API calls with priorityRange/priceRange"
+    evidence_type: test
+
+  - ac_id: "AC11"
+    planned_evidence: "Unit tests: FilterBadge.test.tsx - verify badge displays active filter count"
+    evidence_type: test
+
+  - ac_id: "AC12"
+    planned_evidence: "Unit tests: FilterPanel.interaction.test.tsx - verify Clear All resets filters"
+    evidence_type: test
+
+  - ac_id: "AC13"
+    planned_evidence: "All FilterPanel component tests pass (15+ tests across 4 test files)"
+    evidence_type: test
+
+  - ac_id: "AC14"
+    planned_evidence: "Playwright tests: wishlist-filter-panel.feature - 4 E2E scenarios with screenshots and HAR"
+    evidence_type: test
+
+  - ac_id: "AC17"
+    planned_evidence: "Unit tests: FilterPanel.test.tsx - verify empty state renders with helpful message"
+    evidence_type: test
+
+  - ac_id: "AC19"
+    planned_evidence: "Unit tests: FilterPanel.accessibility.test.tsx - verify keyboard navigation"
+    evidence_type: test
+
+  - ac_id: "AC20"
+    planned_evidence: "Unit tests: FilterPanel.accessibility.test.tsx - verify ARIA live regions and announcements"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Use URL query params or FilterProvider React context for state management?"
+    decision: "FilterProvider React context"
+    rationale: "Story AC9 mentions URL state, but existing main-page.tsx uses FilterProvider pattern. URL state would require significant refactoring of existing code. FilterProvider is simpler and already handles filter state management with activeFilterCount. URL deep linking can be added in future enhancement."
+    decided_by: agent
+    alternatives_considered:
+      - "useSearchParams with URL query params - more complex, requires refactoring existing FilterProvider usage"
+
+  - id: ARCH-002
+    question: "Create custom Slider primitive or use HTML input[type=range]?"
+    decision: "Use HTML input[type=range] with custom styling"
+    rationale: "No Slider primitive exists in @repo/app-component-library. Creating a Radix-based Slider primitive is out of scope for this story. HTML5 range input provides keyboard accessibility and screen reader support out of the box."
+    decided_by: agent
+    alternatives_considered:
+      - "Create new Slider primitive using Radix UI - adds complexity and scope"
+      - "Use third-party slider library - violates design system constraints"
+
+  - id: ARCH-003
+    question: "Collapsible panel or always-visible filter controls?"
+    decision: "Always-visible panel for MVP, collapsible as future enhancement"
+    rationale: "AC7 requires all controls to render. Collapsible behavior adds complexity (state management, animations, accessibility). MVP should focus on core functionality. Collapsible can be added in Phase 5 UX Polish (WISH-2018)."
+    decided_by: agent
+    alternatives_considered:
+      - "Collapsible with Accordion primitive - deferred to WISH-2018"
+
+complexity: moderate
+
+notes:
+  - "WISH-20171 backend already in UAT - priorityRange and priceRange params ready"
+  - "WishlistQueryParamsSchema already has priorityRange and priceRange from WISH-20171"
+  - "FilterProvider pattern established - extend filters object, no URL state management"
+  - "No Slider primitive - using HTML input[type=range] with accessible labels"
+  - "AC9 URL state requirement interpreted as FilterProvider state (not URL query params)"
+  - "Active filter count from FilterProvider.activeFilterCount hook"
+  - "Screen reader announcements via useAnnouncer hook (WISH-2006)"
+  - "Design system compliance: Button, Checkbox, Input, Popover, Badge from _primitives/"
+  - "Empty state handled by GalleryEmptyState component (already exists)"
+  - "Store filter: Checkbox group for multi-select (LEGO, BrickLink, Barweer, Cata, Other)"
+  - "Minimum 15 component tests (4 test files) + 4 E2E Playwright tests"
+  - "Accessibility: keyboard nav (Tab, Arrow keys, Enter, Escape) + ARIA labels + screen reader announcements"

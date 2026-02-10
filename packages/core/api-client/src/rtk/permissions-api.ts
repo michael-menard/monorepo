@@ -7,7 +7,6 @@
 
 import { createApi } from '@reduxjs/toolkit/query/react'
 import { createLogger } from '@repo/logger'
-import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 import {
   UserPermissionsSchema,
   UserQuotasSchema,
@@ -16,6 +15,7 @@ import {
   type UserQuotas,
   type FeaturesResponse,
 } from '../schemas/permissions'
+import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
 const logger = createLogger('api-client:permissions')
 

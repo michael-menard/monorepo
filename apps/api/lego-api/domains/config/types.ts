@@ -152,3 +152,112 @@ export type FeatureFlagError =
   | 'DB_ERROR'
   | 'FORBIDDEN'
   | 'RATE_LIMITED'
+
+// ─────────────────────────────────────────────────────────────────────────
+// Feature Flag Schedule Schemas (WISH-2119, WISH-20260)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Schedule status enum
+ */
+export const ScheduleStatusSchema = z.enum(['pending', 'applied', 'failed', 'cancelled'])
+
+export type ScheduleStatus = z.infer<typeof ScheduleStatusSchema>
+
+/**
+ * Schedule updates object - specifies which flag properties to update
+ * At least one property is required (AC12)
+ */
+export const ScheduleUpdatesSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    rolloutPercentage: z.number().int().min(0).max(100).optional(),
+  })
+  .refine(data => data.enabled !== undefined || data.rolloutPercentage !== undefined, {
+    message: 'At least one update property (enabled or rolloutPercentage) is required',
+  })
+
+export type ScheduleUpdates = z.infer<typeof ScheduleUpdatesSchema>
+
+/**
+ * POST /api/admin/flags/:flagKey/schedule request body (AC1)
+ */
+export const CreateScheduleRequestSchema = z.object({
+  scheduledAt: z
+    .string()
+    .datetime({ message: 'scheduledAt must be a valid ISO 8601 datetime' })
+    .refine(
+      dateStr => {
+        const scheduledTime = new Date(dateStr)
+        return scheduledTime.getTime() > Date.now()
+      },
+      { message: 'scheduledAt must be in the future' },
+    ),
+  updates: ScheduleUpdatesSchema,
+})
+
+export type CreateScheduleRequest = z.infer<typeof CreateScheduleRequestSchema>
+
+/**
+ * Schedule from database (AC11, WISH-20260)
+ */
+export const ScheduleSchema = z.object({
+  id: z.string().uuid(),
+  flagId: z.string().uuid(),
+  scheduledAt: z.date(),
+  status: ScheduleStatusSchema,
+  updates: z.object({
+    enabled: z.boolean().optional(),
+    rolloutPercentage: z.number().int().min(0).max(100).optional(),
+  }),
+  appliedAt: z.date().nullable(),
+  errorMessage: z.string().nullable(),
+  retryCount: z.number().int().min(0).default(0),
+  maxRetries: z.number().int().min(0).max(10).default(3),
+  nextRetryAt: z.date().nullable(),
+  lastError: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type Schedule = z.infer<typeof ScheduleSchema>
+
+/**
+ * Schedule response (single schedule) - AC1, AC4, WISH-20260
+ */
+export const ScheduleResponseSchema = z.object({
+  id: z.string().uuid(),
+  flagKey: z.string(),
+  scheduledAt: z.string().datetime(), // ISO 8601 for API responses
+  status: ScheduleStatusSchema,
+  updates: z.object({
+    enabled: z.boolean().optional(),
+    rolloutPercentage: z.number().int().min(0).max(100).optional(),
+  }),
+  appliedAt: z.string().datetime().nullable(),
+  errorMessage: z.string().nullable(),
+  retryCount: z.number().int().min(0).optional(),
+  maxRetries: z.number().int().min(0).max(10).optional(),
+  nextRetryAt: z.string().datetime().nullable().optional(),
+  lastError: z.string().nullable().optional(),
+  createdAt: z.string().datetime(),
+})
+
+export type ScheduleResponse = z.infer<typeof ScheduleResponseSchema>
+
+/**
+ * GET /api/admin/flags/:flagKey/schedule response - AC3
+ */
+export const ScheduleListResponseSchema = z.array(ScheduleResponseSchema)
+
+export type ScheduleListResponse = z.infer<typeof ScheduleListResponseSchema>
+
+/**
+ * Schedule error types
+ */
+export type ScheduleError =
+  | 'NOT_FOUND'
+  | 'INVALID_FLAG'
+  | 'ALREADY_APPLIED'
+  | 'VALIDATION_ERROR'
+  | 'DB_ERROR'

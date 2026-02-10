@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "knowledge-base": {
+      "command": "node",
+      "args": ["apps/api/knowledge-base/dist/mcp-server/index.js"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}

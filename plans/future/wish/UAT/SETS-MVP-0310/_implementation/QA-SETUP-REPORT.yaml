@@ -1,0 +1,107 @@
+schema: 1
+phase: qa-setup
+status: complete
+timestamp: "2026-02-08T20:40:00-07:00"
+
+feature_dir: "plans/future/wish"
+story_id: "SETS-MVP-0310"
+moved_to: "plans/future/wish/UAT/SETS-MVP-0310"
+status_updated: "in-qa"
+
+# Precondition Validation Results
+preconditions_validation:
+  precondition_1_story_exists: PASS
+    location: "plans/future/wish/ready-for-qa/SETS-MVP-0310/"
+  precondition_2_status_ready_for_qa: PASS
+    current_status: "ready-for-qa"
+  precondition_3_evidence_yaml_exists: PASS
+    path: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/EVIDENCE.yaml"
+  precondition_4_review_yaml_exists: PASS
+    path: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/REVIEW.yaml"
+  precondition_5_code_review_passed: PASS
+    verdict: "PASS"
+    all_workers_passed: true
+
+overall_preconditions: PASS
+
+# Verification Sources
+verification_sources:
+  evidence_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/EVIDENCE.yaml"
+  review_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/REVIEW.yaml"
+  knowledge_context_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/KNOWLEDGE-CONTEXT.yaml"
+  checkpoint_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/CHECKPOINT.yaml"
+  scope_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/SCOPE.yaml"
+
+# Evidence Summary
+evidence_summary:
+  evidence_version: 2
+  evidence_timestamp: "2026-02-01T21:00:00-07:00"
+  acceptance_criteria_total: 10
+  acceptance_criteria_passing: 7
+  acceptance_criteria_status_breakdown:
+    PASS: 7
+    PARTIAL: 1
+    DEFERRED: 1
+    MISSING: 1
+  test_summary:
+    unit_pass: 31
+    unit_fail: 0
+    integration_pass: 0
+    integration_fail: 0
+    e2e_pass: 0
+    e2e_fail: 0
+    e2e_status: "exempt (valid justification documented)"
+    total_passing_tests: 31
+  touched_files_count: 11
+  implementation_approach: "Option B - Minimal API migration"
+
+# Review Summary
+review_summary:
+  verdict: "PASS"
+  review_iteration: 1
+  review_timestamp: "2026-02-01T21:30:00Z"
+  workers_count: 6
+  workers_passed: 6
+  workers_failed: 0
+  workers_run:
+    - code-review-lint: PASS
+    - code-review-style-compliance: PASS
+    - code-review-syntax: PASS
+    - code-review-security: PASS
+    - code-review-typecheck: PASS
+    - code-review-build: PASS
+
+# Checkpoint Updates
+checkpoint_updated: true
+checkpoint_updates:
+  current_phase: "qa-setup"
+  last_successful_phase: "fix-verified"
+  iteration: 2
+  max_iterations: 3
+  blocked: false
+  qa_setup_initiated_at: "2026-02-08T20:40:00-07:00"
+  qa_setup_by: "qa-verify-setup-leader"
+  moved_to_uat: true
+  uat_path: "plans/future/wish/UAT/SETS-MVP-0310"
+
+# Context Summary (from previous phases)
+context:
+  previous_qa_run: "Failed due to missing test coverage"
+  fixes_applied: "Test coverage updated - 31 tests now passing (22 frontend + 9 backend)"
+  iteration_info: "Re-verification after fixes (iteration 2 of 3)"
+  fix_context_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/FIX-CONTEXT.yaml"
+  fix_log_file: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/FIX-LOG.md"
+
+# Key Files Available for Verification
+key_files:
+  story_description: "plans/future/wish/UAT/SETS-MVP-0310/SETS-MVP-0310.md"
+  elaboration_report: "plans/future/wish/UAT/SETS-MVP-0310/ELAB-SETS-MVP-0310.md"
+  proof_document: "plans/future/wish/UAT/SETS-MVP-0310/PROOF-SETS-MVP-0310.md"
+  analysis: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/ANALYSIS.md"
+  scope: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/SCOPE.yaml"
+  plan: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/PLAN.yaml"
+  knowledge_context: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/KNOWLEDGE-CONTEXT.yaml"
+  future_opportunities: "plans/future/wish/UAT/SETS-MVP-0310/_implementation/FUTURE-OPPORTUNITIES.md"
+
+signal: "SETUP COMPLETE"
+next_phase: "qa-verify"

@@ -1,0 +1,239 @@
+### WISH-20171: Advanced Multi-Filter Integration Tests
+### 
+### Purpose: Validate combined filter + sort query parameters
+### Requirements: 
+###   - User authentication token (replace YOUR_USER_TOKEN_HERE)
+###   - Backend running at localhost:3001
+###   - Database with test data
+###
+### Test Coverage: 18 scenarios
+###   - 9 happy path tests (single filter + sort combinations)
+###   - 3 error cases (invalid parameters)
+###   - 5 edge cases (boundary values, null handling)
+###   - 1 performance test (< 2s response time)
+###
+
+@baseUrl = http://localhost:3001/api/wishlist
+@userToken = YOUR_USER_TOKEN_HERE
+
+# ─────────────────────────────────────────────────────────────────────────
+# Happy Path Tests (9 tests) - Single Filter + Sort
+# ─────────────────────────────────────────────────────────────────────────
+
+### Test 1: Store filter + bestValue sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, items filtered by LEGO store, sorted by price/pieceCount ratio
+GET {{baseUrl}}?store=LEGO&sort=bestValue
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 2: Store filter (multiple) + bestValue sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, items from LEGO or BrickLink, sorted by bestValue
+GET {{baseUrl}}?store=LEGO,BrickLink&sort=bestValue
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 3: Priority range + hiddenGems sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, items with priority 3-5, sorted by hidden gem score (5-priority)*pieceCount
+GET {{baseUrl}}?priorityRange=3,5&sort=hiddenGems
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 4: Price range + expiringSoon sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, items priced $50-$200, sorted by oldest releaseDate first
+GET {{baseUrl}}?priceRange=50,200&sort=expiringSoon
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 5: All filters + bestValue sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, all filters applied with AND logic, sorted by bestValue
+GET {{baseUrl}}?store=LEGO&priorityRange=3,5&priceRange=50,200&sort=bestValue
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 6: All filters + expiringSoon sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, all filters applied, sorted by expiringSoon
+GET {{baseUrl}}?store=LEGO,BrickLink&priorityRange=0,2&priceRange=20,100&sort=expiringSoon
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 7: All filters + hiddenGems sort
+### AC: AC1, AC2, AC6
+### Expected: 200 OK, all filters applied, sorted by hiddenGems
+GET {{baseUrl}}?store=LEGO&priorityRange=0,3&priceRange=50,150&sort=hiddenGems
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 8: Pagination with filters
+### AC: AC4, AC6
+### Expected: 200 OK, second page of LEGO items, pagination.total reflects filtered count
+GET {{baseUrl}}?store=LEGO&page=2&limit=10
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 9: Empty result set
+### AC: AC6
+### Expected: 200 OK, empty items array, pagination.total = 0
+GET {{baseUrl}}?store=Other&priorityRange=5,5&priceRange=1000,2000
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────
+# Error Cases (3 tests) - Invalid Parameters
+# ─────────────────────────────────────────────────────────────────────────
+
+### Test 10: Invalid priority range (out of bounds)
+### AC: AC16
+### Expected: 400 Bad Request, validation error: "Priority range must be 0-5 with min <= max"
+GET {{baseUrl}}?priorityRange=6,10
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 11: Invalid price range (min > max)
+### AC: AC16
+### Expected: 400 Bad Request, validation error: "Price range must be >= 0 with min <= max"
+GET {{baseUrl}}?priceRange=200,50
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 12: Invalid store enum
+### AC: AC16
+### Expected: 400 Bad Request, validation error: invalid enum value
+GET {{baseUrl}}?store=InvalidStore
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────
+# Edge Cases (5 tests) - Boundary Values & Null Handling
+# ─────────────────────────────────────────────────────────────────────────
+
+### Test 13: Boundary values (priority 0-5, entire range)
+### AC: AC6
+### Expected: 200 OK, all priority values included
+GET {{baseUrl}}?priorityRange=0,5
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 14: Boundary values (price 0-0, free items only)
+### AC: AC6
+### Expected: 200 OK, items with price=0 or price='0.00'
+GET {{baseUrl}}?priceRange=0,0
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 15: Single priority value (min=max)
+### AC: AC6
+### Expected: 200 OK, only items with priority=3
+GET {{baseUrl}}?priorityRange=3,3
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 16: Null handling - price filter excludes nulls
+### AC: AC3, AC6
+### Expected: 200 OK, no items with null price in results
+GET {{baseUrl}}?priceRange=10,100
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+### Test 17: Filters with no sort (defaults to sortOrder)
+### AC: AC6
+### Expected: 200 OK, default sort applied (sortOrder asc)
+GET {{baseUrl}}?store=LEGO&priorityRange=3,5
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────
+# Performance Test (1 test) - Response Time Validation
+# ─────────────────────────────────────────────────────────────────────────
+
+### Test 18: Performance with all filters (1000+ items dataset)
+### AC: AC18
+### Expected: 200 OK, response time < 2000ms
+### Manual Verification: Check response time in HTTP client
+GET {{baseUrl}}?store=LEGO,BrickLink&priorityRange=0,5&priceRange=0,500&sort=bestValue
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────
+# Test Summary
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Total Tests: 18
+# 
+# Acceptance Criteria Coverage:
+#   AC1 (Schema): Tests 1-9
+#   AC2 (Repository): Tests 1-9
+#   AC3 (Null handling): Test 16
+#   AC4 (Pagination): Test 8
+#   AC6 (Integration): All tests
+#   AC16 (Validation): Tests 10-12
+#   AC18 (Performance): Test 18
+#
+# Test Execution:
+#   1. Replace {{userToken}} with valid JWT
+#   2. Ensure backend running at localhost:3001
+#   3. Run tests using REST Client extension (VS Code) or similar
+#   4. Verify response status and body structure
+#   5. For Test 18, manually verify response time < 2000ms
+#
+# Expected Response Structure (200 OK):
+# {
+#   "items": [...],
+#   "pagination": {
+#     "page": 1,
+#     "limit": 20,
+#     "total": 100,
+#     "totalPages": 5,
+#     "hasMore": true
+#   }
+# }
+#
+# Expected Error Response (400 Bad Request):
+# {
+#   "error": "Validation failed",
+#   "details": {
+#     "fieldErrors": { ... },
+#     "message": "Invalid filter parameters. Check field constraints."
+#   }
+# }

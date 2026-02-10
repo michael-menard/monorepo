@@ -1,0 +1,107 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-08T15:30:00Z"
+
+  lessons_learned:
+    count: 5
+    relevant_to_scope:
+      - story_id: "WISH-2004"
+        lesson: "API path mismatch between frontend RTK Query and backend Hono routes caused 404s"
+        category: blocker
+        applies_because: "Story adds PATCH /api/wishlist/:id endpoint - path alignment critical"
+      - story_id: "WISH-2005b"
+        lesson: "Optimistic updates use onQueryStarted with patchResult.undo() pattern for cache rollback"
+        category: pattern
+        applies_because: "Story requires optimistic UI updates with error rollback"
+      - story_id: "WISH-2032"
+        lesson: "Optimistic form submission pattern: update cache before API, rollback on error with toast"
+        category: pattern
+        applies_because: "Toggle requires immediate UI feedback with error handling"
+      - story_id: "SETS-MVP-001"
+        lesson: "Service layer changes required per Ports & Adapters when adding business logic to API"
+        category: pattern
+        applies_because: "Story requires service layer validation: only owned items can have buildStatus"
+      - story_id: "SETS-MVP-0310"
+        lesson: "Unified model adds buildStatus field to wishlist_items table for owned items"
+        category: pattern
+        applies_because: "Story toggles buildStatus on existing unified model"
+
+    blockers_to_avoid:
+      - "API path schema mismatch between frontend and backend (ADR-001)"
+      - "Missing service layer specification causing Ports & Adapters violations"
+      - "Optimistic update without proper rollback causes stale UI on error"
+      - "Concurrent mutations without disabled state cause race conditions"
+
+    patterns_to_follow:
+      - "RTK Query mutations with onQueryStarted for optimistic cache updates"
+      - "patchResult.undo() for cache rollback on API error"
+      - "Service layer validates business rules before repository update"
+      - "Thin route handlers delegate to service layer (no business logic in routes)"
+      - "Toast with undo action for 5 seconds after successful toggle"
+      - "Disable toggle button during API request to prevent concurrent updates"
+      - "Framer Motion animations with prefers-reduced-motion support"
+
+    patterns_to_avoid:
+      - "Business logic in route handlers (violates Ports & Adapters)"
+      - "Direct repository calls from routes (bypasses service layer)"
+      - "Optimistic updates without error rollback mechanism"
+      - "Concurrent mutation attempts without UI disabled state"
+      - "Animations without respecting prefers-reduced-motion"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/wishlist, Backend uses /wishlist"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-004"
+        title: "Authentication Architecture"
+        status: active
+        constraint: "Cognito JWT auth - validate userId ownership in service layer"
+        applies_to: ["backend", "auth"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Backend .http tests must use real API endpoints, not mocks"
+        applies_to: ["testing", "backend"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test with live API (no MSW)"
+        applies_to: ["testing", "frontend"]
+
+    constraints:
+      api_paths: "/api/v2/wishlist/:id -> /wishlist/:id via Vite proxy"
+      auth: "Service layer validates item ownership via userId from JWT claims"
+      testing: "Backend .http tests + Frontend E2E test with live API required"
+      service_layer: "Ports & Adapters - service validates status='owned' before buildStatus update"
+      error_handling: "Return { error: 'INVALID_STATUS', message: '...' } with 400 for invalid operations"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read full story file"
+        typical_tokens: 3500
+        mitigation: "Only read Acceptance Criteria section for planning"
+      - operation: "Read all existing component files"
+        typical_tokens: 8000
+        mitigation: "Focus on new BuildStatusToggle component, reuse existing patterns"
+      - operation: "Read serverless.yml"
+        typical_tokens: 17500
+        mitigation: "Not needed - changes are service/route layer only"
+
+    recommended_patterns:
+      - "Reference existing optimistic update pattern from WISH-2005b and WISH-2032"
+      - "Reuse RTK Query mutation pattern from wishlist-gallery-api.ts"
+      - "Focus on service layer, routes, and new component only"
+      - "Skip reading database migrations - buildStatus column already exists from SETS-MVP-0310"
+
+  warnings:
+    - "buildStatus field already exists in schema from SETS-MVP-0310 - do NOT create migration"
+    - "Validation must check status='owned' before allowing buildStatus update"
+    - "E2E test required per ADR-006 - must use live API, not MSW"
+
+  tokens:
+    in: 8500
+    out: 950

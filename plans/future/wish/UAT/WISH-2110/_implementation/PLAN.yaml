@@ -1,0 +1,224 @@
+schema: 1
+story_id: WISH-2110
+timestamp: '2026-02-08T11:15:00Z'
+
+steps:
+  - id: 1
+    name: "Update WishlistItemSchema with custom error messages"
+    description: |
+      Add custom error messages to all fields in WishlistItemSchema in packages/core/api-client/src/schemas/wishlist.ts:
+      - UUID fields: use { message: "Invalid UUID format" } (already present)
+      - title: .min(1, { message: "Title is required" })
+      - store: Add custom message for invalid enum values
+      - imageUrl: .url({ message: "Invalid image URL format" })
+      - price: .regex with { message: "Price must be a valid decimal" }
+      - pieceCount: .int({ message: "Piece count must be a whole number" }), .nonnegative({ message: "Piece count cannot be negative" })
+      - priority: .min(0, { message: "Priority must be between 0 and 5" }), .max(5, { message: "Priority must be between 0 and 5" })
+      - sortOrder: .int({ message: "Sort order must be a whole number" }), .min(0, { message: "Sort order cannot be negative" })
+      - datetime fields: .datetime({ message: "Invalid datetime format" })
+      - Currency enum: Add errorMap for user-friendly enum messages
+      - ItemStatus enum: Add errorMap for user-friendly enum messages
+      - BuildStatus enum: Add errorMap for user-friendly enum messages
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "Test title empty string shows 'Title is required'"
+      - "Test invalid imageUrl shows 'Invalid image URL format'"
+      - "Test negative pieceCount shows 'Piece count cannot be negative'"
+      - "Test priority out of range shows appropriate message"
+      - "Test invalid enum values show user-friendly messages"
+    acceptance_criteria:
+      - AC1
+
+  - id: 2
+    name: "Update CreateWishlistItemSchema custom messages"
+    description: |
+      Review and enhance custom error messages in CreateWishlistItemSchema:
+      - title: .min(1, { message: "Title is required" }) (already present)
+      - store: .min(1, { message: "Store is required" }) (already present)
+      - sourceUrl: .url({ message: "Invalid URL format" }) (already present)
+      - price: Update regex message to "Price must be a valid decimal with up to 2 decimal places"
+      - pieceCount: .int({ message: "Piece count must be a whole number" }), .nonnegative({ message: "Piece count cannot be negative" })
+      - priority: Ensure min/max have clear messages
+      - releaseDate: .datetime({ message: "Invalid release date format" })
+      - Verify inherited fields from WishlistItemSchema maintain custom messages
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "Test CreateWishlistItemSchema shows custom messages for all fields"
+      - "Test inherited messages work correctly"
+    acceptance_criteria:
+      - AC2
+
+  - id: 3
+    name: "Verify UpdateWishlistItemSchema inherits custom messages"
+    description: |
+      Since UpdateWishlistItemSchema = CreateWishlistItemSchema.partial(), verify that:
+      - Partial validation maintains field-specific messages
+      - Test that when a field is provided but invalid, custom message appears
+      - No code changes needed if inheritance works correctly
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "Test UpdateWishlistItemSchema shows custom messages on partial updates"
+    acceptance_criteria:
+      - AC3
+
+  - id: 4
+    name: "Update WishlistQueryParamsSchema with custom messages"
+    description: |
+      Add custom error messages to WishlistQueryParamsSchema:
+      - priority: .min(0, { message: "Priority must be between 0 and 5" }), .max(5, { message: "Priority must be between 0 and 5" })
+      - page: .min(1, { message: "Page number must be at least 1" })
+      - limit: .min(1, { message: "Limit must be at least 1" }), .max(100, { message: "Limit cannot exceed 100 items" })
+      - WishlistSortFieldSchema enum: Add errorMap({ message: "Invalid sort field" })
+      - order enum: Add errorMap with message "Sort order must be 'asc' or 'desc'"
+      - ItemStatus enum: Add errorMap for status filter
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "Test page 0 returns 'Page number must be at least 1'"
+      - "Test limit 101 returns 'Limit cannot exceed 100 items'"
+      - "Test invalid sort field returns 'Invalid sort field'"
+      - "Test invalid order returns appropriate message"
+    acceptance_criteria:
+      - AC4
+
+  - id: 5
+    name: "Update BatchReorderSchema with custom messages"
+    description: |
+      Add custom error messages to BatchReorderSchema (and ReorderWishlistItemSchema if needed):
+      - items array: .min(1, { message: "At least one item is required for reordering" })
+      - id field: .regex(uuidPattern, { message: "Invalid item ID in reorder list" })
+      - sortOrder: .int({ message: "Sort order must be a whole number" }), .min(0, { message: "Sort order cannot be negative" })
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "Test empty items array returns 'At least one item is required for reordering'"
+      - "Test invalid ID returns 'Invalid item ID in reorder list'"
+      - "Test negative sortOrder returns 'Sort order cannot be negative'"
+    acceptance_criteria:
+      - AC5
+
+  - id: 6
+    name: "Update MarkAsPurchasedSchema and related purchase schemas"
+    description: |
+      Add custom error messages to purchase-related schemas:
+      - MarkAsPurchasedSchema: Update price/tax/shipping regex messages
+      - MarkAsPurchasedInputSchema: Update price validation messages
+      - PurchaseDetailsInputSchema: Update price validation messages
+      - purchaseDate: .datetime({ message: "Invalid purchase date format" })
+      - Ensure all price fields show "Price must be a valid decimal with up to 2 decimal places"
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "Test invalid purchase date returns appropriate message"
+      - "Test invalid price format returns clear message"
+    acceptance_criteria:
+      - AC6
+
+  - id: 7
+    name: "Update existing tests to assert specific error messages"
+    description: |
+      Update packages/core/api-client/src/schemas/__tests__/wishlist.test.ts:
+      - Replace generic .toThrow() assertions with specific error message checks
+      - Use .toThrow('Title is required') or Zod error inspection
+      - Add new tests for each custom error message path
+      - Ensure at least 25 tests cover all custom message scenarios
+      - Test examples from story:
+        * Empty title -> "Title is required"
+        * Invalid priority enum -> "Priority must be between 0 and 5"
+        * Negative price -> "Price cannot be negative"
+        * Invalid URL -> "Invalid image URL format"
+        * Page 0 -> "Page number must be at least 1"
+        * Limit 101 -> "Limit cannot exceed 100 items"
+    files:
+      - path: packages/core/api-client/src/schemas/__tests__/wishlist.test.ts
+        action: modify
+    tests:
+      - "All existing tests updated to check specific messages"
+      - "New tests added for all custom error message paths"
+      - "Minimum 25 tests asserting error messages"
+    acceptance_criteria:
+      - AC7
+      - AC8
+      - AC9
+
+  - id: 8
+    name: "Add JSDoc comments with error message examples"
+    description: |
+      Update JSDoc comments in packages/core/api-client/src/schemas/wishlist.ts:
+      - Add @throws JSDoc tags documenting common validation failures
+      - Add @example tags showing valid vs invalid inputs
+      - Document error messages for key fields (title, price, priority, etc.)
+      Example:
+      /**
+       * @throws {ZodError} "Title is required" if title is empty
+       * @throws {ZodError} "Priority must be between 0 and 5" if priority is out of range
+       * @example
+       * // Valid
+       * CreateWishlistItemSchema.parse({ title: "LEGO Castle", store: "LEGO" })
+       * // Invalid - throws "Title is required"
+       * CreateWishlistItemSchema.parse({ title: "", store: "LEGO" })
+       */
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+    tests:
+      - "JSDoc comments include error message documentation"
+    acceptance_criteria:
+      - AC12
+
+  - id: 9
+    name: "Run type checking and tests"
+    description: |
+      Verify all changes pass quality gates:
+      - Run pnpm check-types on packages/core/api-client
+      - Run pnpm test on packages/core/api-client/src/schemas/__tests__/wishlist.test.ts
+      - Verify no breaking changes to schema types
+      - Ensure all 25+ tests pass with error message assertions
+    files:
+      - path: packages/core/api-client/src/schemas/wishlist.ts
+        action: modify
+      - path: packages/core/api-client/src/schemas/__tests__/wishlist.test.ts
+        action: modify
+    tests:
+      - "TypeScript compilation passes"
+      - "All unit tests pass"
+      - "No type errors introduced"
+    acceptance_criteria:
+      - AC10
+      - AC11
+
+notes: |
+  Implementation Notes:
+  - This is a LOW effort story focused only on adding custom error messages to existing schemas
+  - No structural changes to schemas - only adding message parameters
+  - All schemas already exist from WISH-2010, we're just enhancing their error messages
+  - Use Zod's built-in message parameter syntax: .min(1, { message: "Custom message" })
+  - Use errorMap for enum types: z.enum(['a', 'b'], { errorMap: () => ({ message: "Custom message" }) })
+  - The story explicitly shows examples of desired error messages - follow those patterns
+  - Focus on user-friendly, non-technical language
+  - Keep messages concise (under 60 characters) for UI display
+  - Test updates should use specific error message assertions, not generic .toThrow()
+
+  Schema Priority:
+  1. WishlistItemSchema (base schema)
+  2. CreateWishlistItemSchema (form input)
+  3. UpdateWishlistItemSchema (partial updates)
+  4. WishlistQueryParamsSchema (list filters)
+  5. BatchReorderSchema (drag-and-drop)
+  6. Purchase-related schemas (MarkAsPurchasedSchema, etc.)
+
+  Testing Strategy:
+  - Update existing tests to assert specific messages
+  - Add new tests for uncovered error paths
+  - Ensure coverage of all enum validations
+  - Test boundary conditions (min/max values)
+  - Verify inherited schemas maintain custom messages

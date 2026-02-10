@@ -18,7 +18,7 @@ import { setImages, sets } from './sets'
 export { setImages, sets }
 
 // Re-export Feature Flags tables (WISH-2009, WISH-2039)
-export { featureFlags, featureFlagUserOverrides } from './feature-flags'
+export { featureFlags, featureFlagUserOverrides, featureFlagSchedules } from './feature-flags'
 
 // Re-export Admin Audit Log table (Admin Panel)
 export { adminAuditLog } from './admin-audit-log'

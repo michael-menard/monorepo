@@ -207,9 +207,49 @@ export const ListWishlistQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
-  store: z.string().max(100).optional(),
+
+  // WISH-20171: Extended filter parameters
+  // Store filter: comma-separated string parsed to array
+  store: z
+    .string()
+    .max(100)
+    .optional()
+    .transform(val => (val ? val.split(',') : undefined)),
+
   tags: z.string().optional(), // comma-separated
+
+  // Keep single priority filter for backward compatibility
   priority: z.coerce.number().int().min(0).max(5).optional(),
+
+  // WISH-20171: Priority range filter
+  priorityRange: z
+    .string()
+    .optional()
+    .transform(val => {
+      if (!val) return undefined
+      const [min, max] = val.split(',').map(Number)
+      return { min, max }
+    })
+    .refine(val => !val || (val.min >= 0 && val.max <= 5 && val.min <= val.max), {
+      message: 'Priority range must be 0-5 with min <= max',
+    }),
+
+  // WISH-20171: Price range filter
+  priceRange: z
+    .string()
+    .optional()
+    .transform(val => {
+      if (!val) return undefined
+      const [min, max] = val.split(',').map(Number)
+      return { min, max }
+    })
+    .refine(val => !val || (val.min >= 0 && val.max >= 0 && val.min <= val.max), {
+      message: 'Price range must be >= 0 with min <= max',
+    }),
+
+
+  // SETS-MVP-002: Status filter for collection view
+  status: ItemStatusSchema.optional(),
   sort: WishlistSortFieldSchema.default('sortOrder'),
   order: z.enum(['asc', 'desc']).default('asc'),
 })
@@ -437,5 +477,20 @@ export type WishlistError =
   | 'DB_ERROR'
   | 'SET_CREATION_FAILED'
   | 'IMAGE_COPY_FAILED'
+  | 'INVALID_STATUS'
 
 export type PresignError = 'INVALID_EXTENSION' | 'INVALID_MIME_TYPE' | 'PRESIGN_FAILED'
+
+// ─────────────────────────────────────────────────────────────────────────
+// Build Status Update Types (SETS-MVP-004)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Input schema for updating build status.
+ * SETS-MVP-004: Build status can only be set on items with status='owned'.
+ */
+export const BuildStatusUpdateInputSchema = z.object({
+  buildStatus: BuildStatusSchema,
+})
+
+export type BuildStatusUpdateInput = z.infer<typeof BuildStatusUpdateInputSchema>

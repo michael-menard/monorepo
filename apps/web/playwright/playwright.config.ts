@@ -51,11 +51,29 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: /(?<!api\/).*\.feature/,
       webServer: {
-        command: 'pnpm dev --port 3002',
+        command: 'pnpm dev',
         url: 'http://localhost:3000',
         reuseExistingServer: true,
         timeout: 120 * 1000,
         cwd: '../main-app',
+      },
+    },
+    {
+      name: 'chromium-mocked',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3002',
+      },
+      testMatch: /(?<!api\/).*\.feature/,
+      webServer: {
+        command: 'pnpm dev --port 3002',
+        url: 'http://localhost:3002',
+        reuseExistingServer: true,
+        timeout: 120 * 1000,
+        cwd: '../main-app',
+        env: {
+          VITE_ENABLE_MSW: 'true',
+        },
       },
     },
     // ─────────────────────────────────────────────────────────────────────────

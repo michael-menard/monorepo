@@ -11,6 +11,9 @@ import {
 import { createInMemoryCache } from './adapters/cache.js'
 import { createRedisCacheAdapter } from './adapters/redis-cache.js'
 import { UpdateFeatureFlagInputSchema, AddUserOverrideRequestSchema } from './types.js'
+import { createScheduleService } from './application/schedule-service.js'
+import { createScheduleRepository } from './adapters/schedule-repository.js'
+import { CreateScheduleRequestSchema } from './types.js'
 
 /**
  * Config Domain Routes (WISH-2009, updated WISH-2019, WISH-2039)
@@ -47,6 +50,9 @@ if (redisClient) {
 }
 
 const featureFlagService = createFeatureFlagService({ flagRepo, cache, userOverrideRepo })
+
+const scheduleRepo = createScheduleRepository(db, schema)
+const scheduleService = createScheduleService({ scheduleRepo, flagRepo })
 
 // ─────────────────────────────────────────────────────────────────────────
 // Public Routes (no auth required, but uses userId if available)
@@ -231,6 +237,90 @@ adminConfig.get('/flags/:flagKey/users', async c => {
 
   return c.json(result.data)
 })
+
+// ─────────────────────────────────────────────────────────────────────────
+// Schedule Routes (WISH-2119)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /flags/:flagKey/schedule - Create scheduled flag update (WISH-2119 AC1)
+ *
+ * Request body: { scheduledAt: ISO8601, updates: { enabled?: boolean, rolloutPercentage?: number } }
+ * Returns created schedule.
+ */
+adminConfig.post('/flags/:flagKey/schedule', async c => {
+  const flagKey = c.req.param('flagKey')
+  const body = await c.req.json()
+
+  // Validate input (AC1: scheduledAt must be future, updates validation)
+  const input = CreateScheduleRequestSchema.safeParse(body)
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await scheduleService.createSchedule(flagKey, input.data)
+
+  if (!result.ok) {
+    if (result.error === 'INVALID_FLAG') {
+      return c.json({ error: 'NOT_FOUND', message: `Flag '${flagKey}' not found` }, 404)
+    }
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json(result.data, 201)
+})
+
+/**
+ * GET /flags/:flagKey/schedule - List all schedules for flag (WISH-2119 AC3)
+ *
+ * Returns array of all schedules (all statuses).
+ */
+adminConfig.get('/flags/:flagKey/schedule', async c => {
+  const flagKey = c.req.param('flagKey')
+
+  const result = await scheduleService.listSchedules(flagKey)
+
+  if (!result.ok) {
+    if (result.error === 'INVALID_FLAG') {
+      return c.json({ error: 'NOT_FOUND', message: `Flag '${flagKey}' not found` }, 404)
+    }
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json(result.data)
+})
+
+/**
+ * DELETE /flags/:flagKey/schedule/:scheduleId - Cancel schedule (WISH-2119 AC4)
+ *
+ * Returns updated schedule with status='cancelled'.
+ * Returns 400 if schedule already applied/failed.
+ */
+adminConfig.delete('/flags/:flagKey/schedule/:scheduleId', async c => {
+  const flagKey = c.req.param('flagKey')
+  const scheduleId = c.req.param('scheduleId')
+
+  const result = await scheduleService.cancelSchedule(flagKey, scheduleId)
+
+  if (!result.ok) {
+    if (result.error === 'NOT_FOUND' || result.error === 'INVALID_FLAG') {
+      return c.json(
+        { error: 'NOT_FOUND', message: `Schedule not found for flag '${flagKey}'` },
+        404,
+      )
+    }
+    if (result.error === 'ALREADY_APPLIED') {
+      return c.json(
+        { error: 'INVALID_STATE', message: 'Cannot cancel schedule that is already applied or failed' },
+        400,
+      )
+    }
+    return c.json({ error: result.error }, 500)
+  }
+
+  return c.json(result.data)
+})
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // Combined Routes (mounted at different paths)

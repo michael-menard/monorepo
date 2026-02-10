@@ -22,6 +22,7 @@ import {
   PresignRequestSchema,
   MarkAsPurchasedInputSchema,
   PurchaseDetailsInputSchema,
+  BuildStatusUpdateInputSchema,
 } from './types.js'
 // IP extraction and geolocation (WISH-2047)
 // Cross-domain dependencies for purchase flow (WISH-2042)
@@ -137,6 +138,8 @@ wishlist.use('*', requireFeature('wishlist'))
 
 /**
  * GET / - List user's wishlist items
+ *
+ * WISH-20171: Extended with combined filter support (store[], priorityRange, priceRange)
  */
 wishlist.get('/', async c => {
   const userId = c.get('userId')
@@ -146,7 +149,8 @@ wishlist.get('/', async c => {
     return c.json({ error: 'Validation failed', details: query.error.flatten() }, 400)
   }
 
-  const { page, limit, search, store, tags, priority, sort, order } = query.data
+  const { page, limit, search, store, tags, priority, priorityRange, priceRange, sort, order, status } =
+    query.data
 
   // Parse comma-separated tags
   const tagList = tags
@@ -159,7 +163,17 @@ wishlist.get('/', async c => {
   const result = await wishlistService.listItems(
     userId,
     { page, limit },
-    { search, store, tags: tagList, priority, sort, order },
+    {
+      search,
+      store, // WISH-20171: Now string[]
+      tags: tagList,
+      priority, // Backward compatibility
+      priorityRange, // WISH-20171: New
+      priceRange, // WISH-20171: New
+      status, // SETS-MVP-002: Filter by lifecycle status
+      sort,
+      order,
+    },
   )
 
   return c.json(result)
@@ -371,6 +385,60 @@ wishlist.delete('/:id', async c => {
   }
 
   return c.body(null, 204)
+})
+
+// ─────────────────────────────────────────────────────────────────────────
+// Build Status Route (SETS-MVP-004)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * PATCH /:id/build-status - Toggle build status of an owned item
+ *
+ * SETS-MVP-004: Build status toggle.
+ * Only valid for items with status='owned'.
+ *
+ * Returns 200 with the updated item on success.
+ * Returns 400 with { error: 'INVALID_STATUS', message: '...' } if item is not owned.
+ * Returns 403 if user doesn't own the item.
+ * Returns 404 if item doesn't exist.
+ */
+wishlist.patch('/:id/build-status', async c => {
+  const userId = c.get('userId')
+  const itemId = c.req.param('id')
+  const body = await c.req.json()
+  const input = BuildStatusUpdateInputSchema.safeParse(body)
+
+  if (!input.success) {
+    return c.json({ error: 'Validation failed', details: input.error.flatten() }, 400)
+  }
+
+  const result = await wishlistService.updateBuildStatus(userId, itemId, input.data.buildStatus)
+
+  if (!result.ok) {
+    if (result.error === 'INVALID_STATUS') {
+      return c.json(
+        { error: 'INVALID_STATUS', message: 'Build status can only be set on owned items' },
+        400,
+      )
+    }
+    const status = result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500
+    if (status === 403 || status === 404) {
+      const { clientIp, geolocation } = await getAuthFailureContext(c)
+      logAuthorizationFailure(
+        userId,
+        itemId,
+        '/wishlist/:id/build-status',
+        'PATCH',
+        status as 403 | 404,
+        result.error,
+        clientIp,
+        geolocation,
+      )
+    }
+    return c.json({ error: result.error }, status)
+  }
+
+  return c.json(result.data)
 })
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -2,11 +2,11 @@ schema: 1
 id: WISH-2013
 feature: wish
 type: feature
-state: uat
+state: blocked
 title: File Upload Security Hardening
 points: null
 priority: null
-blocked_by: null
+blocked_by: "E2E gate - backend server required at localhost:3001 to run 30 Playwright scenarios"
 depends_on:
   - WISH-2011
   - WISH-2002

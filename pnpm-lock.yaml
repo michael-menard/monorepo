@@ -128,10 +128,10 @@ importers:
         version: 5.4.21(@types/node@25.2.1)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
       vitest-axe:
         specifier: ^0.1.0
-        version: 0.1.0(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 0.1.0(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
 
   apps/api/knowledge-base:
     dependencies:
@@ -189,7 +189,7 @@ importers:
         version: 9.0.8
       '@vitest/coverage-v8':
         specifier: ^1.0.0
-        version: 1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1)))
+        version: 1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1)))
       drizzle-kit:
         specifier: ^0.30.0
         version: 0.30.6
@@ -204,7 +204,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
 
   apps/api/lego-api:
     dependencies:
@@ -280,7 +280,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/app-dashboard:
     dependencies:
@@ -340,10 +340,10 @@ importers:
         version: 2.6.1
       tailwindcss:
         specifier: 3.4.17
-        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3))
+        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3))
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3)))
+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3)))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -368,10 +368,10 @@ importers:
         version: 19.2.3(@types/react@19.2.13)
       '@vitejs/plugin-react-swc':
         specifier: ^4.0.1
-        version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: ^3.0.5
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/ui':
         specifier: ^3.0.5
         version: 3.2.4(vitest@3.2.4)
@@ -386,7 +386,7 @@ importers:
         version: 26.1.0(canvas@3.2.1)
       msw:
         specifier: ^2.6.4
-        version: 2.12.9(@types/node@24.10.1)(typescript@5.8.3)
+        version: 2.12.9(@types/node@22.19.10)(typescript@5.8.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -398,10 +398,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/app-inspiration-gallery:
     dependencies:
@@ -473,10 +473,10 @@ importers:
         version: 2.6.1
       tailwindcss:
         specifier: 3.4.17
-        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3))
+        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3))
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3)))
+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3)))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -501,10 +501,10 @@ importers:
         version: 19.2.3(@types/react@19.2.13)
       '@vitejs/plugin-react-swc':
         specifier: ^4.0.1
-        version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: ^3.0.5
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/ui':
         specifier: ^3.0.5
         version: 3.2.4(vitest@3.2.4)
@@ -519,7 +519,7 @@ importers:
         version: 26.1.0(canvas@3.2.1)
       msw:
         specifier: ^2.6.4
-        version: 2.12.9(@types/node@24.10.1)(typescript@5.8.3)
+        version: 2.12.9(@types/node@22.19.10)(typescript@5.8.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -531,10 +531,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/app-instructions-gallery:
     dependencies:
@@ -609,10 +609,10 @@ importers:
         version: 2.6.1
       tailwindcss:
         specifier: 3.4.17
-        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3))
+        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3))
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3)))
+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3)))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -637,10 +637,10 @@ importers:
         version: 19.2.3(@types/react@19.2.13)
       '@vitejs/plugin-react-swc':
         specifier: ^4.0.1
-        version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: ^3.0.5
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/ui':
         specifier: ^3.0.5
         version: 3.2.4(vitest@3.2.4)
@@ -655,7 +655,7 @@ importers:
         version: 26.1.0(canvas@3.2.1)
       msw:
         specifier: ^2.6.4
-        version: 2.12.9(@types/node@24.10.1)(typescript@5.8.3)
+        version: 2.12.9(@types/node@22.19.10)(typescript@5.8.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -667,10 +667,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/app-sets-gallery:
     dependencies:
@@ -736,10 +736,10 @@ importers:
         version: 2.6.1
       tailwindcss:
         specifier: 3.4.17
-        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3))
+        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3))
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3)))
+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3)))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -764,10 +764,10 @@ importers:
         version: 19.2.3(@types/react@19.2.13)
       '@vitejs/plugin-react-swc':
         specifier: ^4.0.1
-        version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: ^3.0.5
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/ui':
         specifier: ^3.0.5
         version: 3.2.4(vitest@3.2.4)
@@ -782,7 +782,7 @@ importers:
         version: 26.1.0(canvas@3.2.1)
       msw:
         specifier: ^2.6.4
-        version: 2.12.9(@types/node@24.10.1)(typescript@5.8.3)
+        version: 2.12.9(@types/node@22.19.10)(typescript@5.8.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -794,10 +794,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/app-wishlist-gallery:
     dependencies:
@@ -887,10 +887,10 @@ importers:
         version: 2.6.1
       tailwindcss:
         specifier: 3.4.17
-        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3))
+        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3))
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3)))
+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3)))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -918,10 +918,10 @@ importers:
         version: 19.2.3(@types/react@19.2.13)
       '@vitejs/plugin-react-swc':
         specifier: ^4.0.1
-        version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: ^3.0.5
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/ui':
         specifier: ^3.0.5
         version: 3.2.4(vitest@3.2.4)
@@ -936,7 +936,7 @@ importers:
         version: 26.1.0(canvas@3.2.1)
       msw:
         specifier: ^2.6.4
-        version: 2.12.9(@types/node@24.10.1)(typescript@5.8.3)
+        version: 2.12.9(@types/node@22.19.10)(typescript@5.8.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -948,10 +948,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/main-app:
     dependencies:
@@ -1230,7 +1230,7 @@ importers:
         version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: 4.0.13
-        version: 4.0.13(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.0.13(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.24(postcss@8.5.6)
@@ -1257,7 +1257,7 @@ importers:
         version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^4.0.13
-        version: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   apps/web/user-settings:
     dependencies:
@@ -1305,10 +1305,10 @@ importers:
         version: 2.6.1
       tailwindcss:
         specifier: 3.4.17
-        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3))
+        version: 3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3))
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@24.10.1)(typescript@5.8.3)))
+        version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.15.11)(@types/node@22.19.10)(typescript@5.8.3)))
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -1333,10 +1333,10 @@ importers:
         version: 19.2.3(@types/react@19.2.13)
       '@vitejs/plugin-react-swc':
         specifier: ^4.0.1
-        version: 4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/coverage-v8':
         specifier: ^3.0.5
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/ui':
         specifier: ^3.0.5
         version: 3.2.4(vitest@3.2.4)
@@ -1351,7 +1351,7 @@ importers:
         version: 26.1.0(canvas@3.2.1)
       msw:
         specifier: ^2.6.4
-        version: 2.12.9(@types/node@24.10.1)(typescript@5.8.3)
+        version: 2.12.9(@types/node@22.19.10)(typescript@5.8.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -1363,10 +1363,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/api-core:
     dependencies:
@@ -1433,6 +1433,9 @@ importers:
         specifier: ^4.0.5
         version: 4.3.6
     devDependencies:
+      '@types/glob':
+        specifier: 9.0.0
+        version: 9.0.0
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -1442,6 +1445,12 @@ importers:
       drizzle-kit:
         specifier: ^0.31.4
         version: 0.31.8
+      glob:
+        specifier: ^10.3.10
+        version: 10.5.0
+      ts-morph:
+        specifier: 27.0.2
+        version: 27.0.2
       tsx:
         specifier: ^4.20.1
         version: 4.21.0
@@ -1450,7 +1459,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/db:
     dependencies:
@@ -1500,7 +1509,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
 
   packages/backend/gallery-core:
     dependencies:
@@ -1516,13 +1525,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/health-check-core:
     dependencies:
@@ -1535,13 +1544,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.0.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.0.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/image-processing:
     dependencies:
@@ -1557,7 +1566,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/lambda-auth:
     dependencies:
@@ -1592,7 +1601,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/lambda-utils:
     dependencies:
@@ -1617,7 +1626,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/moc-instructions-core:
     dependencies:
@@ -1639,13 +1648,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/moc-parts-lists-core:
     dependencies:
@@ -1661,13 +1670,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/mock-data:
     dependencies:
@@ -1692,7 +1701,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.9.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.9.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.9.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.9.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/observability:
     dependencies:
@@ -1738,7 +1747,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.0
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/orchestrator:
     dependencies:
@@ -1763,13 +1772,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/pii-sanitizer:
     dependencies:
@@ -1788,7 +1797,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/rate-limiter:
     dependencies:
@@ -1807,7 +1816,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/resilience:
     dependencies:
@@ -1835,7 +1844,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.0
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/s3-client:
     dependencies:
@@ -1876,7 +1885,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
 
   packages/backend/sets-core:
     dependencies:
@@ -1895,13 +1904,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/upload-config-core:
     dependencies:
@@ -1917,13 +1926,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.0.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.0.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/vercel-adapter:
     dependencies:
@@ -1948,7 +1957,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/vercel-multipart:
     dependencies:
@@ -1973,7 +1982,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/backend/wishlist-core:
     dependencies:
@@ -1989,13 +1998,13 @@ importers:
         version: 22.19.10
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
+        version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/accessibility:
     dependencies:
@@ -2038,7 +2047,7 @@ importers:
         version: 5.4.21(@types/node@25.2.1)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/api-client:
     dependencies:
@@ -2081,7 +2090,7 @@ importers:
         version: 4.5.4(@types/node@22.19.10)(rollup@4.57.1)(typescript@5.8.3)(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/app-component-library:
     dependencies:
@@ -2308,7 +2317,7 @@ importers:
         version: 5.4.21(@types/node@22.19.10)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/charts:
     dependencies:
@@ -2379,7 +2388,7 @@ importers:
         version: 5.4.21(@types/node@22.19.10)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/file-list:
     dependencies:
@@ -2489,7 +2498,7 @@ importers:
         version: 6.4.1(@types/node@25.2.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/logger:
     dependencies:
@@ -2521,7 +2530,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.8
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/core/upload-types:
     dependencies:
@@ -2537,7 +2546,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.0.5
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/dev/tech-radar:
     dependencies:
@@ -2601,7 +2610,7 @@ importers:
         version: 5.4.21(@types/node@25.2.1)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/shared/api-types:
     dependencies:
@@ -2630,7 +2639,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   packages/tools/upload-config:
     dependencies:
@@ -2646,7 +2655,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
 packages:
 
@@ -7036,6 +7045,9 @@ packages:
   '@ts-morph/common@0.11.1':
     resolution: {integrity: sha512-7hWZS0NRpEsNV8vWJzg7FEz6V8MaLNeJOmwmghqUXTpzk16V1LLZhdo+4QvE/+zv4cVci0OviuJFnqhEfoV3+g==}
 
+  '@ts-morph/common@0.28.1':
+    resolution: {integrity: sha512-W74iWf7ILp1ZKNYXY5qbddNaml7e9Sedv5lvU1V8lftlitkc9Pq1A+jlH23ltDgWYeZFFEqGCD1Ies9hqu3O+g==}
+
   '@tsconfig/node10@1.0.12':
     resolution: {integrity: sha512-UCYBaeFvM11aU2y3YPZ//O5Rhj+xKyzy7mvcIoAjASbigy8mHMryP5cK7dgjlz2hWxh1g5pLw084E0a/wlUSFQ==}
 
@@ -7206,6 +7218,10 @@ packages:
 
   '@types/glob@7.2.0':
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
+
+  '@types/glob@9.0.0':
+    resolution: {integrity: sha512-00UxlRaIUvYm4R4W9WYkN8/J+kV8fmOQ7okeH6YFtGWFMt3odD45tpG5yA5wnL7HE6lLgjaTW5n14ju2hl2NNA==}
+    deprecated: This is a stub types definition. glob provides its own type definitions, so you do not need this installed.
 
   '@types/inquirer@6.5.0':
     resolution: {integrity: sha512-rjaYQ9b9y/VFGOpqBEXRavc3jh0a+e6evAbI31tMda8VlPaSy0AZJfXsvmIe3wklc7W6C3zCSfleuMXR7NOyXw==}
@@ -8221,6 +8237,9 @@ packages:
 
   code-block-writer@10.1.1:
     resolution: {integrity: sha512-67ueh2IRGst/51p0n6FvPrnRjAGHY5F8xdjkgrYE7DDzpJe6qA07RYQ9VcoUeo5ATOjSOiWpSL3SWBRRbempMw==}
+
+  code-block-writer@13.0.3:
+    resolution: {integrity: sha512-Oofo0pq3IKnsFtuHqSF7TqBfr71aeyZDVJ0HpmqB7FBM2qEigL0iPONSCZSO9pE9dZTAxANe5XHG9Uy0YMv8cg==}
 
   color-convert@1.9.3:
     resolution: {integrity: sha512-QfAUtd+vFdAtFQcC8CCyYt1fYWxSqAiK2cSD6zDB8N3cpsEBAvRxp9zOGg6G/SHHJYAT88/az/IuDGALsNVbGg==}
@@ -12581,6 +12600,9 @@ packages:
   ts-morph@12.0.0:
     resolution: {integrity: sha512-VHC8XgU2fFW7yO1f/b3mxKDje1vmyzFXHWzOYmKEkCEwcLjDtbdLgBQviqj4ZwP4MJkQtRo6Ha2I29lq/B+VxA==}
 
+  ts-morph@27.0.2:
+    resolution: {integrity: sha512-fhUhgeljcrdZ+9DZND1De1029PrE+cMkIP7ooqkLRTrRLTqcki2AstsyJm0vRNbTbVCNJ0idGlbBrfqc7/nA8w==}
+
   ts-node@10.9.1:
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
@@ -16158,6 +16180,7 @@ snapshots:
       '@inquirer/type': 3.0.10(@types/node@24.10.1)
     optionalDependencies:
       '@types/node': 24.10.1
+    optional: true
 
   '@inquirer/confirm@5.1.21(@types/node@24.9.1)':
     dependencies:
@@ -16214,6 +16237,7 @@ snapshots:
       yoctocolors-cjs: 2.1.3
     optionalDependencies:
       '@types/node': 24.10.1
+    optional: true
 
   '@inquirer/core@10.3.2(@types/node@24.9.1)':
     dependencies:
@@ -16264,6 +16288,7 @@ snapshots:
   '@inquirer/type@3.0.10(@types/node@24.10.1)':
     optionalDependencies:
       '@types/node': 24.10.1
+    optional: true
 
   '@inquirer/type@3.0.10(@types/node@24.9.1)':
     optionalDependencies:
@@ -19232,6 +19257,12 @@ snapshots:
       mkdirp: 1.0.4
       path-browserify: 1.0.1
 
+  '@ts-morph/common@0.28.1':
+    dependencies:
+      minimatch: 10.1.2
+      path-browserify: 1.0.1
+      tinyglobby: 0.2.15
+
   '@tsconfig/node10@1.0.12': {}
 
   '@tsconfig/node12@1.0.11': {}
@@ -19461,6 +19492,10 @@ snapshots:
       '@types/minimatch': 6.0.0
       '@types/node': 24.10.1
 
+  '@types/glob@9.0.0':
+    dependencies:
+      glob: 10.5.0
+
   '@types/inquirer@6.5.0':
     dependencies:
       '@types/through': 0.0.33
@@ -19495,7 +19530,7 @@ snapshots:
 
   '@types/minimatch@6.0.0':
     dependencies:
-      minimatch: 9.0.0
+      minimatch: 10.1.2
 
   '@types/mysql@2.15.22':
     dependencies:
@@ -19859,6 +19894,14 @@ snapshots:
     transitivePeerDependencies:
       - '@swc/helpers'
 
+  '@vitejs/plugin-react-swc@4.2.2(vite@6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.0-beta.47
+      '@swc/core': 1.15.11
+      vite: 6.4.1(@types/node@22.19.10)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+    transitivePeerDependencies:
+      - '@swc/helpers'
+
   '@vitejs/plugin-react-swc@4.2.2(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-beta.47
@@ -19891,7 +19934,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1)))':
+  '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1)))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
@@ -19906,11 +19949,11 @@ snapshots:
       std-env: 3.10.0
       strip-literal: 2.1.1
       test-exclude: 6.0.0
-      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
+      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))':
+  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -19925,26 +19968,24 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))':
+  '@vitest/coverage-v8@4.0.13(vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
-      '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
+      '@vitest/utils': 4.0.13
       ast-v8-to-istanbul: 0.3.11
       debug: 4.4.3(supports-color@8.1.1)
       istanbul-lib-coverage: 3.2.2
       istanbul-lib-report: 3.0.1
       istanbul-lib-source-maps: 5.0.6
       istanbul-reports: 3.2.0
-      magic-string: 0.30.21
-      magicast: 0.3.5
+      magicast: 0.5.2
       std-env: 3.10.0
-      test-exclude: 7.0.1
-      tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      tinyrainbow: 3.0.3
+      vitest: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -20129,6 +20170,18 @@ snapshots:
       tinyrainbow: 1.2.0
       vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@2.1.9)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
+  '@vitest/ui@3.2.4(vitest@1.6.1)':
+    dependencies:
+      '@vitest/utils': 3.2.4
+      fflate: 0.8.2
+      flatted: 3.3.3
+      pathe: 2.0.3
+      sirv: 3.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 2.0.0
+      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1))
+    optional: true
+
   '@vitest/ui@3.2.4(vitest@3.2.4)':
     dependencies:
       '@vitest/utils': 3.2.4
@@ -20140,28 +20193,16 @@ snapshots:
       tinyrainbow: 2.0.0
       vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
-  '@vitest/ui@4.0.13(vitest@1.6.1)':
+  '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:
-      '@vitest/utils': 4.0.13
+      '@vitest/utils': 3.2.4
       fflate: 0.8.2
       flatted: 3.3.3
       pathe: 2.0.3
       sirv: 3.0.2
       tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
-      vitest: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1))
-    optional: true
-
-  '@vitest/ui@4.0.13(vitest@3.2.4)':
-    dependencies:
-      '@vitest/utils': 4.0.13
-      fflate: 0.8.2
-      flatted: 3.3.3
-      pathe: 2.0.3
-      sirv: 3.0.2
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      tinyrainbow: 2.0.0
+      vitest: 4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
     optional: true
 
   '@vitest/ui@4.0.13(vitest@4.0.18)':
@@ -20905,6 +20946,8 @@ snapshots:
       - '@types/react-dom'
 
   code-block-writer@10.1.1: {}
+
+  code-block-writer@13.0.3: {}
 
   color-convert@1.9.3:
     dependencies:
@@ -23680,6 +23723,7 @@ snapshots:
       typescript: 5.8.3
     transitivePeerDependencies:
       - '@types/node'
+    optional: true
 
   msw@2.12.9(@types/node@24.9.1)(typescript@5.8.3):
     dependencies:
@@ -25634,6 +25678,11 @@ snapshots:
       '@ts-morph/common': 0.11.1
       code-block-writer: 10.1.1
 
+  ts-morph@27.0.2:
+    dependencies:
+      '@ts-morph/common': 0.28.1
+      code-block-writer: 13.0.3
+
   ts-node@10.9.1(@swc/core@1.15.11)(@types/node@16.18.11)(typescript@4.9.5):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
@@ -26375,7 +26424,7 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.2
 
-  vitest-axe@0.1.0(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)):
+  vitest-axe@0.1.0(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
       aria-query: 5.3.2
       axe-core: 4.11.1
@@ -26383,9 +26432,9 @@ snapshots:
       dom-accessibility-api: 0.5.16
       lodash-es: 4.17.23
       redent: 3.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
-  vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jsdom@26.1.0(canvas@3.2.1)):
+  vitest@1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jsdom@26.1.0(canvas@3.2.1)):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -26410,7 +26459,7 @@ snapshots:
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.19.33
-      '@vitest/ui': 4.0.13(vitest@1.6.1)
+      '@vitest/ui': 3.2.4(vitest@1.6.1)
       jsdom: 26.1.0(canvas@3.2.1)
     transitivePeerDependencies:
       - less
@@ -26422,7 +26471,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
+  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@20.19.33)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -26450,7 +26499,7 @@ snapshots:
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 20.19.33
-      '@vitest/ui': 4.0.13(vitest@3.2.4)
+      '@vitest/ui': 3.2.4(vitest@3.2.4)
       jsdom: 26.1.0(canvas@3.2.1)
     transitivePeerDependencies:
       - jiti
@@ -26510,7 +26559,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
+  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -26538,7 +26587,7 @@ snapshots:
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 22.19.10
-      '@vitest/ui': 4.0.13(vitest@3.2.4)
+      '@vitest/ui': 3.2.4(vitest@3.2.4)
       jsdom: 26.1.0(canvas@3.2.1)
     transitivePeerDependencies:
       - jiti
@@ -26598,51 +26647,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
-    dependencies:
-      '@types/chai': 5.2.3
-      '@vitest/expect': 3.2.4
-      '@vitest/mocker': 3.2.4(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
-      '@vitest/pretty-format': 3.2.4
-      '@vitest/runner': 3.2.4
-      '@vitest/snapshot': 3.2.4
-      '@vitest/spy': 3.2.4
-      '@vitest/utils': 3.2.4
-      chai: 5.3.3
-      debug: 4.4.3(supports-color@8.1.1)
-      expect-type: 1.3.0
-      magic-string: 0.30.21
-      pathe: 2.0.3
-      picomatch: 4.0.3
-      std-env: 3.10.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.2
-      tinyglobby: 0.2.15
-      tinypool: 1.1.1
-      tinyrainbow: 2.0.0
-      vite: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
-      vite-node: 3.2.4(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@edge-runtime/vm': 3.2.0
-      '@types/node': 24.10.1
-      '@vitest/ui': 4.0.13(vitest@3.2.4)
-      jsdom: 26.1.0(canvas@3.2.1)
-    transitivePeerDependencies:
-      - jiti
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.9.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.9.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
+  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.9.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.9.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -26670,7 +26675,7 @@ snapshots:
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 24.9.1
-      '@vitest/ui': 4.0.13(vitest@3.2.4)
+      '@vitest/ui': 3.2.4(vitest@3.2.4)
       jsdom: 26.1.0(canvas@3.2.1)
     transitivePeerDependencies:
       - jiti
@@ -26686,7 +26691,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
+  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@25.0.1(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -26714,7 +26719,7 @@ snapshots:
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 25.2.1
-      '@vitest/ui': 4.0.13(vitest@3.2.4)
+      '@vitest/ui': 3.2.4(vitest@3.2.4)
       jsdom: 25.0.1(canvas@3.2.1)
     transitivePeerDependencies:
       - jiti
@@ -26730,7 +26735,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@4.0.13)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
+  vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
@@ -26758,7 +26763,7 @@ snapshots:
     optionalDependencies:
       '@edge-runtime/vm': 3.2.0
       '@types/node': 25.2.1
-      '@vitest/ui': 4.0.13(vitest@3.2.4)
+      '@vitest/ui': 3.2.4(vitest@3.2.4)
       jsdom: 26.1.0(canvas@3.2.1)
     transitivePeerDependencies:
       - jiti
@@ -26770,6 +26775,47 @@ snapshots:
       - stylus
       - sugarss
       - supports-color
+      - terser
+      - tsx
+      - yaml
+
+  vitest@4.0.18(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2):
+    dependencies:
+      '@vitest/expect': 4.0.18
+      '@vitest/mocker': 4.0.18(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(vite@6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/pretty-format': 4.0.18
+      '@vitest/runner': 4.0.18
+      '@vitest/snapshot': 4.0.18
+      '@vitest/spy': 4.0.18
+      '@vitest/utils': 4.0.18
+      es-module-lexer: 1.7.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 3.10.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vite: 6.4.1(@types/node@24.10.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@edge-runtime/vm': 3.2.0
+      '@opentelemetry/api': 1.9.0
+      '@types/node': 24.10.1
+      '@vitest/ui': 3.2.4(vitest@4.0.18)
+      jsdom: 26.1.0(canvas@3.2.1)
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
       - terser
       - tsx
       - yaml

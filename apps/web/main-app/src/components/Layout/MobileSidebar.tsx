@@ -207,9 +207,7 @@ export function MobileSidebar() {
 
             {/* Footer */}
             <div className="p-4 border-t border-border">
-              <p className="text-xs text-muted-foreground">
-                LEGO MOC Instructions
-              </p>
+              <p className="text-xs text-muted-foreground">LEGO MOC Instructions</p>
             </div>
           </motion.aside>
         </>

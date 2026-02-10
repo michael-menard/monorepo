@@ -1,0 +1,78 @@
+# Artillery Load Test for Redis Connection Pooling (WISH-2124 AC 10)
+#
+# Verifies that Redis connection pool handles concurrent requests correctly:
+# - 50 concurrent requests
+# - All requests succeed (0 errors)
+# - P95 latency < 50ms
+
+config:
+  target: "http://localhost:3001"
+  phases:
+    # Warm-up phase: establish connections
+    - duration: 10
+      arrivalRate: 5
+      name: "Warm-up"
+    
+    # Load phase: 50 concurrent requests
+    - duration: 30
+      arrivalRate: 50
+      name: "Load test - 50 concurrent requests"
+  
+  # Performance thresholds (AC 10)
+  ensure:
+    maxErrorRate: 0  # 0 errors required
+    p95: 50  # P95 latency < 50ms
+    p99: 100  # P99 latency < 100ms
+  
+  # Plugin configuration
+  plugins:
+    expect: {}
+  
+  # Environment variables
+  variables:
+    environment: "development"
+
+scenarios:
+  # Scenario 1: Get all flags (uses Redis cache)
+  - name: "Get all feature flags"
+    weight: 70
+    flow:
+      - get:
+          url: "/config/flags?environment={{ environment }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: wishlist-gallery
+          capture:
+            - json: "$"
+              as: "flags"
+  
+  # Scenario 2: Get single flag (uses Redis cache)
+  - name: "Get single flag"
+    weight: 20
+    flow:
+      - get:
+          url: "/config/flags/wishlist-gallery?environment={{ environment }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: key
+            - hasProperty: enabled
+  
+  # Scenario 3: Get flags with cache miss (no environment param → cache bypass)
+  - name: "Get flags (cache miss)"
+    weight: 10
+    flow:
+      - get:
+          url: "/config/flags"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+# Custom metrics for Redis-specific monitoring
+# Note: These require instrumentation in application code
+#
+# Expected CloudWatch logs during test:
+# - "Redis cache hit" (should be ~90% of requests after warm-up)
+# - "Redis cache miss" (should be ~10% of requests)
+# - No "Redis connection failed" errors

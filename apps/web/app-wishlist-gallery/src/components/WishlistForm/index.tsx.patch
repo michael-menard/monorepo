@@ -1,0 +1,109 @@
+--- a/apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
++++ b/apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
+@@ -97,6 +97,13 @@ const PRIORITY_OPTIONS = [
+ 
+ export interface WishlistFormProps {
+   /**
++   * Called when any form field changes (for autosave)
++   * WISH-2015: Form Autosave via RTK Slice with localStorage Persistence
++   */
++  onChange?: (field: string, value: any) => void
++
++  /**
+    * Initial values for editing
+    */
+   initialValues?: Partial<CreateWishlistItem>
+@@ -130,6 +137,7 @@ export function WishlistForm({
+   onSubmit,
+   isSubmitting = false,
+   className,
++  onChange,
+ }: WishlistFormProps) {
+   const formRef = useRef<HTMLFormElement>(null)
+   const fileInputRef = useRef<HTMLInputElement>(null)
+@@ -400,6 +408,7 @@ export function WishlistForm({
+             disabled={isDisabled}
+             value={title}
+             onChange={e => {
++              onChange?.('title', e.target.value)
+               setTitle(e.target.value)
+             }}
+           />
+@@ -408,7 +417,10 @@ export function WishlistForm({
+ 
+         <div className="space-y-2">
+           <Label htmlFor="store">Store *</Label>
+-          <Select value={store} onValueChange={setStore} disabled={isDisabled}>
++          <Select value={store} onValueChange={value => {
++            onChange?.('store', value)
++            setStore(value)
++          }} disabled={isDisabled}>
+             <SelectTrigger id="store">
+               <SelectValue placeholder="Select a store" />
+             </SelectTrigger>
+@@ -430,6 +442,7 @@ export function WishlistForm({
+             placeholder="e.g., 75192"
+             disabled={isDisabled}
+             value={setNumber}
+             onChange={e => {
++              onChange?.('setNumber', e.target.value)
+               setSetNumber(e.target.value)
+             }}
+           />
+@@ -442,6 +455,7 @@ export function WishlistForm({
+             placeholder="https://..."
+             disabled={isDisabled}
+             value={sourceUrl}
+             onChange={e => {
++              onChange?.('sourceUrl', e.target.value)
+               setSourceUrl(e.target.value)
+             }}
+           />
+@@ -466,6 +480,7 @@ export function WishlistForm({
+               className="pl-7"
+               disabled={isDisabled}
+               value={price}
+               onChange={e => {
++                onChange?.('price', e.target.value)
+                 setPrice(e.target.value)
+               }}
+             />
+@@ -480,7 +495,10 @@ export function WishlistForm({
+             placeholder="e.g., 7541"
+             disabled={isDisabled}
+             value={pieceCount ?? ''}
+-            onChange={e => setPieceCount(e.target.value ? Number(e.target.value) : undefined)}
++            onChange={e => {
++              const val = e.target.value ? Number(e.target.value) : undefined
++              onChange?.('pieceCount', val)
++              setPieceCount(val)
++            }}
+           />
+         </div>
+ 
+@@ -489,6 +507,7 @@ export function WishlistForm({
+           <Select
+             value={String(priority)}
+             onValueChange={value => {
++              onChange?.('priority', Number(value))
+               setPriority(Number(value))
+             }}
+             disabled={isDisabled}
+@@ -665,6 +684,7 @@ export function WishlistForm({
+         <TagInput
+           id="tags"
+           value={tags}
+           onChange={tags => {
++            onChange?.('tags', tags)
+             setTags(tags)
+           }}
+           placeholder="Add tags..."
+@@ -678,6 +698,7 @@ export function WishlistForm({
+           className="min-h-24 resize-y"
+           disabled={isDisabled}
+           value={notes}
+           onChange={e => {
++            onChange?.('notes', e.target.value)
+             setNotes(e.target.value)
+           }}
+         />

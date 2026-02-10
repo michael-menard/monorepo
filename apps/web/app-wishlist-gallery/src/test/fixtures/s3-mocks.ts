@@ -284,3 +284,27 @@ export function resetPresignCounter(): void {
 export function getNextPresignCounter(): number {
   return ++presignRequestCounter
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WISH-2120: Test Utility Consolidation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @deprecated Use createMockFile from '@/test/utils' instead (WISH-2120)
+ * 
+ * The new version supports options object API with Zod validation:
+ * ```ts
+ * import { createMockFile } from '@/test/utils'
+ * createMockFile({ name: 'test.jpg', type: 'image/jpeg', size: 1024 })
+ * ```
+ * 
+ * This legacy function remains for backward compatibility but will be removed
+ * in a future cleanup. The implementation above uses positional parameters
+ * while the new version uses an options object.
+ */
+// Existing createMockFile function above is now considered legacy
+
+// Re-export new utilities for gradual migration path
+export { createMockFile as createMockFileV2 } from '../utils/createMockFile'
+export { mockS3Upload } from '../utils/mockS3Upload'
+export type { CreateMockFileOptions, MockS3UploadOptions } from '../utils'

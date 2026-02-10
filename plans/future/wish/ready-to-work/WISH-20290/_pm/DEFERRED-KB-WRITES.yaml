@@ -1,0 +1,67 @@
+---
+# Deferred Knowledge Base Writes for WISH-20290
+# These writes should be persisted to KB when KB tools become available
+
+deferred_writes:
+  - type: story_metadata
+    timestamp: "2026-02-08T00:00:00Z"
+    reason: "KB tools not available during story generation"
+    data:
+      story_id: "WISH-20290"
+      feature: "wish"
+      title: "Coverage metrics integration for test utilities"
+      story_dir: "plans/future/wish/backlog/WISH-20290"
+      story_file: "plans/future/wish/backlog/WISH-20290/WISH-20290.md"
+      story_type: "tech_debt"
+      points: 1
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      complexity: "Small"
+      category: "Test Infrastructure"
+      depends_on:
+        - "WISH-2120"
+      surfaces:
+        - "test_infrastructure"
+
+    sql_template: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra
+      ) VALUES (
+        'WISH-20290',
+        'wish',
+        'Coverage metrics integration for test utilities',
+        'plans/future/wish/backlog/WISH-20290',
+        'plans/future/wish/backlog/WISH-20290/WISH-20290.md',
+        'tech_debt',
+        1,
+        'medium',
+        'backlog',
+        false,
+        false,
+        false,
+        false
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra;
+
+retry_instructions: |
+  To retry KB persistence:
+  1. Ensure KB MCP server is running (node apps/api/knowledge-base/dist/mcp-server/index.js)
+  2. Use kb_add_story or execute SQL template above
+  3. Delete this file after successful persistence

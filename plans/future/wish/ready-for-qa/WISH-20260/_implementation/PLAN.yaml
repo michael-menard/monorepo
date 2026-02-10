@@ -1,0 +1,1090 @@
+schema: 1
+story_id: WISH-20260
+created_at: '2026-02-08T20:30:00Z'
+validated: true
+
+# Implementation Plan: Automatic Retry Mechanism for Failed Flag Schedules
+
+overview:
+  title: Add automatic retry with exponential backoff to flag scheduling infrastructure
+  parent_story: WISH-2119
+  estimated_complexity: medium (5 points)
+  risk_level: medium (database migration + cron job changes)
+
+phases:
+
+  phase_1_schema:
+    title: "Phase 1: Database Schema Migration"
+    objective: Add retry columns to feature_flag_schedules table
+    estimated_time: 30 minutes
+
+    steps:
+      - step: 1.1
+        title: Update Drizzle schema definition
+        file: packages/backend/database-schema/src/schema/feature-flags.ts
+        action: |
+          Add 4 new columns to featureFlagSchedules table:
+          - retry_count: integer('retry_count').default(0).notNull()
+          - max_retries: integer('max_retries').default(3).notNull()
+          - next_retry_at: timestamp('next_retry_at', { withTimezone: true })
+          - last_error: text('last_error')
+
+          Add new index to table() function:
+          - nextRetryAtIdx: index('idx_schedules_next_retry_at').on(table.nextRetryAt)
+
+          Add check constraint for max_retries (0-10):
+          - maxRetriesCheck: check('max_retries_check', sql`max_retries >= 0 AND max_retries <= 10`)
+
+        acceptance_criteria:
+          - AC1: Columns added with correct types and defaults
+          - Schema compiles without TypeScript errors
+
+        validation:
+          - Run: pnpm check-types
+          - Verify: No type errors in database-schema package
+
+      - step: 1.2
+        title: Generate Drizzle migration
+        command: cd packages/backend/database-schema && pnpm db:generate
+        action: |
+          Generate migration SQL file using Drizzle Kit.
+          This will create 0012_*.sql with ALTER TABLE statements.
+
+        expected_output: |
+          New migration file created:
+          - packages/backend/database-schema/src/migrations/app/0012_*.sql
+          - meta/_journal.json updated with new entry
+
+        validation:
+          - Verify migration file contains:
+            - ALTER TABLE feature_flag_schedules ADD COLUMN retry_count INTEGER DEFAULT 0 NOT NULL
+            - ALTER TABLE feature_flag_schedules ADD COLUMN max_retries INTEGER DEFAULT 3 NOT NULL
+            - ALTER TABLE feature_flag_schedules ADD COLUMN next_retry_at TIMESTAMP WITH TIME ZONE
+            - ALTER TABLE feature_flag_schedules ADD COLUMN last_error TEXT
+            - CREATE INDEX idx_schedules_next_retry_at ON feature_flag_schedules(next_retry_at)
+            - CHECK constraint for max_retries
+
+      - step: 1.3
+        title: Test migration locally
+        command: cd packages/backend/database-schema && pnpm db:push
+        action: |
+          Apply migration to local database.
+          Verify schema changes applied successfully.
+
+        validation:
+          - Connect to local DB and verify columns exist
+          - Query: SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name = 'feature_flag_schedules' AND column_name IN ('retry_count', 'max_retries', 'next_retry_at', 'last_error')
+
+        rollback_plan: |
+          If migration fails:
+          1. Revert schema changes
+          2. Delete generated migration file
+          3. Update meta/_journal.json
+
+    deliverables:
+      - Migration file: 0012_*.sql
+      - Updated schema: feature-flags.ts
+      - Journal updated: meta/_journal.json
+
+    dependencies: []
+
+  phase_2_types:
+    title: "Phase 2: Update Type Definitions"
+    objective: Extend Schedule types with retry metadata
+    estimated_time: 20 minutes
+
+    steps:
+      - step: 2.1
+        title: Update Schedule schema in types.ts
+        file: apps/api/lego-api/domains/config/types.ts
+        action: |
+          Extend ScheduleSchema (line ~204):
+          Add fields:
+          - retryCount: z.number().int().min(0).default(0)
+          - maxRetries: z.number().int().min(0).max(10).default(3)
+          - nextRetryAt: z.date().nullable()
+          - lastError: z.string().nullable()
+
+          Update Schedule type via z.infer (line ~219)
+
+        acceptance_criteria:
+          - AC1: Schedule type includes retry metadata
+          - TypeScript compilation passes
+
+        validation:
+          - Run: pnpm check-types
+          - Verify Schedule type has retry fields
+
+      - step: 2.2
+        title: Update ScheduleResponse schema
+        file: apps/api/lego-api/domains/config/types.ts
+        action: |
+          Extend ScheduleResponseSchema (line ~224):
+          Add fields (as optional for backward compatibility):
+          - retryCount: z.number().int().min(0).optional()
+          - maxRetries: z.number().int().min(0).max(10).optional()
+          - nextRetryAt: z.string().datetime().nullable().optional()
+          - lastError: z.string().nullable().optional()
+
+        acceptance_criteria:
+          - API response type includes retry metadata
+          - Backward compatible with existing responses
+
+        validation:
+          - Type check passes
+          - Existing schedule responses still valid
+
+      - step: 2.3
+        title: Update schedule repository mapper
+        file: apps/api/lego-api/domains/config/adapters/schedule-repository.ts
+        action: |
+          Update mapToSchedule function (line ~38):
+          Add mappings:
+          - retryCount: r.retryCount as number ?? 0
+          - maxRetries: r.maxRetries as number ?? 3
+          - nextRetryAt: (r.nextRetryAt as Date | null) ?? null
+          - lastError: (r.lastError as string | null) ?? null
+
+        acceptance_criteria:
+          - Database rows map to Schedule type correctly
+          - Defaults applied for missing values
+
+        validation:
+          - Type check passes
+          - Repository compiles without errors
+
+    deliverables:
+      - Updated types: types.ts
+      - Updated mapper: schedule-repository.ts
+
+    dependencies:
+      - phase_1_schema
+
+  phase_3_retry_utility:
+    title: "Phase 3: Retry Logic Utility Function"
+    objective: Create exponential backoff calculation utility
+    estimated_time: 30 minutes
+
+    steps:
+      - step: 3.1
+        title: Create retry utility function
+        file: apps/api/lego-api/jobs/process-flag-schedules.ts
+        action: |
+          Add utility function before handler (after imports):
+
+          /**
+           * Calculate next retry time using exponential backoff with jitter (AC3)
+           *
+           * Backoff formula: 2^(retry_count + 1) minutes + jitter (0-30 seconds)
+           * - Retry 1: 2 minutes + jitter
+           * - Retry 2: 4 minutes + jitter
+           * - Retry 3: 8 minutes + jitter
+           *
+           * @param retryCount - Current retry count (0-based)
+           * @returns Next retry timestamp
+           */
+          export function calculateNextRetryAt(retryCount: number): Date {
+            // Exponential backoff: 2^(retry_count + 1) minutes
+            const backoffMinutes = Math.pow(2, retryCount + 1)
+
+            // Add jitter: random 0-30 seconds
+            const jitterSeconds = Math.random() * 30
+
+            // Convert to milliseconds
+            const backoffMs = backoffMinutes * 60 * 1000
+            const jitterMs = jitterSeconds * 1000
+
+            return new Date(Date.now() + backoffMs + jitterMs)
+          }
+
+        acceptance_criteria:
+          - AC3: Exponential backoff calculation correct
+          - Jitter within 0-30 seconds
+
+        validation:
+          - Unit tests pass (see phase_6_unit_tests)
+
+      - step: 3.2
+        title: Add max retries environment variable
+        file: apps/api/lego-api/jobs/process-flag-schedules.ts
+        action: |
+          Add constant after imports:
+
+          /**
+           * Default max retries for failed schedules (AC7)
+           * Configurable via FLAG_SCHEDULE_MAX_RETRIES environment variable
+           */
+          const DEFAULT_MAX_RETRIES = parseInt(
+            process.env.FLAG_SCHEDULE_MAX_RETRIES ?? '3',
+            10,
+          )
+
+          // Validate range 0-10
+          if (DEFAULT_MAX_RETRIES < 0 || DEFAULT_MAX_RETRIES > 10) {
+            logger.warn('FLAG_SCHEDULE_MAX_RETRIES out of range (0-10), using default 3', {
+              configured: DEFAULT_MAX_RETRIES,
+            })
+          }
+
+        acceptance_criteria:
+          - AC7: Environment variable configurable
+          - Validation for 0-10 range
+
+        validation:
+          - Set env var and verify it's used
+          - Out-of-range values logged as warning
+
+    deliverables:
+      - calculateNextRetryAt function
+      - Environment variable handling
+
+    dependencies:
+      - phase_2_types
+
+  phase_4_repository:
+    title: "Phase 4: Enhance Schedule Repository"
+    objective: Update repository to query and update retry metadata
+    estimated_time: 45 minutes
+
+    steps:
+      - step: 4.1
+        title: Enhance findPendingWithLock query
+        file: apps/api/lego-api/domains/config/adapters/schedule-repository.ts
+        action: |
+          Update findPendingWithLock method (line ~134):
+
+          Replace SQL query with:
+          ```sql
+          SELECT * FROM feature_flag_schedules
+          WHERE (
+            (status = 'pending' AND scheduled_at <= ${now})
+            OR
+            (status = 'failed' AND next_retry_at IS NOT NULL AND next_retry_at <= ${now} AND retry_count < max_retries)
+          )
+          ORDER BY
+            CASE WHEN status = 'failed' THEN 0 ELSE 1 END,
+            next_retry_at ASC NULLS LAST,
+            scheduled_at ASC
+          LIMIT ${limit}
+          FOR UPDATE SKIP LOCKED
+          ```
+
+          Rationale:
+          - Include failed schedules ready for retry
+          - Prioritize retries (status = 'failed') over new schedules
+          - Order by next_retry_at for FIFO retry processing
+
+        acceptance_criteria:
+          - AC2: Query includes failed schedules ready for retry
+          - Query orders by next_retry_at ASC
+          - Row locking preserved (FOR UPDATE SKIP LOCKED)
+
+        validation:
+          - Integration tests verify query behavior
+          - Manual query test returns expected results
+
+      - step: 4.2
+        title: Add updateRetryMetadata method
+        file: apps/api/lego-api/domains/config/adapters/schedule-repository.ts
+        action: |
+          Add new method to ScheduleRepository interface (in ports/index.ts):
+
+          /**
+           * Update retry metadata for a failed schedule (AC3, AC5)
+           */
+          updateRetryMetadata(
+            scheduleId: string,
+            retryCount: number,
+            nextRetryAt: Date | null,
+            lastError: string,
+          ): Promise<Result<void, ScheduleError>>
+
+          Implement in schedule-repository.ts:
+          ```typescript
+          async updateRetryMetadata(scheduleId, retryCount, nextRetryAt, lastError) {
+            try {
+              const updateData: Record<string, unknown> = {
+                status: 'failed',
+                retryCount,
+                nextRetryAt,
+                lastError,
+                updatedAt: new Date(),
+              }
+
+              await typedDb
+                .update(schedules)
+                .set(updateData)
+                .where(eq(schedules.id, scheduleId))
+
+              logger.info('Schedule retry metadata updated', {
+                scheduleId,
+                retryCount,
+                nextRetryAt,
+              })
+
+              return ok(undefined)
+            } catch (error) {
+              logger.error('Failed to update retry metadata', { error, scheduleId })
+              return err('DB_ERROR')
+            }
+          }
+          ```
+
+        acceptance_criteria:
+          - Method updates retry_count, next_retry_at, last_error
+          - Status remains 'failed' during retries
+
+        validation:
+          - Unit test verifies metadata updates
+          - Integration test confirms database state
+
+      - step: 4.3
+        title: Update port definition
+        file: apps/api/lego-api/domains/config/ports/index.ts
+        action: |
+          Add updateRetryMetadata method to ScheduleRepository interface:
+
+          updateRetryMetadata(
+            scheduleId: string,
+            retryCount: number,
+            nextRetryAt: Date | null,
+            lastError: string,
+          ): Promise<Result<void, ScheduleError>>
+
+        acceptance_criteria:
+          - Port interface includes new method
+          - TypeScript compilation passes
+
+        validation:
+          - Type check passes
+          - Repository implementation matches interface
+
+    deliverables:
+      - Enhanced query: findPendingWithLock
+      - New method: updateRetryMetadata
+      - Updated port: ScheduleRepository interface
+
+    dependencies:
+      - phase_3_retry_utility
+
+  phase_5_cron_logic:
+    title: "Phase 5: Enhance Cron Job with Retry Logic"
+    objective: Integrate retry logic into schedule processing
+    estimated_time: 60 minutes
+
+    steps:
+      - step: 5.1
+        title: Add retry handling on schedule failure
+        file: apps/api/lego-api/jobs/process-flag-schedules.ts
+        action: |
+          Update the catch block in the for loop (line ~141):
+
+          Replace existing error handling:
+          ```typescript
+          } catch (error) {
+            // AC9: Error isolation - failed schedule does NOT block others
+            logger.error('Schedule processing failed with exception', {
+              scheduleId: schedule.id,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            })
+
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            const currentRetryCount = schedule.retryCount ?? 0
+            const maxRetries = schedule.maxRetries ?? DEFAULT_MAX_RETRIES
+
+            // Check if we should retry (AC5)
+            if (currentRetryCount < maxRetries) {
+              const nextRetryCount = currentRetryCount + 1
+              const nextRetryAt = calculateNextRetryAt(currentRetryCount)
+
+              // Update retry metadata (AC3, AC4)
+              await scheduleRepo.updateRetryMetadata(
+                schedule.id,
+                nextRetryCount,
+                nextRetryAt,
+                errorMessage,
+              )
+
+              logger.info('Schedule failed, retry scheduled', {
+                scheduleId: schedule.id,
+                flagId: schedule.flagId,
+                retryCount: nextRetryCount,
+                nextRetryAt: nextRetryAt.toISOString(),
+                error: errorMessage,
+              })
+            } else {
+              // Max retries exceeded (AC5)
+              await scheduleRepo.updateRetryMetadata(
+                schedule.id,
+                currentRetryCount,
+                null, // Clear next_retry_at
+                errorMessage,
+              )
+
+              logger.error('Schedule retry limit exceeded', {
+                scheduleId: schedule.id,
+                flagId: schedule.flagId,
+                retryCount: currentRetryCount,
+                maxRetries,
+                lastError: errorMessage,
+              })
+            }
+
+            failedCount++
+          }
+          ```
+
+        acceptance_criteria:
+          - AC3: Retry metadata calculated and updated on failure
+          - AC4: Structured logs for retry attempts
+          - AC5: Max retries enforcement
+
+        validation:
+          - Integration tests verify retry flow
+          - Logs contain correct retry information
+
+      - step: 5.2
+        title: Add success logging with retry info
+        file: apps/api/lego-api/jobs/process-flag-schedules.ts
+        action: |
+          Update success logging (line ~128):
+
+          Replace existing success log:
+          ```typescript
+          // AC8: Mark schedule as applied
+          await scheduleRepo.updateStatus(schedule.id, 'applied', {
+            appliedAt: new Date(),
+          })
+
+          // AC6: Clear retry metadata on success
+          if (schedule.retryCount && schedule.retryCount > 0) {
+            logger.info('Schedule applied on retry', {
+              scheduleId: schedule.id,
+              flagKey: flag.flagKey,
+              retryCount: schedule.retryCount,
+              originalScheduledAt: schedule.scheduledAt,
+              appliedAt: new Date(),
+            })
+          } else {
+            // AC9: Log success to CloudWatch
+            logger.info('Schedule applied successfully', {
+              scheduleId: schedule.id,
+              flagKey: flag.flagKey,
+              updates: schedule.updates,
+              scheduledAt: schedule.scheduledAt,
+            })
+          }
+          ```
+
+        acceptance_criteria:
+          - AC6: Successful retry logged with retry_count
+          - Success logs distinguish first attempt vs retry
+
+        validation:
+          - CloudWatch logs show retry success
+          - Integration tests verify logging
+
+      - step: 5.3
+        title: Update flag not found error handling
+        file: apps/api/lego-api/jobs/process-flag-schedules.ts
+        action: |
+          Update flag not found error (line ~84):
+
+          Replace:
+          ```typescript
+          if (flagRows.length === 0) {
+            // Flag was deleted - mark schedule as failed
+            logger.error('Schedule processing failed: flag not found', {
+              scheduleId: schedule.id,
+              flagId: schedule.flagId,
+            })
+
+            const errorMessage = 'Flag not found (may have been deleted)'
+            const currentRetryCount = schedule.retryCount ?? 0
+            const maxRetries = schedule.maxRetries ?? DEFAULT_MAX_RETRIES
+
+            // Don't retry if flag is deleted (permanent failure)
+            await scheduleRepo.updateRetryMetadata(
+              schedule.id,
+              currentRetryCount,
+              null, // No retry
+              errorMessage,
+            )
+
+            failedCount++
+            continue
+          }
+          ```
+
+          Rationale: Flag deletion is permanent, no point retrying
+
+        acceptance_criteria:
+          - Deleted flag doesn't trigger retry
+          - Error logged clearly
+
+        validation:
+          - Test with deleted flag
+          - Verify no retry scheduled
+
+      - step: 5.4
+        title: Update flag update error handling
+        file: apps/api/lego-api/jobs/process-flag-schedules.ts
+        action: |
+          Update flag update failure (line ~108):
+
+          Replace:
+          ```typescript
+          if (!updateResult.ok) {
+            // Update failed - this is retryable
+            logger.error('Schedule processing failed: flag update error', {
+              scheduleId: schedule.id,
+              flagKey: flag.flagKey,
+              error: updateResult.error,
+            })
+
+            const errorMessage = `Flag update failed: ${updateResult.error}`
+            const currentRetryCount = schedule.retryCount ?? 0
+            const maxRetries = schedule.maxRetries ?? DEFAULT_MAX_RETRIES
+
+            // Retry transient errors (AC3)
+            if (currentRetryCount < maxRetries) {
+              const nextRetryCount = currentRetryCount + 1
+              const nextRetryAt = calculateNextRetryAt(currentRetryCount)
+
+              await scheduleRepo.updateRetryMetadata(
+                schedule.id,
+                nextRetryCount,
+                nextRetryAt,
+                errorMessage,
+              )
+
+              logger.info('Flag update failed, retry scheduled', {
+                scheduleId: schedule.id,
+                flagKey: flag.flagKey,
+                retryCount: nextRetryCount,
+                nextRetryAt: nextRetryAt.toISOString(),
+              })
+            } else {
+              // Max retries exceeded
+              await scheduleRepo.updateRetryMetadata(
+                schedule.id,
+                currentRetryCount,
+                null,
+                errorMessage,
+              )
+
+              logger.error('Flag update retry limit exceeded', {
+                scheduleId: schedule.id,
+                flagKey: flag.flagKey,
+                retryCount: currentRetryCount,
+              })
+            }
+
+            failedCount++
+            continue
+          }
+          ```
+
+        acceptance_criteria:
+          - Flag update errors trigger retry
+          - Max retries enforced
+
+        validation:
+          - Simulate flag update error
+          - Verify retry scheduled
+
+    deliverables:
+      - Enhanced error handling with retry logic
+      - Success logging with retry info
+      - Max retries enforcement
+
+    dependencies:
+      - phase_4_repository
+
+  phase_6_unit_tests:
+    title: "Phase 6: Unit Tests for Retry Logic"
+    objective: Test exponential backoff and retry utilities
+    estimated_time: 45 minutes
+
+    steps:
+      - step: 6.1
+        title: Create retry utility tests
+        file: apps/api/lego-api/jobs/__tests__/retry-utils.test.ts
+        action: |
+          Create new test file:
+
+          import { describe, it, expect } from 'vitest'
+          import { calculateNextRetryAt } from '../process-flag-schedules.js'
+
+          describe('calculateNextRetryAt', () => {
+            it('should return ~2 minutes for retry_count = 0 (AC8)', () => {
+              const result = calculateNextRetryAt(0)
+              const now = Date.now()
+              const diff = result.getTime() - now
+
+              // 2 minutes = 120000ms, jitter adds 0-30000ms
+              expect(diff).toBeGreaterThanOrEqual(120000)
+              expect(diff).toBeLessThan(150000) // 2:30 max
+            })
+
+            it('should return ~4 minutes for retry_count = 1 (AC8)', () => {
+              const result = calculateNextRetryAt(1)
+              const now = Date.now()
+              const diff = result.getTime() - now
+
+              // 4 minutes = 240000ms, jitter adds 0-30000ms
+              expect(diff).toBeGreaterThanOrEqual(240000)
+              expect(diff).toBeLessThan(270000) // 4:30 max
+            })
+
+            it('should return ~8 minutes for retry_count = 2 (AC8)', () => {
+              const result = calculateNextRetryAt(2)
+              const now = Date.now()
+              const diff = result.getTime() - now
+
+              // 8 minutes = 480000ms, jitter adds 0-30000ms
+              expect(diff).toBeGreaterThanOrEqual(480000)
+              expect(diff).toBeLessThan(510000) // 8:30 max
+            })
+
+            it('should add jitter within 0-30 seconds (AC8)', () => {
+              const results = []
+              for (let i = 0; i < 100; i++) {
+                const result = calculateNextRetryAt(0)
+                const now = Date.now()
+                const diff = result.getTime() - now
+                // Extract jitter (diff - base backoff)
+                const jitter = diff - 120000
+                results.push(jitter)
+              }
+
+              // Verify jitter is within range
+              results.forEach(jitter => {
+                expect(jitter).toBeGreaterThanOrEqual(0)
+                expect(jitter).toBeLessThan(30000)
+              })
+
+              // Verify jitter is distributed (not always same value)
+              const uniqueJitters = new Set(results)
+              expect(uniqueJitters.size).toBeGreaterThan(50) // At least 50% unique
+            })
+
+            it('should handle large retry_count without overflow (AC8)', () => {
+              const result = calculateNextRetryAt(10)
+              const now = Date.now()
+              const diff = result.getTime() - now
+
+              // 2^11 = 2048 minutes = ~34 hours
+              expect(diff).toBeGreaterThan(0)
+              expect(result.getTime()).toBeGreaterThan(now)
+            })
+          })
+
+        acceptance_criteria:
+          - AC8: 5+ unit tests for retry logic
+          - All tests pass
+          - Coverage for edge cases
+
+        validation:
+          - Run: pnpm test retry-utils.test.ts
+          - All tests pass
+
+      - step: 6.2
+        title: Add environment variable tests
+        file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+        action: |
+          Add test cases for FLAG_SCHEDULE_MAX_RETRIES:
+
+          describe('Environment variable configuration', () => {
+            it('should use default max retries when env var not set (AC7)', () => {
+              delete process.env.FLAG_SCHEDULE_MAX_RETRIES
+              // Re-import to pick up env var
+              // Verify DEFAULT_MAX_RETRIES = 3
+            })
+
+            it('should use custom max retries from env var (AC7)', () => {
+              process.env.FLAG_SCHEDULE_MAX_RETRIES = '5'
+              // Re-import to pick up env var
+              // Verify max retries = 5
+            })
+
+            it('should warn on invalid max retries range (AC7)', () => {
+              process.env.FLAG_SCHEDULE_MAX_RETRIES = '15'
+              // Re-import and verify warning logged
+            })
+          })
+
+        acceptance_criteria:
+          - AC7: Env var tests pass
+          - Validation warnings logged
+
+        validation:
+          - Run: pnpm test process-flag-schedules.test.ts
+          - Tests pass with correct env var behavior
+
+    deliverables:
+      - retry-utils.test.ts (5+ tests)
+      - Environment variable tests in process-flag-schedules.test.ts
+
+    dependencies:
+      - phase_5_cron_logic
+
+  phase_7_integration_tests:
+    title: "Phase 7: Integration Tests for Retry Flow"
+    objective: Test end-to-end retry scenarios
+    estimated_time: 60 minutes
+
+    steps:
+      - step: 7.1
+        title: Test retry on first failure
+        file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+        action: |
+          Add integration test:
+
+          it('should increment retry_count and schedule retry on first failure (AC9)', async () => {
+            // Setup: Create schedule in database
+            const schedule = await createTestSchedule({
+              status: 'pending',
+              scheduledAt: new Date(Date.now() - 60000), // 1 minute ago
+              retryCount: 0,
+              maxRetries: 3,
+            })
+
+            // Simulate flag update failure
+            mockFlagRepo.update.mockResolvedValue(err('DB_ERROR'))
+
+            // Act: Run cron job
+            await handler(mockEvent)
+
+            // Assert: Schedule retry metadata updated
+            const updated = await getScheduleById(schedule.id)
+            expect(updated.retryCount).toBe(1)
+            expect(updated.nextRetryAt).not.toBeNull()
+            expect(updated.status).toBe('failed')
+            expect(updated.lastError).toContain('DB_ERROR')
+
+            // Verify next retry is ~2 minutes from now
+            const diff = updated.nextRetryAt.getTime() - Date.now()
+            expect(diff).toBeGreaterThanOrEqual(120000)
+            expect(diff).toBeLessThan(150000)
+          })
+
+        acceptance_criteria:
+          - AC9: First failure increments retry_count
+          - AC3: next_retry_at calculated correctly
+
+        validation:
+          - Test passes
+          - Database state correct
+
+      - step: 7.2
+        title: Test successful retry
+        file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+        action: |
+          Add integration test:
+
+          it('should mark schedule as applied on successful retry (AC9)', async () => {
+            // Setup: Create failed schedule ready for retry
+            const nextRetryAt = new Date(Date.now() - 60000) // 1 minute ago
+            const schedule = await createTestSchedule({
+              status: 'failed',
+              retryCount: 1,
+              maxRetries: 3,
+              nextRetryAt,
+              lastError: 'Previous DB error',
+            })
+
+            // Simulate successful flag update
+            mockFlagRepo.update.mockResolvedValue(ok(mockFlag))
+
+            // Act: Run cron job
+            await handler(mockEvent)
+
+            // Assert: Schedule marked as applied
+            const updated = await getScheduleById(schedule.id)
+            expect(updated.status).toBe('applied')
+            expect(updated.appliedAt).not.toBeNull()
+            expect(updated.nextRetryAt).toBeNull() // Cleared
+            expect(updated.retryCount).toBe(1) // Preserved for logging
+          })
+
+        acceptance_criteria:
+          - AC6: Successful retry clears next_retry_at
+          - AC6: Status set to 'applied'
+
+        validation:
+          - Test passes
+          - CloudWatch logs show success
+
+      - step: 7.3
+        title: Test max retries exceeded
+        file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+        action: |
+          Add integration test:
+
+          it('should stop retrying after max retries exceeded (AC9)', async () => {
+            // Setup: Create schedule at max retries
+            const nextRetryAt = new Date(Date.now() - 60000)
+            const schedule = await createTestSchedule({
+              status: 'failed',
+              retryCount: 2, // This will be the 3rd attempt
+              maxRetries: 3,
+              nextRetryAt,
+            })
+
+            // Simulate continued failure
+            mockFlagRepo.update.mockResolvedValue(err('DB_ERROR'))
+
+            // Act: Run cron job
+            await handler(mockEvent)
+
+            // Assert: Schedule permanently failed
+            const updated = await getScheduleById(schedule.id)
+            expect(updated.status).toBe('failed')
+            expect(updated.retryCount).toBe(2) // Not incremented (max reached)
+            expect(updated.nextRetryAt).toBeNull() // Cleared, no more retries
+            expect(updated.lastError).toContain('DB_ERROR')
+          })
+
+        acceptance_criteria:
+          - AC5: Max retries stops further attempts
+          - AC5: next_retry_at cleared
+
+        validation:
+          - Test passes
+          - Error logged to CloudWatch
+
+      - step: 7.4
+        title: Test concurrent retry processing
+        file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+        action: |
+          Add integration test (AC10):
+
+          it('should handle concurrent retry processing with row locking (AC10)', async () => {
+            // Setup: Create failed schedule ready for retry
+            const schedule = await createTestSchedule({
+              status: 'failed',
+              retryCount: 1,
+              nextRetryAt: new Date(Date.now() - 60000),
+            })
+
+            // Simulate two cron jobs running concurrently
+            const job1 = handler(mockEvent)
+            const job2 = handler(mockEvent)
+
+            await Promise.all([job1, job2])
+
+            // Assert: Schedule processed only once
+            const updated = await getScheduleById(schedule.id)
+            // Verify processed once by checking logs or final state
+            expect(updated.retryCount).toBe(2) // Incremented only once
+          })
+
+        acceptance_criteria:
+          - AC10: Row locking prevents duplicate processing
+          - FOR UPDATE SKIP LOCKED works for retries
+
+        validation:
+          - Test passes
+          - No duplicate processing
+
+      - step: 7.5
+        title: Test custom max_retries per schedule
+        file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+        action: |
+          Add integration test (AC10):
+
+          it('should respect custom max_retries per schedule (AC10)', async () => {
+            // Setup: Create schedule with custom max_retries = 5
+            const schedule = await createTestSchedule({
+              status: 'pending',
+              retryCount: 0,
+              maxRetries: 5, // Custom value
+            })
+
+            // Simulate 5 failures
+            mockFlagRepo.update.mockResolvedValue(err('DB_ERROR'))
+
+            for (let i = 0; i < 5; i++) {
+              await handler(mockEvent)
+              const updated = await getScheduleById(schedule.id)
+              if (i < 4) {
+                expect(updated.nextRetryAt).not.toBeNull()
+              } else {
+                // After 5th failure, no more retries
+                expect(updated.nextRetryAt).toBeNull()
+              }
+            }
+          })
+
+        acceptance_criteria:
+          - AC10: Custom max_retries honored
+          - Schedule retries 5 times before final failure
+
+        validation:
+          - Test passes
+          - Retry count matches custom max_retries
+
+    deliverables:
+      - Integration tests (5+ scenarios)
+      - Test coverage for edge cases
+
+    dependencies:
+      - phase_6_unit_tests
+
+  phase_8_validation:
+    title: "Phase 8: End-to-End Validation"
+    objective: Verify all ACs pass with manual testing
+    estimated_time: 30 minutes
+
+    steps:
+      - step: 8.1
+        title: Run all tests
+        command: pnpm test
+        action: |
+          Execute full test suite to verify:
+          - All unit tests pass (5+ tests for retry logic)
+          - All integration tests pass (3+ tests for retry flow)
+          - No regressions in existing tests
+
+        acceptance_criteria:
+          - AC8: 5+ unit tests pass
+          - AC9: 3+ integration tests pass
+          - No failing tests
+
+        validation:
+          - Test output shows all passing
+          - Coverage meets 45% minimum
+
+      - step: 8.2
+        title: Manual retry flow test
+        action: |
+          1. Start local database and API server
+          2. Create a test schedule via admin endpoint
+          3. Simulate failure by disconnecting database
+          4. Manually trigger cron job
+          5. Verify retry_count incremented and next_retry_at set
+          6. Reconnect database
+          7. Wait for next_retry_at time
+          8. Manually trigger cron job again
+          9. Verify schedule marked as applied
+
+        acceptance_criteria:
+          - AC1-AC7: All retry behaviors work end-to-end
+          - CloudWatch logs show correct retry flow
+
+        validation:
+          - Schedule retries successfully
+          - Logs match expected format
+
+      - step: 8.3
+        title: Verify migration applied
+        command: cd packages/backend/database-schema && pnpm db:push
+        action: |
+          Apply migration to test database and verify:
+          - All 4 columns added successfully
+          - Index created on next_retry_at
+          - Check constraint on max_retries works
+          - Existing schedules have default values
+
+        acceptance_criteria:
+          - AC1: Migration adds columns correctly
+          - No data loss or corruption
+
+        validation:
+          - Query database to confirm schema
+          - Rollback migration and re-apply to test idempotency
+
+    deliverables:
+      - All tests passing
+      - Manual validation complete
+      - Migration verified
+
+    dependencies:
+      - phase_7_integration_tests
+
+acceptance_criteria_mapping:
+
+  AC1_database_migration:
+    phase: phase_1_schema
+    steps: [1.1, 1.2, 1.3]
+    validation: Migration adds 4 columns and index
+
+  AC2_failed_schedule_query:
+    phase: phase_4_repository
+    steps: [4.1]
+    validation: Query includes failed schedules ready for retry
+
+  AC3_exponential_backoff:
+    phase: phase_3_retry_utility
+    steps: [3.1]
+    validation: calculateNextRetryAt returns correct times
+
+  AC4_retry_logging:
+    phase: phase_5_cron_logic
+    steps: [5.1, 5.2]
+    validation: CloudWatch logs show retry attempts
+
+  AC5_max_retries:
+    phase: phase_5_cron_logic
+    steps: [5.1]
+    validation: Retry stops after max attempts
+
+  AC6_successful_retry:
+    phase: phase_5_cron_logic
+    steps: [5.2]
+    validation: Status = 'applied', next_retry_at cleared
+
+  AC7_configurable_max_retries:
+    phase: phase_3_retry_utility
+    steps: [3.2]
+    validation: FLAG_SCHEDULE_MAX_RETRIES env var works
+
+  AC8_unit_tests:
+    phase: phase_6_unit_tests
+    steps: [6.1, 6.2]
+    validation: 5+ unit tests pass
+
+  AC9_integration_tests:
+    phase: phase_7_integration_tests
+    steps: [7.1, 7.2, 7.3]
+    validation: 3+ integration tests pass
+
+  AC10_edge_cases:
+    phase: phase_7_integration_tests
+    steps: [7.4, 7.5]
+    validation: Concurrent retries and custom max_retries tested
+
+risks:
+  - risk: Migration must run before cron job deployment
+    mitigation: Add CI/CD migration step, deployment notes
+    severity: high
+
+  - risk: Cron timing delay (up to 60s after next_retry_at)
+    mitigation: Acceptable for retry use case, document in comments
+    severity: low
+
+  - risk: Retry backlog may exhaust 100-schedule limit
+    mitigation: Prioritize retries in query ordering
+    severity: medium
+
+estimated_total_time: 5 hours
+
+rollback_plan:
+  - Revert cron job changes to WISH-2119 version
+  - Rollback database migration
+  - Remove retry utility functions
+  - Revert repository changes
+
+deployment_notes:
+  - Run migration before deploying Lambda
+  - Monitor CloudWatch logs for retry attempts
+  - Verify FLAG_SCHEDULE_MAX_RETRIES env var set in Lambda config
+  - Test retry flow in staging before production
+
+follow_up_stories:
+  - Exponential backoff cap (60 minutes max delay)
+  - Retry metrics dashboard
+  - Retry alerting (SNS on max retries exceeded)
+  - Custom retry policies per schedule

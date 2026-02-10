@@ -6,6 +6,7 @@
  *
  * Story wish-2001: Wishlist Gallery MVP
  * Story wish-2002: Add Item Flow
+ * Story SETS-MVP-002: Collection View
  */
 
 import { z } from 'zod'
@@ -22,6 +23,7 @@ import { store } from './store'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { AddItemPage } from './pages/AddItemPage'
+import { CollectionPage } from './pages/CollectionPage'
 
 /**
  * Module props schema - validated at runtime
@@ -64,7 +66,13 @@ function createAppRouter(className?: string) {
     component: AddItemPage,
   })
 
-  const routeTree = rootRoute.addChildren([indexRoute, addRoute])
+  const collectionRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/collection',
+    component: CollectionPage,
+  })
+
+  const routeTree = rootRoute.addChildren([indexRoute, addRoute, collectionRoute])
 
   return createRouter({
     routeTree,

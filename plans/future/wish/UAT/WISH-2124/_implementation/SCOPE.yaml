@@ -1,0 +1,27 @@
+schema: 1
+story_id: WISH-2124
+timestamp: "2026-02-08T11:10:00Z"
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "packages/backend/**"
+  - "apps/api/**"
+  - "packages/core/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true
+  security: false
+  performance: true
+
+summary: "Migrate feature flag caching from in-memory Map to Redis infrastructure for distributed Lambda instances"

@@ -1,0 +1,29 @@
+schema: 1
+story_id: "WISH-2119"
+timestamp: "2026-02-08T17:40:00Z"
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "apps/api/lego-api/domains/config/**"
+  - "apps/api/lego-api/jobs/**"
+  - "packages/backend/database-schema/src/schema/**"
+  - "packages/backend/database-schema/src/migrations/**"
+  - "packages/core/api-client/src/schemas/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Backend-only flag scheduling infrastructure with admin API endpoints, cron job, and DB migration"

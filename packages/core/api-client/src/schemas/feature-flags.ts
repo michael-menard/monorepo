@@ -132,3 +132,73 @@ export const WishlistFlagKeys = {
 } as const
 
 export type WishlistFlagKey = (typeof WishlistFlagKeys)[keyof typeof WishlistFlagKeys]
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature Flag Schedule Schemas (WISH-2119 - AC11, AC13)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Schedule status enum
+ */
+export const ScheduleStatusSchema = z.enum(['pending', 'applied', 'failed', 'cancelled'])
+
+export type ScheduleStatus = z.infer<typeof ScheduleStatusSchema>
+
+/**
+ * Schedule updates object - specifies which flag properties to update
+ * At least one property is required
+ */
+export const ScheduleUpdatesSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    rolloutPercentage: z.number().int().min(0).max(100).optional(),
+  })
+  .refine(data => data.enabled !== undefined || data.rolloutPercentage !== undefined, {
+    message: 'At least one update property (enabled or rolloutPercentage) is required',
+  })
+
+export type ScheduleUpdates = z.infer<typeof ScheduleUpdatesSchema>
+
+/**
+ * POST /api/admin/flags/:flagKey/schedule request body
+ */
+export const CreateScheduleRequestSchema = z.object({
+  scheduledAt: z
+    .string()
+    .datetime({ message: 'scheduledAt must be a valid ISO 8601 datetime' })
+    .refine(
+      dateStr => {
+        const scheduledTime = new Date(dateStr)
+        return scheduledTime.getTime() > Date.now()
+      },
+      { message: 'scheduledAt must be in the future' },
+    ),
+  updates: ScheduleUpdatesSchema,
+})
+
+export type CreateScheduleRequest = z.infer<typeof CreateScheduleRequestSchema>
+
+/**
+ * Schedule response (single schedule)
+ */
+export const ScheduleResponseSchema = z.object({
+  id: z.string().uuid(),
+  flagKey: z.string(),
+  scheduledAt: z.string().datetime(), // ISO 8601 for API responses
+  status: ScheduleStatusSchema,
+  updates: z.object({
+    enabled: z.boolean().optional(),
+    rolloutPercentage: z.number().int().min(0).max(100).optional(),
+  }),
+  appliedAt: z.string().datetime().nullable(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string().datetime(),
+})
+
+export type ScheduleResponse = z.infer<typeof ScheduleResponseSchema>
+
+/**
+ * GET /api/admin/flags/:flagKey/schedule response
+ */
+export const ScheduleListResponseSchema = z.array(ScheduleResponseSchema)
+
+export type ScheduleListResponse = z.infer<typeof ScheduleListResponseSchema>

@@ -1,0 +1,93 @@
+### ─────────────────────────────────────────────────────────────────────────
+### Build Status Toggle API Tests (SETS-MVP-004)
+### ─────────────────────────────────────────────────────────────────────────
+
+### Variables
+@baseUrl = http://localhost:3001/api/wishlist
+@userToken = YOUR_TOKEN_HERE
+@ownedItemId = YOUR_OWNED_ITEM_ID_HERE
+@wishlistItemId = YOUR_WISHLIST_ITEM_ID_HERE
+
+### ─────────────────────────────────────────────────────────────────────────
+### Happy Path Tests
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 1: Toggle owned item to 'in_progress' (AC9, AC10)
+### Expected: 200 OK with updated item
+PATCH {{baseUrl}}/{{ownedItemId}}/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "buildStatus": "in_progress"
+}
+
+### Test 2: Toggle owned item to 'completed' (AC9)
+### Expected: 200 OK with updated item
+PATCH {{baseUrl}}/{{ownedItemId}}/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "buildStatus": "completed"
+}
+
+### Test 3: Toggle owned item back to 'not_started' (AC9)
+### Expected: 200 OK with updated item
+PATCH {{baseUrl}}/{{ownedItemId}}/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "buildStatus": "not_started"
+}
+
+### ─────────────────────────────────────────────────────────────────────────
+### Error Cases
+### ─────────────────────────────────────────────────────────────────────────
+
+### Test 4: Attempt toggle on wishlist item (AC11, AC25)
+### Expected: 400 { error: 'INVALID_STATUS', message: 'Build status can only be set on owned items' }
+PATCH {{baseUrl}}/{{wishlistItemId}}/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "buildStatus": "completed"
+}
+
+### Test 5: Invalid buildStatus value
+### Expected: 400 Validation failed
+PATCH {{baseUrl}}/{{ownedItemId}}/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "buildStatus": "invalid_value"
+}
+
+### Test 6: Missing buildStatus field
+### Expected: 400 Validation failed
+PATCH {{baseUrl}}/{{ownedItemId}}/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{}
+
+### Test 7: Non-existent item
+### Expected: 404 NOT_FOUND
+PATCH {{baseUrl}}/00000000-0000-0000-0000-000000000000/build-status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "buildStatus": "completed"
+}
+
+### ─────────────────────────────────────────────────────────────────────────
+### Test Summary
+### ─────────────────────────────────────────────────────────────────────────
+### Total: 7 tests
+### AC Coverage: AC9, AC10, AC11, AC22, AC25, AC27
+### Happy Path: 3 tests (toggle to each valid status)
+### Error Cases: 4 tests (wrong status, invalid value, missing field, not found)

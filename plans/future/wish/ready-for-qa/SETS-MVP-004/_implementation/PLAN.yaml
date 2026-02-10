@@ -1,0 +1,312 @@
+schema: 1
+story_id: "SETS-MVP-004"
+timestamp: "2026-02-08T15:30:00Z"
+
+steps:
+  - id: 1
+    description: "Update Zod schema to add optional buildStatus field to UpdateWishlistItemInput"
+    files:
+      - "packages/core/api-client/src/schemas/wishlist.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Add updateBuildStatus service method with ownership and status validation"
+    files:
+      - "apps/api/lego-api/domains/wishlist/application/services.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 3
+    description: "Add PATCH /:id route handler for buildStatus updates"
+    files:
+      - "apps/api/lego-api/domains/wishlist/routes.ts"
+    dependencies: [2]
+    slice: backend
+
+  - id: 4
+    description: "Update wishlist types with buildStatus error codes"
+    files:
+      - "apps/api/lego-api/domains/wishlist/types.ts"
+    dependencies: []
+    slice: backend
+
+  - id: 5
+    description: "Create .http test file for buildStatus toggle scenarios"
+    files:
+      - "apps/api/lego-api/domains/wishlist/__http__/build-status.http"
+    dependencies: [3]
+    slice: backend
+
+  - id: 6
+    description: "Add updateBuildStatus RTK Query mutation endpoint"
+    files:
+      - "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 7
+    description: "Create BuildStatusToggle component with optimistic updates"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/index.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/__types__/index.ts"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 8
+    description: "Add celebration animation component with prefers-reduced-motion support"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/CelebrationAnimation.tsx"
+    dependencies: [7]
+    slice: frontend
+
+  - id: 9
+    description: "Integrate BuildStatusToggle into CollectionCard component"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/CollectionCard/index.tsx"
+    dependencies: [7]
+    slice: frontend
+
+  - id: 10
+    description: "Create unit tests for BuildStatusToggle component"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/__tests__/BuildStatusToggle.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 11
+    description: "Create E2E test for build status toggle with live API"
+    files:
+      - "apps/web/playwright/features/wishlist/build-status-toggle.feature"
+      - "apps/web/playwright/steps/build-status-toggle.steps.ts"
+    dependencies: [9]
+    slice: frontend
+
+files_to_change:
+  - path: "packages/core/api-client/src/schemas/wishlist.ts"
+    action: modify
+    reason: "Add optional buildStatus field to UpdateWishlistItemInputSchema per AC26"
+
+  - path: "apps/api/lego-api/domains/wishlist/application/services.ts"
+    action: modify
+    reason: "Add updateBuildStatus service method per AC21-22"
+
+  - path: "apps/api/lego-api/domains/wishlist/routes.ts"
+    action: modify
+    reason: "Add PATCH /:id route handler per AC23-24"
+
+  - path: "apps/api/lego-api/domains/wishlist/types.ts"
+    action: modify
+    reason: "Add buildStatus error codes per AC25"
+
+  - path: "apps/api/lego-api/domains/wishlist/__http__/build-status.http"
+    action: create
+    reason: "Backend test scenarios per AC27"
+
+  - path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    action: modify
+    reason: "Add updateBuildStatus mutation endpoint with optimistic updates per AC28"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/index.tsx"
+    action: create
+    reason: "Main toggle component per AC1-8, AC12-14, AC18-20"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/__types__/index.ts"
+    action: create
+    reason: "Component-local Zod schemas for props validation"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/CelebrationAnimation.tsx"
+    action: create
+    reason: "Celebration animation per AC15-17, AC29"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/CollectionCard/index.tsx"
+    action: modify
+    reason: "Integrate BuildStatusToggle into collection cards per AC1"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/BuildStatusToggle/__tests__/BuildStatusToggle.test.tsx"
+    action: create
+    reason: "Unit tests for toggle component"
+
+  - path: "apps/web/playwright/features/wishlist/build-status-toggle.feature"
+    action: create
+    reason: "E2E test scenarios per ADR-006"
+
+  - path: "apps/web/playwright/steps/build-status-toggle.steps.ts"
+    action: create
+    reason: "Step definitions for E2E tests"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/api-client"
+    when: "after schema changes in packages/core/api-client"
+    required: true
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after schema changes"
+    required: true
+
+  - command: "pnpm check-types --filter lego-api"
+    when: "after backend changes"
+    required: true
+
+  - command: "pnpm test --filter lego-api"
+    when: "after backend changes"
+    required: false
+
+  - command: "pnpm check-types --filter app-wishlist-gallery"
+    when: "after frontend changes"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery"
+    when: "after frontend component changes"
+    required: true
+
+  - command: "pnpm playwright test build-status-toggle --project legacy"
+    when: "after E2E test creation"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "E2E test: BuildStatusToggle renders on collection cards"
+    evidence_type: test
+
+  - ac_id: "AC2"
+    planned_evidence: "Unit test: Toggle shows current state labels"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "Unit test: Toggle has distinct visual states"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Unit test: Built state has checkmark icon and success color"
+    evidence_type: test
+
+  - ac_id: "AC5"
+    planned_evidence: "Unit test: In Pieces state has box icon and neutral color"
+    evidence_type: test
+
+  - ac_id: "AC6"
+    planned_evidence: "E2E test: Single click toggles state immediately"
+    evidence_type: test
+
+  - ac_id: "AC7"
+    planned_evidence: "Unit test: Keyboard Enter/Space triggers toggle"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "Unit test: Toggle has ARIA role=switch and aria-checked"
+    evidence_type: test
+
+  - ac_id: "AC9"
+    planned_evidence: "HTTP test: PATCH /wishlist/:id accepts buildStatus"
+    evidence_type: http
+
+  - ac_id: "AC10"
+    planned_evidence: "HTTP test: API validates status='owned' before update"
+    evidence_type: http
+
+  - ac_id: "AC11"
+    planned_evidence: "HTTP test: Returns 400 on wishlist item toggle attempt"
+    evidence_type: http
+
+  - ac_id: "AC12"
+    planned_evidence: "Unit test: UI updates immediately on click"
+    evidence_type: test
+
+  - ac_id: "AC13"
+    planned_evidence: "Unit test: On API error, reverts to previous state"
+    evidence_type: test
+
+  - ac_id: "AC14"
+    planned_evidence: "Unit test: Shows error toast on revert"
+    evidence_type: test
+
+  - ac_id: "AC15"
+    planned_evidence: "Unit test: Celebration animation shows when toggling to Built"
+    evidence_type: test
+
+  - ac_id: "AC16"
+    planned_evidence: "Manual: Animation is subtle confetti burst"
+    evidence_type: manual
+
+  - ac_id: "AC17"
+    planned_evidence: "Unit test: Animation respects prefers-reduced-motion"
+    evidence_type: test
+
+  - ac_id: "AC18"
+    planned_evidence: "E2E test: Toast appears after toggle"
+    evidence_type: test
+
+  - ac_id: "AC19"
+    planned_evidence: "E2E test: Toast includes Undo action"
+    evidence_type: test
+
+  - ac_id: "AC20"
+    planned_evidence: "E2E test: Undo reverts to previous state"
+    evidence_type: test
+
+  - ac_id: "AC21"
+    planned_evidence: "File: services.ts has updateBuildStatus method"
+    evidence_type: file
+
+  - ac_id: "AC22"
+    planned_evidence: "HTTP test: Service validates ownership and status='owned'"
+    evidence_type: http
+
+  - ac_id: "AC23"
+    planned_evidence: "File: routes.ts has PATCH /:id handler"
+    evidence_type: file
+
+  - ac_id: "AC24"
+    planned_evidence: "Code review: Route handler delegates to service layer"
+    evidence_type: manual
+
+  - ac_id: "AC25"
+    planned_evidence: "HTTP test: Error response has error code and message"
+    evidence_type: http
+
+  - ac_id: "AC26"
+    planned_evidence: "File: UpdateWishlistItemInputSchema includes buildStatus field"
+    evidence_type: file
+
+  - ac_id: "AC27"
+    planned_evidence: "File: build-status.http has test scenarios"
+    evidence_type: file
+
+  - ac_id: "AC28"
+    planned_evidence: "Code review: RTK Query mutation uses onQueryStarted pattern"
+    evidence_type: manual
+
+  - ac_id: "AC29"
+    planned_evidence: "Unit test: Animation respects prefers-reduced-motion"
+    evidence_type: test
+
+  - ac_id: "AC30"
+    planned_evidence: "Manual: Toast duration verified (success 5000ms, error 7000ms)"
+    evidence_type: manual
+
+  - ac_id: "AC31"
+    planned_evidence: "Unit test: Optimistic update reverts on error without retry"
+    evidence_type: test
+
+  - ac_id: "AC32"
+    planned_evidence: "Unit test: Toggle disabled during API request"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "buildStatus column already exists from SETS-MVP-0310 - no migration needed"
+  - "Reuse optimistic update pattern from WISH-2005b (reorder) and WISH-2032 (form submission)"
+  - "Service layer must validate status='owned' per Ports & Adapters architecture"
+  - "Route handler acts as thin adapter - delegates to service layer"
+  - "E2E test required per ADR-006 - must use live API (playwright.legacy.config.ts)"
+  - "Celebration animation is nice-to-have but included per AC15-17"
+  - "Toast duration: success 5000ms, error 7000ms per AC30"
+  - "No auto-retry on error per AC31 - user retries manually via UI"

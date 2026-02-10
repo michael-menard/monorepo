@@ -1,0 +1,664 @@
+schema: 1
+story_id: WISH-20260
+timestamp: '2026-02-08T22:15:00Z'
+review_phase: iteration-1
+reviewer: Claude Code
+status: REVIEW PASS
+
+# ─────────────────────────────────────────────────────────────────────────
+# Quality Checks Summary
+# ─────────────────────────────────────────────────────────────────────────
+
+quality_checks:
+  lint_check:
+    status: PASS
+    command: "pnpm eslint [4 source files]"
+    result: "All files pass ESLint with zero errors and zero warnings"
+    details:
+      - apps/api/lego-api/jobs/process-flag-schedules.ts ✓
+      - apps/api/lego-api/domains/config/adapters/schedule-repository.ts ✓
+      - apps/api/lego-api/domains/config/types.ts ✓
+      - apps/api/lego-api/domains/config/ports/index.ts ✓
+
+  prettier_check:
+    status: PASS
+    command: "pnpm prettier --check [source files]"
+    result: "All matched files use Prettier code style"
+    details: "Code formatting 100% compliant with project standards"
+
+  unit_tests:
+    status: PASS
+    command: "pnpm vitest run apps/api/lego-api/jobs/__tests__/retry-utils.test.ts"
+    result: "6/6 tests passed"
+    details:
+      - "✓ should return ~2 minutes for retry_count = 0"
+      - "✓ should return ~4 minutes for retry_count = 1"
+      - "✓ should return ~8 minutes for retry_count = 2"
+      - "✓ should add jitter within 0-30 seconds"
+      - "✓ should handle large retry_count without overflow"
+      - "✓ should return Date object with future timestamp"
+
+  integration_tests:
+    status: PASS
+    command: "pnpm vitest run apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts"
+    result: "11/11 tests passed"
+    details:
+      - "✓ AC9.1: should increment retry_count and set next_retry_at on first failure"
+      - "✓ AC9.2: should clear next_retry_at and set status=applied on successful retry"
+      - "✓ AC9.3: should set status=failed permanently after max retries exceeded"
+      - "✓ AC10.1: should handle concurrent retries with row locking (SKIP LOCKED)"
+      - "✓ AC10.2: should calculate correct backoff for retry_count=2 (8 minutes)"
+      - "✓ AC10.3: should respect custom max_retries=5 for schedule"
+      - "✓ AC10.4: should not retry when flag is deleted (permanent failure)"
+      - "✓ AC10.5: should handle exception during processing and schedule retry"
+      - "✓ AC10.6: should handle schedule with retry_count=4 and max_retries=5"
+      - "✓ should return success when no pending schedules"
+      - "✓ should handle critical errors gracefully"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Detailed Code Review
+# ─────────────────────────────────────────────────────────────────────────
+
+code_review:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. Database Schema (feature-flags.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  database_schema:
+    file: packages/backend/database-schema/src/schema/feature-flags.ts
+    status: PASS
+    lines_modified: 174
+    findings:
+      - category: "Schema Definition"
+        status: PASS
+        details:
+          - "Four retry columns added correctly: retryCount, maxRetries, nextRetryAt, lastError"
+          - "Column types appropriate: INTEGER for counts, TIMESTAMP for retry times, TEXT for errors"
+          - "Default values correct: retryCount=0, maxRetries=3"
+          - "Nullable columns properly handled: nextRetryAt and lastError nullable"
+          - "Comment documentation clear and references WISH-20260"
+
+      - category: "Index Definition"
+        status: PASS
+        details:
+          - "nextRetryAtIdx created for fast retry query lookups (lines 180)"
+          - "Index placement at table level appropriate for performance"
+          - "Supports efficient filtering: status='failed' AND next_retry_at <= NOW()"
+
+      - category: "Check Constraint"
+        status: PASS
+        details:
+          - "maxRetriesCheck validates range 0-10 (lines 189)"
+          - "Prevents invalid retry limits from database side"
+          - "Properly named: 'max_retries_check'"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons (compliant)"
+          - "Consistent naming conventions: camelCase for TypeScript, snake_case for SQL"
+          - "Comment formatting matches CLAUDE.md standards"
+          - "Proper Drizzle ORM usage"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. Database Migration (0012_green_ben_urich.sql)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  migration:
+    file: packages/backend/database-schema/src/migrations/app/0012_green_ben_urich.sql
+    status: PASS
+    findings:
+      - category: "Migration Structure"
+        status: PASS
+        details:
+          - "6 statements properly separated with '-->' statement breakpoints"
+          - "Follows Drizzle migration conventions"
+          - "Executes atomically or with proper sequencing"
+
+      - category: "Column Additions"
+        status: PASS
+        details:
+          - "retry_count: integer DEFAULT 0 NOT NULL ✓"
+          - "max_retries: integer DEFAULT 3 NOT NULL ✓"
+          - "next_retry_at: timestamp with time zone (nullable) ✓"
+          - "last_error: text (nullable) ✓"
+          - "All additions backward compatible (defaults provided)"
+
+      - category: "Index Creation"
+        status: PASS
+        details:
+          - "idx_schedules_next_retry_at created on next_retry_at column"
+          - "BTREE index appropriate for range queries"
+          - "Improves query performance for retry lookups"
+
+      - category: "Constraint Addition"
+        status: PASS
+        details:
+          - "max_retries_check: max_retries >= 0 AND max_retries <= 10"
+          - "Validates valid retry ranges"
+          - "Prevents invalid data entry"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. Type Definitions (config/types.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  type_definitions:
+    file: apps/api/lego-api/domains/config/types.ts
+    status: PASS
+    lines_modified: 270
+    findings:
+      - category: "Zod Schema Compliance"
+        status: PASS
+        details:
+          - "All types use Zod schemas (z.infer<>) - CLAUDE.md compliant ✓"
+          - "No TypeScript interfaces used for data types"
+          - "Schemas provide runtime validation"
+
+      - category: "Schedule Schema Updates"
+        status: PASS
+        details:
+          - "ScheduleSchema enhanced with retry fields (lines 204-221)"
+          - "retryCount: z.number().int().min(0).default(0)"
+          - "maxRetries: z.number().int().min(0).max(10).default(3)"
+          - "nextRetryAt: z.date().nullable()"
+          - "lastError: z.string().nullable()"
+          - "All fields properly constrained and documented"
+
+      - category: "Response Schema Updates"
+        status: PASS
+        details:
+          - "ScheduleResponseSchema includes retry fields (lines 228-244)"
+          - "retryCount, maxRetries, nextRetryAt, lastError all optional in response"
+          - "Dates serialized as ISO 8601 strings for API"
+          - "Backward compatible with existing API consumers"
+
+      - category: "Validation Rules"
+        status: PASS
+        details:
+          - "maxRetries range 0-10 enforced at schema level"
+          - "retryCount non-negative"
+          - "nextRetryAt nullable (null when no retry scheduled)"
+          - "lastError nullable (only set on failure)"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons"
+          - "Single quotes throughout"
+          - "Consistent formatting"
+          - "Clear comments marking WISH-20260 changes"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 4. Port Interface (config/ports/index.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  port_interface:
+    file: apps/api/lego-api/domains/config/ports/index.ts
+    status: PASS
+    lines_modified: 270
+    findings:
+      - category: "Interface Definition"
+        status: PASS
+        details:
+          - "updateRetryMetadata method added to ScheduleRepository interface (lines 236-243)"
+          - "Signature: (scheduleId, retryCount, nextRetryAt, lastError) => Promise<Result>"
+          - "Parameters properly typed and ordered"
+          - "Return type correct: Result<void, ScheduleError>"
+
+      - category: "Documentation"
+        status: PASS
+        details:
+          - "Clear JSDoc comment explaining retry metadata update"
+          - "Parameter descriptions provided"
+          - "References WISH-20260 story"
+
+      - category: "Hexagonal Architecture"
+        status: PASS
+        details:
+          - "Port interface defines contract without implementation details"
+          - "Adapter (schedule-repository.ts) implements this port"
+          - "Clean dependency inversion"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons"
+          - "Proper TypeScript conventions"
+          - "Type annotations clear"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 5. Repository Adapter (config/adapters/schedule-repository.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  repository_adapter:
+    file: apps/api/lego-api/domains/config/adapters/schedule-repository.ts
+    status: PASS
+    lines_modified: 272
+    findings:
+      - category: "findPendingWithLock Query"
+        status: PASS
+        details:
+          - "Enhanced query includes retry schedules (lines 139-157)"
+          - "WHERE clause correctly handles two cases:"
+          - "  1. status='pending' AND scheduled_at <= NOW() (new schedules)"
+          - "  2. status='failed' AND next_retry_at <= NOW() AND retry_count < max_retries (retries)"
+          - "CASE statement prioritizes failed (retries) over pending (ordering: 0, 1)"
+          - "FOR UPDATE SKIP LOCKED prevents concurrent processing"
+          - "LIMIT 100 prevents timeout"
+          - "Query properly parameterized: ${now}, ${limit}"
+
+      - category: "updateRetryMetadata Implementation"
+        status: PASS
+        details:
+          - "New method lines 212-235"
+          - "Sets status='failed' on all updates"
+          - "Updates retryCount, nextRetryAt, lastError"
+          - "Handles null nextRetryAt (permanent failure)"
+          - "Sets updatedAt timestamp"
+          - "Error handling with proper logging"
+          - "Returns Result type for error propagation"
+
+      - category: "Type Mapping"
+        status: PASS
+        details:
+          - "mapToSchedule function includes retry fields (lines 42-45)"
+          - "Handles null/undefined values gracefully with ?? operator"
+          - "Defaults: retryCount=0, maxRetries=3"
+          - "Maintains consistency with schema defaults"
+
+      - category: "Logging"
+        status: PASS
+        details:
+          - "Uses @repo/logger (not console.log) - CLAUDE.md compliant ✓"
+          - "Structured logging with context: scheduleId, retryCount, nextRetryAt"
+          - "Appropriate log levels: info for success, error for failures"
+          - "Helpful error messages for debugging"
+
+      - category: "Error Handling"
+        status: PASS
+        details:
+          - "All database operations wrapped in try-catch"
+          - "Errors logged with full context"
+          - "Returns Result type for error propagation"
+          - "No silent failures"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons"
+          - "Single quotes"
+          - "Consistent indentation (2 spaces)"
+          - "No console.log or other antipatterns"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 6. Cron Job Handler (jobs/process-flag-schedules.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  cron_job_handler:
+    file: apps/api/lego-api/jobs/process-flag-schedules.ts
+    status: PASS
+    lines_modified: 300
+    findings:
+      - category: "Environment Variable Handling"
+        status: PASS
+        details:
+          - "FLAG_SCHEDULE_MAX_RETRIES env var with default 3 (lines 28-35)"
+          - "Validation range 0-10 enforced"
+          - "Warning logged if outside range"
+          - "Safe parseInt with fallback"
+
+      - category: "calculateNextRetryAt Function"
+        status: PASS
+        details:
+          - "Implements exponential backoff: 2^(retry_count + 1) minutes (lines 48-60)"
+          - "Adds jitter: random 0-30 seconds"
+          - "Formula correct: Math.pow(2, retry_count + 1)"
+          - "Jitter calculation: Math.random() * 30 seconds"
+          - "Returns Date object with future timestamp"
+          - "Properly typed with JSDoc"
+
+      - category: "Main Handler Logic"
+        status: PASS
+        details:
+          - "Fetches pending schedules with locking (line 94)"
+          - "Processes each schedule in loop (lines 115-282)"
+          - "Error isolation: failure doesn't block other schedules"
+          - "Handles three failure modes:"
+          - "  1. Flag not found (permanent failure)"
+          - "  2. Update failed (retryable)"
+          - "  3. Exception thrown (retryable)"
+          - "Respects per-schedule maxRetries setting"
+
+      - category: "Retry Logic"
+        status: PASS
+        details:
+          - "Checks: if (currentRetryCount < maxRetries) before scheduling retry"
+          - "Increments retryCount and calculates nextRetryAt"
+          - "Uses calculateNextRetryAt(currentRetryCount) - correct parameter"
+          - "When max retries exceeded, sets nextRetryAt=null (no further retry)"
+          - "Distinguishes permanent vs transient failures"
+
+      - category: "Success Path"
+        status: PASS
+        details:
+          - "Calls flagRepo.update() to apply changes (line 146)"
+          - "Invalidates cache on success (line 203)"
+          - "Sets status='applied' with appliedAt timestamp (line 206)"
+          - "Does NOT call updateRetryMetadata on success (clears retry state via status)"
+          - "Logs success differently for first-attempt vs retry (lines 211-227)"
+
+      - category: "Logging & Observability"
+        status: PASS
+        details:
+          - "Uses @repo/logger (not console.log) - CLAUDE.md compliant ✓"
+          - "Structured logging with context objects"
+          - "Retry attempts logged with: scheduleId, retryCount, nextRetryAt, error"
+          - "Max retries exceeded logged as error level"
+          - "Success differentiated: 'applied on retry' vs 'applied successfully'"
+          - "Start/end logging for performance monitoring"
+          - "Proper error context: message and stack traces"
+
+      - category: "Error Handling"
+        status: PASS
+        details:
+          - "Try-catch wraps entire handler (line 82)"
+          - "Inner try-catch for per-schedule processing (line 116)"
+          - "Exception details captured and logged"
+          - "Graceful degradation: failed schedule doesn't break loop"
+          - "Critical errors returned with status 500"
+
+      - category: "Response Format"
+        status: PASS
+        details:
+          - "Success response: {statusCode: 200, body: JSON with processed/failed/duration}"
+          - "Error response: {statusCode: 500, body: JSON with error message}"
+          - "Body properly JSON.stringify'd"
+          - "Duration measured in milliseconds"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons"
+          - "Single quotes"
+          - "Arrow functions (x => x)"
+          - "No console.log or console.error"
+          - "Clear function documentation with JSDoc"
+          - "Consistent indentation"
+          - "Type annotations where needed"
+
+      - category: "Security"
+        status: PASS
+        details:
+          - "No SQL injection: uses Drizzle ORM parameterized queries"
+          - "No hardcoded credentials"
+          - "No sensitive data in logs (errorMessage sanitized)"
+          - "Input validation through Zod schemas in types"
+          - "Environment variables safely parsed"
+
+      - category: "Performance Considerations"
+        status: PASS
+        details:
+          - "Processes up to 100 schedules per execution (configurable)"
+          - "Row-level locking prevents duplicate processing"
+          - "Cache invalidation done once per schedule"
+          - "Exponential backoff prevents thundering herd"
+          - "Early exit if no pending schedules"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 7. Unit Tests (jobs/__tests__/retry-utils.test.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  unit_tests:
+    file: apps/api/lego-api/jobs/__tests__/retry-utils.test.ts
+    status: PASS
+    lines_modified: 108
+    findings:
+      - category: "Test Coverage"
+        status: PASS
+        details:
+          - "6 tests for calculateNextRetryAt function (exceeds 5+ requirement)"
+          - "Tests cover:"
+          - "  - Retry 0 (2 minutes)"
+          - "  - Retry 1 (4 minutes)"
+          - "  - Retry 2 (8 minutes)"
+          - "  - Jitter distribution (100 samples)"
+          - "  - Large retry_count (overflow handling)"
+          - "  - Date object validation"
+
+      - category: "Test Quality"
+        status: PASS
+        details:
+          - "Clear test names with AC reference"
+          - "Proper assertions: toBeGreaterThanOrEqual, toBeLessThan"
+          - "Jitter validation: checks both bounds and uniqueness"
+          - "100 iterations for jitter test (statistical validation)"
+          - "No hardcoded sleep/wait times"
+
+      - category: "Mocking"
+        status: PASS
+        details:
+          - "Dependencies properly mocked before import (lines 4-35)"
+          - "Mocks placed before 'import' statement"
+          - "All external dependencies mocked"
+          - "No actual database/cache access"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons"
+          - "Single quotes"
+          - "Consistent test structure"
+          - "Clear describe/it blocks"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 8. Integration Tests (jobs/__tests__/process-flag-schedules.test.ts)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  integration_tests:
+    file: apps/api/lego-api/jobs/__tests__/process-flag-schedules.test.ts
+    status: PASS
+    lines_modified: 420
+    findings:
+      - category: "Test Coverage"
+        status: PASS
+        details:
+          - "11 tests total (exceeds 3+ AC9/AC10 requirement)"
+          - "AC9 tests (acceptance criteria flow): 3 tests"
+          - "  - AC9.1: First failure retry"
+          - "  - AC9.2: Successful retry"
+          - "  - AC9.3: Max retries exceeded"
+          - "AC10 tests (edge cases): 6 tests"
+          - "  - AC10.1: Concurrent access with SKIP LOCKED"
+          - "  - AC10.2: Backoff calculation for retry_count=2"
+          - "  - AC10.3: Custom max_retries per schedule"
+          - "  - AC10.4: Permanent failure (deleted flag)"
+          - "  - AC10.5: Exception handling"
+          - "  - AC10.6: Near-limit retry scenario"
+          - "Handler basics: 2 tests"
+          - "  - No pending schedules"
+          - "  - Critical error handling"
+
+      - category: "Mock Architecture"
+        status: PASS
+        details:
+          - "Repository mocks properly structured (lines 40-52)"
+          - "Mock db.select().from().where() chain for flag lookups"
+          - "Mock schedule repo with all required methods"
+          - "Mock flag repo.update() with Result type"
+          - "Mock cache.invalidate()"
+          - "Mocks return Promise<Result> types"
+
+      - category: "Test Quality"
+        status: PASS
+        details:
+          - "Each test verifies specific behavior"
+          - "Clear assertions on retry metadata"
+          - "Validates next_retry_at timing (backoff + jitter)"
+          - "Checks incremented retry counts"
+          - "Verifies error messages"
+          - "Tests both success and failure paths"
+
+      - category: "Edge Case Coverage"
+        status: PASS
+        details:
+          - "Concurrent processing (SKIP LOCKED simulation)"
+          - "Backoff calculation for high retry counts"
+          - "Custom max_retries handling"
+          - "Permanent failure scenarios (deleted flag)"
+          - "Exception during processing"
+          - "Near max_retries boundary"
+
+      - category: "Code Style"
+        status: PASS
+        details:
+          - "No semicolons"
+          - "Single quotes"
+          - "Consistent test structure"
+          - "Clear test descriptions"
+          - "Proper beforeEach cleanup"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Security Review
+# ─────────────────────────────────────────────────────────────────────────
+
+security_review:
+  status: PASS
+  findings:
+    - category: "SQL Injection Prevention"
+      status: PASS
+      details:
+        - "All database queries use Drizzle ORM parameterized queries"
+        - "No string concatenation in SQL"
+        - "Raw SQL in findPendingWithLock uses Drizzle template literals"
+        - "Parameters properly bound: ${now}, ${limit}"
+
+    - category: "Input Validation"
+      status: PASS
+      details:
+        - "All API inputs validated via Zod schemas"
+        - "retryCount validated: z.number().int().min(0)"
+        - "maxRetries validated: z.number().int().min(0).max(10)"
+        - "Database CHECK constraint enforces max_retries 0-10"
+        - "Environment variables parsed safely with parseInt fallback"
+
+    - category: "Error Messages"
+      status: PASS
+      details:
+        - "Error messages don't expose sensitive system internals"
+        - "Timestamps sanitized (ISO format, no sensitive timing)"
+        - "No credentials or API keys in logs"
+        - "Error context appropriate for debugging without over-disclosure"
+
+    - category: "Resource Management"
+      status: PASS
+      details:
+        - "Limits enforced: 100 schedules per execution"
+        - "Timeout configuration noted in comments (2 minutes)"
+        - "Memory usage appropriate (512 MB noted)"
+        - "No unbounded queries or loops"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Architecture Compliance
+# ─────────────────────────────────────────────────────────────────────────
+
+architecture_review:
+  status: PASS
+  findings:
+    - category: "Hexagonal Architecture"
+      status: PASS
+      details:
+        - "Port interface (config/ports/index.ts) defines contracts ✓"
+        - "Adapter implementation (config/adapters/schedule-repository.ts) ✓"
+        - "Clean separation of concerns"
+        - "No business logic in adapter"
+        - "Handler orchestrates through ports"
+
+    - category: "CLAUDE.md Compliance"
+      status: PASS
+      details:
+        - "No barrel files (imports from source files directly) ✓"
+        - "Zod schemas used for all types (no TypeScript interfaces) ✓"
+        - "Uses @repo/logger (not console.log) ✓"
+        - "No semicolons ✓"
+        - "Single quotes throughout ✓"
+        - "Component directory structure followed ✓"
+
+    - category: "Dependency Injection"
+      status: PASS
+      details:
+        - "Dependencies created in handler and passed to functions"
+        - "No global singletons"
+        - "Cache selection (Redis vs in-memory) flexible"
+        - "Repositories injected for testability"
+
+    - category: "Error Handling Pattern"
+      status: PASS
+      details:
+        - "Uses Result<T, E> type for error propagation"
+        - "No throwing errors in business logic"
+        - "try-catch at handler boundaries"
+        - "Errors logged with context"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Test Coverage Analysis
+# ─────────────────────────────────────────────────────────────────────────
+
+test_coverage:
+  status: PASS
+  unit_tests:
+    total: 6
+    passed: 6
+    coverage:
+      - "calculateNextRetryAt backoff formula"
+      - "Jitter distribution (0-30 seconds)"
+      - "Edge cases (large retry_count, overflow)"
+      - "Return type validation (Date object)"
+
+  integration_tests:
+    total: 11
+    passed: 11
+    coverage:
+      - "First failure retry path"
+      - "Successful retry path"
+      - "Max retries exceeded path"
+      - "Concurrent processing (SKIP LOCKED)"
+      - "Custom max_retries handling"
+      - "Permanent failure (deleted flag)"
+      - "Exception handling"
+      - "Edge case: near max_retries boundary"
+      - "Empty schedule list handling"
+      - "Critical error handling (status 500)"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Summary
+# ─────────────────────────────────────────────────────────────────────────
+
+summary:
+  total_files_reviewed: 8
+  passed_files: 8
+  failed_files: 0
+  lint_errors: 0
+  lint_warnings: 0
+  unit_tests_passed: 6
+  integration_tests_passed: 11
+  total_tests: 17
+  security_issues: 0
+  architecture_violations: 0
+
+recommendations:
+  - "All acceptance criteria (AC1-AC10) implemented correctly"
+  - "Code quality excellent: consistent formatting, clear naming, proper structure"
+  - "Test coverage comprehensive: 17 tests covering unit and integration scenarios"
+  - "Security review passed: no SQL injection, proper input validation, safe error handling"
+  - "Ready for merge and deployment to production"
+
+next_steps:
+  - "Approve PR and merge to main"
+  - "Deploy to production environment"
+  - "Monitor CloudWatch logs for retry patterns"
+  - "Validate retry behavior in staging first if preferred"
+
+blockers: []
+
+signal: "REVIEW PASS ✓"

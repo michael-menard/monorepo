@@ -2,7 +2,7 @@ schema: 1
 id: WISH-2022
 feature: wish
 type: feature
-state: uat
+state: blocked
 title: Client-side Image Compression
 points: 3
 priority: null
