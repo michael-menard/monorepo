@@ -21,7 +21,7 @@ All stories use `AUTO-{phase}{story}{variant}` format.
 |--------|-------|
 | completed | 0 |
 | in-progress | 0 |
-| pending | 28 |
+| pending | 32 |
 
 ---
 
@@ -115,6 +115,41 @@ Database schemas, daemon skeleton, state management for autonomous execution.
 **Goal:** Detect and respond to execution problems automatically
 
 **Risk Notes:** Must distinguish "slow" from "stuck"
+
+---
+
+### AUTO-0060: Create Cron/Scheduled Execution
+
+**Status:** pending
+**Depends On:** AUTO-0030, AUTO-0050
+**Phase:** 0
+**Feature:** Enable scheduled execution via cron or built-in scheduler: `auto-dev schedule add "0 8 * * 1-5" plans/future/wint --budget 50` (run at 8am weekdays). Support: cron syntax, launchd plist generation (macOS), systemd timer generation (Linux), built-in scheduler (daemon stays running, triggers at times). Auto-stop at configured end time. Resume next day from where left off.
+**Infrastructure:**
+- Cron expression parser
+- launchd/systemd integration
+- Built-in scheduler mode
+- Schedule persistence
+
+**Goal:** Set it and forget it—runs automatically on schedule
+
+**Risk Notes:** Machine must be awake/powered on for scheduled runs
+
+---
+
+### AUTO-0070: Create Wake-on-Schedule Integration
+
+**Status:** pending
+**Depends On:** AUTO-0060
+**Phase:** 0
+**Feature:** macOS power management integration: schedule wake from sleep before execution start, use `pmset` to configure wake schedule, verify machine will be awake, fallback to caffeinate during execution, graceful handling if wake fails.
+**Infrastructure:**
+- pmset integration
+- Power state detection
+- Wake verification
+
+**Goal:** Machine wakes itself up for scheduled runs
+
+**Risk Notes:** Only works on macOS, requires admin permissions for pmset
 
 ---
 
@@ -414,6 +449,41 @@ Remote pause, resume, abort, and configuration management.
 **Goal:** Control when autonomous execution happens
 
 **Risk Notes:** Timezone handling for remote access
+
+---
+
+### AUTO-3060: Create Emergency Panic Button
+
+**Status:** pending
+**Depends On:** AUTO-2010, AUTO-0030
+**Phase:** 3
+**Feature:** Big red button in dashboard that: immediately kills all agent processes (SIGKILL), stops all LangGraph executions, prevents new work from starting, logs panic event with reason, sends immediate notification. Must work even if dashboard is slow/unresponsive. Add keyboard shortcut (Ctrl+Shift+X). Add CLI command: `auto-dev panic`. Add cost-rate trigger: auto-panic if cost/minute exceeds 10x normal rate.
+**Infrastructure:**
+- Immediate kill endpoint (bypasses graceful shutdown)
+- Process group management
+- Panic event logging
+- Cost-rate anomaly detection
+
+**Goal:** Instant stop when something is burning tokens uncontrollably
+
+**Risk Notes:** Will leave stories in inconsistent state—that's acceptable for emergencies
+
+---
+
+### AUTO-3070: Create Cost Anomaly Detection
+
+**Status:** pending
+**Depends On:** AUTO-0040, WINT-3020
+**Phase:** 3
+**Feature:** Real-time cost monitoring that detects anomalies: cost/minute spike (> 3x normal), single agent consuming > 50% of budget, runaway loop detection (same agent called > 20 times). On anomaly: auto-pause offending session, alert immediately, option to panic or continue.
+**Infrastructure:**
+- Cost rate tracking
+- Anomaly thresholds (configurable)
+- Per-agent cost attribution
+
+**Goal:** Catch token burn before it drains budget
+
+**Risk Notes:** Thresholds need tuning, may false-positive on complex stories
 
 ---
 
