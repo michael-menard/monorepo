@@ -1,0 +1,191 @@
+---
+created: "2026-02-11"
+reason: "KB tools not available during story generation"
+retry_command: "kb_write_story BUGF-003"
+---
+
+# Deferred KB Write: BUGF-003
+
+## Story Record
+
+```sql
+INSERT INTO stories (
+  story_id,
+  feature,
+  title,
+  story_dir,
+  story_file,
+  story_type,
+  points,
+  priority,
+  state,
+  touches_backend,
+  touches_frontend,
+  touches_database,
+  touches_infra
+) VALUES (
+  'BUGF-003',
+  'bug-fix',
+  'Implement Delete API and Edit Page for Sets Gallery',
+  'plans/future/bug-fix/backlog/BUGF-003',
+  'plans/future/bug-fix/backlog/BUGF-003/BUGF-003.md',
+  'bug',
+  5,
+  'critical',
+  'backlog',
+  false,
+  true,
+  false,
+  false
+)
+ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_dir = EXCLUDED.story_dir,
+  story_file = EXCLUDED.story_file,
+  story_type = EXCLUDED.story_type,
+  points = EXCLUDED.points,
+  priority = EXCLUDED.priority,
+  state = EXCLUDED.state,
+  touches_backend = EXCLUDED.touches_backend,
+  touches_frontend = EXCLUDED.touches_frontend,
+  touches_database = EXCLUDED.touches_database,
+  touches_infra = EXCLUDED.touches_infra;
+```
+
+## Extracted Metadata
+
+- **Story ID:** BUGF-003
+- **Feature:** bug-fix
+- **Title:** Implement Delete API and Edit Page for Sets Gallery
+- **Story Type:** bug
+- **Points:** 5
+- **Priority:** critical (P1, Phase 1)
+- **State:** backlog
+- **Surfaces:**
+  - Frontend: Yes (RTK mutations, edit page, routing)
+  - Backend: No (APIs already deployed)
+  - Database: No
+  - Infrastructure: No
+
+## Elaboration Findings (18 entries)
+
+### Non-Blocking Gaps (8 entries)
+
+1. **Undo functionality for delete operation**
+   - Category: future-work
+   - Impact: Low | Effort: Medium
+   - Tags: edge-case, future-work, undo
+   - Finding: Users cannot undo deleted sets. Listed in Non-Goals as "future enhancement, not MVP". Users can re-add deleted sets if needed. Consider implementing as BUGF-031: "Implement Undo for Delete Operations Across Galleries"
+
+2. **Bulk delete operations**
+   - Category: enhancement
+   - Impact: Low | Effort: Medium
+   - Tags: enhancement, power-users
+   - Finding: No multi-select delete capability. Listed in Non-Goals as "single delete only". Useful for cleaning up multiple test sets at once. Consider as future enhancement for power users.
+
+3. **Real-time conflict detection**
+   - Category: edge-case
+   - Impact: Low | Effort: High
+   - Tags: edge-case, concurrent-edit, websocket
+   - Finding: No detection if set edited by another session. Listed in Non-Goals. Edge case - single user typically only has one active session. Would require WebSocket infrastructure.
+
+4. **Audit log of changes**
+   - Category: observability
+   - Impact: Low | Effort: Medium
+   - Tags: observability, audit-log, tracking
+   - Finding: No audit trail for set metadata changes. Listed in Non-Goals. Useful for tracking what changed and when, but not critical for MVP. Could be addressed as part of broader audit logging feature.
+
+5. **Image reordering in edit page**
+   - Category: ux-polish
+   - Impact: Medium | Effort: Medium
+   - Tags: ux-polish, images, drag-drop
+   - Finding: Images can be deleted via existing delete image API but not reordered. Users can delete and re-upload to change order, but not ideal UX.
+
+6. **Duplicate set number validation**
+   - Category: edge-case
+   - Impact: Low | Effort: Low
+   - Tags: edge-case, validation, client-side
+   - Finding: No client-side warning for duplicate set numbers. Listed in Non-Goals as "backend concern". Frontend could add client-side warning before submission. Backend should handle authoritative validation.
+
+7. **Unified image upload flow**
+   - Category: future-work
+   - Impact: Low | Effort: Low
+   - Tags: future-work, consistency, refactor
+   - Finding: Edit page image upload flow differs from add page. Listed in Non-Goals as "keep separate for now". Potential to unify the two flows for consistency, but requires refactoring both pages.
+
+8. **Wishlist to Set conversion**
+   - Category: integration
+   - Impact: Medium | Effort: High
+   - Tags: integration, future-work, user-journey
+   - Finding: No conversion from wishlist item to set. Listed in Non-Goals as "separate feature". Common user journey (wishlist → purchase → set) currently requires manual data entry. Consider as BUGF-032: "Implement Wishlist to Set Conversion Flow"
+
+### Enhancement Opportunities (10 entries)
+
+9. **Optimistic updates for update mutation**
+   - Category: performance
+   - Impact: Medium | Effort: Low
+   - Tags: performance, optimization, rtk-query
+   - Finding: Story implements optimistic update for delete (AC-3, AC-28) but not for update mutation. Could improve perceived performance by optimistically updating detail page during save.
+
+10. **Auto-save draft functionality**
+    - Category: ux-polish
+    - Impact: Medium | Effort: Medium
+    - Tags: ux-polish, enhancement, local-storage
+    - Finding: Currently relies on browser "unsaved changes" warning. Could implement localStorage-based auto-save to preserve work across browser crashes or accidental closes.
+
+11. **Keyboard shortcut for save (Cmd/Ctrl+S)**
+    - Category: ux-polish
+    - Impact: Low | Effort: Low
+    - Tags: ux-polish, keyboard, a11y
+    - Finding: Edit page could capture Cmd+S / Ctrl+S to save instead of browser save dialog. Small UX improvement for power users.
+
+12. **Field-level validation feedback during typing**
+    - Category: ux-polish
+    - Impact: Low | Effort: Medium
+    - Tags: ux-polish, validation, real-time
+    - Finding: Story specifies "inline validation on blur". Real-time validation feedback (e.g., "Set number must be 5 digits") could improve UX but may be distracting.
+
+13. **Change preview before saving**
+    - Category: ux-polish
+    - Impact: Low | Effort: High
+    - Tags: ux-polish, diff, preview
+    - Finding: Show diff of what changed before committing update. Useful for large edits but adds UI complexity.
+
+14. **Batch edit functionality**
+    - Category: future-work
+    - Impact: High | Effort: High
+    - Tags: future-work, bulk-operations, power-users
+    - Finding: Edit multiple sets at once (e.g., change theme for 10 sets). Significant feature requiring new UI paradigm.
+
+15. **Edit history / version control**
+    - Category: observability
+    - Impact: Medium | Effort: High
+    - Tags: observability, audit-log, versioning
+    - Finding: Track all edits with ability to revert to previous version. Requires audit log infrastructure (see Gap #4).
+
+16. **Mobile-optimized edit page layout**
+    - Category: ux-polish
+    - Impact: Medium | Effort: Medium
+    - Tags: ux-polish, mobile, responsive
+    - Finding: Story specifies responsive layout ("stack vertically on mobile") but may benefit from mobile-specific optimizations for smaller screens.
+
+17. **Duplicate set functionality**
+    - Category: future-work
+    - Impact: Medium | Effort: Low
+    - Tags: future-work, clone, templates
+    - Finding: Clone existing set as starting point for new set. Useful when adding multiple similar sets (e.g., different color variants).
+
+18. **Smart defaults based on set number**
+    - Category: integration
+    - Impact: Medium | Effort: High
+    - Tags: integration, external-api, automation
+    - Finding: Auto-populate theme, piece count, release date by looking up official LEGO set data when set number entered. Requires external LEGO API integration (e.g., Rebrickable, Brickset).
+
+## Retry Instructions
+
+When KB becomes available, run:
+```bash
+/kb-persist BUGF-003
+```
+
+This will execute the deferred SQL insert for searchability in the knowledge base and write all 18 elaboration findings.
