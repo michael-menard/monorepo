@@ -1,0 +1,230 @@
+/**
+ * MOC Detail Page Step Definitions
+ * Story INST-1104: MOC Detail Page
+ *
+ * BDD step definitions for MOC detail page E2E tests.
+ */
+
+import { expect } from '@playwright/test'
+import { createBdd } from 'playwright-bdd'
+
+const { Given, When, Then } = createBdd()
+
+// ============================================================================
+// Given Steps - Test Preconditions
+// ============================================================================
+
+Given('the instructions gallery has items', async ({ page }) => {
+  // Verify that cards exist in the gallery
+  const cards = page.locator('[data-testid^="instruction-card-"]')
+  await expect(cards.first()).toBeVisible({ timeout: 10000 })
+})
+
+Given('I click on the first MOC card', async ({ page }) => {
+  const card = page.locator('[data-testid^="instruction-card-"]').first()
+  await card.click()
+  await page.waitForTimeout(1000)
+})
+
+Given('I see the dashboard cards', async ({ page }) => {
+  // Wait for dashboard to be visible
+  await page.waitForSelector('[data-testid="moc-detail-dashboard"]', { timeout: 10000 })
+  
+  // Verify at least one card is visible
+  const cards = page.locator('[data-testid*="card"]')
+  await expect(cards.first()).toBeVisible()
+})
+
+Given('I have a custom card order saved in localStorage', async ({ page }) => {
+  // Set custom card order in localStorage before navigating
+  await page.evaluate(() => {
+    const customOrder = ['parts-lists', 'instructions', 'gallery', 'parts-orders']
+    localStorage.setItem('moc-detail-card-order', JSON.stringify(customOrder))
+  })
+})
+
+// ============================================================================
+// When Steps - User Actions
+// ============================================================================
+
+When('I navigate directly to a MOC detail URL', async ({ page }) => {
+  // Navigate to a valid MOC detail URL (using a test MOC ID)
+  await page.goto('/instructions/mock-moc-id-123')
+  await page.waitForTimeout(1000)
+})
+
+When('I navigate to a MOC detail page', async ({ page }) => {
+  const card = page.locator('[data-testid^="instruction-card-"]').first()
+  await card.click()
+  await page.waitForTimeout(1000)
+})
+
+When('I navigate to an invalid MOC detail URL', async ({ page }) => {
+  await page.goto('/instructions/invalid-non-existent-moc-999')
+  await page.waitForTimeout(1000)
+})
+
+When('I scroll down the page', async ({ page }) => {
+  await page.evaluate(() => {
+    window.scrollBy(0, 500)
+  })
+  await page.waitForTimeout(500)
+})
+
+When('I drag the first card to the second position', async ({ page }) => {
+  const cards = page.locator('[data-testid*="card"]')
+  const firstCard = cards.first()
+  const secondCard = cards.nth(1)
+  
+  // Perform drag and drop
+  await firstCard.dragTo(secondCard)
+  await page.waitForTimeout(500)
+})
+
+// ============================================================================
+// Then Steps - Assertions
+// ============================================================================
+
+Then('I should be on the MOC detail page', async ({ page }) => {
+  // URL should contain /instructions/ and a MOC ID
+  await page.waitForURL(/\/instructions\/[^/]+/, { timeout: 5000 })
+})
+
+Then('the URL should contain the MOC ID', async ({ page }) => {
+  const url = page.url()
+  expect(url).toMatch(/\/instructions\/[a-zA-Z0-9-]+/)
+})
+
+Then('the MOC title should be displayed', async ({ page }) => {
+  // Look for a heading or title element
+  const title = page.locator('h1, h2, [data-testid="moc-title"]')
+  await expect(title.first()).toBeVisible()
+})
+
+Then('either the detail page loads or an error page appears', async ({ page }) => {
+  // Either we see the dashboard or an error message
+  const dashboard = page.locator('[data-testid="moc-detail-dashboard"]')
+  const errorMsg = page.getByText(/not found|error|404/i)
+  
+  const dashboardVisible = await dashboard.isVisible().catch(() => false)
+  const errorVisible = await errorMsg.isVisible().catch(() => false)
+  
+  expect(dashboardVisible || errorVisible).toBe(true)
+})
+
+Then('I should see the MOC detail dashboard', async ({ page }) => {
+  const dashboard = page.locator('[data-testid="moc-detail-dashboard"]')
+  await expect(dashboard).toBeVisible({ timeout: 10000 })
+})
+
+Then('the sidebar should be visible', async ({ page }) => {
+  const sidebar = page.locator('[data-testid="moc-detail-sidebar"], aside, [class*="sidebar"]')
+  await expect(sidebar.first()).toBeVisible()
+})
+
+Then('the main area should be visible', async ({ page }) => {
+  const mainArea = page.locator('[data-testid="moc-detail-main"], main, [class*="main"]')
+  await expect(mainArea.first()).toBeVisible()
+})
+
+Then('the sidebar should have sticky positioning', async ({ page }) => {
+  const sidebar = page.locator('[data-testid="moc-detail-sidebar"], aside, [class*="sidebar"]')
+  const position = await sidebar.first().evaluate((el: Element) => {
+    return window.getComputedStyle(el).position
+  })
+  
+  expect(position === 'sticky' || position === 'fixed').toBe(true)
+})
+
+Then('the sidebar should contain a cover image', async ({ page }) => {
+  const sidebar = page.locator('[data-testid="moc-detail-sidebar"], aside, [class*="sidebar"]')
+  const image = sidebar.locator('img')
+  await expect(image.first()).toBeVisible()
+})
+
+Then('I should see the MOC title in the sidebar', async ({ page }) => {
+  const sidebar = page.locator('[data-testid="moc-detail-sidebar"], aside, [class*="sidebar"]')
+  const title = sidebar.locator('h1, h2, h3, [data-testid="moc-title"]')
+  await expect(title.first()).toBeVisible()
+})
+
+Then('the main area should display numeric stats', async ({ page }) => {
+  // Look for stat cards or numeric displays
+  const stats = page.locator('[data-testid*="stat"], [class*="stat"]')
+  await expect(stats.first()).toBeVisible()
+})
+
+Then('I should see the {string} card', async ({ page }, cardName: string) => {
+  // Look for card by name
+  const card = page.getByText(new RegExp(cardName, 'i'))
+  await expect(card).toBeVisible()
+})
+
+Then('the card order should be saved to localStorage', async ({ page }) => {
+  const savedOrder = await page.evaluate(() => {
+    return localStorage.getItem('moc-detail-card-order')
+  })
+  
+  expect(savedOrder).toBeTruthy()
+})
+
+Then('the cards should be displayed in the saved order', async ({ page }) => {
+  // Verify cards appear in the custom order
+  const cards = page.locator('[data-testid*="card"]')
+  const count = await cards.count()
+  expect(count).toBeGreaterThan(0)
+})
+
+Then('sections should be stacked vertically', async ({ page }) => {
+  // On mobile, sections should stack (sidebar above main)
+  const sidebar = page.locator('[data-testid="moc-detail-sidebar"], aside, [class*="sidebar"]')
+  const mainArea = page.locator('[data-testid="moc-detail-main"], main, [class*="main"]')
+  
+  const sidebarBox = await sidebar.first().boundingBox()
+  const mainBox = await mainArea.first().boundingBox()
+  
+  if (sidebarBox && mainBox) {
+    // Main should be below sidebar in vertical stack
+    expect(mainBox.y).toBeGreaterThan(sidebarBox.y)
+  }
+})
+
+Then('either a loading skeleton or the dashboard should be visible', async ({ page }) => {
+  const skeleton = page.locator('[data-testid="moc-detail-skeleton"]')
+  const dashboard = page.locator('[data-testid="moc-detail-dashboard"]')
+  
+  const skeletonVisible = await skeleton.isVisible().catch(() => false)
+  const dashboardVisible = await dashboard.isVisible().catch(() => false)
+  
+  expect(skeletonVisible || dashboardVisible).toBe(true)
+})
+
+Then('I should see a {string} or error message', async ({ page }, messageType: string) => {
+  const errorMsg = page.getByText(new RegExp(messageType, 'i'))
+  await expect(errorMsg).toBeVisible()
+})
+
+Then('I should see a retry or back button', async ({ page }) => {
+  const retryButton = page.getByRole('button', { name: /retry|back|go back/i })
+  await expect(retryButton).toBeVisible()
+})
+
+Then('draggable cards should have aria-roledescription', async ({ page }) => {
+  const draggableCards = page.locator('[draggable="true"], [data-testid*="draggable"]')
+  const firstCard = draggableCards.first()
+  
+  if (await firstCard.isVisible().catch(() => false)) {
+    const ariaRole = await firstCard.getAttribute('aria-roledescription')
+    expect(ariaRole).toBeTruthy()
+  }
+})
+
+Then('focus should move to focusable elements', async ({ page }) => {
+  const focusedElement = await page.evaluate(() => document.activeElement?.tagName)
+  expect(focusedElement).toBeTruthy()
+})
+
+Then('the MOC detail dashboard should load within 5 seconds', async ({ page }) => {
+  const dashboard = page.locator('[data-testid="moc-detail-dashboard"]')
+  await expect(dashboard).toBeVisible({ timeout: 5000 })
+})

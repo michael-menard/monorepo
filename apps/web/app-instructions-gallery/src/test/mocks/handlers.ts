@@ -1,8 +1,12 @@
 import { http, HttpResponse } from 'msw'
+import { uploadSessionHandlers } from '../handlers/upload-sessions'
 
 const API_BASE_URL = 'http://localhost:3001'
 
 export const handlers = [
+  // INST-1105: Upload session handlers for presigned uploads
+  ...uploadSessionHandlers,
+
   // Health check endpoint
   http.get(`${API_BASE_URL}/health`, () => {
     return HttpResponse.json({

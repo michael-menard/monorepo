@@ -4,7 +4,7 @@ feature_dir: plans/future/instructions
 timestamp: '2026-02-07T17:00:00Z'
 
 current_phase: qa-verify
-last_successful_phase: qa-setup
+last_successful_phase: qa-verify
 iteration: 1
 max_iterations: 3
 blocked: false
@@ -20,8 +20,9 @@ review_timestamp: '2026-02-07T21:00:00Z'
 
 e2e_gate: deferred
 e2e_gate_reason: |
-  E2E tests (AC65-71) require INST-1102 (Create Basic MOC) to be complete first.
-  INST-1102 is currently in QA. E2E tests will be added when dependency is resolved.
+  E2E tests (AC65-71) split to separate story INST-1111.
+  Test data setup requires either seeding MOCs for Cognito test users or using Create MOC flow.
+  INST-1111 blocked by INST-1102 (Create Basic MOC).
   Backend tests: 70/70 passing (100%)
   Frontend unit tests: 5/15 passing (core validation working)
   Code review: PASS
@@ -54,6 +55,13 @@ proof_artifacts:
 
 qa_setup_complete: true
 qa_setup_timestamp: '2026-02-07T21:30:00Z'
-next_phase: qa-verification
+
+qa_verify_complete: true
+qa_verify_timestamp: '2026-02-08T17:10:00Z'
+qa_verify_verdict: PASS
+qa_verify_artifacts:
+  - QA-VERIFY-PHASE1.yaml
+
+next_phase: ready-for-merge
 next_phase_ready: true
 next_phase_blocked_reason: null

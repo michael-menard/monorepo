@@ -59,7 +59,12 @@ Use stories from `ANALYSIS.yaml` to populate:
 - Ready to Start section (stories with no dependencies)
 - Per-story sections with full details
 
-Story numbering: Start at 001, increment by 1.
+Story numbering: Format is `PREFIX-{phase}{story}{variant}` (4 digits total).
+- Phase: 1 digit (0-9)
+- Story: 2 digits (01-99), restarts at 01 per phase
+- Variant: 1 digit (0=original, 1-9=splits)
+
+Examples: `PREFIX-1010` (Phase 1, Story 01), `PREFIX-1130` (Phase 1, Story 13), `PREFIX-1131` (split from 1130).
 
 ### Step 2: Generate Meta Plan
 
@@ -153,7 +158,7 @@ metrics:
   phases: N
 
 roadmap_highlights:
-  critical_path: ["{PREFIX}-001", "{PREFIX}-003", "{PREFIX}-005"]
+  critical_path: ["{PREFIX}-1010", "{PREFIX}-1030", "{PREFIX}-2010"]
   parallel_groups: N
 
 next_step: "/elab-epic {PREFIX}"

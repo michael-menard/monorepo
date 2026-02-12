@@ -73,6 +73,7 @@ export interface MocRepository {
   findBySlug(slug: string, userId: string): Promise<Moc | null>
   getMocById(id: string, userId: string): Promise<MocWithFiles | null>
   list(userId: string, query: ListMocsQuery): Promise<MocListResult>
+  updateMoc(mocId: string, userId: string, data: Partial<CreateMocRequest>): Promise<Moc>
   updateThumbnail(mocId: string, userId: string, thumbnailUrl: string): Promise<void>
   getFileByIdAndMocId(fileId: string, mocId: string): Promise<MocFile | null>
 }
@@ -108,4 +109,122 @@ export interface MocImageStorage {
    * @param url - The URL to extract the key from
    */
   extractKeyFromUrl(url: string): string | null
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Upload Session Types (INST-1105)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Upload Session entity
+ */
+export interface UploadSession {
+  id: string
+  userId: string
+  mocInstructionId: string | null
+  status: 'pending' | 'active' | 'completed' | 'expired' | 'cancelled'
+  partSizeBytes: number
+  expiresAt: Date
+  originalFilename: string | null
+  originalFileSize: number | null
+  s3Key?: string
+  createdAt: Date
+  updatedAt: Date
+  finalizedAt: Date | null
+  finalizingAt: Date | null
+}
+
+/**
+ * Upload Session Repository Port
+ * (INST-1105: AC86)
+ *
+ * CRUD operations for upload_sessions table.
+ */
+export interface UploadSessionRepository {
+  /**
+   * Create a new upload session
+   * @param data - Session data including userId, mocId, s3Key, expiry
+   * @returns Created session
+   */
+  create(data: {
+    userId: string
+    mocInstructionId: string
+    status: string
+    partSizeBytes: number
+    expiresAt: Date
+    originalFilename: string
+    originalFileSize: number
+    s3Key?: string
+  }): Promise<UploadSession>
+
+  /**
+   * Find a session by ID
+   * @param sessionId - Session UUID
+   * @returns Session or null if not found
+   */
+  findById(sessionId: string): Promise<UploadSession | null>
+
+  /**
+   * Find a session by ID with user ownership check
+   * @param sessionId - Session UUID
+   * @param userId - User ID for ownership check
+   * @returns Session or null if not found or not owned by user
+   */
+  findByIdAndUserId(sessionId: string, userId: string): Promise<UploadSession | null>
+
+  /**
+   * Update session status to completed
+   * @param sessionId - Session UUID
+   * @param completedAt - Completion timestamp
+   */
+  markCompleted(sessionId: string, completedAt: Date): Promise<void>
+
+  /**
+   * Update session status
+   * @param sessionId - Session UUID
+   * @param status - New status
+   */
+  updateStatus(sessionId: string, status: string): Promise<void>
+}
+
+/**
+ * S3 Storage Port
+ * (INST-1105: AC87)
+ *
+ * S3 operations for presigned URLs and file verification.
+ */
+export interface S3StoragePort {
+  /**
+   * Generate a presigned PUT URL for direct S3 upload
+   * @param bucket - S3 bucket name
+   * @param key - S3 object key
+   * @param contentType - MIME type for the upload
+   * @param expiresIn - TTL in seconds
+   * @returns Presigned URL string
+   */
+  generatePresignedPutUrl(
+    bucket: string,
+    key: string,
+    contentType: string,
+    expiresIn: number,
+  ): Promise<string>
+
+  /**
+   * Check if an object exists in S3 and get metadata
+   * @param bucket - S3 bucket name
+   * @param key - S3 object key
+   * @returns Object metadata including content length
+   */
+  headObject(
+    bucket: string,
+    key: string,
+  ): Promise<Result<{ contentLength: number; contentType?: string }, 'NOT_FOUND' | 'S3_ERROR'>>
+
+  /**
+   * Get the public URL for an S3 object (via CloudFront if configured)
+   * @param bucket - S3 bucket name
+   * @param key - S3 object key
+   * @returns Public URL string
+   */
+  getPublicUrl(bucket: string, key: string): string
 }

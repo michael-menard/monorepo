@@ -1,11 +1,12 @@
 /**
  * InstructionsUpload Component
  * Story INST-1104: Upload Instructions (Direct ≤10MB)
+ * Story INST-1105: Upload Instructions (Presigned >10MB)
  *
  * Features:
  * - AC5: File picker opens on button click
  * - AC6: Non-PDF files show error toast
- * - AC7: >10MB files show error toast with upgrade hint
+ * - AC7: >50MB files show error toast (INST-1105: increased from 10MB)
  * - AC8: File input has proper accept attribute
  * - AC9-12: Selected files list with metadata
  * - AC13: Remove files from queue
@@ -13,10 +14,15 @@
  * - AC15-16: Progress indicator during upload
  * - AC18: Cancel button clears queue
  * - AC19-20: Success/error toasts
+ *
+ * INST-1105 Additions:
+ * - AC1-3: File size routing (<=10MB direct, >10MB presigned)
+ * - AC4: Files >50MB rejected
+ * - AC11-14: Progress bar with speed display, cancel/retry
  */
 
 import { useState, useRef, useCallback, useMemo } from 'react'
-import { Upload, X, FileText, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, X, FileText, Loader2, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import {
   Button,
   Card,
@@ -25,18 +31,35 @@ import {
   showErrorToast,
 } from '@repo/app-component-library'
 import { useUploadInstructionFileMutation } from '@repo/api-client'
-import type { InstructionsUploadProps, FileValidationResult, FileItem } from './__types__'
+import { usePresignedUpload } from '../../hooks/usePresignedUpload'
+import { PresignedUploadProgress } from '../PresignedUploadProgress'
+import { SessionExpiryWarning } from '../SessionExpiryWarning'
+import type {
+  InstructionsUploadProps,
+  FileValidationResult,
+  FileItem,
+  UploadFlow,
+} from './__types__'
 import {
   ALLOWED_PDF_MIME_TYPES,
   ALLOWED_PDF_EXTENSIONS,
-  MAX_FILE_SIZE,
+  MAX_DIRECT_UPLOAD_SIZE,
+  MAX_PRESIGNED_UPLOAD_SIZE,
   MIN_FILE_SIZE,
 } from './__types__'
 
 /**
- * Validate PDF file before upload (AC6-7, AC72-73)
+ * Determine upload flow based on file size (INST-1105 AC1-3)
  */
-function validatePdfFile(file: File): FileValidationResult {
+function determineUploadFlow(fileSize: number): UploadFlow {
+  return fileSize > MAX_DIRECT_UPLOAD_SIZE ? 'presigned' : 'direct'
+}
+
+/**
+ * Validate PDF file before upload (AC6-7, AC72-73)
+ * INST-1105: Updated to support files up to 50MB
+ */
+function validatePdfFile(file: File): FileValidationResult & { uploadFlow?: UploadFlow } {
   // Check file extension (AC58)
   const fileName = file.name.toLowerCase()
   const hasValidExtension = ALLOWED_PDF_EXTENSIONS.some(ext => fileName.endsWith(ext))
@@ -56,12 +79,12 @@ function validatePdfFile(file: File): FileValidationResult {
     }
   }
 
-  // Check file size - max 10MB (AC7, AC57, AC73)
-  const maxSizeMB = MAX_FILE_SIZE / 1024 / 1024
-  if (file.size > MAX_FILE_SIZE) {
+  // Check file size - max 50MB (INST-1105 AC4)
+  const maxSizeMB = MAX_PRESIGNED_UPLOAD_SIZE / 1024 / 1024
+  if (file.size > MAX_PRESIGNED_UPLOAD_SIZE) {
     return {
       valid: false,
-      error: `File is too large. Maximum size is ${maxSizeMB}MB. Upgrade to Pro for files up to 100MB.`,
+      error: `File is too large. Maximum size is ${maxSizeMB}MB.`,
     }
   }
 
@@ -73,7 +96,7 @@ function validatePdfFile(file: File): FileValidationResult {
     }
   }
 
-  return { valid: true }
+  return { valid: true, uploadFlow: determineUploadFlow(file.size) }
 }
 
 /**
@@ -91,8 +114,50 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
   const [fileQueue, setFileQueue] = useState<FileItem[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Track the current presigned file being uploaded
+  const [presignedFile, setPresignedFile] = useState<FileItem | null>(null)
 
   const [uploadInstructionFile] = useUploadInstructionFileMutation()
+
+  // INST-1105: Presigned upload hook
+  const presignedUpload = usePresignedUpload({
+    onSuccess: () => {
+      showSuccessToast('Instructions uploaded successfully')
+      // Mark the presigned file as success
+      if (presignedFile) {
+        setFileQueue(prev =>
+          prev.map(f =>
+            f.id === presignedFile.id ? { ...f, status: 'success' as const, progress: 100 } : f,
+          ),
+        )
+        setPresignedFile(null)
+      }
+      onSuccess?.()
+    },
+    onError: error => {
+      showErrorToast(`Upload failed: ${error}`)
+      // Mark the presigned file as error
+      if (presignedFile) {
+        setFileQueue(prev =>
+          prev.map(f =>
+            f.id === presignedFile.id ? { ...f, status: 'error' as const, error } : f,
+          ),
+        )
+      }
+    },
+    onSessionExpired: () => {
+      showErrorToast('Upload session expired. Please try again.')
+      if (presignedFile) {
+        setFileQueue(prev =>
+          prev.map(f =>
+            f.id === presignedFile.id
+              ? { ...f, status: 'expired' as const, error: 'Session expired' }
+              : f,
+          ),
+        )
+      }
+    },
+  })
 
   // Calculate upload progress (AC15-16)
   const uploadProgress = useMemo(() => {
@@ -112,6 +177,7 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
 
   /**
    * Handle file selection from input (AC5, AC8)
+   * INST-1105: Now determines upload flow based on file size
    */
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -134,6 +200,7 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
         file,
         status: 'pending',
         progress: 0,
+        uploadFlow: validation.uploadFlow,
       })
     }
 
@@ -161,6 +228,7 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
 
   /**
    * Upload files sequentially (AC14)
+   * INST-1105: Routes to presigned upload for files >10MB
    */
   const handleUpload = useCallback(async () => {
     if (fileQueue.length === 0) return
@@ -178,20 +246,34 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
       )
 
       try {
-        // Upload file
-        await uploadInstructionFile({
-          mocId,
-          file: fileItem.file,
-        }).unwrap()
+        // INST-1105: Route based on file size
+        if (fileItem.uploadFlow === 'presigned') {
+          // Large file: Use presigned URL flow
+          setPresignedFile(fileItem)
+          const result = await presignedUpload.startUpload(fileItem.file, mocId)
 
-        // Mark as success (AC19)
-        setFileQueue(prev =>
-          prev.map(f =>
-            f.id === fileItem.id ? { ...f, status: 'success' as const, progress: 100 } : f,
-          ),
-        )
+          if (!result) {
+            // Upload was canceled or failed (error already handled by hook)
+            continue
+          }
 
-        showSuccessToast(`${fileItem.file.name} uploaded successfully`)
+          // Success is handled by the hook callback
+        } else {
+          // Small file: Use direct upload flow
+          await uploadInstructionFile({
+            mocId,
+            file: fileItem.file,
+          }).unwrap()
+
+          // Mark as success (AC19)
+          setFileQueue(prev =>
+            prev.map(f =>
+              f.id === fileItem.id ? { ...f, status: 'success' as const, progress: 100 } : f,
+            ),
+          )
+
+          showSuccessToast(`${fileItem.file.name} uploaded successfully`)
+        }
       } catch (error: any) {
         // Mark as error (AC20)
         const errorMessage =
@@ -208,13 +290,65 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
     }
 
     setIsUploading(false)
+    setPresignedFile(null)
 
     // Call success callback if at least one file succeeded
     const hasSuccess = fileQueue.some(f => f.status === 'success')
     if (hasSuccess && onSuccess) {
       onSuccess()
     }
-  }, [fileQueue, mocId, uploadInstructionFile, onSuccess])
+  }, [fileQueue, mocId, uploadInstructionFile, presignedUpload, onSuccess])
+
+  /**
+   * Handle presigned upload cancel (INST-1105 AC14)
+   */
+  const handlePresignedCancel = useCallback(() => {
+    presignedUpload.cancel()
+    if (presignedFile) {
+      setFileQueue(prev =>
+        prev.map(f =>
+          f.id === presignedFile.id
+            ? { ...f, status: 'canceled' as const, error: 'Upload canceled' }
+            : f,
+        ),
+      )
+    }
+    setPresignedFile(null)
+    setIsUploading(false)
+  }, [presignedUpload, presignedFile])
+
+  /**
+   * Handle presigned upload retry (INST-1105 AC27)
+   */
+  const handlePresignedRetry = useCallback(
+    async (fileItem: FileItem) => {
+      setPresignedFile(fileItem)
+      setFileQueue(prev =>
+        prev.map(f =>
+          f.id === fileItem.id
+            ? { ...f, status: 'uploading' as const, progress: 0, error: undefined }
+            : f,
+        ),
+      )
+      setIsUploading(true)
+
+      const result = await presignedUpload.retry(fileItem.file, mocId)
+
+      if (!result) {
+        setIsUploading(false)
+      }
+    },
+    [presignedUpload, mocId],
+  )
+
+  /**
+   * Handle session refresh (INST-1105 AC23)
+   */
+  const handleSessionRefresh = useCallback(() => {
+    // Reset and allow retry
+    presignedUpload.reset()
+    showSuccessToast('Session refreshed. You can retry the upload.')
+  }, [presignedUpload])
 
   /**
    * Trigger file input click
@@ -228,6 +362,15 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
 
   return (
     <div className="space-y-4">
+      {/* Session Expiry Warning (INST-1105 AC8, AC21, AC23) */}
+      {presignedUpload.timeRemaining !== null && presignedUpload.timeRemaining < 5 * 60 * 1000 && (
+        <SessionExpiryWarning
+          timeRemainingMs={presignedUpload.timeRemaining}
+          onRefresh={handleSessionRefresh}
+          isRefreshing={false}
+        />
+      )}
+
       {/* Upload Button (AC5) */}
       <Button
         type="button"
@@ -270,56 +413,114 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
 
           {/* File List */}
           <div className="space-y-2 mb-4">
-            {fileQueue.map(fileItem => (
-              <div
-                key={fileItem.id}
-                className="flex items-start gap-3 p-3 rounded-lg border border-border"
-              >
-                {/* File Icon */}
-                <div className="flex-shrink-0">
-                  {fileItem.status === 'success' && (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  )}
-                  {fileItem.status === 'error' && (
-                    <AlertCircle className="w-5 h-5 text-destructive" />
-                  )}
-                  {fileItem.status === 'uploading' && (
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                  )}
-                  {fileItem.status === 'pending' && (
-                    <FileText className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </div>
+            {fileQueue.map(fileItem => {
+              // INST-1105: Use PresignedUploadProgress for presigned files being uploaded
+              if (
+                fileItem.uploadFlow === 'presigned' &&
+                presignedFile?.id === fileItem.id &&
+                (presignedUpload.state.status === 'uploading' ||
+                  presignedUpload.state.status === 'creating_session' ||
+                  presignedUpload.state.status === 'completing')
+              ) {
+                return (
+                  <PresignedUploadProgress
+                    key={fileItem.id}
+                    file={fileItem.file}
+                    status={presignedUpload.state.status}
+                    progress={presignedUpload.state.progress}
+                    error={presignedUpload.state.error}
+                    onCancel={handlePresignedCancel}
+                    onRetry={() => handlePresignedRetry(fileItem)}
+                    onRemove={() => handleRemoveFile(fileItem.id)}
+                  />
+                )
+              }
 
-                {/* File Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{fileItem.file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(fileItem.file.size)}
-                  </p>
-                  {fileItem.error ? (
-                    <p className="text-xs text-destructive mt-1">{fileItem.error}</p>
-                  ) : null}
-                </div>
+              // Standard file item display
+              return (
+                <div
+                  key={fileItem.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border border-border"
+                >
+                  {/* File Icon */}
+                  <div className="flex-shrink-0">
+                    {fileItem.status === 'success' && (
+                      <CheckCircle className="w-5 h-5 text-green-500" aria-hidden="true" />
+                    )}
+                    {(fileItem.status === 'error' || fileItem.status === 'expired') && (
+                      <AlertCircle className="w-5 h-5 text-destructive" aria-hidden="true" />
+                    )}
+                    {fileItem.status === 'canceled' && (
+                      <XCircle className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                    )}
+                    {fileItem.status === 'uploading' && (
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" aria-hidden="true" />
+                    )}
+                    {fileItem.status === 'pending' && (
+                      <FileText className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                    )}
+                  </div>
 
-                {/* Remove Button (AC13) */}
-                {!isUploading && fileItem.status === 'pending' && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveFile(fileItem.id)}
-                    className="flex-shrink-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
+                  {/* File Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{fileItem.file.name}</p>
+                      {/* INST-1105: Show badge for presigned uploads */}
+                      {fileItem.uploadFlow === 'presigned' && (
+                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded">Large file</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(fileItem.file.size)}
+                    </p>
+                    {fileItem.error ? (
+                      <p className="text-xs text-destructive mt-1" role="alert">
+                        {fileItem.error}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex-shrink-0 flex gap-1">
+                    {/* Retry button for failed/canceled/expired files (INST-1105 AC27) */}
+                    {(fileItem.status === 'error' ||
+                      fileItem.status === 'canceled' ||
+                      fileItem.status === 'expired') &&
+                      fileItem.uploadFlow === 'presigned' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePresignedRetry(fileItem)}
+                          aria-label="Retry upload"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Loader2 className="w-4 h-4" />
+                        </Button>
+                      )}
+
+                    {/* Remove Button (AC13) */}
+                    {(!isUploading || fileItem.status !== 'uploading') &&
+                      fileItem.status !== 'success' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFile(fileItem.id)}
+                          aria-label="Remove file"
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
-          {/* Upload Progress (AC15-16) */}
-          {isUploading && uploadProgress ? (
+          {/* Upload Progress (AC15-16) - for direct uploads */}
+          {isUploading && uploadProgress && !presignedFile ? (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">

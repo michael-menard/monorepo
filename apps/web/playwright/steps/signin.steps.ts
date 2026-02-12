@@ -155,3 +155,8 @@ When('I click the register link', async ({ page }) => {
 })
 
 // Note: "I should be on the registration page" is in common.steps.ts
+
+// ============================================================================
+// Additional Sign In Steps (INST-1111)
+// ============================================================================
+

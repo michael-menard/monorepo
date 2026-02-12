@@ -19,6 +19,9 @@ import {
   GetMocDetailResponseSchema,
   UploadThumbnailResponseSchema,
   GetFileDownloadUrlResponseSchema,
+  // INST-1105: Presigned upload schemas
+  CreateUploadSessionResponseSchema,
+  CompleteUploadSessionResponseSchema,
   type MocInstructions,
   type MocFile,
   type CreateMocInput,
@@ -27,6 +30,9 @@ import {
   type MocListResponse,
   type GetMocDetailResponse,
   type GetFileDownloadUrlResponse,
+  type CreateUploadSessionRequest,
+  type CreateUploadSessionResponse,
+  type CompleteUploadSessionResponse,
 } from '../schemas/instructions'
 import { getServerlessCacheConfig } from './base-query'
 
@@ -410,6 +416,78 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
       }),
 
       /**
+       * POST /instructions/mocs/:id/upload-sessions - Create presigned upload session
+       *
+       * Story INST-1105: Upload Instructions (Presigned >10MB)
+       *
+       * Creates an upload session for large files (>10MB) and returns
+       * a presigned S3 URL for direct browser-to-S3 upload.
+       */
+      createUploadSession: builder.mutation<
+        CreateUploadSessionResponse,
+        { mocId: string; request: CreateUploadSessionRequest }
+      >({
+        query: ({ mocId, request }) => {
+          logger.debug('Creating upload session for presigned upload', undefined, {
+            mocId,
+            filename: request.filename,
+            fileSize: request.fileSize,
+          })
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.CREATE_UPLOAD_SESSION, { id: mocId }),
+            method: 'POST',
+            body: request,
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = CreateUploadSessionResponseSchema.parse(response)
+          logger.info('Upload session created', undefined, {
+            sessionId: validated.sessionId,
+            expiresAt: validated.expiresAt,
+          })
+          return validated
+        },
+      }),
+
+      /**
+       * POST /instructions/mocs/:id/upload-sessions/:sessionId/complete - Complete upload session
+       *
+       * Story INST-1105: Upload Instructions (Presigned >10MB)
+       *
+       * Verifies the file was uploaded to S3 and creates the moc_files record.
+       * Should be called after successful direct S3 upload.
+       */
+      completeUploadSession: builder.mutation<
+        CompleteUploadSessionResponse,
+        { mocId: string; sessionId: string }
+      >({
+        query: ({ mocId, sessionId }) => {
+          logger.debug('Completing upload session', undefined, { mocId, sessionId })
+          return {
+            url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.COMPLETE_UPLOAD_SESSION, {
+              id: mocId,
+              sessionId,
+            }),
+            method: 'POST',
+            body: { sessionId },
+          }
+        },
+        transformResponse: (response: unknown) => {
+          const validated = CompleteUploadSessionResponseSchema.parse(response)
+          logger.info('Upload session completed', undefined, {
+            fileId: validated.id,
+            mocId: validated.mocId,
+          })
+          return validated
+        },
+        invalidatesTags: (_result, _error, { mocId }) => [
+          { type: 'Moc', id: mocId },
+          { type: 'MocFile', id: mocId },
+          { type: 'MocList' },
+        ],
+      }),
+
+      /**
        * Toggle favorite status for an instruction
        *
        * Legacy mutation - uses optimistic update pattern
@@ -475,6 +553,9 @@ export const {
   useDeleteFileMutation,
   // Story INST-1107: File download
   useLazyGetFileDownloadUrlQuery,
+  // Story INST-1105: Presigned upload session
+  useCreateUploadSessionMutation,
+  useCompleteUploadSessionMutation,
   // Legacy hooks
   useToggleInstructionFavoriteMutation,
 } = instructionsApi

@@ -50,6 +50,10 @@ export const SERVERLESS_ENDPOINTS = {
     // File download endpoint (INST-1107)
     DOWNLOAD_FILE: '/instructions/mocs/{id}/files/{fileId}/download',
 
+    // Presigned upload endpoints (INST-1105)
+    CREATE_UPLOAD_SESSION: '/instructions/mocs/{id}/upload-sessions',
+    COMPLETE_UPLOAD_SESSION: '/instructions/mocs/{id}/upload-sessions/{sessionId}/complete',
+
     // Legacy upload endpoint
     UPLOAD: '/instructions/mocs/upload',
   },

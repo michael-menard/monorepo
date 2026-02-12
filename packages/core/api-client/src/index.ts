@@ -43,8 +43,7 @@ export { ServerlessApiError, handleServerlessError } from './retry/error-handlin
 export { getServerlessApiConfig, type ServerlessApiConfig } from './config/environments'
 export { SERVERLESS_ENDPOINTS, buildEndpoint } from './config/endpoints'
 
-
-// RTK Query Hooks - Instructions/MOC (INST-1103, INST-1107)
+// RTK Query Hooks - Instructions/MOC (INST-1103, INST-1105, INST-1107)
 export {
   useUploadThumbnailMutation,
   useGetMocDetailQuery,
@@ -56,4 +55,14 @@ export {
   useDeleteFileMutation,
   // INST-1107: File download
   useLazyGetFileDownloadUrlQuery,
+  // INST-1105: Presigned upload session
+  useCreateUploadSessionMutation,
+  useCompleteUploadSessionMutation,
 } from './rtk/instructions-api'
+
+// Types for INST-1105: Presigned upload
+export type {
+  CreateUploadSessionRequest,
+  CreateUploadSessionResponse,
+  CompleteUploadSessionResponse,
+} from './schemas/instructions'

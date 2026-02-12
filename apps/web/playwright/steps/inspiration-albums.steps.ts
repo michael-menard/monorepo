@@ -309,3 +309,8 @@ Then('that inspiration should become the album cover', async ({ page }) => {
 When('I press the N key', async ({ page }) => {
   await page.keyboard.press('n')
 })
+
+// ============================================================================
+// Additional Album Steps (INST-1111)
+// ============================================================================
+

@@ -668,6 +668,10 @@ export const uploadSessions = pgTable(
     finalizingAt: timestamp('finalizing_at'), // Transient lock for in-flight finalize
     /** Created MOC instruction ID (null until finalized) */
     mocInstructionId: uuid('moc_instruction_id').references(() => mocInstructions.id),
+    /** Original filename for display (INST-1105) */
+    originalFilename: text('original_filename'),
+    /** Original file size for verification (INST-1105) */
+    originalFileSize: integer('original_file_size'),
   },
   table => ({
     userIdx: index('idx_upload_sessions_user_id').on(table.userId),

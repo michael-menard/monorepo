@@ -196,14 +196,11 @@ export function DetailPage({
    * Handle thumbnail upload success (AC14-15)
    * Updates the instruction thumbnail optimistically
    */
-  const handleThumbnailSuccess = useCallback(
-    (thumbnailUrl: string) => {
-      // RTK Query will automatically invalidate and refetch
-      // The UI will update when the cache is invalidated
-      console.info('Thumbnail uploaded successfully:', thumbnailUrl)
-    },
-    []
-  )
+  const handleThumbnailSuccess = useCallback((thumbnailUrl: string) => {
+    // RTK Query will automatically invalidate and refetch
+    // The UI will update when the cache is invalidated
+    console.info('Thumbnail uploaded successfully:', thumbnailUrl)
+  }, [])
 
   // Loading state
   if (isLoading) {
@@ -343,11 +340,7 @@ export function DetailPage({
                         {formatFileSize(file.size)} • {file.fileType}
                       </p>
                     </div>
-                    <FileDownloadButton
-                      mocId={file.mocId}
-                      fileId={file.id}
-                      fileName={file.name}
-                    />
+                    <FileDownloadButton mocId={file.mocId} fileId={file.id} fileName={file.name} />
                   </div>
                 ))}
               </CardContent>

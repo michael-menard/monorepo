@@ -91,7 +91,7 @@ updated_at: "{TIMESTAMP}"
 
 # {PREFIX} Stories Index
 
-All stories in this epic use the `{PREFIX}-XXX` naming convention (starting at 001).
+All stories use `{PREFIX}-{phase}{story}{variant}` format (e.g., `{PREFIX}-1010` for Phase 1, Story 01, original).
 
 ## Progress Summary
 
@@ -110,14 +110,15 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| {PREFIX}-001 | [Feature Name] | — |
+| {PREFIX}-1010 | [Feature Name] | — |
 
 ---
 
-## {PREFIX}-001: [Feature Name]
+## {PREFIX}-1010: [Feature Name]
 
 **Status:** pending
 **Depends On:** none
+**Phase:** 1
 **Feature:** [Brief description]
 **Endpoints:** (if applicable)
 - `path/to/handler.ts`
@@ -131,10 +132,11 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
-## {PREFIX}-002: [Next Feature]
+## {PREFIX}-1020: [Next Feature]
 
 **Status:** pending
-**Depends On:** {PREFIX}-001
+**Depends On:** {PREFIX}-1010
+**Phase:** 1
 
 ...
 ```
@@ -160,9 +162,9 @@ tags:
 ## Story Prefix
 
 All stories in this project use the **{PREFIX}** prefix.
-- Story IDs: `{PREFIX}-001`, `{PREFIX}-002`, etc.
-- Story folders: `plans/stories/{PREFIX}-XXX/`
-- Artifact files: `ELAB-{PREFIX}-XXX.md`, `PROOF-{PREFIX}-XXX.md`, etc.
+- Story IDs: `{PREFIX}-{phase}{story}{variant}` (e.g., `{PREFIX}-1010`, `{PREFIX}-2030`)
+- Story folders: `plans/stories/{PREFIX}-XXXX/`
+- Artifact files: `ELAB-{PREFIX}-1010.md`, `PROOF-{PREFIX}-2030.md`, etc.
 
 ## Documentation Structure
 
@@ -229,13 +231,13 @@ tags:
 ## Story Prefix
 
 All stories use the **{PREFIX}** prefix. Commands use the full prefixed ID:
-- `/pm-generate-story {PREFIX}-001`
-- `/elab-story {PREFIX}-001`
-- `/dev-implement-story {PREFIX}-001`
+- `/pm-generate-story {PREFIX}-1010`
+- `/elab-story {PREFIX}-1010`
+- `/dev-implement-story {PREFIX}-1010`
 
 ## Artifact Rules
 
-- Each story outputs artifacts under: `plans/stories/{PREFIX}-XXX/`
+- Each story outputs artifacts under: `plans/stories/{PREFIX}-XXXX/`
 - A story folder is the source of truth for all related documentation
 - Story docs MUST include:
   - YAML front matter with status
@@ -246,12 +248,12 @@ All stories use the **{PREFIX}** prefix. Commands use the full prefixed ID:
 
 | Artifact | Filename |
 |----------|----------|
-| Story file | `{PREFIX}-XXX.md` |
-| Elaboration | `ELAB-{PREFIX}-XXX.md` |
-| Proof | `PROOF-{PREFIX}-XXX.md` |
-| Code Review | `CODE-REVIEW-{PREFIX}-XXX.md` |
-| QA Verify | `QA-VERIFY-{PREFIX}-XXX.md` |
-| QA Gate | `QA-GATE-{PREFIX}-XXX.yaml` |
+| Story file | `{PREFIX}-XXXX.md` |
+| Elaboration | `ELAB-{PREFIX}-XXXX.md` |
+| Proof | `PROOF-{PREFIX}-XXXX.md` |
+| Code Review | `CODE-REVIEW-{PREFIX}-XXXX.md` |
+| QA Verify | `QA-VERIFY-{PREFIX}-XXXX.md` |
+| QA Gate | `QA-GATE-{PREFIX}-XXXX.yaml` |
 
 ## Token Budget Rule
 
@@ -262,7 +264,7 @@ All stories use the **{PREFIX}** prefix. Commands use the full prefixed ID:
 ## Step 0 — Harness Validation (if applicable)
 
 - Produce Story 000 as a structural harness to validate the workflow
-- Commit outputs to: `plans/stories/{PREFIX}-000/`
+- Commit outputs to: `plans/stories/{PREFIX}-0000/`
 
 ## Subsequent Steps
 
@@ -319,34 +321,34 @@ Shows which stories block downstream work.
 ```mermaid
 flowchart LR
     subgraph Phase1["Phase 1: Foundation"]
-        S001["{PREFIX}-001<br/>Title"]
-        S002["{PREFIX}-002<br/>Title"]
+        S1010["{PREFIX}-1010<br/>Title"]
+        S1020["{PREFIX}-1020<br/>Title"]
     end
 
     subgraph Phase2["Phase 2: Core Features"]
-        S003["{PREFIX}-003<br/>Title"]
-        S004["{PREFIX}-004<br/>Title"]
+        S2010["{PREFIX}-2010<br/>Title"]
+        S2020["{PREFIX}-2020<br/>Title"]
     end
 
     subgraph Phase3["Phase 3: Integration"]
-        S005["{PREFIX}-005<br/>Title"]
+        S3010["{PREFIX}-3010<br/>Title"]
     end
 
     %% Dependencies
-    S001 --> S003
-    S001 --> S004
-    S002 --> S004
-    S003 --> S005
-    S004 --> S005
+    S1010 --> S2010
+    S1010 --> S2020
+    S1020 --> S2020
+    S2010 --> S3010
+    S2020 --> S3010
 
     %% Styling
     classDef ready fill:#90EE90,stroke:#228B22
     classDef blocked fill:#FFE4B5,stroke:#FFA500
     classDef done fill:#87CEEB,stroke:#4682B4
 
-    class S001,S002 ready
-    class S003,S004 blocked
-    class S005 blocked
+    class S1010,S1020 ready
+    class S2010,S2020 blocked
+    class S3010 blocked
 ```
 
 **Legend:** Green = Ready | Yellow = Blocked | Blue = Done
@@ -362,15 +364,15 @@ gantt
     axisFormat %s
 
     section Phase 1
-    {PREFIX}-001 Title    :s001, 0, 1
-    {PREFIX}-002 Title    :s002, 0, 1
+    {PREFIX}-1010 Title    :s1010, 0, 1
+    {PREFIX}-1020 Title    :s1020, 0, 1
 
     section Phase 2
-    {PREFIX}-003 Title    :s003, after s001, 1
-    {PREFIX}-004 Title    :s004, after s001 s002, 1
+    {PREFIX}-2010 Title    :s2010, after s1010, 1
+    {PREFIX}-2020 Title    :s2020, after s1010 s1020, 1
 
     section Phase 3
-    {PREFIX}-005 Title    :s005, after s003 s004, 1
+    {PREFIX}-3010 Title    :s3010, after s2010 s2020, 1
 ```
 
 ---
@@ -380,7 +382,7 @@ gantt
 The longest chain of dependent stories:
 
 ```
-{PREFIX}-001 → {PREFIX}-003 → {PREFIX}-005
+{PREFIX}-1010 → {PREFIX}-2010 → {PREFIX}-3010
 ```
 
 **Critical path length:** N stories
@@ -391,9 +393,9 @@ The longest chain of dependent stories:
 
 | Parallel Group | Stories | After |
 |----------------|---------|-------|
-| Group 1 | {PREFIX}-001, {PREFIX}-002 | — (start) |
-| Group 2 | {PREFIX}-003, {PREFIX}-004 | Group 1 |
-| Group 3 | {PREFIX}-005 | Group 2 |
+| Group 1 | {PREFIX}-1010, {PREFIX}-1020 | — (start) |
+| Group 2 | {PREFIX}-2010, {PREFIX}-2020 | Group 1 |
+| Group 3 | {PREFIX}-3010 | Group 2 |
 
 **Maximum parallelization:** N stories at once
 
@@ -403,9 +405,9 @@ The longest chain of dependent stories:
 
 | Story | Risk Level | Reason |
 |-------|------------|--------|
-| {PREFIX}-003 | High | [risk reason] |
-| {PREFIX}-001 | Medium | [risk reason] |
-| {PREFIX}-002 | Low | Straightforward |
+| {PREFIX}-2010 | High | [risk reason] |
+| {PREFIX}-1010 | Medium | [risk reason] |
+| {PREFIX}-1020 | Low | Straightforward |
 
 ---
 
@@ -492,10 +494,10 @@ Copy this section to each story's `## Token Budget` section.
 
 | Project | Prefix | Story IDs | Files Created |
 |---------|--------|-----------|---------------|
-| Vercel Migration | STORY | STORY-001, STORY-002 | `STORY.stories.index.md` |
-| Workflow Harness | WRKF | WRKF-000, WRKF-001 | `WRKF.stories.index.md` |
-| Auth Refactor | AUTH | AUTH-001, AUTH-002 | `AUTH.stories.index.md` |
-| Gallery Feature | GLRY | GLRY-001, GLRY-002 | `GLRY.stories.index.md` |
+| Vercel Migration | STORY | STORY-1010, STORY-1020 | `STORY.stories.index.md` |
+| Workflow Harness | WRKF | WRKF-0000, WRKF-1010 | `WRKF.stories.index.md` |
+| Auth Refactor | AUTH | AUTH-1010, AUTH-2010 | `AUTH.stories.index.md` |
+| Gallery Feature | GLRY | GLRY-1010, GLRY-1020, GLRY-1021 | `GLRY.stories.index.md` |
 
 ## Story Sizing Guidelines
 

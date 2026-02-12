@@ -1,2 +1,2 @@
-export { createMocService } from './services.js'
-export type { MocServiceDeps } from './services.js'
+export { createMocService, createUploadSessionService } from './services.js'
+export type { MocServiceDeps, UploadSessionServiceDeps } from './services.js'

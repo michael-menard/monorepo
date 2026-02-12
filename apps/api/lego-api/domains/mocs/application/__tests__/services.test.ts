@@ -107,6 +107,7 @@ function createMockMocRepo(): MocRepository {
     findBySlug: vi.fn().mockResolvedValue(mockMoc),
     getMocById: vi.fn().mockResolvedValue(mockMocWithFiles),
     list: vi.fn().mockResolvedValue({ items: [], total: 0 } as MocListResult),
+    updateMoc: vi.fn().mockResolvedValue(mockMoc),
     updateThumbnail: vi.fn().mockResolvedValue(undefined),
     getFileByIdAndMocId: vi.fn().mockResolvedValue(mockFileWithS3Key),
   }
@@ -508,6 +509,164 @@ describe('MocService - INST-1101', () => {
       if (!result.ok) {
         expect(result.error).toBe('PRESIGN_FAILED')
       }
+    })
+  })
+
+  describe('updateMoc - INST-1108', () => {
+    it('AC-1, AC-3: updates MOC successfully with valid data', async () => {
+      const updateData = {
+        title: 'Updated Castle MOC',
+        description: 'Updated description',
+        tags: ['updated', 'castle'],
+      }
+
+      const updatedMoc = {
+        ...mockMoc,
+        ...updateData,
+        updatedAt: new Date('2025-01-03T00:00:00Z'),
+      }
+
+      vi.mocked(mocRepo.updateMoc).mockResolvedValue(updatedMoc)
+
+      const result = await service.updateMoc('user-123', mockMoc.id, updateData)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.title).toBe('Updated Castle MOC')
+        expect(result.data.description).toBe('Updated description')
+        expect(result.data.tags).toEqual(['updated', 'castle'])
+      }
+
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'user-123')
+      expect(mocRepo.updateMoc).toHaveBeenCalledWith(mockMoc.id, 'user-123', updateData)
+    })
+
+    it('AC-6: validates title length (min 1, max 200)', async () => {
+      const shortTitle = {
+        title: '', // Too short
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, shortTitle)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-7: validates description length (max 2000)', async () => {
+      const longDescription = {
+        description: 'a'.repeat(2001), // Too long
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, longDescription)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-8: validates theme (must be valid ThemeEnum value)', async () => {
+      const invalidTheme = {
+        theme: 'InvalidTheme' as any,
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, invalidTheme)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-9: validates tags (max 20 items, each max 30 chars)', async () => {
+      const tooManyTags = {
+        tags: Array.from({ length: 21 }, (_, i) => `tag${i}`),
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, tooManyTags)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-4, AC-13: returns NOT_FOUND when MOC does not exist', async () => {
+      vi.mocked(mocRepo.getMocById).mockResolvedValue(null)
+
+      const result = await service.updateMoc('user-123', 'nonexistent-id', { title: 'Test' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-4, AC-13: returns NOT_FOUND when user does not own MOC (authorization)', async () => {
+      vi.mocked(mocRepo.getMocById).mockResolvedValue(null)
+
+      const result = await service.updateMoc('other-user', mockMoc.id, { title: 'Test' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'other-user')
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('Partial update: updates only provided fields', async () => {
+      const partialUpdate = {
+        tags: ['new-tag'],
+      }
+
+      const updatedMoc = {
+        ...mockMoc,
+        tags: ['new-tag'],
+        updatedAt: new Date('2025-01-03T00:00:00Z'),
+      }
+
+      vi.mocked(mocRepo.updateMoc).mockResolvedValue(updatedMoc)
+
+      const result = await service.updateMoc('user-123', mockMoc.id, partialUpdate)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        // Only tags should be updated
+        expect(result.data.tags).toEqual(['new-tag'])
+        // Other fields should remain unchanged
+        expect(result.data.title).toBe('Castle MOC')
+        expect(result.data.description).toBe('A detailed medieval castle MOC')
+      }
+
+      expect(mocRepo.updateMoc).toHaveBeenCalledWith(mockMoc.id, 'user-123', partialUpdate)
+    })
+
+    it('AC-10, AC-14: returns DB_ERROR on database failure', async () => {
+      vi.mocked(mocRepo.updateMoc).mockRejectedValue(new Error('Database connection lost'))
+
+      const result = await service.updateMoc('user-123', mockMoc.id, { title: 'Test' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('DB_ERROR')
+      }
+    })
+
+    it('accepts empty update object (no-op)', async () => {
+      const result = await service.updateMoc('user-123', mockMoc.id, {})
+
+      expect(result.ok).toBe(true)
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'user-123')
+      expect(mocRepo.updateMoc).toHaveBeenCalledWith(mockMoc.id, 'user-123', {})
     })
   })
 

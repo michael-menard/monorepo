@@ -195,6 +195,22 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
       return { items, total }
     },
 
+    async updateMoc(mocId: string, userId: string, data: Partial<CreateMocRequest>): Promise<Moc> {
+      // AC-10: Set updatedAt timestamp on update
+      const updateData: any = {
+        ...data,
+        updatedAt: new Date(),
+      }
+
+      const [updated] = await db
+        .update(mocInstructions)
+        .set(updateData)
+        .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+        .returning()
+
+      return mapRowToMoc(updated)
+    },
+
     async updateThumbnail(mocId: string, userId: string, thumbnailUrl: string): Promise<void> {
       await db
         .update(mocInstructions)

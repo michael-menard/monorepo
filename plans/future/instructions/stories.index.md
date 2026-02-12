@@ -4,8 +4,8 @@ title: "INST - MOC Instructions Story Index"
 status: active
 story_prefix: "INST"
 created_at: "2026-01-24T15:00:00-07:00"
-updated_at: "2026-02-08T04:10:00-07:00"
-total_stories: 39
+updated_at: "2026-02-09T20:45:00-07:00"
+total_stories: 40
 ---
 
 # INST - MOC Instructions Story Index
@@ -14,16 +14,17 @@ total_stories: 39
 
 | Metric | Count |
 |--------|-------|
-| Total Stories | 39 |
+| Total Stories | 40 |
 | Completed | 6 |
-| Ready to Work | 2 |
+| Ready to Work | 4 |
 | In Elaboration | 0 |
 | Ready for QA | 0 |
+| Ready for Code Review | 1 |
 | In Progress | 0 |
 | In QA | 1 |
 | Approved | 0 |
-| Created | 1 |
-| Draft | 29 |
+| Created | 2 |
+| Draft | 26 |
 
 ### Story Distribution by Phase
 
@@ -32,7 +33,7 @@ total_stories: 39
 | 0: Infrastructure | 3 | Package extraction, RTK mutations |
 | 1: Core Vertical Slices | 11 | Full-stack user journeys |
 | 2: UX & Reliability | 5 | Polish, error handling, accessibility |
-| 3: Testing & Validation | 2 | Test coverage, flow validation |
+| 3: Testing & Validation | 3 | Test coverage, flow validation, E2E |
 | 4: Files & Security | 5 | Gallery images, virus scan, optimization |
 | 5: Upload UX | 4 | Drag-drop, progress, preview |
 | 6: Search | 2 | Sort, autocomplete |
@@ -129,11 +130,11 @@ Each story is a full-stack vertical slice delivering user value.
 | INST-1101 | View MOC Details | Ready to Work | (cleared by INST-1100) |
 | INST-1102 | Create Basic MOC | In QA (2026-02-07) | INST-1008 |
 | INST-1103 | Upload Thumbnail | Completed (2026-02-08) | none |
-| INST-1104 | Upload Instructions (Direct) | Completed (2026-02-07) | INST-1102 |
-| INST-1105 | Upload Instructions (Presigned) | Draft | INST-1003, INST-1004 |
-| INST-1106 | Upload Parts List | Draft | none |
+| INST-1104 | Upload Instructions (Direct) | Completed (2026-02-08) | INST-1102 |
+| INST-1105 | Upload Instructions (Presigned) | Blocked (2026-02-09) | INST-1111 |
+| INST-1106 | Upload Parts List | Ready to Work (2026-02-08) | none |
 | INST-1107 | Download Files | Ready to Work (2026-02-07) | INST-1101 |
-| INST-1108 | Edit MOC Metadata | Draft | INST-1101 |
+| INST-1108 | Edit MOC Metadata | Ready for Code Review (2026-02-10) | INST-1101 |
 | INST-1109 | Delete MOC | Draft | INST-1101 |
 | INST-1110 | Remove Individual File | Draft | INST-1101 |
 
@@ -838,12 +839,28 @@ Polish and error handling after core functionality works.
 
 ---
 
-## Phase 3: Testing & Validation (2 stories)
+## Phase 3: Testing & Validation (4 stories)
 
 | ID | Title | Status | Blocked By |
 |----|-------|--------|------------|
+| INST-1111 | Fix Missing Playwright BDD Step Definitions | Backlog (2026-02-09) | None |
+| INST-1112 | E2E Tests for File Upload | Created (2026-02-08) | INST-1102 |
 | INST-1300 | Upload Session Test Coverage | Draft | INST-1105 |
 | INST-1301 | End-to-End Flow Validation | Draft | Phase 1 complete |
+
+**INST-1111: Fix Missing Playwright BDD Step Definitions**
+- Fix 245 missing step definitions in Playwright BDD test suite
+- Primarily in inspiration-keyboard.feature and other inspiration features
+- Required to unblock bddgen and enable E2E test execution
+- Blocks: INST-1105 (presigned upload E2E tests)
+- Files: `apps/web/playwright/steps/*.ts`
+
+**INST-1112: E2E Tests for File Upload**
+- Playwright E2E tests for INST-1103 (Thumbnail) and INST-1104 (Instructions Upload)
+- Covers AC65-71 from INST-1104 (upload, validation, download)
+- Requires test data setup: either seed MOCs for Cognito test users or use Create MOC flow
+- Blocked by INST-1102 (Create Basic MOC) for dynamic test data creation
+- Files: `apps/web/playwright/features/instructions/inst-1104-*.feature`
 
 **INST-1300: Upload Session Test Coverage**
 - Integration tests for complete upload flow
@@ -994,3 +1011,6 @@ Polish and error handling after core functionality works.
 | 2026-02-06 23:00 | Claude Sonnet 4.5 | **INST-1104 Created**: Generated story for Upload Instructions (Direct ≤10MB). Executed PM story generation leader workflow: (1) Created STORY-SEED.md from codebase scanning - discovered backend route already implemented (routes.ts lines 198-237) and RTK mutation exists (instructions-api.ts lines 258-291), (2) Generated comprehensive TEST-PLAN.md with 18 happy path tests, 7 error cases, 7 edge cases, and coverage targets (80% frontend, 90% backend), (3) Generated UIUX-NOTES.md with file picker component specs, sequential upload UX, and MVP-critical accessibility requirements, (4) Generated DEV-FEASIBILITY.md confirming VERY HIGH feasibility with 3-day estimate - backend already functional, only frontend component needed, (5) Synthesized complete INST-1104.md story with 71 ACs covering frontend/backend/testing. PDF validation needs to be added to file-validation.ts (2 hours). Backend route verified functional. Blocked by INST-1102 (In QA - non-blocking for story creation). KB write deferred (MCP unavailable). Status: Created (ready for elaboration). |
 | 2026-02-06 23:15 | Claude Haiku 4.5 | **INST-1104 Elaboration Completed**: Phase 2 completion executed. Autonomous mode verdict: PASS. Elaboration analysis identified 3 MVP-critical gaps - all resolved by adding 3 acceptance criteria (AC72-74) for PDF validation consistency, 10MB file size enforcement, and structured error codes. Story upgraded from 71 to 74 ACs. Generated ELAB-INST-1104.md report. Appended QA Discovery Notes to story frontmatter. Updated story status: elaboration → ready-to-work. Moved directory from elaboration/ to ready-to-work/. Updated story index counts (Ready to Work: 3→4, In Elaboration: 1→0). Story ready for implementation phase. |
 | 2026-02-07 18:45 | Claude Sonnet 4.5 | **INST-1107 Created**: Generated story for Download Files. Executed PM story generation leader workflow: (1) Created STORY-SEED.md from codebase scanning (no baseline available) - discovered S3 presigned URL pattern in inspiration domain, MOC detail page with file list, RTK Query framework in place, (2) Generated comprehensive TEST-PLAN.md with 3 happy path tests, 6 error cases, 6 edge cases, coverage targets (90% backend, 80% frontend), (3) Generated UIUX-NOTES.md confirming MVP-feasible with FileDownloadButton component reusing Button primitive, loading states, accessibility requirements, (4) Generated DEV-FEASIBILITY.md confirming HIGH feasibility with 2-3 day estimate - 80% pattern reuse from existing presigned URL code, (5) Synthesized complete INST-1107.md story with 72 ACs covering backend endpoint, frontend component, RTK Query integration, security, error handling. Presigned S3 download URL pattern (GetObjectCommand) mirrors upload pattern (PutObjectCommand). Blocked by INST-1101 (View MOC Details - for E2E testing). Status: Created (ready for elaboration). |
+| 2026-02-08 12:00 | Claude Sonnet 4.5 | **INST-1106 Created**: Generated story for Upload Parts List. Executed PM story generation leader workflow: (1) Created STORY-SEED.md from codebase scanning (no baseline available) - discovered proven direct upload patterns from INST-1103 (thumbnail) and INST-1104 (instructions), existing file validation utilities (validatePdfFile, validateFileSize), RTK Query uploadInstructionFile mutation pattern, (2) Generated comprehensive TEST-PLAN.md with 4 happy path tests, 6 error cases, 6 edge cases, coverage targets (80% frontend, 90% backend, 95% validation), (3) Generated UIUX-NOTES.md with PartsListUpload component architecture (adapt from ThumbnailUpload), MVP-critical accessibility requirements, visual design specs, error messaging patterns, (4) Generated DEV-FEASIBILITY.md confirming HIGH feasibility with 2-3 day estimate - 70-100% reuse across all layers, identified 3 MVP-critical risks (endpoint structure, single file replacement, CSV/XML MIME types), (5) Synthesized complete INST-1106.md story with 73 ACs covering frontend/backend/database/testing. Key differences from INST-1103/1104: CSV/XML/PDF file types (not just images or just PDFs), single file only (replace if exists), upsert pattern for enforcement. KB write deferred (tools unavailable). Status: Created (ready for elaboration). |
+| 2026-02-09 12:00 | Claude Sonnet 4.5 | **INST-1105 Created**: Generated story for Upload Instructions (Presigned >10MB). Executed PM story generation leader workflow: (1) Loaded STORY-SEED.md with 80-100% reuse potential across all layers - @repo/upload-types, @repo/upload-config, @repo/upload-client, useUploadManager hook, editPresign/editFinalize patterns from moc-instructions-core, (2) Generated comprehensive TEST-PLAN.md with 10 test categories (85 test cases total), coverage targets (80% frontend, 90% backend, 95% upload session state machine), E2E tests with real S3 presigned URLs per ADR-006, (3) Generated UIUX-NOTES.md with PresignedUpload component architecture, 6 file item states (queued, uploading, success, failed, expired, cancelled), session expiry warning/auto-refresh UX, MVP-critical accessibility requirements (keyboard nav, screen reader, ARIA, WCAG AA), (4) Generated DEV-FEASIBILITY.md confirming HIGH feasibility with 5-day estimate (40 hours) - proven patterns save ~10 hours, identified 4 technical risks with proven mitigations (session expiry, S3 verification, file handle loss, concurrent completion), (5) Synthesized complete INST-1105.md story with 85 ACs covering two-phase presigned URL flow (session creation → S3 upload → completion), session expiry handling (local TTL + API error), multi-file concurrent upload (max 3), progress tracking, cancel/retry. Database migration required: Add originalFilename, originalFileSize to upload_sessions table. Blocked by INST-1003, INST-1004 (both completed). KB write deferred (tools unavailable). Status: Created (ready for elaboration). |
+| 2026-02-09 15:30 | Claude Sonnet 4.5 | **INST-1108 Created**: Generated story for Edit MOC Metadata. Executed PM story generation leader workflow: (1) Loaded STORY-SEED.md with reality context (MocForm component exists from INST-1102, useUpdateMocMutation RTK hook exists, PATCH /mocs/:id backend endpoint missing), (2) Generated comprehensive TEST-PLAN.md with 6 happy path tests, 8 error cases, 10 edge cases, coverage targets (90% backend, 80% frontend, 80% integration), E2E tests with direct navigation workaround for INST-1101 dependency, (3) Generated UIUX-NOTES.md with EditMocPage architecture (95% component reuse, MocForm pre-populated with initialValues), MVP-critical accessibility requirements, form recovery pattern from CreateMocPage, (4) Generated DEV-FEASIBILITY.md confirming HIGH feasibility with 8-10 hour estimate (2-3 backend + 3-4 frontend + 2-3 testing) - 95% frontend reuse, 70% backend reuse, identified 5 MVP-critical risks (PATCH endpoint missing, INST-1101 dependency, MocForm compatibility, validation schema alignment, test data setup) with clear mitigations, (5) Synthesized complete INST-1108.md story with 74 ACs covering PATCH endpoint implementation, EditMocPage component, RTK Query integration, form recovery, keyboard navigation, screen reader support. Partial update semantics (only changed fields sent). Blocked by INST-1101 (Ready to Work - edit button placement). Status: Created (ready for elaboration). |
