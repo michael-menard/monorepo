@@ -1,0 +1,28 @@
+schema: 1
+story_id: REPA-002
+timestamp: '2026-02-10T21:30:00Z'
+
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - 'packages/core/upload/**'
+  - 'packages/core/upload-client/**'
+  - 'apps/web/main-app/**'
+  - 'apps/web/app-instructions-gallery/**'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+
+summary: 'Consolidate XHR upload client code from @repo/upload-client and app-level implementations into @repo/upload/client/ with a single source of truth'

@@ -1,0 +1,53 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix"
+prefix: "BUGF"
+project_name: "bug-fix"
+completed: "2026-02-10T00:00:00Z"
+
+files_created:
+  - path: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/stories.index.md"
+    stories: 24
+  - path: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/PLAN.meta.md"
+  - path: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/PLAN.exec.md"
+  - path: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/roadmap.md"
+
+stage_directories_created:
+  - "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/backlog/"
+  - "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/elaboration/"
+  - "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/ready-to-work/"
+  - "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/in-progress/"
+  - "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix/UAT/"
+
+metrics:
+  total_stories: 24
+  ready_to_start: 21
+  blocked_stories: 3
+  phases: 4
+  critical_path_length: 2
+  max_parallel: 8
+  high_risk_stories: 6
+  sizing_warning_stories: 8
+
+roadmap_highlights:
+  critical_path: ["BUGF-001", "BUGF-004"]
+  parallel_groups: 6
+  phase_1_stories: 4
+  phase_2_stories: 2
+  phase_3_stories: 11
+  phase_4_stories: 7
+
+phase_breakdown:
+  phase_1:
+    name: "Critical Functionality"
+    stories: ["BUGF-001", "BUGF-002", "BUGF-003", "BUGF-004", "BUGF-016"]
+  phase_2:
+    name: "Cross-App Infrastructure"
+    stories: ["BUGF-005", "BUGF-006"]
+  phase_3:
+    name: "Test Coverage & Quality"
+    stories: ["BUGF-007", "BUGF-008", "BUGF-009", "BUGF-010", "BUGF-011", "BUGF-012", "BUGF-013", "BUGF-014", "BUGF-015", "BUGF-018", "BUGF-019", "BUGF-020", "BUGF-023"]
+  phase_4:
+    name: "Code Quality & Cleanup"
+    stories: ["BUGF-017", "BUGF-021", "BUGF-022", "BUGF-024"]
+
+next_step: "/elab-epic BUGF"

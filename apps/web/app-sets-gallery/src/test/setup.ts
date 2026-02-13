@@ -81,6 +81,12 @@ vi.mock('@repo/logger', () => ({
     warn: vi.fn(),
     debug: vi.fn(),
   },
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  })),
 }))
 
 // Global test utilities
@@ -89,3 +95,6 @@ declare global {
 }
 
 globalThis.vi = vi
+
+// Mock environment variables for API client
+vi.stubEnv('VITE_SERVERLESS_API_BASE_URL', 'http://localhost:3001/api')

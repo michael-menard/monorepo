@@ -7,14 +7,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useBackgroundCompression } from '../useBackgroundCompression'
-import type { CompressionResult } from '../../utils/imageCompression'
+import type { CompressionResult } from '@repo/upload/image/compression/__types__'
 
-// Mock imageCompression module
-vi.mock('../../utils/imageCompression', () => ({
+// Mock imageCompression module from @repo/upload
+vi.mock('@repo/upload/image/compression', () => ({
   compressImage: vi.fn(),
 }))
 
-import { compressImage } from '../../utils/imageCompression'
+import { compressImage } from '@repo/upload/image/compression'
 const mockCompressImage = vi.mocked(compressImage)
 
 // Default compression config for tests

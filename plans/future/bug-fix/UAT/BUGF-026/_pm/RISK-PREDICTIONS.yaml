@@ -1,0 +1,64 @@
+# Risk Predictions: BUGF-026
+# Generated: 2026-02-11
+# Model: Heuristic-based (WKFL-007)
+
+predictions:
+  split_risk:
+    score: 0.1
+    confidence: high
+    reasoning: |
+      Story is well-scoped as a security architecture review with clear deliverable (SECURITY-REVIEW.md).
+      All 6 ACs are documentation-focused and achievable within 2-3 days.
+      No implementation work required, reducing scope creep risk.
+      Low split risk.
+    
+  review_cycles:
+    estimate: 2
+    confidence: medium
+    reasoning: |
+      Security reviews typically require peer review and iteration.
+      Expected cycle 1: Initial draft
+      Expected cycle 2: Security expert feedback incorporation
+      Possible cycle 3 if significant gaps identified
+      2-3 review cycles estimated.
+    
+  token_cost:
+    estimate_range: [8000, 15000]
+    confidence: medium
+    reasoning: |
+      Documentation and analysis story.
+      Phase 1: Architecture documentation (~3k tokens)
+      Phase 2: Threat modeling (~4k tokens)
+      Phase 3: Contract spec and vulnerability assessment (~5k tokens)
+      Phase 4: Documentation writing (~3k tokens)
+      Total: 8k-15k tokens estimated.
+    
+  unblocks:
+    - story_id: BUGF-005
+      confidence: high
+      notes: Primary blocker removal - security review must be complete before auth hook consolidation
+    
+  introduced_risks:
+    - risk_id: SEC-004
+      severity: low
+      description: Incomplete security review may provide false confidence for BUGF-005
+      mitigation: Require external security consultant review if internal expertise insufficient
+    
+  fallback_plan: |
+    If security review identifies blocking vulnerabilities:
+    1. Create follow-up stories to fix identified issues
+    2. BUGF-005 remains blocked until mitigations implemented
+    3. Update BUGF-005 security acceptance criteria based on findings
+    
+    If external security consultant unavailable:
+    1. Use OWASP ASVS as self-review checklist
+    2. Run automated SAST tools for vulnerability detection
+    3. Peer review by most senior available engineer
+    4. Accept higher risk and document gaps for future review
+
+metadata:
+  story_type: documentation
+  domain: auth-security
+  complexity: complex
+  ac_count: 6
+  experiment_variant: control

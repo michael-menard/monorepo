@@ -1,0 +1,388 @@
+schema: 1
+story_id: "BUGF-012"
+timestamp: "2026-02-11T19:40:00Z"
+
+steps:
+  - id: 1
+    description: "Research @dnd-kit testing approach and create mock setup pattern"
+    files:
+      - "apps/web/app-inspiration-gallery/src/test/mocks/dnd-kit.ts"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Research @dnd-kit official testing documentation"
+      - "Create reusable mock for DndContext, useDraggable, useDroppable, useSortable"
+      - "Document mocking approach in test file comments"
+
+  - id: 2
+    description: "Create main-page.tsx integration test (highest priority)"
+    files:
+      - "apps/web/app-inspiration-gallery/src/pages/__tests__/main-page.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "885 lines - highest value test"
+      - "Test tab switching, search, sort, modals, keyboard shortcuts"
+      - "Target 75% line coverage"
+      - "Use within() to scope queries to sections"
+
+  - id: 3
+    description: "Create DraggableInspirationGallery test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/DraggableInspirationGallery/__tests__/DraggableInspirationGallery.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Test drag handlers with mocked @dnd-kit"
+      - "Test onReorder callback"
+      - "Target 65% coverage (mocking complexity)"
+
+  - id: 4
+    description: "Create DeleteInspirationModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/DeleteInspirationModal/__tests__/DeleteInspirationModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Modal pattern: open/close, confirm/cancel, RTK mutation"
+      - "Test destructive action confirmation"
+      - "Target 70% coverage"
+
+  - id: 5
+    description: "Create DeleteAlbumModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/DeleteAlbumModal/__tests__/DeleteAlbumModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Same pattern as DeleteInspirationModal"
+      - "Target 70% coverage"
+
+  - id: 6
+    description: "Create EditInspirationModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/EditInspirationModal/__tests__/EditInspirationModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test form validation, edit flow"
+      - "Test RTK Query update mutation"
+      - "Target 70% coverage"
+
+  - id: 7
+    description: "Create UploadModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/UploadModal/__tests__/UploadModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test upload flow with presigned URL"
+      - "Test file selection, validation"
+      - "Related to BUGF-032 but no blocking conflicts"
+      - "Target 70% coverage"
+
+  - id: 8
+    description: "Create CreateAlbumModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/CreateAlbumModal/__tests__/CreateAlbumModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test album creation flow"
+      - "Test form validation"
+      - "Target 70% coverage"
+
+  - id: 9
+    description: "Create AddToAlbumModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/AddToAlbumModal/__tests__/AddToAlbumModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test album selection"
+      - "Test adding inspirations to album"
+      - "Target 70% coverage"
+
+  - id: 10
+    description: "Create LinkToMocModal test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/LinkToMocModal/__tests__/LinkToMocModal.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test MOC linking flow"
+      - "Test search/selection"
+      - "Target 70% coverage"
+
+  - id: 11
+    description: "Create InspirationContextMenu test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/InspirationContextMenu/__tests__/InspirationContextMenu.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test menu options and handlers"
+      - "Test keyboard navigation (arrow keys, Enter, Escape)"
+      - "Target 70% coverage"
+
+  - id: 12
+    description: "Create AlbumContextMenu test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/AlbumContextMenu/__tests__/AlbumContextMenu.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Same pattern as InspirationContextMenu"
+      - "Target 70% coverage"
+
+  - id: 13
+    description: "Create SortableAlbumCard test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/SortableAlbumCard/__tests__/SortableAlbumCard.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Test with mocked @dnd-kit"
+      - "Test drag handle accessibility"
+      - "Target 65% coverage"
+
+  - id: 14
+    description: "Create SortableInspirationCard test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/SortableInspirationCard/__tests__/SortableInspirationCard.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Same pattern as SortableAlbumCard"
+      - "Target 65% coverage"
+
+  - id: 15
+    description: "Create AlbumDragPreview test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/AlbumDragPreview/__tests__/AlbumDragPreview.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Test preview rendering"
+      - "Test multi-select count display"
+      - "Target 65% coverage"
+
+  - id: 16
+    description: "Create InspirationDragPreview test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/InspirationDragPreview/__tests__/InspirationDragPreview.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Same pattern as AlbumDragPreview"
+      - "Target 65% coverage"
+
+  - id: 17
+    description: "Create EmptyState test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/EmptyState/__tests__/EmptyState.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test all variants: first-time, no-results, no-items"
+      - "Test action buttons"
+      - "Target 60% coverage (presentational)"
+
+  - id: 18
+    description: "Create GalleryLoadingSkeleton test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/GalleryLoadingSkeleton/__tests__/GalleryLoadingSkeleton.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test skeleton count rendering"
+      - "Test aria-label for accessibility"
+      - "Target 60% coverage (presentational)"
+
+  - id: 19
+    description: "Create AlbumCardSkeleton test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/AlbumCardSkeleton/__tests__/AlbumCardSkeleton.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Test skeleton rendering"
+      - "Test animation classes"
+      - "Target 60% coverage (presentational)"
+
+  - id: 20
+    description: "Create InspirationCardSkeleton test"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/InspirationCardSkeleton/__tests__/InspirationCardSkeleton.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Same pattern as AlbumCardSkeleton"
+      - "Target 60% coverage (presentational)"
+
+  - id: 21
+    description: "Run coverage report and identify gaps"
+    files: []
+    dependencies: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    slice: frontend
+    notes:
+      - "Run pnpm test:coverage --filter app-inspiration-gallery"
+      - "Verify 70% line coverage, 65% branch coverage"
+      - "Identify and fill coverage gaps"
+
+  - id: 22
+    description: "Optional: Create reusable modal test helper if duplication high"
+    files:
+      - "apps/web/app-inspiration-gallery/src/test/helpers/modal-test-helper.ts"
+    dependencies: [4, 5, 6, 7, 8, 9, 10]
+    slice: frontend
+    notes:
+      - "Only if modal tests show significant duplication"
+      - "Extract common modal test patterns"
+      - "Document usage in JSDoc"
+
+files_to_change:
+  - path: "apps/web/app-inspiration-gallery/src/test/mocks/dnd-kit.ts"
+    action: create
+    reason: "Reusable @dnd-kit mock setup for drag component tests"
+
+  - path: "apps/web/app-inspiration-gallery/src/pages/__tests__/main-page.test.tsx"
+    action: create
+    reason: "AC-1: Main page integration test (highest priority - 885 lines)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/DraggableInspirationGallery/__tests__/DraggableInspirationGallery.test.tsx"
+    action: create
+    reason: "AC-3: Drag-sort functionality test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/DeleteInspirationModal/__tests__/DeleteInspirationModal.test.tsx"
+    action: create
+    reason: "AC-2: Destructive modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/DeleteAlbumModal/__tests__/DeleteAlbumModal.test.tsx"
+    action: create
+    reason: "AC-2: Destructive modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/EditInspirationModal/__tests__/EditInspirationModal.test.tsx"
+    action: create
+    reason: "AC-2: Edit flow modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/UploadModal/__tests__/UploadModal.test.tsx"
+    action: create
+    reason: "AC-2: Upload flow modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/CreateAlbumModal/__tests__/CreateAlbumModal.test.tsx"
+    action: create
+    reason: "AC-2: Creation flow modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/AddToAlbumModal/__tests__/AddToAlbumModal.test.tsx"
+    action: create
+    reason: "AC-2: Album membership modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/LinkToMocModal/__tests__/LinkToMocModal.test.tsx"
+    action: create
+    reason: "AC-2: MOC linking modal test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/InspirationContextMenu/__tests__/InspirationContextMenu.test.tsx"
+    action: create
+    reason: "AC-4: Context menu test with keyboard navigation"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/AlbumContextMenu/__tests__/AlbumContextMenu.test.tsx"
+    action: create
+    reason: "AC-4: Context menu test with keyboard navigation"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/SortableAlbumCard/__tests__/SortableAlbumCard.test.tsx"
+    action: create
+    reason: "AC-3: Sortable card test with @dnd-kit mocks"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/SortableInspirationCard/__tests__/SortableInspirationCard.test.tsx"
+    action: create
+    reason: "AC-3: Sortable card test with @dnd-kit mocks"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/AlbumDragPreview/__tests__/AlbumDragPreview.test.tsx"
+    action: create
+    reason: "AC-3: Drag preview test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/InspirationDragPreview/__tests__/InspirationDragPreview.test.tsx"
+    action: create
+    reason: "AC-3: Drag preview test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/EmptyState/__tests__/EmptyState.test.tsx"
+    action: create
+    reason: "AC-5: Empty state variants test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/GalleryLoadingSkeleton/__tests__/GalleryLoadingSkeleton.test.tsx"
+    action: create
+    reason: "AC-5: Loading skeleton test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/AlbumCardSkeleton/__tests__/AlbumCardSkeleton.test.tsx"
+    action: create
+    reason: "AC-5: Card skeleton test"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/InspirationCardSkeleton/__tests__/InspirationCardSkeleton.test.tsx"
+    action: create
+    reason: "AC-5: Card skeleton test"
+
+commands_to_run:
+  - command: "pnpm test --filter app-inspiration-gallery"
+    when: "after each test file creation (incremental)"
+    required: true
+
+  - command: "pnpm test:coverage --filter app-inspiration-gallery"
+    when: "after all test files created (step 21)"
+    required: true
+
+  - command: "pnpm lint --filter app-inspiration-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-inspiration-gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: main-page.test.tsx - tab switching, search, sort, modals, keyboard shortcuts, empty states, loading states"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests: DeleteInspirationModal.test.tsx, DeleteAlbumModal.test.tsx, EditInspirationModal.test.tsx, UploadModal.test.tsx, CreateAlbumModal.test.tsx, AddToAlbumModal.test.tsx, LinkToMocModal.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests: DraggableInspirationGallery.test.tsx, SortableAlbumCard.test.tsx, SortableInspirationCard.test.tsx, AlbumDragPreview.test.tsx, InspirationDragPreview.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests: InspirationContextMenu.test.tsx, AlbumContextMenu.test.tsx - menu options, keyboard navigation"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit tests: EmptyState.test.tsx, GalleryLoadingSkeleton.test.tsx, AlbumCardSkeleton.test.tsx, InspirationCardSkeleton.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Coverage report: pnpm test:coverage - 70% line coverage, 65% branch coverage"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Test files follow BDD structure, use semantic queries, userEvent for interactions, beforeEach cleanup"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "JSDoc comments in dnd-kit mock setup, modal testing pattern documented in test file comments"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Per ADR-005: Unit tests with MSW mocking required"
+  - "Per ADR-006: E2E tests exempt for test-only stories"
+  - "Test infrastructure already exists (MSW, vitest, global mocks)"
+  - "Follow BDD patterns from BulkActionsBar and InspirationCard tests"
+  - "Incremental approach: create tests by component type (modals together, drag components together)"
+  - "Priority order: main-page first (highest value), then modals, then drag components, then UI components"
+  - "@dnd-kit mocking research needed upfront (step 1) before drag component tests"
+  - "Optional modal test helper if duplication becomes significant"
+  - "Coverage gaps addressed in step 21 after initial test creation"

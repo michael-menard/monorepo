@@ -1,0 +1,155 @@
+schema: 1
+story_id: "REPA-004"
+timestamp: "2026-02-10T21:30:00Z"
+domain: "upload"
+
+# Knowledge context for REPA-004: Migrate Image Processing to Shared Package
+
+lessons:
+  - id: LESSON-001
+    title: "Image compression quality presets reduce user confusion"
+    summary: "WISH-2046 introduced named presets (low-bandwidth, balanced, high-quality) instead of raw config. Users found this much more intuitive."
+    context: "Original implementation required users to understand maxSizeMB, maxWidthOrHeight, initialQuality. Presets simplified to single choice."
+    recommendation: "Preserve preset-based API in generalized hook. Do not expose raw compression config to consuming apps."
+    relevance: high
+    source: "WISH-2046"
+
+  - id: LESSON-002
+    title: "HEIC files may report incorrect MIME type"
+    summary: "Some apps (iOS Files, email) report HEIC files as application/octet-stream instead of image/heic."
+    context: "Detection required both MIME type check AND file extension check for reliability."
+    recommendation: "Preserve dual detection strategy (isHEIC function) in @repo/upload/image/heic module."
+    relevance: high
+    source: "WISH-2045"
+
+  - id: LESSON-003
+    title: "Progress tracking must be phase-aware"
+    summary: "Users expect separate progress indicators for conversion, compression, and upload phases."
+    context: "Original implementation used separate progress states (conversionProgress, compressionProgress, uploadProgress) with distinct UI feedback."
+    recommendation: "Preserve phase-aware progress tracking in generalized useUpload hook."
+    relevance: high
+    source: "useS3Upload implementation"
+
+  - id: LESSON-004
+    title: "WebP conversion requires browser support fallback"
+    summary: "WISH-2058 added WebP as default format but needed JPEG fallback for older browsers (Safari <14)."
+    context: "browser-image-compression library handles fallback internally, but warning logging needed for observability."
+    recommendation: "Preserve WebP fallback behavior with @repo/logger warnings in compression module."
+    relevance: medium
+    source: "WISH-2058"
+
+  - id: LESSON-005
+    title: "Skip compression for already-small images"
+    summary: "Compression of files <500KB with dimensions within limits is unnecessary and may increase size."
+    context: "shouldSkipCompression function checks both file size AND dimensions to avoid over-processing."
+    recommendation: "Preserve skip logic in @repo/upload/image/compression module."
+    relevance: medium
+    source: "imageCompression.ts implementation"
+
+adrs:
+  - id: ADR-003
+    title: "CloudFront in front of S3 with Origin Access Control"
+    decision: "All S3 uploads use CloudFront CDN with OAC for secure public access."
+    status: active
+    relevance: "Upload flow uses presigned URLs for S3, then serves via CloudFront. Do not change this pattern."
+    context: "Protected feature per story non-goals. Generalized hook must preserve presigned URL flow."
+
+  - id: ADR-UPLOAD-001
+    title: "Zod-first type definitions for all APIs"
+    decision: "All configuration types defined with Zod schemas, types inferred via z.infer<>"
+    status: active
+    relevance: "Critical for runtime validation. All new modules must use Zod schemas per CLAUDE.md."
+    context: "CompressionConfig, PresignedUrlResponse, UploadState, etc. must all have Zod schemas."
+
+patterns:
+  - pattern: "Hexagonal architecture for image processing"
+    description: "Separate concerns: configuration (presets), logic (compression/conversion), orchestration (hooks)"
+    location: "Story architecture notes"
+    relevance: "Guides module structure: /image/presets, /image/compression, /image/heic, /hooks"
+
+  - pattern: "Progress callback pattern"
+    description: "Consistent onProgress(percent: number, phase: string) signature across all async operations"
+    location: "useS3Upload hook, compressImage function, convertHEICToJPEG function"
+    relevance: "Preserve this pattern in generalized useUpload hook"
+
+  - pattern: "Error logging without throwing"
+    description: "Return error states instead of throwing, log all errors via @repo/logger"
+    location: "useS3Upload hook implementation"
+    relevance: "Consuming apps display error messages, hook returns error states"
+
+  - pattern: "Preset-based configuration"
+    description: "Named presets from WISH-2046 provide opinionated defaults"
+    location: "COMPRESSION_PRESETS constant in imageCompression.ts"
+    relevance: "Do not expose raw compression options to consuming apps - use presets"
+
+constraints:
+  - constraint: "Package must build in isolation"
+    description: "No imports from apps/web/* in package code. All dependencies via workspace packages."
+    enforcement: "Turborepo build order + type checking"
+    relevance: high
+
+  - constraint: "Exact dependency versions"
+    description: "browser-image-compression ^2.0.2, heic2any 0.0.4 (match wishlist app)"
+    enforcement: "Copy exact versions from wishlist package.json"
+    relevance: high
+
+  - constraint: "No barrel files"
+    description: "Per CLAUDE.md: no index.ts re-exports, direct imports from source files"
+    enforcement: "Code review"
+    relevance: high
+
+  - constraint: "80%+ test coverage"
+    description: "All new package modules must meet 80% coverage threshold"
+    enforcement: "CI coverage checks"
+    relevance: high
+
+dependencies:
+  - dependency: "REPA-001"
+    status: complete
+    description: "Create @repo/upload Package Structure"
+    verification: "packages/core/upload/ directory structure exists"
+
+  - dependency: "@repo/upload-client"
+    status: active
+    description: "XHR upload with progress tracking - already used by useS3Upload"
+    usage: "Import uploadToPresignedUrl from @repo/upload/client"
+
+  - dependency: "@repo/logger"
+    status: active
+    description: "Logging utility - replaces console.log calls"
+    usage: "Import logger from @repo/logger for all error/warning logging"
+
+  - dependency: "browser-image-compression"
+    status: external
+    version: "^2.0.2"
+    description: "Client-side image compression library"
+    usage: "Add to @repo/upload package.json dependencies"
+
+  - dependency: "heic2any"
+    status: external
+    version: "0.0.4"
+    description: "HEIC to JPEG conversion library"
+    usage: "Add to @repo/upload package.json dependencies"
+
+risks:
+  - risk: "Type safety loss during extraction"
+    mitigation: "Use Zod schemas for all types, enforce strict typing"
+    severity: medium
+
+  - risk: "Progress callback inconsistency"
+    mitigation: "Document onProgress contract in JSDoc, preserve existing signature"
+    severity: low
+
+  - risk: "Presigned URL schema assumptions"
+    mitigation: "AC-10 requires verification of PresignedUrlResponse schema against RTK mutation"
+    severity: high
+
+  - risk: "Dependency version conflicts"
+    mitigation: "Use exact versions from wishlist app, test in isolation"
+    severity: low
+
+notes:
+  - "No KB search performed - KB tools unavailable during planning phase"
+  - "Knowledge context sourced from story file, source code analysis, and elaboration docs"
+  - "All patterns and lessons preserved from existing wishlist implementation"
+  - "Non-goals respected: no behavior changes, no optimization, no new features"

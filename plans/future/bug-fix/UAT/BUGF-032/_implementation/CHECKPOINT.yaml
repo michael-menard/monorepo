@@ -1,0 +1,49 @@
+schema: 1
+story_id: "BUGF-032"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-12T03:30:00Z"
+
+current_phase: qa-verify
+last_successful_phase: qa-verify
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+
+warnings: []
+
+completed_at: "2026-02-12T03:35:00Z"
+phase_status: completed
+e2e_gate: exempt
+
+e2e_exemption_reason: "E2E tests split to BUGF-051 - requires live backend (BUGF-031) deployment"
+
+progress:
+  steps_completed: "1-8, 13"
+  steps_deferred: "9-12 (split to BUGF-051)"
+  completion_percentage: 100
+
+completed_work:
+  - "Created RTK Query uploads-api slice with presigned URL mutation"
+  - "Created Zod schemas for upload request/response"
+  - "Added UPLOADS endpoint to endpoints.ts"
+  - "Updated API client exports and package.json"
+  - "Registered uploadsApi in main-app Redux store"
+  - "Integrated presigned URL API in upload-page.tsx"
+  - "Integrated presigned URL API in InstructionsNewPage.tsx"
+  - "Implemented session refresh handler in both pages"
+  - "Added loading states and error banners"
+  - "Wrote 16 unit tests for uploads-api schemas (all passing)"
+
+build_verification:
+  api_client_build: PASS
+  api_client_types: PASS
+  store_types: PASS
+  lint: PASS
+  unit_tests: "16/16 PASS"
+
+split_stories:
+  - id: BUGF-051
+    title: "E2E Tests for Presigned URL Upload Flow"
+    reason: "E2E tests require live backend (BUGF-031) deployment"
+    scope: "Playwright E2E tests for upload flow (Steps 9-12)"

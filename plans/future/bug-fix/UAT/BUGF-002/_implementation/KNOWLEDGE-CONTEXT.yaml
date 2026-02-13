@@ -1,0 +1,54 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-11T15:00:00Z"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "Ensure RTK Query mutation arguments match backend API schema exactly"
+      - "Test error handling paths early to catch response shape mismatches"
+    patterns_to_follow:
+      - "Follow CreateMocPage.tsx async mutation handling pattern (lines 157-197)"
+      - "Use try/catch with .unwrap() for RTK Query mutations"
+      - "Preserve form state on error for retry capability"
+      - "Show context-specific error messages based on HTTP status codes"
+    patterns_to_avoid:
+      - "Don't clear form state on API errors - preserve for retry"
+      - "Don't use console.log - use @repo/logger"
+      - "Don't skip loading states - users need visual feedback"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests can use mocks, UAT must use real services"
+        applies_to: ["testing"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test required during dev implementation"
+        applies_to: ["testing", "frontend"]
+    constraints:
+      api_paths: "/api/v2/instructions/mocs/:id (frontend) -> /mocs/:id (backend)"
+      testing: "Unit tests with mocks OK, UAT must use live API"
+      e2e_required: "Minimum one happy-path E2E test using playwright.legacy.config.ts"
+
+  token_optimization:
+    high_cost_operations: []
+    recommended_patterns:
+      - "Read targeted sections of large files using offset/limit"
+      - "Use Grep to locate code before reading full files"
+
+  warnings: []
+
+  tokens:
+    in: 0
+    out: 0

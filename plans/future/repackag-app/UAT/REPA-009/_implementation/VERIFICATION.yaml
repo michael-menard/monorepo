@@ -1,0 +1,136 @@
+schema: 1
+story_id: "REPA-009"
+timestamp: "2026-02-11T17:05:22Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 117, fail: 0, skip: 1 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 95.0
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes:
+    - "All tests use React Testing Library with semantic queries"
+    - "Proper accessibility testing with axe-core integration"
+    - "Keyboard interaction tests included for selection and navigation"
+    - "Test IDs used appropriately when multiple buttons present"
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "GalleryCard accepts selection mode props (selectable, selected, onSelect, selectionPosition) with Zod schema validation"
+    verification: "Spot-checked GalleryCard.tsx lines 36-42, confirmed Zod schema defines all selection props"
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "Selection checkbox overlay renders with 24x24px size, correct styling, and positioning"
+    verification: "Spot-checked GalleryCard.tsx lines 359-378, confirmed h-6 w-6 (24x24px), border-2, rounded-full, Check icon"
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Selection click behavior implemented with card click and keyboard activation"
+    verification: "Tests verify click behavior, Enter/Space key activation, checkbox propagation stopping"
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "GalleryCard accepts drag handle props (draggable, dragHandlePosition, renderDragHandle)"
+    verification: "Spot-checked GalleryCard.tsx lines 44-50, confirmed Zod schema defines all drag handle props"
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Drag handle renders with 44x44px touch target at specified position"
+    verification: "Spot-checked GalleryCard.tsx lines 395-416, confirmed h-11 w-11 (44x44px), GripVertical icon, positioning"
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Drag handle has aria-label with card title, 44x44px touch target, touch-none class for WCAG 2.5.5"
+    verification: "Spot-checked GalleryCard.tsx line 397, confirmed aria-label implementation and accessibility attributes"
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Hover overlay renders custom content with gradient background and opacity transitions"
+    verification: "Tests verify hover overlay content rendering, gradient classes, opacity transitions"
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "InspirationCard refactored to use GalleryCard, all 36 tests pass"
+    verification: "Executed tests: 36 passed in InspirationCard.test.tsx"
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "AlbumCard refactored to use GalleryCard, stacked effect preserved, all 35 tests pass"
+    verification: "Executed tests: 35 passed in AlbumCard.test.tsx"
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "All tests pass (117 passed, 1 skipped), coverage 95.0% (exceeds 45% threshold and 80% target for GalleryCard)"
+    verification: "Executed all three test files: GalleryCard (46 passed, 1 skipped), InspirationCard (36 passed), AlbumCard (35 passed)"
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "README.md documents selection mode, drag handles, hover overlays, breaking changes, migration guide"
+    verification: "Spot-checked README.md, confirmed comprehensive documentation with code examples, breaking changes section, and migration guide"
+
+architecture_compliant: true
+architecture_notes:
+  - "ADR-001 (Reuse-first): GalleryCard consolidates duplicate patterns from InspirationCard and AlbumCard"
+  - "ADR-002 (Props-based composition): GalleryCard uses selectable, draggable, hoverOverlay props instead of inheritance"
+  - "ADR-003 (Breaking changes): Actions overlay removal is documented with migration guide in README"
+  - "Follows CLAUDE.md requirements: Zod-first types, no barrel files, @repo/ui imports, @repo/logger for logging"
+  - "Component structure follows standard: Component/index.tsx with __tests__ and __types__ directories"
+  - "WCAG 2.5.5 compliance: 44x44px touch targets for drag handle"
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Environment variable VITE_SERVERLESS_API_BASE_URL required for tests due to transitive barrel import from @repo/app-component-library"
+    category: blocker
+    tags: ["testing", "environment", "monorepo"]
+    resolution: "Set env var before running tests: VITE_SERVERLESS_API_BASE_URL=http://localhost:3000 pnpm test"
+
+  - lesson: "Breaking changes require explicit documentation in README with before/after migration examples"
+    category: pattern
+    tags: ["documentation", "breaking-changes", "api-design"]
+
+  - lesson: "Fixed position strategy (checkbox=top-left, drag=top-right) prevents overlay collision edge cases"
+    category: pattern
+    tags: ["ui", "accessibility", "positioning"]
+
+  - lesson: "Zod-first type definitions with z.infer<> provide runtime validation and self-documenting constraints"
+    category: pattern
+    tags: ["typescript", "validation", "code-quality"]
+
+pre_existing_issues_noted:
+  - issue: "@repo/gallery has pre-existing test failures in GalleryDataTable components (47 failed tests in other files)"
+    impact: "No impact on REPA-009 - these failures existed before this story"
+
+  - issue: "app-inspiration-gallery has pre-existing build warning about @repo/api-client FeatureSchema export"
+    impact: "No impact on REPA-009 - this warning existed before this story"
+
+gate:
+  decision: PASS
+  reason: "All 11 ACs verified as PASS. 117 tests pass (95% coverage exceeds 45% threshold). Build passes for @repo/gallery. Code review verdict PASS. Architecture compliance PASS. No blocking issues found."
+  blocking_issues: []
+
+tokens:
+  in: 46703
+  out: 1500

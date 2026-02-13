@@ -1,0 +1,290 @@
+schema: 1
+story_id: "BUGF-003"
+timestamp: "2026-02-11T19:40:00Z"
+
+steps:
+  - id: 1
+    description: "Add useDeleteSetMutation to RTK Query sets-api with optimistic update and cache invalidation"
+    files:
+      - "packages/core/api-client/src/rtk/sets-api.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Add useUpdateSetMutation to RTK Query sets-api with cache invalidation"
+    files:
+      - "packages/core/api-client/src/rtk/sets-api.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Wire delete handler in main-page.tsx to useDeleteSetMutation with toast notifications"
+    files:
+      - "apps/web/app-sets-gallery/src/pages/main-page.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 4
+    description: "Wire delete handler in set-detail-page.tsx to useDeleteSetMutation with navigation and toast"
+    files:
+      - "apps/web/app-sets-gallery/src/pages/set-detail-page.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 5
+    description: "Create edit-set-page.tsx with form pre-filling, validation, and mutation handling"
+    files:
+      - "apps/web/app-sets-gallery/src/pages/edit-set-page.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 6
+    description: "Add /sets/:id/edit route to Module.tsx routing configuration"
+    files:
+      - "apps/web/app-sets-gallery/src/Module.tsx"
+    dependencies: [5]
+    slice: frontend
+
+  - id: 7
+    description: "Write unit tests for useDeleteSetMutation and useUpdateSetMutation"
+    files:
+      - "packages/core/api-client/src/rtk/__tests__/sets-api.test.ts"
+    dependencies: [1, 2]
+    slice: packages
+
+  - id: 8
+    description: "Write unit tests for edit-set-page component"
+    files:
+      - "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+    dependencies: [5]
+    slice: frontend
+
+files_to_change:
+  - path: "packages/core/api-client/src/rtk/sets-api.ts"
+    action: modify
+    reason: "Add deleteSet and updateSet mutations with proper cache invalidation and optimistic updates (AC-1 through AC-8)"
+
+  - path: "apps/web/app-sets-gallery/src/pages/edit-set-page.tsx"
+    action: create
+    reason: "New edit page component with form pre-filling, validation, and mutation handling (AC-9 through AC-21)"
+
+  - path: "apps/web/app-sets-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Wire handleConfirmDelete to useDeleteSetMutation with toast notifications (AC-24 through AC-29)"
+
+  - path: "apps/web/app-sets-gallery/src/pages/set-detail-page.tsx"
+    action: modify
+    reason: "Wire delete button to useDeleteSetMutation with navigation and toast (AC-30 through AC-34)"
+
+  - path: "apps/web/app-sets-gallery/src/Module.tsx"
+    action: modify
+    reason: "Add /sets/:id/edit route that renders EditSetPage (AC-22, AC-23)"
+
+  - path: "packages/core/api-client/src/rtk/__tests__/sets-api.test.ts"
+    action: create
+    reason: "Unit tests for delete and update mutations to verify API calls, cache invalidation, and error handling"
+
+  - path: "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+    action: create
+    reason: "Unit tests for edit page component to verify form validation, mutation handling, and navigation"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after api-client changes"
+    required: true
+
+  - command: "pnpm test --filter app-sets-gallery"
+    when: "after app-sets-gallery changes"
+    required: true
+
+  - command: "pnpm lint --filter @repo/api-client --filter app-sets-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/api-client --filter app-sets-gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies DELETE request to /api/v2/sets/:id"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies invalidatesTags includes Set and SetList"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies optimistic update removes item from cache"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies PATCH request to /api/v2/sets/:id"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Code inspection: sets-api.ts - mutation accepts UpdateSetInput partial object"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies invalidatesTags includes Set tag for updated item"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies 404 and 403 error handling for both mutations"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test: sets-api.test.ts - verifies typed RTK Query error responses"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies form renders with pre-filled data"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Code inspection: edit-set-page.tsx - useGetSetByIdQuery with skip: !setId pattern"
+    evidence_type: file
+
+  - ac_id: "AC-11"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies loading skeleton displays while fetching"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "Code inspection: edit-set-page.tsx - imports and uses TagInput component"
+    evidence_type: file
+
+  - ac_id: "AC-13"
+    planned_evidence: "Code inspection: edit-set-page.tsx - imports and uses ImageUploadZone component"
+    evidence_type: file
+
+  - ac_id: "AC-14"
+    planned_evidence: "Code inspection: edit-set-page.tsx - follows 3-card layout pattern"
+    evidence_type: file
+
+  - ac_id: "AC-15"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies UpdateSetSchema validation before submission"
+    evidence_type: test
+
+  - ac_id: "AC-16"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies loading state during mutation"
+    evidence_type: test
+
+  - ac_id: "AC-17"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies success toast and navigation to detail page"
+    evidence_type: test
+
+  - ac_id: "AC-18"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies success toast includes set title"
+    evidence_type: test
+
+  - ac_id: "AC-19"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies error toast with specific message"
+    evidence_type: test
+
+  - ac_id: "AC-20"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies cancel button navigates to detail page"
+    evidence_type: test
+
+  - ac_id: "AC-21"
+    planned_evidence: "Unit test: edit-set-page.test.tsx - verifies unsaved changes warning"
+    evidence_type: test
+
+  - ac_id: "AC-22"
+    planned_evidence: "Code inspection: Module.tsx - /sets/:id/edit route exists"
+    evidence_type: file
+
+  - ac_id: "AC-23"
+    planned_evidence: "Code inspection: Module.tsx - route properly typed with params"
+    evidence_type: file
+
+  - ac_id: "AC-24"
+    planned_evidence: "Unit test: main-page.test.tsx - verifies handleConfirmDelete calls useDeleteSetMutation"
+    evidence_type: test
+
+  - ac_id: "AC-25"
+    planned_evidence: "Unit test: main-page.test.tsx - verifies success toast with set title"
+    evidence_type: test
+
+  - ac_id: "AC-26"
+    planned_evidence: "Unit test: main-page.test.tsx - verifies error toast with error message"
+    evidence_type: test
+
+  - ac_id: "AC-27"
+    planned_evidence: "Unit test: main-page.test.tsx - verifies delete button loading state"
+    evidence_type: test
+
+  - ac_id: "AC-28"
+    planned_evidence: "Unit test: main-page.test.tsx - verifies list updates after delete"
+    evidence_type: test
+
+  - ac_id: "AC-29"
+    planned_evidence: "Code inspection: main-page.tsx - confirmation dialog includes set name/number"
+    evidence_type: file
+
+  - ac_id: "AC-30"
+    planned_evidence: "Unit test: set-detail-page.test.tsx - verifies delete handler calls useDeleteSetMutation"
+    evidence_type: test
+
+  - ac_id: "AC-31"
+    planned_evidence: "Unit test: set-detail-page.test.tsx - verifies navigation to main gallery with success toast"
+    evidence_type: test
+
+  - ac_id: "AC-32"
+    planned_evidence: "Unit test: set-detail-page.test.tsx - verifies error toast and remains on page"
+    evidence_type: test
+
+  - ac_id: "AC-33"
+    planned_evidence: "Unit test: set-detail-page.test.tsx - verifies delete button loading state"
+    evidence_type: test
+
+  - ac_id: "AC-34"
+    planned_evidence: "Unit test: set-detail-page.test.tsx - verifies edit button navigation works"
+    evidence_type: test
+
+  - ac_id: "AC-35"
+    planned_evidence: "Code inspection: sets-api.ts - useDeleteSetMutation exported"
+    evidence_type: file
+
+  - ac_id: "AC-36"
+    planned_evidence: "Code inspection: sets-api.ts - useUpdateSetMutation exported"
+    evidence_type: file
+
+  - ac_id: "AC-37"
+    planned_evidence: "Code inspection: all files - types use Zod schemas with z.infer<>"
+    evidence_type: file
+
+  - ac_id: "AC-38"
+    planned_evidence: "Code inspection: all files - logging uses @repo/logger"
+    evidence_type: file
+
+  - ac_id: "AC-39"
+    planned_evidence: "Code inspection: all files - no barrel files created"
+    evidence_type: file
+
+  - ac_id: "AC-40"
+    planned_evidence: "Code inspection: edit-set-page.tsx - functional component with function declaration"
+    evidence_type: file
+
+  - ac_id: "AC-41"
+    planned_evidence: "Code inspection: all files - named exports used"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Per ADR-001, backend DELETE/PATCH endpoints use /sets/:id, frontend uses /api/v2/sets/:id (Vite proxy handles rewrite)"
+  - "Per ADR-003, images served via CloudFront CDN in front of S3"
+  - "Per ADR-005 and BUGF stories index, E2E tests deferred to BUGF-014 (Phase 3)"
+  - "Reuse TagInput and ImageUploadZone components from add-set-page for consistency"
+  - "Follow optimistic update pattern from deleteSetImage mutation (lines 162-176 of sets-api.ts)"
+  - "Follow cache invalidation pattern from addSet mutation (lines 91-97 of sets-api.ts)"
+  - "Edit page uses same 3-card layout as add-set-page for UX consistency"
+  - "UpdateSetSchema and UpdateSetInput already defined in packages/core/api-client/src/schemas/sets.ts"
+  - "No architectural decisions requiring user input - all patterns established in codebase"

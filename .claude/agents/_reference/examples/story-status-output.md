@@ -91,6 +91,109 @@ Example output formats for /story-status command.
 
 ---
 
+## Dependency-Ordered Work List (--deps-order)
+
+```
+╔═════════════════════════════════════════════════════════════════════════════════════════╗
+║                        BUGF Epic - Dependency Work List                                 ║
+╠═════════════════════════════════════════════════════════════════════════════════════════╣
+║ Total: 28 │ Active: 26 │ Deferred: 2 │ Longest Chain: 3 │ Max Parallel: 22              ║
+╚═════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────┐
+│ TIER 0 — No Dependencies (22 stories, start immediately)         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ Phase 1: Critical Functionality                                   │
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ Story    │ Title                                  │ Blocks   │ │
+│ ├──────────┼────────────────────────────────────────┼──────────┤ │
+│ │ BUGF-001 │ Implement Presigned URL API             │ 004, 025 │ │
+│ │ BUGF-002 │ Implement Edit Save for Instructions    │ —        │ │
+│ │ BUGF-003 │ Implement Delete API / Edit Sets        │ —        │ │
+│ │ BUGF-016 │ Missing API Integrations Inspiration    │ —        │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+│                                                                   │
+│ Phase 2: Cross-App Infrastructure                                 │
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ BUGF-026 │ Auth Token Refresh Security Review      │ 005      │ │
+│ │ BUGF-006 │ Replace Console Usage with logger       │ —        │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+│                                                                   │
+│ Phase 3: Test Coverage & Quality                                  │
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ BUGF-028 │ MSW Mocking Infrastructure              │ —        │ │
+│ │ BUGF-027 │ Rate Limiting Implementation Guide      │ —        │ │
+│ │ BUGF-009 │ Fix Skipped Test Suites                 │ —        │ │
+│ │  ...     │ (+8 more)                               │          │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+│                                                                   │
+│ Phase 4: Code Quality & Cleanup                                   │
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ BUGF-017 │ Convert Interfaces to Zod Schemas       │ —        │ │
+│ │  ...     │ (+3 more)                               │          │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+│                                                                   │
+│ Phase 5: E2E Testing                                              │
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ BUGF-030 │ Comprehensive E2E Test Suite            │ —        │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ TIER 1 — Blocked by Tier 0 (3 stories)                           │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ Story    │ Title                                  │ Wait For │ │
+│ ├──────────┼────────────────────────────────────────┼──────────┤ │
+│ │ BUGF-004 │ Session Refresh API for Upload Expiry   │ 001      │ │
+│ │ BUGF-025 │ Lambda IAM Policy Documentation         │ 001      │ │
+│ │ BUGF-005 │ Create Shared Auth Hooks Package        │ 026      │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ TIER 2 — Blocked by Tier 1 (1 story)                             │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ Story    │ Title                                  │ Chain    │ │
+│ ├──────────┼────────────────────────────────────────┼──────────┤ │
+│ │ BUGF-023 │ Wishlist Drag and Delete Issues         │ 026→005  │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ DEFERRED (2 stories, not in MVP)                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌──────────┬────────────────────────────────────────┬──────────┐ │
+│ │ BUGF-007 │ Dashboard Test Mismatches               │ —        │ │
+│ │ BUGF-011 │ Dashboard Component Tests               │ 007      │ │
+│ └──────────┴────────────────────────────────────────┴──────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ CRITICAL CHAINS                                                   │
+├─────────────────────────────────────────────────────────────────┤
+│ BUGF-001 → BUGF-004                                              │
+│ BUGF-001 → BUGF-025                                              │
+│ BUGF-026 → BUGF-005 → BUGF-023  (longest: 3)                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Rendering rules:**
+- Group by tier (Tier 0, Tier 1, Tier 2, ...)
+- Within each tier, sub-group by phase number
+- Show story ID, abbreviated title (max 40 chars), and what it blocks/waits-for
+- "Blocks" column: show short IDs of downstream stories this unblocks
+- "Wait For" column: show short IDs of upstream blockers
+- "Chain" column (Tier 2+): show full dependency chain using → arrows
+- Completed stories: exclude from tiers, show count in header
+- Deferred stories: show in separate section at the end
+- Critical chains: show all paths of length >= 2, mark longest
+- Header metrics: Total, Active, Deferred, Completed, Longest Chain depth, Max Parallel (Tier 0 count)
+
+---
+
 ## Single Story Output
 
 ```

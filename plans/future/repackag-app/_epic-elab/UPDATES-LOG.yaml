@@ -1,0 +1,16 @@
+feature_dir: "plans/future/repackag-app"
+prefix: "REPA"
+updated: "2026-02-09"
+
+stories_index:
+  stories_added: 0
+  stories_split: 0
+  risk_notes_added: 0
+
+roadmap:
+  dependencies_added: 0
+  critical_path_changed: false
+
+files_modified: []
+
+follow_ups_created: false

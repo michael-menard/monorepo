@@ -1,0 +1,24 @@
+schema: 1
+story_id: "BUGF-026"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-11T21:05:00Z"
+
+current_phase: completed
+last_successful_phase: qa-verify
+
+iteration: 1
+max_iterations: 3
+
+blocked: false
+blocked_reason: null
+
+forced: false
+warnings: []
+
+completed_at: "2026-02-11T21:05:00Z"
+e2e_gate: exempt
+
+qa_gate:
+  decision: PASS
+  timestamp: "2026-02-11T21:05:00Z"
+  verified_by: "qa-verify-completion-leader"

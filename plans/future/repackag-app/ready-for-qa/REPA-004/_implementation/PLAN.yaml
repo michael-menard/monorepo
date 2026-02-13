@@ -1,0 +1,275 @@
+schema: 1
+story_id: "REPA-004"
+timestamp: "2026-02-10T21:30:00Z"
+
+steps:
+  - id: 1
+    description: "Add browser-image-compression and heic2any dependencies to @repo/upload package.json"
+    files:
+      - "packages/core/upload/package.json"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create @repo/upload/image/presets module with COMPRESSION_PRESETS and utility functions"
+    files:
+      - "packages/core/upload/src/image/presets/index.ts"
+      - "packages/core/upload/src/image/presets/__types__/index.ts"
+      - "packages/core/upload/src/image/presets/__tests__/presets.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Create @repo/upload/image/compression module with compressImage function and Zod schemas"
+    files:
+      - "packages/core/upload/src/image/compression/index.ts"
+      - "packages/core/upload/src/image/compression/__types__/index.ts"
+      - "packages/core/upload/src/image/compression/__tests__/compression.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Create @repo/upload/image/heic module with HEIC conversion functions and Zod schemas"
+    files:
+      - "packages/core/upload/src/image/heic/index.ts"
+      - "packages/core/upload/src/image/heic/__types__/index.ts"
+      - "packages/core/upload/src/image/heic/__tests__/heic.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 5
+    description: "Create generalized useUpload hook with presigned URL injection pattern"
+    files:
+      - "packages/core/upload/src/hooks/useUpload.ts"
+      - "packages/core/upload/src/hooks/__types__/index.ts"
+      - "packages/core/upload/src/hooks/__tests__/useUpload.test.tsx"
+    dependencies: [3, 4]
+    slice: packages
+
+  - id: 6
+    description: "Update @repo/upload package exports to include new modules"
+    files:
+      - "packages/core/upload/package.json"
+      - "packages/core/upload/src/index.ts"
+    dependencies: [2, 3, 4, 5]
+    slice: packages
+
+  - id: 7
+    description: "Update wishlist gallery components to import from @repo/upload"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx"
+      - "apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 8
+    description: "Adapt wishlist useS3Upload to use generalized useUpload hook"
+    files:
+      - "apps/web/app-wishlist-gallery/src/hooks/index.ts"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 9
+    description: "Remove old wishlist imageCompression.ts and useS3Upload.ts files"
+    files:
+      - "apps/web/app-wishlist-gallery/src/utils/imageCompression.ts"
+      - "apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 10
+    description: "Verify presigned URL schema compatibility and update RTK mutation if needed"
+    files:
+      - "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    dependencies: [5]
+    slice: packages
+
+  - id: 11
+    description: "Run all tests and verify Playwright E2E tests pass"
+    files: []
+    dependencies: [9, 10]
+    slice: packages
+
+files_to_change:
+  - path: "packages/core/upload/package.json"
+    action: modify
+    reason: "Add browser-image-compression and heic2any dependencies + update exports"
+
+  - path: "packages/core/upload/src/image/presets/index.ts"
+    action: create
+    reason: "Extract COMPRESSION_PRESETS from wishlist imageCompression.ts (AC-3)"
+
+  - path: "packages/core/upload/src/image/presets/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for CompressionPreset types (AC-3)"
+
+  - path: "packages/core/upload/src/image/presets/__tests__/presets.test.ts"
+    action: create
+    reason: "Unit tests for preset utilities with 80%+ coverage (AC-3)"
+
+  - path: "packages/core/upload/src/image/compression/index.ts"
+    action: create
+    reason: "Extract compressImage function from wishlist imageCompression.ts (AC-1)"
+
+  - path: "packages/core/upload/src/image/compression/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for CompressionConfig and CompressionResult (AC-1)"
+
+  - path: "packages/core/upload/src/image/compression/__tests__/compression.test.ts"
+    action: create
+    reason: "Unit tests for compression functions with 80%+ coverage (AC-1)"
+
+  - path: "packages/core/upload/src/image/heic/index.ts"
+    action: create
+    reason: "Extract HEIC conversion functions from wishlist imageCompression.ts (AC-2)"
+
+  - path: "packages/core/upload/src/image/heic/__types__/index.ts"
+    action: create
+    reason: "Zod schema for HEICConversionOptions (AC-2)"
+
+  - path: "packages/core/upload/src/image/heic/__tests__/heic.test.ts"
+    action: create
+    reason: "Unit tests for HEIC conversion and detection (AC-2)"
+
+  - path: "packages/core/upload/src/hooks/useUpload.ts"
+    action: create
+    reason: "Generalized upload hook from wishlist useS3Upload (AC-4)"
+
+  - path: "packages/core/upload/src/hooks/__types__/index.ts"
+    action: create
+    reason: "PresignedUrlResponse and UploadState Zod schemas (AC-4)"
+
+  - path: "packages/core/upload/src/hooks/__tests__/useUpload.test.tsx"
+    action: create
+    reason: "React Testing Library tests for useUpload hook (AC-8)"
+
+  - path: "packages/core/upload/src/index.ts"
+    action: modify
+    reason: "Update exports to include new modules (AC-1, AC-2, AC-3, AC-4)"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx"
+    action: modify
+    reason: "Update imports to use @repo/upload (AC-5)"
+
+  - path: "apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx"
+    action: modify
+    reason: "Update imports to use @repo/upload (AC-5)"
+
+  - path: "apps/web/app-wishlist-gallery/src/hooks/index.ts"
+    action: modify
+    reason: "Replace useS3Upload with useUpload wrapper (AC-5)"
+
+  - path: "apps/web/app-wishlist-gallery/src/utils/imageCompression.ts"
+    action: delete
+    reason: "Remove after extracting to @repo/upload (AC-5)"
+
+  - path: "apps/web/app-wishlist-gallery/src/hooks/useS3Upload.ts"
+    action: delete
+    reason: "Remove after extracting to @repo/upload (AC-5)"
+
+  - path: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    action: modify
+    reason: "Update presigned URL mutation response type to match PresignedUrlResponse schema (AC-10)"
+
+commands_to_run:
+  - command: "pnpm build --filter=@repo/upload"
+    when: "after steps 1-6 complete"
+    required: true
+
+  - command: "pnpm test --filter=@repo/upload"
+    when: "after steps 2, 3, 4, 5 complete"
+    required: true
+
+  - command: "pnpm check-types --filter=@repo/upload"
+    when: "after steps 1-6 complete"
+    required: true
+
+  - command: "pnpm test --filter=app-wishlist-gallery"
+    when: "after steps 7, 8, 9 complete"
+    required: true
+
+  - command: "pnpm check-types --filter=app-wishlist-gallery"
+    when: "after steps 7, 8, 9 complete"
+    required: true
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit tests: packages/core/upload/src/image/compression/__tests__/compression.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests: packages/core/upload/src/image/heic/__tests__/heic.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests: packages/core/upload/src/image/presets/__tests__/presets.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests: packages/core/upload/src/hooks/__tests__/useUpload.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "File inspection: imports updated in WishlistForm and AddItemPage, old files deleted"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "Test command: pnpm test --filter=app-wishlist-gallery"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Test commands: pnpm build/test/check-types --filter=@repo/upload"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit tests: packages/core/upload/src/hooks/__tests__/useUpload.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "File inspection: packages/core/upload directory structure exists"
+    evidence_type: file
+
+  - ac_id: "AC-10"
+    planned_evidence: "Type inspection: PresignedUrlResponse schema matches RTK mutation response"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should HEIC conversion happen before or after compression?"
+    decision: "HEIC conversion happens BEFORE compression"
+    rationale: "Per existing useS3Upload implementation, HEIC conversion at high quality (0.9) precedes compression. This preserves quality through conversion, then applies preset-based compression. Changing this order would alter existing behavior (non-goal)."
+    decided_by: existing-pattern
+
+  - id: ARCH-002
+    question: "Should useUpload hook throw errors or return error states?"
+    decision: "Return error states (no thrown errors)"
+    rationale: "Per existing useS3Upload pattern and React best practices. Consuming apps display error messages via returned error state. Matches story architecture notes."
+    decided_by: existing-pattern
+
+  - id: ARCH-003
+    question: "Should compression presets module be separate from compression module?"
+    decision: "Yes, separate modules: /image/presets and /image/compression"
+    rationale: "Per story architecture notes and separation of concerns. Presets are configuration data, compression is logic. Allows independent testing and reuse (e.g., consuming apps can list presets without importing compression logic)."
+    decided_by: story-specification
+
+complexity: moderate
+
+notes:
+  - "REPA-001 dependency verified: packages/core/upload/ structure exists"
+  - "Dependency versions match: browser-image-compression ^2.0.2, heic2any 0.0.4"
+  - "Per story non-goals: NOT changing compression behavior, NOT modifying S3 upload flow"
+  - "Per CLAUDE.md: All types must use Zod schemas, no TypeScript interfaces"
+  - "Per CLAUDE.md: No barrel files - direct imports from source files"
+  - "WebP fallback behavior preserved: logs warning via @repo/logger, falls back to JPEG"
+  - "Progress tracking pattern preserved: onProgress(percent: number, phase: string)"
+  - "All compression tests must achieve 80%+ coverage per AC-1, AC-2, AC-3, AC-7"
+  - "Package must build/test in isolation before apps import (build order enforced by Turborepo)"
+  - "Visual regression test recommended but not blocking (story mentions manual QA verification)"

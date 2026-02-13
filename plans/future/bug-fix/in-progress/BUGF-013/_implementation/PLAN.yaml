@@ -1,0 +1,378 @@
+schema: 1
+story_id: BUGF-013
+story_type: test
+created_at: "2026-02-11"
+
+# CRITICAL FINDING: The app-instructions-gallery components are THIN WRAPPERS
+# around @repo/upload components. The actual implementations live in @repo/upload.
+# Tests should focus on integration points and app-specific behavior only.
+
+phases:
+  - id: 1
+    name: "Error Handling Components Tests"
+    description: "High priority - ConflictModal, RateLimitBanner, SessionExpiredBanner"
+    priority: high
+    estimated_hours: 3
+    files:
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/ConflictModal/__tests__/ConflictModal.test.tsx"
+        tests:
+          - "should render with current title in description"
+          - "should show new title input field initialized with current title"
+          - "should validate new title differs from original"
+          - "should show error when title is empty"
+          - "should show error when title matches original"
+          - "should call onConfirm with new title on submit"
+          - "should call onCancel when cancel button clicked"
+          - "should disable inputs when isLoading is true"
+          - "should show 'Saving...' text when loading"
+          - "should show suggested slug section when suggestedSlug provided"
+          - "should call onUseSuggested when 'Use This' button clicked"
+          - "should not show suggested slug section when suggestedSlug not provided"
+          - "should submit on Enter key press"
+          - "should have proper ARIA labels and roles"
+          - "should link error messages with aria-describedby"
+          - "should have aria-invalid on input with error"
+          - "should focus input field on mount"
+          - "should restore focus to previous element on close"
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+        tests:
+          - "should render when visible is true"
+          - "should not render when visible is false"
+          - "should display countdown timer in MM:SS format"
+          - "should format countdown correctly (60s -> 1:00, 90s -> 1:30)"
+          - "should disable retry button during countdown"
+          - "should enable retry button when countdown reaches zero"
+          - "should decrement countdown every second (use vi.useFakeTimers)"
+          - "should call onRetry when retry button clicked and enabled"
+          - "should call onDismiss when dismiss button clicked"
+          - "should show progress bar with correct percentage"
+          - "should have progressbar role with aria-valuenow, aria-valuemin, aria-valuemax"
+          - "should have timer role with aria-live='polite' for screen readers"
+          - "should announce countdown updates to screen readers"
+          - "should respect prefers-reduced-motion for progress animation"
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+        tests:
+          - "should render when visible is true"
+          - "should not render when visible is false"
+          - "should not render when expiredCount is 0"
+          - "should display correct expired count (singular)"
+          - "should display correct expired count (plural)"
+          - "should call onRefreshSession when refresh button clicked"
+          - "should disable refresh button when isRefreshing is true"
+          - "should show 'Refreshing...' text when isRefreshing is true"
+          - "should have spinner animation when isRefreshing (respects reduced motion)"
+          - "should have alert role with aria-live='assertive' for screen readers"
+          - "should have aria-busy on refresh button when loading"
+
+  - id: 2
+    name: "Upload Page Integration Tests"
+    description: "High priority - upload-page.tsx full flow with presigned URL API"
+    priority: high
+    estimated_hours: 4
+    files:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        tests:
+          - "should render page with title and description"
+          - "should show restored session message when wasRestored is true"
+          - "should render file upload buttons for all categories (instruction, parts-list, thumbnail, image)"
+          - "should render form fields (title, description, tags, theme)"
+          - "should render type selector (MOC/Set) with correct default"
+          - "should switch form fields when type is changed"
+          - "should call generatePresignedUrl API when files selected"
+          - "should pass correct parameters to presigned URL API (fileName, mimeType, fileSize, category)"
+          - "should add files to upload manager after presigned URL generated"
+          - "should show API error banner when presigned URL fails"
+          - "should handle 409 conflict from presigned URL API"
+          - "should handle 429 rate limit from presigned URL API"
+          - "should handle 500 server error from presigned URL API"
+          - "should show SessionExpiredBanner when expiredCount > 0"
+          - "should call generatePresignedUrl for expired files when refresh clicked"
+          - "should retry uploads after session refresh"
+          - "should show RateLimitBanner when rateLimitSeconds > 0"
+          - "should disable finalize button during rate limit"
+          - "should show ConflictModal when finalize returns 409"
+          - "should retry finalize with new title after conflict resolution"
+          - "should use suggested slug when onUseSuggested clicked"
+          - "should show per-file validation errors from finalize"
+          - "should disable finalize button when form is invalid"
+          - "should disable finalize button when no instruction file uploaded"
+          - "should enable finalize button when all conditions met"
+          - "should show loading state on finalize button when submitting"
+          - "should call reset and navigate on successful finalize"
+          - "should have proper ARIA labels on all form inputs"
+          - "should show error summary with clickable links to fields"
+        notes: |
+          This is the most complex test file. It integrates:
+          - UploaderSessionProvider context
+          - presigned URL API (RTK Query mutation)
+          - upload manager hook
+          - form validation (react-hook-form + Zod)
+          - finalize API with error handling
+          - Multiple error modals/banners
+
+          Use MSW to mock:
+          - POST /api/v2/uploads/presigned-url
+          - POST /api/instructions/finalize
+
+          Test both happy path and all error scenarios.
+
+  - id: 3
+    name: "Form Validation Tests"
+    description: "Medium priority - SlugField, TagInput"
+    priority: medium
+    estimated_hours: 3
+    files:
+      - path: "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/SlugField.test.tsx"
+        tests:
+          - "should render input with label"
+          - "should initialize with current slug value"
+          - "should allow manual slug input"
+          - "should convert input to lowercase"
+          - "should validate slug format (lowercase, numbers, hyphens only)"
+          - "should show error for invalid characters (spaces, special chars)"
+          - "should generate slug from title when refresh button clicked"
+          - "should disable refresh button when title is empty"
+          - "should show availability indicator (checking state)"
+          - "should show availability indicator (available state with green check)"
+          - "should show availability indicator (unavailable state with red X)"
+          - "should show availability indicator (error state with amber X)"
+          - "should debounce availability check (500ms)"
+          - "should not check availability if slug matches currentSlug"
+          - "should not check availability if slug is empty"
+          - "should call check-slug API with correct parameters (slug, excludeId)"
+          - "should show 'already in use' error when unavailable"
+          - "should have aria-invalid when unavailable"
+          - "should have proper ARIA labels on input and button"
+
+      - path: "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/TagInput.test.tsx"
+        tests:
+          - "should render empty input with placeholder"
+          - "should display existing tags as chips"
+          - "should add tag on Enter key press"
+          - "should add tag on comma key press"
+          - "should trim and lowercase tag before adding"
+          - "should validate max tags (10)"
+          - "should show error when adding 11th tag"
+          - "should validate tag length (max 30 chars)"
+          - "should show error when tag exceeds 30 chars"
+          - "should validate tag format (letters, numbers, spaces, hyphens only)"
+          - "should show error for invalid characters"
+          - "should prevent duplicate tags"
+          - "should show error message for duplicate"
+          - "should remove tag when X button clicked"
+          - "should remove last tag on Backspace when input is empty"
+          - "should show tag count indicator (3/10)"
+          - "should hide input when at max tags"
+          - "should clear input after adding tag"
+          - "should have proper ARIA labels on chips and remove buttons"
+          - "should disable all inputs when disabled prop is true"
+
+  - id: 4
+    name: "Upload Flow Component Tests"
+    description: "Medium priority - SessionProvider, UploaderFileItem, UploaderList (thin wrappers)"
+    priority: medium
+    estimated_hours: 2
+    files:
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+        tests:
+          - "should provide session context to children"
+          - "should throw error when useUploaderSessionContext used outside provider"
+          - "should initialize with route prop"
+          - "should call onRestore callback when session is restored"
+          - "should show UnsavedChangesDialog when isDirty and navigating"
+          - "should call confirmStay when Stay button clicked"
+          - "should call confirmLeave when Leave button clicked"
+          - "should pass session state through context"
+          - "should pass route through context"
+        notes: |
+          SessionProvider is a thin wrapper around @repo/upload/hooks/useUploaderSession.
+          Focus tests on integration points, not re-testing @repo/upload behavior.
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+        tests:
+          - "should render file name, size, and category"
+          - "should display file type icon (PDF vs Image)"
+          - "should show status badge with correct variant"
+          - "should show progress bar when status is 'uploading'"
+          - "should show progress percentage"
+          - "should show error message when present"
+          - "should show cancel button when status is 'uploading' or 'queued'"
+          - "should show retry button when status is 'failed' or 'expired'"
+          - "should show remove button when status is 'success' or 'canceled'"
+          - "should call onCancel with fileId when cancel clicked"
+          - "should call onRetry with fileId when retry clicked"
+          - "should call onRemove with fileId when remove clicked"
+          - "should disable all buttons when disabled prop is true"
+          - "should have proper ARIA labels on all buttons"
+          - "should have role='listitem'"
+          - "should format file size (bytes, KB, MB)"
+        notes: |
+          UploaderFileItem is imported from @repo/upload but re-exported.
+          Test the app-specific integration and props.
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+        tests:
+          - "should render nothing when files array is empty"
+          - "should render aggregate progress card"
+          - "should show overall progress percentage"
+          - "should show file count summary (X of Y complete)"
+          - "should show status summary (queued, uploading, failed, expired counts)"
+          - "should group files by category"
+          - "should render category headers with icons"
+          - "should render file count in category header"
+          - "should render UploaderFileItem for each file"
+          - "should pass callbacks to UploaderFileItem (onCancel, onRetry, onRemove)"
+          - "should pass disabled prop to UploaderFileItem"
+          - "should have role='list' with aria-label on category groups"
+          - "should announce completion to screen readers (aria-live)"
+          - "should announce failure count to screen readers"
+        notes: |
+          UploaderList composes UploaderFileItem components.
+          Focus on layout, grouping, and aggregate display logic.
+
+key_patterns:
+  - description: "Use MSW for API mocking (POST /api/v2/uploads/presigned-url, POST /api/instructions/finalize)"
+  - description: "Import from test setup: import { server } from '@/test/mocks/server'"
+  - description: "Use vi.useFakeTimers() for countdown tests (RateLimitBanner)"
+  - description: "Use userEvent from @testing-library/user-event for interactions"
+  - description: "Use waitFor for async operations and state updates"
+  - description: "Mock @repo/logger: vi.mock('@repo/logger', () => ({ logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() } }))"
+  - description: "Mock TanStack Router hooks (already in setup.ts)"
+  - description: "Use semantic queries: getByRole, getByLabelText (NOT getByTestId)"
+  - description: "Test accessibility: aria-labels, aria-invalid, aria-describedby, role attributes"
+  - description: "Create mock files: new File(['content'], 'file.pdf', { type: 'application/pdf' })"
+  - description: "Mock RTK Query mutations: useGeneratePresignedUrlMutation returns [mutation, { isLoading }]"
+  - description: "App components are thin wrappers - test integration points, not @repo/upload internals"
+
+imports:
+  common: |
+    import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+    import { render, screen, waitFor } from '@testing-library/react'
+    import userEvent from '@testing-library/user-event'
+    import { logger } from '@repo/logger'
+
+  msw: |
+    import { http, HttpResponse } from 'msw'
+    import { server } from '@/test/mocks/server'
+
+  upload_types: |
+    import type { UploaderFileItem, UploadBatchState, FileCategory } from '@repo/upload/types'
+
+mock_setup:
+  logger: |
+    vi.mock('@repo/logger', () => ({
+      logger: {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
+      },
+    }))
+
+  presigned_url_api: |
+    // In MSW handlers
+    http.post('/api/v2/uploads/presigned-url', async ({ request }) => {
+      const body = await request.json()
+      return HttpResponse.json({
+        presignedUrl: `https://s3.mock.com/bucket/${body.fileName}`,
+        key: `uploads/user-123/${body.fileName}`,
+        expiresAt: Date.now() + 3600000,
+      })
+    })
+
+  finalize_api_success: |
+    http.post('/api/instructions/finalize', () => {
+      return HttpResponse.json({
+        success: true,
+        data: { id: 'moc-123', slug: 'test-moc' },
+      })
+    })
+
+  finalize_api_409: |
+    http.post('/api/instructions/finalize', () => {
+      return HttpResponse.json(
+        { error: 'Conflict', message: 'Title already exists', suggestedSlug: 'test-moc-2' },
+        { status: 409 }
+      )
+    })
+
+  finalize_api_429: |
+    http.post('/api/instructions/finalize', () => {
+      return HttpResponse.json(
+        { error: 'Rate limit exceeded', retryAfterSeconds: 60 },
+        { status: 429 }
+      )
+    })
+
+  fake_timers: |
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+dependencies:
+  testing:
+    - vitest
+    - "@testing-library/react"
+    - "@testing-library/user-event"
+    - "@testing-library/jest-dom"
+    - msw
+
+  app_dependencies:
+    - "@repo/upload/hooks"
+    - "@repo/upload/types"
+    - "@repo/upload/components"
+    - "@repo/api-client"
+    - "@repo/logger"
+    - "@tanstack/react-router"
+    - "react-hook-form"
+    - "@hookform/resolvers/zod"
+    - zod
+
+critical_findings:
+  - finding: "App components are THIN WRAPPERS around @repo/upload"
+    impact: "Tests should focus on integration, not re-test @repo/upload behavior"
+    action: "Verify props pass-through, callbacks, and app-specific logic only"
+
+  - finding: "ConflictModal, RateLimitBanner, SessionExpiredBanner exist in BOTH @repo/upload AND app-instructions-gallery"
+    impact: "App versions may have slight differences from @repo/upload versions"
+    action: "Test actual app implementations, not @repo/upload versions"
+
+  - finding: "upload-page.tsx is 789 lines with complex integration"
+    impact: "Requires careful MSW setup for multi-step flow"
+    action: "Mock presigned URL API, finalize API, and test all error paths"
+
+  - finding: "useUploadManager hook is defined in app, not imported from @repo/upload"
+    impact: "Need to verify actual location and import path"
+    action: "Check imports in upload-page.tsx to confirm hook location"
+
+test_coverage_targets:
+  upload_page: 70
+  error_components: 80
+  form_components: 60
+  upload_flow_components: 60
+  overall: 45
+
+estimated_total_hours: 12
+estimated_test_count: 120
+
+notes: |
+  This plan is based on ACTUAL source code inspection, not story assumptions.
+
+  Key differences from story:
+  1. Components are thin wrappers around @repo/upload - focus on integration
+  2. upload-page.tsx uses presigned URL API (RTK Query) - requires MSW
+  3. Form validation uses react-hook-form + Zod - test real validation behavior
+  4. Error components have suggested slug feature (Story 3.1.19)
+  5. SessionProvider integrates useUploaderSession + useUnsavedChangesPrompt
+
+  Test priority order:
+  1. Error components (highest impact on user experience)
+  2. Upload page integration (most complex, highest value)
+  3. Form validation (medium complexity)
+  4. Upload flow components (lowest complexity, thin wrappers)

@@ -33,10 +33,10 @@ import {
   inspirationApi,
 } from '@repo/api-client/rtk/inspiration-api'
 import { useDispatch } from 'react-redux'
+import { useAnnouncer } from '@repo/accessibility'
+import { useRovingTabIndex } from '@repo/gallery'
 import { SortableInspirationCard } from '../SortableInspirationCard'
 import { InspirationDragPreview } from '../InspirationDragPreview'
-import { useAnnouncer } from '../../hooks/useAnnouncer'
-import { useRovingTabIndex } from '../../hooks/useRovingTabIndex'
 
 /**
  * DraggableInspirationGallery props schema (data-only)
@@ -163,6 +163,7 @@ export function DraggableInspirationGallery({
   } = useRovingTabIndex(items.length, containerRef, {
     wrapHorizontal: true,
     wrapVertical: false,
+    ariaLabel: 'Inspiration items',
   })
 
   // RTK Query mutation

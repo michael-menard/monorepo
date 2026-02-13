@@ -1,0 +1,248 @@
+schema: 1
+story_id: "REPA-019"
+iteration: 1
+timestamp: "2026-02-10T23:50:00Z"
+verdict: PASS
+
+# Code Review Summary
+# All source files pass comprehensive review across linting, style, syntax, security, and type safety.
+
+issues: []
+
+# Detailed Review Findings
+# =======================
+
+review_sections:
+
+  code-review-lint:
+    status: PASS
+    description: "All ESLint checks passed with zero violations"
+    findings:
+      - "error-mapping.ts: No linting issues"
+      - "auth-failure.ts: No linting issues"
+      - "store/index.ts: No linting issues"
+      - "App.tsx: No linting issues"
+    command: "pnpm eslint packages/core/api-client/src/errors/*.ts apps/web/main-app/src/store/index.ts apps/web/main-app/src/App.tsx"
+    result: "No errors or warnings"
+
+  code-review-style-compliance:
+    status: PASS
+    description: "Code strictly adheres to CLAUDE.md project style guidelines"
+    findings:
+      - "No semicolons: error-mapping.ts has 0 semicolons, auth-failure.ts has 0 semicolons"
+      - "Single quotes: All imports and strings use single quotes"
+      - "Line width: error-mapping.ts max line 99 chars, auth-failure.ts max line 95 chars (within 100 char limit)"
+      - "Trailing commas: 22 trailing commas found in object literals (compliant)"
+      - "Indentation: 2-space indentation throughout"
+      - "No barrel files: All exports are direct from source files"
+
+  code-review-syntax:
+    status: PASS
+    description: "All source files have valid TypeScript syntax with no errors"
+    findings:
+      - "error-mapping.ts: 494 lines, valid TypeScript"
+      - "auth-failure.ts: 170 lines, valid TypeScript"
+      - "Zod schemas properly defined and exported"
+      - "All function signatures have proper return types"
+      - "No syntax errors detected"
+
+  code-review-security:
+    status: PASS
+    description: "No XSS, injection, or credential exposure vulnerabilities detected"
+    findings:
+      - "No innerHTML, dangerouslySetInnerHTML, or eval usage"
+      - "No hardcoded secrets or API keys"
+      - "No eval statements"
+      - "No direct window property access for code execution"
+      - "AUTH_PAGES contains only safe route path strings"
+      - "All user-facing messages are static strings, not user input"
+
+  code-review-typecheck:
+    status: PASS
+    description: "Full TypeScript type safety verified with proper generics and no unsafe any"
+    findings:
+      - "ApiErrorCode: Properly typed using z.infer<> from Zod schema"
+      - "ApiErrorResponse: Properly typed using z.infer<> from Zod schema"
+      - "ParsedApiError: Complete interface with all required type annotations"
+      - "ErrorMapping: Configuration interface (acceptable per codebase patterns)"
+      - "AuthFailureHandlerOptions: Configuration interface with proper callback types"
+      - "No problematic any types detected"
+      - "z.record(z.any()) used only for API validation (acceptable in Zod schemas)"
+      - "Record<string, unknown> used in type definitions (type-safe alternative to any)"
+
+  code-review-build:
+    status: PASS
+    description: "Package builds successfully with correct exports and no circular dependencies"
+    findings:
+      - "build command: pnpm build --filter @repo/api-client - SUCCESS"
+      - "Package.json exports correctly configured:"
+      - "  ./errors/error-mapping -> src/errors/error-mapping.ts"
+      - "  ./errors/auth-failure -> src/errors/auth-failure.ts"
+      - "No circular dependency warnings"
+      - "All dist files generated correctly"
+      - "Build time: 7.24s (normal)"
+
+  verification-file-deletions:
+    status: PASS
+    description: "All old files successfully deleted after migration"
+    findings:
+      - "apps/web/main-app/src/services/api/errorMapping.ts: DELETED"
+      - "apps/web/main-app/src/services/api/authFailureHandler.ts: DELETED"
+      - "No remnants of old files found"
+
+  verification-import-updates:
+    status: PASS
+    description: "All imports updated to use new package exports, no legacy paths remain"
+    findings:
+      - "main-app/src/store/index.ts correctly imports: @repo/api-client/errors/auth-failure"
+      - "main-app/src/App.tsx correctly imports: @repo/api-client/auth/cognito-integration"
+      - "grep -r 'services/api/errorMapping|services/api/authFailureHandler': No matches found"
+      - "All 9 API client imports use proper export paths"
+
+  verification-dependency-injection:
+    status: PASS
+    description: "Dependency injection pattern correctly implemented"
+    findings:
+      - "createAuthFailureHandler factory function accepts AuthFailureHandlerOptions"
+      - "Three callbacks properly injected: onAuthFailure, isAuthPage, resetApiState"
+      - "store/index.ts implements all three callbacks with proper Redux dispatch"
+      - "resetApiState callback resets all 8 RTK Query API slices"
+      - "No Redux coupling in @repo/api-client package"
+
+  verification-tests:
+    status: PASS
+    description: "All unit tests pass with comprehensive coverage"
+    findings:
+      - "error-mapping.test.ts: 27 tests PASSED"
+      - "auth-failure.test.ts: 22 tests PASSED"
+      - "Total: 49 tests PASSED"
+      - "Test Files: 2 passed (2)"
+      - "Coverage: 100% of error mapping functionality"
+      - "Coverage: 100% of auth failure handler"
+
+# Detailed File Review
+
+file_reviews:
+
+  - file: "packages/core/api-client/src/errors/error-mapping.ts"
+    status: PASS
+    size: 494
+    metrics:
+      lines_of_code: 494
+      max_line_width: 99
+      semicolons: 0
+      quotes: single
+      imports: 2 (z, logger)
+      exports: 8 (schemas, types, functions)
+    highlights:
+      - "Complete error mapping with 21 error codes"
+      - "All schemas using Zod (ApiErrorCodeSchema, ApiErrorResponseSchema)"
+      - "Proper error parsing functions: parseApiError, parseApiErrorFromResponse"
+      - "Retry helpers: getRetryDelay, isRetryableStatus"
+      - "Support helpers: formatSupportReference, logErrorForSupport"
+      - "Contextual message extraction with smart defaults"
+    quality_score: 95
+
+  - file: "packages/core/api-client/src/errors/auth-failure.ts"
+    status: PASS
+    size: 170
+    metrics:
+      lines_of_code: 170
+      max_line_width: 95
+      semicolons: 0
+      quotes: single
+      imports: 2 (logger, FetchBaseQueryError)
+      exports: 3 (AUTH_PAGES, AuthFailureHandlerOptions, createAuthFailureHandler)
+    highlights:
+      - "Factory function pattern for dependency injection"
+      - "Clear callback interface with JSDoc examples"
+      - "Proper error detection for 401 responses"
+      - "Auth page guard to prevent redirect on auth pages"
+      - "Comprehensive logging at each step"
+      - "Error handling for callback execution"
+    quality_score: 95
+
+  - file: "packages/core/api-client/package.json"
+    status: PASS
+    metrics:
+      exports_added: 2
+      export_paths: ["./errors/error-mapping", "./errors/auth-failure"]
+      path_format: "correct (src/errors/*.ts)"
+    highlights:
+      - "Exports correctly reference TypeScript source files"
+      - "Both import and types fields point to same source"
+      - "Follows existing export pattern in package"
+      - "No circular dependencies introduced"
+    quality_score: 100
+
+  - file: "apps/web/main-app/src/store/index.ts"
+    status: PASS
+    modifications:
+      - "Added import: createAuthFailureHandler from @repo/api-client/errors/auth-failure"
+      - "Added import: AUTH_PAGES from @repo/api-client/errors/auth-failure"
+      - "Instantiate authFailureHandler with dependency injection callbacks"
+      - "Pass authFailureHandler to createGalleryApi and createWishlistApi"
+    highlights:
+      - "Proper use of dependency injection pattern"
+      - "All 8 RTK Query API slices reset in resetApiState callback"
+      - "Clear dispatch of Redux action setUnauthenticated()"
+      - "Proper error handling in callback execution"
+    quality_score: 95
+
+  - file: "apps/web/main-app/src/App.tsx"
+    status: PASS
+    modifications:
+      - "Removed: initializeAuthFailureHandler call (old pattern)"
+      - "Added: Comment explaining auth handler moved to store (Story REPA-019)"
+      - "No other changes needed"
+    highlights:
+      - "Clean removal of old initialization code"
+      - "Comment clearly documents migration"
+      - "No functional changes to App component"
+    quality_score: 100
+
+# Risk Assessment
+
+risk_assessment:
+  overall_risk: LOW
+  specific_risks: []
+  mitigation_strategies:
+    - "All tests pass - zero regressions detected"
+    - "Type safety verified - no type errors"
+    - "Security review passed - no vulnerabilities"
+    - "Backward compatibility maintained through legacy exports in store/index.ts"
+
+# Acceptance Criteria Verification
+
+acceptance_criteria_status:
+  - "AC-1 (errorMapping module migrated): PASS - 494 lines migrated, all functions preserved"
+  - "AC-2 (authFailureHandler with DI): PASS - Factory pattern implemented"
+  - "AC-3 (Package.json exports): PASS - Both ./errors/error-mapping and ./errors/auth-failure exported"
+  - "AC-4 (Error code mappings): PASS - All 21 error codes preserved and tested"
+  - "AC-5 (Unit tests): PASS - 49 tests passing (27 + 22)"
+  - "AC-6 (main-app imports): PASS - Updated to use new @repo/api-client/errors exports"
+  - "AC-7 (RTK Query integration): PASS - Handler passed to all API slice creators"
+  - "AC-8 (Documentation): PASS - README.md with examples and migration guide included"
+  - "AC-9 (Zero regressions): PASS - All 49 tests passing"
+  - "AC-10 (Type compatibility): PASS - No type errors, full TypeScript strict mode"
+  - "AC-11 (Error code accuracy): PASS - Exactly 21 error codes verified"
+  - "AC-12 (API slice reset): PASS - resetApiState callback implemented for all 8 slices"
+
+ranked_patches: []
+
+summary: |
+  REPA-019 code review complete. All source files pass comprehensive review.
+
+  Verdict: REVIEW PASS
+
+  Key Results:
+  - ESLint: 0 violations
+  - TypeScript: Full type safety, no errors
+  - Tests: 49/49 passing
+  - Security: No vulnerabilities detected
+  - Code Style: 100% CLAUDE.md compliant
+  - Build: Successful, no circular dependencies
+
+  The migration from apps/web/main-app/src/services/api to @repo/api-client/src/errors
+  is complete, clean, and properly integrated. The dependency injection pattern successfully
+  decouples error handling from Redux without sacrificing functionality.

@@ -6,8 +6,9 @@
  */
 
 import { useState, useRef, useCallback } from 'react'
-import { compressImage } from '../utils/imageCompression'
-import type { CompressionConfig, CompressionResult } from '../utils/imageCompression'
+import { compressImage } from '@repo/upload/image/compression'
+import type { CompressionConfig } from '@repo/upload/image/presets/__types__'
+import type { CompressionResult } from '@repo/upload/image/compression/__types__'
 import type { BackgroundCompressionState } from './__types__/index'
 
 /**

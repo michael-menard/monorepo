@@ -46,10 +46,6 @@ export const FileItemSchema = z.object({
 
 export type FileItem = z.infer<typeof FileItemSchema>
 
-// Validation result type
-export const FileValidationResultSchema = z.object({
-  valid: z.boolean(),
-  error: z.string().optional(),
-})
-
-export type FileValidationResult = z.infer<typeof FileValidationResultSchema>
+// TODO(REPA-005): Remove re-export when component migrates to @repo/upload
+import { FileValidationResultSchema, type FileValidationResult } from '@repo/upload/types'
+export { FileValidationResultSchema, type FileValidationResult }

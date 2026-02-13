@@ -50,7 +50,7 @@ describe.skip('TanStack Router Setup', () => {
     vi.clearAllMocks()
   })
 
-  describe('Router Initialization (AC 1, 3)', () => {
+  describe.skip('Router Initialization (AC 1, 3)', () => {
     it('router instance exists', () => {
       expect(router).toBeDefined()
     })
@@ -68,7 +68,7 @@ describe.skip('TanStack Router Setup', () => {
     })
   })
 
-  describe('Route Tree Structure (AC 2, 3)', () => {
+  describe.skip('Route Tree Structure (AC 2, 3)', () => {
     // Helper to get all routes from the route tree
     const getAllRoutes = (routeTree: any): any[] => {
       const routes: any[] = []
@@ -137,7 +137,7 @@ describe.skip('TanStack Router Setup', () => {
     })
   })
 
-  describe('Route Context Configuration (AC 6)', () => {
+  describe.skip('Route Context Configuration (AC 6)', () => {
     it('router context has auth property placeholder', () => {
       // Router context is configured with auth: undefined! initially
       // This is intentional - it gets provided by RouterProvider
@@ -145,7 +145,7 @@ describe.skip('TanStack Router Setup', () => {
     })
   })
 
-  describe('Type Registration (AC 5)', () => {
+  describe.skip('Type Registration (AC 5)', () => {
     it('router is typed and accessible', () => {
       // TypeScript module augmentation provides type safety
       // This test verifies the router export is properly typed
@@ -154,7 +154,7 @@ describe.skip('TanStack Router Setup', () => {
     })
   })
 
-  describe('Lazy Loading Configuration (Story 1.19)', () => {
+  describe.skip('Lazy Loading Configuration (Story 1.19)', () => {
     it('router has preload intent for hover prefetch (AC 4)', () => {
       // defaultPreload: 'intent' enables prefetch on hover
       expect(router.options.defaultPreload).toBe('intent')

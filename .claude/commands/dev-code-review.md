@@ -1,9 +1,9 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 5.0.0
+updated: 2026-02-11
+version: 6.0.0
 type: orchestrator
-agents: ["code-review-lint.agent.md", "code-review-style-compliance.agent.md", "code-review-syntax.agent.md", "code-review-security.agent.md", "code-review-typecheck.agent.md", "code-review-build.agent.md", "review-aggregate-leader.agent.md"]
+agents: ["code-review-lint.agent.md", "code-review-style-compliance.agent.md", "code-review-syntax.agent.md", "code-review-security.agent.md", "code-review-typecheck.agent.md", "code-review-build.agent.md", "code-review-reusability.agent.md", "code-review-react.agent.md", "code-review-typescript.agent.md", "code-review-accessibility.agent.md", "review-aggregate-leader.agent.md"]
 schema: packages/backend/orchestrator/src/artifacts/review.ts
 ---
 
@@ -26,7 +26,7 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 | # | Phase | Model | Workers | Signal |
 |---|-------|-------|---------|--------|
 | 0 | Setup | haiku | (self) | SETUP COMPLETE |
-| 1 | Review | haiku | failed + typecheck + build (or all 6 on first run) | REVIEW COMPLETE |
+| 1 | Review | haiku | failed + typecheck + build (or all 10 on first run) | REVIEW COMPLETE |
 | 2 | Aggregate | haiku | review-aggregate-leader | AGGREGATE COMPLETE |
 | 3 | Finalize | haiku | (self) | CODE-REVIEW COMPLETE |
 
@@ -47,7 +47,7 @@ touched_files = evidence.touched_files.map(f => f.path)
 **SELECTIVE RE-REVIEW OPTIMIZATION**
 
 Check if `REVIEW.yaml` exists from a previous review cycle:
-- If NO previous review: Run all 6 workers
+- If NO previous review: Run all 10 workers
 - If previous review exists with FAIL verdict: Only re-run failed workers + typecheck + build
 
 ### Determine Workers to Run
@@ -64,7 +64,7 @@ if file_exists(review_path):
     # Always re-run these (fixes could break compilation)
     always_run = ["typecheck", "build"]
 
-    for worker in ["lint", "style", "syntax", "security", "typecheck", "build"]:
+    for worker in ["lint", "style", "syntax", "security", "typecheck", "build", "reusability", "react", "typescript", "accessibility"]:
         prev_result = prev.findings.get(worker)
 
         if worker in always_run:
@@ -76,7 +76,7 @@ if file_exists(review_path):
             carried_forward[worker] = prev_result
 else:
     # First review - run all
-    workers_to_run = ["lint", "style", "syntax", "security", "typecheck", "build"]
+    workers_to_run = ["lint", "style", "syntax", "security", "typecheck", "build", "reusability", "react", "typescript", "accessibility"]
 ```
 
 ### Spawn Workers
@@ -163,7 +163,7 @@ ReviewSchema = {
   workers_run: string[],
   workers_skipped: string[],
   ranked_patches: RankedPatch[],
-  findings: { lint, style, syntax, security, typecheck, build },
+  findings: { lint, style, syntax, security, typecheck, build, reusability, react, typescript, accessibility },
   total_errors: number,
   total_warnings: number,
   auto_fixable_count: number,

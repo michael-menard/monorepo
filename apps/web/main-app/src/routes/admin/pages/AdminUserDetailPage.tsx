@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Button, Badge } from '@repo/app-component-library'
 import type { BlockUserInput } from '@repo/api-client'
+import { logger } from '@repo/logger'
 import { BlockUserDialog } from '../components/BlockUserDialog'
 import { RevokeTokensDialog } from '../components/RevokeTokensDialog'
 import { UnblockUserDialog } from '../components/UnblockUserDialog'
@@ -55,7 +56,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       await revokeTokens(userId).unwrap()
       setShowRevokeDialog(false)
     } catch (err) {
-      console.error('Failed to revoke tokens:', err)
+      logger.error('Failed to revoke tokens', { userId, error: err })
     }
   }
 
@@ -64,7 +65,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       await blockUser({ userId, input }).unwrap()
       setShowBlockDialog(false)
     } catch (err) {
-      console.error('Failed to block user:', err)
+      logger.error('Failed to block user', { userId, error: err })
     }
   }
 
@@ -73,7 +74,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       await unblockUser(userId).unwrap()
       setShowUnblockDialog(false)
     } catch (err) {
-      console.error('Failed to unblock user:', err)
+      logger.error('Failed to unblock user', { userId, error: err })
     }
   }
 

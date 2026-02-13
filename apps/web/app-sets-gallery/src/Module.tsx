@@ -9,6 +9,7 @@ import { Routes, Route, MemoryRouter } from 'react-router-dom'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { AddSetPage } from './pages/add-set-page'
+import { EditSetPage } from './pages/edit-set-page'
 import { SetDetailPage } from './pages/set-detail-page'
 
 /**
@@ -37,6 +38,7 @@ export function AppSetsGalleryModule({
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/sets/add" element={<AddSetPage />} />
+        <Route path="/sets/:id/edit" element={<EditSetPage />} />
         <Route path="/sets/:id" element={<SetDetailPage />} />
       </Routes>
     </ModuleLayout>

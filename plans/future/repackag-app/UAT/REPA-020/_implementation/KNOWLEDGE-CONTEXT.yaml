@@ -1,0 +1,67 @@
+schema: 1
+story_id: "REPA-020"
+timestamp: "2026-02-11T00:00:00Z"
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid: []
+    patterns_to_follow:
+      - "Use factory pattern from column-helpers.tsx as template"
+      - "All types must use Zod schemas with z.infer<>"
+      - "No barrel files - import directly from source files"
+      - "hoverOverlay prop replaces removed actions prop in GalleryCard"
+    patterns_to_avoid:
+      - "Do not use TypeScript interfaces - use Zod schemas"
+      - "Do not create barrel files (index.ts re-exports)"
+      - "Do not use removed actions prop on GalleryCard"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests required, minimum 45% coverage maintained"
+        applies_to: ["testing"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per UI-facing story"
+        applies_to: ["testing", "frontend"]
+
+    constraints:
+      api_paths: "Not applicable - frontend-only story"
+      infrastructure: "Not applicable - frontend-only story"
+      storage: "Not applicable - frontend-only story"
+      auth: "Not applicable - frontend-only story"
+      testing: "Unit tests required with 45% minimum coverage; E2E tests may be skipped (no UI surfaces, only factory functions)"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full GalleryCard.tsx"
+        typical_tokens: 5000
+        mitigation: "Read with limit, focus on props schema"
+      - operation: "Reading full story file"
+        typical_tokens: 10000
+        mitigation: "Read only Acceptance Criteria section"
+
+    recommended_patterns:
+      - "Targeted file reads with limit parameter"
+      - "Grep before Read for specific patterns"
+      - "Read column-helpers.tsx as pattern template (small file)"
+
+  warnings:
+    - "REPA-009 already implemented despite being marked 'Ready to Work' - GalleryCard uses hoverOverlay API"
+    - "Existing cards (InstructionCard, SetCard) still use removed actions prop - migration needed but NOT blocking"
+    - "Story mentions dependency on REPA-009 but factories should target current API (already has hoverOverlay)"
+
+  notes:
+    - "Story has 23 acceptance criteria including 2 added by autonomous elaboration (AC-22, AC-23)"
+    - "Factory pattern exists in column-helpers.tsx - use as template"
+    - "Storybook stories should go in app-component-library since gallery doesn't have Storybook setup"
+    - "This is frontend-only work in @repo/gallery package"
+    - "Four domain types: Instruction, Set, WishlistItem, Inspiration"

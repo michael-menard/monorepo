@@ -1,0 +1,59 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-10T23:00:00Z"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "API path schema mismatch between frontend and backend (from ADR-001)"
+      - "Avoid barrel files - import directly from source files"
+      - "Never use console.log - use @repo/logger"
+      - "Always use Zod schemas for types - never use TypeScript interfaces"
+    patterns_to_follow:
+      - "Use dependency injection for shared packages to avoid Redux/framework coupling"
+      - "Preserve 100% test coverage when migrating code"
+      - "Use kebab-case for file names (error-mapping.ts not errorMapping.ts)"
+      - "Named exports preferred over default exports"
+    patterns_to_avoid:
+      - "Singleton pattern for authFailureHandler (use dependency injection instead)"
+      - "Direct Redux store dependency in shared packages"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT tests must use real services, not mocks. MSW only for E2E tests in dev."
+        applies_to: ["testing"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test required per story during dev implementation"
+        applies_to: ["testing", "workflow"]
+    constraints:
+      api_paths: "/api/v2/{domain} -> /{domain} via proxy (not directly relevant)"
+      testing: "100% test coverage required, E2E tests in dev phase"
+      code_style: "Zod-first types, no barrel files, kebab-case filenames"
+      shared_packages: "Use dependency injection to avoid framework coupling"
+
+  token_optimization:
+    high_cost_operations: []
+    recommended_patterns:
+      - "Targeted file reads over full files"
+      - "Read only Acceptance Criteria section from story files"
+      - "Use grep before reading large files"
+
+  notes:
+    - "No KB lessons found - this is likely the first error handling consolidation story"
+    - "REPA-012 (auth-hooks) and REPA-013 (auth-utils) in progress - coordinate on auth error handling"
+    - "Package already has ServerlessApiError class - error-mapping focuses on user messages"
+    - "Package already has authorization-errors.ts - this is for 403/429 permissions errors"
+
+  warnings: []

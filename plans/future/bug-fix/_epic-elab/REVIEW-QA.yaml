@@ -1,0 +1,63 @@
+perspective: qa
+verdict: CONCERNS
+timestamp: 2026-02-11T09:42:00Z
+
+testability:
+  core_journey_testable: true
+  core_acs_clear: true
+  test_strategy_complete: false
+
+mvp_blockers:
+  - id: QA-001
+    issue: "BUGF-001/002/003 lack defined test strategies for API integration - unit tests alone insufficient for file upload and mutation flows"
+    stories: [BUGF-001, BUGF-002, BUGF-003]
+    action: "define unit + integration + Playwright E2E test plans for each story before implementation"
+  - id: QA-002
+    issue: "BUGF-008/009/010 require E2E test infrastructure - password reset and auth flows need Playwright+Cucumber spec"
+    stories: [BUGF-008, BUGF-009, BUGF-010]
+    action: "create feature files and step definitions for password reset and auth flows"
+  - id: QA-003
+    issue: "BUGF-012/013/014/015 test coverage stories lack acceptance criteria - unclear how to verify 45% coverage threshold"
+    stories: [BUGF-012, BUGF-013, BUGF-014, BUGF-015]
+    action: "define test coverage AC for each component and app before starting"
+
+missing_mvp_stories:
+  - title: "Test infrastructure setup for MSW mocking of presigned URL responses"
+    gap: "cannot test upload flow without mock S3 endpoint in unit tests"
+  - title: "Playwright page objects for file upload flows"
+    gap: "E2E tests need reusable selectors and actions for upload components"
+  - title: "Test strategy document for drag-and-drop components"
+    gap: "BUGF-023 drag tests require specialized setup (vitest-user-event for drag simulation)"
+  - title: "Dashboard component test matrix"
+    gap: "BUGF-007 test mismatches need standardized test approach before fixing"
+
+future:
+  test_improvements:
+    - area: "API error scenario coverage"
+      stories: [BUGF-001, BUGF-002, BUGF-003]
+      suggestion: "add error boundary tests for presigned URL failures and mutation timeouts"
+    - area: "Performance regression testing"
+      stories: [BUGF-009, BUGF-015]
+      suggestion: "add Lighthouse CI checks to prevent performance regressions from test-heavy changes"
+    - area: "Accessibility verification in tests"
+      stories: [BUGF-020]
+      suggestion: "integrate axe-core into component tests to catch a11y issues early"
+  
+  suggested_stories:
+    - title: "Create Vitest test utilities for upload component testing"
+      gap: "no shared utilities for file input mocking across apps"
+      priority: P1
+    - title: "Implement Playwright test data seeding for gallery features"
+      gap: "E2E tests need fresh test data per run"
+      priority: P1
+    - title: "Add test metrics reporting to CI pipeline"
+      gap: "no visibility into test coverage trends"
+      priority: P2
+  
+  recommendations:
+    - "Phase 1 stories should include integration test specs before implementation starts"
+    - "Use MSW handlers as baseline for API mocking in all frontend tests"
+    - "Consider Playwright fixture for auth state to reduce test setup boilerplate"
+    - "Mandate E2E tests for every user-facing feature per Phase 1/2"
+
+QA REVIEW COMPLETE

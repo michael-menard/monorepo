@@ -1,0 +1,62 @@
+perspective: qa
+verdict: CONCERNS
+
+testability:
+  core_journey_testable: false
+  core_acs_clear: false
+  test_strategy_complete: false
+
+mvp_blockers:
+  - "No acceptance criteria defined for any story - core functionality untestable"
+  - "No test strategy document exists - unclear which tests verify consolidation success"
+  - "No E2E test scenarios defined for migration validation"
+  - "Breaking changes (REPA-003, REPA-005) have no rollback/regression test plan"
+  - "Upload component consolidation (REPA-005) affects 4 apps with 7 sub-components - no integration test matrix"
+
+missing_mvp_stories:
+  - "REPA-TEST-01: Create consolidation test suite (unit + integration + E2E)"
+  - "REPA-TEST-02: Define import migration regression tests"
+  - "REPA-TEST-03: Add smoke tests for upload flow across all 4 apps"
+  - "REPA-TEST-04: Create gallery drag-drop E2E tests (Playwright + Cucumber)"
+  - "REPA-TEST-05: Add package deprecation validation tests"
+
+future:
+  test_improvements:
+    - area: "Unit Tests - Package Consolidation"
+      stories: [REPA-001, REPA-002, REPA-004, REPA-006, REPA-012, REPA-013, REPA-014, REPA-016, REPA-018, REPA-019]
+      suggestion: "Each new package must include full unit test suite (min 70% coverage) covering exports, schemas, and utility functions"
+    - area: "Integration Tests - Breaking Changes"
+      stories: [REPA-003, REPA-005]
+      suggestion: "Create integration tests validating hooks work across authenticated and anonymous sessions; verify component composition doesn't break dependent functionality"
+    - area: "E2E Tests - Upload Journey"
+      stories: [REPA-002, REPA-003, REPA-004, REPA-005]
+      suggestion: "Add Playwright E2E tests for upload flow: file selection → compression → S3 finalization across main-app, app-instructions-gallery, app-wishlist-gallery, app-sets-gallery"
+    - area: "E2E Tests - Gallery Interactions"
+      stories: [REPA-007, REPA-009, REPA-010, REPA-011]
+      suggestion: "Add Playwright E2E tests for drag-drop, keyboard navigation, filtering, and selection modes with screen reader verification"
+    - area: "Regression Tests - Import Migrations"
+      stories: [REPA-001, REPA-002, REPA-003, REPA-004, REPA-005, REPA-006, REPA-012, REPA-013, REPA-014, REPA-015, REPA-016, REPA-017, REPA-018, REPA-019, REPA-021]
+      suggestion: "For each story, create import migration test matrix covering all affected apps; validate no circular dependencies introduced"
+    - area: "Deprecation & Rollback Tests"
+      stories: [REPA-002, REPA-006, REPA-021]
+      suggestion: "Add tests verifying deprecation warnings appear; create rollback scenarios for package migration (e.g., reverting from @repo/upload back to @repo/upload-client)"
+    - area: "Performance Tests - Bundle Size"
+      stories: [REPA-001, REPA-007, REPA-012, REPA-013, REPA-014, REPA-015, REPA-016, REPA-018, REPA-019]
+      suggestion: "Measure bundle size impact for each new package and consolidated imports; ensure code duplication elimination doesn't increase bundle size"
+    - area: "Accessibility Tests - Gallery"
+      stories: [REPA-007, REPA-008, REPA-009, REPA-010]
+      suggestion: "Add keyboard navigation tests (Tab, Enter, arrow keys), screen reader announcements, focus management, and ARIA label verification for all gallery components"
+
+  recommendations:
+    - "Before MVP: Create comprehensive test acceptance criteria document covering unit, integration, E2E, and regression testing for all 21 stories"
+    - "Establish baseline metrics: lines of duplicate code before, bundle size, test coverage %; define success thresholds"
+    - "For each story, define concrete testable outputs: 'Download @repo/package has 70%+ coverage', 'Zero import errors when app imports from new package', 'Gallery drag-drop E2E passes in Chrome/Firefox/Safari'"
+    - "Create test automation script to verify import migrations don't introduce circular dependencies or orphaned imports"
+    - "High-risk stories (REPA-003, REPA-005, REPA-010) require 2x test review cycles: dev review + QA acceptance before merge"
+    - "Define E2E test environment requirements: Playwright setup for multi-browser, mock S3 for upload tests, Cucumber feature files for gallery interactions"
+    - "Gallery stories (REPA-007, REPA-008, REPA-009, REPA-010) require keyboard + screen reader testing; consider automated a11y tests (axe-core, WAVE)"
+    - "Create 'consolidation dashboard' CI check: compares current duplicate lines vs target; blocks PR if consolidation increases duplicates"
+
+---
+
+QA REVIEW COMPLETE

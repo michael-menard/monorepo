@@ -1,0 +1,26 @@
+schema: 1
+story_id: REPA-004
+timestamp: "2026-02-10T21:18:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/core/upload/**"
+  - "apps/web/app-wishlist-gallery/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Extract image compression and HEIC conversion from wishlist gallery into shared @repo/upload package; migrate useS3Upload orchestration hook to shared package"

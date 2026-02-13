@@ -1,5 +1,6 @@
 /**
  * Story 3.1.39: Instructions Edit Page
+ * Story BUGF-002: Wire MOC Edit Save Mutation
  *
  * Edit page for existing MOC instructions.
  * Validates ownership and provides edit functionality.
@@ -10,6 +11,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react'
+import { useUpdateMocMutation, type UpdateMocInput } from '@repo/api-client'
 import {
   Button,
   Card,
@@ -21,6 +23,7 @@ import {
   Label,
   Alert,
   AlertDescription,
+  showSuccessToast,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
 import { z } from 'zod'
@@ -66,11 +69,13 @@ interface InstructionsEditPageProps {
 /**
  * Instructions Edit Page Component
  * Story 3.1.39: Edit Routes & Entry Points
+ * Story BUGF-002: Wire MOC Edit Save Mutation
  */
 export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEditPageProps) {
   const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [updateMoc] = useUpdateMocMutation()
 
   // Initialize form with MOC data
   const form = useForm<MocEditFormInput>({
@@ -121,11 +126,26 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
       try {
         logger.info('Saving MOC edits', { mocId: moc.id, title: data.title })
 
-        // TODO: Implement save via RTK Query mutation
-        // await updateMoc({ id: moc.id, data }).unwrap()
+        // Transform form data to API input schema
+        const updateInput: UpdateMocInput = {
+          title: data.title,
+          description: data.description || null,
+          theme: data.theme || null,
+          tags: data.tags
+            ? data.tags
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => t.length > 0)
+            : null,
+        }
 
-        // For now, just log and navigate back
-        logger.info('MOC edit saved (placeholder)', { mocId: moc.id })
+        // Call RTK Query mutation with .unwrap() for error handling
+        await updateMoc({ id: moc.id, input: updateInput }).unwrap()
+
+        logger.info('MOC edit saved successfully', { mocId: moc.id })
+
+        // Show success toast
+        showSuccessToast('Changes saved', `${data.title} has been updated.`, 5000)
 
         // Navigate to detail page after save
         if (moc.slug) {
@@ -135,12 +155,35 @@ export function InstructionsEditPage({ moc, isLoading, error }: InstructionsEdit
         }
       } catch (err) {
         logger.error('Failed to save MOC edits', { mocId: moc.id, error: err })
-        setSaveError('Failed to save changes. Please try again.')
+
+        // Extract error status and set context-specific message
+        let errorMessage = 'Failed to save changes. Please try again.'
+
+        if (err && typeof err === 'object' && 'status' in err) {
+          const status = (err as { status: number }).status
+          switch (status) {
+            case 404:
+              errorMessage = 'MOC not found. It may have been deleted.'
+              break
+            case 403:
+              errorMessage = "You don't have permission to edit this MOC."
+              break
+            case 409:
+              errorMessage =
+                'A MOC with this title already exists. Please choose a different title.'
+              break
+            case 500:
+              errorMessage = 'Failed to save changes. Please try again.'
+              break
+          }
+        }
+
+        setSaveError(errorMessage)
       } finally {
         setIsSaving(false)
       }
     },
-    [moc, navigate],
+    [moc, navigate, updateMoc],
   )
 
   // Loading state

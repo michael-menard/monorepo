@@ -1,0 +1,264 @@
+# Deferred Knowledge Base Writes - BUGF-014
+# Knowledge Base currently unavailable - these entries should be written when KB is accessible
+
+story_id: BUGF-014
+generated_at: "2026-02-11T20:15:00Z"
+source_stage: elab
+category: future-opportunities
+
+entries:
+  # Non-Blocking Gaps (8 entries)
+  - entry_type: finding
+    title: "Edge case: GalleryGrid with single item"
+    content: |
+      - **Edge Case**: GalleryGrid rendering with single item
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Test grid layout consistency with 1 item vs 10+ items. Current story covers empty and multiple items but not boundary cases.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - edge-case
+      - future-work
+      - app-sets-gallery
+      - GalleryGrid
+
+  - entry_type: finding
+    title: "Edge case: SetDetailPage with partial purchase info"
+    content: |
+      - **Edge Case**: SetDetailPage with incomplete purchase data
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Test scenarios where some purchase fields are null (e.g., price without tax/shipping). Current tests cover all-or-nothing purchase info.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - edge-case
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Edge case: SetDetailPage with extremely long notes"
+    content: |
+      - **Edge Case**: Notes field with excessive content
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Test notes field with 5000+ characters to verify whitespace-pre-line rendering and card overflow behavior.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - edge-case
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Edge case: SetDetailPage with many tags"
+    content: |
+      - **Edge Case**: Tag sidebar with excessive tags
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Test sidebar rendering with 20+ tags to verify flex-wrap behavior and visual overflow.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - edge-case
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Error scenario: Delete mutation network failure"
+    content: |
+      - **Error Handling**: Delete mutation network failure scenario
+      - **Impact**: Medium | **Effort**: Low
+      - **Recommendation**: Test delete mutation failing with network error (not just 500 status). Current story covers success path and 500 error.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - error-handling
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Error scenario: SetDetailPage with malformed image URLs"
+    content: |
+      - **Error Handling**: Invalid image URL handling
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Test image rendering when imageUrl is invalid or returns 404. May require img onError handler testing.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - error-handling
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Accessibility: Keyboard navigation in lightbox"
+    content: |
+      - **Accessibility Enhancement**: Lightbox keyboard controls
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Test Esc key closing lightbox, arrow keys navigating images. @repo/gallery GalleryLightbox may already have these tests.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - accessibility
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+      - GalleryLightbox
+
+  - entry_type: finding
+    title: "Accessibility: Screen reader announcements for delete"
+    content: |
+      - **Accessibility Enhancement**: Delete action screen reader feedback
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Verify aria-live regions announce deletion success/failure. Current story tests toast display but not screen reader behavior.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - accessibility
+      - future-work
+      - app-sets-gallery
+      - SetDetailPage
+
+  # Enhancement Opportunities (10 entries)
+  - entry_type: finding
+    title: "Enhancement: Visual regression testing for SetDetailPage"
+    content: |
+      - **Enhancement**: Visual regression test coverage
+      - **Impact**: Medium | **Effort**: High
+      - **Recommendation**: Add Playwright visual regression tests for SetDetailPage layouts (with/without images, with/without purchase info). Out of scope for unit tests. Defer to BUGF-030.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - testing
+      - app-sets-gallery
+      - SetDetailPage
+      - e2e
+      - BUGF-030
+
+  - entry_type: finding
+    title: "Enhancement: Performance testing for GalleryGrid"
+    content: |
+      - **Enhancement**: Performance validation for large galleries
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Test GalleryGrid rendering performance with 100+ items. Current story focuses on correctness, not performance.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - performance
+      - app-sets-gallery
+      - GalleryGrid
+
+  - entry_type: finding
+    title: "Enhancement: Integration testing for set detail flow"
+    content: |
+      - **Enhancement**: Full user flow integration test
+      - **Impact**: Medium | **Effort**: Medium
+      - **Recommendation**: Add integration test covering full set detail view -> edit -> save -> return flow. Current story tests components in isolation.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - testing
+      - integration
+      - app-sets-gallery
+
+  - entry_type: finding
+    title: "Enhancement: Toast message content validation"
+    content: |
+      - **UX Polish**: Exact toast message validation
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Verify exact toast message text for delete success (currently only checks that toast appears). Improves UX consistency.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - ux-polish
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Enhancement: Loading state timing verification"
+    content: |
+      - **UX Polish**: Skeleton loading timing
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Test that skeleton appears immediately on mount, not after delay. Current story tests skeleton presence but not timing.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - ux-polish
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Enhancement: Error message consistency validation"
+    content: |
+      - **UX Polish**: Error message tone guidelines
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Verify all error messages follow platform tone guidelines (e.g., no technical jargon). Current tests check presence, not content.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - ux-polish
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Enhancement: Delete dialog aria-describedby validation"
+    content: |
+      - **Accessibility Enhancement**: Dialog ARIA attributes
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Verify delete ConfirmationDialog has proper aria-describedby linking description to dialog. @repo/app-component-library may already handle this.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - accessibility
+      - app-sets-gallery
+      - SetDetailPage
+
+  - entry_type: finding
+    title: "Enhancement: Lightbox keyboard shortcuts testing"
+    content: |
+      - **Accessibility Enhancement**: Comprehensive keyboard controls
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Test additional keyboard shortcuts beyond Esc (e.g., arrow keys, Home, End). @repo/gallery GalleryLightbox should own these tests.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - accessibility
+      - app-sets-gallery
+      - @repo/gallery
+      - GalleryLightbox
+
+  - entry_type: finding
+    title: "Enhancement: ModuleLayout nested routing testing"
+    content: |
+      - **Enhancement**: Nested routing validation
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Test ModuleLayout behavior when used with nested React Router outlets. Current tests cover basic children rendering only.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - edge-case
+      - app-sets-gallery
+      - ModuleLayout
+
+  - entry_type: finding
+    title: "Enhancement: Utility function test coverage"
+    content: |
+      - **Code Quality**: Helper function testing
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Add tests for formatBuildStatus, getBuildStatusVariant, formatDate, formatCurrency, buildLightboxImages helper functions in set-detail-page.tsx. Current story focuses on component rendering.
+      - **Source**: BUGF-014 elaboration analysis
+    tags:
+      - enhancement
+      - code-quality
+      - app-sets-gallery
+      - SetDetailPage
+      - utility-functions
+
+notes: |
+  Priority for next iteration if test coverage work continues:
+  1. Delete mutation network failure (Medium impact, Low effort)
+  2. Toast message content validation (Low effort, improves consistency)
+  3. Utility function test coverage (Completes component coverage)
+
+  Deferred to other stories:
+  - Visual regression testing -> BUGF-030 (Comprehensive E2E Suite)
+  - Integration testing -> BUGF-030
+  - @repo/gallery lightbox keyboard shortcuts -> Should be tested in @repo/gallery package
+
+  Low ROI (Consider skipping):
+  - Performance testing with 100+ items (unlikely to reveal issues)
+  - ModuleLayout nested routing (trivial component, low value)

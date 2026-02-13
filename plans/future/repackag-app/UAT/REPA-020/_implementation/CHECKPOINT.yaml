@@ -1,0 +1,20 @@
+schema: 1
+story_id: "REPA-020"
+feature_dir: "plans/future/repackag-app"
+timestamp: "2026-02-11T10:32:00Z"
+
+current_phase: qa-verify
+last_successful_phase: qa-setup
+
+iteration: 2
+max_iterations: 3
+
+blocked: false
+blocked_reason: null
+
+forced: false
+warnings:
+  - "Storybook stories not created - gallery package lacks Storybook setup"
+
+completed_at: "2026-02-11T10:30:00Z"
+e2e_gate: exempt

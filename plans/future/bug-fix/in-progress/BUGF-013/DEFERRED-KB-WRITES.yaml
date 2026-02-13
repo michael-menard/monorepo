@@ -1,0 +1,24 @@
+---
+# KB Write Queue - Stories Table
+# Story generated without KB persistence due to unavailable KB tools
+# Retry with: /kb-sync --retry-deferred
+
+pending_writes:
+  - table: stories
+    operation: INSERT
+    data:
+      story_id: BUGF-013
+      feature: bug-fix
+      title: "Add Test Coverage for Instructions Gallery Upload Components"
+      story_dir: plans/future/bug-fix/backlog/BUGF-013
+      story_file: plans/future/bug-fix/backlog/BUGF-013/BUGF-013.md
+      story_type: test
+      points: 5
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+    timestamp: "2026-02-11T00:00:00Z"
+    reason: "KB tools not available in current session"

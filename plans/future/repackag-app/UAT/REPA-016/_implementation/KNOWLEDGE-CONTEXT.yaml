@@ -1,0 +1,66 @@
+schema: 1
+story_id: REPA-016
+timestamp: "2026-02-11T04:00:00Z"
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "Ensure all package exports are correctly configured in package.json before updating consumer imports"
+      - "Verify no circular dependencies when restructuring package internals"
+      - "Run type checking after each phase to catch import errors early"
+    patterns_to_follow:
+      - "Use Zod schemas with z.infer for all type definitions (per CLAUDE.md)"
+      - "Maintain backward compatibility via index.ts re-exports when restructuring"
+      - "Migrate tests alongside source code to maintain coverage"
+      - "Use named exports, avoid barrel files (per CLAUDE.md)"
+    patterns_to_avoid:
+      - "Deleting source files before verifying all consumers are updated"
+      - "Modifying schema validation logic during migration (migration only)"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests required, minimum 45% coverage"
+        applies_to: ["testing", "packages"]
+      - id: "CLAUDE.md"
+        title: "Zod-First Types Required"
+        status: active
+        constraint: "ALWAYS use Zod schemas for types - never use TypeScript interfaces"
+        applies_to: ["all"]
+
+    constraints:
+      testing: "Minimum 45% test coverage, Vitest framework (locked preference)"
+      types: "Zod schemas with z.infer only, no TypeScript interfaces"
+      imports: "Named exports, no barrel files (index.ts re-exports OK for backward compat)"
+      quality_gates: "TypeScript compilation, ESLint, Prettier, all tests pass"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full test files unnecessarily"
+        typical_tokens: 5000
+        mitigation: "Copy test file content directly, update imports only"
+      - operation: "Reading all consumer files multiple times"
+        typical_tokens: 3000
+        mitigation: "Batch read all consumers once, update systematically"
+
+    recommended_patterns:
+      - "Read files in parallel when no dependencies"
+      - "Use Grep to verify no remaining imports before declaring cleanup complete"
+      - "Batch related file operations (create subdirectory structure in single phase)"
+
+  warnings:
+    - "This is a schema consolidation - validation logic must NOT be modified"
+    - "Comprehensive test coverage (252 lines) provides safety net - preserve exactly"
+    - "Both consumer apps are actively used - verify builds pass before cleanup"
+
+tokens:
+  in: 0
+  out: 0
+  note: "Context loaded inline by dev-plan-leader (token efficiency)"

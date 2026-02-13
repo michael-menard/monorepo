@@ -1,0 +1,28 @@
+schema: 1
+story_id: REPA-016
+timestamp: "2026-02-11T03:58:25Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/core/api-client/**"
+  - "apps/web/main-app/src/types/**"
+  - "apps/web/app-instructions-gallery/src/types/**"
+  - "packages/core/app-component-library/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Consolidate duplicate MOC form validation schemas into @repo/api-client with directory restructuring (form.ts, api.ts, utils.ts)"

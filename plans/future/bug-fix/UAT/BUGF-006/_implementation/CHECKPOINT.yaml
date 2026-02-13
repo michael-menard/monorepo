@@ -1,0 +1,14 @@
+schema: 1
+story_id: "BUGF-006"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-11T19:00:00Z"
+
+current_phase: qa-setup
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+qa_setup_started: "2026-02-11T19:20:00Z"
+e2e_gate: exempt

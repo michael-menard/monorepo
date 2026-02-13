@@ -1,0 +1,474 @@
+schema: 1
+story_id: "REPA-014"
+feature_dir: "plans/future/repackag-app"
+title: "Create @repo/hooks Package for Common React Hooks"
+
+overview: |
+  Create a new @repo/hooks package to consolidate four React hooks currently duplicated
+  or scattered across multiple web apps. This eliminates code duplication, reduces
+  maintenance burden, and provides a single source of truth for general-purpose hooks.
+
+  Hooks to migrate:
+  - useLocalStorage (2 duplicate copies)
+  - useUnsavedChangesPrompt (2 duplicate copies)
+  - useDelayedShow (1 copy, generally useful)
+  - useMultiSelect (1 copy, generally useful)
+
+  Total impact: 8 consumer files across 4 apps, 815+ lines of test coverage to preserve.
+
+phases:
+  - id: 1
+    name: "Create Package Structure"
+    description: "Set up @repo/hooks package with all configuration files"
+    tasks:
+      - id: 1.1
+        name: "Create package directory and package.json"
+        description: |
+          Create packages/core/hooks/ directory with package.json following REPA-001 pattern.
+          Configure exports for all four hooks with direct file exports (no barrel files).
+        acceptance_criteria:
+          - AC-1
+          - AC-3
+        files_created:
+          - packages/core/hooks/package.json
+        decisions:
+          - tier: 1
+            title: "Use REPA-001 package.json structure"
+            choice: "Follow @repo/upload package.json pattern with named exports"
+            rationale: "Established pattern from REPA-001 ensures consistency"
+
+      - id: 1.2
+        name: "Create tsconfig.json and vite.config.ts"
+        description: |
+          Create TypeScript and Vite configuration files following @repo/upload pattern.
+          Configure build to output to dist/ with proper externals.
+        acceptance_criteria:
+          - AC-2
+        files_created:
+          - packages/core/hooks/tsconfig.json
+          - packages/core/hooks/vite.config.ts
+        decisions:
+          - tier: 1
+            title: "Use REPA-001 build configuration"
+            choice: "Follow @repo/upload vite.config.ts pattern"
+            rationale: "Proven configuration for React hook packages"
+
+      - id: 1.3
+        name: "Create README.md"
+        description: |
+          Create README.md documenting all four hooks with usage examples.
+          Include API documentation, examples, and migration notes.
+        acceptance_criteria:
+          - AC-1
+        files_created:
+          - packages/core/hooks/README.md
+        decisions:
+          - tier: 1
+            title: "README structure"
+            choice: "One section per hook with usage examples"
+            rationale: "Matches accessibility package documentation pattern"
+
+      - id: 1.4
+        name: "Create vitest.config.ts"
+        description: |
+          Create Vitest configuration for testing hooks.
+          Configure test environment for React hooks testing.
+        acceptance_criteria:
+          - AC-2
+        files_created:
+          - packages/core/hooks/vitest.config.ts
+        decisions:
+          - tier: 1
+            title: "Test configuration"
+            choice: "Follow @repo/upload vitest.config.ts pattern"
+            rationale: "Matches existing test setup patterns"
+
+  - id: 2
+    name: "Migrate Hooks Implementation"
+    description: "Copy hook implementations from source apps to @repo/hooks"
+    tasks:
+      - id: 2.1
+        name: "Migrate useLocalStorage"
+        description: |
+          Copy useLocalStorage implementation from app-wishlist-gallery to @repo/hooks.
+          This is the reference implementation with comprehensive error handling and Zod support.
+        acceptance_criteria:
+          - AC-4
+          - AC-8
+        files_created:
+          - packages/core/hooks/src/useLocalStorage.ts
+        source_file: apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
+        decisions:
+          - tier: 1
+            title: "Reference implementation choice"
+            choice: "Use app-wishlist-gallery version"
+            rationale: "Story identifies this as reference version with full features"
+
+      - id: 2.2
+        name: "Migrate useUnsavedChangesPrompt"
+        description: |
+          Copy useUnsavedChangesPrompt implementation from main-app to @repo/hooks.
+          This hook depends on @tanstack/react-router (peer dependency).
+        acceptance_criteria:
+          - AC-5
+          - AC-8
+        files_created:
+          - packages/core/hooks/src/useUnsavedChangesPrompt.ts
+        source_file: apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts
+        decisions:
+          - tier: 1
+            title: "Reference implementation choice"
+            choice: "Use main-app version"
+            rationale: "Story identifies this as reference version"
+
+      - id: 2.3
+        name: "Migrate useDelayedShow"
+        description: |
+          Copy useDelayedShow implementation from main-app to @repo/hooks.
+          Simple timer-based hook for delayed UI rendering.
+        acceptance_criteria:
+          - AC-6
+          - AC-8
+        files_created:
+          - packages/core/hooks/src/useDelayedShow.ts
+        source_file: apps/web/main-app/src/hooks/useDelayedShow.ts
+
+      - id: 2.4
+        name: "Migrate useMultiSelect"
+        description: |
+          Copy useMultiSelect implementation from app-inspiration-gallery to @repo/hooks.
+          Includes shift-click range selection logic.
+        acceptance_criteria:
+          - AC-7
+          - AC-8
+        files_created:
+          - packages/core/hooks/src/useMultiSelect.ts
+        source_file: apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts
+
+  - id: 3
+    name: "Migrate Tests"
+    description: "Copy test files from source apps to @repo/hooks"
+    tasks:
+      - id: 3.1
+        name: "Migrate useLocalStorage tests"
+        description: |
+          Copy 239 lines of useLocalStorage tests from app-wishlist-gallery.
+          Update imports to reference local hook file.
+        acceptance_criteria:
+          - AC-9
+        files_created:
+          - packages/core/hooks/src/__tests__/useLocalStorage.test.ts
+        source_file: apps/web/app-wishlist-gallery/src/hooks/__tests__/useLocalStorage.test.ts
+
+      - id: 3.2
+        name: "Migrate useDelayedShow tests"
+        description: |
+          Copy 233 lines of useDelayedShow tests from main-app.
+          Includes timer mocking tests.
+        acceptance_criteria:
+          - AC-10
+        files_created:
+          - packages/core/hooks/src/__tests__/useDelayedShow.test.ts
+        source_file: apps/web/main-app/src/hooks/__tests__/useDelayedShow.test.ts
+
+      - id: 3.3
+        name: "Migrate useMultiSelect tests"
+        description: |
+          Copy 343 lines of useMultiSelect tests from app-inspiration-gallery.
+          Includes shift-click range selection tests.
+        acceptance_criteria:
+          - AC-11
+        files_created:
+          - packages/core/hooks/src/__tests__/useMultiSelect.test.ts
+        source_file: apps/web/app-inspiration-gallery/src/hooks/__tests__/useMultiSelect.test.ts
+
+      - id: 3.4
+        name: "Create test setup file"
+        description: |
+          Create src/__tests__/setup.ts for test environment configuration.
+          Follow pattern from @repo/gallery and @repo/upload.
+        files_created:
+          - packages/core/hooks/src/__tests__/setup.ts
+        decisions:
+          - tier: 1
+            title: "Test setup pattern"
+            choice: "Follow @repo/gallery test setup pattern"
+            rationale: "Matches existing core package test setup"
+
+  - id: 4
+    name: "Update Package Dependencies"
+    description: "Add @repo/hooks as dependency to consuming apps"
+    tasks:
+      - id: 4.1
+        name: "Add @repo/hooks to app-wishlist-gallery"
+        description: "Add @repo/hooks dependency with workspace:* version"
+        acceptance_criteria:
+          - AC-13
+        files_modified:
+          - apps/web/app-wishlist-gallery/package.json
+        commands:
+          - "cd apps/web/app-wishlist-gallery && pnpm add @repo/hooks@workspace:*"
+
+      - id: 4.2
+        name: "Add @repo/hooks to app-instructions-gallery"
+        description: "Add @repo/hooks dependency with workspace:* version"
+        acceptance_criteria:
+          - AC-13
+        files_modified:
+          - apps/web/app-instructions-gallery/package.json
+        commands:
+          - "cd apps/web/app-instructions-gallery && pnpm add @repo/hooks@workspace:*"
+
+      - id: 4.3
+        name: "Add @repo/hooks to main-app"
+        description: "Add @repo/hooks dependency with workspace:* version"
+        acceptance_criteria:
+          - AC-13
+        files_modified:
+          - apps/web/main-app/package.json
+        commands:
+          - "cd apps/web/main-app && pnpm add @repo/hooks@workspace:*"
+
+      - id: 4.4
+        name: "Add @repo/hooks to app-inspiration-gallery"
+        description: "Add @repo/hooks dependency with workspace:* version"
+        acceptance_criteria:
+          - AC-13
+        files_modified:
+          - apps/web/app-inspiration-gallery/package.json
+        commands:
+          - "cd apps/web/app-inspiration-gallery && pnpm add @repo/hooks@workspace:*"
+
+  - id: 5
+    name: "Update Consumer Imports"
+    description: "Update all consumer files to import from @repo/hooks"
+    tasks:
+      - id: 5.1
+        name: "Update useLocalStorage consumers (4 files)"
+        description: |
+          Update imports in:
+          - apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx
+          - apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
+          - apps/web/app-wishlist-gallery/src/hooks/useWishlistSortPersistence.ts
+          - apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx
+
+          Change from:
+            import { useLocalStorage } from '../hooks/useLocalStorage'
+          To:
+            import { useLocalStorage } from '@repo/hooks/useLocalStorage'
+        acceptance_criteria:
+          - AC-12
+        files_modified:
+          - apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx
+          - apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
+          - apps/web/app-wishlist-gallery/src/hooks/useWishlistSortPersistence.ts
+          - apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx
+
+      - id: 5.2
+        name: "Update useUnsavedChangesPrompt consumers (2 files)"
+        description: |
+          Update imports in:
+          - apps/web/main-app/src/components/Uploader/SessionProvider/index.tsx
+          - apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx
+
+          Change from:
+            import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt'
+          To:
+            import { useUnsavedChangesPrompt } from '@repo/hooks/useUnsavedChangesPrompt'
+        acceptance_criteria:
+          - AC-12
+        files_modified:
+          - apps/web/main-app/src/components/Uploader/SessionProvider/index.tsx
+          - apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx
+
+      - id: 5.3
+        name: "Update useDelayedShow consumers (1 file)"
+        description: |
+          Update imports in:
+          - apps/web/main-app/src/components/PageTransitionSpinner/PageTransitionSpinner.tsx
+
+          Change from:
+            import { useDelayedShow } from '@/hooks/useDelayedShow'
+          To:
+            import { useDelayedShow } from '@repo/hooks/useDelayedShow'
+        acceptance_criteria:
+          - AC-12
+        files_modified:
+          - apps/web/main-app/src/components/PageTransitionSpinner/PageTransitionSpinner.tsx
+
+      - id: 5.4
+        name: "Update useMultiSelect consumers (1 file)"
+        description: |
+          Update imports in:
+          - apps/web/app-inspiration-gallery/src/pages/main-page.tsx
+
+          Change from:
+            import { useMultiSelect } from '../hooks/useMultiSelect'
+          To:
+            import { useMultiSelect } from '@repo/hooks/useMultiSelect'
+        acceptance_criteria:
+          - AC-12
+        files_modified:
+          - apps/web/app-inspiration-gallery/src/pages/main-page.tsx
+
+  - id: 6
+    name: "Cleanup and Verification"
+    description: "Remove duplicate files and verify builds/tests pass"
+    tasks:
+      - id: 6.1
+        name: "Run package build and tests"
+        description: |
+          Build @repo/hooks package and run all tests to verify everything works.
+          All 815+ lines of tests must pass.
+        acceptance_criteria:
+          - AC-2
+          - AC-9
+          - AC-10
+          - AC-11
+        commands:
+          - "cd packages/core/hooks && pnpm build"
+          - "cd packages/core/hooks && pnpm test"
+        decisions:
+          - tier: 3
+            title: "When to delete duplicate files"
+            choice: "Delete only after successful build and test verification"
+            rationale: "Safety - ensure package works before removing originals"
+
+      - id: 6.2
+        name: "Build all consuming apps"
+        description: |
+          Run pnpm build for all four consuming apps to verify imports work correctly.
+        acceptance_criteria:
+          - AC-15
+        commands:
+          - "pnpm --filter app-wishlist-gallery build"
+          - "pnpm --filter app-instructions-gallery build"
+          - "pnpm --filter main-app build"
+          - "pnpm --filter app-inspiration-gallery build"
+
+      - id: 6.3
+        name: "Run type checking for all consuming apps"
+        description: |
+          Run pnpm check-types for all four consuming apps to verify TypeScript is happy.
+        acceptance_criteria:
+          - AC-16
+        commands:
+          - "pnpm --filter app-wishlist-gallery check-types"
+          - "pnpm --filter app-instructions-gallery check-types"
+          - "pnpm --filter main-app check-types"
+          - "pnpm --filter app-inspiration-gallery check-types"
+
+      - id: 6.4
+        name: "Delete duplicate hook files (6 files)"
+        description: |
+          After successful verification, delete duplicate hook implementation files.
+          Files to delete:
+          - apps/web/app-instructions-gallery/src/hooks/useLocalStorage.ts
+          - apps/web/app-instructions-gallery/src/hooks/useUnsavedChangesPrompt.ts
+          - apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
+          - apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts
+          - apps/web/main-app/src/hooks/useDelayedShow.ts
+          - apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts
+        acceptance_criteria:
+          - AC-14
+        files_deleted:
+          - apps/web/app-instructions-gallery/src/hooks/useLocalStorage.ts
+          - apps/web/app-instructions-gallery/src/hooks/useUnsavedChangesPrompt.ts
+          - apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
+          - apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts
+          - apps/web/main-app/src/hooks/useDelayedShow.ts
+          - apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts
+        decisions:
+          - tier: 4
+            title: "Confirm file deletion"
+            choice: "ESCALATE - Always confirm destructive operations"
+            rationale: "Tier 4 decision - destructive operation requires user confirmation"
+
+      - id: 6.5
+        name: "Delete duplicate test files (3 files)"
+        description: |
+          After successful verification, delete duplicate test files.
+          Files to delete:
+          - apps/web/app-wishlist-gallery/src/hooks/__tests__/useLocalStorage.test.ts
+          - apps/web/main-app/src/hooks/__tests__/useDelayedShow.test.ts
+          - apps/web/app-inspiration-gallery/src/hooks/__tests__/useMultiSelect.test.ts
+        acceptance_criteria:
+          - AC-14
+        files_deleted:
+          - apps/web/app-wishlist-gallery/src/hooks/__tests__/useLocalStorage.test.ts
+          - apps/web/main-app/src/hooks/__tests__/useDelayedShow.test.ts
+          - apps/web/app-inspiration-gallery/src/hooks/__tests__/useMultiSelect.test.ts
+        decisions:
+          - tier: 4
+            title: "Confirm test file deletion"
+            choice: "ESCALATE - Always confirm destructive operations"
+            rationale: "Tier 4 decision - destructive operation requires user confirmation"
+
+      - id: 6.6
+        name: "Final verification - rebuild and test all"
+        description: |
+          Run full monorepo build and tests to verify no import errors after deletion.
+        acceptance_criteria:
+          - AC-15
+          - AC-16
+        commands:
+          - "pnpm build"
+          - "pnpm check-types"
+
+risk_areas:
+  - area: "TanStack Router peer dependency"
+    mitigation: "Verified all apps use ^1.130.2 - compatible version"
+    verified: true
+
+  - area: "Circular dependency with @repo/logger"
+    mitigation: "Verified @repo/logger has no imports from apps/web/**"
+    verified: true
+
+  - area: "Missing tests for useUnsavedChangesPrompt"
+    mitigation: "Will rely on AC-16 type checking and manual verification"
+    verified: false
+    note: "No test file exists - acceptable per story"
+
+  - area: "Large changeset (8 consumer files)"
+    mitigation: "Thorough verification via builds and type checking before cleanup"
+    verified: false
+    note: "Will be verified in phase 6"
+
+verification_plan:
+  unit_tests:
+    - "All 815+ lines of migrated tests pass in @repo/hooks"
+    - "No TypeScript errors in @repo/hooks package"
+
+  integration_tests:
+    - "All 4 consuming apps build successfully"
+    - "All 4 consuming apps pass type checking"
+    - "No import errors in consuming apps"
+
+  smoke_tests:
+    - "Clean pnpm install resolves @repo/hooks correctly"
+    - "No import errors after duplicate files deleted"
+    - "Full monorepo build passes"
+
+required_evidence:
+  build:
+    - "pnpm build output from packages/core/hooks/ - must succeed"
+    - "pnpm build output from monorepo root - all apps must succeed"
+
+  tests:
+    - "pnpm test output from packages/core/hooks/ - all tests pass"
+    - "No test regressions in consuming apps"
+
+  types:
+    - "pnpm check-types output from monorepo root - 0 errors"
+
+estimated_files:
+  created: 12
+  modified: 12
+  deleted: 9
+  total: 33
+
+estimated_loc:
+  hooks: 500
+  tests: 815
+  config: 150
+  total: 1465

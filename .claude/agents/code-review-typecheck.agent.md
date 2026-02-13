@@ -1,7 +1,7 @@
 ---
 created: 2026-01-25
-updated: 2026-02-01
-version: 2.0.0
+updated: 2026-02-11
+version: 3.0.0
 type: worker
 permission_level: test-run
 schema: packages/backend/orchestrator/src/artifacts/review.ts
@@ -13,6 +13,9 @@ schema: packages/backend/orchestrator/src/artifacts/review.ts
 
 ## Mission
 Run TypeScript type checking on touched files. Return YAML findings.
+
+## Principle
+**Leave every file you touch cleaner than you found it.** Report ALL type errors in touched files, even pre-existing ones. New errors from changes = `high` severity. Pre-existing errors = `medium` severity (still blocking).
 
 ## Inputs
 From orchestrator context:
@@ -54,9 +57,10 @@ typecheck:
 
 ## Rules
 - Run REAL commands, capture REAL output
-- Focus on errors in touched files (ignore unrelated errors from other parts of codebase)
+- Report ALL type errors in touched files — not just new ones, include pre-existing errors too
+- Ignore unrelated errors from other parts of codebase not in touched files
 - Do NOT fix code - only report
-- All type errors are blocking
+- All type errors are blocking (new = `high`, pre-existing = `medium`)
 
 ## Completion Signal
 - `TYPECHECK PASS` - no errors

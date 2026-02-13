@@ -1,0 +1,147 @@
+schema: 1
+story_id: "BUGF-027"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-11T20:30:00Z"
+
+approach: |
+  Create comprehensive implementation guide at docs/guides/password-reset-rate-limiting.md
+  documenting Cognito rate limiting behavior, frontend state management patterns, UI/UX
+  patterns, component reuse strategy, and testing approach. Optionally extend existing
+  auth flow documentation with rate limiting sections if needed for completeness.
+
+steps:
+  - id: 1
+    description: "Create primary deliverable: docs/guides/password-reset-rate-limiting.md with all 6 ACs"
+    files:
+      - path: "docs/guides/password-reset-rate-limiting.md"
+        action: "create"
+    tests: []
+    details: |
+      Main implementation guide covering:
+      - AC-1: Cognito rate limiting behavior (LimitExceededException, no Retry-After header)
+      - AC-2: Frontend state management (sessionStorage keys, exponential backoff algorithm)
+      - AC-3: UI/UX patterns (RateLimitBanner vs inline errors, countdown timers, accessibility)
+      - AC-4: Component reuse strategy (move RateLimitBanner to app-component-library)
+      - AC-5: Architectural boundaries (Cognito-managed vs backend-managed, ADR-004 reference)
+      - AC-6: Testing strategy (MSW mocking, E2E with Playwright, UAT with real Cognito per ADR-005)
+
+      Code examples to include:
+      - sessionStorage read/write for cooldown tracking
+      - Exponential backoff calculation (60s → 120s → 240s → 480s → 600s)
+      - MSW handler for LimitExceededException
+      - Amplify v6 forgotPassword and confirmResetPassword API examples
+      - RateLimitBanner props interface and usage
+      - Accessible countdown timer implementation
+
+      Reference existing implementations:
+      - ResendCodeButton exponential backoff pattern (lines 23-31)
+      - RateLimitBanner countdown timer (lines 41-59)
+      - ForgotPasswordPage error handling (lines 89-94, 123-124)
+      - Account enumeration prevention (lines 78-88, 112-120)
+
+  - id: 2
+    description: "Extend docs/flows/auth/forgot-password.md with rate limiting section (optional)"
+    files:
+      - path: "docs/flows/auth/forgot-password.md"
+        action: "modify"
+    tests: []
+    details: |
+      Add "Rate Limiting" section after "Security Considerations" that:
+      - References the main implementation guide
+      - Documents specific rate limiting behavior for forgotPassword operation
+      - Shows cooldown UX flow in mermaid diagram
+      - Links to BUGF-027 implementation guide for technical details
+
+      This is optional - only create if needed for flow completeness.
+
+  - id: 3
+    description: "Extend docs/flows/auth/reset-password.md with rate limiting section (optional)"
+    files:
+      - path: "docs/flows/auth/reset-password.md"
+        action: "modify"
+    tests: []
+    details: |
+      Add "Rate Limiting" section documenting confirmResetPassword rate limiting:
+      - LimitExceededException error state
+      - Cooldown UI/UX when rate limited
+      - Reference to main implementation guide
+      - Update error states table with rate limit entry
+
+      This is optional - only create if needed for flow completeness.
+
+  - id: 4
+    description: "Extend docs/architecture/authentication-system.md with rate limiting subsection (optional)"
+    files:
+      - path: "docs/architecture/authentication-system.md"
+        action: "modify"
+    tests: []
+    details: |
+      Add "Rate Limiting" subsection under "Authentication Flows" section:
+      - Overview of Cognito-managed rate limiting
+      - Comparison table: Cognito vs backend rate-limit.ts middleware
+      - Frontend state management approach
+      - Reference to detailed implementation guide
+      - Link to ADR-004 (Cognito as authoritative auth service)
+
+      This is optional - only create if needed for architectural completeness.
+
+knowledge_context:
+  - source: "packages/core/upload/src/components/RateLimitBanner/index.tsx"
+    relevance: "Existing rate limit banner with countdown timer - pattern to reuse for auth flows"
+  - source: "apps/web/main-app/src/components/Auth/ResendCodeButton.tsx"
+    relevance: "Existing exponential backoff pattern with sessionStorage - exact pattern to document for password reset"
+  - source: "apps/web/main-app/src/routes/pages/ForgotPasswordPage.tsx"
+    relevance: "Current LimitExceededException handling (lines 89-94, 123-124) - shows current state and gap for improvement"
+  - source: "apps/web/main-app/src/routes/pages/ResetPasswordPage.tsx"
+    relevance: "Password reset completion page that also needs rate limiting documentation"
+  - source: "apps/api/lego-api/middleware/rate-limit.ts"
+    relevance: "Backend rate limiting pattern for comparison - shows architectural boundary between Cognito and backend rate limiting"
+  - source: "docs/flows/auth/forgot-password.md"
+    relevance: "Existing forgot password flow documentation - context for optional rate limiting section"
+  - source: "docs/flows/auth/reset-password.md"
+    relevance: "Existing reset password flow documentation - context for optional rate limiting section"
+  - source: "docs/architecture/authentication-system.md"
+    relevance: "Main authentication architecture document - context for optional rate limiting subsection"
+  - source: "packages/core/upload/src/components/RateLimitBanner/__types__/index.ts"
+    relevance: "RateLimitBanner props schema - shows current API that may need extension for auth use cases"
+
+implementation_notes:
+  - "This is a documentation-only story - no code changes required"
+  - "Main deliverable is docs/guides/password-reset-rate-limiting.md"
+  - "Optional updates to auth flow docs and architecture docs only if needed for completeness"
+  - "All code examples must be TypeScript with proper type annotations"
+  - "All code snippets must be compilable (will be validated during QA)"
+  - "Follow Zod-first type pattern from CLAUDE.md when showing type examples"
+  - "Use existing ResendCodeButton cooldown calculation as reference: Math.min(600, 60 * Math.pow(2, attemptCount - 1))"
+  - "Document that Cognito does NOT provide Retry-After header (critical gap vs backend rate limiting)"
+  - "Emphasize account enumeration prevention in all rate limit messaging"
+  - "Reference ADR-004 for Cognito as authoritative auth service"
+  - "Reference ADR-005 for UAT testing requirements (must use real Cognito)"
+  - "Testing examples should use MSW for unit tests, not mocking Cognito directly"
+
+acceptance_validation:
+  - "AC-1: Cognito rate limiting behavior documented with API limits, error format, retry behavior, and comparison to backend rate limiting"
+  - "AC-2: Frontend state management specified with sessionStorage keys, cooldown algorithm (60s → 120s → 240s → 480s → 600s), and code examples"
+  - "AC-3: UI/UX patterns defined with RateLimitBanner usage, countdown timer format, button states, and accessibility (aria-live, prefers-reduced-motion)"
+  - "AC-4: Component reuse strategy documented with RateLimitBanner current location, recommended move to app-component-library, and adaptations needed"
+  - "AC-5: Architectural boundaries documented with Cognito vs backend comparison table, ADR-004 reference, and security considerations (account enumeration)"
+  - "AC-6: Testing strategy documented with MSW examples, Playwright E2E outline, and UAT requirements per ADR-005"
+
+related_stories:
+  - "BUGF-019": "Frontend implementation of password reset rate limiting UX (consumes this guide)"
+  - "BUGF-026": "Auth token refresh security review (references rate limiting for SEC-003)"
+
+constraints:
+  - "Cognito rate limit thresholds are AWS-managed, not configurable at fine-grained level"
+  - "Cognito LimitExceededException does not include Retry-After header - frontend must estimate cooldown"
+  - "Account enumeration prevention must be maintained in all rate limit messaging"
+  - "ADR-004: Password reset is Cognito-managed, no backend API involvement"
+  - "ADR-005: UAT tests must use real Cognito, no mocking"
+
+deliverables:
+  primary:
+    - "docs/guides/password-reset-rate-limiting.md"
+  optional:
+    - "docs/flows/auth/forgot-password.md (rate limiting section)"
+    - "docs/flows/auth/reset-password.md (rate limiting section)"
+    - "docs/architecture/authentication-system.md (rate limiting subsection)"

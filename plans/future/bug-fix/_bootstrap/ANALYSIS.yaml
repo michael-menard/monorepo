@@ -1,0 +1,386 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix"
+prefix: "BUGF"
+project_name: "bug-fix"
+analyzed: "2026-02-10T00:00:00Z"
+
+overall_goal: |
+  Fix critical bugs, implement missing functionality, and improve test coverage across all web applications to ensure production-ready quality.
+
+phases:
+  - id: 1
+    name: "Critical Functionality"
+    description: "Fix blocking issues that prevent core features from working"
+  - id: 2
+    name: "Cross-App Infrastructure"
+    description: "Implement shared authentication and logging infrastructure"
+  - id: 3
+    name: "Test Coverage & Quality"
+    description: "Fix test/implementation mismatches and add missing tests"
+  - id: 4
+    name: "Code Quality & Cleanup"
+    description: "Type safety improvements and deprecated code removal"
+
+stories:
+  - id: "BUGF-001"
+    title: "Implement Presigned URL API for Upload Functionality"
+    feature: "Integrate presigned URL API for file uploads in main-app and app-instructions-gallery to enable actual file uploading instead of mock demonstrations"
+    phase: 1
+    depends_on: []
+    endpoints:
+      - "POST /api/uploads/presigned-url"
+    infrastructure:
+      - "S3 bucket configuration"
+      - "IAM permissions for presigned URL generation"
+    goal: "Enable users to upload PDF instruction files to S3 via presigned URLs"
+    risk_notes: "Backend API endpoint may not exist yet; requires coordination with backend team"
+    sizing_warning: true
+
+  - id: "BUGF-002"
+    title: "Implement Edit Save Functionality for Instructions"
+    feature: "Complete RTK Query mutation integration for saving instruction edits in both main-app and app-instructions-gallery"
+    phase: 1
+    depends_on: []
+    endpoints:
+      - "PUT /api/instructions/:id"
+    infrastructure: []
+    goal: "Allow users to successfully save edits to instruction metadata"
+    risk_notes: "May need to coordinate with backend for proper API contract"
+    sizing_warning: false
+
+  - id: "BUGF-003"
+    title: "Implement Delete API and Edit Page for Sets Gallery"
+    feature: "Create useDeleteSetMutation integration, build missing edit-set-page.tsx, and wire up edit flow routing"
+    phase: 1
+    depends_on: []
+    endpoints:
+      - "DELETE /api/sets/:id"
+      - "PUT /api/sets/:id"
+    infrastructure: []
+    goal: "Enable users to delete sets and access edit functionality via proper edit page"
+    risk_notes: "Delete API stubbed with cache invalidation notes; requires backend API completion"
+    sizing_warning: true
+
+  - id: "BUGF-004"
+    title: "Implement Session Refresh API for Upload Expiry"
+    feature: "Create API endpoint to refresh presigned URLs for expired upload sessions and integrate into upload-page session management"
+    phase: 1
+    depends_on: ["BUGF-001"]
+    endpoints:
+      - "POST /api/uploads/refresh-session"
+    infrastructure: []
+    goal: "Prevent users from losing upload progress when presigned URLs expire"
+    risk_notes: "Depends on BUGF-001 presigned URL implementation"
+    sizing_warning: false
+
+  - id: "BUGF-005"
+    title: "Create Shared Auth Hooks Package"
+    feature: "Consolidate 6 duplicate use-module-auth.ts stubs into @repo/auth-hooks package with real authentication integration"
+    phase: 2
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "New package: @repo/auth-hooks"
+    goal: "Replace hardcoded auth values with real authentication logic across all apps"
+    risk_notes: "Cross-cutting change affects 6 apps; requires careful migration strategy"
+    sizing_warning: true
+
+  - id: "BUGF-006"
+    title: "Replace Console Usage with @repo/logger"
+    feature: "Replace all console.log/error calls with @repo/logger across app-inspiration-gallery, app-instructions-gallery, and main-app"
+    phase: 2
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure consistent, structured logging across all applications"
+    risk_notes: "Low risk; straightforward search and replace with verification"
+    sizing_warning: false
+
+  - id: "BUGF-007"
+    title: "Fix Dashboard Test/Implementation Mismatches"
+    feature: "Resolve 5 critical test failures in app-dashboard by aligning tests with actual component implementations or fixing implementations to match expected behavior"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure dashboard tests accurately reflect and validate actual component behavior"
+    risk_notes: "Requires decision: fix tests or fix implementation for each mismatch"
+    sizing_warning: false
+
+  - id: "BUGF-008"
+    title: "Implement E2E Tests for Password Reset Flow"
+    feature: "Create Playwright feature files for forgot-password and reset-password flows including code expiration and rate limiting scenarios"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure password reset flows work correctly across all edge cases"
+    risk_notes: "Page objects exist but no tests; medium complexity due to email integration"
+    sizing_warning: false
+
+  - id: "BUGF-009"
+    title: "Fix and Enable Skipped Test Suites in Main App"
+    feature: "Implement or remove 10 completely skipped test suites in main-app including navigation, performance, auth flow, and cache tests"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Restore test coverage for critical navigation and auth functionality"
+    risk_notes: "High priority; tests were skipped for a reason - may uncover deeper issues"
+    sizing_warning: true
+
+  - id: "BUGF-010"
+    title: "Fix Hub.listen Mocking in Auth Tests"
+    feature: "Resolve 8 TODO comments in AuthProvider tests where Hub.listen mock is not being called in test environment"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure auth event listeners are properly tested"
+    risk_notes: "Test environment issue; may require Jest/Vitest configuration changes"
+    sizing_warning: false
+
+  - id: "BUGF-011"
+    title: "Add Test Coverage for Dashboard Components"
+    feature: "Create test files for 8 untested dashboard components including DashboardHeader, charts, tables, and FilterBar"
+    phase: 3
+    depends_on: ["BUGF-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Achieve minimum 45% test coverage for dashboard components"
+    risk_notes: "Medium effort; straightforward component testing"
+    sizing_warning: false
+
+  - id: "BUGF-012"
+    title: "Add Test Coverage for Inspiration Gallery Components"
+    feature: "Create test files for 19 untested components including main-page.tsx, modals, drag components, and context menus"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Achieve test coverage for critical inspiration gallery user flows"
+    risk_notes: "Main page is highest priority; drag testing may require special setup"
+    sizing_warning: true
+
+  - id: "BUGF-013"
+    title: "Add Test Coverage for Instructions Gallery Components"
+    feature: "Create test files for untested upload components, forms, and session management"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure upload flow is properly tested with mocked S3 interactions"
+    risk_notes: "Upload testing complexity; requires mock S3 presigned URL flows"
+    sizing_warning: false
+
+  - id: "BUGF-014"
+    title: "Add Test Coverage for Sets Gallery Components"
+    feature: "Create test files for GalleryGrid, GalleryFilterBar, ModuleLayout, and SetDetailPage"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure sets gallery functionality is properly tested"
+    risk_notes: "SetDetailPage is most complex; may need comprehensive test scenarios"
+    sizing_warning: false
+
+  - id: "BUGF-015"
+    title: "Add Test Coverage for Main App Components"
+    feature: "Create test files for 29 untested components including admin pages, modules, dialogs, and input components"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Improve test coverage for main app to meet minimum 45% threshold"
+    risk_notes: "Large scope; prioritize admin and auth-related components first"
+    sizing_warning: true
+
+  - id: "BUGF-016"
+    title: "Implement Missing API Integrations for Inspiration Gallery"
+    feature: "Complete implementations for handleAddToAlbum, handleLinkToMoc, album membership API, and bulk delete operations"
+    phase: 1
+    depends_on: []
+    endpoints:
+      - "POST /api/albums/:id/members"
+      - "POST /api/inspirations/:id/link-moc"
+      - "DELETE /api/inspirations (bulk)"
+      - "GET /api/inspirations/:id/albums"
+    infrastructure: []
+    goal: "Enable album management and MOC linking features"
+    risk_notes: "Multiple API endpoints; requires backend coordination"
+    sizing_warning: true
+
+  - id: "BUGF-017"
+    title: "Convert TypeScript Interfaces to Zod Schemas"
+    feature: "Replace 100+ TypeScript interfaces with Zod schemas across all apps, prioritizing app-instructions-gallery (40+ violations)"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Achieve runtime validation and type safety per CLAUDE.md guidelines"
+    risk_notes: "Large-scale refactor; can be done incrementally by app or feature area"
+    sizing_warning: true
+
+  - id: "BUGF-018"
+    title: "Fix Memory Leaks from createObjectURL"
+    feature: "Add URL.revokeObjectURL cleanup in useEffect hooks for all components using createObjectURL for file previews"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Prevent memory leaks from blob URLs in file upload components"
+    risk_notes: "Affects app-inspiration-gallery and app-instructions-gallery; straightforward fix"
+    sizing_warning: false
+
+  - id: "BUGF-019"
+    title: "Implement Password Reset Rate Limiting and UX Improvements"
+    feature: "Add countdown timer for rate limits, disable buttons during cooldown, implement resend code rate limiting, and consolidate duplicate password strength implementations"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Improve password reset security and user experience"
+    risk_notes: "UX improvements; includes extracting shared password strength utility"
+    sizing_warning: false
+
+  - id: "BUGF-020"
+    title: "Fix Accessibility Issues Across Apps"
+    feature: "Add missing ARIA labels, keyboard support, aria-describedby for errors, and fix misleading screen reader announcements in drag components"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure WCAG 2.1 AA compliance for all interactive components"
+    risk_notes: "Cross-cutting; prioritize form inputs and upload components"
+    sizing_warning: false
+
+  - id: "BUGF-021"
+    title: "Replace Type Assertions with Proper Types"
+    feature: "Remove 40+ 'as any' assertions and unsafe type casts across main-app, replace with proper type definitions and guards"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Improve type safety and catch runtime errors at compile time"
+    risk_notes: "Code quality improvement; may uncover hidden type issues"
+    sizing_warning: false
+
+  - id: "BUGF-022"
+    title: "Remove Deprecated Legacy App and Update CI/CD"
+    feature: "Remove lego-moc-instructions-app directory and update GitHub workflows, CI config, and documentation to remove all references"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure:
+      - "Update .github/workflows/deploy-frontend.yml"
+      - "Update .github/workflows/ci.yml"
+    goal: "Clean up deprecated code and simplify build pipeline"
+    risk_notes: "Low risk; app already removed in Nov 2025, only cleanup remains"
+    sizing_warning: false
+
+  - id: "BUGF-023"
+    title: "Fix Wishlist Gallery Drag and Delete Issues"
+    feature: "Fix canDelete always false in auth module, add missing drag tests, fix keyboard announcement accuracy, and improve undo timer display"
+    phase: 3
+    depends_on: ["BUGF-005"]
+    endpoints: []
+    infrastructure: []
+    goal: "Ensure wishlist reordering and deletion work correctly"
+    risk_notes: "Depends on shared auth hooks implementation; drag testing complexity"
+    sizing_warning: false
+
+  - id: "BUGF-024"
+    title: "Fix Code Quality Issues and Technical Debt"
+    feature: "Consolidate duplicate components, add null checks, make hardcoded limits configurable, remove mock API files, fix empty catch blocks, and add error logging"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Reduce technical debt and improve code maintainability"
+    risk_notes: "Low priority cleanup; can be done incrementally"
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "BUGF-001": []
+    "BUGF-002": []
+    "BUGF-003": []
+    "BUGF-004": ["BUGF-001"]
+    "BUGF-005": []
+    "BUGF-006": []
+    "BUGF-007": []
+    "BUGF-008": []
+    "BUGF-009": []
+    "BUGF-010": []
+    "BUGF-011": ["BUGF-007"]
+    "BUGF-012": []
+    "BUGF-013": []
+    "BUGF-014": []
+    "BUGF-015": []
+    "BUGF-016": []
+    "BUGF-017": []
+    "BUGF-018": []
+    "BUGF-019": []
+    "BUGF-020": []
+    "BUGF-021": []
+    "BUGF-022": []
+    "BUGF-023": ["BUGF-005"]
+    "BUGF-024": []
+
+  critical_path:
+    - "BUGF-001"
+    - "BUGF-004"
+
+  critical_path_length: 2
+
+parallelization:
+  max_parallel: 8
+  groups:
+    - stories: ["BUGF-001", "BUGF-002", "BUGF-003", "BUGF-005", "BUGF-006", "BUGF-016"]
+      after: null
+    - stories: ["BUGF-004"]
+      after: "group_1"
+    - stories: ["BUGF-007", "BUGF-008", "BUGF-009", "BUGF-010", "BUGF-012", "BUGF-013", "BUGF-014", "BUGF-015"]
+      after: null
+    - stories: ["BUGF-011", "BUGF-023"]
+      after: "group_3"
+    - stories: ["BUGF-017", "BUGF-018", "BUGF-019", "BUGF-020", "BUGF-021", "BUGF-022", "BUGF-024"]
+      after: null
+
+risks:
+  - id: "RISK-001"
+    description: "Backend API endpoints may not exist for presigned URLs, requiring coordination with backend team"
+    affected_stories: ["BUGF-001", "BUGF-004"]
+    severity: high
+
+  - id: "RISK-002"
+    description: "Shared auth hooks package is cross-cutting change affecting 6 apps; migration strategy needs careful planning"
+    affected_stories: ["BUGF-005", "BUGF-023"]
+    severity: high
+
+  - id: "RISK-003"
+    description: "Skipped tests were disabled for a reason; enabling may uncover deeper architectural issues"
+    affected_stories: ["BUGF-009"]
+    severity: medium
+
+  - id: "RISK-004"
+    description: "Large-scale Zod conversion may introduce breaking changes or runtime validation errors"
+    affected_stories: ["BUGF-017"]
+    severity: medium
+
+  - id: "RISK-005"
+    description: "Test/implementation mismatches require product decisions on expected behavior"
+    affected_stories: ["BUGF-007"]
+    severity: medium
+
+  - id: "RISK-006"
+    description: "Multiple missing API endpoints require backend team availability and coordination"
+    affected_stories: ["BUGF-001", "BUGF-002", "BUGF-003", "BUGF-016"]
+    severity: high
+
+metrics:
+  total_stories: 24
+  phases: 4
+  max_parallel: 8
+  critical_path_length: 2
+  stories_with_sizing_warnings: 8

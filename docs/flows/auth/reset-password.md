@@ -144,3 +144,23 @@ flowchart TD
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-01-25 | michael | Initial documentation |
+
+## Rate Limiting
+
+AWS Cognito enforces rate limiting on `confirmResetPassword` operations. After multiple failed verification code attempts, users will be rate limited.
+
+**Error Handling**:
+| Error | Rate Limited? | Cooldown |
+|-------|--------------|----------|
+| `CodeMismatchException` | After 5 attempts | Exponential backoff |
+| `ExpiredCodeException` | No | Request new code |
+| `LimitExceededException` | Yes | Show countdown timer |
+
+**Frontend Response**:
+- Display `RateLimitBanner` with countdown
+- Disable form submission during cooldown
+- Maintain account enumeration prevention (no account existence hints)
+
+**Technical Details**: See [Password Reset Rate Limiting Implementation Guide](../../guides/password-reset-rate-limiting.md)
+
+**Related Story**: [BUGF-027](../../../plans/future/bug-fix/in-progress/BUGF-027/BUGF-027.md), [BUGF-019](../../../plans/future/bug-fix/ready-to-work/BUGF-019/BUGF-019.md)

@@ -1,0 +1,108 @@
+schema: 1
+story_id: REPA-0510
+timestamp: "2026-02-11T16:30:00Z"
+failure_source: needs-work
+iteration: 3
+
+issues_to_fix:
+  - id: 1
+    file: "packages/core/upload/src/components/ConflictModal/index.tsx"
+    issue: "Component migrated but NO TESTS. AC-1 requires tests in __tests__/ConflictModal.test.tsx"
+    severity: critical
+    auto_fixable: false
+    affected_acs: ["AC-1"]
+
+  - id: 2
+    file: "packages/core/upload/src/components/RateLimitBanner/index.tsx"
+    issue: "Component migrated but NO TESTS. AC-2 requires countdown timer behavior tests"
+    severity: critical
+    auto_fixable: false
+    affected_acs: ["AC-2"]
+
+  - id: 3
+    file: "packages/core/upload/src/components/SessionExpiredBanner/index.tsx"
+    issue: "Component migrated but NO TESTS. AC-3 requires tests in __tests__/SessionExpiredBanner.test.tsx"
+    severity: critical
+    auto_fixable: false
+    affected_acs: ["AC-3"]
+
+  - id: 4
+    file: "packages/core/upload/src/components/UploaderFileItem/index.tsx"
+    issue: "Component migrated but NO TESTS. AC-5 requires component directory structure with __tests__/"
+    severity: critical
+    auto_fixable: false
+    affected_acs: ["AC-5"]
+
+  - id: 5
+    file: "packages/core/upload/src/components/UploaderList/index.tsx"
+    issue: "Component migrated but NO TESTS. AC-6 requires component directory structure with __tests__/"
+    severity: critical
+    auto_fixable: false
+    affected_acs: ["AC-6"]
+
+  - id: 6
+    file: "packages/core/upload/src/components/UnsavedChangesDialog/__tests__/UnsavedChangesDialog.test.tsx"
+    issue: "Test failure due to AlertDialog test ID mismatch. Tests fail but component works. Fix test setup: work without AlertDialog test IDs"
+    severity: high
+    auto_fixable: true
+    affected_acs: ["AC-4"]
+
+  - id: 7
+    file: "packages/core/upload/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+    issue: "Test failure due to Vitest workspace dependency resolution. Tests fail but component works. Fix workspace config or test imports."
+    severity: high
+    auto_fixable: true
+    affected_acs: ["AC-8"]
+
+  - id: 8
+    file: "packages/core/upload/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+    issue: "Test failure due to Vitest workspace dependency resolution. Tests fail but component works. Fix workspace config or test imports."
+    severity: high
+    auto_fixable: true
+    affected_acs: ["AC-9"]
+
+  - id: 9
+    file: "apps/web/playwright/tests/"
+    issue: "E2E tests not executed (AC-16 MISSING). Pre-existing build issues block E2E. Defer or create isolated E2E tests."
+    severity: high
+    auto_fixable: false
+    affected_acs: ["AC-16"]
+
+focus_files:
+  - "packages/core/upload/src/components/ConflictModal/__tests__/ConflictModal.test.tsx"
+  - "packages/core/upload/src/components/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+  - "packages/core/upload/src/components/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+  - "packages/core/upload/src/components/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+  - "packages/core/upload/src/components/UploaderList/__tests__/UploaderList.test.tsx"
+  - "packages/core/upload/src/components/UnsavedChangesDialog/__tests__/UnsavedChangesDialog.test.tsx"
+  - "packages/core/upload/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+  - "packages/core/upload/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+
+root_cause: |
+  QA verification identified 5 components shipped without any tests despite acceptance criteria requirements.
+  Additional 3 test files have setup issues (not component bugs):
+  - UnsavedChangesDialog tests: AlertDialog test ID mismatch
+  - ThumbnailUpload/InstructionsUpload tests: Vitest workspace dependency resolution
+
+  These issues collectively prevent AC-14 (all components with 80%+ coverage) and AC-16 (E2E tests) from passing.
+
+fix_strategy: |
+  Priority 1 (Critical - 5 components with zero tests):
+  1. Create comprehensive test suites for ConflictModal, RateLimitBanner, SessionExpiredBanner, UploaderFileItem, UploaderList
+  2. Ensure 80%+ code coverage per component per AC-14
+  3. Follow component test patterns from successful tests (UnsavedChangesDialog pattern)
+
+  Priority 2 (High - test setup issues):
+  4. Fix UnsavedChangesDialog tests to work without AlertDialog test IDs
+  5. Resolve Vitest workspace dependency issue for ThumbnailUpload/InstructionsUpload
+
+  Priority 3 (High - E2E coverage):
+  6. Defer E2E tests OR create isolated happy-path E2E test (per ADR-006 requirement in AC-16)
+  7. Document decision on E2E approach (deferred vs isolated)
+
+success_criteria:
+  - All 8 components have test files with 80%+ coverage
+  - All test files pass (238 passing → 240+ passing)
+  - At least one E2E happy-path test created or deferral documented
+  - VERIFICATION.yaml shows all ACs passing
+  - All tests pass: `pnpm test:all packages/core/upload`

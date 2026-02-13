@@ -1,0 +1,128 @@
+schema: 1
+story_id: "BUGF-010"
+timestamp: "2026-02-11T22:45:00.000Z"
+iteration: 1
+
+verdict: PASS
+
+workers_run:
+  - lint
+  - typecheck
+workers_skipped:
+  - style
+  - syntax
+  - security
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+ranked_patches: []
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  style:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  syntax:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  security:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  build:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  reusability:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  react:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  typescript:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  accessibility:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+total_errors: 0
+total_warnings: 0
+auto_fixable_count: 0
+
+test_results:
+  file: "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+  framework: "vitest"
+  tests_passed: 8
+  tests_failed: 0
+  duration_ms: 145
+  summary: "✓ All 8 tests passed (145ms)"
+  details:
+    - "should register Hub listener on mount"
+    - "should dispatch setUnauthenticated on signedOut event"
+    - "should clear Cognito token manager on signedOut event"
+    - "should dispatch updateTokens on tokenRefresh event"
+    - "should update Cognito token manager on tokenRefresh event"
+    - "should dispatch setUnauthenticated on tokenRefresh_failure event"
+    - "should handle tokenRefresh event when fetchAuthSession fails"
+    - "should cleanup Hub listener on unmount"
+
+review_notes: |
+  BUGF-010 is a test infrastructure fix (tech_debt classification) that only modifies test code.
+  No production code was changed.
+
+  Modified file: apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx
+
+  Changes summary:
+  - Added vi.unmock() call to opt-out of global AuthProvider mock (line 18)
+  - Removed it.skip() from 8 Hub event listener tests
+  - Replaced arbitrary setTimeout assertions with explicit waitFor() patterns
+  - Added documentation comments explaining root cause (global mock in setup.ts) and solution
+  - Fixed TypeScript issues: removed unused 'act' import, properly typed store.getState() calls
+
+  Review outcome: All quality gates pass
+  - No linting issues found
+  - No type errors in the modified file
+  - All 8 unit tests pass successfully
+  - Test assertions are more explicit and reliable
+  - Code follows CLAUDE.md guidelines for test infrastructure
+
+tokens:
+  in: 0
+  out: 0

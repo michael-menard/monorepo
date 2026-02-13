@@ -26,7 +26,7 @@ import { getAuthMiddleware } from '@repo/api-client/auth/auth-middleware'
 import { enhancedGalleryApi } from '@repo/api-client/rtk/gallery-api'
 import { enhancedWishlistApi } from '@repo/api-client/rtk/wishlist-api'
 import { dashboardApi } from '@repo/api-client/rtk/dashboard-api'
-import { setAuthSession, refreshAuthSession, clearAuthSession } from './sessionService'
+import { setAuthSession, refreshAuthSession, clearAuthSession } from '@repo/auth-services'
 import {
   setLoading,
   setAuthenticated,

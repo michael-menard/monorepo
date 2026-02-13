@@ -65,13 +65,6 @@ vi.mock('@/components/Navigation/NavigationProvider', () => ({
   useNavigationOptional: () => mockNavigationContext,
 }))
 
-// Mock AuthLayout
-vi.mock('@/components/Layout/RootLayout', () => ({
-  AuthLayout: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="auth-layout">{children}</div>
-  ),
-}))
-
 // Mock @repo/ui components - consolidated into a single mock
 vi.mock('@repo/app-component-library', () => ({
   Button: ({ children, disabled, type, className, asChild, variant, ...props }: any) => {
@@ -103,8 +96,19 @@ vi.mock('@repo/app-component-library', () => ({
     </div>
   ),
   AlertDescription: ({ children }: any) => <span>{children}</span>,
-  Checkbox: ({ id, className, ...props }: any) => (
-    <input type="checkbox" id={id} className={className} {...props} />
+  Checkbox: ({ id, className, checked, onCheckedChange, ...props }: any) => (
+    <input
+      type="checkbox"
+      id={id}
+      className={className}
+      checked={checked}
+      onChange={e => {
+        if (onCheckedChange) {
+          onCheckedChange(e.target.checked)
+        }
+      }}
+      {...props}
+    />
   ),
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
 }))
@@ -151,7 +155,7 @@ const renderSignupPage = () => {
   return { store, user }
 }
 
-describe.skip('SignupPage', () => {
+describe('SignupPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSignUp.mockReset()
@@ -165,11 +169,6 @@ describe.skip('SignupPage', () => {
   })
 
   describe('Rendering', () => {
-    it('renders within AuthLayout', () => {
-      renderSignupPage()
-      expect(screen.getByTestId('auth-layout')).toBeInTheDocument()
-    })
-
     it('displays the signup form title', () => {
       renderSignupPage()
       expect(screen.getByText('Create your account')).toBeInTheDocument()

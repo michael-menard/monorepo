@@ -1,11 +1,11 @@
 /**
  * InspirationCard Component Tests
  *
- * INSP-002: Card Component
+ * REPA-009: Updated for GalleryCard refactor
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { InspirationCard } from '../index'
 
@@ -15,12 +15,16 @@ describe('InspirationCard', () => {
     title: 'Test Inspiration',
     imageUrl: 'https://example.com/image.jpg',
   }
+  
+  const testId = `inspiration-card-${defaultProps.id}`
 
   describe('rendering', () => {
     it('renders with required props', () => {
       render(<InspirationCard {...defaultProps} />)
 
-      expect(screen.getByRole('button', { name: /Test Inspiration/i })).toBeInTheDocument()
+      // GalleryCard renders as article
+      expect(screen.getByRole('article')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders thumbnail when provided', () => {
@@ -86,9 +90,7 @@ describe('InspirationCard', () => {
     it('has correct test id', () => {
       render(<InspirationCard {...defaultProps} />)
 
-      expect(
-        screen.getByTestId('inspiration-card-123e4567-e89b-12d3-a456-426614174001'),
-      ).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
   })
 
@@ -96,22 +98,22 @@ describe('InspirationCard', () => {
     it('shows selection checkbox in selection mode', () => {
       render(<InspirationCard {...defaultProps} selectionMode={true} />)
 
-      // Selection checkbox overlay should be visible
-      const card = screen.getByTestId('inspiration-card-123e4567-e89b-12d3-a456-426614174001')
-      expect(card).toBeInTheDocument()
+      // GalleryCard selection checkbox should be visible
+      const checkbox = screen.getByTestId(`${testId}-selection-checkbox`)
+      expect(checkbox).toBeInTheDocument()
     })
 
     it('shows check icon when selected', () => {
       render(<InspirationCard {...defaultProps} selectionMode={true} isSelected={true} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration, selected/i })
-      expect(card).toHaveAttribute('aria-pressed', 'true')
+      const checkbox = screen.getByTestId(`${testId}-selection-checkbox`)
+      expect(checkbox).toHaveClass('bg-primary')
     })
 
     it('applies selected styling when isSelected is true', () => {
-      render(<InspirationCard {...defaultProps} isSelected={true} />)
+      render(<InspirationCard {...defaultProps} isSelected={true} selectionMode={true} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration, selected/i })
+      const card = screen.getByRole('article')
       expect(card).toHaveClass('ring-2', 'ring-primary')
     })
   })
@@ -121,7 +123,9 @@ describe('InspirationCard', () => {
       const onClick = vi.fn()
       render(<InspirationCard {...defaultProps} onClick={onClick} />)
 
-      await userEvent.click(screen.getByRole('button', { name: /Test Inspiration/i }))
+      // Get the card element by testId
+      const card = screen.getByTestId(testId)
+      await userEvent.click(card)
 
       expect(onClick).toHaveBeenCalledTimes(1)
     })
@@ -137,7 +141,8 @@ describe('InspirationCard', () => {
         />,
       )
 
-      await userEvent.click(screen.getByRole('button', { name: /Test Inspiration/i }))
+      // selectable + onSelect makes card interactive (role="button")
+      await userEvent.click(screen.getByTestId(testId))
 
       expect(onSelect).toHaveBeenCalledWith(true)
     })
@@ -153,7 +158,8 @@ describe('InspirationCard', () => {
         />,
       )
 
-      await userEvent.click(screen.getByRole('button', { name: /Test Inspiration, selected/i }))
+      // selectable + onSelect makes card interactive (role="button")
+      await userEvent.click(screen.getByTestId(testId))
 
       expect(onSelect).toHaveBeenCalledWith(false)
     })
@@ -197,9 +203,9 @@ describe('InspirationCard', () => {
 
   describe('keyboard navigation', () => {
     it('can be focused', () => {
-      render(<InspirationCard {...defaultProps} />)
+      render(<InspirationCard {...defaultProps} onClick={vi.fn()} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration/i })
+      const card = screen.getByTestId(testId)
       card.focus()
 
       expect(card).toHaveFocus()
@@ -209,7 +215,7 @@ describe('InspirationCard', () => {
       const onClick = vi.fn()
       render(<InspirationCard {...defaultProps} onClick={onClick} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration/i })
+      const card = screen.getByTestId(testId)
       card.focus()
 
       await userEvent.keyboard('{Enter}')
@@ -221,7 +227,7 @@ describe('InspirationCard', () => {
       const onClick = vi.fn()
       render(<InspirationCard {...defaultProps} onClick={onClick} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration/i })
+      const card = screen.getByTestId(testId)
       card.focus()
 
       await userEvent.keyboard(' ')
@@ -231,32 +237,45 @@ describe('InspirationCard', () => {
   })
 
   describe('accessibility', () => {
-    it('has role button', () => {
+    it('has role button when interactive', () => {
+      render(<InspirationCard {...defaultProps} onClick={vi.fn()} />)
+
+      const card = screen.getByTestId(testId)
+      expect(card).toHaveAttribute('role', 'button')
+    })
+    
+    it('has role article when not interactive', () => {
       render(<InspirationCard {...defaultProps} />)
 
-      expect(screen.getByRole('button', { name: /Test Inspiration/i })).toBeInTheDocument()
+      expect(screen.getByRole('article')).toBeInTheDocument()
     })
 
-    it('has aria-pressed attribute', () => {
-      render(<InspirationCard {...defaultProps} isSelected={false} />)
+    it('has aria-selected attribute in selection mode', () => {
+      render(<InspirationCard {...defaultProps} selectionMode={true} isSelected={false} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration/i })
-      expect(card).toHaveAttribute('aria-pressed', 'false')
+      const card = screen.getByRole('article')
+      expect(card).toHaveAttribute('aria-selected', 'false')
     })
 
-    it('has aria-pressed true when selected', () => {
-      render(<InspirationCard {...defaultProps} isSelected={true} />)
+    it('has aria-selected true when selected', () => {
+      render(<InspirationCard {...defaultProps} selectionMode={true} isSelected={true} />)
 
-      const card = screen.getByRole('button', { name: /Test Inspiration, selected/i })
-      expect(card).toHaveAttribute('aria-pressed', 'true')
+      const card = screen.getByRole('article')
+      expect(card).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('has accessible label with title when interactive', () => {
+      render(<InspirationCard {...defaultProps} onClick={vi.fn()} />)
+
+      const card = screen.getByTestId(testId)
+      expect(card).toHaveAttribute('aria-label', 'Test Inspiration')
     })
 
     it('has accessible label with selected state', () => {
-      render(<InspirationCard {...defaultProps} isSelected={true} />)
+      render(<InspirationCard {...defaultProps} onClick={vi.fn()} isSelected={true} selectionMode={true} />)
 
-      expect(
-        screen.getByRole('button', { name: /Test Inspiration, selected/i }),
-      ).toBeInTheDocument()
+      const card = screen.getByTestId(testId)
+      expect(card).toHaveAttribute('aria-label')
     })
 
     it('image has alt text', () => {
@@ -270,6 +289,54 @@ describe('InspirationCard', () => {
 
       const img = screen.getByRole('img', { name: /Test Inspiration/i })
       expect(img).toHaveAttribute('loading', 'lazy')
+    })
+  })
+
+  describe('GalleryCard integration (REPA-009)', () => {
+    it('integrates with GalleryCard selection mode', () => {
+      render(<InspirationCard {...defaultProps} selectionMode={true} isSelected={false} />)
+
+      // Verify GalleryCard's checkbox is rendered
+      expect(screen.getByTestId(`${testId}-selection-checkbox`)).toBeInTheDocument()
+    })
+
+    it('renders hover overlay content within GalleryCard', () => {
+      render(<InspirationCard {...defaultProps} />)
+
+      // Verify hover overlay container exists
+      const hoverOverlay = screen.getByTestId(`${testId}-hover-overlay`)
+      expect(hoverOverlay).toBeInTheDocument()
+
+      // Verify title is in hover overlay
+      expect(within(hoverOverlay).getByText('Test Inspiration')).toBeInTheDocument()
+    })
+
+    it('renders all action buttons in hover overlay', () => {
+      render(<InspirationCard {...defaultProps} sourceUrl="https://example.com/source" />)
+
+      const hoverOverlay = screen.getByTestId(`${testId}-hover-overlay`)
+      
+      // Both source link and more menu should be in overlay
+      expect(within(hoverOverlay).getByRole('button', { name: /Open source link/i })).toBeInTheDocument()
+      expect(within(hoverOverlay).getByRole('button', { name: /More options/i })).toBeInTheDocument()
+    })
+
+    it('renders badges in hover overlay', () => {
+      render(<InspirationCard {...defaultProps} albumCount={3} mocCount={2} />)
+
+      const hoverOverlay = screen.getByTestId(`${testId}-hover-overlay`)
+      
+      expect(within(hoverOverlay).getByText(/3 albums/i)).toBeInTheDocument()
+      expect(within(hoverOverlay).getByText(/2 MOCs/i)).toBeInTheDocument()
+    })
+
+    it('renders tags in hover overlay', () => {
+      render(<InspirationCard {...defaultProps} tags={['lego', 'castle']} />)
+
+      const hoverOverlay = screen.getByTestId(`${testId}-hover-overlay`)
+      
+      expect(within(hoverOverlay).getByText('lego')).toBeInTheDocument()
+      expect(within(hoverOverlay).getByText('castle')).toBeInTheDocument()
     })
   })
 })

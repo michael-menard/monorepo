@@ -1,0 +1,26 @@
+schema: 1
+story_id: REPA-013
+timestamp: "2026-02-10T20:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/core/**"
+  - "apps/web/main-app/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: false
+
+summary: "Create @repo/auth-utils shared package with JWT and route guard utilities migrated from main-app with Zod schema conversion"

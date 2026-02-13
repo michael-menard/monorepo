@@ -47,6 +47,8 @@ export interface GalleryFilterBarProps {
   onThemeChange?: (theme: string | null) => void
   /** Theme filter placeholder */
   themePlaceholder?: string
+  /** Accessible label for theme filter select (A11Y) */
+  themeAriaLabel?: string
 
   /** Available sort options */
   sortOptions?: SortOption[]
@@ -56,6 +58,8 @@ export interface GalleryFilterBarProps {
   onSortChange?: (sort: string) => void
   /** Sort select placeholder */
   sortPlaceholder?: string
+  /** Accessible label for sort select (A11Y) */
+  sortAriaLabel?: string
 
   /** Called when all filters should be cleared */
   onClearAll?: () => void
@@ -91,15 +95,18 @@ export interface GalleryFilterBarProps {
  *   search={search}
  *   onSearchChange={setSearch}
  *   onSearch={handleDebouncedSearch}
+ *   searchAriaLabel="Search sets"
  *   tags={availableTags}
  *   selectedTags={selectedTags}
  *   onTagsChange={setSelectedTags}
  *   themes={availableThemes}
  *   selectedTheme={selectedTheme}
  *   onThemeChange={setSelectedTheme}
+ *   themeAriaLabel="Filter by theme"
  *   sortOptions={sortOptions}
  *   selectedSort={sortBy}
  *   onSortChange={setSortBy}
+ *   sortAriaLabel="Sort sets"
  * />
  * ```
  */
@@ -117,10 +124,12 @@ export const GalleryFilterBar = ({
   selectedTheme = null,
   onThemeChange,
   themePlaceholder = 'All Themes',
+  themeAriaLabel,
   sortOptions = [],
   selectedSort = '',
   onSortChange,
   sortPlaceholder = 'Sort by',
+  sortAriaLabel,
   onClearAll,
   showActiveFilters = true,
   children,
@@ -227,6 +236,7 @@ export const GalleryFilterBar = ({
                 selected={selectedTheme}
                 onChange={onThemeChange}
                 placeholder={themePlaceholder}
+                aria-label={themeAriaLabel}
                 data-testid={`${testId}-theme`}
               />
             </div>
@@ -240,6 +250,7 @@ export const GalleryFilterBar = ({
                 value={selectedSort}
                 onValueChange={onSortChange}
                 placeholder={sortPlaceholder}
+                aria-label={sortAriaLabel}
               />
             </div>
           ) : null}

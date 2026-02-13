@@ -158,7 +158,7 @@ describe('AddSetPage', () => {
     registerSpy.mockReturnValue({ unwrap: async () => ({}) })
 
     // Mock uploadToPresignedUrl implementation
-    const uploadModule = await import('@repo/upload-client')
+    const uploadModule = await import('@repo/upload')
     const uploadMock = vi.spyOn(uploadModule, 'uploadToPresignedUrl').mockResolvedValue({
       success: true,
       httpStatus: 200,

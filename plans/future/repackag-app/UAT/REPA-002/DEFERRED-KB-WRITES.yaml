@@ -1,0 +1,61 @@
+# Deferred Knowledge Base Writes
+# These writes failed during story generation and should be retried later
+# Created: 2026-02-10T19:20:00Z
+
+deferred_writes:
+  - type: story_metadata
+    reason: KB tools not available during story generation
+    story_id: REPA-002
+    feature: repackag-app
+    title: "Migrate Upload Client Functions to @repo/upload"
+    story_dir: plans/future/repackag-app/REPA-002
+    story_file: plans/future/repackag-app/REPA-002/REPA-002.md
+    story_type: tech_debt
+    points: 2
+    priority: high
+    state: backlog
+    touches_backend: false
+    touches_frontend: false
+    touches_database: false
+    touches_infra: false
+    surfaces:
+      - packages
+    tags:
+      - migration
+      - upload
+      - package-consolidation
+      - technical-debt
+    created_at: "2026-02-10"
+    retry_after: "2026-02-11T00:00:00Z"
+    retry_count: 0
+    last_error: "KB persistence tools (mcp__postgres-knowledgebase__query) not available in current tool set"
+
+retry_instructions: |
+  When KB tools become available, run:
+
+  INSERT INTO stories (
+    story_id, feature, title, story_dir, story_file, story_type,
+    points, priority, state, touches_backend, touches_frontend,
+    touches_database, touches_infra
+  ) VALUES (
+    'REPA-002',
+    'repackag-app',
+    'Migrate Upload Client Functions to @repo/upload',
+    'plans/future/repackag-app/REPA-002',
+    'plans/future/repackag-app/REPA-002/REPA-002.md',
+    'tech_debt',
+    2,
+    'high',
+    'backlog',
+    false,
+    false,
+    false,
+    false
+  )
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_type = EXCLUDED.story_type,
+    points = EXCLUDED.points,
+    priority = EXCLUDED.priority,
+    state = EXCLUDED.state,
+    updated_at = NOW();

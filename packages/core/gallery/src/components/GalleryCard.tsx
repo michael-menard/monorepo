@@ -1,22 +1,25 @@
 import { useState, useCallback } from 'react'
 import { z } from 'zod'
+import { Check, GripVertical } from 'lucide-react'
 import { cn } from '@repo/app-component-library'
-import { GalleryCardImageSchema, GalleryAspectRatioSchema } from '../types'
+import { GalleryCardImageSchema, GalleryAspectRatioSchema, OverlayPositionSchema } from '../types'
 
 /**
  * Schema for GalleryCard component props
+ *
+ * @remarks
+ * Breaking Change (REPA-009): The `actions` prop has been REMOVED.
+ * Use `hoverOverlay` prop instead to provide custom hover content including action buttons.
  */
 export const GalleryCardPropsSchema = z.object({
-  /** Image configuration */
-  image: GalleryCardImageSchema,
+  /** Image configuration (optional - renders muted placeholder or imageFallback when omitted) */
+  image: GalleryCardImageSchema.optional(),
   /** Card title (required) */
   title: z.string().min(1),
   /** Optional subtitle text */
   subtitle: z.string().optional(),
   /** Optional metadata content (badges, counts, etc.) - React.ReactNode can't be validated */
   metadata: z.any().optional(),
-  /** Optional action buttons/icons - React.ReactNode can't be validated */
-  actions: z.any().optional(),
   /** Click handler for card selection/navigation */
   onClick: z.function().optional(),
   /** Optional href for link-based navigation */
@@ -29,6 +32,32 @@ export const GalleryCardPropsSchema = z.object({
   className: z.string().optional(),
   /** Test ID for testing purposes */
   'data-testid': z.string().optional(),
+
+  // === Selection Mode Props (REPA-009) ===
+  /** Whether the card can be selected (shows checkbox overlay) */
+  selectable: z.boolean().optional(),
+  /** Callback when selection state changes */
+  onSelect: z.function().args(z.boolean()).returns(z.void()).optional(),
+  /** Position of selection checkbox (ignored when both selectable+draggable, defaults to 'top-left') */
+  selectionPosition: OverlayPositionSchema.optional(),
+
+  // === Drag Handle Props (REPA-009) ===
+  /** Whether the card can be dragged (shows drag handle) */
+  draggable: z.boolean().optional(),
+  /** Position of drag handle (ignored when both selectable+draggable, defaults to 'top-right') */
+  dragHandlePosition: OverlayPositionSchema.optional(),
+  /** Custom render function for drag handle (receives listeners and attributes from useSortable) */
+  renderDragHandle: z.custom<(listeners: any, attributes: any) => React.ReactNode>().optional(),
+
+  // === Hover Overlay Props (REPA-009) ===
+  /** Custom hover overlay content (replaces removed actions prop) */
+  hoverOverlay: z.custom<React.ReactNode>().optional(),
+
+  // === Content & Fallback Props (REPA-009) ===
+  /** Custom placeholder content when no image is provided - React.ReactNode */
+  imageFallback: z.custom<React.ReactNode>().optional(),
+  /** Whether to show the content area below the image (default: true) */
+  showContent: z.boolean().optional(),
 })
 
 /**
@@ -37,8 +66,15 @@ export const GalleryCardPropsSchema = z.object({
 export type GalleryCardProps = z.infer<typeof GalleryCardPropsSchema> & {
   /** Optional metadata content (badges, counts, etc.) */
   metadata?: React.ReactNode
-  /** Optional action buttons/icons */
-  actions?: React.ReactNode
+  /** Custom hover overlay content */
+  hoverOverlay?: React.ReactNode
+  /** Custom placeholder content when no image is provided */
+  imageFallback?: React.ReactNode
+  /** Custom drag handle render function - receives dnd-kit listeners and attributes */
+  renderDragHandle?: (
+    listeners?: Record<string, Function>,
+    attributes?: Record<string, unknown>,
+  ) => React.ReactNode
 }
 
 /** Maps aspect ratio to Tailwind classes */
@@ -51,7 +87,7 @@ const aspectRatioClassMap: Record<string, string> = {
 
 /**
  * A base gallery card component for displaying items with images.
- * Designed to be extended for specific gallery types (MOCs, Wishlist, etc.).
+ * Now supports selection mode, drag handles, and hover overlays (REPA-009).
  *
  * @example
  * ```tsx
@@ -66,15 +102,45 @@ const aspectRatioClassMap: Record<string, string> = {
  *
  * @example
  * ```tsx
- * // Extended usage with slots
+ * // With selection mode
+ * <GalleryCard
+ *   image={{ src: '/item.jpg', alt: 'Item' }}
+ *   title="Selectable Item"
+ *   selectable={true}
+ *   selected={isSelected}
+ *   onSelect={(selected) => handleSelect(item.id, selected)}
+ * />
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // With drag handle (for use with SortableGallery)
+ * <GalleryCard
+ *   image={{ src: '/item.jpg', alt: 'Item' }}
+ *   title="Draggable Item"
+ *   draggable={true}
+ *   renderDragHandle={(listeners, attributes) => (
+ *     <button {...listeners} {...attributes} aria-label={`Drag to reorder ${title}`}>
+ *       <GripVertical />
+ *     </button>
+ *   )}
+ * />
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // With hover overlay (migration from removed actions prop)
  * <GalleryCard
  *   image={{ src: '/moc.jpg', alt: 'MOC Image' }}
  *   title="MOC Title"
  *   metadata={<Badge>500 pieces</Badge>}
- *   actions={
- *     <Button variant="ghost" size="icon">
- *       <Heart />
- *     </Button>
+ *   hoverOverlay={
+ *     <div className="absolute inset-0 flex items-end p-4">
+ *       <div className="flex gap-2">
+ *         <Button variant="ghost" size="icon"><Heart /></Button>
+ *         <Button variant="ghost" size="icon"><Share /></Button>
+ *       </div>
+ *     </div>
  *   }
  * />
  * ```
@@ -84,19 +150,36 @@ export const GalleryCard = ({
   title,
   subtitle,
   metadata,
-  actions,
   onClick,
   href,
   selected = false,
   loading = false,
   className,
   'data-testid': testId = 'gallery-card',
+  // Selection mode props
+  selectable = false,
+  onSelect,
+  selectionPosition = 'top-left',
+  // Drag handle props
+  draggable = false,
+  dragHandlePosition = 'top-right',
+  renderDragHandle,
+  // Hover overlay & content
+  hoverOverlay,
+  imageFallback,
+  showContent = true,
 }: GalleryCardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
 
-  const aspectRatioClass = aspectRatioClassMap[image.aspectRatio ?? '4/3']
-  const isInteractive = Boolean(onClick ?? href)
+  const aspectRatioClass = aspectRatioClassMap[image?.aspectRatio ?? '4/3']
+  const hasImage = Boolean(image?.src)
+  const isInteractive = Boolean(onClick ?? href ?? (selectable && onSelect))
+
+  // Position conflict resolution (Decision #1): When both selectable AND draggable,
+  // use fixed positions: checkbox=top-left, drag handle=top-right
+  const resolvedSelectionPosition = selectable && draggable ? 'top-left' : selectionPosition
+  const resolvedDragHandlePosition = selectable && draggable ? 'top-right' : dragHandlePosition
 
   const handleImageLoad = useCallback(() => {
     setImageLoaded(true)
@@ -111,15 +194,33 @@ export const GalleryCard = ({
     (event: React.KeyboardEvent) => {
       if (isInteractive && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault()
-        onClick?.()
+        // Selection mode: if selectable and no explicit onClick, call onSelect
+        if (selectable && !onClick) {
+          onSelect?.(!selected)
+        } else {
+          onClick?.()
+        }
       }
     },
-    [isInteractive, onClick],
+    [isInteractive, selectable, selected, onClick, onSelect],
   )
 
   const handleClick = useCallback(() => {
-    onClick?.()
-  }, [onClick])
+    // Selection mode: if selectable and no explicit onClick, call onSelect
+    if (selectable && !onClick) {
+      onSelect?.(!selected)
+    } else {
+      onClick?.()
+    }
+  }, [selectable, selected, onClick, onSelect])
+
+  const handleCheckboxClick = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation()
+      onSelect?.(!selected)
+    },
+    [selected, onSelect],
+  )
 
   // Determine the wrapper element
   const WrapperElement = href ? 'a' : 'div'
@@ -131,7 +232,7 @@ export const GalleryCard = ({
       role={isInteractive ? 'button' : 'article'}
       tabIndex={isInteractive ? 0 : undefined}
       aria-label={isInteractive ? `${title}${subtitle ? ` - ${subtitle}` : ''}` : undefined}
-      aria-selected={selected}
+      aria-selected={selectable ? selected : undefined}
       data-testid={testId}
       onClick={isInteractive ? handleClick : undefined}
       onKeyDown={isInteractive ? handleKeyDown : undefined}
@@ -161,106 +262,193 @@ export const GalleryCard = ({
     >
       {/* Image Container */}
       <div className={cn('relative w-full overflow-hidden bg-muted', aspectRatioClass)}>
-        {/* Loading skeleton */}
-        {!imageLoaded && !imageError && (
-          <div
-            className="absolute inset-0 bg-muted animate-pulse"
-            data-testid={`${testId}-image-skeleton`}
-          />
-        )}
-
-        {/* Image */}
-        {!imageError ? (
-          <img
-            src={image.src}
-            alt={image.alt}
-            loading="lazy"
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            className={cn(
-              'h-full w-full object-cover',
-              'transition-all duration-300',
-              'group-hover:scale-105',
-              !imageLoaded && 'opacity-0',
-              imageLoaded && 'opacity-100',
+        {hasImage ? (
+          <>
+            {/* Loading skeleton */}
+            {!imageLoaded && !imageError && (
+              <div
+                className="absolute inset-0 bg-muted animate-pulse"
+                data-testid={`${testId}-image-skeleton`}
+              />
             )}
-            data-testid={`${testId}-image`}
-          />
+
+            {/* Image */}
+            {!imageError ? (
+              <img
+                src={image!.src}
+                alt={image!.alt}
+                loading="lazy"
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                className={cn(
+                  'h-full w-full object-cover',
+                  'transition-all duration-300',
+                  'group-hover:scale-105',
+                  !imageLoaded && 'opacity-0',
+                  imageLoaded && 'opacity-100',
+                )}
+                data-testid={`${testId}-image`}
+              />
+            ) : imageFallback ? (
+              // Custom error fallback
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                data-testid={`${testId}-image-fallback`}
+              >
+                {imageFallback}
+              </div>
+            ) : (
+              // Default error fallback
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground"
+                data-testid={`${testId}-image-error`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="opacity-50"
+                  aria-hidden="true"
+                >
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                </svg>
+              </div>
+            )}
+          </>
+        ) : imageFallback ? (
+          // No image provided - show custom fallback
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            data-testid={`${testId}-image-fallback`}
+          >
+            {imageFallback}
+          </div>
         ) : (
-          // Error fallback
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground"
-            data-testid={`${testId}-image-error`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="opacity-50"
-              aria-hidden="true"
-            >
-              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-              <circle cx="9" cy="9" r="2" />
-              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-            </svg>
-          </div>
+          // No image, no fallback - just muted background
+          <div className="absolute inset-0 bg-muted" data-testid={`${testId}-image-placeholder`} />
         )}
 
-        {/* Actions overlay (top-right) */}
-        {actions ? (
+        {/* Hover overlay (REPA-009 - replaces actions overlay) */}
+        {hoverOverlay ? (
           <div
-            role="group"
-            aria-label="Card actions"
             className={cn(
-              'absolute top-2 right-2 z-10',
-              'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+              'absolute inset-0 z-10',
+              'bg-gradient-to-t from-black/60 via-transparent to-transparent',
+              // Always visible on mobile, hover-visible on desktop (Decision #3)
               'transition-opacity duration-200',
+              'md:opacity-0 md:group-hover:opacity-100',
             )}
-            onClick={e => e.stopPropagation()}
-            onKeyDown={e => e.stopPropagation()}
-            data-testid={`${testId}-actions`}
+            data-testid={`${testId}-hover-overlay`}
           >
-            {actions}
+            {hoverOverlay}
           </div>
+        ) : null}
+
+        {/* Selection checkbox overlay (REPA-009) */}
+        {selectable ? (
+          <button
+            type="button"
+            onClick={handleCheckboxClick}
+            aria-label={`Select ${title}`}
+            className={cn(
+              'absolute z-10',
+              'h-6 w-6 rounded-full border-2',
+              'flex items-center justify-center',
+              'transition-all duration-200',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              // Position
+              resolvedSelectionPosition === 'top-left' ? 'top-2 left-2' : 'top-2 right-2',
+              // States
+              selected
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-white bg-black/40 text-white',
+            )}
+            data-testid={`${testId}-selection-checkbox`}
+          >
+            {selected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+          </button>
+        ) : null}
+
+        {/* Drag handle (REPA-009) */}
+        {draggable ? (
+          renderDragHandle ? (
+            // Custom drag handle provided
+            <div
+              className={cn(
+                'absolute z-10',
+                resolvedDragHandlePosition === 'top-left' ? 'top-2 left-2' : 'top-2 right-2',
+              )}
+              data-testid={`${testId}-drag-handle`}
+            >
+              {renderDragHandle(undefined, undefined)}
+            </div>
+          ) : (
+            // Default drag handle
+            <button
+              type="button"
+              aria-label={`Drag to reorder ${title}`}
+              className={cn(
+                'absolute z-10',
+                'h-11 w-11', // 44x44px touch target (WCAG 2.5.5)
+                'flex items-center justify-center',
+                'rounded bg-black/40 text-white',
+                'cursor-grab active:cursor-grabbing',
+                'touch-none', // Prevent scroll interference
+                'transition-opacity duration-200',
+                // Always visible on mobile, hover-visible on desktop (Decision #3)
+                'md:opacity-0 md:group-hover:opacity-100',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                // Position
+                resolvedDragHandlePosition === 'top-left' ? 'top-2 left-2' : 'top-2 right-2',
+              )}
+              data-testid={`${testId}-drag-handle`}
+            >
+              <GripVertical className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )
         ) : null}
       </div>
 
-      {/* Content Area */}
-      <div className="flex flex-col gap-1 p-4">
-        {/* Title */}
-        <h3
-          className="font-semibold text-base leading-tight line-clamp-2"
-          data-testid={`${testId}-title`}
-        >
-          {title}
-        </h3>
-
-        {/* Subtitle */}
-        {subtitle ? (
-          <p
-            className="text-sm text-muted-foreground line-clamp-1"
-            data-testid={`${testId}-subtitle`}
+      {/* Content Area (hidden when showContent=false, e.g. overlay-only cards) */}
+      {showContent ? (
+        <div className="flex flex-col gap-1 p-4">
+          {/* Title */}
+          <h3
+            className="font-semibold text-base leading-tight line-clamp-2"
+            data-testid={`${testId}-title`}
           >
-            {subtitle}
-          </p>
-        ) : null}
+            {title}
+          </h3>
 
-        {/* Metadata slot */}
-        {metadata ? (
-          <div
-            className="mt-2 flex flex-wrap items-center gap-2"
-            data-testid={`${testId}-metadata`}
-          >
-            {metadata}
-          </div>
-        ) : null}
-      </div>
+          {/* Subtitle */}
+          {subtitle ? (
+            <p
+              className="text-sm text-muted-foreground line-clamp-1"
+              data-testid={`${testId}-subtitle`}
+            >
+              {subtitle}
+            </p>
+          ) : null}
+
+          {/* Metadata slot */}
+          {metadata ? (
+            <div
+              className="mt-2 flex flex-wrap items-center gap-2"
+              data-testid={`${testId}-metadata`}
+            >
+              {metadata}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </WrapperElement>
   )
 }

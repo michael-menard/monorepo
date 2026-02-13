@@ -536,6 +536,115 @@ interface User {
 
 ---
 
+---
+
+## Rate Limiting
+
+### Overview
+
+Authentication operations are rate limited at two layers:
+
+1. **Cognito-Managed** (Password reset, sign-up, sign-in): AWS Cognito service-level rate limiting
+2. **Backend-Managed** (API endpoints): Backend middleware for 401/403 responses
+
+### Cognito vs Backend Rate Limiting Comparison
+
+| Aspect | Cognito-Managed | Backend-Managed |
+|--------|----------------|-----------------|
+| **Operations** | `forgotPassword`, `confirmResetPassword`, `signIn`, `signUp` | Backend API endpoints (upload, admin, etc.) |
+| **Enforcement** | AWS Cognito service | `apps/api/lego-api/middleware/rate-limit.ts` |
+| **Error Type** | `LimitExceededException` (400) | `429 Too Many Requests` |
+| **Retry-After Header** | ❌ No | ✅ Yes (calculated from sliding window) |
+| **Threshold** | ~5 requests/min (AWS-managed, not configurable) | 10 failures per 5 minutes (configurable) |
+| **State Storage** | N/A (Cognito black box) | In-memory Map (per Lambda instance) |
+| **Frontend Handling** | Estimate cooldown via exponential backoff | Use `Retry-After` header from response |
+
+### Frontend State Management for Cognito Rate Limiting
+
+Since Cognito does not provide a `Retry-After` header, the frontend must track cooldown state using sessionStorage:
+
+```typescript
+// sessionStorage keys for password reset rate limiting
+const FORGOT_PASSWORD_KEYS = {
+  attempts: 'auth:forgotPassword:attempts',
+  lastAttempt: 'auth:forgotPassword:lastAttempt',
+  cooldownUntil: 'auth:forgotPassword:cooldownUntil',
+}
+```
+
+**Exponential Backoff Algorithm**:
+- Attempt 1: 60 seconds
+- Attempt 2: 120 seconds (2 minutes)
+- Attempt 3: 240 seconds (4 minutes)
+- Attempt 4: 480 seconds (8 minutes)
+- Attempt 5+: 600 seconds (10 minutes, capped)
+
+**Reference Implementation**: `apps/web/main-app/src/components/Auth/ResendCodeButton.tsx`
+
+### UI/UX Pattern: RateLimitBanner Component
+
+Rate limiting feedback is displayed using the `RateLimitBanner` component:
+
+```typescript
+import { RateLimitBanner } from '@repo/app-component-library'
+
+<RateLimitBanner
+  visible={cooldownSeconds > 0}
+  retryAfterSeconds={cooldownSeconds}
+  onRetry={() => setCooldownSeconds(0)}
+  message="Too many password reset attempts. Please wait before retrying."
+/>
+```
+
+**Features**:
+- Countdown timer (format: "2:30" for 150 seconds)
+- Progress bar (respects `prefers-reduced-motion`)
+- Accessible: `aria-live="polite"`, `role="timer"`
+- Retry button (enabled when countdown expires)
+
+**Location**: `packages/core/upload/src/components/RateLimitBanner/index.tsx` (recommended move to `app-component-library`)
+
+### ADR-004: Cognito as Authoritative Auth Service
+
+Password reset operations do **NOT** involve backend API endpoints. The flow is:
+
+```
+Frontend (Amplify SDK) → Cognito User Pool (Direct)
+```
+
+**Implications**:
+- No backend proxy layer for password reset
+- Frontend handles Cognito rate limiting errors
+- Client-side cooldown tracking (sessionStorage)
+- Cooldown can be bypassed locally, but Cognito enforces service-level limit
+
+**Design Decision**: Client-side cooldown provides UX feedback, but does not replace Cognito's enforcement.
+
+### Account Enumeration Prevention
+
+Rate limit feedback must NOT leak account existence information:
+
+✅ **Correct**: "Too many attempts. Please wait before trying again."  
+❌ **Wrong**: "This account has been temporarily locked due to too many reset attempts."
+
+**Implementation**: See `apps/web/main-app/src/routes/pages/ForgotPasswordPage.tsx` lines 78-88, 112-120
+
+### Implementation Guide
+
+For detailed specifications on implementing password reset rate limiting, see:
+
+**[Password Reset Rate Limiting Implementation Guide](../guides/password-reset-rate-limiting.md)**
+
+Topics covered:
+- Cognito rate limiting behavior and error responses
+- Frontend state management patterns (sessionStorage, exponential backoff)
+- UI/UX patterns (RateLimitBanner, countdown timers, accessibility)
+- Component reuse strategy
+- Testing approach (MSW, Playwright, UAT requirements)
+
+**Related Stories**: [BUGF-027](../../plans/future/bug-fix/in-progress/BUGF-027/BUGF-027.md), [BUGF-019](../../plans/future/bug-fix/ready-to-work/BUGF-019/BUGF-019.md)
+
+
 ## Error Handling
 
 ### Cognito Error Mapping

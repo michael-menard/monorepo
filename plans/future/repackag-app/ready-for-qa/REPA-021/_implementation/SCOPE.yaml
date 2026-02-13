@@ -1,0 +1,39 @@
+story_id: REPA-021
+title: "Standardize Card Skeletons and Empty States in Shared Library"
+type: tech_debt
+surfaces: [frontend]
+
+packages_modified:
+  - "@repo/app-component-library"
+  - "apps/web/main-app"
+  - "apps/web/app-dashboard"
+
+files_to_create:
+  - "packages/core/app-component-library/src/feedback/empty-states.tsx"
+  - "packages/core/app-component-library/src/feedback/__tests__/empty-states.test.tsx"
+  - "packages/core/app-component-library/src/feedback/__tests__/DashboardSkeleton.test.tsx"
+
+files_to_modify:
+  - "packages/core/app-component-library/src/feedback/skeleton.tsx"
+  - "packages/core/app-component-library/src/index.ts"
+  - "apps/web/main-app/src/components/Dashboard/index.ts"
+  - "apps/web/app-dashboard/src/components/index.ts"
+
+files_to_delete:
+  - "apps/web/main-app/src/components/Dashboard/DashboardSkeleton.tsx"
+  - "apps/web/main-app/src/components/Dashboard/EmptyDashboard.tsx"
+  - "apps/web/main-app/src/components/Dashboard/__tests__/DashboardSkeleton.test.tsx"
+  - "apps/web/main-app/src/components/Dashboard/__tests__/EmptyDashboard.test.tsx"
+  - "apps/web/app-dashboard/src/components/DashboardSkeleton.tsx"
+  - "apps/web/app-dashboard/src/components/EmptyDashboard.tsx"
+  - "apps/web/app-dashboard/src/components/__tests__/DashboardSkeleton.test.tsx"
+  - "apps/web/app-dashboard/src/components/__tests__/EmptyDashboard.test.tsx"
+  - "apps/web/app-dashboard/src/components/DashboardSkeleton/"
+  - "apps/web/app-dashboard/src/components/EmptyDashboard/"
+
+api_changes: none
+database_changes: none
+infrastructure_changes: none
+
+e2e_exempt: false
+storybook_deferred: true  # No .storybook config in library package

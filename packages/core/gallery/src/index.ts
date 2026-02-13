@@ -100,6 +100,7 @@ export type {
   ViewMode,
   FilterableFields,
   SearchableFieldConfig,
+  OverlayPosition,
 } from './types'
 
 // Column filtering (datatable)
@@ -154,4 +155,60 @@ export {
   GalleryResponseSchema,
   DefaultGalleryResponseSchema,
   GallerySearchParamsSchema,
+  OverlayPositionSchema,
 } from './types'
+
+// Keyboard navigation hooks (REPA-008)
+export { useRovingTabIndex } from './hooks/useRovingTabIndex'
+export type { RovingTabIndexOptions, UseRovingTabIndexReturn } from './hooks/useRovingTabIndex'
+export { RovingTabIndexOptionsSchema } from './hooks/useRovingTabIndex'
+
+export { useKeyboardShortcuts, getShortcutHints } from './hooks/useKeyboardShortcuts'
+export type { KeyboardShortcut, KeyboardShortcutsOptions } from './hooks/useKeyboardShortcuts'
+export {
+  KeyboardShortcutSchema,
+  KeyboardShortcutsOptionsSchema,
+} from './hooks/useKeyboardShortcuts'
+
+export { useGalleryKeyboard } from './hooks/useGalleryKeyboard'
+export type {
+  UseGalleryKeyboardOptions,
+  UseGalleryKeyboardReturn,
+} from './hooks/useGalleryKeyboard'
+export { UseGalleryKeyboardOptionsSchema } from './hooks/useGalleryKeyboard'
+
+// SortableGallery (REPA-007)
+export { SortableGallery } from './components/SortableGallery'
+export type {
+  SortableGalleryProps,
+  SensorConfig,
+  SortableItem,
+  LayoutMode,
+} from './components/SortableGallery/__types__'
+export {
+  SortableGalleryPropsDataSchema,
+  SensorConfigSchema,
+  SortableItemSchema,
+  LayoutModeSchema,
+} from './components/SortableGallery/__types__'
+export { DEFAULT_SENSOR_CONFIG } from './components/SortableGallery/utils/sensor-config'
+
+// Card Factories (REPA-020) - Direct imports per CLAUDE.md no-barrel-files rule
+export { createInstructionCard } from './card-factories/create-instruction-card'
+export { createSetCard } from './card-factories/create-set-card'
+export { createWishlistCard } from './card-factories/create-wishlist-card'
+export { createInspirationCard } from './card-factories/create-inspiration-card'
+export {
+  BaseCardOptionsSchema,
+  InstructionCardOptionsSchema,
+  SetCardOptionsSchema,
+  WishlistCardOptionsSchema,
+  InspirationCardOptionsSchema,
+} from './card-factories/__types__'
+export type {
+  BaseCardOptions,
+  InstructionCardOptions,
+  SetCardOptions,
+  WishlistCardOptions,
+  InspirationCardOptions,
+} from './card-factories/__types__'

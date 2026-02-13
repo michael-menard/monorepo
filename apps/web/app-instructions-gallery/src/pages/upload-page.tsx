@@ -11,7 +11,7 @@ import { useCallback, useState, useRef, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Upload, FileText, Image as ImageIcon, List, Plus, AlertCircle } from 'lucide-react'
+import { Upload, FileText, Image as ImageIcon, List, Plus, AlertCircle, Loader2 } from 'lucide-react'
 import {
   Button,
   Card,
@@ -29,6 +29,8 @@ import {
   AlertDescription,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
+import { useGeneratePresignedUrlMutation } from '@repo/api-client'
+import { mapHttpErrorToUploadError, getErrorMessage } from '@repo/upload-types'
 import type { UploaderSession, FileCategory } from '@repo/upload-types'
 import {
   UploaderSessionProvider,
@@ -107,6 +109,11 @@ function InstructionsNewContent() {
     [form, resetForm, defaultMocValues, defaultSetValues],
   )
 
+  // Presigned URL API (BUGF-032)
+  const [generatePresignedUrl, { isLoading: isGeneratingUrls }] =
+    useGeneratePresignedUrlMutation()
+  const [apiError, setApiError] = useState<string | null>(null)
+
   // Upload manager
   const uploadManager = useUploadManager({
     onComplete: state => {
@@ -148,28 +155,51 @@ function InstructionsNewContent() {
     navigate({ to: '/dashboard' })
   }, [navigate])
 
-  // File selection handlers
+  // File selection handlers (BUGF-032: real presigned URL API)
   const handleFileSelect = useCallback(
-    (category: FileCategory) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    (category: FileCategory) => async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files
       if (!files || files.length === 0) return
 
-      // TODO: In real implementation, call API to get presigned URLs
-      // For now, create mock file items for UI demonstration
-      const fileItems: FileWithUploadUrl[] = Array.from(files).map((file, index) => ({
-        file,
-        category,
-        fileId: `mock-${Date.now()}-${index}`,
-        uploadUrl: 'https://example.com/mock-upload-url',
-      }))
+      setApiError(null)
+      const fileItems: FileWithUploadUrl[] = []
 
-      uploadManager.addFiles(fileItems)
-      logger.info('Files selected', { category, count: files.length })
+      for (const file of Array.from(files)) {
+        try {
+          const response = await generatePresignedUrl({
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+            category,
+          }).unwrap()
+
+          fileItems.push({
+            file,
+            category,
+            fileId: response.key,
+            uploadUrl: response.presignedUrl,
+          })
+
+          logger.info('Presigned URL generated', { fileId: response.key, fileName: file.name })
+        } catch (err) {
+          const status = (err as { status?: number }).status
+          const errorCode = mapHttpErrorToUploadError(status ?? 0)
+          const message = getErrorMessage(errorCode)
+          setApiError(`${file.name}: ${message}`)
+          logger.error('Failed to generate presigned URL', { fileName: file.name, status })
+        }
+      }
+
+      if (fileItems.length > 0) {
+        uploadManager.addFiles(fileItems)
+      }
+
+      logger.info('Files selected', { category, count: fileItems.length })
 
       // Reset input
       e.target.value = ''
     },
-    [uploadManager],
+    [uploadManager, generatePresignedUrl],
   )
 
   // Finalize handler (Story 3.1.19)
@@ -268,17 +298,53 @@ function InstructionsNewContent() {
     setSuggestedSlug(undefined)
   }, [])
 
-  // Session refresh
+  // Session refresh (BUGF-032: regenerate presigned URLs for expired files)
   const handleRefreshSession = useCallback(async () => {
     setIsRefreshingSession(true)
+    setApiError(null)
     logger.info('Refreshing upload session')
 
-    // TODO: Call API to get new presigned URLs for expired files
-    // Then call uploadManager.retryAll()
+    const expiredFiles = uploadManager.state.files.filter(
+      f => f.status === 'expired' || f.status === 'failed',
+    )
 
-    setIsRefreshingSession(false)
+    if (expiredFiles.length === 0) {
+      setIsRefreshingSession(false)
+      return
+    }
+
+    const urlUpdates: Array<{ fileId: string; uploadUrl: string }> = []
+
+    for (const fileItem of expiredFiles) {
+      try {
+        const response = await generatePresignedUrl({
+          fileName: fileItem.name,
+          mimeType: fileItem.type || 'application/octet-stream',
+          fileSize: fileItem.size,
+          category: fileItem.category,
+        }).unwrap()
+
+        urlUpdates.push({
+          fileId: fileItem.id,
+          uploadUrl: response.presignedUrl,
+        })
+
+        logger.info('Presigned URL refreshed', { fileId: fileItem.id })
+      } catch (err) {
+        const status = (err as { status?: number }).status
+        const errorCode = mapHttpErrorToUploadError(status ?? 0)
+        setApiError(`Failed to refresh: ${getErrorMessage(errorCode)}`)
+        logger.error('Failed to refresh presigned URL', { fileId: fileItem.id, status })
+      }
+    }
+
+    if (urlUpdates.length > 0) {
+      uploadManager.updateFileUrls(urlUpdates)
+    }
+
     uploadManager.retryAll()
-  }, [uploadManager])
+    setIsRefreshingSession(false)
+  }, [uploadManager, generatePresignedUrl])
 
   // Check if finalize is allowed (Story 3.1.16 + 3.1.19)
   const hasInstruction = uploadManager.state.files.some(
@@ -322,6 +388,22 @@ function InstructionsNewContent() {
           onRefreshSession={handleRefreshSession}
           isRefreshing={isRefreshingSession}
         />
+
+        {apiError && (
+          <Alert variant="destructive" role="alert" aria-live="polite">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>{apiError}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setApiError(null)}
+              >
+                Dismiss
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       {/* Error Summary (Story 3.1.16) */}
@@ -385,8 +467,9 @@ function InstructionsNewContent() {
             <Upload className="h-5 w-5" />
             Upload Files
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="flex items-center gap-2">
             Add your instruction PDF (required), parts list, thumbnail, and gallery images.
+            {isGeneratingUrls && <Loader2 className="h-4 w-4 animate-spin" />}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -555,7 +638,7 @@ function InstructionsNewContent() {
                 variant="outline"
                 className="w-full gap-2"
                 onClick={() => instructionInputRef.current?.click()}
-                disabled={uploadManager.isUploading}
+                disabled={uploadManager.isUploading || isGeneratingUrls}
               >
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Instructions</span>
@@ -577,7 +660,7 @@ function InstructionsNewContent() {
                 variant="outline"
                 className="w-full gap-2"
                 onClick={() => partsListInputRef.current?.click()}
-                disabled={uploadManager.isUploading}
+                disabled={uploadManager.isUploading || isGeneratingUrls}
               >
                 <List className="h-4 w-4" />
                 <span className="hidden sm:inline">Parts List</span>
@@ -599,7 +682,7 @@ function InstructionsNewContent() {
                 variant="outline"
                 className="w-full gap-2"
                 onClick={() => thumbnailInputRef.current?.click()}
-                disabled={uploadManager.isUploading}
+                disabled={uploadManager.isUploading || isGeneratingUrls}
               >
                 <ImageIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Thumbnail</span>
@@ -622,7 +705,7 @@ function InstructionsNewContent() {
                 variant="outline"
                 className="w-full gap-2"
                 onClick={() => galleryInputRef.current?.click()}
-                disabled={uploadManager.isUploading}
+                disabled={uploadManager.isUploading || isGeneratingUrls}
               >
                 <Upload className="h-4 w-4" />
                 <span className="hidden sm:inline">Gallery</span>

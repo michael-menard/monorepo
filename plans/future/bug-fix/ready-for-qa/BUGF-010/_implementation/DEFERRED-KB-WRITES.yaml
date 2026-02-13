@@ -1,0 +1,387 @@
+# Deferred Knowledge Base Writes - BUGF-010
+# To be executed during completion phase by kb-writer agent
+
+story_id: BUGF-010
+created_at: "2026-02-11T19:45:00Z"
+total_entries: 15
+status: pending
+
+# All entries are non-blocking findings from elaboration analysis
+# None of these findings require PM modifications to the story
+
+entries:
+  - entry_id: 1
+    entry_type: finding
+    source_stage: elab
+    category: test-infrastructure
+    priority: high
+    title: "Test timing uses arbitrary 100ms delay instead of explicit assertions"
+    content: |
+      **Finding**: Test in AuthProvider.test.tsx line 112 uses `await new Promise(resolve => setTimeout(resolve, 100))`
+      instead of explicit waitFor assertion.
+
+      **Impact**: Low - tests work but timing is non-deterministic
+      **Effort**: Low (1 minute change)
+
+      **Recommendation**: Replace with `await waitFor(() => expect(Hub.listen).toHaveBeenCalled())`
+      for more reliable test timing.
+
+      **Can be done alongside MVP fix** - identified as high-priority quick win.
+    tags:
+      - test-infrastructure
+      - test-polish
+      - quick-win
+      - auth
+    related_stories:
+      - BUGF-009
+
+  - entry_id: 2
+    entry_type: finding
+    source_stage: elab
+    category: edge-case
+    priority: medium
+    title: "No test coverage for multiple Hub events in rapid succession"
+    content: |
+      **Finding**: No test case simulating rapid tokenRefresh → signedOut → tokenRefresh sequence
+      to verify event queue handling.
+
+      **Impact**: Low - edge case scenario
+      **Effort**: Low
+
+      **Recommendation**: Add test case for rapid event succession to verify React state updates
+      handle events in order and final state matches last event.
+    tags:
+      - edge-case
+      - test-coverage
+      - auth
+    related_stories:
+      - BUGF-009
+
+  - entry_id: 3
+    entry_type: finding
+    source_stage: elab
+    category: edge-case
+    priority: medium
+    title: "No test coverage for Hub event handling during component unmount"
+    content: |
+      **Finding**: No test triggering Hub event during component unmount to verify cleanup
+      timing prevents memory leaks.
+
+      **Impact**: Low - edge case but related to memory safety
+      **Effort**: Medium
+
+      **Recommendation**: Add test case triggering Hub event during unmount lifecycle to ensure
+      cleanup function prevents callbacks from executing after unmount.
+    tags:
+      - edge-case
+      - memory-leak
+      - test-coverage
+      - auth
+    related_stories:
+      - BUGF-009
+      - BUGF-018
+
+  - entry_id: 4
+    entry_type: finding
+    source_stage: elab
+    category: observability
+    priority: high
+    title: "Tests don't verify logger calls for Hub events"
+    content: |
+      **Finding**: Tests don't assert logger.debug(), logger.info(), logger.warn() calls
+      during Hub event handling (AuthProvider.tsx lines 111, 116, 129, 159, 165).
+
+      **Impact**: Low - observability gap
+      **Effort**: Low (5 minute change)
+
+      **Recommendation**: Add assertions for logger calls in each Hub event test to verify
+      observability is working correctly.
+
+      **Can be done alongside MVP fix** - identified as high-priority quick win.
+    tags:
+      - observability
+      - test-coverage
+      - quick-win
+      - auth
+    related_stories:
+      - BUGF-009
+
+  - entry_id: 5
+    entry_type: finding
+    source_stage: elab
+    category: coverage-expansion
+    priority: high
+    title: "No test for signedIn Hub event (AuthProvider.tsx lines 163-167)"
+    content: |
+      **Finding**: AuthProvider handles signedIn Hub event (calls checkAuthState when user
+      signs in from another tab) but no test exists for this event handler.
+
+      **Impact**: Medium - missing coverage for multi-tab auth sync feature
+      **Effort**: Low
+
+      **Recommendation**: Add test case for signedIn event to verify checkAuthState() is called
+      when user signs in from another tab. This is a real feature with no test coverage.
+    tags:
+      - test-coverage
+      - auth
+      - multi-tab-sync
+    related_stories:
+      - BUGF-009
+      - BUGF-030
+
+  - entry_id: 6
+    entry_type: enhancement
+    source_stage: elab
+    category: test-infrastructure
+    priority: medium
+    title: "Mock setup duplicated across AuthProvider test files"
+    content: |
+      **Enhancement**: Hub.listen mock pattern is duplicated between AuthProvider.test.tsx
+      and AuthStateSync.integration.test.tsx.
+
+      **Impact**: Medium - code duplication
+      **Effort**: Medium
+
+      **Recommendation**: Extract Hub.listen mock pattern to shared test utility in
+      `src/test/helpers/auth-mocks.ts` for reuse across auth tests.
+
+      Related to BUGF-043 (Consolidate Duplicated Test Setup Files).
+    tags:
+      - test-infrastructure
+      - code-quality
+      - refactoring
+      - auth
+    related_stories:
+      - BUGF-043
+
+  - entry_id: 7
+    entry_type: enhancement
+    source_stage: elab
+    category: test-infrastructure
+    priority: low
+    title: "Add TypeScript type for Hub event payload structure"
+    content: |
+      **Enhancement**: Tests use inline object structure for Hub event payloads without
+      TypeScript type definition.
+
+      **Impact**: Low - readability improvement
+      **Effort**: Low
+
+      **Recommendation**: Add TypeScript type for Hub event payload to improve test readability:
+      ```typescript
+      type HubAuthEvent = {
+        payload: {
+          event: 'signedOut' | 'tokenRefresh' | 'tokenRefresh_failure' | 'signedIn'
+        }
+      }
+      ```
+    tags:
+      - test-polish
+      - typescript
+      - code-quality
+      - auth
+
+  - entry_id: 8
+    entry_type: enhancement
+    source_stage: elab
+    category: future-e2e
+    priority: low
+    title: "No integration test for multi-tab auth sync"
+    content: |
+      **Enhancement**: No E2E test verifying signedOut event synchronizes across multiple tabs.
+
+      **Impact**: Medium - E2E gap for multi-tab feature
+      **Effort**: High
+
+      **Recommendation**: Create Playwright E2E test opening multiple tabs and verifying
+      signedOut event synchronizes across tabs.
+
+      **Deferred to BUGF-030** (Implement Comprehensive E2E Test Suite).
+    tags:
+      - e2e
+      - auth
+      - multi-tab-sync
+      - deferred-to-bugf-030
+    related_stories:
+      - BUGF-030
+
+  - entry_id: 9
+    entry_type: enhancement
+    source_stage: elab
+    category: test-infrastructure
+    priority: high
+    title: "Test doesn't verify Hub channel is 'auth'"
+    content: |
+      **Enhancement**: Test "should register Hub listener on mount" doesn't verify the
+      channel parameter passed to Hub.listen is 'auth'.
+
+      **Impact**: Low - correctness assertion
+      **Effort**: Low (2 minute change)
+
+      **Recommendation**: Add assertion:
+      `expect(Hub.listen).toHaveBeenCalledWith('auth', expect.any(Function))`
+
+      **Can be done alongside MVP fix** - identified as high-priority quick win.
+    tags:
+      - test-polish
+      - quick-win
+      - test-coverage
+      - auth
+    related_stories:
+      - BUGF-009
+
+  - entry_id: 10
+    entry_type: enhancement
+    source_stage: elab
+    category: test-infrastructure
+    priority: low
+    title: "Tests don't verify cleanup function signature"
+    content: |
+      **Enhancement**: Tests capture cleanupFunction from Hub.listen but don't verify
+      it's a function type.
+
+      **Impact**: Low - type safety assertion
+      **Effort**: Low
+
+      **Recommendation**: Add assertion that Hub.listen returns a function:
+      `expect(typeof cleanupFunction).toBe('function')`
+    tags:
+      - test-polish
+      - test-coverage
+      - auth
+
+  - entry_id: 11
+    entry_type: enhancement
+    source_stage: elab
+    category: edge-case
+    priority: low
+    title: "No test coverage for Hub event handling errors"
+    content: |
+      **Enhancement**: No test cases for Hub.listen throwing errors or callback throwing
+      errors to verify error boundaries.
+
+      **Impact**: Low - error handling edge case
+      **Effort**: Medium
+
+      **Recommendation**: Add test cases for:
+      1. Hub.listen throwing error during registration
+      2. Hub event callback throwing error during event handling
+      3. Verify error boundaries catch and handle these scenarios
+    tags:
+      - edge-case
+      - error-handling
+      - test-coverage
+      - auth
+
+  - entry_id: 12
+    entry_type: enhancement
+    source_stage: elab
+    category: test-infrastructure
+    priority: low
+    title: "Test doesn't verify Redux store isolation between tests"
+    content: |
+      **Enhancement**: Tests create fresh Redux store in beforeEach but don't verify
+      store instances are different between tests.
+
+      **Impact**: Low - test isolation verification
+      **Effort**: Low
+
+      **Recommendation**: Add assertion verifying each test creates fresh store:
+      `expect(store).not.toBe(previousStore)` to prevent test pollution.
+    tags:
+      - test-polish
+      - test-isolation
+      - redux
+      - auth
+
+  - entry_id: 13
+    entry_type: enhancement
+    source_stage: elab
+    category: coverage-expansion
+    priority: low
+    title: "Mock fetchAuthSession doesn't simulate token expiry"
+    content: |
+      **Enhancement**: Mock fetchAuthSession doesn't return tokens with exp claim in payload
+      to test token expiration logic.
+
+      **Impact**: Low - coverage gap for token expiration
+      **Effort**: Medium
+
+      **Recommendation**: Enhance mock to return tokens with exp claim to enable testing
+      token expiration scenarios.
+    tags:
+      - test-coverage
+      - auth
+      - token-management
+
+  - entry_id: 14
+    entry_type: enhancement
+    source_stage: elab
+    category: edge-case
+    priority: low
+    title: "Test doesn't verify concurrent event handling"
+    content: |
+      **Enhancement**: No test simulating multiple events fired before React state updates
+      complete (race condition scenario).
+
+      **Impact**: Low - race condition edge case
+      **Effort**: Medium
+
+      **Recommendation**: Add test case simulating multiple Hub events fired in quick succession
+      before React setState completes, to verify state updates are queued correctly and don't
+      create race conditions.
+    tags:
+      - edge-case
+      - race-condition
+      - test-coverage
+      - auth
+
+  - entry_id: 15
+    entry_type: enhancement
+    source_stage: elab
+    category: observability
+    priority: low
+    title: "No performance test for Hub listener registration overhead"
+    content: |
+      **Enhancement**: No performance benchmark measuring Hub.listen call time to detect
+      regressions.
+
+      **Impact**: Low - performance monitoring gap
+      **Effort**: High
+
+      **Recommendation**: Add performance benchmark measuring Hub.listen registration time.
+      Useful for monitoring but not MVP-critical. Could use Vitest's bench() API for
+      performance regression detection.
+    tags:
+      - performance
+      - monitoring
+      - low-priority
+      - observability
+
+quick_wins:
+  # These 3 findings can be done alongside MVP fix (total ~8 minutes)
+  - entry_id: 1
+    title: "Replace arbitrary delay with explicit waitFor"
+    effort: "1 minute"
+  - entry_id: 4
+    title: "Add logger call verification"
+    effort: "5 minutes"
+  - entry_id: 9
+    title: "Verify Hub channel is 'auth'"
+    effort: "2 minutes"
+
+related_stories_summary:
+  BUGF-009: "Fix and Enable Skipped Test Suites in Main App - Broader test enablement effort"
+  BUGF-030: "Implement Comprehensive E2E Test Suite - Multi-tab auth sync E2E test"
+  BUGF-043: "Consolidate Duplicated Test Setup Files - Extract Hub mock pattern to shared utility"
+  BUGF-018: "Fix Memory Leaks from createObjectURL - Related memory leak testing"
+
+notes: |
+  All 15 entries are non-blocking polish, edge cases, and enhancements that do not affect
+  the MVP scope of BUGF-010.
+
+  The core goal (enable 8 Hub event listener tests) is complete and ready for implementation
+  with the solution pattern from ANALYSIS.md.
+
+  Three high-priority quick wins were identified that developers can optionally include
+  when implementing the MVP fix (total ~8 minutes of additional work).

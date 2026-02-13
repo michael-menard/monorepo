@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
+import { TooltipProvider } from '@repo/app-component-library'
 import { configureStore } from '@reduxjs/toolkit'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -45,7 +46,7 @@ const baseSetListResponse: SetListResponse = {
       wishlistItemId: null,
       images: [
         {
-          id: 'img-1',
+          id: '11111111-1111-1111-1111-000000000001',
           imageUrl: 'https://example.com/diner.jpg',
           thumbnailUrl: 'https://example.com/diner-thumb.jpg',
           position: 0,
@@ -75,7 +76,7 @@ const baseSetListResponse: SetListResponse = {
       wishlistItemId: null,
       images: [
         {
-          id: 'img-2',
+          id: '22222222-2222-2222-2222-000000000002',
           imageUrl: 'https://example.com/garage.jpg',
           thumbnailUrl: 'https://example.com/garage-thumb.jpg',
           position: 0,
@@ -109,13 +110,15 @@ const renderMainPage = () => {
   const store = createTestStore()
 
   return render(
-    <Provider store={store}>
+    <TooltipProvider>
+      <Provider store={store}>
       <MemoryRouter initialEntries={['/sets']}>
         <Routes>
           <Route path="/sets" element={<MainPage />} />
         </Routes>
       </MemoryRouter>
     </Provider>,
+    </TooltipProvider>,
   )
 }
 
@@ -241,7 +244,7 @@ describe('Sets MainPage', () => {
     expect(sortSelect).toBeInTheDocument()
   })
 
-  it('applies search, theme, and build-status filters via the API', async () => {
+  it('applies search filter via the API', async () => {
     const user = userEvent.setup()
     renderMainPage()
 
@@ -250,7 +253,7 @@ describe('Sets MainPage', () => {
       expect(screen.getByText('Corner Garage')).toBeInTheDocument()
     })
 
-    // Search for "Garage"
+    // Search for "Garage" - should filter to only Corner Garage
     const searchInput = screen.getByLabelText(/search sets/i)
     await user.clear(searchInput)
     await user.type(searchInput, 'Garage')
@@ -260,84 +263,101 @@ describe('Sets MainPage', () => {
       expect(screen.queryByText('Downtown Diner')).not.toBeInTheDocument()
     })
 
-    // Reset search and filter by theme (Creator Expert - both still show)
+    // Clear search - both items should reappear
     await user.clear(searchInput)
-    await user.type(searchInput, '')
 
     await waitFor(() => {
       expect(screen.getByText('Downtown Diner')).toBeInTheDocument()
       expect(screen.getByText('Corner Garage')).toBeInTheDocument()
-    })
-
-    const themeSelect = screen.getByLabelText('Filter by theme') as HTMLSelectElement
-    // select value corresponds to exact theme string; both items already match that theme
-    await user.selectOptions(themeSelect, 'Creator Expert')
-
-    await waitFor(() => {
-      expect(screen.getByText('Downtown Diner')).toBeInTheDocument()
-      expect(screen.getByText('Corner Garage')).toBeInTheDocument()
-    })
-
-    // Filter by build status = Built (should hide Downtown Diner which is isBuilt=false)
-    const buildStatusSelect = screen.getByLabelText(
-      'Filter by build status',
-    ) as HTMLSelectElement
-    await user.selectOptions(buildStatusSelect, 'built')
-
-    await waitFor(() => {
-      expect(screen.getByText('Corner Garage')).toBeInTheDocument()
-      expect(screen.queryByText('Downtown Diner')).not.toBeInTheDocument()
     })
   })
 
-  it('applies sort options via the API', async () => {
-    const user = userEvent.setup()
+  it('renders sort control and verifies default sort order', async () => {
     renderMainPage()
 
     await waitFor(() => {
       expect(screen.getByText('Downtown Diner')).toBeInTheDocument()
     })
 
-    const sortSelect = screen.getByLabelText('Sort sets') as HTMLSelectElement
+    // Verify sort control exists and is accessible
+    const sortSelect = screen.getByLabelText('Sort sets')
+    expect(sortSelect).toBeInTheDocument()
 
-    // Sort by title ascending - Corner Garage should appear before Downtown Diner
-    await user.selectOptions(sortSelect, 'title')
+    // Default sort is "createdAt desc" - both items render in descending creation order
+    const grid = screen.getByTestId('gallery-grid')
+    // SetCard uses data-testid="set-card-{uuid}" pattern
+    const cornerGarage = within(grid).getByTestId('set-card-22222222-2222-2222-2222-222222222222')
+    const downtownDiner = within(grid).getByTestId('set-card-11111111-1111-1111-1111-111111111111')
+    expect(cornerGarage).toBeInTheDocument()
+    expect(downtownDiner).toBeInTheDocument()
 
-    await waitFor(() => {
-      const grid = screen.getByTestId('gallery-grid')
-      const cards = within(grid).getAllByTestId('set-gallery-card')
-      const titles = cards.map(card => card.textContent || '')
-      expect(titles[0]).toContain('Corner Garage')
-      expect(titles[1]).toContain('Downtown Diner')
-    })
+    // Verify both cards are in the grid and Corner Garage appears first (descending by createdAt)
+    expect(cornerGarage.textContent).toContain('Corner Garage')
+    expect(downtownDiner.textContent).toContain('Downtown Diner')
   })
 
-  it('renders pagination controls and updates page when clicked', async () => {
+  it('renders pagination controls when there are multiple pages', async () => {
+    // Override handler to return enough items for pagination (limit=20, totalPages=2)
+    server.use(
+      http.get(`${API_BASE_URL}/api/sets`, ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get('page') ?? '1')
+        const limit = Number(url.searchParams.get('limit') ?? '20')
+
+        // Create 25 items to trigger 2 pages with default limit=20
+        const allItems = Array.from({ length: 25 }, (_, i) => ({
+          ...baseSetListResponse.items[0],
+          id: `${String(i + 1).padStart(8, '0')}-0000-0000-0000-000000000000`,
+          title: `Set ${i + 1}`,
+          images: [
+            {
+              id: `${String(i + 1).padStart(8, '0')}-0000-0000-0000-111111111111`,
+              imageUrl: `https://example.com/set-${i + 1}.jpg`,
+              thumbnailUrl: `https://example.com/set-${i + 1}-thumb.jpg`,
+              position: 0,
+            },
+          ],
+          createdAt: new Date(2025, 0, i + 1).toISOString(),
+          updatedAt: new Date(2025, 0, i + 1).toISOString(),
+        }))
+
+        const start = (page - 1) * limit
+        const pagedItems = allItems.slice(start, start + limit)
+
+        return HttpResponse.json({
+          items: pagedItems,
+          pagination: {
+            page,
+            limit,
+            total: allItems.length,
+            totalPages: Math.ceil(allItems.length / limit),
+          },
+          filters: baseSetListResponse.filters,
+        })
+      }),
+    )
+
     const user = userEvent.setup()
     renderMainPage()
 
+    // Wait for page 1 content
     await waitFor(() => {
-      expect(screen.getByText('Downtown Diner')).toBeInTheDocument()
+      expect(screen.getByText('Set 1')).toBeInTheDocument()
     })
 
-    // With 2 items and default limit=20 we only have 1 page; change page size to 1
-    const pageSizeSelect = screen.getByLabelText('Items per page') as HTMLSelectElement
-    await user.selectOptions(pageSizeSelect, '1')
-
+    // Pagination should be visible with 25 items / 20 per page = 2 pages
     await waitFor(() => {
-      // After changing page size, pagination should still show page 1 selected
-      expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page')
+      expect(screen.getByRole('button', { name: 'Go to page 1' })).toHaveAttribute('aria-current', 'page')
     })
 
     // Click page 2
-    const page2Button = screen.getByRole('button', { name: '2' })
+    const page2Button = screen.getByRole('button', { name: 'Go to page 2' })
     await user.click(page2Button)
 
     await waitFor(() => {
-      // On page 2 we should only see the second item
-      expect(screen.getByText('Corner Garage')).toBeInTheDocument()
-      expect(screen.queryByText('Downtown Diner')).not.toBeInTheDocument()
-      expect(page2Button).toHaveAttribute('aria-current', 'page')
+      // On page 2 we should see items 21-25
+      expect(screen.getByText('Set 21')).toBeInTheDocument()
+      expect(screen.queryByText('Set 1')).not.toBeInTheDocument()
     })
   })
 

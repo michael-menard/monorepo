@@ -19,6 +19,8 @@ export interface GalleryThemeFilterProps {
   className?: string
   /** Label for the filter */
   label?: string
+  /** Accessible label for the select input (A11Y) */
+  'aria-label'?: string
   /** Test ID for testing purposes */
   'data-testid'?: string
 }
@@ -39,6 +41,7 @@ const ALL_THEMES_VALUE = '__all__'
  *   selected={selectedTheme}
  *   onChange={setSelectedTheme}
  *   placeholder="All Themes"
+ *   aria-label="Filter by theme"
  * />
  * ```
  */
@@ -50,6 +53,7 @@ export const GalleryThemeFilter = ({
   disabled = false,
   className,
   label,
+  'aria-label': ariaLabel,
   'data-testid': testId = 'gallery-theme-filter',
 }: GalleryThemeFilterProps) => {
   // Convert themes to options with "All Themes" first
@@ -85,6 +89,7 @@ export const GalleryThemeFilter = ({
         value={selectValue}
         onValueChange={handleValueChange}
         disabled={disabled}
+        aria-label={ariaLabel}
       />
     </div>
   )

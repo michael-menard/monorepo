@@ -1,0 +1,73 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-10T22:00:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "STORY-007"
+        lesson: "Discriminated union result types ({ success: true, data } | { success: false, error }) worked seamlessly and should be default pattern"
+        category: pattern
+        applies_because: "Upload client already uses this pattern, should preserve it"
+      - story_id: "General"
+        lesson: "Targeted file reads reduce token usage - read specific line ranges instead of full files"
+        category: token_optimization
+        applies_because: "Story involves reading multiple source files for migration"
+      - story_id: "General"
+        lesson: "Grep before Read - find relevant files first, then read only those"
+        category: token_optimization
+        applies_because: "Need to find all 52 import sites efficiently"
+
+    blockers_to_avoid:
+      - "Reading full serverless.yml when only one resource needed (~17.5k tokens)"
+      - "Multiple agents reading the same files - cache context"
+
+    patterns_to_follow:
+      - "Discriminated union result types for core functions"
+      - "Use @repo/logger for all logging (no console.log)"
+      - "Zod-first type definitions with z.infer<>"
+      - "AbortController for cancellation support"
+
+    patterns_to_avoid:
+      - "Creating barrel files with export * (use explicit exports)"
+      - "Reading full files when only sections needed"
+      - "Skipping type errors - fix them immediately"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain} via proxy"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per story using live resources"
+        applies_to: ["frontend", "testing"]
+
+    constraints:
+      api_paths: "Not applicable - pure package migration, no API changes"
+      infrastructure: "Not applicable - no infrastructure changes"
+      storage: "Upload functionality already established, preserve existing behavior"
+      auth: "CSRF token handling must be preserved exactly in finalize client"
+      testing: "Minimum 45% test coverage, E2E tests if frontend impacted"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading all source files at once"
+        typical_tokens: 15000
+        mitigation: "Read one source file at a time as needed"
+      - operation: "Reading all 52 import sites"
+        typical_tokens: 20000
+        mitigation: "Use grep to find import sites, update programmatically"
+
+    recommended_patterns:
+      - "Migrate files one at a time (xhr.ts, manager.ts, types.ts, finalize.ts)"
+      - "Update imports with single grep + edit operation"
+      - "Batch test execution after all changes"
+
+  warnings:
+    - "KB system not available - manual knowledge context created from ADR-LOG.md and LESSONS-LEARNED.md"
+    - "Story depends on REPA-001 being completed - verified package exists"

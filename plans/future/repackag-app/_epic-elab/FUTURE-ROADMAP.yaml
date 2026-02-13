@@ -1,0 +1,91 @@
+schema: 1
+feature_dir: "plans/future/repackag-app"
+prefix: "REPA"
+reviewed: "2026-02-09"
+
+summary: "Post-MVP opportunities tracked for future iterations"
+
+enhancements:
+  high_value:
+    - id: ENG-FUT-001
+      source: engineering
+      suggestion: "Create integration test harness for Phase 1 completion before Phase 2"
+      impact: high
+      effort: medium
+    - id: ENG-FUT-002
+      source: engineering
+      suggestion: "Upfront design review for SortableGallery API with gallery app developers"
+      impact: high
+      effort: low
+    - id: PROD-FUT-001
+      source: product
+      suggestion: "Split REPA-005 into core + optional sub-components to reduce task size"
+      impact: high
+      effort: low
+    - id: PLAT-FUT-001
+      source: platform
+      suggestion: "Create Turborepo package generation template with presets"
+      impact: high
+      effort: medium
+    - id: PLAT-FUT-002
+      source: platform
+      suggestion: "Add pre-commit hook for workspace config mismatch detection"
+      impact: high
+      effort: medium
+    - id: QA-FUT-001
+      source: qa
+      suggestion: "Create consolidation test suite covering unit + integration + E2E"
+      impact: high
+      effort: high
+    - id: QA-FUT-002
+      source: qa
+      suggestion: "Establish baseline metrics for LOC, bundle size, coverage before starting"
+      impact: high
+      effort: low
+
+  nice_to_have:
+    - id: ENG-FUT-003
+      source: engineering
+      suggestion: "Plan codemod scripts for bulk import migrations"
+      impact: medium
+    - id: ENG-FUT-004
+      source: engineering
+      suggestion: "Document coexistence/deprecation testing for old packages"
+      impact: medium
+    - id: UX-FUT-001
+      source: ux
+      suggestion: "Drag-and-drop visual feedback matching LEGO theme with Framer Motion"
+      impact: medium
+    - id: UX-FUT-002
+      source: ux
+      suggestion: "Visual regression testing on all migrated gallery components"
+      impact: medium
+    - id: SEC-FUT-001
+      source: security
+      suggestion: "Add OWASP-compliant input validation for auth hooks before consolidation"
+      impact: medium
+    - id: SEC-FUT-002
+      source: security
+      suggestion: "Error mapping must sanitize sensitive data in responses"
+      impact: medium
+    - id: PLAT-FUT-003
+      source: platform
+      suggestion: "Cross-package circular dependency detection in build pipeline"
+      impact: medium
+
+suggested_stories:
+  - title: "Create import migration validator CLI tool"
+    source: platform
+    priority: P1
+    reason: "Scans codebase post-migration to detect stale imports"
+  - title: "Document package.json export map patterns"
+    source: platform
+    priority: P2
+    reason: "Ensures consistent export maps across new packages"
+
+metrics:
+  total_suggestions: 14
+  deferred_stories: 0
+
+---
+FUTURE ROADMAP COMPLETE

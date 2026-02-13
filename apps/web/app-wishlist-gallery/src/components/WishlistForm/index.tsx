@@ -31,15 +31,15 @@ import {
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
 import { TagInput } from '../TagInput'
 import { useS3Upload, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '../../hooks/useS3Upload'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
+import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 import { useBackgroundCompression } from '../../hooks/useBackgroundCompression'
+import { formatFileSize } from '@repo/upload/image/compression'
 import {
-  formatFileSize,
   COMPRESSION_PRESETS,
   getPresetByName,
   isValidPresetName,
-  type CompressionPresetName,
-} from '../../utils/imageCompression'
+} from '@repo/upload/image/presets'
+import type { CompressionPresetName } from '@repo/upload/image/presets/__types__'
 
 /**
  * localStorage key for compression preset preference

@@ -1,0 +1,48 @@
+schema: 1
+story_id: "BUGF-003"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-11T20:55:00Z"
+
+current_phase: qa-verified
+last_successful_phase: qa-verify
+e2e_gate: exempt
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+
+steps_completed:
+  - id: 1
+    description: "Add deleteSet mutation to RTK Query sets-api"
+    status: complete
+  - id: 2
+    description: "Add updateSet mutation to RTK Query sets-api"
+    status: complete
+  - id: 3
+    description: "Wire delete handler in main-page.tsx"
+    status: complete
+  - id: 4
+    description: "Wire delete handler in set-detail-page.tsx"
+    status: complete
+  - id: 5
+    description: "Create edit-set-page.tsx"
+    status: complete
+  - id: 6
+    description: "Add edit route to Module.tsx"
+    status: complete
+  - id: 7
+    description: "Write mutation unit tests"
+    status: deferred
+    note: "Mutation tests deferred; edit-page tests cover integration path"
+  - id: 8
+    description: "Write edit-set-page tests"
+    status: complete
+
+verification:
+  type_check: pass
+  unit_tests: pass
+  lint: not_run
+  e2e_tests:
+    status: exempt
+    reason: "Per ADR-005, E2E tests deferred to BUGF-014"

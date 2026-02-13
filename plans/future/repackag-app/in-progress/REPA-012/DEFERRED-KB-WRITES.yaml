@@ -1,0 +1,26 @@
+---
+# Deferred Knowledge Base Writes
+# These writes failed during story generation and should be retried later
+created: 2026-02-10
+story_id: REPA-012
+---
+
+pending_writes:
+  - write_type: story_insert
+    table: stories
+    data:
+      story_id: REPA-012
+      feature: repackag-app
+      title: "Create @repo/auth-hooks Package"
+      story_dir: plans/future/repackag-app/REPA-012
+      story_file: plans/future/repackag-app/REPA-012/REPA-012.md
+      story_type: feature
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+    reason: KB database not available at generation time
+    attempted_at: 2026-02-10T00:00:00Z

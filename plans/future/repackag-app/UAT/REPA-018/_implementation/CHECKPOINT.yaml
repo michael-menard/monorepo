@@ -1,0 +1,14 @@
+schema: 1
+story_id: REPA-018
+feature_dir: plans/future/repackag-app
+timestamp: '2026-02-10T22:33:00Z'
+
+current_phase: done
+last_successful_phase: qa-verify
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+completed_at: '2026-02-10T22:33:00Z'
+e2e_gate: exempt

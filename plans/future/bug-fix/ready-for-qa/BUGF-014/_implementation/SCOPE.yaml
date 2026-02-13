@@ -1,0 +1,26 @@
+schema: 1
+story_id: "BUGF-014"
+timestamp: "2026-02-11T20:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-sets-gallery/**"
+  - "packages/core/gallery/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Add test coverage for Sets Gallery GalleryGrid, SetDetailPage, and ModuleLayout components"

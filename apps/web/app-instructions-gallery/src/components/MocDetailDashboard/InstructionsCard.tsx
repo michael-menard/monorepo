@@ -1,5 +1,5 @@
 import { FileText, Download, ExternalLink } from 'lucide-react'
-import { InstructionsUpload } from '../InstructionsUpload'
+import { InstructionsUpload } from '@repo/upload/components'
 import { DashboardCard } from './DashboardCard'
 
 interface InstructionsCardProps {

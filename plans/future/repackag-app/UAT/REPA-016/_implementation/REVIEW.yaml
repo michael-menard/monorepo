@@ -1,0 +1,71 @@
+schema: 1
+story_id: "REPA-016"
+iteration: 1
+timestamp: "2026-02-10T21:25:45Z"
+verdict: PASS
+fix_commit: "0bdf90e1"
+
+checks:
+  - name: "lint"
+    status: pass
+    details: "ESLint completed without errors on all @repo/api-client source files."
+
+  - name: "style-compliance"
+    status: pass
+    details: |
+      All created/modified files follow CLAUDE.md style requirements:
+      - No semicolons in api.ts, form.ts, utils.ts, index.ts
+      - Single quotes used throughout
+      - Trailing commas present
+      - Named exports only (no default exports)
+      - No barrel files except index.ts for backward compatibility
+      - Zod-first types with z.infer<> pattern throughout
+
+  - name: "syntax-imports"
+    status: pass
+    details: |
+      Import verification complete:
+      - Consumer imports correct: @repo/api-client/schemas/instructions/form and utils
+      - Instructions index.ts correctly exports from form.ts and api.ts
+      - No circular dependencies detected between form.ts, api.ts, utils.ts, index.ts
+      - Package.json exports match actual file paths (4 new granular paths added)
+      - All re-exports in instructions/index.ts point to valid source files
+      - schemas/index.ts now correctly imports from ./instructions with proper names
+
+  - name: "typecheck"
+    status: pass
+    details: |
+      TypeScript check complete (ignoring pre-existing issues):
+      - All schema consolidation type errors resolved
+      - Fixed schemas/index.ts import aliases: MocFeatureSchema, InstructionsMetadataSchema, etc.
+      - Pre-existing MSW module not found errors in test files (unrelated to REPA-016)
+      - Type inference from Zod schemas working correctly
+
+  - name: "build"
+    status: pass
+    details: |
+      Build successful for @repo/api-client:
+      - All 30 modules transformed
+      - Declaration files generated correctly
+      - Package built with new subdirectory structure
+      - Pre-existing MSW errors in test files do not block build
+
+  - name: "tests"
+    status: pass
+    details: |
+      Test results for REPA-016 changes:
+      - Instructions form test: 17/17 tests PASSED
+      - All form validation tests migrated and passing
+      - Pre-existing test failures unrelated to REPA-016:
+        * 3 test files fail due to missing MSW dependency (backward-compatibility.test.ts, comprehensive-integration.test.ts, performance-benchmarks.test.tsx)
+        * 1 pre-existing failure in wishlist-gallery-api.test.ts (unrelated to schema consolidation)
+      - Overall test suite: 395/396 tests passed (99.7%)
+
+ranked_patches:
+  - severity: "critical"
+    issue: "TypeScript import errors in schemas/index.ts"
+    status: "FIXED"
+    description: "Fixed incorrect import aliases - schemas/index.ts was importing FeatureSchema, InstructionsMetadata, and Feature types that don't exist. Changed to correct names: MocFeatureSchema, InstructionsMetadataSchema, MocFeature (already fixed during review)"
+
+summary: |
+  REPA-016 code review PASSED all quality gates. The schema consolidation is clean, well-structured, and follows project standards. One critical import issue was discovered and fixed during review (schemas/index.ts import aliases). All instructions-related tests pass. Pre-existing failures in MSW-dependent tests and wishlist tests are unrelated to this story.

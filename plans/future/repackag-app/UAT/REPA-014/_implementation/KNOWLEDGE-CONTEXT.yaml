@@ -1,0 +1,449 @@
+schema: 1
+story_id: "REPA-014"
+feature_dir: "plans/future/repackag-app"
+
+# KNOWLEDGE-CONTEXT.yaml
+# This file contains all the technical knowledge needed to implement REPA-014.
+# It serves as a reference for the execution agent and documents architectural decisions.
+
+overview: |
+  This story consolidates four general-purpose React hooks into a new @repo/hooks package.
+  The hooks are currently duplicated or scattered across multiple web apps.
+
+  Key principles:
+  - Migration only - preserve exact behavior (no API changes)
+  - Follow REPA-001 (@repo/upload) package structure pattern
+  - No barrel files per CLAUDE.md (direct file exports only)
+  - Zod-first types (though these hooks use TypeScript interfaces for simplicity)
+  - Named exports only
+
+hooks:
+  useLocalStorage:
+    purpose: "Generic localStorage persistence with optional Zod validation and error handling"
+    source_reference: "apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts"
+    duplicate_locations:
+      - "apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts"
+      - "apps/web/app-instructions-gallery/src/hooks/useLocalStorage.ts"
+    features:
+      - "SSR safety (window check)"
+      - "Graceful error handling (quota exceeded, incognito mode)"
+      - "Optional Zod schema validation"
+      - "JSON serialization/deserialization"
+    dependencies:
+      - "@repo/logger"
+      - "zod (peer - optional)"
+      - "react (peer)"
+    test_file: "apps/web/app-wishlist-gallery/src/hooks/__tests__/useLocalStorage.test.ts"
+    test_coverage: "239 lines"
+    consumers:
+      - file: "apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx"
+        import: "import { useLocalStorage } from '../hooks/useLocalStorage'"
+      - file: "apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx"
+        import: "import { useLocalStorage } from '../../hooks/useLocalStorage'"
+      - file: "apps/web/app-wishlist-gallery/src/hooks/useWishlistSortPersistence.ts"
+        import: "import { useLocalStorage } from './useLocalStorage'"
+      - file: "apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx"
+        import: "import { useLocalStorage } from '../hooks/useLocalStorage'"
+
+  useUnsavedChangesPrompt:
+    purpose: "Blocks navigation with custom dialog for SPA and browser prompt for refresh/close"
+    source_reference: "apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts"
+    duplicate_locations:
+      - "apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts"
+      - "apps/web/app-instructions-gallery/src/hooks/useUnsavedChangesPrompt.ts"
+    features:
+      - "SPA navigation blocking via TanStack Router useBlocker"
+      - "Browser refresh/close blocking via beforeunload event"
+      - "Custom React dialog for SPA navigation"
+      - "Logging for observability"
+    dependencies:
+      - "@tanstack/react-router (peer)"
+      - "@repo/logger"
+      - "react (peer)"
+    test_file: null
+    test_coverage: "0 lines - NO TESTS EXIST"
+    note: "No test coverage exists - will rely on type checking and manual verification"
+    consumers:
+      - file: "apps/web/main-app/src/components/Uploader/SessionProvider/index.tsx"
+        import: "import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt'"
+      - file: "apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx"
+        import: "import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt'"
+
+  useDelayedShow:
+    purpose: "Delays showing UI element until after threshold to avoid flash on fast operations"
+    source_reference: "apps/web/main-app/src/hooks/useDelayedShow.ts"
+    duplicate_locations:
+      - "apps/web/main-app/src/hooks/useDelayedShow.ts"
+    features:
+      - "Timer-based delay logic"
+      - "Immediate hide on deactivation"
+      - "Cleanup on unmount"
+    dependencies:
+      - "react (peer)"
+    test_file: "apps/web/main-app/src/hooks/__tests__/useDelayedShow.test.ts"
+    test_coverage: "233 lines including timer mocking tests"
+    consumers:
+      - file: "apps/web/main-app/src/components/PageTransitionSpinner/PageTransitionSpinner.tsx"
+        import: "import { useDelayedShow } from '@/hooks/useDelayedShow'"
+
+  useMultiSelect:
+    purpose: "Manages multi-selection state for gallery items with shift-click range selection"
+    source_reference: "apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts"
+    duplicate_locations:
+      - "apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts"
+    features:
+      - "Click to toggle individual items"
+      - "Shift+click for range selection"
+      - "Select all / clear all"
+      - "Multi-select mode toggle"
+      - "Maximum selection limit"
+    dependencies:
+      - "react (peer)"
+    test_file: "apps/web/app-inspiration-gallery/src/hooks/__tests__/useMultiSelect.test.ts"
+    test_coverage: "343 lines including shift-click range selection tests"
+    consumers:
+      - file: "apps/web/app-inspiration-gallery/src/pages/main-page.tsx"
+        import: "import { useMultiSelect } from '../hooks/useMultiSelect'"
+
+package_structure:
+  reference_package: "@repo/upload (REPA-001)"
+  location: "packages/core/hooks/"
+  name: "@repo/hooks"
+  version: "0.1.0"
+
+  directory_structure: |
+    packages/core/hooks/
+      src/
+        __tests__/
+          setup.ts
+          useLocalStorage.test.ts
+          useDelayedShow.test.ts
+          useMultiSelect.test.ts
+        useLocalStorage.ts
+        useUnsavedChangesPrompt.ts
+        useDelayedShow.ts
+        useMultiSelect.ts
+      package.json
+      tsconfig.json
+      vite.config.ts
+      vitest.config.ts
+      README.md
+
+  exports_config: |
+    Direct file exports (no barrel files per CLAUDE.md):
+    {
+      "exports": {
+        "./useLocalStorage": {
+          "import": "./dist/useLocalStorage.js",
+          "types": "./dist/useLocalStorage.d.ts"
+        },
+        "./useUnsavedChangesPrompt": {
+          "import": "./dist/useUnsavedChangesPrompt.js",
+          "types": "./dist/useUnsavedChangesPrompt.d.ts"
+        },
+        "./useDelayedShow": {
+          "import": "./dist/useDelayedShow.js",
+          "types": "./dist/useDelayedShow.d.ts"
+        },
+        "./useMultiSelect": {
+          "import": "./dist/useMultiSelect.js",
+          "types": "./dist/useMultiSelect.d.ts"
+        }
+      }
+    }
+
+  peer_dependencies:
+    react: "^19.1.0"
+    "@tanstack/react-router": "^1.130.2"
+    zod: "^4.1.13"
+
+  dependencies:
+    "@repo/logger": "workspace:*"
+
+  dev_dependencies:
+    - "@testing-library/jest-dom"
+    - "@testing-library/react"
+    - "@testing-library/react-hooks"
+    - "@types/node"
+    - "@types/react"
+    - "@vitejs/plugin-react"
+    - "eslint"
+    - "jsdom"
+    - "typescript"
+    - "vite"
+    - "vite-plugin-dts"
+    - "vitest"
+
+build_configuration:
+  vite_config: |
+    - Entry points for each hook (no barrel export)
+    - ES module format only
+    - External: react, react-dom, @repo/*, @tanstack/react-router, zod
+    - Generate .d.ts files with vite-plugin-dts
+    - Exclude test files from build
+
+  tsconfig: |
+    - target: ESNext
+    - module: ESNext
+    - jsx: react-jsx
+    - moduleResolution: bundler
+    - strict: false (per CLAUDE.md - noImplicitAny: false)
+    - Exclude test files from compilation
+
+  vitest_config: |
+    - globals: true
+    - environment: jsdom (for React hooks testing)
+    - setupFiles: ['src/__tests__/setup.ts']
+    - coverage.enabled: false (by default)
+
+import_patterns:
+  consumer_usage: |
+    // NO barrel imports - direct file imports only per CLAUDE.md
+    import { useLocalStorage } from '@repo/hooks/useLocalStorage'
+    import { useUnsavedChangesPrompt } from '@repo/hooks/useUnsavedChangesPrompt'
+    import { useDelayedShow } from '@repo/hooks/useDelayedShow'
+    import { useMultiSelect } from '@repo/hooks/useMultiSelect'
+
+  replacing_patterns:
+    useLocalStorage:
+      old: "import { useLocalStorage } from '../hooks/useLocalStorage'"
+      new: "import { useLocalStorage } from '@repo/hooks/useLocalStorage'"
+      old_alias: "import { useLocalStorage } from '@/hooks/useLocalStorage'"
+
+    useUnsavedChangesPrompt:
+      old: "import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt'"
+      new: "import { useUnsavedChangesPrompt } from '@repo/hooks/useUnsavedChangesPrompt'"
+
+    useDelayedShow:
+      old: "import { useDelayedShow } from '@/hooks/useDelayedShow'"
+      new: "import { useDelayedShow } from '@repo/hooks/useDelayedShow'"
+
+    useMultiSelect:
+      old: "import { useMultiSelect } from '../hooks/useMultiSelect'"
+      new: "import { useMultiSelect } from '@repo/hooks/useMultiSelect'"
+
+migration_strategy:
+  approach: "Three-step migration to minimize risk"
+  steps:
+    - step: 1
+      name: "Create and verify @repo/hooks package"
+      description: |
+        Create package with all hooks and tests.
+        Build and test in isolation.
+        Verify all 815+ lines of tests pass.
+
+    - step: 2
+      name: "Update consumers and verify"
+      description: |
+        Add @repo/hooks dependency to consuming apps.
+        Update imports in all consumer files.
+        Build and type-check all consuming apps.
+
+    - step: 3
+      name: "Delete duplicates after verification"
+      description: |
+        Only after successful verification, delete duplicate files.
+        Requires user confirmation (Tier 4 decision).
+        Final full monorepo build and test.
+
+  safety_checks:
+    - "Package builds successfully before updating consumers"
+    - "All package tests pass before updating consumers"
+    - "All consuming apps build before deleting duplicates"
+    - "All consuming apps type-check before deleting duplicates"
+    - "User confirmation required before file deletion (Tier 4)"
+
+verification_requirements:
+  package_level:
+    build:
+      command: "cd packages/core/hooks && pnpm build"
+      expected: "Build succeeds, dist/ directory created with .js and .d.ts files"
+
+    test:
+      command: "cd packages/core/hooks && pnpm test"
+      expected: "All 815+ lines of tests pass (useLocalStorage: 239, useDelayedShow: 233, useMultiSelect: 343)"
+
+    types:
+      command: "cd packages/core/hooks && pnpm check-types"
+      expected: "No TypeScript errors"
+
+  app_level:
+    builds:
+      - app: "app-wishlist-gallery"
+        command: "pnpm --filter app-wishlist-gallery build"
+      - app: "app-instructions-gallery"
+        command: "pnpm --filter app-instructions-gallery build"
+      - app: "main-app"
+        command: "pnpm --filter main-app build"
+      - app: "app-inspiration-gallery"
+        command: "pnpm --filter app-inspiration-gallery build"
+
+    types:
+      - app: "app-wishlist-gallery"
+        command: "pnpm --filter app-wishlist-gallery check-types"
+      - app: "app-instructions-gallery"
+        command: "pnpm --filter app-instructions-gallery check-types"
+      - app: "main-app"
+        command: "pnpm --filter main-app check-types"
+      - app: "app-inspiration-gallery"
+        command: "pnpm --filter app-inspiration-gallery check-types"
+
+  monorepo_level:
+    build:
+      command: "pnpm build"
+      expected: "All packages and apps build successfully"
+
+    types:
+      command: "pnpm check-types"
+      expected: "No TypeScript errors across entire monorepo"
+
+files_to_create:
+  package_structure:
+    - packages/core/hooks/package.json
+    - packages/core/hooks/tsconfig.json
+    - packages/core/hooks/vite.config.ts
+    - packages/core/hooks/vitest.config.ts
+    - packages/core/hooks/README.md
+
+  hooks:
+    - packages/core/hooks/src/useLocalStorage.ts
+    - packages/core/hooks/src/useUnsavedChangesPrompt.ts
+    - packages/core/hooks/src/useDelayedShow.ts
+    - packages/core/hooks/src/useMultiSelect.ts
+
+  tests:
+    - packages/core/hooks/src/__tests__/setup.ts
+    - packages/core/hooks/src/__tests__/useLocalStorage.test.ts
+    - packages/core/hooks/src/__tests__/useDelayedShow.test.ts
+    - packages/core/hooks/src/__tests__/useMultiSelect.test.ts
+
+files_to_modify:
+  app_packages:
+    - apps/web/app-wishlist-gallery/package.json
+    - apps/web/app-instructions-gallery/package.json
+    - apps/web/main-app/package.json
+    - apps/web/app-inspiration-gallery/package.json
+
+  consumers:
+    - apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx
+    - apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
+    - apps/web/app-wishlist-gallery/src/hooks/useWishlistSortPersistence.ts
+    - apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx
+    - apps/web/main-app/src/components/Uploader/SessionProvider/index.tsx
+    - apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx
+    - apps/web/main-app/src/components/PageTransitionSpinner/PageTransitionSpinner.tsx
+    - apps/web/app-inspiration-gallery/src/pages/main-page.tsx
+
+files_to_delete:
+  hooks:
+    - apps/web/app-instructions-gallery/src/hooks/useLocalStorage.ts
+    - apps/web/app-instructions-gallery/src/hooks/useUnsavedChangesPrompt.ts
+    - apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
+    - apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts
+    - apps/web/main-app/src/hooks/useDelayedShow.ts
+    - apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts
+
+  tests:
+    - apps/web/app-wishlist-gallery/src/hooks/__tests__/useLocalStorage.test.ts
+    - apps/web/main-app/src/hooks/__tests__/useDelayedShow.test.ts
+    - apps/web/app-inspiration-gallery/src/hooks/__tests__/useMultiSelect.test.ts
+
+known_risks:
+  tanstack_router_version:
+    status: "VERIFIED"
+    finding: "All consuming apps use @tanstack/react-router ^1.130.2"
+    mitigation: "Versions are compatible - no action needed"
+
+  circular_dependency:
+    status: "VERIFIED"
+    finding: "@repo/logger has no imports from apps/web/**"
+    mitigation: "No circular dependency risk - safe to proceed"
+
+  missing_tests:
+    status: "ACCEPTABLE"
+    finding: "useUnsavedChangesPrompt has no test coverage"
+    mitigation: "Will rely on type checking (AC-16) and manual verification"
+    note: "Story explicitly accepts this - not blocking for MVP"
+
+coding_standards:
+  claude_md_rules:
+    - "Zod-first types (though these hooks use TypeScript interfaces for simplicity)"
+    - "Named exports only (no default exports)"
+    - "No barrel files (direct file exports)"
+    - "Use @repo/logger (never console.log)"
+    - "Functional components only"
+    - "No semicolons"
+    - "Single quotes"
+    - "Trailing commas always"
+    - "100 char line width"
+    - "2 space indentation"
+    - "Arrow parens: x => x not (x) => x"
+
+  hook_conventions:
+    - "Preserve all JSDoc comments from original implementations"
+    - "Keep zod schema validation support in useLocalStorage"
+    - "Maintain TanStack Router dependency in useUnsavedChangesPrompt"
+    - "Preserve timer-based delay logic in useDelayedShow"
+    - "Maintain shift-click range selection in useMultiSelect"
+    - "No API changes - migration only"
+
+test_migration_notes:
+  setup_file: |
+    Create src/__tests__/setup.ts following @repo/gallery pattern:
+    - Import @testing-library/jest-dom
+    - Configure jsdom environment
+    - Mock window APIs if needed
+
+  import_updates: |
+    When migrating test files, update imports from relative paths to local:
+    - OLD: import { useLocalStorage } from '../useLocalStorage'
+    - NEW: import { useLocalStorage } from '../useLocalStorage' (same - tests in __tests__)
+
+  test_environment: |
+    Vitest config must set:
+    - environment: 'jsdom' (for React hooks testing)
+    - globals: true (for describe/it/expect)
+    - setupFiles: ['src/__tests__/setup.ts']
+
+evidence_tracking:
+  build_evidence:
+    - "Screenshot or terminal output of successful package build"
+    - "Screenshot or terminal output of all 4 app builds"
+    - "Screenshot or terminal output of final monorepo build"
+
+  test_evidence:
+    - "Screenshot or terminal output showing all 815+ tests passing"
+    - "Line count verification for each test file"
+
+  type_evidence:
+    - "Screenshot or terminal output of check-types with 0 errors"
+    - "Per-app and monorepo-wide type checking"
+
+post_migration_validation:
+  smoke_tests:
+    - "Run pnpm install --force to verify workspace resolution"
+    - "Verify no import errors in consuming apps"
+    - "Verify duplicate files are deleted successfully"
+    - "Run full monorepo build after cleanup"
+
+  regression_tests:
+    - "No test regressions in consuming apps"
+    - "No build errors in consuming apps"
+    - "No type errors in consuming apps"
+
+future_enhancements:
+  out_of_scope:
+    - "Adding new hooks beyond the four identified"
+    - "Modifying hook functionality or APIs"
+    - "Creating domain-specific hooks (belong in @repo/gallery, etc.)"
+    - "Adding Storybook documentation"
+    - "Performance optimizations"
+    - "Advanced type safety features (branded types)"
+
+  post_mvp:
+    - "Add useDebounce and useThrottle"
+    - "Add useMediaQuery"
+    - "Add versioning and deprecation strategy"
+    - "Enhance JSDoc documentation"
+    - "Add ESLint rule to prevent duplicate implementations"
+    - "Add error boundaries for hooks using browser APIs"

@@ -117,6 +117,25 @@ vi.mock('@repo/logger', () => ({
   })),
 }))
 
+// Mock Worker for heic2any and image compression libraries
+global.Worker = class Worker {
+  constructor(_stringUrl: string | URL, _options?: WorkerOptions) {}
+  addEventListener(_type: string, _listener: EventListenerOrEventListenerObject): void {}
+  removeEventListener(_type: string, _listener: EventListenerOrEventListenerObject): void {}
+  postMessage(_message: any): void {}
+  terminate(): void {}
+  dispatchEvent(_event: Event): boolean {
+    return false
+  }
+  onmessage: ((this: Worker, ev: MessageEvent) => any) | null = null
+  onmessageerror: ((this: Worker, ev: MessageEvent) => any) | null = null
+  onerror: ((this: Worker, ev: ErrorEvent) => any) | null = null
+} as any
+
+// Mock URL.createObjectURL and URL.revokeObjectURL for image processing
+global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+global.URL.revokeObjectURL = vi.fn()
+
 // WISH-2045: Mock heic2any since it uses Web Workers which aren't available in Node
 vi.mock('heic2any', () => ({
   default: vi.fn().mockResolvedValue(new Blob(['mock-jpeg'], { type: 'image/jpeg' })),

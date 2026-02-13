@@ -108,7 +108,7 @@ describe.skip('Performance Integration Tests', () => {
     return render(<Provider store={store}>{component}</Provider>)
   }
 
-  describe('Component Render Performance', () => {
+  describe.skip('Component Render Performance', () => {
     it('should render Gallery module within performance budget', async () => {
       const startTime = performance.now()
 
@@ -162,7 +162,7 @@ describe.skip('Performance Integration Tests', () => {
     })
   })
 
-  describe('Interaction Performance', () => {
+  describe.skip('Interaction Performance', () => {
     it('should handle button clicks within performance budget', async () => {
       renderWithStore(<GalleryModule />)
 
@@ -206,7 +206,7 @@ describe.skip('Performance Integration Tests', () => {
     })
   })
 
-  describe('Memory Performance', () => {
+  describe.skip('Memory Performance', () => {
     it('should not create memory leaks during component mounting/unmounting', async () => {
       const initialMetrics = performanceMonitor.getComponentMetrics().length
 
@@ -254,7 +254,7 @@ describe.skip('Performance Integration Tests', () => {
     })
   })
 
-  describe('Bundle Size Performance', () => {
+  describe.skip('Bundle Size Performance', () => {
     it('should track component bundle impact', () => {
       // This would be more meaningful with actual bundle analysis
       const componentSizes = {
@@ -276,7 +276,7 @@ describe.skip('Performance Integration Tests', () => {
     })
   })
 
-  describe('Performance Monitoring Integration', () => {
+  describe.skip('Performance Monitoring Integration', () => {
     it('should track component performance metrics', () => {
       renderWithStore(<GalleryModule />)
 

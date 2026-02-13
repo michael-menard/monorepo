@@ -8,11 +8,18 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { z } from 'zod'
 import { Plus } from 'lucide-react'
-import { Button, cn, ConfirmationDialog } from '@repo/app-component-library'
-import { useViewMode, GalleryViewToggle, GalleryDataTable, GalleryPagination } from '@repo/gallery'
+import { Button, cn, ConfirmationDialog, useToast } from '@repo/app-component-library'
+import {
+  useViewMode,
+  GalleryViewToggle,
+  GalleryDataTable,
+  GalleryPagination,
+  GalleryFilterBar,
+} from '@repo/gallery'
 import type { Set } from '@repo/api-client/schemas/sets'
-import { useGetSetsQuery } from '@repo/api-client/rtk/sets-api'
-import { GalleryFilterBar, type BuiltFilterValue } from '../components/GalleryFilterBar'
+import { useGetSetsQuery, useDeleteSetMutation } from '@repo/api-client/rtk/sets-api'
+import { BuildStatusFilter } from '../components/BuildStatusFilter'
+import type { BuiltFilterValue } from '../components/BuildStatusFilter/__types__'
 import { GalleryGrid } from '../components/GalleryGrid'
 import { SetCard } from '../components/SetCard'
 import { setsColumns } from '../columns/sets-columns'
@@ -44,6 +51,9 @@ export function MainPage({ className }: MainPageProps) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [deleteTarget, setDeleteTarget] = useState<Set | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const { success: toastSuccess, error: toastError } = useToast()
+  const [deleteSet] = useDeleteSetMutation()
 
   const {
     data: setsData,
@@ -113,12 +123,22 @@ export function MainPage({ className }: MainPageProps) {
     setDeleteTarget(set)
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return
-    // NOTE: Actual delete API + cache invalidation will be implemented in sets-2004
-    // For now, this simply closes the dialog and would be extended to call a
-    // deleteSet mutation and refetch the list.
-    setDeleteTarget(null)
+
+    setIsDeleting(true)
+    try {
+      await deleteSet({ id: deleteTarget.id, title: deleteTarget.title }).unwrap()
+      toastSuccess(
+        `"${deleteTarget.title}" deleted`,
+        'The set has been removed from your collection.',
+      )
+      setDeleteTarget(null)
+    } catch (err) {
+      toastError(err, `Failed to delete "${deleteTarget.title}"`)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleCancelDelete = () => {
@@ -176,18 +196,23 @@ export function MainPage({ className }: MainPageProps) {
 
                 <div className="pt-2">
                   <GalleryFilterBar
-                    searchTerm={searchTerm}
+                    search={searchTerm}
                     onSearchChange={handleSearchChange}
+                    searchAriaLabel="Search sets"
+                    searchPlaceholder="Search sets..."
                     themes={availableThemes}
                     selectedTheme={theme}
                     onThemeChange={handleThemeChange}
-                    builtFilter={builtFilter}
-                    onBuiltFilterChange={handleBuiltFilterChange}
-                    sortField={sortField}
+                    themeAriaLabel="Filter by theme"
                     sortOptions={sortOptions}
+                    selectedSort={sortField}
                     onSortChange={value => handleSortFieldChange(value as SortField)}
+                    sortAriaLabel="Sort sets"
+                    rightSlot={
+                      <GalleryViewToggle currentView={viewMode} onViewChange={setViewMode} />
+                    }
                   >
-                    <GalleryViewToggle currentView={viewMode} onViewChange={setViewMode} />
+                    <BuildStatusFilter value={builtFilter} onChange={handleBuiltFilterChange} />
                   </GalleryFilterBar>
                 </div>
 
@@ -254,15 +279,15 @@ export function MainPage({ className }: MainPageProps) {
                   title="Delete set?"
                   description={
                     deleteTarget
-                      ? `Are you sure you want to delete "${deleteTarget.title}" from your collection? This action cannot be undone.`
+                      ? `Are you sure you want to delete "${deleteTarget.title}"${deleteTarget.setNumber ? ` (#${deleteTarget.setNumber})` : ''} from your collection? This action cannot be undone.`
                       : 'Are you sure you want to delete this set from your collection? This action cannot be undone.'
                   }
-                  confirmText="Delete"
+                  confirmText={isDeleting ? 'Deleting...' : 'Delete'}
                   cancelText="Cancel"
                   variant="destructive"
                   open={Boolean(deleteTarget)}
                   onOpenChange={open => {
-                    if (!open) {
+                    if (!open && !isDeleting) {
                       handleCancelDelete()
                     }
                   }}

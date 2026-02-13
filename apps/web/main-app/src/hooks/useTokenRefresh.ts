@@ -3,7 +3,7 @@ import { useToast } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuth } from '@/store/slices/authSlice'
-import { isTokenExpired } from '@/lib/jwt'
+import { isTokenExpired } from '@repo/auth-utils/jwt'
 import { useAuth } from '@/services/auth/AuthProvider'
 
 /**

@@ -1,0 +1,253 @@
+schema: 1
+story_id: "REPA-002"
+timestamp: "2026-02-10T22:00:00Z"
+
+steps:
+  - id: 1
+    description: "Migrate xhr.ts from @repo/upload-client to @repo/upload/client/"
+    files:
+      - "packages/core/upload/src/client/xhr.ts"
+      - "packages/core/upload-client/src/xhr.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Migrate manager.ts from @repo/upload-client to @repo/upload/client/"
+    files:
+      - "packages/core/upload/src/client/manager.ts"
+      - "packages/core/upload-client/src/manager.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Migrate types.ts from @repo/upload-client to @repo/upload/client/"
+    files:
+      - "packages/core/upload/src/client/types.ts"
+      - "packages/core/upload-client/src/types.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Create finalize.ts in @repo/upload/client/ by consolidating duplicate finalizeClient.ts files"
+    files:
+      - "packages/core/upload/src/client/finalize.ts"
+      - "apps/web/main-app/src/services/api/finalizeClient.ts"
+      - "apps/web/app-instructions-gallery/src/services/api/finalizeClient.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Update client/index.ts to export all client functions"
+    files:
+      - "packages/core/upload/src/client/index.ts"
+    dependencies: [4]
+    slice: packages
+
+  - id: 6
+    description: "Update root index.ts to re-export client functions"
+    files:
+      - "packages/core/upload/src/index.ts"
+    dependencies: [5]
+    slice: packages
+
+  - id: 7
+    description: "Add @repo/upload dependency to app package.json files"
+    files:
+      - "apps/web/main-app/package.json"
+      - "apps/web/app-instructions-gallery/package.json"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 8
+    description: "Update InstructionsNewPage.tsx to import from @repo/upload"
+    files:
+      - "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+    dependencies: [7]
+    slice: frontend
+
+  - id: 9
+    description: "Update upload-page.tsx to import from @repo/upload"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+    dependencies: [7]
+    slice: frontend
+
+  - id: 10
+    description: "Update all other @repo/upload-client import sites"
+    files:
+      - "packages/core/upload-client/src/index.ts"
+    dependencies: [7]
+    slice: packages
+
+  - id: 11
+    description: "Delete duplicate finalizeClient.ts files from apps"
+    files:
+      - "apps/web/main-app/src/services/api/finalizeClient.ts"
+      - "apps/web/app-instructions-gallery/src/services/api/finalizeClient.ts"
+    dependencies: [8, 9]
+    slice: frontend
+
+  - id: 12
+    description: "Deprecate @repo/upload-client package"
+    files:
+      - "packages/core/upload-client/package.json"
+      - "packages/core/upload-client/README.md"
+    dependencies: [11]
+    slice: packages
+
+  - id: 13
+    description: "Migrate tests from @repo/upload-client to @repo/upload/client/__tests__/"
+    files:
+      - "packages/core/upload/src/client/__tests__/xhr.test.ts"
+      - "packages/core/upload/src/client/__tests__/manager.test.ts"
+      - "packages/core/upload-client/src/__tests__/"
+    dependencies: [1, 2, 3]
+    slice: packages
+
+  - id: 14
+    description: "Create tests for finalize.ts functionality"
+    files:
+      - "packages/core/upload/src/client/__tests__/finalize.test.ts"
+    dependencies: [4]
+    slice: packages
+
+files_to_change:
+  - path: "packages/core/upload/src/client/xhr.ts"
+    action: create
+    reason: "Migrate XHR upload functions from @repo/upload-client (AC-1)"
+
+  - path: "packages/core/upload/src/client/manager.ts"
+    action: create
+    reason: "Migrate upload manager from @repo/upload-client (AC-1)"
+
+  - path: "packages/core/upload/src/client/types.ts"
+    action: create
+    reason: "Migrate upload types and schemas from @repo/upload-client (AC-1)"
+
+  - path: "packages/core/upload/src/client/finalize.ts"
+    action: create
+    reason: "Consolidate duplicate finalizeClient.ts implementations (AC-2)"
+
+  - path: "packages/core/upload/src/client/index.ts"
+    action: modify
+    reason: "Export all client functions (AC-3)"
+
+  - path: "packages/core/upload/src/index.ts"
+    action: modify
+    reason: "Re-export client functions from package root (AC-3)"
+
+  - path: "apps/web/main-app/package.json"
+    action: modify
+    reason: "Add @repo/upload dependency (AC-4)"
+
+  - path: "apps/web/app-instructions-gallery/package.json"
+    action: modify
+    reason: "Add @repo/upload dependency (AC-4)"
+
+  - path: "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+    action: modify
+    reason: "Update import from finalizeClient to @repo/upload (AC-4)"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+    action: modify
+    reason: "Update import from finalizeClient to @repo/upload (AC-4)"
+
+  - path: "apps/web/main-app/src/services/api/finalizeClient.ts"
+    action: delete
+    reason: "Remove duplicate, consolidated into @repo/upload (AC-5)"
+
+  - path: "apps/web/app-instructions-gallery/src/services/api/finalizeClient.ts"
+    action: delete
+    reason: "Remove duplicate, consolidated into @repo/upload (AC-5)"
+
+  - path: "packages/core/upload-client/package.json"
+    action: modify
+    reason: "Add deprecation notice (AC-6)"
+
+  - path: "packages/core/upload-client/README.md"
+    action: modify
+    reason: "Add migration instructions and deprecation notice (AC-6)"
+
+  - path: "packages/core/upload/src/client/__tests__/xhr.test.ts"
+    action: create
+    reason: "Migrate XHR tests from @repo/upload-client (AC-1)"
+
+  - path: "packages/core/upload/src/client/__tests__/manager.test.ts"
+    action: create
+    reason: "Migrate manager tests from @repo/upload-client (AC-1)"
+
+  - path: "packages/core/upload/src/client/__tests__/finalize.test.ts"
+    action: create
+    reason: "Create tests for finalize functionality (AC-2)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after package.json changes"
+    required: true
+
+  - command: "pnpm build --filter @repo/upload"
+    when: "after client code migration"
+    required: true
+
+  - command: "pnpm test --filter @repo/upload"
+    when: "after tests created"
+    required: true
+
+  - command: "pnpm check-types:all"
+    when: "after all import updates"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test:all"
+    when: "final verification"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit tests: xhr.test.ts, manager.test.ts with all existing tests passing"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests: finalize.test.ts covering happy path, 409/429/400 errors, CSRF tokens"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "TypeScript compilation success with all imports resolving correctly"
+    evidence_type: command
+
+  - ac_id: "AC-4"
+    planned_evidence: "Build success + grep verification showing no old imports remain"
+    evidence_type: command
+
+  - ac_id: "AC-5"
+    planned_evidence: "File system check showing duplicate files deleted"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "File content showing deprecation notices in package.json and README.md"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "All quality gates pass (test, typecheck, lint, build) + manual smoke tests"
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Migration sequence is critical - follow step order exactly to avoid broken imports"
+  - "Do not remove @repo/upload-client package, only deprecate (rollback safety)"
+  - "Preserve CSRF token handling exactly as-is in finalize client"
+  - "All types must use Zod schemas per CLAUDE.md"
+  - "Use @repo/logger for all logging, no console.log"
+  - "Test coverage must meet 45% minimum threshold"
+  - "Only 10 files actually import @repo/upload-client (not 52 as stated in story)"
+  - "Main import updates are in finalizeClient consumers (2 files)"

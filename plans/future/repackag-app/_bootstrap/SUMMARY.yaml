@@ -1,0 +1,29 @@
+schema: 2
+feature_dir: "plans/future/repackag-app"
+prefix: "REPA"
+completed: "2026-02-09"
+
+files_created:
+  - path: "plans/future/repackag-app/stories.index.md"
+    stories: 21
+  - path: "plans/future/repackag-app/PLAN.meta.md"
+  - path: "plans/future/repackag-app/PLAN.exec.md"
+  - path: "plans/future/repackag-app/roadmap.md"
+
+metrics:
+  total_stories: 21
+  ready_to_start: 12
+  critical_path_length: 5
+  max_parallel: 12
+  phases: 6
+
+roadmap_highlights:
+  critical_path:
+    - "REPA-001"
+    - "REPA-002"
+    - "REPA-003"
+    - "REPA-005"
+    - "REPA-017"
+  parallel_groups: 8
+
+next_step: "/elab-epic plans/future/repackag-app"

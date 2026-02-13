@@ -67,6 +67,10 @@ export const ReviewSchema = z.object({
     security: WorkerResultSchema.optional(),
     typecheck: WorkerResultSchema.optional(),
     build: WorkerResultSchema.optional(),
+    reusability: WorkerResultSchema.optional(),
+    react: WorkerResultSchema.optional(),
+    typescript: WorkerResultSchema.optional(),
+    accessibility: WorkerResultSchema.optional(),
   }),
 
   // Summary counts

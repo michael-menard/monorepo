@@ -1,0 +1,347 @@
+schema: 1
+story_id: "BUGF-032"
+timestamp: "2026-02-11T20:30:00Z"
+
+approach: |
+  Wire the presigned URL API (from BUGF-031) into frontend upload pages using RTK Query mutation pattern.
+  Create uploads-api.ts slice following wishlist-gallery-api.ts pattern. Replace mock presigned URL
+  generation in upload pages with real API calls. Leverage existing @repo/upload infrastructure
+  (useUploadManager, uploadToPresignedUrl) without modifications. Add comprehensive E2E tests for
+  complete upload flow validation.
+
+steps:
+  - id: 1
+    description: "Create uploads-api.ts RTK Query slice with presigned URL mutation"
+    files:
+      - path: "packages/core/api-client/src/rtk/uploads-api.ts"
+        action: create
+        details: |
+          Create new RTK Query API slice following wishlist-gallery-api.ts pattern:
+          - Import createApi from RTK Query
+          - Import createServerlessBaseQuery and getServerlessCacheConfig from base-query.ts
+          - Define presigned URL request/response schemas (reuse from inspiration.ts pattern)
+          - Create uploadsApi with generatePresignedUrl mutation
+          - Export useGeneratePresignedUrlMutation hook
+          - Configure JWT auth and performance monitoring
+          - Add endpoint to /uploads/presigned-url (verify endpoint exists in BUGF-031)
+          - No cache invalidation needed (presigned URLs are one-time use)
+    tests:
+      - path: "packages/core/api-client/src/rtk/__tests__/uploads-api.test.ts"
+        type: unit
+    dependencies: []
+
+  - id: 2
+    description: "Add presigned URL schemas to api-client schemas index"
+    files:
+      - path: "packages/core/api-client/src/schemas/uploads.ts"
+        action: create
+        details: |
+          Create uploads schema file with presigned URL types:
+          - GeneratePresignedUrlRequestSchema (fileName, mimeType, fileSize, category)
+          - GeneratePresignedUrlResponseSchema (presignedUrl, key, expiresIn, expiresAt)
+          - FileCategory enum for upload types (instruction, parts-list, thumbnail, image)
+          - Export types and schemas
+      - path: "packages/core/api-client/src/schemas/index.ts"
+        action: modify
+        details: "Export uploads schemas (GeneratePresignedUrlRequest/Response, FileCategory)"
+    tests:
+      - path: "packages/core/api-client/src/schemas/__tests__/uploads.test.ts"
+        type: unit
+    dependencies: [1]
+
+  - id: 3
+    description: "Verify endpoint configuration for presigned URL API"
+    files:
+      - path: "packages/core/api-client/src/config/endpoints.ts"
+        action: modify
+        details: |
+          Add UPLOADS section to SERVERLESS_ENDPOINTS:
+          UPLOADS: {
+            GENERATE_PRESIGNED_URL: '/uploads/presigned-url'
+          }
+          This should already exist from BUGF-031, but verify and add if missing.
+    tests: []
+    dependencies: []
+
+  - id: 4
+    description: "Integrate presigned URL API in app-instructions-gallery/upload-page.tsx"
+    files:
+      - path: "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+        action: modify
+        details: |
+          Replace mock presigned URL generation (lines 154-162) with real API integration:
+          1. Import useGeneratePresignedUrlMutation from @repo/api-client/rtk/uploads-api
+          2. Call mutation hook at component level
+          3. In handleFileSelect callback:
+             - For each file, call generatePresignedUrl mutation with file metadata
+             - Wait for API response with presignedUrl
+             - Create FileWithUploadUrl with real presignedUrl
+             - Pass to uploadManager.addFiles()
+          4. Handle API errors:
+             - 401: Show "Please sign in" message
+             - 400: Show "Invalid file" message
+             - 413: Show "File too large (max 100MB)" message
+             - 500: Show "Upload service unavailable" message
+          5. Show loading spinner during API call
+          6. Log API calls with logger.info
+    tests:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        type: integration
+    dependencies: [1, 2]
+
+  - id: 5
+    description: "Integrate presigned URL API in main-app/InstructionsNewPage.tsx"
+    files:
+      - path: "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+        action: modify
+        details: |
+          Replace mock presigned URL generation (lines 154-162) with real API integration:
+          1. Import useGeneratePresignedUrlMutation from @repo/api-client/rtk/uploads-api
+          2. Call mutation hook at component level
+          3. In handleFileSelect callback:
+             - For each file, call generatePresignedUrl mutation with file metadata
+             - Wait for API response with presignedUrl
+             - Create FileWithUploadUrl with real presignedUrl
+             - Pass to uploadManager.addFiles()
+          4. Handle API errors (same as step 4)
+          5. Show loading spinner during API call
+          6. Log API calls with logger.info
+          Same pattern as upload-page.tsx for consistency.
+    tests:
+      - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+        type: integration
+    dependencies: [1, 2, 4]
+
+  - id: 6
+    description: "Implement session refresh handler for expired presigned URLs"
+    files:
+      - path: "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+        action: modify
+        details: |
+          Update handleRefreshSession (lines 270-279) to call presigned URL API:
+          1. Get expired files from uploadManager.state.files.filter(f => f.status === 'expired')
+          2. For each expired file, call generatePresignedUrl mutation
+          3. Collect new presignedUrl responses
+          4. Call uploadManager.updateFileUrls() with new URLs
+          5. Call uploadManager.retryAll() to restart uploads
+          6. Handle API errors gracefully
+      - path: "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+        action: modify
+        details: "Same refresh handler implementation as upload-page.tsx"
+    tests:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        type: integration
+      - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+        type: integration
+    dependencies: [4, 5]
+
+  - id: 7
+    description: "Add loading states and error banners for presigned URL API calls"
+    files:
+      - path: "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+        action: modify
+        details: |
+          Add UI feedback for API operations:
+          1. Add isGeneratingUrls state to track API calls
+          2. Disable file selection buttons during API call (isGeneratingUrls || uploadManager.isUploading)
+          3. Show inline spinner/progress indicator during generatePresignedUrl call
+          4. Add error alert for API failures (use existing Alert component)
+          5. Clear error on successful retry
+      - path: "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+        action: modify
+        details: "Same loading states and error UI as upload-page.tsx"
+    tests:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        type: integration
+      - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+        type: integration
+    dependencies: [6]
+
+  - id: 8
+    description: "Write unit tests for uploads-api RTK Query slice"
+    files:
+      - path: "packages/core/api-client/src/rtk/__tests__/uploads-api.test.ts"
+        action: create
+        details: |
+          Test RTK Query mutation with MSW:
+          1. Mock generatePresignedUrl endpoint with MSW handler
+          2. Test successful mutation returns presignedUrl, key, expiresIn
+          3. Test mutation request structure (fileName, mimeType, fileSize, category)
+          4. Test error responses (401, 400, 413, 500)
+          5. Test response schema validation with Zod
+          6. Verify no cache invalidation tags
+          Follow wishlist-gallery-api.test.ts pattern
+    tests:
+      - path: "packages/core/api-client/src/rtk/__tests__/uploads-api.test.ts"
+        type: unit
+    dependencies: [1, 2]
+
+  - id: 9
+    description: "Write integration tests for upload-page.tsx presigned URL flow"
+    files:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        action: create
+        details: |
+          Test upload page with presigned URL API:
+          1. Mock generatePresignedUrl mutation with MSW
+          2. Test file selection triggers API call with correct metadata
+          3. Test successful API response creates FileWithUploadUrl
+          4. Test uploadManager receives presignedUrl from API
+          5. Test API error handling (401, 400, 413, 500)
+          6. Test loading state during API call
+          7. Test session refresh flow with expired files
+          8. Use React Testing Library + MSW
+    tests:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        type: integration
+    dependencies: [4, 6, 7]
+
+  - id: 10
+    description: "Write integration tests for InstructionsNewPage.tsx presigned URL flow"
+    files:
+      - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+        action: create
+        details: |
+          Test instructions new page with presigned URL API:
+          1. Same test structure as upload-page.test.tsx
+          2. Verify both pages use identical pattern
+          3. Test file selection, API call, upload manager integration
+          4. Test error handling and session refresh
+    tests:
+      - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+        type: integration
+    dependencies: [5, 6, 7]
+
+  - id: 11
+    description: "Create E2E test suite for complete upload flow"
+    files:
+      - path: "apps/web/playwright/tests/upload-flow.spec.ts"
+        action: create
+        details: |
+          Playwright E2E tests for upload flow:
+          1. Test: Happy path - select PDF, upload completes, progress updates
+             - Navigate to /instructions/new
+             - Select 2MB PDF file
+             - Verify presigned URL API call (network trace)
+             - Verify PUT to S3 presigned URL
+             - Verify progress bar updates (0% → 100%)
+             - Verify success message
+             - Verify file card shows "Uploaded" status
+          2. Test: Invalid file type - client-side rejection
+             - Attempt to select .exe file
+             - Verify no API call made
+             - Verify error message shown
+          3. Test: File too large - 413 error
+             - Select 150MB PDF file
+             - Verify API returns 413
+             - Verify error message "File too large (max 100MB)"
+          4. Test: Session expired - 403 from S3
+             - Mock expired presigned URL (or advance time)
+             - Attempt upload
+             - Verify 403 from S3
+             - Verify SessionExpiredBanner appears
+          5. Test: Multi-file upload
+             - Select 3 PDF files
+             - Verify each gets presigned URL
+             - Verify all progress bars update independently
+             - Verify all success states
+          6. Test: Network failure handling
+             - Start upload
+             - Simulate network interruption
+             - Verify retry option appears
+          Use Playwright network tracing, authenticated user fixture
+    tests:
+      - path: "apps/web/playwright/tests/upload-flow.spec.ts"
+        type: e2e
+    dependencies: [4, 5, 6, 7]
+
+  - id: 12
+    description: "Add E2E test for session refresh flow"
+    files:
+      - path: "apps/web/playwright/tests/upload-session-refresh.spec.ts"
+        action: create
+        details: |
+          Playwright E2E test for session refresh:
+          1. Start upload with presigned URL
+          2. Simulate session expiry (mock expired presignedUrl or advance time)
+          3. Verify SessionExpiredBanner appears
+          4. Click "Refresh Session" button
+          5. Verify new presigned URLs requested from API
+          6. Verify uploadManager.updateFileUrls called
+          7. Verify uploads retry with new URLs
+          8. Verify success after refresh
+          Test both automatic expiry detection and manual refresh
+    tests:
+      - path: "apps/web/playwright/tests/upload-session-refresh.spec.ts"
+        type: e2e
+    dependencies: [6, 11]
+
+  - id: 13
+    description: "Update API client exports and documentation"
+    files:
+      - path: "packages/core/api-client/src/rtk/index.ts"
+        action: modify
+        details: "Export uploadsApi and useGeneratePresignedUrlMutation from uploads-api.ts"
+      - path: "packages/core/api-client/README.md"
+        action: modify
+        details: "Document uploads-api usage with code example"
+    tests: []
+    dependencies: [1, 2]
+
+patterns_to_follow:
+  - source: "packages/core/api-client/src/rtk/wishlist-gallery-api.ts"
+    pattern: |
+      RTK Query mutation pattern with Zod validation:
+      - createApi with createServerlessBaseQuery
+      - enablePerformanceMonitoring and enableJwtAuth flags
+      - Mutation with transformResponse using Zod schema
+      - Export hook (useGeneratePresignedUrlMutation)
+      - No providesTags or invalidatesTags for presigned URLs (one-time use)
+
+  - source: "packages/core/api-client/src/schemas/inspiration.ts"
+    pattern: |
+      Presigned URL schema pattern (lines 302-319):
+      - PresignRequestSchema with fileName, mimeType, fileSize
+      - PresignResponseSchema with presignedUrl, key, expiresIn
+      - Adapt for upload file categories (instruction, parts-list, thumbnail, image)
+
+  - source: "packages/core/upload/src/hooks/useUploadManager.ts"
+    pattern: |
+      FileWithUploadUrl interface (lines 64-69):
+      - file: File
+      - category: FileCategory
+      - fileId: string
+      - uploadUrl: string (presignedUrl from API)
+      Use this exact interface when creating file items
+
+risks:
+  - risk: "BUGF-031 backend API not deployed or misconfigured"
+    mitigation: |
+      Verify BUGF-031 deployment status before starting frontend work.
+      Can develop against local backend or MSW mocks initially.
+      Add API health check in E2E test setup.
+
+  - risk: "CORS misconfiguration prevents browser uploads to S3"
+    mitigation: |
+      BUGF-031 includes CORS testing. Verify CORS headers in E2E tests.
+      Add explicit CORS validation in Playwright network traces.
+
+  - risk: "E2E test flakiness due to network timing"
+    mitigation: |
+      Use Playwright's built-in retry logic and explicit waits.
+      Add generous timeouts for upload operations (large files).
+      Use waitForResponse to confirm API calls complete.
+
+  - risk: "useUploadManager API changes break integration"
+    mitigation: |
+      Story explicitly protects useUploadManager interface (non-goal).
+      Use existing FileWithUploadUrl interface without modifications.
+      Add integration tests to catch any breaking changes early.
+
+  - risk: "File size limits differ between frontend validation and backend"
+    mitigation: |
+      Import MAX_FILE_SIZE constant from backend or shared config.
+      Validate file size client-side before API call (fail fast).
+      Handle 413 error gracefully with user-friendly message.
+
+estimated_loc: 350

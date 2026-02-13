@@ -1,0 +1,113 @@
+schema: 1
+story_id: "BUGF-010"
+timestamp: "2026-02-11T20:30:00Z"
+
+steps:
+  - id: 1
+    description: "Add vi.unmock() call to AuthProvider.test.tsx to use real component implementation"
+    files:
+      - "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Remove all it.skip() calls from the 8 Hub event listener tests"
+    files:
+      - "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 3
+    description: "Replace arbitrary 100ms timeout with explicit waitFor() assertions (Quick Win QA item #1)"
+    files:
+      - "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 4
+    description: "Run tests to verify all 8 Hub event listener tests pass"
+    files:
+      - "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    dependencies: [3]
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    action: modify
+    reason: "Add vi.unmock() call, remove it.skip() from 8 tests, and improve test timing with waitFor()"
+
+commands_to_run:
+  - command: "pnpm --filter main-app test apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    when: "after code changes"
+    required: true
+
+  - command: "pnpm --filter main-app test:coverage"
+    when: "after tests pass"
+    required: true
+
+  - command: "pnpm --filter main-app check-types"
+    when: "after code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should register Hub listener on mount' passes"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should register Hub listener on mount' passes"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should dispatch setUnauthenticated on signedOut event' passes"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should clear Cognito token manager on signedOut event' passes"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should dispatch updateTokens on tokenRefresh event' passes"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should update Cognito token manager on tokenRefresh event' passes"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should dispatch setUnauthenticated on tokenRefresh_failure event' passes"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should handle tokenRefresh event when fetchAuthSession fails' passes"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: AuthProvider.test.tsx - 'should cleanup Hub listener on unmount' passes"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Test command output showing all 8 tests passing without skips"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "Coverage report showing AuthProvider.tsx lines 109-175 included"
+    evidence_type: command
+
+  - ac_id: "AC-12"
+    planned_evidence: "Code comments in test file explaining the root cause and fix"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Root cause: Global mock in setup.ts (lines 503-516) mocks AuthProvider component, preventing useEffect from executing"
+  - "Solution: Use vi.unmock('@/services/auth/AuthProvider') pattern from AuthStateSync.integration.test.tsx"
+  - "The vi.unmock() call must be placed BEFORE importing AuthProvider to ensure real implementation is used"
+  - "All test assertions are already correct - only need to enable Hub.listen to be called"
+  - "Quick Win: Replace 100ms setTimeout with waitFor(() => expect(Hub.listen).toHaveBeenCalled()) for better test reliability"
+  - "Story file QA Discovery identified this as high-priority quick win alongside MVP fix (1 minute effort)"
+  - "No changes needed to AuthProvider.tsx implementation - it's already correct"
+  - "No changes needed to setup.ts - global mock is appropriate for most tests, just need to opt-out in this specific test file"

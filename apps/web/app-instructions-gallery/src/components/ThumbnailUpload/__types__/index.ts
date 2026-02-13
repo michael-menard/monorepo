@@ -20,10 +20,6 @@ export const MIN_FILE_SIZE = 100 // 100 bytes
 
 export type AllowedFileType = (typeof ALLOWED_FILE_TYPES)[number]
 
-// Validation result type
-export const FileValidationResultSchema = z.object({
-  valid: z.boolean(),
-  error: z.string().optional(),
-})
-
-export type FileValidationResult = z.infer<typeof FileValidationResultSchema>
+// TODO(REPA-005): Remove re-export when component migrates to @repo/upload
+import { FileValidationResultSchema, type FileValidationResult } from '@repo/upload/types'
+export { FileValidationResultSchema, type FileValidationResult }

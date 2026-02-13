@@ -1,0 +1,296 @@
+schema: 1
+story_id: "REPA-013"
+version: 1
+timestamp: "2026-02-10T20:15:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Create @repo/auth-utils package with proper structure and configuration"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/core/auth-utils/package.json"
+        description: "Package configuration with Zod 4.1.13 and subpath exports for /jwt and /guards"
+      - type: file
+        path: "packages/core/auth-utils/tsconfig.json"
+        description: "TypeScript configuration following @repo/upload pattern"
+      - type: file
+        path: "packages/core/auth-utils/vite.config.ts"
+        description: "Vite build config with subpath entry points"
+      - type: file
+        path: "packages/core/auth-utils/vitest.config.ts"
+        description: "Vitest configuration for tests"
+      - type: command
+        command: "pnpm build --filter @repo/auth-utils"
+        result: "SUCCESS - Built dist/index.js (0.93 kB), dist/jwt/index.js (1.42 kB), dist/guards/index.js (6.93 kB)"
+
+  - ac_id: "AC-2"
+    ac_text: "Migrate JWT utilities with Zod schema conversion"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/core/auth-utils/src/jwt/index.ts"
+        description: "JWT utilities with JwtPayloadSchema, CognitoIdTokenPayloadSchema, CognitoAccessTokenPayloadSchema using z.passthrough() and .extend()"
+      - type: test
+        path: "packages/core/auth-utils/src/jwt/__tests__/index.test.ts"
+        description: "29 JWT tests migrated and passing (430 lines)"
+      - type: command
+        command: "pnpm test --filter @repo/auth-utils"
+        result: "SUCCESS - 29 JWT tests passed"
+
+  - ac_id: "AC-3"
+    ac_text: "Migrate route guard utilities with Zod schema conversion"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/core/auth-utils/src/guards/index.ts"
+        description: "Route guards with RouteGuardOptionsSchema and AuthStateSchema, includes checkTokenExpiry property (NOT checkTokenExpiration)"
+      - type: test
+        path: "packages/core/auth-utils/src/guards/__tests__/index.test.ts"
+        description: "58 route guard tests migrated and passing (996 lines)"
+      - type: command
+        command: "pnpm test --filter @repo/auth-utils"
+        result: "SUCCESS - 58 route guard tests passed"
+
+  - ac_id: "AC-4"
+    ac_text: "All unit tests pass in new package location"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/core/auth-utils/src/jwt/__tests__/index.test.ts"
+        description: "29 JWT tests passed (430 lines migrated)"
+      - type: test
+        path: "packages/core/auth-utils/src/guards/__tests__/index.test.ts"
+        description: "58 route guard tests passed (996 lines migrated)"
+      - type: command
+        command: "pnpm test --filter @repo/auth-utils"
+        result: "SUCCESS - 87 total tests passed (29 JWT + 58 guards), 1,426 lines of tests migrated"
+
+  - ac_id: "AC-5"
+    ac_text: "Package builds successfully with correct exports"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm build --filter @repo/auth-utils"
+        result: "SUCCESS - dist/index.js, dist/jwt/index.js, dist/guards/index.js with .d.ts files"
+      - type: file
+        path: "packages/core/auth-utils/dist/index.js"
+        description: "Root export (0.93 kB gzipped 0.38 kB)"
+      - type: file
+        path: "packages/core/auth-utils/dist/jwt/index.js"
+        description: "JWT subpath export (1.42 kB gzipped 0.67 kB)"
+      - type: file
+        path: "packages/core/auth-utils/dist/guards/index.js"
+        description: "Guards subpath export (6.93 kB gzipped 1.90 kB)"
+      - type: command
+        command: "pnpm check-types --filter @repo/auth-utils"
+        result: "SUCCESS - TypeScript compilation passes"
+
+  - ac_id: "AC-6"
+    ac_text: "main-app imports updated to use new package"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/web/main-app/src/hooks/useTokenRefresh.ts"
+        description: "Import updated from '@/lib/jwt' to '@repo/auth-utils/jwt'"
+      - type: file
+        path: "apps/web/main-app/src/routes/index.ts"
+        description: "Import updated from '@/lib/route-guards' to '@repo/auth-utils/guards'"
+      - type: file
+        path: "apps/web/main-app/package.json"
+        description: "Added '@repo/auth-utils': 'workspace:*' dependency"
+      - type: test
+        path: "apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+        description: "Test mocks updated to '@repo/auth-utils/jwt', 11 tests pass"
+      - type: command
+        command: "pnpm test apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+        result: "SUCCESS - 11 tests passed with new imports"
+
+  - ac_id: "AC-7"
+    ac_text: "Package includes comprehensive documentation"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/core/auth-utils/README.md"
+        description: "Comprehensive 239-line README with usage examples, API reference, Zod schema docs, and migration notes"
+
+  - ac_id: "AC-8"
+    ac_text: "All code passes linting and type checking"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm lint --filter @repo/auth-utils"
+        result: "SUCCESS - No lint errors"
+      - type: command
+        command: "pnpm check-types --filter @repo/auth-utils"
+        result: "SUCCESS - No type errors (TanStack Router type warnings fixed with type assertions)"
+      - type: command
+        command: "pnpm test --filter @repo/auth-utils"
+        result: "SUCCESS - 87 tests passed"
+
+touched_files:
+  # Created package files
+  - path: "packages/core/auth-utils/package.json"
+    action: created
+    lines: 43
+    description: "Package configuration with Zod 4.1.13 and subpath exports"
+  - path: "packages/core/auth-utils/tsconfig.json"
+    action: created
+    lines: 35
+    description: "TypeScript configuration"
+  - path: "packages/core/auth-utils/vite.config.ts"
+    action: created
+    lines: 42
+    description: "Vite build configuration with dts plugin"
+  - path: "packages/core/auth-utils/vitest.config.ts"
+    action: created
+    lines: 19
+    description: "Vitest test configuration"
+  - path: "packages/core/auth-utils/src/index.ts"
+    action: created
+    lines: 19
+    description: "Root barrel export"
+  - path: "packages/core/auth-utils/src/jwt/index.ts"
+    action: created
+    lines: 128
+    description: "JWT utilities with Zod schemas"
+  - path: "packages/core/auth-utils/src/guards/index.ts"
+    action: created
+    lines: 372
+    description: "Route guard utilities with Zod schemas"
+  - path: "packages/core/auth-utils/src/__tests__/setup.ts"
+    action: created
+    lines: 10
+    description: "Test setup with logger mock"
+  - path: "packages/core/auth-utils/src/jwt/__tests__/index.test.ts"
+    action: created
+    lines: 430
+    description: "JWT unit tests (migrated from main-app)"
+  - path: "packages/core/auth-utils/src/guards/__tests__/index.test.ts"
+    action: created
+    lines: 996
+    description: "Route guard unit tests (migrated from main-app)"
+  - path: "packages/core/auth-utils/README.md"
+    action: created
+    lines: 239
+    description: "Package documentation"
+  
+  # Modified main-app files
+  - path: "apps/web/main-app/package.json"
+    action: modified
+    lines: 1
+    description: "Added @repo/auth-utils dependency"
+  - path: "apps/web/main-app/src/hooks/useTokenRefresh.ts"
+    action: modified
+    lines: 1
+    description: "Updated import to @repo/auth-utils/jwt"
+  - path: "apps/web/main-app/src/routes/index.ts"
+    action: modified
+    lines: 1
+    description: "Updated import to @repo/auth-utils/guards"
+  - path: "apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+    action: modified
+    lines: 2
+    description: "Updated mocks and imports to @repo/auth-utils/jwt"
+  
+  # Deleted main-app files
+  - path: "apps/web/main-app/src/lib/jwt.ts"
+    action: deleted
+    lines: 123
+    description: "Migrated to @repo/auth-utils/jwt"
+  - path: "apps/web/main-app/src/lib/route-guards.ts"
+    action: deleted
+    lines: 346
+    description: "Migrated to @repo/auth-utils/guards"
+  - path: "apps/web/main-app/src/lib/__tests__/jwt.test.ts"
+    action: deleted
+    lines: 430
+    description: "Migrated to @repo/auth-utils/src/jwt/__tests__/index.test.ts"
+  - path: "apps/web/main-app/src/lib/__tests__/route-guards.test.ts"
+    action: deleted
+    lines: 996
+    description: "Migrated to @repo/auth-utils/src/guards/__tests__/index.test.ts"
+
+commands_run:
+  - command: "pnpm install"
+    result: SUCCESS
+    output: "Installed dependencies for @repo/auth-utils"
+    timestamp: "2026-02-10T20:02:00Z"
+  
+  - command: "pnpm build --filter @repo/auth-utils"
+    result: SUCCESS
+    output: "Built dist/index.js (0.93 kB), dist/jwt/index.js (1.42 kB), dist/guards/index.js (6.93 kB)"
+    timestamp: "2026-02-10T20:03:00Z"
+  
+  - command: "pnpm test --filter @repo/auth-utils"
+    result: SUCCESS
+    output: "87 tests passed (29 JWT + 58 guards) in 16ms"
+    timestamp: "2026-02-10T20:07:00Z"
+  
+  - command: "pnpm check-types --filter @repo/auth-utils"
+    result: SUCCESS
+    output: "TypeScript compilation passes"
+    timestamp: "2026-02-10T20:08:00Z"
+  
+  - command: "pnpm lint --filter @repo/auth-utils"
+    result: SUCCESS
+    output: "No lint errors"
+    timestamp: "2026-02-10T20:10:00Z"
+  
+  - command: "pnpm add @repo/auth-utils@workspace:* --filter @repo/main-app"
+    result: SUCCESS
+    output: "Added @repo/auth-utils to main-app dependencies"
+    timestamp: "2026-02-10T20:11:00Z"
+  
+  - command: "pnpm test apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+    result: SUCCESS
+    output: "11 tests passed with new @repo/auth-utils imports"
+    timestamp: "2026-02-10T20:10:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 98
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra - package creation story does not require E2E tests"
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results: null
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: 0
+  branches: 0
+
+notable_decisions:
+  - "Used Zod 4.1.13 to match @repo/upload and standardize monorepo"
+  - "Used .passthrough() on JwtPayloadSchema to allow additional claims"
+  - "Used .extend() for Cognito payload schemas to inherit base JWT schema"
+  - "Fixed TanStack Router type errors with 'as any' type assertions (same approach as existing codebase)"
+  - "Property name is checkTokenExpiry (NOT checkTokenExpiration) per source verification"
+  - "Package exports point to dist/ (built output) not src/ per @repo/upload pattern"
+  - "Followed REPA-001 package structure pattern for consistency"
+
+known_deviations:
+  - "TanStack Router search param types require 'as any' assertions due to strict type checking - same as original code"
+  - "main-app build has pre-existing MSW import errors unrelated to this migration"
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 52312, out: 0 }

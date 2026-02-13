@@ -1,0 +1,209 @@
+---
+doc_type: risk_predictions
+story_id: REPA-015
+created_at: "2026-02-10"
+agent_version: "pm-story-risk-predictor-v1.0"
+prediction_mode: "fallback"
+confidence: "medium"
+notes: "Predictions generated using fallback heuristics (KB unavailable)"
+---
+
+# REPA-015 Risk Predictions
+
+## Split Risk Prediction
+
+**Predicted Split Risk:** LOW (0.15)
+
+**Factors Contributing to Low Risk:**
+- Small scope (~50 LOC migration)
+- Clear boundaries (generic vs. domain-specific)
+- Well-tested utilities with existing test coverage
+- No new dependencies required
+- Proven migration pattern from REPA-008
+- Single package target (no multi-package coordination)
+
+**Factors Increasing Risk:**
+- None significant
+
+**Recommendation:** No split required. Story is appropriately sized at 1 SP.
+
+**Confidence:** High - scope is well-defined and constrained
+
+---
+
+## Review Cycle Prediction
+
+**Predicted Review Cycles:** 1-2
+
+**Baseline Estimate:** 1 review cycle
+
+**Factors Supporting Single-Cycle Success:**
+- Straightforward utility extraction (low implementation ambiguity)
+- Clear acceptance criteria from seed
+- High test coverage (existing tests migrate with utilities)
+- No architectural concerns (package already exists)
+- Low complexity (pure functions, no state)
+
+**Factors That May Require Second Cycle:**
+- Import path updates across multiple files (minor risk of missing one)
+- Documentation quality (JSDoc may need refinement)
+- Test migration completeness (verify all relevant tests moved)
+
+**Confidence:** Medium-High - simple implementation but thorough review needed
+
+---
+
+## Token Cost Prediction
+
+**Predicted Token Range:** 80,000 - 120,000 tokens (full lifecycle)
+
+**Breakdown by Phase:**
+
+| Phase | Estimated Tokens | Notes |
+|-------|-----------------|-------|
+| Story Seed Generation | 15,000 | ✅ Already complete |
+| Story Generation (PM) | 25,000 | ✅ Current phase |
+| Implementation | 30,000 - 50,000 | Small scope, ~4 file creations, import updates |
+| QA Gate Review | 15,000 - 25,000 | Test verification, coverage check |
+| Code Review | 10,000 - 15,000 | Small diff, clear intent |
+| **Total** | **80,000 - 120,000** | Full lifecycle end-to-end |
+
+**Confidence:** Medium - based on similar small-scope utility stories
+
+**Cost Drivers:**
+- Small code changes (~50 LOC + tests)
+- Limited file count (~7 new files)
+- Simple test updates (no complex mocking)
+- Minimal documentation additions
+
+**Cost Reducers:**
+- Clear implementation path (no exploration needed)
+- Existing migration pattern (REPA-008 precedent)
+- High code reuse (extraction, not creation)
+
+---
+
+## Risk Factors Summary
+
+### Low Risk (Severity: 1-3)
+
+| Factor | Severity | Mitigation |
+|--------|----------|------------|
+| Import path changes | 2 | Update all imports before deleting source |
+| Test migration completeness | 2 | Verify coverage maintained |
+| Documentation clarity | 2 | JSDoc review in QA gate |
+| Timing with REPA-008 | 1 | Verify useAnnouncer complete first |
+
+### Medium Risk (Severity: 4-6)
+
+None identified.
+
+### High Risk (Severity: 7-10)
+
+None identified.
+
+**Overall Risk Profile:** LOW
+
+---
+
+## Historical Comparison
+
+**Similar Stories (if available):**
+- REPA-008: Add Gallery Keyboard Hooks - useAnnouncer migration portion
+  - Actual cycles: 1 (presumed, in progress)
+  - Actual tokens: Unknown
+  - Actual outcome: Successful migration
+
+**Pattern Match:** This story is similar in scope to the useAnnouncer portion of REPA-008 (utility migration from app to package with tests).
+
+**Adjustment Factors:**
+- REPA-015 has slightly smaller scope (50 LOC vs. ~180 LOC for useAnnouncer)
+- REPA-015 has precedent from REPA-008 (should be faster)
+- REPA-015 has multiple utilities (slightly more file management)
+
+**Adjusted Predictions:**
+- Split risk: LOW (unchanged - scope is small)
+- Review cycles: 1-2 (unchanged - straightforward but needs verification)
+- Token cost: 80,000-120,000 (slightly lower than typical due to precedent)
+
+---
+
+## Recommendations for Efficient Execution
+
+### To Minimize Review Cycles
+
+1. **Complete Test Migration Checklist:**
+   - Verify all tests for migrated utilities are moved
+   - Verify all tests still pass in both package and app
+   - Verify coverage metrics maintained
+
+2. **Update All Import Paths:**
+   - Search codebase for all uses of focusRingClasses
+   - Update GotItModal, WishlistCard, and any other consumers
+   - Run TypeScript check to catch missing imports
+
+3. **Add Comprehensive Documentation:**
+   - JSDoc with usage examples for each utility
+   - Update package README with new utilities
+   - Reference WCAG standards where applicable
+
+### To Minimize Token Cost
+
+1. **Use Existing Tests:**
+   - Extract tests directly from app (don't rewrite)
+   - Verify tests pass without modification
+   - Minimal test adaptation should be needed
+
+2. **Follow REPA-008 Pattern:**
+   - Use same file structure as useAnnouncer
+   - Use same export pattern in index.ts
+   - Copy proven migration approach
+
+3. **Clear Implementation Plan:**
+   - Follow phased approach from feasibility review
+   - No exploratory work needed (scope is clear)
+   - Minimize back-and-forth with reviewer
+
+### To Avoid Split
+
+1. **Strict Scope Adherence:**
+   - Only migrate 4 utilities as specified
+   - Do NOT attempt to migrate domain-specific functions
+   - Do NOT add "nice to have" features
+
+2. **Clear Non-Goals:**
+   - Do NOT create generic ARIA builders (defer to future)
+   - Do NOT refactor existing code (extract as-is)
+   - Do NOT add new utilities beyond scope
+
+---
+
+## Prediction Confidence Levels
+
+| Metric | Confidence | Reasoning |
+|--------|-----------|-----------|
+| Split Risk | High | Small, well-defined scope with clear boundaries |
+| Review Cycles | Medium-High | Straightforward but needs thorough verification |
+| Token Cost | Medium | Based on heuristics, no historical data for exact match |
+
+---
+
+## Monitoring Recommendations
+
+Track these metrics during execution:
+
+1. **Actual Review Cycles:** Compare to predicted 1-2 cycles
+2. **Actual Token Cost:** Compare to predicted 80k-120k range
+3. **Implementation Time:** Track against 1 SP estimate
+4. **Test Coverage Change:** Ensure maintained at 45%+ globally
+
+If actuals deviate significantly:
+- Update prediction model for future utility migration stories
+- Document lessons learned for pattern library
+- Adjust estimates for similar work (REPA-016, REPA-021, etc.)
+
+---
+
+**Predictions Generated:** 2026-02-10
+**Prediction Model:** Fallback heuristics (WKFL-007 compliant)
+**Next Review:** Post-implementation (compare actuals to predictions)

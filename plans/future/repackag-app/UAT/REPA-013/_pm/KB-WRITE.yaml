@@ -1,0 +1,21 @@
+# KB Write Record for REPA-013
+# Generated: 2026-02-10
+
+story_metadata:
+  story_id: REPA-013
+  feature: repackag-app
+  title: "Create @repo/auth-utils Package"
+  story_dir: plans/future/repackag-app/backlog/REPA-013
+  story_file: plans/future/repackag-app/backlog/REPA-013/REPA-013.md
+  story_type: feature
+  points: 3
+  priority: high
+  state: backlog
+  touches_backend: false
+  touches_frontend: true
+  touches_database: false
+  touches_infra: false
+
+kb_write_status: deferred
+reason: "KB write functionality not available in current execution context"
+retry_instructions: "Run kb_write_story with above metadata after KB infrastructure is available"

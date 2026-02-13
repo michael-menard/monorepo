@@ -1,0 +1,485 @@
+schema: 1
+story_id: "REPA-009"
+timestamp: "2026-02-11T19:30:00Z"
+
+steps:
+  - id: 1
+    description: "Create Zod schemas for new GalleryCard props (selection, drag, hover overlay)"
+    files:
+      - "packages/core/gallery/src/types/index.ts"
+    dependencies: []
+    slice: packages
+    notes:
+      - "Define SelectionPositionSchema: z.enum(['top-left', 'top-right'])"
+      - "Define DragHandlePositionSchema: z.enum(['top-left', 'top-right'])"
+      - "Export schemas for use in GalleryCardPropsSchema"
+
+  - id: 2
+    description: "Update GalleryCardPropsSchema with selection mode props"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Add selectable: z.boolean().optional()"
+      - "Add selected: z.boolean().optional() - ALREADY EXISTS, verify usage"
+      - "Add onSelect: z.function().args(z.boolean()).returns(z.void()).optional()"
+      - "Add selectionPosition: SelectionPositionSchema.optional()"
+      - "Update GalleryCardProps type inference"
+
+  - id: 3
+    description: "Update GalleryCardPropsSchema with drag handle props"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Add draggable: z.boolean().optional()"
+      - "Add dragHandlePosition: DragHandlePositionSchema.optional()"
+      - "Add renderDragHandle: z.custom<(listeners: any, attributes: any) => React.ReactNode>().optional()"
+      - "Note: z.function() cannot validate render prop signatures, use z.custom()"
+
+  - id: 4
+    description: "Update GalleryCardPropsSchema with hover overlay prop"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Add hoverOverlay: z.custom<React.ReactNode>().optional()"
+      - "React.ReactNode cannot be validated by Zod, use z.custom() or z.any()"
+
+  - id: 5
+    description: "Remove actions overlay from GalleryCard (BREAKING CHANGE)"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [2, 3, 4]
+    slice: packages
+    notes:
+      - "Remove actions prop from GalleryCardPropsSchema"
+      - "Remove actions overlay JSX (lines 215-231 in current implementation)"
+      - "Document breaking change in TSDoc comment"
+      - "Add migration note: use hoverOverlay prop instead"
+
+  - id: 6
+    description: "Implement selection checkbox overlay rendering in GalleryCard"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [5]
+    slice: packages
+    notes:
+      - "Import Check icon from lucide-react"
+      - "Add conditional rendering: {selectable ? <checkbox JSX> : null}"
+      - "Position: absolute top-2 left-2 (or right-2 if selectionPosition='top-right')"
+      - "Checkbox: h-6 w-6 rounded-full border-2"
+      - "Selected state: border-primary bg-primary text-primary-foreground with Check icon"
+      - "Unselected state: border-white bg-black/40 text-white (no icon)"
+      - "Z-index: z-10"
+      - "DECISION: When both selectable AND draggable, checkbox ALWAYS at top-left (ignore selectionPosition)"
+
+  - id: 7
+    description: "Implement selection click behavior in GalleryCard"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [6]
+    slice: packages
+    notes:
+      - "Update handleClick: if selectable && !onClick, call onSelect(!selected)"
+      - "If selectable && onClick defined, call onClick (explicit override)"
+      - "Update handleKeyDown: follow same logic for Enter/Space keys"
+      - "Add checkbox click handler: calls onSelect(!selected), stops propagation"
+      - "Pattern from InspirationCard/AlbumCard (lines 79-92)"
+
+  - id: 8
+    description: "Implement drag handle rendering in GalleryCard"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [5]
+    slice: packages
+    notes:
+      - "Import GripVertical icon from lucide-react"
+      - "Add conditional rendering: {draggable ? <drag handle JSX> : null}"
+      - "Position: absolute top-2 right-2 (or left-2 if dragHandlePosition='top-left')"
+      - "DECISION: When both selectable AND draggable, drag handle ALWAYS at top-right (ignore dragHandlePosition)"
+      - "Default drag handle: button with h-11 w-11 (44px touch target), GripVertical icon"
+      - "Responsive: md:opacity-0 md:group-hover:opacity-100 (always visible mobile, hover desktop)"
+      - "Cursor: cursor-grab active:cursor-grabbing"
+      - "Z-index: z-10"
+      - "If renderDragHandle provided, use custom render: renderDragHandle(listeners, attributes)"
+
+  - id: 9
+    description: "Implement drag handle accessibility in GalleryCard"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [8]
+    slice: packages
+    notes:
+      - "Add aria-label to drag handle button: `Drag to reorder ${title}`"
+      - "Add touch-none class (WCAG 2.5.5: prevent scroll interference)"
+      - "Drag handle accepts {...listeners} {...attributes} from useSortable (passed via renderDragHandle or default)"
+      - "Note: listeners and attributes will be undefined in default implementation (parent must pass via renderDragHandle)"
+
+  - id: 10
+    description: "Implement hover overlay container in GalleryCard"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [5]
+    slice: packages
+    notes:
+      - "Add conditional rendering inside image container: {hoverOverlay ? <overlay JSX> : null}"
+      - "Container: absolute inset-0 z-10"
+      - "Gradient: bg-gradient-to-t from-black/60 via-transparent to-transparent"
+      - "Responsive: md:opacity-0 md:group-hover:opacity-100 (always visible mobile, hover desktop)"
+      - "Transition: transition-opacity duration-200"
+      - "Render hoverOverlay content inside gradient container"
+
+  - id: 11
+    description: "Update GalleryCard TSDoc with selection mode examples"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [7]
+    slice: packages
+    notes:
+      - "Add @example for selection mode usage"
+      - "Document selectable, selected, onSelect, selectionPosition props"
+      - "Document position conflict resolution (both selectable+draggable: fixed positions)"
+
+  - id: 12
+    description: "Update GalleryCard TSDoc with drag handle examples"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [9]
+    slice: packages
+    notes:
+      - "Add @example for drag handle usage with SortableGallery"
+      - "Document draggable, dragHandlePosition, renderDragHandle props"
+      - "Document 44x44px touch target requirement"
+      - "Document aria-label pattern"
+
+  - id: 13
+    description: "Update GalleryCard TSDoc with hover overlay examples"
+    files:
+      - "packages/core/gallery/src/components/GalleryCard.tsx"
+    dependencies: [10]
+    slice: packages
+    notes:
+      - "Add @example for hoverOverlay usage"
+      - "Document mobile vs desktop behavior"
+      - "Document migration from actions prop (BREAKING CHANGE note)"
+
+  - id: 14
+    description: "Write unit tests for GalleryCard selection mode (AC-1, AC-2, AC-3)"
+    files:
+      - "packages/core/gallery/src/components/__tests__/GalleryCard.test.tsx"
+    dependencies: [7]
+    slice: packages
+    notes:
+      - "AC-1: Render with selectable=true, verify prop accepted"
+      - "AC-1: Verify Zod schema validates selection props correctly"
+      - "AC-2: Render checkbox overlay at selectionPosition"
+      - "AC-2: Verify checkbox styling (24x24px, border-2, rounded-full)"
+      - "AC-2: Verify selected state shows Check icon"
+      - "AC-2: Verify unselected state has no Check icon"
+      - "AC-2: Snapshot test for selected/unselected states"
+      - "AC-3: Click card with selectable=true, verify onSelect called"
+      - "AC-3: Click card with selectable+onClick, verify onClick called (not onSelect)"
+      - "AC-3: Press Enter key, verify onSelect called"
+      - "AC-3: Press Space key, verify onSelect called"
+      - "AC-3: Click checkbox directly, verify onSelect called and propagation stopped"
+
+  - id: 15
+    description: "Write unit tests for GalleryCard drag handle (AC-4, AC-5, AC-6)"
+    files:
+      - "packages/core/gallery/src/components/__tests__/GalleryCard.test.tsx"
+    dependencies: [9]
+    slice: packages
+    notes:
+      - "AC-4: Render with draggable=true, verify prop accepted"
+      - "AC-4: Verify Zod schema validates drag handle props correctly"
+      - "AC-5: Render drag handle at dragHandlePosition"
+      - "AC-5: Verify drag handle is 44x44px (measure with getBoundingClientRect or test class h-11 w-11)"
+      - "AC-5: Verify custom renderDragHandle used when provided"
+      - "AC-5: Snapshot test for default drag handle"
+      - "AC-6: Verify drag handle has aria-label with card title"
+      - "AC-6: Mock useSortable, verify listeners and attributes forwarded"
+      - "AC-6: Verify touch-none class present"
+      - "AC-6: Run axe-core on card with drag handle, verify no violations"
+
+  - id: 16
+    description: "Write unit tests for GalleryCard hover overlay (AC-7)"
+    files:
+      - "packages/core/gallery/src/components/__tests__/GalleryCard.test.tsx"
+    dependencies: [10]
+    slice: packages
+    notes:
+      - "AC-7: Render with hoverOverlay={<div>Custom Content</div>}, verify content renders"
+      - "AC-7: Verify hover overlay has gradient classes"
+      - "AC-7: Verify hover overlay has opacity transition classes"
+      - "AC-7: Snapshot test for hover overlay state"
+
+  - id: 17
+    description: "Write unit tests for GalleryCard position conflict resolution"
+    files:
+      - "packages/core/gallery/src/components/__tests__/GalleryCard.test.tsx"
+    dependencies: [6, 8]
+    slice: packages
+    notes:
+      - "Test: When both selectable=true and draggable=true, checkbox at top-left, drag handle at top-right"
+      - "Test: selectionPosition and dragHandlePosition props ignored when both features enabled"
+      - "Verify z-index layering (no visual collisions)"
+
+  - id: 18
+    description: "Refactor InspirationCard to use GalleryCard (AC-8)"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/InspirationCard/index.tsx"
+    dependencies: [7, 10]
+    slice: frontend
+    notes:
+      - "Import GalleryCard from @repo/gallery"
+      - "Replace Card wrapper with GalleryCard"
+      - "Map props: selectionMode -> selectable, isSelected -> selected"
+      - "Move hover overlay content (title, badges, tags) into hoverOverlay prop"
+      - "Remove duplicate image container, checkbox overlay, hover gradient logic"
+      - "Keep top actions (source link, more menu) inside hoverOverlay"
+      - "Maintain existing InspirationCardProps API (no breaking changes)"
+      - "Target: ~100 LOC reduction (220 -> ~120)"
+
+  - id: 19
+    description: "Write regression tests for InspirationCard refactor (AC-8)"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/InspirationCard/__tests__/InspirationCard.test.tsx"
+    dependencies: [18]
+    slice: frontend
+    notes:
+      - "Run ALL existing InspirationCard tests (baseline)"
+      - "Integration test: Render with selection mode, verify checkbox renders"
+      - "Integration test: Verify hover overlay contains title/badges/tags"
+      - "Snapshot test: Compare before/after refactor (should match visually)"
+      - "Verify all existing tests pass post-refactor"
+
+  - id: 20
+    description: "Refactor AlbumCard to use GalleryCard (AC-9)"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/AlbumCard/index.tsx"
+    dependencies: [7, 10]
+    slice: frontend
+    notes:
+      - "Import GalleryCard from @repo/gallery"
+      - "Replace Card wrapper with GalleryCard"
+      - "Map props: selectionMode -> selectable, isSelected -> selected"
+      - "Move hover overlay content (title, description, folder icon, badges) into hoverOverlay prop"
+      - "Move stacked card effect to wrapper div OUTSIDE GalleryCard (preserve visual depth)"
+      - "Remove duplicate image container, checkbox overlay, hover gradient logic"
+      - "Maintain existing AlbumCardProps API (no breaking changes)"
+      - "Target: ~100 LOC reduction (227 -> ~127)"
+
+  - id: 21
+    description: "Write regression tests for AlbumCard refactor (AC-9)"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/AlbumCard/__tests__/AlbumCard.test.tsx"
+    dependencies: [20]
+    slice: frontend
+    notes:
+      - "Run ALL existing AlbumCard tests (baseline)"
+      - "Integration test: Render with selection mode, verify checkbox renders"
+      - "Integration test: Verify stacked card effect preserved"
+      - "Snapshot test: Compare before/after refactor (should match visually)"
+      - "Verify all existing tests pass post-refactor"
+
+  - id: 22
+    description: "Update @repo/gallery README with new GalleryCard features (AC-11)"
+    files:
+      - "packages/core/gallery/README.md"
+    dependencies: [11, 12, 13]
+    slice: packages
+    notes:
+      - "Add section: Selection Mode"
+      - "Add section: Drag Handles"
+      - "Add section: Hover Overlays"
+      - "Add section: Breaking Changes (actions prop removed)"
+      - "Add section: Migration Guide (actions -> hoverOverlay)"
+      - "Add code examples for each feature"
+
+  - id: 23
+    description: "Run full test suite and verify coverage targets (AC-10)"
+    files: []
+    dependencies: [14, 15, 16, 17, 19, 21]
+    slice: packages
+    notes:
+      - "Run: pnpm test packages/core/gallery"
+      - "Run: pnpm test apps/web/app-inspiration-gallery"
+      - "Verify overall coverage >= 45%"
+      - "Verify GalleryCard.tsx coverage >= 80%"
+      - "Fix any failing tests before proceeding"
+
+files_to_change:
+  - path: "packages/core/gallery/src/types/index.ts"
+    action: modify
+    reason: "Add SelectionPositionSchema and DragHandlePositionSchema for new GalleryCard props (Step 1)"
+
+  - path: "packages/core/gallery/src/components/GalleryCard.tsx"
+    action: modify
+    reason: "Enhance GalleryCard with selection mode, drag handles, hover overlay support. Remove actions overlay (BREAKING CHANGE). Update Zod schema and TSDoc (Steps 2-13)"
+
+  - path: "packages/core/gallery/src/components/__tests__/GalleryCard.test.tsx"
+    action: create
+    reason: "Add comprehensive unit tests for selection, drag handles, hover overlay, position conflicts (Steps 14-17)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/InspirationCard/index.tsx"
+    action: modify
+    reason: "Refactor to use GalleryCard instead of Card, eliminate ~100 LOC duplicate code (Step 18)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/InspirationCard/__tests__/InspirationCard.test.tsx"
+    action: modify
+    reason: "Add regression tests and integration tests for InspirationCard refactor (Step 19)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/AlbumCard/index.tsx"
+    action: modify
+    reason: "Refactor to use GalleryCard instead of Card, eliminate ~100 LOC duplicate code (Step 20)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/AlbumCard/__tests__/AlbumCard.test.tsx"
+    action: modify
+    reason: "Add regression tests and integration tests for AlbumCard refactor (Step 21)"
+
+  - path: "packages/core/gallery/README.md"
+    action: create
+    reason: "Document new GalleryCard features, breaking changes, and migration guide (Step 22)"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/gallery"
+    when: "after GalleryCard enhancements (Steps 1-13)"
+    required: true
+
+  - command: "pnpm test --filter @repo/gallery"
+    when: "after GalleryCard tests written (Steps 14-17)"
+    required: true
+
+  - command: "pnpm build --filter app-inspiration-gallery"
+    when: "after InspirationCard and AlbumCard refactors (Steps 18-21)"
+    required: true
+
+  - command: "pnpm test --filter app-inspiration-gallery"
+    when: "after refactor tests written (Steps 19, 21)"
+    required: true
+
+  - command: "pnpm lint --filter @repo/gallery --filter app-inspiration-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/gallery --filter app-inspiration-gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies selection props accepted and Zod schema validation"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies checkbox overlay rendering, styling, positioning, selected/unselected states. Snapshot tests capture visual states."
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies click behavior, keyboard activation, onSelect callback, propagation stopping"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies drag handle props accepted and Zod schema validation"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies drag handle rendering, positioning, 44x44px size, custom renderDragHandle. Snapshot tests capture default state."
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies aria-label, listener/attribute forwarding, touch-none class, 44x44px size measurement. Axe-core accessibility test."
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests: GalleryCard.test.tsx verifies hover overlay content rendering, gradient classes, opacity transitions. Snapshot test."
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Integration tests: InspirationCard.test.tsx verifies GalleryCard integration, selection mode, hover overlay content. Regression tests ensure existing functionality preserved."
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Integration tests: AlbumCard.test.tsx verifies GalleryCard integration, selection mode, stacked card effect preservation. Regression tests ensure existing functionality preserved."
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Coverage report: pnpm test shows >= 45% overall, >= 80% for GalleryCard.tsx. All tests pass for @repo/gallery and app-inspiration-gallery."
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "File: packages/core/gallery/README.md contains documentation for selection mode, drag handles, hover overlays, breaking changes, and migration guide."
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Position Conflict Resolution: Fixed positions vs flexible props when both selectable and draggable enabled?"
+    decision: "Use fixed positions (checkbox=top-left, drag=top-right)"
+    rationale: |
+      When both selectable=true and draggable=true:
+      - Selection checkbox ALWAYS renders at top-left
+      - Drag handle ALWAYS renders at top-right
+      - selectionPosition and dragHandlePosition props are IGNORED in this case
+      - This prevents overlay collisions and simplifies implementation
+      - Most gallery apps use selection OR drag, not both simultaneously
+      - Eliminates edge case complexity for MVP
+    decided_by: design_decision
+    source: "DECISIONS.yaml Decision #1"
+
+  - id: ARCH-002
+    question: "Actions Overlay: Remove built-in actions overlay or keep both?"
+    decision: "Remove built-in actions overlay (breaking change)"
+    rationale: |
+      - REMOVE existing actions overlay from GalleryCard
+      - Consumers must now use hoverOverlay prop to provide actions content
+      - Migration: InspirationCard and AlbumCard will manage their own action buttons within hoverOverlay
+      - Cleaner API, no z-index conflicts, more flexible
+      - Only 3 components currently use GalleryCard, migration effort is low
+      - InspirationCard and AlbumCard refactors (AC-8, AC-9) already account for this change
+    decided_by: design_decision
+    source: "DECISIONS.yaml Decision #2"
+    breaking_change: true
+
+  - id: ARCH-003
+    question: "Mobile Hover Overlay: Always visible or tap-to-reveal?"
+    decision: "Always visible on mobile, hover-visible on desktop"
+    rationale: |
+      - On mobile (<768px): Hover overlay ALWAYS VISIBLE (no opacity-0)
+      - On desktop (>=768px): Hover overlay visible on hover only
+      - Implementation: Use md:opacity-0 md:group-hover:opacity-100 classes
+      - Matches existing patterns in SortableInspirationCard/SortableWishlistCard
+      - Ensures content always accessible on mobile devices
+      - No new props needed
+    decided_by: design_decision
+    source: "DECISIONS.yaml Decision #3"
+
+  - id: ARCH-004
+    question: "renderDragHandle Prop: MVP requirement or future work?"
+    decision: "Include in MVP but document as optional/advanced"
+    rationale: |
+      - Story includes renderDragHandle in AC-4 and AC-5
+      - No current consumers identified, but provides flexibility for future needs
+      - Implementation is straightforward (~20 LOC for default + custom render logic)
+      - Default GripVertical icon covers 99% of use cases
+      - Custom render prop allows brand-specific icon customization if needed
+      - Low risk to include, defer actual custom usage to future work
+    decided_by: design_decision
+    source: "DECISIONS.yaml Decision #4"
+
+complexity: moderate
+
+notes:
+  - "REPA-007 (SortableGallery) is in-progress but does NOT block REPA-009. Drag handle UI can be built independently."
+  - "Mock useSortable in unit tests to verify listener/attribute forwarding. Defer full integration validation to REPA-010."
+  - "Breaking change (actions overlay removal) is justified and low-impact. Only 3 components affected, 2 already refactoring."
+  - "Target LOC reduction: ~200 LOC duplicate code eliminated from InspirationCard + AlbumCard"
+  - "Target LOC addition: ~200 LOC in GalleryCard, ~150 LOC in tests, Net: +220 LOC"
+  - "Per KNOWLEDGE-CONTEXT lesson REPA-LESSON-001: Always define Zod schemas first, infer types with z.infer<>"
+  - "Per KNOWLEDGE-CONTEXT lesson REPA-LESSON-005: WCAG 2.5.5 requires 44x44px touch targets. Use h-11 w-11 classes."
+  - "Per ADR-002: Props-based composition over inheritance. GalleryCard provides feature slots via props."
+  - "Per PATTERN-003: Selection click behavior hierarchy ensures explicit onClick prop overrides default onSelect behavior"
+  - "Test strategy: Comprehensive unit tests for GalleryCard (80%+ coverage), regression tests for InspirationCard/AlbumCard, integration tests for refactors"

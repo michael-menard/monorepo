@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { z } from 'zod'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../_lib/utils'
 
@@ -389,6 +390,67 @@ const GalleryGridSkeleton = React.forwardRef<HTMLDivElement, GalleryGridSkeleton
 )
 GalleryGridSkeleton.displayName = 'GalleryGridSkeleton'
 
+// Dashboard Skeleton
+const DashboardSkeletonPropsSchema = z.object({
+  className: z.string().optional(),
+})
+
+type DashboardSkeletonProps = z.infer<typeof DashboardSkeletonPropsSchema>
+
+const DashboardSkeleton = React.forwardRef<HTMLDivElement, DashboardSkeletonProps>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn('space-y-8 animate-in fade-in duration-300', className)}
+      aria-busy="true"
+      aria-label="Loading dashboard"
+      data-testid="dashboard-skeleton"
+      {...props}
+    >
+      {/* Header Skeleton */}
+      <div className="space-y-2">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-5 w-64" />
+      </div>
+
+      {/* Quick Actions Skeleton */}
+      <div className="flex gap-2">
+        <Skeleton className="h-10 w-28" />
+        <Skeleton className="h-10 w-36" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      {/* Stats Cards Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="p-6 border rounded-lg space-y-3">
+            <div className="flex justify-between items-center">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-9 w-9 rounded-lg" />
+            </div>
+            <Skeleton className="h-8 w-16" />
+          </div>
+        ))}
+      </div>
+
+      {/* Recent MOCs Skeleton */}
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-32" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="aspect-square rounded-lg" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  ),
+)
+DashboardSkeleton.displayName = 'DashboardSkeleton'
+
 export {
   Skeleton,
   CardSkeleton,
@@ -400,5 +462,9 @@ export {
   MocCardSkeleton,
   MocCardCompactSkeleton,
   GalleryGridSkeleton,
+  DashboardSkeleton,
+  DashboardSkeletonPropsSchema,
   skeletonVariants,
 }
+
+export type { DashboardSkeletonProps }

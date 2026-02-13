@@ -1,0 +1,274 @@
+schema: 1
+story_id: "REPA-019"
+timestamp: "2026-02-10T23:15:00Z"
+
+steps:
+  - id: 1
+    description: "Create errors/ directory structure in @repo/api-client"
+    files:
+      - "packages/core/api-client/src/errors/"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Move errorMapping.ts to @repo/api-client/src/errors/error-mapping.ts"
+    files:
+      - "packages/core/api-client/src/errors/error-mapping.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Refactor and move authFailureHandler.ts to @repo/api-client/src/errors/auth-failure.ts with dependency injection"
+    files:
+      - "packages/core/api-client/src/errors/auth-failure.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 4
+    description: "Add package.json exports for ./errors/error-mapping and ./errors/auth-failure"
+    files:
+      - "packages/core/api-client/package.json"
+    dependencies: [2, 3]
+    slice: packages
+
+  - id: 5
+    description: "Migrate errorMapping.test.ts to @repo/api-client/src/errors/__tests__/"
+    files:
+      - "packages/core/api-client/src/errors/__tests__/error-mapping.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 6
+    description: "Migrate and update authFailureHandler.test.ts for new dependency injection API"
+    files:
+      - "packages/core/api-client/src/errors/__tests__/auth-failure.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 7
+    description: "Update main-app/src/store/index.ts to use new imports and dependency injection API"
+    files:
+      - "apps/web/main-app/src/store/index.ts"
+    dependencies: [3, 4]
+    slice: frontend
+
+  - id: 8
+    description: "Update main-app/src/App.tsx to use new auth failure handler initialization"
+    files:
+      - "apps/web/main-app/src/App.tsx"
+    dependencies: [7]
+    slice: frontend
+
+  - id: 9
+    description: "Delete old errorMapping.ts and authFailureHandler.ts from main-app"
+    files:
+      - "apps/web/main-app/src/services/api/errorMapping.ts"
+      - "apps/web/main-app/src/services/api/authFailureHandler.ts"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 10
+    description: "Delete old test files from main-app"
+    files:
+      - "apps/web/main-app/src/services/api/__tests__/errorMapping.test.ts"
+      - "apps/web/main-app/src/services/api/__tests__/authFailureHandler.test.ts"
+    dependencies: [5, 6]
+    slice: frontend
+
+  - id: 11
+    description: "Add documentation (README or JSDoc) in @repo/api-client/src/errors/"
+    files:
+      - "packages/core/api-client/src/errors/README.md"
+    dependencies: [2, 3]
+    slice: packages
+
+  - id: 12
+    description: "Verify no remaining imports from old paths in main-app"
+    files: []
+    dependencies: [9, 10]
+    slice: frontend
+
+files_to_change:
+  - path: "packages/core/api-client/src/errors/error-mapping.ts"
+    action: create
+    reason: "Move errorMapping.ts from main-app (494 lines) - AC1"
+
+  - path: "packages/core/api-client/src/errors/auth-failure.ts"
+    action: create
+    reason: "Move and refactor authFailureHandler.ts with dependency injection (138 lines) - AC2"
+
+  - path: "packages/core/api-client/src/errors/__tests__/error-mapping.test.ts"
+    action: create
+    reason: "Migrate errorMapping tests (401 lines) - AC5"
+
+  - path: "packages/core/api-client/src/errors/__tests__/auth-failure.test.ts"
+    action: create
+    reason: "Migrate and update authFailureHandler tests (252 lines) - AC5"
+
+  - path: "packages/core/api-client/src/errors/README.md"
+    action: create
+    reason: "Add documentation explaining module responsibilities and usage - AC8"
+
+  - path: "packages/core/api-client/package.json"
+    action: modify
+    reason: "Add exports for ./errors/error-mapping and ./errors/auth-failure - AC3"
+
+  - path: "apps/web/main-app/src/store/index.ts"
+    action: modify
+    reason: "Update imports to use @repo/api-client/errors/auth-failure with new DI API - AC6"
+
+  - path: "apps/web/main-app/src/App.tsx"
+    action: modify
+    reason: "Update to use new auth failure handler initialization pattern - AC6"
+
+  - path: "apps/web/main-app/src/services/api/errorMapping.ts"
+    action: delete
+    reason: "Remove after migration to @repo/api-client"
+
+  - path: "apps/web/main-app/src/services/api/authFailureHandler.ts"
+    action: delete
+    reason: "Remove after migration to @repo/api-client"
+
+  - path: "apps/web/main-app/src/services/api/__tests__/errorMapping.test.ts"
+    action: delete
+    reason: "Remove after migration to @repo/api-client"
+
+  - path: "apps/web/main-app/src/services/api/__tests__/authFailureHandler.test.ts"
+    action: delete
+    reason: "Remove after migration to @repo/api-client"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/api-client"
+    when: "after creating error modules in @repo/api-client"
+    required: true
+
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after migrating tests to @repo/api-client"
+    required: true
+
+  - command: "pnpm build --filter main-app"
+    when: "after updating main-app imports"
+    required: true
+
+  - command: "pnpm test --filter main-app"
+    when: "after updating main-app"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/api-client"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter main-app"
+    when: "after all code changes"
+    required: true
+
+  - command: "grep -r 'services/api/errorMapping\\|services/api/authFailureHandler' apps/web/main-app/src/"
+    when: "after all changes - verify no old imports remain"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File created: packages/core/api-client/src/errors/error-mapping.ts with all functions preserved"
+    evidence_type: file
+
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: error-mapping.test.ts covers all functions"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "File created: packages/core/api-client/src/errors/auth-failure.ts with createAuthFailureHandler factory"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: auth-failure.test.ts covers DI API"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "package.json exports includes ./errors/error-mapping and ./errors/auth-failure"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "TypeScript compilation passes with new exports"
+    evidence_type: command
+
+  - ac_id: "AC-4"
+    planned_evidence: "ERROR_MAPPINGS constant has exactly 21 entries in error-mapping.ts"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests verify all 21 error codes"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "All 653 test lines migrated with 100% pass rate"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "main-app/src/store/index.ts imports from @repo/api-client/errors/auth-failure"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "main-app/src/App.tsx updated for new initialization pattern"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "grep command shows no old imports remain"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Integration test: main-app tests pass with new imports"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Manual smoke test: 401 redirect works correctly"
+    evidence_type: manual
+
+  - ac_id: "AC-8"
+    planned_evidence: "README.md created in @repo/api-client/src/errors/ with module documentation"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    planned_evidence: "All @repo/api-client tests pass (100%)"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "All main-app tests pass (100%)"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "TypeScript compilation passes with no type errors"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "Error code count verified: exactly 21 codes in error-mapping.ts"
+    evidence_type: file
+
+  - ac_id: "AC-11"
+    planned_evidence: "Test coverage for all 21 error codes"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "AuthFailureHandlerOptions interface documents resetApiState callback pattern"
+    evidence_type: file
+
+  - ac_id: "AC-12"
+    planned_evidence: "Tests verify API state reset via callback injection"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "How should authFailureHandler coordinate API state reset after moving to @repo/api-client?"
+    decision: "Use callback injection pattern - consumer (main-app) provides resetApiState callback that handles all RTK Query APIs"
+    rationale: "Keeps @repo/api-client decoupled from specific RTK Query API instances. Consumer has full control over which APIs to reset. Aligns with dependency injection pattern used for other callbacks."
+    decided_by: autonomous
+    tier: 1
+
+complexity: moderate
+
+notes:
+  - "Total migration: 632 lines of source code + 653 lines of tests"
+  - "Dependency injection refactor removes Redux coupling from authFailureHandler"
+  - "Package already has ServerlessApiError and authorization-errors - error-mapping is complementary"
+  - "AUTH_PAGES constant preserved for reference but auth page detection uses callback"
+  - "All 21 error codes (not 27+) verified from source file"
+  - "Callback injection pattern chosen for API state reset (ARCH-001)"

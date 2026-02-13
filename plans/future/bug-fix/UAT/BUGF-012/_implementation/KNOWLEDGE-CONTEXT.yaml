@@ -1,0 +1,122 @@
+schema: 1
+story_id: "BUGF-012"
+title: "Add Test Coverage for Inspiration Gallery Components"
+generated_at: "2026-02-11T23:45:00Z"
+phase: qa-setup
+
+# Key verification points for QA
+qa_focus:
+  - primary: "Verify all 210 unit tests pass with zero failures"
+  - secondary: "Validate test coverage meets 70% line, 65% branch thresholds"
+  - tertiary: "Confirm all test patterns follow BDD structure and use semantic queries"
+
+# Critical acceptance criteria summary
+acceptance_criteria:
+  - ac_id: AC-1
+    title: "Main Page Testing (Highest Priority)"
+    status: PASS
+    evidence: "src/pages/__tests__/main-page.test.tsx - 45+ test cases"
+    verification: "Tab switching, search, sort, modals, keyboard shortcuts, loading/empty states"
+
+  - ac_id: AC-2
+    title: "Modal Component Testing"
+    status: PASS
+    evidence: "7 modal test files with 36 total tests"
+    verification: "Delete, Edit, Upload, Create, Link modals - all open/close/validation flows"
+
+  - ac_id: AC-3
+    title: "Drag & Drop Component Testing"
+    status: PASS
+    evidence: "src/test/mocks/dnd-kit.ts + 5 drag component tests"
+    verification: "@dnd-kit mocks working, drag handlers triggering correctly"
+
+  - ac_id: AC-4
+    title: "Context Menu Testing"
+    status: PASS
+    evidence: "2 context menu test files with keyboard navigation"
+    verification: "Menu rendering, action handlers, keyboard support (Enter, ArrowDown)"
+
+  - ac_id: AC-5
+    title: "UI Component Testing"
+    status: PASS
+    evidence: "4 skeleton/empty state test files with 52 total tests"
+    verification: "All 5 empty state variants, loading skeletons, accessibility"
+
+  - ac_id: AC-6
+    title: "Coverage Metrics"
+    status: PENDING_VERIFICATION
+    target: "70% line coverage, 65% branch coverage"
+    note: "Coverage metrics require pnpm test:coverage run during verification phase"
+
+  - ac_id: AC-7
+    title: "Test Infrastructure & Quality"
+    status: PASS
+    evidence: "All 210 tests use BDD structure, semantic queries, userEvent, beforeEach cleanup"
+    verification: "ESLint passed, code style 100% CLAUDE.md compliant"
+
+  - ac_id: AC-8
+    title: "Documentation & Patterns"
+    status: PASS
+    evidence: "dnd-kit.ts has comprehensive JSDoc documentation"
+    verification: "Mock patterns clearly documented for future reference"
+
+# Test execution summary
+test_execution:
+  total_tests: 210
+  passed: 210
+  failed: 0
+  skipped: 0
+  test_files_created: 23
+  status: SUCCESS
+
+# Key findings from code review
+code_review_findings:
+  verdict: PASS
+  iteration: 1
+  strengths:
+    - "BDD structure with nested describe blocks"
+    - "95%+ semantic queries (getByRole, getByLabelText preferred)"
+    - "Strong accessibility assertions in all tests"
+    - "Comprehensive @dnd-kit mock setup with documentation"
+    - "Modal tests cover critical paths: open/close, validation, loading"
+    - "Main page integration test covers 22 complex scenarios"
+  minor_notes:
+    - "One non-critical act() warning in keyboard navigation test (jsdom limitation)"
+
+# Critical test patterns to verify
+test_patterns:
+  bdd_structure: "describe('ComponentName') with rendering/interactions/accessibility blocks"
+  query_strategy: "Prefer getByRole > getByLabelText > getByTestId > getByText"
+  interaction_method: "userEvent.setup() for all async interactions"
+  cleanup: "beforeEach(() => { vi.clearAllMocks() }) in every describe block"
+  mocking: "Reusable @dnd-kit mock setup in src/test/mocks/dnd-kit.ts"
+
+# Files to verify during QA
+verification_sources:
+  evidence_file: "_implementation/EVIDENCE.yaml"
+  review_file: "_implementation/REVIEW.yaml"
+  test_main_page: "apps/web/app-inspiration-gallery/src/pages/__tests__/main-page.test.tsx"
+  test_modals: "apps/web/app-inspiration-gallery/src/components/*/[Modal]/__tests__/*.test.tsx"
+  test_drag: "apps/web/app-inspiration-gallery/src/components/[Draggable|Sortable]*/__tests__/*.test.tsx"
+  mock_dnd_kit: "apps/web/app-inspiration-gallery/src/test/mocks/dnd-kit.ts"
+
+# Potential edge cases to verify
+edge_cases:
+  - "Modal focus trap behavior (Tab key cycling)"
+  - "Multi-album warnings display limiting (max 3 + '...and N more')"
+  - "Image fallback: thumbnailUrl → imageUrl"
+  - "Loading skeleton visibility and animation"
+  - "Empty state variants for different scenarios"
+  - "Keyboard shortcut combinations (Cmd+A, Cmd+N, etc.)"
+  - "Drag event handlers with mocked @dnd-kit"
+
+# Known deviations or exceptions
+deviations: []
+
+# Notes for QA team
+qa_notes:
+  - "This is a test-only story (tech_debt type) - no component code modifications"
+  - "All 210 tests created and passing"
+  - "Coverage metrics require full test:coverage run during verification"
+  - "E2E tests exempt per ADR-006 (Phase 3 unit/integration only)"
+  - "No API endpoints exercised (unit/integration tests with MSW mocking)"

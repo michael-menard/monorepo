@@ -1,0 +1,291 @@
+schema: 1
+story_id: "REPA-016"
+timestamp: "2026-02-11T04:05:00Z"
+
+steps:
+  - id: 1
+    description: "Create instructions subdirectory structure in @repo/api-client/src/schemas/"
+    files:
+      - "packages/core/api-client/src/schemas/instructions/api.ts"
+      - "packages/core/api-client/src/schemas/instructions/form.ts"
+      - "packages/core/api-client/src/schemas/instructions/utils.ts"
+      - "packages/core/api-client/src/schemas/instructions/index.ts"
+    dependencies: []
+    slice: packages
+    notes:
+      - "Rename existing instructions.ts to instructions/api.ts (377 lines)"
+      - "Copy moc-form.ts content to instructions/form.ts (327 lines)"
+      - "Extract 5 helper functions to instructions/utils.ts"
+      - "Create index.ts with re-exports for backward compatibility"
+
+  - id: 2
+    description: "Update @repo/api-client package.json exports for new subdirectory structure"
+    files:
+      - "packages/core/api-client/package.json"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Add 4 new exports: instructions, instructions/form, instructions/api, instructions/utils"
+      - "Maintain existing ./schemas/instructions export pointing to index.ts"
+
+  - id: 3
+    description: "Migrate test file to new location with updated imports"
+    files:
+      - "packages/core/api-client/src/schemas/instructions/__tests__/form.test.ts"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Copy all 252 lines from main-app/src/types/__tests__/moc-form.test.ts"
+      - "Update imports to reference ../form.ts and ../utils.ts"
+      - "Verify Vitest configuration in vite.config.ts (inline config, no separate vitest.config.ts)"
+
+  - id: 4
+    description: "Update consumer imports in main-app"
+    files:
+      - "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+    dependencies: [1, 2]
+    slice: frontend
+    notes:
+      - "Replace local import from @/types/moc-form with @repo/api-client/schemas/instructions/form"
+      - "Import MocInstructionFormSchema, createEmptyMocForm, etc."
+
+  - id: 5
+    description: "Update consumer imports in app-instructions-gallery"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+    dependencies: [1, 2]
+    slice: frontend
+    notes:
+      - "Replace local import from @/types/moc-form with @repo/api-client/schemas/instructions/form"
+      - "Same imports as main-app consumer"
+
+  - id: 6
+    description: "Run tests to verify migration (packages phase)"
+    files: []
+    dependencies: [3]
+    slice: packages
+    notes:
+      - "Run pnpm test from packages/core/api-client/"
+      - "Verify all 252 lines of form tests pass"
+      - "Verify coverage maintained at 45% minimum"
+
+  - id: 7
+    description: "Build verification for updated packages and consumers"
+    files: []
+    dependencies: [4, 5]
+    slice: packages
+    notes:
+      - "Run pnpm build for @repo/api-client"
+      - "Run pnpm build for main-app"
+      - "Run pnpm build for app-instructions-gallery"
+      - "Verify no TypeScript errors"
+
+  - id: 8
+    description: "Type checking verification for all consuming apps"
+    files: []
+    dependencies: [4, 5]
+    slice: packages
+    notes:
+      - "Run pnpm check-types for main-app"
+      - "Run pnpm check-types for app-instructions-gallery"
+      - "Verify no import errors or type mismatches"
+
+  - id: 9
+    description: "Cleanup duplicate files after successful migration"
+    files:
+      - "apps/web/main-app/src/types/moc-form.ts"
+      - "apps/web/app-instructions-gallery/src/types/moc-form.ts"
+      - "apps/web/main-app/src/types/__tests__/moc-form.test.ts"
+    dependencies: [6, 7, 8]
+    slice: frontend
+    notes:
+      - "Delete 2 duplicate moc-form.ts files (327 lines each)"
+      - "Delete 1 duplicate test file (252 lines)"
+      - "Use Grep to verify no remaining imports reference deleted paths"
+
+  - id: 10
+    description: "Final build and test verification for entire monorepo"
+    files: []
+    dependencies: [9]
+    slice: packages
+    notes:
+      - "Run pnpm build from monorepo root (Turborepo)"
+      - "Run pnpm test from monorepo root"
+      - "Run pnpm check-types from monorepo root"
+      - "Verify no errors across all apps and packages"
+
+files_to_change:
+  # New files - Phase 1: Restructure
+  - path: "packages/core/api-client/src/schemas/instructions/api.ts"
+    action: create
+    reason: "Rename from instructions.ts - API response validation schemas (AC-1)"
+
+  - path: "packages/core/api-client/src/schemas/instructions/form.ts"
+    action: create
+    reason: "Migrated from moc-form.ts - form validation schemas with 13 sub-schemas (AC-2)"
+
+  - path: "packages/core/api-client/src/schemas/instructions/utils.ts"
+    action: create
+    reason: "Extracted helper functions from moc-form.ts (AC-1)"
+
+  - path: "packages/core/api-client/src/schemas/instructions/index.ts"
+    action: create
+    reason: "Re-export all for backward compatibility (AC-4)"
+
+  - path: "packages/core/api-client/src/schemas/instructions/__tests__/form.test.ts"
+    action: create
+    reason: "Migrated from main-app test file - 252 lines of comprehensive tests (AC-8)"
+
+  # Modified files - Phase 1: Package exports
+  - path: "packages/core/api-client/package.json"
+    action: modify
+    reason: "Add 4 new exports for granular imports (AC-3)"
+
+  # Modified files - Phase 2: Consumer updates
+  - path: "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+    action: modify
+    reason: "Update imports to @repo/api-client/schemas/instructions/form (AC-6)"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+    action: modify
+    reason: "Update imports to @repo/api-client/schemas/instructions/form (AC-6)"
+
+  # Deleted files - Phase 3: Cleanup
+  - path: "packages/core/api-client/src/schemas/instructions.ts"
+    action: delete
+    reason: "Replaced by instructions/api.ts subdirectory structure"
+
+  - path: "apps/web/main-app/src/types/moc-form.ts"
+    action: delete
+    reason: "Duplicate file consolidated into @repo/api-client (AC-10)"
+
+  - path: "apps/web/app-instructions-gallery/src/types/moc-form.ts"
+    action: delete
+    reason: "Duplicate file consolidated into @repo/api-client (AC-10)"
+
+  - path: "apps/web/main-app/src/types/__tests__/moc-form.test.ts"
+    action: delete
+    reason: "Migrated to @repo/api-client tests (AC-10)"
+
+commands_to_run:
+  # Phase 1: Package tests
+  - command: "pnpm test --filter @repo/api-client"
+    when: "after creating form.test.ts (step 3)"
+    required: true
+    reason: "Verify all 252 lines of migrated tests pass (AC-8)"
+
+  # Phase 2: Package build
+  - command: "pnpm build --filter @repo/api-client"
+    when: "after updating package.json exports (step 2)"
+    required: true
+    reason: "Verify package builds with new structure (AC-11)"
+
+  - command: "pnpm build --filter main-app"
+    when: "after updating main-app imports (step 4)"
+    required: true
+    reason: "Verify main-app builds with new imports (AC-11)"
+
+  - command: "pnpm build --filter app-instructions-gallery"
+    when: "after updating app-instructions-gallery imports (step 5)"
+    required: true
+    reason: "Verify app-instructions-gallery builds with new imports (AC-11)"
+
+  # Phase 3: Type checking
+  - command: "pnpm check-types --filter main-app"
+    when: "after updating main-app imports (step 4)"
+    required: true
+    reason: "Verify no TypeScript errors in main-app (AC-12)"
+
+  - command: "pnpm check-types --filter app-instructions-gallery"
+    when: "after updating app-instructions-gallery imports (step 5)"
+    required: true
+    reason: "Verify no TypeScript errors in app-instructions-gallery (AC-12)"
+
+  # Phase 4: Final verification
+  - command: "pnpm build"
+    when: "after all code changes (step 10)"
+    required: true
+    reason: "Final monorepo build verification (AC-11)"
+
+  - command: "pnpm test"
+    when: "after all code changes (step 10)"
+    required: true
+    reason: "Final monorepo test verification (AC-9)"
+
+  - command: "pnpm check-types"
+    when: "after all code changes (step 10)"
+    required: true
+    reason: "Final monorepo type check (AC-12)"
+
+  - command: "pnpm lint --filter @repo/api-client"
+    when: "after all code changes"
+    required: true
+    reason: "ESLint quality gate per CLAUDE.md"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File system: 4 files created in instructions/ subdirectory (api.ts, form.ts, utils.ts, index.ts)"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "File content: form.ts contains all 13 sub-schemas (Designer, Dimensions, Features, etc.)"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "File content: package.json exports section includes 4 new paths"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Build test: pnpm build succeeds for @repo/api-client, main-app, app-instructions-gallery"
+    evidence_type: command
+
+  - ac_id: "AC-5"
+    planned_evidence: "Import test: New granular imports work in consumer files"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "File content: Both consumer files import from @repo/api-client/schemas/instructions/form"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "Manual test: Form validation behavior unchanged (visual verification in dev environment)"
+    evidence_type: manual
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test: pnpm test --filter @repo/api-client passes all 252 lines of tests"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Test coverage: Coverage report shows >= 45% for @repo/api-client"
+    evidence_type: command
+
+  - ac_id: "AC-10"
+    planned_evidence: "File system: 3 files deleted + Grep verification shows no remaining imports"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "Build test: pnpm build succeeds for all apps and packages"
+    evidence_type: command
+
+  - ac_id: "AC-12"
+    planned_evidence: "Type check: pnpm check-types passes for all apps"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Migration only - no schema validation logic changes per story non-goals"
+  - "Comprehensive test coverage (252 lines) provides safety net"
+  - "Three-phase approach: restructure → update consumers → cleanup"
+  - "Backward compatibility maintained via index.ts re-exports"
+  - "Per CLAUDE.md: Zod-first types, named exports, no barrel files"
+  - "Vitest configured inline in vite.config.ts (no separate config file)"
+  - "Line count verified: moc-form.ts is 327 lines, test is 252 lines"
+  - "No E2E tests needed per ADR-006: internal refactor, no UI changes"
+
+risks:
+  - "Low risk: straightforward consolidation with comprehensive tests"
+  - "Mitigation: phased approach with builds/tests after each phase"
+  - "All consumers already depend on @repo/api-client"

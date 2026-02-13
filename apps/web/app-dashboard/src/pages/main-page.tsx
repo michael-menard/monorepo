@@ -18,8 +18,8 @@ import {
   ActivityFeed,
   FilterBar,
   DashboardHeader,
-  EmptyDashboard,
 } from '../components'
+import { EmptyDashboard } from '@repo/app-component-library/feedback/empty-states'
 import {
   dashboardStats,
   buildStatus,

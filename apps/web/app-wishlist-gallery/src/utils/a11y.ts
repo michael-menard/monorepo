@@ -6,7 +6,6 @@
  * Story WISH-2006: Accessibility
  */
 
-import { z } from 'zod'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 
 /**
@@ -214,44 +213,3 @@ export function generateDragAnnouncement(
   }
 }
 
-/**
- * Focus ring classes for consistent focus styling
- * Uses design system tokens per WISH-2006 requirements
- */
-export const focusRingClasses =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2'
-
-/**
- * Schema for validating WCAG AA contrast ratios
- */
-export const ContrastRatioSchema = z.object({
-  normalText: z.number().min(4.5),
-  largeText: z.number().min(3),
-})
-
-/**
- * Keyboard shortcut key names for display
- */
-export const keyboardShortcutLabels: Record<string, string> = {
-  a: 'A',
-  g: 'G',
-  Delete: 'Del',
-  Enter: 'Enter',
-  Escape: 'Esc',
-  ArrowUp: 'Up',
-  ArrowDown: 'Down',
-  ArrowLeft: 'Left',
-  ArrowRight: 'Right',
-  Home: 'Home',
-  End: 'End',
-}
-
-/**
- * Get human-readable keyboard shortcut label
- *
- * @param key - Key code or name
- * @returns Human-readable label
- */
-export function getKeyboardShortcutLabel(key: string): string {
-  return keyboardShortcutLabels[key] ?? key.toUpperCase()
-}

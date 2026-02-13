@@ -1,0 +1,26 @@
+---
+# Deferred Knowledge Base Writes
+# These writes failed due to KB unavailability and should be retried later
+generated: 2026-02-11
+---
+
+pending_writes:
+  - table: stories
+    operation: upsert
+    timestamp: 2026-02-11T00:00:00Z
+    data:
+      story_id: BUGF-002
+      feature: bug-fix
+      title: "Implement Edit Save Functionality for Instructions"
+      story_dir: plans/future/bug-fix/backlog/BUGF-002
+      story_file: plans/future/bug-fix/backlog/BUGF-002/BUGF-002.md
+      story_type: bug
+      points: 3
+      priority: high
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+    reason: "KB unavailable during story generation (psql or DATABASE_URL not configured)"
+    retry_count: 0

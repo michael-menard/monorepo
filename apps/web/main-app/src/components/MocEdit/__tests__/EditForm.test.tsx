@@ -141,7 +141,7 @@ vi.mock('@repo/app-component-library', () => ({
 }))
 
 // Mock upload-types
-vi.mock('@repo/upload-types', () => ({
+vi.mock('@repo/upload/types', () => ({
   EditMocFormSchema: {
     parse: vi.fn(),
   },

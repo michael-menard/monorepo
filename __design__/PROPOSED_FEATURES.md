@@ -16,3 +16,6 @@
   - [ ] barweer
   - [ ] setdb
   - [ ] bluebrixx
+
+
+add oppossum plugin and other quality packages

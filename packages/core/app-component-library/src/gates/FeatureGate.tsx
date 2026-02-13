@@ -1,67 +1,14 @@
 import { ReactNode } from 'react'
 import { z } from 'zod'
-
-/**
- * Feature enum values (must match backend)
- */
-export const FeatureSchema = z.enum([
-  'moc',
-  'wishlist',
-  'profile',
-  'gallery',
-  'chat',
-  'reviews',
-  'user_discovery',
-  'setlist',
-  'privacy_advanced',
-])
-export type Feature = z.infer<typeof FeatureSchema>
-
-/**
- * Tier enum values (must match backend)
- */
-export const TierSchema = z.enum(['admin', 'free-tier', 'pro-tier', 'power-tier'])
-export type Tier = z.infer<typeof TierSchema>
-
-/**
- * Map feature to minimum required tier
- */
-const FEATURE_REQUIRED_TIER: Record<Feature, Tier> = {
-  moc: 'free-tier',
-  wishlist: 'free-tier',
-  profile: 'free-tier',
-  gallery: 'pro-tier',
-  chat: 'pro-tier',
-  reviews: 'pro-tier',
-  user_discovery: 'pro-tier',
-  setlist: 'power-tier',
-  privacy_advanced: 'power-tier',
-}
-
-/**
- * Human-readable tier names
- */
-const TIER_DISPLAY_NAMES: Record<Tier, string> = {
-  admin: 'Admin',
-  'free-tier': 'Free',
-  'pro-tier': 'Pro',
-  'power-tier': 'Power',
-}
-
-/**
- * Human-readable feature names
- */
-const FEATURE_DISPLAY_NAMES: Record<Feature, string> = {
-  moc: 'MOCs',
-  wishlist: 'Wishlist',
-  profile: 'Profile',
-  gallery: 'Gallery',
-  chat: 'Chat',
-  reviews: 'Reviews',
-  user_discovery: 'User Discovery',
-  setlist: 'Set Lists',
-  privacy_advanced: 'Advanced Privacy',
-}
+import {
+  type Feature,
+  type Tier,
+  FeatureSchema,
+  TierSchema,
+  FEATURE_REQUIRED_TIER,
+  TIER_DISPLAY_NAMES,
+  FEATURE_DISPLAY_NAMES,
+} from '@repo/api-client'
 
 /**
  * Props schema for FeatureGate component
@@ -286,5 +233,5 @@ export function withFeatureGate<P extends object>(
   }
 }
 
-// Export utility functions for external use
+// Re-export constants for backward compatibility
 export { FEATURE_REQUIRED_TIER, TIER_DISPLAY_NAMES, FEATURE_DISPLAY_NAMES }

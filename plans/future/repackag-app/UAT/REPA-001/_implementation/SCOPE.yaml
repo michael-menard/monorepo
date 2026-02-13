@@ -1,0 +1,25 @@
+schema: 1
+story_id: "REPA-001"
+timestamp: "2026-02-10T00:00:00Z"
+
+touches:
+  backend: false
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "packages/core/upload/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create new @repo/upload package structure with directories, configs, and placeholder exports"

@@ -1,0 +1,173 @@
+schema: 1
+feature_dir: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix"
+prefix: "BUGF"
+reviewed: 2026-02-11T09:46:00Z
+
+summary: "Post-MVP opportunities to improve developer productivity, observability, UX polish, and security hardening across file operations and authentication flows."
+
+enhancements:
+  high_value:
+    - id: ENG-004
+      source: engineering
+      suggestion: "Consolidate duplicate upload session management logic into shared hook (currently in main-app and app-instructions-gallery)"
+      impact: high
+      effort: medium
+    - id: ENG-005
+      source: engineering
+      suggestion: "Extract auth hook pattern into @repo/auth-hooks package to standardize authentication across all apps"
+      impact: high
+      effort: medium
+    - id: SEC-004
+      source: security
+      suggestion: "Implement signed URL expiration enforcement with server validation that presigned URL timestamp is recent"
+      impact: high
+      effort: medium
+    - id: PLAT-001
+      source: platform
+      suggestion: "Implement presigned URL endpoint rate limiting and quota management to prevent S3 exhaustion"
+      impact: high
+      effort: medium
+    - id: PLAT-002
+      source: platform
+      suggestion: "Add CloudFront caching for presigned URL redirects to reduce S3 latency"
+      impact: high
+      effort: medium
+    - id: QA-004
+      source: qa
+      suggestion: "Create Vitest test utilities for upload component testing with shared file input mocking"
+      impact: high
+      effort: medium
+
+  nice_to_have:
+    - id: UX-001
+      source: ux
+      suggestion: "Show upload progress with file-level details (bytes uploaded, estimated time remaining)"
+      impact: medium
+      effort: medium
+    - id: UX-002
+      source: ux
+      suggestion: "Display session expiry countdown in upload UI with refresh prompts to prevent timeout errors"
+      impact: medium
+      effort: medium
+    - id: UX-003
+      source: ux
+      suggestion: "Add visual feedback during presigned URL generation to prevent perception of UI hang"
+      impact: medium
+      effort: low
+    - id: UX-004
+      source: ux
+      suggestion: "Improve drag-and-drop feedback with drop zone highlighting and drag preview visual effects"
+      impact: medium
+      effort: medium
+    - id: UX-005
+      source: ux
+      suggestion: "Add visual countdown timer during password reset rate limit period"
+      impact: medium
+      effort: low
+    - id: PLAT-003
+      source: platform
+      suggestion: "Add CloudWatch metrics for presigned URL generation latency to monitor performance"
+      impact: medium
+      effort: low
+    - id: PLAT-004
+      source: platform
+      suggestion: "Implement Lambda warmup strategy for upload presigned URL endpoint to reduce cold starts"
+      impact: medium
+      effort: medium
+    - id: PLAT-005
+      source: platform
+      suggestion: "Configure S3 lifecycle policies for uploaded file retention and cleanup"
+      impact: medium
+      effort: low
+    - id: SEC-005
+      source: security
+      suggestion: "Add request signing for file upload operations to prevent replay attacks"
+      impact: medium
+      effort: medium
+    - id: SEC-006
+      source: security
+      suggestion: "Implement CSRF token validation for state-changing operations (edits and deletes)"
+      impact: medium
+      effort: medium
+    - id: SEC-007
+      source: security
+      suggestion: "Validate file metadata (title, slug, tags) on server before persisting"
+      impact: medium
+      effort: low
+    - id: SEC-008
+      source: security
+      suggestion: "Add security headers (CSP, X-Frame-Options, X-Content-Type-Options) to API responses"
+      impact: medium
+      effort: low
+
+suggested_stories:
+  - title: "Implement comprehensive E2E tests for upload session lifecycle with real timings"
+    source: engineering
+    priority: P1
+    reason: "Session refresh logic needs integration testing to validate timeout handling and re-authentication"
+  - title: "Implement Playwright test data seeding for gallery features"
+    source: qa
+    priority: P1
+    reason: "E2E tests need fresh test data per run to ensure isolation"
+  - title: "Create Playwright fixture for auth state to reduce test setup boilerplate"
+    source: qa
+    priority: P1
+    reason: "Multiple E2E tests need auth context setup, shared fixture reduces duplication"
+  - title: "Add test metrics reporting to CI pipeline"
+    source: qa
+    priority: P2
+    reason: "No visibility into test coverage trends across releases"
+  - title: "Implement skeleton loaders for all gallery views"
+    source: ux
+    priority: P2
+    reason: "Empty state during initial load feels broken, skeleton provides user feedback"
+  - title: "Add tutorial/onboarding for upload flow"
+    source: ux
+    priority: P2
+    reason: "Users may not understand presigned URL delay or session expiry without guidance"
+  - title: "Create automated S3 cleanup job for expired or orphaned uploads"
+    source: platform
+    priority: P2
+    reason: "Incomplete uploads consume S3 storage indefinitely without cleanup"
+  - title: "Implement Redis cache for authentication tokens to reduce database load"
+    source: platform
+    priority: P2
+    reason: "Auth hook BUGF-005 will increase auth check frequency across all apps"
+  - title: "Add error boundary and fallback UI for failed API calls"
+    source: engineering
+    priority: P2
+    reason: "Presigned URL failures should gracefully degrade with user-friendly messaging"
+  - title: "Create empty state illustrations for all galleries"
+    source: ux
+    priority: P3
+    reason: "Current empty states are plain text, illustrations improve engagement"
+  - title: "Integrate axe-core into component tests for accessibility verification"
+    source: qa
+    priority: P2
+    reason: "Catch accessibility issues early in component tests before E2E"
+  - title: "Implement telemetry for presigned URL success/failure rates"
+    source: product
+    priority: P2
+    reason: "Track upload flow reliability for user journey optimization"
+
+stories_to_defer:
+  - story: BUGF-007
+    reason: "Test coverage story addressing test mismatches not required for core journey"
+  - story: BUGF-011
+    reason: "Integration test improvements for existing components non-blocking for MVP"
+  - story: BUGF-016
+    reason: "User settings form validation improvements nice-to-have after core flows work"
+  - story: BUGF-017
+    reason: "Notification service E2E tests can follow core upload/auth flows"
+  - story: BUGF-018
+    reason: "File preview accessibility improvements after core gallery features stable"
+  - story: BUGF-021
+    reason: "Wishlist bulk operations not required for core happy path"
+  - story: BUGF-022
+    reason: "Gallery sorting persistence improvements non-critical for MVP"
+  - story: BUGF-024
+    reason: "Performance optimization and monitoring follows initial implementation"
+
+metrics:
+  total_suggestions: 22
+  deferred_stories: 8

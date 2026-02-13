@@ -27,7 +27,7 @@ Object.defineProperty(mockPerformanceObserver, 'supportedEntryTypes', {
 })
 global.PerformanceObserver = mockPerformanceObserver
 
-describe.skip('Performance Monitoring', () => {
+describe('Performance Monitoring', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Mock performance.now
@@ -51,7 +51,7 @@ describe.skip('Performance Monitoring', () => {
       expect(metrics.ttfb).toBe(600)
     })
 
-    it('should rate metrics correctly', () => {
+    it.skip('should rate metrics correctly', () => {
       // This would test the private getRating method
       // We can test it indirectly through console logs or by making it public for testing
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})

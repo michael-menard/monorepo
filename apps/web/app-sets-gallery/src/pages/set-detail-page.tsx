@@ -5,7 +5,7 @@
  * Story sets-2001: Sets Gallery MVP (Detail View)
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { ArrowLeft, Edit, Trash2, Blocks, CheckCircle2 } from 'lucide-react'
@@ -18,13 +18,14 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  ConfirmationDialog,
   Skeleton,
   cn,
+  useToast,
 } from '@repo/app-component-library'
 import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@repo/gallery'
-import { useGetSetByIdQuery } from '@repo/api-client/rtk/sets-api'
+import { useGetSetByIdQuery, useDeleteSetMutation } from '@repo/api-client/rtk/sets-api'
 import type { Set } from '@repo/api-client/schemas/sets'
-import { logger } from '@repo/logger'
 
 const SetDetailPagePropsSchema = z.object({
   className: z.string().optional(),
@@ -198,6 +199,11 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
     skip: !setId,
   })
 
+  const [deleteSet] = useDeleteSetMutation()
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const { success: toastSuccess, error: toastError } = useToast()
+
   const lightboxImages = useMemo(() => buildLightboxImages(set), [set])
   const lightbox = useLightbox(lightboxImages.length)
 
@@ -211,15 +217,23 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
   }
 
   const handleDelete = () => {
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = async () => {
     if (!set) return
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this set from your collection? This action cannot be undone.',
-    )
 
-    if (!confirmed) return
-
-    // Story sets-2004 will wire this to a real delete endpoint + navigation.
-    logger.info('Set delete confirmed (stub - no API call yet)', undefined, { setId: set.id })
+    setIsDeleting(true)
+    try {
+      await deleteSet({ id: set.id, title: set.title }).unwrap()
+      toastSuccess(`"${set.title}" deleted`, 'The set has been removed from your collection.')
+      navigate('/sets')
+    } catch (err) {
+      toastError(err, `Failed to delete "${set.title}"`)
+      setShowDeleteDialog(false)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   if (!setId) {
@@ -542,6 +556,27 @@ export function SetDetailPage({ className }: SetDetailPageProps = {}) {
         onNext={lightbox.next}
         onPrev={lightbox.prev}
         data-testid="set-detail-lightbox"
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmationDialog
+        title="Delete set?"
+        description={
+          set
+            ? `Are you sure you want to delete "${set.title}"${set.setNumber ? ` (#${set.setNumber})` : ''} from your collection? This action cannot be undone.`
+            : 'Are you sure you want to delete this set? This action cannot be undone.'
+        }
+        confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+        cancelText="Cancel"
+        variant="destructive"
+        open={showDeleteDialog}
+        onOpenChange={open => {
+          if (!open && !isDeleting) {
+            setShowDeleteDialog(false)
+          }
+        }}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
       />
     </div>
   )

@@ -1,0 +1,56 @@
+STORY CONTEXT:
+Index path: plans/future/repackag-app/stories.index.md
+Story ID: REPA-005
+Feature directory: plans/future/repackag-app
+Output directory: /Users/michaelmenard/Development/monorepo/plans/future/repackag-app/backlog/REPA-005
+
+Index entry:
+## REPA-005: Migrate Upload Components
+**Status:** pending
+**Depends On:** REPA-003, REPA-004
+**Feature:** Extract reusable upload UI components into shared package. Move ThumbnailUpload, InstructionsUpload, ImageUploadZone components. Consolidate 7 duplicate Uploader sub-components (ConflictModal, RateLimitBanner, SessionExpiredBanner, UnsavedChangesDialog, UploaderFileItem, UploaderList, SessionProvider).
+**Goal:** All upload components consolidated in @repo/upload with no duplicates in apps.
+**Risk Notes:** Breaking changes during upload migration. **Sizing Warning:** Large scope with 7 sub-components across multiple apps.
+
+Seed file: /Users/michaelmenard/Development/monorepo/plans/future/repackag-app/backlog/REPA-005/_pm/STORY-SEED.md
+
+Key seed insights:
+- 7 duplicate Uploader sub-components across 2 apps (~1945 LOC total)
+- SessionProvider has DEPENDENCY on REPA-003 (useUploaderSession hook) - currently "ready-to-work"
+- ThumbnailUpload and InstructionsUpload are domain-specific (app-instructions-gallery only)
+- All components use @repo/app-component-library for UI primitives
+- Components are well-tested with existing test coverage
+- SessionProvider has divergent implementations (Redux vs non-Redux auth)
+- Must use dependency injection pattern for auth state in SessionProvider
+
+Related components (from seed):
+1. ConflictModal (195 lines × 2 apps)
+2. RateLimitBanner (144 lines × 2 apps, EXACT duplicates)
+3. SessionExpiredBanner
+4. UnsavedChangesDialog (with existing tests)
+5. UploaderFileItem (235 lines)
+6. UploaderList
+7. SessionProvider (82 lines vs 89 lines, divergent auth)
+8. ThumbnailUpload (288 lines, app-instructions-gallery only)
+9. InstructionsUpload (359 lines, app-instructions-gallery only)
+
+Reuse candidates (from seed):
+- @repo/app-component-library: Dialog, Alert, Button, Progress, Card, Badge, Input, Label
+- @repo/upload/types: UploaderFileItem, UploadStatus
+- @repo/upload/hooks: useUploadManager, useUploaderSession (REPA-003 dependency)
+- @repo/hooks: useUnsavedChangesPrompt
+- lucide-react: Icons
+
+Constraints (from seed):
+- Zod schemas for all types (no TypeScript interfaces)
+- Component directory structure: index.tsx, __tests__/, __types__/, utils/
+- No barrel files
+- Must import UI from @repo/app-component-library
+- Minimum test coverage: 45% global (target 80%+ for package)
+
+Active conflicts (from seed):
+- WARNING: REPA-003 (useUploaderSession hook) is "ready-to-work" status
+- SessionProvider depends on REPA-003 completion
+- Resolution: Verify REPA-003 completion before SessionProvider migration
+
+Experiment Variant: control (no active experiments)

@@ -8,6 +8,7 @@
 import { useCallback } from 'react'
 import { z } from 'zod'
 import { ThemeProvider } from '@repo/app-component-library'
+import { logger } from '@repo/logger'
 import { DetailPage } from './pages/detail-page'
 import type { Instruction } from './__types__'
 
@@ -84,8 +85,7 @@ export function InstructionsDetailModule({
         onEdit(id)
       } else {
         // Fallback: log for development
-        // eslint-disable-next-line no-console
-        console.log('Edit instruction:', id)
+        logger.info('Edit instruction', { instructionId: id })
       }
     },
     [onEdit],
@@ -97,8 +97,7 @@ export function InstructionsDetailModule({
         onFavorite(id)
       } else {
         // Fallback: log for development
-        // eslint-disable-next-line no-console
-        console.log('Toggle favorite:', id)
+        logger.info('Toggle favorite', { instructionId: id })
       }
     },
     [onFavorite],

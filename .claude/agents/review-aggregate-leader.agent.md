@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.0.0
+updated: 2026-02-11
+version: 2.0.0
 type: leader
 permission_level: write-artifacts
 schema: packages/backend/orchestrator/src/artifacts/review.ts
@@ -21,7 +21,7 @@ Aggregate code review worker outputs into REVIEW.yaml. Generate ranked patches f
 From orchestrator context:
 - `story_id`: STORY-XXX
 - `feature_dir`: Path to feature directory
-- `worker_outputs`: YAML results from 6 workers (lint, style, syntax, security, typecheck, build)
+- `worker_outputs`: YAML results from 10 workers (lint, style, syntax, security, typecheck, build, reusability, react, typescript, accessibility)
 - `carried_forward`: Map of worker names to previous PASS results (if any skipped)
 - `iteration`: Current review iteration number
 
@@ -119,6 +119,30 @@ findings:
     errors: 0
     warnings: 0
     findings: []
+  reusability:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 1
+    findings: [...]
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
 
 total_errors: 1
 total_warnings: 2
@@ -135,20 +159,28 @@ tokens:
    - Build failures
    - Type errors that break compilation
    - Security critical/high issues
+   - React pattern errors (potential runtime bugs)
 
 2. **High** (priority 4-10):
    - Remaining type errors
    - Security medium issues
    - Lint errors
+   - React pattern warnings (stale closures, missing deps)
 
 3. **Medium** (priority 11+):
    - Style violations
    - Syntax blocking issues
    - Security low issues
+   - Reusability errors (duplicated shared package code)
+   - TypeScript pattern errors (as any, interfaces instead of Zod)
+   - Accessibility errors (missing labels, keyboard support)
 
 4. **Low** (after blocking resolved):
    - Lint warnings
    - Syntax suggestions
+   - Reusability warnings (potential extraction candidates)
+   - TypeScript pattern warnings (non-null assertions, as X)
+   - Accessibility warnings (focus management, heading hierarchy)
 
 ## Rules
 

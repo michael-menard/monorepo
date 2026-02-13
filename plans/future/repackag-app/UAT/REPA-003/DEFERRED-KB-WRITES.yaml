@@ -1,0 +1,32 @@
+---
+# Deferred Knowledge Base Writes
+# These writes failed during story generation and should be retried later
+---
+
+deferred_writes:
+  - timestamp: "2026-02-10T00:00:00Z"
+    table: stories
+    operation: INSERT
+    reason: KB unavailable during story generation
+    data:
+      story_id: REPA-003
+      feature: repackag-app
+      title: "Migrate Upload Hooks to @repo/upload"
+      story_dir: plans/future/repackag-app/REPA-003
+      story_file: plans/future/repackag-app/REPA-003/REPA-003.md
+      story_type: tech_debt
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+      epic: repackag-app
+      depends_on: ["REPA-002"]
+      blocks: ["REPA-005"]
+      tags: ["hook-migration", "consolidation", "upload", "auth-refactor"]
+
+# Retry Instructions:
+# When KB is available, run:
+# INSERT INTO stories (...) VALUES (...) ON CONFLICT (story_id) DO UPDATE SET ...

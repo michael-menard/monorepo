@@ -1,0 +1,132 @@
+schema: 1
+story_id: "REPA-001"
+timestamp: "2026-02-10T00:00:00Z"
+
+touched_files:
+  created:
+    - packages/core/upload/package.json
+    - packages/core/upload/tsconfig.json
+    - packages/core/upload/vite.config.ts
+    - packages/core/upload/vitest.config.ts
+    - packages/core/upload/README.md
+    - packages/core/upload/src/index.ts
+    - packages/core/upload/src/client/index.ts
+    - packages/core/upload/src/hooks/index.ts
+    - packages/core/upload/src/image/index.ts
+    - packages/core/upload/src/components/index.ts
+    - packages/core/upload/src/types/index.ts
+    - packages/core/upload/src/__tests__/setup.ts
+    - packages/core/upload/src/__tests__/package-structure.test.ts
+  modified: []
+  deleted: []
+
+acceptance_criteria:
+  AC-1:
+    status: pass
+    evidence: "Package created at packages/core/upload/ with proper monorepo structure"
+  AC-2:
+    status: pass
+    evidence: "package.json configured with name '@repo/upload', version '0.0.1', private: true"
+  AC-3:
+    status: pass
+    evidence: "package.json includes zod 4.1.13, react ^19.1.0, framer-motion ^12.23.22, cva ^0.7.0, clsx ^2.1.1, tailwind-merge ^2.5.4"
+    note: "Zod version updated from story spec (^3.24.2) to 4.1.13 to match @repo/app-component-library"
+  AC-4:
+    status: pass
+    evidence: "peerDependencies configured for react '^18.0.0 || ^19.0.0' and react-dom '^18.0.0 || ^19.0.0'"
+  AC-5:
+    status: pass
+    evidence: "Scripts configured: build (vite build), dev (vite build --watch), check-types (tsc --noEmit), lint (eslint), test (vitest run), test:watch"
+  AC-6:
+    status: pass
+    evidence: "Exports field configured with main (.) and subpaths (./client, ./hooks, ./image, ./components, ./types) all with import and types entries"
+  AC-7:
+    status: pass
+    evidence: "tsconfig.json configured with strict: false, jsx: react-jsx, moduleResolution: bundler, ESNext target"
+  AC-8:
+    status: pass
+    evidence: "ESLint inherits from workspace root. Lint passes with 0 warnings."
+  AC-9:
+    status: pass
+    evidence: "Vitest configured with jsdom environment, React Testing Library support, setup file with browser API mocks"
+  AC-10:
+    status: pass
+    evidence: "All subdirectories created: src/client/, src/hooks/, src/image/, src/components/, src/types/ — each with placeholder index.ts"
+  AC-11:
+    status: pass
+    evidence: "src/index.ts created with re-exports from all subdirectories"
+  AC-12:
+    status: pass
+    evidence: "README.md created with package description, directory structure, usage examples, migration roadmap, and dev commands"
+  AC-13:
+    status: pass
+    evidence: "Build succeeds: 'pnpm --filter @repo/upload build' exits 0, generates dist/ with 6 entry points"
+  AC-14:
+    status: pass
+    evidence: "Type checking passes: 'pnpm --filter @repo/upload check-types' exits 0"
+  AC-15:
+    status: pass
+    evidence: "Linting passes: 'pnpm --filter @repo/upload lint' exits 0 with 0 warnings"
+  AC-16:
+    status: pass
+    evidence: "Tests pass: 'pnpm --filter @repo/upload test' — 2 tests, 1 file, all pass"
+  AC-17:
+    status: pass
+    evidence: "Turborepo dry-run confirms package in scope with correct build task configuration"
+
+quality_gates:
+  build:
+    status: pass
+    command: "pnpm --filter @repo/upload build"
+    exit_code: 0
+    output_summary: "6 modules transformed, 6 entry points built with declarations in 283ms"
+  check_types:
+    status: pass
+    command: "pnpm --filter @repo/upload check-types"
+    exit_code: 0
+  lint:
+    status: pass
+    command: "pnpm --filter @repo/upload lint"
+    exit_code: 0
+    warnings: 0
+  test:
+    status: pass
+    command: "pnpm --filter @repo/upload test"
+    exit_code: 0
+    results:
+      files: 1
+      tests: 2
+      passed: 2
+      failed: 0
+  turborepo:
+    status: pass
+    command: "pnpm turbo run build --filter=@repo/upload --dry-run"
+    exit_code: 0
+
+unit_tests:
+  status: pass
+  count: 2
+  passed: 2
+  failed: 0
+
+e2e_tests:
+  status: exempt
+  mode: null
+  reason: "Infrastructure-only story - package structure creation with no runtime behavior or UI"
+  results:
+    passed: 0
+    failed: 0
+
+decisions:
+  - id: D1
+    description: "Use Zod 4.1.13 instead of story-specified ^3.24.2"
+    rationale: "Matches @repo/app-component-library version to avoid conflicts across monorepo"
+    impact: low
+  - id: D2
+    description: "Added @types/node to devDependencies"
+    rationale: "Required by tsconfig.json types field for node type definitions"
+    impact: low
+  - id: D3
+    description: "Used flexible peer dependency range (^18.0.0 || ^19.0.0) instead of strict ^19.1.0"
+    rationale: "Matches @repo/app-component-library pattern for broader compatibility"
+    impact: low

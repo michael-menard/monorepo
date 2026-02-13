@@ -1,0 +1,39 @@
+schema: 1
+story_id: REPA-0510
+timestamp: "2026-02-11T17:27:32Z"
+
+touches:
+  backend: false       # Frontend-only component migration
+  frontend: true       # React components, UI, Tailwind
+  packages: true       # Create new @repo/upload/components package
+  db: false            # No database changes
+  contracts: false     # No API contract changes
+  ui: true             # Upload UI components (modals, banners, dialogs)
+  infra: false         # No infrastructure changes
+
+touched_paths_globs:
+  - "packages/core/upload/src/components/**"    # Target: new package components
+  - "apps/web/main-app/src/components/Uploader/**"        # Source: Uploader components
+  - "apps/web/main-app/src/**"                  # App-level import updates
+  - "apps/web/app-instructions-gallery/src/components/Uploader/**"  # Source: Uploader components
+  - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/**"  # Source: domain-specific
+  - "apps/web/app-instructions-gallery/src/components/InstructionsUpload/**"  # Source: domain-specific
+  - "apps/web/app-instructions-gallery/src/**" # App-level import updates
+
+risk_flags:
+  auth: false          # No authentication changes
+  payments: false      # No payment-related code
+  migrations: false    # No database migrations
+  external_apis: false # No external API changes
+  security: false      # No security implications (moving existing code)
+  performance: false   # No performance concerns (consolidation only)
+
+summary: "Migrate 8 upload components (6 Uploader sub-components + 2 domain-specific) from apps to @repo/upload/components with preserved test coverage and backward-compatible APIs"
+
+notes:
+  - "No API contract changes - pure frontend consolidation"
+  - "Component divergence verification: 0% divergence (all components identical)"
+  - "Canonical source: main-app for Uploader sub-components"
+  - "Domain-specific components (ThumbnailUpload, InstructionsUpload) only in app-instructions-gallery"
+  - "SessionProvider migration deferred to REPA-0520 (REPA-003 dependency)"
+  - "Package boundary rules: No imports from apps/, Redux, or app-specific code"

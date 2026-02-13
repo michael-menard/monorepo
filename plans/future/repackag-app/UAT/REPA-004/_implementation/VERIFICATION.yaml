@@ -1,0 +1,83 @@
+schema: 1
+story_id: "REPA-004"
+timestamp: "2026-02-11T17:40:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit:
+    upload_package:
+      pass: 225
+      fail: 2
+      skipped: 2
+      pre_existing_failures: 2
+      new_failures: 0
+    wishlist_gallery:
+      pass: 606
+      fail: 13
+      skipped: 0
+      pre_existing_failures: 13
+      new_failures: 0
+
+coverage: 80
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  notes:
+    - "2 pre-existing failures in useUploaderSession.test.tsx (from REPA-003, verified against baseline)"
+    - "package-structure.test.ts fixed to avoid env var dependency from barrel import"
+    - "Zero new test failures introduced by REPA-004"
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    verification: "Compression module exists with compressImage, shouldSkipCompression, getImageDimensions, formatFileSize, transformFilenameToWebP. Zod schemas in __types__. 17 tests (1 skipped)."
+
+  - ac_id: "AC-2"
+    status: PASS
+    verification: "HEIC module exists with isHEIC, convertHEICToJPEG, transformHEICFilename. Zod schemas in __types__. 20 tests passing."
+
+  - ac_id: "AC-3"
+    status: PASS
+    verification: "Presets module exists with COMPRESSION_PRESETS, getPresetByName, isValidPresetName. Zod schemas in __types__. 15 tests passing."
+
+  - ac_id: "AC-4"
+    status: PASS
+    verification: "useUpload hook accepts getPresignedUrl as parameter, preserves convert→compress→upload flow. Zod schemas for PresignedUrlResponse, UploadState. 18 tests (1 skipped)."
+
+  - ac_id: "AC-5"
+    status: PASS
+    verification: "Wishlist imports updated in useS3Upload.ts, useBackgroundCompression.ts, WishlistForm/index.tsx. imageCompression.ts deleted. useS3Upload.ts adapted as wrapper (intentional deviation)."
+
+  - ac_id: "AC-6"
+    status: PASS_WITH_NOTES
+    verification: "606 passed, 13 failed (all pre-existing, baseline verified). useS3Upload: 51 pass, useBackgroundCompression: 22 pass."
+
+  - ac_id: "AC-7"
+    status: PASS
+    verification: "Build passes. 225 tests pass, 2 pre-existing failures (useUploaderSession from REPA-003), 2 skipped. No app imports in package code. REPA-004-specific tests: all passing."
+
+  - ac_id: "AC-8"
+    status: PASS
+    verification: "useUpload.test.tsx with 18 RTL tests covering orchestration, error states, abort/cancel."
+
+  - ac_id: "AC-9"
+    status: PASS
+    verification: "Package structure exists with package.json, tsconfig.json, vite.config.ts. Turborepo build order correct."
+
+  - ac_id: "AC-10"
+    status: PASS
+    verification: "PresignedUrlResponseSchema compatible with PresignResponseSchema. Upload schema more permissive (optional expiresIn)."
+
+architecture_compliant: true
+
+issues:
+  - severity: low
+    category: pre-existing-failures
+    description: "2 pre-existing test failures in useUploaderSession.test.tsx from REPA-003"
+    blocking: false
+
+qa_verdict: PASS
+signal: "VERIFICATION COMPLETE"

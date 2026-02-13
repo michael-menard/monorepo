@@ -7,8 +7,6 @@
 export { StatsCards } from './StatsCards'
 export { RecentMocsGrid } from './RecentMocsGrid'
 export { QuickActions } from './QuickActions'
-export { EmptyDashboard } from './EmptyDashboard'
-export { DashboardSkeleton } from './DashboardSkeleton'
 
 // New dashboard components
 export { BuildStatusChart } from './BuildStatusChart'

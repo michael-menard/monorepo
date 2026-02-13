@@ -1,0 +1,26 @@
+schema: 1
+story_id: BUGF-009
+timestamp: "2026-02-11T20:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/main-app/src/__tests__/**"
+  - "apps/web/main-app/src/test/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Fix and enable 10+ skipped test suites in main-app covering navigation, authentication, performance monitoring, and module loading"

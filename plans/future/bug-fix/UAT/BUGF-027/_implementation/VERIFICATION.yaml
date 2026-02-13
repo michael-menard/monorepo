@@ -1,0 +1,564 @@
+schema: 1
+story_id: "BUGF-027"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-11T23:45:00Z"
+phase: qa-setup
+status: preconditions-validated
+
+precondition_checks:
+  story_exists:
+    status: pass
+    location: "plans/future/bug-fix/ready-for-qa/BUGF-027/"
+    verified_at: "2026-02-11T23:45:00Z"
+
+  story_status:
+    status: pass
+    current_status: "ready-for-qa"
+    expected_status: ["ready-for-qa", "ready-for-qa-with-warnings"]
+    verified_at: "2026-02-11T23:45:00Z"
+
+  evidence_file:
+    status: pass
+    location: "plans/future/bug-fix/ready-for-qa/BUGF-027/_implementation/EVIDENCE.yaml"
+    exists: true
+    ac_count: 6
+    ac_passing: 6
+    verified_at: "2026-02-11T23:45:00Z"
+
+  review_file:
+    status: pass
+    location: "plans/future/bug-fix/ready-for-qa/BUGF-027/_implementation/REVIEW.yaml"
+    exists: true
+    verdict: "PASS"
+    iteration: 2
+    verified_at: "2026-02-11T23:45:00Z"
+
+  checkpoint_file:
+    status: pass
+    location: "plans/future/bug-fix/ready-for-qa/BUGF-027/_implementation/CHECKPOINT.yaml"
+    exists: true
+    current_phase: "done"
+    last_successful_phase: "review"
+    verified_at: "2026-02-11T23:45:00Z"
+
+deliverables_verified:
+  primary:
+    - file: "docs/guides/password-reset-rate-limiting.md"
+      size_kb: 39
+      lines: 1187
+      type: "implementation_guide"
+      status: "exists"
+      verified_at: "2026-02-11T23:45:00Z"
+
+  optional:
+    - file: "docs/flows/auth/forgot-password.md"
+      size_kb: 4.1
+      type: "documentation_update"
+      status: "exists"
+      verified_at: "2026-02-11T23:45:00Z"
+
+    - file: "docs/flows/auth/reset-password.md"
+      size_kb: 5.4
+      type: "documentation_update"
+      status: "exists"
+      verified_at: "2026-02-11T23:45:00Z"
+
+    - file: "docs/architecture/authentication-system.md"
+      size_kb: 22
+      type: "documentation_update"
+      status: "exists"
+      verified_at: "2026-02-11T23:45:00Z"
+
+evidence_summary:
+  story_type: "documentation"
+  acceptance_criteria:
+    - id: "AC-1"
+      description: "Document Cognito rate limiting behavior"
+      status: "PASS"
+
+    - id: "AC-2"
+      description: "Specify frontend state management for password reset rate limiting"
+      status: "PASS"
+
+    - id: "AC-3"
+      description: "Define UI/UX patterns for rate limit feedback"
+      status: "PASS"
+
+    - id: "AC-4"
+      description: "Provide component reuse strategy"
+      status: "PASS"
+
+    - id: "AC-5"
+      description: "Document architectural boundaries and constraints"
+      status: "PASS"
+
+    - id: "AC-6"
+      description: "Include testing strategy for rate limiting"
+      status: "PASS"
+
+  ac_total: 6
+  ac_passing: 6
+  ac_pass_rate: 100
+
+review_verdict: "PASS"
+review_iteration: 2
+
+notes:
+  - "Story is a documentation-only delivery (story_type: documentation)"
+  - "All 6 acceptance criteria satisfied with comprehensive documentation"
+  - "Primary deliverable: implementation guide (1187 lines)"
+  - "Optional deliverables completed: 3 documentation updates to existing auth flow docs"
+  - "Code examples follow project conventions (Zod-first types, proper imports)"
+  - "Cross-references to existing implementations with accurate line numbers"
+  - "ADR-004 and ADR-005 references included as required"
+  - "Review iteration 2: all previous findings resolved"
+  - "E2E tests exempt (documentation story)"
+  - "Ready for QA verification phase"
+
+setup_readiness: "ready"
+next_phase: "qa-verification"
+
+qa_verify:
+  timestamp: "2026-02-11T23:55:00Z"
+  qa_lead: "claude"
+  verdict: "PASS"
+  overall_status: "VERIFICATION COMPLETE"
+
+  acceptance_criteria_verification:
+    - id: "AC-1"
+      title: "Document Cognito rate limiting behavior"
+      status: "PASS"
+      evidence_location: "docs/guides/password-reset-rate-limiting.md"
+      verification_details:
+        - item: "API call limits per IP/user for forgotPassword and confirmResetPassword"
+          status: "complete"
+          location: "Section 1.2 (lines 50-59)"
+          notes: "Table documents ~5 requests per minute for both operations with clear caveat about AWS-managed nature"
+        - item: "Error response format (LimitExceededException structure)"
+          status: "complete"
+          location: "Section 1.3 (lines 61-82)"
+          notes: "Complete error structure with TypeScript example, including $metadata and explicit note about missing Retry-After header"
+        - item: "Retry behavior and cooldown duration estimation"
+          status: "complete"
+          location: "Section 1.4 (lines 83-92)"
+          notes: "Four-step retry process documented with reference to ResendCodeButton implementation"
+        - item: "Differences from backend-managed rate limiting"
+          status: "complete"
+          location: "Section 5.1 (lines 687-699) and line 81"
+          notes: "Comprehensive comparison table shows 8 aspects including Retry-After header difference; inline note at line 81"
+        - item: "Explicit statement that Cognito does not provide Retry-After header"
+          status: "complete"
+          location: "Lines 73, 79-81, 694"
+          notes: "Stated in three locations: error example comment, critical difference callout, and comparison table"
+      findings: []
+
+    - id: "AC-2"
+      title: "Specify frontend state management for password reset rate limiting"
+      status: "PASS"
+      evidence_location: "docs/guides/password-reset-rate-limiting.md"
+      verification_details:
+        - item: "sessionStorage keys for tracking forgotPassword attempts"
+          status: "complete"
+          location: "Section 2.1 (lines 97-114)"
+          notes: "Defines auth:forgotPassword:attempts, auth:forgotPassword:lastAttempt, auth:forgotPassword:cooldownUntil with clear naming convention"
+        - item: "Cooldown calculation algorithm (exponential backoff: 60s → 120s → 240s → 480s → 600s max)"
+          status: "complete"
+          location: "Section 2.2 (lines 116-146)"
+          notes: "Complete calculateCooldown function with TypeScript, formula explanation, and example progression table"
+        - item: "State lifecycle management (reset conditions, expiration handling)"
+          status: "complete"
+          location: "Section 2.4 (lines 205-215)"
+          notes: "Table documents 6 lifecycle events with clear actions for each"
+        - item: "Integration pattern with existing ResendCodeButton approach"
+          status: "complete"
+          location: "Lines 91-92, 145-146, 582"
+          notes: "Multiple cross-references to ResendCodeButton with specific line numbers"
+        - item: "Code examples for sessionStorage read/write operations"
+          status: "complete"
+          location: "Section 2.3 (lines 148-203)"
+          notes: "Four complete TypeScript functions: getCooldownRemaining, setCooldown, incrementAttemptCount, resetAttempts"
+      findings: []
+
+    - id: "AC-3"
+      title: "Define UI/UX patterns for rate limit feedback"
+      status: "PASS"
+      evidence_location: "docs/guides/password-reset-rate-limiting.md"
+      verification_details:
+        - item: "When to show RateLimitBanner vs inline error message"
+          status: "complete"
+          location: "Section 3.1 (lines 318-328)"
+          notes: "Decision table with 6 scenarios including rationale for each choice"
+        - item: "Countdown timer display format: 'Try again in 2:30', update every second"
+          status: "complete"
+          location: "Section 3.2 (lines 332-358)"
+          notes: "formatCountdown function with MM:SS format, examples, and update frequency specs (1000ms visual, 30s screen reader)"
+        - item: "Button disable states during cooldown with visual indicators"
+          status: "complete"
+          location: "Section 3.3 (lines 360-383)"
+          notes: "Complete Button example with disabled, aria-disabled, opacity, cursor, and dynamic text"
+        - item: "Accessibility: aria-live='polite' for countdown announcements"
+          status: "complete"
+          location: "Section 3.4.1 (lines 386-402)"
+          notes: "Complete implementation with role='timer', aria-live='polite', sr-only class"
+        - item: "Accessibility: Screen reader announcements every 30 seconds"
+          status: "complete"
+          location: "Section 3.4.2 (lines 404-430)"
+          notes: "Implementation pattern with throttling logic to avoid spam, rounded seconds for announcements"
+        - item: "Accessibility: prefers-reduced-motion support for timer animations"
+          status: "complete"
+          location: "Section 3.4.3 (lines 432-460)"
+          notes: "CSS example with motion-reduce:transition-none and progressbar ARIA attributes"
+        - item: "Accessibility: role='alert' for rate limit error messages"
+          status: "complete"
+          location: "Section 3.4.4 (lines 462-473)"
+          notes: "Alert component example with role='alert' and aria-hidden on icon"
+      findings: []
+
+    - id: "AC-4"
+      title: "Provide component reuse strategy"
+      status: "PASS"
+      evidence_location: "docs/guides/password-reset-rate-limiting.md"
+      verification_details:
+        - item: "Document RateLimitBanner current location"
+          status: "complete"
+          location: "Section 4.1 (lines 478-501)"
+          notes: "Exact path, current usage context, and complete Zod props schema documented"
+        - item: "Recommend move to packages/core/app-component-library/feedback/"
+          status: "complete"
+          location: "Section 4.2 (lines 503-522)"
+          notes: "Recommendation with rationale and 5-step migration path"
+        - item: "Specify adaptations needed for auth flow use cases (messaging, styling, dismiss behavior)"
+          status: "complete"
+          location: "Section 4.3 (lines 524-589)"
+          notes: "Three subsections cover messaging variations, styling variants, and dismiss behavior with code examples"
+        - item: "Document integration points in ForgotPasswordPage and ResetPasswordPage"
+          status: "complete"
+          location: "Section 4.4 (lines 591-663)"
+          notes: "Complete integration examples for both pages with placement guidance"
+        - item: "Reference shadcn Alert primitive and _primitives import pattern"
+          status: "complete"
+          location: "Section 4.5 (lines 665-682)"
+          notes: "Shows correct vs incorrect import patterns per CLAUDE.md, explains architecture"
+      findings:
+        - type: "informational"
+          severity: "low"
+          description: "RateLimitBanner props contract shown in 4.1 only has 4 props (visible, retryAfterSeconds, onRetry, onDismiss). Section 4.3.1 proposes message and title props as enhancements for BUGF-019. This is clearly marked as 'Proposed Enhancement' and 'Recommended Enhancement', not current implementation."
+          impact: "No impact - documentation correctly distinguishes current vs proposed state"
+          resolution: "Accepted as-is - appropriate for implementation guide"
+
+    - id: "AC-5"
+      title: "Document architectural boundaries and constraints"
+      status: "PASS"
+      evidence_location: "docs/guides/password-reset-rate-limiting.md"
+      verification_details:
+        - item: "Cognito-managed vs backend-managed rate limiting comparison table"
+          status: "complete"
+          location: "Section 5.1 (lines 687-699)"
+          notes: "Comprehensive table with 9 aspects including enforcement, error types, headers, thresholds, storage"
+        - item: "Why backend API endpoints are not needed (Amplify SDK → Cognito direct)"
+          status: "complete"
+          location: "Section 5.2 (lines 701-726)"
+          notes: "Clear flow diagram, rationale per ADR-004, contrast table with backend operations"
+        - item: "ADR-004 implications (Cognito as authoritative auth service)"
+          status: "complete"
+          location: "Section 5.3 (lines 728-738)"
+          notes: "Five specific implications listed with design decision explanation"
+        - item: "Security considerations: account enumeration prevention"
+          status: "complete"
+          location: "Section 5.4.1 (lines 740-765) and 5.4.2 (lines 767-775)"
+          notes: "Correct vs wrong examples, current implementation reference, feedback security table with 4 scenarios"
+        - item: "Security: never leak account existence information"
+          status: "complete"
+          location: "Lines 745-763, 796-833"
+          notes: "Multiple locations emphasize this with examples of safe vs unsafe messaging"
+        - item: "Amplify v6 API examples for forgotPassword and confirmResetPassword"
+          status: "complete"
+          location: "Section 5.5 (lines 777-827)"
+          notes: "Complete examples for both operations with error handling, v6 migration note, output structure"
+      findings: []
+      cross_reference_verification:
+        - file: "docs/architecture/authentication-system.md"
+          section: "Rate Limiting (lines 539-645)"
+          status: "consistent"
+          notes: "Has rate limiting section with Cognito vs backend comparison, ADR-004 reference, account enumeration prevention, and link to implementation guide"
+
+    - id: "AC-6"
+      title: "Include testing strategy for rate limiting"
+      status: "PASS"
+      evidence_location: "docs/guides/password-reset-rate-limiting.md"
+      verification_details:
+        - item: "Unit test approach: MSW mocking of LimitExceededException"
+          status: "complete"
+          location: "Section 6.1.1 (lines 833-878)"
+          notes: "Complete MSW handler example with Cognito HTTP API intercept, attempt tracking, correct response format"
+        - item: "Unit test approach: Code example of MSW handler"
+          status: "complete"
+          location: "Lines 838-876"
+          notes: "39-line working example with sessionStorage tracking and proper Cognito response structure"
+        - item: "Unit test approach: Testing sessionStorage state tracking"
+          status: "complete"
+          location: "Section 6.1.2 (lines 880-956)"
+          notes: "Four complete test examples covering attempt tracking, cooldown calculation, banner display, button disable"
+        - item: "Unit test approach: Testing cooldown timer"
+          status: "complete"
+          location: "Section 6.1.3 (lines 958-991)"
+          notes: "Complete example using vi.useFakeTimers with timer advancement verification"
+        - item: "E2E test scenarios: Playwright test outline for rate limit flow"
+          status: "complete"
+          location: "Section 6.2.1 (lines 993-1088)"
+          notes: "Four complete Playwright tests: rate limit banner, button disable, countdown expiry, state persistence"
+        - item: "E2E test scenarios: How to trigger rate limiting"
+          status: "complete"
+          location: "Section 6.2.2 (lines 1090-1113)"
+          notes: "Two methods documented: rapid API calls vs pre-set sessionStorage with recommendation"
+        - item: "UAT requirements: ADR-005 reference (must use real Cognito)"
+          status: "complete"
+          location: "Section 6.3.1 (lines 1115-1127)"
+          notes: "ADR-005 referenced with requirement and four rationale points"
+        - item: "UAT requirements: How to trigger rate limiting in UAT environment"
+          status: "complete"
+          location: "Section 6.3.2 (lines 1129-1159)"
+          notes: "Manual testing steps, automated UAT script, Playwright config example"
+        - item: "UAT requirements: Note about Cognito rate limit differences between environments"
+          status: "complete"
+          location: "Section 6.3.3 (lines 1161-1169)"
+          notes: "Table comparing dev/staging/prod with thresholds and notes, implication explained"
+      findings: []
+      code_quality_verification:
+        vitest_api:
+          status: "correct"
+          notes: "All test examples use vi.useFakeTimers, vi.advanceTimersByTime, vi.useRealTimers (Vitest API, not Jest)"
+          grep_results: "4 instances of vi.* found, 0 instances of jest.* found"
+        import_patterns:
+          status: "correct"
+          notes: "All imports follow @repo/app-component-library pattern, no individual path imports"
+          examples: "Lines 596, 635, 670 show correct @repo/app-component-library usage"
+        zod_first:
+          status: "correct"
+          notes: "RateLimitBannerPropsSchema defined with Zod, type inferred with z.infer"
+          location: "Lines 486-501"
+
+  cross_reference_verification:
+    - file: "docs/flows/auth/forgot-password.md"
+      section: "Rate Limiting (lines 117-140)"
+      status: "PASS"
+      details:
+        - item: "Has rate limiting section"
+          status: "yes"
+        - item: "UX flow diagram included"
+          status: "yes"
+          location: "Lines 128-136 (mermaid diagram)"
+        - item: "Cross-reference to implementation guide"
+          status: "yes"
+          location: "Line 138"
+        - item: "Related story references"
+          status: "yes"
+          location: "Line 140 (BUGF-027, BUGF-019)"
+      findings: []
+
+    - file: "docs/flows/auth/reset-password.md"
+      section: "Rate Limiting (lines 148-167)"
+      status: "PASS"
+      details:
+        - item: "Has rate limiting section"
+          status: "yes"
+        - item: "Error handling table included"
+          status: "yes"
+          location: "Lines 153-158 (3-row table)"
+        - item: "Cross-reference to implementation guide"
+          status: "yes"
+          location: "Line 164"
+        - item: "Related story references"
+          status: "yes"
+          location: "Line 166 (BUGF-027, BUGF-019)"
+      findings: []
+
+    - file: "docs/architecture/authentication-system.md"
+      section: "Rate Limiting (lines 539-645)"
+      status: "PASS"
+      details:
+        - item: "Has rate limiting subsection"
+          status: "yes"
+        - item: "Cognito vs backend comparison table"
+          status: "yes"
+          location: "Lines 552-561 (11-row table)"
+        - item: "Frontend state management patterns"
+          status: "yes"
+          location: "Lines 562-583 (sessionStorage keys, backoff algorithm)"
+        - item: "ADR-004 reference and implications"
+          status: "yes"
+          location: "Lines 607-621 (section 5.3 equivalent)"
+        - item: "Account enumeration prevention"
+          status: "yes"
+          location: "Lines 623-631"
+        - item: "Implementation guide link"
+          status: "yes"
+          location: "Lines 633-645"
+      findings: []
+
+  referenced_files_verification:
+    - file: "packages/core/upload/src/components/RateLimitBanner/index.tsx"
+      status: "exists"
+      verified: true
+      size: "3774 bytes"
+      notes: "Referenced in sections 4.1, 4.2, 4.5"
+
+    - file: "packages/core/upload/src/components/RateLimitBanner/__types__/index.ts"
+      status: "exists"
+      verified: true
+      notes: "Referenced for props schema in section 4.1"
+
+    - file: "apps/web/main-app/src/components/Auth/ResendCodeButton.tsx"
+      status: "exists"
+      verified: true
+      size: "7789 bytes"
+      notes: "Referenced in sections 1.4, 2.2, 5.3 for exponential backoff pattern"
+
+    - file: "apps/web/main-app/src/routes/pages/ForgotPasswordPage.tsx"
+      status: "exists"
+      verified: true
+      notes: "Referenced in sections 2.5, 3.4.4, 4.4.1, 5.2, 5.4.1"
+
+    - file: "apps/api/lego-api/middleware/rate-limit.ts"
+      status: "exists"
+      verified: true
+      size: "7071 bytes"
+      notes: "Referenced in sections 1.3, 5.1, 5.2 for backend comparison"
+
+  code_example_quality:
+    typescript_syntax:
+      status: "valid"
+      method: "Node.js syntax check on extracted examples"
+      results: "All code examples are syntactically valid TypeScript"
+
+    vitest_usage:
+      status: "correct"
+      results: "All test examples use Vitest API (vi.*), no Jest API usage detected"
+
+    zod_first_patterns:
+      status: "correct"
+      results: "RateLimitBannerPropsSchema uses Zod with z.infer for type"
+
+    import_conventions:
+      status: "correct"
+      results: "All imports use @repo/app-component-library, no individual path imports"
+
+  documentation_completeness:
+    primary_deliverable:
+      file: "docs/guides/password-reset-rate-limiting.md"
+      status: "complete"
+      lines: 1201
+      sections: 6
+      all_acs_covered: true
+
+    optional_deliverables:
+      - file: "docs/flows/auth/forgot-password.md"
+        status: "updated"
+        lines_added: 24
+        quality: "consistent with primary guide"
+
+      - file: "docs/flows/auth/reset-password.md"
+        status: "updated"
+        lines_added: 20
+        quality: "consistent with primary guide"
+
+      - file: "docs/architecture/authentication-system.md"
+        status: "updated"
+        lines_added: 107
+        quality: "consistent with primary guide"
+
+  overall_findings:
+    critical: []
+    major: []
+    minor: []
+    informational:
+      - finding: "RateLimitBanner props contract documentation vs proposed enhancements clearly distinguished"
+        location: "Section 4.3.1"
+        impact: "None - appropriate for implementation guide to propose enhancements"
+        action: "Accepted as-is"
+      - finding: "formatCountdown vs formatTime naming discrepancy noted in guide itself"
+        location: "Lines 350-352"
+        impact: "None - guide explicitly addresses this with note"
+        action: "Accepted as-is"
+
+  qa_checklist:
+    - item: "All 6 acceptance criteria fully satisfied"
+      status: "complete"
+      evidence: "Per-AC verification shows all sub-items complete with evidence locations"
+
+    - item: "Primary deliverable (implementation guide) comprehensive and accurate"
+      status: "complete"
+      evidence: "1201 lines covering all required topics with code examples and cross-references"
+
+    - item: "Optional documentation updates completed and consistent"
+      status: "complete"
+      evidence: "All 3 optional files updated with rate limiting sections and cross-references"
+
+    - item: "Code examples are TypeScript with proper type annotations"
+      status: "complete"
+      evidence: "All examples include explicit types, Zod schemas with z.infer"
+
+    - item: "Vitest API used (not Jest)"
+      status: "complete"
+      evidence: "Grep verification: 4 vi.* instances, 0 jest.* instances"
+
+    - item: "Import patterns follow project conventions (@repo/*)"
+      status: "complete"
+      evidence: "All imports use @repo/app-component-library, no _primitives path imports"
+
+    - item: "Referenced file paths are accurate and files exist"
+      status: "complete"
+      evidence: "All 5 referenced files verified to exist at documented locations"
+
+    - item: "ADR-004 and ADR-005 referenced appropriately"
+      status: "complete"
+      evidence: "AC-5 references ADR-004 in sections 5.2, 5.3; AC-6 references ADR-005 in section 6.3.1"
+
+    - item: "Account enumeration prevention emphasized throughout"
+      status: "complete"
+      evidence: "Multiple sections (5.4.1, 5.4.2, architecture doc) emphasize this with examples"
+
+    - item: "Cross-references to existing implementations included"
+      status: "complete"
+      evidence: "ResendCodeButton, RateLimitBanner, ForgotPasswordPage, rate-limit.ts all referenced with line numbers"
+
+    - item: "Testing strategy covers unit, E2E, and UAT"
+      status: "complete"
+      evidence: "Section 6 has comprehensive coverage: 6.1 unit (MSW), 6.2 E2E (Playwright), 6.3 UAT (ADR-005)"
+
+    - item: "Zod-first patterns demonstrated"
+      status: "complete"
+      evidence: "Section 4.1 shows RateLimitBannerPropsSchema with Zod and z.infer type"
+
+  readiness_assessment:
+    for_bugf_019_implementation: "ready"
+    technical_accuracy: "high"
+    completeness: "comprehensive"
+    consistency: "excellent"
+    usability: "clear and actionable"
+
+  recommendation: "APPROVE - All acceptance criteria fully satisfied. Documentation is comprehensive, technically accurate, and provides clear implementation guidance for BUGF-019. Code examples follow project conventions. Cross-references are accurate. No blocking issues identified."
+
+  next_steps:
+    - "Move story from ready-for-qa to UAT"
+    - "Create UAT checklist for documentation review"
+    - "BUGF-019 can proceed with implementation using this guide"
+
+gate:
+  decision: "QA_PASS"
+  timestamp: "2026-02-11T23:58:00Z"
+  rationale: "All 6 acceptance criteria fully satisfied with comprehensive, technically accurate documentation. Primary deliverable (1201 lines) and 3 optional documentation updates completed. All code examples follow project conventions (Zod-first types, proper imports, Vitest API). Cross-references to existing implementations verified with accurate line numbers. No critical or major findings identified. E2E exempt per documentation story type. Ready for UAT."
+  ac_results:
+    AC-1: PASS
+    AC-2: PASS
+    AC-3: PASS
+    AC-4: PASS
+    AC-5: PASS
+    AC-6: PASS
+  findings_summary:
+    critical: 0
+    major: 0
+    minor: 0
+    informational: 2
+  e2e_gate: exempt
+  recommendation: "Move to UAT"

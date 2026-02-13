@@ -1,0 +1,128 @@
+schema: 1
+story_id: "REPA-009"
+generated_at: "2026-02-11T19:30:00Z"
+source: "manual (KB unavailable)"
+
+lessons:
+  - id: "REPA-LESSON-001"
+    title: "Zod-first type definitions required"
+    context: "Project enforces Zod schemas for all type definitions per CLAUDE.md"
+    lesson: "Always define Zod schemas first, infer TypeScript types with z.infer<>. Never use interface or type aliases without Zod validation."
+    applies_to: ["packages/core/gallery/src/components/GalleryCard.tsx"]
+
+  - id: "REPA-LESSON-002"
+    title: "Component directory structure with __types__ and __tests__"
+    context: "Project uses structured component directories"
+    lesson: "Component structure: Component/index.tsx, __tests__/Component.test.tsx, __types__/index.ts (for component-local schemas)"
+    applies_to: ["packages/core/gallery"]
+
+  - id: "REPA-LESSON-003"
+    title: "Selection mode pattern from existing domain cards"
+    context: "InspirationCard and AlbumCard have working selection implementations"
+    lesson: "Selection pattern: selectionMode + isSelected props, checkbox at top-left with z-10, click card calls onSelect when selectionMode=true"
+    applies_to: ["apps/web/app-inspiration-gallery/src/components/InspirationCard", "apps/web/app-inspiration-gallery/src/components/AlbumCard"]
+
+  - id: "REPA-LESSON-004"
+    title: "Hover overlay pattern consistency"
+    context: "Multiple cards use identical gradient overlay approach"
+    lesson: "Hover overlay: bg-gradient-to-t from-black/60 via-transparent to-transparent with opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+    applies_to: ["apps/web/app-inspiration-gallery"]
+
+  - id: "REPA-LESSON-005"
+    title: "WCAG touch target minimum 44x44px"
+    context: "SortableWishlistCard and SortableInspirationCard enforce 44x44px drag handles"
+    lesson: "All interactive touch targets must be minimum 44x44px (WCAG 2.5.5). Use h-11 w-11 Tailwind classes for 44px buttons."
+    applies_to: ["accessibility"]
+
+adrs:
+  - id: "ADR-001"
+    title: "Reuse-first principle for shared components"
+    decision: "Consolidate duplicate patterns into shared packages rather than maintaining multiple implementations"
+    rationale: "Eliminates ~300 LOC of duplicate code, centralizes maintenance, ensures consistency"
+    status: "accepted"
+    applies_to: ["@repo/gallery"]
+
+  - id: "ADR-002"
+    title: "Props-based composition over inheritance"
+    decision: "GalleryCard provides feature slots via props (selectable, draggable, hoverOverlay) rather than subclassing"
+    rationale: "More flexible, allows domain cards to compose features as needed, avoids inheritance complexity"
+    status: "accepted"
+    applies_to: ["packages/core/gallery/src/components/GalleryCard.tsx"]
+
+  - id: "ADR-003"
+    title: "Breaking changes require explicit approval"
+    decision: "Removing actions overlay from GalleryCard is a breaking change requiring PM approval"
+    rationale: "Affects existing consumers, migration effort must be justified"
+    status: "accepted"
+    applies_to: ["packages/core/gallery/src/components/GalleryCard.tsx"]
+
+patterns:
+  - id: "PATTERN-001"
+    name: "Gallery card layering"
+    description: "Z-index strategy for card overlays"
+    implementation: |
+      Image: z-0 (base)
+      Hover overlay: z-10
+      Selection checkbox: z-10 (top-left corner)
+      Drag handle: z-10 (top-right corner)
+      All overlays use absolute positioning at different corners to prevent collisions
+    applies_to: ["GalleryCard enhancements"]
+
+  - id: "PATTERN-002"
+    name: "Responsive hover visibility"
+    description: "Mobile-first hover overlay behavior"
+    implementation: |
+      Mobile (<768px): Always visible (no opacity-0)
+      Desktop (>=768px): Hover-visible only
+      Use Tailwind: md:opacity-0 md:group-hover:opacity-100
+    applies_to: ["hoverOverlay prop", "drag handle rendering"]
+
+  - id: "PATTERN-003"
+    name: "Selection click behavior hierarchy"
+    description: "Priority order for card click handling"
+    implementation: |
+      1. If selectable=true AND onClick undefined: call onSelect
+      2. If selectable=true AND onClick defined: call onClick (explicit override)
+      3. Keyboard (Enter/Space) follows same logic as click
+      4. Clicking checkbox directly: always calls onSelect, stops propagation
+    applies_to: ["GalleryCard click handlers"]
+
+dependencies:
+  - story_id: "REPA-007"
+    title: "SortableGallery Component"
+    status: "in-progress"
+    impact: "Drag handle integration testing depends on SortableGallery completion"
+    mitigation: "Mock useSortable in unit tests, defer full integration to REPA-010"
+
+  - story_id: "REPA-008"
+    title: "Gallery Keyboard Hooks"
+    status: "completed"
+    impact: "useRovingTabIndex and useAnnouncer available for optional use"
+    mitigation: "No blocker - can optionally integrate keyboard hooks"
+
+constraints:
+  - category: "code_style"
+    requirement: "Use @repo/ui for all UI components (Button, Card, icons)"
+    enforced_by: "CLAUDE.md import rules"
+
+  - category: "code_style"
+    requirement: "Use @repo/logger for logging (never console.log)"
+    enforced_by: "CLAUDE.md logging rules"
+
+  - category: "testing"
+    requirement: "Minimum 45% overall test coverage, 80%+ for critical components"
+    enforced_by: "Project quality gates"
+
+  - category: "accessibility"
+    requirement: "WCAG 2.5.5 touch target minimum 44x44px"
+    enforced_by: "Accessibility standards"
+
+  - category: "breaking_changes"
+    requirement: "Actions overlay removal requires explicit documentation and migration guide"
+    enforced_by: "ADR-003"
+
+notes:
+  - "Knowledge context manually created - KB database unavailable"
+  - "Lessons extracted from existing code patterns in InspirationCard, AlbumCard, SortableInspirationCard"
+  - "ADRs inferred from DEV-FEASIBILITY.md and DECISIONS.yaml"
+  - "Patterns documented from existing implementations and design decisions"

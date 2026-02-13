@@ -1,0 +1,77 @@
+# Risk Predictions: BUGF-009
+# Generated: 2026-02-11T18:30:00Z
+# Model: haiku (heuristics-only mode)
+# WKFL Version: 007-v1
+
+predictions:
+  split_risk: 0.7
+  review_cycles: 3
+  token_estimate: 180000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-11T18:30:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+
+# Calculation Details
+
+## AC Count Analysis
+- AC count: 22
+- Complexity: complex (>= 5 ACs)
+- Base split risk from AC count: 0.5 (high AC count)
+
+## Scope Complexity Analysis
+- Scope keywords: frontend, testing, auth, navigation, mocking
+- Frontend + backend: No (frontend only)
+- Database: No
+- Auth keywords: Yes (+0.1 split risk)
+- Test infrastructure: Yes (testing focus)
+
+## Split Risk Calculation
+- Base risk: 0.5 (from 22 ACs)
+- Auth complexity boost: +0.1
+- Test infrastructure complexity: +0.1
+- **Final split_risk: 0.7**
+
+## Review Cycles Calculation
+- Base cycles: 1
+- Scope keywords > 3: Yes (+1 cycle)
+- Auth/security: Yes (+1 cycle)
+- Estimated files > 5: Yes, 11 test suites (+0 additional, already counted)
+- **Final review_cycles: 3**
+
+## Token Estimate Calculation
+- WKFL-006 patterns: Unavailable
+- KB similar stories: None found (heuristics-only mode)
+- Fallback: Story complexity heuristic
+  - Complex story (22 ACs): baseline 150K
+  - Test infrastructure focus: +20K (comprehensive test updates)
+  - Multiple test suites (11): +10K
+- **Final token_estimate: 180000**
+
+## Confidence Assessment
+- Similar stories: 0 (no KB data)
+- WKFL-006 patterns: Unavailable
+- **Confidence: low** (heuristics-only mode, no historical data)
+
+## Notes
+- Predictions generated in degraded mode (no KB access, no WKFL-006 patterns)
+- Split risk is high due to:
+  1. Large AC count (22 ACs)
+  2. Auth-related work (complex mocking)
+  3. Unknown extent of RTK Query refactoring impact
+  4. Hub.listen mocking blocker
+- Review cycles estimate based on:
+  1. Multiple test suites requiring investigation
+  2. Auth complexity requiring security review
+  3. Coordination with active refactoring work
+- Token estimate conservative due to:
+  1. Investigation phase for each test suite
+  2. Potential for iterative mock updates
+  3. Documentation requirements for removed tests
+
+## Recommended Actions
+- Consider splitting story if Hub.listen solution proves complex (defer to BUGF-010)
+- Prioritize high-value test suites (auth flows) over lower priority (performance tests)
+- Document decision criteria for fix vs. remove early to guide implementation
+- Monitor token usage; if exceeding 150K, consider removing lower priority tests

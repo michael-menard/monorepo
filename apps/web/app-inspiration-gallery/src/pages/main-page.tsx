@@ -37,6 +37,9 @@ import {
   type Inspiration,
   type AlbumWithMetadata,
 } from '@repo/api-client/rtk/inspiration-api'
+import { useMultiSelect } from '@repo/hooks/useMultiSelect'
+import { useGalleryKeyboard } from '@repo/gallery'
+import { logger } from '@repo/logger'
 import { InspirationCard } from '../components/InspirationCard'
 import { AlbumCard } from '../components/AlbumCard'
 import { EmptyState } from '../components/EmptyState'
@@ -55,8 +58,6 @@ import { LinkToMocModal } from '../components/LinkToMocModal'
 import { CreateAlbumModal } from '../components/CreateAlbumModal'
 import { GalleryLoadingSkeleton } from '../components/GalleryLoadingSkeleton'
 import { BulkActionsBar } from '../components/BulkActionsBar'
-import { useMultiSelect } from '../hooks/useMultiSelect'
-import { useGalleryKeyboard } from '../hooks/useGalleryKeyboard'
 
 /**
  * Main page props schema
@@ -323,14 +324,14 @@ export function MainPage({ className }: MainPageProps) {
   // Add to album handler (placeholder - requires album membership API)
   const handleAddToAlbum = useCallback(async (albumIds: string[]) => {
     // TODO: Implement when album membership API is ready
-    console.log('Add to albums:', albumIds)
+    logger.info('Add to albums', { albumIds })
     toast.success('Added to albums!')
   }, [])
 
   // Link to MOC handler (placeholder - requires MOC linking API)
   const handleLinkToMoc = useCallback(async (mocIds: string[]) => {
     // TODO: Implement when MOC linking API is ready
-    console.log('Link to MOCs:', mocIds)
+    logger.info('Link to MOCs', { mocIds })
     toast.success('Linked to MOCs!')
   }, [])
 
@@ -376,7 +377,7 @@ export function MainPage({ className }: MainPageProps) {
 
   const handleAlbumClick = (id: string) => {
     // TODO: Navigate to album page
-    console.log('Open album:', id)
+    logger.info('Open album', { albumId: id })
   }
 
   const handleOpenCreateAlbumModal = () => {
@@ -596,7 +597,7 @@ export function MainPage({ className }: MainPageProps) {
                   onCardClick={handleInspirationClick}
                   onMenuClick={(id, e) => {
                     // TODO: Open context menu
-                    console.log('Menu clicked', id, e)
+                    logger.info('Menu clicked', { inspirationId: id, event: e.type })
                   }}
                 />
               ) : (
@@ -675,7 +676,7 @@ export function MainPage({ className }: MainPageProps) {
                       }}
                       onEdit={() => {
                         // TODO: Implement album edit modal
-                        console.log('Edit album:', album.id)
+                        logger.info('Edit album', { albumId: album.id })
                       }}
                       onAddInspirations={() => {
                         // TODO: Navigate to album or open add modal

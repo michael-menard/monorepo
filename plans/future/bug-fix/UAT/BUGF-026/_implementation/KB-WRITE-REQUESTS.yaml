@@ -1,0 +1,474 @@
+# KB Write Requests for BUGF-026 Future Opportunities
+# To be processed by kb-writer agent
+
+story_id: BUGF-026
+feature: bug-fix
+phase: elaboration
+generated_at: "2026-02-11T19:45:00Z"
+
+# Non-Blocking Gaps (10 items)
+gaps:
+  - id: gap-1
+    entry_type: finding
+    source_stage: elab
+    category: "performance"
+    title: "Token expiration buffer not configurable per environment"
+    content: |
+      **Gap**: Token expiration buffer (5 min) is hardcoded in CognitoTokenManager, not configurable per environment.
+
+      **Current State**: 5-minute buffer before token expiration is fixed in `/packages/core/api-client/src/auth/cognito-integration.ts`
+
+      **Impact**: Low - Current default is reasonable for production. Would be useful for development/testing to set shorter buffer (e.g., 1 min) for faster testing of token refresh scenarios.
+
+      **Effort**: Low - Add `tokenExpirationBuffer` to CognitoTokenManagerConfig interface
+
+      **Recommendation**: Make tokenExpirationBuffer environment-configurable for production vs. development (e.g., 5 min prod, 1 min dev for faster testing)
+
+      **Related Story**: BUGF-026 (security review), potentially BUGF-005 (auth consolidation)
+    additional_tags:
+      - "configuration"
+      - "testing"
+      - "future-work"
+      - "token-management"
+
+  - id: gap-2
+    entry_type: finding
+    source_stage: elab
+    category: "performance"
+    title: "Circuit breaker threshold hardcoded at 3 failures"
+    content: |
+      **Gap**: Circuit breaker threshold (3 consecutive failures) is hardcoded in CognitoTokenManager.
+
+      **Current State**: Circuit breaker opens after 3 consecutive failures in `/packages/core/api-client/src/auth/cognito-integration.ts`
+
+      **Impact**: Low - Current threshold is reasonable. Different profiles might want higher tolerance (5 failures) or lower (2 failures).
+
+      **Effort**: Low - Add `circuitBreakerThreshold` to CognitoTokenManagerConfig interface
+
+      **Recommendation**: Make circuit breaker threshold configurable per CognitoTokenManagerConfig for different failure tolerance profiles
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "configuration"
+      - "resilience"
+      - "future-work"
+      - "circuit-breaker"
+
+  - id: gap-3
+    entry_type: finding
+    source_stage: elab
+    category: "documentation"
+    title: "Hub.listen race condition mitigation not documented"
+    content: |
+      **Gap**: No explicit documentation of how Hub.listen concurrent events are handled and what guarantees are provided for event ordering.
+
+      **Current State**: AuthProvider uses Hub.listen for tokenRefresh events in `/apps/web/main-app/src/services/auth/AuthProvider.tsx`. Concurrent refresh prevention exists via `refreshPromise` pattern in CognitoTokenManager.
+
+      **Impact**: Low - Implementation likely handles this correctly via existing `refreshPromise` pattern, but documentation gap makes it unclear.
+
+      **Effort**: Medium - Requires code analysis and documentation writing
+
+      **Recommendation**: Document how concurrent Hub.listen events are handled and what guarantees are provided for event ordering. Should be part of SECURITY-REVIEW.md in BUGF-026 or BUGF-005 implementation docs.
+
+      **Related Story**: BUGF-026 (security review), BUGF-005 (auth consolidation)
+    additional_tags:
+      - "edge-case"
+      - "documentation"
+      - "concurrency"
+      - "hub-events"
+
+  - id: gap-4
+    entry_type: finding
+    source_stage: elab
+    category: "observability"
+    title: "Backend session sync error handling needs granularity"
+    content: |
+      **Gap**: Backend session sync error handling treats all errors the same - could distinguish between recoverable errors (network timeout) vs. unrecoverable errors (invalid token).
+
+      **Current State**: refreshAuthSession in `/packages/core/auth-services/src/session/index.ts` logs errors but doesn't distinguish error types.
+
+      **Impact**: Medium - Smarter retry strategies could improve reliability (retry network timeouts, don't retry invalid tokens).
+
+      **Effort**: Medium - Requires error classification and differentiated retry logic
+
+      **Recommendation**: Distinguish between recoverable errors (network timeout) vs. unrecoverable errors (invalid token) in refreshAuthSession for smarter retry strategies
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "error-handling"
+      - "enhancement"
+      - "retry-logic"
+      - "session-sync"
+
+  - id: gap-5
+    entry_type: finding
+    source_stage: elab
+    category: "observability"
+    title: "No monitoring/alerting on circuit breaker opens"
+    content: |
+      **Gap**: No monitoring or alerting when circuit breaker opens in production to detect widespread auth issues early.
+
+      **Current State**: CognitoTokenManager tracks metrics (consecutiveFailures) but doesn't expose alerts when circuit breaker opens.
+
+      **Impact**: Medium - Circuit breaker opening indicates widespread auth problems. Early detection would enable faster incident response.
+
+      **Effort**: Medium - Add observability hooks and integrate with monitoring system (e.g., CloudWatch, DataDog)
+
+      **Recommendation**: Add observability for when circuit breaker opens in production to detect widespread auth issues early
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "monitoring"
+      - "alerting"
+      - "production"
+      - "circuit-breaker"
+
+  - id: gap-6
+    entry_type: finding
+    source_stage: elab
+    category: "observability"
+    title: "Token metrics not exposed to UI/dashboard"
+    content: |
+      **Gap**: Token metrics tracking (getAuthMetrics() data) is available in CognitoTokenManager but not exposed to UI or admin dashboard.
+
+      **Current State**: CognitoTokenManager tracks totalRefreshAttempts, successfulRefreshes, failedRefreshes, but no UI exposure.
+
+      **Impact**: Low - Would be useful for debugging auth issues in production, but not critical for core functionality.
+
+      **Effort**: Medium - Create admin dashboard component and wire up metrics API
+
+      **Recommendation**: Consider exposing getAuthMetrics() data to admin dashboard for debugging auth issues
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "ui"
+      - "metrics"
+      - "debugging"
+      - "admin-dashboard"
+
+  - id: gap-7
+    entry_type: finding
+    source_stage: elab
+    category: "security"
+    title: "Session replay attack protection not documented"
+    content: |
+      **Gap**: No explicit documentation of session replay attack surface and mitigations (e.g., token binding, device fingerprinting).
+
+      **Current State**: Implementation likely has some protections via httpOnly cookies and token expiration, but attack surface not formally documented.
+
+      **Impact**: Medium - Session replay attacks are a known threat vector for authentication systems. Documentation gap makes it unclear what protections exist.
+
+      **Effort**: High - Requires security analysis, threat modeling, and potentially code changes for additional mitigations
+
+      **Recommendation**: Security review should document session replay attack surface and mitigations (e.g., token binding, device fingerprinting). Should be covered in SECURITY-REVIEW.md for BUGF-026.
+
+      **Related Story**: BUGF-026 (security review) - MUST be addressed in security review deliverable
+    additional_tags:
+      - "security-hardening"
+      - "session-management"
+      - "threat-model"
+      - "replay-attacks"
+
+  - id: gap-8
+    entry_type: finding
+    source_stage: elab
+    category: "documentation"
+    title: "Refresh token rotation strategy not documented"
+    content: |
+      **Gap**: AWS Cognito supports refresh token rotation - not documented whether this is enabled and how it affects token lifecycle.
+
+      **Current State**: CognitoTokenManager handles token refresh but doesn't document Cognito's refresh token rotation feature.
+
+      **Impact**: Medium - Refresh token rotation is a security best practice. Documentation gap makes it unclear if feature is enabled and how it's handled.
+
+      **Effort**: Medium - Requires AWS Cognito configuration review and documentation
+
+      **Recommendation**: Document whether refresh token rotation is enabled in AWS Cognito and how it affects token lifecycle. Should be part of SECURITY-REVIEW.md in BUGF-026.
+
+      **Related Story**: BUGF-026 (security review) - should be addressed in security review deliverable
+    additional_tags:
+      - "documentation"
+      - "token-lifecycle"
+      - "cognito"
+      - "security-best-practice"
+
+  - id: gap-9
+    entry_type: finding
+    source_stage: elab
+    category: "security"
+    title: "CSRF protection for session sync endpoints not documented"
+    content: |
+      **Gap**: No explicit documentation of CSRF protection for POST /auth/session, POST /auth/refresh, POST /auth/logout endpoints.
+
+      **Current State**: Likely handled by httpOnly cookies with SameSite attribute, but not explicitly documented.
+
+      **Impact**: High - CSRF protection is critical for session management endpoints. Documentation gap creates uncertainty about security posture.
+
+      **Effort**: Low - Should be straightforward to confirm and document existing protections
+
+      **Recommendation**: Security review should confirm CSRF protection for session sync endpoints (likely handled by httpOnly cookies + SameSite). MUST be covered in SECURITY-REVIEW.md for BUGF-026.
+
+      **Related Story**: BUGF-026 (security review) - MUST be addressed in security review deliverable
+    additional_tags:
+      - "security-hardening"
+      - "csrf"
+      - "session-sync"
+      - "http-security"
+
+  - id: gap-10
+    entry_type: finding
+    source_stage: elab
+    category: "edge-case"
+    title: "Network failure during token refresh edge case"
+    content: |
+      **Gap**: Expected behavior when network fails while refreshPromise is pending is not documented - does retry logic handle this?
+
+      **Current State**: CognitoTokenManager has retry logic, but network failure during pending refresh not explicitly documented.
+
+      **Impact**: Low - Edge case that may already be handled by existing retry logic, but behavior should be documented.
+
+      **Effort**: Medium - Requires code analysis and edge case testing
+
+      **Recommendation**: Document expected behavior when network fails while refreshPromise is pending - does retry logic handle this? Should be part of retry logic documentation in SECURITY-REVIEW.md.
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "edge-case"
+      - "network"
+      - "retry-logic"
+      - "error-handling"
+
+# Enhancement Opportunities (10 items)
+enhancements:
+  - id: enhancement-1
+    entry_type: finding
+    source_stage: elab
+    category: "security"
+    title: "Add automated security testing in CI/CD"
+    content: |
+      **Enhancement**: Add SAST tools (Snyk, Semgrep) to CI pipeline to catch auth vulnerabilities in code review stage.
+
+      **Current State**: Manual code review for security issues. No automated security scanning in CI/CD pipeline.
+
+      **Impact**: High - Automated security scanning would catch vulnerabilities before they reach production. Reduces reliance on manual security reviews.
+
+      **Effort**: High - Requires tool selection, integration, baseline creation, and team training
+
+      **Recommendation**: Add SAST tools to CI/CD pipeline for automated vulnerability detection. Consider Snyk for dependency scanning and Semgrep for code pattern analysis.
+
+      **Related Story**: BUGF-026 (security review) - mentioned as optional infrastructure in story
+    additional_tags:
+      - "security-testing"
+      - "ci-cd"
+      - "automation"
+      - "sast"
+
+  - id: enhancement-2
+    entry_type: finding
+    source_stage: elab
+    category: "testing"
+    title: "Build security testing framework for token refresh"
+    content: |
+      **Enhancement**: Create integration test suite specifically for security scenarios: token expiry races, concurrent refresh attempts, circuit breaker behavior under attack.
+
+      **Current State**: Unit tests exist for AuthProvider and CognitoTokenManager, but no dedicated security scenario testing.
+
+      **Impact**: Medium - Security-focused test suite would increase confidence in auth system resilience.
+
+      **Effort**: High - Requires test framework design, scenario identification, and implementation
+
+      **Recommendation**: Create integration test suite for security scenarios to validate auth system behavior under attack conditions.
+
+      **Related Story**: BUGF-026 (security review), BUGF-005 (auth consolidation)
+    additional_tags:
+      - "security-testing"
+      - "integration-tests"
+      - "token-refresh"
+      - "test-framework"
+
+  - id: enhancement-3
+    entry_type: finding
+    source_stage: elab
+    category: "observability"
+    title: "Build token refresh observability dashboard"
+    content: |
+      **Enhancement**: Build admin dashboard showing token refresh metrics (success rate, circuit breaker status, average refresh time) for production monitoring.
+
+      **Current State**: Metrics exist in CognitoTokenManager but not visualized in dashboard.
+
+      **Impact**: Medium - Dashboard would help operations team monitor auth health and respond to incidents faster.
+
+      **Effort**: Medium - UI work to create dashboard and wire up metrics API
+
+      **Recommendation**: Build admin dashboard for token refresh observability to improve production monitoring.
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "observability"
+      - "dashboard"
+      - "metrics"
+      - "admin-ui"
+
+  - id: enhancement-4
+    entry_type: finding
+    source_stage: elab
+    category: "security"
+    title: "Create security incident response playbook"
+    content: |
+      **Enhancement**: Create runbook for handling auth security incidents: token leak, session hijacking, circuit breaker mass failure.
+
+      **Current State**: No documented incident response procedures for auth-related security incidents.
+
+      **Impact**: Medium - Incident response playbook would reduce time to resolution during auth security incidents.
+
+      **Effort**: Medium - Requires scenario identification, response procedure definition, and team training
+
+      **Recommendation**: Create security incident response playbook for common auth failure scenarios.
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "security"
+      - "incident-response"
+      - "runbook"
+      - "operations"
+
+  - id: enhancement-5
+    entry_type: finding
+    source_stage: elab
+    category: "performance"
+    title: "Implement proactive token refresh optimization"
+    content: |
+      **Enhancement**: Implement predictive token refresh based on user activity patterns to reduce mid-request auth failures.
+
+      **Current State**: Token refresh is reactive based on expiration buffer (5 minutes before expiry).
+
+      **Impact**: Low - Marginal improvement in user experience by reducing auth failures during active sessions.
+
+      **Effort**: High - Requires activity tracking, prediction model, and refresh scheduling logic
+
+      **Recommendation**: Proactive token refresh optimization is low-priority due to high effort and marginal benefit. Current reactive approach is sufficient.
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "performance"
+      - "optimization"
+      - "proactive-refresh"
+      - "ux"
+
+  - id: enhancement-6
+    entry_type: finding
+    source_stage: elab
+    category: "testing"
+    title: "Build token refresh simulation testing harness"
+    content: |
+      **Enhancement**: Build test harness to simulate various token refresh failure modes for QA validation.
+
+      **Current State**: Manual testing of token refresh failure scenarios. No automated simulation framework.
+
+      **Impact**: Medium - Test harness would improve QA confidence and reduce manual testing effort.
+
+      **Effort**: Medium - Requires failure mode identification and test harness implementation
+
+      **Recommendation**: Build token refresh simulation testing harness for comprehensive QA validation.
+
+      **Related Story**: BUGF-026 (security review), BUGF-005 (auth consolidation)
+    additional_tags:
+      - "testing"
+      - "simulation"
+      - "qa"
+      - "test-harness"
+
+  - id: enhancement-7
+    entry_type: finding
+    source_stage: elab
+    category: "code-quality"
+    title: "Define auth hook contract with Zod schemas"
+    content: |
+      **Enhancement**: Define auth hook contract as Zod schemas (not just TypeScript interfaces) for runtime validation and type safety per CLAUDE.md guidelines.
+
+      **Current State**: BUGF-026 will define auth hook contract in SECURITY-REVIEW.md, but likely as TypeScript interfaces.
+
+      **Impact**: High - Zod schemas provide runtime validation and are a CLAUDE.md requirement ("ALWAYS use Zod schemas for types - never use TypeScript interfaces").
+
+      **Effort**: Low - Convert TypeScript interfaces to Zod schemas
+
+      **Recommendation**: Auth hook contract SHOULD use Zod schemas in BUGF-005 implementation per CLAUDE.md guidelines. This is a code quality requirement for the implementation phase, not the documentation phase (BUGF-026).
+
+      **Related Story**: BUGF-005 (auth consolidation) - SHOULD be part of BUGF-005 implementation
+
+      **NOTE**: This is flagged as reminder for BUGF-005 implementation team, not a BUGF-026 deliverable.
+    additional_tags:
+      - "code-quality"
+      - "zod"
+      - "type-safety"
+      - "bugf-005"
+      - "claude-md-compliance"
+
+  - id: enhancement-8
+    entry_type: finding
+    source_stage: elab
+    category: "security"
+    title: "Build security review automation tool"
+    content: |
+      **Enhancement**: Create automated security checklist tool that validates new auth code against security review findings.
+
+      **Current State**: Manual security review for new auth-related code changes.
+
+      **Impact**: Medium - Automated validation would catch security issues earlier and reduce review burden.
+
+      **Effort**: High - Requires checklist formalization, automation framework, and CI integration
+
+      **Recommendation**: Build automated security review tool to validate auth code changes against BUGF-026 security review findings.
+
+      **Related Story**: BUGF-026 (security review)
+    additional_tags:
+      - "security"
+      - "automation"
+      - "validation"
+      - "code-review"
+
+  - id: enhancement-9
+    entry_type: finding
+    source_stage: elab
+    category: "documentation"
+    title: "Create token lifecycle visualization diagram"
+    content: |
+      **Enhancement**: Create architecture diagram showing complete token lifecycle from sign-in through refresh to expiry for documentation.
+
+      **Current State**: Token lifecycle documented in text but no visual diagram in BUGF-026 story.
+
+      **Impact**: Low - Visual diagram would improve documentation clarity but not essential.
+
+      **Effort**: Medium - Requires diagram creation (Mermaid or similar)
+
+      **Recommendation**: Token lifecycle visualization should be included in SECURITY-REVIEW.md deliverable for BUGF-026 (per AC-1: "Include sequence diagram or architecture diagram").
+
+      **Related Story**: BUGF-026 (security review) - should be part of deliverable
+    additional_tags:
+      - "documentation"
+      - "visualization"
+      - "architecture"
+      - "token-lifecycle"
+
+  - id: enhancement-10
+    entry_type: finding
+    source_stage: elab
+    category: "documentation"
+    title: "Document cross-tab session sync behavior"
+    content: |
+      **Enhancement**: Document how auth state synchronizes across browser tabs (currently via Hub.listen broadcast) and edge cases (e.g., sign-out in one tab).
+
+      **Current State**: Cross-tab sync exists via Hub.listen but behavior not formally documented.
+
+      **Impact**: Medium - Documentation would clarify expected behavior for multi-tab scenarios.
+
+      **Effort**: Low - Primarily documentation work to describe existing behavior
+
+      **Recommendation**: Document cross-tab session sync behavior in SECURITY-REVIEW.md for BUGF-026 or BUGF-005 implementation docs.
+
+      **Related Story**: BUGF-026 (security review), BUGF-005 (auth consolidation)
+    additional_tags:
+      - "documentation"
+      - "session-sync"
+      - "cross-tab"
+      - "hub-events"

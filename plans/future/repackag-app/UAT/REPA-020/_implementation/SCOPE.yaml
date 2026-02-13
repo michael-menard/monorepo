@@ -1,0 +1,37 @@
+schema: 1
+story_id: "REPA-020"
+title: "Create Domain Card Factories for @repo/gallery"
+feature_dir: "plans/future/repackag-app"
+timestamp: "2026-02-11T01:00:00Z"
+
+packages_touched:
+  - "@repo/gallery"
+
+files_created:
+  - "packages/core/gallery/src/card-factories/create-instruction-card.ts"
+  - "packages/core/gallery/src/card-factories/create-set-card.ts"
+  - "packages/core/gallery/src/card-factories/create-wishlist-card.ts"
+  - "packages/core/gallery/src/card-factories/create-inspiration-card.ts"
+  - "packages/core/gallery/src/card-factories/index.ts"
+  - "packages/core/gallery/src/card-factories/__tests__/create-instruction-card.test.ts"
+  - "packages/core/gallery/src/card-factories/__tests__/create-set-card.test.ts"
+  - "packages/core/gallery/src/card-factories/__tests__/create-wishlist-card.test.ts"
+  - "packages/core/gallery/src/card-factories/__tests__/create-inspiration-card.test.ts"
+
+files_modified:
+  - "packages/core/gallery/src/index.ts"
+  - "packages/core/gallery/package.json"
+
+files_deleted: []
+
+acceptance_criteria_count: 23
+test_coverage_target: "45%"
+
+surfaces:
+  - frontend
+
+tags:
+  - feature
+  - gallery
+  - card-factories
+  - storybook

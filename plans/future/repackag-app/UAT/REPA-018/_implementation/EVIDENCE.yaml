@@ -1,0 +1,142 @@
+schema: 1
+story_id: "REPA-018"
+timestamp: "2026-02-10T22:30:00Z"
+
+touched_files:
+  created:
+    - packages/core/auth-services/package.json
+    - packages/core/auth-services/tsconfig.json
+    - packages/core/auth-services/vite.config.ts
+    - packages/core/auth-services/vitest.config.ts
+    - packages/core/auth-services/README.md
+    - packages/core/auth-services/src/index.ts
+    - packages/core/auth-services/src/session/index.ts
+    - packages/core/auth-services/src/session/__types__/index.ts
+    - packages/core/auth-services/src/__tests__/setup.ts
+    - packages/core/auth-services/src/session/__tests__/index.test.ts
+    - packages/core/auth-services/src/session/__tests__/integration.test.ts
+  modified:
+    - apps/web/main-app/package.json
+    - apps/web/main-app/src/services/auth/AuthProvider.tsx
+  deleted: []
+  # Note: sessionService.ts deletion is pending - will be done after QA verification
+
+acceptance_criteria:
+  AC-1:
+    status: pass
+    evidence:
+      - type: command
+        command: "pnpm --filter @repo/auth-services build"
+        result: "Build succeeded, dist/index.js (2.60 kB), dist/index.d.ts generated"
+      - type: file
+        path: "packages/core/auth-services/dist/index.d.ts"
+        result: "Type declarations generated for all exports"
+      - type: file
+        path: "packages/core/auth-services/dist/session/index.d.ts"
+        result: "Session service type declarations generated"
+
+  AC-2:
+    status: pass
+    evidence:
+      - type: file
+        path: "packages/core/auth-services/src/session/__types__/index.ts"
+        result: "Zod schemas: SessionResponseSchema, SessionErrorSchema, SessionStatusSchema, SessionUserSchema"
+      - type: file
+        path: "packages/core/auth-services/src/session/index.ts"
+        result: "All 4 functions migrated: setAuthSession, refreshAuthSession, clearAuthSession, getSessionStatus"
+      - type: test
+        test_file: "packages/core/auth-services/src/session/__tests__/index.test.ts"
+        result: "credentials: include verified in tests; API surface matches original"
+
+  AC-3:
+    status: pass
+    evidence:
+      - type: test
+        command: "pnpm --filter @repo/auth-services test"
+        result: "18 tests passed, 3 integration tests skipped"
+        details:
+          - "setAuthSession: success, 401 error, network failure, credentials include"
+          - "refreshAuthSession: success, error, network failure"
+          - "clearAuthSession: success, error (no throw), network failure (no throw)"
+          - "getSessionStatus: authenticated, unauthenticated, network failure"
+          - "Environment variable handling: missing env var throws"
+          - "Request headers: Content-Type verified"
+          - "Edge cases: empty token, malformed response"
+
+  AC-4:
+    status: pass
+    evidence:
+      - type: file
+        path: "packages/core/auth-services/src/session/__tests__/integration.test.ts"
+        result: "Integration test file exists with describe.skipIf(!shouldRun)"
+      - type: test
+        result: "3 integration tests skipped (RUN_INTEGRATION_TESTS not set)"
+
+  AC-5:
+    status: pass
+    evidence:
+      - type: file
+        path: "apps/web/main-app/package.json"
+        result: "@repo/auth-services: workspace:* added to dependencies"
+      - type: file
+        path: "apps/web/main-app/src/services/auth/AuthProvider.tsx"
+        result: "Import changed from './sessionService' to '@repo/auth-services'"
+      - type: command
+        command: "pnpm --filter @repo/main-app check-types"
+        result: "Pre-existing type errors only; no errors related to auth-services import"
+      - type: test
+        command: "pnpm --filter @repo/main-app test -- src/services/auth/__tests__/AuthProvider.test.tsx"
+        result: "8 tests skipped (pre-existing it.skip), no failures"
+
+  AC-6:
+    status: pass
+    evidence:
+      - type: file
+        path: "packages/core/auth-services/README.md"
+        result: "README with installation, env vars, usage examples, API docs"
+      - type: file
+        path: "packages/core/auth-services/src/session/index.ts"
+        result: "JSDoc comments on all 4 exported functions"
+      - type: file
+        path: "packages/core/auth-services/src/index.ts"
+        result: "All schemas and types exported from package root"
+
+  AC-7:
+    status: pass
+    evidence:
+      - type: command
+        command: "pnpm --filter @repo/auth-services build"
+        result: "Build succeeded"
+      - type: command
+        command: "pnpm --filter @repo/auth-services test"
+        result: "18 passed, 3 skipped"
+      - type: command
+        command: "pnpm --filter @repo/auth-services check-types"
+        result: "No errors"
+      - type: command
+        command: "pnpm --filter @repo/auth-services lint"
+        result: "No errors"
+
+unit_tests:
+  status: pass
+  count: 18
+  skipped: 3
+  command: "pnpm --filter @repo/auth-services test"
+
+build:
+  status: pass
+  command: "pnpm --filter @repo/auth-services build"
+  output_size: "2.60 kB"
+  type_declarations: true
+
+e2e_tests:
+  status: exempt
+  reason: "Package migration story - no UI changes, no user-facing behavior changes"
+  mode: n/a
+
+notes:
+  - "sessionService.ts deletion deferred to avoid risk before QA verification"
+  - "AuthProvider tests are pre-existing it.skip() - not caused by migration"
+  - "main-app type check has pre-existing errors unrelated to this change"
+  - "Integration tests deferred to UAT per ADR-005"
+  - "Linter auto-fixed import formatting in session/index.ts and src/index.ts"

@@ -1,0 +1,53 @@
+# Deferred Knowledge Base Writes for REPA-008
+# These writes should be processed when KB becomes available
+
+story_record:
+  story_id: "REPA-008"
+  feature: "repackag-app"
+  title: "Add Gallery Keyboard Hooks"
+  story_dir: "plans/future/repackag-app/REPA-008"
+  story_file: "plans/future/repackag-app/REPA-008/REPA-008.md"
+  story_type: "feature"
+  points: 2
+  priority: "high"
+  state: "backlog"
+  touches_backend: false
+  touches_frontend: true
+  touches_database: false
+  touches_infra: false
+  epic: "REPACKAG"
+  phase: "Phase 2 - Gallery Enhancement"
+  experiment_variant: "control"
+  created_at: "2026-02-10"
+
+sql_statement: |
+  INSERT INTO stories (
+    story_id, feature, title, story_dir, story_file, story_type,
+    points, priority, state, touches_backend, touches_frontend,
+    touches_database, touches_infra
+  ) VALUES (
+    'REPA-008',
+    'repackag-app',
+    'Add Gallery Keyboard Hooks',
+    'plans/future/repackag-app/REPA-008',
+    'plans/future/repackag-app/REPA-008/REPA-008.md',
+    'feature',
+    2,
+    'high',
+    'backlog',
+    false,
+    true,
+    false,
+    false
+  )
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_dir = EXCLUDED.story_dir,
+    story_file = EXCLUDED.story_file,
+    points = EXCLUDED.points,
+    priority = EXCLUDED.priority,
+    state = EXCLUDED.state,
+    touches_frontend = EXCLUDED.touches_frontend;
+
+reason: "KB system unavailable during story generation"
+queued_at: "2026-02-10T00:00:00Z"

@@ -1,0 +1,117 @@
+schema: 1
+story_id: BUGF-026
+story_type: documentation
+timestamp: "2026-02-11T20:30:00Z"
+
+deliverables:
+  - path: "plans/future/bug-fix/in-progress/BUGF-026/SECURITY-REVIEW.md"
+    type: document
+    description: "Comprehensive security architecture review for auth token refresh"
+    status: created
+
+acceptance_criteria:
+  AC-1:
+    status: pass
+    evidence: "Section 1: Token Refresh Architecture Documentation - includes sequence diagram, state transitions, decision points matrix, token storage matrix, and backend cookie configuration"
+  AC-2:
+    status: pass
+    evidence: "Section 2: Threat Model using STRIDE methodology - 19 threats identified, severity matrix, 7 gaps requiring action, 10 existing mitigations documented"
+  AC-3:
+    status: pass
+    evidence: "Section 3: Auth Hook Contract Specification - Zod schemas for ModuleAuthResult and PermissionsResult, security boundaries diagram, error handling pattern, usage examples, cross-app state isolation requirements"
+  AC-4:
+    status: pass
+    evidence: "Section 4: Security Acceptance Criteria for BUGF-005 - 8 unit tests, 4 integration tests, 3 E2E tests, 3 integration test scenarios, rollback criteria, definition of done checklist"
+  AC-5:
+    status: pass
+    evidence: "Section 5: Vulnerability Assessment - 10 findings (2 High, 5 Medium, 3 Low), test coverage gap analysis, detailed descriptions with code references and mitigation recommendations"
+  AC-6:
+    status: pass
+    evidence: "Section 6: Summary and Recommendations - 13 prioritized recommendations, BUGF-005 unblocking decision with conditions, complete file review inventory"
+
+touched_files:
+  - path: "plans/future/bug-fix/in-progress/BUGF-026/SECURITY-REVIEW.md"
+    action: created
+    description: "Primary deliverable - comprehensive security review document"
+  - path: "plans/future/bug-fix/in-progress/BUGF-026/_implementation/CHECKPOINT.yaml"
+    action: created
+    description: "Workflow checkpoint tracking"
+  - path: "plans/future/bug-fix/in-progress/BUGF-026/_implementation/SCOPE.yaml"
+    action: created
+    description: "Story scope definition"
+  - path: "plans/future/bug-fix/in-progress/BUGF-026/_implementation/EVIDENCE.yaml"
+    action: created
+    description: "Implementation evidence"
+
+files_reviewed:
+  - path: "apps/web/main-app/src/services/auth/AuthProvider.tsx"
+    lines: 685
+    depth: full
+  - path: "packages/core/api-client/src/auth/cognito-integration.ts"
+    lines: 498
+    depth: full
+  - path: "packages/core/api-client/src/auth/auth-middleware.ts"
+    lines: 316
+    depth: full
+  - path: "packages/core/api-client/src/auth/rtk-auth-integration.ts"
+    lines: 320
+    depth: full
+  - path: "packages/core/api-client/src/retry/retry-logic.ts"
+    lines: 520
+    depth: security-relevant
+  - path: "packages/core/auth-services/src/session/index.ts"
+    lines: 161
+    depth: full
+  - path: "packages/core/auth-hooks/src/useModuleAuth.ts"
+    lines: 147
+    depth: full
+  - path: "packages/core/auth-hooks/src/usePermissions.ts"
+    lines: 137
+    depth: full
+  - path: "packages/core/auth-utils/src/jwt/index.ts"
+    lines: 131
+    depth: full
+  - path: "apps/api/lego-api/domains/auth/routes.ts"
+    lines: 163
+    depth: full
+  - path: "apps/api/lego-api/middleware/cookie-auth.ts"
+    lines: 119
+    depth: full
+  - path: "apps/api/lego-api/server.ts"
+    depth: cors-config
+  - path: "apps/api/infrastructure/auth/cognito.ts"
+    depth: security-relevant
+
+unit_tests:
+  status: exempt
+  reason: "Documentation-only story - no code changes"
+
+build:
+  status: exempt
+  reason: "Documentation-only story - no code changes"
+
+e2e_tests:
+  status: exempt
+  mode: exempt
+  reason: "Documentation-only story - no code changes"
+  results:
+    passed: 0
+    failed: 0
+    skipped: 0
+
+vulnerabilities_found:
+  critical: 0
+  high: 2
+  medium: 5
+  low: 3
+  total: 10
+
+threats_identified:
+  total: 19
+  gaps_requiring_action: 7
+
+bugf005_unblocked: true
+bugf005_conditions:
+  - "Must implement all security tests in Section 4.1"
+  - "Must follow auth hook contract in Section 3.2"
+  - "Must meet Definition of Done in Section 4.4"

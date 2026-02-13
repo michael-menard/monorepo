@@ -1,0 +1,28 @@
+schema: 1
+story_id: "REPA-008"
+timestamp: "2026-02-10T00:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/core/gallery/**"
+  - "packages/core/accessibility/**"
+  - "apps/web/app-wishlist-gallery/**"
+  - "apps/web/app-inspiration-gallery/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Consolidate duplicate keyboard navigation hooks from gallery apps into shared packages @repo/gallery and @repo/accessibility, reducing ~470 lines of duplicate code while maintaining WCAG 2.1 compliance"

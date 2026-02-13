@@ -14,7 +14,7 @@ import { Button, showSuccessToast, cn } from '@repo/app-component-library'
 import { useCreateMocMutation } from '@repo/api-client/rtk/instructions-api'
 import type { CreateMocInput } from '@repo/api-client/schemas/instructions'
 import { MocForm } from '../components/MocForm'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 
 /**
  * INST-1102: localStorage key for form recovery

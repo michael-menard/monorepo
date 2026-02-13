@@ -8,20 +8,55 @@ import { setsApi } from '@repo/api-client/rtk/sets-api'
 import { permissionsApi } from '@repo/api-client/rtk/permissions-api'
 import { adminApi } from '@repo/api-client/rtk/admin-api'
 import { inspirationApi } from '@repo/api-client/rtk/inspiration-api'
-import { authSlice } from './slices/authSlice'
+import { uploadsApi } from '@repo/api-client/rtk/uploads-api'
+import { createAuthFailureHandler, AUTH_PAGES } from '@repo/api-client/errors/auth-failure'
+import { authSlice, setUnauthenticated } from './slices/authSlice'
 import { themeSlice } from './slices/themeSlice'
 import { navigationSlice } from './slices/navigationSlice'
 import { globalUISlice } from './slices/globalUISlice'
-import { getAuthFailureHandler } from '@/services/api/authFailureHandler'
+
+// Create global auth failure handler with dependency injection (Story REPA-019)
+// This handler is called when API requests receive 401 responses after token refresh fails
+const authFailureHandler = createAuthFailureHandler({
+  // Handle auth failure: clear state and redirect to login
+  onAuthFailure: (currentPath: string) => {
+    // Clear auth state from Redux
+    store.dispatch(setUnauthenticated())
+
+    // Redirect to login with return URL and expired flag
+    const redirectUrl = `/login?redirect=${encodeURIComponent(currentPath)}&expired=true`
+    window.location.href = redirectUrl
+  },
+
+  // Check if current path is an auth page (don't redirect on auth pages)
+  isAuthPage: (path: string) => {
+    return AUTH_PAGES.some(authPath => path.startsWith(authPath))
+  },
+
+  // Clear RTK Query cache for all API slices
+  resetApiState: () => {
+    // Reset all enhanced API slices
+    // These are available at runtime since the handler is called after initialization
+    store.dispatch(enhancedGalleryApi.util.resetApiState())
+    store.dispatch(enhancedWishlistApi.util.resetApiState())
+    store.dispatch(instructionsApi.util.resetApiState())
+    store.dispatch(dashboardApi.util.resetApiState())
+    store.dispatch(setsApi.util.resetApiState())
+    store.dispatch(permissionsApi.util.resetApiState())
+    store.dispatch(adminApi.util.resetApiState())
+    store.dispatch(inspirationApi.util.resetApiState())
+    store.dispatch(uploadsApi.util.resetApiState())
+  },
+})
 
 // Create enhanced API instances with global auth failure handler (Story 1.29)
 // The handler redirects to login on 401 responses after token refresh fails
 export const enhancedGalleryApi = createGalleryApi({
-  onAuthFailure: getAuthFailureHandler(),
+  onAuthFailure: authFailureHandler,
 })
 
 export const enhancedWishlistApi = createWishlistApi({
-  onAuthFailure: getAuthFailureHandler(),
+  onAuthFailure: authFailureHandler,
 })
 
 // Note: instructionsApi uses the pre-created instance from @repo/api-client
@@ -49,6 +84,7 @@ export const store = configureStore({
     [permissionsApi.reducerPath]: permissionsApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
     [inspirationApi.reducerPath]: inspirationApi.reducer,
+    [uploadsApi.reducerPath]: uploadsApi.reducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
@@ -67,7 +103,8 @@ export const store = configureStore({
       .concat(setsApi.middleware)
       .concat(permissionsApi.middleware)
       .concat(adminApi.middleware)
-      .concat(inspirationApi.middleware),
+      .concat(inspirationApi.middleware)
+      .concat(uploadsApi.middleware),
   devTools: import.meta.env.DEV,
 })
 

@@ -113,3 +113,28 @@ Note: `UserNotFoundException` is intentionally handled as success for security.
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-01-25 | michael | Initial documentation |
+
+## Rate Limiting
+
+AWS Cognito enforces service-level rate limiting on `forgotPassword` operations to prevent abuse. After multiple rapid requests (~5 per minute), Cognito returns a `LimitExceededException`.
+
+**Frontend Handling**:
+- Track attempts in sessionStorage
+- Calculate exponential backoff (60s → 120s → 240s → 480s → 600s max)
+- Display `RateLimitBanner` with countdown timer
+- Disable submit button during cooldown
+
+**UX Flow**:
+```mermaid
+flowchart LR
+    A[Attempt 1] --> B[Attempt 2]
+    B --> C[Attempt 3]
+    C --> D[Rate Limited]
+    D --> E[Show Banner + Timer]
+    E --> F[Wait 240s]
+    F --> G[Retry Enabled]
+```
+
+**Technical Details**: See [Password Reset Rate Limiting Implementation Guide](../../guides/password-reset-rate-limiting.md)
+
+**Related Story**: [BUGF-027](../../../plans/future/bug-fix/in-progress/BUGF-027/BUGF-027.md), [BUGF-019](../../../plans/future/bug-fix/ready-to-work/BUGF-019/BUGF-019.md)

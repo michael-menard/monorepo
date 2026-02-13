@@ -1,0 +1,56 @@
+perspective: engineering
+verdict: CONCERNS
+timestamp: 2026-02-11T09:40:00Z
+
+feasibility:
+  core_journey_feasible: true
+  blocking_deps:
+    - S3 presigned URL endpoint not yet implemented (BUGF-001, BUGF-004)
+    - RTK Query mutation for instruction save not yet implemented (BUGF-002)
+    - Sets gallery delete/edit API stubs need completion (BUGF-003)
+
+mvp_blockers:
+  - id: ENG-001
+    issue: "BUGF-001/004 presigned URL API not implemented - blocks file upload in instructions-gallery and main-app"
+    stories: [BUGF-001, BUGF-004]
+    action: "coordinate with backend to implement presigned URL endpoint and session refresh"
+  - id: ENG-002
+    issue: "BUGF-002 edit save mutation not implemented - edit pages have TODO stubs"
+    stories: [BUGF-002]
+    action: "implement RTK Query mutation for instruction metadata updates"
+  - id: ENG-003
+    issue: "BUGF-003 delete/edit APIs stubbed - sets gallery cannot delete or edit"
+    stories: [BUGF-003]
+    action: "implement useDeleteSetMutation and edit-set-page route"
+
+missing_mvp_stories:
+  - title: "Backend API contract definition for presigned URLs"
+    reason: "frontend implementation blocked waiting for spec"
+  - title: "RTK Query schema synchronization across apps"
+    reason: "instruction edits need unified API contract"
+  - title: "S3 bucket configuration documentation"
+    reason: "presigned URL implementation needs IAM/bucket setup guide"
+
+future:
+  architecture_improvements:
+    - suggestion: "consolidate duplicate upload session management logic into shared hook (currently in main-app and app-instructions-gallery)"
+      impact: medium
+    - suggestion: "extract auth hook pattern into @repo/auth-hooks package (BUGF-005 addresses this)"
+      impact: high
+    - suggestion: "create RTK Query API mocking strategy to unblock frontend tests during API development"
+      impact: medium
+  
+  suggested_stories:
+    - title: "Implement comprehensive E2E tests for upload session lifecycle"
+      reason: "session refresh logic needs integration testing with real timings"
+      priority: P1
+    - title: "Add error boundary and fallback UI for failed API calls"
+      reason: "presigned URL failures should gracefully degrade"
+      priority: P2
+  
+  recommendations:
+    - "Consider feature-flagging presigned URL API to gate rollout"
+    - "Define RTK Query cache invalidation strategy for file operations"
+    - "Add request retry middleware for transient S3 failures"
+
+ENGINEERING REVIEW COMPLETE

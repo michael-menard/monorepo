@@ -1,0 +1,480 @@
+schema: 1
+story_id: BUGF-009
+timestamp: "2026-02-11T20:15:00Z"
+
+# Implementation Plan: Fix and Enable Skipped Test Suites in Main App
+
+steps:
+  # Phase 1: Investigation and Analysis
+  - id: 1
+    description: "Investigate all skipped test suites and verify component implementations"
+    files:
+      - "apps/web/main-app/src/routes/pages/__tests__/LoginPage.test.tsx"
+      - "apps/web/main-app/src/routes/pages/__tests__/SignupPage.test.tsx"
+      - "apps/web/main-app/src/components/Auth/__tests__/AuthFlow.test.tsx"
+      - "apps/web/main-app/src/routes/__tests__/router.test.ts"
+      - "apps/web/main-app/src/__tests__/App.integration.test.tsx"
+      - "apps/web/main-app/src/routes/__tests__/ModuleLoading.integration.test.tsx"
+      - "apps/web/main-app/src/components/Navigation/__tests__/NavigationSystem.integration.test.tsx"
+      - "apps/web/main-app/src/test/performance.test.tsx"
+      - "apps/web/main-app/src/__tests__/Performance.integration.test.tsx"
+      - "apps/web/main-app/src/components/Cache/__tests__/CachePerformance.test.ts"
+      - "apps/web/main-app/src/routes/modules/__tests__/GalleryModule.test.tsx"
+    dependencies: []
+    slice: frontend
+    notes:
+      - "Review each test suite against current component implementations"
+      - "Check git history for component changes since tests were skipped"
+      - "Verify which components still exist (DashboardSkeleton, EmptyDashboard were deleted)"
+      - "Verify performanceMonitor utilities existence before attempting performance tests"
+      - "Verify @repo/cache package existence for cache tests"
+      - "Locate AuthProvider test file (path may differ from story reference)"
+      - "Document decision for each test suite: fix vs. remove vs. defer"
+      - "Create prioritized list for implementation"
+
+  - id: 2
+    description: "Verify and document package dependencies for cache tests"
+    files:
+      - "packages/core/"
+    dependencies: [1]
+    slice: packages
+    notes:
+      - "Check if @repo/cache package exists in packages/core/"
+      - "If missing: plan to remove cache tests with justification"
+      - "If exists: add to fix list with appropriate priority"
+
+  # Phase 2: High Priority - Critical Test Suites
+  - id: 3
+    description: "Enable and fix LoginPage test suite"
+    files:
+      - "apps/web/main-app/src/routes/pages/__tests__/LoginPage.test.tsx"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks (remove .skip)"
+      - "Update RTK Query mutation mocks for current implementation"
+      - "Update form validation mocks"
+      - "Verify userEvent interactions working"
+      - "Ensure all assertions passing"
+      - "Run: pnpm test LoginPage.test.tsx"
+
+  - id: 4
+    description: "Enable and fix SignupPage test suite"
+    files:
+      - "apps/web/main-app/src/routes/pages/__tests__/SignupPage.test.tsx"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks"
+      - "Update RTK Query mutation mocks"
+      - "Update validation logic mocks"
+      - "Verify form error handling"
+      - "Ensure all assertions passing"
+      - "Run: pnpm test SignupPage.test.tsx"
+
+  - id: 5
+    description: "Enable and fix AuthFlow test suite"
+    files:
+      - "apps/web/main-app/src/components/Auth/__tests__/AuthFlow.test.tsx"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks"
+      - "Update auth flow mocks"
+      - "Address Hub.listen dependency if possible (4-hour timebox)"
+      - "Verify OTP verification flow"
+      - "Ensure all assertions passing"
+      - "If Hub.listen unsolvable: document and defer to BUGF-010"
+      - "Run: pnpm test AuthFlow.test.tsx"
+
+  - id: 6
+    description: "Enable and fix TanStack Router Setup tests"
+    files:
+      - "apps/web/main-app/src/routes/__tests__/router.test.ts"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks"
+      - "Update TanStack Router mocks for current router configuration"
+      - "Verify router configuration"
+      - "Ensure all assertions passing"
+      - "Run: pnpm test router.test.ts"
+
+  - id: 7
+    description: "Enable and fix App Integration tests"
+    files:
+      - "apps/web/main-app/src/__tests__/App.integration.test.tsx"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks"
+      - "Update Redux Provider mocks"
+      - "Verify provider stack integration"
+      - "Ensure all assertions passing"
+      - "Run: pnpm test App.integration.test.tsx"
+
+  # Phase 3: Medium Priority - Important Test Suites
+  - id: 8
+    description: "Enable and fix Module Loading Integration tests"
+    files:
+      - "apps/web/main-app/src/routes/__tests__/ModuleLoading.integration.test.tsx"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [3, 4, 5, 6, 7]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks"
+      - "Update lazy loading mocks"
+      - "Verify module loading validation"
+      - "Ensure all assertions passing"
+      - "Run: pnpm test ModuleLoading.integration.test.tsx"
+
+  - id: 9
+    description: "Enable and fix Navigation System Integration tests"
+    files:
+      - "apps/web/main-app/src/components/Navigation/__tests__/NavigationSystem.integration.test.tsx"
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [3, 4, 5, 6, 7]
+    slice: frontend
+    notes:
+      - "Un-skip describe blocks"
+      - "Update navigation provider mocks"
+      - "Verify breadcrumb navigation"
+      - "Verify quick actions"
+      - "Ensure all assertions passing"
+      - "Run: pnpm test NavigationSystem.integration.test.tsx"
+
+  - id: 10
+    description: "Fix AuthProvider Hub.listen tests (if solution found in step 5)"
+    files:
+      - "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    dependencies: [5]
+    slice: frontend
+    notes:
+      - "Only execute if Hub.listen solution found in step 5"
+      - "Un-skip 8 individual tests"
+      - "Verify Hub.listen mock working"
+      - "Ensure all assertions passing"
+      - "If solution not found: document deferral to BUGF-010"
+
+  # Phase 4: Lower Priority - Performance and Cleanup
+  - id: 11
+    description: "Decide on performance monitoring tests (enable or remove)"
+    files:
+      - "apps/web/main-app/src/test/performance.test.tsx"
+      - "apps/web/main-app/src/__tests__/Performance.integration.test.tsx"
+    dependencies: [1, 8, 9]
+    slice: frontend
+    notes:
+      - "Based on investigation in step 1: performanceMonitor utilities exist?"
+      - "If exists: enable and fix tests (un-skip, update RTK Query mocks)"
+      - "If obsolete: remove test files with justification"
+      - "Document decision in commit message"
+
+  - id: 12
+    description: "Remove cache performance tests"
+    files:
+      - "apps/web/main-app/src/components/Cache/__tests__/CachePerformance.test.ts"
+    dependencies: [2]
+    slice: frontend
+    notes:
+      - "Based on investigation in step 2: @repo/cache package missing"
+      - "Remove cache test file"
+      - "Document justification: 'Dependency @repo/cache does not exist'"
+      - "Create follow-up story if cache functionality is needed"
+
+  - id: 13
+    description: "Remove GalleryModule stub test file"
+    files:
+      - "apps/web/main-app/src/routes/modules/__tests__/GalleryModule.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Based on investigation in step 1: verify if stub/incomplete"
+      - "If stub: remove test file (only 12 lines)"
+      - "Document removal in commit message"
+
+  - id: 14
+    description: "Remove tests for deleted components"
+    files:
+      - "apps/web/main-app/src/components/Dashboard/__tests__/DashboardSkeleton.test.tsx"
+      - "apps/web/main-app/src/components/Dashboard/__tests__/EmptyDashboard.test.tsx"
+    dependencies: [1]
+    slice: frontend
+    notes:
+      - "Based on investigation in step 1: identify tests for deleted components"
+      - "Remove test files for: DashboardSkeleton, EmptyDashboard, etc."
+      - "Document removals in commit message"
+
+  # Phase 5: Verification and Documentation
+  - id: 15
+    description: "Verify all enabled tests pass locally"
+    files: []
+    dependencies: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    slice: frontend
+    notes:
+      - "Run: pnpm test --run"
+      - "Verify no errors from mock setup"
+      - "Verify all userEvent interactions working"
+      - "Fix any remaining issues"
+
+  - id: 16
+    description: "Run test coverage reports"
+    files: []
+    dependencies: [15]
+    slice: frontend
+    notes:
+      - "Run: pnpm test --coverage --run"
+      - "Verify global coverage >= 45%"
+      - "Verify auth coverage >= 80%"
+      - "Verify navigation coverage >= 70%"
+      - "Generate coverage reports"
+
+  - id: 17
+    description: "Update test documentation"
+    files:
+      - "apps/web/main-app/src/test/setup.ts"
+    dependencies: [15]
+    slice: frontend
+    notes:
+      - "Add comments explaining complex mocking setups"
+      - "Document Hub.listen mock approach (if implemented)"
+      - "Document RTK Query hook mocks"
+      - "Document TanStack Router mocks"
+      - "Document any non-obvious mock patterns"
+
+  - id: 18
+    description: "Create summary documentation"
+    files: []
+    dependencies: [16, 17]
+    slice: frontend
+    notes:
+      - "Document why each test was skipped and how it was fixed"
+      - "Document removed tests with justification"
+      - "Document deferred tests with reasoning (Hub.listen to BUGF-010)"
+      - "Update testing documentation if new patterns emerged"
+
+files_to_change:
+  # Test files to enable and fix
+  - path: "apps/web/main-app/src/routes/pages/__tests__/LoginPage.test.tsx"
+    action: modify
+    reason: "Un-skip tests, update RTK Query mocks, verify assertions (AC-5)"
+
+  - path: "apps/web/main-app/src/routes/pages/__tests__/SignupPage.test.tsx"
+    action: modify
+    reason: "Un-skip tests, update RTK Query mocks, verify assertions (AC-6)"
+
+  - path: "apps/web/main-app/src/components/Auth/__tests__/AuthFlow.test.tsx"
+    action: modify
+    reason: "Un-skip tests, update auth flow mocks, address Hub.listen (AC-7)"
+
+  - path: "apps/web/main-app/src/routes/__tests__/router.test.ts"
+    action: modify
+    reason: "Un-skip tests, update TanStack Router mocks (AC-8)"
+
+  - path: "apps/web/main-app/src/__tests__/App.integration.test.tsx"
+    action: modify
+    reason: "Un-skip tests, update Redux Provider mocks (AC-9)"
+
+  - path: "apps/web/main-app/src/routes/__tests__/ModuleLoading.integration.test.tsx"
+    action: modify
+    reason: "Un-skip tests, update lazy loading mocks (AC-10)"
+
+  - path: "apps/web/main-app/src/components/Navigation/__tests__/NavigationSystem.integration.test.tsx"
+    action: modify
+    reason: "Un-skip tests, update navigation provider mocks (AC-11)"
+
+  # AuthProvider tests (conditional on Hub.listen solution)
+  - path: "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+    action: modify
+    reason: "Fix 8 skipped Hub.listen tests if solution found (AC-12)"
+
+  # Performance tests (conditional - may remove)
+  - path: "apps/web/main-app/src/test/performance.test.tsx"
+    action: modify_or_delete
+    reason: "Enable or remove based on performanceMonitor existence (AC-13)"
+
+  - path: "apps/web/main-app/src/__tests__/Performance.integration.test.tsx"
+    action: modify_or_delete
+    reason: "Enable or remove based on performance monitoring usage (AC-14)"
+
+  # Test files to remove
+  - path: "apps/web/main-app/src/components/Cache/__tests__/CachePerformance.test.ts"
+    action: delete
+    reason: "Remove due to missing @repo/cache package dependency (AC-15)"
+
+  - path: "apps/web/main-app/src/routes/modules/__tests__/GalleryModule.test.tsx"
+    action: delete
+    reason: "Remove stub test file if not needed (AC-16)"
+
+  - path: "apps/web/main-app/src/components/Dashboard/__tests__/DashboardSkeleton.test.tsx"
+    action: delete
+    reason: "Remove test for deleted component (AC-17)"
+
+  - path: "apps/web/main-app/src/components/Dashboard/__tests__/EmptyDashboard.test.tsx"
+    action: delete
+    reason: "Remove test for deleted component (AC-17)"
+
+  # Mock setup (may need updates)
+  - path: "apps/web/main-app/src/test/setup.ts"
+    action: modify
+    reason: "Update mock setup for RTK Query, TanStack Router, AWS Amplify Hub (AC-21)"
+
+commands_to_run:
+  - command: "pnpm test LoginPage.test.tsx --run"
+    when: "after step 3 (LoginPage tests enabled)"
+    required: true
+
+  - command: "pnpm test SignupPage.test.tsx --run"
+    when: "after step 4 (SignupPage tests enabled)"
+    required: true
+
+  - command: "pnpm test AuthFlow.test.tsx --run"
+    when: "after step 5 (AuthFlow tests enabled)"
+    required: true
+
+  - command: "pnpm test router.test.ts --run"
+    when: "after step 6 (Router tests enabled)"
+    required: true
+
+  - command: "pnpm test App.integration.test.tsx --run"
+    when: "after step 7 (App integration tests enabled)"
+    required: true
+
+  - command: "pnpm test ModuleLoading.integration.test.tsx --run"
+    when: "after step 8 (Module loading tests enabled)"
+    required: true
+
+  - command: "pnpm test NavigationSystem.integration.test.tsx --run"
+    when: "after step 9 (Navigation tests enabled)"
+    required: true
+
+  - command: "pnpm test --run"
+    when: "after all test fixes (step 15)"
+    required: true
+
+  - command: "pnpm test --coverage --run"
+    when: "after full test pass (step 16)"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Investigation notes documenting decision for each test suite"
+    evidence_type: manual
+
+  - ac_id: "AC-2"
+    planned_evidence: "Package verification showing @repo/cache missing"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "Git history check identifying tests for deleted components"
+    evidence_type: manual
+
+  - ac_id: "AC-4"
+    planned_evidence: "Prioritized list in implementation plan steps 1-14"
+    evidence_type: file
+
+  - ac_id: "AC-4a"
+    planned_evidence: "performanceMonitor utilities verification in step 11"
+    evidence_type: manual
+
+  - ac_id: "AC-5"
+    planned_evidence: "Test execution: pnpm test LoginPage.test.tsx --run"
+    evidence_type: command
+
+  - ac_id: "AC-6"
+    planned_evidence: "Test execution: pnpm test SignupPage.test.tsx --run"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Test execution: pnpm test AuthFlow.test.tsx --run"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Test execution: pnpm test router.test.ts --run"
+    evidence_type: command
+
+  - ac_id: "AC-9"
+    planned_evidence: "Test execution: pnpm test App.integration.test.tsx --run"
+    evidence_type: command
+
+  - ac_id: "AC-10"
+    planned_evidence: "Test execution: pnpm test ModuleLoading.integration.test.tsx --run"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "Test execution: pnpm test NavigationSystem.integration.test.tsx --run"
+    evidence_type: command
+
+  - ac_id: "AC-12"
+    planned_evidence: "Hub.listen mock implementation or deferral documentation"
+    evidence_type: manual
+
+  - ac_id: "AC-13"
+    planned_evidence: "Performance tests enabled or removed with justification"
+    evidence_type: file
+
+  - ac_id: "AC-14"
+    planned_evidence: "Performance integration tests enabled or removed with justification"
+    evidence_type: file
+
+  - ac_id: "AC-15"
+    planned_evidence: "Cache tests removed with commit message justification"
+    evidence_type: file
+
+  - ac_id: "AC-16"
+    planned_evidence: "GalleryModule stub removed with commit message"
+    evidence_type: file
+
+  - ac_id: "AC-17"
+    planned_evidence: "Tests for deleted components removed with commit message"
+    evidence_type: file
+
+  - ac_id: "AC-18"
+    planned_evidence: "Test execution: pnpm test --run (full suite passing)"
+    evidence_type: command
+
+  - ac_id: "AC-19"
+    planned_evidence: "Coverage report: pnpm test --coverage --run"
+    evidence_type: command
+
+  - ac_id: "AC-20"
+    planned_evidence: "Summary documentation explaining each test decision"
+    evidence_type: file
+
+  - ac_id: "AC-21"
+    planned_evidence: "Updated test/setup.ts with mock documentation comments"
+    evidence_type: file
+
+  - ac_id: "AC-22"
+    planned_evidence: "Testing documentation updates if new patterns emerged"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "This is a test infrastructure story, NOT a bug-fix story"
+  - "Any production bugs discovered must be documented and deferred to separate stories"
+  - "Hub.listen mocking has 4-hour timebox - defer to BUGF-010 if not solvable"
+  - "Cache tests will be removed due to missing @repo/cache package"
+  - "Performance tests may be removed if performanceMonitor utilities are obsolete"
+  - "AuthProvider test file path needs verification during investigation (step 1)"
+  - "Prioritize high-value test suites (auth flows) over lower priority (performance tests)"
+  - "Tests should continue to validate accessibility (aria attributes, roles)"
+  - "Use existing mock patterns for consistency"
+  - "Coordinate with active refactoring work to avoid conflicts"
+  - "Commit test fixes incrementally (one suite at a time)"

@@ -1,0 +1,154 @@
+story_id: REPA-021
+title: "Standardize Card Skeletons and Empty States in Shared Library"
+completed_at: "2026-02-11T09:30:00Z"
+
+acceptance_criteria:
+  AC-1:
+    title: "DashboardSkeleton Component in Library"
+    status: pass
+    evidence:
+      - "Added DashboardSkeleton to packages/core/app-component-library/src/feedback/skeleton.tsx"
+      - "Uses library's Skeleton primitive (cva-based variant system)"
+      - "Includes DashboardSkeletonPropsSchema (Zod schema)"
+      - "Uses React.forwardRef with displayName"
+      - "Uses cn() utility for className merging"
+      - "Renders header + quick actions + 3 stat cards + 5 MOC cards"
+      - "Includes aria-busy and aria-label for accessibility"
+      - "Matches original visual structure from main-app implementation"
+
+  AC-2:
+    title: "Generic EmptyState Component"
+    status: pass
+    evidence:
+      - "Created packages/core/app-component-library/src/feedback/empty-states.tsx"
+      - "Accepts icon (LucideIcon), title, description, action, features, className"
+      - "Action href renders TanStack Router Link via Button asChild pattern"
+      - "Action onClick renders Button directly"
+      - "href takes precedence when both onClick and href provided"
+      - "Features prop renders grid of feature highlights"
+      - "EmptyStatePropsSchema defined with Zod"
+      - "Icons have aria-hidden='true'"
+      - "CTA is keyboard-accessible via TanStack Router Link"
+
+  AC-3:
+    title: "EmptyDashboard Preset"
+    status: pass
+    evidence:
+      - "EmptyDashboard preset wraps EmptyState in empty-states.tsx"
+      - "Uses Blocks icon, correct title/description from original implementation"
+      - "4-item feature grid: Organize MOCs, Gallery View, Wishlist, Instructions"
+      - "Supports onAddClick and addLink props for CTA customization"
+      - "Defaults to href='/instructions/new' matching original behavior"
+      - "EmptyDashboardPropsSchema defined with Zod"
+
+  AC-4:
+    title: "Library Package Exports"
+    status: pass
+    evidence:
+      - "Components exported from packages/core/app-component-library/src/index.ts"
+      - "Subpath export added: ./feedback/empty-states in package.json exports map"
+      - "Named exports: DashboardSkeleton, EmptyState, EmptyDashboard"
+      - "Type exports: DashboardSkeletonProps, EmptyStateProps, EmptyDashboardProps"
+      - "Schema exports: DashboardSkeletonPropsSchema, EmptyStatePropsSchema, EmptyDashboardPropsSchema"
+      - "@tanstack/react-router added as library dependency for Link component"
+      - "Library build succeeds: pnpm --filter @repo/app-component-library build"
+
+  AC-5:
+    title: "main-app Migration"
+    status: pass
+    evidence:
+      - "Deleted: components/Dashboard/DashboardSkeleton.tsx"
+      - "Deleted: components/Dashboard/EmptyDashboard.tsx"
+      - "Deleted: components/Dashboard/__tests__/DashboardSkeleton.test.tsx"
+      - "Deleted: components/Dashboard/__tests__/EmptyDashboard.test.tsx"
+      - "Removed barrel re-exports from components/Dashboard/index.ts"
+      - "Updated: routes/__tests__/uploader-routes.test.tsx - static import from library subpath, RouterProvider wrapper for proper router context"
+      - "All 7 uploader-routes tests pass"
+
+  AC-6:
+    title: "app-dashboard Migration"
+    status: pass
+    evidence:
+      - "Deleted: components/DashboardSkeleton.tsx (flat file)"
+      - "Deleted: components/EmptyDashboard.tsx (flat file)"
+      - "Deleted: components/DashboardSkeleton/ (directory-based version)"
+      - "Deleted: components/EmptyDashboard/ (directory-based version)"
+      - "Deleted: components/__tests__/DashboardSkeleton.test.tsx"
+      - "Deleted: components/__tests__/EmptyDashboard.test.tsx"
+      - "Removed barrel re-exports from components/index.ts"
+      - "Updated: pages/main-page.tsx imports EmptyDashboard directly from library subpath"
+
+  AC-7:
+    title: "Test Coverage in Library"
+    status: pass
+    evidence:
+      - "Created: feedback/__tests__/DashboardSkeleton.test.tsx (10 tests)"
+      - "Created: feedback/__tests__/empty-states.test.tsx (17 tests)"
+      - "All 27 tests pass"
+      - "Tests cover: EmptyState with onClick, href, no action, both (precedence), features"
+      - "Tests cover: EmptyDashboard defaults, custom addLink, onAddClick, feature highlights"
+      - "Tests cover: DashboardSkeleton skeleton elements, stats grid, MOC grid, a11y, className"
+      - "Test consolidation: merged duplicate tests from both apps into single files"
+      - "@tanstack/react-router mocked in library tests for isolated unit testing"
+
+  AC-8:
+    title: "E2E Test Verification"
+    status: deferred
+    notes: "Follow-up story REPA-022 created in stories.index.md for E2E test generation."
+
+  AC-9:
+    title: "Storybook Documentation"
+    status: deferred
+    notes: "No .storybook config directory exists in @repo/app-component-library. Non-blocking per story spec."
+
+build_verification:
+  library_build:
+    status: pass
+    command: "pnpm --filter @repo/app-component-library build"
+    result: "Built in 3.34s, no errors in our files"
+
+  library_tests:
+    status: pass
+    command: "pnpm --filter @repo/app-component-library test -- --run src/feedback/__tests__/"
+    result: "2 test files, 27 tests passed"
+
+  main_app_tests:
+    status: pass
+    command: "pnpm --filter main-app test -- --run src/routes/__tests__/uploader-routes.test.tsx"
+    result: "7 tests passed"
+
+  type_check:
+    status: pass
+    notes: "No new type errors introduced. All pre-existing errors are in unrelated packages."
+
+files_created:
+  - "packages/core/app-component-library/src/feedback/empty-states.tsx"
+  - "packages/core/app-component-library/src/feedback/__tests__/DashboardSkeleton.test.tsx"
+  - "packages/core/app-component-library/src/feedback/__tests__/empty-states.test.tsx"
+
+files_modified:
+  - "packages/core/app-component-library/src/feedback/skeleton.tsx"
+  - "packages/core/app-component-library/src/index.ts"
+  - "packages/core/app-component-library/package.json"
+  - "apps/web/main-app/src/components/Dashboard/index.ts"
+  - "apps/web/main-app/src/routes/__tests__/uploader-routes.test.tsx"
+  - "apps/web/app-dashboard/src/components/index.ts"
+  - "apps/web/app-dashboard/src/pages/main-page.tsx"
+  - "plans/future/repackag-app/stories.index.md"
+
+files_deleted:
+  - "apps/web/main-app/src/components/Dashboard/DashboardSkeleton.tsx"
+  - "apps/web/main-app/src/components/Dashboard/EmptyDashboard.tsx"
+  - "apps/web/main-app/src/components/Dashboard/__tests__/DashboardSkeleton.test.tsx"
+  - "apps/web/main-app/src/components/Dashboard/__tests__/EmptyDashboard.test.tsx"
+  - "apps/web/app-dashboard/src/components/DashboardSkeleton.tsx"
+  - "apps/web/app-dashboard/src/components/EmptyDashboard.tsx"
+  - "apps/web/app-dashboard/src/components/DashboardSkeleton/index.tsx"
+  - "apps/web/app-dashboard/src/components/DashboardSkeleton/__tests__/DashboardSkeleton.test.tsx"
+  - "apps/web/app-dashboard/src/components/EmptyDashboard/index.tsx"
+  - "apps/web/app-dashboard/src/components/EmptyDashboard/__tests__/EmptyDashboard.test.tsx"
+  - "apps/web/app-dashboard/src/components/__tests__/DashboardSkeleton.test.tsx"
+  - "apps/web/app-dashboard/src/components/__tests__/EmptyDashboard.test.tsx"
+
+follow_up:
+  - "REPA-022: E2E Tests for Dashboard Skeleton and Empty States (added to stories.index.md)"

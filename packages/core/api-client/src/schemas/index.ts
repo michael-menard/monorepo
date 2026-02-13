@@ -276,3 +276,13 @@ export {
   type GetMocDetailResponse,
   type UploadThumbnailResponse,
 } from './instructions'
+
+// Upload schemas (BUGF-032)
+export {
+  FileCategorySchema,
+  GeneratePresignedUrlRequestSchema,
+  GeneratePresignedUrlResponseSchema,
+  type FileCategory,
+  type GeneratePresignedUrlRequest,
+  type GeneratePresignedUrlResponse,
+} from './uploads'

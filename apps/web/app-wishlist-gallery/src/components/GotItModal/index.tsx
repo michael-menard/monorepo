@@ -29,7 +29,7 @@ import {
 } from '@repo/app-component-library'
 import type { WishlistItem, BuildStatus } from '@repo/api-client/schemas/wishlist'
 import { useUpdateItemPurchaseMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
-import { focusRingClasses } from '../../utils/a11y'
+import { focusRingClasses } from '@repo/accessibility'
 import type { GotItModalProps, PurchaseDetailsForm } from './__types__'
 import { PurchaseDetailsFormSchema } from './__types__'
 

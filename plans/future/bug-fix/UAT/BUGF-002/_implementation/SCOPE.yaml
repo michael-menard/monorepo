@@ -1,0 +1,27 @@
+schema: 1
+story_id: "BUGF-002"
+timestamp: "2026-02-11T15:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/main-app/src/routes/pages/InstructionsEditPage.tsx"
+  - "apps/web/app-instructions-gallery/src/pages/edit-page.tsx"
+  - "packages/core/api-client/src/rtk/instructions-api.ts"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Wire useUpdateMocMutation hook into edit pages to enable saving of MOC metadata edits (title, description, theme, tags)"

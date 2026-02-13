@@ -303,43 +303,45 @@ export const wishlistGalleryApi = createApi({
      * SETS-MVP-004: Toggle build status of an owned item.
      * Implements optimistic update via onQueryStarted.
      */
-    updateBuildStatus: builder.mutation<WishlistItem, { itemId: string; buildStatus: BuildStatus }>({
-      query: ({ itemId, buildStatus }) => ({
-        url: `/wishlist/${itemId}/build-status`,
-        method: 'PATCH',
-        body: { buildStatus },
-      }),
-      transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
-      async onQueryStarted({ itemId, buildStatus }, { dispatch, queryFulfilled }) {
-        // AC12, AC28: Optimistic update - update cache immediately
-        const patchResult = dispatch(
-          wishlistGalleryApi.util.updateQueryData(
-            'getWishlist',
-            { status: 'owned', page: 1, limit: 100 },
-            draft => {
-              const item = draft.items.find(i => i.id === itemId)
-              if (item) {
-                item.buildStatus = buildStatus
-              }
-            },
-          ),
-        )
+    updateBuildStatus: builder.mutation<WishlistItem, { itemId: string; buildStatus: BuildStatus }>(
+      {
+        query: ({ itemId, buildStatus }) => ({
+          url: `/wishlist/${itemId}/build-status`,
+          method: 'PATCH',
+          body: { buildStatus },
+        }),
+        transformResponse: (response: unknown) => WishlistItemSchema.parse(response),
+        async onQueryStarted({ itemId, buildStatus }, { dispatch, queryFulfilled }) {
+          // AC12, AC28: Optimistic update - update cache immediately
+          const patchResult = dispatch(
+            wishlistGalleryApi.util.updateQueryData(
+              'getWishlist',
+              { status: 'owned', page: 1, limit: 100 },
+              draft => {
+                const item = draft.items.find(i => i.id === itemId)
+                if (item) {
+                  item.buildStatus = buildStatus
+                }
+              },
+            ),
+          )
 
-        try {
-          await queryFulfilled
-        } catch {
-          // AC13, AC31: Revert on error without retry
-          patchResult.undo()
-        }
+          try {
+            await queryFulfilled
+          } catch {
+            // AC13, AC31: Revert on error without retry
+            patchResult.undo()
+          }
+        },
+        invalidatesTags: (result, _error, { itemId }) =>
+          result
+            ? [
+                { type: 'WishlistItem', id: itemId },
+                { type: 'Wishlist', id: 'LIST' },
+              ]
+            : [],
       },
-      invalidatesTags: (result, _error, { itemId }) =>
-        result
-          ? [
-              { type: 'WishlistItem', id: itemId },
-              { type: 'Wishlist', id: 'LIST' },
-            ]
-          : [],
-    }),
+    ),
 
     /**
      * DELETE /api/wishlist/:id

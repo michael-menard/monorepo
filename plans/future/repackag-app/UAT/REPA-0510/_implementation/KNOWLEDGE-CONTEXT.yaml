@@ -1,0 +1,126 @@
+schema: 1
+story_id: REPA-0510
+timestamp: "2026-02-11T18:29:00Z"
+
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-11T18:29:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "REPA-002"
+        lesson: "Established package migration pattern: Create clear module structure with explicit exports (no barrel files per CLAUDE.md), migrate tests alongside code, maintain test coverage during consolidation"
+        category: pattern
+        applies_because: "REPA-0510 migrates 8 upload components following same consolidation pattern as REPA-002 (upload client functions)"
+
+      - story_id: "REPA-004"
+        lesson: "Component migration with test preservation: Maintain 80%+ coverage target during migration, use package-level test setup, verify isolation with --filter flag"
+        category: pattern
+        applies_because: "REPA-0510 migrates components with existing tests and must maintain 80%+ coverage (AC-14)"
+
+      - story_id: "REPA-005"
+        lesson: "Component divergence verification is BLOCKING pre-implementation step: Must verify byte-for-byte identical code OR document differences before choosing canonical source"
+        category: blocker
+        applies_because: "Parent story REPA-005 identified this as critical - already completed for REPA-0510 (0% divergence confirmed)"
+
+      - story_id: "General"
+        lesson: "Zod-first types requirement: ALL component props must use Zod schemas with z.infer<>, never TypeScript interfaces (per CLAUDE.md)"
+        category: pattern
+        applies_because: "All migrated components must follow Zod-first pattern for type validation"
+
+    blockers_to_avoid:
+      - "Package boundary violations: @repo/upload CANNOT import from apps/web/*, Redux, or app-specific code"
+      - "Barrel file creation: Do NOT create barrel files (index.ts re-exports) - violates CLAUDE.md"
+      - "Missing test coverage: Package-level coverage must meet 80%+ target, no component below 75%"
+      - "Import path consistency: Must verify NO imports from old paths remain after migration"
+
+    patterns_to_follow:
+      - "Component directory structure: ComponentName/index.tsx, __tests__/, __types__/, utils/ (per CLAUDE.md)"
+      - "Explicit exports: Export each component explicitly from package index.ts"
+      - "Test migration: Migrate tests alongside components, maintain coverage targets"
+      - "Package isolation: Verify builds/tests pass with --filter flag"
+      - "UI primitives: Import ALL components from @repo/app-component-library barrel export"
+
+    patterns_to_avoid:
+      - "TypeScript interfaces: Use Zod schemas with z.infer<> instead"
+      - "Console.log: Use @repo/logger instead"
+      - "Individual component imports: Import from @repo/app-component-library barrel, not individual paths"
+      - "Skipping E2E tests: Must include Playwright tests per ADR-006 (live API mode)"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests use mocks, E2E tests can use MSW or live, UAT MUST use real services"
+        applies_to: ["testing", "frontend"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "Require at least one happy-path E2E test per story during dev phase using live resources (no MSW)"
+        applies_to: ["testing", "frontend", "dev-workflow"]
+
+    constraints:
+      api_paths: "N/A - Frontend-only component migration, no API endpoints"
+      infrastructure: "N/A - No infrastructure changes"
+      storage: "N/A - Upload components use existing @repo/upload/types for S3 integration"
+      auth: "N/A - Components receive auth state via props, no direct Cognito integration"
+      testing: "AC-16 must include Playwright E2E tests for upload flows per ADR-006 (live API mode required)"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full component files"
+        typical_tokens: 1000-2000 per component
+        mitigation: "Use Grep to verify divergence before full reads, target specific components"
+
+      - operation: "Reading all test files upfront"
+        typical_tokens: 500-1000 per test file
+        mitigation: "Read tests during component migration, not all at once"
+
+    recommended_patterns:
+      - "Batch related operations: Create components in logical groups (Uploader sub-components, domain-specific components)"
+      - "Grep before Read: Verify import paths exist before updating"
+      - "Targeted file reads: Read components during migration, not exploratory reads"
+      - "Skip redundant context: Divergence verification already complete (documented in DIVERGENCE-NOTES.md)"
+
+  repackag_app_context:
+    epic: "repackag-app"
+    related_stories:
+      - id: "REPA-001"
+        status: "completed"
+        contribution: "Created @repo/upload package structure"
+
+      - id: "REPA-002"
+        status: "ready-for-qa"
+        contribution: "Migrated upload client functions, established package migration pattern"
+
+      - id: "REPA-003"
+        status: "in-progress"
+        contribution: "Migrating upload hooks (useUploadManager, useUploaderSession) - blocks REPA-0520"
+
+      - id: "REPA-004"
+        status: "UAT"
+        contribution: "Image processing migration - dependency for REPA-0510 (non-blocking)"
+
+      - id: "REPA-005"
+        status: "split"
+        contribution: "Parent story - split into REPA-0510 (components) + REPA-0520 (SessionProvider)"
+
+      - id: "REPA-0520"
+        status: "ready-to-work"
+        contribution: "Sibling story - SessionProvider migration (depends on REPA-003)"
+
+    package_patterns:
+      - "Explicit exports from package index.ts (no barrel files)"
+      - "Component directory structure: index.tsx, __tests__/, __types__/, utils/"
+      - "Zod-first types: All props validated with Zod schemas"
+      - "Package boundary enforcement: No imports from apps/*, Redux, app-specific code"
+      - "Test coverage target: 80%+ at package level, 75%+ per component minimum"
+
+  warnings:
+    - "FileValidationResult schema duplication acknowledged in AC-10 (deferred to REPA-017)"
+    - "SessionProvider migration deferred to REPA-0520 (REPA-003 dependency)"
+    - "Component divergence verification COMPLETED: 0% divergence, canonical source = main-app"

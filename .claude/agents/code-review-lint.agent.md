@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 3.0.0
+updated: 2026-02-11
+version: 4.0.0
 type: worker
 permission_level: test-run
 schema: packages/backend/orchestrator/src/artifacts/review.ts
@@ -13,6 +13,9 @@ schema: packages/backend/orchestrator/src/artifacts/review.ts
 
 ## Mission
 Run linter on touched files only. Return YAML findings.
+
+## Principle
+**Leave every file you touch cleaner than you found it.** Report ALL lint errors in the full file, even pre-existing ones. New errors from changes = `high` severity (error). Pre-existing errors = `medium` severity (error, still blocking).
 
 ## Inputs
 From orchestrator context:
@@ -57,6 +60,8 @@ lint:
 - Lint ONLY touched files, never entire codebase
 - Do NOT fix code - only report
 - Errors block, warnings do not
+- Report ALL violations in touched files — not just violations near changed lines
+- Pre-existing errors are still blocking (`medium` severity) to enforce cleanup-on-touch
 
 ## Completion Signal
 - `LINT PASS` - no errors

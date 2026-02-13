@@ -1,0 +1,173 @@
+# Deferred KB Writes for BUGF-009
+# Generated: 2026-02-11T18:30:00Z
+# Reason: KB tools unavailable during story generation
+
+deferred_writes:
+  - table: stories
+    operation: INSERT ON CONFLICT UPDATE
+    data:
+      story_id: BUGF-009
+      feature: bug-fix
+      title: "Fix and Enable Skipped Test Suites in Main App"
+      story_dir: plans/future/bug-fix/backlog/BUGF-009
+      story_file: plans/future/bug-fix/backlog/BUGF-009/BUGF-009.md
+      story_type: tech_debt
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+      created_at: "2026-02-11T18:30:00Z"
+      updated_at: "2026-02-11T18:30:00Z"
+
+    sql: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra, created_at, updated_at
+      ) VALUES (
+        'BUGF-009',
+        'bug-fix',
+        'Fix and Enable Skipped Test Suites in Main App',
+        'plans/future/bug-fix/backlog/BUGF-009',
+        'plans/future/bug-fix/backlog/BUGF-009/BUGF-009.md',
+        'tech_debt',
+        5,
+        'high',
+        'backlog',
+        false,
+        true,
+        false,
+        false,
+        '2026-02-11T18:30:00Z',
+        '2026-02-11T18:30:00Z'
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra,
+        updated_at = EXCLUDED.updated_at;
+
+retry_instructions: |
+  To retry KB persistence:
+  1. Ensure KB connection available
+  2. Execute SQL statement above
+  3. Verify row inserted/updated in stories table
+  4. Delete this DEFERRED-KB-WRITES.yaml file
+
+  # Non-Blocking Findings from Elaboration (Added by elab-autonomous-decider)
+  # These should be logged to KB as findings after story completion
+
+non_blocking_findings:
+  reason: "Many findings reference existing stories (BUGF-030, BUGF-043); deferring KB writes to avoid duplication"
+
+  gaps:
+    - id: 1
+      finding: "Hub.listen mocking solution"
+      impact: Medium
+      effort: High (4-8 hours research)
+      recommendation: "Defer to BUGF-010 if solution not found within timebox"
+      category: edge-case
+      tags: [auth, mocking, hub-listen, future-work]
+
+    - id: 2
+      finding: "Performance monitoring validation"
+      impact: Low
+      effort: Low (1-2 hours)
+      recommendation: "Investigate whether performanceMonitor implementation still exists"
+      category: technical-debt
+      tags: [performance, validation, future-work]
+      note: "Addressed by new AC-4a in story"
+
+    - id: 3
+      finding: "Cache tests dependency"
+      impact: Low
+      effort: Medium (create package) OR Low (remove tests)
+      recommendation: "Remove cache tests with justification. Future story could create @repo/cache package if needed"
+      category: infrastructure
+      tags: [cache, dependencies, future-work]
+
+    - id: 4
+      finding: "GalleryModule stub test"
+      impact: Low
+      effort: Low (<1 hour)
+      recommendation: "12-line stub test file may be obsolete. Remove if not needed (AC-16)"
+      category: cleanup
+      tags: [test-cleanup, obsolete]
+
+    - id: 5
+      finding: "Tests for deleted components"
+      impact: Low
+      effort: Low (1-2 hours)
+      recommendation: "Investigation phase (AC-3) should identify test files for deleted components"
+      category: cleanup
+      tags: [test-cleanup, deleted-components]
+
+  enhancements:
+    - id: 1
+      finding: "Test coverage consolidation"
+      impact: Medium
+      effort: Medium
+      recommendation: "Consider consolidating similar test patterns into shared test utilities"
+      category: test-quality
+      tags: [test-utils, consolidation, future-work]
+      related_story: "BUGF-043"
+
+    - id: 2
+      finding: "Mock standardization"
+      impact: Medium
+      effort: Medium
+      recommendation: "Extract common RTK Query mock patterns to @repo/test-utils"
+      category: test-quality
+      tags: [mocking, standardization, test-utils]
+
+    - id: 3
+      finding: "E2E coverage for auth flows"
+      impact: High
+      effort: High
+      recommendation: "Critical auth flows should have E2E coverage"
+      category: test-coverage
+      tags: [e2e, auth, playwright]
+      related_story: "BUGF-030"
+
+    - id: 4
+      finding: "Performance test modernization"
+      impact: Low
+      effort: Medium
+      recommendation: "Modernize to use current performance monitoring APIs if tests are enabled"
+      category: test-quality
+      tags: [performance, modernization, future-work]
+
+    - id: 5
+      finding: "Test documentation"
+      impact: Low
+      effort: Low
+      recommendation: "Document common test patterns and mocking strategies discovered"
+      category: documentation
+      tags: [test-patterns, documentation]
+
+    - id: 6
+      finding: "Accessibility test patterns"
+      impact: Medium
+      effort: Low
+      recommendation: "Extract common a11y assertions into shared utilities"
+      category: accessibility
+      tags: [a11y, test-utils, future-work]
+
+    - id: 7
+      finding: "Coverage reporting automation"
+      impact: Low
+      effort: Low
+      recommendation: "Automate coverage reports in CI with thresholds"
+      category: ci-cd
+      tags: [coverage, automation, ci]

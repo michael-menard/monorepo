@@ -1,0 +1,53 @@
+schema: 3
+feature_dir: "plans/future/repackag-app"
+prefix: "REPA"
+reviewed: "2026-02-09"
+focus: mvp-critical
+
+verdict: CONCERNS
+summary: "Epic is architecturally sound and ready to build. QA raised concerns about missing acceptance criteria and test strategy - these will be addressed during story elaboration phase."
+
+perspectives:
+  engineering:
+    verdict: READY
+    mvp_critical_count: 0
+  product:
+    verdict: READY
+    mvp_critical_count: 0
+  qa:
+    verdict: CONCERNS
+    mvp_critical_count: 0
+  ux:
+    verdict: READY
+    mvp_critical_count: 0
+  platform:
+    verdict: READY
+    mvp_critical_count: 0
+  security:
+    verdict: READY
+    mvp_critical_count: 0
+
+mvp_blockers: []
+
+missing_mvp_stories: []
+
+metrics:
+  mvp_blockers: 0
+  missing_mvp_stories: 0
+
+---
+## QA Concerns & Rationale
+
+QA verdict is CONCERNS due to:
+1. No acceptance criteria defined for stories
+2. No test strategy document
+3. No E2E test scenarios defined
+4. Missing rollback/regression test plan for breaking changes
+5. No integration test matrix for multi-app migrations
+
+**Important:** These concerns are valid but expected at the epic level. Acceptance criteria, test strategy, and concrete test scenarios are defined during story elaboration phase (which happens in `/elab-story`), not at epic review. The workflow architecture anticipates this - epic review establishes feasibility and architecture; story elaboration establishes implementation details including testing.
+
+This is process risk, not delivery risk. The 21 stories are architecturally sound and the testing concerns will be systematically addressed as each story moves to elaboration.
+
+---
+EPIC REVIEW COMPLETE

@@ -56,7 +56,7 @@ export default defineConfig({
       '@repo/app-component-library',
       '@repo/cache',
       '@repo/logger',
-      '@repo/upload-types',
+      '@repo/upload',
       '@repo/accessibility',
       '@repo/charts',
       '@repo/mock-data',

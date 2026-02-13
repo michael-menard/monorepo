@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '@repo/app-component-library'
 import { useAppSelector } from '@/store/hooks'
 import { selectIsNavigating } from '@/store/slices/globalUISlice'
-import { useDelayedShow } from '@/hooks/useDelayedShow'
+import { useDelayedShow } from '@repo/hooks/useDelayedShow'
 
 /** Default delay threshold in milliseconds */
 export const DEFAULT_SPINNER_DELAY = 300

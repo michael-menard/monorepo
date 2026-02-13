@@ -1,9 +1,14 @@
 /**
  * @repo/upload-types
  *
+ * @deprecated This package has been deprecated. Please use @repo/upload/types instead.
+ * Migration: Replace `import { ... } from '@repo/upload-types'` with `import { ... } from '@repo/upload/types'`
+ *
  * Shared upload types and utilities for MOC upload features.
  * Used by main-app and API for consistent type definitions.
  */
+
+console.warn('[DEPRECATED] @repo/upload-types is deprecated. Import from @repo/upload/types instead.')
 
 // Session types
 export {

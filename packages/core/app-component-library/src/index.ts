@@ -76,10 +76,27 @@ export {
   MocCardSkeleton,
   MocCardCompactSkeleton,
   GalleryGridSkeleton,
+  DashboardSkeleton,
+  DashboardSkeletonPropsSchema,
   skeletonVariants,
 } from './feedback/skeleton'
 
-export type { GalleryGridSkeletonProps, GalleryGridSkeletonColumns } from './feedback/skeleton'
+export type {
+  GalleryGridSkeletonProps,
+  GalleryGridSkeletonColumns,
+  DashboardSkeletonProps,
+} from './feedback/skeleton'
+
+export {
+  EmptyState,
+  EmptyDashboard,
+  EmptyStatePropsSchema,
+  EmptyDashboardPropsSchema,
+  EmptyStateFeatureSchema,
+  EmptyStateActionSchema,
+} from './feedback/empty-states'
+
+export type { EmptyStateProps, EmptyDashboardProps } from './feedback/empty-states'
 
 export {
   ProgressIndicator,
@@ -156,25 +173,17 @@ export {
   FeatureGate,
   withFeatureGate,
   FeatureGatePropsSchema,
-  FeatureSchema as GateFeatureSchema,
-  TierSchema as GateTierSchema,
   FEATURE_REQUIRED_TIER,
   TIER_DISPLAY_NAMES,
   FEATURE_DISPLAY_NAMES,
 } from './gates/FeatureGate'
-export type { FeatureGateProps, Feature as GateFeature, Tier as GateTier } from './gates/FeatureGate'
+export type { FeatureGateProps } from './gates/FeatureGate'
 
 // Indicators (Quota display)
 export {
   QuotaIndicator,
   QuotaBar,
   QuotaCard,
-  QuotaTypeSchema,
-  QuotaInfoSchema,
-  QuotaIndicatorPropsSchema,
-  QuotaBarPropsSchema,
-  QuotaCardPropsSchema,
-  QUOTA_DISPLAY_NAMES,
   QUOTA_UNITS,
   getQuotaPercentage,
   getQuotaStatus,
@@ -183,8 +192,8 @@ export type {
   QuotaIndicatorProps,
   QuotaBarProps,
   QuotaCardProps,
-  QuotaType,
-  QuotaInfo,
+
+
 } from './indicators/QuotaIndicator'
 
 // Dialogs

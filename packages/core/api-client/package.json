@@ -37,8 +37,20 @@
       "types": "./src/schemas/wishlist.ts"
     },
     "./schemas/instructions": {
-      "import": "./src/schemas/instructions.ts",
-      "types": "./src/schemas/instructions.ts"
+      "import": "./src/schemas/instructions/index.ts",
+      "types": "./src/schemas/instructions/index.ts"
+    },
+    "./schemas/instructions/form": {
+      "import": "./src/schemas/instructions/form.ts",
+      "types": "./src/schemas/instructions/form.ts"
+    },
+    "./schemas/instructions/api": {
+      "import": "./src/schemas/instructions/api.ts",
+      "types": "./src/schemas/instructions/api.ts"
+    },
+    "./schemas/instructions/utils": {
+      "import": "./src/schemas/instructions/utils.ts",
+      "types": "./src/schemas/instructions/utils"
     },
     "./schemas/sets": {
       "import": "./src/schemas/sets.ts",
@@ -111,6 +123,22 @@
     "./utils/authorization-errors": {
       "import": "./src/utils/authorization-errors.ts",
       "types": "./src/utils/authorization-errors.ts"
+    },
+    "./errors/error-mapping": {
+      "import": "./src/errors/error-mapping.ts",
+      "types": "./src/errors/error-mapping.ts"
+    },
+    "./errors/auth-failure": {
+      "import": "./src/errors/auth-failure.ts",
+      "types": "./src/errors/auth-failure.ts"
+    },
+    "./rtk/uploads-api": {
+      "import": "./src/rtk/uploads-api.ts",
+      "types": "./src/rtk/uploads-api.ts"
+    },
+    "./schemas/uploads": {
+      "import": "./src/schemas/uploads.ts",
+      "types": "./src/schemas/uploads.ts"
     }
   },
   "scripts": {

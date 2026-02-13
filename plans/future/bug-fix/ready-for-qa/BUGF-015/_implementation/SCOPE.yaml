@@ -1,0 +1,25 @@
+schema: 1
+story_id: BUGF-015
+timestamp: "2026-02-11T20:15:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/main-app/src/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: false
+
+summary: "Add test coverage for 24 untested main-app components including security-critical admin dialogs, recently modified upload components, form validation, and infrastructure components"

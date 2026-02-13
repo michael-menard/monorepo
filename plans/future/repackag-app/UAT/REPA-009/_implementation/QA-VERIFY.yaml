@@ -1,0 +1,129 @@
+schema: 1
+story_id: "REPA-009"
+timestamp: "2026-02-11T18:10:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 117, fail: 0, skip: 1 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 95.0
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes:
+    - "All tests follow semantic query pattern (getByRole, getByTestId)"
+    - "No setTimeout usage, proper React Testing Library patterns"
+    - "Comprehensive coverage of selection, drag handles, and hover overlays"
+    - "Integration tests verify GalleryCard usage in InspirationCard and AlbumCard"
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "GalleryCard accepts selection mode props verified via GalleryCardPropsSchema and unit tests"
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "Selection checkbox renders with correct 24x24px styling (h-6 w-6) and positioning (top-left/top-right)"
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Selection click behavior and keyboard activation (Enter/Space) verified"
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "GalleryCard accepts drag handle props verified via GalleryCardPropsSchema"
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Drag handle renders with 44x44px touch target (h-11 w-11) at specified position"
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Drag handle has aria-label, passes axe-core accessibility tests, 44x44px touch target"
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Hover overlay renders with gradient background and opacity transitions (md:opacity-0 md:group-hover:opacity-100)"
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "InspirationCard refactored to use GalleryCard, all 35 tests pass"
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "AlbumCard refactored to use GalleryCard with stacked effect preserved, all 36 tests pass"
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "117 tests passed, 1 skipped. Coverage: 95.0% lines, 88.0% branches. Build successful."
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "README.md with complete documentation including breaking changes and migration guide"
+
+architecture_compliant: true
+architecture_notes:
+  - "Follows Zod-first type definitions per CLAUDE.md (ADR-001 from KNOWLEDGE-CONTEXT)"
+  - "Uses props-based composition over inheritance (ADR-002)"
+  - "Breaking change (actions prop removal) is documented with migration guide (ADR-003)"
+  - "Component directory structure follows project standards with __tests__ and __types__"
+  - "All imports use @repo/ui for UI components and @repo/logger for logging"
+  - "WCAG 2.5.5 compliant with 44x44px touch targets"
+
+issues:
+  - severity: info
+    category: deprecated-test-file
+    description: "Old test file at packages/core/gallery/src/__tests__/GalleryCard.test.tsx contains outdated tests for removed 'actions' prop"
+    resolution: "Not blocking - correct test file is at packages/core/gallery/src/components/__tests__/GalleryCard.test.tsx with all REPA-009 tests"
+    blocking: false
+
+  - severity: info
+    category: pre-existing
+    description: "Pre-existing env var requirement (VITE_SERVERLESS_API_BASE_URL) for test execution due to transitive imports"
+    resolution: "Documented in EVIDENCE.yaml known_deviations. Not related to REPA-009 changes."
+    blocking: false
+
+lessons_to_record:
+  - lesson: "Zod-first type definitions with z.infer<> required per CLAUDE.md"
+    category: pattern
+    tags: ["typescript", "zod", "types"]
+
+  - lesson: "Component refactoring achieved ~100 LOC reduction per card by extracting common patterns to GalleryCard"
+    category: reuse
+    tags: ["refactoring", "code-reuse", "gallery"]
+
+  - lesson: "Position conflict resolution: When both selectable and draggable, fix checkbox to top-left and drag handle to top-right"
+    category: pattern
+    tags: ["ui", "overlays", "accessibility"]
+
+  - lesson: "Responsive hover behavior: Mobile-first (always visible), desktop hover-only via md:opacity-0 md:group-hover:opacity-100"
+    category: pattern
+    tags: ["responsive", "hover", "mobile-first"]
+
+  - lesson: "Breaking changes require explicit documentation in README with migration guide"
+    category: pattern
+    tags: ["documentation", "breaking-changes", "migration"]
+
+  - lesson: "44x44px touch targets (h-11 w-11) required for WCAG 2.5.5 compliance"
+    category: pattern
+    tags: ["accessibility", "wcag", "touch-targets"]
+
+tokens:
+  in: 47638
+  out: 1200

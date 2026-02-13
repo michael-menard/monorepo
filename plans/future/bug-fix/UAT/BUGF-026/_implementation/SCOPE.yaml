@@ -1,0 +1,46 @@
+schema: 1
+story_id: "BUGF-026"
+feature_dir: "plans/future/bug-fix"
+story_type: documentation
+
+title: "Auth Token Refresh Security Review"
+description: >
+  Conduct a comprehensive security architecture review of the token refresh
+  implementation to unblock BUGF-005 (Create Shared Auth Hooks Package) with
+  clear security guidance.
+
+deliverables:
+  - type: document
+    path: "plans/future/bug-fix/in-progress/BUGF-026/SECURITY-REVIEW.md"
+    description: "Comprehensive security review document with architecture docs, threat model, auth hook contract, and vulnerability assessment"
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Token refresh architecture documented"
+  - id: AC-2
+    description: "Threat model created for token refresh flows (STRIDE)"
+  - id: AC-3
+    description: "Auth hook contract specification defined"
+  - id: AC-4
+    description: "Security acceptance criteria established for BUGF-005"
+  - id: AC-5
+    description: "Vulnerability assessment completed"
+  - id: AC-6
+    description: "Security review documentation published"
+
+code_areas_to_review:
+  - /apps/web/main-app/src/services/auth/AuthProvider.tsx
+  - /packages/core/api-client/src/auth/cognito-integration.ts
+  - /packages/core/auth-services/src/session/index.ts
+  - /packages/core/auth-hooks/src/useModuleAuth.ts
+  - /packages/core/auth-hooks/src/usePermissions.ts
+
+test_areas:
+  - /apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx
+  - /packages/core/auth-hooks/src/__tests__/useModuleAuth.test.tsx
+
+e2e_exempt: true
+e2e_exempt_reason: "Documentation-only story with no code changes"
+
+blocks:
+  - BUGF-005

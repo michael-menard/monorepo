@@ -46,7 +46,7 @@ import { GotItModal } from '../components/GotItModal'
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
 import { DraggableWishlistGallery } from '../components/DraggableWishlistGallery'
 import { useWishlistSortPersistence, DEFAULT_SORT_MODE } from '../hooks/useWishlistSortPersistence'
-import { useAnnouncer, Announcer } from '../hooks/useAnnouncer'
+import { useAnnouncer, Announcer } from '@repo/accessibility'
 import { FilterPanel } from '../components/FilterPanel'
 import { FilterBadge } from '../components/FilterPanel/FilterBadge'
 import type {

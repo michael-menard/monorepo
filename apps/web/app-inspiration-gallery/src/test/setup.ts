@@ -65,7 +65,7 @@ vi.mock('@tanstack/react-router', async () => {
   }
 })
 
-// Mock logger
+// Mock logger with createLogger export
 vi.mock('@repo/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -73,6 +73,12 @@ vi.mock('@repo/logger', () => ({
     warn: vi.fn(),
     debug: vi.fn(),
   },
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  })),
 }))
 
 // Global test utilities

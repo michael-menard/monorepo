@@ -1,0 +1,119 @@
+schema: 1
+story_id: BUGF-009
+timestamp: "2026-02-11T20:15:00Z"
+generated_by: knowledge-context-loader (inline)
+
+# Knowledge context loaded for test coverage story
+
+lessons_loaded: 0
+adrs_loaded: 3
+patterns_loaded: 2
+
+architecture_decisions:
+  - id: ADR-001
+    title: API Path Schema
+    constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain} - affects test mocking"
+    relevance: "When mocking API calls in tests, ensure paths match /api/v2/{domain} pattern"
+
+  - id: ADR-005
+    title: Testing Strategy
+    constraint: "Unit/Integration tests CAN use mocks (MSW for API, vi.mock for modules)"
+    relevance: "Core decision - this story enables unit/integration tests which are ALLOWED to use mocks per ADR-005"
+
+  - id: ADR-006
+    title: E2E Tests in Dev
+    constraint: "E2E tests must use live resources"
+    relevance: "Not applicable - this story only touches unit/integration tests, not E2E"
+
+testing_patterns:
+  mock_provider_wrapper:
+    description: "Established pattern for wrapping components in test providers"
+    example: |
+      const renderWithProviders = (ui: React.ReactElement) => {
+        const store = configureStore({
+          reducer: { /* reducers */ },
+          preloadedState: { /* initial state */ }
+        })
+        return render(
+          <Provider store={store}>
+            <MemoryRouter>
+              {ui}
+            </MemoryRouter>
+          </Provider>
+        )
+      }
+
+  accessibility_assertions:
+    description: "Tests should verify accessibility attributes"
+    example: |
+      // Check aria-invalid on error
+      expect(inputElement).toHaveAttribute('aria-invalid', 'true')
+
+      // Check aria-describedby for error messages
+      expect(inputElement).toHaveAttribute('aria-describedby', 'email-error')
+
+      // Check role and aria-label
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+
+blockers_to_avoid:
+  hub_listen_mocking:
+    description: "AWS Amplify Hub.listen mock not being called in test environment"
+    impact: "8 tests skipped in AuthProvider"
+    mitigation: "4-hour timebox for solution, defer to BUGF-010 if needed"
+
+  missing_cache_package:
+    description: "Cache tests depend on @repo/cache package which doesn't exist"
+    impact: "289 lines of cache performance tests cannot run"
+    resolution: "Remove cache tests with justification"
+
+  rtk_query_refactoring:
+    description: "Modules have been significantly refactored with RTK Query hooks"
+    impact: "Tests may need complete rewrites, not just mock updates"
+    mitigation: "Investigate first, remove if >50% rewrite needed"
+
+project_constraints:
+  - "Do not modify production code - only test files and test mocks"
+  - "Use existing Vitest + React Testing Library + MSW stack"
+  - "Follow established mock patterns for consistency"
+  - "Test accessibility (aria attributes, roles, keyboard nav)"
+  - "No new package dependencies unless critical"
+
+test_infrastructure:
+  framework: "Vitest + React Testing Library"
+  mocking: "MSW (Mock Service Worker) for API, vi.mock() for modules"
+  setup_files: "apps/web/main-app/src/test/setup.ts"
+  coverage_targets:
+    global: ">=45%"
+    auth: ">=80%"
+    navigation: ">=70%"
+
+active_work_constraints:
+  - "Major consolidation work in progress across app modules"
+  - "Deleted components: DashboardSkeleton, EmptyDashboard"
+  - "Deleted hooks: use-module-auth.ts, useLocalStorage.ts, useUploadManager.ts, etc."
+  - "Multiple backup files (*.bak, *.backup) indicating iterative work"
+  - "Coordinate with team to avoid conflicts with active refactoring"
+
+decision_criteria:
+  fix_criteria:
+    - "Component still exists and is in use"
+    - "Test validates core user journey (auth, navigation, routing)"
+    - "Changes needed are minor (mock updates, import fixes)"
+    - "Estimated effort: <4 hours per test suite"
+
+  remove_criteria:
+    - "Component has been deleted or refactored away"
+    - "Test validates obsolete functionality"
+    - "Changes needed would require complete rewrite (>50% of test)"
+    - "Dependency missing (e.g., @repo/cache)"
+
+  defer_criteria:
+    - "Test is valuable but solution complex (Hub.listen issue)"
+    - "Test requires new package creation"
+    - "Test needs major rewrite for current implementation"
+
+notes:
+  - "This is a test infrastructure story, NOT a bug-fix story"
+  - "Any production bugs discovered must be documented and deferred to separate stories"
+  - "Prioritize high-value test suites (auth flows) over lower priority (performance tests)"
+  - "AuthProvider test file path needs verification during investigation phase"

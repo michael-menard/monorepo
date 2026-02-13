@@ -1,0 +1,237 @@
+schema: 1
+story_id: "REPA-008"
+timestamp: "2026-02-10T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Move useRovingTabIndex to @repo/gallery with ariaLabel parameter"
+    files:
+      - "packages/core/gallery/src/hooks/useRovingTabIndex.ts"
+      - "packages/core/gallery/src/hooks/__tests__/useRovingTabIndex.test.ts"
+      - "packages/core/gallery/src/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Move useAnnouncer to @repo/accessibility with Announcer component"
+    files:
+      - "packages/core/accessibility/src/hooks/useAnnouncer.tsx"
+      - "packages/core/accessibility/src/hooks/__tests__/useAnnouncer.test.tsx"
+      - "packages/core/accessibility/src/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 3
+    description: "Move useKeyboardShortcuts to @repo/gallery unchanged"
+    files:
+      - "packages/core/gallery/src/hooks/useKeyboardShortcuts.ts"
+      - "packages/core/gallery/src/hooks/__tests__/useKeyboardShortcuts.test.ts"
+      - "packages/core/gallery/src/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 4
+    description: "Create useGalleryKeyboard in @repo/gallery built on useKeyboardShortcuts"
+    files:
+      - "packages/core/gallery/src/hooks/useGalleryKeyboard.ts"
+      - "packages/core/gallery/src/hooks/__tests__/useGalleryKeyboard.test.ts"
+      - "packages/core/gallery/src/index.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Build and verify packages compile successfully"
+    files: []
+    dependencies: [1, 2, 3, 4]
+    slice: packages
+
+  - id: 6
+    description: "Update wishlist gallery imports and add ariaLabel parameter"
+    files:
+      - "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+      - "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/index.tsx"
+    dependencies: [5]
+    slice: frontend
+
+  - id: 7
+    description: "Update inspiration gallery imports and add ariaLabel parameter"
+    files:
+      - "apps/web/app-inspiration-gallery/src/pages/main-page.tsx"
+      - "apps/web/app-inspiration-gallery/src/components/DraggableInspirationGallery/index.tsx"
+    dependencies: [5]
+    slice: frontend
+
+  - id: 8
+    description: "Delete duplicate hook files from both gallery apps"
+    files:
+      - "apps/web/app-wishlist-gallery/src/hooks/useRovingTabIndex.ts"
+      - "apps/web/app-wishlist-gallery/src/hooks/useAnnouncer.tsx"
+      - "apps/web/app-wishlist-gallery/src/hooks/useKeyboardShortcuts.ts"
+      - "apps/web/app-wishlist-gallery/src/hooks/__tests__/useRovingTabIndex.test.tsx"
+      - "apps/web/app-wishlist-gallery/src/hooks/__tests__/useAnnouncer.test.tsx"
+      - "apps/web/app-wishlist-gallery/src/hooks/__tests__/useKeyboardShortcuts.test.tsx"
+      - "apps/web/app-inspiration-gallery/src/hooks/useRovingTabIndex.ts"
+      - "apps/web/app-inspiration-gallery/src/hooks/useAnnouncer.tsx"
+      - "apps/web/app-inspiration-gallery/src/hooks/useGalleryKeyboard.ts"
+      - "apps/web/app-inspiration-gallery/src/hooks/__tests__/useGalleryKeyboard.test.ts"
+    dependencies: [6, 7]
+    slice: frontend
+
+  - id: 9
+    description: "Run full test suite and verify quality gates"
+    files: []
+    dependencies: [8]
+    slice: packages
+
+files_to_change:
+  - path: "packages/core/gallery/src/hooks/useRovingTabIndex.ts"
+    action: create
+    reason: "Move from wishlist gallery, add ariaLabel parameter (AC1)"
+  - path: "packages/core/gallery/src/hooks/__tests__/useRovingTabIndex.test.ts"
+    action: create
+    reason: "Migrate tests from wishlist gallery (AC1)"
+  - path: "packages/core/accessibility/src/hooks/useAnnouncer.tsx"
+    action: create
+    reason: "Move from wishlist gallery with Announcer component (AC2)"
+  - path: "packages/core/accessibility/src/hooks/__tests__/useAnnouncer.test.tsx"
+    action: create
+    reason: "Migrate tests from wishlist gallery (AC2)"
+  - path: "packages/core/gallery/src/hooks/useKeyboardShortcuts.ts"
+    action: create
+    reason: "Move from wishlist gallery unchanged (AC3)"
+  - path: "packages/core/gallery/src/hooks/__tests__/useKeyboardShortcuts.test.ts"
+    action: create
+    reason: "Migrate tests from wishlist gallery (AC3)"
+  - path: "packages/core/gallery/src/hooks/useGalleryKeyboard.ts"
+    action: create
+    reason: "New implementation built on useKeyboardShortcuts (AC4)"
+  - path: "packages/core/gallery/src/hooks/__tests__/useGalleryKeyboard.test.ts"
+    action: create
+    reason: "New test suite for useGalleryKeyboard (AC4)"
+  - path: "packages/core/gallery/src/index.ts"
+    action: modify
+    reason: "Add exports for new hooks (AC1, AC3, AC4)"
+  - path: "packages/core/accessibility/src/index.ts"
+    action: modify
+    reason: "Add exports for useAnnouncer (AC2)"
+  - path: "apps/web/app-wishlist-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Update imports to use @repo/gallery and @repo/accessibility (AC6)"
+  - path: "apps/web/app-wishlist-gallery/src/components/DraggableWishlistGallery/index.tsx"
+    action: modify
+    reason: "Update imports and add ariaLabel: 'Wishlist items' (AC6)"
+  - path: "apps/web/app-inspiration-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Update imports to use @repo/gallery and @repo/accessibility (AC7)"
+  - path: "apps/web/app-inspiration-gallery/src/components/DraggableInspirationGallery/index.tsx"
+    action: modify
+    reason: "Update imports and add ariaLabel: 'Inspiration items' (AC7)"
+  - path: "apps/web/app-wishlist-gallery/src/hooks/useRovingTabIndex.ts"
+    action: delete
+    reason: "Remove duplicate after migration (AC6)"
+  - path: "apps/web/app-wishlist-gallery/src/hooks/useAnnouncer.tsx"
+    action: delete
+    reason: "Remove duplicate after migration (AC6)"
+  - path: "apps/web/app-wishlist-gallery/src/hooks/useKeyboardShortcuts.ts"
+    action: delete
+    reason: "Remove duplicate after migration (AC6)"
+  - path: "apps/web/app-wishlist-gallery/src/hooks/__tests__/useRovingTabIndex.test.tsx"
+    action: delete
+    reason: "Remove duplicate after migration (AC6)"
+  - path: "apps/web/app-wishlist-gallery/src/hooks/__tests__/useAnnouncer.test.tsx"
+    action: delete
+    reason: "Remove duplicate after migration (AC6)"
+  - path: "apps/web/app-wishlist-gallery/src/hooks/__tests__/useKeyboardShortcuts.test.tsx"
+    action: delete
+    reason: "Remove duplicate after migration (AC6)"
+  - path: "apps/web/app-inspiration-gallery/src/hooks/useRovingTabIndex.ts"
+    action: delete
+    reason: "Remove duplicate after migration (AC7)"
+  - path: "apps/web/app-inspiration-gallery/src/hooks/useAnnouncer.tsx"
+    action: delete
+    reason: "Remove duplicate after migration (AC7)"
+  - path: "apps/web/app-inspiration-gallery/src/hooks/useGalleryKeyboard.ts"
+    action: delete
+    reason: "Remove after replacing with shared implementation (AC7)"
+  - path: "apps/web/app-inspiration-gallery/src/hooks/__tests__/useGalleryKeyboard.test.ts"
+    action: delete
+    reason: "Remove after replacing with shared implementation (AC7)"
+
+commands_to_run:
+  - command: "pnpm build --filter=@repo/gallery --filter=@repo/accessibility"
+    when: "after step 5 (package code changes)"
+    required: true
+  - command: "pnpm test --filter=@repo/gallery --filter=@repo/accessibility"
+    when: "after step 5 (package code changes)"
+    required: true
+  - command: "pnpm test --filter=app-wishlist-gallery"
+    when: "after step 6 (wishlist updates)"
+    required: true
+  - command: "pnpm test --filter=app-inspiration-gallery"
+    when: "after step 7 (inspiration updates)"
+    required: true
+  - command: "pnpm test"
+    when: "after step 9 (all changes complete)"
+    required: true
+  - command: "pnpm check-types:all"
+    when: "after step 9 (all changes complete)"
+    required: true
+  - command: "pnpm lint:all"
+    when: "after step 9 (all changes complete)"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Hook at packages/core/gallery/src/hooks/useRovingTabIndex.ts with ariaLabel parameter, tests pass, exported from index.ts, package builds"
+    evidence_type: file
+  - ac_id: "AC2"
+    planned_evidence: "Hook at packages/core/accessibility/src/hooks/useAnnouncer.tsx with Announcer component, tests pass, exported from index.ts, package builds"
+    evidence_type: file
+  - ac_id: "AC3"
+    planned_evidence: "Hook at packages/core/gallery/src/hooks/useKeyboardShortcuts.ts, tests pass, exported from index.ts"
+    evidence_type: file
+  - ac_id: "AC4"
+    planned_evidence: "Hook at packages/core/gallery/src/hooks/useGalleryKeyboard.ts built on useKeyboardShortcuts, tests verify all shortcuts, exported from index.ts"
+    evidence_type: file
+  - ac_id: "AC5"
+    planned_evidence: "SKIPPED - Optional AC, not required for story completion"
+    evidence_type: manual
+  - ac_id: "AC6"
+    planned_evidence: "Wishlist gallery imports from @repo/gallery and @repo/accessibility, ariaLabel='Wishlist items', app tests pass, old files deleted"
+    evidence_type: test
+  - ac_id: "AC7"
+    planned_evidence: "Inspiration gallery imports from @repo/gallery and @repo/accessibility, ariaLabel='Inspiration items', app tests pass, old files deleted"
+    evidence_type: test
+  - ac_id: "AC8"
+    planned_evidence: "All tests pass (pnpm test), all packages build (pnpm build), no TypeScript errors (pnpm check-types:all), no lint errors (pnpm lint:all)"
+    evidence_type: command
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should AC5 (useGallerySelection) be implemented in this story?"
+    decision: "Skip AC5 - marked as OPTIONAL in story"
+    rationale: "Story explicitly marks AC5 as optional. Current apps don't use explicit selection state management."
+    decided_by: auto
+    tier: 1
+  - id: ARCH-002
+    question: "Which version of duplicate hooks should be used as source?"
+    decision: "Use wishlist gallery versions as source"
+    rationale: "Wishlist versions have better documentation and more comprehensive implementations"
+    decided_by: auto
+    tier: 1
+  - id: ARCH-003
+    question: "How should test files be migrated to preserve history?"
+    decision: "Use git mv commands for test file migration"
+    rationale: "Preserves git blame history"
+    decided_by: auto
+    tier: 1
+
+complexity: moderate
+
+notes:
+  - "AC5 (useGallerySelection) is OPTIONAL and will be skipped"
+  - "Use git mv to preserve history when moving test files"
+  - "Final build verification should build both packages together"
+  - "No new npm dependencies required"
+  - "Both target packages have proper hooks/ directories and barrel exports"
+  - "Total code reduction: ~470 duplicate lines eliminated"

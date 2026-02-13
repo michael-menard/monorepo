@@ -1,0 +1,240 @@
+schema: 1
+story_id: BUGF-015
+timestamp: "2026-02-11T20:30:00Z"
+
+steps:
+  - id: 1
+    description: "Phase 1: Create tests for admin components (AdminModule, UnblockUserDialog, UserSearchInput, RevokeTokensDialog, AdminUserDetailPage)"
+    files:
+      - "apps/web/main-app/src/routes/admin/__tests__/AdminModule.test.tsx"
+      - "apps/web/main-app/src/routes/admin/components/__tests__/UnblockUserDialog.test.tsx"
+      - "apps/web/main-app/src/routes/admin/components/__tests__/UserSearchInput.test.tsx"
+      - "apps/web/main-app/src/routes/admin/components/__tests__/RevokeTokensDialog.test.tsx"
+      - "apps/web/main-app/src/routes/admin/pages/__tests__/AdminUserDetailPage.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Phase 2: Create tests for upload components (SessionProvider, UploaderFileItem, UploaderList, ConflictModal, RateLimitBanner, SessionExpiredBanner)"
+    files:
+      - "apps/web/main-app/src/components/Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+      - "apps/web/main-app/src/components/Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+      - "apps/web/main-app/src/components/Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+      - "apps/web/main-app/src/components/Uploader/ConflictModal/__tests__/ConflictModal.test.tsx"
+      - "apps/web/main-app/src/components/Uploader/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+      - "apps/web/main-app/src/components/Uploader/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 3
+    description: "Phase 3: Create tests for module wrappers (SetsGalleryModule, InspirationModule, InstructionsCreateModule)"
+    files:
+      - "apps/web/main-app/src/routes/modules/__tests__/SetsGalleryModule.test.tsx"
+      - "apps/web/main-app/src/routes/modules/__tests__/InspirationModule.test.tsx"
+      - "apps/web/main-app/src/routes/modules/__tests__/InstructionsCreateModule.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 4
+    description: "Phase 4: Create tests for form components (TagInput, SlugField)"
+    files:
+      - "apps/web/main-app/src/components/MocEdit/__tests__/TagInput.test.tsx"
+      - "apps/web/main-app/src/components/MocEdit/__tests__/SlugField.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 5
+    description: "Phase 5: Create tests for navigation and layout components (NotFoundHandler, Sidebar, RootLayout, CacheDashboard)"
+    files:
+      - "apps/web/main-app/src/components/Navigation/__tests__/NotFoundHandler.test.tsx"
+      - "apps/web/main-app/src/components/Layout/__tests__/Sidebar.test.tsx"
+      - "apps/web/main-app/src/components/Layout/__tests__/RootLayout.test.tsx"
+      - "apps/web/main-app/src/components/Cache/__tests__/CacheDashboard.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 6
+    description: "Phase 6: Create tests for page components (InstructionsNewPage, PlaceholderPage, UnauthorizedPage)"
+    files:
+      - "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+      - "apps/web/main-app/src/routes/pages/__tests__/PlaceholderPage.test.tsx"
+      - "apps/web/main-app/src/routes/pages/__tests__/UnauthorizedPage.test.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 7
+    description: "Run all tests and generate coverage report"
+    files: []
+    dependencies: [1, 2, 3, 4, 5, 6]
+    slice: frontend
+
+  - id: 8
+    description: "Verify coverage threshold and quality standards"
+    files: []
+    dependencies: [7]
+    slice: frontend
+
+files_to_change:
+  # Phase 1: Admin Components
+  - path: "apps/web/main-app/src/routes/admin/__tests__/AdminModule.test.tsx"
+    action: create
+    reason: "Test AdminModule wrapper - AC-1: Admin component test coverage"
+
+  - path: "apps/web/main-app/src/routes/admin/components/__tests__/UnblockUserDialog.test.tsx"
+    action: create
+    reason: "Test UnblockUserDialog - AC-1: Dialog open/close, confirmation flow, API call verification"
+
+  - path: "apps/web/main-app/src/routes/admin/components/__tests__/UserSearchInput.test.tsx"
+    action: create
+    reason: "Test UserSearchInput - AC-1: Search input, debouncing (300ms), results display"
+
+  - path: "apps/web/main-app/src/routes/admin/components/__tests__/RevokeTokensDialog.test.tsx"
+    action: create
+    reason: "Test RevokeTokensDialog - AC-1: Dialog confirmation, API mutation, error handling"
+
+  - path: "apps/web/main-app/src/routes/admin/pages/__tests__/AdminUserDetailPage.test.tsx"
+    action: create
+    reason: "Test AdminUserDetailPage - AC-1: User detail rendering, action buttons, API calls"
+
+  # Phase 2: Upload Components
+  - path: "apps/web/main-app/src/components/Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+    action: create
+    reason: "Test SessionProvider - AC-2: Context provision, session state management, persistence"
+
+  - path: "apps/web/main-app/src/components/Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+    action: create
+    reason: "Test UploaderFileItem - AC-2: File rendering, progress display, retry/cancel/remove actions"
+
+  - path: "apps/web/main-app/src/components/Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+    action: create
+    reason: "Test UploaderList - AC-2: File grouping, aggregate progress, category sections"
+
+  - path: "apps/web/main-app/src/components/Uploader/ConflictModal/__tests__/ConflictModal.test.tsx"
+    action: create
+    reason: "Test ConflictModal - AC-2: Conflict display, new title input, validation"
+
+  - path: "apps/web/main-app/src/components/Uploader/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+    action: create
+    reason: "Test RateLimitBanner - AC-2: Countdown timer (vi.useFakeTimers), retry button enable/disable"
+
+  - path: "apps/web/main-app/src/components/Uploader/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+    action: create
+    reason: "Test SessionExpiredBanner - AC-2: Expired count display, refresh action"
+
+  # Phase 3: Module Wrappers
+  - path: "apps/web/main-app/src/routes/modules/__tests__/SetsGalleryModule.test.tsx"
+    action: create
+    reason: "Test SetsGalleryModule - AC-3: Lazy loading, error boundary, module state"
+
+  - path: "apps/web/main-app/src/routes/modules/__tests__/InspirationModule.test.tsx"
+    action: create
+    reason: "Test InspirationModule - AC-3: Lazy loading, error boundary, module state"
+
+  - path: "apps/web/main-app/src/routes/modules/__tests__/InstructionsCreateModule.test.tsx"
+    action: create
+    reason: "Test InstructionsCreateModule - AC-3: Lazy loading, error boundary, module state"
+
+  # Phase 4: Form Components
+  - path: "apps/web/main-app/src/components/MocEdit/__tests__/TagInput.test.tsx"
+    action: create
+    reason: "Test TagInput - AC-4: Tag add/remove, validation (max 10 tags, max 30 chars), chip display"
+
+  - path: "apps/web/main-app/src/components/MocEdit/__tests__/SlugField.test.tsx"
+    action: create
+    reason: "Test SlugField - AC-4: Slug generation, format validation (lowercase, hyphens, numbers only), manual editing"
+
+  # Phase 5: Navigation and Layout
+  - path: "apps/web/main-app/src/components/Navigation/__tests__/NotFoundHandler.test.tsx"
+    action: create
+    reason: "Test NotFoundHandler - AC-5: 404 handling, navigation fallback"
+
+  - path: "apps/web/main-app/src/components/Layout/__tests__/Sidebar.test.tsx"
+    action: create
+    reason: "Test Sidebar - AC-5: Navigation items, active states, mobile collapse"
+
+  - path: "apps/web/main-app/src/components/Layout/__tests__/RootLayout.test.tsx"
+    action: create
+    reason: "Test RootLayout - AC-5: Layout structure, children rendering"
+
+  - path: "apps/web/main-app/src/components/Cache/__tests__/CacheDashboard.test.tsx"
+    action: create
+    reason: "Test CacheDashboard - AC-5: Cache display, clear actions, stats"
+
+  # Phase 6: Pages
+  - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsNewPage.test.tsx"
+    action: create
+    reason: "Test InstructionsNewPage - AC-6: Page rendering, form display, submission"
+
+  - path: "apps/web/main-app/src/routes/pages/__tests__/PlaceholderPage.test.tsx"
+    action: create
+    reason: "Test PlaceholderPage - AC-6: Placeholder message, navigation options"
+
+  - path: "apps/web/main-app/src/routes/pages/__tests__/UnauthorizedPage.test.tsx"
+    action: create
+    reason: "Test UnauthorizedPage - AC-6: 401 error display, sign-in redirect"
+
+commands_to_run:
+  - command: "pnpm test --filter main-app"
+    when: "after all test files created"
+    required: true
+  - command: "pnpm test --filter main-app --coverage"
+    when: "after all tests pass"
+    required: true
+  - command: "pnpm lint --filter main-app"
+    when: "after all test files created"
+    required: true
+  - command: "pnpm check-types --filter main-app"
+    when: "after all test files created"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit tests: AdminModule.test.tsx, UnblockUserDialog.test.tsx, UserSearchInput.test.tsx, RevokeTokensDialog.test.tsx, AdminUserDetailPage.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests: SessionProvider.test.tsx, UploaderFileItem.test.tsx, UploaderList.test.tsx, ConflictModal.test.tsx, RateLimitBanner.test.tsx, SessionExpiredBanner.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests: SetsGalleryModule.test.tsx, InspirationModule.test.tsx, InstructionsCreateModule.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests: TagInput.test.tsx, SlugField.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit tests: NotFoundHandler.test.tsx, Sidebar.test.tsx, RootLayout.test.tsx, CacheDashboard.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit tests: InstructionsNewPage.test.tsx, PlaceholderPage.test.tsx, UnauthorizedPage.test.tsx"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "All tests use semantic queries, BDD structure, userEvent interactions per test pattern review"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Coverage report from 'pnpm test --filter main-app --coverage', all tests pass in CI"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Per ADR-005: Unit tests MUST use MSW mocking (all handlers already in setup.ts)"
+  - "Per ADR-006: E2E tests optional for test-only story (deferred to BUGF-030)"
+  - "All test infrastructure already exists (setup.ts, test-utils.tsx, MSW handlers)"
+  - "53 existing test files provide comprehensive patterns to follow"
+  - "Reference tests: BlockUserDialog.test.tsx (admin), DashboardModule.test.tsx (modules), EditForm.test.tsx (forms), NavigationProvider.test.tsx (context)"
+  - "Timer testing (RateLimitBanner): Use vi.useFakeTimers() and vi.advanceTimersByTime()"
+  - "Context provider testing (SessionProvider): Reference NavigationProvider.test.tsx pattern"
+  - "Coverage target of 45% is aspirational - may not be reached by testing only 24 components"
+  - "All phases are independent - can execute in parallel or sequentially"
+  - "Each test file follows BDD structure: describe(rendering/interactions/accessibility)"
+  - "All tests verify ARIA attributes, keyboard navigation, and focus management"
+  - "No new MSW handlers needed - all APIs already mocked in setup.ts"
+  - "No component implementations should be modified (test as-is, unless actual bugs found)"

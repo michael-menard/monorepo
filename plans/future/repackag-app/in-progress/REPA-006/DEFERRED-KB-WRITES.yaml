@@ -1,0 +1,32 @@
+---
+# Deferred KB writes for REPA-006
+# These writes should be retried when KB becomes available
+deferred_at: "2026-02-10T22:00:00Z"
+reason: "KB tools not available in current environment"
+writes:
+  - operation: insert_story
+    table: stories
+    data:
+      story_id: REPA-006
+      feature: repackag-app
+      title: "Migrate Upload Types to @repo/upload/types"
+      story_dir: plans/future/repackag-app/backlog/REPA-006
+      story_file: plans/future/repackag-app/backlog/REPA-006/REPA-006.md
+      story_type: tech_debt
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+      epic: repackag-app
+      created_at: "2026-02-10"
+      tags:
+        - migration
+        - consolidation
+        - types
+        - zod
+        - deprecation
+    on_conflict: update_set_all_except_story_id
+---

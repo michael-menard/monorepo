@@ -1,0 +1,169 @@
+schema: 1
+story_id: "REPA-003"
+timestamp: "2026-02-11T18:16:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit:
+    pass: 238
+    fail: 0
+    skipped: 2
+  integration:
+    pass: 6
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+
+coverage: 96.5
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  issues: []
+  notes: "All tests pass after fixing localStorage mock (jsdom compatibility) and debounce pattern (effect-based save)"
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "packages/core/upload/src/hooks/useUploadManager.ts"
+    notes: "Single consolidated implementation created"
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "useUploadManager.test.tsx (13 tests)"
+    notes: "All features verified: concurrency, progress, cancel, retry, 401 expiry detection, status tracking"
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "packages/core/upload/src/hooks/useUploaderSession.ts"
+    notes: "Unified implementation with dependency injection pattern"
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "useUploaderSession.ts lines 37-46, 73-97"
+    notes: "Accepts isAuthenticated and userId parameters, generates correct storage keys via getStorageKey()"
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "useUploaderSession.ts lines 31-32, 160-172"
+    notes: "Debounced writes implemented with 300ms delay using pendingSaveRef + useEffect pattern"
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "useUploaderSession.ts lines 108-139"
+    notes: "Session restoration with 24-hour TTL check, toast notification, expiry buffer 30s"
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "useUploaderSession.ts lines 141-158"
+    notes: "Anonymous to authenticated migration: detects auth state change, calls migrateSession, removes old key"
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "SessionProvider implementations in both apps"
+    notes: "useUploadManager API unchanged (backward compatible). useUploaderSession requires DI params (breaking change documented)"
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "useUploadManager.test.tsx (13 tests pass)"
+    notes: "Comprehensive coverage: initialization, concurrency (max 3), progress, cancel (AbortController), retry (file handles), 401 → expired + callback, errors"
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "useUploaderSession.test.tsx (12 tests pass)"
+    notes: "All scenarios verified: authenticated/anonymous modes, storage keys, debounced writes (300ms fake timers), restoration, expiry, migration, invalid JSON handling"
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "Test run output: 238 pass, 0 fail, 2 skip"
+    notes: "All unit tests pass in @repo/upload package"
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "coverage: 96.5%"
+    notes: "Coverage 96.5% far exceeds 45% threshold"
+
+  - ac_id: "AC-13"
+    status: PASS
+    evidence_ref: "apps/web/main-app SessionProvider index.tsx lines 40-48"
+    notes: "main-app imports from @repo/upload/hooks, passes isAuthenticated and userId from Redux"
+
+  - ac_id: "AC-14"
+    status: PASS
+    evidence_ref: "apps/web/app-instructions-gallery SessionProvider index.tsx lines 39-42"
+    notes: "app-instructions-gallery imports from @repo/upload/hooks, uses anonymous mode (no auth props)"
+
+  - ac_id: "AC-15"
+    status: PASS
+    evidence_ref: "Git status shows deleted files"
+    notes: "6 duplicate hook files deleted: useUploadManager.ts, useUploaderSession.ts and tests from both apps"
+
+  - ac_id: "AC-16"
+    status: PASS
+    evidence_ref: "Integration test results: 6/6 pass"
+    notes: "main-app uploader-state.integration.test.tsx passes (6 tests). app-instructions-gallery verified via imports"
+
+  - ac_id: "AC-17"
+    status: PASS
+    evidence_ref: "Build output and type check"
+    notes: "No new type errors. 3 pre-existing errors in api-client and app-component-library (unrelated to REPA-003)"
+
+  - ac_id: "AC-18"
+    status: PASS
+    evidence_ref: "REVIEW.yaml: code-review-lint-style PASS"
+    notes: "All files follow CLAUDE.md conventions: no semicolons, single quotes, trailing commas, @repo/logger"
+
+  - ac_id: "AC-19"
+    status: PASS
+    evidence_ref: "grep verification output"
+    notes: "No lingering imports to old hook locations in either app"
+
+  - ac_id: "AC-20"
+    status: PASS
+    evidence_ref: "Import paths in both apps use @repo/upload/hooks subpath"
+    notes: "Consumer imports correctly use @repo/upload/hooks to avoid pulling in HEIC module"
+
+  - ac_id: "AC-21"
+    status: PASS
+    evidence_ref: "useUploaderSession.ts getStorageKey() usage"
+    notes: "Uses existing storage key format from @repo/upload-types: uploader:{route}:{userId} / uploader:{route}:anon:{sessionId}"
+
+  - ac_id: "AC-22"
+    status: PASS
+    evidence_ref: "useUploaderSession.ts lines 141-158, migrateSession import line 28"
+    notes: "Uses migrateSession utility from @repo/upload-types for localStorage key migration"
+
+architecture_compliant: true
+architecture_notes: |
+  Clean consolidation with dependency injection pattern successfully decouples auth from shared hooks.
+  Subpath export (@repo/upload/hooks) avoids pulling in HEIC image module.
+  Effect-based debounced save pattern (pendingSaveRef + useEffect) prevents side effects in React state updaters.
+  localStorage test mocks use direct spying for jsdom compatibility.
+
+issues: []
+
+gate:
+  decision: PASS
+  reason: "All 22 ACs verified, 238 unit tests pass (0 fail), 6 integration tests pass, 96.5% coverage exceeds threshold, architecture compliant"
+  blocking_issues: []
+
+lessons_to_record:
+  - lesson: "localStorage mocks in jsdom require spying on localStorage directly (not Storage.prototype) for proper write capture"
+    category: pattern
+    tags: ["testing", "jsdom", "localStorage"]
+
+  - lesson: "Debounced localStorage writes should use effect-based pattern (pendingSaveRef + useEffect) instead of calling save inside React state updaters to avoid stale state"
+    category: pattern
+    tags: ["react", "hooks", "localStorage", "debounce"]
+
+  - lesson: "Integration tests provided excellent validation for DI pattern migration - real Redux integration worked correctly despite complexity"
+    category: pattern
+    tags: ["testing", "integration", "dependency-injection"]
+
+tokens:
+  in: 46588
+  out: 1800

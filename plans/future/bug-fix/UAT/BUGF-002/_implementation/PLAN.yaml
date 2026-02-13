@@ -1,0 +1,188 @@
+schema: 1
+story_id: "BUGF-002"
+timestamp: "2026-02-11T15:00:00Z"
+
+steps:
+  - id: 1
+    description: "Wire useUpdateMocMutation into app-instructions-gallery edit-page.tsx"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/edit-page.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Wire useUpdateMocMutation into main-app InstructionsEditPage.tsx"
+    files:
+      - "apps/web/main-app/src/routes/pages/InstructionsEditPage.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 3
+    description: "Create unit tests for edit-page.tsx mutation handling"
+    files:
+      - "apps/web/app-instructions-gallery/src/pages/__tests__/edit-page.test.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 4
+    description: "Create unit tests for InstructionsEditPage.tsx mutation handling"
+    files:
+      - "apps/web/main-app/src/routes/pages/__tests__/InstructionsEditPage.test.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 5
+    description: "Create E2E test for happy-path edit flow (ADR-006 requirement)"
+    files:
+      - "apps/web/playwright/tests/instructions-edit.spec.ts"
+    dependencies: [1, 2]
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/app-instructions-gallery/src/pages/edit-page.tsx"
+    action: modify
+    reason: "Replace TODO at line 124 with useUpdateMocMutation integration following CreateMocPage pattern"
+
+  - path: "apps/web/main-app/src/routes/pages/InstructionsEditPage.tsx"
+    action: modify
+    reason: "Replace TODO at line 124 with useUpdateMocMutation integration following CreateMocPage pattern"
+
+  - path: "apps/web/app-instructions-gallery/src/pages/__tests__/edit-page.test.tsx"
+    action: create
+    reason: "Unit tests for form submission, validation, error handling, and loading states (covers AC-3 to AC-11)"
+
+  - path: "apps/web/main-app/src/routes/pages/__tests__/InstructionsEditPage.test.tsx"
+    action: create
+    reason: "Unit tests for form submission, validation, error handling, and loading states (covers AC-3 to AC-11)"
+
+  - path: "apps/web/playwright/tests/instructions-edit.spec.ts"
+    action: create
+    reason: "E2E test for happy-path edit flow with live API per ADR-006 (covers AC-1, AC-2, AC-4)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/app-instructions-gallery --filter @repo/main-app"
+    when: "after code changes to verify TypeScript compilation"
+    required: true
+
+  - command: "pnpm lint --filter @repo/app-instructions-gallery --filter @repo/main-app"
+    when: "after code changes to verify code style"
+    required: true
+
+  - command: "pnpm test --filter @repo/app-instructions-gallery --filter @repo/main-app"
+    when: "after unit test creation to verify all tests pass"
+    required: true
+
+  - command: "pnpm playwright test tests/instructions-edit.spec.ts --config playwright.legacy.config.ts"
+    when: "after E2E test creation to verify live API integration"
+    required: true
+
+  - command: "pnpm build --filter @repo/app-instructions-gallery --filter @repo/main-app"
+    when: "final verification before proof phase"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "E2E test: instructions-edit.spec.ts - app-instructions-gallery save flow"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "E2E test: instructions-edit.spec.ts - main-app save flow"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: edit-page.test.tsx - Zod validation before submission"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "E2E test: instructions-edit.spec.ts - success toast and navigation verification"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: edit-page.test.tsx - 409 error message test"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: edit-page.test.tsx - 403 error message test"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test: edit-page.test.tsx - 404 error message test"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test: edit-page.test.tsx - 500 error message test"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: edit-page.test.tsx - form state preservation on error"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Unit test: edit-page.test.tsx - button disabled when formState.isDirty === false"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Unit test: edit-page.test.tsx - button loading state during isLoading === true"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "RTK Query automatic cache invalidation (Moc and MocList tags already configured in instructions-api.ts)"
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: simple
+
+implementation_details:
+  mutation_hook: "useUpdateMocMutation from @repo/api-client"
+  mutation_args: "{ id: string, input: UpdateMocInput }"
+  pattern_reference: "apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx lines 157-197"
+
+  data_transformation:
+    description: "Convert form data to API input schema"
+    from_schema: "MocEditFormInput"
+    to_schema: "UpdateMocInput"
+    transformations:
+      - field: "tags"
+        logic: "Split comma-separated string to array, trim whitespace, filter empty"
+      - field: "description"
+        logic: "Convert empty string to undefined for optional field"
+      - field: "theme"
+        logic: "Convert empty string to undefined for optional field"
+
+  error_handling:
+    strategy: "HTTP status code detection with context-specific messages"
+    error_cases:
+      - status: 404
+        message: "MOC not found. It may have been deleted."
+      - status: 403
+        message: "You don't have permission to edit this MOC."
+      - status: 409
+        message: "A MOC with this title already exists. Please choose a different title."
+      - status: 500
+        message: "Failed to save changes. Please try again."
+
+  button_state_logic:
+    disabled_condition: "!formState.isDirty || isLoading"
+    loading_text: "Saving..."
+    normal_text: "Save Changes"
+
+  success_flow:
+    toast_message: "Changes saved successfully"
+    navigation_target: "/instructions/{mocId}"
+    cache_invalidation: "automatic via RTK Query tags"
+
+  cache_tags:
+    invalidated: ["Moc", "MocList"]
+    strategy: "RTK Query automatic invalidation on mutation success"
+
+notes:
+  - "Both edit pages have identical structure - changes can be applied in parallel"
+  - "useUpdateMocMutation already exported from packages/core/api-client/src/rtk/instructions-api.ts"
+  - "UpdateMocInputSchema defined in packages/core/api-client/src/schemas/instructions/api.ts:248"
+  - "Pattern to follow: CreateMocPage.tsx async mutation handling with try/catch and .unwrap()"
+  - "Cache invalidation already configured in instructions-api.ts - no additional work needed"
+  - "Per ADR-001: Frontend path /api/v2/instructions/mocs/:id proxied to backend /mocs/:id"
+  - "Per ADR-006: E2E test must use playwright.legacy.config.ts with VITE_ENABLE_MSW=false"
+  - "Form state management: Preserve form data on error, only clear on success"
+  - "Accessibility: Ensure aria-busy on button during loading, error messages announced via aria-live"

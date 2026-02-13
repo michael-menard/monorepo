@@ -1,0 +1,27 @@
+schema: 1
+story_id: "BUGF-010"
+timestamp: "2026-02-11T20:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/main-app/src/services/auth/__tests__/AuthProvider.test.tsx"
+  - "apps/web/main-app/src/services/auth/AuthProvider.tsx"
+  - "apps/web/main-app/src/test/setup.ts"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Fix Hub.listen mocking in AuthProvider tests by enabling 8 skipped tests that verify auth event handling"

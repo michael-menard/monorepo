@@ -1,0 +1,49 @@
+perspective: platform
+verdict: READY
+
+infra:
+  core_infra_exists: true
+  deploy_path_clear: true
+
+missing_mvp_stories:
+  - story: "Package workspace registration in pnpm-workspace.yaml"
+    reason: "New packages need explicit workspace glob or entry for pnpm discovery; currently no automated entry mechanism in workspace config"
+  - story: "Import rewrite validation tooling"
+    reason: "MVP stories lack automated validation that all import paths are updated after package moves; manual verification risk"
+  - story: "Package deprecation strategy"
+    reason: "REPA-002, REPA-006 deprecate @repo/upload-client and @repo/upload-types but no deprecation notice or migration guide template defined"
+
+future:
+  platform_improvements:
+    - suggestion: "Add pre-commit hook to detect workspace.* mismatch between pnpm-workspace.yaml and package.json"
+      impact: high
+    - suggestion: "Create Turborepo package generation template (turbo gen package) with vite.config.ts, tsconfig.json, ESLint, Vitest presets"
+      impact: high
+    - suggestion: "Document workspace:* dependency resolution in CLAUDE.md to prevent accidental npm registry references during consolidation"
+      impact: medium
+    - suggestion: "Add build cache invalidation strategy for cross-package schema changes (Zod schemas moving between packages)"
+      impact: medium
+    - suggestion: "Create deprecation notice template in package.json for REPA-002 and REPA-006 with migration guide URL"
+      impact: low
+  observability_gaps:
+    - gap: "No package build time SLA monitoring; gallery and upload consolidation may increase bundling complexity"
+      impact: "Deployment performance regression risk"
+    - gap: "No cross-package circular dependency detection in build pipeline; moving 21 interdependent stories needs runtime guard"
+      impact: "Build failures during import refactoring hard to diagnose"
+  suggested_stories:
+    - story: "Add workspace glob pattern validation and auto-registration in turbo.json"
+      phase: "Phase 0 (Pre-work)"
+      rationale: "Prevents workspace discovery failures when new packages are created"
+    - story: "Create import migration validator CLI tool"
+      phase: "Phase 0 (Pre-work)"
+      rationale: "Scans codebase post-migration to detect stale imports from deprecated packages"
+    - story: "Document package.json export map patterns for @repo/* scope"
+      phase: "Phase 0 (Pre-work)"
+      rationale: "Ensures consistent export maps across new packages (REPA-001, REPA-012, REPA-013, etc.)"
+  recommendations:
+    - rec: "Execute Phase 1 (upload consolidation, stories 1-6) independently before Phase 2; upload is largest refactor with highest app count"
+    - rec: "Batch Phase 3 stories (auth-hooks, auth-utils, hooks, accessibility) into single pnpm install to reduce lockfile churn"
+    - rec: "Add E2E smoke tests post-Phase 1 to validate import paths before proceeding to downstream phases"
+    - rec: "Use workspace:* pinning for all internal dependencies in new packages; no semver ranges for monorepo code"
+
+PLATFORM REVIEW COMPLETE

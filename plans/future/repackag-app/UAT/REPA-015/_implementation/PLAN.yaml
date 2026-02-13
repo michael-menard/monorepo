@@ -1,0 +1,70 @@
+schema: 1
+story_id: REPA-015
+feature_dir: plans/future/repackag-app
+timestamp: "2026-02-10T20:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create focus-styles.ts in @repo/accessibility/src/utils/"
+    files:
+      - packages/core/accessibility/src/utils/focus-styles.ts
+    action: create
+
+  - id: 2
+    description: "Create keyboard-labels.ts in @repo/accessibility/src/utils/"
+    files:
+      - packages/core/accessibility/src/utils/keyboard-labels.ts
+    action: create
+
+  - id: 3
+    description: "Create contrast-validation.ts in @repo/accessibility/src/utils/"
+    files:
+      - packages/core/accessibility/src/utils/contrast-validation.ts
+    action: create
+
+  - id: 4
+    description: "Create unit tests for migrated utilities"
+    files:
+      - packages/core/accessibility/src/utils/__tests__/focus-styles.test.ts
+      - packages/core/accessibility/src/utils/__tests__/keyboard-labels.test.ts
+      - packages/core/accessibility/src/utils/__tests__/contrast-validation.test.ts
+    action: create
+
+  - id: 5
+    description: "Update @repo/accessibility index.ts with new exports"
+    files:
+      - packages/core/accessibility/src/index.ts
+    action: modify
+
+  - id: 6
+    description: "Update GotItModal import to use @repo/accessibility"
+    files:
+      - apps/web/app-wishlist-gallery/src/components/GotItModal/index.tsx
+    action: modify
+
+  - id: 7
+    description: "Update WishlistCard import to use @repo/accessibility"
+    files:
+      - apps/web/app-wishlist-gallery/src/components/WishlistCard/index.tsx
+    action: modify
+
+  - id: 8
+    description: "Remove migrated utilities from a11y.ts (keep domain-specific)"
+    files:
+      - apps/web/app-wishlist-gallery/src/utils/a11y.ts
+    action: modify
+
+  - id: 9
+    description: "Remove migrated tests from a11y.test.ts (keep domain-specific)"
+    files:
+      - apps/web/app-wishlist-gallery/src/utils/__tests__/a11y.test.ts
+    action: modify
+
+  - id: 10
+    description: "Run tests and type-check"
+    action: verify
+    commands:
+      - "pnpm test --filter=@repo/accessibility"
+      - "pnpm test --filter=app-wishlist-gallery"
+      - "pnpm check-types --filter=@repo/accessibility"
+      - "pnpm check-types --filter=app-wishlist-gallery"

@@ -1,0 +1,43 @@
+perspective: ux
+verdict: READY
+
+core_flow:
+  complete: true
+  usable: true
+
+future:
+  ux_polish:
+    - story: REPA-007
+      suggestion: "Ensure drag-and-drop visual feedback matches LEGO theme with Framer Motion polish"
+      impact: high
+    - story: REPA-008
+      suggestion: "Test roving tabindex + keyboard navigation exhaustively across desktop browsers for edge cases"
+      impact: high
+    - story: REPA-010
+      suggestion: "Validate SortableGallery API covers all inspiration gallery layouts before full refactor"
+      impact: high
+    - story: REPA-011
+      suggestion: "Design customFilters extensibility to prevent prop drilling and maintain clean API"
+      impact: medium
+    - story: REPA-009
+      suggestion: "Test selection mode interactions with drag-and-drop to prevent UI conflict/confusion"
+      impact: medium
+    - story: REPA-020
+      suggestion: "Document card factory patterns in Storybook with visual examples for consistency"
+      impact: medium
+  accessibility_improvements:
+    - story: REPA-008
+      suggestion: "useAnnouncer must support screen reader announcements for reorder completion and drag state changes"
+    - story: REPA-007
+      suggestion: "SortableGallery keyboard reordering must announce visual changes to assistive tech"
+    - story: REPA-009
+      suggestion: "Selection mode aria-labels must differentiate between selectable, selected, and drag states"
+recommendations:
+  - "Phase 2 (Gallery Enhancement) has strong direct UX impact—prioritize REPA-007/008/009 to unblock REPA-010 full refactor"
+  - "All Phase 1 (Upload) stories are internal refactoring with no user-facing UX change if parity is maintained"
+  - "Phase 3+ (Hooks/Services/Schemas) are invisible to users if APIs remain stable—no UX risk"
+  - "Conduct visual regression testing on all migrated gallery components to ensure pixel-perfect parity"
+  - "Test keyboard navigation (Tab, arrow keys, Enter) thoroughly on SortableGallery before shipping"
+
+---
+UX REVIEW COMPLETE

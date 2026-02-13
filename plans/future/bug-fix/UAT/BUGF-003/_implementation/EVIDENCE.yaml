@@ -1,0 +1,298 @@
+schema: 1
+story_id: "BUGF-003"
+version: 2
+timestamp: "2026-02-11T20:55:00Z"
+
+acceptance_criteria:
+  # RTK Query Mutations (AC-1 through AC-8)
+  - ac_id: "AC-1"
+    status: pass
+    evidence: "sets-api.ts:190 - deleteSet mutation sends DELETE to /sets/:id"
+    type: file
+
+  - ac_id: "AC-2"
+    status: pass
+    evidence: "sets-api.ts:211-214 - invalidatesTags includes Set and SetList"
+    type: file
+
+  - ac_id: "AC-3"
+    status: pass
+    evidence: "sets-api.ts:195-209 - onQueryStarted optimistically removes from getSetById cache with undo on failure"
+    type: file
+
+  - ac_id: "AC-4"
+    status: pass
+    evidence: "sets-api.ts:224-228 - updateSet mutation sends PATCH to /sets/:id"
+    type: file
+
+  - ac_id: "AC-5"
+    status: pass
+    evidence: "sets-api.ts:223 - mutation accepts { id: string; data: UpdateSetInput } which is CreateSetSchema.partial()"
+    type: file
+
+  - ac_id: "AC-6"
+    status: pass
+    evidence: "sets-api.ts:230-236 - invalidatesTags includes Set tag for updated item"
+    type: file
+
+  - ac_id: "AC-7"
+    status: pass
+    evidence: "RTK Query baseQuery handles error responses; .unwrap() surfaces errors to calling components"
+    type: file
+
+  - ac_id: "AC-8"
+    status: pass
+    evidence: "RTK Query typed error responses via FetchBaseQueryError type"
+    type: file
+
+  # Edit Page (AC-9 through AC-21)
+  - ac_id: "AC-9"
+    status: pass
+    evidence: "edit-set-page.test.tsx:86-97 - 'pre-fills form with existing set data' passes"
+    type: test
+
+  - ac_id: "AC-10"
+    status: pass
+    evidence: "edit-set-page.tsx:99-105 - useGetSetByIdQuery with skip: !setId"
+    type: file
+
+  - ac_id: "AC-11"
+    status: pass
+    evidence: "edit-set-page.test.tsx:81-84 - 'displays loading skeleton' passes"
+    type: test
+
+  - ac_id: "AC-12"
+    status: pass
+    evidence: "edit-set-page.tsx:334-341 - TagInput component imported and used"
+    type: file
+
+  - ac_id: "AC-13"
+    status: deferred
+    evidence: "ImageUploadZone not included in edit page; image management via detail page"
+    type: file
+
+  - ac_id: "AC-14"
+    status: pass
+    evidence: "edit-set-page.tsx:246-401 - Two-card layout (Set Information + Purchase Information)"
+    type: file
+
+  - ac_id: "AC-15"
+    status: pass
+    evidence: "edit-set-page.test.tsx:231-252 - 'displays validation errors for invalid input' passes"
+    type: test
+
+  - ac_id: "AC-16"
+    status: pass
+    evidence: "edit-set-page.test.tsx:254-283 - 'disables form fields during submission' passes"
+    type: test
+
+  - ac_id: "AC-17"
+    status: pass
+    evidence: "edit-set-page.test.tsx:113-151 - 'submits update with PATCH and navigates to detail page' passes"
+    type: test
+
+  - ac_id: "AC-18"
+    status: pass
+    evidence: "edit-set-page.tsx:181-184 - success toast includes updatedSet.title"
+    type: file
+
+  - ac_id: "AC-19"
+    status: pass
+    evidence: "edit-set-page.test.tsx:153-180 - 'shows error toast on update failure' passes"
+    type: test
+
+  - ac_id: "AC-20"
+    status: pass
+    evidence: "edit-set-page.test.tsx:182-200 - 'navigates to detail page on cancel' passes"
+    type: test
+
+  - ac_id: "AC-21"
+    status: pass
+    evidence: "edit-set-page.test.tsx:202-229 - 'unsaved changes warning' passes"
+    type: test
+
+  # Routing (AC-22, AC-23)
+  - ac_id: "AC-22"
+    status: pass
+    evidence: "Module.tsx:41 - Route path='/sets/:id/edit' element={<EditSetPage />}"
+    type: file
+
+  - ac_id: "AC-23"
+    status: pass
+    evidence: "edit-set-page.tsx:93 - useParams<{ id: string }> provides typed params"
+    type: file
+
+  # Main Page Delete (AC-24 through AC-29)
+  - ac_id: "AC-24"
+    status: pass
+    evidence: "main-page.tsx - handleConfirmDelete calls deleteSet().unwrap()"
+    type: file
+
+  - ac_id: "AC-25"
+    status: pass
+    evidence: "main-page.tsx - toastSuccess includes deleteTarget.title"
+    type: file
+
+  - ac_id: "AC-26"
+    status: pass
+    evidence: "main-page.tsx - catch block calls toastError with error and title"
+    type: file
+
+  - ac_id: "AC-27"
+    status: pass
+    evidence: "main-page.tsx - isDeleting state controls ConfirmationDialog loading"
+    type: file
+
+  - ac_id: "AC-28"
+    status: pass
+    evidence: "RTK Query invalidatesTags automatically refreshes list after delete"
+    type: file
+
+  - ac_id: "AC-29"
+    status: pass
+    evidence: "main-page.tsx - ConfirmationDialog description includes set number"
+    type: file
+
+  # Detail Page Delete (AC-30 through AC-34)
+  - ac_id: "AC-30"
+    status: pass
+    evidence: "set-detail-page.tsx - handleConfirmDelete calls deleteSet().unwrap()"
+    type: file
+
+  - ac_id: "AC-31"
+    status: pass
+    evidence: "set-detail-page.tsx - navigate('/sets') on success with success toast"
+    type: file
+
+  - ac_id: "AC-32"
+    status: pass
+    evidence: "set-detail-page.tsx - catch block calls toastError, page stays visible"
+    type: file
+
+  - ac_id: "AC-33"
+    status: pass
+    evidence: "set-detail-page.tsx - isDeleting state controls ConfirmationDialog loading"
+    type: file
+
+  - ac_id: "AC-34"
+    status: pass
+    evidence: "set-detail-page.tsx - Edit button navigates to /sets/:id/edit"
+    type: file
+
+  # Exports and Code Quality (AC-35 through AC-41)
+  - ac_id: "AC-35"
+    status: pass
+    evidence: "sets-api.ts:250 - useDeleteSetMutation exported"
+    type: file
+
+  - ac_id: "AC-36"
+    status: pass
+    evidence: "sets-api.ts:251 - useUpdateSetMutation exported"
+    type: file
+
+  - ac_id: "AC-37"
+    status: pass
+    evidence: "UpdateSetSchema (Zod) used for validation; all types from z.infer<>"
+    type: file
+
+  - ac_id: "AC-38"
+    status: pass
+    evidence: "No console.log usage; edit-set-page uses useToast for user feedback"
+    type: file
+
+  - ac_id: "AC-39"
+    status: pass
+    evidence: "No barrel files created; all imports use direct file paths"
+    type: file
+
+  - ac_id: "AC-40"
+    status: pass
+    evidence: "edit-set-page.tsx:92 - export function EditSetPage() - function declaration"
+    type: file
+
+  - ac_id: "AC-41"
+    status: pass
+    evidence: "All components use named exports (EditSetPage, EditSetSkeleton)"
+    type: file
+
+touched_files:
+  - path: "packages/core/api-client/src/rtk/sets-api.ts"
+    action: modified
+    reason: "Added deleteSet and updateSet mutations"
+
+  - path: "apps/web/app-sets-gallery/src/pages/edit-set-page.tsx"
+    action: created
+    reason: "New edit page with form pre-filling, validation, PATCH submission"
+
+  - path: "apps/web/app-sets-gallery/src/pages/main-page.tsx"
+    action: modified
+    reason: "Wired handleConfirmDelete to useDeleteSetMutation with toast"
+
+  - path: "apps/web/app-sets-gallery/src/pages/set-detail-page.tsx"
+    action: modified
+    reason: "Wired delete button to useDeleteSetMutation with dialog and navigation"
+
+  - path: "apps/web/app-sets-gallery/src/Module.tsx"
+    action: modified
+    reason: "Added /sets/:id/edit route"
+
+  - path: "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+    action: created
+    reason: "9 unit tests for edit page component"
+
+commands_run:
+  - command: "vitest run edit-set-page.test.tsx"
+    result: "9 passed, 0 failed"
+  - command: "vitest run main-page.test.tsx"
+    result: "6 passed, 0 failed"
+  - command: "tsc --noEmit -p api-client/tsconfig.json"
+    result: "0 BUGF-003 errors (pre-existing only)"
+  - command: "tsc --noEmit -p app-sets-gallery/tsconfig.json"
+    result: "0 BUGF-003 errors (pre-existing only)"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "Used optimistic update for deleteSet (matching existing deleteSetImage pattern)"
+  - "Edit page uses 2-card layout (Set Info + Purchase Info) without ImageUploadZone"
+  - "Title validation added explicitly since UpdateSetSchema is fully partial"
+  - "E2E tests exempt per ADR-005, deferred to BUGF-014"
+
+known_deviations:
+  - ac_id: "AC-13"
+    description: "ImageUploadZone not included in edit page; image management via detail page"
+    severity: low
+    mitigation: "Images can be managed from the set detail page"
+
+test_summary:
+  total: 15
+  passed: 15
+  failed: 0
+  skipped: 0
+  files:
+    - path: "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+      tests: 9
+      passed: 9
+    - path: "apps/web/app-sets-gallery/src/pages/__tests__/main-page.test.tsx"
+      tests: 6
+      passed: 6
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "E2E tests explicitly deferred to BUGF-014 per ADR-005"
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage: {}
+token_summary: {}

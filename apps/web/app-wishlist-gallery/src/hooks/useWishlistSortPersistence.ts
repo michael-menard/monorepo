@@ -9,7 +9,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { z } from 'zod'
-import { useLocalStorage } from './useLocalStorage'
+import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 
 /**
  * Storage key for wishlist sort mode (scoped to app)

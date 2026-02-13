@@ -1,0 +1,530 @@
+schema: 2
+feature_dir: "plans/future/repackag-app"
+prefix: "REPA"
+project_name: "repackag-app"
+analyzed: "2026-02-09"
+
+overall_goal: |
+  Eliminate ~10,800 lines of duplicate code across 50+ files by consolidating into shared packages (@repo/upload, @repo/auth-hooks, @repo/hooks, etc.), enhancing existing packages (@repo/gallery, @repo/accessibility), and standardizing card components across the monorepo.
+
+phases:
+  - id: 1
+    name: "Upload Consolidation"
+    description: "Create unified @repo/upload package consolidating all upload infrastructure"
+  - id: 2
+    name: "Gallery Enhancement"
+    description: "Enhance @repo/gallery to eliminate custom reimplementations"
+  - id: 3
+    name: "Hook Consolidation"
+    description: "Create shared hook packages for common functionality"
+  - id: 4
+    name: "Type & Schema Consolidation"
+    description: "Eliminate duplicate type definitions"
+  - id: 5
+    name: "Service Consolidation"
+    description: "Consolidate service layer code"
+  - id: 6
+    name: "Card Standardization"
+    description: "Standardize card components"
+
+stories:
+  - id: "REPA-001"
+    title: "Create @repo/upload Package Structure"
+    feature: "Upload Consolidation"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Create the new @repo/upload package with proper structure to house all upload-related code.
+      Set up package.json with dependencies, configure TypeScript/ESLint/Vitest, create barrel exports.
+      Package structure includes: client/, hooks/, image/, components/, types/ directories.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-002"
+    title: "Migrate Upload Client Functions"
+    feature: "Upload Consolidation"
+    phase: 1
+    depends_on:
+      - "REPA-001"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Consolidate XHR upload client code from @repo/upload-client and app-level implementations.
+      Move @repo/upload-client contents to @repo/upload/client.
+      Add finalizeClient functions from main-app and app-instructions-gallery.
+      Delete duplicate finalizeClient.ts from app-instructions-gallery.
+      Deprecate old @repo/upload-client package.
+    risk_notes: "RISK-004: Deprecated packages need deprecation period (severity: low)"
+    sizing_warning: false
+
+  - id: "REPA-003"
+    title: "Migrate Upload Hooks"
+    feature: "Upload Consolidation"
+    phase: 1
+    depends_on:
+      - "REPA-002"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Consolidate duplicate upload hooks into @repo/upload/hooks.
+      Create single useUploadManager implementation (eliminate duplicate in app-instructions-gallery).
+      Create single useUploaderSession implementation supporting both authenticated and anonymous sessions.
+      Merge authenticated user handling from main-app with anonymous handling from app-instructions-gallery.
+    risk_notes: "RISK-001: Breaking changes during upload migration (severity: high)"
+    sizing_warning: false
+
+  - id: "REPA-004"
+    title: "Migrate Image Processing"
+    feature: "Upload Consolidation"
+    phase: 1
+    depends_on:
+      - "REPA-001"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Extract image compression and HEIC conversion from wishlist into shared package.
+      Create @repo/upload/image/compression.ts with compression utilities.
+      Create @repo/upload/image/heic.ts with HEIC conversion.
+      Create @repo/upload/image/presets.ts with compression presets.
+      Move useS3Upload hook to package.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-005"
+    title: "Migrate Upload Components"
+    feature: "Upload Consolidation"
+    phase: 1
+    depends_on:
+      - "REPA-003"
+      - "REPA-004"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Extract reusable upload UI components into shared package.
+      Move ThumbnailUpload, InstructionsUpload, ImageUploadZone components.
+      Consolidate 7 duplicate Uploader sub-components from main-app and app-instructions-gallery:
+      - ConflictModal (195 lines) - EXACT DUPLICATE
+      - RateLimitBanner (143 lines) - EXACT DUPLICATE
+      - SessionExpiredBanner (70 lines) - EXACT DUPLICATE
+      - UnsavedChangesDialog (95 lines) - EXACT DUPLICATE
+      - UploaderFileItem (234 lines) - EXACT DUPLICATE
+      - UploaderList (151 lines) - EXACT DUPLICATE
+      - SessionProvider (81 lines) - Minor diff
+    risk_notes: "RISK-001: Breaking changes during upload migration (severity: high)"
+    sizing_warning: true
+
+  - id: "REPA-006"
+    title: "Migrate Upload Types"
+    feature: "Upload Consolidation"
+    phase: 1
+    depends_on:
+      - "REPA-001"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Consolidate upload types and delete deprecated wrappers.
+      Move @repo/upload-types schemas to @repo/upload/types.
+      Delete deprecated wrapper files (uploader-upload.ts, uploader-session.ts).
+      Deprecate @repo/upload-types package.
+    risk_notes: "RISK-004: Deprecated packages need deprecation period (severity: low)"
+    sizing_warning: false
+
+  - id: "REPA-007"
+    title: "Add SortableGallery Component"
+    feature: "Gallery Enhancement"
+    phase: 2
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Add drag-and-drop gallery support to @repo/gallery to eliminate custom implementations in wishlist and inspiration apps.
+      Create SortableGallery component using dnd-kit with onReorder callback.
+      Add undo/redo flow with configurable toast duration.
+      Support both grid and list layouts, keyboard reordering, accessibility (roving tabindex, announcements).
+      Create SortableGalleryItem wrapper component with DragOverlay support.
+      This eliminates ~1000 LOC from app-wishlist-gallery and app-inspiration-gallery.
+    risk_notes: "RISK-002: SortableGallery API design may not cover all app needs (severity: medium)"
+    sizing_warning: true
+
+  - id: "REPA-008"
+    title: "Add Gallery Keyboard Hooks"
+    feature: "Gallery Enhancement"
+    phase: 2
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Extract and standardize keyboard navigation hooks for galleries.
+      Move useRovingTabIndex to @repo/gallery/hooks (dedupe from wishlist and inspiration).
+      Move useAnnouncer to @repo/accessibility (dedupe from wishlist and inspiration).
+      Create useGalleryKeyboard combining best of both implementations.
+      Create useGallerySelection for multi-select mode.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-009"
+    title: "Enhance GalleryCard with Selection & Drag"
+    feature: "Gallery Enhancement"
+    phase: 2
+    depends_on:
+      - "REPA-007"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Enhance GalleryCard to support selection mode and drag handles natively.
+      Add selectable, selected, onSelect, selectionPosition props for selection mode.
+      Add draggable, dragHandlePosition props for drag mode.
+      Add hoverOverlay prop for custom overlays.
+      Simplify InspirationCard and AlbumCard to use enhanced GalleryCard.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-010"
+    title: "Refactor app-inspiration-gallery to Use @repo/gallery"
+    feature: "Gallery Enhancement"
+    phase: 2
+    depends_on:
+      - "REPA-007"
+      - "REPA-008"
+      - "REPA-009"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Refactor inspiration gallery to use @repo/gallery instead of custom components.
+      Replace DraggableInspirationGallery with SortableGallery.
+      Replace InspirationCard with GalleryCard (with selection).
+      Replace SortableInspirationCard with SortableGalleryItem.
+      Replace AlbumCard with GalleryCard (with stacked effect).
+      Replace GalleryLoadingSkeleton with GallerySkeleton.
+      Replace custom keyboard handling with useGalleryKeyboard.
+    risk_notes: "RISK-002: SortableGallery API design may not cover all app needs (severity: medium)"
+    sizing_warning: true
+
+  - id: "REPA-011"
+    title: "Standardize GalleryFilterBar Across Apps"
+    feature: "Gallery Enhancement"
+    phase: 2
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Make GalleryFilterBar extensible to support app-specific filters.
+      Add customFilters slot to GalleryFilterBar.
+      Create BuildStatusFilter component for sets gallery.
+      Refactor sets gallery to use shared GalleryFilterBar with custom filter slot.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-012"
+    title: "Create @repo/auth-hooks Package"
+    feature: "Hook Consolidation"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Create shared authentication hooks package.
+      Implement useModuleAuth properly (not stubs) - currently 6 identical stubs across apps.
+      Move usePermissions from main-app to package.
+      Move useTokenRefresh from main-app to package.
+      Delete 6 duplicate stub files across apps.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-013"
+    title: "Create @repo/auth-utils Package"
+    feature: "Hook Consolidation"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Create shared authentication utilities package.
+      Move JWT utilities from main-app (122 lines).
+      Move route guard utilities from main-app (346 lines).
+      Make available to other apps.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-014"
+    title: "Create @repo/hooks Package"
+    feature: "Hook Consolidation"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Create general-purpose hooks package.
+      Move useLocalStorage (dedupe from wishlist and instructions gallery).
+      Move useUnsavedChangesPrompt (dedupe from main-app and instructions gallery).
+      Move useDelayedShow from main-app.
+      Move useMultiSelect from inspiration gallery.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-015"
+    title: "Enhance @repo/accessibility"
+    feature: "Hook Consolidation"
+    phase: 3
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Move accessibility hooks to @repo/accessibility package.
+      Add useAnnouncer to @repo/accessibility (dedupe from wishlist and inspiration).
+      Add ARIA label generators from a11y.ts (from wishlist).
+      Delete duplicate a11y code from apps.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-016"
+    title: "Create @repo/moc-schemas Package"
+    feature: "Type & Schema Consolidation"
+    phase: 4
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Consolidate MOC-related Zod schemas.
+      Move moc-form.ts (328 lines) from main-app.
+      Delete EXACT DUPLICATE moc-form.ts from app-instructions-gallery.
+      Update both apps to import from shared package.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-017"
+    title: "Consolidate Component-Level Schemas"
+    feature: "Type & Schema Consolidation"
+    phase: 4
+    depends_on:
+      - "REPA-005"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Move duplicate component schemas to shared locations.
+      Move FileValidationResultSchema from ThumbnailUpload and InstructionsUpload components to @repo/upload/types.
+      Eliminate duplicate schemas in component __types__ directories.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-018"
+    title: "Create @repo/auth-services Package"
+    feature: "Service Consolidation"
+    phase: 5
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Create shared authentication services package.
+      Move session service from main-app (162 lines).
+      Make session management available to other apps.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-019"
+    title: "Add Error Mapping to @repo/api-client"
+    feature: "Service Consolidation"
+    phase: 5
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Move error handling utilities to @repo/api-client.
+      Add errorMapping from main-app (~200 lines).
+      Add authFailureHandler from main-app (~150 lines).
+      Enable consistent error handling across all apps.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-020"
+    title: "Create Domain Card Factories"
+    feature: "Card Standardization"
+    phase: 6
+    depends_on:
+      - "REPA-009"
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Create factory functions for domain-specific cards in @repo/gallery.
+      Create createInstructionCard factory.
+      Create createSetCard factory.
+      Create createWishlistCard factory.
+      Create createInspirationCard factory.
+      Document card customization patterns in Storybook.
+    risk_notes: ""
+    sizing_warning: false
+
+  - id: "REPA-021"
+    title: "Standardize Card Skeletons"
+    feature: "Card Standardization"
+    phase: 6
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: |
+      Consolidate skeleton loading components into @repo/app-component-library.
+      Move DashboardSkeleton from main-app (delete duplicate from app-dashboard).
+      Move EmptyDashboard from main-app (delete duplicate from app-dashboard).
+    risk_notes: ""
+    sizing_warning: false
+
+dependencies:
+  graph:
+    REPA-001: []
+    REPA-002:
+      - "REPA-001"
+    REPA-003:
+      - "REPA-002"
+    REPA-004:
+      - "REPA-001"
+    REPA-005:
+      - "REPA-003"
+      - "REPA-004"
+    REPA-006:
+      - "REPA-001"
+    REPA-007: []
+    REPA-008: []
+    REPA-009:
+      - "REPA-007"
+    REPA-010:
+      - "REPA-007"
+      - "REPA-008"
+      - "REPA-009"
+    REPA-011: []
+    REPA-012: []
+    REPA-013: []
+    REPA-014: []
+    REPA-015: []
+    REPA-016: []
+    REPA-017:
+      - "REPA-005"
+    REPA-018: []
+    REPA-019: []
+    REPA-020:
+      - "REPA-009"
+    REPA-021: []
+  critical_path:
+    - "REPA-001"
+    - "REPA-002"
+    - "REPA-003"
+    - "REPA-005"
+    - "REPA-017"
+  critical_path_length: 5
+
+parallelization:
+  max_parallel: 12
+  groups:
+    - group: 1
+      stories:
+        - "REPA-001"
+        - "REPA-007"
+        - "REPA-008"
+        - "REPA-011"
+        - "REPA-012"
+        - "REPA-013"
+        - "REPA-014"
+        - "REPA-015"
+        - "REPA-016"
+        - "REPA-018"
+        - "REPA-019"
+        - "REPA-021"
+      notes: "Independent stories with no dependencies - can start immediately"
+    - group: 2
+      stories:
+        - "REPA-002"
+        - "REPA-004"
+        - "REPA-006"
+      notes: "Depends on REPA-001"
+    - group: 3
+      stories:
+        - "REPA-003"
+      notes: "Depends on REPA-002"
+    - group: 4
+      stories:
+        - "REPA-009"
+      notes: "Depends on REPA-007"
+    - group: 5
+      stories:
+        - "REPA-005"
+      notes: "Depends on REPA-003 and REPA-004"
+    - group: 6
+      stories:
+        - "REPA-010"
+      notes: "Depends on REPA-007, REPA-008, and REPA-009"
+    - group: 7
+      stories:
+        - "REPA-017"
+      notes: "Depends on REPA-005"
+    - group: 8
+      stories:
+        - "REPA-020"
+      notes: "Depends on REPA-009"
+
+risks:
+  - id: "RISK-001"
+    severity: "high"
+    description: "Breaking changes during upload migration"
+    affected_stories:
+      - "REPA-001"
+      - "REPA-002"
+      - "REPA-003"
+      - "REPA-004"
+      - "REPA-005"
+      - "REPA-006"
+    mitigation: |
+      Comprehensive testing before merge. Each story includes updating all imports and ensuring all tests pass.
+      Keep deprecated packages for 1 release cycle with warnings.
+
+  - id: "RISK-002"
+    severity: "medium"
+    description: "SortableGallery API design may not cover all app needs"
+    affected_stories:
+      - "REPA-007"
+      - "REPA-010"
+    mitigation: |
+      Review both app-wishlist-gallery and app-inspiration-gallery implementations before designing API.
+      Add extension points (customFilters, hoverOverlay, etc.) for flexibility.
+      Validate API with real refactoring in REPA-010 before considering complete.
+
+  - id: "RISK-003"
+    severity: "medium"
+    description: "Import path changes across many files could miss references"
+    affected_stories:
+      - "REPA-001"
+      - "REPA-002"
+      - "REPA-003"
+      - "REPA-004"
+      - "REPA-005"
+      - "REPA-006"
+      - "REPA-012"
+      - "REPA-013"
+      - "REPA-014"
+      - "REPA-015"
+      - "REPA-016"
+      - "REPA-017"
+      - "REPA-018"
+      - "REPA-019"
+    mitigation: |
+      Use automated codemod scripts for bulk import changes.
+      Run full TypeScript compilation after each import update.
+      Run full test suite before merging each story.
+
+  - id: "RISK-004"
+    severity: "low"
+    description: "Deprecated packages need deprecation period"
+    affected_stories:
+      - "REPA-002"
+      - "REPA-006"
+    mitigation: |
+      Keep @repo/upload-client and @repo/upload-types for 1 release cycle.
+      Add deprecation warnings in package.json and README.
+      Update documentation to point to new @repo/upload package.
+
+metrics:
+  total_stories: 21
+  phases: 6
+  max_parallel: 12
+  critical_path_length: 5
+  stories_with_sizing_warnings: 3

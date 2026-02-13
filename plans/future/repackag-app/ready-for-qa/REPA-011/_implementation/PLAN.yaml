@@ -1,0 +1,159 @@
+schema: 1
+story_id: "REPA-011"
+timestamp: "2026-02-10T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create BuildStatusFilter component with Zod types in app-sets-gallery"
+    files:
+      - "apps/web/app-sets-gallery/src/components/BuildStatusFilter/index.tsx"
+      - "apps/web/app-sets-gallery/src/components/BuildStatusFilter/__types__/index.ts"
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Refactor sets main page to use shared GalleryFilterBar from @repo/gallery"
+    files:
+      - "apps/web/app-sets-gallery/src/pages/main-page.tsx"
+    dependencies: [1]
+    slice: frontend
+
+  - id: 3
+    description: "Delete custom GalleryFilterBar from app-sets-gallery"
+    files:
+      - "apps/web/app-sets-gallery/src/components/GalleryFilterBar.tsx"
+    dependencies: [2]
+    slice: frontend
+
+  - id: 4
+    description: "Update main page tests to verify shared GalleryFilterBar integration"
+    files:
+      - "apps/web/app-sets-gallery/src/pages/__tests__/main-page.test.tsx"
+    dependencies: [2, 3]
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/app-sets-gallery/src/components/BuildStatusFilter/index.tsx"
+    action: create
+    reason: "New sets-specific build status filter component (AC1)"
+
+  - path: "apps/web/app-sets-gallery/src/components/BuildStatusFilter/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for BuildStatusFilter props (AC11)"
+
+  - path: "apps/web/app-sets-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Update to use shared GalleryFilterBar with BuildStatusFilter in children slot (AC5, AC6, AC7, AC12)"
+
+  - path: "apps/web/app-sets-gallery/src/components/GalleryFilterBar.tsx"
+    action: delete
+    reason: "Remove duplicate custom filter bar implementation (AC10)"
+
+  - path: "apps/web/app-sets-gallery/src/pages/__tests__/main-page.test.tsx"
+    action: modify
+    reason: "Update tests to work with shared GalleryFilterBar (AC13)"
+
+commands_to_run:
+  - command: "pnpm --filter app-sets-gallery build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter app-sets-gallery test main-page.test.tsx"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter app-sets-gallery lint src/components/BuildStatusFilter src/pages/main-page.tsx"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-sets-gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "File exists: apps/web/app-sets-gallery/src/components/BuildStatusFilter/index.tsx"
+    evidence_type: file
+
+  - ac_id: "AC2"
+    planned_evidence: "BuildStatusFilter uses AppSelect from @repo/app-component-library (import check)"
+    evidence_type: file
+
+  - ac_id: "AC3"
+    planned_evidence: "BuildStatusFilter has three options: 'All statuses', 'Built', 'In Pieces' (code review)"
+    evidence_type: file
+
+  - ac_id: "AC4"
+    planned_evidence: "BuildStatusFilter accepts value, onChange, className, data-testid props (type definition)"
+    evidence_type: file
+
+  - ac_id: "AC5"
+    planned_evidence: "Sets main page imports GalleryFilterBar from @repo/gallery (import statement)"
+    evidence_type: file
+
+  - ac_id: "AC6"
+    planned_evidence: "BuildStatusFilter renders in children slot of GalleryFilterBar (code review)"
+    evidence_type: file
+
+  - ac_id: "AC7"
+    planned_evidence: "GalleryViewToggle renders in rightSlot of GalleryFilterBar (code review)"
+    evidence_type: file
+
+  - ac_id: "AC8"
+    planned_evidence: "All filter behaviors preserved (test: main-page.test.tsx 'applies search, theme, and build-status filters')"
+    evidence_type: test
+
+  - ac_id: "AC9"
+    planned_evidence: "Filter combinations work (test: main-page.test.tsx 'applies search, theme, and build-status filters')"
+    evidence_type: test
+
+  - ac_id: "AC10"
+    planned_evidence: "Custom GalleryFilterBar.tsx deleted from app-sets-gallery (file deletion verified)"
+    evidence_type: file
+
+  - ac_id: "AC11"
+    planned_evidence: "BuildStatusFilter uses Zod schemas (__types__/index.ts file exists)"
+    evidence_type: file
+
+  - ac_id: "AC12"
+    planned_evidence: "Prop names match shared GalleryFilterBar API (code review: search, selectedSort, selectedTheme)"
+    evidence_type: file
+
+  - ac_id: "AC13"
+    planned_evidence: "All existing tests pass (pnpm test main-page.test.tsx)"
+    evidence_type: test
+
+  - ac_id: "AC14"
+    planned_evidence: "TypeScript compilation succeeds (pnpm check-types)"
+    evidence_type: command
+
+  - ac_id: "AC15"
+    planned_evidence: "ESLint passes with no errors (pnpm lint)"
+    evidence_type: command
+
+  - ac_id: "AC16"
+    planned_evidence: "Responsive layout works on mobile viewports (manual testing - deferred to proof phase)"
+    evidence_type: manual
+
+  - ac_id: "AC17"
+    planned_evidence: "BuildStatusFilter has JSDoc comments (code review)"
+    evidence_type: file
+
+  - ac_id: "AC18"
+    planned_evidence: "Story documentation updated with implementation notes (story file updated)"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "No architectural decisions required - straightforward refactoring using existing patterns"
+  - "Shared GalleryFilterBar already has children and rightSlot extension points"
+  - "BuildStatusFilter follows same pattern as theme filter (uses AppSelect)"
+  - "Wishlist gallery main page provides reference implementation for rightSlot usage"
+  - "No backend changes required - frontend-only refactoring"
+  - "Prop name changes: searchTerm → search, sortField → selectedSort (match shared API)"
+  - "All tests should pass with minimal changes - just update aria-label selectors if needed"
+  - "Mobile responsive testing deferred to proof phase per AC16"
+  - "Custom filter bar deletion is ~135 lines removed (code cleanup win)"

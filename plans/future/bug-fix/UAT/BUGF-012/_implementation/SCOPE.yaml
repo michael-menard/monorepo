@@ -1,0 +1,26 @@
+schema: 1
+story_id: "BUGF-012"
+timestamp: "2026-02-11T19:30:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-inspiration-gallery/**"
+  - "packages/core/gallery/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Add test coverage for 18 untested inspiration gallery components (main-page.tsx, modals, drag components, context menus) using Vitest and accessibility best practices"

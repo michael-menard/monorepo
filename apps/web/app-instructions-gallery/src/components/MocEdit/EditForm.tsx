@@ -33,7 +33,7 @@ import {
   type EditMocFormInput,
   type MocForEditResponse,
   type LegoTheme,
-} from '@repo/upload-types'
+} from '@repo/upload/types'
 import { TagInput } from './TagInput'
 import { SlugField } from './SlugField'
 

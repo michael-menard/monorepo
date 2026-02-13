@@ -1,0 +1,163 @@
+schema: 1
+story_id: "REPA-018"
+timestamp: "2026-02-10T22:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create package structure (package.json, tsconfig.json, vite.config.ts, vitest.config.ts)"
+    files:
+      - "packages/core/auth-services/package.json"
+      - "packages/core/auth-services/tsconfig.json"
+      - "packages/core/auth-services/vite.config.ts"
+      - "packages/core/auth-services/vitest.config.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create Zod schemas for session types"
+    files:
+      - "packages/core/auth-services/src/session/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Migrate session service with Zod conversion"
+    files:
+      - "packages/core/auth-services/src/session/index.ts"
+      - "packages/core/auth-services/src/index.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Add test setup and unit tests"
+    files:
+      - "packages/core/auth-services/src/__tests__/setup.ts"
+      - "packages/core/auth-services/src/session/__tests__/index.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Add integration test (skippable)"
+    files:
+      - "packages/core/auth-services/src/session/__tests__/integration.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 6
+    description: "Update main-app imports and delete old file"
+    files:
+      - "apps/web/main-app/package.json"
+      - "apps/web/main-app/src/services/auth/AuthProvider.tsx"
+    dependencies: [3]
+    slice: frontend
+
+  - id: 7
+    description: "Add README documentation"
+    files:
+      - "packages/core/auth-services/README.md"
+    dependencies: [3]
+    slice: packages
+
+  - id: 8
+    description: "Build and test verification"
+    files: []
+    dependencies: [4, 5, 6, 7]
+    slice: packages
+
+files_to_change:
+  - path: "packages/core/auth-services/package.json"
+    action: create
+    reason: "New package definition (AC-1)"
+  - path: "packages/core/auth-services/tsconfig.json"
+    action: create
+    reason: "TypeScript config (AC-1)"
+  - path: "packages/core/auth-services/vite.config.ts"
+    action: create
+    reason: "Build config with vite-plugin-dts (AC-1)"
+  - path: "packages/core/auth-services/vitest.config.ts"
+    action: create
+    reason: "Test config (AC-1)"
+  - path: "packages/core/auth-services/src/session/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for SessionResponse, SessionError (AC-2)"
+  - path: "packages/core/auth-services/src/session/index.ts"
+    action: create
+    reason: "Migrated session service with Zod (AC-2)"
+  - path: "packages/core/auth-services/src/index.ts"
+    action: create
+    reason: "Root export (AC-2)"
+  - path: "packages/core/auth-services/src/__tests__/setup.ts"
+    action: create
+    reason: "Test setup with logger mock (AC-3)"
+  - path: "packages/core/auth-services/src/session/__tests__/index.test.ts"
+    action: create
+    reason: "Unit tests for all 4 functions (AC-3)"
+  - path: "packages/core/auth-services/src/session/__tests__/integration.test.ts"
+    action: create
+    reason: "Integration tests, skippable (AC-4)"
+  - path: "apps/web/main-app/package.json"
+    action: modify
+    reason: "Add @repo/auth-services dependency (AC-5)"
+  - path: "apps/web/main-app/src/services/auth/AuthProvider.tsx"
+    action: modify
+    reason: "Update import from ./sessionService to @repo/auth-services (AC-5)"
+  - path: "apps/web/main-app/src/services/auth/sessionService.ts"
+    action: delete
+    reason: "Remove migrated file (AC-5)"
+  - path: "packages/core/auth-services/README.md"
+    action: create
+    reason: "Package documentation (AC-6)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after creating package.json"
+    required: true
+  - command: "pnpm build --filter @repo/auth-services"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm test --filter @repo/auth-services"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm check-types --filter @repo/auth-services"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm lint --filter @repo/auth-services"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm build --filter @repo/main-app"
+    when: "after main-app migration"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Package builds successfully with type declarations in dist/"
+    evidence_type: command
+  - ac_id: "AC-2"
+    planned_evidence: "Session service exports match original API surface; Zod schemas validate"
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests pass: src/session/__tests__/index.test.ts"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "Integration test file exists with test.skip() for CI"
+    evidence_type: file
+  - ac_id: "AC-5"
+    planned_evidence: "main-app builds with new import; old file deleted"
+    evidence_type: command
+  - ac_id: "AC-6"
+    planned_evidence: "README.md with usage examples; JSDoc on exports"
+    evidence_type: file
+  - ac_id: "AC-7"
+    planned_evidence: "All quality gates pass: build, test, check-types, lint"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Follow auth-utils pattern for all config files"
+  - "Zod version 4.1.13 matching auth-utils sibling"
+  - "Single entry point, no subpath exports needed"
+  - "Integration tests use test.skip() when backend unavailable"
+  - "CRITICAL: preserve credentials: 'include' for httpOnly cookie support"

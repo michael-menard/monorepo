@@ -20,6 +20,7 @@ export { dashboardApi } from './rtk/dashboard-api'
 export { instructionsApi } from './rtk/instructions-api'
 export { permissionsApi } from './rtk/permissions-api'
 export { adminApi } from './rtk/admin-api'
+export { uploadsApi } from './rtk/uploads-api'
 
 // Auth utilities
 export {
@@ -54,3 +55,6 @@ export {
   useUploadPartsListFileMutation,
   useDeleteFileMutation,
 } from './rtk/instructions-api'
+
+// RTK Query Hooks - Uploads (BUGF-032)
+export { useGeneratePresignedUrlMutation } from './rtk/uploads-api'

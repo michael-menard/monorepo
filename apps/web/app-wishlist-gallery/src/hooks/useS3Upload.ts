@@ -2,7 +2,7 @@
  * useS3Upload Hook
  *
  * Handles image upload to S3 via presigned URLs for wishlist items.
- * Uses @repo/upload-client for the actual upload with progress tracking.
+ * Uses @repo/upload for the actual upload with progress tracking.
  *
  * Story wish-2002: Add Item Flow
  * WISH-2013: Security hardening - file type and size validation
@@ -13,17 +13,14 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
-import { uploadToPresignedUrl, UploadError, type UploadProgress } from '@repo/upload-client'
+import { uploadToPresignedUrl, UploadError, type UploadProgress } from '@repo/upload'
 import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
-import {
-  compressImage,
-  getPresetByName,
-  isHEIC,
-  convertHEICToJPEG,
-  type CompressionResult,
-  type CompressionPresetName,
-  type HEICConversionResult,
-} from '../utils/imageCompression'
+import { compressImage } from '@repo/upload/image/compression'
+import type { CompressionResult } from '@repo/upload/image/compression/__types__'
+import { getPresetByName } from '@repo/upload/image/presets'
+import type { CompressionPresetName } from '@repo/upload/image/presets/__types__'
+import { isHEIC, convertHEICToJPEG } from '@repo/upload/image/heic'
+import type { HEICConversionResult } from '@repo/upload/image/heic/__types__'
 
 /**
  * Maximum file size in bytes (10MB)

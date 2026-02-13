@@ -9,8 +9,8 @@ import { useController, type Control } from 'react-hook-form'
 import { Input, FormItem, FormLabel, FormControl, FormMessage } from '@repo/app-component-library'
 import { Check, X, Loader2, RefreshCw } from 'lucide-react'
 import { logger } from '@repo/logger'
-import { slugify } from '@repo/upload-types'
-import type { EditMocFormInput } from '@repo/upload-types'
+import { slugify } from '@repo/upload/types'
+import type { EditMocFormInput } from '@repo/upload/types'
 
 interface SlugFieldProps {
   control: Control<EditMocFormInput>

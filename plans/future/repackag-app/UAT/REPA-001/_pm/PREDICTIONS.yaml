@@ -1,0 +1,29 @@
+predictions:
+  split_risk: 0.2
+  review_cycles: 2
+  token_estimate: 120000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-10T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+  notes: |
+    Predictions based on heuristics only (no similar stories available in KB).
+
+    Split risk calculation:
+    - Base risk from AC count: (17 - 3) * 0.1 = 1.4 → clamped to 1.0
+    - Scope complexity: infrastructure-only (-0.5 adjustment)
+    - No frontend/backend interaction (-0.3 adjustment)
+    - Final: 0.2 (low risk, pure package structure)
+
+    Review cycles:
+    - Base: 1 cycle (infrastructure story)
+    - Scope keywords: 0 (no auth, security, database)
+    - File count: ~10 files (+1 cycle for config verification)
+    - Final: 2 cycles (config review + structure validation)
+
+    Token estimate:
+    - No similar stories found
+    - Infrastructure-only stories typically lower cost
+    - Estimated: 120K tokens (below global default due to simple scope)
+    - Conservative estimate given 17 ACs, but most are structure verification

@@ -1,0 +1,42 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-11T18:00:00Z"
+  mode: "graceful_degradation"
+  notes: "KB system unavailable - generated from ADR-LOG.md and CLAUDE.md only"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid: []
+    patterns_to_follow:
+      - "Use @repo/logger for all logging (CLAUDE.md mandate)"
+      - "Import pattern: import { logger } from '@repo/logger'"
+      - "Logger methods: logger.info(), logger.error(), logger.warn(), logger.debug()"
+      - "Logger accepts context objects as second parameter for structured logging"
+    patterns_to_avoid:
+      - "Never use console.log/error/warn/debug in application source files"
+      - "Do not use console in production code (breaks structured logging)"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs: []
+    constraints:
+      logging: "@repo/logger is the project standard per CLAUDE.md - no exceptions for source files"
+    notes: "No backend, database, or API work - ADRs not directly applicable"
+
+  token_optimization:
+    high_cost_operations: []
+    recommended_patterns:
+      - "Use Grep to find console usage locations"
+      - "Read only the specific files that need modification"
+      - "Batch similar changes together per file"
+    notes: "Simple find-and-replace story - low token usage expected"
+
+  warnings:
+    - "KB system unavailable - operating in graceful degradation mode"
+    - "No lessons learned available from past stories"
+    - "ADRs loaded but none directly apply to logging standardization"
+
+  tokens:
+    in: 0
+    out: 0

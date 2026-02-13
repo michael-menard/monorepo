@@ -1,0 +1,49 @@
+# Deferred Knowledge Base Writes
+# Story: REPA-011
+# Reason: KB write tool not available during story generation
+# Status: Pending KB sync
+
+stories:
+  - story_id: REPA-011
+    feature: repackag-app
+    title: "Standardize GalleryFilterBar Across Apps"
+    story_dir: plans/future/repackag-app/REPA-011
+    story_file: plans/future/repackag-app/REPA-011/REPA-011.md
+    story_type: tech_debt
+    points: 2
+    priority: low
+    state: backlog
+    touches_backend: false
+    touches_frontend: true
+    touches_database: false
+    touches_infra: false
+    epic: REPACK
+    phase: 2
+    created_at: "2026-02-10T00:00:00Z"
+    
+sync_command: |
+  INSERT INTO stories (
+    story_id, feature, title, story_dir, story_file, story_type,
+    points, priority, state, touches_backend, touches_frontend,
+    touches_database, touches_infra
+  ) VALUES (
+    'REPA-011',
+    'repackag-app',
+    'Standardize GalleryFilterBar Across Apps',
+    'plans/future/repackag-app/REPA-011',
+    'plans/future/repackag-app/REPA-011/REPA-011.md',
+    'tech_debt',
+    2,
+    'low',
+    'backlog',
+    false,
+    true,
+    false,
+    false
+  )
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_dir = EXCLUDED.story_dir,
+    story_file = EXCLUDED.story_file,
+    points = EXCLUDED.points,
+    state = EXCLUDED.state;

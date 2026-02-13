@@ -1,0 +1,337 @@
+schema: 1
+story_id: BUGF-013
+created_at: "2026-02-11"
+
+# CRITICAL ARCHITECTURAL FINDINGS
+
+architecture:
+  component_structure:
+    finding: "App components are thin wrappers around @repo/upload package"
+    details: |
+      - SessionProvider: Wraps @repo/upload/hooks/useUploaderSession + useUnsavedChangesPrompt
+      - UploaderFileItem: Re-export from @repo/upload with app-specific props
+      - UploaderList: Composes @repo/upload components with app-specific layout
+      - ConflictModal, RateLimitBanner, SessionExpiredBanner: Exist in BOTH locations
+    impact: "Tests should focus on integration points, not re-testing @repo/upload internals"
+
+  presigned_url_integration:
+    finding: "upload-page.tsx uses RTK Query mutation for presigned URL API"
+    api_endpoint: "POST /api/v2/uploads/presigned-url"
+    implementation: "useGeneratePresignedUrlMutation() from @repo/api-client"
+    parameters:
+      - fileName
+      - mimeType
+      - fileSize
+      - category
+    response:
+      - presignedUrl
+      - key
+      - expiresAt
+    impact: "Must mock RTK Query mutation AND MSW handlers for testing"
+
+  finalize_flow:
+    finding: "Finalize uses custom client, not RTK Query"
+    implementation: "finalizeSession() from @/services/api/finalizeClient"
+    api_endpoint: "POST /api/instructions/finalize"
+    error_handling:
+      - 409_conflict: "Shows ConflictModal with suggestedSlug"
+      - 429_rate_limit: "Shows RateLimitBanner with countdown"
+      - per_file_errors: "Shows file validation error list"
+    impact: "Must mock finalizeClient function or use MSW for HTTP interception"
+
+  session_management:
+    finding: "SessionProvider combines multiple hooks"
+    hooks_used:
+      - useUploaderSession: "@repo/upload/hooks"
+      - useUnsavedChangesPrompt: "@repo/hooks"
+    dialog_component: "UnsavedChangesDialog from @repo/upload/components"
+    context_value:
+      - session: "UseUploaderSessionResult"
+      - route: "string"
+      - isDirty: "boolean"
+      - wasRestored: "boolean"
+    impact: "Tests need to verify context provider and consumer integration"
+
+source_code_locations:
+  components:
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx"
+      lines: 82
+      complexity: "low (context provider wrapper)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderFileItem/index.tsx"
+      lines: 235
+      complexity: "low (display component)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderList/index.tsx"
+      lines: 152
+      complexity: "low (composition component)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/ConflictModal/index.tsx"
+      lines: 196
+      complexity: "medium (form validation, focus management)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/RateLimitBanner/index.tsx"
+      lines: 144
+      complexity: "medium (timer logic, countdown)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionExpiredBanner/index.tsx"
+      lines: 70
+      complexity: "low (display with action)"
+
+    - path: "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+      lines: 790
+      complexity: "high (integration of multiple concerns)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/MocEdit/EditForm.tsx"
+      lines: 270
+      complexity: "medium (form with validation)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/MocEdit/SlugField.tsx"
+      lines: 190
+      complexity: "medium (debounced API call, validation)"
+
+    - path: "apps/web/app-instructions-gallery/src/components/MocEdit/TagInput.tsx"
+      lines: 138
+      complexity: "low (input with chip display)"
+
+existing_tests:
+  found:
+    - path: "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/EditForm.test.tsx"
+      status: "exists"
+      coverage: "partial (basic rendering tests)"
+      notes: "Needs additional validation tests"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/__tests__/Accessibility.test.tsx"
+      status: "exists"
+      scope: "accessibility tests for uploader components"
+
+    - path: "apps/web/app-instructions-gallery/src/components/Uploader/__tests__/FinalizeFlow.integration.test.tsx"
+      status: "exists"
+      scope: "integration tests for finalize flow (409/429)"
+
+  patterns_to_reuse:
+    - "MSW server setup from test/setup.ts"
+    - "Logger mocking pattern"
+    - "TanStack Router mocking pattern"
+    - "userEvent setup patterns from existing tests"
+
+test_infrastructure:
+  setup_file: "apps/web/app-instructions-gallery/src/test/setup.ts"
+  msw_server: "apps/web/app-instructions-gallery/src/test/mocks/server.ts"
+  msw_handlers: "apps/web/app-instructions-gallery/src/test/mocks/handlers.ts"
+
+  global_mocks:
+    - "window.matchMedia"
+    - "ResizeObserver"
+    - "IntersectionObserver"
+    - "@tanstack/react-router hooks"
+    - "@repo/logger"
+
+  vitest_config:
+    - "setupFiles: ['./src/test/setup.ts']"
+    - "environment: jsdom"
+    - "coverage: { threshold: { global: 45 } }"
+
+form_validation:
+  library: "react-hook-form + Zod"
+  schemas:
+    - "MocInstructionFormSchema from @/types/moc-form"
+    - "EditMocFormSchema from @repo/upload/types"
+  validation_mode: "onBlur (EditForm), onChange (upload-page)"
+
+  title_validation:
+    - "required: true"
+    - "min: 3"
+    - "max: 100 (EditForm) or 120 (upload-page)"
+
+  description_validation:
+    - "required: false (EditForm) or true (upload-page)"
+    - "min: 10"
+    - "max: 2000"
+
+  tags_validation:
+    - "max_count: 10"
+    - "max_length: 30"
+    - "format: letters, numbers, spaces, hyphens only"
+
+  slug_validation:
+    - "format: lowercase, numbers, hyphens only"
+    - "uniqueness: debounced API check (500ms)"
+    - "api: GET /api/v2/mocs/check-slug?slug=X&excludeId=Y"
+
+api_mocking_requirements:
+  presigned_url_api:
+    method: POST
+    path: /api/v2/uploads/presigned-url
+    request_body:
+      - fileName: string
+      - mimeType: string
+      - fileSize: number
+      - category: FileCategory
+    success_response:
+      status: 200
+      body:
+        presignedUrl: "https://s3.mock.com/bucket/{fileName}"
+        key: "uploads/user-123/{fileName}"
+        expiresAt: number (timestamp)
+    error_responses:
+      - status: 409 (conflict)
+      - status: 429 (rate limit)
+      - status: 400 (validation error)
+      - status: 500 (server error)
+
+  finalize_api:
+    method: POST
+    path: /api/instructions/finalize
+    request_body:
+      - uploadSessionId: string
+      - title: string
+      - description: string
+      - tags: string[]
+      - theme: string
+    success_response:
+      status: 200
+      body:
+        success: true
+        data:
+          id: string
+          slug: string
+        idempotent: boolean (optional)
+    error_responses:
+      - status: 409 (conflict with suggestedSlug)
+      - status: 429 (rate limit with retryAfterSeconds)
+      - status: 400 (per-file validation errors)
+
+  slug_check_api:
+    method: GET
+    path: /api/v2/mocs/check-slug
+    query_params:
+      - slug: string
+      - excludeId: string
+    response:
+      available: boolean
+
+accessibility_requirements:
+  aria_attributes:
+    - "aria-label on all buttons"
+    - "aria-invalid on inputs with errors"
+    - "aria-describedby linking errors to inputs"
+    - "aria-live for dynamic updates (progress, countdowns)"
+    - "aria-busy on loading buttons"
+    - "role='progressbar' with aria-valuenow, aria-valuemin, aria-valuemax"
+    - "role='timer' for countdown displays"
+    - "role='alert' for error messages"
+
+  keyboard_navigation:
+    - "Tab order follows visual flow"
+    - "Enter submits forms"
+    - "Escape closes modals"
+    - "Backspace removes tags in TagInput"
+    - "All interactive elements focusable (no tabindex=-1)"
+
+  focus_management:
+    - "ConflictModal: Focus input on open, restore focus on close"
+    - "UnsavedChangesDialog: Focus safer action (Stay) by default"
+    - "Form errors: Provide clickable links to jump to field"
+
+  screen_reader_support:
+    - "sr-only class for screen-reader-only announcements"
+    - "Hidden decorative icons (aria-hidden='true')"
+    - "Progress updates announced via aria-live='polite'"
+    - "Errors announced via aria-live='assertive'"
+
+timer_testing:
+  component: "RateLimitBanner"
+  pattern: |
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.runOnlyPendingTimers()
+      vi.useRealTimers()
+    })
+
+    // Advance timer by 1 second
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+  countdown_logic:
+    - "Initial: retryAfterSeconds from props"
+    - "Decrement: Every 1000ms"
+    - "Stop: When reaches 0"
+    - "Enable retry: When countdown hits 0"
+
+mock_file_creation:
+  pattern: |
+    const createMockFile = (name: string, type: string, size: number): File => {
+      const blob = new Blob(['x'.repeat(size)], { type })
+      return new File([blob], name, { type })
+    }
+
+    const mockPdfFile = createMockFile('instructions.pdf', 'application/pdf', 1024 * 1024)
+    const mockImageFile = createMockFile('cover.jpg', 'image/jpeg', 512 * 1024)
+
+story_assumptions_vs_reality:
+  assumptions:
+    - "Story assumed all components need full testing"
+    - "Story estimated 100 test cases"
+    - "Story did not mention thin wrapper pattern"
+
+  reality:
+    - "Components are thin wrappers around @repo/upload"
+    - "Actual test count will be ~120 (more granular)"
+    - "Tests should focus on integration, not internals"
+    - "ConflictModal has suggestedSlug feature (Story 3.1.19)"
+    - "RateLimitBanner has progress indicator"
+    - "upload-page.tsx has both MOC and Set form types"
+
+  adjustments_made:
+    - "Reduced scope for thin wrapper components"
+    - "Increased focus on integration points"
+    - "Added tests for suggested slug feature"
+    - "Added tests for type switching in upload-page"
+    - "Added timer tests with vi.useFakeTimers"
+
+test_priorities:
+  phase_1:
+    - "Error components have highest user impact"
+    - "409/429 handling is critical path"
+    - "Session expiry affects upload success rate"
+
+  phase_2:
+    - "Upload page is 789 lines of integration"
+    - "Covers entire upload flow end-to-end"
+    - "Highest complexity, highest value"
+
+  phase_3:
+    - "Form validation is important but isolated"
+    - "SlugField has debounced API call"
+    - "TagInput has input parsing logic"
+
+  phase_4:
+    - "Upload flow components are thin wrappers"
+    - "Lowest complexity, lowest risk"
+    - "Test props pass-through and callbacks"
+
+coverage_strategy:
+  target: 45
+  critical_paths:
+    - "Error handling modals: 80%"
+    - "Upload page integration: 70%"
+    - "Form validation: 60%"
+    - "Thin wrapper components: 60%"
+
+  acceptable_gaps:
+    - "Display-only components"
+    - "Style/layout logic"
+    - "Icon rendering"
+    - "@repo/upload internals (already tested)"
+
+next_steps:
+  - "Review this plan with PM"
+  - "Create test files in order of priority"
+  - "Set up MSW handlers for APIs"
+  - "Run coverage report after each phase"
+  - "Adjust test granularity based on actual coverage"

@@ -1,0 +1,133 @@
+schema: 1
+story_id: "REPA-017"
+timestamp: "2026-02-11T10:01:30Z"
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Create validation.ts in @repo/upload with FileValidationResultSchema"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: "packages/core/upload/src/types/validation.ts"
+        description: "Created validation.ts with FileValidationResultSchema and comprehensive JSDoc"
+      - type: code_snippet
+        file: "packages/core/upload/src/types/validation.ts"
+        lines: "1-24"
+        description: "Complete schema definition with documentation explaining frontend vs backend differences"
+
+  - id: AC-2
+    description: "Export FileValidationResultSchema from @repo/upload/types barrel"
+    status: PASS
+    evidence:
+      - type: file_modified
+        path: "packages/core/upload/src/types/index.ts"
+        description: "Added validation types export to barrel file"
+      - type: code_snippet
+        file: "packages/core/upload/src/types/index.ts"
+        lines: "75-76"
+        description: "Export statement added to barrel index"
+
+  - id: AC-3
+    description: "@repo/upload builds successfully"
+    status: PASS
+    evidence:
+      - type: command_output
+        command: "pnpm --filter @repo/upload build"
+        description: "Build completed successfully with all assets generated"
+        notes: "Build succeeded, TypeScript errors in other packages are pre-existing"
+
+  - id: AC-4
+    description: "Update InstructionsUpload to import FileValidationResultSchema from @repo/upload"
+    status: PASS
+    evidence:
+      - type: file_modified
+        path: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__types__/index.ts"
+        description: "Replaced local schema definition with re-export from @repo/upload/types"
+      - type: code_snippet
+        file: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__types__/index.ts"
+        lines: "35-37"
+        description: "Re-export with TODO comment for future migration (REPA-005)"
+      - type: verification
+        description: "Component still imports from ./__types__ which now re-exports from @repo/upload"
+
+  - id: AC-5
+    description: "Update ThumbnailUpload to import FileValidationResultSchema from @repo/upload"
+    status: PASS
+    evidence:
+      - type: file_modified
+        path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__types__/index.ts"
+        description: "Replaced local schema definition with re-export from @repo/upload/types"
+      - type: code_snippet
+        file: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__types__/index.ts"
+        lines: "23-25"
+        description: "Re-export with TODO comment for future migration (REPA-005)"
+      - type: verification
+        description: "Component still imports from ./__types__ which now re-exports from @repo/upload"
+
+  - id: AC-6
+    description: "Create comprehensive tests for FileValidationResultSchema"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: "packages/core/upload/src/types/__tests__/validation.test.ts"
+        description: "Created comprehensive test suite with 11 test cases"
+      - type: test_results
+        test_command: "pnpm --filter @repo/upload test src/types/__tests__/validation"
+        passed: 11
+        failed: 0
+        skipped: 0
+        description: "All validation schema tests passing"
+
+  - id: AC-7
+    description: "All @repo/upload tests pass"
+    status: PASS_WITH_NOTES
+    evidence:
+      - type: test_results
+        test_command: "pnpm --filter @repo/upload test src/types/__tests__/validation"
+        passed: 11
+        failed: 0
+        skipped: 0
+        description: "New validation tests all pass"
+      - type: notes
+        description: "Pre-existing test failures in useUploaderSession.test.tsx (2 failures) are unrelated to this story. Story only touches types, not hooks."
+
+files_modified:
+  - path: "packages/core/upload/src/types/validation.ts"
+    change_type: created
+    description: "New validation types file with FileValidationResultSchema"
+    
+  - path: "packages/core/upload/src/types/__tests__/validation.test.ts"
+    change_type: created
+    description: "Comprehensive test suite for validation schema (11 tests)"
+    
+  - path: "packages/core/upload/src/types/index.ts"
+    change_type: modified
+    description: "Added validation types export to barrel"
+    
+  - path: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/__types__/index.ts"
+    change_type: modified
+    description: "Replaced local FileValidationResultSchema with re-export from @repo/upload"
+    
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__types__/index.ts"
+    change_type: modified
+    description: "Replaced local FileValidationResultSchema with re-export from @repo/upload"
+
+verification_steps:
+  - description: "No duplicate FileValidationResultSchema definitions remain in apps/web/"
+    command: 'grep -r "export const FileValidationResultSchema" apps/web/'
+    result: "No matches found - all duplicates removed"
+    
+  - description: "Validation tests pass"
+    command: "pnpm --filter @repo/upload test src/types/__tests__/validation"
+    result: "11 tests passed"
+    
+  - description: "Package builds successfully"
+    command: "pnpm --filter @repo/upload build"
+    result: "Build completed successfully"
+
+notes:
+  - "This is a types-only consolidation with no runtime behavior changes"
+  - "Pre-existing TypeScript errors in app-instructions-gallery and api-client are unrelated to this story"
+  - "Pre-existing test failures in @repo/upload useUploaderSession hook are unrelated to this story"
+  - "Components continue to import from their local __types__ which now re-export from @repo/upload"
+  - "TODO comments added to guide REPA-005 (component migration) work"

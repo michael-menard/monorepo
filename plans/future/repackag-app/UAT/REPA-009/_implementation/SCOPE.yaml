@@ -1,0 +1,28 @@
+schema: 1
+story_id: "REPA-009"
+timestamp: "2026-02-11T19:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "packages/core/gallery/**"
+  - "apps/web/app-inspiration-gallery/**"
+  - "apps/web/app-sets-gallery/**"
+  - "apps/web/app-wishlist-gallery/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Enhance GalleryCard component to natively support selection mode, drag handles, and hover overlays, enabling consolidation of duplicate card implementations across gallery apps"

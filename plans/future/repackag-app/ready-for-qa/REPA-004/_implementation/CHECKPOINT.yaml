@@ -1,0 +1,15 @@
+schema: 1
+story_id: REPA-004
+feature_dir: plans/future/repackag-app
+timestamp: "2026-02-11T04:55:00Z"
+
+current_phase: done
+last_successful_phase: proof
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+e2e_gate: exempt
+warnings:
+  - "13 pre-existing test failures in wishlist gallery (verified against baseline)"
+  - "E2E tests exempt (refactor with no behavior changes, requires live environment)"

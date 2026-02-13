@@ -1,0 +1,33 @@
+schema: 1
+story_id: "REPA-017"
+title: "Consolidate Component-Level Schemas"
+story_type: tech_debt
+surfaces:
+  backend: false
+  frontend: true
+  database: false
+  infra: false
+
+packages_modified:
+  - name: "@repo/upload"
+    path: "packages/core/upload"
+    role: destination
+
+apps_modified:
+  - name: "app-instructions-gallery"
+    path: "apps/web/app-instructions-gallery"
+    files_to_update: 2
+
+files_to_create:
+  - packages/core/upload/src/types/validation.ts
+  - packages/core/upload/src/types/__tests__/validation.test.ts
+
+files_to_modify:
+  - packages/core/upload/src/types/index.ts
+  - apps/web/app-instructions-gallery/src/components/InstructionsUpload/__types__/index.ts
+  - apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__types__/index.ts
+
+e2e_gate: exempt
+e2e_exempt_reason: "Types-only consolidation with no runtime behavior changes, no UI changes, no API changes"
+
+total_acs: 7

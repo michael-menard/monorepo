@@ -1,0 +1,63 @@
+schema: 1
+story_id: REPA-013
+timestamp: "2026-02-10T20:00:00Z"
+
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-10T20:00:00Z"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid: []
+    patterns_to_follow:
+      - "Follow REPA-001 package structure pattern for consistency"
+      - "Use Zod schemas for runtime validation per CLAUDE.md"
+      - "Maintain comprehensive test coverage during migration"
+    patterns_to_avoid:
+      - "Don't create barrel files in app code (package index.ts is allowed)"
+      - "Don't use TypeScript interfaces without Zod schemas"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-004"
+        title: "Authentication Architecture"
+        status: active
+        constraint: "AWS Cognito with JWT tokens (access, ID, refresh)"
+        applies_to: ["auth", "frontend"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test required during dev phase with live resources"
+        applies_to: ["frontend", "testing"]
+
+    constraints:
+      auth: "AWS Cognito tokens with standard JWT claims (sub, exp, iat, cognito:username, cognito:groups)"
+      testing: "Maintain 45% minimum global coverage, E2E tests use live resources (no MSW in UAT)"
+
+  token_optimization:
+    high_cost_operations: []
+    recommended_patterns:
+      - "Read only necessary sections of large files"
+      - "Use targeted file reads over full file dumps"
+
+  warnings:
+    - "Property name is checkTokenExpiry (not checkTokenExpiration) - verified in source at lines 20, 77, 166+"
+    - "Use Zod version 4.1.13 to match @repo/upload and standardize monorepo"
+    - "Verify exact import count during implementation (story claims 7, grep found 3-7)"
+    - "Package exports should point to dist/ not src/ for production builds"
+
+  setup_decisions:
+    from_file: "_implementation/DECISIONS.yaml"
+    critical_clarifications:
+      - "AC-3: Property name is checkTokenExpiry (not checkTokenExpiration)"
+      - "AC-1: Use zod ^4.1.13 to match @repo/upload"
+      - "AC-5: Exports point to dist/ (built output) not src/"
+      - "AC-6: Verify import count before implementation"
+    deferred_enhancements: 15
+    kb_status: "deferred"
+
+  tokens:
+    in: 0
+    out: 0

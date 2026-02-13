@@ -1,0 +1,124 @@
+schema: 1
+story_id: "BUGF-006"
+timestamp: "2026-02-11T18:00:00Z"
+
+steps:
+  - id: 1
+    description: "Add logger import and replace 5 console.log statements in app-inspiration-gallery main-page.tsx"
+    files: ["apps/web/app-inspiration-gallery/src/pages/main-page.tsx"]
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Add logger import, replace 2 console statements, and remove eslint-disable comments in app-instructions-gallery DetailModule.tsx"
+    files: ["apps/web/app-instructions-gallery/src/DetailModule.tsx"]
+    dependencies: []
+    slice: frontend
+
+  - id: 3
+    description: "Add logger import and replace 3 console.error statements in main-app AdminUserDetailPage.tsx"
+    files: ["apps/web/main-app/src/routes/admin/pages/AdminUserDetailPage.tsx"]
+    dependencies: []
+    slice: frontend
+
+  - id: 4
+    description: "Run lint to verify no console warnings in modified files"
+    files: []
+    dependencies: [1, 2, 3]
+    slice: frontend
+
+  - id: 5
+    description: "Run type check to verify TypeScript compilation"
+    files: []
+    dependencies: [1, 2, 3]
+    slice: frontend
+
+  - id: 6
+    description: "Verify logger output in browser console (manual verification)"
+    files: []
+    dependencies: [4, 5]
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/app-inspiration-gallery/src/pages/main-page.tsx"
+    action: modify
+    reason: "Replace 5 console.log statements with logger.info() per AC-1"
+
+  - path: "apps/web/app-instructions-gallery/src/DetailModule.tsx"
+    action: modify
+    reason: "Replace 2 console statements with logger calls and remove eslint-disable comments per AC-2 and AC-3"
+
+  - path: "apps/web/main-app/src/routes/admin/pages/AdminUserDetailPage.tsx"
+    action: modify
+    reason: "Replace 3 console.error statements with logger.error() per AC-4"
+
+commands_to_run:
+  - command: "pnpm lint --filter app-inspiration-gallery --filter app-instructions-gallery --filter main-app"
+    when: "after all code changes"
+    required: true
+    reason: "Verify no console warnings in modified files (AC-6)"
+
+  - command: "pnpm check-types --filter app-inspiration-gallery --filter app-instructions-gallery --filter main-app"
+    when: "after all code changes"
+    required: true
+    reason: "Verify TypeScript compilation (AC-7)"
+
+  - command: "git diff --name-only"
+    when: "after all code changes"
+    required: true
+    reason: "Verify only source files modified, not test files or CI workflows (AC-9, AC-10)"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Code inspection: 5 console.log replaced with logger.info() in app-inspiration-gallery/src/pages/main-page.tsx"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "Code inspection: 2 console statements replaced with logger calls in app-instructions-gallery/src/DetailModule.tsx"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "Code inspection: eslint-disable-next-line comments removed from app-instructions-gallery/src/DetailModule.tsx"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Code inspection: 3 console.error replaced with logger.error() in main-app AdminUserDetailPage.tsx"
+    evidence_type: file
+
+  - ac_id: "AC-5"
+    planned_evidence: "Code inspection: All 3 files have 'import { logger } from @repo/logger' added"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "Command output: pnpm lint shows no console warnings in modified files"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Command output: pnpm check-types passes for all modified files"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Manual verification: Start each app and verify logger output appears in browser console"
+    evidence_type: manual
+
+  - ac_id: "AC-9"
+    planned_evidence: "Command output: git diff shows no test files modified"
+    evidence_type: command
+
+  - ac_id: "AC-10"
+    planned_evidence: "Command output: git diff shows no CI/CD workflows modified"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "All console statements identified via grep"
+  - "No logger imports currently present in any of the 3 files"
+  - "All steps are independent and can be executed in parallel (steps 1-3)"
+  - "Verification steps (4-6) depend on code changes completing"
+  - "Per CLAUDE.md: 'Don't use console.log - use @repo/logger'"
+  - "Per project preferences: pref-proj-004 mandates @repo/logger for all logging"
+  - "Test files and MSW handlers intentionally excluded per story scope"
+  - "No architectural changes required - @repo/logger already exists and is a dependency"

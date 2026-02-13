@@ -138,7 +138,7 @@ const renderLoginPage = () => {
   return { store, user }
 }
 
-describe.skip('LoginPage', () => {
+describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSignIn.mockReset()
@@ -186,7 +186,7 @@ describe.skip('LoginPage', () => {
 
     it('displays Sign In button', () => {
       renderLoginPage()
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument()
     })
 
     it('displays forgot password link', () => {
@@ -254,7 +254,7 @@ describe.skip('LoginPage', () => {
       const { user } = renderLoginPage()
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'invalid-email')
       await user.click(submitButton)
@@ -269,7 +269,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'short')
@@ -283,7 +283,7 @@ describe.skip('LoginPage', () => {
     it('does not submit form with empty fields', async () => {
       const { user } = renderLoginPage()
 
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
       await user.click(submitButton)
 
       expect(mockSignIn).not.toHaveBeenCalled()
@@ -297,7 +297,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -317,7 +317,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -334,7 +334,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -360,7 +360,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -381,7 +381,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -406,7 +406,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'wrongPassword123')
@@ -423,7 +423,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -443,7 +443,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'wrongPassword123')
@@ -488,7 +488,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -522,7 +522,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -577,7 +577,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -595,7 +595,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')
@@ -613,7 +613,7 @@ describe.skip('LoginPage', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter your email')
       const passwordInput = screen.getByPlaceholderText('Enter your password')
-      const submitButton = screen.getByRole('button', { name: /sign in/i })
+      const submitButton = screen.getByRole('button', { name: /^sign in$/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'validPassword123')

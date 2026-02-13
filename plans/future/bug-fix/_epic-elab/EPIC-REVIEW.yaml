@@ -1,0 +1,96 @@
+schema: 3
+feature_dir: "/Users/michaelmenard/Development/monorepo/plans/future/bug-fix"
+prefix: "BUGF"
+reviewed: 2026-02-11T09:46:00Z
+focus: mvp-critical
+
+verdict: CONCERNS
+summary: "MVP readiness requires fixing 9 critical blockers in API implementation, test strategy, and security hardening before core user journeys can launch."
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+  product:
+    verdict: READY
+    mvp_critical_count: 0
+  qa:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+  ux:
+    verdict: READY
+    mvp_critical_count: 0
+  platform:
+    verdict: READY
+    mvp_critical_count: 0
+  security:
+    verdict: CONCERNS
+    mvp_critical_count: 3
+
+mvp_blockers:
+  - id: ENG-001
+    source: engineering
+    issue: "Presigned URL API not implemented - blocks file upload in instructions-gallery and main-app upload flows"
+    stories: [BUGF-001, BUGF-004]
+    action: "Coordinate with backend to implement presigned URL endpoint and integrate session refresh mechanism"
+  - id: ENG-002
+    source: engineering
+    issue: "RTK Query mutation for instruction save not implemented - edit pages have TODO stubs preventing save operations"
+    stories: [BUGF-002]
+    action: "Implement RTK Query mutation for instruction metadata updates (title, slug, tags)"
+  - id: ENG-003
+    source: engineering
+    issue: "Sets gallery delete/edit API stubs not implemented - users cannot delete or edit sets through UI"
+    stories: [BUGF-003]
+    action: "Implement useDeleteSetMutation and edit-set-page route with backend API integration"
+  - id: QA-001
+    source: qa
+    issue: "BUGF-001/002/003 lack defined test strategies for API integration - unit tests alone insufficient for file upload and mutation flows"
+    stories: [BUGF-001, BUGF-002, BUGF-003]
+    action: "Define unit + integration + Playwright E2E test plans for each story before implementation starts"
+  - id: QA-002
+    source: qa
+    issue: "BUGF-008/009/010 require E2E test infrastructure - password reset and auth flows need Playwright specifications"
+    stories: [BUGF-008, BUGF-009, BUGF-010]
+    action: "Create Playwright feature files and step definitions for password reset and auth flows"
+  - id: QA-003
+    source: qa
+    issue: "Test coverage stories (BUGF-012/013/014/015) lack acceptance criteria - unclear how to verify 45% coverage threshold"
+    stories: [BUGF-012, BUGF-013, BUGF-014, BUGF-015]
+    action: "Define test coverage acceptance criteria for each component and app before starting"
+  - id: SEC-001
+    source: security
+    issue: "Presigned URL generation needs S3 bucket scope enforcement - unbounded presigned URLs pose data exposure risk"
+    stories: [BUGF-001]
+    action: "Implement strict bucket path restrictions in Lambda IAM role and validate scope in presigned URL generation"
+  - id: SEC-002
+    source: security
+    issue: "Auth hook consolidation (BUGF-005) must not consolidate auth state unsafely - production implementation needs careful session/token handling"
+    stories: [BUGF-005]
+    action: "Define auth hook contract with clear session/token validation and security review before consolidation"
+  - id: SEC-003
+    source: security
+    issue: "Password reset rate limiting incomplete - resend button can be spammed bypassing security controls"
+    stories: [BUGF-008, BUGF-019]
+    action: "Implement server-side rate limiting on password reset code generation with frontend feedback"
+
+missing_mvp_stories:
+  - title: "Lambda execution role policy documentation for S3 presigned URLs"
+    source: security
+    reason: "BUGF-001 needs clear IAM policy enforcement to prevent overly-permissive S3 access"
+  - title: "Auth token refresh security review"
+    source: security
+    reason: "BUGF-005 auth hook consolidation needs security architecture review before implementation"
+  - title: "Rate limiting implementation guide for password reset"
+    source: security
+    reason: "BUGF-008 needs backend rate limit enforcement specification and validation"
+  - title: "Test infrastructure setup for MSW mocking of presigned URL responses"
+    source: qa
+    reason: "Cannot test upload flow without mock S3 endpoint responses in unit tests"
+  - title: "Playwright page objects for file upload flows"
+    source: qa
+    reason: "E2E tests need reusable selectors and actions for upload components"
+
+metrics:
+  mvp_blockers: 9
+  missing_mvp_stories: 5

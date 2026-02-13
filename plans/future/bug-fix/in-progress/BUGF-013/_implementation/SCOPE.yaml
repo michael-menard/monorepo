@@ -1,0 +1,51 @@
+schema: 1
+story_id: "BUGF-013"
+story_type: test
+feature_area: app-instructions-gallery
+
+app_path: "apps/web/app-instructions-gallery"
+
+source_files:
+  - "src/components/Uploader/SessionProvider/index.tsx"
+  - "src/components/Uploader/UploaderFileItem/index.tsx"
+  - "src/components/Uploader/UploaderList/index.tsx"
+  - "src/components/Uploader/ConflictModal/index.tsx"
+  - "src/components/Uploader/RateLimitBanner/index.tsx"
+  - "src/components/Uploader/SessionExpiredBanner/index.tsx"
+  - "src/pages/upload-page.tsx"
+  - "src/components/MocEdit/EditForm.tsx"
+  - "src/components/MocEdit/SlugField.tsx"
+  - "src/components/MocEdit/TagInput.tsx"
+
+test_files_to_create:
+  - "src/components/Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+  - "src/components/Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+  - "src/components/Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+  - "src/components/Uploader/ConflictModal/__tests__/ConflictModal.test.tsx"
+  - "src/components/Uploader/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+  - "src/components/Uploader/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+  - "src/pages/__tests__/upload-page.test.tsx"
+  - "src/components/MocEdit/__tests__/SlugField.test.tsx"
+  - "src/components/MocEdit/__tests__/TagInput.test.tsx"
+
+existing_test_files:
+  - "src/components/MocEdit/__tests__/EditForm.test.tsx"
+
+protected_files:
+  - "packages/core/upload/**/*"  # Do NOT modify @repo/upload tests
+
+dependencies:
+  - "@repo/upload"
+  - "@repo/api-client"
+  - "@repo/logger"
+  - "msw"
+  - "vitest"
+  - "@testing-library/react"
+
+coverage_target:
+  global: 45
+  upload_components: 70
+  error_handling: 80
+  form_components: 60
+
+e2e_required: false  # Test story, E2E split to BUGF-051

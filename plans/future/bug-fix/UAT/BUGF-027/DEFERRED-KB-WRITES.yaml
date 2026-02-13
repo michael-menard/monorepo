@@ -1,0 +1,174 @@
+---
+generated_at: "2026-02-11T17:56:36Z"
+updated_at: "2026-02-11T18:15:00Z"
+story_id: BUGF-027
+reason: KB tools not available during story generation and autonomous decision phase
+status: pending
+total_deferred_entries: 13
+---
+
+# Deferred KB Writes for BUGF-027
+
+## Stories Table Insert
+
+```sql
+INSERT INTO stories (
+  story_id,
+  feature,
+  title,
+  story_dir,
+  story_file,
+  story_type,
+  points,
+  priority,
+  state,
+  touches_backend,
+  touches_frontend,
+  touches_database,
+  touches_infra
+) VALUES (
+  'BUGF-027',
+  'bug-fix',
+  'Rate Limiting Implementation Guide for Password Reset',
+  'plans/future/bug-fix/elaboration/BUGF-027',
+  'plans/future/bug-fix/elaboration/BUGF-027/BUGF-027.md',
+  'documentation',
+  1,
+  'medium',
+  'elaboration',
+  false,
+  false,
+  false,
+  false
+)
+ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_dir = EXCLUDED.story_dir,
+  story_file = EXCLUDED.story_file,
+  story_type = EXCLUDED.story_type,
+  points = EXCLUDED.points,
+  priority = EXCLUDED.priority,
+  state = EXCLUDED.state,
+  touches_backend = EXCLUDED.touches_backend,
+  touches_frontend = EXCLUDED.touches_frontend,
+  touches_database = EXCLUDED.touches_database,
+  touches_infra = EXCLUDED.touches_infra,
+  updated_at = NOW();
+```
+
+## Metadata
+
+- **Epic**: bug-fix
+- **Phase**: 3 (Test Coverage & Quality)
+- **Surfaces**: documentation, auth
+- **Depends On**: None
+- **Relates To**: BUGF-019, BUGF-026
+- **Experiment Variant**: control
+
+## Notes
+
+This story is a documentation deliverable creating an implementation guide at `docs/guides/password-reset-rate-limiting.md`. It does not touch backend, frontend code, database, or infrastructure. The guide informs BUGF-019 frontend implementation and supports BUGF-026 security review.
+
+Retry this KB write during next KB sync operation or via manual retry command.
+
+---
+
+## Future Opportunities KB Entries (from Autonomous Decision Phase)
+
+### Non-Blocking Gaps (4 entries)
+
+#### Gap 1: Auth Operations Rate Limiting Documentation
+- **Finding**: No backend rate limiting documentation for other auth operations
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Extend guide to cover sign-in, sign-up, and MFA rate limiting patterns when those flows require UX improvements
+- **Tags**: non-blocking, documentation, auth, future-work
+- **Context**: Password reset rate limiting guide (BUGF-027) focuses solely on forgotPassword/confirmResetPassword. Other auth operations need similar documentation.
+
+#### Gap 2: Monitoring/Alerting for Rate Limit Abuse
+- **Finding**: No monitoring/alerting guidance for rate limit abuse patterns
+- **Impact**: Low | **Effort**: Medium
+- **Recommendation**: Add section on CloudWatch metrics for tracking Cognito LimitExceededException frequency and patterns
+- **Tags**: non-blocking, observability, monitoring, security
+- **Context**: Password reset rate limiting guide should include observability patterns for detecting abuse, but this is not MVP-critical for BUGF-019.
+
+#### Gap 3: sessionStorage Fallback Behavior
+- **Finding**: No fallback behavior documented for sessionStorage failure
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Add guidance for handling sessionStorage quota exceeded or disabled scenarios
+- **Tags**: non-blocking, edge-case, browser-compatibility, resilience
+- **Context**: Rate limit state tracking uses sessionStorage. Guide should document graceful degradation when storage unavailable.
+
+#### Gap 4: Resend Code Rate Limiting Documentation
+- **Finding**: No guidance on rate limiting for "Resend code" functionality beyond password reset
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Document pattern for email verification code resend rate limiting (similar to ResendCodeButton)
+- **Tags**: non-blocking, documentation, auth, pattern-reuse
+- **Context**: ResendCodeButton already implements exponential backoff. Pattern should be documented for reuse in other verification flows.
+
+### Enhancement Opportunities (8 entries)
+
+#### Enhancement 1: Interactive Code Examples
+- **Finding**: Interactive code examples could be runnable
+- **Impact**: Medium | **Effort**: Medium
+- **Recommendation**: Consider creating a StackBlitz or CodeSandbox demo with working rate limit countdown timer
+- **Tags**: ux-polish, documentation, developer-experience, enhancement
+- **Context**: Documentation guide would benefit from interactive demos for developers to experiment with rate limiting patterns.
+
+#### Enhancement 2: Cooldown Algorithm Diagram
+- **Finding**: Diagram visual for cooldown calculation algorithm
+- **Impact**: Medium | **Effort**: Low
+- **Recommendation**: Add mermaid or ASCII diagram showing exponential backoff progression (60s → 120s → 240s → 480s → 600s)
+- **Tags**: documentation, visual-polish, enhancement
+- **Context**: Visual representation of exponential backoff helps developers understand cooldown calculation at a glance.
+
+#### Enhancement 3: Rate Limiting Comparison Table
+- **Finding**: Comparison table: Cognito vs backend rate limiting
+- **Impact**: Medium | **Effort**: Low
+- **Recommendation**: Add side-by-side table comparing Cognito-managed (forgotPassword) vs backend middleware (API endpoints) rate limiting
+- **Tags**: documentation, architecture, enhancement
+- **Context**: Clarifies architectural boundaries between Cognito-managed and backend-managed rate limiting for developers.
+
+#### Enhancement 4: Progressive Enhancement for Countdown
+- **Finding**: Progressive enhancement for countdown timer
+- **Impact**: Low | **Effort**: Medium
+- **Recommendation**: Document how to enhance countdown with client-side prediction when Cognito doesn't provide Retry-After header
+- **Tags**: enhancement, ux-polish, performance
+- **Context**: Advanced pattern for improving UX when service doesn't provide explicit retry timing.
+
+#### Enhancement 5: Internationalization for Countdown Messages
+- **Finding**: Internationalization considerations for countdown messages
+- **Impact**: Low | **Effort**: Medium
+- **Recommendation**: Add guidance on i18n-friendly countdown message formats and pluralization
+- **Tags**: enhancement, i18n, accessibility
+- **Context**: Countdown timer messages need i18n support for multi-language deployments. Document best practices.
+
+#### Enhancement 6: Dark Mode for RateLimitBanner
+- **Finding**: Dark mode considerations for RateLimitBanner styling
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Document Tailwind dark mode classes for RateLimitBanner when moved to app-component-library
+- **Tags**: enhancement, visual-polish, dark-mode
+- **Context**: RateLimitBanner should support dark mode when reused across application. Document Tailwind patterns.
+
+#### Enhancement 7: Animation Guidance for prefers-reduced-motion
+- **Finding**: Animation guidance for prefers-reduced-motion
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Expand on accessibility section with specific Framer Motion configuration examples
+- **Tags**: enhancement, accessibility, animation
+- **Context**: prefers-reduced-motion mentioned in AC-3 but could be expanded with concrete Framer Motion examples for countdown timer animations.
+
+#### Enhancement 8: Rate Limit Banner Placement Patterns
+- **Finding**: Rate limit banner placement patterns
+- **Impact**: Medium | **Effort**: Low
+- **Recommendation**: Document where RateLimitBanner should be positioned (above form vs below vs modal) for different use cases
+- **Tags**: enhancement, ux-polish, pattern-guidance
+- **Context**: Consistent placement patterns improve UX across application. Guide should recommend best practices for different contexts.
+
+---
+
+## Processing Notes
+
+- kb-writer tool not available during story generation and autonomous decision phase
+- All 12 findings categorized as non-blocking (4 gaps + 8 enhancements)
+- No MVP-critical gaps found - story can proceed to ready-to-work
+- Process these KB entries via batch job or manual kb-writer invocation
+- Story ready for completion phase without AC additions

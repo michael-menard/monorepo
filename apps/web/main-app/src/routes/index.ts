@@ -13,7 +13,7 @@ import { LoadingPage } from './pages/LoadingPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
-import { RouteGuards } from '@/lib/route-guards'
+import { RouteGuards } from '@repo/auth-utils/guards'
 import type { AuthState } from '@/store/slices/authSlice'
 
 // Route context type

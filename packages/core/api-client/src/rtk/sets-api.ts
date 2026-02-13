@@ -17,6 +17,7 @@ import {
   type SetImage,
   type SetListQuery,
   type CreateSetInput,
+  type UpdateSetInput,
 } from '../schemas/sets'
 import { createServerlessBaseQuery, getServerlessCacheConfig } from './base-query'
 
@@ -179,6 +180,61 @@ export const setsApi = createApi({
         { type: 'SetList' as const, id: 'LIST' },
       ],
     }),
+
+    /**
+     * DELETE /api/sets/:id
+     *
+     * Deletes a set from the user's collection.
+     * Uses optimistic update to remove from list cache immediately.
+     */
+    deleteSet: builder.mutation<void, { id: string; title?: string }>({
+      query: ({ id }) => ({
+        url: `/sets/${id}`,
+        method: 'DELETE',
+      }),
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        // Optimistically remove from getSetById cache
+        const patchResult = dispatch(
+          setsApi.util.updateQueryData('getSetById', id, () => {
+            // Invalidate the individual set cache entry
+            return undefined as unknown as Set
+          }),
+        )
+
+        try {
+          await queryFulfilled
+        } catch {
+          // Roll back optimistic update on failure
+          patchResult.undo()
+        }
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Set' as const, id },
+        { type: 'SetList' as const, id: 'LIST' },
+      ],
+    }),
+
+    /**
+     * PATCH /api/sets/:id
+     *
+     * Updates an existing set with partial data.
+     * Backend uses PATCH (not PUT) per ADR-001.
+     */
+    updateSet: builder.mutation<Set, { id: string; data: UpdateSetInput }>({
+      query: ({ id, data }) => ({
+        url: `/sets/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      transformResponse: (response: unknown) => SetSchema.parse(response),
+      invalidatesTags: (result, _error, { id }) =>
+        result
+          ? [
+              { type: 'Set' as const, id },
+              { type: 'SetList' as const, id: 'LIST' },
+            ]
+          : [{ type: 'SetList' as const, id: 'LIST' }],
+    }),
   }),
 })
 
@@ -191,4 +247,6 @@ export const {
   usePresignSetImageMutation,
   useRegisterSetImageMutation,
   useDeleteSetImageMutation,
+  useDeleteSetMutation,
+  useUpdateSetMutation,
 } = setsApi

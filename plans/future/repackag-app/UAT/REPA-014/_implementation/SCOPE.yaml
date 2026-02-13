@@ -1,0 +1,61 @@
+schema: 1
+story_id: "REPA-014"
+title: "Create @repo/hooks Package for Common React Hooks"
+feature_dir: "plans/future/repackag-app"
+story_type: tech_debt
+points: 5
+
+scope:
+  new_packages:
+    - packages/core/hooks/
+  modified_apps:
+    - apps/web/app-instructions-gallery
+    - apps/web/app-wishlist-gallery
+    - apps/web/main-app
+    - apps/web/app-inspiration-gallery
+  hooks_to_migrate:
+    - useLocalStorage
+    - useUnsavedChangesPrompt
+    - useDelayedShow
+    - useMultiSelect
+  consumer_files: 8
+  test_files_to_migrate: 3
+  files_to_delete: 6
+
+acceptance_criteria:
+  - id: AC-1
+    description: "Create @repo/hooks package structure"
+  - id: AC-2
+    description: "Package builds successfully"
+  - id: AC-3
+    description: "Package.json exports configured correctly"
+  - id: AC-4
+    description: "Migrate useLocalStorage"
+  - id: AC-5
+    description: "Migrate useUnsavedChangesPrompt"
+  - id: AC-6
+    description: "Migrate useDelayedShow"
+  - id: AC-7
+    description: "Migrate useMultiSelect"
+  - id: AC-8
+    description: "All hooks use named exports"
+  - id: AC-9
+    description: "Migrate useLocalStorage tests"
+  - id: AC-10
+    description: "Migrate useDelayedShow tests"
+  - id: AC-11
+    description: "Migrate useMultiSelect tests"
+  - id: AC-12
+    description: "Update all consumer files to import from @repo/hooks"
+  - id: AC-13
+    description: "Add @repo/hooks dependency to consuming apps"
+  - id: AC-14
+    description: "Remove duplicate hook files"
+  - id: AC-15
+    description: "Build verification passes for all consuming apps"
+  - id: AC-16
+    description: "Type checking passes for all consuming apps"
+
+dependencies: []
+e2e_required: false
+e2e_exemption_reason: "Internal refactor only - no user-facing changes, no API changes, no UI changes"

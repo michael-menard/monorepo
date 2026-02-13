@@ -58,6 +58,13 @@ export const SERVERLESS_ENDPOINTS = {
     UPLOAD: '/instructions/mocs/upload',
   },
 
+  // Upload API endpoints
+  // Story BUGF-032: Frontend Integration for Presigned URL Upload
+  // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
+  UPLOADS: {
+    GENERATE_PRESIGNED_URL: '/uploads/presigned-url',
+  },
+
   // User/Profile endpoints
   // Paths are relative to baseUrl ('/api'), proxy strips '/api' prefix
   USER: {
@@ -101,6 +108,7 @@ export const ENDPOINT_CATEGORIES = {
   GALLERY: 'gallery',
   WISHLIST: 'wishlist',
   MOC: 'moc',
+  UPLOADS: 'uploads',
   USER: 'user',
   HEALTH: 'health',
 } as const
@@ -118,6 +126,8 @@ export function getEndpointsForCategory(category: EndpointCategory): Record<stri
       return SERVERLESS_ENDPOINTS.WISHLIST
     case ENDPOINT_CATEGORIES.MOC:
       return SERVERLESS_ENDPOINTS.MOC
+    case ENDPOINT_CATEGORIES.UPLOADS:
+      return SERVERLESS_ENDPOINTS.UPLOADS
     case ENDPOINT_CATEGORIES.USER:
       return SERVERLESS_ENDPOINTS.USER
     case ENDPOINT_CATEGORIES.HEALTH:

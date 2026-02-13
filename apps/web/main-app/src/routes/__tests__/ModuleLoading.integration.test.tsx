@@ -45,7 +45,7 @@ vi.mock('lucide-react', () => ({
 }))
 
 describe.skip('Module Loading Integration', () => {
-  describe('Module rendering', () => {
+  describe.skip('Module rendering', () => {
     it('renders all modules without errors', async () => {
       const modules = [
         { Component: GalleryModule, name: 'Gallery' },
@@ -101,7 +101,7 @@ describe.skip('Module Loading Integration', () => {
     })
   })
 
-  describe('Module-specific content', () => {
+  describe.skip('Module-specific content', () => {
     it('Gallery module shows gallery-specific features', () => {
       render(<GalleryModule />)
 
@@ -153,7 +153,7 @@ describe.skip('Module Loading Integration', () => {
     })
   })
 
-  describe('Module accessibility', () => {
+  describe.skip('Module accessibility', () => {
     it('all modules have proper heading hierarchy', () => {
       const modules = [GalleryModule, WishlistModule, InstructionsModule, DashboardModule]
 
@@ -192,7 +192,7 @@ describe.skip('Module Loading Integration', () => {
     })
   })
 
-  describe('Module lazy loading simulation', () => {
+  describe.skip('Module lazy loading simulation', () => {
     it('modules can be dynamically imported', async () => {
       // Simulate dynamic import
       const galleryModulePromise = Promise.resolve({ GalleryModule })

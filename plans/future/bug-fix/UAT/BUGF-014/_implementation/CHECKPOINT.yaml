@@ -1,0 +1,15 @@
+schema: 1
+story_id: "BUGF-014"
+feature_dir: "plans/future/bug-fix"
+timestamp: "2026-02-11T21:15:00Z"
+
+current_phase: done
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+
+completed_at: "2026-02-11T21:15:00Z"
+e2e_gate: exempt

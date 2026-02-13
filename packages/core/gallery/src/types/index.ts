@@ -255,3 +255,15 @@ export const GallerySearchParamsSchema = z.object({
 })
 
 export type GallerySearchParams = z.infer<typeof GallerySearchParamsSchema>
+
+// =============================================================================
+// Gallery Card Position Schemas (REPA-009)
+// =============================================================================
+
+/**
+ * Schema for position options for selection checkbox and drag handle overlays
+ * @see GalleryCard component for usage
+ */
+export const OverlayPositionSchema = z.enum(['top-left', 'top-right'])
+
+export type OverlayPosition = z.infer<typeof OverlayPositionSchema>

@@ -22,7 +22,7 @@ import {
   useToast,
 } from '@repo/app-component-library'
 import { z } from 'zod'
-import { uploadToPresignedUrl } from '@repo/upload-client'
+import { uploadToPresignedUrl } from '@repo/upload'
 import { CreateSetSchema, type CreateSetInput } from '@repo/api-client/schemas/sets'
 import {
   useAddSetMutation,

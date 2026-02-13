@@ -1,0 +1,44 @@
+schema: 1
+story_id: "REPA-003"
+title: "Migrate Upload Hooks to @repo/upload"
+story_type: tech_debt
+
+surfaces:
+  frontend: true
+  backend: false
+  database: false
+  infra: false
+
+packages_touched:
+  - "@repo/upload"
+
+apps_touched:
+  - "apps/web/main-app"
+  - "apps/web/app-instructions-gallery"
+
+files_to_create:
+  - "packages/core/upload/src/hooks/useUploadManager.ts"
+  - "packages/core/upload/src/hooks/useUploaderSession.ts"
+  - "packages/core/upload/src/hooks/__tests__/useUploadManager.test.tsx"
+  - "packages/core/upload/src/hooks/__tests__/useUploaderSession.test.tsx"
+
+files_to_modify:
+  - "packages/core/upload/src/hooks/index.ts"
+  - "packages/core/upload/package.json"
+  - "apps/web/main-app/src/components/Uploader/SessionProvider/index.tsx"
+  - "apps/web/main-app/src/routes/pages/InstructionsNewPage.tsx"
+  - "apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx"
+  - "apps/web/app-instructions-gallery/src/pages/upload-page.tsx"
+  - "apps/web/app-instructions-gallery/src/hooks/useUploadManager.ts"
+
+files_to_delete:
+  - "apps/web/main-app/src/hooks/useUploadManager.ts"
+  - "apps/web/main-app/src/hooks/useUploaderSession.ts"
+  - "apps/web/app-instructions-gallery/src/hooks/useUploadManager.ts"
+  - "apps/web/app-instructions-gallery/src/hooks/useUploaderSession.ts"
+
+dependencies_verified:
+  REPA-001: completed
+  REPA-002: completed
+
+e2e_exempt: false

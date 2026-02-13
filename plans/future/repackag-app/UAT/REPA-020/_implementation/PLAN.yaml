@@ -1,0 +1,324 @@
+schema: 1
+story_id: "REPA-020"
+timestamp: "2026-02-11T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Add @repo/api-client dependency to package.json"
+    files:
+      - "packages/core/gallery/package.json"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create card-factories directory structure and base types"
+    files:
+      - "packages/core/gallery/src/card-factories/index.ts"
+      - "packages/core/gallery/src/card-factories/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Implement createInstructionCard factory function"
+    files:
+      - "packages/core/gallery/src/card-factories/create-instruction-card.tsx"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Implement createSetCard factory function"
+    files:
+      - "packages/core/gallery/src/card-factories/create-set-card.tsx"
+    dependencies: [2]
+    slice: packages
+
+  - id: 5
+    description: "Implement createWishlistCard factory function"
+    files:
+      - "packages/core/gallery/src/card-factories/create-wishlist-card.tsx"
+    dependencies: [2]
+    slice: packages
+
+  - id: 6
+    description: "Implement createInspirationCard factory function"
+    files:
+      - "packages/core/gallery/src/card-factories/create-inspiration-card.tsx"
+    dependencies: [2]
+    slice: packages
+
+  - id: 7
+    description: "Export factories from @repo/gallery package"
+    files:
+      - "packages/core/gallery/src/index.ts"
+    dependencies: [3, 4, 5, 6]
+    slice: packages
+
+  - id: 8
+    description: "Write unit tests for createInstructionCard"
+    files:
+      - "packages/core/gallery/src/card-factories/__tests__/create-instruction-card.test.tsx"
+    dependencies: [3]
+    slice: packages
+
+  - id: 9
+    description: "Write unit tests for createSetCard"
+    files:
+      - "packages/core/gallery/src/card-factories/__tests__/create-set-card.test.tsx"
+    dependencies: [4]
+    slice: packages
+
+  - id: 10
+    description: "Write unit tests for createWishlistCard"
+    files:
+      - "packages/core/gallery/src/card-factories/__tests__/create-wishlist-card.test.tsx"
+    dependencies: [5]
+    slice: packages
+
+  - id: 11
+    description: "Write unit tests for createInspirationCard"
+    files:
+      - "packages/core/gallery/src/card-factories/__tests__/create-inspiration-card.test.tsx"
+    dependencies: [6]
+    slice: packages
+
+  - id: 12
+    description: "Create Storybook stories for all factories"
+    files:
+      - "packages/core/app-component-library/src/__stories__/CardFactories.stories.tsx"
+    dependencies: [7]
+    slice: packages
+
+  - id: 13
+    description: "Add JSDoc documentation to all factory functions"
+    files:
+      - "packages/core/gallery/src/card-factories/create-instruction-card.tsx"
+      - "packages/core/gallery/src/card-factories/create-set-card.tsx"
+      - "packages/core/gallery/src/card-factories/create-wishlist-card.tsx"
+      - "packages/core/gallery/src/card-factories/create-inspiration-card.tsx"
+    dependencies: [3, 4, 5, 6]
+    slice: packages
+
+  - id: 14
+    description: "Create README.md in card-factories directory"
+    files:
+      - "packages/core/gallery/src/card-factories/README.md"
+    dependencies: [7]
+    slice: packages
+
+files_to_change:
+  - path: "packages/core/gallery/package.json"
+    action: modify
+    reason: "Add @repo/api-client dependency for domain type schemas"
+
+  - path: "packages/core/gallery/src/card-factories/index.ts"
+    action: create
+    reason: "Barrel export file for all card factory functions (required for package exports)"
+
+  - path: "packages/core/gallery/src/card-factories/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for factory options (InstructionCardOptionsSchema, SetCardOptionsSchema, etc.)"
+
+  - path: "packages/core/gallery/src/card-factories/create-instruction-card.tsx"
+    action: create
+    reason: "Factory function to map Instruction domain type to GalleryCardProps (AC-1)"
+
+  - path: "packages/core/gallery/src/card-factories/create-set-card.tsx"
+    action: create
+    reason: "Factory function to map Set domain type to GalleryCardProps (AC-2)"
+
+  - path: "packages/core/gallery/src/card-factories/create-wishlist-card.tsx"
+    action: create
+    reason: "Factory function to map WishlistItem domain type to GalleryCardProps (AC-3)"
+
+  - path: "packages/core/gallery/src/card-factories/create-inspiration-card.tsx"
+    action: create
+    reason: "Factory function to map Inspiration domain type to GalleryCardProps (AC-4)"
+
+  - path: "packages/core/gallery/src/card-factories/__tests__/create-instruction-card.test.tsx"
+    action: create
+    reason: "Unit tests for createInstructionCard factory (AC-16, AC-17, AC-18)"
+
+  - path: "packages/core/gallery/src/card-factories/__tests__/create-set-card.test.tsx"
+    action: create
+    reason: "Unit tests for createSetCard factory (AC-16, AC-17, AC-18)"
+
+  - path: "packages/core/gallery/src/card-factories/__tests__/create-wishlist-card.test.tsx"
+    action: create
+    reason: "Unit tests for createWishlistCard factory (AC-16, AC-17, AC-18)"
+
+  - path: "packages/core/gallery/src/card-factories/__tests__/create-inspiration-card.test.tsx"
+    action: create
+    reason: "Unit tests for createInspirationCard factory (AC-16, AC-17, AC-18)"
+
+  - path: "packages/core/gallery/src/index.ts"
+    action: modify
+    reason: "Export card factories and option schemas from @repo/gallery package (AC-20, AC-21)"
+
+  - path: "packages/core/app-component-library/src/__stories__/CardFactories.stories.tsx"
+    action: create
+    reason: "Storybook stories demonstrating factory usage (AC-12, AC-13)"
+
+  - path: "packages/core/gallery/src/card-factories/README.md"
+    action: create
+    reason: "Documentation explaining factory pattern, usage, and migration path (AC-15)"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --coverage --filter @repo/gallery"
+    when: "before and after implementation"
+    required: true
+    note: "Document baseline coverage before implementation (AC-23), verify 45% minimum maintained (AC-19)"
+
+  - command: "pnpm lint --filter @repo/gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: create-instruction-card.test.tsx verifies Instruction → GalleryCardProps mapping"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: create-set-card.test.tsx verifies Set → GalleryCardProps mapping"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: create-wishlist-card.test.tsx verifies WishlistItem → GalleryCardProps mapping"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: create-inspiration-card.test.tsx verifies Inspiration → GalleryCardProps mapping"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "File: __types__/index.ts contains all factory option schemas"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "TypeScript compilation verifies return types inferred from GalleryCardPropsSchema"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests verify Zod validation errors for missing required fields"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit tests verify image extraction with thumbnail fallback logic"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit tests verify metadata badge formatting (piece count, price, theme, priority)"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Unit tests verify action button composition and click handlers"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Unit tests verify accessible labels on action buttons"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "Storybook story: CardFactories.stories.tsx shows basic usage of each factory"
+    evidence_type: file
+
+  - ac_id: "AC-13"
+    planned_evidence: "Storybook story: CardFactories.stories.tsx includes side-by-side comparison"
+    evidence_type: file
+
+  - ac_id: "AC-14"
+    planned_evidence: "JSDoc comments in all factory function files with @example usage"
+    evidence_type: file
+
+  - ac_id: "AC-15"
+    planned_evidence: "README.md in card-factories directory"
+    evidence_type: file
+
+  - ac_id: "AC-16"
+    planned_evidence: "Unit tests (steps 8-11) verify correct GalleryCardProps returned for valid domain data"
+    evidence_type: test
+
+  - ac_id: "AC-17"
+    planned_evidence: "Unit tests (steps 8-11) verify metadata rendering for all domain fields"
+    evidence_type: test
+
+  - ac_id: "AC-18"
+    planned_evidence: "Unit tests (steps 8-11) verify action handlers called with correct parameters"
+    evidence_type: test
+
+  - ac_id: "AC-19"
+    planned_evidence: "Coverage report shows 45% minimum maintained for @repo/gallery"
+    evidence_type: command
+
+  - ac_id: "AC-20"
+    planned_evidence: "Modified src/index.ts (step 7) exports all factories"
+    evidence_type: file
+
+  - ac_id: "AC-21"
+    planned_evidence: "Modified src/index.ts (step 7) exports all factory option schemas"
+    evidence_type: file
+
+  - ac_id: "AC-22"
+    planned_evidence: "All factory implementations (steps 3-6) use hoverOverlay prop (not removed actions prop)"
+    evidence_type: file
+
+  - ac_id: "AC-23"
+    planned_evidence: "Coverage report captured before implementation showing baseline"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Following column-helpers.tsx pattern for factory function structure"
+  - "All factories use hoverOverlay API (REPA-009 already implemented)"
+  - "Storybook stories go in app-component-library (gallery doesn't have Storybook setup)"
+  - "No E2E tests needed - this is a pure utility function story with no UI surfaces"
+  - "Domain type schemas imported from @repo/api-client (already exist)"
+  - "Factory functions are pure - no React hooks, no side effects"
+  - "Metadata formatting must be consistent across all factories"
+  - "Action buttons use event.stopPropagation() to prevent card click"
+  - "All types defined via Zod schemas (project standard)"
+
+dependencies:
+  external_packages:
+    - "@repo/api-client" # Domain type schemas
+    - "@repo/app-component-library" # Badge, Button components
+    - "lucide-react" # Icons
+    - "zod" # Schema validation
+    - "@tanstack/react-table" # For understanding column-helpers pattern
+    - "react" # JSX and React types
+    - "vitest" # Testing framework
+    - "@testing-library/react" # React component testing
+
+  internal_packages:
+    - "@repo/gallery" # GalleryCard component and types
+
+reuse_patterns:
+  - source: "packages/core/gallery/src/utils/column-helpers.tsx"
+    pattern: "Factory function structure (accept data + options, return config object)"
+
+  - source: "packages/core/gallery/src/components/GalleryCard.tsx"
+    pattern: "hoverOverlay API for action buttons (lines 119-133)"
+
+risks:
+  - risk: "REPA-009 dependency confusion"
+    mitigation: "Factories target current GalleryCard API which already has hoverOverlay support"
+
+  - risk: "Test coverage regression"
+    mitigation: "Document baseline coverage before implementation (AC-23)"
+
+  - risk: "Inconsistent metadata formatting"
+    mitigation: "Create shared formatting utilities if needed, document patterns in README"

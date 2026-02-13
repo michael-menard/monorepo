@@ -10,7 +10,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { redirect } from '@tanstack/react-router'
+import { redirect, createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router'
+import { EmptyDashboard } from '@repo/app-component-library/feedback/empty-states'
 
 // Mock the redirect function to capture redirect params
 const mockRedirect = vi.fn((opts: any) => {
@@ -117,10 +118,14 @@ describe('Story 3.1.15: Uploader Routes & CTAs', () => {
     })
 
     it('EmptyDashboard has Add Your First MOC link to /instructions/new', async () => {
-      const { EmptyDashboard } = await import('@/components/Dashboard/EmptyDashboard')
-      render(<EmptyDashboard />)
+      const rootRoute = createRootRoute({ component: EmptyDashboard })
+      const router = createRouter({
+        routeTree: rootRoute,
+        history: createMemoryHistory({ initialEntries: ['/'] }),
+      })
+      render(<RouterProvider router={router} />)
 
-      const addMocLink = screen.getByRole('link', { name: /add your first moc/i })
+      const addMocLink = await screen.findByRole('link', { name: /add your first moc/i })
       expect(addMocLink).toHaveAttribute('href', '/instructions/new')
     })
   })

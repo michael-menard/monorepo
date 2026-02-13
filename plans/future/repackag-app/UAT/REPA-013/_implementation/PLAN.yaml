@@ -1,0 +1,234 @@
+schema: 1
+story_id: "REPA-013"
+timestamp: "2026-02-10T20:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create @repo/auth-utils package structure with all config files"
+    files:
+      - "packages/core/auth-utils/package.json"
+      - "packages/core/auth-utils/tsconfig.json"
+      - "packages/core/auth-utils/vite.config.ts"
+      - "packages/core/auth-utils/vitest.config.ts"
+      - "packages/core/auth-utils/src/index.ts"
+      - "packages/core/auth-utils/src/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Migrate JWT utilities from main-app to package with Zod conversion"
+    files:
+      - "packages/core/auth-utils/src/jwt/index.ts"
+      - "apps/web/main-app/src/lib/jwt.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Migrate route guard utilities from main-app to package with Zod conversion"
+    files:
+      - "packages/core/auth-utils/src/guards/index.ts"
+      - "apps/web/main-app/src/lib/route-guards.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 4
+    description: "Migrate JWT unit tests to new package location"
+    files:
+      - "packages/core/auth-utils/src/jwt/__tests__/index.test.ts"
+      - "apps/web/main-app/src/lib/__tests__/jwt.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 5
+    description: "Migrate route guard unit tests to new package location"
+    files:
+      - "packages/core/auth-utils/src/guards/__tests__/index.test.ts"
+      - "apps/web/main-app/src/lib/__tests__/route-guards.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 6
+    description: "Add Zod schema validation tests for JWT and guard types"
+    files:
+      - "packages/core/auth-utils/src/jwt/__tests__/index.test.ts"
+      - "packages/core/auth-utils/src/guards/__tests__/index.test.ts"
+    dependencies: [4, 5]
+    slice: packages
+
+  - id: 7
+    description: "Build package and verify exports configuration"
+    files:
+      - "packages/core/auth-utils/package.json"
+    dependencies: [2, 3]
+    slice: packages
+
+  - id: 8
+    description: "Update main-app imports to use @repo/auth-utils"
+    files:
+      - "apps/web/main-app/src/hooks/useTokenRefresh.ts"
+      - "apps/web/main-app/src/routes/index.ts"
+      - "apps/web/main-app/package.json"
+    dependencies: [7]
+    slice: frontend
+
+  - id: 9
+    description: "Delete old JWT and route guard files from main-app"
+    files:
+      - "apps/web/main-app/src/lib/jwt.ts"
+      - "apps/web/main-app/src/lib/route-guards.ts"
+      - "apps/web/main-app/src/lib/__tests__/jwt.test.ts"
+      - "apps/web/main-app/src/lib/__tests__/route-guards.test.ts"
+    dependencies: [8]
+    slice: frontend
+
+  - id: 10
+    description: "Create comprehensive README.md with usage examples"
+    files:
+      - "packages/core/auth-utils/README.md"
+    dependencies: [7]
+    slice: packages
+
+  - id: 11
+    description: "Run full test suite and verify coverage"
+    files: []
+    dependencies: [6, 8, 9]
+    slice: packages
+
+files_to_change:
+  # New package files
+  - path: "packages/core/auth-utils/package.json"
+    action: create
+    reason: "Package configuration with dependencies and subpath exports"
+  - path: "packages/core/auth-utils/tsconfig.json"
+    action: create
+    reason: "TypeScript configuration extending base config"
+  - path: "packages/core/auth-utils/vite.config.ts"
+    action: create
+    reason: "Build configuration with vite-plugin-dts for type generation"
+  - path: "packages/core/auth-utils/vitest.config.ts"
+    action: create
+    reason: "Test configuration for Vitest"
+  - path: "packages/core/auth-utils/src/index.ts"
+    action: create
+    reason: "Root barrel export for jwt and guards modules"
+  - path: "packages/core/auth-utils/src/__types__/index.ts"
+    action: create
+    reason: "Shared Zod schemas if needed"
+  - path: "packages/core/auth-utils/src/jwt/index.ts"
+    action: create
+    reason: "JWT utilities migrated from main-app with Zod schemas"
+  - path: "packages/core/auth-utils/src/guards/index.ts"
+    action: create
+    reason: "Route guard utilities migrated from main-app with Zod schemas"
+  - path: "packages/core/auth-utils/src/jwt/__tests__/index.test.ts"
+    action: create
+    reason: "JWT tests migrated from main-app (430 lines) plus Zod validation tests"
+  - path: "packages/core/auth-utils/src/guards/__tests__/index.test.ts"
+    action: create
+    reason: "Route guard tests migrated from main-app (996 lines) plus Zod validation tests"
+  - path: "packages/core/auth-utils/README.md"
+    action: create
+    reason: "Package documentation with usage examples and API reference"
+
+  # Files to update in main-app
+  - path: "apps/web/main-app/package.json"
+    action: modify
+    reason: "Add @repo/auth-utils as dependency"
+  - path: "apps/web/main-app/src/hooks/useTokenRefresh.ts"
+    action: modify
+    reason: "Update imports from lib/jwt to @repo/auth-utils/jwt"
+  - path: "apps/web/main-app/src/routes/index.ts"
+    action: modify
+    reason: "Update imports from lib/route-guards to @repo/auth-utils/guards"
+
+  # Files to delete from main-app
+  - path: "apps/web/main-app/src/lib/jwt.ts"
+    action: delete
+    reason: "Migrated to @repo/auth-utils/jwt"
+  - path: "apps/web/main-app/src/lib/route-guards.ts"
+    action: delete
+    reason: "Migrated to @repo/auth-utils/guards"
+  - path: "apps/web/main-app/src/lib/__tests__/jwt.test.ts"
+    action: delete
+    reason: "Migrated to @repo/auth-utils/src/jwt/__tests__/index.test.ts"
+  - path: "apps/web/main-app/src/lib/__tests__/route-guards.test.ts"
+    action: delete
+    reason: "Migrated to @repo/auth-utils/src/guards/__tests__/index.test.ts"
+
+commands_to_run:
+  - command: "git grep -l 'from.*lib/jwt\\|from.*lib/route-guards' apps/web/main-app/src"
+    when: "before step 8 - verify import count"
+    required: true
+  - command: "pnpm install"
+    when: "after step 1 - install dependencies"
+    required: true
+  - command: "pnpm build --filter @repo/auth-utils"
+    when: "after step 7 - build package"
+    required: true
+  - command: "pnpm test --filter @repo/auth-utils"
+    when: "after step 6 - verify package tests"
+    required: true
+  - command: "pnpm build --filter main-app"
+    when: "after step 8 - verify main-app builds with new imports"
+    required: true
+  - command: "pnpm test --filter main-app"
+    when: "after step 9 - verify main-app tests pass"
+    required: true
+  - command: "pnpm lint --filter @repo/auth-utils"
+    when: "after all code changes - verify no lint errors"
+    required: true
+  - command: "pnpm check-types --filter @repo/auth-utils"
+    when: "after all code changes - verify type safety"
+    required: true
+  - command: "pnpm check-types --filter main-app"
+    when: "after all code changes - verify main-app type safety"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Package files created: package.json, tsconfig.json, vite.config.ts, vitest.config.ts, README.md"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "JWT utilities migrated to packages/core/auth-utils/src/jwt/index.ts with Zod schemas"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "Route guard utilities migrated to packages/core/auth-utils/src/guards/index.ts with Zod schemas"
+    evidence_type: file
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests: packages/core/auth-utils/src/jwt/__tests__/index.test.ts and guards/__tests__/index.test.ts"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "Build output verification: pnpm build --filter @repo/auth-utils produces dist/ with correct exports"
+    evidence_type: command
+  - ac_id: "AC-6"
+    planned_evidence: "Import updates verified: pnpm test --filter main-app passes after import changes"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "README.md created with comprehensive documentation"
+    evidence_type: file
+  - ac_id: "AC-8"
+    planned_evidence: "Test commands: pnpm test --filter @repo/auth-utils and pnpm test --filter main-app"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Property name is checkTokenExpiry (not checkTokenExpiration) - verified at lines 20, 77, 166+ in route-guards.ts"
+  - "Using zod ^4.1.13 to match @repo/upload and standardize monorepo"
+  - "Package exports point to dist/ (built output) not src/ per @repo/upload pattern"
+  - "Import count verification step added before updating main-app (story claims 7, grep found 3-7)"
+  - "All 1,426 lines of tests must be migrated and pass"
+  - "Following REPA-001 package structure pattern"
+  - "Zod conversion uses .passthrough() for JwtPayload and .extend() for Cognito payloads"
+  - "RouteGuardOptions uses extensive .optional() for all optional fields"
+  - "No architectural decisions required - all patterns established by REPA-001 and existing code"
+
+validation:
+  all_acs_covered: true
+  paths_match_scope: true
+  no_unresolved_decisions: true
+  no_circular_dependencies: true
+  required_commands_present: true
+  warnings: []

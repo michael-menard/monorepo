@@ -1,0 +1,42 @@
+schema: 1
+story_id: REPA-002
+feature_dir: plans/future/repackag-app
+timestamp: '2026-02-10T21:20:00Z'
+
+current_phase: done
+last_successful_phase: review
+iteration: 2
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+completed_at: '2026-02-10T22:30:00Z'
+e2e_gate: exempt
+
+phase_history:
+  - phase: setup
+    status: success
+    timestamp: '2026-02-10T21:00:00Z'
+  - phase: plan
+    status: success
+    timestamp: '2026-02-10T21:30:00Z'
+  - phase: execute
+    status: success
+    timestamp: '2026-02-10T21:20:00Z'
+  - phase: proof
+    status: success
+    timestamp: '2026-02-10T21:20:00Z'
+  - phase: review
+    iteration: 1
+    status: fail
+    issues: 6
+    timestamp: '2026-02-10T22:00:00Z'
+  - phase: fix
+    iteration: 1
+    status: success
+    fixed: 6
+    timestamp: '2026-02-10T22:15:00Z'
+  - phase: review
+    iteration: 2
+    status: pass
+    timestamp: '2026-02-10T22:30:00Z'

@@ -1,0 +1,452 @@
+schema: 1
+story_id: "REPA-0510"
+timestamp: "2026-02-11T18:30:00Z"
+
+steps:
+  - id: 1
+    description: "Migrate UnsavedChangesDialog component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/UnsavedChangesDialog/index.tsx"
+      - "packages/core/upload/src/components/UnsavedChangesDialog/__tests__/UnsavedChangesDialog.test.tsx"
+      - "packages/core/upload/src/components/UnsavedChangesDialog/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Migrate SessionExpiredBanner component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/SessionExpiredBanner/index.tsx"
+      - "packages/core/upload/src/components/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+      - "packages/core/upload/src/components/SessionExpiredBanner/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 3
+    description: "Migrate UploaderList component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/UploaderList/index.tsx"
+      - "packages/core/upload/src/components/UploaderList/__tests__/UploaderList.test.tsx"
+      - "packages/core/upload/src/components/UploaderList/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 4
+    description: "Migrate RateLimitBanner component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/RateLimitBanner/index.tsx"
+      - "packages/core/upload/src/components/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+      - "packages/core/upload/src/components/RateLimitBanner/__types__/index.ts"
+    dependencies: [1, 2, 3]
+    slice: packages
+
+  - id: 5
+    description: "Migrate ConflictModal component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/ConflictModal/index.tsx"
+      - "packages/core/upload/src/components/ConflictModal/__tests__/ConflictModal.test.tsx"
+      - "packages/core/upload/src/components/ConflictModal/__types__/index.ts"
+    dependencies: [1, 2, 3]
+    slice: packages
+
+  - id: 6
+    description: "Migrate UploaderFileItem component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/UploaderFileItem/index.tsx"
+      - "packages/core/upload/src/components/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+      - "packages/core/upload/src/components/UploaderFileItem/__types__/index.ts"
+    dependencies: [1, 2, 3]
+    slice: packages
+
+  - id: 7
+    description: "Migrate ThumbnailUpload component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/ThumbnailUpload/index.tsx"
+      - "packages/core/upload/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+      - "packages/core/upload/src/components/ThumbnailUpload/__types__/index.ts"
+      - "packages/core/upload/src/components/ThumbnailUpload/utils/index.ts"
+    dependencies: [4, 5, 6]
+    slice: packages
+
+  - id: 8
+    description: "Migrate InstructionsUpload component to @repo/upload"
+    files:
+      - "packages/core/upload/src/components/InstructionsUpload/index.tsx"
+      - "packages/core/upload/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+      - "packages/core/upload/src/components/InstructionsUpload/__types__/index.ts"
+      - "packages/core/upload/src/components/InstructionsUpload/utils/index.ts"
+    dependencies: [4, 5, 6]
+    slice: packages
+
+  - id: 9
+    description: "Update @repo/upload/components/index.ts with explicit exports"
+    files:
+      - "packages/core/upload/src/components/index.ts"
+    dependencies: [1, 2, 3, 4, 5, 6, 7, 8]
+    slice: packages
+
+  - id: 10
+    description: "Run package-level tests to verify 80%+ coverage"
+    files: []
+    dependencies: [9]
+    slice: packages
+
+  - id: 11
+    description: "Update main-app imports from @/components/Uploader to @repo/upload/components"
+    files:
+      - "apps/web/main-app/src/**/*.tsx"
+      - "apps/web/main-app/src/**/*.ts"
+    dependencies: [10]
+    slice: frontend
+
+  - id: 12
+    description: "Update app-instructions-gallery imports to @repo/upload/components"
+    files:
+      - "apps/web/app-instructions-gallery/src/**/*.tsx"
+      - "apps/web/app-instructions-gallery/src/**/*.ts"
+    dependencies: [10]
+    slice: frontend
+
+  - id: 13
+    description: "Delete old Uploader component directories from main-app (except SessionProvider)"
+    files:
+      - "apps/web/main-app/src/components/Uploader/ConflictModal/"
+      - "apps/web/main-app/src/components/Uploader/RateLimitBanner/"
+      - "apps/web/main-app/src/components/Uploader/SessionExpiredBanner/"
+      - "apps/web/main-app/src/components/Uploader/UnsavedChangesDialog/"
+      - "apps/web/main-app/src/components/Uploader/UploaderFileItem/"
+      - "apps/web/main-app/src/components/Uploader/UploaderList/"
+    dependencies: [11]
+    slice: frontend
+
+  - id: 14
+    description: "Delete old component directories from app-instructions-gallery (except SessionProvider)"
+    files:
+      - "apps/web/app-instructions-gallery/src/components/Uploader/ConflictModal/"
+      - "apps/web/app-instructions-gallery/src/components/Uploader/RateLimitBanner/"
+      - "apps/web/app-instructions-gallery/src/components/Uploader/SessionExpiredBanner/"
+      - "apps/web/app-instructions-gallery/src/components/Uploader/UnsavedChangesDialog/"
+      - "apps/web/app-instructions-gallery/src/components/Uploader/UploaderFileItem/"
+      - "apps/web/app-instructions-gallery/src/components/Uploader/UploaderList/"
+      - "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/"
+      - "apps/web/app-instructions-gallery/src/components/InstructionsUpload/"
+    dependencies: [12]
+    slice: frontend
+
+  - id: 15
+    description: "Run main-app tests to verify no regressions"
+    files: []
+    dependencies: [13]
+    slice: frontend
+
+  - id: 16
+    description: "Run app-instructions-gallery tests to verify no regressions"
+    files: []
+    dependencies: [14]
+    slice: frontend
+
+  - id: 17
+    description: "Run Playwright E2E tests for upload flows (live API mode)"
+    files: []
+    dependencies: [15, 16]
+    slice: frontend
+
+  - id: 18
+    description: "Add FileValidationResult duplication note to @repo/upload README"
+    files:
+      - "packages/core/upload/README.md"
+    dependencies: [9]
+    slice: packages
+
+files_to_change:
+  # Phase 1 - Simple Components (Package creation)
+  - path: "packages/core/upload/src/components/UnsavedChangesDialog/index.tsx"
+    action: create
+    reason: "AC-4: Migrate UnsavedChangesDialog from apps to package"
+
+  - path: "packages/core/upload/src/components/UnsavedChangesDialog/__tests__/UnsavedChangesDialog.test.tsx"
+    action: create
+    reason: "AC-4: Migrate existing tests to package"
+
+  - path: "packages/core/upload/src/components/UnsavedChangesDialog/__types__/index.ts"
+    action: create
+    reason: "AC-4: Zod schemas for component props"
+
+  - path: "packages/core/upload/src/components/SessionExpiredBanner/index.tsx"
+    action: create
+    reason: "AC-3: Migrate SessionExpiredBanner from apps to package"
+
+  - path: "packages/core/upload/src/components/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+    action: create
+    reason: "AC-3: Create tests for SessionExpiredBanner"
+
+  - path: "packages/core/upload/src/components/SessionExpiredBanner/__types__/index.ts"
+    action: create
+    reason: "AC-3: Zod schemas for component props"
+
+  - path: "packages/core/upload/src/components/UploaderList/index.tsx"
+    action: create
+    reason: "AC-6: Migrate UploaderList from apps to package"
+
+  - path: "packages/core/upload/src/components/UploaderList/__tests__/UploaderList.test.tsx"
+    action: create
+    reason: "AC-6: Create tests for UploaderList"
+
+  - path: "packages/core/upload/src/components/UploaderList/__types__/index.ts"
+    action: create
+    reason: "AC-6: Zod schemas for component props"
+
+  # Phase 2 - Medium Complexity Components
+  - path: "packages/core/upload/src/components/RateLimitBanner/index.tsx"
+    action: create
+    reason: "AC-2: Migrate RateLimitBanner from apps to package"
+
+  - path: "packages/core/upload/src/components/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+    action: create
+    reason: "AC-2: Add countdown behavior tests"
+
+  - path: "packages/core/upload/src/components/RateLimitBanner/__types__/index.ts"
+    action: create
+    reason: "AC-2: Zod schemas for component props"
+
+  - path: "packages/core/upload/src/components/ConflictModal/index.tsx"
+    action: create
+    reason: "AC-1: Migrate ConflictModal from apps to package"
+
+  - path: "packages/core/upload/src/components/ConflictModal/__tests__/ConflictModal.test.tsx"
+    action: create
+    reason: "AC-1: Migrate existing tests to package"
+
+  - path: "packages/core/upload/src/components/ConflictModal/__types__/index.ts"
+    action: create
+    reason: "AC-1: Zod schemas for component props"
+
+  - path: "packages/core/upload/src/components/UploaderFileItem/index.tsx"
+    action: create
+    reason: "AC-5: Migrate UploaderFileItem from apps to package"
+
+  - path: "packages/core/upload/src/components/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+    action: create
+    reason: "AC-5: Create tests for UploaderFileItem"
+
+  - path: "packages/core/upload/src/components/UploaderFileItem/__types__/index.ts"
+    action: create
+    reason: "AC-5: Zod schemas for component props"
+
+  # Phase 3 - Domain-Specific Components
+  - path: "packages/core/upload/src/components/ThumbnailUpload/index.tsx"
+    action: create
+    reason: "AC-8: Migrate ThumbnailUpload from app-instructions-gallery"
+
+  - path: "packages/core/upload/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+    action: create
+    reason: "AC-8: Migrate existing tests from app-instructions-gallery"
+
+  - path: "packages/core/upload/src/components/ThumbnailUpload/__types__/index.ts"
+    action: create
+    reason: "AC-8: Move schemas to component directory"
+
+  - path: "packages/core/upload/src/components/ThumbnailUpload/utils/index.ts"
+    action: create
+    reason: "AC-8: Component-specific utilities for validation and preview"
+
+  - path: "packages/core/upload/src/components/InstructionsUpload/index.tsx"
+    action: create
+    reason: "AC-9: Migrate InstructionsUpload from app-instructions-gallery"
+
+  - path: "packages/core/upload/src/components/InstructionsUpload/__tests__/InstructionsUpload.test.tsx"
+    action: create
+    reason: "AC-9: Migrate existing tests from app-instructions-gallery"
+
+  - path: "packages/core/upload/src/components/InstructionsUpload/__types__/index.ts"
+    action: create
+    reason: "AC-9: Move schemas to component directory"
+
+  - path: "packages/core/upload/src/components/InstructionsUpload/utils/index.ts"
+    action: create
+    reason: "AC-9: Component-specific utilities for queue management"
+
+  # Package Exports
+  - path: "packages/core/upload/src/components/index.ts"
+    action: modify
+    reason: "AC-11: Add explicit exports for all 8 components"
+
+  - path: "packages/core/upload/README.md"
+    action: modify
+    reason: "AC-10: Document FileValidationResult duplication (defer to REPA-017)"
+
+  # App Migration - main-app
+  - path: "apps/web/main-app/src/components/Uploader/ConflictModal/"
+    action: delete
+    reason: "AC-12: Delete after migration verified"
+
+  - path: "apps/web/main-app/src/components/Uploader/RateLimitBanner/"
+    action: delete
+    reason: "AC-12: Delete after migration verified"
+
+  - path: "apps/web/main-app/src/components/Uploader/SessionExpiredBanner/"
+    action: delete
+    reason: "AC-12: Delete after migration verified"
+
+  - path: "apps/web/main-app/src/components/Uploader/UnsavedChangesDialog/"
+    action: delete
+    reason: "AC-12: Delete after migration verified"
+
+  - path: "apps/web/main-app/src/components/Uploader/UploaderFileItem/"
+    action: delete
+    reason: "AC-12: Delete after migration verified"
+
+  - path: "apps/web/main-app/src/components/Uploader/UploaderList/"
+    action: delete
+    reason: "AC-12: Delete after migration verified"
+
+  # App Migration - app-instructions-gallery
+  - path: "apps/web/app-instructions-gallery/src/components/Uploader/ConflictModal/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/Uploader/RateLimitBanner/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionExpiredBanner/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/Uploader/UnsavedChangesDialog/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderFileItem/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderList/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+  - path: "apps/web/app-instructions-gallery/src/components/InstructionsUpload/"
+    action: delete
+    reason: "AC-13: Delete after migration verified"
+
+commands_to_run:
+  - command: "pnpm build --filter=@repo/upload"
+    when: "after component migration (step 9)"
+    required: true
+
+  - command: "pnpm test --filter=@repo/upload --coverage"
+    when: "after component migration (step 10)"
+    required: true
+
+  - command: "pnpm check-types --filter=@repo/upload"
+    when: "after component migration (step 10)"
+    required: true
+
+  - command: "pnpm test --filter=main-app"
+    when: "after main-app import updates (step 15)"
+    required: true
+
+  - command: "pnpm test --filter=app-instructions-gallery"
+    when: "after app-instructions-gallery import updates (step 16)"
+    required: true
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types:all"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint:all"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test:all"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter=playwright test upload-flow --config=playwright.legacy.config.ts"
+    when: "after app tests pass (step 17)"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Component test: ConflictModal.test.tsx in @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Component test: RateLimitBanner.test.tsx with countdown tests"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Component test: SessionExpiredBanner.test.tsx in @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Component test: UnsavedChangesDialog.test.tsx migrated to @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Component test: UploaderFileItem.test.tsx in @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Component test: UploaderList.test.tsx in @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Component test: ThumbnailUpload.test.tsx migrated to @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Component test: InstructionsUpload.test.tsx migrated to @repo/upload"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Documentation: @repo/upload/README.md with FileValidationResult note"
+    evidence_type: file
+
+  - ac_id: "AC-11"
+    planned_evidence: "File: packages/core/upload/src/components/index.ts with explicit exports"
+    evidence_type: file
+
+  - ac_id: "AC-12"
+    planned_evidence: "Command: pnpm check-types --filter=main-app verifies no old imports"
+    evidence_type: command
+
+  - ac_id: "AC-13"
+    planned_evidence: "Command: pnpm check-types --filter=app-instructions-gallery verifies no old imports"
+    evidence_type: command
+
+  - ac_id: "AC-14"
+    planned_evidence: "Test coverage report: pnpm test --filter=@repo/upload --coverage shows 80%+"
+    evidence_type: test
+
+  - ac_id: "AC-15"
+    planned_evidence: "Package build/test commands: pnpm build/test/check-types --filter=@repo/upload"
+    evidence_type: command
+
+  - ac_id: "AC-16"
+    planned_evidence: "Playwright E2E tests: upload flows, rate limit, conflict handling (live API mode)"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Component divergence verification COMPLETED: 0% divergence, canonical source = main-app"
+  - "All components are byte-for-byte identical across apps (6 Uploader sub-components)"
+  - "ThumbnailUpload and InstructionsUpload exist only in app-instructions-gallery"
+  - "SessionProvider migration deferred to REPA-0520 (REPA-003 dependency)"
+  - "FileValidationResult schema duplication documented in AC-10, deferred to REPA-017"
+  - "Package boundary enforcement: No imports from apps/*, Redux, or app-specific code"
+  - "E2E tests MUST use live API mode (no MSW) per ADR-006"
+  - "Test coverage target: 80%+ at package level, 75%+ per component minimum"
+  - "Component migration order: Phase 1 (simple), Phase 2 (medium), Phase 3 (domain-specific)"
+  - "Per REPA-002 pattern: Explicit exports, no barrel files, maintain test coverage"
+  - "Import path updates estimated ~20-30 files per app from parent story analysis"

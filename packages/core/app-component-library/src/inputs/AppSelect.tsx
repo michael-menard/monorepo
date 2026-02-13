@@ -29,6 +29,8 @@ export interface AppSelectProps extends Omit<SelectProps, 'onValueChange'> {
   onSanitizationWarning?: (warnings: string[]) => void
   /** Original onValueChange handler that receives sanitized value */
   onValueChange?: (value: string) => void
+  /** Accessible label for the select (A11Y) */
+  'aria-label'?: string
 }
 
 /**
@@ -51,6 +53,7 @@ export interface AppSelectProps extends Omit<SelectProps, 'onValueChange'> {
  *   ]}
  *   placeholder="Select an option"
  *   onValueChange={(value) => setSelected(value)}
+ *   aria-label="Select an option"
  * />
  *
  * // With custom sanitization
@@ -70,6 +73,7 @@ export const AppSelect = React.forwardRef<React.ElementRef<typeof SelectTrigger>
       showSanitizationWarnings = false,
       onSanitizationWarning,
       onValueChange,
+      'aria-label': ariaLabel,
       ...props
     },
     ref,
@@ -125,7 +129,7 @@ export const AppSelect = React.forwardRef<React.ElementRef<typeof SelectTrigger>
 
     return (
       <Select {...props} onValueChange={handleValueChange}>
-        <SelectTrigger ref={ref}>
+        <SelectTrigger ref={ref} aria-label={ariaLabel}>
           <SelectValue placeholder={sanitizedPlaceholder} />
         </SelectTrigger>
         <SelectContent>

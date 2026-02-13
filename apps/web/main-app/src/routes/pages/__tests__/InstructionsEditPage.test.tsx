@@ -50,6 +50,18 @@ vi.mock('@repo/logger', () => ({
     error: vi.fn(),
     debug: vi.fn(),
   },
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+    })),
+  })),
 }))
 
 vi.mock('@repo/app-component-library', () => ({
@@ -73,6 +85,11 @@ vi.mock('@repo/app-component-library', () => ({
     <div role="alert" data-variant={variant}>{children}</div>
   ),
   AlertDescription: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  showSuccessToast: vi.fn(),
+}))
+
+vi.mock('@repo/api-client', () => ({
+  useUpdateMocMutation: vi.fn(() => [vi.fn(() => ({ unwrap: vi.fn(() => Promise.resolve({})) }))]),
 }))
 
 import { InstructionsEditPage } from '../InstructionsEditPage'

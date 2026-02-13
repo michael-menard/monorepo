@@ -1,0 +1,48 @@
+# Deferred Knowledge Base Writes for BUGF-010
+# These writes should be retried when KB is available
+
+story_record:
+  story_id: BUGF-010
+  feature: bug-fix
+  title: "Fix Hub.listen Mocking in Auth Tests"
+  story_dir: "plans/future/bug-fix/backlog/BUGF-010"
+  story_file: "plans/future/bug-fix/backlog/BUGF-010/BUGF-010.md"
+  story_type: tech_debt
+  points: 1
+  priority: medium
+  state: backlog
+  touches_backend: false
+  touches_frontend: false
+  touches_database: false
+  touches_infra: false
+  touches_test: true
+  created_at: "2026-02-11T19:30:00Z"
+  experiment_variant: control
+
+# SQL to execute when KB available:
+# INSERT INTO stories (
+#   story_id, feature, title, story_dir, story_file, story_type,
+#   points, priority, state, touches_backend, touches_frontend,
+#   touches_database, touches_infra, touches_test, created_at, experiment_variant
+# ) VALUES (
+#   'BUGF-010', 'bug-fix', 'Fix Hub.listen Mocking in Auth Tests',
+#   'plans/future/bug-fix/backlog/BUGF-010', 'plans/future/bug-fix/backlog/BUGF-010/BUGF-010.md',
+#   'tech_debt', 1, 'medium', 'backlog', false, false, false, false, true,
+#   '2026-02-11T19:30:00Z', 'control'
+# )
+# ON CONFLICT (story_id) DO UPDATE SET
+#   feature = EXCLUDED.feature,
+#   title = EXCLUDED.title,
+#   story_dir = EXCLUDED.story_dir,
+#   story_file = EXCLUDED.story_file,
+#   story_type = EXCLUDED.story_type,
+#   points = EXCLUDED.points,
+#   priority = EXCLUDED.priority,
+#   state = EXCLUDED.state,
+#   touches_backend = EXCLUDED.touches_backend,
+#   touches_frontend = EXCLUDED.touches_frontend,
+#   touches_database = EXCLUDED.touches_database,
+#   touches_infra = EXCLUDED.touches_infra,
+#   touches_test = EXCLUDED.touches_test,
+#   created_at = EXCLUDED.created_at,
+#   experiment_variant = EXCLUDED.experiment_variant

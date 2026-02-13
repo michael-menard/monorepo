@@ -1,0 +1,39 @@
+---
+story_id: REPA-006
+phase: pm-generate
+generated_at: "2026-02-10T22:00:00Z"
+model: claude-sonnet-4-5
+workers:
+  - name: pm-draft-test-plan
+    model: sonnet-4.5
+    status: completed
+    tokens:
+      input: ~2500
+      output: ~3500
+      total: ~6000
+  - name: pm-dev-feasibility-review
+    model: sonnet-4.5
+    status: completed
+    tokens:
+      input: ~2500
+      output: ~3000
+      total: ~5500
+  - name: pm-story-risk-predictor
+    model: sonnet-4.5
+    status: completed
+    tokens:
+      input: ~1500
+      output: ~1000
+      total: ~2500
+totals:
+  input_tokens: ~30000
+  output_tokens: ~28000
+  total_tokens: ~58000
+  worker_total: ~14000
+  leader_total: ~44000
+notes:
+  - "Workers executed inline (Task tool not available in environment)"
+  - "Token estimates for workers are approximations based on output size"
+  - "Leader tokens include reading seed, agent instructions, generating story"
+  - "Actual tokens tracked via system token counter: ~58,119"
+---

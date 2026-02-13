@@ -1,0 +1,39 @@
+predictions:
+  split_risk: 0.4
+  review_cycles: 2
+  token_estimate: 120000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-10T19:15:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+  calculation_notes:
+    split_risk_rationale: |
+      Base risk from AC count (7 ACs): (7-3)*0.1 = 0.4
+      No frontend + backend complexity boost (pure backend/infra = -0.1): 0.3
+      Multi-file migration (52 import sites) adds complexity: +0.1 = 0.4
+      No auth/security/database involvement (no additional boost)
+      Final: 0.4 (medium-low risk)
+    review_cycles_rationale: |
+      Base cycles: 1
+      Multi-file migration (52 sites): +1 = 2
+      No auth/security/database: no additional cycles
+      Estimated files to change: ~60 (52 imports + client files + tests)
+      Final: 2 cycles (one for implementation, one for thoroughness check)
+    token_estimate_rationale: |
+      No similar stories available (KB search not performed, would require kb_search tool)
+      Using heuristic: 7 ACs * 15K tokens/AC baseline = 105K
+      Multi-file migration overhead: +15K tokens = 120K
+      Fallback to conservative estimate given no historical data
+      Final: 120,000 tokens
+    confidence_rationale: |
+      Low confidence due to:
+      - No similar stories loaded (KB search not performed)
+      - WKFL-006 patterns unavailable (patterns directory missing)
+      - Heuristics-only mode with no historical data
+      - First story in REPA epic (no domain-specific baseline)
+  degradation_mode: heuristics_only
+  missing_data:
+    - WKFL-006 patterns file not found (plans/future/workflow-learning/patterns/)
+    - KB similar stories not loaded (kb_search tool not available in this context)
+    - No outcome files from similar migration stories

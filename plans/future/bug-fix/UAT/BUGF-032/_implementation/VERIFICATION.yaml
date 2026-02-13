@@ -1,0 +1,135 @@
+schema: 1
+story_id: "BUGF-032"
+timestamp: "2026-02-11T22:45:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 16, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 100.0
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "All 16 unit tests validate Zod schema paths comprehensively"
+
+acs_verified:
+  - ac_id: "AC3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification_notes: |
+      Verified end-to-end upload flow integration:
+      - RTK Query mutation (useGeneratePresignedUrlMutation) created in uploads-api.ts
+      - Zod schemas validate request/response at runtime
+      - Mutation wired into handleFileSelect in both upload pages
+      - API call to /uploads/presigned-url replaces mock implementation
+      - Error handling maps HTTP status codes (401, 400, 413, 500) to user-friendly messages
+      - API error banner with dismiss functionality implemented
+      - Loading spinner (Loader2) during presigned URL generation
+      - File upload buttons disabled during API calls
+      - uploadsApi registered in Redux store with reducer, middleware, and auth reset
+    spot_check: "Verified uploads-api.ts exports useGeneratePresignedUrlMutation and uses Zod validation"
+
+  - ac_id: "AC7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification_notes: |
+      Verified session refresh handler for expired presigned URLs:
+      - handleRefreshSession filters expired/failed files from uploadManager.state.files
+      - Calls generatePresignedUrl mutation for each expired file
+      - Uses stored file metadata (name, type, size, category) from UploaderFileItem
+      - Collects URL updates via urlUpdates array
+      - Applies updates via uploadManager.updateFileUrls()
+      - Calls uploadManager.retryAll() to restart uploads with new URLs
+      - Error handling with user-friendly messages on refresh failure
+      - Implementation exists in both upload-page.tsx and InstructionsNewPage.tsx (lines 301-347)
+    spot_check: "Verified handleRefreshSession in upload-page.tsx at lines 301-347"
+
+architecture_compliant: true
+architecture_notes: |
+  All code follows established patterns:
+  - RTK Query mutation pattern matches wishlist-gallery-api.ts
+  - Zod-first types (no TypeScript interfaces, all types via z.infer)
+  - JWT authentication enabled via createServerlessBaseQuery
+  - Performance monitoring enabled
+  - Store properly registered with reducer, middleware, and auth reset
+  - No barrel files (direct imports from source)
+  - @repo/logger used for logging (no console.log)
+  - Proper package.json sub-path exports for rtk/uploads-api and schemas/uploads
+
+code_quality:
+  standards_compliance: PASS
+  zod_first_types: true
+  no_barrel_files: true
+  proper_logging: true
+  notes: |
+    - All types derived from Zod schemas via z.infer
+    - No console.log usage - logger imported from @repo/logger
+    - No hardcoded secrets or credentials
+    - JWT auth properly configured
+    - URL validation via Zod z.string().url()
+    - File size validation with positive integer constraint
+
+security:
+  verdict: PASS
+  findings: []
+  notes: |
+    - JWT Bearer token authentication enabled via CognitoTokenManager
+    - No hardcoded secrets or credentials in code
+    - Presigned URL validated via Zod z.string().url()
+    - File size validated with z.number().int().positive()
+    - No sensitive data logged
+
+build_quality:
+  typescript_compilation: PASS
+  eslint: PASS
+  build: PASS
+  notes: |
+    - api-client package builds successfully (7.36s)
+    - ESLint passes on all BUGF-032 files (uploads-api.ts, schemas/uploads.ts)
+    - TypeScript compilation passes for production files
+    - Pre-existing errors in test files (performance-benchmarks.test.tsx missing MSW) are unrelated to BUGF-032
+
+e2e_status:
+  executed: false
+  exempt: true
+  reason: "E2E tests split to BUGF-051 - requires live backend (BUGF-031) deployment"
+  split_story: "BUGF-051"
+  notes: "Frontend integration is complete and ready for E2E testing once backend is deployed"
+
+issues: []
+
+non_blocking_notes:
+  - "E2E tests deferred to BUGF-051 per story split decision"
+  - "Integration tests for upload pages could be added in future (non-blocking)"
+  - "Pre-existing TypeScript errors in performance-benchmarks.test.tsx (missing MSW dependency) are unrelated to BUGF-032"
+
+lessons_to_record:
+  - lesson: "RTK Query mutation pattern for presigned URL generation works well - clean separation of concerns"
+    category: pattern
+    tags: ["frontend", "rtk-query", "uploads"]
+
+  - lesson: "Zod runtime validation of API responses provides runtime safety for presigned URL structure"
+    category: pattern
+    tags: ["validation", "zod", "api-safety"]
+
+  - lesson: "Session refresh handler pattern (filtering expired files, regenerating URLs, batch update) is reusable for other expiry scenarios"
+    category: reuse
+    tags: ["uploads", "session-management", "error-recovery"]
+
+tokens:
+  in: 45641
+  out: 1200
+
+gate:
+  decision: PASS
+  reason: "All acceptance criteria verified (AC3, AC7), all 16 unit tests pass, build successful, code quality and security standards met, E2E tests exempted per BUGF-051 split"
+  blocking_issues: []
+  qa_verified_by: "qa-verify-completion-leader"
+  qa_verified_at: "2026-02-12T03:35:00Z"

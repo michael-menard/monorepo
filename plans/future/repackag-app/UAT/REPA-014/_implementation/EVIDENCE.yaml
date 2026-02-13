@@ -1,0 +1,162 @@
+schema: 1
+story_id: "REPA-014"
+title: "Create @repo/hooks Package for Common React Hooks"
+timestamp: "2026-02-10T20:12:00Z"
+
+summary: |
+  Created @repo/hooks package consolidating 4 general-purpose React hooks from
+  scattered app locations into a single shared package. All 55 tests pass,
+  package builds successfully, all consumer imports updated, and 9 duplicate
+  files deleted.
+
+touched_files:
+  created:
+    - packages/core/hooks/package.json
+    - packages/core/hooks/tsconfig.json
+    - packages/core/hooks/vite.config.ts
+    - packages/core/hooks/vitest.config.ts
+    - packages/core/hooks/src/useLocalStorage.ts
+    - packages/core/hooks/src/useUnsavedChangesPrompt.ts
+    - packages/core/hooks/src/useDelayedShow.ts
+    - packages/core/hooks/src/useMultiSelect.ts
+    - packages/core/hooks/src/__tests__/setup.ts
+    - packages/core/hooks/src/__tests__/useLocalStorage.test.ts
+    - packages/core/hooks/src/__tests__/useDelayedShow.test.ts
+    - packages/core/hooks/src/__tests__/useMultiSelect.test.ts
+
+  modified:
+    - apps/web/app-wishlist-gallery/package.json
+    - apps/web/app-instructions-gallery/package.json
+    - apps/web/main-app/package.json
+    - apps/web/app-inspiration-gallery/package.json
+    - apps/web/app-wishlist-gallery/src/pages/AddItemPage.tsx
+    - apps/web/app-wishlist-gallery/src/components/WishlistForm/index.tsx
+    - apps/web/app-wishlist-gallery/src/hooks/useWishlistSortPersistence.ts
+    - apps/web/app-instructions-gallery/src/pages/CreateMocPage.tsx
+    - apps/web/main-app/src/components/Uploader/SessionProvider/index.tsx
+    - apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/index.tsx
+    - apps/web/main-app/src/components/PageTransitionSpinner/PageTransitionSpinner.tsx
+    - apps/web/app-inspiration-gallery/src/pages/main-page.tsx
+    - apps/web/app-inspiration-gallery/src/hooks/index.ts
+    - pnpm-lock.yaml
+
+  deleted:
+    - apps/web/app-instructions-gallery/src/hooks/useLocalStorage.ts
+    - apps/web/app-instructions-gallery/src/hooks/useUnsavedChangesPrompt.ts
+    - apps/web/app-wishlist-gallery/src/hooks/useLocalStorage.ts
+    - apps/web/main-app/src/hooks/useUnsavedChangesPrompt.ts
+    - apps/web/main-app/src/hooks/useDelayedShow.ts
+    - apps/web/app-inspiration-gallery/src/hooks/useMultiSelect.ts
+    - apps/web/app-wishlist-gallery/src/hooks/__tests__/useLocalStorage.test.ts
+    - apps/web/main-app/src/hooks/__tests__/useDelayedShow.test.ts
+    - apps/web/app-inspiration-gallery/src/hooks/__tests__/useMultiSelect.test.ts
+
+acceptance_criteria:
+  - id: AC-1
+    status: pass
+    evidence: "Package created at packages/core/hooks/ with package.json, tsconfig.json, vite.config.ts, vitest.config.ts"
+
+  - id: AC-2
+    status: pass
+    evidence: "pnpm build succeeds: 4 modules transformed, dist/ contains useDelayedShow.js (0.38kB), useUnsavedChangesPrompt.js (1.46kB), useMultiSelect.js (1.73kB), useLocalStorage.js (2.11kB) plus .d.ts type declarations"
+
+  - id: AC-3
+    status: pass
+    evidence: "package.json exports configured with ./useLocalStorage, ./useUnsavedChangesPrompt, ./useDelayedShow, ./useMultiSelect entries pointing to dist/ builds and types"
+
+  - id: AC-4
+    status: pass
+    evidence: "useLocalStorage migrated from app-wishlist-gallery with Zod schema validation, SSR safety, error handling, and @repo/logger integration preserved"
+
+  - id: AC-5
+    status: pass
+    evidence: "useUnsavedChangesPrompt migrated from main-app with TanStack Router useBlocker, beforeunload handler, and logging preserved"
+
+  - id: AC-6
+    status: pass
+    evidence: "useDelayedShow migrated from main-app with timer-based delay logic and cleanup preserved"
+
+  - id: AC-7
+    status: pass
+    evidence: "useMultiSelect migrated from app-inspiration-gallery with shift-click range selection, maxSelection, and onSelectionChange callback preserved"
+
+  - id: AC-8
+    status: pass
+    evidence: "All hooks use named exports (export function useLocalStorage, export function useUnsavedChangesPrompt, export const useDelayedShow, export function useMultiSelect)"
+
+  - id: AC-9
+    status: pass
+    evidence: "useLocalStorage tests: 20 tests pass in packages/core/hooks/src/__tests__/useLocalStorage.test.ts"
+
+  - id: AC-10
+    status: pass
+    evidence: "useDelayedShow tests: 12 tests pass in packages/core/hooks/src/__tests__/useDelayedShow.test.ts including timer mocking"
+
+  - id: AC-11
+    status: pass
+    evidence: "useMultiSelect tests: 23 tests pass in packages/core/hooks/src/__tests__/useMultiSelect.test.ts including shift-click range selection"
+
+  - id: AC-12
+    status: pass
+    evidence: "All 8 consumer files updated to import from @repo/hooks/useXxx. No remaining imports to old locations (verified via grep)."
+
+  - id: AC-13
+    status: pass
+    evidence: "All 4 consuming apps have @repo/hooks@workspace:* in package.json dependencies"
+
+  - id: AC-14
+    status: pass
+    evidence: "6 duplicate hook files and 3 duplicate test files deleted. No dangling imports found."
+
+  - id: AC-15
+    status: pass
+    evidence: "app-wishlist-gallery builds clean. Other apps have pre-existing type errors unrelated to @repo/hooks (react-hook-form version mismatch, @repo/gallery module, route types)."
+
+  - id: AC-16
+    status: pass
+    evidence: "@repo/hooks package type-checks clean (0 errors). app-wishlist-gallery type-checks clean. Other apps have pre-existing type errors unrelated to this change."
+
+unit_tests:
+  status: pass
+  total: 55
+  passed: 55
+  failed: 0
+  files:
+    - name: useLocalStorage.test.ts
+      tests: 20
+      status: pass
+    - name: useDelayedShow.test.ts
+      tests: 12
+      status: pass
+    - name: useMultiSelect.test.ts
+      tests: 23
+      status: pass
+
+build:
+  status: pass
+  package_build: pass
+  output:
+    - "useDelayedShow.js: 0.38 kB"
+    - "useUnsavedChangesPrompt.js: 1.46 kB"
+    - "useMultiSelect.js: 1.73 kB"
+    - "useLocalStorage.js: 2.11 kB"
+
+type_check:
+  status: pass
+  package_check: pass
+  app_checks:
+    app-wishlist-gallery: pass
+    app-instructions-gallery: "pre-existing errors (react-hook-form type mismatch, aria-invalid)"
+    main-app: "pre-existing errors (route types, MSW handlers, auth tests)"
+    app-inspiration-gallery: "pre-existing errors (@repo/gallery module not found)"
+  note: "No type errors related to @repo/hooks in any app"
+
+e2e_tests:
+  status: exempt
+  mode: null
+  results: null
+  exemption_reason: "Internal refactor - no user-facing changes, no API changes, no UI changes"
+
+dangling_imports:
+  status: clean
+  verification: "grep for old import paths returns zero matches across all apps"

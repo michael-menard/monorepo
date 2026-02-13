@@ -12,7 +12,7 @@ import {
   type UploaderFileItem as FileItemType,
   type UploadBatchState,
   type FileCategory,
-} from '@repo/upload-types'
+} from '@repo/upload/types'
 import { UploaderFileItem } from '@/components/Uploader/UploaderFileItem'
 
 /**

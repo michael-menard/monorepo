@@ -1,0 +1,38 @@
+schema: 1
+story_id: "REPA-019"
+title: "Add Error Mapping to @repo/api-client"
+feature_dir: "plans/future/repackag-app"
+timestamp: "2026-02-10T23:00:00Z"
+
+packages_touched:
+  - "@repo/api-client"
+  - "main-app"
+
+files_created:
+  - "packages/core/api-client/src/errors/error-mapping.ts"
+  - "packages/core/api-client/src/errors/auth-failure.ts"
+  - "packages/core/api-client/src/errors/__tests__/error-mapping.test.ts"
+  - "packages/core/api-client/src/errors/__tests__/auth-failure.test.ts"
+
+files_modified:
+  - "packages/core/api-client/package.json"
+  - "apps/web/main-app/src/store/index.ts"
+  - "apps/web/main-app/src/App.tsx"
+
+files_deleted:
+  - "apps/web/main-app/src/services/api/errorMapping.ts"
+  - "apps/web/main-app/src/services/api/authFailureHandler.ts"
+  - "apps/web/main-app/src/services/api/__tests__/errorMapping.test.ts"
+  - "apps/web/main-app/src/services/api/__tests__/authFailureHandler.test.ts"
+
+acceptance_criteria_count: 12
+test_coverage_target: "100%"
+
+surfaces:
+  - packages
+
+tags:
+  - consolidation
+  - error-handling
+  - api-client
+  - code-move

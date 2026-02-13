@@ -17,7 +17,8 @@ import { Star, Puzzle, Trash2 } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
 import { BuildStatusToggle } from '../BuildStatusToggle'
 import { getBestImageUrl } from '../ResponsiveImage/index.js'
-import { generateItemAriaLabel, focusRingClasses } from '../../utils/a11y'
+import { generateItemAriaLabel } from '../../utils/a11y'
+import { focusRingClasses } from '@repo/accessibility'
 
 /**
  * Checkmark icon with circle - based on cool-checkmark.tsx design

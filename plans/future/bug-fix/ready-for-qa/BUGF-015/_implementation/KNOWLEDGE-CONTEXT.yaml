@@ -1,0 +1,72 @@
+schema: 1
+story_id: BUGF-015
+timestamp: "2026-02-11T20:30:00Z"
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "Timer testing requires vi.useFakeTimers() at test start and vi.useRealTimers() in afterEach cleanup"
+      - "Context provider testing needs custom render wrapping children in provider (reference NavigationProvider.test.tsx)"
+      - "Lazy module testing requires vi.mock() for React.lazy imports (reference DashboardModule.test.tsx)"
+      - "Form validation testing with react-hook-form requires comprehensive mocking (reference EditForm.test.tsx)"
+    patterns_to_follow:
+      - "BDD test structure: describe(ComponentName) > describe(rendering/interactions/accessibility)"
+      - "Use semantic queries: getByRole, getByLabelText, getByText - no getByTestId unless necessary"
+      - "Use userEvent for interactions, not fireEvent"
+      - "Use waitFor for async assertions"
+      - "Always call vi.clearAllMocks() in beforeEach"
+      - "All tests follow structure from 53 existing test files"
+      - "Reuse existing MSW handlers in setup.ts - no new handlers needed"
+    patterns_to_avoid:
+      - "Don't use console.log in tests - use @repo/logger mock"
+      - "Don't skip accessibility tests (ARIA attributes, keyboard nav, focus management)"
+      - "Don't use getByTestId as first choice - prefer semantic queries"
+      - "Don't modify component implementations to make tests pass (exception: actual bugs)"
+      - "Don't create new MSW handlers - all APIs already mocked"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests MUST use MSW for API mocking. UAT MUST NEVER use mocking."
+        applies_to: ["testing", "frontend", "backend"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "E2E tests optional during dev phase but required before UAT. May skip E2E if no UI-facing ACs."
+        applies_to: ["testing", "frontend", "workflow"]
+    constraints:
+      api_paths: "Not applicable - no API changes"
+      infrastructure: "Not applicable - frontend testing only"
+      storage: "Not applicable - no storage changes"
+      auth: "Admin components test auth flows with mocked Cognito (aws-amplify/auth mocked in setup.ts)"
+      testing: "Unit tests MUST use MSW mocking (all handlers already in setup.ts). E2E tests optional for test-only story per ADR-006."
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading all 53 existing test files"
+        typical_tokens: 50000
+        mitigation: "Read only reference patterns (5-6 key test files)"
+      - operation: "Reading full component implementations"
+        typical_tokens: 30000
+        mitigation: "Read component only when writing its test, not all upfront"
+      - operation: "Reading full story file"
+        typical_tokens: 8000
+        mitigation: "ACs already provided - no need to re-read full story"
+    recommended_patterns:
+      - "Read reference test files to understand patterns (BlockUserDialog.test.tsx, DashboardModule.test.tsx, EditForm.test.tsx)"
+      - "Read component implementation only when writing its test"
+      - "Reuse setup.ts global mocks - no changes needed"
+      - "Batch test file creation by phase (admin, upload, forms, etc.)"
+      - "Use existing test-utils.tsx render utilities"
+
+  warnings:
+    - "Coverage target of 45% may not be reached by testing only 24 components - story notes this is aspirational"
+    - "E2E tests deferred to BUGF-030 per ADR-006 (optional for test-only story)"
+    - "Some components may have complex mocking requirements - reference existing patterns"

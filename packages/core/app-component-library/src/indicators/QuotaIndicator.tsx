@@ -1,33 +1,7 @@
 import { z } from 'zod'
 import { cn } from '../_lib/utils'
 import { Progress } from '../_primitives/progress'
-
-/**
- * Quota type enum (must match backend)
- */
-export const QuotaTypeSchema = z.enum(['mocs', 'wishlists', 'galleries', 'setlists', 'storage'])
-export type QuotaType = z.infer<typeof QuotaTypeSchema>
-
-/**
- * Quota info structure
- */
-export const QuotaInfoSchema = z.object({
-  current: z.number().int().nonnegative(),
-  limit: z.number().int().nonnegative().nullable(), // null = unlimited
-  remaining: z.number().int().nullable(), // null = unlimited
-})
-export type QuotaInfo = z.infer<typeof QuotaInfoSchema>
-
-/**
- * Human-readable quota type names
- */
-const QUOTA_DISPLAY_NAMES: Record<QuotaType, string> = {
-  mocs: 'MOCs',
-  wishlists: 'Wishlists',
-  galleries: 'Galleries',
-  setlists: 'Set Lists',
-  storage: 'Storage',
-}
+import { type QuotaType, type QuotaInfo, QUOTA_DISPLAY_NAMES } from '@repo/api-client'
 
 /**
  * Units for each quota type
@@ -61,14 +35,6 @@ function getQuotaStatus(percentage: number): 'normal' | 'warning' | 'critical' {
 // ─────────────────────────────────────────────────────────────────────────
 // QuotaIndicator Component
 // ─────────────────────────────────────────────────────────────────────────
-
-export const QuotaIndicatorPropsSchema = z.object({
-  quotaType: QuotaTypeSchema,
-  quota: QuotaInfoSchema,
-  showLabel: z.boolean().optional().default(true),
-  compact: z.boolean().optional().default(false),
-  className: z.string().optional(),
-})
 
 export interface QuotaIndicatorProps {
   /**
@@ -166,15 +132,6 @@ export function QuotaIndicator({
 // ─────────────────────────────────────────────────────────────────────────
 // QuotaBar Component
 // ─────────────────────────────────────────────────────────────────────────
-
-export const QuotaBarPropsSchema = z.object({
-  quotaType: QuotaTypeSchema,
-  quota: QuotaInfoSchema,
-  showLabel: z.boolean().optional().default(true),
-  showText: z.boolean().optional().default(true),
-  size: z.enum(['sm', 'md', 'lg']).optional().default('md'),
-  className: z.string().optional(),
-})
 
 export interface QuotaBarProps {
   /**
@@ -320,12 +277,6 @@ export function QuotaBar({
 // QuotaCard Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const QuotaCardPropsSchema = z.object({
-  quotaType: QuotaTypeSchema,
-  quota: QuotaInfoSchema,
-  className: z.string().optional(),
-})
-
 export interface QuotaCardProps {
   /**
    * The type of quota to display
@@ -421,4 +372,4 @@ export function QuotaCard({ quotaType, quota, className }: QuotaCardProps) {
 }
 
 // Export utilities
-export { QUOTA_DISPLAY_NAMES, QUOTA_UNITS, getQuotaPercentage, getQuotaStatus }
+export { QUOTA_UNITS, getQuotaPercentage, getQuotaStatus }

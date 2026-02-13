@@ -20,7 +20,7 @@ import { useAddWishlistItemMutation } from '@repo/api-client/rtk/wishlist-galler
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
 import { WishlistForm } from '../components/WishlistForm'
 import { ResumeDraftBanner } from '../components/ResumeDraftBanner'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 import {
   updateDraftField,
   clearDraft,

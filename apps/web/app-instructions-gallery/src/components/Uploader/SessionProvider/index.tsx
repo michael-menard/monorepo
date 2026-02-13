@@ -6,9 +6,9 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { useUploaderSession, type UseUploaderSessionResult } from '@/hooks/useUploaderSession'
-import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt'
-import { UnsavedChangesDialog } from '@/components/Uploader/UnsavedChangesDialog'
+import { useUploaderSession, type UseUploaderSessionResult } from '@repo/upload/hooks'
+import { useUnsavedChangesPrompt } from '@repo/hooks/useUnsavedChangesPrompt'
+import { UnsavedChangesDialog } from '@repo/upload/components'
 
 export interface UploaderSessionContextValue extends UseUploaderSessionResult {
   /** Route path this session is for */

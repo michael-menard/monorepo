@@ -1,0 +1,27 @@
+schema: 1
+story_id: "BUGF-027"
+timestamp: "2026-02-11T18:11:47Z"
+
+touches:
+  backend: true
+  frontend: true
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/api/**"
+  - "apps/web/**"
+  - "docs/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: true
+  security: true
+  performance: false
+
+summary: "Create comprehensive documentation for Cognito rate limiting in password reset flows and frontend UX patterns"

@@ -58,7 +58,7 @@ describe.skip('Authentication Flow', () => {
     vi.clearAllMocks()
   })
 
-  describe('LoginPage', () => {
+  describe.skip('LoginPage', () => {
     it('renders login form with LEGO branding', () => {
       render(
         <TestWrapper>
@@ -170,7 +170,7 @@ describe.skip('Authentication Flow', () => {
     })
   })
 
-  describe('SignupPage', () => {
+  describe.skip('SignupPage', () => {
     it('renders signup form with LEGO branding', () => {
       render(
         <TestWrapper>
@@ -245,7 +245,7 @@ describe.skip('Authentication Flow', () => {
     })
   })
 
-  describe('ForgotPasswordPage', () => {
+  describe.skip('ForgotPasswordPage', () => {
     it('renders forgot password form with LEGO branding', () => {
       render(
         <TestWrapper>
@@ -345,7 +345,7 @@ describe.skip('Authentication Flow', () => {
     })
   })
 
-  describe('Authentication Flow Integration', () => {
+  describe.skip('Authentication Flow Integration', () => {
     it('navigates between auth pages correctly', async () => {
       const user = userEvent.setup()
 
@@ -428,7 +428,7 @@ describe.skip('Authentication Flow', () => {
     })
   })
 
-  describe('OTP/MFA Authentication Flow', () => {
+  describe.skip('OTP/MFA Authentication Flow', () => {
     it('handles OTP challenge during login', async () => {
       const user = userEvent.setup()
       mockAuth.signIn.mockResolvedValue({

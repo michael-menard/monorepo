@@ -1,0 +1,424 @@
+schema: 1
+story_id: "REPA-012"
+timestamp: "2026-02-10T20:15:00Z"
+
+key_findings:
+
+  file_locations:
+    usePermissions:
+      source: "apps/web/main-app/src/services/permissions/usePermissions.ts"
+      test: "apps/web/main-app/src/services/permissions/__tests__/usePermissions.test.tsx"
+      lines: 116
+      exports:
+        - "usePermissions"
+        - "useHasFeature"
+        - "useHasQuota"
+        - "useQuotaInfo"
+        - "useIsAdmin"
+        - "useTier"
+
+    useTokenRefresh:
+      source: "apps/web/main-app/src/hooks/useTokenRefresh.ts"
+      test: "apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+      lines: 96
+      exports: ["useTokenRefresh"]
+      status: "DEFERRED - Circular dependency with AuthProvider"
+
+    useModuleAuth_stubs:
+      count: 6
+      locations:
+        - "apps/web/app-dashboard/src/hooks/use-module-auth.ts"
+        - "apps/web/app-inspiration-gallery/src/hooks/use-module-auth.ts"
+        - "apps/web/app-instructions-gallery/src/hooks/use-module-auth.ts"
+        - "apps/web/app-sets-gallery/src/hooks/use-module-auth.ts"
+        - "apps/web/app-wishlist-gallery/src/hooks/use-module-auth.ts"
+        - "apps/web/user-settings/src/hooks/use-module-auth.ts"
+      identical: true
+      notes: "All stubs have identical implementation - hardcoded return values with TODO comments"
+
+  import_dependencies:
+    usePermissions:
+      external_packages:
+        - package: "react-redux"
+          imports: ["useSelector"]
+        - package: "@repo/api-client"
+          imports:
+            - "Feature"
+            - "QuotaType"
+            - "Tier"
+            - "FEATURE_REQUIRED_TIER"
+            - "TIER_DISPLAY_NAMES"
+      app_specific:
+        - path: "@/store/slices/authSlice"
+          imports: ["selectAuth"]
+        - path: "@/store"
+          imports: ["useGetPermissionsQuery"]
+      notes: "Redux coupling is acceptable - consumers must configure Redux with authSlice and permissionsApi"
+
+    useTokenRefresh:
+      external_packages:
+        - package: "react"
+          imports: ["useEffect"]
+        - package: "@repo/app-component-library"
+          imports: ["useToast"]
+        - package: "@repo/logger"
+          imports: ["logger"]
+      app_specific:
+        - path: "@/store/hooks"
+          imports: ["useAppSelector"]
+        - path: "@/store/slices/authSlice"
+          imports: ["selectAuth"]
+        - path: "@/lib/jwt"
+          imports: ["isTokenExpired"]
+        - path: "@/services/auth/AuthProvider"
+          imports: ["useAuth"]
+          circular_dependency: true
+      notes: "CIRCULAR DEPENDENCY: useAuth from AuthProvider creates build issues"
+
+  test_infrastructure:
+    usePermissions_test:
+      framework: "vitest + @testing-library/react"
+      mocks:
+        - "vi.mock('@/store')"
+        - "vi.mock('@repo/api-client/rtk/permissions-api')"
+      test_helper: "configureStore with authSlice and permissionsApi"
+      test_count: 8
+      coverage_areas:
+        - "skip fetching when not authenticated"
+        - "fetch permissions when authenticated"
+        - "return permissions data when loaded"
+        - "hasFeature logic (admin, suspended, normal user)"
+        - "hasQuota logic (unlimited, exhausted, remaining)"
+        - "convenience hooks (useHasFeature, useHasQuota, useIsAdmin, useTier)"
+
+    useTokenRefresh_test:
+      framework: "vitest + @testing-library/react"
+      mocks:
+        - "vi.mock('@repo/app-component-library')"
+        - "vi.mock('@repo/logger')"
+        - "vi.mock('@/lib/jwt')"
+        - "vi.mock('@/services/auth/AuthProvider')"
+      uses_fake_timers: true
+      test_count: 12
+      coverage_areas:
+        - "initialization (unauthenticated, no tokens)"
+        - "token expiry detection (immediate, interval)"
+        - "refresh triggering"
+        - "error handling"
+        - "cleanup (unmount, logout)"
+
+  component_usage:
+    QuotaIndicator:
+      path: "packages/core/app-component-library/src/indicators/QuotaIndicator.tsx"
+      defines_locally:
+        - "QuotaTypeSchema"
+        - "QuotaInfoSchema"
+        - "QUOTA_DISPLAY_NAMES"
+        - "QUOTA_UNITS"
+      should_import_from: "@repo/api-client"
+      notes: "Component does NOT use hooks, only type definitions - no circular dependency risk"
+
+    FeatureGate:
+      path: "packages/core/app-component-library/src/gates/FeatureGate.tsx"
+      defines_locally:
+        - "FeatureSchema"
+        - "TierSchema"
+        - "FEATURE_REQUIRED_TIER"
+        - "TIER_DISPLAY_NAMES"
+        - "FEATURE_DISPLAY_NAMES"
+      should_import_from: "@repo/api-client"
+      notes: "Component does NOT use hooks, only type definitions - no circular dependency risk"
+
+    RootLayout:
+      path: "apps/web/main-app/src/components/Layout/RootLayout.tsx"
+      imports:
+        - "useTokenRefresh from '@/hooks/useTokenRefresh'"
+      notes: "Will continue to import useTokenRefresh from main-app (not migrated)"
+
+    App:
+      path: "apps/web/main-app/src/App.tsx"
+      imports: []
+      notes: "Does not import usePermissions or useTokenRefresh - no changes needed"
+
+  package_reference_structure:
+    reference_package: "@repo/gallery"
+    package_json:
+      name: "@repo/gallery"
+      version: "0.0.1"
+      private: true
+      type: "module"
+      main: "./src/index.ts"
+      exports: "."
+      scripts:
+        - "build: vite build"
+        - "lint: eslint src/"
+        - "test: vitest run"
+      dependencies:
+        - "@repo/accessibility: workspace:*"
+        - "@repo/app-component-library: workspace:*"
+        - "@repo/logger: workspace:*"
+        - "react: ^19.0.0"
+        - "react-dom: ^19.0.0"
+        - "zod: ^3.24.0"
+      devDependencies:
+        - "@testing-library/jest-dom: ^6.6.3"
+        - "@testing-library/react: ^16.0.1"
+        - "@vitejs/plugin-react-swc: ^3.7.2"
+        - "jsdom: ^25.0.1"
+        - "typescript: ^5.7.2"
+        - "vite: ^6.0.0"
+        - "vitest: ^3.0.5"
+      peerDependencies:
+        - "react: ^19.0.0"
+        - "react-dom: ^19.0.0"
+
+    tsconfig_json:
+      extends: "../../../tsconfig.json"
+      compilerOptions:
+        - "baseUrl: ."
+        - "outDir: dist"
+        - "declaration: true"
+        - "paths: {@/*: [./src/*]}"
+      include: ["src/**/*"]
+      exclude: ["node_modules", "dist", "**/*.test.*"]
+
+    vitest_config:
+      reference: "@repo/accessibility/vitest.config.ts"
+      plugins: ["react (from @vitejs/plugin-react-swc)"]
+      test:
+        - "globals: true"
+        - "environment: jsdom"
+        - "setupFiles: ./src/test/setup.ts"
+        - "pool: forks"
+        - "singleFork: true"
+        - "maxConcurrency: 1"
+
+    test_setup:
+      reference: "@repo/accessibility/src/test/setup.ts"
+      includes:
+        - "expect.extend(@testing-library/jest-dom/matchers)"
+        - "afterEach cleanup"
+        - "DOM cleanup"
+        - "localStorage/sessionStorage clear"
+
+  api_client_exports:
+    permissions_schemas:
+      path: "packages/core/api-client/src/schemas/permissions.ts"
+      exports:
+        - "TierSchema, Tier"
+        - "FeatureSchema, Feature"
+        - "QuotaTypeSchema, QuotaType"
+        - "QuotaInfoSchema, QuotaInfo"
+        - "UserQuotasSchema, UserQuotas"
+        - "UserPermissionsSchema, UserPermissions"
+        - "TIER_FEATURES"
+        - "FEATURE_REQUIRED_TIER"
+        - "TIER_DISPLAY_NAMES"
+        - "FEATURE_DISPLAY_NAMES"
+        - "QUOTA_DISPLAY_NAMES"
+      notes: "All schemas and constants needed are already in @repo/api-client"
+
+    permissions_api:
+      path: "packages/core/api-client/src/rtk/permissions-api.ts"
+      exports:
+        - "permissionsApi"
+        - "useGetPermissionsQuery"
+        - "useGetQuotasQuery"
+        - "useGetFeaturesQuery"
+        - "useInvalidatePermissionsMutation"
+        - "useInvalidateQuotasMutation"
+      notes: "RTK Query API already configured in @repo/api-client"
+
+    main_index:
+      path: "packages/core/api-client/src/index.ts"
+      re_exports: "All schemas from ./schemas/index and permissionsApi"
+      notes: "All exports are already available from @repo/api-client"
+
+  redux_store_structure:
+    main_app_store:
+      path: "apps/web/main-app/src/store/index.ts"
+      slices:
+        - "auth: authSlice.reducer"
+        - "theme: themeSlice.reducer"
+        - "navigation: navigationSlice.reducer"
+        - "globalUI: globalUISlice.reducer"
+      apis:
+        - "enhancedGalleryApi"
+        - "enhancedWishlistApi"
+        - "instructionsApi"
+        - "dashboardApi"
+        - "setsApi"
+        - "permissionsApi"
+        - "adminApi"
+        - "inspirationApi"
+      exports:
+        - "store"
+        - "useGetPermissionsQuery"
+        - "permissionsApi"
+      notes: "permissionsApi is configured in main-app store and re-exported"
+
+    authSlice:
+      path: "apps/web/main-app/src/store/slices/authSlice.ts"
+      state:
+        - "isAuthenticated: boolean"
+        - "isLoading: boolean"
+        - "user: User | null"
+        - "tokens: { accessToken?, idToken?, refreshToken? } | null"
+        - "error: string | null"
+      selectors:
+        - "selectAuth"
+        - "selectIsAuthenticated"
+        - "selectUser"
+        - "selectAuthLoading"
+        - "selectAuthError"
+      notes: "Auth state structure is stable and well-defined"
+
+discrepancies:
+  - finding: "useTokenRefresh cannot be migrated due to circular dependency"
+    expected: "All 3 hooks (usePermissions, useTokenRefresh, useModuleAuth) would be migrated"
+    actual: "Only usePermissions and useModuleAuth can be migrated safely"
+    resolution: "Defer useTokenRefresh to separate story after auth context abstraction"
+
+  - finding: "QuotaIndicator and FeatureGate define schemas locally"
+    expected: "Components would import from @repo/auth-hooks"
+    actual: "Components should import from @repo/api-client (types only, no hooks)"
+    resolution: "Import types from @repo/api-client, no dependency on @repo/auth-hooks needed"
+
+  - finding: "No components found importing QuotaIndicator or FeatureGate from apps/web"
+    expected: "Story mentioned updating these component imports"
+    actual: "Components are in @repo/app-component-library, not directly imported in apps"
+    resolution: "Update component library internal imports only, no app changes needed"
+
+circular_dependency_analysis:
+  issue: "useTokenRefresh -> AuthProvider -> useTokenRefresh"
+  chain:
+    - "useTokenRefresh uses useAuth() from @/services/auth/AuthProvider"
+    - "AuthProvider is used in RootLayout"
+    - "RootLayout calls useTokenRefresh"
+  impact: "Cannot move useTokenRefresh to @repo/auth-hooks without breaking build"
+
+  solutions:
+    option_1:
+      approach: "Keep useTokenRefresh in main-app"
+      pros: ["No circular dependency", "Simple", "Low risk"]
+      cons: ["Not reusable across apps"]
+      decision: "SELECTED for Phase 1"
+
+    option_2:
+      approach: "Abstract auth context interface"
+      pros: ["Fully reusable", "Clean architecture"]
+      cons: ["Requires additional auth abstraction story", "More complex"]
+      decision: "FUTURE - Separate story for auth context"
+
+    option_3:
+      approach: "Pass auth functions as parameters"
+      pros: ["Avoids circular dependency"]
+      cons: ["Awkward API", "Breaks hook conventions"]
+      decision: "REJECTED"
+
+recommended_package_structure:
+  name: "@repo/auth-hooks"
+  version: "0.0.1"
+  exports:
+    hooks:
+      - "usePermissions"
+      - "useHasFeature"
+      - "useHasQuota"
+      - "useQuotaInfo"
+      - "useIsAdmin"
+      - "useTier"
+      - "useModuleAuth"
+    types:
+      - "ModuleAuthState"
+      - "UseModuleAuthReturn"
+  dependencies:
+    runtime:
+      - "react: ^19.0.0 (peer)"
+      - "react-dom: ^19.0.0 (peer)"
+      - "react-redux: ^9.0.0"
+      - "@reduxjs/toolkit: ^2.0.0"
+      - "@repo/api-client: workspace:*"
+      - "@repo/logger: workspace:*"
+      - "zod: ^3.24.0"
+    dev:
+      - "@testing-library/react: ^16.0.1"
+      - "@testing-library/jest-dom: ^6.6.3"
+      - "vitest: ^3.0.5"
+      - "jsdom: ^25.0.1"
+
+migration_checklist:
+  phase_1_hooks:
+    - name: "usePermissions"
+      status: "READY"
+      dependencies: ["@repo/api-client", "react-redux"]
+      tests: "8 test cases"
+    - name: "useHasFeature"
+      status: "READY"
+      dependencies: ["usePermissions"]
+      tests: "included in usePermissions"
+    - name: "useHasQuota"
+      status: "READY"
+      dependencies: ["usePermissions"]
+      tests: "included in usePermissions"
+    - name: "useQuotaInfo"
+      status: "READY"
+      dependencies: ["usePermissions"]
+      tests: "included in usePermissions"
+    - name: "useIsAdmin"
+      status: "READY"
+      dependencies: ["usePermissions"]
+      tests: "included in usePermissions"
+    - name: "useTier"
+      status: "READY"
+      dependencies: ["usePermissions"]
+      tests: "included in usePermissions"
+    - name: "useModuleAuth"
+      status: "NEW_IMPLEMENTATION"
+      dependencies: ["usePermissions"]
+      tests: "needs writing"
+
+  phase_1_components:
+    - name: "QuotaIndicator"
+      change: "Import types from @repo/api-client"
+      risk: "LOW"
+    - name: "FeatureGate"
+      change: "Import types from @repo/api-client"
+      risk: "LOW"
+
+  phase_1_stubs:
+    count: 6
+    action: "DELETE"
+    apps:
+      - "app-dashboard"
+      - "app-inspiration-gallery"
+      - "app-instructions-gallery"
+      - "app-sets-gallery"
+      - "app-wishlist-gallery"
+      - "user-settings"
+
+  deferred:
+    - name: "useTokenRefresh"
+      reason: "Circular dependency with AuthProvider"
+      future_story: "Create @repo/auth-context abstraction first"
+
+validation_points:
+  - "All 6 stub files have identical implementation"
+  - "@repo/api-client already exports all needed types and schemas"
+  - "permissionsApi is already configured in main-app store"
+  - "No components in apps/web directly import QuotaIndicator or FeatureGate"
+  - "useTokenRefresh has circular dependency - must be deferred"
+  - "Redux coupling is acceptable for this package"
+
+success_metrics:
+  code_deletion:
+    - "6 stub files deleted (600+ lines)"
+    - "2 files deleted from main-app (usePermissions + test)"
+  code_reuse:
+    - "usePermissions available to all apps"
+    - "useModuleAuth real implementation (vs 6 stubs)"
+  type_safety:
+    - "Component library uses canonical types from @repo/api-client"
+    - "No duplicate schema definitions"
+  architecture:
+    - "No circular dependencies introduced"
+    - "Clean separation between auth hooks and auth context"

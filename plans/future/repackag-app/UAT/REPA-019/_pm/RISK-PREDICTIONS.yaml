@@ -1,0 +1,54 @@
+predictions:
+  split_risk: 0.3
+  review_cycles: 2
+  token_estimate: 120000
+  confidence: medium
+  similar_stories:
+    - story_id: REPA-012
+      similarity_score: 0.85
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+    - story_id: REPA-013
+      similarity_score: 0.82
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+    - story_id: REPA-016
+      similarity_score: 0.78
+      actual_cycles: null
+      actual_tokens: null
+      split_occurred: false
+  generated_at: "2026-02-10T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+
+# Prediction Rationale:
+#
+# split_risk: 0.3 (LOW-MEDIUM)
+# - AC count: 10 ACs (base_risk = 0.7 from formula: (10-3)*0.1)
+# - Scope complexity: No frontend/backend split (-0.0), no database (-0.0), no auth/security (-0.0)
+# - Package consolidation pattern: Well-scoped, self-contained utilities
+# - ADJUSTED DOWN: This is a straightforward code move with dependency injection refactor
+# - Final: 0.3 (low-medium risk)
+#
+# review_cycles: 2 (TYPICAL)
+# - Base cycles: 1
+# - Complexity: Dependency injection refactor (+1)
+# - Estimated files: ~8 files (error-mapping, auth-failure, tests, package.json)
+# - No auth/security complexity (error handling utilities, not auth logic)
+# - Final: 2 cycles expected
+#
+# token_estimate: 120000 (BELOW AVERAGE)
+# - Similar package consolidation stories (REPA-012, REPA-013, REPA-016) in progress
+# - No OUTCOME.yaml available yet for similar stories
+# - Scope: ~632 LOC to move + ~653 test LOC to migrate + dependency injection refactor
+# - Heuristic: Code move stories typically ~100-150K tokens
+# - ADJUSTED DOWN: Well-defined scope, no complex logic changes
+# - Final: 120K tokens (below global default of 150K)
+#
+# confidence: medium
+# - 3 similar stories identified but no OUTCOME.yaml data yet
+# - WKFL-006 patterns not available (heuristics-only mode)
+# - Scope is well-defined in seed file
+# - Similar to other REPA consolidation stories

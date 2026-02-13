@@ -1,0 +1,60 @@
+feature_dir: "plans/future/bug-fix"
+prefix: "BUGF"
+updated: 2026-02-11T10:30:00Z
+phase: "Phase 4 - Updates Leader"
+
+summary:
+  stories_added: 5
+  stories_deferred: 2
+  risk_notes_added: 2
+  dependencies_updated: 3
+
+stories_index:
+  stories_added: 5
+    - BUGF-025: Lambda Execution Role Policy Documentation for S3 Presigned URLs (Phase 1, depends BUGF-001)
+    - BUGF-026: Auth Token Refresh Security Review (Phase 2, blocks BUGF-005)
+    - BUGF-027: Rate Limiting Implementation Guide for Password Reset (Phase 3, relates BUGF-019)
+    - BUGF-028: Test Infrastructure Setup for MSW Mocking of Presigned URL Responses (Phase 3, early)
+    - BUGF-029: Playwright Page Objects for File Upload Flows (Phase 3, early)
+  stories_deferred: 2
+    - BUGF-007: Fix Dashboard Test/Implementation Mismatches (from MVP scope)
+    - BUGF-011: Add Test Coverage for Dashboard Components (from MVP scope)
+  risk_notes_added: 2
+    - BUGF-001: Added SEC-001 risk (S3 scope enforcement required)
+    - BUGF-005: Added SEC-002 risk (security review required before implementation); updated depends to BUGF-026
+
+roadmap:
+  updated_sections:
+    - dependency_graph: Added BUGF-025, BUGF-026, BUGF-027, BUGF-028, BUGF-029 with relationships
+    - gantt_chart: Updated to reflect new stories and dependencies
+    - critical_path: Changed from "BUGF-001 → BUGF-004" to "BUGF-026 → BUGF-005 → BUGF-023" (length: 2→3)
+    - parallel_opportunities: Updated groups and max parallelization from 8 to 10 stories
+    - swimlane_view: Added new stories to appropriate domains; created Deferred Items section
+    - risk_indicators: Added BUGF-026, BUGF-028, BUGF-029; updated BUGF-005 risk description
+    - quick_reference: Total stories 24→29; Added deferred count; Critical path 2→3; Max parallel 8→10
+
+files_modified:
+  - "plans/future/bug-fix/stories.index.md"
+  - "plans/future/bug-fix/roadmap.md"
+
+follow_ups_created: true
+updates_log_created: true
+
+decisions_applied:
+  - NEW-001: accept → BUGF-025 created
+  - NEW-002: accept → BUGF-026 created
+  - NEW-003: accept → BUGF-027 created
+  - NEW-004: accept → BUGF-028 created
+  - NEW-005: accept → BUGF-029 created
+  - ENG-001: accept → SEC-001 risk note added to BUGF-001
+  - SEC-002: accept → SEC-002 risk note added to BUGF-005; BUGF-026 blocks BUGF-005
+  - Deferred: BUGF-007 marked deferred with reason
+  - Deferred: BUGF-011 marked deferred with reason
+
+notes:
+  - Total story count increased from 24 to 29 (+5 new, total 27 active + 2 deferred)
+  - Critical path extended by security review dependency (BUGF-026 blocks BUGF-005)
+  - Phase 2 now requires security review completion before auth hook implementation
+  - Phase 3 gains 3 infrastructure stories (BUGF-027, BUGF-028, BUGF-029) to support test implementation
+  - Ready to Start list updated to show 24 stories (27 active - 3 with dependencies)
+  - Parallelization improved: can now start 10 stories simultaneously (up from 8)

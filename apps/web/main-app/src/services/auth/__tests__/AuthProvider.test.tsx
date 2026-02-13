@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, waitFor, act } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth'
-import { authSlice } from '@/store/slices/authSlice'
 import { getCognitoTokenManager } from '@repo/api-client/auth/cognito-integration'
+
+/**
+ * BUGF-010 Fix: Hub.listen mocking in AuthProvider tests
+ *
+ * Root Cause: Global mock in setup.ts (lines 503-516) mocks the entire AuthProvider component,
+ * preventing its useEffect (which calls Hub.listen) from executing in tests.
+ *
+ * Solution: Use vi.unmock() to opt-out of the global mock and test the real AuthProvider implementation.
+ * This must be called BEFORE any imports to ensure the real component is used.
+ */
+vi.unmock('@/services/auth/AuthProvider')
 
 // Mock Hub from aws-amplify/utils BEFORE importing AuthProvider
 vi.mock('aws-amplify/utils', () => ({
@@ -15,6 +25,8 @@ vi.mock('aws-amplify/utils', () => ({
 
 // Import Hub and AuthProvider AFTER the mock is set up
 import { Hub } from 'aws-amplify/utils'
+import { authSlice } from '@/store/slices/authSlice'
+
 import { AuthProvider } from '../AuthProvider'
 
 vi.mock('@repo/api-client/auth/cognito-integration', () => ({
@@ -91,7 +103,7 @@ describe('AuthProvider Hub Event Listeners', () => {
       if (channel === 'auth') {
         hubListenerCallback = callback as typeof hubListenerCallback
       }
-      return cleanupFunction
+      return cleanupFunction as any
     })
   })
 
@@ -99,8 +111,7 @@ describe('AuthProvider Hub Event Listeners', () => {
     vi.clearAllMocks()
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should register Hub listener on mount', async () => {
+  it('should register Hub listener on mount', async () => {
     render(
       <Provider store={store}>
         <AuthProvider>
@@ -109,13 +120,13 @@ describe('AuthProvider Hub Event Listeners', () => {
       </Provider>,
     )
 
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Wait for Hub.listen to be called (replaced arbitrary timeout with explicit assertion)
+    await waitFor(() => expect(Hub.listen).toHaveBeenCalled())
 
     expect(Hub.listen).toHaveBeenCalledWith('auth', expect.any(Function))
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should dispatch setUnauthenticated on signedOut event', async () => {
+  it('should dispatch setUnauthenticated on signedOut event', async () => {
     render(
       <Provider store={store}>
         <AuthProvider>
@@ -131,13 +142,12 @@ describe('AuthProvider Hub Event Listeners', () => {
     hubListenerCallback!({ payload: { event: 'signedOut' } })
 
     await waitFor(() => {
-      const state = store.getState()
+      const state = store.getState() as { auth: { isAuthenticated: boolean } }
       expect(state.auth.isAuthenticated).toBe(false)
     })
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should clear Cognito token manager on signedOut event', async () => {
+  it('should clear Cognito token manager on signedOut event', async () => {
     const mockClearTokens = vi.fn()
     vi.mocked(getCognitoTokenManager).mockReturnValue({
       clearTokens: mockClearTokens,
@@ -163,8 +173,7 @@ describe('AuthProvider Hub Event Listeners', () => {
     })
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should dispatch updateTokens on tokenRefresh event', async () => {
+  it('should dispatch updateTokens on tokenRefresh event', async () => {
     const mockTokens = {
       accessToken: { toString: () => 'new-access-token' },
       idToken: { toString: () => 'new-id-token' },
@@ -190,13 +199,14 @@ describe('AuthProvider Hub Event Listeners', () => {
     hubListenerCallback!({ payload: { event: 'tokenRefresh' } })
 
     await waitFor(() => {
-      const state = store.getState()
+      const state = store.getState() as {
+        auth: { tokens: { accessToken: string } | null }
+      }
       expect(state.auth.tokens?.accessToken).toBe('new-access-token')
     })
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should update Cognito token manager on tokenRefresh event', async () => {
+  it('should update Cognito token manager on tokenRefresh event', async () => {
     const mockSetTokens = vi.fn()
     vi.mocked(getCognitoTokenManager).mockReturnValue({
       clearTokens: vi.fn(),
@@ -236,8 +246,7 @@ describe('AuthProvider Hub Event Listeners', () => {
     })
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should dispatch setUnauthenticated on tokenRefresh_failure event', async () => {
+  it('should dispatch setUnauthenticated on tokenRefresh_failure event', async () => {
     render(
       <Provider store={store}>
         <AuthProvider>
@@ -253,13 +262,12 @@ describe('AuthProvider Hub Event Listeners', () => {
     hubListenerCallback!({ payload: { event: 'tokenRefresh_failure' } })
 
     await waitFor(() => {
-      const state = store.getState()
+      const state = store.getState() as { auth: { isAuthenticated: boolean } }
       expect(state.auth.isAuthenticated).toBe(false)
     })
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should handle tokenRefresh event when fetchAuthSession fails', async () => {
+  it('should handle tokenRefresh event when fetchAuthSession fails', async () => {
     vi.mocked(fetchAuthSession).mockRejectedValue(new Error('Session fetch failed'))
 
     render(
@@ -276,14 +284,14 @@ describe('AuthProvider Hub Event Listeners', () => {
 
     hubListenerCallback!({ payload: { event: 'tokenRefresh' } })
 
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Wait for Hub.listen to be called (replaced arbitrary timeout with explicit assertion)
+    await waitFor(() => expect(Hub.listen).toHaveBeenCalled())
 
-    const state = store.getState()
+    const state = store.getState() as { auth: { tokens: null } }
     expect(state.auth.tokens).toBeNull()
   })
 
-  // TODO: Come back and implement - Hub.listen mock not being called in test environment
-  it.skip('should cleanup Hub listener on unmount', async () => {
+  it('should cleanup Hub listener on unmount', async () => {
     const { unmount } = render(
       <Provider store={store}>
         <AuthProvider>

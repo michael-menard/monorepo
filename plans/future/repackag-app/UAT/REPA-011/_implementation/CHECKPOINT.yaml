@@ -1,0 +1,13 @@
+schema: 1
+story_id: "REPA-011"
+feature_dir: "plans/future/repackag-app"
+timestamp: "2026-02-10T21:05:00Z"
+current_phase: qa-verify
+last_successful_phase: qa-verify
+iteration: 1
+max_iterations: 3
+blocked: false
+blocked_reason: null
+forced: false
+warnings: []
+e2e_gate: exempt

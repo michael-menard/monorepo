@@ -15,8 +15,8 @@ import { useS3Upload, MAX_FILE_SIZE, ALLOWED_MIME_TYPES } from '../useS3Upload'
 // WISH-2120: Import test utilities for cleaner File mocking
 import { createMockFile } from '../../test/utils'
 
-// Mock @repo/upload-client
-vi.mock('@repo/upload-client', () => {
+// Mock @repo/upload
+vi.mock('@repo/upload', () => {
   const mockUploadToPresignedUrl = vi.fn()
 
   class MockUploadError extends Error {
@@ -39,10 +39,13 @@ vi.mock('@repo/api-client/rtk/wishlist-gallery-api', () => ({
   useGetWishlistImagePresignUrlMutation: vi.fn(),
 }))
 
-// WISH-2022/2046/2045/2058: Mock image compression utility
+// WISH-2022/2046/2045/2058: Mock image compression utilities from @repo/upload
 // WISH-2058: Updated presets to use WebP format
-vi.mock('../../utils/imageCompression', () => ({
+vi.mock('@repo/upload/image/compression', () => ({
   compressImage: vi.fn(),
+}))
+
+vi.mock('@repo/upload/image/presets', () => ({
   getPresetByName: vi.fn((name: string) => {
     const presets: Record<string, { name: string; label: string; settings: object }> = {
       'low-bandwidth': {
@@ -63,6 +66,9 @@ vi.mock('../../utils/imageCompression', () => ({
     }
     return presets[name] ?? presets['balanced']
   }),
+}))
+
+vi.mock('@repo/upload/image/heic', () => ({
   // WISH-2045: HEIC support mocks
   isHEIC: vi.fn((file: File) => {
     const heicMimeTypes = ['image/heic', 'image/heif']
@@ -74,9 +80,11 @@ vi.mock('../../utils/imageCompression', () => ({
 }))
 
 // Import mocked functions after mocks are set up
-import { uploadToPresignedUrl } from '@repo/upload-client'
+import { uploadToPresignedUrl } from '@repo/upload'
 import { useGetWishlistImagePresignUrlMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
-import { compressImage, getPresetByName, isHEIC, convertHEICToJPEG } from '../../utils/imageCompression'
+import { compressImage } from '@repo/upload/image/compression'
+import { getPresetByName } from '@repo/upload/image/presets'
+import { isHEIC, convertHEICToJPEG } from '@repo/upload/image/heic'
 
 const mockUploadToPresignedUrl = vi.mocked(uploadToPresignedUrl)
 const mockUseGetWishlistImagePresignUrlMutation = vi.mocked(useGetWishlistImagePresignUrlMutation)

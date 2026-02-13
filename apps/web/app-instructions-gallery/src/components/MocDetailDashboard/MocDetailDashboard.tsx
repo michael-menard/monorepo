@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type React from 'react'
-import { ThumbnailUpload } from '../ThumbnailUpload'
+import { ThumbnailUpload } from '@repo/upload/components'
 import type { Moc } from './__types__/moc'
 import { CoverCard } from './CoverCard'
 import { MetaCard } from './MetaCard'

@@ -1,0 +1,651 @@
+schema: 1
+story_id: "REPA-001"
+timestamp: "2026-02-10T00:00:00Z"
+
+approach: |
+  Create a new @repo/upload package at packages/core/upload/ with proper monorepo structure,
+  configuration, and placeholder directories. This package will serve as the consolidation target
+  for all upload-related code currently scattered across multiple packages and apps.
+
+  Strategy:
+  1. Create package directory structure with subdirectories (client/, hooks/, image/, components/, types/)
+  2. Configure package.json based on .template/ baseline and app-component-library patterns
+  3. Set up TypeScript, Vitest, and Vite build configuration using proven patterns from existing packages
+  4. Add placeholder index.ts files to each subdirectory with comments indicating future migration targets
+  5. Create smoke test to verify package structure and test infrastructure
+  6. Add comprehensive README.md with package purpose and migration roadmap
+  7. Verify package integrates with Turborepo pipeline
+  8. Run all quality gates (build, check-types, lint, test) to ensure package is production-ready
+
+  This is an infrastructure-only story - no actual upload code will be migrated yet.
+
+steps:
+  - id: 1
+    description: "Create root package directory and subdirectory structure"
+    files:
+      - path: "packages/core/upload/"
+        action: create
+      - path: "packages/core/upload/src/"
+        action: create
+      - path: "packages/core/upload/src/client/"
+        action: create
+      - path: "packages/core/upload/src/hooks/"
+        action: create
+      - path: "packages/core/upload/src/image/"
+        action: create
+      - path: "packages/core/upload/src/components/"
+        action: create
+      - path: "packages/core/upload/src/types/"
+        action: create
+      - path: "packages/core/upload/src/__tests__/"
+        action: create
+    depends_on: []
+
+  - id: 2
+    description: "Create package.json with dependencies, scripts, and exports configuration"
+    files:
+      - path: "packages/core/upload/package.json"
+        action: create
+    depends_on: [1]
+    notes: |
+      Use .template/package.json as baseline structure.
+      Use @repo/app-component-library for React component package patterns.
+      Use @repo/gallery for consolidated package patterns.
+
+      Key decisions:
+      - Zod version: Use 4.1.13 (matches @repo/app-component-library, NOT ^3.24.2 from story)
+      - React version: ^19.1.0 (strict peer dependency)
+      - Build: vite build + tsc for declarations (matches app-component-library pattern)
+      - Export main barrel + subpath exports for client/, hooks/, image/, components/, types/
+      - Scripts: build, dev, check-types, lint, test, test:watch (standard monorepo pattern)
+
+  - id: 3
+    description: "Create tsconfig.json for strict TypeScript configuration"
+    files:
+      - path: "packages/core/upload/tsconfig.json"
+        action: create
+    depends_on: [1]
+    notes: |
+      Base on app-component-library/tsconfig.json pattern.
+      Key settings:
+      - Extends root tsconfig.json (../../tsconfig.json)
+      - strict: false (matches monorepo standard, noImplicitAny: false)
+      - jsx: react-jsx (React 19 support)
+      - moduleResolution: bundler
+      - outDir: dist, declaration: false (Vite plugin handles declarations)
+      - paths: {"@/*": ["./src/*"]} for internal imports
+      - Exclude: node_modules, dist, **/*.test.ts, **/*.test.tsx, src/__tests__/**
+
+  - id: 4
+    description: "Create vite.config.ts for build and test configuration"
+    files:
+      - path: "packages/core/upload/vite.config.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Base on app-component-library/vite.config.ts pattern (most comprehensive).
+
+      Build configuration:
+      - Use vite-plugin-dts for TypeScript declarations
+      - Library mode with multiple entry points (index + subpaths)
+      - Entry points: index, client/index, hooks/index, image/index, components/index, types/index
+      - Format: ES modules only
+      - External dependencies: react, react-dom, framer-motion, zod, @repo/* packages
+      - Source maps in development mode
+
+      Test configuration:
+      - Vitest with jsdom environment
+      - globals: true
+      - setupFiles: ./src/__tests__/setup.ts
+      - Include: src/**/*.test.{ts,tsx}
+
+  - id: 5
+    description: "Create vitest.config.ts (if separate from vite.config.ts is preferred)"
+    files:
+      - path: "packages/core/upload/vitest.config.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      DECISION POINT: app-component-library uses vite.config.ts with test block.
+      Some packages like gallery use vite.config.ts only.
+
+      Recommendation: Use vite.config.ts with test block (simpler, matches app-component-library).
+      This step creates a separate vitest.config.ts if needed for clarity.
+
+      Pattern from app-component-library/vitest.config.ts:
+      - React plugin
+      - jsdom environment
+      - setupFiles for test globals
+      - Path aliases (@/ -> ./src/)
+      - Coverage with v8 provider
+
+  - id: 6
+    description: "Create test setup file with browser API mocks"
+    files:
+      - path: "packages/core/upload/src/__tests__/setup.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Copy pattern from app-component-library/src/__tests__/setup.ts.
+
+      Must include:
+      - import '@testing-library/jest-dom'
+      - IntersectionObserver mock
+      - ResizeObserver mock
+      - matchMedia mock
+      - scrollTo mock
+      - localStorage mock
+      - sessionStorage mock
+
+      These mocks are required for React component testing in jsdom environment.
+
+  - id: 7
+    description: "Create placeholder index.ts in src/client/ subdirectory"
+    files:
+      - path: "packages/core/upload/src/client/index.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Placeholder content:
+      // XHR upload client functions will be migrated from @repo/upload-client (REPA-002)
+      export {}
+
+  - id: 8
+    description: "Create placeholder index.ts in src/hooks/ subdirectory"
+    files:
+      - path: "packages/core/upload/src/hooks/index.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Placeholder content:
+      // Upload hooks (useUploadManager, useUploaderSession) will be migrated from apps (REPA-003)
+      export {}
+
+  - id: 9
+    description: "Create placeholder index.ts in src/image/ subdirectory"
+    files:
+      - path: "packages/core/upload/src/image/index.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Placeholder content:
+      // Image processing utilities will be migrated from app-wishlist-gallery (REPA-004)
+      export {}
+
+  - id: 10
+    description: "Create placeholder index.ts in src/components/ subdirectory"
+    files:
+      - path: "packages/core/upload/src/components/index.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Placeholder content:
+      // Upload UI components will be migrated from apps (REPA-005)
+      export {}
+
+  - id: 11
+    description: "Create placeholder index.ts in src/types/ subdirectory"
+    files:
+      - path: "packages/core/upload/src/types/index.ts"
+        action: create
+    depends_on: [1]
+    notes: |
+      Placeholder content:
+      // Type definitions and Zod schemas will be migrated from @repo/upload-types (REPA-006)
+      export {}
+
+  - id: 12
+    description: "Create main barrel export at src/index.ts"
+    files:
+      - path: "packages/core/upload/src/index.ts"
+        action: create
+    depends_on: [7, 8, 9, 10, 11]
+    notes: |
+      Re-export from all subdirectories:
+      export * from './client'
+      export * from './hooks'
+      export * from './image'
+      export * from './components'
+      export * from './types'
+
+      Note: This is acceptable for package-level exports, even though CLAUDE.md
+      discourages barrel files for component directories. Package exports are different.
+
+  - id: 13
+    description: "Create smoke test for package structure verification"
+    files:
+      - path: "packages/core/upload/src/__tests__/package-structure.test.ts"
+        action: create
+    depends_on: [6, 12]
+    notes: |
+      Basic test to verify:
+      - Package can be imported
+      - Test infrastructure works
+      - Placeholder exports exist
+
+      Example:
+      import { describe, it, expect } from 'vitest'
+
+      describe('@repo/upload package structure', () => {
+        it('should have placeholder exports', () => {
+          // This test verifies the package structure is set up correctly
+          // Actual functionality tests will be added in migration stories
+          expect(true).toBe(true)
+        })
+
+        it('should be importable', async () => {
+          // Verify main package export works
+          const pkg = await import('../index')
+          expect(pkg).toBeDefined()
+        })
+      })
+
+  - id: 14
+    description: "Create comprehensive README.md with package documentation"
+    files:
+      - path: "packages/core/upload/README.md"
+        action: create
+    depends_on: [1]
+    notes: |
+      Include:
+      - Package purpose and scope
+      - Directory structure explanation
+      - Migration roadmap (REPA-002 through REPA-006)
+      - Installation and usage (for future consumers)
+      - Import patterns (main vs subpath exports)
+      - Links to related packages being consolidated
+      - Note about package being under construction
+
+      Tone: Technical and precise, no marketing language.
+
+  - id: 15
+    description: "Verify package dependencies installation"
+    files: []
+    depends_on: [2]
+    verification_command: "pnpm install"
+    notes: |
+      Run from monorepo root. Ensures:
+      - pnpm resolves workspace dependencies correctly
+      - All dependencies are installable
+      - No version conflicts exist
+
+  - id: 16
+    description: "Verify TypeScript build succeeds"
+    files: []
+    depends_on: [3, 4, 12, 15]
+    verification_command: "pnpm --filter @repo/upload build"
+    expected_exit_code: 0
+    notes: |
+      Ensures:
+      - Vite build completes successfully
+      - TypeScript declarations are generated
+      - dist/ directory is created with proper structure
+      - All entry points are bundled correctly
+
+  - id: 17
+    description: "Verify type checking passes"
+    files: []
+    depends_on: [3, 15]
+    verification_command: "pnpm --filter @repo/upload check-types"
+    expected_exit_code: 0
+    notes: |
+      Ensures:
+      - No TypeScript compilation errors
+      - tsconfig.json is valid
+      - All imports resolve correctly
+
+  - id: 18
+    description: "Verify linting passes"
+    files: []
+    depends_on: [15]
+    verification_command: "pnpm --filter @repo/upload lint"
+    expected_exit_code: 0
+    notes: |
+      Ensures:
+      - ESLint configuration inherits correctly from workspace root
+      - No linting errors exist
+      - Code follows project standards
+      - Max warnings = 0 (strict enforcement)
+
+  - id: 19
+    description: "Verify test infrastructure with smoke test"
+    files: []
+    depends_on: [4, 6, 13, 15]
+    verification_command: "pnpm --filter @repo/upload test"
+    expected_exit_code: 0
+    notes: |
+      Ensures:
+      - Vitest runs successfully
+      - Test setup loads correctly
+      - Smoke test passes
+      - React Testing Library is available for future tests
+
+  - id: 20
+    description: "Verify Turborepo pipeline integration"
+    files: []
+    depends_on: [16]
+    verification_command: "pnpm turbo run build --filter=@repo/upload --dry-run"
+    expected_exit_code: 0
+    notes: |
+      Ensures:
+      - Package is recognized by Turborepo
+      - Build task is configured correctly
+      - Dependencies are resolved (^build)
+      - No additional turbo.json changes needed (packages/core/* is already supported)
+
+  - id: 21
+    description: "Verify directory structure completeness"
+    files: []
+    depends_on: [7, 8, 9, 10, 11, 12, 13, 14]
+    verification_command: "ls -R packages/core/upload/src"
+    notes: |
+      Manual verification that all required files exist:
+      - src/client/index.ts
+      - src/hooks/index.ts
+      - src/image/index.ts
+      - src/components/index.ts
+      - src/types/index.ts
+      - src/index.ts
+      - src/__tests__/setup.ts
+      - src/__tests__/package-structure.test.ts
+
+  - id: 22
+    description: "Verify package exports configuration"
+    files: []
+    depends_on: [16]
+    verification_command: "cat packages/core/upload/package.json | grep -A 15 '\"exports\"'"
+    notes: |
+      Verify exports field includes:
+      - Main export: "." -> ./dist/index.js
+      - Subpath: "./client" -> ./dist/client/index.js
+      - Subpath: "./hooks" -> ./dist/hooks/index.js
+      - Subpath: "./image" -> ./dist/image/index.js
+      - Subpath: "./components" -> ./dist/components/index.js
+      - Subpath: "./types" -> ./dist/types/index.js
+
+      Each with proper types field pointing to .d.ts files.
+
+reference_configs:
+  template_baseline:
+    path: "packages/.template/package.json"
+    patterns:
+      - Standard package.json structure
+      - Script naming conventions (build, dev, check-types, lint, test, test:watch)
+      - Exports field configuration
+      - Version: 0.0.1 (new packages start here)
+      - type: module (ESM)
+      - sideEffects: false (tree-shaking friendly)
+
+  react_component_reference:
+    path: "packages/core/app-component-library/package.json"
+    patterns:
+      - React 19.1.0 dependencies and peerDependencies
+      - React-specific dependencies (framer-motion, class-variance-authority, clsx, tailwind-merge)
+      - Zod version: 4.1.13 (DIFFERS from story spec of ^3.24.2)
+      - DevDependencies: @testing-library/react 16.3.0, vitest 3.2.4, typescript 5.8.3
+      - Build script: "vite build" (Vite handles both JS and declarations with plugin)
+      - Lint script: "eslint --fix . --fix --max-warnings 0"
+      - Test scripts: "vitest run" and "vitest --watch --no-threads --pool=forks --max-workers=4"
+
+  consolidated_package_reference:
+    path: "packages/core/gallery/package.json"
+    patterns:
+      - private: true (internal workspace package)
+      - Simpler exports: "." -> "./src/index.ts" (source exports, not dist)
+      - workspace:* dependencies for internal packages
+      - Zod ^3.24.0 (older version, ignore this - use app-component-library's 4.1.13)
+
+  logger_utility_reference:
+    path: "packages/core/logger/package.json"
+    patterns:
+      - Minimal utility package structure
+      - Build: "tsc" (no bundler for pure TS utilities)
+      - Dual exports for import/require (CJS compatibility)
+      - files: ["dist"] (limits published files)
+
+  typescript_config:
+    path: "packages/core/app-component-library/tsconfig.json"
+    patterns:
+      - target: ESNext, module: ESNext
+      - jsx: react-jsx (React 19 JSX transform)
+      - moduleResolution: bundler
+      - strict: false, noImplicitAny: false (monorepo standard)
+      - outDir: dist, declaration: false (Vite plugin handles it)
+      - baseUrl: ".", paths: {"@/*": ["./src/*"]}
+      - Excludes: node_modules, dist, tests, stories
+
+  logger_typescript_config:
+    path: "packages/core/logger/tsconfig.json"
+    patterns:
+      - extends: ../../../tsconfig.json (inherit from root)
+      - declaration: true, declarationMap: true (for type definitions)
+      - module: NodeNext, moduleResolution: NodeNext (for Node packages)
+      - Use bundler resolution for React packages instead
+
+  vite_build_config:
+    path: "packages/core/app-component-library/vite.config.ts"
+    patterns:
+      - vite-plugin-dts for TypeScript declarations
+      - Multiple library entry points for subpath exports
+      - External dependencies (React, Radix, workspace packages, utilities)
+      - ES modules only (formats: ['es'])
+      - Conditional source maps (development only)
+      - entryFileNames: '[name].js' (preserves directory structure)
+
+  vitest_test_config:
+    path: "packages/core/app-component-library/vitest.config.ts"
+    patterns:
+      - @vitejs/plugin-react for JSX support
+      - resolve.alias for @ -> ./src
+      - test.globals: true, test.environment: jsdom
+      - test.setupFiles: ['./src/__tests__/setup.ts']
+      - test.include: ['src/**/*.test.{ts,tsx}']
+      - test.coverage with v8 provider
+
+  test_setup:
+    path: "packages/core/app-component-library/src/__tests__/setup.ts"
+    patterns:
+      - Import '@testing-library/jest-dom'
+      - IntersectionObserver mock
+      - ResizeObserver mock
+      - matchMedia mock with vi.fn()
+      - scrollTo mock
+      - localStorage and sessionStorage mocks
+
+  turborepo_integration:
+    path: "turbo.json"
+    patterns:
+      - build task: dependsOn ^build, outputs dist/**
+      - test task: dependsOn ^build
+      - lint task: dependsOn ^lint
+      - check-types task: dependsOn ^check-types
+      - No package-specific overrides needed (global patterns match packages/core/*)
+
+dependency_versions:
+  production:
+    zod: "4.1.13"  # CRITICAL: Use app-component-library version, NOT story's ^3.24.2
+    react: "^19.1.0"
+    react-dom: "^19.1.0"
+    framer-motion: "^12.23.22"
+    class-variance-authority: "^0.7.0"
+    clsx: "^2.1.1"
+    tailwind-merge: "^2.5.4"
+
+  peer_dependencies:
+    react: "^18.0.0 || ^19.0.0"  # Flexible for compatibility
+    react-dom: "^18.0.0 || ^19.0.0"
+
+  dev_dependencies:
+    typescript: "5.8.3"  # Exact version (no caret)
+    vitest: "^3.2.4"
+    "@testing-library/react": "^16.3.0"
+    "@testing-library/jest-dom": "^6.6.3"
+    "@vitejs/plugin-react": "^4.3.4"
+    jsdom: "^25.0.1"
+    eslint: "^9.30.0"
+    vite: "^5.2.10"
+    "vite-plugin-dts": "4.5.4"  # No caret (matches app-component-library)
+
+risks:
+  - id: R1
+    description: "Zod version discrepancy between story spec (^3.24.2) and existing packages (4.1.13)"
+    mitigation: |
+      Use Zod 4.1.13 to match @repo/app-component-library. The story spec is outdated.
+      Zod 4.x has breaking changes from 3.x, but all migration stories will use the same version,
+      so consistency is more important than following the outdated spec.
+      Document this decision in README.md and mention in PR description.
+    severity: low
+    likelihood: low
+
+  - id: R2
+    description: "Package exports subpath imports may not work correctly if Vite build doesn't create proper directory structure"
+    mitigation: |
+      Vite config must specify multiple entry points that preserve directory structure.
+      Use entryFileNames: '[name].js' in rollupOptions to maintain paths.
+      Test imports from sibling package after build to verify:
+      - import { something } from '@repo/upload' works
+      - import { something } from '@repo/upload/hooks' works
+      Verify dist/ structure matches exports field expectations.
+    severity: medium
+    likelihood: medium
+
+  - id: R3
+    description: "Empty placeholder files might cause TypeScript or linting errors"
+    mitigation: |
+      Use 'export {}' in placeholder files to make them valid modules.
+      Add comments explaining they're placeholders to prevent confusion.
+      Ensure tsconfig excludes test files but includes placeholder files.
+    severity: low
+    likelihood: low
+
+  - id: R4
+    description: "Turborepo might not recognize new package without configuration changes"
+    mitigation: |
+      Verify turbo.json already includes patterns for packages/core/*.
+      Run dry-run verification (step 20) to confirm integration.
+      If needed, add package-specific overrides, but existing global patterns should suffice.
+    severity: low
+    likelihood: very-low
+
+  - id: R5
+    description: "Test setup might be incomplete for future React component tests"
+    mitigation: |
+      Copy complete setup.ts from app-component-library including all browser API mocks.
+      Verify @testing-library/jest-dom is installed and imported.
+      Include all mocks proactively (IntersectionObserver, ResizeObserver, matchMedia, etc.)
+      even if not needed yet - they're required for React component testing.
+    severity: low
+    likelihood: low
+
+  - id: R6
+    description: "Build might fail due to missing external dependencies in Vite config"
+    mitigation: |
+      Externalize all peer dependencies and workspace dependencies in rollupOptions.
+      Include regex patterns for @radix-ui/.*, @repo/.* to catch all variations.
+      Test build after configuration (step 16) before proceeding.
+    severity: medium
+    likelihood: low
+
+validation_criteria:
+  quality_gates:
+    - name: "Build succeeds"
+      command: "pnpm --filter @repo/upload build"
+      expected_exit_code: 0
+      blocking: true
+
+    - name: "Type checking passes"
+      command: "pnpm --filter @repo/upload check-types"
+      expected_exit_code: 0
+      blocking: true
+
+    - name: "Linting passes with no warnings"
+      command: "pnpm --filter @repo/upload lint"
+      expected_exit_code: 0
+      blocking: true
+
+    - name: "Tests pass"
+      command: "pnpm --filter @repo/upload test"
+      expected_exit_code: 0
+      blocking: true
+
+    - name: "Turborepo recognizes package"
+      command: "pnpm turbo run build --filter=@repo/upload --dry-run"
+      expected_exit_code: 0
+      blocking: true
+
+  structure_checks:
+    - "packages/core/upload/package.json exists"
+    - "packages/core/upload/tsconfig.json exists"
+    - "packages/core/upload/vite.config.ts exists"
+    - "packages/core/upload/README.md exists"
+    - "packages/core/upload/src/client/index.ts exists"
+    - "packages/core/upload/src/hooks/index.ts exists"
+    - "packages/core/upload/src/image/index.ts exists"
+    - "packages/core/upload/src/components/index.ts exists"
+    - "packages/core/upload/src/types/index.ts exists"
+    - "packages/core/upload/src/index.ts exists"
+    - "packages/core/upload/src/__tests__/setup.ts exists"
+    - "packages/core/upload/src/__tests__/package-structure.test.ts exists"
+
+  export_validation:
+    - "Main export (.) resolves to dist/index.js"
+    - "Subpath export (./client) resolves to dist/client/index.js"
+    - "Subpath export (./hooks) resolves to dist/hooks/index.js"
+    - "Subpath export (./image) resolves to dist/image/index.js"
+    - "Subpath export (./components) resolves to dist/components/index.js"
+    - "Subpath export (./types) resolves to dist/types/index.js"
+    - "Type definitions (.d.ts files) are generated for all exports"
+
+e2e_exempt: true
+e2e_exempt_reason: "Infrastructure-only story - creates package structure with no runtime behavior or UI to test. Future stories (REPA-002 through REPA-006) will add functionality requiring E2E tests."
+
+notes: |
+  CRITICAL DECISIONS:
+
+  1. Zod Version Override: Using 4.1.13 instead of story's ^3.24.2
+     - Rationale: Match existing @repo/app-component-library to avoid version conflicts
+     - Impact: All migration stories will use same version
+     - Documentation: Noted in README and QA discovery notes
+
+  2. Build Strategy: Vite with vite-plugin-dts (like app-component-library)
+     - Alternative considered: Plain tsc (like @repo/logger)
+     - Rationale: React components need bundler, tree-shaking, and JSX transform
+     - Pattern: Multiple entry points for subpath exports
+
+  3. Exports Pattern: Dist-based exports (not source exports like @repo/gallery)
+     - Rationale: Compiled output ensures compatibility and better tree-shaking
+     - Tradeoff: More complex build but better for consumers
+
+  4. ESLint: Inherit from workspace root (no package-level config)
+     - Rationale: Monorepo standard (app-component-library has no .eslintrc)
+     - Benefit: Centralized linting rules, easier maintenance
+
+  5. Test Configuration: Vitest config embedded in vite.config.ts
+     - Alternative: Separate vitest.config.ts
+     - Rationale: Simpler, matches app-component-library pattern
+     - Benefit: Single source of truth for build and test aliases
+
+  MIGRATION READINESS:
+
+  This package structure directly enables parallel migration in subsequent stories:
+  - REPA-002: Populate client/ directory
+  - REPA-003: Populate hooks/ directory
+  - REPA-004: Populate image/ directory
+  - REPA-005: Populate components/ directory
+  - REPA-006: Populate types/ directory
+
+  All stories can begin immediately after REPA-001 completes with no blocking dependencies.
+
+  MONOREPO INTEGRATION:
+
+  - Turborepo: No changes needed, packages/core/* already in pipeline
+  - pnpm workspaces: Auto-discovered, no workspace config needed
+  - Import aliases: @repo/upload will work in all apps once installed
+  - Build graph: Package has no dependencies yet, all migrations are additive
+
+  SUCCESS CRITERIA MAPPING TO ACS:
+
+  - AC-1 to AC-12: Covered by steps 1-14 (structure and config creation)
+  - AC-13 to AC-16: Covered by steps 15-19 (quality gate verifications)
+  - AC-17: Covered by step 20 (Turborepo integration verification)
+  - All acceptance criteria have corresponding implementation steps and verification commands

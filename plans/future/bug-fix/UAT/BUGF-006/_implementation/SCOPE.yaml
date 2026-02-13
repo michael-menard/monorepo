@@ -1,0 +1,27 @@
+schema: 1
+story_id: "BUGF-006"
+timestamp: "2026-02-11T17:49:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/**"
+  - "packages/core/app-component-library/**"
+  - "packages/core/accessibility/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Replace console statements with @repo/logger across frontend apps to comply with CLAUDE.md standards and enable proper structured logging"

@@ -1,6 +1,7 @@
 /**
  * Uploader State Resilience Integration Tests
  * Story 3.1.9: Uploader State Resilience & Unsaved-Changes Guard
+ * Story REPA-003: Updated for dependency-injected useUploaderSession from @repo/upload
  *
  * Tests:
  * - Unauthenticated → redirect → return restores locally persisted state
@@ -9,13 +10,26 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+// Stub browser APIs before any module loads (HEIC converter in @repo/upload bundle needs them)
+vi.hoisted(() => {
+  if (typeof globalThis.Worker === 'undefined') {
+    ;(globalThis as any).Worker = class MockWorker {
+      postMessage() {}
+      terminate() {}
+      addEventListener() {}
+      removeEventListener() {}
+    }
+  }
+  if (typeof URL.createObjectURL !== 'function') {
+    URL.createObjectURL = () => 'blob:mock'
+    URL.revokeObjectURL = () => {}
+  }
+})
+
 import { renderHook, waitFor } from '@testing-library/react'
-import { Provider } from 'react-redux'
-import { configureStore } from '@reduxjs/toolkit'
-import React from 'react'
 import { logger } from '@repo/logger'
-import { useUploaderSession } from '@/hooks/useUploaderSession'
-import { authSlice } from '@/store/slices/authSlice'
+import { useUploaderSession } from '@repo/upload/hooks'
 
 // Mock dependencies
 vi.mock('@repo/logger', () => ({
@@ -37,7 +51,7 @@ const { mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
 }))
 
-vi.mock('@repo/app-component-library/hooks/useToast', () => ({
+vi.mock('@repo/app-component-library', () => ({
   useToast: vi.fn(() => ({
     toast: mockToast,
   })),
@@ -60,8 +74,6 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
       mockLocalStorage = {}
     })
 
-    // Mock toast is wired via vi.mock('@repo/app-component-library/hooks/useToast')
-
     vi.clearAllMocks()
   })
 
@@ -69,35 +81,15 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
     vi.clearAllMocks()
   })
 
-  const createMockStore = (authState: any) => {
-    return configureStore({
-      reducer: {
-        auth: authSlice.reducer,
-      },
-      preloadedState: {
-        auth: authState,
-      },
-    })
-  }
-
-  const wrapper =
-    (store: any) =>
-    ({ children }: { children: React.ReactNode }) => <Provider store={store}>{children}</Provider>
-
   describe('Auth redirect flow with state restoration', () => {
     it('restores state after user returns from login redirect', async () => {
       // Step 1: User starts as unauthenticated and creates some state
-      const anonStore = createMockStore({
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      })
-
-      const { result: anonResult } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-        wrapper: wrapper(anonStore),
-      })
+      const { result: anonResult } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: false,
+        }),
+      )
 
       // User fills in some data
       await waitFor(() => {
@@ -111,7 +103,7 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         description: 'Test description',
         tags: ['test', 'moc'],
         theme: 'space',
-        step: 1,
+        step: 'files',
         files: [
           {
             name: 'instructions.pdf',
@@ -122,6 +114,7 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         ],
         uploadToken: 'test-token',
         version: 1,
+        updatedAt: Date.now(),
       }
 
       // Manually persist state (simulating what the hook would do)
@@ -133,17 +126,12 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
       // Step 2: User navigates to login (would be redirected by route guard)
       // Step 3: User completes authentication and returns to /instructions/new
 
-      const authStore = createMockStore({
-        isAuthenticated: true,
-        user: { id: 'user-123', email: 'test@example.com' },
-        token: 'auth-token',
-      })
-
-      const { result: authResult } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-          wrapper: wrapper(authStore),
-        },
+      const { result: authResult } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: true,
+          userId: 'user-123',
+        }),
       )
 
       // Step 4: State should be restored from localStorage
@@ -170,7 +158,7 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         description: 'Old description',
         tags: ['old'],
         theme: 'city',
-        step: 2,
+        step: 'files',
         files: [
           {
             name: 'old.pdf',
@@ -181,23 +169,19 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         ],
         uploadToken: 'old-token',
         version: 1,
+        updatedAt: Date.now(),
       }
 
       const oldUserKey = 'uploader:/instructions/new:user-123'
       mockLocalStorage[oldUserKey] = JSON.stringify(oldUserState)
 
       // Step 2: Different user (user-456) logs in and visits uploader
-      const newUserStore = createMockStore({
-        isAuthenticated: true,
-        user: { id: 'user-456', email: 'newuser@example.com' },
-        token: 'new-auth-token',
-      })
-
-      const { result } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-          wrapper: wrapper(newUserStore),
-        },
+      const { result } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: true,
+          userId: 'user-456',
+        }),
       )
 
       await waitFor(() => {
@@ -227,7 +211,7 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         description: 'Description',
         tags: ['test'],
         theme: 'technic',
-        step: 2,
+        step: 'files',
         files: [
           {
             name: 'file1.pdf',
@@ -244,23 +228,19 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         ],
         uploadToken: 'upload-token',
         version: 1,
+        updatedAt: Date.now(),
       }
 
       const storageKey = 'uploader:/instructions/new:user-789'
       mockLocalStorage[storageKey] = JSON.stringify(stateWithFiles)
 
       // Step 2: User returns authenticated
-      const authStore = createMockStore({
-        isAuthenticated: true,
-        user: { id: 'user-789', email: 'test@example.com' },
-        token: 'auth-token',
-      })
-
-      const { result } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-          wrapper: wrapper(authStore),
-        },
+      const { result } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: true,
+          userId: 'user-789',
+        }),
       )
 
       await waitFor(() => {
@@ -285,12 +265,6 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
 
   describe('State persistence and cleanup', () => {
     it('clears state on successful finalize', async () => {
-      const authStore = createMockStore({
-        isAuthenticated: true,
-        user: { id: 'user-999', email: 'test@example.com' },
-        token: 'auth-token',
-      })
-
       // Pre-populate localStorage with state
       const storageKey = 'uploader:/instructions/new:user-999'
       mockLocalStorage[storageKey] = JSON.stringify({
@@ -298,17 +272,19 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         description: 'Test',
         tags: [],
         theme: 'space',
-        step: 3,
+        step: 'review',
         files: [],
         uploadToken: 'token',
         version: 1,
+        updatedAt: Date.now(),
       })
 
-      const { result } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-          wrapper: wrapper(authStore),
-        },
+      const { result } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: true,
+          userId: 'user-999',
+        }),
       )
 
       await waitFor(() => {
@@ -323,17 +299,11 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
     })
 
     it('clears anon state on user opting to leave', async () => {
-      const anonStore = createMockStore({
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      })
-
-      const { result } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-          wrapper: wrapper(anonStore),
-        },
+      const { result } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: false,
+        }),
       )
 
       await waitFor(() => {
@@ -362,12 +332,6 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
 
   describe('State versioning and migration', () => {
     it('handles version field in persisted state', async () => {
-      const authStore = createMockStore({
-        isAuthenticated: true,
-        user: { id: 'user-123', email: 'test@example.com' },
-        token: 'auth-token',
-      })
-
       // Persist state with version
       const storageKey = 'uploader:/instructions/new:user-123'
       mockLocalStorage[storageKey] = JSON.stringify({
@@ -375,17 +339,19 @@ describe('Story 3.1.9: Uploader State Resilience Integration', () => {
         description: 'Test',
         tags: [],
         theme: 'city',
-        step: 1,
+        step: 'metadata',
         files: [],
         uploadToken: 'token',
         version: 1,
+        updatedAt: Date.now(),
       })
 
-      const { result } = renderHook(
-        () => useUploaderSession({ route: '/instructions/new' }),
-        {
-          wrapper: wrapper(authStore),
-        },
+      const { result } = renderHook(() =>
+        useUploaderSession({
+          route: '/instructions/new',
+          isAuthenticated: true,
+          userId: 'user-123',
+        }),
       )
 
       await waitFor(() => {

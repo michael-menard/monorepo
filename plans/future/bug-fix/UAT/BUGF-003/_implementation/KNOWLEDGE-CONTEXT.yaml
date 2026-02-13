@@ -1,0 +1,81 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-11T19:40:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WISH-2004"
+        lesson: "API path mismatch between frontend RTK Query and backend Hono routes caused 404s"
+        category: blocker
+        applies_because: "Story adds RTK Query mutations that must align with backend endpoints"
+      - story_id: "WISH-2018"
+        lesson: "CloudFront CDN integration pattern for S3 images established"
+        category: pattern
+        applies_because: "Sets gallery uses S3/CloudFront for image storage"
+      - story_id: "General"
+        lesson: "Cache invalidation patterns for RTK Query ensure UI stays consistent"
+        category: pattern
+        applies_because: "Delete and update mutations must invalidate appropriate cache tags"
+
+    blockers_to_avoid:
+      - "API path schema mismatch - frontend uses /api/v2/sets, backend uses /sets (Vite proxy required)"
+      - "Missing cache tag invalidation causing stale data in UI"
+      - "Optimistic updates without proper rollback on mutation failure"
+
+    patterns_to_follow:
+      - "Use Zod schemas with z.infer<> for all types (no TypeScript interfaces)"
+      - "RTK Query mutations: invalidatesTags for cache invalidation, onQueryStarted for optimistic updates"
+      - "Reuse existing components (TagInput, ImageUploadZone) from add-set-page"
+      - "Form validation with Zod schemas before mutation submission"
+      - "Toast notifications for success/error feedback"
+      - "Loading skeletons while fetching data"
+
+    patterns_to_avoid:
+      - "Creating barrel files (index.ts re-exports)"
+      - "Using console.log instead of @repo/logger"
+      - "TypeScript interfaces instead of Zod schemas"
+      - "Direct imports from shadcn paths (use @repo/ui)"
+
+  architecture_decisions:
+    active_count: 3
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Frontend uses /api/v2/{domain}, Backend uses /{domain}"
+        applies_to: ["api", "backend", "frontend"]
+      - id: "ADR-003"
+        title: "Image Storage and CDN Architecture"
+        status: active
+        constraint: "CloudFront CDN in front of S3 with OAC for image delivery"
+        applies_to: ["frontend", "backend", "images"]
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests required, E2E tests deferred to BUGF-014 per stories index"
+        applies_to: ["testing"]
+
+    constraints:
+      api_paths: "/api/v2/sets -> /sets via Vite proxy (already configured)"
+      storage: "S3 upload via presigned URLs, CloudFront for serving images"
+      testing: "Unit tests required for mutations, E2E deferred to Phase 3"
+      code_quality: "All types from Zod schemas, no barrel files, use @repo/logger"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file"
+        typical_tokens: 10000
+        mitigation: "Only read Acceptance Criteria section (lines 117-316)"
+      - operation: "Reading full component files"
+        typical_tokens: 5000
+        mitigation: "Targeted reads for patterns, Grep for specific sections"
+
+    recommended_patterns:
+      - "Grep before Read for locating specific sections"
+      - "Read with offset+limit for large files"
+      - "Reuse patterns from existing files instead of re-reading"
+
+  warnings:
+    - "E2E tests explicitly deferred to BUGF-014 per bug-fix epic stories index"
+    - "Backend APIs already deployed - verify endpoints in testing"

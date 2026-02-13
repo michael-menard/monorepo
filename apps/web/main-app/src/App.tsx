@@ -6,16 +6,11 @@ import { router } from './routes'
 import { store } from './store'
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary'
 import { selectAuth } from './store/slices/authSlice'
-import { initializeAuthFailureHandler } from './services/api/authFailureHandler'
 
 // Initialize enhanced Cognito token manager
 // This will be configured with actual tokens from the auth provider
 // The enhanced version includes automatic token refresh and caching
 initializeCognitoTokenManager()
-
-// Initialize global auth failure handler for RTK Query APIs (Story 1.29)
-// This handles 401 responses by clearing auth state and redirecting to login
-initializeAuthFailureHandler(store)
 
 /**
  * Inner app component that connects auth state to router context
@@ -25,6 +20,9 @@ initializeAuthFailureHandler(store)
  * so it has access to TanStack Router's navigation context.
  * useTokenRefresh is also inside RootLayout since it requires AuthProvider.
  * useNavigationSync is also inside RootLayout since it requires RouterProvider context.
+ *
+ * Auth failure handler is created during store initialization (Story REPA-019)
+ * using dependency injection pattern to avoid Redux coupling in @repo/api-client.
  */
 function InnerApp() {
   const auth = useSelector(selectAuth)

@@ -1,0 +1,51 @@
+schema: 1
+story_id: "BUGF-012"
+timestamp: "2026-02-11T19:35:00Z"
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "Do not modify existing test files (BulkActionsBar, InspirationCard, AlbumCard)"
+      - "Do not modify MSW handlers unless API contract changed"
+      - "Do not modify global test setup (src/test/setup.ts)"
+      - "Do not modify component implementations to make tests pass (except bug fixes → separate story)"
+    patterns_to_follow:
+      - "BDD structure: rendering, interactions, accessibility, keyboard navigation"
+      - "Use userEvent for interactions (not fireEvent)"
+      - "Use semantic queries (getByRole, getByLabelText)"
+      - "Reuse existing MSW handlers from src/test/mocks/handlers.ts"
+      - "Follow test patterns from BulkActionsBar and InspirationCard tests"
+    patterns_to_avoid:
+      - "Do not create barrel files for tests"
+      - "Do not use console.log in tests - use @repo/logger (mocked)"
+      - "Do not test implementation details - test user behavior"
+      - "Do not test @repo/gallery components in isolation - test through integration"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests should use mocks, E2E/UAT must use real services"
+        applies_to: ["testing"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "E2E tests exempt for test-only stories (this is a test coverage story)"
+        applies_to: ["testing"]
+    constraints:
+      testing: "Unit tests required with MSW mocking. E2E tests exempt per ADR-005 (test-only story). Target 70% line coverage, 65% branch coverage."
+
+  token_optimization:
+    high_cost_operations: []
+    recommended_patterns:
+      - "Read only the component file and existing test patterns"
+      - "Do not read full story file - ACs section only"
+      - "Batch test file creation by component type (modals together, drag components together)"
+
+  warnings: []

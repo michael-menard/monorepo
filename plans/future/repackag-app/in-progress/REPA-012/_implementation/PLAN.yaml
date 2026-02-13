@@ -1,0 +1,291 @@
+schema: 1
+story_id: "REPA-012"
+timestamp: "2026-02-10T20:15:00Z"
+
+phases:
+  - id: 1
+    name: "Package Structure"
+    description: "Create packages/core/auth-hooks/ with config files"
+    files_to_create:
+      - path: "packages/core/auth-hooks/package.json"
+        description: "Package manifest with dependencies: react, react-dom, @repo/api-client, @repo/logger, @repo/app-component-library, zod"
+      - path: "packages/core/auth-hooks/tsconfig.json"
+        description: "TypeScript config extending root tsconfig"
+      - path: "packages/core/auth-hooks/vitest.config.ts"
+        description: "Vitest config for testing (based on accessibility package)"
+      - path: "packages/core/auth-hooks/src/index.ts"
+        description: "Main barrel file exporting all hooks"
+      - path: "packages/core/auth-hooks/src/test/setup.ts"
+        description: "Test setup file (based on accessibility package)"
+      - path: "packages/core/auth-hooks/README.md"
+        description: "Package documentation"
+    files_to_modify:
+      - path: "turbo.json"
+        description: "Add @repo/auth-hooks to build/lint/test pipelines"
+      - path: "pnpm-workspace.yaml"
+        description: "Verify packages/core/* is included (already present)"
+    files_to_delete: []
+    verification:
+      - "pnpm install"
+      - "pnpm build --filter=@repo/auth-hooks"
+
+  - id: 2
+    name: "Migrate usePermissions"
+    description: "Move usePermissions and helper hooks from main-app to new package"
+    files_to_create:
+      - path: "packages/core/auth-hooks/src/usePermissions.ts"
+        description: "Migrated from apps/web/main-app/src/services/permissions/usePermissions.ts with Redux dependencies abstracted"
+      - path: "packages/core/auth-hooks/src/__tests__/usePermissions.test.tsx"
+        description: "Migrated from apps/web/main-app/src/services/permissions/__tests__/usePermissions.test.tsx"
+    files_to_modify:
+      - path: "packages/core/auth-hooks/src/index.ts"
+        description: "Export usePermissions and all helper hooks"
+    files_to_delete: []
+    migration_notes:
+      - "usePermissions imports from @repo/api-client: Feature, QuotaType, Tier, FEATURE_REQUIRED_TIER, TIER_DISPLAY_NAMES"
+      - "usePermissions uses Redux hooks: useSelector, selectAuth, useGetPermissionsQuery"
+      - "Helper hooks: useHasFeature, useHasQuota, useQuotaInfo, useIsAdmin, useTier"
+      - "Tests mock @/store and @repo/api-client/rtk/permissions-api"
+    verification:
+      - "pnpm test --filter=@repo/auth-hooks -- usePermissions"
+
+  - id: 3
+    name: "Migrate useTokenRefresh"
+    description: "Move useTokenRefresh from main-app to new package"
+    files_to_create:
+      - path: "packages/core/auth-hooks/src/useTokenRefresh.ts"
+        description: "Migrated from apps/web/main-app/src/hooks/useTokenRefresh.ts"
+      - path: "packages/core/auth-hooks/src/__tests__/useTokenRefresh.test.tsx"
+        description: "Migrated from apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+    files_to_modify:
+      - path: "packages/core/auth-hooks/src/index.ts"
+        description: "Export useTokenRefresh"
+    files_to_delete: []
+    migration_notes:
+      - "useTokenRefresh imports from @repo/app-component-library (useToast), @repo/logger"
+      - "useTokenRefresh uses Redux hooks: useAppSelector, selectAuth"
+      - "useTokenRefresh uses @/lib/jwt (isTokenExpired) - need to check if this should be abstracted"
+      - "useTokenRefresh uses @/services/auth/AuthProvider (useAuth) - this is a circular dependency risk"
+    verification:
+      - "pnpm test --filter=@repo/auth-hooks -- useTokenRefresh"
+
+  - id: 4
+    name: "Create useModuleAuth Implementation"
+    description: "Create real useModuleAuth connected to auth system"
+    files_to_create:
+      - path: "packages/core/auth-hooks/src/useModuleAuth.ts"
+        description: "Real implementation using usePermissions and auth context"
+      - path: "packages/core/auth-hooks/src/__tests__/useModuleAuth.test.tsx"
+        description: "Tests for useModuleAuth"
+    files_to_modify:
+      - path: "packages/core/auth-hooks/src/index.ts"
+        description: "Export useModuleAuth, ModuleAuthState, UseModuleAuthReturn types"
+    files_to_delete: []
+    implementation_notes:
+      - "useModuleAuth should use usePermissions internally"
+      - "hasAccess = hasFeature check"
+      - "canEdit/canDelete = permissions logic"
+      - "isAdmin = useIsAdmin()"
+      - "hasPermission = custom permission checking logic"
+      - "refreshAuth = refetch from usePermissions"
+    verification:
+      - "pnpm test --filter=@repo/auth-hooks -- useModuleAuth"
+
+  - id: 5
+    name: "Update Component Library Imports"
+    description: "Update QuotaIndicator and FeatureGate to import from @repo/auth-hooks"
+    files_to_create: []
+    files_to_modify:
+      - path: "packages/core/app-component-library/src/indicators/QuotaIndicator.tsx"
+        description: "Change imports from local definitions to @repo/api-client"
+        change_type: "Remove local QuotaType/QuotaInfo schemas, import from @repo/api-client"
+      - path: "packages/core/app-component-library/src/gates/FeatureGate.tsx"
+        description: "Change imports from local definitions to @repo/api-client"
+        change_type: "Remove local Feature/Tier schemas, import from @repo/api-client"
+    files_to_delete: []
+    notes:
+      - "These components do NOT use hooks, only type definitions"
+      - "Import schemas/types from @repo/api-client which is already a dependency"
+      - "No circular dependency risk since no hooks are imported"
+    verification:
+      - "pnpm build --filter=@repo/app-component-library"
+      - "pnpm check-types --filter=@repo/app-component-library"
+
+  - id: 6
+    name: "Update Main App Imports"
+    description: "Update main-app to use @repo/auth-hooks"
+    files_to_create: []
+    files_to_modify:
+      - path: "apps/web/main-app/src/components/Layout/RootLayout.tsx"
+        description: "Import useTokenRefresh from @repo/auth-hooks"
+      - path: "apps/web/main-app/src/App.tsx"
+        description: "No changes needed (doesn't import usePermissions or useTokenRefresh)"
+    files_to_delete:
+      - path: "apps/web/main-app/src/services/permissions/usePermissions.ts"
+        description: "Migrated to @repo/auth-hooks"
+      - path: "apps/web/main-app/src/services/permissions/__tests__/usePermissions.test.tsx"
+        description: "Migrated to @repo/auth-hooks"
+      - path: "apps/web/main-app/src/hooks/useTokenRefresh.ts"
+        description: "Migrated to @repo/auth-hooks"
+      - path: "apps/web/main-app/src/hooks/__tests__/useTokenRefresh.test.tsx"
+        description: "Migrated to @repo/auth-hooks"
+    verification:
+      - "pnpm build --filter=main-app"
+      - "pnpm test --filter=main-app"
+
+  - id: 7
+    name: "Delete Stub Files and Update Gallery Apps"
+    description: "Delete 6 duplicate stub files from gallery apps and update imports"
+    files_to_create: []
+    files_to_modify: []
+    files_to_delete:
+      - path: "apps/web/app-dashboard/src/hooks/use-module-auth.ts"
+        description: "Stub file - delete and import from @repo/auth-hooks"
+      - path: "apps/web/app-inspiration-gallery/src/hooks/use-module-auth.ts"
+        description: "Stub file - delete and import from @repo/auth-hooks"
+      - path: "apps/web/app-instructions-gallery/src/hooks/use-module-auth.ts"
+        description: "Stub file - delete and import from @repo/auth-hooks"
+      - path: "apps/web/app-sets-gallery/src/hooks/use-module-auth.ts"
+        description: "Stub file - delete and import from @repo/auth-hooks"
+      - path: "apps/web/app-wishlist-gallery/src/hooks/use-module-auth.ts"
+        description: "Stub file - delete and import from @repo/auth-hooks"
+      - path: "apps/web/user-settings/src/hooks/use-module-auth.ts"
+        description: "Stub file - delete and import from @repo/auth-hooks"
+    update_imports:
+      - "Search for './hooks/use-module-auth' in gallery apps"
+      - "Replace with '@repo/auth-hooks'"
+      - "Check if any components use useModuleAuth and update"
+    verification:
+      - "pnpm build --filter=app-dashboard"
+      - "pnpm build --filter=app-inspiration-gallery"
+      - "pnpm build --filter=app-instructions-gallery"
+      - "pnpm build --filter=app-sets-gallery"
+      - "pnpm build --filter=app-wishlist-gallery"
+      - "pnpm build --filter=user-settings"
+
+  - id: 8
+    name: "Final Integration Testing"
+    description: "Run full build and test suite"
+    files_to_create: []
+    files_to_modify: []
+    files_to_delete: []
+    verification:
+      - "pnpm build"
+      - "pnpm lint"
+      - "pnpm check-types"
+      - "pnpm test"
+
+dependencies:
+  internal:
+    - package: "@repo/api-client"
+      imports:
+        - "Feature"
+        - "QuotaType"
+        - "Tier"
+        - "FEATURE_REQUIRED_TIER"
+        - "TIER_DISPLAY_NAMES"
+        - "useGetPermissionsQuery (via RTK Query hook)"
+      notes: "Core auth schemas and RTK Query API"
+    - package: "@repo/logger"
+      imports: ["logger", "createLogger"]
+      notes: "Logging utility"
+    - package: "@repo/app-component-library"
+      imports: ["useToast"]
+      notes: "Toast notifications for useTokenRefresh"
+    - package: "react-redux"
+      imports: ["useSelector", "Provider"]
+      notes: "Redux integration for auth state"
+    - package: "@reduxjs/toolkit"
+      imports: ["configureStore"]
+      notes: "Store configuration in tests"
+  peer:
+    - package: "react"
+      version: "^19.0.0"
+    - package: "react-dom"
+      version: "^19.0.0"
+  dev:
+    - package: "vitest"
+      version: "^3.0.5"
+    - package: "@testing-library/react"
+      version: "^16.0.1"
+    - package: "@testing-library/jest-dom"
+      version: "^6.6.3"
+    - package: "jsdom"
+      version: "^25.0.1"
+
+risks:
+  - id: 1
+    description: "Circular dependency: useTokenRefresh uses @/services/auth/AuthProvider (useAuth)"
+    severity: "HIGH"
+    mitigation: "Two options: (1) Keep useTokenRefresh in main-app only, OR (2) Abstract auth context interface. DECISION: Keep in main-app for now, only migrate usePermissions and useModuleAuth."
+    decision: "PHASE 3: Migrate useTokenRefresh separately after abstracting auth dependencies"
+
+  - id: 2
+    description: "Redux coupling: usePermissions uses Redux for auth state and RTK Query"
+    severity: "MEDIUM"
+    mitigation: "Accept Redux coupling as it's the standard state management. Consumers must provide Redux Provider with authSlice and permissionsApi configured."
+    decision: "ACCEPTED - Document Redux requirements in README"
+
+  - id: 3
+    description: "@/lib/jwt dependency in useTokenRefresh"
+    severity: "MEDIUM"
+    mitigation: "Move isTokenExpired to @repo/api-client/auth utilities OR keep useTokenRefresh in main-app"
+    decision: "DEFER useTokenRefresh migration to Phase 3"
+
+  - id: 4
+    description: "Test mocking complexity - tests mock @/store which is app-specific"
+    severity: "LOW"
+    mitigation: "Update test mocks to use @repo/api-client paths. Document mock setup requirements."
+    decision: "Update test imports to use package exports"
+
+circular_dependency_analysis:
+  risk: "MEDIUM"
+  details: |
+    useTokenRefresh creates a circular dependency:
+    - useTokenRefresh (new package) -> @/services/auth/AuthProvider (main-app)
+    - AuthProvider (main-app) -> useTokenRefresh (new package) [via RootLayout]
+
+    This is a classic circular dependency that will cause build issues.
+  mitigation: |
+    PHASE 1 (this plan): Only migrate usePermissions and useModuleAuth
+    PHASE 2 (future): Abstract auth context to @repo/auth-context
+    PHASE 3 (future): Migrate useTokenRefresh after auth context abstraction
+  revised_scope: |
+    - ✅ Migrate usePermissions + helper hooks
+    - ✅ Create useModuleAuth implementation
+    - ✅ Update component library imports
+    - ✅ Delete stub files
+    - ❌ Defer useTokenRefresh migration (circular dependency)
+
+phase_revisions:
+  - phase_id: 3
+    status: "DEFERRED"
+    reason: "Circular dependency with AuthProvider - requires auth context abstraction first"
+    new_plan: "Create separate story for auth context abstraction"
+
+  - phase_id: 6
+    modified: true
+    changes: "Do not migrate useTokenRefresh - keep import from @/hooks/useTokenRefresh"
+
+success_criteria:
+  - "✅ @repo/auth-hooks package builds successfully"
+  - "✅ All 6 stub files deleted"
+  - "✅ usePermissions and 5 helper hooks work from new package"
+  - "✅ useModuleAuth real implementation works"
+  - "✅ All gallery apps import from @repo/auth-hooks"
+  - "✅ QuotaIndicator and FeatureGate import types from @repo/api-client"
+  - "✅ No circular dependencies"
+  - "✅ All tests pass"
+  - "⏸️ useTokenRefresh remains in main-app (deferred to future story)"
+
+notes: |
+  IMPORTANT: This plan defers useTokenRefresh migration due to circular dependency.
+  useTokenRefresh will remain in apps/web/main-app/src/hooks/ for now.
+
+  A future story should:
+  1. Create @repo/auth-context package
+  2. Abstract AuthProvider interface
+  3. Migrate useTokenRefresh to @repo/auth-hooks
+
+  This revised approach eliminates the circular dependency risk and delivers
+  value incrementally.

@@ -6,9 +6,9 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { useUploaderSession, type UseUploaderSessionResult } from '@/hooks/useUploaderSession'
-import { useUnsavedChangesPrompt } from '@/hooks/useUnsavedChangesPrompt'
-import { UnsavedChangesDialog } from '@/components/Uploader/UnsavedChangesDialog'
+import { useUploaderSession, type UseUploaderSessionResult } from '@repo/upload/hooks'
+import { useUnsavedChangesPrompt } from '@repo/hooks/useUnsavedChangesPrompt'
+import { UnsavedChangesDialog } from '@repo/upload/components'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuth } from '@/store/slices/authSlice'
 
@@ -39,9 +39,11 @@ export function UploaderSessionProvider({
 }: UploaderSessionProviderProps) {
   const { user } = useAppSelector(selectAuth)
 
-  // Session persistence
+  // Session persistence (REPA-003: injected auth via dependency injection)
   const sessionResult = useUploaderSession({
     route,
+    isAuthenticated: !!user,
+    userId: user?.id,
     onRestore,
   })
 

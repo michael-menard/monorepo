@@ -1,0 +1,22 @@
+# Deferred KB Writes for REPA-005
+# KB unavailable during story generation, queue writes for later retry
+
+deferred_writes:
+  - type: story_insert
+    table: stories
+    data:
+      story_id: REPA-005
+      feature: repackag-app
+      title: "Migrate Upload Components to @repo/upload"
+      story_dir: plans/future/repackag-app/backlog/REPA-005
+      story_file: plans/future/repackag-app/backlog/REPA-005/REPA-005.md
+      story_type: refactor
+      points: 8
+      priority: high
+      state: backlog
+      touches_backend: false
+      touches_frontend: true
+      touches_database: false
+      touches_infra: false
+    timestamp: "2026-02-11T17:45:00Z"
+    retry_count: 0

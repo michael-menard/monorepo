@@ -1,0 +1,4 @@
+current_phase: qa-setup
+last_successful_phase: review
+timestamp: "2026-02-10T21:35:00Z"
+moved_to_uat: true

@@ -1,0 +1,26 @@
+schema: 1
+story_id: "BUGF-003"
+timestamp: "2026-02-11T19:35:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: true
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "apps/web/app-sets-gallery/**"
+  - "packages/core/api-client/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Add useDeleteSetMutation and useUpdateSetMutation RTK Query hooks, create edit-set-page.tsx, wire delete handlers in main-page and set-detail-page, add /sets/:id/edit route"

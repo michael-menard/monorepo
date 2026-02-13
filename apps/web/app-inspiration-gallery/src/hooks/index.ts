@@ -4,14 +4,20 @@
  * Custom hooks for the inspiration gallery module.
  */
 
-export { useAnnouncer, Announcer } from './useAnnouncer'
-export type { AnnouncementPriority, AnnouncerOptions, UseAnnouncerReturn } from './useAnnouncer'
+// Re-export from shared packages (REPA-008)
+export { useAnnouncer, Announcer } from '@repo/accessibility'
+export type {
+  AnnouncementPriority,
+  AnnouncerOptions,
+  UseAnnouncerReturn,
+} from '@repo/accessibility'
 
-export { useRovingTabIndex } from './useRovingTabIndex'
-export type { RovingTabIndexOptions, UseRovingTabIndexReturn } from './useRovingTabIndex'
+export { useRovingTabIndex } from '@repo/gallery'
+export type { RovingTabIndexOptions, UseRovingTabIndexReturn } from '@repo/gallery'
 
-export { useMultiSelect } from './useMultiSelect'
-export type { UseMultiSelectOptions, UseMultiSelectReturn } from './useMultiSelect'
+export { useGalleryKeyboard } from '@repo/gallery'
+export type { UseGalleryKeyboardOptions, UseGalleryKeyboardReturn } from '@repo/gallery'
 
-export { useGalleryKeyboard } from './useGalleryKeyboard'
-export type { UseGalleryKeyboardOptions, UseGalleryKeyboardReturn } from './useGalleryKeyboard'
+// Re-export from @repo/hooks (REPA-014)
+export { useMultiSelect } from '@repo/hooks/useMultiSelect'
+export type { UseMultiSelectOptions, UseMultiSelectReturn } from '@repo/hooks/useMultiSelect'

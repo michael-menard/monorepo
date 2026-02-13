@@ -1,0 +1,29 @@
+schema: 1
+story_id: "REPA-007"
+timestamp: "2026-02-10T20:00:00Z"
+
+touches:
+  backend: false
+  frontend: true
+  packages: true
+  db: false
+  contracts: false
+  ui: true
+  infra: false
+
+touched_paths_globs:
+  - "packages/core/gallery/src/components/SortableGallery/**"
+  - "packages/core/gallery/src/hooks/**"
+  - "packages/core/gallery/src/index.ts"
+  - "packages/core/accessibility/src/hooks/**"
+  - "packages/core/accessibility/src/index.ts"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Create reusable SortableGallery component in @repo/gallery with drag-and-drop, undo/redo, keyboard navigation, and accessibility support"

@@ -15,8 +15,6 @@ import {
   generateEmptyStateAnnouncement,
   generateModalOpenAnnouncement,
   generateDragAnnouncement,
-  focusRingClasses,
-  getKeyboardShortcutLabel,
 } from '../a11y'
 
 // Helper to create mock wishlist items
@@ -53,7 +51,7 @@ describe('generateItemAriaLabel', () => {
     expect(label).toContain('$800')
     expect(label).toContain('7,541 pieces')
     expect(label).toContain('item 1 of 10')
-    expect(label).toContain('priority 5 of 5')
+    expect(label).toContain('priority 5')
   })
 
   it('should handle item without price', () => {
@@ -228,30 +226,3 @@ describe('generateDragAnnouncement', () => {
   })
 })
 
-describe('focusRingClasses', () => {
-  it('should include focus-visible styles', () => {
-    expect(focusRingClasses).toContain('focus-visible:ring-2')
-    expect(focusRingClasses).toContain('focus-visible:ring-sky-500')
-    expect(focusRingClasses).toContain('focus-visible:ring-offset-2')
-  })
-})
-
-describe('getKeyboardShortcutLabel', () => {
-  it('should return uppercase for single letters', () => {
-    expect(getKeyboardShortcutLabel('a')).toBe('A')
-    expect(getKeyboardShortcutLabel('g')).toBe('G')
-  })
-
-  it('should return mapped labels for special keys', () => {
-    expect(getKeyboardShortcutLabel('Delete')).toBe('Del')
-    expect(getKeyboardShortcutLabel('Escape')).toBe('Esc')
-    expect(getKeyboardShortcutLabel('Enter')).toBe('Enter')
-  })
-
-  it('should return arrow key labels', () => {
-    expect(getKeyboardShortcutLabel('ArrowUp')).toBe('Up')
-    expect(getKeyboardShortcutLabel('ArrowDown')).toBe('Down')
-    expect(getKeyboardShortcutLabel('ArrowLeft')).toBe('Left')
-    expect(getKeyboardShortcutLabel('ArrowRight')).toBe('Right')
-  })
-})

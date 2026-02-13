@@ -1,0 +1,131 @@
+feature_dir: "plans/future/bug-fix"
+prefix: "BUGF"
+decided: 2026-02-11T10:05:00Z
+reviewer: user
+
+summary:
+  reviewed: 20
+  accepted: 15
+  modified: 2
+  rejected: 0
+  deferred: 3
+
+decisions:
+  # Engineering MVP Blockers
+  - id: ENG-001
+    decision: accept
+    notes: "Implement presigned URL API endpoint and integrate"
+  - id: ENG-002
+    decision: accept
+    notes: "Implement RTK Query save mutation for instruction edits"
+  - id: ENG-003
+    decision: accept
+    notes: "Should be implemented, not stubbed — implement delete mutation and edit page"
+
+  # QA MVP Blockers
+  - id: QA-001
+    decision: accept
+    notes: "Require test plans (unit + integration + E2E) before implementing API stories"
+  - id: QA-002
+    decision: modify
+    notes: "Include E2E test infrastructure setup within each story's implementation rather than separate prerequisite"
+  - id: QA-003
+    decision: accept
+    notes: "Define explicit test coverage acceptance criteria per component before starting"
+
+  # Security MVP Blockers
+  - id: SEC-001
+    decision: accept
+    notes: "Implement strict IAM path restrictions and validate scope in presigned URL generation"
+  - id: SEC-002
+    decision: accept
+    notes: "Require security architecture review before auth hook consolidation"
+  - id: SEC-003
+    decision: accept
+    notes: "Implement server-side rate limiting with frontend feedback"
+
+new_stories:
+  - id: NEW-001
+    title: "Lambda Execution Role Policy Documentation for S3 Presigned URLs"
+    decision: accept
+    notes: "Create as separate story for IAM policy documentation"
+  - id: NEW-002
+    title: "Auth Token Refresh Security Review"
+    decision: accept
+    notes: "Create as separate story for security architecture review"
+  - id: NEW-003
+    title: "Rate Limiting Implementation Guide for Password Reset"
+    decision: accept
+    notes: "Create as separate story for backend rate limit specification"
+  - id: NEW-004
+    title: "Test Infrastructure Setup for MSW Mocking of Presigned URL Responses"
+    decision: accept
+    notes: "Create as separate story for MSW test infrastructure"
+  - id: NEW-005
+    title: "Playwright Page Objects for File Upload Flows"
+    decision: accept
+    notes: "Create as separate story for Playwright upload page objects"
+
+deferred:
+  - id: BUGF-007
+    reason: "Dashboard test mismatches not blocking core user journeys — defer from MVP"
+  - id: BUGF-011
+    reason: "Dashboard component tests non-blocking for MVP — defer"
+
+kept_in_mvp:
+  - id: BUGF-016
+    reason: "Inspiration API integrations (album management, MOC linking) important for MVP"
+  - id: BUGF-017
+    reason: "Zod schema conversion stays in epic scope"
+  - id: BUGF-018
+    reason: "Memory leak fixes stay in epic scope"
+  - id: BUGF-021
+    reason: "Type assertion fixes stay in epic scope"
+  - id: BUGF-022
+    reason: "Legacy app removal stays in epic scope"
+  - id: BUGF-024
+    reason: "Technical debt fixes stay in epic scope"
+
+action_items:
+  - id: ENG-001
+    action: "Implement presigned URL endpoint with IAM scope enforcement"
+    owner: Dev
+  - id: ENG-002
+    action: "Implement RTK Query mutation for instruction save"
+    owner: Dev
+  - id: ENG-003
+    action: "Implement useDeleteSetMutation and create edit-set-page.tsx"
+    owner: Dev
+  - id: QA-001
+    action: "Define test plans for BUGF-001/002/003 before implementation"
+    owner: QA
+  - id: QA-002
+    action: "Include E2E infrastructure within each auth/password story"
+    owner: Dev
+  - id: QA-003
+    action: "Define test coverage criteria per component for BUGF-012-015"
+    owner: QA
+  - id: SEC-001
+    action: "Implement strict S3 bucket path restrictions in Lambda IAM role"
+    owner: Dev
+  - id: SEC-002
+    action: "Security architecture review of auth hook contract"
+    owner: Dev
+  - id: SEC-003
+    action: "Implement server-side rate limiting for password reset"
+    owner: Dev
+  - id: NEW-001
+    action: "Create BUGF-025 story for IAM policy documentation"
+    owner: PM
+  - id: NEW-002
+    action: "Create BUGF-026 story for auth token security review"
+    owner: PM
+  - id: NEW-003
+    action: "Create BUGF-027 story for rate limit implementation guide"
+    owner: PM
+  - id: NEW-004
+    action: "Create BUGF-028 story for MSW mock infrastructure"
+    owner: PM
+  - id: NEW-005
+    action: "Create BUGF-029 story for Playwright upload page objects"
+    owner: PM

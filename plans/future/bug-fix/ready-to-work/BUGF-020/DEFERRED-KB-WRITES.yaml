@@ -1,0 +1,267 @@
+schema: 1
+story_id: "BUGF-020"
+created_at: "2026-02-11T21:00:00Z"
+
+entries:
+  # GAP: Documentation clarity
+  - id: "BUGF-020-GAP-001"
+    type: "gap"
+    category: "documentation"
+    title: "Drag-and-drop keyboard instructions clarity"
+    description: |
+      Current drag handle instructions say "Press Space to start dragging. Use arrow keys to move"
+      but this is misleading because:
+      - KeyboardSensor is NOT implemented (only PointerSensor/TouchSensor for drag-and-drop)
+      - Arrow keys DO work for navigation via useRovingTabIndex (roving tabindex pattern)
+      - The instructions conflate two separate features: pointer/touch drag vs arrow key navigation
+
+      AC1 correctly fixes this by changing instructions to:
+      "Drag to reorder. Use arrow keys to navigate between items."
+
+      This separates the two concepts and accurately describes the interaction model.
+    tags: ["bugf-020", "accessibility", "screen-reader", "keyboard-navigation"]
+    kb_category: "accessibility"
+    kb_title: "Separate drag-and-drop and keyboard navigation instructions"
+    kb_content: |
+      When implementing drag-and-drop with roving tabindex navigation, ensure screen reader
+      instructions clearly separate the two interaction models:
+
+      - Drag-and-drop: Pointer/touch only (PointerSensor, TouchSensor)
+      - Navigation: Arrow keys via roving tabindex (useRovingTabIndex)
+
+      Good: "Drag to reorder. Use arrow keys to navigate between items."
+      Bad: "Press Space to start dragging. Use arrow keys to move." (implies arrow keys drag)
+
+      Reference: BUGF-020 AC1, DraggableWishlistGallery/index.tsx:417-418
+
+  # GAP: Coverage metric clarification
+  - id: "BUGF-020-GAP-002"
+    type: "gap"
+    category: "testing"
+    title: "A11y test coverage metric definition"
+    description: |
+      AC4-AC7 specify "80%+ coverage of a11y-critical components" but don't clarify:
+      - Which coverage metric? (line, branch, function)
+      - How to measure "coverage of a11y-critical components"?
+
+      Story text clarifies this means:
+      - 80% of the a11y-critical components listed in each AC (e.g., DraggableInspirationGallery,
+        SortableInspirationCard, AlbumCard, modals)
+      - Not 80% overall app coverage
+      - Focus on interaction paths (keyboard, screen reader, ARIA)
+      - Standard vitest coverage metrics apply (line coverage)
+    tags: ["bugf-020", "testing", "coverage", "accessibility"]
+    kb_category: "testing"
+    kb_title: "Define a11y test coverage targets"
+    kb_content: |
+      When specifying a11y test coverage targets, clarify the metric and scope:
+
+      Good: "80% line coverage of a11y-critical components (list specific components)"
+      Bad: "80%+ coverage" (ambiguous - of what? which metric?)
+
+      For a11y testing, focus on:
+      - Interaction paths (keyboard navigation, screen reader announcements)
+      - ARIA attributes (labels, roles, states)
+      - Semantic HTML (heading hierarchy, interactive elements)
+      - Live regions (polite vs assertive, timing)
+
+      Not necessarily:
+      - Overall app line coverage (may include non-a11y code)
+      - Visual regression tests (separate concern)
+
+      Reference: BUGF-020 AC4-AC7
+
+  # GAP: Test setup divergence risk
+  - id: "BUGF-020-GAP-003"
+    type: "gap"
+    category: "testing"
+    title: "Cross-app test setup divergence risk"
+    description: |
+      Apps have similar but not identical test setup files:
+      - app-sets-gallery has URL.createObjectURL stub
+      - app-inspiration-gallery has different logger mock (createLogger export)
+      - app-dashboard has minimal logger mock
+
+      If test setup diverges further during implementation, shared a11y utilities from
+      @repo/accessibility-testing may fail in some apps.
+
+      Mitigation:
+      - BUGF-043 addresses test setup consolidation
+      - AC3 includes updating all app package.json files with @repo/accessibility-testing dependency
+      - Implementation should validate shared utilities work in all 5 apps before merging
+    tags: ["bugf-020", "testing", "test-setup", "monorepo"]
+    kb_category: "testing"
+    kb_title: "Validate shared test utilities across apps with divergent setup"
+    kb_content: |
+      When creating shared test utilities (e.g., @repo/accessibility-testing), validate they work
+      across all apps before merging:
+
+      1. Check for test setup divergence (setup.ts files)
+      2. Run shared utility tests in each app's test environment
+      3. Verify mocks are compatible (MSW, logger, router, etc.)
+      4. Document any app-specific setup required
+
+      Warning signs:
+      - Different vitest config
+      - Different MSW handler setup
+      - Different global mocks (window.matchMedia, ResizeObserver, etc.)
+      - Different environment variable stubs
+
+      Related: BUGF-043 (consolidate test setup files)
+      Reference: BUGF-020 AC3
+
+  # GAP: Story sizing awareness
+  - id: "BUGF-020-GAP-004"
+    type: "gap"
+    category: "story-sizing"
+    title: "Story sizing slightly optimistic"
+    description: |
+      Story is estimated at 8 points but work breakdown suggests 10-11 points:
+      - AC1: Fix drag handle instructions (0.5 points)
+      - AC2: Add TagInput instructions (0.5 points)
+      - AC3: Promote test utilities to shared package (2-3 points)
+      - AC4: Add a11y tests to inspiration-gallery (1.5 points)
+      - AC5: Add a11y tests to sets-gallery (1.5 points)
+      - AC6: Add a11y tests to instructions-gallery (1.5 points)
+      - AC7: Add a11y tests to dashboard (1.5 points)
+      - AC8: Verify focus visible compliance (1-1.5 points)
+
+      Total: 10-11 points vs 8 points estimated
+
+      Gap: 2-3 points
+
+      Recommendation:
+      - Story is cohesive and should NOT be split
+      - 8 points is slightly optimistic but acceptable
+      - If velocity is a concern, AC8 can be deferred to follow-up story
+      - Implementation team should be aware of potential 10-point effort
+    tags: ["bugf-020", "story-sizing", "estimation"]
+    kb_category: "story-planning"
+    kb_title: "A11y test coverage stories tend to run 1.25x estimated points"
+    kb_content: |
+      When estimating a11y test coverage stories, account for:
+
+      1. Infrastructure setup (shared package, test directories) - 2-3 points
+      2. Per-app test writing (screen-reader, keyboard, axe) - 1.5 points each
+      3. Audit and documentation (focus compliance, patterns) - 1-1.5 points
+
+      Rule of thumb:
+      - Simple fixes (text changes, ARIA attributes): 0.5 points
+      - Shared package creation: 2-3 points
+      - Per-app a11y test suite: 1.5 points
+      - Documentation and audit: 1-1.5 points
+
+      For 5 apps + shared package + fixes + audit:
+      - Conservative estimate: 10-12 points
+      - Optimistic estimate: 8 points
+      - Realistic: 10 points
+
+      Reference: BUGF-020 (8 points, estimated 10-11 in analysis)
+
+  # ENHANCEMENT: Package architecture
+  - id: "BUGF-020-ENH-001"
+    type: "enhancement"
+    category: "code-quality"
+    title: "Use @repo/accessibility/testing export path instead of new package"
+    description: |
+      AC3 creates @repo/accessibility-testing as a standalone package. Consider using a testing/
+      subdirectory within @repo/accessibility with export path instead.
+
+      Current approach (AC3):
+      packages/core/accessibility-testing/
+        src/
+          screen-reader.ts
+          keyboard.ts
+          axe.ts
+          index.ts
+        package.json  # @repo/accessibility-testing
+
+      Alternative approach:
+      packages/core/accessibility/
+        src/
+          index.ts              # Runtime exports
+          testing/              # Testing utilities
+            screen-reader.ts
+            keyboard.ts
+            axe.ts
+            index.ts
+        package.json            # Add testing exports
+
+      Export pattern:
+      {
+        "exports": {
+          ".": "./src/index.ts",
+          "./testing": "./src/testing/index.ts"
+        }
+      }
+
+      Usage:
+      // Runtime utilities
+      import { useAnnouncer, focusRingClasses } from '@repo/accessibility'
+
+      // Testing utilities
+      import { validateAriaLabel, runAxe } from '@repo/accessibility/testing'
+
+      Benefits:
+      1. Fewer top-level packages to maintain (17 → 16)
+      2. Co-located testing utilities with runtime code
+      3. Standard export pattern used in monorepos (e.g., React, Next.js)
+      4. Simpler dependency graph
+
+      Tradeoff:
+      - AC3 implementation adjusts from "create new package" to "add testing subdirectory + export"
+      - No functional difference, just package structure
+    tags: ["bugf-020", "architecture", "monorepo", "package-structure"]
+    kb_category: "architecture"
+    kb_title: "Co-locate testing utilities with runtime code using export paths"
+    kb_content: |
+      When creating testing utilities for a package, prefer co-location with export paths over
+      separate packages:
+
+      Good:
+      packages/core/my-package/
+        src/
+          index.ts          # Runtime exports
+          testing/          # Testing utilities
+            helpers.ts
+            mocks.ts
+            index.ts
+        package.json
+          "exports": {
+            ".": "./src/index.ts",
+            "./testing": "./src/testing/index.ts"
+          }
+
+      Less ideal:
+      packages/core/my-package-testing/  # Separate package
+        src/
+          helpers.ts
+          mocks.ts
+        package.json
+
+      Benefits of co-location:
+      - Fewer packages to maintain
+      - Clear relationship between runtime and testing code
+      - Simpler version synchronization
+      - Standard pattern in major libraries (React, Next.js, Vitest)
+
+      When to use separate package:
+      - Testing utilities are large and complex (>5000 lines)
+      - Testing utilities have conflicting peer dependencies
+      - Multiple packages share the same testing utilities
+
+      Reference: BUGF-020 AC3, @repo/accessibility package structure
+
+metadata:
+  total_entries: 5
+  gaps: 4
+  enhancements: 1
+  categories:
+    documentation: 1
+    testing: 3
+    story-sizing: 1
+    code-quality: 1
+    architecture: 1
+  story_phase: 3
+  story_type: "bug"
+  elaboration_verdict: "PASS"

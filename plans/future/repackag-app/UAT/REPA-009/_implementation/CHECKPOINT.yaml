@@ -1,0 +1,14 @@
+schema: 1
+story_id: "REPA-009"
+feature_dir: "plans/future/repackag-app"
+timestamp: "2026-02-11T18:15:00Z"
+
+current_phase: done
+last_successful_phase: qa-verify
+e2e_gate: exempt
+e2e_exemption_reason: "Component-level refactor with no user-facing flow changes. All behavior verified via 117 unit tests."
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []

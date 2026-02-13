@@ -22,7 +22,7 @@ vi.mock('@repo/logger', () => ({
   },
 }))
 
-vi.mock('@/lib/jwt', () => ({
+vi.mock('@repo/auth-utils/jwt', () => ({
   isTokenExpired: vi.fn(),
 }))
 
@@ -34,7 +34,7 @@ vi.mock('@/services/auth/AuthProvider', () => ({
 
 import { useToast } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
-import { isTokenExpired } from '@/lib/jwt'
+import { isTokenExpired } from '@repo/auth-utils/jwt'
 import { useAuth } from '@/services/auth/AuthProvider'
 
 describe('useTokenRefresh', () => {

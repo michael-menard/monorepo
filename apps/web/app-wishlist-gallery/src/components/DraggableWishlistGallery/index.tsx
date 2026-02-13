@@ -38,9 +38,9 @@ import {
 import { useDispatch } from 'react-redux'
 import { SortableWishlistCard } from '../SortableWishlistCard'
 import { WishlistDragPreview } from '../WishlistDragPreview'
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
-import { useAnnouncer } from '../../hooks/useAnnouncer'
-import { useRovingTabIndex } from '../../hooks/useRovingTabIndex'
+import { useKeyboardShortcuts } from '@repo/gallery'
+import { useAnnouncer } from '@repo/accessibility'
+import { useRovingTabIndex } from '@repo/gallery'
 
 /**
  * DraggableWishlistGallery props schema (data-only)
@@ -182,6 +182,7 @@ export function DraggableWishlistGallery({
   } = useRovingTabIndex(items.length, containerRef, {
     wrapHorizontal: true,
     wrapVertical: false,
+    ariaLabel: 'Wishlist items',
   })
 
   // RTK Query mutation

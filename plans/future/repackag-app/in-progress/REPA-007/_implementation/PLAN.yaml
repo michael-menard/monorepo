@@ -1,0 +1,108 @@
+schema: 1
+story_id: "REPA-007"
+timestamp: "2026-02-10T20:05:00Z"
+
+strategy: "Extract common drag-and-drop patterns from DraggableWishlistGallery and DraggableInspirationGallery into a generic SortableGallery component in @repo/gallery. Leverage existing useRovingTabIndex and useAnnouncer hooks already extracted to shared packages."
+
+key_findings:
+  - "useRovingTabIndex already exists in @repo/gallery/hooks (REPA-008 work)"
+  - "useAnnouncer already exists in @repo/accessibility/hooks (REPA-008 work)"
+  - "Both hooks are already exported from package index files"
+  - "dnd-kit dependencies (core 6.3.1, sortable 10.0.0, utilities 3.2.2) already installed in @repo/gallery"
+  - "framer-motion already installed in @repo/gallery"
+  - "DraggableWishlistGallery (727 LOC) and DraggableInspirationGallery (~643 LOC) share ~90% identical DnD logic"
+
+steps:
+  - id: 1
+    name: "Create SortableGallery types"
+    description: "Create Zod schemas and TypeScript types for SortableGallery props, sensor config, and undo context"
+    file: "packages/core/gallery/src/components/SortableGallery/__types__/index.ts"
+    action: create
+    estimated_loc: 80
+
+  - id: 2
+    name: "Create SortableGallery utils"
+    description: "Create utility functions for sensor defaults, reorder helpers"
+    files:
+      - "packages/core/gallery/src/components/SortableGallery/utils/sensor-config.ts"
+      - "packages/core/gallery/src/components/SortableGallery/utils/reorder.ts"
+      - "packages/core/gallery/src/components/SortableGallery/utils/index.ts"
+    action: create
+    estimated_loc: 60
+
+  - id: 3
+    name: "Create SortableGallery component"
+    description: "Main SortableGallery component with DndContext, SortableContext, drag handling, undo/redo flow, error handling, keyboard navigation, accessibility, and layout support"
+    file: "packages/core/gallery/src/components/SortableGallery/index.tsx"
+    action: create
+    estimated_loc: 500
+    depends_on: [1, 2]
+
+  - id: 4
+    name: "Export SortableGallery from @repo/gallery"
+    description: "Add SortableGallery exports to packages/core/gallery/src/index.ts"
+    file: "packages/core/gallery/src/index.ts"
+    action: modify
+    estimated_loc: 15
+
+  - id: 5
+    name: "Write unit tests"
+    description: "Comprehensive test suite covering rendering, drag-and-drop, undo flow, keyboard navigation, and accessibility"
+    files:
+      - "packages/core/gallery/src/components/SortableGallery/__tests__/SortableGallery.test.tsx"
+    action: create
+    estimated_loc: 400
+    depends_on: [3]
+
+  - id: 6
+    name: "Verify build and types"
+    description: "Run pnpm build, pnpm check-types, pnpm lint for @repo/gallery package"
+    action: verify
+    depends_on: [4]
+
+  - id: 7
+    name: "Run tests"
+    description: "Run vitest for the new test suite"
+    action: verify
+    depends_on: [5]
+
+touched_files:
+  new:
+    - "packages/core/gallery/src/components/SortableGallery/__types__/index.ts"
+    - "packages/core/gallery/src/components/SortableGallery/utils/sensor-config.ts"
+    - "packages/core/gallery/src/components/SortableGallery/utils/reorder.ts"
+    - "packages/core/gallery/src/components/SortableGallery/utils/index.ts"
+    - "packages/core/gallery/src/components/SortableGallery/index.tsx"
+    - "packages/core/gallery/src/components/SortableGallery/__tests__/SortableGallery.test.tsx"
+  modified:
+    - "packages/core/gallery/src/index.ts"
+
+dependencies_used:
+  existing:
+    - "@dnd-kit/core: 6.3.1"
+    - "@dnd-kit/sortable: 10.0.0"
+    - "@dnd-kit/utilities: 3.2.2"
+    - "framer-motion: ^12.23.22"
+    - "zod: ^3.24.0"
+    - "@repo/app-component-library: workspace:*"
+    - "@repo/accessibility: (for useAnnouncer)"
+  new: []
+
+hooks_reused:
+  - name: "useRovingTabIndex"
+    location: "packages/core/gallery/src/hooks/useRovingTabIndex.ts"
+    status: "already extracted (REPA-008)"
+  - name: "useAnnouncer"
+    location: "packages/core/accessibility/src/hooks/useAnnouncer.tsx"
+    status: "already extracted (REPA-008)"
+
+ac_mapping:
+  component_api: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6"]
+  drag_and_drop: ["AC-7", "AC-8", "AC-9", "AC-10", "AC-11", "AC-12", "AC-13"]
+  undo_redo: ["AC-14", "AC-15", "AC-16", "AC-17", "AC-18"]
+  error_handling: ["AC-19", "AC-20", "AC-21", "AC-22"]
+  keyboard_nav: ["AC-23", "AC-24", "AC-25", "AC-26"]
+  accessibility: ["AC-27", "AC-28", "AC-29", "AC-30", "AC-31"]
+  layout: ["AC-32", "AC-33", "AC-34"]
+
+estimated_total_loc: 1055

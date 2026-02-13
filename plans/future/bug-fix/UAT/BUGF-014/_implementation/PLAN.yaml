@@ -1,0 +1,302 @@
+schema: 1
+story_id: "BUGF-014"
+timestamp: "2026-02-11"
+
+steps:
+  - id: 1
+    action: "create_file"
+    path: "apps/web/app-sets-gallery/src/components/__tests__/GalleryGrid.test.tsx"
+    description: "GalleryGrid component tests - loading, empty, items rendering"
+    ac_refs: ["AC-1"]
+    notes: |
+      - This is a LOCAL GalleryGrid (not from @repo/gallery)
+      - Uses generic type <T> with items, isLoading, children (render prop)
+      - Loading state: shows Loader2 spinner when isLoading=true and items.length=0
+      - Empty state: shows "No sets found" when isLoading=false and items.length=0
+      - Grid rendering: uses data-testid="gallery-grid" and renders children(item) for each item
+      - Grid classes: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+
+  - id: 2
+    action: "create_file"
+    path: "apps/web/app-sets-gallery/src/pages/__tests__/set-detail-page.test.tsx"
+    description: "SetDetailPage tests - data loading, interactions, lightbox"
+    ac_refs: ["AC-2", "AC-3", "AC-4"]
+    notes: |
+      Component uses:
+      - useGetSetByIdQuery(setId) from @repo/api-client/rtk/sets-api
+      - useDeleteSetMutation() from @repo/api-client/rtk/sets-api
+      - GalleryGrid from @repo/gallery (the shared package, NOT local)
+      - GalleryLightbox and useLightbox from @repo/gallery
+      - useParams from react-router-dom for setId
+      - useNavigate from react-router-dom
+      - useToast from @repo/app-component-library
+      - ConfirmationDialog for delete confirmation
+
+      Test data-testids:
+      - set-detail-skeleton: loading skeleton
+      - set-detail-not-found: 404 state
+      - set-detail-error: generic error state
+      - set-detail-page: main content container
+      - set-detail-back-button: back button
+      - set-detail-edit-button: edit button
+      - set-detail-delete-button: delete button
+      - set-detail-image-thumbnail-{index}: image thumbnails
+      - set-detail-lightbox: lightbox component
+
+      Error handling:
+      - 404: Shows SetDetailNotFound component with "Set Not Found" message
+      - 403: Shows SetDetailError with "You don't have access to this set" message
+      - Generic: Shows SetDetailError with "Failed to load set details" message
+
+      MSW handlers required:
+      - GET /api/sets/:id - success, 404, 403, network error
+      - DELETE /api/sets/:id - success (204)
+
+      Test wrappers needed:
+      - RTK Query store with setsApi
+      - TooltipProvider for toast
+      - MemoryRouter for routing
+
+  - id: 3
+    action: "create_file"
+    path: "apps/web/app-sets-gallery/src/components/__tests__/module-layout.test.tsx"
+    description: "ModuleLayout component tests - children rendering, structure, classes"
+    ac_refs: ["AC-5"]
+    notes: |
+      - Very simple component (32 lines)
+      - Props: children (ReactNode), className (optional)
+      - Renders: <div className={cn('min-h-full', className)}>{children}</div>
+      - Tests: rendering children, default class, custom className, structure verification
+
+  - id: 4
+    action: "verify"
+    command: "pnpm vitest run --reporter=verbose"
+    cwd: "apps/web/app-sets-gallery"
+    description: "Run all tests to verify pass"
+    ac_refs: ["AC-6", "AC-7"]
+
+  - id: 5
+    action: "verify"
+    command: "pnpm check-types"
+    cwd: "apps/web/app-sets-gallery"
+    description: "Type-check all files"
+    ac_refs: ["AC-6"]
+
+  - id: 6
+    action: "verify"
+    command: "pnpm lint"
+    cwd: "apps/web/app-sets-gallery"
+    description: "Lint all files"
+    ac_refs: ["AC-6", "AC-8"]
+
+knowledge_context:
+  existing_patterns:
+    - description: "MSW dynamic handler for /api/sets with filtering, sorting, pagination"
+      file: "apps/web/app-sets-gallery/src/pages/__tests__/main-page.test.tsx"
+      lines: "128-209"
+      notes: "Shows complete pattern for query param handling and response generation"
+
+    - description: "RTK Query store setup pattern for tests"
+      file: "apps/web/app-sets-gallery/src/pages/__tests__/main-page.test.tsx"
+      lines: "101-107"
+      notes: "createTestStore function with setsApi reducer and middleware"
+
+    - description: "Mutation mocking and navigation assertions"
+      file: "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+      lines: "113-151"
+      notes: "Shows PATCH mutation with navigation to detail page on success"
+
+    - description: "Toast mocking pattern for add-set-page"
+      file: "apps/web/app-sets-gallery/src/pages/__tests__/add-set-page.test.tsx"
+      lines: "54-63"
+      notes: "Mock useToast hook with success/error toast spies"
+
+    - description: "MemoryRouter + TooltipProvider wrapper pattern"
+      file: "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+      lines: "54-70"
+      notes: "Shows proper routing setup with multiple routes for navigation tests"
+
+    - description: "Error state testing with MSW status codes"
+      file: "apps/web/app-sets-gallery/src/pages/__tests__/edit-set-page.test.tsx"
+      lines: "99-111"
+      notes: "Shows 404 error handling pattern"
+
+  components_analyzed:
+    - path: "apps/web/app-sets-gallery/src/components/GalleryGrid.tsx"
+      lines: 70
+      key_imports:
+        - "Loader2 from lucide-react"
+      key_props:
+        - "items: T[] (generic)"
+        - "isLoading?: boolean"
+        - "children: (item: T) => React.ReactNode (render prop)"
+        - "className?: string"
+      rendering_logic:
+        - "isLoading && items.length === 0: shows Loader2 spinner"
+        - "!isLoading && items.length === 0: shows empty state with icon and text"
+        - "items.length > 0: renders grid with data-testid='gallery-grid'"
+      notes: "LOCAL component, NOT from @repo/gallery package"
+
+    - path: "apps/web/app-sets-gallery/src/pages/set-detail-page.tsx"
+      lines: 584
+      key_imports:
+        - "useGetSetByIdQuery, useDeleteSetMutation from @repo/api-client/rtk/sets-api"
+        - "GalleryGrid, GalleryLightbox, useLightbox from @repo/gallery"
+        - "useParams, useNavigate from react-router-dom"
+        - "Button, Card, ConfirmationDialog, Skeleton, useToast from @repo/app-component-library"
+      key_hooks:
+        - "useGetSetByIdQuery(setId, { skip: !setId })"
+        - "useDeleteSetMutation()"
+        - "useLightbox(lightboxImages.length)"
+        - "useState for delete dialog and isDeleting"
+      error_handling:
+        - "isFetchBaseQueryError type guard for error status checking"
+        - "404 -> SetDetailNotFound component"
+        - "403 -> SetDetailError with permission message"
+        - "Generic -> SetDetailError with generic message"
+      key_features:
+        - "Image gallery with lightbox (GalleryLightbox from @repo/gallery)"
+        - "Delete confirmation dialog"
+        - "Edit navigation (/sets/:id/edit)"
+        - "Back navigation (/sets)"
+        - "Toast on successful delete"
+        - "Purchase info card (conditional)"
+        - "Notes card (conditional)"
+      data_testids:
+        - "set-detail-skeleton"
+        - "set-detail-not-found"
+        - "set-detail-error"
+        - "set-detail-page"
+        - "set-detail-back-button"
+        - "set-detail-edit-button"
+        - "set-detail-delete-button"
+        - "set-detail-image-thumbnail-{index}"
+        - "set-detail-lightbox"
+        - "gallery-grid (from @repo/gallery GalleryGrid)"
+
+    - path: "apps/web/app-sets-gallery/src/components/module-layout.tsx"
+      lines: 32
+      key_imports:
+        - "cn from @repo/app-component-library"
+        - "z from zod"
+      key_props:
+        - "children: ReactNode"
+        - "className?: string"
+      rendering_logic:
+        - "Simple div wrapper with cn('min-h-full', className)"
+      notes: "Trivial component, simple rendering tests sufficient"
+
+  msw_handlers_configured:
+    - endpoint: "GET /api/sets"
+      location: "apps/web/app-sets-gallery/src/test/mocks/handlers.ts"
+      notes: "Default handler returns single mock set, can be overridden with server.use()"
+
+    - endpoint: "GET /api/sets/:id"
+      location: "apps/web/app-sets-gallery/src/test/mocks/handlers.ts"
+      notes: "Default handler returns mock set detail by id"
+
+    - endpoint: "Dynamic handlers"
+      notes: "main-page.test.tsx shows pattern for complex query param handling (lines 128-209)"
+
+  test_infrastructure:
+    - mock: "TanStack Router"
+      location: "apps/web/app-sets-gallery/src/test/setup.ts"
+      mocks: "useNavigate, useLocation, useParams, useSearch"
+      lines: "64-74"
+
+    - mock: "@repo/logger"
+      location: "apps/web/app-sets-gallery/src/test/setup.ts"
+      mocks: "logger.info, logger.error, logger.warn, logger.debug"
+      lines: "76-90"
+
+    - mock: "window.matchMedia"
+      location: "apps/web/app-sets-gallery/src/test/setup.ts"
+      lines: "28-40"
+
+    - mock: "ResizeObserver"
+      location: "apps/web/app-sets-gallery/src/test/setup.ts"
+      lines: "42-47"
+
+    - mock: "IntersectionObserver"
+      location: "apps/web/app-sets-gallery/src/test/setup.ts"
+      lines: "49-54"
+
+  repo_gallery_reference:
+    - path: "packages/core/gallery/src/components/GalleryGrid.tsx"
+      notes: "Shared GalleryGrid from @repo/gallery - different API than local one"
+      props:
+        - "children: React.ReactNode (not render prop)"
+        - "columns?: GalleryGridColumns (responsive config)"
+        - "gap?: 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12"
+        - "className?: string"
+        - "data-testid?: string (default: 'gallery-grid')"
+      notes_usage: "SetDetailPage uses THIS version (from @repo/gallery), NOT the local GalleryGrid"
+
+    - path: "packages/core/gallery/src/__tests__/GalleryGrid.test.tsx"
+      notes: "Reference test for @repo/gallery GalleryGrid - NOT applicable to local GalleryGrid"
+      patterns: "CSS class testing, responsive column testing, gap testing, accessibility testing"
+
+critical_distinctions:
+  - note: "app-sets-gallery has TWO different GalleryGrid components"
+    details:
+      - "LOCAL: src/components/GalleryGrid.tsx - generic, render prop based, used by MainPage"
+      - "SHARED: @repo/gallery GalleryGrid - children based, responsive columns, used by SetDetailPage"
+    impact: "Must test the LOCAL GalleryGrid in step 1, not reference @repo/gallery tests"
+
+  - note: "SetDetailPage uses shared @repo/gallery components"
+    details:
+      - "GalleryGrid from @repo/gallery (NOT local)"
+      - "GalleryLightbox from @repo/gallery"
+      - "useLightbox from @repo/gallery"
+    impact: "No need to test these components, only test SetDetailPage integration"
+
+  - note: "SetDetailPage has 3 error state components"
+    details:
+      - "SetDetailSkeleton (loading)"
+      - "SetDetailNotFound (404)"
+      - "SetDetailError (403, generic)"
+    impact: "Test all three exported components, not just the main SetDetailPage"
+
+test_scenarios_by_component:
+  GalleryGrid_local:
+    - "renders loading state with Loader2 spinner when isLoading=true and items.length=0"
+    - "renders empty state with icon and text when isLoading=false and items.length=0"
+    - "renders items using children render prop when items.length > 0"
+    - "applies correct grid layout classes (data-testid='gallery-grid')"
+    - "applies custom className when provided"
+
+  SetDetailPage_data_loading:
+    - "displays SetDetailSkeleton while loading (data-testid='set-detail-skeleton')"
+    - "displays set details on successful load (data-testid='set-detail-page')"
+    - "displays SetDetailNotFound on 404 (data-testid='set-detail-not-found')"
+    - "displays SetDetailError on 403 with permission message (data-testid='set-detail-error')"
+    - "displays SetDetailError on generic error (data-testid='set-detail-error')"
+
+  SetDetailPage_user_interactions:
+    - "navigates to /sets/:id/edit when edit button clicked (data-testid='set-detail-edit-button')"
+    - "opens delete confirmation dialog when delete button clicked (data-testid='set-detail-delete-button')"
+    - "closes dialog without mutation when cancel clicked"
+    - "triggers deleteSet mutation when confirm clicked"
+    - "navigates to /sets after successful delete"
+    - "displays toast message on successful delete"
+
+  SetDetailPage_lightbox:
+    - "opens lightbox when image thumbnail clicked (data-testid='set-detail-image-thumbnail-{index}')"
+    - "closes lightbox when close triggered (data-testid='set-detail-lightbox')"
+    - "does not render image thumbnails when set.images.length === 0"
+    - "has accessible aria-labels on image thumbnails"
+
+  ModuleLayout:
+    - "renders children within layout wrapper"
+    - "applies 'min-h-full' class by default"
+    - "applies custom className when provided"
+    - "renders as a div element"
+
+execution_notes:
+  - priority: "Start with ModuleLayout (simplest), then GalleryGrid (local), then SetDetailPage (most complex)"
+  - msw_usage: "Use server.use() in beforeEach/individual tests to override default handlers"
+  - wrapper_pattern: "Provider (RTK store) > TooltipProvider > MemoryRouter > Routes > Route > Component"
+  - toast_mocking: "Mock useToast hook to avoid needing ToastProvider, capture success/error calls"
+  - navigation_testing: "Use MemoryRouter with multiple routes to verify navigation behavior"
+  - delete_mutation: "Mock DELETE /api/sets/:id to return 204 status on success"
+  - lightbox_testing: "Test useLightbox integration, not GalleryLightbox internals (belongs in @repo/gallery)"
