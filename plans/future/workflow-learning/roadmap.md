@@ -1,285 +1,224 @@
-# WKFL Roadmap
+# Workflow Intelligence Program — Roadmap
+
+## Dependency Graph
+
+```mermaid
+graph TB
+    subgraph Foundation["Foundation (COMPLETE)"]
+        WKFL001["WKFL-001<br/>Retro Agent ✓"]
+        WKFL004["WKFL-004<br/>Feedback ✓"]
+        WKFL005["WKFL-005<br/>Doc Sync"]
+    end
+
+    subgraph INFR["INFR: Infrastructure & Persistence (6 stories)"]
+        INFR001["INFR-001<br/>Artifact Schemas"]
+        INFR002["INFR-002<br/>Writer/Reader"]
+        INFR003["INFR-003<br/>MinIO Setup"]
+        INFR004["INFR-004<br/>Events Table"]
+        INFR005["INFR-005<br/>Event SDK"]
+        INFR006["INFR-006<br/>Instrument + Retain"]
+
+        INFR001 --> INFR002
+        INFR003 --> INFR002
+        INFR004 --> INFR005
+        INFR005 --> INFR006
+    end
+
+    subgraph AUDT["AUDT: Code Audit Engine (3 stories)"]
+        AUDT001["AUDT-001<br/>Graph + Schema"]
+        AUDT002["AUDT-002<br/>9 Lens Nodes"]
+        AUDT003["AUDT-003<br/>Orchestration"]
+
+        AUDT001 --> AUDT002 --> AUDT003
+    end
+
+    subgraph MODL["MODL: Model Experimentation (4 stories)"]
+        MODL001["MODL-001<br/>Providers"]
+        MODL002["MODL-002<br/>Task Contracts"]
+        MODL003["MODL-003<br/>Quality Eval"]
+        MODL004["MODL-004<br/>Leaderboards"]
+
+        MODL001 --> MODL002 --> MODL003 --> MODL004
+        WKFL004 --> MODL003
+    end
+
+    subgraph TELE["TELE: Telemetry (4 stories)"]
+        TELE001["TELE-001<br/>Docker Stack"]
+        TELE002["TELE-002<br/>Metrics Mapping"]
+        TELE003["TELE-003<br/>Dashboards"]
+        TELE004["TELE-004<br/>Alerting"]
+
+        TELE001 --> TELE002 --> TELE003
+        TELE002 --> TELE004
+    end
+
+    subgraph LERN["LERN: Learning Loop (7 stories)"]
+        LERN001["LERN-001<br/>Calibration"]
+        LERN002["LERN-002<br/>Pattern Mining"]
+        LERN003["LERN-003<br/>KB Compress"]
+        LERN004["LERN-004<br/>Heuristics"]
+        LERN005["LERN-005<br/>Risk Predictor"]
+        LERN006["LERN-006<br/>Proposals"]
+        LERN007["LERN-007<br/>Experimentation"]
+
+        LERN001 --> LERN004
+        LERN002 --> LERN003
+        LERN002 --> LERN005
+        LERN001 --> LERN006
+        LERN002 --> LERN006
+    end
+
+    subgraph SDLC["SDLC: Agent Roles (5 stories)"]
+        SDLC001["SDLC-001<br/>PLAN Schema"]
+        SDLC002["SDLC-002<br/>PO Agent"]
+        SDLC003["SDLC-003<br/>PM Agent"]
+        SDLC004["SDLC-004<br/>SM Agent"]
+        SDLC005["SDLC-005<br/>Decisions + Budgets"]
+
+        SDLC001 --> SDLC002
+        SDLC001 --> SDLC003
+        SDLC001 --> SDLC004
+    end
+
+    %% Cross-epic dependencies
+    INFR005 --> TELE002
+    INFR005 --> LERN001
+    INFR005 --> LERN002
+    MODL004 --> LERN001
+    MODL004 --> LERN007
+    WKFL001 --> LERN001
+    WKFL001 --> LERN002
+
+    style WKFL001 fill:#90EE90
+    style WKFL004 fill:#90EE90
+    style WKFL005 fill:#FFEB3B
+```
+
+## Epic Execution Order
+
+```
+Phase 0: Foundation ─────────────── COMPLETE
+              │
+              ├──── Phase 1A: INFR ─── no blockers, start immediately
+              ├──── Phase 1B: AUDT ─── no blockers, start immediately
+              └──── Phase 1C: MODL ─── no blockers, start immediately
+                        │
+                        ├── Phase 2: TELE ─── needs INFR events
+                        │
+                        └── Phase 3: LERN ─── needs INFR + MODL
+                                │
+                                └── Phase 4: SDLC ─── capstone
+```
+
+### Parallelism
+
+INFR, AUDT, and MODL have **no cross-dependencies** and can run simultaneously. This is the biggest time savings — 3 epics in parallel instead of sequential.
+
+| Phase | Epics | Can Parallel? | Depends On |
+|-------|-------|--------------|------------|
+| 0 | Foundation | N/A | COMPLETE |
+| 1 | INFR, AUDT, MODL | Yes (all 3) | Foundation |
+| 2 | TELE | No (single) | INFR events |
+| 3 | LERN | No (single) | INFR + MODL |
+| 4 | SDLC | No (single) | All above |
 
 ## Visual Timeline
 
 ```mermaid
 gantt
-    title Workflow Learning System Implementation
+    title Workflow Intelligence Program
     dateFormat  YYYY-MM-DD
 
-    section Phase 1: Foundation
-    WKFL-001 Retro Agent       :a1, 2026-02-07, 3d
-    WKFL-004 Feedback Capture  :a4, 2026-02-07, 1d
-    WKFL-005 Doc Sync          :a5, 2026-02-08, 2d
-    Phase 1 Complete           :milestone, m1, 2026-02-10, 0d
+    section Foundation (COMPLETE)
+    WKFL-001 Retro Agent       :done, a1, 2026-02-07, 3d
+    WKFL-004 Feedback Capture  :done, a4, 2026-02-07, 1d
+    WKFL-005 Doc Sync          :active, a5, 2026-02-08, 2d
+    Foundation Complete        :milestone, m0, 2026-02-10, 0d
 
-    section Phase 2: Analysis
-    WKFL-002 Calibration       :a2, after m1, 2d
-    WKFL-006 Pattern Miner     :a6, after m1, 3d
-    Phase 2 Complete           :milestone, m2, 2026-02-14, 0d
+    section INFR: Infrastructure
+    INFR-001 Artifact Schemas  :i1, 2026-02-12, 2d
+    INFR-003 MinIO Setup       :i3, 2026-02-12, 1d
+    INFR-002 Writer/Reader     :i2, after i1, 2d
+    INFR-004 Events Table      :i4, 2026-02-12, 2d
+    INFR-005 Event SDK         :i5, after i4, 2d
+    INFR-006 Instrument        :i6, after i5, 2d
+    INFR Complete              :milestone, mi, 2026-02-22, 0d
 
-    section Phase 3: Adaptation
-    WKFL-003 Heuristics        :a3, after m2, 2d
-    WKFL-007 Risk Predictor    :a7, after a6, 2d
-    WKFL-009 KB Compress       :a9, after a6, 1d
-    Phase 3 Complete           :milestone, m3, 2026-02-18, 0d
+    section AUDT: Code Audit
+    AUDT-001 Graph + Schema    :u1, 2026-02-12, 2d
+    AUDT-002 9 Lens Nodes      :u2, after u1, 3d
+    AUDT-003 Orchestration     :u3, after u2, 2d
+    AUDT Complete              :milestone, mu, 2026-02-20, 0d
 
-    section Phase 4: Experimentation
-    WKFL-008 Experiments       :a8, after m3, 3d
-    WKFL-010 Proposals         :a10, after a8, 2d
-    Phase 4 Complete           :milestone, m4, 2026-02-24, 0d
+    section MODL: Model Experimentation
+    MODL-001 Providers         :m1, 2026-02-12, 2d
+    MODL-002 Task Contracts    :m2, after m1, 3d
+    MODL-003 Quality Eval      :m3, after m2, 2d
+    MODL-004 Leaderboards      :m4, after m3, 2d
+    MODL Complete              :milestone, mm, 2026-02-24, 0d
+
+    section TELE: Telemetry
+    TELE-001 Docker Stack      :t1, after mi, 2d
+    TELE-002 Metrics Mapping   :t2, after t1, 2d
+    TELE-003 Dashboards        :t3, after t2, 2d
+    TELE-004 Alerting          :t4, after t2, 1d
+    TELE Complete              :milestone, mt, 2026-03-01, 0d
+
+    section LERN: Learning Loop
+    LERN-001 Calibration       :l1, after mm, 2d
+    LERN-002 Pattern Mining    :l2, after mm, 3d
+    LERN-003 KB Compress       :l3, after l2, 1d
+    LERN-004 Heuristics        :l4, after l1, 2d
+    LERN-005 Risk Predictor    :l5, after l2, 2d
+    LERN-006 Proposals         :l6, after l4, 2d
+    LERN-007 Experimentation   :l7, after mm, 3d
+    LERN Complete              :milestone, ml, 2026-03-08, 0d
+
+    section SDLC: Agent Roles
+    SDLC-001 PLAN Schema       :s1, after ml, 2d
+    SDLC-002 PO Agent          :s2, after s1, 2d
+    SDLC-003 PM Agent          :s3, after s1, 2d
+    SDLC-004 SM Agent          :s4, after s1, 2d
+    SDLC-005 Decisions         :s5, after s2, 2d
+    SDLC Complete              :milestone, ms, 2026-03-16, 0d
 
     section Validation
-    10-Story Burn-in           :v1, after m4, 5d
+    10-Story Burn-in           :v1, after ms, 5d
     Metrics Review             :v2, after v1, 2d
-    Full Rollout               :milestone, m5, 2026-03-03, 0d
+    Full Rollout               :milestone, mv, 2026-03-23, 0d
 ```
-
-## Dependency Graph
-
-```mermaid
-graph LR
-    subgraph Phase1[Phase 1: Foundation]
-        WKFL-001[WKFL-001<br/>Retro Agent]
-        WKFL-004[WKFL-004<br/>Feedback]
-        WKFL-005[WKFL-005<br/>Doc Sync]
-    end
-
-    subgraph Phase2[Phase 2: Analysis]
-        WKFL-002[WKFL-002<br/>Calibration]
-        WKFL-006[WKFL-006<br/>Pattern Miner]
-    end
-
-    subgraph Phase3[Phase 3: Adaptation]
-        WKFL-003[WKFL-003<br/>Heuristics]
-        WKFL-007[WKFL-007<br/>Risk Predictor]
-        WKFL-009[WKFL-009<br/>KB Compress]
-    end
-
-    subgraph Phase4[Phase 4: Experimentation]
-        WKFL-008[WKFL-008<br/>Experiments]
-        WKFL-010[WKFL-010<br/>Proposals]
-    end
-
-    WKFL-001 --> WKFL-002
-    WKFL-001 --> WKFL-006
-    WKFL-001 --> WKFL-008
-
-    WKFL-004 --> WKFL-002
-    WKFL-004 --> WKFL-003
-
-    WKFL-002 --> WKFL-003
-    WKFL-002 --> WKFL-010
-
-    WKFL-006 --> WKFL-007
-    WKFL-006 --> WKFL-009
-    WKFL-006 --> WKFL-010
-
-    WKFL-003 --> WKFL-010
-
-    style WKFL-001 fill:#90EE90
-    style WKFL-004 fill:#90EE90
-    style WKFL-005 fill:#90EE90
-```
-
-## Phase Details
-
-### Phase 1: Foundation (Days 1-4)
-
-**Goal:** Establish consistent data capture for all learning.
-
-| Story | Parallel? | Critical Path? |
-|-------|-----------|----------------|
-| WKFL-001 | Yes (with 004, 005) | Yes |
-| WKFL-004 | Yes | No |
-| WKFL-005 | Yes | No |
-
-**Exit Criteria:**
-- [ ] OUTCOME.yaml generated for every completed story
-- [ ] `/feedback` command functional
-- [ ] Doc sync running on file changes
-- [ ] At least 3 stories completed with outcomes captured
-
-**Risks:**
-- OUTCOME schema may need iteration (mitigate: version from start)
-- Feedback adoption may be low (mitigate: prompt after gate)
-
----
-
-### Phase 2: Analysis (Days 5-8)
-
-**Goal:** Start deriving insights from captured data.
-
-| Story | Parallel? | Critical Path? |
-|-------|-----------|----------------|
-| WKFL-002 | Yes (with 006) | Yes |
-| WKFL-006 | Yes | Yes |
-
-**Exit Criteria:**
-- [ ] First calibration report generated
-- [ ] First pattern mining run completed
-- [ ] At least 10 stories in outcome dataset
-- [ ] Patterns KB category populated
-
-**Dependencies:**
-- Requires outcomes from Phase 1 (min 5-10 stories)
-- Feedback data enhances calibration but not required
-
----
-
-### Phase 3: Adaptation (Days 9-13)
-
-**Goal:** System starts self-improving based on data.
-
-| Story | Parallel? | Critical Path? |
-|-------|-----------|----------------|
-| WKFL-003 | No (needs 002) | No |
-| WKFL-007 | Yes (needs 006) | No |
-| WKFL-009 | Yes (needs 006) | No |
-
-**Exit Criteria:**
-- [ ] First heuristic adjustment proposed
-- [ ] Risk predictions included in story generation
-- [ ] KB compression run completed
-- [ ] Agent hints injected into at least 2 agents
-
-**Dependencies:**
-- WKFL-003 needs calibration data from WKFL-002
-- WKFL-007 needs patterns from WKFL-006
-
----
-
-### Phase 4: Experimentation (Days 14-18)
-
-**Goal:** Full learning flywheel active.
-
-| Story | Parallel? | Critical Path? |
-|-------|-----------|----------------|
-| WKFL-008 | No (needs 001) | Yes |
-| WKFL-010 | No (needs 008) | Yes |
-
-**Exit Criteria:**
-- [ ] First experiment defined and running
-- [ ] First improvement proposal generated
-- [ ] Proposal tracking in place
-- [ ] Metrics dashboard functional
-
-**Dependencies:**
-- WKFL-008 needs outcome tracking from WKFL-001
-- WKFL-010 aggregates from WKFL-002, WKFL-006
-
----
-
-## Validation Period (Days 19-25)
-
-### 10-Story Burn-in
-
-Run the full learning system on 10 real stories:
-
-| Story # | Learning Components Active | Expected Outputs |
-|---------|---------------------------|------------------|
-| 1-3 | Foundation only | Outcomes, feedback |
-| 4-6 | + Analysis | Calibration, patterns |
-| 7-9 | + Adaptation | Predictions, hints |
-| 10 | + Experimentation | Proposals |
-
-### Metrics Review
-
-| Metric | Target | How to Measure |
-|--------|--------|----------------|
-| Outcome capture rate | 100% | Count OUTCOME.yaml files |
-| Calibration accuracy (high) | >90% | CALIBRATION-*.yaml |
-| Pattern discovery | 5+ patterns | PATTERNS-*.yaml |
-| Prediction accuracy | >60% | Predicted vs actual |
-| Proposal quality | 50%+ accepted | Proposal tracking |
-
----
-
-## Rollout Strategy
-
-### Gradual Enablement
-
-```yaml
-# Week 1: Foundation
-enabled_components:
-  - outcome_capture
-  - feedback_command
-  - doc_sync
-
-# Week 2: Add Analysis
-enabled_components:
-  - outcome_capture
-  - feedback_command
-  - doc_sync
-  - calibration        # NEW
-  - pattern_miner      # NEW
-
-# Week 3: Add Adaptation
-enabled_components:
-  - outcome_capture
-  - feedback_command
-  - doc_sync
-  - calibration
-  - pattern_miner
-  - heuristic_evolver  # NEW
-  - risk_predictor     # NEW
-  - kb_compressor      # NEW
-
-# Week 4: Full System
-enabled_components:
-  - all
-```
-
-### Rollback Triggers
-
-| Condition | Action |
-|-----------|--------|
-| Gate pass rate drops >10% | Disable adaptation components |
-| Proposal rejection >90% | Disable WKFL-010 |
-| KB bloat >2x baseline | Disable writes, run compress |
-| Calibration drift >20% | Reset thresholds to defaults |
-
----
 
 ## Success Milestones
 
-| Milestone | Criteria | Target Date |
-|-----------|----------|-------------|
-| M1: Data Flowing | All 3 foundation components active | Day 4 |
-| M2: Insights Appearing | First calibration + patterns | Day 8 |
-| M3: Self-Improvement | First heuristic proposal | Day 13 |
-| M4: Full Flywheel | Experiment + proposal pipeline | Day 18 |
-| M5: Validated | 10 stories through system | Day 25 |
-| M6: Production | Full confidence, no rollbacks | Day 30 |
+| Milestone | Criteria | Epic |
+|-----------|----------|------|
+| M0: Foundation | Data capture working | COMPLETE |
+| M1: Infrastructure | Events flow, artifacts persist | INFR |
+| M2: Audit Running | Code-only audit produces FINDINGS | AUDT |
+| M3: Multi-Model | Providers + selector + leaderboard | MODL |
+| M4: Observable | Dashboards + alerts from real events | TELE |
+| M5: Learning Active | Calibration + patterns via Task Contract | LERN |
+| M6: Self-Improving | First heuristic/improvement proposal | LERN |
+| M7: Governed | Agent roles execute within budgets | SDLC |
+| M8: Validated | 10 stories, all metrics met | Validation |
 
----
+## Validation Period
 
-## Resource Requirements
+### 10-Story Burn-in
 
-| Resource | Quantity | Notes |
-|----------|----------|-------|
-| Stories to process | 10-20 | For training and validation |
-| KB storage | ~500 entries | Lessons, patterns, calibration |
-| Agent runs | ~50/week | Retro, calibration, patterns |
-| Token budget | ~200K/week | For learning agent runs |
+| Story # | Components Active | Expected Outputs |
+|---------|------------------|------------------|
+| 1-3 | INFR + AUDT (code-only) | Events, artifacts, FINDINGS.yaml |
+| 4-6 | + MODL + TELE | Leaderboard entries, dashboards |
+| 7-9 | + LERN | Calibration, patterns, convergence |
+| 10 | + SDLC | Proposals, predictions, governed runs |
 
----
+### Target Metrics
 
-## Post-Rollout
-
-### Ongoing Operations
-
-| Job | Frequency | Duration |
-|-----|-----------|----------|
-| Retro agent | Per story completion | 2-3 min |
-| Calibration | Weekly | 5 min |
-| Pattern mining | Weekly | 10 min |
-| KB compression | Monthly | 5 min |
-| Improvement proposals | Weekly | 10 min |
-
-### Continuous Improvement
-
-- Review proposals weekly
-- Update agent hints from patterns
-- Adjust thresholds from calibration
-- Expand experiments based on proposals
+| Metric | Target | How to Measure |
+|--------|--------|----------------|
+| Audit findings precision | >80% | Human feedback on findings |
+| Model selector convergence | <50 runs | Leaderboard convergence |
+| Non-Claude usage | >60% | Leaderboard model distribution |
+| Cost reduction | >50% | Provider cost tracking |
+| Quality maintained | No degradation | Gate pass rates |

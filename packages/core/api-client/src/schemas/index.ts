@@ -233,7 +233,7 @@ export {
   DesignerSchema,
   DimensionsSchema,
   InstructionsMetadataSchema,
-  FeatureSchema as MocFeatureSchema,
+  MocFeatureSchema,
   // Entity schemas
   MocInstructionsSchema,
   MocFileSchema,
@@ -261,8 +261,7 @@ export {
   type FileType,
   type Designer,
   type Dimensions,
-  type InstructionsMetadata,
-  type Feature as MocFeature,
+  type MocFeature,
   type MocInstructions,
   type MocFile,
   type CreateMocInput,

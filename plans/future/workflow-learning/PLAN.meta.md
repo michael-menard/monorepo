@@ -1,216 +1,165 @@
-# WKFL Meta Documentation
+# Workflow Intelligence Program — Architecture & Principles
 
 ## Architecture Principles
 
-### 1. Data Before Intelligence
+### 1. LangGraph is the Production Target
 
-Every learning component depends on quality data capture. The foundation phase (WKFL-001, WKFL-004, WKFL-005) establishes consistent data before any analysis or adaptation.
-
-```
-WRONG: Build pattern miner → realize we don't have good data
-RIGHT: Build outcome capture → accumulate data → build pattern miner
-```
-
-### 2. Proposals Over Auto-Changes
-
-All learning outputs are proposals first. No automatic modification of:
-- Agent prompts
-- Workflow configuration
-- Decision thresholds
-- Documentation
-
-Human approval required for all changes, tracked in KB.
-
-### 3. Compounding Knowledge
-
-Each component adds to shared knowledge:
-- Retro → lessons
-- Feedback → calibration data
-- Patterns → agent hints
-- Experiments → validated changes
-
-The KB is the central nervous system.
-
-### 4. Graceful Degradation
-
-Learning components are optional enhancements:
-- Workflow works without retro running
-- Predictions are advisory, not blocking
-- Calibration informs but doesn't override
-
-No learning component can break core workflow.
-
-### 5. Measurable Impact
-
-Every component has success metrics:
-- Before/after comparisons
-- Statistical significance requirements
-- Rollback triggers if metrics degrade
-
-## Component Relationships
-
-### Data Flow
+Claude Code agents (`.claude/agents/*.agent.md`) are prototypes that capture workflow logic. Every agent maps to a LangGraph node. The migration path is one-directional:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     STORY EXECUTION                          │
-│   PM → Elab → Dev → Review → QA Verify → QA Gate → Merge    │
-└─────────────────────────────────┬───────────────────────────┘
-                                  │
-                    ┌─────────────▼─────────────┐
-                    │       OUTCOME.yaml        │
-                    │   (tokens, cycles, etc)   │
-                    └─────────────┬─────────────┘
-                                  │
-    ┌─────────────────────────────┼─────────────────────────────┐
-    │                             │                             │
-    ▼                             ▼                             ▼
-┌───────────┐             ┌───────────┐             ┌───────────┐
-│ WKFL-001  │             │ WKFL-004  │             │ WKFL-005  │
-│   Retro   │             │ Feedback  │             │ Doc Sync  │
-└─────┬─────┘             └─────┬─────┘             └───────────┘
-      │                         │
-      │     ┌───────────────────┤
-      │     │                   │
-      ▼     ▼                   ▼
-┌───────────────────────────────────────────────────────────────┐
-│                      KNOWLEDGE BASE                           │
-│  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌──────────┐ ┌────────┐│
-│  │ Lessons │ │Decisions │ │Feedback │ │ Patterns │ │Calibra-││
-│  │         │ │          │ │         │ │          │ │tion    ││
-│  └─────────┘ └──────────┘ └─────────┘ └──────────┘ └────────┘│
-└───────────────────────────────┬───────────────────────────────┘
-                                │
-    ┌───────────────────────────┼───────────────────────────────┐
-    │               │           │           │                   │
-    ▼               ▼           ▼           ▼                   ▼
-┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐
-│ WKFL-002  │ │ WKFL-006  │ │ WKFL-008  │ │ WKFL-003  │ │ WKFL-009  │
-│Calibration│ │ Patterns  │ │Experiments│ │Heuristics │ │ Compress  │
-└─────┬─────┘ └─────┬─────┘ └───────────┘ └─────┬─────┘ └───────────┘
-      │             │                           │
-      │             │                           │
-      ▼             ▼                           ▼
-┌───────────┐ ┌───────────┐             ┌───────────────────────────┐
-│ WKFL-007  │ │ WKFL-010  │             │   CONFIGURATION CHANGES   │
-│Risk Pred. │ │ Proposals │──proposals──│  (human-approved only)    │
-└───────────┘ └───────────┘             └───────────────────────────┘
+Claude Code Agent → Prototype/Spec → LangGraph Node → Production
 ```
 
-### KB Categories
+Do not invest in Claude Code-specific infrastructure. Build for LangGraph.
 
-| Category | Writers | Readers |
-|----------|---------|---------|
-| `lesson` | WKFL-001, existing | WKFL-006, all agents |
-| `feedback` | WKFL-004 | WKFL-002, WKFL-003 |
-| `calibration` | WKFL-002 | WKFL-003, WKFL-010 |
-| `pattern` | WKFL-006 | WKFL-007, all agents |
-| `experiment` | WKFL-008 | WKFL-010 |
-| `proposal` | WKFL-010 | Humans |
+### 2. Model Choice is a Learned Parameter
 
-## Package Boundaries
-
-### New Packages (if needed)
+Never hard-code model assignments. Each node declares a Task Contract (what it needs), and the Model Selector learns the best model through experimentation.
 
 ```
-packages/
-  backend/
-    workflow-learning/           # New package for learning logic
-      src/
-        outcome/                  # Outcome capture and schema
-        calibration/              # Calibration calculation
-        patterns/                 # Pattern mining algorithms
-        experiments/              # Experiment framework
-        proposals/                # Proposal generation
+WRONG: createToolNode({ model: 'claude-sonnet', ... })
+RIGHT: createModelNode({ taskContract: { reasoning_depth: 'deep', max_cost: 0.05 }, ... })
 ```
 
-### Integration Points
+### 3. Events are the Source of Truth
 
-| From | To | Method |
-|------|----|--------|
-| dev-documentation-leader | OUTCOME.yaml | Direct write |
-| /wt-finish | workflow-retro | Task spawn |
-| /feedback | KB | `kb_add` |
-| pattern-miner | AGENT-HINTS.yaml | Direct write |
-| risk-predictor | pm-story output | Merge into YAML |
+Structured workflow events feed everything: dashboards, learning, decisions. See INFR epic for the 5 core + 6 learning events.
 
-## Schema Evolution
+### 4. Postgres is the Brain
 
-### OUTCOME.yaml v1 → v2 Migration Path
+Three-tier storage:
+- **Postgres** (relational + JSONB): artifacts, events, state
+- **MinIO/S3**: large blobs (> 500KB)
+- **pgvector**: KB embeddings for semantic search
 
-```yaml
-# v1 (initial)
-story_id: WISH-001
-phases:
-  pm_story: { tokens: 12000 }
+No MongoDB. See INFR epic for schema details.
 
-# v2 (add predictions for validation)
-story_id: WISH-001
-predictions:
-  split_risk: 0.3
-  review_cycles: 2
-  token_estimate: 150000
-actuals:
-  split: false
-  review_cycles: 3
-  tokens: 167000
-phases:
-  pm_story: { tokens: 12000 }
+### 5. Code First, Models Later
+
+Start with code-only (Tier 0) implementations. Add model assistance only when code can't do the job. The multi-armed bandit will naturally find the cheapest model that meets quality thresholds.
+
+```
+Tier 0: Pure code (regex, AST, file matching) — free, fast, deterministic
+Tier 1: Add model via Task Contract — bandit finds cheapest option
+Tier 2: Upgrade budget if cheap models fail quality threshold
 ```
 
-Migration: Add `predictions` and `actuals` sections, leave `phases` unchanged.
+### 6. Proposals Over Auto-Changes
+
+All learning outputs are proposals first. No automatic modification of agent prompts, workflow configuration, decision thresholds, or model assignments. Human approval required for structural changes.
+
+### 7. Measurable Impact
+
+Every component has success metrics with before/after comparisons, statistical significance requirements, rollback triggers, and cost tracking per model per task.
+
+## System Layers
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Application Layer                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
+│  │  Audit   │  │ Learning │  │   Self-  │  │   SDLC   │            │
+│  │  Engine  │  │   Loop   │  │  Optim.  │  │  Agents  │            │
+│  │ (AUDT)   │  │ (LERN)   │  │ (LERN)   │  │ (SDLC)   │            │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘            │
+│       └──────────────┼──────────────┼──────────────┘                 │
+│                      │              │                                 │
+│  ┌───────────────────▼──────────────▼────────────────────────────┐   │
+│  │                    Model Layer (MODL)                          │   │
+│  │  Task Contracts → Model Selector (Bandit) → Quality Eval      │   │
+│  │                         │                                     │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │   │
+│  │  │OpenRouter│  │  Ollama  │  │Anthropic │                   │   │
+│  │  └──────────┘  └──────────┘  └──────────┘                   │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────────┐   │
+│  │              Observability Layer (TELE)                        │   │
+│  │  OTel → Prometheus → Grafana → Alerts                        │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────────┐   │
+│  │              Infrastructure Layer (INFR)                       │   │
+│  │  Postgres (artifacts + events) │ MinIO/S3 │ pgvector (KB)    │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+## Postgres Schema Separation
+
+| Schema | Purpose | Epic |
+|--------|---------|------|
+| `work.*` | Artifacts, artifact_versions, artifact_links | INFR |
+| `telemetry.*` | Workflow events, run metrics | INFR, TELE |
+| `ai.*` | Model leaderboards, experiment results | MODL |
+| `kb.*` | Knowledge base entries, embeddings | LERN |
+
+## Cross-Epic Data Flow
+
+```
+Story Execution → OUTCOME.yaml → Retro Agent (WKFL-001)
+                                      │
+              ┌───────────────────────┼────────────────────┐
+              ▼                       ▼                    ▼
+        workflow_events         KB entries            artifacts
+         (INFR-004)           (existing)            (INFR-001)
+              │                    │                     │
+    ┌─────────┼─────────┐         │              ┌──────┘
+    ▼         ▼         ▼         ▼              ▼
+  TELE      LERN      SDLC     MODL           AUDT
+dashboards  mining    agents   evaluator      findings
+```
+
+## Task Contract Schema (v1)
+
+```typescript
+const TaskContractSchema = z.object({
+  task_id: z.string(),
+  input_schema: z.any(),
+  output_schema: z.any(),
+  requirements: z.object({
+    structured_output: z.boolean().default(true),
+    code_understanding: z.enum(['none', 'basic', 'deep']),
+    reasoning_depth: z.enum(['shallow', 'moderate', 'deep']),
+    context_window_min: z.number().default(4096),
+  }),
+  budget: z.object({
+    max_cost_usd: z.number(),
+    max_latency_ms: z.number(),
+    min_quality_score: z.number(),
+  }),
+})
+```
 
 ## Security Considerations
 
-### KB Access Control
+### Provider API Keys
+- OpenRouter: `OPENROUTER_API_KEY` env var, never committed
+- Anthropic: `ANTHROPIC_API_KEY` env var
+- Ollama: No key needed (local)
 
-- All learning agents read/write to same KB
+### Data Privacy
+- Ollama: All data stays local
+- OpenRouter: Check model provider data policies
 - No PII in KB entries (story IDs, not user names)
-- Proposals don't include secrets or credentials
+- Do not send production credentials to any model
 
 ### Experiment Safety
-
 - Experiments cannot modify production data
-- Traffic splits are advisory (no enforcement)
 - Rollback always available
-
-### Proposal Review
-
-- All proposals go through human approval
-- No auto-apply, even for high-confidence changes
-- Audit log of all applied proposals
-
-## Future Considerations
-
-### Cross-Project Learning (Not in Scope)
-
-The current design is single-repo. Future extensions could:
-- Anonymize patterns for cross-project sharing
-- Create pattern marketplace
-- Federated learning across teams
-
-### LLM-Based Analysis (Potential Enhancement)
-
-Currently using heuristic-based analysis. Could enhance with:
-- Embedding-based pattern similarity
-- LLM-powered proposal generation
-- Natural language queries over KB
-
-### Real-Time Learning (Not in Scope)
-
-Current design is batch-oriented (weekly/monthly). Real-time would require:
-- Streaming outcome capture
-- Incremental calibration updates
-- Online experiment analysis
+- Learning components cannot break core workflow
 
 ## Glossary
 
 | Term | Definition |
 |------|------------|
-| Calibration | Measuring stated confidence vs actual outcomes |
-| Outcome | Captured metrics from story completion |
-| Pattern | Recurring behavior detected across stories |
-| Proposal | Suggested change to workflow, awaiting approval |
-| Heuristic | Rule for auto-accepting/escalating decisions |
-| Experiment | A/B test of workflow variation |
+| Task Contract | Node-level declaration of what a model must do (not which model) |
+| Model Selector | Multi-armed bandit that picks the best model for a Task Contract |
+| Provider | Adapter for a model hosting service (OpenRouter, Ollama, Anthropic) |
+| Leaderboard | Per-task quality/cost/latency tracking |
+| Convergence | When the bandit has high confidence in the best model for a task |
+| Quality Evaluator | Automatic scoring of model outputs |
+| DecisionRecord | ADR-lite artifact for significant agent decisions |
+| Tier 0 | Code-only, no model needed |
+| Tier 1-3 | Model-assisted at increasing cost/capability |
 | Flywheel | Self-reinforcing improvement cycle |
