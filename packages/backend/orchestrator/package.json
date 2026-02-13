@@ -23,6 +23,7 @@
   "dependencies": {
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
+    "@langchain/ollama": "^0.1.0",
     "@repo/logger": "workspace:*",
     "yaml": "^2.7.0",
     "zod": "^3.23.8"

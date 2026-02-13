@@ -109,9 +109,13 @@ export { createNodeLogger, createNodeLoggerWithContext, type NodeLogger } from '
 // Node factory
 export {
   createLLMNode,
+  createLLMPoweredNode,
   createNode,
   createSimpleNode,
   createToolNode,
+  type LLMNodeImplementation,
+  type LLMPoweredNodeConfig,
+  type LLMRunnableConfig,
   type NodeFunction,
   type NodeImplementation,
 } from './node-factory.js'

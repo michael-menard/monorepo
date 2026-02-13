@@ -1,30 +1,42 @@
 # Model Assignments
 #
 # Single source of truth for agent-to-model assignments.
+# Strategy: Ollama for routine tasks, Claude for gap analysis & decision making
+#
 # This file is consumed by:
 # - LangGraph orchestrator (via model-assignments.ts)
 # - Claude agents (reference directly)
 # - Generated documentation (via generate-workflow-docs.ts)
 #
-# Model selection criteria:
-# - haiku: Validation, status updates, template filling, single-focus checks
-# - sonnet: Analysis, code generation, multi-factor decisions, synthesis
-# - opus: Reserved for critical judgment calls (rarely used)
+# MODEL STRATEGY:
+#   Ollama Models (local, fast, free):
+#     - ollama:qwen2.5-coder:7b         → Fast routine tasks (lint, syntax)
+#     - ollama:codellama:13b            → Mid-complexity code tasks
+#     - ollama:deepseek-coder-v2:33b    → Best coding model for complex generation (~20GB RAM)
+#     - ollama:deepseek-coder-v2:16b    → Lighter alternative for complex code (~10GB RAM)
+#     - ollama:llama3.2:8b              → General purpose analysis
+#
+#   Claude Models (powerful reasoning, external):
+#     - haiku  → Simple validation (fallback for Ollama)
+#     - sonnet → Gap analysis, decision making, synthesis
+#     - opus   → Critical strategic decisions (rarely used)
+#
+# See MODEL_STRATEGY.md for detailed rationale
 
 # ==============================================================================
-# Setup Leaders
-# Simple validation, low complexity
+# Setup Leaders - Simple Validation
+# Use Ollama for speed, fallback to haiku if unavailable
 # ==============================================================================
-elab-setup-leader: haiku
-dev-setup-leader: haiku
-qa-verify-setup-leader: haiku
-pm-bootstrap-setup-leader: haiku
-pm-harness-setup-leader: haiku
-elab-epic-setup-leader: haiku
+elab-setup-leader: ollama:qwen2.5-coder:7b
+dev-setup-leader: ollama:qwen2.5-coder:7b
+qa-verify-setup-leader: ollama:qwen2.5-coder:7b
+pm-bootstrap-setup-leader: ollama:qwen2.5-coder:7b
+pm-harness-setup-leader: ollama:qwen2.5-coder:7b
+elab-epic-setup-leader: ollama:qwen2.5-coder:7b
 
 # ==============================================================================
-# Work Leaders
-# Complex analysis and synthesis
+# Work Leaders - Gap Analysis & Strategic Planning
+# KEEP ON CLAUDE SONNET - Requires deep reasoning and judgment
 # ==============================================================================
 pm-story-generation-leader: sonnet
 pm-story-seed-agent: sonnet
@@ -42,61 +54,95 @@ dev-implement-implementation-leader: sonnet
 qa-verify-verification-leader: sonnet
 
 # ==============================================================================
-# Workers
-# Focused single-check validation
+# Story Workflow Nodes - Gap Analysis & Decision Making
+# KEEP ON CLAUDE SONNET - Core reasoning tasks that define quality
 # ==============================================================================
 
-# PM Workers
-pm-draft-test-plan: haiku
-pm-dev-feasibility-review: haiku
-pm-uiux-recommendations: haiku
+# Gap Analysis - Requires multi-perspective reasoning
+story-fanout-pm: sonnet          # PM gap analysis - strategic product thinking
+story-fanout-ux: sonnet          # UX gap analysis - user empathy & design reasoning
+story-fanout-qa: sonnet          # QA gap analysis - risk assessment & test strategy
 
-# Code Review Workers
-code-review-lint: haiku
-code-review-syntax: haiku
-code-review-style-compliance: haiku
-code-review-security: haiku
-code-review-typecheck: haiku
-code-review-build: haiku
+# Attack Analysis - Adversarial reasoning to challenge assumptions
+story-attack: sonnet             # Red team analysis - creative critical thinking
 
+# Readiness Scoring - Multi-factor decision making with judgment calls
+story-readiness-score: sonnet    # Complex scoring with weighted factors
+
+# Synthesis - Combine multiple analyses into coherent narrative
+story-synthesize: sonnet         # Synthesize PM, UX, QA insights with conflict resolution
+
+# Gap Hygiene - Quality checks (can use mid-tier Ollama)
+story-gap-hygiene: ollama:codellama:13b
+
+# Commitment Gate - Critical go/no-go decisions
+commitment-gate: sonnet
+
+# ==============================================================================
+# PM Workers - Routine Tasks
+# Use Ollama for speed
+# ==============================================================================
+pm-draft-test-plan: ollama:qwen2.5-coder:7b
+pm-dev-feasibility-review: ollama:codellama:13b
+pm-uiux-recommendations: ollama:llama3.2:8b
+
+# ==============================================================================
+# Code Review Workers - Routine Code Analysis
+# Use Ollama for pattern-based checks, Claude for security
+# ==============================================================================
+code-review-lint: ollama:qwen2.5-coder:7b
+code-review-syntax: ollama:qwen2.5-coder:7b
+code-review-style-compliance: ollama:qwen2.5-coder:7b
+code-review-security: sonnet                    # KEEP ON CLAUDE - security requires deep analysis
+code-review-typecheck: ollama:qwen2.5-coder:7b
+code-review-build: ollama:qwen2.5-coder:7b
+
+# ==============================================================================
 # Dev Implementation Workers
-dev-implement-planner: sonnet
-dev-implement-plan-validator: haiku
-dev-implement-backend-coder: sonnet
-dev-implement-frontend-coder: sonnet
-dev-implement-contracts: haiku
-dev-implement-verifier: haiku
-dev-implement-playwright: haiku
-dev-implement-proof-writer: haiku
-dev-implement-learnings: haiku
-
-# Epic Elaboration Workers
-elab-epic-engineering: haiku
-elab-epic-product: haiku
-elab-epic-qa: haiku
-elab-epic-ux: haiku
-elab-epic-platform: haiku
-elab-epic-security: haiku
+# Mix: Ollama for routine, Claude for strategic, DeepSeek for complex code
+# ==============================================================================
+dev-implement-planner: sonnet                              # Strategic planning requires reasoning
+dev-implement-plan-validator: ollama:codellama:13b         # Structural validation
+dev-implement-backend-coder: ollama:deepseek-coder-v2:33b  # Best coding model (use :16b if <20GB RAM)
+dev-implement-frontend-coder: ollama:deepseek-coder-v2:33b # Best coding model (use :16b if <20GB RAM)
+dev-implement-contracts: ollama:qwen2.5-coder:7b           # Interface definitions
+dev-implement-verifier: ollama:codellama:13b               # Verification logic
+dev-implement-playwright: ollama:qwen2.5-coder:7b          # E2E test generation
+dev-implement-proof-writer: ollama:llama3.2:8b             # Documentation writing
+dev-implement-learnings: ollama:llama3.2:8b                # Extract learnings
 
 # ==============================================================================
-# Completion Leaders
-# Status updates, artifact writes
+# Epic Elaboration Workers - Routine Analysis
+# Use Ollama except for security
 # ==============================================================================
-elab-completion-leader: haiku
-dev-documentation-leader: haiku
-qa-verify-completion-leader: haiku
-pm-bootstrap-generation-leader: haiku
-pm-harness-generation-leader: haiku
-elab-epic-aggregation-leader: haiku
-elab-epic-updates-leader: haiku
+elab-epic-engineering: ollama:codellama:13b
+elab-epic-product: ollama:llama3.2:8b
+elab-epic-qa: ollama:qwen2.5-coder:7b
+elab-epic-ux: ollama:llama3.2:8b
+elab-epic-platform: ollama:codellama:13b
+elab-epic-security: sonnet                      # KEEP ON CLAUDE - security analysis
 
 # ==============================================================================
-# Utility Agents
+# Completion Leaders - Status Updates & Formatting
+# Use Ollama for speed
 # ==============================================================================
-knowledge-context-loader: haiku
-kb-writer: haiku
+elab-completion-leader: ollama:qwen2.5-coder:7b
+dev-documentation-leader: ollama:llama3.2:8b
+qa-verify-completion-leader: ollama:qwen2.5-coder:7b
+pm-bootstrap-generation-leader: ollama:qwen2.5-coder:7b
+pm-harness-generation-leader: ollama:qwen2.5-coder:7b
+elab-epic-aggregation-leader: ollama:llama3.2:8b
+elab-epic-updates-leader: ollama:qwen2.5-coder:7b
 
 # ==============================================================================
-# Fix Agents
+# Utility Agents - Routine Tasks
+# Use Ollama
+# ==============================================================================
+knowledge-context-loader: ollama:qwen2.5-coder:7b
+kb-writer: ollama:llama3.2:8b
+
+# ==============================================================================
+# Fix Agents - Problem Diagnosis
+# KEEP ON CLAUDE - Requires diagnostic reasoning
 # ==============================================================================
 dev-fix-fix-leader: sonnet

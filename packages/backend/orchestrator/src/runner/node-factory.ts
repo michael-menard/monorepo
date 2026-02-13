@@ -408,3 +408,116 @@ function mapErrorCategoryToMetrics(
       return 'other'
   }
 }
+
+// ============================================================================
+// LLM-Powered Node Factory
+// ============================================================================
+
+import { getLLMForAgent, type LLMResult } from '../config/llm-provider.js'
+
+/**
+ * Configuration for LLM-powered nodes.
+ */
+export interface LLMPoweredNodeConfig {
+  /** Node name (used for model lookup) */
+  name: string
+
+  /** Override the model from assignments */
+  modelOverride?: string
+
+  /** Custom retry configuration (uses LLM preset by default) */
+  retry?: Partial<NodeRetryConfig>
+}
+
+/**
+ * Extended RunnableConfig with LLM injection.
+ */
+export interface LLMRunnableConfig extends RunnableConfig {
+  configurable?: RunnableConfig['configurable'] & {
+    llm?: LLMResult
+  }
+}
+
+/**
+ * LLM-powered node implementation function signature.
+ * Receives the LLM result via config.configurable.llm
+ */
+export type LLMNodeImplementation = (
+  state: GraphState,
+  config: LLMRunnableConfig,
+) => Promise<Partial<GraphState>> | Partial<GraphState>
+
+/**
+ * Creates a LangGraph-compatible node with LLM injection.
+ *
+ * Uses LangGraph's native pattern of injecting dependencies via RunnableConfig.configurable.
+ * The LLM is resolved at graph execution time based on model-assignments.yaml.
+ *
+ * For Ollama models: Injects a ChatOllama instance.
+ * For Claude models: Injects model info (Claude invoked externally).
+ *
+ * @example
+ * ```typescript
+ * const codeReviewNode = createLLMPoweredNode(
+ *   { name: 'code-review-lint' },
+ *   async (state, config) => {
+ *     const llmResult = config.configurable?.llm
+ *
+ *     if (llmResult?.provider === 'ollama') {
+ *       // Use Ollama directly
+ *       const response = await llmResult.llm.invoke([...])
+ *       return { analysis: response.content }
+ *     }
+ *
+ *     // Claude model - return signal for external invocation
+ *     return { pendingClaudeCall: { model: llmResult?.model, prompt: '...' } }
+ *   }
+ * )
+ * ```
+ *
+ * @param nodeConfig - Node configuration
+ * @param implementation - The node implementation function
+ * @returns A LangGraph-compatible node function
+ */
+export function createLLMPoweredNode(
+  nodeConfig: LLMPoweredNodeConfig,
+  implementation: LLMNodeImplementation,
+): NodeFunction {
+  // Use LLM preset retry configuration by default
+  const retryConfig: Partial<NodeRetryConfig> = nodeConfig.retry ?? {
+    maxAttempts: 5,
+    backoffMs: 2000,
+    backoffMultiplier: 2,
+    maxBackoffMs: 60000,
+    timeoutMs: 60000,
+    jitterFactor: 0.25,
+  }
+
+  // Create the base node
+  return createNode(
+    {
+      name: nodeConfig.name,
+      retry: retryConfig,
+    },
+    async (state: GraphState, config?: RunnableConfig) => {
+      // Resolve LLM at execution time
+      const llmResult = await getLLMForAgent(nodeConfig.name, {
+        modelOverride: nodeConfig.modelOverride as
+          | import('../config/model-assignments.js').Model
+          | undefined,
+      })
+
+      // Inject LLM into config.configurable
+      const enhancedConfig: LLMRunnableConfig = {
+        ...config,
+        configurable: {
+          ...config?.configurable,
+          llm: llmResult,
+        },
+      }
+
+      // Execute implementation with injected LLM
+      return implementation(state, enhancedConfig)
+    },
+  )
+}

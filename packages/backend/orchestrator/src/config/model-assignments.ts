@@ -18,11 +18,44 @@ import { parse as parseYaml } from 'yaml'
 // ============================================================================
 
 /**
- * Valid model values.
+ * Claude model values (external via Claude Code).
  */
-export const ModelSchema = z.enum(['haiku', 'sonnet', 'opus'])
+export const ClaudeModelSchema = z.enum(['haiku', 'sonnet', 'opus'])
+
+export type ClaudeModel = z.infer<typeof ClaudeModelSchema>
+
+/**
+ * Ollama model pattern: `ollama:{model}:{tag}`
+ * Examples: `ollama:qwen2.5-coder:7b`, `ollama:codellama:13b`
+ */
+export const OllamaModelSchema = z.custom<`ollama:${string}:${string}`>(
+  val => typeof val === 'string' && /^ollama:[a-z0-9._-]+:[a-z0-9._-]+$/i.test(val),
+  { message: 'Must be in format ollama:{model}:{tag}' },
+)
+
+export type OllamaModel = z.infer<typeof OllamaModelSchema>
+
+/**
+ * Combined model schema - supports both Claude and Ollama models.
+ */
+export const ModelSchema = z.union([ClaudeModelSchema, OllamaModelSchema])
 
 export type Model = z.infer<typeof ModelSchema>
+
+/**
+ * Model provider type.
+ */
+export type ModelProvider = 'claude' | 'ollama'
+
+/**
+ * Parsed Ollama model info.
+ */
+export interface ParsedOllamaModel {
+  provider: 'ollama'
+  model: string
+  tag: string
+  fullName: string // e.g., "qwen2.5-coder:7b"
+}
 
 /**
  * Model assignments map.
@@ -30,6 +63,57 @@ export type Model = z.infer<typeof ModelSchema>
 export const ModelAssignmentsSchema = z.record(z.string(), ModelSchema)
 
 export type ModelAssignments = z.infer<typeof ModelAssignmentsSchema>
+
+// ============================================================================
+// Provider Detection
+// ============================================================================
+
+/**
+ * Determines the provider for a model string.
+ */
+export function getModelProvider(model: Model): ModelProvider {
+  if (typeof model === 'string' && model.startsWith('ollama:')) {
+    return 'ollama'
+  }
+  return 'claude'
+}
+
+/**
+ * Checks if a model is an Ollama model.
+ */
+export function isOllamaModel(model: Model): model is OllamaModel {
+  return getModelProvider(model) === 'ollama'
+}
+
+/**
+ * Checks if a model is a Claude model.
+ */
+export function isClaudeModel(model: Model): model is ClaudeModel {
+  return getModelProvider(model) === 'claude'
+}
+
+/**
+ * Parses an Ollama model string into its components.
+ * Returns null if not a valid Ollama model.
+ */
+export function parseOllamaModel(model: string): ParsedOllamaModel | null {
+  if (typeof model !== 'string') {
+    return null
+  }
+
+  const match = model.match(/^ollama:([a-z0-9._-]+):([a-z0-9._-]+)$/i)
+  if (!match) {
+    return null
+  }
+
+  const [, modelName, tag] = match
+  return {
+    provider: 'ollama',
+    model: modelName,
+    tag,
+    fullName: `${modelName}:${tag}`,
+  }
+}
 
 // ============================================================================
 // Default Assignments

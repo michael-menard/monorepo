@@ -195,3 +195,15 @@ export {
   type PersistLearningsResult,
   type GraphStateWithLearnings,
 } from './completion/index.js'
+
+// LLM-Powered Nodes
+export {
+  // Code review lint
+  codeReviewLintNode,
+  createCodeReviewLintNode,
+  LintIssueSchema,
+  LintReviewResultSchema,
+  type LintIssue,
+  type LintReviewResult,
+  type GraphStateWithLintReview,
+} from './llm/index.js'

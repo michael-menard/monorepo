@@ -7,6 +7,45 @@
 /** Package version - matches package.json */
 export const version = '0.0.1'
 
+// Config module exports - model assignments and LLM provider
+export {
+  // Model Assignments
+  ClaudeModelSchema,
+  OllamaModelSchema,
+  ModelSchema,
+  ModelAssignmentsSchema,
+  type ClaudeModel,
+  type OllamaModel,
+  type Model,
+  type ModelProvider,
+  type ParsedOllamaModel,
+  type ModelAssignments,
+  getModelProvider,
+  isOllamaModel,
+  isClaudeModel,
+  parseOllamaModel,
+  DEFAULT_MODEL_ASSIGNMENTS,
+  loadModelAssignments,
+  clearModelAssignmentsCache,
+  getModelForAgent,
+  getAgentsForModel,
+  hasModelAssignment,
+  MODEL_SELECTION_CRITERIA,
+  suggestModel,
+  // LLM Provider
+  LLMProviderConfigSchema,
+  type LLMProviderConfig,
+  loadLLMProviderConfig,
+  clearLLMProviderConfigCache,
+  isOllamaAvailable,
+  clearOllamaAvailabilityCache,
+  createOllamaLLM,
+  clearOllamaLLMCache,
+  getLLMForAgent,
+  getModelInfoForAgent,
+  type LLMResult,
+} from './config/index.js'
+
 // State module exports - GraphState schemas, types, and utilities
 export {
   // Enum schemas and types
@@ -71,9 +110,13 @@ export {
   createNode,
   createSimpleNode,
   createLLMNode,
+  createLLMPoweredNode,
   createToolNode,
   type NodeFunction,
   type NodeImplementation,
+  type LLMNodeImplementation,
+  type LLMPoweredNodeConfig,
+  type LLMRunnableConfig,
   // Retry logic
   withNodeRetry,
   calculateRetryDelay,
@@ -260,6 +303,14 @@ export {
   type PersistLearningsConfig,
   type PersistLearningsResult,
   type GraphStateWithLearnings,
+  // LLM-Powered Nodes
+  codeReviewLintNode,
+  createCodeReviewLintNode,
+  LintIssueSchema,
+  LintReviewResultSchema,
+  type LintIssue,
+  type LintReviewResult,
+  type GraphStateWithLintReview,
 } from './nodes/index.js'
 
 // Artifacts module exports - evidence-first YAML artifact schemas
