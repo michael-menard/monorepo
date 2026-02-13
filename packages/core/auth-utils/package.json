@@ -1,0 +1,46 @@
+{
+  "name": "@repo/auth-utils",
+  "version": "0.0.1",
+  "description": "Shared authentication and authorization utilities - JWT token handling and route guards",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./jwt": {
+      "import": "./dist/jwt/index.js",
+      "types": "./dist/jwt/index.d.ts"
+    },
+    "./guards": {
+      "import": "./dist/guards/index.js",
+      "types": "./dist/guards/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint --fix . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4"
+  },
+  "dependencies": {
+    "@repo/logger": "workspace:*",
+    "@tanstack/react-router": "^1.108.2",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "eslint": "^9.30.0",
+    "typescript": "5.8.3",
+    "vite": "^5.2.10",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "^3.2.4"
+  }
+}

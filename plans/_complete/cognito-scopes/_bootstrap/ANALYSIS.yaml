@@ -1,0 +1,515 @@
+schema: 2
+feature_dir: "/Users/michaelmenard/Development/Monorepo/plans/future/cognito-scopes"
+prefix: "COGN"
+project_name: "cognito-scopes"
+analyzed: "2026-02-03T23:04:00Z"
+
+overall_goal: |
+  Implement a comprehensive authorization system using AWS Cognito JWT with groups and scopes,
+  featuring a freemium tier model that controls feature access and usage quotas for cost protection,
+  user experience, and safety.
+
+phases:
+  - id: 1
+    name: "Foundation"
+    description: "Database schema, Cognito configuration, and Pre Token Generation Lambda"
+  - id: 2
+    name: "API Authorization"
+    description: "Middleware development, endpoint protection, and error handling"
+  - id: 3
+    name: "Frontend Integration"
+    description: "JWT handling, UI feature gating, and user experience"
+  - id: 4
+    name: "Age Restrictions & Safety"
+    description: "Age verification and chat safety features"
+  - id: 5
+    name: "Monitoring & Operations"
+    description: "CloudWatch setup, logging, and reconciliation jobs"
+  - id: 6
+    name: "Testing & Launch"
+    description: "Comprehensive testing, documentation, and production deployment"
+
+stories:
+  - id: "COGN-001"
+    title: "Create user_quotas Database Schema"
+    feature: "Design and implement the user_quotas table with quota limits, usage tracking, and age verification fields"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["PostgreSQL database", "Migration scripts"]
+    goal: "Establish the data foundation for tier-based quotas and usage tracking"
+    risk_notes: "Migration must handle existing users, computed columns (is_minor) need testing"
+    sizing_warning: false
+
+  - id: "COGN-002"
+    title: "Create Quota Initialization Trigger"
+    feature: "Implement database trigger to automatically create free-tier quotas for new users"
+    phase: 1
+    depends_on: ["COGN-001"]
+    endpoints: []
+    infrastructure: ["PostgreSQL trigger function"]
+    goal: "Ensure all new users automatically receive free-tier quotas on signup"
+    risk_notes: "Trigger must handle race conditions, idempotency concerns"
+    sizing_warning: false
+
+  - id: "COGN-003"
+    title: "Configure Cognito User Pool & Groups"
+    feature: "Set up Cognito groups (admin, free-tier, pro-tier, power-tier) and configure JWT settings"
+    phase: 1
+    depends_on: []
+    endpoints: []
+    infrastructure: ["AWS Cognito User Pool", "Cognito Groups"]
+    goal: "Establish Cognito infrastructure for user authentication and group management"
+    risk_notes: "Manual group assignment for admin, default group assignment for free-tier"
+    sizing_warning: false
+
+  - id: "COGN-004"
+    title: "Implement Pre Token Generation Lambda"
+    feature: "Create Lambda function that dynamically assigns scopes based on tier, age, and add-ons"
+    phase: 1
+    depends_on: ["COGN-001", "COGN-003"]
+    endpoints: []
+    infrastructure: ["AWS Lambda", "Database connection pooling", "CloudWatch logging"]
+    goal: "Dynamically generate JWT scopes at login time based on user tier and attributes"
+    risk_notes: "Cold starts impact UX, database connection failures must fail closed, timeout handling critical"
+    sizing_warning: true
+
+  - id: "COGN-005"
+    title: "Implement JWT Authentication Middleware"
+    feature: "Create middleware to verify JWT signature, extract user ID, groups, and scopes"
+    phase: 2
+    depends_on: ["COGN-003", "COGN-004"]
+    endpoints: []
+    infrastructure: ["JWKS client for Cognito public keys"]
+    goal: "Verify and extract claims from JWT tokens for all API requests"
+    risk_notes: "JWKS key rotation handling, token expiration edge cases"
+    sizing_warning: false
+
+  - id: "COGN-006"
+    title: "Implement Scope Verification Middleware"
+    feature: "Create middleware to check if user has required scope for an operation"
+    phase: 2
+    depends_on: ["COGN-005"]
+    endpoints: []
+    infrastructure: []
+    goal: "Enforce scope-based authorization on API endpoints"
+    risk_notes: "Admin bypass logic must be secure, error messages must guide users to upgrade"
+    sizing_warning: false
+
+  - id: "COGN-007"
+    title: "Implement Quota Check Middleware"
+    feature: "Create middleware to verify user hasn't exceeded quota limits before operations"
+    phase: 2
+    depends_on: ["COGN-005", "COGN-001"]
+    endpoints: []
+    infrastructure: ["Database connection", "Row-level locking"]
+    goal: "Prevent users from exceeding tier-based quota limits"
+    risk_notes: "Race conditions on concurrent operations, transaction handling, performance impact"
+    sizing_warning: false
+
+  - id: "COGN-008"
+    title: "Implement Quota Increment Middleware"
+    feature: "Create middleware to update usage counts after successful operations"
+    phase: 2
+    depends_on: ["COGN-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Accurately track resource usage for quota enforcement"
+    risk_notes: "Must handle failures gracefully, eventual consistency concerns"
+    sizing_warning: false
+
+  - id: "COGN-009"
+    title: "Implement Storage Quota Middleware"
+    feature: "Create middleware to check storage limits before file uploads and increment after success"
+    phase: 2
+    depends_on: ["COGN-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Prevent storage quota overages from file uploads"
+    risk_notes: "File size calculation before upload, mid-upload quota exhaustion handling"
+    sizing_warning: false
+
+  - id: "COGN-010"
+    title: "Protect MOC API Endpoints"
+    feature: "Add authentication, scope checking (moc:manage), and quota enforcement to MOC endpoints"
+    phase: 2
+    depends_on: ["COGN-006", "COGN-008", "COGN-009"]
+    endpoints: ["/api/mocs"]
+    infrastructure: []
+    goal: "Secure MOC upload/edit/delete operations with proper authorization and quota checks"
+    risk_notes: "Must handle file uploads, storage tracking, concurrent operations"
+    sizing_warning: false
+
+  - id: "COGN-011"
+    title: "Protect Wishlist API Endpoints"
+    feature: "Add authentication, scope checking (wishlist:manage), and quota enforcement to wishlist endpoints"
+    phase: 2
+    depends_on: ["COGN-006", "COGN-008"]
+    endpoints: ["/api/wishlists"]
+    infrastructure: []
+    goal: "Secure wishlist operations with tier-appropriate limits"
+    risk_notes: "Free tier limited to 1 wishlist, Pro has 20, Power has 40"
+    sizing_warning: false
+
+  - id: "COGN-012"
+    title: "Protect Gallery API Endpoints"
+    feature: "Add authentication, scope checking (gallery:manage), and quota enforcement to gallery endpoints"
+    phase: 2
+    depends_on: ["COGN-006", "COGN-008"]
+    endpoints: ["/api/galleries"]
+    infrastructure: []
+    goal: "Secure gallery operations for Pro and Power tiers only"
+    risk_notes: "Free tier has no gallery access, must return helpful upgrade prompts"
+    sizing_warning: false
+
+  - id: "COGN-013"
+    title: "Protect Set List API Endpoints"
+    feature: "Add authentication, scope checking (setlist:manage), and quota enforcement to set list endpoints"
+    phase: 2
+    depends_on: ["COGN-006", "COGN-008"]
+    endpoints: ["/api/setlists"]
+    infrastructure: []
+    goal: "Secure set list operations for Power tier only"
+    risk_notes: "Power tier has unlimited set lists (constrained by storage)"
+    sizing_warning: false
+
+  - id: "COGN-014"
+    title: "Standardize API Error Responses"
+    feature: "Create consistent error response format with upgrade URLs and actionable guidance"
+    phase: 2
+    depends_on: ["COGN-006", "COGN-007"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide clear, actionable error messages when users hit quota or scope limits"
+    risk_notes: "Balance between helpful guidance and information disclosure"
+    sizing_warning: false
+
+  - id: "COGN-015"
+    title: "Implement Frontend JWT Storage & Parsing"
+    feature: "Store JWT in httpOnly cookies, parse scopes/groups, handle token refresh and expiration"
+    phase: 3
+    depends_on: ["COGN-005"]
+    endpoints: []
+    infrastructure: ["httpOnly cookies with CSRF protection"]
+    goal: "Securely store and manage JWT tokens in the frontend"
+    risk_notes: "Cookie vs localStorage decision, XSS/CSRF protection, token refresh UX"
+    sizing_warning: false
+
+  - id: "COGN-016"
+    title: "Implement UI Feature Gating"
+    feature: "Create hasScope() utility, show/hide features based on scopes, display upgrade prompts"
+    phase: 3
+    depends_on: ["COGN-015"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide seamless UI experience that adapts to user tier and permissions"
+    risk_notes: "Client-side checks are UX only, not security (backend enforces)"
+    sizing_warning: false
+
+  - id: "COGN-017"
+    title: "Implement Quota Usage Indicators"
+    feature: "Display quota usage (e.g., '3/5 MOCs used') and tier badges throughout UI"
+    phase: 3
+    depends_on: ["COGN-016"]
+    endpoints: []
+    infrastructure: []
+    goal: "Keep users informed of their quota status and encourage upgrades"
+    risk_notes: "Real-time usage data may be stale, need refresh mechanism"
+    sizing_warning: false
+
+  - id: "COGN-018"
+    title: "Implement Frontend Error Handling"
+    feature: "Handle 401/403/413/429 errors with user-friendly messages and upgrade prompts"
+    phase: 3
+    depends_on: ["COGN-016"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide helpful, contextual error messages that guide users to resolution"
+    risk_notes: "Balance between helpful and annoying, timing of upgrade prompts"
+    sizing_warning: false
+
+  - id: "COGN-019"
+    title: "Add Birthdate Field to User Signup"
+    feature: "Add birthdate field to signup form, store in database, compute is_minor flag"
+    phase: 4
+    depends_on: ["COGN-001"]
+    endpoints: ["/api/auth/signup"]
+    infrastructure: []
+    goal: "Capture user age for chat access restrictions"
+    risk_notes: "Self-reported (honor system), easy to circumvent, compliance considerations"
+    sizing_warning: false
+
+  - id: "COGN-020"
+    title: "Implement Age-Based Scope Filtering"
+    feature: "Update Pre Token Generation Lambda to remove chat:participate scope for minors"
+    phase: 4
+    depends_on: ["COGN-004", "COGN-019"]
+    endpoints: []
+    infrastructure: []
+    goal: "Prevent minors from accessing chat features"
+    risk_notes: "Birthday changes require token refresh, minor turns 18 edge case"
+    sizing_warning: false
+
+  - id: "COGN-021"
+    title: "Implement Chat Safety UI"
+    feature: "Hide chat for users without chat:participate scope, display age restriction messages"
+    phase: 4
+    depends_on: ["COGN-020", "COGN-016"]
+    endpoints: []
+    infrastructure: []
+    goal: "Provide age-appropriate UI and clear messaging about age restrictions"
+    risk_notes: "Chat safety features (report/block) needed but out of scope for this story"
+    sizing_warning: false
+
+  - id: "COGN-022"
+    title: "Set Up CloudWatch Monitoring"
+    feature: "Create custom metrics, dashboards, and alarms for Lambda, API, and database"
+    phase: 5
+    depends_on: ["COGN-004", "COGN-006"]
+    endpoints: []
+    infrastructure: ["CloudWatch metrics", "CloudWatch dashboards", "CloudWatch alarms", "SNS notifications"]
+    goal: "Monitor system health and receive alerts for critical issues"
+    risk_notes: "Alert fatigue, threshold tuning, cost of CloudWatch"
+    sizing_warning: false
+
+  - id: "COGN-023"
+    title: "Implement Structured Logging"
+    feature: "Add structured JSON logging to Lambda and API with log-based metrics"
+    phase: 5
+    depends_on: ["COGN-004", "COGN-006"]
+    endpoints: []
+    infrastructure: ["CloudWatch Logs", "Log retention policies"]
+    goal: "Enable debugging and analysis of authorization issues"
+    risk_notes: "PII in logs, log volume/cost, sensitive data handling"
+    sizing_warning: false
+
+  - id: "COGN-024"
+    title: "Create Quota Reconciliation Jobs"
+    feature: "Create daily cron jobs to recalculate actual usage vs recorded quotas and fix drift"
+    phase: 5
+    depends_on: ["COGN-008", "COGN-009"]
+    endpoints: []
+    infrastructure: ["Lambda/ECS scheduled jobs"]
+    goal: "Ensure quota accuracy despite potential bugs or race conditions"
+    risk_notes: "Job must not disrupt user operations, handle large user base efficiently"
+    sizing_warning: false
+
+  - id: "COGN-025"
+    title: "Write Comprehensive Test Suite"
+    feature: "Unit tests for Lambda and middleware, integration tests for end-to-end flows, load tests"
+    phase: 6
+    depends_on: ["COGN-004", "COGN-006", "COGN-007", "COGN-008"]
+    endpoints: []
+    infrastructure: []
+    goal: "Achieve >90% test coverage and validate system under load"
+    risk_notes: "Test data setup complexity, load test infrastructure costs"
+    sizing_warning: true
+
+  - id: "COGN-026"
+    title: "Create Documentation & Runbooks"
+    feature: "Write API docs, admin runbooks, user docs, and developer guides"
+    phase: 6
+    depends_on: []
+    endpoints: []
+    infrastructure: []
+    goal: "Enable operators and developers to work with the authorization system"
+    risk_notes: "Documentation must stay current with implementation"
+    sizing_warning: false
+
+  - id: "COGN-027"
+    title: "Production Deployment & Launch"
+    feature: "Deploy to production, assign admin users, create test users, monitor for 24 hours"
+    phase: 6
+    depends_on: ["COGN-025", "COGN-026", "COGN-022", "COGN-023"]
+    endpoints: []
+    infrastructure: ["Production AWS environment"]
+    goal: "Successfully launch authorization system to production"
+    risk_notes: "Zero-downtime deployment, rollback plan, monitoring critical for first 24h"
+    sizing_warning: false
+
+dependencies:
+  graph:
+    "COGN-001": []
+    "COGN-002": ["COGN-001"]
+    "COGN-003": []
+    "COGN-004": ["COGN-001", "COGN-003"]
+    "COGN-005": ["COGN-003", "COGN-004"]
+    "COGN-006": ["COGN-005"]
+    "COGN-007": ["COGN-005", "COGN-001"]
+    "COGN-008": ["COGN-007"]
+    "COGN-009": ["COGN-007"]
+    "COGN-010": ["COGN-006", "COGN-008", "COGN-009"]
+    "COGN-011": ["COGN-006", "COGN-008"]
+    "COGN-012": ["COGN-006", "COGN-008"]
+    "COGN-013": ["COGN-006", "COGN-008"]
+    "COGN-014": ["COGN-006", "COGN-007"]
+    "COGN-015": ["COGN-005"]
+    "COGN-016": ["COGN-015"]
+    "COGN-017": ["COGN-016"]
+    "COGN-018": ["COGN-016"]
+    "COGN-019": ["COGN-001"]
+    "COGN-020": ["COGN-004", "COGN-019"]
+    "COGN-021": ["COGN-020", "COGN-016"]
+    "COGN-022": ["COGN-004", "COGN-006"]
+    "COGN-023": ["COGN-004", "COGN-006"]
+    "COGN-024": ["COGN-008", "COGN-009"]
+    "COGN-025": ["COGN-004", "COGN-006", "COGN-007", "COGN-008"]
+    "COGN-026": []
+    "COGN-027": ["COGN-025", "COGN-026", "COGN-022", "COGN-023"]
+
+  critical_path:
+    - "COGN-001"
+    - "COGN-004"
+    - "COGN-005"
+    - "COGN-006"
+    - "COGN-007"
+    - "COGN-008"
+    - "COGN-010"
+    - "COGN-015"
+    - "COGN-016"
+    - "COGN-025"
+    - "COGN-027"
+
+  critical_path_length: 11
+
+parallelization:
+  max_parallel: 4
+  groups:
+    - stories: ["COGN-001", "COGN-003"]
+      after: null
+      description: "Foundation: Database and Cognito setup can run in parallel"
+    - stories: ["COGN-002", "COGN-004"]
+      after: "group_1"
+      description: "Foundation: Trigger and Lambda depend on group 1"
+    - stories: ["COGN-005"]
+      after: "group_2"
+      description: "API Authorization: JWT middleware foundation"
+    - stories: ["COGN-006", "COGN-007"]
+      after: "group_3"
+      description: "API Authorization: Scope and quota middleware in parallel"
+    - stories: ["COGN-008", "COGN-009"]
+      after: "group_4"
+      description: "API Authorization: Both quota increment middlewares"
+    - stories: ["COGN-010", "COGN-011", "COGN-012", "COGN-013", "COGN-014"]
+      after: "group_5"
+      description: "API Authorization: Endpoint protection and error handling in parallel"
+    - stories: ["COGN-015"]
+      after: "group_3"
+      description: "Frontend Integration: JWT handling (can start after auth middleware ready)"
+    - stories: ["COGN-016"]
+      after: "group_7"
+      description: "Frontend Integration: Feature gating"
+    - stories: ["COGN-017", "COGN-018"]
+      after: "group_8"
+      description: "Frontend Integration: Quota indicators and error handling"
+    - stories: ["COGN-019"]
+      after: "group_1"
+      description: "Age Restrictions: Birthdate field (depends on database)"
+    - stories: ["COGN-020"]
+      after: "group_2"
+      description: "Age Restrictions: Scope filtering in Lambda"
+    - stories: ["COGN-021"]
+      after: "group_8"
+      description: "Age Restrictions: Chat UI safety (depends on feature gating)"
+    - stories: ["COGN-022", "COGN-023"]
+      after: "group_4"
+      description: "Monitoring: CloudWatch and logging setup"
+    - stories: ["COGN-024"]
+      after: "group_5"
+      description: "Monitoring: Reconciliation jobs"
+    - stories: ["COGN-025"]
+      after: "group_6"
+      description: "Testing: Comprehensive test suite"
+    - stories: ["COGN-026"]
+      after: null
+      description: "Documentation: Can be written in parallel with development"
+    - stories: ["COGN-027"]
+      after: "group_15"
+      description: "Launch: Final deployment after testing complete"
+
+risks:
+  - id: "RISK-001"
+    description: "Lambda cold starts during login cause poor user experience"
+    affected_stories: ["COGN-004"]
+    severity: high
+    mitigation: "Provision concurrency, Lambda SnapStart, optimize package size, keep Lambda warm"
+
+  - id: "RISK-002"
+    description: "Database becomes bottleneck for quota checks under load"
+    affected_stories: ["COGN-007", "COGN-008", "COGN-009"]
+    severity: high
+    mitigation: "Connection pooling, read replicas, Redis caching if needed, monitor DB metrics"
+
+  - id: "RISK-003"
+    description: "Race conditions on concurrent quota operations lead to overages"
+    affected_stories: ["COGN-007", "COGN-008", "COGN-009"]
+    severity: critical
+    mitigation: "Row-level locking with FOR UPDATE, transactions, atomic increment operations"
+
+  - id: "RISK-004"
+    description: "Quota bypass exploits allow unlimited resource consumption"
+    affected_stories: ["COGN-007", "COGN-010", "COGN-011", "COGN-012", "COGN-013"]
+    severity: critical
+    mitigation: "Security audit, penetration testing, rate limiting, anomaly detection, automated alerts"
+
+  - id: "RISK-005"
+    description: "JWT expiration (1 hour) causes mid-session confusion"
+    affected_stories: ["COGN-015", "COGN-018"]
+    severity: medium
+    mitigation: "Automatic token refresh, clear session expired messages, easy re-login flow"
+
+  - id: "RISK-006"
+    description: "Age verification easily circumvented (self-reported birthdate)"
+    affected_stories: ["COGN-019", "COGN-020", "COGN-021"]
+    severity: medium
+    mitigation: "Accept for MVP, parental consent later, chat moderation, clear ToS, future 3rd party verification"
+
+  - id: "RISK-007"
+    description: "Pricing too low leads to costs exceeding revenue"
+    affected_stories: ["COGN-007", "COGN-009"]
+    severity: high
+    mitigation: "Monitor AWS costs, adjust pricing based on actuals, usage alerts, hard caps, ToS pricing flexibility"
+
+  - id: "RISK-008"
+    description: "Database and JWT out of sync after tier changes"
+    affected_stories: ["COGN-004", "COGN-005"]
+    severity: medium
+    mitigation: "Short JWT expiration (1 hour), refresh button in UI, force logout for critical changes"
+
+  - id: "RISK-009"
+    description: "Quota drift from failed decrements or bugs"
+    affected_stories: ["COGN-008", "COGN-009", "COGN-024"]
+    severity: medium
+    mitigation: "Delete hooks, reconciliation jobs, admin tools to recalculate, monitoring"
+
+  - id: "RISK-010"
+    description: "Test coverage insufficient for edge cases"
+    affected_stories: ["COGN-025"]
+    severity: high
+    mitigation: "Document and test all 10 edge cases from PRD, load testing, security audit"
+
+metrics:
+  total_stories: 27
+  phases: 6
+  max_parallel: 4
+  critical_path_length: 11
+  stories_with_sizing_warnings: 2
+  estimated_complexity: "high"
+
+notes: |
+  This is a comprehensive authorization system with significant infrastructure components.
+  The PRD is extremely detailed with 1700+ lines covering edge cases, security, monitoring,
+  and future enhancements. Key complexity drivers:
+
+  1. Multi-layer system: Cognito + Lambda + Database + API + Frontend
+  2. Race condition handling and transaction management required
+  3. Security-critical: Authorization bugs could be catastrophic
+  4. Performance-sensitive: Auth checks on every API call
+  5. Complex business logic: 4 tiers, age restrictions, add-ons, quotas
+
+  Sizing warnings for COGN-004 and COGN-025 due to:
+  - COGN-004: Lambda involves multiple domains (DB, Cognito, error handling, monitoring)
+  - COGN-025: Testing spans all layers and requires significant test infrastructure
+
+  Consider splitting COGN-004 into separate stories for Lambda core logic,
+  error handling, and monitoring if needed during implementation.

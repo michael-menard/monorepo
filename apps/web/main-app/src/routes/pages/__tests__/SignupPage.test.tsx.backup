@@ -1,0 +1,762 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { SignupPage } from '../SignupPage'
+import { authSlice } from '@/store/slices/authSlice'
+
+// Clear global mocks and set up local mocks
+vi.unmock('@tanstack/react-router')
+vi.unmock('@/services/auth/AuthProvider')
+vi.unmock('@/components/Navigation/NavigationProvider')
+vi.unmock('@/components/Layout/RootLayout')
+vi.unmock('@repo/app-component-library')
+vi.unmock('react-hook-form')
+vi.unmock('@hookform/resolvers/zod')
+vi.unmock('lucide-react')
+vi.unmock('framer-motion')
+
+// Mock TanStack Router
+const mockNavigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, onClick, ...props }: any) => (
+    <a href={to} onClick={onClick} {...props}>
+      {children}
+    </a>
+  ),
+  useNavigate: () => mockNavigate,
+}))
+
+// Mock framer-motion to pass through props correctly
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({
+      children,
+      initial,
+      animate,
+      transition,
+      whileHover,
+      whileTap,
+      variants,
+      style,
+      ...props
+    }: any) => <div {...props}>{children}</div>,
+    p: ({ children, initial, animate, transition, ...props }: any) => <p {...props}>{children}</p>,
+  },
+}))
+
+// Mock AuthProvider
+const mockSignUp = vi.fn()
+vi.mock('@/services/auth/AuthProvider', () => ({
+  useAuth: () => ({
+    signUp: mockSignUp,
+    isLoading: false,
+  }),
+}))
+
+// Mock NavigationProvider
+const mockTrackNavigation = vi.fn()
+const mockNavigationContext = {
+  trackNavigation: mockTrackNavigation,
+}
+vi.mock('@/components/Navigation/NavigationProvider', () => ({
+  useNavigation: () => mockNavigationContext,
+  useNavigationOptional: () => mockNavigationContext,
+}))
+
+// Mock AuthLayout
+vi.mock('@/components/Layout/RootLayout', () => ({
+  AuthLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="auth-layout">{children}</div>
+  ),
+}))
+
+// Mock @repo/ui components - consolidated into a single mock
+vi.mock('@repo/app-component-library', () => ({
+  Button: ({ children, disabled, type, className, asChild, variant, ...props }: any) => {
+    if (asChild) {
+      return children
+    }
+    return (
+      <button type={type} disabled={disabled} className={className} {...props}>
+        {children}
+      </button>
+    )
+  },
+  Input: ({ id, type, placeholder, className, ...props }: any) => (
+    <input id={id} type={type} placeholder={placeholder} className={className} {...props} />
+  ),
+  Label: ({ children, htmlFor, ...props }: any) => (
+    <label htmlFor={htmlFor} {...props}>
+      {children}
+    </label>
+  ),
+  Card: ({ children, className }: any) => <div className={className}>{children}</div>,
+  CardContent: ({ children, className }: any) => <div className={className}>{children}</div>,
+  CardDescription: ({ children, className }: any) => <p className={className}>{children}</p>,
+  CardHeader: ({ children, className }: any) => <div className={className}>{children}</div>,
+  CardTitle: ({ children, className }: any) => <h2 className={className}>{children}</h2>,
+  Alert: ({ children, variant, className, ...props }: any) => (
+    <div data-variant={variant} className={className} {...props}>
+      {children}
+    </div>
+  ),
+  AlertDescription: ({ children }: any) => <span>{children}</span>,
+  Checkbox: ({ id, className, ...props }: any) => (
+    <input type="checkbox" id={id} className={className} {...props} />
+  ),
+  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+}))
+
+// Mock Lucide icons
+vi.mock('lucide-react', () => ({
+  User: () => <span data-testid="user-icon">User</span>,
+  Mail: () => <span data-testid="mail-icon">Mail</span>,
+  Lock: () => <span data-testid="lock-icon">Lock</span>,
+  Eye: () => <span data-testid="eye-icon">Eye</span>,
+  EyeOff: () => <span data-testid="eye-off-icon">EyeOff</span>,
+  ArrowLeft: () => <span data-testid="arrow-left-icon">ArrowLeft</span>,
+  AlertCircle: () => <span data-testid="alert-circle-icon">AlertCircle</span>,
+  CheckCircle: () => <span data-testid="check-circle-icon">CheckCircle</span>,
+}))
+
+const createMockStore = () => {
+  return configureStore({
+    reducer: {
+      auth: authSlice.reducer,
+    },
+    preloadedState: {
+      auth: {
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        tokens: null,
+        error: null,
+      },
+    },
+  })
+}
+
+const renderSignupPage = () => {
+  const store = createMockStore()
+  const user = userEvent.setup()
+
+  render(
+    <Provider store={store}>
+      <SignupPage />
+    </Provider>,
+  )
+
+  return { store, user }
+}
+
+describe('SignupPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSignUp.mockReset()
+    mockNavigate.mockReset()
+    mockTrackNavigation.mockReset()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  describe('Rendering', () => {
+    it('renders within AuthLayout', () => {
+      renderSignupPage()
+      expect(screen.getByTestId('auth-layout')).toBeInTheDocument()
+    })
+
+    it('displays the signup form title', () => {
+      renderSignupPage()
+      expect(screen.getByText('Create your account')).toBeInTheDocument()
+    })
+
+    it('displays the signup form description', () => {
+      renderSignupPage()
+      expect(
+        screen.getByText('Join our community of LEGO builders and start sharing your MOCs'),
+      ).toBeInTheDocument()
+    })
+
+    it('displays LEGO MOC Hub branding', () => {
+      renderSignupPage()
+      expect(screen.getByText('LEGO MOC Hub')).toBeInTheDocument()
+    })
+
+    it('displays name input field with label', () => {
+      renderSignupPage()
+      expect(screen.getByLabelText('Full Name')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Enter your full name')).toBeInTheDocument()
+    })
+
+    it('displays email input field with label', () => {
+      renderSignupPage()
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument()
+    })
+
+    it('displays password input field with label', () => {
+      renderSignupPage()
+      expect(screen.getByLabelText('Password')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Create a strong password')).toBeInTheDocument()
+    })
+
+    it('displays confirm password input field with label', () => {
+      renderSignupPage()
+      expect(screen.getByLabelText('Confirm Password')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Confirm your password')).toBeInTheDocument()
+    })
+
+    it('displays terms and conditions checkbox', () => {
+      renderSignupPage()
+      expect(screen.getByText(/I agree to the/)).toBeInTheDocument()
+      expect(screen.getByText('Terms of Service')).toBeInTheDocument()
+      expect(screen.getByText('Privacy Policy')).toBeInTheDocument()
+    })
+
+    it('displays Create Account button', () => {
+      renderSignupPage()
+      expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument()
+    })
+
+    it('displays sign in link', () => {
+      renderSignupPage()
+      const link = screen.getByText('Sign in here')
+      expect(link).toBeInTheDocument()
+      expect(link).toHaveAttribute('href', '/login')
+    })
+
+    it('displays back to home button', () => {
+      renderSignupPage()
+      const link = screen.getByText('Back to Home')
+      expect(link).toHaveAttribute('href', '/')
+    })
+  })
+
+  describe('Password Visibility Toggle', () => {
+    it('password inputs are hidden by default', () => {
+      renderSignupPage()
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      expect(passwordInput).toHaveAttribute('type', 'password')
+      expect(confirmPasswordInput).toHaveAttribute('type', 'password')
+    })
+
+    it('toggles password visibility when button is clicked', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const toggleButtons = screen.getAllByLabelText('Show password')
+
+      expect(passwordInput).toHaveAttribute('type', 'password')
+
+      await user.click(toggleButtons[0])
+
+      expect(passwordInput).toHaveAttribute('type', 'text')
+    })
+
+    it('toggles confirm password visibility independently', async () => {
+      const { user } = renderSignupPage()
+
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const toggleButtons = screen.getAllByLabelText('Show password')
+
+      expect(confirmPasswordInput).toHaveAttribute('type', 'password')
+
+      // Click the second toggle button (for confirm password)
+      await user.click(toggleButtons[1])
+
+      expect(confirmPasswordInput).toHaveAttribute('type', 'text')
+    })
+  })
+
+  describe('Password Strength Indicator', () => {
+    it('shows password strength indicator when typing password', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      await user.type(passwordInput, 'abc')
+
+      expect(screen.getByText(/password strength:/i)).toBeInTheDocument()
+    })
+
+    it('shows Weak for very short passwords', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      await user.type(passwordInput, 'abc')
+
+      expect(screen.getByText(/weak/i)).toBeInTheDocument()
+    })
+
+    it('shows Fair for medium passwords', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      await user.type(passwordInput, 'abcde')
+
+      expect(screen.getByText(/fair/i)).toBeInTheDocument()
+    })
+
+    it('shows Good for better passwords', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      await user.type(passwordInput, 'abcdefg')
+
+      expect(screen.getByText(/good/i)).toBeInTheDocument()
+    })
+
+    it('shows Strong for long passwords', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      await user.type(passwordInput, 'abcdefgh')
+
+      expect(screen.getByText(/strong/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('Form Validation', () => {
+    it('shows name validation error for short name', async () => {
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'A')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Name must be at least 2 characters')).toBeInTheDocument()
+      })
+    })
+
+    it('shows email validation error for invalid email', async () => {
+      const { user } = renderSignupPage()
+
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(emailInput, 'invalid-email')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument()
+      })
+    })
+
+    it('shows password validation error for short password', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(passwordInput, 'short')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument()
+      })
+    })
+
+    it('shows password validation error for missing uppercase/lowercase/number', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(passwordInput, 'alllowercase')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Password must contain uppercase, lowercase, and number'),
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('shows password mismatch error', async () => {
+      const { user } = renderSignupPage()
+
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'DifferentPass1')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText("Passwords don't match")).toBeInTheDocument()
+      })
+    })
+
+    it('shows terms acceptance error when not checked', async () => {
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('You must accept the terms and conditions')).toBeInTheDocument()
+      })
+    })
+
+    it('does not submit form with empty fields', async () => {
+      const { user } = renderSignupPage()
+
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+      await user.click(submitButton)
+
+      expect(mockSignUp).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Successful Signup', () => {
+    it('calls signUp with correct data', async () => {
+      mockSignUp.mockResolvedValue({ success: true, requiresConfirmation: true })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockSignUp).toHaveBeenCalledWith({
+          name: 'John Doe',
+          email: 'john@example.com',
+          password: 'ValidPass1',
+        })
+      })
+    })
+
+    it('displays success message on successful signup', async () => {
+      mockSignUp.mockResolvedValue({ success: true, requiresConfirmation: true })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/account created successfully/i)).toBeInTheDocument()
+      })
+    })
+
+    it('navigates to verify-email page after delay', async () => {
+      mockSignUp.mockResolvedValue({ success: true, requiresConfirmation: true })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockSignUp).toHaveBeenCalled()
+      })
+
+      // Advance timers by 2 seconds (the delay before navigation)
+      vi.advanceTimersByTime(2000)
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: '/auth/verify-email',
+          search: { email: 'john@example.com' },
+        })
+      })
+    })
+
+    it('tracks signup success event', async () => {
+      mockSignUp.mockResolvedValue({ success: true, requiresConfirmation: true })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockTrackNavigation).toHaveBeenCalledWith('signup_success', {
+          source: 'signup_page',
+          email: 'john@example.com',
+        })
+      })
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('displays error message when signup fails', async () => {
+      mockSignUp.mockResolvedValue({
+        success: false,
+        error: 'An account with this email already exists',
+      })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'existing@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('An account with this email already exists')).toBeInTheDocument()
+      })
+    })
+
+    it('displays generic error when signUp throws', async () => {
+      mockSignUp.mockRejectedValue(new Error('Network error'))
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Signup failed. Please try again.')).toBeInTheDocument()
+      })
+    })
+
+    it('tracks signup error event', async () => {
+      mockSignUp.mockResolvedValue({
+        success: false,
+        error: 'Email already in use',
+      })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockTrackNavigation).toHaveBeenCalledWith('signup_error', {
+          source: 'signup_page',
+          error: 'Email already in use',
+        })
+      })
+    })
+  })
+
+  describe('Loading State', () => {
+    it('shows loading state during submission', async () => {
+      mockSignUp.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve({ success: true }), 100)),
+      )
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      expect(screen.getByText(/creating account/i)).toBeInTheDocument()
+    })
+
+    it('disables submit button during submission', async () => {
+      mockSignUp.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve({ success: true }), 100)),
+      )
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      expect(submitButton).toBeDisabled()
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('name input has aria-invalid when in error state', async () => {
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'A')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(nameInput).toHaveAttribute('aria-invalid', 'true')
+      })
+    })
+
+    it('email input has aria-invalid when in error state', async () => {
+      const { user } = renderSignupPage()
+
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(emailInput, 'invalid')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(emailInput).toHaveAttribute('aria-invalid', 'true')
+      })
+    })
+
+    it('password toggle buttons have appropriate aria-labels', () => {
+      renderSignupPage()
+      const toggleButtons = screen.getAllByLabelText('Show password')
+      expect(toggleButtons).toHaveLength(2)
+    })
+
+    it('all form inputs have associated labels', () => {
+      renderSignupPage()
+
+      expect(screen.getByLabelText('Full Name')).toBeInTheDocument()
+      expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+      expect(screen.getByLabelText('Password')).toBeInTheDocument()
+      expect(screen.getByLabelText('Confirm Password')).toBeInTheDocument()
+    })
+  })
+
+  describe('Navigation Tracking', () => {
+    it('tracks signup attempt on form submit', async () => {
+      mockSignUp.mockResolvedValue({ success: true })
+      const { user } = renderSignupPage()
+
+      const nameInput = screen.getByPlaceholderText('Enter your full name')
+      const emailInput = screen.getByPlaceholderText('Enter your email')
+      const passwordInput = screen.getByPlaceholderText('Create a strong password')
+      const confirmPasswordInput = screen.getByPlaceholderText('Confirm your password')
+      const termsCheckbox = screen.getByRole('checkbox')
+      const submitButton = screen.getByRole('button', { name: /create account/i })
+
+      await user.type(nameInput, 'John Doe')
+      await user.type(emailInput, 'john@example.com')
+      await user.type(passwordInput, 'ValidPass1')
+      await user.type(confirmPasswordInput, 'ValidPass1')
+      await user.click(termsCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockTrackNavigation).toHaveBeenCalledWith('signup_attempt', {
+          source: 'signup_page',
+          timestamp: expect.any(Number),
+        })
+      })
+    })
+
+    it('tracks signin link click', async () => {
+      const { user } = renderSignupPage()
+
+      const signInLink = screen.getByText('Sign in here')
+      await user.click(signInLink)
+
+      expect(mockTrackNavigation).toHaveBeenCalledWith('signin_link', {
+        source: 'signup_page',
+      })
+    })
+
+    it('tracks back to home link click', async () => {
+      const { user } = renderSignupPage()
+
+      const backToHomeLink = screen.getByText('Back to Home')
+      await user.click(backToHomeLink)
+
+      expect(mockTrackNavigation).toHaveBeenCalledWith('back_to_home', {
+        source: 'signup_page',
+      })
+    })
+  })
+})

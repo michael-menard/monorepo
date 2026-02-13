@@ -1,0 +1,91 @@
+perspective: engineering
+verdict: CONCERNS
+
+scope:
+  technical_feasibility: true
+  architecture_sound: true
+  implementation_complexity: high
+
+mvp_blockers:
+  - id: ENG-001
+    issue: COGN-004 (Pre Token Generation Lambda) has undefined cold start SLA and database connection failure handling - critical path blocker
+    stories: [COGN-004]
+    action: Define cold start requirements and implement connection pooling with clear failure modes before implementation
+
+  - id: ENG-002
+    issue: COGN-007 (Quota Check) lacks specification for race condition handling on concurrent operations - core safety feature
+    stories: [COGN-007]
+    action: Document transaction isolation levels and row-level locking strategy before dev starts
+
+  - id: ENG-003
+    issue: No shared middleware framework defined across COGN-005, COGN-006, COGN-007, COGN-008 - risk of inconsistent patterns
+    stories: [COGN-005, COGN-006, COGN-007, COGN-008]
+    action: Create shared middleware framework package before implementing individual middlewares
+
+  - id: ENG-004
+    issue: JWT refresh token lifecycle undefined - COGN-015 frontend integration needs backend contract
+    stories: [COGN-005, COGN-015]
+    action: Define token expiration, refresh endpoint behavior, and error recovery flows in COGN-005 spec
+
+architecture_risks:
+  - story: COGN-004
+    risk: Lambda timeout on database operations with multiple domains
+    severity: critical
+    mitigation: Implement async operations, connection pooling, timeouts per operation
+
+  - story: COGN-007, COGN-008
+    risk: Race conditions between quota check and quota increment
+    severity: critical
+    mitigation: Use database transactions with FOR UPDATE locking, document idempotency
+
+  - story: COGN-015
+    risk: Token expiration during user session
+    severity: high
+    mitigation: Implement auto-refresh with silent retry, graceful degradation
+
+  - story: COGN-025
+    risk: Test coverage insufficient for 10+ edge cases in concurrency and failure scenarios
+    severity: high
+    mitigation: Identify and spec all edge cases before implementation, add load testing
+
+scalability_concerns:
+  - story: COGN-004
+    metric: Lambda cold starts for 10k concurrent users
+    impact: Auth latency critical path
+
+  - story: COGN-007, COGN-008
+    metric: Database connection pool sizing for quota operations at scale
+    impact: Contention during peak usage
+
+dependencies_clear: true
+tech_stack_alignment: true
+
+missing_mvp_stories:
+  - title: Shared middleware framework foundation
+    reason: Required before COGN-005, COGN-006, COGN-007, COGN-008 to ensure consistent patterns and maintainability
+
+  - title: Database connection pooling setup
+    reason: Blocks COGN-004 and COGN-007 implementation; critical for reliability
+
+future:
+  value_improvements:
+    - story: COGN-004
+      suggestion: Implement circuit breaker pattern for database failures
+      impact: high
+
+    - story: COGN-025
+      suggestion: Add chaos engineering tests for failure scenarios
+      impact: high
+
+  deferred_stories:
+    - story: COGN-024
+      reason: Reconciliation jobs can be Post-MVP; not required for core authorization
+
+  recommendations:
+    - "Create shared middleware utility package before COGN-005"
+    - "Document database connection strategy and pooling config"
+    - "Spec token refresh lifecycle before COGN-015"
+    - "Define Lambda timeout and cold start budgets"
+    - "Identify and spec edge cases for concurrency and failures in COGN-025"
+
+ENGINEERING REVIEW COMPLETE

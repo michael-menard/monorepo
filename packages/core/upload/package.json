@@ -1,0 +1,102 @@
+{
+  "name": "@repo/upload",
+  "version": "0.0.1",
+  "description": "Consolidated upload package for client, hooks, image processing, components, and type definitions",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    },
+    "./hooks": {
+      "import": "./dist/hooks/index.js",
+      "types": "./dist/hooks/index.d.ts"
+    },
+    "./image": {
+      "import": "./dist/image/index.js",
+      "types": "./dist/image/index.d.ts"
+    },
+    "./image/presets": {
+      "import": "./dist/image/presets/index.js",
+      "types": "./dist/image/presets/index.d.ts"
+    },
+    "./image/presets/__types__": {
+      "import": "./dist/image/presets/__types__/index.js",
+      "types": "./dist/image/presets/__types__/index.d.ts"
+    },
+    "./image/compression": {
+      "import": "./dist/image/compression/index.js",
+      "types": "./dist/image/compression/index.d.ts"
+    },
+    "./image/compression/__types__": {
+      "import": "./dist/image/compression/__types__/index.js",
+      "types": "./dist/image/compression/__types__/index.d.ts"
+    },
+    "./image/heic": {
+      "import": "./dist/image/heic/index.js",
+      "types": "./dist/image/heic/index.d.ts"
+    },
+    "./image/heic/__types__": {
+      "import": "./dist/image/heic/__types__/index.js",
+      "types": "./dist/image/heic/__types__/index.d.ts"
+    },
+    "./components": {
+      "import": "./dist/components/index.js",
+      "types": "./dist/components/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint --fix . --fix --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest --watch --no-threads --pool=forks --max-workers=4"
+  },
+  "dependencies": {
+    "@repo/api-client": "workspace:*",
+    "@repo/app-component-library": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "browser-image-compression": "^2.0.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.22",
+    "heic2any": "0.0.4",
+    "lucide-react": "0.563.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^2.5.4",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.30.0",
+    "jsdom": "^25.0.1",
+    "typescript": "5.8.3",
+    "vite": "^5.2.10",
+    "vite-plugin-dts": "4.5.4",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  }
+}

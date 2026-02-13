@@ -1,0 +1,401 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { GalleryCard } from '../GalleryCard'
+
+describe('GalleryCard', () => {
+  const defaultProps = {
+    image: { src: '/test.jpg', alt: 'Test image' },
+    title: 'Test Card',
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('Basic Rendering', () => {
+    it('renders with required props', () => {
+      render(<GalleryCard {...defaultProps} />)
+      
+      expect(screen.getByTestId('gallery-card')).toBeInTheDocument()
+      expect(screen.getByTestId('gallery-card-image')).toHaveAttribute('src', '/test.jpg')
+      expect(screen.getByTestId('gallery-card-title')).toHaveTextContent('Test Card')
+    })
+
+    it('renders subtitle when provided', () => {
+      render(<GalleryCard {...defaultProps} subtitle="Test subtitle" />)
+      
+      expect(screen.getByTestId('gallery-card-subtitle')).toHaveTextContent('Test subtitle')
+    })
+
+    it('renders metadata slot when provided', () => {
+      render(<GalleryCard {...defaultProps} metadata={<div data-testid="custom-metadata">Badge</div>} />)
+      
+      expect(screen.getByTestId('custom-metadata')).toBeInTheDocument()
+    })
+  })
+
+  describe('Selection Mode (AC-1, AC-2, AC-3)', () => {
+    it('accepts selectable prop', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} />)
+      
+      expect(screen.getByTestId('gallery-card-selection-checkbox')).toBeInTheDocument()
+    })
+
+    it('renders checkbox overlay when selectable=true', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} />)
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      expect(checkbox).toBeInTheDocument()
+      expect(checkbox).toHaveClass('h-6', 'w-6', 'rounded-full', 'border-2')
+    })
+
+    it('renders checkbox at top-left by default', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} />)
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      expect(checkbox).toHaveClass('top-2', 'left-2')
+    })
+
+    it('renders checkbox at top-right when selectionPosition="top-right"', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} selectionPosition="top-right" />)
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      expect(checkbox).toHaveClass('top-2', 'right-2')
+    })
+
+    it('shows Check icon when selected', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} selected={true} />)
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      expect(checkbox).toHaveClass('border-primary', 'bg-primary', 'text-primary-foreground')
+      // Check icon has aria-hidden, so we query for svg
+      expect(checkbox.querySelector("svg")).toBeTruthy()
+    })
+
+    it('does not show Check icon when not selected', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} selected={false} />)
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      expect(checkbox).toHaveClass('border-white', 'bg-black/40', 'text-white')
+      expect(checkbox.querySelector("svg")).toBeFalsy()
+    })
+
+    it('calls onSelect with true when unselected card is clicked', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+      render(<GalleryCard {...defaultProps} selectable={true} selected={false} onSelect={onSelect} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      await user.click(card)
+      
+      expect(onSelect).toHaveBeenCalledWith(true)
+    })
+
+    it('calls onSelect with false when selected card is clicked', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+      render(<GalleryCard {...defaultProps} selectable={true} selected={true} onSelect={onSelect} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      await user.click(card)
+      
+      expect(onSelect).toHaveBeenCalledWith(false)
+    })
+
+    it('calls onClick instead of onSelect when onClick is provided', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+      const onClick = vi.fn()
+      render(<GalleryCard {...defaultProps} selectable={true} onSelect={onSelect} onClick={onClick} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      await user.click(card)
+      
+      expect(onClick).toHaveBeenCalled()
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('calls onSelect when checkbox is clicked directly', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+      render(<GalleryCard {...defaultProps} selectable={true} selected={false} onSelect={onSelect} />)
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      await user.click(checkbox)
+      
+      expect(onSelect).toHaveBeenCalledWith(true)
+    })
+
+    it('calls onSelect when Enter key is pressed', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+      render(<GalleryCard {...defaultProps} selectable={true} selected={false} onSelect={onSelect} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      card.focus()
+      await user.keyboard('{Enter}')
+      
+      expect(onSelect).toHaveBeenCalledWith(true)
+    })
+
+    it('calls onSelect when Space key is pressed', async () => {
+      const user = userEvent.setup()
+      const onSelect = vi.fn()
+      render(<GalleryCard {...defaultProps} selectable={true} selected={false} onSelect={onSelect} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      card.focus()
+      await user.keyboard(' ')
+      
+      expect(onSelect).toHaveBeenCalledWith(true)
+    })
+
+    it('has aria-selected attribute when selectable', () => {
+      render(<GalleryCard {...defaultProps} selectable={true} selected={true} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      expect(card).toHaveAttribute('aria-selected', 'true')
+    })
+  })
+
+  describe('Drag Handle (AC-4, AC-5, AC-6)', () => {
+    it('accepts draggable prop', () => {
+      render(<GalleryCard {...defaultProps} draggable={true} />)
+      
+      expect(screen.getByTestId('gallery-card-drag-handle')).toBeInTheDocument()
+    })
+
+    it('renders drag handle button at top-right by default', () => {
+      render(<GalleryCard {...defaultProps} draggable={true} />)
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveClass('top-2', 'right-2')
+    })
+
+    it('renders drag handle at top-left when dragHandlePosition="top-left"', () => {
+      render(<GalleryCard {...defaultProps} draggable={true} dragHandlePosition="top-left" />)
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveClass('top-2', 'left-2')
+    })
+
+    it('has 44x44px touch target (h-11 w-11 classes)', () => {
+      render(<GalleryCard {...defaultProps} draggable={true} />)
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveClass('h-11', 'w-11')
+    })
+
+    it('has proper accessibility attributes', () => {
+      render(<GalleryCard {...defaultProps} title="My Card" draggable={true} />)
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveAttribute('aria-label', 'Drag to reorder My Card')
+      expect(dragHandle).toHaveClass('touch-none')
+    })
+
+    it('has cursor classes for grab behavior', () => {
+      render(<GalleryCard {...defaultProps} draggable={true} />)
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveClass('cursor-grab', 'active:cursor-grabbing')
+    })
+
+    it('is hover-visible on desktop (has md:opacity-0 md:group-hover:opacity-100)', () => {
+      render(<GalleryCard {...defaultProps} draggable={true} />)
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveClass('md:opacity-0', 'md:group-hover:opacity-100')
+    })
+
+    it('uses custom renderDragHandle when provided', () => {
+      const customRender = vi.fn(() => <div data-testid="custom-drag-handle">Custom Handle</div>)
+      render(<GalleryCard {...defaultProps} draggable={true} renderDragHandle={customRender} />)
+      
+      expect(screen.getByTestId('custom-drag-handle')).toBeInTheDocument()
+      expect(customRender).toHaveBeenCalledWith(undefined, undefined)
+    })
+  })
+
+  describe('Hover Overlay (AC-7)', () => {
+    it('renders hover overlay content when provided', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          hoverOverlay={<div data-testid="custom-overlay">Hover Content</div>}
+        />
+      )
+      
+      expect(screen.getByTestId('custom-overlay')).toBeInTheDocument()
+    })
+
+    it('hover overlay has gradient classes', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          hoverOverlay={<div>Content</div>}
+        />
+      )
+      
+      const overlay = screen.getByTestId('gallery-card-hover-overlay')
+      expect(overlay).toHaveClass('bg-gradient-to-t', 'from-black/60', 'via-transparent', 'to-transparent')
+    })
+
+    it('hover overlay has opacity transition classes', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          hoverOverlay={<div>Content</div>}
+        />
+      )
+      
+      const overlay = screen.getByTestId('gallery-card-hover-overlay')
+      expect(overlay).toHaveClass('transition-opacity', 'duration-200')
+    })
+
+    it('hover overlay is hover-visible on desktop (md:opacity-0 md:group-hover:opacity-100)', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          hoverOverlay={<div>Content</div>}
+        />
+      )
+      
+      const overlay = screen.getByTestId('gallery-card-hover-overlay')
+      expect(overlay).toHaveClass('md:opacity-0', 'md:group-hover:opacity-100')
+    })
+
+    it('hover overlay has z-10', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          hoverOverlay={<div>Content</div>}
+        />
+      )
+      
+      const overlay = screen.getByTestId('gallery-card-hover-overlay')
+      expect(overlay).toHaveClass('z-10')
+    })
+  })
+
+  describe('Position Conflict Resolution (Decision #1)', () => {
+    it('fixes checkbox at top-left when both selectable and draggable', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          selectable={true}
+          draggable={true}
+          selectionPosition="top-right" // Should be ignored
+        />
+      )
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      expect(checkbox).toHaveClass('top-2', 'left-2')
+    })
+
+    it('fixes drag handle at top-right when both selectable and draggable', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          selectable={true}
+          draggable={true}
+          dragHandlePosition="top-left" // Should be ignored
+        />
+      )
+      
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      expect(dragHandle).toHaveClass('top-2', 'right-2')
+    })
+
+    it('both checkbox and drag handle render without collision', () => {
+      render(
+        <GalleryCard
+          {...defaultProps}
+          selectable={true}
+          draggable={true}
+        />
+      )
+      
+      const checkbox = screen.getByTestId('gallery-card-selection-checkbox')
+      const dragHandle = screen.getByTestId('gallery-card-drag-handle')
+      
+      expect(checkbox).toBeInTheDocument()
+      expect(dragHandle).toBeInTheDocument()
+      expect(checkbox).toHaveClass('left-2')
+      expect(dragHandle).toHaveClass('right-2')
+    })
+  })
+
+  describe('Breaking Change: Actions Overlay Removed', () => {
+    it('does not have actions overlay element', () => {
+      const { container } = render(<GalleryCard {...defaultProps} />)
+      
+      // Verify no actions overlay element exists (old implementation had data-testid="gallery-card-actions")
+      expect(screen.queryByTestId('gallery-card-actions')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Interactive States', () => {
+    it('has role="button" when onClick provided', () => {
+      render(<GalleryCard {...defaultProps} onClick={vi.fn()} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      expect(card).toHaveAttribute('role', 'button')
+    })
+
+    it('has aria-label when interactive', () => {
+      render(<GalleryCard {...defaultProps} subtitle="Subtitle" onClick={vi.fn()} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      expect(card).toHaveAttribute('aria-label', 'Test Card - Subtitle')
+    })
+
+    it('shows selected state styling', () => {
+      render(<GalleryCard {...defaultProps} selected={true} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      expect(card).toHaveClass('ring-2', 'ring-primary', 'ring-offset-2')
+    })
+
+    it('shows loading state', () => {
+      render(<GalleryCard {...defaultProps} loading={true} />)
+      
+      const card = screen.getByTestId('gallery-card')
+      expect(card).toHaveClass('animate-pulse', 'pointer-events-none')
+    })
+  })
+
+  describe('Image Handling', () => {
+    it('shows skeleton while loading', () => {
+      render(<GalleryCard {...defaultProps} />)
+      
+      expect(screen.getByTestId('gallery-card-image-skeleton')).toBeInTheDocument()
+    })
+
+    it('shows error fallback on image error', () => {
+      render(<GalleryCard {...defaultProps} />)
+      
+      const image = screen.getByTestId('gallery-card-image')
+      image.dispatchEvent(new Event('error'))
+      
+      expect(screen.getByTestId('gallery-card-image-error')).toBeInTheDocument()
+    })
+  })
+
+  describe('Aspect Ratios', () => {
+    it('uses 4/3 aspect ratio by default', () => {
+      render(<GalleryCard {...defaultProps} />)
+      
+      const imageContainer = screen.getByTestId('gallery-card-image').parentElement
+      expect(imageContainer).toHaveClass('aspect-[4/3]')
+    })
+
+    it('uses custom aspect ratio when provided', () => {
+      render(<GalleryCard {...defaultProps} image={{ src: '/test.jpg', alt: 'Test', aspectRatio: '16/9' }} />)
+      
+      const imageContainer = screen.getByTestId('gallery-card-image').parentElement
+      expect(imageContainer).toHaveClass('aspect-video')
+    })
+  })
+})
