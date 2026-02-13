@@ -1,0 +1,105 @@
+perspective: engineering
+verdict: READY
+feasibility:
+  core_journey_feasible: true
+  blocking_deps: []
+  tech_stack_sufficient: true
+architecture:
+  database:
+    choice: Extend existing postgres-knowledgebase
+    rationale: Leverages existing pgvector, reduces connection overhead
+    risk: Low - already proven with KB functionality
+  graph_approach:
+    choice: Relational tables (no AGE extension)
+    rationale: Simpler, no new extensions, SQL-familiar
+    risk: Low - materialized views provide performance path
+  migration_strategy:
+    choice: Incremental with compatibility shim
+    rationale: 5-10 agents per phase, reduces blast radius
+    risk: Moderate - shim adds complexity but enables gradual rollout
+  doc_sync:
+    choice: Mandatory gate at phase/story completion
+    rationale: Forces documentation currency
+    risk: Low - automation mitigates friction
+core_technologies:
+  required:
+    - PostgreSQL (extended knowledgebase)
+    - pgvector (already available)
+    - Node.js/TypeScript (existing agent codebase)
+    - MCP servers (existing)
+  new_components:
+    - Compatibility shim module (TypeScript)
+    - Graph materialized views (SQL)
+    - ML training pipeline (Python, LightGBM/XGBoost)
+  proven_choices: All technologies have equivalent deployments
+technical_decisions:
+  schema_design:
+    assessment: Sound - 6 distinct schemas (core, context_cache, telemetry, ml, graph, workflow)
+    risk: Low - clear separation of concerns
+  mcp_tool_design:
+    assessment: Straightforward - CRUD operations on tables
+    risk: Low - MCP server already supports similar patterns
+  ml_model_storage:
+    assessment: Bytea for model binaries acceptable
+    risk: Moderate - may need external storage if models grow
+    mitigation: Archive old models, implement size limits
+  session_lifecycle:
+    assessment: Clear - database tables track creation/updates/cleanup
+    risk: Moderate - need session expiry policy
+    mitigation: TTL-based cleanup, document ownership rules
+integration_points:
+  within_system:
+    - 115 agents need compatibility shim integration
+    - Commands (story-status, story-update, story-move) need DB query updates
+    - Existing .cache/ files replaced with DB tables
+  external_dependencies:
+    - PostgreSQL connection pool
+    - MCP server extensions (no external APIs)
+  impact: Low to moderate - primarily internal refactoring
+infrastructure_requirements:
+  storage:
+    - Additional PostgreSQL schema (~1-5 GB initially)
+    - Model storage for 3 ML models (~100 MB each)
+  compute:
+    - MCP server capacity for new tools
+    - ML training environment (separate, not in production)
+  availability:
+    - Migration phases can proceed independently
+    - DB schema backward compatibility required
+  scaling:
+    - Graph views need indexing as feature count grows
+    - Telemetry writes need batching for high-volume agents
+performance_considerations:
+  critical_paths:
+    - Story status queries (Phase 1) - must be <100ms
+    - Context cache retrieval (Phase 2) - target <500ms for agent startup
+    - Cohesion checks (Phase 4) - graph queries need optimization
+  benchmarking:
+    - Phase 2 targets 80% token reduction
+    - Phase 5 ML models target 85% accuracy
+    - Phase 6 batch mode should handle 5-10 stories without degradation
+  mitigation: Comprehensive benchmarking phases (2100, 5130, 6090) validate assumptions
+future:
+  architecture_improvements:
+    - suggestion: "Add query caching layer (Redis) for hot graph queries"
+      impact: high
+      timeline: Post-Phase-4
+    - suggestion: "Implement streaming telemetry writes for high-volume agents"
+      impact: medium
+      timeline: Post-Phase-3
+  suggested_stories:
+    - title: "Performance benchmark suite for database queries"
+      reason: "Validate <100ms story status and <500ms cache retrieval assumptions"
+      priority: P1
+    - title: "ML model serving framework for production inference"
+      reason: "Models trained in Phase 5 need serving infrastructure"
+      priority: P1
+    - title: "Database migration rollback plan"
+      reason: "Document recovery procedure if Phase 1 data migration fails"
+      priority: P1
+  recommendations:
+    - "Create detailed Phase 0 database migration script with rollback"
+    - "Define SLA for context cache TTL and invalidation strategy"
+    - "Establish ML model versioning and rollback procedure"
+    - "Benchmark graph view performance before Phase 4 large-scale rollout"
+review_complete: true

@@ -24,12 +24,7 @@ export { featureFlags, featureFlagUserOverrides, featureFlagSchedules } from './
 export { adminAuditLog } from './admin-audit-log'
 
 // Re-export User Quotas tables (Authorization & Tier System)
-export {
-  userQuotas,
-  userAddons,
-  userQuotasRelations,
-  userAddonsRelations,
-} from './user-quotas'
+export { userQuotas, userAddons, userQuotasRelations, userAddonsRelations } from './user-quotas'
 
 // Re-export Inspiration Gallery tables (Epic 5)
 export {
@@ -330,6 +325,7 @@ export const mocFiles = pgTable(
     fileUrl: text('file_url').notNull(),
     originalFilename: text('original_filename'),
     mimeType: text('mime_type'), // Optional: for clarity on file format
+    s3Key: text('s3_key').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }), // Soft-delete support (nullable)
@@ -672,6 +668,10 @@ export const uploadSessions = pgTable(
     finalizingAt: timestamp('finalizing_at'), // Transient lock for in-flight finalize
     /** Created MOC instruction ID (null until finalized) */
     mocInstructionId: uuid('moc_instruction_id').references(() => mocInstructions.id),
+    /** Original filename for display (INST-1105) */
+    originalFilename: text('original_filename'),
+    /** Original file size for verification (INST-1105) */
+    originalFileSize: integer('original_file_size'),
   },
   table => ({
     userIdx: index('idx_upload_sessions_user_id').on(table.userId),

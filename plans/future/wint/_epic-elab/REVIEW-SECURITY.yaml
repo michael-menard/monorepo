@@ -1,0 +1,218 @@
+perspective: security
+verdict: READY
+security:
+  core_auth_works: true
+  critical_vulns: false
+threat_model:
+  actors:
+    - Internal agents (trusted, authenticated)
+    - Human operators (authenticated via existing auth)
+    - External attack surface (minimal - database-internal system)
+  attack_surface:
+    primary: MCP tools (exposed to agent network)
+    secondary: Database connection pool
+    minimal: No new external APIs introduced
+authentication:
+  agent_authentication:
+    current: Agents authenticated through existing auth (assume inherited)
+    new_threat: MCP tools must validate agent identity
+    mitigation: Inherit MCP auth layer (already in place)
+  human_authentication:
+    current: Existing auth system (assume strong)
+    new_threat: None - humans use existing auth
+    mitigation: No changes needed
+  assessment: Core auth flow remains secure
+authorization:
+  database_schema_access:
+    assessment: PostgreSQL role-based access control (RBAC) available
+    design: Each schema should have dedicated role (story_role, cache_role, etc.)
+    risk: Default - wide access could expose sensitive data
+    mitigation: Document role strategy in Phase 0, implement principle of least privilege
+  mcp_tool_access:
+    assessment: MCP server inherits auth from existing system
+    design: Tools should validate caller identity and permissions
+    risk: Tool calls could bypass intended access controls
+    mitigation: Validate agent/user identity in every MCP tool
+  story_status_access:
+    assessment: All agents can query story status (design intent)
+    risk: Sensitive story metadata could be exposed
+    mitigation: Audit what data is exposed via story queries
+  telemetry_data_access:
+    assessment: Telemetry logged for all agent invocations
+    risk: Decision logs include sensitive context (embeddings, reasoning)
+    mitigation: Classify telemetry data levels, restrict access to analysis agents
+  assessment: Authorization strategy needs definition
+data_protection:
+  at_rest:
+    database_storage:
+      - Stories: Non-sensitive metadata (title, status, phase)
+      - Context cache: Project conventions, agent missions (non-sensitive)
+      - Telemetry: Agent decisions, latency, tokens (low sensitivity)
+      - ML data: Training data derived from telemetry (low sensitivity)
+      - Graph: Feature capabilities, rules (non-sensitive)
+    encryption: PostgreSQL supports transparent encryption (TDE)
+    risk: Low - no PII or secrets stored
+    mitigation: Enable PostgreSQL encryption at rest for compliance
+  in_transit:
+    agent_to_database:
+      - Connection: PostgreSQL protocol (TCP/TLS)
+      - Risk: Medium - agent network should be internal
+      - Mitigation: Enforce TLS, validate certificate
+    mcp_tool_calls:
+      - Connection: Existing MCP transport (assume TLS)
+      - Risk: Low - inherits existing security
+      - Mitigation: No changes needed
+  in_use:
+    model_binaries:
+      - Storage: ML schema bytea columns
+      - Risk: Model poisoning could occur if malicious model uploaded
+      - Mitigation: Validate model checksums, restrict upload to trusted sources
+    cached_context:
+      - Access: Agents retrieve project context at startup
+      - Risk: Poisoned cache could mislead agents
+      - Mitigation: Version context, validate checksums
+  assessment: Data protection sufficient for non-sensitive metadata
+confidentiality:
+  source_code:
+    current: Agents access project code via existing mechanisms
+    new_threat: None - database doesn't expose new code access paths
+  project_strategy:
+    current: Confidential project information may be in context cache
+    risk: Database breach exposes strategy docs (PLAN.md, roadmap.md)
+    mitigation: Document sensitivity levels, restrict database access
+  decision_logs:
+    current: Telemetry captures HiTL decisions and reasoning
+    risk: Competitive intelligence in decision logs
+    mitigation: Archive old telemetry, restrict query access
+  assessment: Non-sensitive data - no confidentiality concerns
+integrity:
+  story_status_integrity:
+    risk: Malicious agent changes story status incorrectly
+    mitigation: Database ACID guarantees, transaction isolation
+    test: Phase 1 integration tests validate status transitions
+  graph_integrity:
+    risk: Corrupted graph leads to false cohesion checks
+    mitigation: Validation scripts, referential integrity constraints
+    test: Phase 4 validation tests check franken-feature detection
+  ml_model_integrity:
+    risk: Poisoned training data produces unreliable models
+    mitigation: Data validation in Phase 5, audit training data
+    test: Phase 5 accuracy benchmarks identify poor models
+  telemetry_integrity:
+    risk: Agents log false telemetry to skew metrics
+    mitigation: Signature verification (future), audit trails
+    test: Phase 3 validation tests check telemetry completeness
+  assessment: Integrity protections adequate for non-critical system
+availability:
+  database_availability:
+    requirement: Story queries must be <100ms (Phase 1)
+    risk: Database outage blocks all agent operations
+    mitigation: Connection pooling, read replicas (Phase 6+)
+  mcp_tool_availability:
+    requirement: MCP tools must respond within SLA
+    risk: Tool timeout cascades to agent failures
+    mitigation: Timeout policies, graceful degradation
+  compatibility_shim:
+    requirement: Directory fallback available during DB maintenance
+    risk: Directory becomes inconsistent if DB fails mid-migration
+    mitigation: Sync frequency, rollback procedures
+  assessment: Availability covered in platform review
+api_security:
+  mcp_tool_api:
+    design: CRUD operations on database tables
+    input_validation:
+      story_id: Expected format WINT-XXXX, validate regex
+      payload: JSONB objects, validate schema
+    risk: SQL injection if inputs not validated
+    mitigation: Parameterized queries (required), input validation (documented)
+    test: Phase 0 unit tests validate input handling
+  error_handling:
+    risk: Error messages expose database schema
+    mitigation: Generic error messages, log detailed errors server-side
+  rate_limiting:
+    risk: Agent spam could overload database
+    mitigation: Connection pool limits, query timeouts
+  assessment: API security requires implementation in Phase 0
+secrets_management:
+  database_credentials:
+    current: Assume existing secret management
+    risk: Credentials in environment variables (if misconfigured)
+    mitigation: Use existing secret management system
+  model_api_keys:
+    requirement: ML models may need API keys (future)
+    risk: Keys exposed in model storage
+    mitigation: Separate key management, never store in bytea
+  assessment: No new secret management required
+compliance:
+  audit_logging:
+    requirement: Telemetry provides audit trail
+    risk: Audit logs truncated by retention policy
+    mitigation: Archive audit logs, document retention policy
+  data_residency:
+    current: PostgreSQL data stored in existing location
+    risk: None - no new data movement
+  access_controls:
+    requirement: RBAC for database roles
+    risk: Not documented in Phase 0 stories
+    mitigation: Add RBAC documentation to Phase 0 requirements
+  assessment: Compliance needs documentation (Phase 0)
+vulnerability_assessment:
+  high_severity_risks: None identified
+  medium_severity_risks:
+    - Database role authorization strategy not documented
+    - Input validation for MCP tools not explicitly required
+    - Error message handling not specified
+  low_severity_risks:
+    - Secret management assumes existing system works
+    - No new external API surface exposes data
+supply_chain_security:
+  dependencies:
+    - PostgreSQL (external, assume secure)
+    - LightGBM, XGBoost (Python packages, assume trusted)
+  risk: ML training uses external packages
+  mitigation: Validate model outputs, restrict package sources
+  assessment: Low risk - internal system, no external exposure
+incident_response:
+  database_compromise:
+    impact: Story status, telemetry, context cache exposed
+    response: Restore from backup, audit access logs
+  model_poisoning:
+    impact: Unreliable ML predictions lead to wrong decisions
+    response: Retrain models, validate training data
+  agent_compromise:
+    impact: Agents execute malicious database operations
+    response: Kill agent, audit operations, restore from backup
+  assessment: Incident response covered by existing procedures
+future:
+  security_hardening:
+    - story: Phase 0
+      suggestion: "Document RBAC strategy and test role isolation"
+      impact: high
+    - story: Phase 1
+      suggestion: "Implement input validation for all MCP tools"
+      impact: high
+    - story: Phase 5
+      suggestion: "Add model signature verification for trained models"
+      impact: medium
+  compliance_gaps:
+    - standard: SOC2
+      gap: "Audit logging not explicitly scoped for Phase 0"
+    - standard: GDPR
+      gap: "Telemetry may contain user context (assess sensitivity)"
+  suggested_stories:
+    - title: "Database role access control audit"
+      gap: "Verify least-privilege RBAC enforced at schema level"
+      priority: P1
+    - title: "MCP tool input validation suite"
+      gap: "Prevent SQL injection and schema exposure"
+      priority: P1
+    - title: "Telemetry data classification"
+      gap: "Define sensitivity levels and retention policies"
+      priority: P2
+  recommendations:
+    - "Define database RBAC strategy in Phase 0 before schema creation"
+    - "Require input validation and parameterized queries in all MCP tools"
+    - "Classify telemetry data by sensitivity level"
+    - "Document incident response procedures for database/agent compromise"
+    - "Plan security testing (penetration test, code review) for Phase 1"
+review_complete: true

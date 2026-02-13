@@ -6,6 +6,7 @@
  */
 
 import type { FileCategory, UploadConfig } from './schema.js'
+import { PDF_MIN_BYTES_FOR_PRESIGNED } from './schema.js'
 
 /**
  * Get file size limit in bytes for a given file category
@@ -131,4 +132,53 @@ export const formatBytes = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+}
+
+/**
+ * Check if file should use presigned URL upload flow
+ *
+ * Files >10MB must use presigned URL flow to avoid Lambda payload limits.
+ *
+ * Story INST-1105: Upload Instructions (Presigned >10MB)
+ *
+ * @param fileSize - File size in bytes
+ * @returns true if file should use presigned URL upload
+ */
+export const shouldUsePresignedUpload = (fileSize: number): boolean => {
+  return fileSize > PDF_MIN_BYTES_FOR_PRESIGNED
+}
+
+/**
+ * Validation result for presigned upload file size
+ */
+export interface PresignedUploadValidation {
+  valid: boolean
+  error?: string
+}
+
+/**
+ * Validate file size for presigned upload flow
+ *
+ * Validates that file is:
+ * - >10MB (must use presigned for large files)
+ * - <=50MB (max upload size)
+ *
+ * Story INST-1105: Upload Instructions (Presigned >10MB)
+ *
+ * @param fileSize - File size in bytes
+ * @param config - Upload configuration object
+ * @returns Validation result with error message if invalid
+ */
+export const validateFileSizeForPresigned = (
+  fileSize: number,
+  config: UploadConfig,
+): PresignedUploadValidation => {
+  if (fileSize <= PDF_MIN_BYTES_FOR_PRESIGNED) {
+    return { valid: false, error: 'Use direct upload for files ≤10MB' }
+  }
+  if (fileSize > config.pdfMaxBytes) {
+    const maxMb = config.pdfMaxBytes / (1024 * 1024)
+    return { valid: false, error: `File too large. Max ${maxMb}MB.` }
+  }
+  return { valid: true }
 }

@@ -1,8 +1,12 @@
 import { http, HttpResponse } from 'msw'
+import { uploadSessionHandlers } from '../handlers/upload-sessions'
 
 const API_BASE_URL = 'http://localhost:3001'
 
 export const handlers = [
+  // INST-1105: Upload session handlers for presigned uploads
+  ...uploadSessionHandlers,
+
   // Health check endpoint
   http.get(`${API_BASE_URL}/health`, () => {
     return HttpResponse.json({
@@ -26,6 +30,33 @@ export const handlers = [
         requestId: `req-${Date.now()}`,
         timestamp: new Date().toISOString(),
       },
+    })
+  }),
+
+  /**
+   * AC43: MSW handler for thumbnail upload endpoint
+   * Story INST-1103: Upload Thumbnail
+   */
+  http.post(`${API_BASE_URL}/api/v2/mocs/:id/thumbnail`, async ({ request, params }) => {
+    const formData = await request.formData()
+    const file = formData.get('file')
+
+    if (!file) {
+      return HttpResponse.json(
+        {
+          code: 'MISSING_FILE',
+          message: 'No file provided',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Simulate successful upload
+    const mocId = params.id
+    const thumbnailUrl = `https://cdn.example.com/mocs/user-123/moc-${mocId}/thumbnail/test-image.jpg`
+
+    return HttpResponse.json({
+      thumbnailUrl,
     })
   }),
 

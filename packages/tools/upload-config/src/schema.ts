@@ -119,3 +119,10 @@ export const VALID_PARTS_FORMATS = ['txt', 'csv', 'json', 'xml', 'xlsx', 'xls'] 
 
 export type ValidImageFormat = (typeof VALID_IMAGE_FORMATS)[number]
 export type ValidPartsFormat = (typeof VALID_PARTS_FORMATS)[number]
+
+/**
+ * Presigned upload threshold in bytes
+ * Files larger than this must use presigned URL flow
+ * Story INST-1105: Upload Instructions (Presigned >10MB)
+ */
+export const PDF_MIN_BYTES_FOR_PRESIGNED = 10 * 1024 * 1024 // 10MB threshold

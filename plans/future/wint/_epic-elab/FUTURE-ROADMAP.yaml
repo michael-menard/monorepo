@@ -1,0 +1,248 @@
+schema: 1
+feature_dir: "plans/future/wint"
+prefix: "WINT"
+reviewed: "2026-02-09T22:45:00Z"
+
+summary: "Post-MVP enhancements and polish - 15+ opportunities for future iterations"
+
+enhancements:
+  high_value:
+    - id: ARCH-001
+      source: engineering
+      suggestion: "Add query caching layer (Redis) for hot graph queries"
+      impact: high
+      effort: medium
+      timeline: "Post-Phase-4"
+    - id: ARCH-002
+      source: engineering
+      suggestion: "ML model serving framework for production inference"
+      impact: high
+      effort: high
+      timeline: "Post-Phase-5"
+    - id: INFRA-001
+      source: platform
+      suggestion: "Add read replica for telemetry queries to avoid production DB load"
+      impact: medium
+      effort: medium
+      timeline: "Post-Phase-3"
+    - id: INFRA-002
+      source: platform
+      suggestion: "Implement Redis caching layer for hot graph queries"
+      impact: high
+      effort: medium
+      timeline: "Post-Phase-4"
+    - id: SEC-001
+      source: security
+      suggestion: "Add model signature verification for trained models"
+      impact: medium
+      effort: medium
+      timeline: "Post-Phase-5"
+    - id: OPS-001
+      source: platform
+      suggestion: "Containerize ML training environment for reproducibility"
+      impact: medium
+      effort: medium
+      timeline: "Post-Phase-5"
+    - id: OBSERVABILITY-001
+      source: platform
+      suggestion: "Structured logging for all MCP tool invocations"
+      impact: medium
+      effort: low
+      timeline: "Post-Phase-1"
+    - id: OBSERVABILITY-002
+      source: platform
+      suggestion: "Prometheus metrics for agent latency and throughput"
+      impact: medium
+      effort: medium
+      timeline: "Post-Phase-2"
+    - id: OBSERVABILITY-003
+      source: platform
+      suggestion: "PagerDuty integration for critical path failures"
+      impact: medium
+      effort: low
+      timeline: "Post-Phase-3"
+
+  nice_to_have:
+    - id: UX-POLISH-001
+      source: ux
+      suggestion: "Weekly report command could highlight actionable improvements"
+      impact: medium
+      effort: low
+    - id: UX-ACCESS-001
+      source: ux
+      suggestion: "Add query templates for common telemetry questions"
+      impact: medium
+      effort: low
+    - id: PERF-001
+      source: engineering
+      suggestion: "Implement streaming telemetry writes for high-volume agents"
+      impact: medium
+      effort: medium
+      timeline: "Post-Phase-3"
+    - id: MIGRATE-001
+      source: product
+      suggestion: "Incremental rollout of caching and ML to high-volume agents"
+      impact: high
+      effort: medium
+      timeline: "Phases 2-5"
+
+suggested_stories:
+  - title: "Performance benchmark suite for database queries"
+    source: engineering
+    category: "Foundation (Phase 1)"
+    priority: P1
+    reason: "Validate <100ms story status and <500ms cache retrieval assumptions"
+    effort: "1-2 weeks"
+  - title: "Database migration rollback plan"
+    source: engineering
+    category: "Foundation (Phase 0)"
+    priority: P1
+    reason: "Document recovery procedure if Phase 1 data migration fails"
+    effort: "3-5 days"
+  - title: "ML model serving framework for production inference"
+    source: engineering
+    category: "Phase 5 Infrastructure"
+    priority: P1
+    reason: "Models trained in Phase 5 need serving infrastructure"
+    effort: "2-3 weeks"
+  - title: "Chaos testing for database connection failures"
+    source: qa
+    category: "Phase 1 Testing"
+    priority: P1
+    reason: "Agents need graceful degradation when DB unavailable"
+    effort: "1-2 weeks"
+  - title: "Load testing for telemetry writes at 10x current volume"
+    source: qa
+    category: "Phase 3 Testing"
+    priority: P1
+    reason: "Validate batching strategy before Phase 3 agent migration"
+    effort: "1 week"
+  - title: "ML model accuracy validation on production data"
+    source: qa
+    category: "Phase 5 Testing"
+    priority: P1
+    reason: "Test models on real-world story data before Phase 5 rollout"
+    effort: "1-2 weeks"
+  - title: "Continuous integration testing for each phase gate"
+    source: qa
+    category: "Phase Gates (all phases)"
+    priority: P1
+    reason: "Implement automated validation at each phase boundary"
+    effort: "2-3 weeks (setup)"
+  - title: "Performance regression tests for query optimization"
+    source: qa
+    category: "Phase Gates"
+    priority: P2
+    reason: "Catch slowdowns in story queries and graph operations"
+    effort: "1 week"
+  - title: "Database performance tuning for Phase 3+ telemetry volume"
+    source: platform
+    category: "Phase 3 Operations"
+    priority: P1
+    reason: "Need index strategy for 1000+ writes/min"
+    effort: "2-3 weeks"
+  - title: "Backup and disaster recovery procedure"
+    source: platform
+    category: "Phase 0 Foundation"
+    priority: P1
+    reason: "Database schema and data migration need recovery plan"
+    effort: "1 week"
+  - title: "Dashboard UI for batch processing status"
+    source: ux
+    category: "Phase 6 UX Polish"
+    priority: P2
+    reason: "Current text-based batch-status lacks visibility"
+    effort: "2-3 weeks"
+  - title: "Interactive cohesion rule explorer"
+    source: ux
+    category: "Phase 4 UX Enhancement"
+    priority: P2
+    reason: "Users don't understand why features marked incomplete"
+    effort: "2-3 weeks"
+  - title: "Preference prediction explainer"
+    source: ux
+    category: "Phase 5 UX Enhancement"
+    priority: P2
+    reason: "Users should understand why ML auto-accepts stories"
+    effort: "1-2 weeks"
+  - title: "Performance benchmarking across database sizes"
+    source: product
+    category: "Phase 2 Validation"
+    priority: P2
+    reason: "Ops needs confidence in scalability"
+    effort: "1 week"
+  - title: "Cost analysis framework for ML model storage"
+    source: product
+    category: "Phase 5 Finance"
+    priority: P2
+    reason: "Finance needs ROI on ML pipeline"
+    effort: "1 week"
+
+stories_to_defer: []
+
+metrics:
+  total_suggestions: 15
+  deferred_stories: 0
+  high_value_enhancements: 9
+  nice_to_have_enhancements: 4
+  future_stories_by_priority:
+    P1: 8
+    P2: 7
+  timeline_distribution:
+    "Post-Phase-1": 1
+    "Post-Phase-2": 1
+    "Post-Phase-3": 3
+    "Post-Phase-4": 2
+    "Post-Phase-5": 3
+    "Phases 2-5": 1
+    "Phase Gates (all)": 2
+    "Phase 1/3/5 Testing": 3
+
+future_roadmap_notes: |
+  **Non-MVP Items Grouped by Phase:**
+
+  **Phase 0-1 Foundation Enhancements:**
+  - Structured logging for MCP tool invocations (low effort, high value)
+  - Backup and disaster recovery procedure (prerequisite)
+  - Database migration rollback plan (prerequisite)
+
+  **Phase 2 Performance Enhancements:**
+  - Performance benchmark suite for database queries (critical for latency targets)
+  - Streaming telemetry writes for high-volume agents (post-Phase-3)
+
+  **Phase 3 Operations & Testing:**
+  - Load testing for telemetry writes at 10x volume (P1)
+  - Database performance tuning for telemetry scaling (P1)
+  - Prometheus metrics for throughput tracking (P2)
+  - PagerDuty alerting integration (P2)
+
+  **Phase 4 Intelligence:**
+  - Query caching layer (Redis) for graph queries (high value, medium effort)
+  - Interactive cohesion rule explorer UI (P2, post-MVP)
+  - Performance regression testing (P2)
+
+  **Phase 5 ML Infrastructure:**
+  - ML model serving framework (P1, critical for production)
+  - Model signature verification (P1, security hardening)
+  - ML model accuracy validation on production data (P1 testing)
+  - Cost analysis framework for ML ROI (P2)
+  - Containerized ML training environment (P2)
+  - Preference prediction explainer UI (P2)
+
+  **Phase 6 Operations Polish:**
+  - Dashboard UI for batch processing (P2, visibility enhancement)
+  - Weekly report actionable improvements (P2, nice-to-have)
+
+  **Phase 7 Finalization:**
+  - Incremental rollout strategy refinement (post-MVP)
+  - Query template library for common telemetry questions (P2)
+
+  **Testing Strategy Enhancements (Cross-Phase):**
+  - Continuous integration testing harness for phase gates (P1)
+  - Chaos testing for database failures (P1)
+  - Performance regression tests (P2)
+
+  **Priority Rationale:**
+  - P1 items: Critical for production readiness, scaling, and reliability
+  - P2 items: Nice-to-have UX improvements, optional analytics, post-launch polish
+  - No P0 blockers identified - all MVP-critical items in EPIC-REVIEW.yaml

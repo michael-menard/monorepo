@@ -1,15 +1,16 @@
-import { eq, and, isNull, like, count, desc, sql } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
+import { eq, and, like, count, desc } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type * as schema from '@repo/database-schema'
 import slugifyLib from 'slugify'
 const slugify = slugifyLib.default || slugifyLib
-import { randomUUID } from 'crypto'
 import type {
   MocRepository,
   Moc,
   MocWithFiles,
   MocListItem,
   MocListResult,
+  MocFile,
 } from '../ports/index.js'
 import type { CreateMocRequest, ListMocsQuery } from '../types.js'
 
@@ -19,7 +20,7 @@ type Schema = typeof schema
  * Create a MocRepository implementation using Drizzle
  */
 export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema): MocRepository {
-  const { mocInstructions, mocFiles } = dbSchema
+  const { mocInstructions } = dbSchema
 
   return {
     async create(userId: string, data: CreateMocRequest): Promise<Moc> {
@@ -100,6 +101,7 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
         fileUrl: file.fileUrl,
         originalFilename: file.originalFilename,
         mimeType: file.mimeType,
+        s3Key: file.s3Key,
         createdAt: file.createdAt,
         updatedAt: file.updatedAt,
       }))
@@ -193,11 +195,50 @@ export function createMocRepository(db: NodePgDatabase<Schema>, dbSchema: Schema
       return { items, total }
     },
 
+    async updateMoc(mocId: string, userId: string, data: Partial<CreateMocRequest>): Promise<Moc> {
+      // AC-10: Set updatedAt timestamp on update
+      const updateData: any = {
+        ...data,
+        updatedAt: new Date(),
+      }
+
+      const [updated] = await db
+        .update(mocInstructions)
+        .set(updateData)
+        .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+        .returning()
+
+      return mapRowToMoc(updated)
+    },
+
     async updateThumbnail(mocId: string, userId: string, thumbnailUrl: string): Promise<void> {
       await db
         .update(mocInstructions)
         .set({ thumbnailUrl, updatedAt: new Date() })
         .where(and(eq(mocInstructions.id, mocId), eq(mocInstructions.userId, userId)))
+    },
+
+    async getFileByIdAndMocId(fileId: string, mocId: string): Promise<MocFile | null> {
+      const result = await db.query.mocFiles.findFirst({
+        where: (mocFiles, { and, eq, isNull }) =>
+          and(eq(mocFiles.id, fileId), eq(mocFiles.mocId, mocId), isNull(mocFiles.deletedAt)),
+      })
+
+      if (!result) {
+        return null
+      }
+
+      return {
+        id: result.id,
+        mocId: result.mocId,
+        fileType: result.fileType,
+        fileUrl: result.fileUrl,
+        originalFilename: result.originalFilename,
+        mimeType: result.mimeType,
+        s3Key: result.s3Key,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+      }
     },
   }
 }

@@ -23,6 +23,10 @@ export const CreateMocRequestSchema = z.object({
   tags: z.array(z.string().max(30)).max(20).optional(),
 })
 
+// Request schema for updating a MOC (INST-1108: AC-2, AC-5)
+// All fields optional for partial update semantics
+export const UpdateMocRequestSchema = CreateMocRequestSchema.partial()
+
 // Response schema for created MOC
 export const CreateMocResponseSchema = z.object({
   id: z.string().uuid(),
@@ -138,6 +142,7 @@ export const MocListResponseSchema = z.object({
 
 // Type inference
 export type CreateMocRequest = z.infer<typeof CreateMocRequestSchema>
+export type UpdateMocRequest = z.infer<typeof UpdateMocRequestSchema>
 export type CreateMocResponse = z.infer<typeof CreateMocResponseSchema>
 export type Theme = z.infer<typeof ThemeEnum>
 export type MocDetailFile = z.infer<typeof MocDetailFileSchema>
@@ -155,3 +160,90 @@ export const UploadThumbnailResponseSchema = z.object({
 
 // Type inference
 export type UploadThumbnailResponse = z.infer<typeof UploadThumbnailResponseSchema>
+
+// Download file response schema (INST-1107: AC-9, AC-15)
+export const GetFileDownloadUrlResponseSchema = z.object({
+  downloadUrl: z.string().url(),
+  expiresAt: z.string().datetime(),
+})
+
+// Type inference
+export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Upload Session Schemas (INST-1105)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Create Upload Session Request Schema
+ * (INST-1105: AC31)
+ */
+export const CreateUploadSessionRequestSchema = z.object({
+  filename: z.string().min(1, 'Filename is required').max(255, 'Filename too long'),
+  fileSize: z.number().int().positive('File size must be positive'),
+  fileType: z.string().min(1, 'File type is required'),
+})
+
+export type CreateUploadSessionRequest = z.infer<typeof CreateUploadSessionRequestSchema>
+
+/**
+ * Create Upload Session Response Schema
+ * (INST-1105: AC47)
+ */
+export const CreateUploadSessionResponseSchema = z.object({
+  sessionId: z.string().uuid(),
+  presignedUrl: z.string().url(),
+  expiresAt: z.string().datetime(),
+})
+
+export type CreateUploadSessionResponse = z.infer<typeof CreateUploadSessionResponseSchema>
+
+/**
+ * Complete Upload Session Request Schema
+ * (INST-1105: AC49)
+ *
+ * Note: sessionId comes from URL path, so request body may be empty
+ */
+export const CompleteUploadSessionRequestSchema = z.object({
+  // Currently no body required - sessionId is in URL path
+})
+
+export type CompleteUploadSessionRequest = z.infer<typeof CompleteUploadSessionRequestSchema>
+
+/**
+ * Complete Upload Session Response Schema
+ * (INST-1105: AC61)
+ */
+export const CompleteUploadSessionResponseSchema = z.object({
+  id: z.string().uuid(),
+  mocId: z.string().uuid(),
+  fileType: z.literal('instruction'),
+  fileUrl: z.string().url(),
+  originalFilename: z.string(),
+  mimeType: z.literal('application/pdf'),
+  fileSize: z.number().int().positive(),
+  createdAt: z.string().datetime(),
+  uploadedBy: z.string(),
+})
+
+export type CompleteUploadSessionResponse = z.infer<typeof CompleteUploadSessionResponseSchema>
+
+/**
+ * Upload Session entity schema (for internal use)
+ */
+export const UploadSessionSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string(),
+  mocInstructionId: z.string().uuid().nullable(),
+  status: z.enum(['pending', 'active', 'completed', 'expired', 'cancelled']),
+  partSizeBytes: z.number().int(),
+  expiresAt: z.date(),
+  originalFilename: z.string().nullable(),
+  originalFileSize: z.number().int().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  finalizedAt: z.date().nullable(),
+  finalizingAt: z.date().nullable(),
+})
+
+export type UploadSessionType = z.infer<typeof UploadSessionSchema>

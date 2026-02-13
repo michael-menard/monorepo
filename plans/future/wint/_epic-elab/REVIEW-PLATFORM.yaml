@@ -1,0 +1,183 @@
+perspective: platform
+verdict: READY
+infra:
+  core_infra_exists: true
+  deploy_path_clear: true
+infrastructure_assessment:
+  database:
+    current_state: postgres-knowledgebase exists with pgvector
+    requirement: Extend with 6 new schemas (core, context_cache, telemetry, ml, graph, workflow)
+    readiness: Ready - no new database instance required
+    risk: Low - schema additions do not require downtime
+  mcp_servers:
+    current_state: postgres-knowledgebase MCP server active
+    requirement: Add 14 new MCP tools (story, context, session, telemetry, graph, ml)
+    readiness: Ready - MCP server extensible
+    risk: Low - additive changes only
+  application_runtime:
+    current_state: Node.js agents deployed
+    requirement: Compatibility shim module, no new runtime needed
+    readiness: Ready - existing agent infrastructure sufficient
+    risk: Low - module addition does not change deployment
+  ml_training_environment:
+    current_state: Not deployed
+    requirement: Python environment for LightGBM/XGBoost/Random Forest training (Phase 5)
+    readiness: Requires setup - can be local/separate from production
+    risk: Low - non-critical path, runs offline
+deployment_path:
+  phase_0:
+    steps:
+      - Create database schemas as migrations
+      - Add MCP tools to existing server
+      - Deploy doc-sync skill and agent
+    deployment: Database migration + MCP server restart
+    rollback: Schema rollback script (pre-tested)
+    downtime: Minimal (<5 minutes for restart)
+  phase_1:
+    steps:
+      - Deploy compatibility shim module
+      - Update story-status, story-update, story-move agents
+      - Run story migration script
+    deployment: Agent updates + one-time data migration
+    rollback: Schema-level rollback of story status table
+    downtime: 30 minutes for migration (can schedule)
+  phase_2:
+    steps:
+      - Cache warming scripts populate database tables
+      - Update 5 high-volume agents with cache retrieval
+    deployment: Agent updates (no infrastructure changes)
+    rollback: Agent version rollback
+    downtime: None
+  phase_3:
+    steps:
+      - Telemetry logging integrated into 10 core agents
+      - Telemetry query command deployed
+    deployment: Agent updates (no infrastructure changes)
+    rollback: Agent version rollback
+    downtime: None
+  phase_4:
+    steps:
+      - Graph population scripts run (one-time)
+      - 4 new agents deployed (graph-checker, prosecutor, defender, curator)
+      - Cohesion-check command added
+    deployment: Agent updates + one-time graph population
+    rollback: Drop graph schema tables
+    downtime: None
+  phase_5:
+    steps:
+      - ML training runs offline (30-50 stories of telemetry required)
+      - Trained models stored in ML schema (bytea)
+      - 2 new agents deployed (recommender, predictor)
+      - predict-preference skill integrated into 5 workflows
+    deployment: Agent updates + model storage (no new instances)
+    rollback: Remove ML schema rows, agent version rollback
+    downtime: None
+  phase_6:
+    steps:
+      - Batch coordinator agent deployed
+      - Batch process, status, weekly report commands added
+      - Queue management implemented
+    deployment: Agent updates + command additions
+    rollback: Agent version rollback
+    downtime: None
+  phase_7:
+    steps:
+      - Systematic agent migration (7 batches, 5-10 agents each)
+      - Compatibility shim removed after all agents migrated
+      - doc-sync final run
+    deployment: Agent migrations + schema cleanup
+    rollback: Shim restoration, agent version rollback
+    downtime: None (migration can proceed incrementally)
+scaling_considerations:
+  current_volume:
+    - ~115 agents, 28 commands, 13 skills
+    - Story status queries (<100ms target)
+    - Telemetry writes (~10-100 per agent invocation)
+  phase_2_requirements:
+    - Context cache size: ~1-5 GB
+    - Cache retrieval latency: <500ms target
+    - No scaling needed for Phase 2 scope
+  phase_3_requirements:
+    - Telemetry writes: ~100-1000 per workflow
+    - Telemetry storage: ~10-50 GB for 6 months
+    - Database indexing strategy: Partition by agent/date
+  phase_5_requirements:
+    - ML training data: 30-50 stories of telemetry
+    - Model storage: ~100 MB per model (3 models)
+    - Inference latency: <100ms for predictions
+  phase_6_requirements:
+    - Batch processing: 5-10 stories per batch
+    - Concurrent batch queues: 1-2 simultaneously
+    - No scaling needed beyond Phase 3 telemetry capacity
+observability:
+  monitoring_points:
+    - MCP tool latency (Phase 0)
+    - Story query latency (Phase 1)
+    - Cache hit rate (Phase 2)
+    - Telemetry write throughput (Phase 3)
+    - Graph view refresh time (Phase 4)
+    - ML model accuracy (Phase 5)
+    - Batch processing success rate (Phase 6)
+  alerting:
+    - Database connection pool exhaustion
+    - MCP tool timeout (>1s)
+    - Telemetry write lag (>5s)
+    - ML model accuracy drift
+  dashboards:
+    - Phase progress tracking
+    - Agent telemetry summary
+    - Story workflow metrics
+    - ML model performance
+    - Batch processing status
+compliance_and_security:
+  data_isolation:
+    - Assessment: Schemas provide logical isolation
+    - Risk: None - telemetry data not sensitive at this stage
+  access_control:
+    - Assessment: MCP tools inherit existing auth
+    - Risk: None - all access through authenticated MCP layer
+  audit_logging:
+    - Assessment: Telemetry captures all operations
+    - Risk: None - audit data available for compliance
+infrastructure_dependencies:
+  external:
+    - PostgreSQL (on-premises or RDS)
+    - MCP server (existing)
+  internal:
+    - Agent runner (existing)
+    - TypeScript build pipeline (existing)
+  no_blocking_dependencies: True
+future:
+  platform_improvements:
+    - suggestion: "Add read replica for telemetry queries to avoid production DB load"
+      impact: medium
+      timeline: Post-Phase-3
+    - suggestion: "Implement Redis caching layer for hot graph queries"
+      impact: high
+      timeline: Post-Phase-4
+    - suggestion: "Containerize ML training environment for reproducibility"
+      impact: medium
+      timeline: Post-Phase-5
+  observability_gaps:
+    - area: logging
+      suggestion: "Structured logging for all MCP tool invocations"
+    - area: metrics
+      suggestion: "Prometheus metrics for agent latency and throughput"
+    - area: alerting
+      suggestion: "PagerDuty integration for critical path failures"
+  suggested_stories:
+    - title: "Database performance tuning for Phase 3+ telemetry volume"
+      gap: "Need index strategy for 1000+ writes/min"
+      priority: P1
+    - title: "ML model serving infrastructure"
+      gap: "Phase 5 models need serving layer for inference"
+      priority: P1
+    - title: "Backup and disaster recovery procedure"
+      gap: "Database schema and data migration need recovery plan"
+      priority: P1
+  recommendations:
+    - "Design database migration script with dry-run capability for Phase 0"
+    - "Establish SLA targets for MCP tool latency before Phase 1"
+    - "Plan ML training infrastructure early (Phase 0-1) for Phase 5 readiness"
+    - "Implement telemetry monitoring before Phase 3 large-scale rollout"
+review_complete: true

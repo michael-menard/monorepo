@@ -1,0 +1,107 @@
+feature_dir: "plans/future/wint"
+prefix: "WINT"
+updated: "2026-02-09T23:15:00Z"
+phase: "4_updates"
+
+summary: "Phase 4 Updates - Applied acceptance criteria updates to 6 affected stories based on Phase 3 blocker resolutions"
+
+stories_index:
+  stories_updated: 6
+  stories_added: 0
+  stories_split: 0
+  acceptance_criteria_added: 6
+
+updates_applied:
+  - story_id: "WINT-0110"
+    title: "Create Session Management MCP Tools"
+    change: "Added Phase 0 acceptance criteria for database RBAC strategy"
+    source_blocker: "SECURITY-BLOCKER-001"
+    criteria_added:
+      - "Database RBAC strategy design document with role definitions"
+      - "Schema design review for authorization constraints"
+      - "Role assignments and permissions matrix documentation"
+      - "Session lifecycle management rules established"
+
+  - story_id: "WINT-0130"
+    title: "Create Graph Query MCP Tools"
+    change: "Added Phase 0 acceptance criteria for input validation"
+    source_blocker: "SECURITY-BLOCKER-002"
+    criteria_added:
+      - "Explicit input validation requirements for all MCP tool parameters"
+      - "Parameterized queries (prepared statements) mandatory"
+      - "SQL injection risk mitigation testing"
+      - "Input sanitization and validation library usage"
+      - "Security review checklist for Phase 0"
+
+  - story_id: "WINT-0140"
+    title: "Create ML Pipeline MCP Tools"
+    change: "Added Phase 0 acceptance criteria for input validation"
+    source_blocker: "SECURITY-BLOCKER-002"
+    criteria_added:
+      - "Explicit input validation requirements for all MCP tool parameters"
+      - "Parameterized queries (prepared statements) mandatory"
+      - "SQL injection risk mitigation testing"
+      - "Input sanitization and validation library usage"
+      - "Security review checklist for Phase 0"
+
+  - story_id: "WINT-1010"
+    title: "Create Compatibility Shim Module"
+    change: "Added Phase 0 acceptance criteria for rollback testing"
+    source_blocker: "PLATFORM-BLOCKER-001"
+    criteria_added:
+      - "Database migration rollback script development"
+      - "Rollback procedure pre-tested with recovery validation"
+      - "Disaster recovery documentation"
+      - "Rollback testing in staging environment"
+      - "Phase 1 gate validation includes rollback sign-off"
+
+  - story_id: "WINT-1050"
+    title: "Update story-update Command to Use DB"
+    change: "Added Phase 0 acceptance criteria for test suite"
+    source_blocker: "QA-BLOCKER-001"
+    criteria_added:
+      - "Comprehensive compatibility shim test suite deliverables"
+      - "Integration test requirements explicitly documented"
+      - "Phase 0 test infrastructure setup (WINT-0120 prerequisite)"
+      - "Agent logic compatibility validation checklist"
+
+  - story_id: "WINT-1060"
+    title: "Update story-move Command to Use DB"
+    change: "Added Phase 0 acceptance criteria for test suite"
+    source_blocker: "QA-BLOCKER-001"
+    criteria_added:
+      - "Comprehensive compatibility shim test suite deliverables"
+      - "Integration test requirements explicitly documented"
+      - "Phase 0 test infrastructure setup (WINT-0120 prerequisite)"
+      - "Agent logic compatibility validation checklist"
+
+files_modified:
+  - "plans/future/wint/stories.index.md"
+
+impact_summary:
+  total_stories_affected: 6
+  total_acceptance_criteria_added: 18
+  blockers_resolved_via_criteria: 4
+  unique_blockers_addressed:
+    - "SECURITY-BLOCKER-001"
+    - "SECURITY-BLOCKER-002"
+    - "PLATFORM-BLOCKER-001"
+    - "QA-BLOCKER-001"
+  stories_by_phase:
+    phase_0: 3
+    phase_1: 3
+
+status: "complete"
+notes: |
+  All acceptance criteria updates successfully applied to stories.index.md.
+
+  The updates implement the Phase 3 Interactive decision strategy to resolve
+  MVP-critical blockers through explicit acceptance criteria in Phase 0 work items:
+
+  1. SECURITY-BLOCKER-001: RBAC documentation requirement in WINT-0110
+  2. SECURITY-BLOCKER-002: Input validation requirements in WINT-0130, WINT-0140
+  3. PLATFORM-BLOCKER-001: Rollback testing requirement in WINT-1010
+  4. QA-BLOCKER-001: Test suite requirements in WINT-1050, WINT-1060
+
+  This approach keeps the epic unblocked while ensuring Phase 0 delivers
+  all prerequisite work required for Phase 1 execution.

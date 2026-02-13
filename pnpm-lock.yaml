@@ -214,6 +214,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.700.0
         version: 3.985.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.700.0
+        version: 3.985.0
       '@maxmind/geoip2-node':
         specifier: 6.3.4
         version: 6.3.4
@@ -20191,7 +20194,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.9(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:

@@ -11,9 +11,9 @@ import { z } from 'zod'
 import { ModuleLayout } from './components/module-layout'
 import { MainPage } from './pages/main-page'
 import { UploadPage } from './pages/UploadPage'
-import { EditPage } from './pages/EditPage'
 import { MocDetailModule } from './pages/MocDetailModule'
 import { CreateMocPage } from './pages/CreateMocPage'
+import { EditMocPage } from './pages/EditMocPage'
 
 /**
  * Gallery view modes controlled by the host application.
@@ -52,7 +52,7 @@ export function InstuctionsGalleryModule({
       {mode === 'gallery' && <MainPage />}
       {mode === 'upload' && <UploadPage />}
       {mode === 'detail' && <MocDetailModule mocIdOrSlug={mocIdOrSlug} />}
-      {mode === 'edit' && <EditPage />}
+      {mode === 'edit' && !!mocIdOrSlug && <EditMocPage mocIdOrSlug={mocIdOrSlug} />}
       {mode === 'create' && <CreateMocPage />}
     </ModuleLayout>
   )

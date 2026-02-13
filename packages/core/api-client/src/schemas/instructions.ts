@@ -374,3 +374,69 @@ export const UploadThumbnailResponseSchema = z.object({
 })
 
 export type UploadThumbnailResponse = z.infer<typeof UploadThumbnailResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Download File URL Response Schema (INST-1107)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const GetFileDownloadUrlResponseSchema = z.object({
+  downloadUrl: z.string().url(),
+  expiresAt: z.string().datetime(),
+})
+
+export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Presigned Upload Session Schemas (INST-1105)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Request schema for creating an upload session
+ * POST /mocs/:id/upload-sessions
+ */
+export const CreateUploadSessionRequestSchema = z.object({
+  filename: z.string().min(1).max(255),
+  fileSize: z.number().int().positive(),
+  fileType: z.literal('application/pdf'),
+})
+
+export type CreateUploadSessionRequest = z.infer<typeof CreateUploadSessionRequestSchema>
+
+/**
+ * Response schema for created upload session
+ */
+export const CreateUploadSessionResponseSchema = z.object({
+  sessionId: lenientUuid,
+  presignedUrl: z.string().url(),
+  expiresAt: z.string().datetime(),
+})
+
+export type CreateUploadSessionResponse = z.infer<typeof CreateUploadSessionResponseSchema>
+
+/**
+ * Request schema for completing an upload session
+ * POST /mocs/:id/upload-sessions/:sessionId/complete
+ */
+export const CompleteUploadSessionRequestSchema = z.object({
+  sessionId: lenientUuid,
+})
+
+export type CompleteUploadSessionRequest = z.infer<typeof CompleteUploadSessionRequestSchema>
+
+/**
+ * Response schema for completed upload session
+ * Returns the created moc_files record
+ */
+export const CompleteUploadSessionResponseSchema = z.object({
+  id: lenientUuid,
+  mocId: lenientUuid,
+  fileType: z.string(),
+  fileUrl: z.string().url(),
+  originalFilename: z.string(),
+  mimeType: z.string(),
+  fileSize: z.number().int().positive(),
+  createdAt: z.string().transform(val => new Date(val)),
+  uploadedBy: z.string(),
+})
+
+export type CompleteUploadSessionResponse = z.infer<typeof CompleteUploadSessionResponseSchema>

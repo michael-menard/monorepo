@@ -5,7 +5,7 @@
  * Focuses on AC-12 (getMoc endpoint), AC-16 (404/auth handling), AC-21 (service layer).
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createMocService } from '../services.js'
 import type { MocRepository, Moc, MocWithFiles, MocFile, MocListResult } from '../../ports/index.js'
 import type { CreateMocRequest } from '../../types.js'
@@ -18,6 +18,16 @@ vi.mock('@repo/logger', () => ({
     warn: vi.fn(),
     debug: vi.fn(),
   },
+}))
+
+// Mock S3 SDK for INST-1107
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: vi.fn().mockImplementation(() => ({})),
+  GetObjectCommand: vi.fn().mockImplementation(params => params),
+}))
+
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn().mockResolvedValue('https://s3.amazonaws.com/test-bucket/file.pdf?signature=mock'),
 }))
 
 // Test data
@@ -43,6 +53,7 @@ const mockFiles: MocFile[] = [
     fileUrl: 'https://s3.amazonaws.com/bucket/instructions.pdf',
     originalFilename: 'castle-instructions.pdf',
     mimeType: 'application/pdf',
+    s3Key: 'instructions/user-123/castle-instructions.pdf',
     createdAt: new Date('2025-01-01T00:00:00Z'),
     updatedAt: null,
   },
@@ -53,6 +64,7 @@ const mockFiles: MocFile[] = [
     fileUrl: 'https://s3.amazonaws.com/bucket/parts-list.csv',
     originalFilename: 'castle-parts.csv',
     mimeType: 'text/csv',
+    s3Key: 'parts-lists/user-123/castle-parts.csv',
     createdAt: new Date('2025-01-01T00:00:00Z'),
     updatedAt: null,
   },
@@ -63,6 +75,7 @@ const mockFiles: MocFile[] = [
     fileUrl: 'https://s3.amazonaws.com/bucket/gallery-1.jpg',
     originalFilename: 'castle-gallery-1.jpg',
     mimeType: 'image/jpeg',
+    s3Key: 'gallery/user-123/castle-gallery-1.jpg',
     createdAt: new Date('2025-01-01T00:00:00Z'),
     updatedAt: null,
   },
@@ -74,6 +87,19 @@ const mockMocWithFiles: MocWithFiles = {
   totalPieceCount: 1500,
 }
 
+// Mock file data for download tests (INST-1107)
+const mockFileWithS3Key = {
+  id: 'file-1',
+  mocId: '123e4567-e89b-12d3-a456-426614174000',
+  fileType: 'instruction',
+  fileUrl: 'https://s3.amazonaws.com/bucket/instructions.pdf',
+  originalFilename: 'castle-instructions.pdf',
+  mimeType: 'application/pdf',
+  s3Key: 'instructions/user-123/castle-instructions.pdf',
+  createdAt: new Date('2025-01-01T00:00:00Z'),
+  updatedAt: null,
+}
+
 // Mock repository factory
 function createMockMocRepo(): MocRepository {
   return {
@@ -81,7 +107,9 @@ function createMockMocRepo(): MocRepository {
     findBySlug: vi.fn().mockResolvedValue(mockMoc),
     getMocById: vi.fn().mockResolvedValue(mockMocWithFiles),
     list: vi.fn().mockResolvedValue({ items: [], total: 0 } as MocListResult),
+    updateMoc: vi.fn().mockResolvedValue(mockMoc),
     updateThumbnail: vi.fn().mockResolvedValue(undefined),
+    getFileByIdAndMocId: vi.fn().mockResolvedValue(mockFileWithS3Key),
   }
 }
 
@@ -392,6 +420,256 @@ describe('MocService - INST-1101', () => {
     })
   })
 
+  describe('getFileDownloadUrl - INST-1107', () => {
+    let downloadService: ReturnType<typeof createMocService>
+
+    // Set up env and create fresh service for each test
+    beforeEach(() => {
+      process.env.S3_BUCKET = 'test-bucket'
+      downloadService = createMocService({ mocRepo })
+    })
+
+    afterEach(() => {
+      delete process.env.S3_BUCKET
+    })
+
+    it('AC-2, AC-73: queries file from repository by fileId and mocId', async () => {
+      const result = await downloadService.getFileDownloadUrl('user-123', mockMoc.id, 'file-1')
+
+      expect(mocRepo.getFileByIdAndMocId).toHaveBeenCalledWith('file-1', mockMoc.id)
+      expect(result.ok).toBe(true)
+    })
+
+    it('AC-3, AC-74: verifies file belongs to user\'s MOC', async () => {
+      const result = await downloadService.getFileDownloadUrl('user-123', mockMoc.id, 'file-1')
+
+      // Should call getMocById to verify ownership
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'user-123')
+      expect(result.ok).toBe(true)
+    })
+
+    it('AC-4, AC-74: returns NOT_FOUND for unauthorized user (no info leakage)', async () => {
+      // User doesn't own the MOC
+      vi.mocked(mocRepo.getMocById).mockResolvedValue(null)
+
+      const result = await downloadService.getFileDownloadUrl('other-user', mockMoc.id, 'file-1')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+    })
+
+    it('AC-4: returns NOT_FOUND for non-existent file', async () => {
+      vi.mocked(mocRepo.getFileByIdAndMocId).mockResolvedValue(null)
+
+      const result = await downloadService.getFileDownloadUrl('user-123', mockMoc.id, 'nonexistent')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+    })
+
+    it('AC-9: returns downloadUrl and expiresAt on success', async () => {
+      const result = await downloadService.getFileDownloadUrl('user-123', mockMoc.id, 'file-1')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.downloadUrl).toBeDefined()
+        expect(result.data.downloadUrl).toContain('https://')
+        expect(result.data.expiresAt).toBeDefined()
+        // Verify ISO8601 format
+        expect(new Date(result.data.expiresAt).toISOString()).toBe(result.data.expiresAt)
+      }
+    })
+
+    it('returns DB_ERROR when file is missing s3Key', async () => {
+      vi.mocked(mocRepo.getFileByIdAndMocId).mockResolvedValue({
+        ...mockFileWithS3Key,
+        s3Key: undefined,
+      } as any)
+
+      const result = await downloadService.getFileDownloadUrl('user-123', mockMoc.id, 'file-1')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('DB_ERROR')
+      }
+    })
+
+    it('returns PRESIGN_FAILED when S3 bucket is not configured', async () => {
+      delete process.env.S3_BUCKET
+
+      // Need to recreate the service with empty bucket
+      const noBucketService = createMocService({ mocRepo })
+      const result = await noBucketService.getFileDownloadUrl('user-123', mockMoc.id, 'file-1')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('PRESIGN_FAILED')
+      }
+    })
+  })
+
+  describe('updateMoc - INST-1108', () => {
+    it('AC-1, AC-3: updates MOC successfully with valid data', async () => {
+      const updateData = {
+        title: 'Updated Castle MOC',
+        description: 'Updated description',
+        tags: ['updated', 'castle'],
+      }
+
+      const updatedMoc = {
+        ...mockMoc,
+        ...updateData,
+        updatedAt: new Date('2025-01-03T00:00:00Z'),
+      }
+
+      vi.mocked(mocRepo.updateMoc).mockResolvedValue(updatedMoc)
+
+      const result = await service.updateMoc('user-123', mockMoc.id, updateData)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.title).toBe('Updated Castle MOC')
+        expect(result.data.description).toBe('Updated description')
+        expect(result.data.tags).toEqual(['updated', 'castle'])
+      }
+
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'user-123')
+      expect(mocRepo.updateMoc).toHaveBeenCalledWith(mockMoc.id, 'user-123', updateData)
+    })
+
+    it('AC-6: validates title length (min 1, max 200)', async () => {
+      const shortTitle = {
+        title: '', // Too short
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, shortTitle)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-7: validates description length (max 2000)', async () => {
+      const longDescription = {
+        description: 'a'.repeat(2001), // Too long
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, longDescription)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-8: validates theme (must be valid ThemeEnum value)', async () => {
+      const invalidTheme = {
+        theme: 'InvalidTheme' as any,
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, invalidTheme)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-9: validates tags (max 20 items, each max 30 chars)', async () => {
+      const tooManyTags = {
+        tags: Array.from({ length: 21 }, (_, i) => `tag${i}`),
+      }
+
+      const result = await service.updateMoc('user-123', mockMoc.id, tooManyTags)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('VALIDATION_ERROR')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-4, AC-13: returns NOT_FOUND when MOC does not exist', async () => {
+      vi.mocked(mocRepo.getMocById).mockResolvedValue(null)
+
+      const result = await service.updateMoc('user-123', 'nonexistent-id', { title: 'Test' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('AC-4, AC-13: returns NOT_FOUND when user does not own MOC (authorization)', async () => {
+      vi.mocked(mocRepo.getMocById).mockResolvedValue(null)
+
+      const result = await service.updateMoc('other-user', mockMoc.id, { title: 'Test' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('NOT_FOUND')
+      }
+
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'other-user')
+      expect(mocRepo.updateMoc).not.toHaveBeenCalled()
+    })
+
+    it('Partial update: updates only provided fields', async () => {
+      const partialUpdate = {
+        tags: ['new-tag'],
+      }
+
+      const updatedMoc = {
+        ...mockMoc,
+        tags: ['new-tag'],
+        updatedAt: new Date('2025-01-03T00:00:00Z'),
+      }
+
+      vi.mocked(mocRepo.updateMoc).mockResolvedValue(updatedMoc)
+
+      const result = await service.updateMoc('user-123', mockMoc.id, partialUpdate)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        // Only tags should be updated
+        expect(result.data.tags).toEqual(['new-tag'])
+        // Other fields should remain unchanged
+        expect(result.data.title).toBe('Castle MOC')
+        expect(result.data.description).toBe('A detailed medieval castle MOC')
+      }
+
+      expect(mocRepo.updateMoc).toHaveBeenCalledWith(mockMoc.id, 'user-123', partialUpdate)
+    })
+
+    it('AC-10, AC-14: returns DB_ERROR on database failure', async () => {
+      vi.mocked(mocRepo.updateMoc).mockRejectedValue(new Error('Database connection lost'))
+
+      const result = await service.updateMoc('user-123', mockMoc.id, { title: 'Test' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('DB_ERROR')
+      }
+    })
+
+    it('accepts empty update object (no-op)', async () => {
+      const result = await service.updateMoc('user-123', mockMoc.id, {})
+
+      expect(result.ok).toBe(true)
+      expect(mocRepo.getMocById).toHaveBeenCalledWith(mockMoc.id, 'user-123')
+      expect(mocRepo.updateMoc).toHaveBeenCalledWith(mockMoc.id, 'user-123', {})
+    })
+  })
+
   describe('Performance', () => {
     it('handles MOC with many files efficiently', async () => {
       const manyFiles: MocFile[] = Array.from({ length: 50 }, (_, i) => ({
@@ -401,6 +679,7 @@ describe('MocService - INST-1101', () => {
         fileUrl: `https://s3.amazonaws.com/bucket/file-${i}.pdf`,
         originalFilename: `file-${i}.pdf`,
         mimeType: 'application/pdf',
+        s3Key: `uploads/user-123/${mockMoc.id}/file-${i}.pdf`,
         createdAt: new Date('2025-01-01T00:00:00Z'),
         updatedAt: null,
       }))

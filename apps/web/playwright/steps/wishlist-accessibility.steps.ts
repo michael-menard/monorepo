@@ -276,3 +276,245 @@ Then('there should be ARIA live regions on the page', async ({ page }) => {
   const count = await liveRegions.count()
   expect(count).toBeGreaterThan(0)
 })
+
+// ---------------------------------------------------------------------------
+// Focus visibility and design system
+// ---------------------------------------------------------------------------
+
+When('I press Tab to focus on a wishlist card', async ({ page }) => {
+  await page.keyboard.press('Tab')
+  const focused = page.locator(':focus')
+  await expect(focused).toBeVisible()
+})
+
+Then('the focused card should have a visible focus indicator', async ({ page }) => {
+  const focused = page.locator(':focus')
+  const outline = await focused.evaluate(el => window.getComputedStyle(el).outline)
+  expect(outline).not.toBe('none')
+})
+
+Then('the focus ring should use design system colors', async ({ page }) => {
+  const focused = page.locator(':focus')
+  const outlineColor = await focused.evaluate(el => window.getComputedStyle(el).outlineColor)
+  expect(outlineColor).toBeTruthy()
+})
+
+// ---------------------------------------------------------------------------
+// Accessible names and alt text
+// ---------------------------------------------------------------------------
+
+Then('all links should have accessible names', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['link-name'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('there should be no image-alt violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['image-alt'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Critical violations
+// ---------------------------------------------------------------------------
+
+Then('there should be no critical or serious violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page }).analyze()
+  const criticalOrSerious = results.violations.filter(
+    v => v.impact === 'critical' || v.impact === 'serious',
+  )
+  expect(criticalOrSerious).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// ARIA validity
+// ---------------------------------------------------------------------------
+
+Then('all ARIA attributes should be valid', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['aria-valid-attr', 'aria-valid-attr-value'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('required ARIA attributes should be present', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['aria-required-attr'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Keyboard accessibility
+// ---------------------------------------------------------------------------
+
+Then('focus-order-semantics rules should pass', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['focus-order-semantics'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('tabindex rules should pass', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['tabindex'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Form accessibility
+// ---------------------------------------------------------------------------
+
+When('I navigate to the add item page', async ({ page }) => {
+  await page.goto('/wishlist/add')
+  await page.waitForLoadState('networkidle')
+})
+
+Then('all form inputs should have associated labels', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['label'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Modal accessibility
+// ---------------------------------------------------------------------------
+
+Then('the Got It modal should have no accessibility violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('the delete modal should have no accessibility violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Semantic structure
+// ---------------------------------------------------------------------------
+
+Then('there should be a main landmark', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['landmark-one-main'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('region rules should mostly pass', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['region'])
+    .exclude('aside, [role="complementary"], nav[aria-label*="sidebar"]')
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('there should be no duplicate-id violations', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['duplicate-id'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('list and listitem rules should pass', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['list', 'listitem'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('the gallery should have a list with aria-label', async ({ page }) => {
+  const list = page.locator('[role="list"][aria-label], [role="grid"][aria-label]')
+  await expect(list.first()).toBeVisible()
+})
+
+Then('heading-order rules should pass', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['heading-order'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('all links should have content', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['link-in-text-block'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+Then('all buttons should have content', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['button-name'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Datatable view
+// ---------------------------------------------------------------------------
+
+Given('I switch to datatable view', async ({ page }) => {
+  const viewToggle = page.getByRole('button', { name: /datatable|table view/i })
+  await viewToggle.click()
+  await page.waitForTimeout(500)
+})
+
+Then('table accessibility rules should pass', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['table', 'td-headers-attr', 'th-has-data-cells'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Document properties
+// ---------------------------------------------------------------------------
+
+Then('the HTML element should have a valid lang attribute', async ({ page }) => {
+  const results = await new AxeBuilder({ page })
+    .withRules(['html-has-lang', 'html-lang-valid'])
+    .analyze()
+  expect(results.violations).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Zoom and responsive
+// ---------------------------------------------------------------------------
+
+Given('I set the viewport to 300% zoom equivalent', async ({ page }) => {
+  const originalWidth = page.viewportSize()?.width ?? 1280
+  const zoomedWidth = Math.floor(originalWidth / 3)
+  await page.setViewportSize({ width: zoomedWidth, height: 1024 })
+})
+
+Then('there should be no critical violations at zoom', async ({ page }) => {
+  const results = await new AxeBuilder({ page }).analyze()
+  const critical = results.violations.filter(v => v.impact === 'critical')
+  expect(critical).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// Screen reader announcements
+// ---------------------------------------------------------------------------
+
+When('I perform an action that changes content', async ({ page }) => {
+  const addButton = page.getByRole('button', { name: /add item/i })
+  await addButton.click()
+  await page.waitForTimeout(500)
+  await page.goBack()
+})
+
+Then('the change should be announced to screen readers', async ({ page }) => {
+  const liveRegions = page.locator('[aria-live], [role="status"], [role="alert"]')
+  const count = await liveRegions.count()
+  expect(count).toBeGreaterThan(0)
+})

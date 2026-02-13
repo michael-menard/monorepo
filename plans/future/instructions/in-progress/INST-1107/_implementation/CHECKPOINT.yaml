@@ -1,0 +1,58 @@
+schema: 1
+story_id: INST-1107
+feature_dir: plans/future/instructions
+timestamp: 2026-02-08T05:31:00Z
+
+current_phase: testing
+last_successful_phase: frontend-integration
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+
+phases_completed:
+  - setup
+  - planning
+  - backend-types
+  - backend-service
+  - backend-route
+  - frontend-schemas
+  - rtk-query-integration
+  - component-creation
+  - detail-page-integration
+  - unit-tests
+  - component-tests
+
+e2e_gate: pending
+status: in_progress
+started_at: 2026-02-08T04:13:26Z
+updated_at: 2026-02-08T05:31:00Z
+
+implementation_summary:
+  backend:
+    status: complete
+    files_modified:
+      - apps/api/lego-api/domains/mocs/types.ts
+      - apps/api/lego-api/domains/mocs/ports/index.ts
+      - apps/api/lego-api/domains/mocs/adapters/repositories.ts
+      - apps/api/lego-api/domains/mocs/application/services.ts
+      - apps/api/lego-api/domains/mocs/routes.ts
+  frontend:
+    status: complete
+    files_created:
+      - apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+      - apps/web/app-instructions-gallery/src/components/FileDownloadButton/__types__/index.ts
+      - apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+    files_modified:
+      - packages/core/api-client/src/schemas/instructions.ts
+      - packages/core/api-client/src/config/endpoints.ts
+      - packages/core/api-client/src/rtk/instructions-api.ts
+      - packages/core/api-client/src/index.ts
+      - apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+      - apps/web/app-instructions-gallery/src/pages/__tests__/detail-page.test.tsx
+  tests:
+    unit_tests: 7 passing (backend service)
+    component_tests: 17 passing (FileDownloadButton)
+    detail_page_tests: 29 passing (integration mocks added)
+    e2e_tests: pending

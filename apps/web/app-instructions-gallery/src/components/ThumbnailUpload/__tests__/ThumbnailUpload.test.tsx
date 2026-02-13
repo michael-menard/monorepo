@@ -6,9 +6,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ThumbnailUpload } from '../index'
 import * as apiClient from '@repo/api-client'
 import * as toastUtils from '@repo/app-component-library'
+import { ThumbnailUpload } from '../index'
 
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')

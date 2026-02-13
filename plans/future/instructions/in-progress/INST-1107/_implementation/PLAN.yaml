@@ -1,0 +1,466 @@
+schema: 1
+story_id: INST-1107
+timestamp: '2026-02-08T04:30:00Z'
+autonomy_level: conservative
+phase: planning
+
+summary: |
+  Implement secure file download flow for instruction PDFs and parts lists. Backend creates
+  presigned S3 URLs with ownership verification. Frontend provides FileDownloadButton component
+  with loading states and error handling. RTK Query integration with no caching (URLs expire).
+
+phases:
+  - id: 1-backend-types
+    name: Backend Types and Schemas
+    duration_hours: 0.5
+    blockers: []
+    outputs:
+      - file: apps/api/lego-api/domains/mocs/types.ts
+        type: modify
+        description: Add GetFileDownloadUrlResponseSchema with downloadUrl and expiresAt fields
+
+    tasks:
+      - name: Add Zod schema for download response
+        description: |
+          Add GetFileDownloadUrlResponseSchema = z.object({
+            downloadUrl: z.string().url(),
+            expiresAt: z.string().datetime()
+          }) and export inferred type.
+        acceptance:
+          - Schema validates downloadUrl as URL format
+          - Schema validates expiresAt as ISO8601 datetime
+          - Type exported for use in service layer
+
+  - id: 2-backend-service
+    name: Backend Service Layer
+    duration_hours: 2
+    blockers: [1-backend-types]
+    outputs:
+      - file: apps/api/lego-api/domains/mocs/application/services.ts
+        type: modify
+        description: Add getFileDownloadUrl method to MocService with ownership verification and presigned URL generation
+
+    tasks:
+      - name: Implement getFileDownloadUrl service method
+        description: |
+          Add async getFileDownloadUrl(userId, mocId, fileId) to MocService.
+          1. Query file by fileId from mocRepo.getFileByIdAndMocId()
+          2. If not found, return err('NOT_FOUND')
+          3. Query MOC to verify ownership (moc.userId === userId)
+          4. If unauthorized, return err('NOT_FOUND') (no info leakage)
+          5. Generate presigned S3 URL using GetObjectCommand with ResponseContentDisposition
+          6. Return ok({ downloadUrl, expiresAt })
+          Pattern: apps/api/lego-api/domains/inspiration/adapters/storage.ts lines 81-90
+        acceptance:
+          - Service method signature matches type definition
+          - Ownership verification via mocRepo.getMocById()
+          - Returns err('NOT_FOUND') for both file not found and unauthorized
+          - Generates presigned URL with 900s expiry
+          - ResponseContentDisposition uses RFC 5987 encoding
+          - Logs success and failures with @repo/logger
+
+      - name: Add repository method for file retrieval
+        description: |
+          If mocRepo.getFileByIdAndMocId() doesn't exist, add it to MocRepository interface
+          and implementation. Query: SELECT s3Key, originalFilename, mocId FROM moc_files WHERE id = ? AND mocId = ?
+        acceptance:
+          - Repository method returns file metadata or null
+          - Method does not perform authorization (service layer handles that)
+
+  - id: 3-backend-route
+    name: Backend Route Handler
+    duration_hours: 1
+    blockers: [2-backend-service]
+    outputs:
+      - file: apps/api/lego-api/domains/mocs/routes.ts
+        type: modify
+        description: Add GET /mocs/:id/files/:fileId/download route as thin adapter
+
+    tasks:
+      - name: Add download route handler
+        description: |
+          Add GET /mocs/:id/files/:fileId/download route.
+          1. Parse mocId and fileId from params
+          2. Get userId from req.user (auth middleware)
+          3. Call mocService.getFileDownloadUrl(userId, mocId, fileId)
+          4. Map errors to HTTP status: NOT_FOUND→404, PRESIGN_FAILED→500
+          5. Return JSON with downloadUrl and expiresAt
+          Route handler is thin adapter - NO business logic
+        acceptance:
+          - Route exists at GET /mocs/:id/files/:fileId/download
+          - Validates mocId and fileId are valid UUIDs
+          - Returns 401 if not authenticated
+          - Delegates to service layer
+          - Maps service errors to HTTP codes correctly
+          - Returns JSON matching GetFileDownloadUrlResponseSchema
+
+  - id: 4-backend-tests
+    name: Backend Unit Tests
+    duration_hours: 2
+    blockers: [2-backend-service, 3-backend-route]
+    outputs:
+      - file: apps/api/lego-api/domains/mocs/__tests__/download.test.ts
+        type: create
+        description: Unit tests for getFileDownloadUrl service method
+
+    tasks:
+      - name: Create service unit tests
+        description: |
+          Test getFileDownloadUrl method:
+          - Success: file exists, user owns MOC, returns presigned URL
+          - Error: file not found returns NOT_FOUND
+          - Error: user doesn't own MOC returns NOT_FOUND (no info leakage)
+          - Error: S3 presigning fails returns PRESIGN_FAILED
+          - Edge: Special characters in filename encoded correctly
+          Mock mocRepo and S3 client
+        acceptance:
+          - Test coverage ≥90% for service method
+          - All error cases covered
+          - Mocks verify presigned URL parameters
+
+  - id: 5-frontend-schemas
+    name: Frontend API Schemas
+    duration_hours: 0.5
+    blockers: []
+    outputs:
+      - file: packages/core/api-client/src/schemas/instructions.ts
+        type: modify
+        description: Add GetFileDownloadUrlResponseSchema for frontend validation
+
+    tasks:
+      - name: Add download URL response schema
+        description: |
+          Add export const GetFileDownloadUrlResponseSchema = z.object({
+            downloadUrl: z.string().url(),
+            expiresAt: z.string().datetime()
+          })
+          Export inferred type GetFileDownloadUrlResponse
+        acceptance:
+          - Schema matches backend schema
+          - Type exported for RTK Query
+
+  - id: 6-rtk-query
+    name: RTK Query Integration
+    duration_hours: 1
+    blockers: [5-frontend-schemas]
+    outputs:
+      - file: packages/core/api-client/src/rtk/instructions-api.ts
+        type: modify
+        description: Add getFileDownloadUrl query endpoint
+      - file: packages/core/api-client/src/index.ts
+        type: modify
+        description: Export useGetFileDownloadUrlQuery hook
+
+    tasks:
+      - name: Add RTK Query endpoint
+        description: |
+          Add getFileDownloadUrl query to instructionsApi:
+          - Endpoint: /mocs/{mocId}/files/{fileId}/download (uses buildEndpoint)
+          - Method: GET
+          - Query params: { mocId: string, fileId: string }
+          - transformResponse with GetFileDownloadUrlResponseSchema.parse()
+          - keepUnusedDataFor: 0 (no caching - URLs expire)
+          - providesTags: [] (no cache tags needed)
+        acceptance:
+          - Query endpoint added to instructionsApi
+          - Response validated with Zod schema
+          - No caching (keepUnusedDataFor: 0)
+          - Hook generated automatically by RTK Query
+
+      - name: Export hook from index.ts
+        description: |
+          Add useGetFileDownloadUrlQuery to exports in packages/core/api-client/src/index.ts
+        acceptance:
+          - Hook exported and available for import
+
+  - id: 7-frontend-component
+    name: FileDownloadButton Component
+    duration_hours: 2
+    blockers: [6-rtk-query]
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+        type: create
+        description: Download button component with loading states and error handling
+      - file: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__types__/index.ts
+        type: create
+        description: Zod schemas for component props
+
+    tasks:
+      - name: Create component types
+        description: |
+          Create __types__/index.ts with:
+          FileDownloadButtonPropsSchema = z.object({
+            mocId: z.string().uuid(),
+            fileId: z.string().uuid(),
+            fileName: z.string().min(1),
+            className: z.string().optional()
+          })
+        acceptance:
+          - Props schema uses Zod (no TypeScript interfaces)
+          - All required props defined
+
+      - name: Implement FileDownloadButton
+        description: |
+          Create index.tsx component:
+          - Import Button from @repo/app-component-library/_primitives/button
+          - Import Download, Loader2 from lucide-react
+          - Use useGetFileDownloadUrlQuery (lazy query preferred)
+          - On click: fetch download URL, then window.location.href = downloadUrl
+          - Show loading state with Loader2 spinner
+          - Show error toast on failure (use showErrorToast from @repo/app-component-library)
+          - aria-label="Download {fileName}"
+          - aria-busy={isLoading}
+          - focus:ring-2 focus:ring-primary
+        acceptance:
+          - Component renders with Download icon
+          - Loading state shows Loader2 spinner
+          - Button disabled during loading
+          - Error shows toast notification
+          - Accessibility attributes present
+          - Touch target ≥44x44px
+
+  - id: 8-frontend-integration
+    name: Integrate into Detail Page
+    duration_hours: 1
+    blockers: [7-frontend-component]
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+        type: modify
+        description: Add FileDownloadButton to file list
+
+    tasks:
+      - name: Add download button to file list
+        description: |
+          In detail-page.tsx around lines 318-325 (file list area):
+          - Import FileDownloadButton
+          - Render FileDownloadButton for each file
+          - Pass mocId, fileId, fileName props
+          - Each button operates independently
+        acceptance:
+          - Download button appears for each file
+          - Multiple buttons work independently
+          - Props passed correctly
+
+  - id: 9-frontend-tests
+    name: Frontend Component Tests
+    duration_hours: 2
+    blockers: [7-frontend-component]
+    outputs:
+      - file: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+        type: create
+        description: Unit tests for FileDownloadButton component
+
+    tasks:
+      - name: Create component unit tests
+        description: |
+          Test FileDownloadButton:
+          - Renders with Download icon
+          - Shows loading state during API call
+          - Disabled during loading
+          - Success triggers window.location.href
+          - Error shows toast notification
+          - Accessibility attributes present
+          Mock useGetFileDownloadUrlQuery with React Testing Library
+        acceptance:
+          - Test coverage ≥80% for component
+          - All states tested (idle, loading, success, error)
+          - Accessibility tests included
+
+  - id: 10-e2e-tests
+    name: E2E Tests with Playwright
+    duration_hours: 3
+    blockers: [8-frontend-integration]
+    outputs:
+      - file: apps/web/playwright/features/instructions/inst-1107-download.feature
+        type: create
+        description: Cucumber feature for download flow
+      - file: apps/web/playwright/step-definitions/instructions/inst-1107-download.steps.ts
+        type: create
+        description: Step definitions for download feature
+
+    tasks:
+      - name: Create Cucumber feature file
+        description: |
+          Create inst-1107-download.feature with scenarios:
+          - Happy path: Download instruction PDF with correct filename
+          - Error: Unauthorized user cannot download file
+        acceptance:
+          - Feature file uses Gherkin syntax
+          - Scenarios cover MVP flows
+
+      - name: Implement step definitions
+        description: |
+          Create inst-1107-download.steps.ts:
+          - Navigate to MOC detail page
+          - Click download button
+          - Wait for download to start
+          - Verify file downloaded (check downloads folder)
+          Use playwright download event listener
+        acceptance:
+          - Steps implement feature scenarios
+          - Tests run against LIVE backend (no MSW)
+          - Tests pass consistently
+
+risks:
+  - id: risk-1
+    title: presigned URL expiry during testing
+    severity: low
+    impact: E2E tests may fail if network slow
+    mitigation: Use reasonable timeout (900s is sufficient), retry logic in tests
+    status: mitigated
+
+  - id: risk-2
+    title: Repository method may not exist
+    severity: medium
+    impact: May need to add getFileByIdAndMocId to MocRepository
+    mitigation: Check repository interface, add if missing (estimated 30min)
+    status: accepted
+
+dependencies:
+  external:
+    - name: INST-1101 (View MOC Details)
+      status: completed
+      description: Detail page exists with file list
+      blocking: false
+      notes: E2E tests depend on detail page
+
+  internal:
+    - name: presigned URL pattern
+      location: apps/api/lego-api/domains/inspiration/adapters/storage.ts
+      status: exists
+      lines: 81-90
+      notes: Reuse getSignedUrl pattern for downloads
+
+    - name: MOC service authorization
+      location: apps/api/lego-api/domains/mocs/application/services.ts
+      status: exists
+      lines: 67-89
+      notes: Reuse getMoc pattern for ownership verification
+
+testing_strategy:
+  unit_tests:
+    backend:
+      target_coverage: 90
+      test_file: apps/api/lego-api/domains/mocs/__tests__/download.test.ts
+      test_cases:
+        - Success: file exists, user owns MOC
+        - Error: file not found
+        - Error: user doesn't own MOC
+        - Error: S3 presigning fails
+        - Edge: special characters in filename
+
+    frontend:
+      target_coverage: 80
+      test_file: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+      test_cases:
+        - Component renders
+        - Loading state
+        - Success triggers download
+        - Error shows toast
+        - Accessibility
+
+  e2e_tests:
+    test_file: apps/web/playwright/features/instructions/inst-1107-download.feature
+    test_cases:
+      - Download instruction PDF
+      - Unauthorized user blocked
+
+files_to_modify:
+  - path: apps/api/lego-api/domains/mocs/types.ts
+    changes:
+      - Add GetFileDownloadUrlResponseSchema
+    reason: Phase 1 - Backend types
+
+  - path: apps/api/lego-api/domains/mocs/application/services.ts
+    changes:
+      - Add getFileDownloadUrl method to MocService
+      - Add repository method if needed
+    reason: Phase 2 - Service layer business logic
+
+  - path: apps/api/lego-api/domains/mocs/routes.ts
+    changes:
+      - Add GET /mocs/:id/files/:fileId/download route
+    reason: Phase 3 - Thin adapter route handler
+
+  - path: packages/core/api-client/src/schemas/instructions.ts
+    changes:
+      - Add GetFileDownloadUrlResponseSchema
+    reason: Phase 5 - Frontend schema validation
+
+  - path: packages/core/api-client/src/rtk/instructions-api.ts
+    changes:
+      - Add getFileDownloadUrl query endpoint
+    reason: Phase 6 - RTK Query integration
+
+  - path: packages/core/api-client/src/index.ts
+    changes:
+      - Export useGetFileDownloadUrlQuery
+    reason: Phase 6 - Export hook
+
+  - path: apps/web/app-instructions-gallery/src/pages/detail-page.tsx
+    changes:
+      - Import and render FileDownloadButton in file list
+    reason: Phase 8 - Integration
+
+files_to_create:
+  - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+    description: Main download button component
+    size_estimate: 150 lines
+    reason: Phase 7 - Frontend component
+
+  - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__types__/index.ts
+    description: Zod schemas for component props
+    size_estimate: 20 lines
+    reason: Phase 7 - Component types
+
+  - path: apps/api/lego-api/domains/mocs/__tests__/download.test.ts
+    description: Unit tests for download service
+    size_estimate: 200 lines
+    reason: Phase 4 - Backend tests
+
+  - path: apps/web/app-instructions-gallery/src/components/FileDownloadButton/__tests__/FileDownloadButton.test.tsx
+    description: Unit tests for component
+    size_estimate: 150 lines
+    reason: Phase 9 - Frontend tests
+
+  - path: apps/web/playwright/features/instructions/inst-1107-download.feature
+    description: Cucumber feature file
+    size_estimate: 50 lines
+    reason: Phase 10 - E2E tests
+
+  - path: apps/web/playwright/step-definitions/instructions/inst-1107-download.steps.ts
+    description: Step definitions
+    size_estimate: 100 lines
+    reason: Phase 10 - E2E tests
+
+acceptance_criteria_coverage:
+  total: 76
+  by_phase:
+    phase_1: [9, 15]  # Backend types
+    phase_2: [2, 3, 4, 6, 7, 8, 11, 12, 13, 73, 74, 76]  # Service layer
+    phase_3: [1, 5, 10, 14, 75]  # Route handler
+    phase_4: [59, 60, 61, 62, 63]  # Backend tests
+    phase_5: [40]  # Frontend schemas
+    phase_6: [36, 37, 38, 39, 41, 42, 43]  # RTK Query
+    phase_7: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]  # Component
+    phase_8: [32, 33, 34, 35]  # Integration
+    phase_9: [60]  # Frontend tests
+    phase_10: [68, 69, 70, 71, 72]  # E2E tests
+  database: [44, 45, 46, 47]  # Database (no changes)
+  security: [48, 49, 50, 51, 52]  # Security
+  error_handling: [53, 54, 55, 56, 57, 58]  # Error handling
+  integration: [64, 65, 66, 67]  # Integration tests
+
+notes: |
+  - Presigned URL pattern from inspiration domain is well-tested
+  - RTK Query must not cache download URLs (they expire in 15 minutes)
+  - Authorization returns 404 (not 403) to avoid info leakage
+  - Service layer owns all business logic (route is thin adapter)
+  - Component uses window.location.href for download trigger (simplest browser-native approach)
+  - E2E tests run against LIVE backend with real S3 (no MSW)
+
+confidence: high
+confidence_rationale: |
+  Well-scoped story with proven patterns. Presigned URL generation already exists in codebase.
+  Service layer pattern established. RTK Query framework in place. Clear acceptance criteria.
+  Estimated 14-15 hours total effort.

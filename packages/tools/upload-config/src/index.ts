@@ -33,6 +33,8 @@ export {
   DEFAULT_ALLOWED_MIME_TYPES,
   VALID_IMAGE_FORMATS,
   VALID_PARTS_FORMATS,
+  // INST-1105: Presigned upload threshold
+  PDF_MIN_BYTES_FOR_PRESIGNED,
 } from './schema.js'
 
 export type {
@@ -54,4 +56,10 @@ export {
   mbToBytes,
   bytesToMb,
   formatBytes,
+  // INST-1105: Presigned upload utilities
+  shouldUsePresignedUpload,
+  validateFileSizeForPresigned,
 } from './limits.js'
+
+// Types
+export type { PresignedUploadValidation } from './limits.js'
