@@ -1,0 +1,28 @@
+schema: 1
+story_id: WINT-0070
+timestamp: "2026-02-14T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: true
+  contracts: true
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "packages/backend/database-schema/**"
+  - "packages/backend/orchestrator/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Validate workflow tracking tables (workflowExecutions, workflowCheckpoints, workflowAuditLog) from WINT-0010 meet all requirements before dependent stories proceed"
+elaboration: "completed"

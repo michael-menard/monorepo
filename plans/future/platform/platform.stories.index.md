@@ -30,7 +30,7 @@ All can start immediately. Ordered by downstream impact.
 |---|---|-------|-------|--------|------|
 | 1 | | INFR-0010 | Postgres Artifact Schemas | INFR-0020, INFR-0030 | INFR |
 | 2 | | INFR-0040 | Workflow Events Table + Ingestion **in-qa** | INFR-0050, TELE-0010 | INFR |
-| 3 | x | MODL-0010 | Provider Adapters (OpenRouter/Ollama/Anthropic) **uat** | MODL-0020 | MODL |
+| 3 | x | MODL-0010 | Provider Adapters (OpenRouter/Ollama/Anthropic) **completed** | MODL-0020 | MODL |
 | 4 | | WINT-0010 | Create Core Database Schemas (6 schemas) ⚡ | WINT-0020–0070, AUTO-0010/0020 | WINT |
 | 5 | x | LNGG-0010 | Story File Adapter — YAML Read/Write ⚡ **completed** | LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070 | LNGG |
 | 6 | x | LNGG-0030 | Decision Callback System **completed** | LNGG-0070 | LNGG |
@@ -42,6 +42,7 @@ All can start immediately. Ordered by downstream impact.
 | 12 | | WINT-0220 | Define Model-per-Task Strategy **created** | WINT-0230, 0240, 0250 | WINT |
 | 13 | x | WINT-1020 | Flatten Story Directories **completed** | WINT-1030 | WINT |
 | 14 | x | WINT-7010 | Audit Agent Directory References **uat** | WINT-7020 | WINT |
+| G1 | | GATE-01 | **E2E: Validate Foundation** | ← all Wave 1 | GATE | **HARD GATE → blocks Wave 2** |
 
 ---
 
@@ -54,23 +55,27 @@ All can start immediately. Ordered by downstream impact.
 | 15 | x | LNGG-0020 | Index Management Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
 | 16 | x | LNGG-0040 | Stage Movement Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
 | 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **ready-for-qa** | ← LNGG-0010 | LNGG | **P0** |
-| 18 | x | WINT-1080 | Reconcile WINT Schema with LangGraph ⚡ **ready-to-work** | ← WINT-0010 | WINT | **P0** |
+| 18 | x | WINT-1080 | Reconcile WINT Schema with LangGraph ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 19 | | WINT-0020 | Create Story Management Tables ⚡ **ready-to-work** | ← WINT-0010 | WINT | **P0** |
-| 20 | | WINT-0070 | Create Workflow Tracking Tables ⚡ **in-elaboration** | ← WINT-0010 | WINT | **P0** |
+| 20 | x | WINT-0070 | Create Workflow Tracking Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 21 | | WINT-0160 | Create doc-sync Agent ⚡ | ← WINT-0150 | WINT | **P0** |
 | 22 | | INFR-0020 | Artifact Writer/Reader Service | ← INFR-0010 | INFR | P1 |
 | 23 | | KBAR-0020 | Schema Tests & Validation | ← KBAR-0010 | KBAR | P1 |
-| 24 | | MODL-0020 | Task Contracts & Model Selector | ← MODL-0010 | MODL | P1 |
-| 24b | | MODL-0050 | Add MiniMax Model Provider to LangGraph | ← MODL-0010 | MODL | P1 |
+| 24 | | MODL-0020 | Task Contracts & Model Selector | — | MODL | P1 |
+| 24b | | MODL-0050 | Add MiniMax Model Provider to LangGraph | — | MODL | P1 |
 | 25 | | WINT-0200 | Create User Flows Schema | ← WINT-0180 | WINT | P2 |
-| 26 | | WINT-0030 | Create Context Cache Tables | ← WINT-0010 | WINT | P2 |
+| 26 | x | WINT-0030 | Create Context Cache Tables **ready-to-work** | ← WINT-0010 | WINT | P2 |
 | 27 | | WINT-0060 | Create Graph Relational Tables | ← WINT-0010 | WINT | P2 |
 | 28 | | WINT-0230 | Create Unified Model Interface | ← WINT-0220 | WINT | P2 |
-| 29 | | INFR-0041 | Workflow Event SDK - Typed Schemas & Validation **ready-to-work** | ← INFR-0040 | INFR | P1 |
+| 29 | x | INFR-0041 | Workflow Event SDK - Typed Schemas & Validation **completed** | ← INFR-0040 | INFR | P1 |
 | 30 | | INFR-0050 | Event SDK (Shared Telemetry Hooks) | ← INFR-0040, INFR-0041 | INFR | P3 |
 | 31 | | WINT-0040 | Create Telemetry Tables | ← WINT-0010 | WINT | P3 |
 | 32 | | WINT-0050 | Create ML Pipeline Tables | ← WINT-0010 | WINT | P3 |
 | 34 | | INFR-0030 | MinIO/S3 Docker Setup + Client Adapter | ← INFR-0010 | INFR | P3 |
+| G2 | | GATE-02 | **E2E: Validate LNGG Adapters** | ← GATE-01, LNGG-0020/0040/0060 | GATE | **HARD GATE** |
+| G3 | | GATE-03 | **E2E: Validate Schema & Services** | ← GATE-02, all schema stories | GATE | **HARD GATE** |
+| G4 | | GATE-04 | **E2E: Validate Agents & Services** | ← GATE-03, WINT-0160, KBAR-0020 | GATE | **HARD GATE** |
+| G5 | | GATE-05 | **E2E: Validate User Flows & Infra** | ← GATE-04, WINT-0200, INFR-0050 | GATE | **HARD GATE** |
 
 ---
 
@@ -94,6 +99,8 @@ All can start immediately. Ordered by downstream impact.
 | 45 | | WINT-1130 | Track Worktree-to-Story Mapping in DB | ← WINT-0020 | WINT | P2 |
 | 46 | | WINT-0210 | Populate Role Pack Templates | ← WINT-0180, 0190, 0200 | WINT | P3 |
 | 47 | | MODL-0030 | Quality Evaluator | ← MODL-0020 | MODL | P3 |
+| G6 | | GATE-06 | **E2E: Validate LangGraph Types** | ← GATE-05, LNGG-0070, WINT-1100 | GATE | **HARD GATE** |
+| G7 | | GATE-07 | **E2E: Validate MCP Tools** | ← GATE-06, all MCP tool stories | GATE | **HARD GATE** |
 
 ---
 
@@ -111,6 +118,7 @@ All can start immediately. Ordered by downstream impact.
 | 55 | | WINT-1050 | Update story-update to Use DB | ← WINT-1010, 1030 | WINT | P2 |
 | 56 | | WINT-1060 | Update story-move to Use DB | ← WINT-1010, 1030 | WINT | P2 |
 | 57 | | KBAR-0050 | CLI Sync Commands | ← KBAR-0040 | KBAR | P2 |
+| G8 | | GATE-08 | **E2E: Validate Pre-LangGraph Prep** | ← GATE-07, all Wave 4 | GATE | **HARD GATE** |
 
 ---
 
@@ -127,6 +135,7 @@ All can start immediately. Ordered by downstream impact.
 | 62 | | WINT-7020 | Create Agent Migration Plan | ← WINT-7010 | WINT | P3 |
 | 63 | | MODL-0040 | Model Leaderboards | ← MODL-0030 | MODL | P3 |
 | 64 | | AUDT-0020 | 9 Audit Lens Nodes | ← AUDT-0010 | AUDT | P3 |
+| G9 | | GATE-09 | **E2E: Validate Business Logic** | ← GATE-08, WINT-9010 | GATE | **HARD GATE** |
 
 ---
 
@@ -142,6 +151,7 @@ All can start immediately. Ordered by downstream impact.
 | 70 | | WINT-0190 | Create Patch Queue Pattern and Schema | ← WINT-0180 | WINT | P3 |
 | 71 | | WINT-0240 | Configure Ollama Model Fleet | ← WINT-0220 | WINT | P3 |
 | 72 | | WINT-0250 | Define Escalation Triggers | ← WINT-0220, 0230 | WINT | P3 |
+| G10 | | GATE-10 | **E2E: Validate First LangGraph Nodes** | ← GATE-09, all Wave 6 | GATE | **HARD GATE** |
 
 ---
 
@@ -160,6 +170,7 @@ All can start immediately. Ordered by downstream impact.
 | 79 | | KBAR-0150 | Artifact Tools Integration Tests ⚡ | ← KBAR-0140 | KBAR | **P0** |
 | 80 | | AUDT-0030 | Audit Orchestration Nodes | ← AUDT-0020 | AUDT | P3 |
 | 81 | | TELE-0010 | Docker Telemetry Stack | ← INFR-0040 | TELE | P3 |
+| G11 | | GATE-11 | **E2E: Validate KBAR Tooling** | ← GATE-10, all Wave 7 | GATE | **HARD GATE** |
 
 ---
 
@@ -179,6 +190,7 @@ All can start immediately. Ordered by downstream impact.
 | 89 | | KBAR-0200 | Update Knowledge Context Loader | ← KBAR-0190 | KBAR | P2 |
 | 90 | | KBAR-0210 | Update Orchestrator Commands | ← KBAR-0200 | KBAR | P2 |
 | 91 | | KBAR-0220 | Agent Migration Testing | ← KBAR-0210 | KBAR | P2 |
+| G12 | | GATE-12 | **E2E: Validate Context & Session** | ← GATE-11, all Wave 8 | GATE | **HARD GATE** |
 
 ---
 
@@ -194,6 +206,7 @@ All can start immediately. Ordered by downstream impact.
 | 95 | | WINT-9140 | Validate LangGraph Parity Phase ⚡ 🎉 | ← WINT-9120, 9130 | WINT | **P0** |
 | 96 | | KBAR-0230 | DB-Driven Index Generation | ← KBAR-0220 | KBAR | P2 |
 | 97 | | KBAR-0240 | Regenerate Index CLI | ← KBAR-0230 | KBAR | P2 |
+| G13 | | GATE-13 | **E2E: Validate LangGraph Operational** | ← GATE-12, all Wave 9 | GATE | **HARD GATE** |
 
 ---
 
