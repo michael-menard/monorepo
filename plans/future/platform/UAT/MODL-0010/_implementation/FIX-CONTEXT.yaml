@@ -1,0 +1,61 @@
+schema: 1
+story_id: MODL-0010
+timestamp: "2026-02-14T18:36:00Z"
+failure_source: code-review-failed
+iteration: 2
+review_iteration: 3
+
+issues_to_fix:
+  - id: 1
+    priority: 1
+    file: "packages/backend/orchestrator/src/providers/base.ts"
+    line: 99
+    issue: "AvailabilityCacheSchema duplicates identical interface from packages/backend/orchestrator/src/config/llm-provider.ts"
+    severity: high
+    auto_fixable: true
+    worker: reusability
+    rule: no-duplicate-type-definitions
+
+  - id: 2
+    priority: 2
+    file: "packages/backend/orchestrator/src/providers/ollama.ts"
+    line: 73
+    issue: "checkAvailability() method duplicates logic from config/llm-provider.ts isOllamaAvailable()"
+    severity: high
+    auto_fixable: false
+    worker: reusability
+    rule: no-duplicate-logic
+
+  - id: 3
+    priority: 3
+    file: "packages/backend/orchestrator/src/providers/anthropic.ts"
+    line: 83
+    issue: "checkAvailability() method implements custom availability check pattern, duplicated across providers"
+    severity: high
+    auto_fixable: false
+    worker: reusability
+    rule: no-duplicate-pattern
+
+focus_files:
+  - "packages/backend/orchestrator/src/providers/base.ts"
+  - "packages/backend/orchestrator/src/providers/ollama.ts"
+  - "packages/backend/orchestrator/src/providers/anthropic.ts"
+  - "packages/backend/orchestrator/src/config/llm-provider.ts"
+
+warnings:
+  - "Code duplication warnings detected in getCachedInstance() and generateConfigHash() - may need refactoring"
+  - "Security findings (low) already documented and acceptable for current phase"
+
+test_status:
+  unit_tests_pass: true
+  integration_tests_partial: true
+  build_pass: true
+  lint_pass: true
+  type_check_pass: true
+  note: "All checks pass except reusability worker - duplicated code patterns need consolidation"
+
+strategy:
+  - "Consolidate AvailabilityCacheSchema - move to shared llm-provider.ts (auto-fixable)"
+  - "Refactor checkAvailability() - create shared base implementation to eliminate duplication"
+  - "Consolidate availability check patterns across all providers"
+  - "Re-run code review to verify all HIGH severity issues resolved"

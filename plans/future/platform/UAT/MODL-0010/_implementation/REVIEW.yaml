@@ -1,0 +1,218 @@
+schema: 1
+story_id: MODL-0010
+timestamp: "2026-02-14T00:00:00.000Z"
+iteration: 4
+
+verdict: FAIL
+
+workers_run:
+  - reusability
+  - typecheck
+  - build
+workers_skipped:
+  - lint
+  - style
+  - syntax
+  - security
+  - react
+  - typescript
+  - accessibility
+
+ranked_patches:
+  - priority: 1
+    file: packages/backend/orchestrator/src/providers/ollama.ts
+    line: 97
+    issue: "Duplicated getCachedInstance() pattern — identical 6-line implementation across 3 providers"
+    severity: high
+    auto_fixable: true
+    worker: reusability
+  - priority: 2
+    file: packages/backend/orchestrator/src/providers/ollama.ts
+    line: 125
+    issue: "Duplicated getModel() cache retrieval — configHash generation and cache-check pattern identical 3x"
+    severity: high
+    auto_fixable: true
+    worker: reusability
+  - priority: 3
+    file: packages/backend/orchestrator/src/providers/ollama.ts
+    line: 148
+    issue: "Duplicated clearCaches() — identical cleanup pattern across all 3 providers"
+    severity: high
+    auto_fixable: true
+    worker: reusability
+  - priority: 4
+    file: packages/backend/orchestrator/src/providers/ollama.ts
+    line: 53
+    issue: "Duplicated loadConfig() boilerplate — check cache, parse schema, return pattern repeated 3x"
+    severity: medium
+    auto_fixable: true
+    worker: reusability
+  - priority: 5
+    file: packages/backend/orchestrator/src/providers/openrouter.ts
+    line: 129
+    issue: "Model name parsing duplicated — each provider implements slightly different prefix-removal variant"
+    severity: medium
+    auto_fixable: true
+    worker: reusability
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    files_checked: 6
+    findings: []
+
+  style:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    files_checked: 6
+    violations: 0
+    findings: []
+
+  syntax:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    files_checked: 7
+    blocking: 0
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    counts:
+      critical: 0
+      high: 0
+      medium: 0
+      low: 2
+    findings:
+      - id: SEC-001
+        severity: low
+        category: sensitive-data-handling
+        issue: "API key included in configuration hash calculation"
+      - id: SEC-002
+        severity: low
+        category: information-disclosure
+        issue: "OpenRouter API key included in HTTP Authorization header during availability check"
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 7
+    findings: []
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    packages_built:
+      - "@repo/orchestrator"
+    findings: []
+
+  reusability:
+    verdict: FAIL
+    skipped: false
+    files_checked: 9
+    errors: 3
+    warnings: 2
+    fix_iteration_status: "Partial Resolution - 2 of 3 HIGH duplication issues fixed"
+    findings:
+      - severity: error
+        file: packages/backend/orchestrator/src/providers/ollama.ts
+        line: 97
+        message: "Duplicated getCachedInstance() pattern — identical 6-line implementation across 3 providers"
+        rule: no-app-duplication
+      - severity: error
+        file: packages/backend/orchestrator/src/providers/ollama.ts
+        line: 125
+        message: "Duplicated getModel() cache retrieval — configHash generation and cache-check pattern identical 3x"
+        rule: no-app-duplication
+      - severity: error
+        file: packages/backend/orchestrator/src/providers/ollama.ts
+        line: 148
+        message: "Duplicated clearCaches() — identical cleanup pattern across all 3 providers"
+        rule: no-app-duplication
+      - severity: warning
+        file: packages/backend/orchestrator/src/providers/ollama.ts
+        line: 53
+        message: "Duplicated loadConfig() boilerplate — check cache, parse schema, return pattern repeated 3x"
+        rule: no-app-duplication
+      - severity: warning
+        file: packages/backend/orchestrator/src/providers/openrouter.ts
+        line: 129
+        message: "Model name parsing duplicated — each provider implements slightly different prefix-removal variant"
+        rule: no-app-duplication
+
+  react:
+    verdict: SKIP
+    skipped: true
+    files_checked: 0
+    findings: []
+    notes: "Backend-only, no .tsx files"
+
+  typescript:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 1
+    findings:
+      - severity: warning
+        file: packages/backend/orchestrator/src/providers/base.ts
+        line: 61
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema"
+        note: "Exception granted: internal implementation contract"
+
+  accessibility:
+    verdict: PASS
+    skipped: true
+    files_checked: 0
+    findings: []
+    notes: "Backend-only, no .tsx files"
+
+total_errors: 3
+total_warnings: 3
+auto_fixable_count: 5
+
+summary:
+  blocking_issues: 3
+  quality_gates_passed: 10
+  quality_gates_failed: 1
+  re_review_iteration: true
+  workers_rerun: 3
+  workers_carried_forward: 7
+  primary_concern: "Code reusability issues with duplicated caching and cache-check patterns across provider implementations"
+  notes: |
+    Iteration 4 selective re-review after Fix Iteration 2. Only 3 workers re-run (reusability, typecheck, build).
+
+    Reusability worker (FAIL - partial resolution):
+    - 3 HIGH severity errors remaining in provider implementations:
+      1. getCachedInstance() pattern duplicated identically across 3 providers (line 97)
+      2. getModel() cache retrieval pattern duplicated 3x (line 125)
+      3. clearCaches() cleanup pattern identical across all 3 providers (line 148)
+    - 2 MEDIUM severity warnings about additional duplication:
+      1. loadConfig() boilerplate pattern repeated 3x (line 53)
+      2. Model name parsing duplicated with variants (line 129)
+
+    Status: 2 of 3 HIGH duplication issues have been partially addressed, but fundamental architectural
+    duplication in cache management remains unresolved.
+
+    Typecheck (PASS): No type errors detected.
+    Build (PASS): @repo/orchestrator builds successfully.
+
+    Carried forward from iteration 3 (all PASS):
+    - lint: 6 files checked, 0 errors, 0 warnings
+    - style: 6 files checked, 0 violations
+    - syntax: 7 files checked, 0 blocking issues
+    - security: 2 low-severity issues (API key handling) - acceptable for phase
+    - react: SKIP - backend-only
+    - typescript: 1 warning (interface vs Zod) - exception granted for internal contract
+    - accessibility: SKIP - backend-only
