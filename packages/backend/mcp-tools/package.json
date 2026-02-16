@@ -25,6 +25,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
     "drizzle-orm": "^0.44.3",
