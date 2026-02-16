@@ -1,0 +1,87 @@
+schema: 1
+story_id: INFR-0050
+timestamp: "2026-02-15T15:45:00Z"
+
+context:
+  parent_story: INFR-0041
+  parent_status: completed
+  depends_on:
+    - INFR-0040
+    - INFR-0041
+  blocks:
+    - INFR-0051
+    - TELE-0010
+
+key_findings:
+  - INFR-0040 provides insertWorkflowEvent() with resilient error handling (catches DB errors, logs warnings)
+  - INFR-0041 provides typed event schemas and helper functions (createStepCompletedEvent, etc.)
+  - @repo/observability provides trace.getActiveSpan() for OTel correlation IDs
+  - Drizzle ORM has batch insert API: db.insert(table).values([...])
+  - ON CONFLICT DO NOTHING on event_id provides idempotency for batch inserts
+  - No existing event buffering or hook patterns in codebase
+
+implementation_locations:
+  - packages/backend/db/src/telemetry-sdk/ (new SDK module)
+  - packages/backend/db/src/workflow-events.ts (existing insertWorkflowEvent function)
+  - packages/backend/db/src/workflow-events/helpers.ts (existing event helpers from INFR-0041)
+  - packages/backend/observability/src/tracing/index.ts (OTel utilities)
+
+constraints:
+  - "Use Zod schemas for all types - never use TypeScript interfaces"
+  - "No barrel files - import directly from source files"
+  - "Use @repo/logger for logging, not console"
+  - "Minimum 45% test coverage (SDK should exceed 80%)"
+  - "Named exports preferred"
+  - "Runtime validation required for all config"
+  - "Event logging must never crash orchestrator (resilient error handling)"
+
+lessons_learned:
+  - Event buffer overflow must be handled gracefully (drop-oldest strategy documented in story)
+  - Extract correlation_id at event creation time, not flush time (span may end)
+  - PostgreSQL param limit ~65535 requires chunking large batches (>6500 events)
+  - Shutdown handlers must flush buffer synchronously with timeout to prevent hanging
+  - Testcontainers provides real PostgreSQL for integration tests
+
+architecture_decisions:
+  - id: ARCH-INFR-0050-001
+    title: "Buffer Overflow Strategy"
+    status: active
+    constraint: "Use 'drop-oldest' strategy (default) with configurable overflowStrategy option"
+    applies_to: ["telemetry-sdk", "event-buffer"]
+    rationale: "Graceful degradation - losing old events is acceptable vs crashing orchestrator or blocking execution"
+
+  - id: ARCH-INFR-0050-002
+    title: "OTel Context Extraction Timing"
+    status: active
+    constraint: "Extract correlation_id from active span at event creation time, not flush time"
+    applies_to: ["telemetry-sdk", "hooks"]
+    rationale: "Active span may end before flush occurs; store trace ID immediately when hook called"
+
+  - id: ARCH-INFR-0050-003
+    title: "Hook Function Return Value"
+    status: active
+    constraint: "Hooks are transparent wrappers - return original operation result unchanged"
+    applies_to: ["telemetry-sdk", "hooks"]
+    rationale: "SDK should not alter operation behavior; use @repo/logger debug mode for debugging instead of returning event_id"
+
+  - id: ARCH-INFR-0050-004
+    title: "SDK Singleton Pattern"
+    status: active
+    constraint: "Single SDK instance per process via initTelemetrySdk() caching"
+    applies_to: ["telemetry-sdk", "init"]
+    rationale: "One event buffer per process simplifies state management"
+
+token_optimization:
+  high_cost_operations:
+    - operation: "Reading full orchestrator node files"
+      typical_tokens: 5000
+      mitigation: "Use Grep to locate relevant functions before Read"
+    - operation: "Reading all INFR-0040/0041 story files"
+      typical_tokens: 10000
+      mitigation: "Only read ACs section from dependencies, not full stories"
+  recommended_patterns:
+    - "Targeted file reads over full files"
+    - "Grep before Read for pattern matching"
+    - "Batch related operations (read multiple related files in parallel)"
+
+warnings: []

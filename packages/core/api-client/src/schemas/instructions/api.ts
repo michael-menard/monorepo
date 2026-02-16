@@ -374,3 +374,63 @@ export const UploadThumbnailResponseSchema = z.object({
 })
 
 export type UploadThumbnailResponse = z.infer<typeof UploadThumbnailResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// File Download URL Response (INST-1105)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const GetFileDownloadUrlResponseSchema = z.object({
+  downloadUrl: z.string().url(),
+  expiresAt: z.string().transform(val => new Date(val)),
+})
+
+export type GetFileDownloadUrlResponse = z.infer<typeof GetFileDownloadUrlResponseSchema>
+
+// ─────────────────────────────────────────────────────────────────────────
+// Upload Session Schemas (INST-1105)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const CreateUploadSessionRequestSchema = z.object({
+  files: z.array(
+    z.object({
+      name: z.string(),
+      size: z.number().int().positive(),
+      mimeType: z.string(),
+      category: z.enum(['instruction', 'parts-list', 'thumbnail', 'image']),
+    }),
+  ),
+  partSizeBytes: z.number().int().positive().optional(),
+})
+
+export type CreateUploadSessionRequest = z.infer<typeof CreateUploadSessionRequestSchema>
+
+export const CreateUploadSessionResponseSchema = z.object({
+  sessionId: lenientUuid,
+  files: z.array(
+    z.object({
+      fileId: lenientUuid,
+      name: z.string(),
+      uploadUrls: z.array(
+        z.object({
+          partNumber: z.number().int(),
+          url: z.string().url(),
+        }),
+      ),
+    }),
+  ),
+  expiresAt: z.string().transform(val => new Date(val)),
+})
+
+export type CreateUploadSessionResponse = z.infer<typeof CreateUploadSessionResponseSchema>
+
+export const CompleteUploadSessionResponseSchema = z.object({
+  mocId: lenientUuid,
+  files: z.array(
+    z.object({
+      fileId: lenientUuid,
+      fileUrl: z.string().url(),
+    }),
+  ),
+})
+
+export type CompleteUploadSessionResponse = z.infer<typeof CompleteUploadSessionResponseSchema>

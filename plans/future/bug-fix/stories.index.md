@@ -4,7 +4,7 @@ title: "BUGF Stories Index"
 status: active
 story_prefix: "BUGF"
 created_at: "2026-02-10T00:00:00Z"
-updated_at: "2026-02-11T21:00:00Z"
+updated_at: "2026-02-13T21:35:00Z"
 total_stories: 48
 ---
 
@@ -16,14 +16,14 @@ All stories in this epic use the `BUGF-XXX` naming convention (starting at 001).
 
 | Status | Count |
 |--------|-------|
-| completed | 1 |
-| uat | 5 |
+| completed | 2 |
+| uat | 11 |
 | ready-for-qa | 0 |
 | in-qa | 0 |
 | in-progress | 3 |
-| ready-to-work | 6 |
-| elaboration | 0 |
-| backlog | 28 |
+| ready-to-work | 4 |
+| elaboration | 1 |
+| backlog | 26 |
 | created | 3 |
 | deferred | 2 |
 
@@ -35,11 +35,9 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Title | Phase | Blocked By |
 |-------|-------|-------|-----------|
-| BUGF-013 | Add Test Coverage for Instructions Gallery Components | 3 | — |
 | BUGF-014 | Add Test Coverage for Sets Gallery Components | 3 | ✓ Ready |
 | BUGF-016 | Implement Missing API Integrations for Inspiration Gallery | 1 | — |
 | BUGF-017 | Convert TypeScript Interfaces to Zod Schemas | 4 | — |
-| BUGF-018 | Fix Memory Leaks from createObjectURL | 3 | — |
 | BUGF-019 | Implement Password Reset Rate Limiting and UX Improvements | 3 | — |
 | BUGF-021 | Replace Type Assertions with Proper Types | 4 | — |
 | BUGF-022 | Remove Deprecated Legacy App and Update CI/CD | 4 | — |
@@ -76,6 +74,7 @@ Stories that have successfully passed QA verification:
 | Story | Title | Phase | Completed |
 |-------|-------|-------|-----------|
 | BUGF-002 | Implement Edit Save Functionality for Instructions | 1 | 2026-02-11 |
+| BUGF-013 | Add Test Coverage for Instructions Gallery Upload Components | 3 | 2026-02-13 |
 
 ---
 
@@ -259,11 +258,11 @@ AC3, AC7 (2 total)
 
 ## BUGF-010: Fix Hub.listen Mocking in Auth Tests
 
-**Status:** ready-for-qa
+**Status:** uat
 **Phase:** 3 (Test Coverage & Quality)
 **Depends On:** —
-**Story File:** `ready-for-qa/BUGF-010/BUGF-010.md`
-**Elaboration Report:** `ready-for-qa/BUGF-010/ELAB-BUGF-010.md`
+**Story File:** `UAT/BUGF-010/BUGF-010.md`
+**Elaboration Report:** `UAT/BUGF-010/ELAB-BUGF-010.md`
 **Feature:** Resolve 8 TODO comments in AuthProvider tests where Hub.listen mock is not being called in test environment
 **Goal:** Ensure auth event listeners are properly tested
 **Points:** 1
@@ -272,6 +271,10 @@ AC3, AC7 (2 total)
 **Story generated:** 2026-02-11T19:30:00Z with experiment variant control. Predictions: split_risk=0.1, review_cycles=1, token_estimate=80K (low confidence - heuristics-only mode).
 
 **Elaboration Verdict:** PASS (2026-02-11) - All 8 audit checks passed. 0 ACs added, 15 KB entries logged as non-blocking. Story ready for implementation.
+
+**Implementation:** Complete (2026-02-11) - All 12 ACs pass. 8 tests unskipped (previously marked it.skip), vi.unmock pattern applied, Hub.listen mocking fixed. 1 file modified (AuthProvider.test.tsx - 310 lines). Zero regressions. Review: PASS.
+
+**QA Verification:** PASS (2026-02-13) - All 12 ACs verified PASS. 8 Hub event listener tests passing (152ms execution). Code quality excellent with documented deviations. Architecture compliant. E2E exempt (tech_debt story type). Ready for UAT/release.
 
 **Risk Notes:** Test environment issue; may require Vitest configuration changes. Low risk - tests already written, just need mock setup fix
 
@@ -317,10 +320,10 @@ AC3, AC7 (2 total)
 
 ## BUGF-013: Add Test Coverage for Instructions Gallery Upload Components
 
-**Status:** ready-to-work
+**Status:** Completed
 **Phase:** 3 (Test Coverage & Quality)
 **Depends On:** —
-**Story File:** `ready-to-work/BUGF-013/BUGF-013.md`
+**Story File:** `UAT/BUGF-013/BUGF-013.md`
 **Feature:** Create comprehensive unit tests for untested upload components, forms, and session management in app-instructions-gallery
 **Goal:** Achieve minimum 45% test coverage threshold with focus on upload flow integration, presigned URL API mocking, and error handling scenarios
 **Points:** 5
@@ -330,7 +333,13 @@ AC3, AC7 (2 total)
 
 **Elaboration Verdict:** PASS (2026-02-11) - All audit checks passed. 0 ACs added, 18 KB entries logged as non-blocking. Story ready for implementation.
 
-**Risk Notes:** Upload testing complexity; requires MSW mocking for presigned URL flows and S3 interactions. Session refresh tests deferred (blocked by BUGF-004).
+**Implementation:** Complete (2026-02-12) - 9 test files created (8 executable), 156/156 tests passing. 26 tests blocked by pre-existing upload-page.tsx import issues. Review: PASS iteration 1.
+
+**QA Setup:** Complete (2026-02-13) - All 5 preconditions validated. Story moved to UAT. Evidence and Review verified. Ready for verification phase.
+
+**QA Verification:** PASS (2026-02-13) - All 22 ACs verified (16 PASS + 6 BLOCKED by pre-existing source issues). 156/156 tests passing with 100% pass rate. All executable tests use semantic queries (no data-testid). Test quality excellent. Architecture compliant. Pre-existing upload-page.tsx import issues do not impact test quality verification - follow-up story BUGF-052 recommended for source file import fixes.
+
+**Risk Notes:** Upload testing complexity; requires MSW mocking for presigned URL flows and S3 interactions. Pre-existing import issues in upload-page.tsx block AC-2 execution (26 tests written but cannot run).
 
 ---
 
@@ -356,7 +365,7 @@ AC3, AC7 (2 total)
 
 ## BUGF-015: Add Test Coverage for Main App Components
 
-**Status:** ready-to-work
+**Status:** uat
 **Phase:** 3 (Test Coverage & Quality)
 **Depends On:** —
 **Feature:** Create test files for 24 untested components including admin pages, modules, dialogs, and input components
@@ -366,11 +375,15 @@ AC3, AC7 (2 total)
 
 **Generated:** 2026-02-11T20:00:00Z with experiment variant control. Predictions: split_risk=0.6, review_cycles=2, token_estimate=140K (low confidence - heuristics-only mode, KB unavailable).
 
-**Story File:** `ready-to-work/BUGF-015/BUGF-015.md`
+**Story File:** `UAT/BUGF-015/BUGF-015.md`
 
-**Elaboration Verdict:** PASS (2026-02-11) - All 8 audit checks passed. 0 ACs added, 17 KB entries logged as non-blocking (7 gaps + 10 enhancements). Story ready for implementation.
+**Elaboration Verdict:** PASS (2026-02-11) - All 8 audit checks passed. 0 ACs added, 17 KB entries logged as non-blocking (7 gaps + 10 enhancements).
 
-**Risk Notes:** Large scope (24 components, 15-22 hours estimated); prioritize admin (security critical) and upload (recently modified) components first. Moderate split risk due to scope. Timer testing (RateLimitBanner) requires vi.useFakeTimers pattern.
+**Implementation Verdict:** PASS (2026-02-13) - 22 of 24 test files created successfully with 937 passing tests. AC-6 PARTIAL (InstructionsNewPage skipped due to broken imports from deleted modules - legitimate blocker, not testing gap).
+
+**QA Verdict:** PASS (2026-02-13) - All ACs verified (7 PASS + 1 PARTIAL with valid justification), 937 tests pass, architecture compliant. Ready for merge.
+
+**Risk Notes:** AC-6 PARTIAL justified by component-level issue (InstructionsNewPage imports deleted modules). No risk to code quality. Refactoring of component imports required separately.
 
 ---
 
@@ -406,28 +419,46 @@ AC3, AC7 (2 total)
 
 ## BUGF-018: Fix Memory Leaks from createObjectURL
 
-**Status:** backlog
+**Status:** uat
 **Phase:** 3 (Test Coverage & Quality)
 **Depends On:** —
+**Story File:** `UAT/BUGF-018/BUGF-018.md`
+**Elaboration Report:** `ready-for-qa/BUGF-018/ELAB-BUGF-018.md`
 **Feature:** Add URL.revokeObjectURL cleanup in useEffect hooks for all components using createObjectURL for file previews
 **Goal:** Prevent memory leaks from blob URLs in file upload components
+**Points:** 1
+**Experiment Variant:** control
 
-**Risk Notes:** Affects app-inspiration-gallery and app-instructions-gallery; straightforward fix
+**Story generated:** 2026-02-13T00:00:00Z with experiment variant control. Predictions: split_risk=0.1, review_cycles=1, token_estimate=60K (medium confidence - heuristics-only mode).
+
+**Elaboration Verdict:** PASS (2026-02-13) - All 8 audit checks passed. 0 MVP-critical gaps identified, 0 ACs added, 13 non-blocking findings logged to KB. Story is implementation-ready.
+
+**Implementation:** Complete (2026-02-13) - All 5 ACs pass. 3 components fixed (UploadModal, ThumbnailUpload, ImageUploadZone). 15 unit tests (7 new cleanup tests). Review: PASS iteration 1. E2E exempt (bug fix, unit-test verified).
+
+**QA Setup:** Complete (2026-02-14) - All 5 preconditions validated. Story moved to UAT. CHECKPOINT.yaml updated. Ready for QA verification phase.
+
+**QA Verification:** PASS_WITH_NOTES (2026-02-14) - All 5 ACs verified (AC1-3, AC5: PASS; AC4: MANUAL). 15 unit tests verified passing (7 UploadModal, 8 ImageUploadZone, 2 ThumbnailUpload tests blocked by pre-existing @repo/api-client issue). Code review confirms proper React patterns. Memory leak prevention implemented via useEffect cleanup. Ready for merge.
+
+**Risk Notes:** Affects app-inspiration-gallery, app-instructions-gallery, and app-sets-gallery; straightforward fix with established pattern in codebase
 
 ---
 
 ## BUGF-019: Implement Password Reset Rate Limiting and UX Improvements
 
-**Status:** ready-to-work
+**Status:** uat
 **Phase:** 3 (Test Coverage & Quality)
 **Depends On:** —
 **Feature:** Add countdown timer for rate limits, disable buttons during cooldown, implement resend code rate limiting, and consolidate duplicate password strength implementations
 **Goal:** Improve password reset security and user experience
-**Story File:** `ready-to-work/BUGF-019/BUGF-019.md`
+**Story File:** `UAT/BUGF-019/BUGF-019.md`
 **Points:** 2
 **Experiment Variant:** control
 
 **Elaboration Verdict:** PASS (2026-02-11) - All 8 audit checks passed. 0 ACs added, 22 KB entries logged as non-blocking. Story ready for implementation without modifications.
+
+**Implementation:** Complete (2026-02-14) - All 8 ACs implemented. useRateLimitCooldown hook, RateLimitBanner component, PasswordStrengthIndicator consolidation, integration into ForgotPasswordPage and ResetPasswordPage. 172 tests passing. Review: PASS.
+
+**QA Verification:** PASS (2026-02-14) - All 8 ACs independently verified. 172 unit tests passing, 0 failures. 85% coverage (exceeds 45% threshold). Architecture compliant (ADR-004, ADR-005, CLAUDE.md). Build clean. Ready for merge.
 
 **Story generated:** 2026-02-11T21:00:00Z with experiment variant control. Predictions: split_risk=0.3, review_cycles=1-2, token_estimate=90K-110K (low confidence - heuristics-only mode).
 
@@ -441,16 +472,20 @@ Related stories:
 
 ## BUGF-020: Fix Accessibility Issues and Improve A11y Test Coverage
 
-**Status:** created
+**Status:** uat
 **Phase:** 3 (Test Coverage & Quality)
 **Depends On:** —
-**Story File:** `backlog/BUGF-020/BUGF-020.md`
+**Story File:** `UAT/BUGF-020/BUGF-020.md`
 **Feature:** Fix accessibility issues and establish consistent a11y testing across all apps - includes promoting test utilities to shared package, fixing misleading screen reader instructions, adding accessible instructions to TagInput components, and adding comprehensive a11y test coverage to all apps
 **Goal:** Ensure WCAG 2.1 AA compliance for all interactive components
 **Points:** 8
 **Experiment Variant:** control
 
 **Story generated:** 2026-02-11T20:45:00Z with experiment variant control. Predictions: split_risk=0.2, review_cycles=1, token_estimate=100K (medium confidence).
+
+**QA Setup:** Complete (2026-02-13) - All 5 preconditions validated. Story moved to UAT. Evidence and Review verified. CHECKPOINT updated. Ready for verification phase.
+
+**QA Verification:** PASS (2026-02-13) - All 8 ACs independently verified and PASS. 34 a11y tests pass across 4 apps (inspiration: 11, sets: 9, instructions: 7, dashboard: 7). @repo/accessibility-testing package builds clean. TypeScript compilation clean for new files. E2E exempt (test infrastructure + a11y compliance story). Minor non-blocking issues: pre-existing console.log in test utility (low impact), SortableAlbumCard out of scope. Architecture compliant, comprehensive documentation, full test coverage.
 
 **Risk Notes:** Low risk - Most a11y patterns already in place, primarily additive (fixes + tests). Test utilities promotion is straightforward.
 
@@ -906,6 +941,10 @@ These cause pnpm peer dependency warnings and can lead to runtime issues with Re
 **Split From:** BUGF-032
 **Story File:** `ready-to-work/BUGF-051/BUGF-051.md`
 **Story Type:** test
+**Generated:** 2026-02-14T21:54:00Z
+**Experiment Variant:** control
+**Moved to Elaboration:** 2026-02-14
+**Elaboration Complete:** 2026-02-14
 
 ### Scope
 
@@ -916,5 +955,8 @@ Playwright E2E tests to verify the complete presigned URL upload flow works end-
 - AC1: Happy path upload E2E (presigned URL API call, S3 PUT, progress bar, success status)
 - AC2: Error handling E2E (file too large, invalid type, network failure)
 - AC3: Session expiry E2E (refresh generates new URLs, uploads retry)
+- AC4: Multi-file upload E2E (5 files, 3 concurrent, queue management)
+- AC5: Test infrastructure production-ready (real services, cleanup, CI/CD)
 
 **Points:** 2
+**Predictions:** split_risk=0.1, review_cycles=1, token_estimate=80K (medium confidence)

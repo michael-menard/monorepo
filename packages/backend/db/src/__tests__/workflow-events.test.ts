@@ -73,7 +73,13 @@ describe('insertWorkflowEvent', () => {
       workflowName: 'dev-implement-story',
       agentRole: 'dev-implementation-leader',
       status: 'in-progress',
-      payload: { from: 'backlog', to: 'in-progress', reason: 'started implementation' },
+      payload: {
+        from_state: 'backlog',
+        to_state: 'in-progress',
+        item_id: 'INFR-0040',
+        item_type: 'story',
+        reason: 'started implementation',
+      },
     }
 
     await insertWorkflowEvent(event)
@@ -89,7 +95,13 @@ describe('insertWorkflowEvent', () => {
         workflowName: 'dev-implement-story',
         agentRole: 'dev-implementation-leader',
         status: 'in-progress',
-        payload: { from: 'backlog', to: 'in-progress', reason: 'started implementation' },
+        payload: {
+          from_state: 'backlog',
+          to_state: 'in-progress',
+          item_id: 'INFR-0040',
+          item_type: 'story',
+          reason: 'started implementation',
+        },
       }),
     )
   })
@@ -124,24 +136,27 @@ describe('insertWorkflowEvent', () => {
 
   it('should handle empty JSONB payload', async () => {
     const eventId = randomUUID()
-    await insertWorkflowEvent({
-      eventId,
-      eventType: 'step_completed',
-      payload: {},
-    })
-
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
+    // Empty payload is now invalid - must have required fields or be null
+    // This test now validates that we reject empty payloads
+    await expect(
+      insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
         payload: {},
       }),
-    )
+    ).rejects.toThrow(/Invalid payload for event_type 'step_completed'/)
   })
 
-  it('should handle large JSONB payload', async () => {
+  it('should handle large JSONB payload with valid schema', async () => {
     const eventId = randomUUID()
-    const largePayload: Record<string, unknown> = {}
-    for (let i = 0; i < 1000; i++) {
-      largePayload[`key_${i}`] = `value_${i}_${'x'.repeat(100)}`
+    // Create a large but valid payload for step_completed
+    const largePayload = {
+      step_name: 'test-step-with-long-name-' + 'x'.repeat(100),
+      duration_ms: 123456789,
+      tokens_used: 999999,
+      model: 'claude-sonnet-4.5-with-long-identifier-' + 'x'.repeat(100),
+      status: 'success' as const,
+      error_message: 'A very long error message: ' + 'x'.repeat(1000),
     }
 
     await insertWorkflowEvent({
@@ -239,5 +254,332 @@ describe('insertWorkflowEvent', () => {
         eventVersion: 1,
       }),
     )
+  })
+
+  // INFR-0041 AC-14: Tests for payload validation and new metadata columns
+
+  describe('INFR-0041: Payload Validation (AC-9)', () => {
+    it('should validate item_state_changed payload successfully', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        from_state: 'backlog',
+        to_state: 'in-progress',
+        item_id: 'INFR-0041',
+        item_type: 'story',
+        reason: 'user action',
+      }
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'item_state_changed',
+        payload,
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload,
+        }),
+      )
+    })
+
+    it('should validate step_completed payload successfully', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        step_name: 'elab-story',
+        duration_ms: 45000,
+        tokens_used: 12500,
+        model: 'claude-sonnet-4.5',
+        status: 'success',
+      }
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        payload,
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+    })
+
+    it('should validate story_changed payload successfully', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        change_type: 'updated',
+        field_changed: 'status',
+        old_value: 'backlog',
+        new_value: 'in-progress',
+        item_id: 'INFR-0041',
+      }
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'story_changed',
+        payload,
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+    })
+
+    it('should validate gap_found payload successfully', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        gap_type: 'missing_ac',
+        gap_description: 'No AC for error handling',
+        severity: 'high',
+        item_id: 'INFR-0041',
+        workflow_name: 'elab-story',
+      }
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'gap_found',
+        payload,
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+    })
+
+    it('should validate flow_issue payload successfully', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        issue_type: 'tool_failure',
+        issue_description: 'Git push failed',
+        recovery_action: 'retry',
+        workflow_name: 'dev-implement-story',
+        agent_role: 'dev-implementation-leader',
+      }
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'flow_issue',
+        payload,
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+    })
+
+    it('should throw validation error for invalid item_state_changed payload', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        from_state: 'backlog',
+        // Missing required to_state, item_id, item_type
+      }
+
+      await expect(
+        insertWorkflowEvent({
+          eventId,
+          eventType: 'item_state_changed',
+          payload,
+        }),
+      ).rejects.toThrow(/Invalid payload for event_type 'item_state_changed'/)
+    })
+
+    it('should throw validation error for invalid step_completed status enum', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        step_name: 'test-step',
+        duration_ms: 1000,
+        status: 'pending', // Invalid enum value
+      }
+
+      await expect(
+        insertWorkflowEvent({
+          eventId,
+          eventType: 'step_completed',
+          payload,
+        }),
+      ).rejects.toThrow(/Invalid payload for event_type 'step_completed'/)
+    })
+
+    it('should throw validation error for invalid story_changed change_type enum', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        change_type: 'modified', // Invalid enum value
+        field_changed: 'status',
+        item_id: 'INFR-0041',
+      }
+
+      await expect(
+        insertWorkflowEvent({
+          eventId,
+          eventType: 'story_changed',
+          payload,
+        }),
+      ).rejects.toThrow(/Invalid payload for event_type 'story_changed'/)
+    })
+
+    it('should throw validation error for invalid gap_found severity enum', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        gap_type: 'missing_ac',
+        gap_description: 'Test',
+        severity: 'critical', // Invalid enum value
+        item_id: 'INFR-0041',
+        workflow_name: 'test-workflow',
+      }
+
+      await expect(
+        insertWorkflowEvent({
+          eventId,
+          eventType: 'gap_found',
+          payload,
+        }),
+      ).rejects.toThrow(/Invalid payload for event_type 'gap_found'/)
+    })
+
+    it('should throw validation error for invalid flow_issue issue_type enum', async () => {
+      const eventId = randomUUID()
+      const payload = {
+        issue_type: 'unknown', // Invalid enum value
+        issue_description: 'Test',
+        workflow_name: 'test-workflow',
+      }
+
+      await expect(
+        insertWorkflowEvent({
+          eventId,
+          eventType: 'flow_issue',
+          payload,
+        }),
+      ).rejects.toThrow(/Invalid payload for event_type 'flow_issue'/)
+    })
+
+    it('should allow NULL payload (backward compatibility)', async () => {
+      const eventId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        payload: null,
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: null,
+        }),
+      )
+    })
+
+    it('should allow undefined payload (backward compatibility)', async () => {
+      const eventId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+      })
+
+      expect(mockInsert).toHaveBeenCalledTimes(1)
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: null,
+        }),
+      )
+    })
+  })
+
+  describe('INFR-0041: Metadata Columns (AC-6, AC-7, AC-8)', () => {
+    it('should accept NULL for all metadata columns', async () => {
+      const eventId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        correlationId: null,
+        source: null,
+        emittedBy: null,
+      })
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          correlationId: null,
+          source: null,
+          emittedBy: null,
+        }),
+      )
+    })
+
+    it('should accept valid UUID for correlation_id (AC-6)', async () => {
+      const eventId = randomUUID()
+      const correlationId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        correlationId,
+      })
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          correlationId,
+        }),
+      )
+    })
+
+    it('should accept valid text for source (AC-7)', async () => {
+      const eventId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        source: 'orchestrator',
+      })
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: 'orchestrator',
+        }),
+      )
+    })
+
+    it('should accept valid text for emitted_by (AC-8)', async () => {
+      const eventId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        emittedBy: 'dev-implementation-leader',
+      })
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emittedBy: 'dev-implementation-leader',
+        }),
+      )
+    })
+
+    it('should accept all metadata columns together', async () => {
+      const eventId = randomUUID()
+      const correlationId = randomUUID()
+
+      await insertWorkflowEvent({
+        eventId,
+        eventType: 'step_completed',
+        correlationId,
+        source: 'langgraph-node',
+        emittedBy: 'pm-story-seed-agent',
+      })
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          correlationId,
+          source: 'langgraph-node',
+          emittedBy: 'pm-story-seed-agent',
+        }),
+      )
+    })
+
+    it('should throw validation error for invalid correlation_id UUID format', async () => {
+      const eventId = randomUUID()
+
+      await expect(
+        insertWorkflowEvent({
+          eventId,
+          eventType: 'step_completed',
+          correlationId: 'not-a-uuid',
+        }),
+      ).rejects.toThrow()
+    })
   })
 })

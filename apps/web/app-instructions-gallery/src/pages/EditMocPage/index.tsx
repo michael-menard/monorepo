@@ -14,7 +14,7 @@ import { Button, showSuccessToast, cn, Skeleton } from '@repo/app-component-libr
 import { useUpdateMocMutation, useGetMocDetailQuery } from '@repo/api-client/rtk/instructions-api'
 import type { UpdateMocInput, CreateMocInput } from '@repo/api-client/schemas/instructions'
 import { MocForm } from '../../components/MocForm'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
+import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 
 /**
  * INST-1108 FIX: Adapter to convert UpdateMocInput to CreateMocInput format

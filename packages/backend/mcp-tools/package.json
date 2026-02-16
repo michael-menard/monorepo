@@ -1,0 +1,45 @@
+{
+  "name": "@repo/mcp-tools",
+  "version": "1.0.0",
+  "description": "MCP tools infrastructure for session management and workflow operations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./session-management": {
+      "types": "./dist/session-management/index.d.ts",
+      "default": "./dist/session-management/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@repo/logger": "workspace:*",
+    "drizzle-orm": "^0.44.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "25.2.1",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "mcp",
+    "tools",
+    "session-management",
+    "workflow",
+    "langgraph"
+  ]
+}

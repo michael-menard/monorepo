@@ -1,0 +1,96 @@
+schema: 1
+story_id: LNGG-0070
+timestamp: "2026-02-15T12:31:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit:
+    pass: 48
+    fail: 0
+  integration:
+    pass: 48
+    fail: 0
+  e2e:
+    status: exempt
+    reason: "Backend infrastructure story - no frontend or API endpoints"
+
+coverage: 96.5
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "workflow-lifecycle.integration.test.ts - 7 tests passing. Sequential stage transitions validated with StoryFileAdapter + StageMovementAdapter + IndexAdapter. Tests invalid transitions, idempotent moves, content preservation, missing story errors, elapsed time tracking, index metrics updates."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "checkpoint-resume.integration.test.ts - 8 tests passing. Checkpoint save/resume at all phases (setup→plan→execute→proof), blocked/unblocked state management, checkpoint+story coexistence, iteration preservation, concurrent checkpoint read safety."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "decision-callbacks.integration.test.ts - 9 tests passing. Auto-decision with rule matching, default fallback, integration with story file updates, noop callback, registry built-in callbacks, custom callback registration, error handling, context propagation."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "kb-writer.integration.test.ts - 9 tests passing. Lesson write with story tagging, duplicate detection/skip, batch writes, no-op writer modes, factory patterns, KB writes alongside story operations without interference."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "real-story-compatibility.integration.test.ts - 10 tests passing. Legacy and v2 format validation, normalization, round-trip integrity, fixture compatibility, rejection of invalid formats, batch reads with mixed formats."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "performance-benchmarks.integration.test.ts - 5 tests passing. All benchmarks well within advisory targets: Story read p95 0.32ms (<50ms ✓), write p95 0.49ms (<100ms ✓), stage movement p95 1.03ms (<200ms ✓), checkpoint write p95 0.67ms (<100ms ✓), checkpoint read p95 0.28ms (<50ms ✓), batch read 20 stories 1.66ms total."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "48 integration tests across 6 files provide comprehensive adapter coverage. Error paths tested: missing files, invalid transitions, validation failures, duplicate KB entries, no-op fallback. All existing adapter unit tests continue passing."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Quality comparison using 5-point checklist: (1) YAML fields present ✓, (2) No Zod errors ✓, (3) Structure valid for legacy/v2 formats ✓, (4) Checkpoint schema valid ✓, (5) Index metrics accurate ✓. Generated artifacts match Claude Code baseline quality."
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Integration test pattern with temp directories (fs.mkdtemp) and afterEach cleanup prevents test pollution and provides reliable isolation for file-based testing"
+    category: pattern
+    tags: ["testing", "integration", "backend"]
+
+  - lesson: "Performance benchmarks with p95 percentiles provide more stable metrics than average or max values. Use large sample sizes (50-100) and document environment details"
+    category: pattern
+    tags: ["testing", "performance", "backend"]
+
+  - lesson: "Backward compatibility testing for both legacy and v2 formats catches schema regressions early. Use passthrough() in Zod schemas to allow unknown fields"
+    category: pattern
+    tags: ["testing", "backward-compatibility", "backend"]
+
+  - lesson: "Integration tests should focus on adapter combinations and workflow scenarios, while unit tests focus on individual adapter functionality. This separation provides clear test purpose and better coverage"
+    category: pattern
+    tags: ["testing", "architecture", "backend"]
+
+gate:
+  decision: PASS
+  reason: "All 8 ACs verified with comprehensive integration test evidence. 48/48 tests pass with 96.5% coverage. Performance benchmarks within targets. Architecture and quality standards met. No blocking issues."
+  blocking_issues: []
+  timestamp: "2026-02-15T12:31:00Z"
+
+tokens:
+  in: 41374
+  out: 1000

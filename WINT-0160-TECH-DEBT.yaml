@@ -1,0 +1,241 @@
+technical_debt:
+  t_shirt_size: S
+  size_rationale: |
+    This is a well-structured node implementation with comprehensive testing (11 test cases),
+    proper Zod schema validation, and clear documentation. The primary concerns are around
+    subprocess interaction patterns and hardcoded assumptions. Overall maintenance burden is
+    low-to-medium due to dependency on external subprocess behavior and file system I/O patterns.
+  maintenance_burden: medium
+
+  findings:
+    - id: DEBT-001
+      severity: medium
+      finding: |
+        Subprocess spawning uses hardcoded 'claude' command with shell: true.
+
+        Location: doc-sync.ts, line 100
+        Code: spawn('claude', ['doc-sync', ...args], { cwd: workingDir, shell: true })
+
+        Issues:
+        - No verification that 'claude' command is in PATH
+        - shell: true is a security consideration for any user-controlled input
+        - Comment at line 98-99 acknowledges this is a placeholder ("In a real implementation...")
+        - No timeout mechanism for subprocess execution
+        - Comment suggests the actual implementation is deferred
+      estimated_effort: small
+      suggested_action: |
+        1. Document that this requires 'claude' CLI to be installed and in PATH
+        2. Add timeout to child process (e.g., 30s default with config override)
+        3. Consider environment validation at node startup
+        4. If subprocess execution is production-critical, add health check or alternative implementation
+        5. Add explicit note in docstring about external dependency requirement
+
+    - id: DEBT-002
+      severity: medium
+      finding: |
+        SYNC-REPORT.md parsing uses regex patterns that are lenient and may accept malformed input.
+
+        Location: doc-sync.ts, lines 148-154
+        Code: Uses /Total files changed:\s*(\d+)/i and similar patterns with case-insensitive matching
+
+        Issues:
+        - No validation that counts make semantic sense (e.g., negative after parseInt)
+        - Case-insensitive matching may accept "TOTAL FILES CHANGED:" or variations
+        - Missing sections default to 0 with warnings, but no way to distinguish:
+          * "Tool didn't run" (all zero)
+          * "Tool ran, no changes" (legitimate all zero)
+        - [DRAFT] vs [APPLIED] checking is simplistic: /\[DRAFT\]/i anywhere in document
+        - No validation that parsed counts are consistent (e.g., filesChanged > sectionsUpdated)
+      estimated_effort: medium
+      suggested_action: |
+        1. Add strict count validation (no negative numbers, reasonable bounds check)
+        2. Differentiate missing sections from zero values in return type
+        3. Consider parsing SYNC-REPORT.md as structured data (YAML, JSON) instead of regex
+        4. Add validation that count relationships make sense
+        5. Log all parsed values at debug level for easier troubleshooting
+
+    - id: DEBT-003
+      severity: low
+      finding: |
+        Exit code semantics are implicit and partially documented.
+
+        Location: doc-sync.ts, lines 212-214, 233-234
+        Code: Treats exit code 1 as potentially valid in check-only mode, all others as errors
+
+        Issues:
+        - Exit code meaning depends on config (exit code 1 = success in check-only, failure otherwise)
+        - No documentation of what each exit code means (0=success, 1=out-of-sync?, 2=error?)
+        - Comment explains the logic but could be clearer in code
+        - If subprocess behavior changes, this logic may become stale
+      estimated_effort: small
+      suggested_action: |
+        1. Create enum or constant for exit codes: EXIT_CODE_SUCCESS=0, EXIT_CODE_OUT_OF_SYNC=1, etc.
+        2. Add explicit subprocess contract documentation
+        3. Consider making exit code mapping configurable
+        4. Add integration test with real 'claude doc-sync' command (if available)
+
+    - id: DEBT-004
+      severity: low
+      finding: |
+        No timeout handling for subprocess or file I/O operations.
+
+        Location: doc-sync.ts, executeDocSyncCommand() and parseSyncReport()
+
+        Issues:
+        - spawn() call has no timeout, could hang indefinitely
+        - readFile() call could hang on large/corrupted files
+        - If doc-sync command hangs, graph execution stalls with no recovery
+        - No per-step timeout, only overall node timeout from factory
+      estimated_effort: small
+      suggested_action: |
+        1. Add explicit timeout to spawn() using AbortController or similar
+        2. Add timeout to readFile() operation
+        3. Document expected execution time and timeout values
+        4. Consider per-step timeouts in addition to overall node timeout
+        5. Add telemetry for execution time to detect performance regressions
+
+    - id: DEBT-005
+      severity: low
+      finding: |
+        Test mocks for spawn are incomplete/realistic.
+
+        Location: __tests__/doc-sync.test.ts, lines 145-153
+        Code: Mock child process event handlers don't match real child_process behavior exactly
+
+        Issues:
+        - Real spawn() returns EventEmitter with on(), but mocks use vi.fn() callbacks
+        - stdout/stderr are Streams in real code, mocks are simple { on: vi.fn() }
+        - No test covers actual stream data buffering edge cases
+        - Mock at line 146 returns on: vi.fn() but doesn't handle multiple event listeners
+        - Tests don't verify stdout/stderr are properly accumulated
+      estimated_effort: small
+      suggested_action: |
+        1. Create realistic spawn() mock helper or use library like child-process-mock
+        2. Add test for large stdout/stderr output (multi-megabyte)
+        3. Add test for stream events arriving in unusual patterns
+        4. Test that stderr is captured even when stdout is empty
+        5. Consider integration test with real subprocess if possible
+
+    - id: DEBT-006
+      severity: low
+      finding: |
+        State immutability is reliant on updateState() helper, not structurally enforced.
+
+        Location: doc-sync.ts, lines 216, 236, 246
+        Code: Returns updateState({docSync: ...}) pattern, test verifies immutability at line 468
+
+        Issues:
+        - No TypeScript readonly types to prevent accidental mutation
+        - If updateState() is not implemented correctly, state could be mutated
+        - Pattern depends on runtime correctness of helper function
+        - Test covers this (line 438-474) but it's not compile-time safe
+      estimated_effort: small
+      suggested_action: |
+        1. Document updateState() contract explicitly
+        2. Consider using Readonly<> or as const patterns for state returns
+        3. Add type-level tests or utilities to enforce immutability
+        4. Review updateState() implementation for correctness
+
+    - id: DEBT-007
+      severity: low
+      finding: |
+        Partial DocSyncResult type is used in parseSyncReport() return, creates refactoring risk.
+
+        Location: doc-sync.ts, line 143
+        Code: async function parseSyncReport(): Promise<Omit<DocSyncResult, 'success'>>
+
+        Issues:
+        - Using Omit<> to exclude 'success' field
+        - If DocSyncResult fields change, this function signature doesn't auto-update
+        - Caller must know to add success field (line 237-240)
+        - Increases cognitive load and refactoring risk
+      estimated_effort: small
+      suggested_action: |
+        1. Create a ParsedSyncReport type explicitly listing all parsed fields
+        2. Avoid Omit<> pattern - use explicit types
+        3. Consider creating builder pattern for DocSyncResult construction
+        4. Add compile-time exhaustiveness check
+
+    - id: DEBT-008
+      severity: low
+      finding: |
+        Error message accumulation in errors array is simplistic.
+
+        Location: doc-sync.ts, lines 225, 255
+        Code: errors: [`doc-sync command failed with exit code ${exitCode}`, stderr]
+
+        Issues:
+        - Combines structured error (exit code) with unstructured stderr
+        - stderr could be very large (MB of output)
+        - No way to distinguish error types (subprocess error vs file I/O error vs parse error)
+        - Error array loses context about which step failed
+      estimated_effort: small
+      suggested_action: |
+        1. Add explicit error type/category to DocSyncResult
+        2. Truncate stderr to first 1KB and add "..." if truncated
+        3. Create structured error objects instead of strings
+        4. Add error classification (SUBPROCESS_ERROR, FILE_NOT_FOUND, PARSE_ERROR, etc.)
+
+    - id: DEBT-009
+      severity: low
+      finding: |
+        Documentation mentions /doc-sync command but actual behavior may differ.
+
+        Location: doc-sync.ts, lines 2-9, 98-99
+        Comments and JSDoc reference /doc-sync command, but implementation spawns 'claude doc-sync'
+
+        Issues:
+        - Inconsistency between documented behavior and actual implementation
+        - Comment says "In a real implementation, this would invoke Claude Code's /doc-sync command"
+        - This IS the implementation, so comment is outdated
+        - No clarity on whether this is MVP or placeholder
+      estimated_effort: small
+      suggested_action: |
+        1. Update module docstring to clarify current implementation
+        2. Rename comment to reflect actual behavior
+        3. Add FIXME or TODO if this is placeholder for future work
+        4. Document exact command being spawned
+        5. Add version requirement for 'claude' CLI tool
+
+    - id: DEBT-010
+      severity: low
+      finding: |
+        GraphStateWithDocSync interface uses optional docSync field, but node always sets it.
+
+        Location: doc-sync.ts, lines 66-69
+        Code: interface GraphStateWithDocSync { docSync?: DocSyncResult }
+
+        Issues:
+        - Optional field (docSync?) but docSyncImpl always returns it (never undefined)
+        - Callers can't distinguish "node not run" from "node run with empty result"
+        - Type system doesn't enforce that docSync is always present after node execution
+      estimated_effort: small
+      suggested_action: |
+        1. Make docSync field required in return type of docSyncNode
+        2. Create separate "optional docSync" type for input state
+        3. Document state lifecycle (before/after node execution)
+        4. Consider using discriminated union for graph state transitions
+
+summary: |
+  The WINT-0160 doc-sync node implementation is clean, well-tested, and follows the project's
+  patterns (Zod schemas, proper typing, comprehensive test coverage). The primary maintenance
+  concerns are around subprocess interaction patterns, lenient file parsing, and missing
+  timeout mechanisms. All issues are manageable with small-to-medium effort updates.
+
+  No blocking issues prevent deployment, but the identified items should be addressed before
+  this becomes production-critical infrastructure.
+
+recommendations:
+  immediate:
+    - Add subprocess timeout handling (DEBT-004)
+    - Document 'claude' CLI dependency requirement (DEBT-001)
+
+  short_term:
+    - Improve SYNC-REPORT.md parsing robustness (DEBT-002)
+    - Add explicit exit code documentation (DEBT-003)
+    - Fix subprocess mock realism (DEBT-005)
+
+  long_term:
+    - Consider structured SYNC-REPORT.md format (DEBT-002)
+    - Add error type classification system (DEBT-008)
+    - Enforce state immutability at type level (DEBT-006)

@@ -1,0 +1,62 @@
+schema: 1
+story_id: "BUGF-020"
+timestamp: "2026-02-13T20:30:00Z"
+
+lessons:
+  - title: "Zod-First Types Required"
+    summary: "All types must be inferred from Zod schemas, never use TypeScript interfaces"
+    context: "Per CLAUDE.md project standards"
+    recommendation: "Define schemas first, then use z.infer<typeof Schema>"
+    tags: ["typescript", "zod", "types"]
+
+  - title: "No Barrel Files"
+    summary: "Direct imports from source files are required, no index.ts re-exports"
+    context: "Per CLAUDE.md project standards"
+    recommendation: "Import directly from component files, not index.ts barrels"
+    tags: ["imports", "structure"]
+
+  - title: "A11y Test Utilities Already Exist"
+    summary: "Wishlist-gallery has comprehensive a11y test utilities that can be promoted to shared package"
+    context: "Found in apps/web/app-wishlist-gallery/src/test/a11y/"
+    recommendation: "Reuse these proven utilities rather than creating new ones"
+    tags: ["a11y", "testing", "reuse"]
+
+  - title: "Misleading Drag Handle Instructions"
+    summary: "Sortable cards mention 'Press Space to start dragging' but KeyboardSensor is not implemented"
+    context: "Lines 138-140 in SortableWishlistCard/index.tsx"
+    recommendation: "Remove keyboard drag references, clarify pointer/touch-only interaction"
+    tags: ["a11y", "drag-and-drop", "screen-reader"]
+
+  - title: "TagInput Missing Accessible Instructions"
+    summary: "TagInput supports Enter/Backspace but doesn't announce to screen readers"
+    context: "sets-gallery and wishlist-gallery TagInput components"
+    recommendation: "Add aria-describedby with hidden instructions element"
+    tags: ["a11y", "forms", "screen-reader"]
+
+  - title: "Package Structure for Testing Utilities"
+    summary: "Testing packages should include dependencies: @testing-library/react, axe-core, vitest"
+    context: "Pattern from @repo/accessibility package.json"
+    recommendation: "Follow existing package patterns for peer dependencies"
+    tags: ["packages", "testing", "structure"]
+
+architectural_decisions: []
+
+related_adrs: []
+
+domain_context:
+  area: "accessibility"
+  complexity: "moderate"
+  dependencies:
+    - "@repo/accessibility"
+    - "@repo/app-component-library"
+    - "@repo/gallery"
+    - "vitest"
+    - "axe-core"
+    - "@testing-library/react"
+
+notes:
+  - "AC3 requires creating new @repo/accessibility-testing package"
+  - "AC4-AC7 require new test directories in each app: src/test/a11y/__tests__/"
+  - "AC8 requires audit + documentation, not code changes"
+  - "All test utilities already exist and work well, just need to be promoted and reused"
+  - "Story is primarily additive, low risk of breaking existing functionality"

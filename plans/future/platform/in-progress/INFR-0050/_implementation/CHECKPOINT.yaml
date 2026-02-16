@@ -1,0 +1,13 @@
+schema: 1
+story_id: INFR-0050
+feature_dir: /Users/michaelmenard/Development/monorepo/plans/future/platform
+timestamp: '2026-02-15T15:45:00Z'
+
+current_phase: plan
+last_successful_phase: setup
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false

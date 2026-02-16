@@ -1,0 +1,251 @@
+schema: 1
+story_id: "KBAR-0010"
+version: 1
+timestamp: "2026-02-14T21:26:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "KBAR schema namespace created in PostgreSQL"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0016_worried_black_tarantula.sql"
+        description: "Migration creates CREATE SCHEMA \"kbar\" statement (line 1)"
+
+  - ac_id: "AC-2"
+    ac_text: "Story Management tables defined (stories, story_states, story_dependencies)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "Stories table defined with epic, phase, status indexes (lines 113-149)"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests validate stories, story_states, story_dependencies table structure"
+
+  - ac_id: "AC-3"
+    ac_text: "Artifact tables defined with sync state tracking"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "Artifacts table with checksum field (lines 241-275), artifact_versions (lines 283-321), artifact_content_cache (lines 329-361)"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests validate artifact tables and checksum tracking"
+
+  - ac_id: "AC-4"
+    ac_text: "Sync state tables defined for conflict resolution"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "sync_events (lines 373-421), sync_conflicts (lines 429-475), sync_checkpoints (lines 483-518) tables defined"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests validate sync state tables and conflict resolution"
+
+  - ac_id: "AC-5"
+    ac_text: "Index generation tables defined"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "index_metadata (lines 530-567) with hierarchical parent FK, index_entries (lines 575-610) tables defined"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests validate index tables and hierarchical structure"
+
+  - ac_id: "AC-6"
+    ac_text: "All enums defined in public schema with kbar_ prefix"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "6 enums defined: kbar_story_phase, kbar_artifact_type, kbar_sync_status, kbar_dependency_type, kbar_story_priority, kbar_conflict_resolution (lines 46-95)"
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0016_worried_black_tarantula.sql"
+        description: "Enums created in public schema (lines 3-8)"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests verify all 6 enums with kbar_ prefix"
+
+  - ac_id: "AC-7"
+    ac_text: "Drizzle migration generated and applied successfully"
+    status: PARTIAL
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0016_worried_black_tarantula.sql"
+        description: "Migration file generated with CREATE SCHEMA, enums, tables, indexes, FKs"
+      - type: command
+        command: "pnpm db:generate"
+        result: "SUCCESS"
+
+  - ac_id: "AC-8"
+    ac_text: "Schema exported from packages/backend/database-schema/src/schema/index.ts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "KBAR schema, enums, tables, relations, and Zod schemas exported (lines 947-1030)"
+      - type: command
+        command: "pnpm tsc --noEmit"
+        result: "SUCCESS"
+
+  - ac_id: "AC-9"
+    ac_text: "Zod schemas auto-generated and exported"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "Insert and Select Zod schemas for all 11 tables using createInsertSchema/createSelectSchema (lines 731-802)"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "31 Zod validation tests verify required/nullable fields for all tables"
+
+  - ac_id: "AC-10"
+    ac_text: "All foreign keys indexed for query performance"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0016_worried_black_tarantula.sql"
+        description: "All FK columns indexed: story_states_story_id_idx, artifacts_story_id_idx, etc. (lines 171-214)"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests document FK indexes for all tables"
+
+  - ac_id: "AC-11"
+    ac_text: "Drizzle relations defined for all table relationships"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/kbar.ts"
+        description: "Relations defined for stories→artifacts, stories→story_states, stories→story_dependencies, artifacts→artifact_versions (lines 623-726)"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+        description: "Unit tests verify all relations are defined correctly"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/schema/kbar.ts"
+    action: created
+    lines: 802
+    description: "KBAR schema with 11 tables, 6 enums, indexes, FK constraints, relations, and Zod schemas"
+
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modified
+    lines: 83
+    description: "Added KBAR schema exports (schema namespace, enums, tables, relations, Zod schemas)"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0016_worried_black_tarantula.sql"
+    action: created
+    lines: 214
+    description: "Generated migration with CREATE SCHEMA, 6 enums, 11 tables, 12 FK constraints, 47 indexes"
+
+  - path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    action: created
+    lines: 429
+    description: "Comprehensive unit tests for KBAR schema (46 tests covering all ACs)"
+
+  - path: "packages/backend/db/src/schema.ts"
+    action: modified
+    lines: 3
+    description: "Added comment about KBAR schemas being available from database-schema package"
+
+commands_run:
+  - command: "pnpm tsc --noEmit"
+    result: SUCCESS
+    timestamp: "2026-02-14T21:25:00Z"
+
+  - command: "pnpm db:generate"
+    result: SUCCESS
+    output: "Migration file created: src/migrations/app/0016_worried_black_tarantula.sql"
+    timestamp: "2026-02-14T21:19:00Z"
+
+  - command: "pnpm test"
+    result: SUCCESS
+    output: "163 passed (46 KBAR schema tests + 117 existing tests)"
+    timestamp: "2026-02-14T21:25:00Z"
+
+  - command: "pnpm eslint --fix packages/backend/database-schema/src/schema/kbar.ts"
+    result: SUCCESS
+    output: "Fixed 2 Prettier formatting errors (CR-001: enum array formatting, CR-002: uniqueIndex formatting)"
+    timestamp: "2026-02-14T21:31:00Z"
+    fixes_applied:
+      - issue_id: CR-001
+        file: "packages/backend/database-schema/src/schema/kbar.ts"
+        line: 101
+        fix: "kbarStoryPriorityEnum array formatted to single line"
+      - issue_id: CR-002
+        file: "packages/backend/database-schema/src/schema/kbar.ts"
+        line: 493
+        fix: "checkpointNameIdx uniqueIndex formatted to single line"
+
+  - command: "pnpm eslint packages/backend/database-schema/src/schema/kbar.ts"
+    result: SUCCESS
+    output: "No errors - all formatting issues resolved"
+    timestamp: "2026-02-14T21:31:01Z"
+
+  - command: "pnpm test (post-fix verification)"
+    result: SUCCESS
+    output: "163 passed (46 KBAR schema tests + 117 existing tests) - no regressions"
+    timestamp: "2026-02-14T21:31:01Z"
+
+test_summary:
+  unit: { pass: 46, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra"
+
+notable_decisions:
+  - "Followed WINT schema pattern for namespace isolation using pgSchema('kbar')"
+  - "Used `: any` cast for self-referencing FK in indexMetadata to avoid TypeScript circular reference error"
+  - "Defined all enums in public schema with kbar_ prefix for cross-namespace reusability"
+  - "Applied CASCADE delete for artifacts, story_states, story_dependencies referencing stories"
+  - "Used JSONB metadata columns for extensible story and artifact metadata"
+  - "All FK columns indexed for query performance"
+  - "Zod schemas auto-generated via drizzle-zod (createInsertSchema, createSelectSchema)"
+
+known_deviations:
+  - ac_id: "AC-7"
+    deviation: "Migration not applied to live database (db:migrate failed - no running database)"
+    impact: "Migration file exists and is valid SQL, but not yet applied"
+    reason: "No live database available during implementation. Migration can be applied when database is running."
+    resolution: "Migration file is ready and can be applied via `pnpm db:migrate` when database is available"
+
+fixes_applied:
+  iteration_0:
+    - issue_id: CR-001
+      severity: ERROR
+      category: "Code Style (Prettier)"
+      file: "packages/backend/database-schema/src/schema/kbar.ts"
+      line: 101
+      description: "Enum array formatting violates Prettier rules - should be on single line"
+      fix_applied: "Reformatted kbarStoryPriorityEnum array to single line using eslint --fix"
+      verification: "ESLint passes with no errors"
+      timestamp: "2026-02-14T21:31:00Z"
+
+    - issue_id: CR-002
+      severity: ERROR
+      category: "Code Style (Prettier)"
+      file: "packages/backend/database-schema/src/schema/kbar.ts"
+      line: 493
+      description: "uniqueIndex formatting violates Prettier rules - unnecessary line breaks"
+      fix_applied: "Reformatted checkpointNameIdx definition to single line using eslint --fix"
+      verification: "ESLint passes with no errors"
+      timestamp: "2026-02-14T21:31:00Z"
+
+    summary:
+      total_issues: 2
+      fixed: 2
+      blocked: 0
+      command_used: "pnpm eslint --fix packages/backend/database-schema/src/schema/kbar.ts"
+      verification_passed: true
+      tests_passed: true
+      ready_for_review: true
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 113423, out: 86577 }
+  fix_iteration_0: { in: 30954, out: 2500 }

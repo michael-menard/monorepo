@@ -1,0 +1,157 @@
+schema: 1
+story_id: "BUGF-018"
+timestamp: "2026-02-13T21:30:00Z"
+
+steps:
+  - id: 1
+    description: "Add useEffect cleanup for previewUrl in UploadModal component"
+    files: ["apps/web/app-inspiration-gallery/src/components/UploadModal/index.tsx"]
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Add useEffect cleanup for previewUrl in ThumbnailUpload component"
+    files: ["apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"]
+    dependencies: []
+    slice: frontend
+
+  - id: 3
+    description: "Add useEffect cleanup for preview URLs in ImageUploadZone component"
+    files: ["apps/web/app-sets-gallery/src/components/ImageUploadZone.tsx"]
+    dependencies: []
+    slice: frontend
+
+  - id: 4
+    description: "Update UploadModal to revoke URL in remove handler (lines 278-281)"
+    files: ["apps/web/app-inspiration-gallery/src/components/UploadModal/index.tsx"]
+    dependencies: [1]
+    slice: frontend
+
+  - id: 5
+    description: "Update ImageUploadZone removeImage function to revoke blob URL before filtering"
+    files: ["apps/web/app-sets-gallery/src/components/ImageUploadZone.tsx"]
+    dependencies: [3]
+    slice: frontend
+
+  - id: 6
+    description: "Add unit test: UploadModal revokes URL on unmount"
+    files: ["apps/web/app-inspiration-gallery/src/components/UploadModal/__tests__/UploadModal.test.tsx"]
+    dependencies: [1, 4]
+    slice: frontend
+
+  - id: 7
+    description: "Add unit test: UploadModal revokes URL when removing image"
+    files: ["apps/web/app-inspiration-gallery/src/components/UploadModal/__tests__/UploadModal.test.tsx"]
+    dependencies: [1, 4]
+    slice: frontend
+
+  - id: 8
+    description: "Add unit test: UploadModal revokes old URL when replacing with new file"
+    files: ["apps/web/app-inspiration-gallery/src/components/UploadModal/__tests__/UploadModal.test.tsx"]
+    dependencies: [1, 4]
+    slice: frontend
+
+  - id: 9
+    description: "Add unit test: ThumbnailUpload revokes URL on unmount"
+    files: ["apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"]
+    dependencies: [2]
+    slice: frontend
+
+  - id: 10
+    description: "Add unit test: ThumbnailUpload verify existing handleRemove cleanup still works"
+    files: ["apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"]
+    dependencies: [2]
+    slice: frontend
+
+  - id: 11
+    description: "Add unit test: ImageUploadZone revokes all URLs on unmount (multiple files)"
+    files: ["apps/web/app-sets-gallery/src/components/__tests__/ImageUploadZone.test.tsx"]
+    dependencies: [3, 5]
+    slice: frontend
+
+  - id: 12
+    description: "Add unit test: ImageUploadZone revokes URL when removing individual image"
+    files: ["apps/web/app-sets-gallery/src/components/__tests__/ImageUploadZone.test.tsx"]
+    dependencies: [3, 5]
+    slice: frontend
+
+files_to_change:
+  - path: "apps/web/app-inspiration-gallery/src/components/UploadModal/index.tsx"
+    action: modify
+    reason: "Add useEffect cleanup hook for previewUrl (AC1-AC3) and update remove handler to revoke URL"
+
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/index.tsx"
+    action: modify
+    reason: "Add useEffect cleanup hook for previewUrl on unmount (AC1-AC3) - existing handleRemove cleanup is already correct"
+
+  - path: "apps/web/app-sets-gallery/src/components/ImageUploadZone.tsx"
+    action: modify
+    reason: "Add useEffect cleanup hook for all preview URLs (AC1-AC3) and update removeImage to revoke specific URL"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/UploadModal/__tests__/UploadModal.test.tsx"
+    action: modify
+    reason: "Add 3 new unit tests for cleanup verification (AC5): unmount, remove, replace scenarios"
+
+  - path: "apps/web/app-instructions-gallery/src/components/ThumbnailUpload/__tests__/ThumbnailUpload.test.tsx"
+    action: modify
+    reason: "Add 2 new unit tests for cleanup verification (AC5): unmount and verify existing handleRemove"
+
+  - path: "apps/web/app-sets-gallery/src/components/__tests__/ImageUploadZone.test.tsx"
+    action: modify
+    reason: "Add 2 new unit tests for cleanup verification (AC5): unmount multiple files and remove individual"
+
+commands_to_run:
+  - command: "pnpm test --filter app-inspiration-gallery -- UploadModal"
+    when: "after UploadModal changes"
+    required: true
+
+  - command: "pnpm test --filter app-instructions-gallery -- ThumbnailUpload"
+    when: "after ThumbnailUpload changes"
+    required: true
+
+  - command: "pnpm test --filter app-sets-gallery -- ImageUploadZone"
+    when: "after ImageUploadZone changes"
+    required: true
+
+  - command: "pnpm lint --filter app-inspiration-gallery --filter app-instructions-gallery --filter app-sets-gallery"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter app-inspiration-gallery --filter app-instructions-gallery --filter app-sets-gallery"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Code review: useEffect hooks added to all three components (UploadModal lines ~87-93, ThumbnailUpload lines ~99-105, ImageUploadZone lines ~26-32)"
+    evidence_type: file
+
+  - ac_id: "AC2"
+    planned_evidence: "Code review: URL.revokeObjectURL() called in useEffect cleanup functions and manual cleanup handlers"
+    evidence_type: file
+
+  - ac_id: "AC3"
+    planned_evidence: "Unit tests: 7 tests verify cleanup on unmount, file removal, and file replacement scenarios"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Manual memory profiling steps documented in test plan - run browser DevTools heap snapshots"
+    evidence_type: manual
+
+  - ac_id: "AC5"
+    planned_evidence: "Unit tests: All 7 new tests use vi.spyOn(URL, 'revokeObjectURL') to verify cleanup calls"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "ThumbnailUpload already has correct cleanup in handleRemove (line 144) - only need to add useEffect for unmount cleanup"
+  - "ImageUploadZone creates multiple blob URLs in render (line 117) - useEffect cleanup must iterate over array"
+  - "UploadModal remove handler (lines 278-281) needs URL revocation added before resetting previewUrl to null"
+  - "All three test files already exist with proper setup - extending with new cleanup tests"
+  - "Test files already mock URL.createObjectURL - can use vi.spyOn for revokeObjectURL verification"
+  - "Pattern: useEffect with previewUrl/previewUrls as dependency, return cleanup function"
+  - "Pattern: Check if URL exists before revoking to avoid errors"
+  - "ImageUploadZone has inline blob creation in JSX (line 117) - cannot be easily cleaned up per-image, must clean all on unmount"

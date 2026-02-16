@@ -1,0 +1,67 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-14T14:30:00Z"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "Incomplete file globbing patterns can miss edge cases in directory structures"
+      - "YAML frontmatter parsing can fail on malformed or non-standard YAML"
+      - "Large graph visualizations (143+ nodes) can become unreadable without grouping"
+    patterns_to_follow:
+      - "Use comprehensive glob patterns with validation checks"
+      - "Include error handling for malformed frontmatter with fallback to partial data"
+      - "Group large graphs by agent type or spawn hierarchy for readability"
+      - "Spot-check sampling to validate completeness of scanning results"
+    patterns_to_avoid:
+      - "Assuming all agents follow standard frontmatter schema"
+      - "Creating graphs without readability considerations"
+      - "Missing cross-references in non-standard locations"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs: []
+    constraints: {}
+    notes: "No ADRs apply - this is a documentation/audit story with no code changes, API endpoints, infrastructure, or authentication components"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading all 143 agent files individually"
+        typical_tokens: 150000+
+        mitigation: "Use Grep for frontmatter extraction in batches, Read only when parsing fails"
+      - operation: "Reading full command files for reference scanning"
+        typical_tokens: 50000+
+        mitigation: "Use Grep with specific patterns before full Read"
+      - operation: "Multiple full-directory listings"
+        typical_tokens: 10000+
+        mitigation: "Cache directory structure output, reuse for multiple artifact generation"
+    recommended_patterns:
+      - "Grep before Read - scan for patterns before loading full files"
+      - "Batch operations - group related scanning tasks"
+      - "Cache intermediate results - reuse parsed frontmatter across artifacts"
+      - "Targeted extraction - parse only frontmatter sections, not full agent content"
+
+  warnings:
+    - "This is a documentation/audit story - no code changes, no executable tests"
+    - "Verification is manual completeness review, not automated test execution"
+    - "Agent files may have non-standard frontmatter - error handling required"
+    - "Graph visualization may need manual review for readability with 143+ agents"
+
+  story_context:
+    domain: "agent-audit"
+    type: "chore"
+    complexity: "low"
+    scope_summary: "Read-only filesystem scanning to catalog agent directory structure, metadata, and cross-references for Phase 7 migration planning"
+    output_artifacts:
+      - "AGENT-CATALOG.yaml"
+      - "DIRECTORY-STRUCTURE.md"
+      - "CROSS-REFERENCES.yaml"
+      - "SPAWN-GRAPH.md"
+      - "SHARED-DEPENDENCIES.yaml"
+      - "ORPHANED-AGENTS.yaml"
+      - "AUDIT-SUMMARY.md"
+
+  tokens:
+    in: 8500
+    out: 1200

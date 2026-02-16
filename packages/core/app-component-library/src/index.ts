@@ -118,6 +118,9 @@ export {
 export { AppProgress } from './feedback/AppProgress'
 export type { AppProgressProps, ProgressVariant } from './feedback/AppProgress'
 
+export { RateLimitBanner } from './feedback/RateLimitBanner'
+export type { RateLimitBannerProps } from './feedback/RateLimitBanner/__types__'
+
 // Alerts
 export { AppAlert, AppAlertTitle, AppAlertDescription } from './alerts/AppAlert'
 export type { AppAlertProps, AlertVariant } from './alerts/AppAlert'
@@ -192,8 +195,6 @@ export type {
   QuotaIndicatorProps,
   QuotaBarProps,
   QuotaCardProps,
-
-
 } from './indicators/QuotaIndicator'
 
 // Dialogs
@@ -301,6 +302,8 @@ export type {
 
 export { useToast } from './hooks/useToast'
 export type { ToastOptions, UseToastReturn } from './hooks/useToast'
+
+export { useRateLimitCooldown } from './hooks/useRateLimitCooldown'
 
 // =============================================================================
 // UTILITIES
@@ -478,3 +481,7 @@ export {
   FormMessage,
   FormField,
 } from './_primitives/form'
+
+// Password Strength Indicator
+export { PasswordStrengthIndicator, getPasswordStrength } from './forms/PasswordStrengthIndicator'
+export type { PasswordStrengthIndicatorProps } from './forms/PasswordStrengthIndicator'

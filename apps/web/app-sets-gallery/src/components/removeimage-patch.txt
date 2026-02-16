@@ -1,0 +1,7 @@
+  const removeImage = (index: number) => {
+    // BUGF-018: Revoke blob URL before removing
+    if (previewUrls[index]) {
+      URL.revokeObjectURL(previewUrls[index])
+    }
+    onImagesChange(images.filter((_, i) => i !== index))
+  }

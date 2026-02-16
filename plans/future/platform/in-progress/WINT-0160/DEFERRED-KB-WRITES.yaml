@@ -1,0 +1,179 @@
+---
+generated: 2026-02-14
+reason: "KB unavailable during story generation"
+---
+
+# Deferred Knowledge Base Writes for WINT-0160
+
+## Story Record
+
+**Table**: stories
+
+**Operation**: INSERT ON CONFLICT UPDATE
+
+**Data**:
+```sql
+INSERT INTO stories (
+  story_id,
+  feature,
+  title,
+  story_dir,
+  story_file,
+  story_type,
+  points,
+  priority,
+  state,
+  touches_backend,
+  touches_frontend,
+  touches_database,
+  touches_infra,
+  epic,
+  wave,
+  tags,
+  depends_on,
+  experiment_variant,
+  created_at,
+  updated_at
+) VALUES (
+  'WINT-0160',
+  'platform',
+  'Create doc-sync Agent (LangGraph Node Integration)',
+  'plans/future/platform/backlog/WINT-0160',
+  'plans/future/platform/backlog/WINT-0160/WINT-0160.md',
+  'feature',
+  3,
+  'critical',  -- P0 maps to critical
+  'backlog',
+  true,  -- touches_backend
+  false, -- touches_frontend
+  false, -- touches_database
+  false, -- touches_infra
+  'WINT',
+  'Wave 2 — LangGraph Adapters & Schema',
+  ARRAY['langgraph', 'orchestration', 'workflow', 'doc-sync'],
+  ARRAY['WINT-0150'],
+  'control',
+  '2026-02-14',
+  '2026-02-14'
+)
+ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_dir = EXCLUDED.story_dir,
+  story_file = EXCLUDED.story_file,
+  story_type = EXCLUDED.story_type,
+  points = EXCLUDED.points,
+  priority = EXCLUDED.priority,
+  state = EXCLUDED.state,
+  touches_backend = EXCLUDED.touches_backend,
+  touches_frontend = EXCLUDED.touches_frontend,
+  touches_database = EXCLUDED.touches_database,
+  touches_infra = EXCLUDED.touches_infra,
+  epic = EXCLUDED.epic,
+  wave = EXCLUDED.wave,
+  tags = EXCLUDED.tags,
+  depends_on = EXCLUDED.depends_on,
+  experiment_variant = EXCLUDED.experiment_variant,
+  updated_at = EXCLUDED.updated_at;
+```
+
+## Future Opportunity Findings (from Elaboration)
+
+### Finding 1: Error Logging Strategy
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: edge-case, observability, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Gap**: Story doesn't specify error logging strategy for subprocess failures
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Add @repo/logger.error calls in error handling section of implementation. Story mentions using @repo/logger but doesn't specify exact logging strategy for subprocess errors.
+
+### Finding 2: Timeout Handling
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: edge-case, resilience, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Gap**: No mention of timeout handling for long-running doc-sync processes
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Consider adding subprocess timeout (e.g., 60s) to prevent hanging nodes. Current story assumes doc-sync completes quickly (10-30s per SKILL.md).
+
+### Finding 3: Concurrent Execution
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: edge-case, concurrency, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Gap**: Story doesn't address concurrent node execution scenarios
+- **Impact**: Low | **Effort**: Medium
+- **Recommendation**: Consider thread-safety if multiple nodes could invoke doc-sync simultaneously. Current story assumes single-threaded orchestrator execution.
+
+### Finding 4: Performance - Result Caching
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: performance, optimization, enhancement, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Enhancement**: Caching SYNC-REPORT parsing results
+- **Impact**: Medium | **Effort**: Low
+- **Recommendation**: Cache parsed SYNC-REPORT.md results by file hash to avoid re-parsing in multi-node workflows. Speeds up batch processing.
+
+### Finding 5: Observability - Metrics
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: observability, monitoring, enhancement, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Enhancement**: Add metrics for doc-sync invocation times
+- **Impact**: Medium | **Effort**: Low
+- **Recommendation**: Track node execution time, subprocess duration, and parsing time for performance monitoring. Useful for identifying slowdowns in large workflows.
+
+### Finding 6: Developer Experience - Helper Functions
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: ux-polish, enhancement, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Enhancement**: Add helper function for common config patterns
+- **Impact**: Low | **Effort**: Low
+- **Recommendation**: Create `createDocSyncCheckOnlyNode()` and `createDocSyncForceNode()` convenience factories for common use cases. Reduces boilerplate in graph construction.
+
+### Finding 7: Testing - Integration Tests
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: enhancement, testing, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Enhancement**: Integration test with real doc-sync agent
+- **Impact**: High | **Effort**: Medium
+- **Recommendation**: Story specifies unit tests with mocks. Optional integration test (mentioned in Test Plan) would validate end-to-end behavior. Consider adding to future test suite.
+
+### Finding 8: Extensibility - Custom Parsers
+**Entry Type**: finding
+**Category**: future-opportunities
+**Tags**: enhancement, extensibility, non-blocking
+**Source Stage**: elab
+
+**Content**:
+- **Enhancement**: Support custom SYNC-REPORT parsing strategies
+- **Impact**: Low | **Effort**: Medium
+- **Recommendation**: Allow injecting custom parsers for different report formats. Enables experimentation with doc-sync output format changes without node code changes.
+
+## Retry Instructions
+
+When KB becomes available, run:
+```bash
+psql $KB_CONNECTION_STRING -f DEFERRED-KB-WRITES.yaml
+```
+
+Or use automated retry script:
+```bash
+/kb-retry-deferred plans/future/platform/elaboration/WINT-0160/DEFERRED-KB-WRITES.yaml
+```

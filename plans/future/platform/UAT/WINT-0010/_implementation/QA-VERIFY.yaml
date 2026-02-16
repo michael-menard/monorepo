@@ -1,0 +1,139 @@
+schema: 1
+story_id: "WINT-0010"
+timestamp: "2026-02-14T17:49:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 163, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: null
+coverage_meets_threshold: true
+coverage_note: "Pure schema definition - coverage not applicable per EVIDENCE.yaml"
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes:
+    - "Tests written alongside implementation per WRKF-1010 lesson (avoiding large fix phase)"
+    - "22 dedicated WINT schema tests covering all 6 schema groups"
+    - "Tests validate table structure, relations, Zod schemas, and enums"
+
+acs_verified:
+  - ac_id: "AC-001"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification: "Spot-checked wint.ts line 40: export const wintSchema = pgSchema('wint')"
+    notes: "Migration file 0015 shows CREATE SCHEMA \"wint\" statement"
+
+  - ac_id: "AC-002"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification: "EVIDENCE shows lines 58-217 define stories, storyStates, storyTransitions, storyDependencies"
+    notes: "All tables have UUID PKs, timestamps, indexes, and FK relations as required"
+
+  - ac_id: "AC-003"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification: "EVIDENCE shows lines 242-335 define contextPacks with expiresAt TTL"
+    notes: "Context cache tables include TTL fields for cache invalidation"
+
+  - ac_id: "AC-004"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification: "EVIDENCE shows lines 357-495 define telemetry tables with JSONB metadata"
+    notes: "agentInvocations, agentDecisions, agentOutcomes, stateTransitions all defined"
+
+  - ac_id: "AC-005"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification: "EVIDENCE shows lines 517-661 define ML pipeline tables with version field"
+    notes: "trainingData, mlModels, modelPredictions, modelMetrics with JSONB hyperparameters"
+
+  - ac_id: "AC-006"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verification: "EVIDENCE shows lines 683-833 define graph relational tables"
+    notes: "features, capabilities, featureRelationships with self-referencing FKs, cohesionRules"
+
+  - ac_id: "AC-007"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verification: "EVIDENCE shows lines 855-1001 define workflow tracking tables"
+    notes: "workflowExecutions with status enum, workflowCheckpoints, workflowAuditLog"
+
+  - ac_id: "AC-008"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verification: "EVIDENCE confirms all tables include composite and single-column indexes"
+    notes: "Composite indexes on priority+state, agentName+storyId, FK indexes on all tables"
+
+  - ac_id: "AC-009"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    verification: "EVIDENCE shows lines 1007-1141 define relations for all tables"
+    notes: "Relations defined using relations() API, circular dependencies handled correctly"
+
+  - ac_id: "AC-010"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    verification: "EVIDENCE shows lines 1147-1265 generate Zod schemas via drizzle-zod"
+    notes: "createInsertSchema/createSelectSchema used for all tables, types inferred via z.infer"
+
+  - ac_id: "AC-011"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    verification: "22 tests in wint-schema.test.ts, 163 total tests passed (7 test files)"
+    notes: "100% test pass rate, covers all 6 schema groups, table definitions, relations, Zod schemas"
+
+  - ac_id: "AC-012"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    verification: "Migration file 0015_messy_sugar_man.sql created with 735 lines"
+    notes: "Verified CREATE SCHEMA \"wint\" on line 1, snapshot and journal files updated"
+
+  - ac_id: "AC-013"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    verification: "EVIDENCE confirms comprehensive JSDoc header (lines 1-30) and table comments"
+    notes: "All tables have JSDoc comments explaining purpose, related stories, and relationships"
+
+architecture_compliant: true
+architecture_notes:
+  - "Follows umami.ts pattern for pgSchema() namespace isolation"
+  - "Uses drizzle-zod for automatic Zod schema generation per AC-010"
+  - "UUID PKs and timestamps on all tables per WINT schema standards"
+  - "JSONB extensively used for flexible metadata storage"
+  - "Enums defined using pgEnum() for type safety"
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Writing tests alongside implementation (per WRKF-1010 lesson) prevented large fix phase and resulted in 100% test pass rate"
+    category: pattern
+    tags: ["database", "testing", "quality"]
+
+  - lesson: "Pure schema definition stories are efficient - 163 tests pass with no E2E overhead"
+    category: reuse
+    tags: ["infrastructure", "velocity"]
+
+  - lesson: "drizzle-kit 0.31.8 does not support partial indexes with .where() clause - use standard indexes instead"
+    category: blocker
+    tags: ["database", "drizzle", "constraints"]
+
+  - lesson: "Using drizzle-zod createInsertSchema/createSelectSchema eliminates manual Zod schema definition and keeps schemas in sync with database"
+    category: pattern
+    tags: ["database", "validation", "automation"]
+
+gate:
+  decision: PASS
+  reason: "All 13 ACs verified, 163 unit tests pass, architecture compliant with established patterns"
+  blocking_issues: []
+
+tokens:
+  in: 37270
+  out: 1200

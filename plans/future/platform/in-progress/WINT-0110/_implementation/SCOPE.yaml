@@ -1,0 +1,200 @@
+schema: 1
+story_id: WINT-0110
+timestamp: "2026-02-15T15:30:00Z"
+gen_mode: false
+
+title: "Create Session Management MCP Tools"
+summary: "Implement 5 MCP tools (session_create, session_update, session_complete, session_query, session_cleanup) for managing agent sessions in the WINT workflow. Tools provide type-safe CRUD operations on wint.contextSessions table with comprehensive input validation via Zod schemas."
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/mcp-tools/**"
+  - "packages/core/**" # Zod schema exports
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true # session cleanup safety, dryRun default
+  performance: true # query optimization, pagination
+
+elaboration: completed
+
+## Acceptance Criteria (8 total)
+
+acceptance_criteria:
+  - id: AC-1
+    title: "Implement session_create Tool"
+    description: "Creates new record in wint.contextSessions with auto-UUID generation"
+    status: pending
+  - id: AC-2
+    title: "Implement session_update Tool"
+    description: "Updates token metrics (incremental/absolute modes) and metadata with validation"
+    status: pending
+  - id: AC-3
+    title: "Implement session_complete Tool"
+    description: "Marks session as ended with final metrics and duration calculation"
+    status: pending
+  - id: AC-4
+    title: "Implement session_query Tool"
+    description: "Retrieves sessions with flexible filtering (agent, story, active) and pagination"
+    status: pending
+  - id: AC-5
+    title: "Implement session_cleanup Tool"
+    description: "Archives old completed sessions with dryRun safety (default true)"
+    status: pending
+  - id: AC-6
+    title: "Create Zod Validation Schemas"
+    description: "Define input schemas for all 5 tools with proper validation rules"
+    status: pending
+  - id: AC-7
+    title: "Write Unit Tests"
+    description: "Test coverage ≥80% for all tools (7 test suites)"
+    status: pending
+  - id: AC-8
+    title: "Document Tool Usage"
+    description: "Create SESSION-MANAGEMENT-TOOLS.md with signatures, examples, error handling"
+    status: pending
+
+## Implementation Phases
+
+phases:
+  - id: 1
+    name: "Schema & Validation"
+    duration_hours: 2
+    description: "Create Zod input schemas, define output types, export schemas for reuse"
+  - id: 2
+    name: "CRUD Operations"
+    duration_hours: 8
+    description: "Implement all 5 tools with database operations via Drizzle ORM"
+  - id: 3
+    name: "Testing"
+    duration_hours: 7
+    description: "Unit tests, schema validation tests, integration tests, edge cases"
+  - id: 4
+    name: "Documentation"
+    duration_hours: 2
+    description: "API documentation, integration guide, troubleshooting guide"
+
+total_estimated_hours: 19
+
+## Dependencies
+
+blocking_dependencies: []
+blocked_by_story_ids: []
+blocks_story_ids:
+  - WINT-2090 # Session Context Management
+  - WINT-2100 # session-manager Agent
+
+## Key Decisions
+
+decisions:
+  - decision: "Default mode='incremental' for session_update"
+    rationale: "Prevents accidental token count overwrites, safer default for concurrent updates"
+  - decision: "Default dryRun=true for session_cleanup"
+    rationale: "Prevents accidental data deletion, requires explicit opt-in"
+  - decision: "Order session_query results by started_at DESC"
+    rationale: "Most recent sessions first, aligns with typical use case"
+  - decision: "Package location: packages/backend/mcp-tools/"
+    rationale: "New standalone package for MCP tool infrastructure, reusable across future tools"
+
+## Risk Flags
+
+risks:
+  - severity: medium
+    title: "Concurrent Session Updates"
+    description: "Multiple agents updating same session simultaneously may cause race conditions"
+    mitigation: "Incremental mode uses SQL arithmetic, absolute mode documents last-write-wins behavior"
+  - severity: high
+    title: "Session Cleanup Safety"
+    description: "Risk of accidental deletion of active or recent sessions"
+    mitigation: "Default dryRun=true, protected endedAt IS NOT NULL check, comprehensive logging"
+  - severity: medium
+    title: "MCP Tool Pattern Not Established"
+    description: "No existing MCP server infrastructure in codebase"
+    mitigation: "Focus on database operations as standalone functions, defer MCP server integration to later story"
+
+## Testing Strategy
+
+testing:
+  - file: session-create.test.ts
+    coverage_target: 85%
+    scenarios:
+      - Happy path: create with all fields
+      - Auto-generate sessionId
+      - Minimal creation (agentName only)
+      - Error: Duplicate sessionId
+      - Error: Missing agentName
+      - Error: Invalid UUID format
+  - file: session-update.test.ts
+    coverage_target: 85%
+    scenarios:
+      - Incremental mode: multiple updates accumulate
+      - Absolute mode: last write wins
+      - Update metadata JSONB field
+      - Error: Session not found
+      - Error: Negative token counts
+      - Concurrency: multiple agents updating same session
+  - file: session-complete.test.ts
+    coverage_target: 85%
+    scenarios:
+      - Mark session as ended with timestamp
+      - Use current timestamp if endedAt not provided
+      - Calculate session duration
+      - Error: Session already completed
+      - Error: Session not found
+  - file: session-query.test.ts
+    coverage_target: 85%
+    scenarios:
+      - Query active sessions only
+      - Query by agentName
+      - Query by storyId
+      - Combine filters (agentName + active)
+      - Pagination (limit + offset)
+      - Default limit=50
+      - Empty result set
+      - Offset beyond results
+  - file: session-cleanup.test.ts
+    coverage_target: 85%
+    scenarios:
+      - DryRun mode: returns count, no deletion
+      - Actual cleanup: deletes old sessions when dryRun=false
+      - Preserves recent completed sessions
+      - Preserves active sessions regardless of age
+      - Error: Negative retentionDays
+  - file: schemas.test.ts
+    coverage_target: 95%
+    scenarios:
+      - Validate all required fields present
+      - Reject invalid UUID formats
+      - Reject negative token counts
+      - Validate enum values (mode)
+      - Optional field handling
+  - file: integration.test.ts
+    coverage_target: 90%
+    scenarios:
+      - Full session lifecycle (create → update → complete → query)
+      - Concurrent session updates
+      - Session cleanup with dryRun validation
+      - Pagination edge cases
+
+## Success Criteria
+
+success_criteria:
+  - "All 5 MCP tools implemented with Zod validation"
+  - "Integration with wint.contextSessions table via Drizzle ORM"
+  - "Unit tests achieving ≥80% coverage"
+  - "All ACs validated via tests"
+  - "Documentation complete with usage examples"
+  - "Error handling for all edge cases"
+  - "Code review passed"
+  - "All tests passing in CI/CD"

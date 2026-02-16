@@ -1,0 +1,302 @@
+# Deferred Knowledge Base Entries - BUGF-019
+# These findings are logged for future reference but do not block MVP implementation
+
+generated_at: "2026-02-11T19:30:00Z"
+story_id: "BUGF-019"
+source_stage: elab
+category: future-opportunities
+
+# Non-Blocking Gaps (7 items)
+gaps:
+  - id: gap_1
+    finding: "RateLimitBanner lacks custom message/title props"
+    impact: Low
+    effort: Low
+    tags: [enhancement, ux-polish, component-library]
+    recommendation: |
+      Add optional `message` and `title` props to RateLimitBanner schema to support custom
+      messaging for different contexts (upload vs auth). Recommended in BUGF-027 guide section
+      4.3.1 but not required for MVP.
+
+      Enhanced schema:
+      ```typescript
+      export const RateLimitBannerPropsSchema = z.object({
+        visible: z.boolean(),
+        retryAfterSeconds: z.number(),
+        onRetry: z.any(),
+        onDismiss: z.any().optional(),
+        message: z.string().optional(), // NEW
+        title: z.string().optional().default('Rate Limit Exceeded'), // NEW
+      })
+      ```
+
+      Effort: ~30 minutes (update schema, component, tests)
+
+  - id: gap_2
+    finding: "Password strength indicator debouncing not implemented"
+    impact: Low
+    effort: Low
+    tags: [performance, optimization]
+    recommendation: |
+      AC-4 mentions optional 200ms debounce for real-time password strength updates.
+      Improves performance for long passwords but not blocking. Consider if performance
+      issues observed in UAT.
+
+      Implementation pattern:
+      ```typescript
+      const debouncedPassword = useDebounce(password, 200)
+      <PasswordStrengthIndicator password={debouncedPassword} />
+      ```
+
+  - id: gap_3
+    finding: "ResendCodeButton not integrated into ResetPasswordPage"
+    impact: Low
+    effort: Medium
+    tags: [edge-case, consistency, refactor]
+    recommendation: |
+      AC-3 wires up "resend code" button but ResetPasswordPage lines 199-227 show basic
+      implementation without exponential backoff. Story should replace with ResendCodeButton
+      component for consistency with established patterns.
+
+      Current: Basic implementation with no cooldown
+      Target: Use ResendCodeButton component with exponential backoff
+      Effort: ~1 hour (replace implementation, update tests)
+
+  - id: gap_4
+    finding: "No visual distinction between temporary vs permanent errors"
+    impact: Low
+    effort: Low
+    tags: [ux-polish, error-handling]
+    recommendation: |
+      All errors shown as inline alerts. Rate limit errors (temporary) vs validation errors
+      (permanent) have no visual distinction beyond messaging. Consider using RateLimitBanner
+      for temporary errors, inline Alert for permanent errors.
+
+  - id: gap_5
+    finding: "SessionStorage keys lack TypeScript constants export"
+    impact: Low
+    effort: Low
+    tags: [code-quality, maintainability]
+    recommendation: |
+      SessionStorage keys defined inline in each page (e.g., FORGOT_PASSWORD_KEYS). Consider
+      exporting from shared location (e.g., `@repo/auth-utils`) to prevent typos and enable
+      reuse.
+
+      Related story: BUGF-005 (Shared Auth Hooks) - could be bundled with auth hook consolidation.
+
+  - id: gap_6
+    finding: "Countdown timer update frequency not configurable"
+    impact: Low
+    effort: Low
+    tags: [performance, flexibility]
+    recommendation: |
+      Hardcoded 1-second timer tick. Some contexts may prefer slower updates (e.g., 5-second
+      ticks for long cooldowns). Consider making interval configurable via prop.
+
+  - id: gap_7
+    finding: "No analytics tracking for rate limit events"
+    impact: Low
+    effort: Low
+    tags: [observability, analytics]
+    recommendation: |
+      Story tracks navigation events but not rate limit occurrences. Consider adding analytics
+      for rate limit triggers (helps understand abuse patterns, threshold tuning).
+
+      Related: Future telemetry epic
+
+# Enhancement Opportunities (15 items)
+enhancements:
+  - id: enhancement_1
+    finding: "Progress bar animation for countdown"
+    impact: Medium
+    effort: Low
+    tags: [ux-polish, quick-win]
+    recommendation: |
+      RateLimitBanner includes progress bar (lines 104-122 in BUGF-027 guide). Adds visual
+      feedback for cooldown duration. Enhances UX but not required for MVP.
+
+      Already implemented in RateLimitBanner, just needs integration.
+
+  - id: enhancement_2
+    finding: "Toast notification on cooldown expiry"
+    impact: Medium
+    effort: Low
+    tags: [ux-polish, quick-win]
+    recommendation: |
+      When cooldown expires, show toast notification ("You can now retry") instead of silently
+      re-enabling button. Improves discoverability.
+
+      Implementation pattern:
+      ```typescript
+      useEffect(() => {
+        if (cooldownSeconds === 0 && previousCooldown > 0) {
+          toast.success('Rate limit expired. You can now retry.')
+        }
+      }, [cooldownSeconds])
+      ```
+
+      Effort: ~30 minutes (requires toast component)
+
+  - id: enhancement_3
+    finding: "Persistent attempt count across sessions"
+    impact: Medium
+    effort: High
+    tags: [integration, security, future-backlog]
+    recommendation: |
+      Current implementation uses sessionStorage (ephemeral). Consider persisting attempt count
+      to localStorage for cross-session tracking. Security trade-off: prevents users from
+      circumventing cooldown by closing tab but risks permanent lockout.
+
+      Related story: BUGF-026 (Auth Token Refresh Security) - security review overlap
+
+  - id: enhancement_4
+    finding: "Server-side rate limiting for Cognito operations"
+    impact: High
+    effort: High
+    tags: [integration, security, future-backlog, adr-review]
+    recommendation: |
+      Current client-side cooldown is UX feedback only. Backend proxy for Cognito operations
+      would enable server-enforced rate limiting with Retry-After header.
+
+      WARNING: Violates ADR-004 (Cognito as Authoritative Auth Service). Consider only if
+      Cognito rate limits prove insufficient. Would require ADR review and BUGF-027 guide update.
+
+  - id: enhancement_5
+    finding: "Configurable exponential backoff formula"
+    impact: Low
+    effort: Medium
+    tags: [performance, flexibility]
+    recommendation: |
+      Hardcoded 60s base, 600s max. Some contexts may prefer different progression (e.g.,
+      aggressive 30s → 60s → 120s for high-security flows). Consider making base and max
+      configurable via props or environment variables.
+
+  - id: enhancement_6
+    finding: "Visual countdown in RateLimitBanner banner title"
+    impact: Medium
+    effort: Low
+    tags: [ux-polish, quick-win]
+    recommendation: |
+      Currently countdown shown in button text and banner body. Add countdown to banner title
+      (e.g., "Rate Limit Exceeded (2:30 remaining)") for prominence.
+
+  - id: enhancement_7
+    finding: "Copy to clipboard for verification code"
+    impact: Medium
+    effort: Low
+    tags: [ux-polish, accessibility]
+    recommendation: |
+      ResetPasswordPage code input (OTPInput component) could include "paste" button for
+      clipboard access. Improves UX for users switching between email and app.
+
+      Related story: BUGF-020 (Accessibility) - keyboard navigation, WCAG compliance
+
+  - id: enhancement_8
+    finding: "Resend code success feedback via banner"
+    impact: Medium
+    effort: Low
+    tags: [ux-polish, consistency]
+    recommendation: |
+      AC-3 shows success message but uses inline alert. Consider using success variant of
+      RateLimitBanner for consistency with error feedback.
+
+  - id: enhancement_9
+    finding: "Password strength recommendations"
+    impact: Low
+    effort: Medium
+    tags: [ux-polish]
+    recommendation: |
+      PasswordStrengthIndicator shows strength bars but no specific recommendations (e.g.,
+      "Add a special character to reach 'Strong'"). Helps users understand how to improve password.
+
+  - id: enhancement_10
+    finding: "Cooldown state sync across tabs"
+    impact: Medium
+    effort: High
+    tags: [integration, security, future-backlog]
+    recommendation: |
+      SessionStorage is per-tab. Users can bypass cooldown by opening new tab. Consider using
+      localStorage + storage event listener to sync cooldown state across tabs. Security
+      enhancement but adds complexity.
+
+  - id: enhancement_11
+    finding: "Adaptive cooldown based on user behavior"
+    impact: High
+    effort: High
+    tags: [integration, observability, future-backlog]
+    recommendation: |
+      Current exponential backoff is fixed. Adaptive approach could reduce cooldown for trusted
+      users (e.g., verified email, no prior abuse) or increase for suspicious IPs. Requires
+      backend integration and behavioral analytics. Out of scope for frontend-only story.
+
+  - id: enhancement_12
+    finding: "Email verification reminder in cooldown message"
+    impact: Low
+    effort: Low
+    tags: [ux-polish]
+    recommendation: |
+      RateLimitBanner message could include reminder: "Check your email for the verification
+      code while you wait." Helps users make productive use of cooldown time.
+
+  - id: enhancement_13
+    finding: "Dark mode support for password strength colors"
+    impact: Low
+    effort: Low
+    tags: [code-quality, accessibility]
+    recommendation: |
+      Password strength colors (red, orange, yellow, lime, green) are hardcoded. Should respect
+      theme (light/dark mode) for accessibility. Consider using theme-aware color tokens.
+
+  - id: enhancement_14
+    finding: "Keyboard shortcut to retry after cooldown"
+    impact: Low
+    effort: Low
+    tags: [edge-case, accessibility]
+    recommendation: |
+      When cooldown expires, allow Enter key to retry instead of requiring click. Improves
+      keyboard navigation UX.
+
+  - id: enhancement_15
+    finding: "A/B test different cooldown formulas"
+    impact: Medium
+    effort: High
+    tags: [observability, future-backlog]
+    recommendation: |
+      Exponential backoff formula not validated against user behavior. Consider A/B testing
+      different formulas (linear, quadratic, exponential) to optimize balance between security
+      and UX. Requires analytics integration and backend coordination.
+
+      Related: Future telemetry epic
+
+# Prioritization Summary
+quick_wins:
+  - enhancement_1  # Progress bar animation
+  - enhancement_2  # Toast notification on expiry
+  - gap_1          # RateLimitBanner custom props
+
+next_iteration:
+  - gap_3          # ResendCodeButton integration
+  - enhancement_8  # Resend success feedback
+  - enhancement_6  # Visual countdown in title
+
+future_backlog:
+  - enhancement_4  # Server-side rate limiting (ADR review)
+  - enhancement_10 # Cross-tab sync (high effort)
+  - enhancement_11 # Adaptive cooldown (backend integration)
+
+low_priority:
+  - gap_2          # Password debouncing
+  - gap_7          # Analytics tracking
+  - enhancement_9  # Password recommendations
+  - enhancement_13 # Dark mode support
+
+# Notes
+notes: |
+  All 22 opportunities are genuine enhancements, not blockers. Story BUGF-019 MVP scope is
+  appropriate and implementation-ready.
+
+  Recommend prioritizing 3 quick wins (enhancement_1, enhancement_2, gap_1) for iteration
+  immediately following MVP release.
+
+  Defer high-effort items (server-side rate limiting, adaptive cooldown, cross-tab sync)
+  until user feedback validates need.

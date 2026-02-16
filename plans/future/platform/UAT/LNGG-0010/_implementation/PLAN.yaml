@@ -1,0 +1,413 @@
+schema: 1
+story_id: LNGG-0010
+timestamp: 2026-02-14T00:00:00Z
+generated_by: dev-execute-leader
+
+steps:
+  - id: 1
+    description: "Install required dependencies (gray-matter, js-yaml, @types/js-yaml)"
+    files:
+      - "packages/backend/orchestrator/package.json"
+    dependencies: []
+    slice: packages
+    rationale: "Dependencies must be installed before implementation can proceed. gray-matter for frontmatter parsing, js-yaml for YAML serialization."
+    acceptance_criteria: []
+
+  - id: 2
+    description: "Create error class hierarchy for typed error handling"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "Custom error classes provide type-safe error handling. Includes: StoryNotFoundError, InvalidYAMLError, ValidationError, WriteError, ReadError. Required for AC-6."
+    acceptance_criteria: [AC-6]
+
+  - id: 3
+    description: "Create file utilities module with atomic write pattern"
+    files:
+      - "packages/backend/orchestrator/src/adapters/utils/file-utils.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "Atomic write pattern (temp file + rename) prevents partial file corruption. Required for AC-5."
+    acceptance_criteria: [AC-5]
+
+  - id: 4
+    description: "Create YAML parser utilities module"
+    files:
+      - "packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "Centralized YAML parsing/serialization logic with gray-matter integration. Handles frontmatter extraction and content preservation."
+    acceptance_criteria: [AC-1, AC-2]
+
+  - id: 5
+    description: "Create main StoryFileAdapter class with read() and write() methods"
+    files:
+      - "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    dependencies: [2, 3, 4]
+    slice: packages
+    rationale: "Core adapter implementation. Uses story-v2-compatible schema for backward compatibility. Implements read() and write() with validation. Required for AC-1, AC-2, AC-4, AC-7."
+    acceptance_criteria: [AC-1, AC-2, AC-4, AC-7]
+
+  - id: 6
+    description: "Add update() method to StoryFileAdapter"
+    files:
+      - "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    dependencies: [5]
+    slice: packages
+    rationale: "Update method merges frontmatter changes while preserving content. Required for AC-3."
+    acceptance_criteria: [AC-3]
+
+  - id: 7
+    description: "Add batch operations (readBatch, exists) to StoryFileAdapter"
+    files:
+      - "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    dependencies: [5]
+    slice: packages
+    rationale: "Batch read operations for performance. exists() utility method for file presence checks."
+    acceptance_criteria: []
+
+  - id: 8
+    description: "Create test fixtures (minimal, full, invalid story YAML files)"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/fixtures/minimal-story.yaml"
+      - "packages/backend/orchestrator/src/adapters/__tests__/fixtures/full-story.yaml"
+      - "packages/backend/orchestrator/src/adapters/__tests__/fixtures/invalid-missing-id.yaml"
+    dependencies: []
+    slice: packages
+    rationale: "Test fixtures provide realistic test data for both legacy and new schema formats."
+    acceptance_criteria: [AC-7]
+
+  - id: 9
+    description: "Write unit tests for error classes"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    dependencies: [2, 8]
+    slice: packages
+    rationale: "Unit tests verify error class hierarchy and typed error handling. Required for AC-6."
+    acceptance_criteria: [AC-6]
+
+  - id: 10
+    description: "Write unit tests for file utilities (atomic write pattern)"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    dependencies: [3, 8]
+    slice: packages
+    rationale: "Tests verify atomic write behavior - temp file creation, successful rename, cleanup on failure. Required for AC-5."
+    acceptance_criteria: [AC-5]
+
+  - id: 11
+    description: "Write unit tests for YAML parser utilities"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    dependencies: [4, 8]
+    slice: packages
+    rationale: "Tests verify frontmatter parsing, content extraction, YAML serialization."
+    acceptance_criteria: [AC-1, AC-2]
+
+  - id: 12
+    description: "Write unit tests for read() and write() methods"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    dependencies: [5, 8]
+    slice: packages
+    rationale: "Tests verify reading existing files, writing new files, Zod validation. Required for AC-1, AC-2, AC-4."
+    acceptance_criteria: [AC-1, AC-2, AC-4]
+
+  - id: 13
+    description: "Write unit tests for update() method"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    dependencies: [6, 8]
+    slice: packages
+    rationale: "Tests verify frontmatter merging, content preservation during updates. Required for AC-3."
+    acceptance_criteria: [AC-3]
+
+  - id: 14
+    description: "Write unit tests for batch operations"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    dependencies: [7, 8]
+    slice: packages
+    rationale: "Tests verify readBatch() performance, exists() utility."
+    acceptance_criteria: []
+
+  - id: 15
+    description: "Write integration tests with real story files"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.integration.test.ts"
+    dependencies: [5, 6, 7, 8]
+    slice: packages
+    rationale: "Integration tests verify backward compatibility with existing legacy story files, new v2 schema support. Required for AC-7."
+    acceptance_criteria: [AC-7]
+
+  - id: 16
+    description: "Add inline documentation and JSDoc comments"
+    files:
+      - "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+      - "packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts"
+      - "packages/backend/orchestrator/src/adapters/utils/file-utils.ts"
+      - "packages/backend/orchestrator/src/adapters/__types__/index.ts"
+    dependencies: [5, 6, 7]
+    slice: packages
+    rationale: "Documentation ensures maintainability and clear API contracts."
+    acceptance_criteria: []
+
+files_to_change:
+  - path: "packages/backend/orchestrator/package.json"
+    action: modify
+    reason: "Add dependencies: gray-matter@^4.0.3, js-yaml@^4.1.0, @types/js-yaml@^4.0.5"
+    lines_estimate: 5
+
+  - path: "packages/backend/orchestrator/src/adapters/__types__/index.ts"
+    action: create
+    reason: "Custom error class hierarchy: StoryNotFoundError, InvalidYAMLError, ValidationError, WriteError, ReadError. ~80 lines with JSDoc."
+    lines_estimate: 80
+
+  - path: "packages/backend/orchestrator/src/adapters/utils/file-utils.ts"
+    action: create
+    reason: "Atomic write utilities: writeFileAtomic(), ensureDirectory(), readFileSafe(). ~120 lines with error handling."
+    lines_estimate: 120
+
+  - path: "packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts"
+    action: create
+    reason: "YAML parsing utilities: parseFrontmatter(), serializeStory(), extractContent(). ~100 lines with gray-matter integration."
+    lines_estimate: 100
+
+  - path: "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    action: create
+    reason: "Main adapter class with read(), write(), update(), readBatch(), exists() methods. Uses story-v2-compatible schema. ~300 lines with validation and error handling."
+    lines_estimate: 300
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/fixtures/minimal-story.yaml"
+    action: create
+    reason: "Minimal valid story file (legacy format). ~30 lines."
+    lines_estimate: 30
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/fixtures/full-story.yaml"
+    action: create
+    reason: "Full story file with all fields (new v2 format). ~80 lines."
+    lines_estimate: 80
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/fixtures/invalid-missing-id.yaml"
+    action: create
+    reason: "Invalid story file missing required 'id' field. ~20 lines."
+    lines_estimate: 20
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    action: create
+    reason: "Comprehensive unit tests for adapter, utilities, error handling. 20+ test cases. ~400 lines."
+    lines_estimate: 400
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.integration.test.ts"
+    action: create
+    reason: "Integration tests with real story files, backward compatibility verification. ~200 lines."
+    lines_estimate: 200
+
+commands_to_run:
+  - command: "pnpm add -w gray-matter@^4.0.3 js-yaml@^4.1.0"
+    when: "step 1 - dependency installation"
+    required: true
+    reason: "Install runtime dependencies for YAML parsing and frontmatter handling"
+
+  - command: "pnpm add -w -D @types/js-yaml@^4.0.5"
+    when: "step 1 - dependency installation"
+    required: true
+    reason: "Install TypeScript type definitions for js-yaml"
+
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after each implementation step"
+    required: true
+    reason: "Verify TypeScript compilation passes"
+
+  - command: "pnpm test packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.test.ts"
+    when: "after unit test creation (steps 9-14)"
+    required: true
+    reason: "Verify all unit tests pass"
+
+  - command: "pnpm test packages/backend/orchestrator/src/adapters/__tests__/story-file-adapter.integration.test.ts"
+    when: "after integration test creation (step 15)"
+    required: true
+    reason: "Verify integration tests pass with real files"
+
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify package builds successfully"
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify code style compliance"
+
+  - command: "pnpm test --coverage packages/backend/orchestrator/src/adapters"
+    when: "final verification"
+    required: true
+    reason: "Verify 80%+ test coverage requirement"
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies read() method parses YAML files into typed StoryArtifact objects"
+    evidence_type: test
+    notes: "Test reads minimal-story.yaml and full-story.yaml fixtures, asserts Zod validation passes, verifies all fields mapped correctly"
+
+  - ac_id: AC-1
+    planned_evidence: "Integration test: story-file-adapter.integration.test.ts reads real legacy story files"
+    evidence_type: test
+    notes: "Test reads existing WKFL-001, BUGF-010 story files, verifies backward compatibility with legacy format"
+
+  - ac_id: AC-2
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies write() method serializes StoryArtifact to YAML with frontmatter"
+    evidence_type: test
+    notes: "Test creates StoryArtifact object, writes to temp file, reads back, verifies frontmatter structure and markdown content preserved"
+
+  - ac_id: AC-2
+    planned_evidence: "Manual verification: Write new story file and inspect YAML structure"
+    evidence_type: manual
+    notes: "Create test story, write to disk, verify frontmatter delimiters (---), field structure, content section"
+
+  - ac_id: AC-3
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies update() method merges changes and preserves content"
+    evidence_type: test
+    notes: "Test reads existing story, modifies frontmatter field, calls update(), verifies field changed but content unchanged"
+
+  - ac_id: AC-4
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies validation runs before read/write operations"
+    evidence_type: test
+    notes: "Test attempts to read invalid-missing-id.yaml, asserts ValidationError thrown with Zod error details"
+
+  - ac_id: AC-4
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies write() rejects invalid StoryArtifact objects"
+    evidence_type: test
+    notes: "Test attempts to write object missing required fields, asserts ValidationError thrown before file write"
+
+  - ac_id: AC-5
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies atomic write pattern (temp file + rename)"
+    evidence_type: test
+    notes: "Test monitors filesystem during write(), asserts temp file created first (.tmp extension), then renamed to final path"
+
+  - ac_id: AC-5
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies cleanup on write failure"
+    evidence_type: test
+    notes: "Test simulates write error (e.g., disk full), asserts temp file cleaned up, original file unchanged"
+
+  - ac_id: AC-6
+    planned_evidence: "Unit test: story-file-adapter.test.ts verifies custom error classes thrown for each error condition"
+    evidence_type: test
+    notes: "Test cases: file not found → StoryNotFoundError, invalid YAML → InvalidYAMLError, validation failure → ValidationError, write failure → WriteError, read failure → ReadError"
+
+  - ac_id: AC-6
+    planned_evidence: "Error class tests verify error messages are descriptive and include context"
+    evidence_type: test
+    notes: "Assert error messages include file path, validation details, and actionable information"
+
+  - ac_id: AC-7
+    planned_evidence: "Integration test: story-file-adapter.integration.test.ts verifies reading legacy story files (status, epic, acceptance_criteria)"
+    evidence_type: test
+    notes: "Test reads existing WKFL-001 story file with legacy format, asserts Zod validation passes, verifies backward-compatible schema accepts all fields"
+
+  - ac_id: AC-7
+    planned_evidence: "Integration test: story-file-adapter.integration.test.ts verifies reading new v2 story files (state, feature, acs)"
+    evidence_type: test
+    notes: "Test reads story file with new v2 format, asserts validation passes, verifies schema supports both formats"
+
+  - ac_id: AC-7
+    planned_evidence: "Unit test: Verify story-v2-compatible.ts schema tests pass"
+    evidence_type: test
+    notes: "Run existing story-v2-compatible.test.ts, verify all 20+ test cases pass, confirming backward compatibility"
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Which schema version to use for Story File Adapter (v1 strict vs v2 backward-compatible)?"
+    decision: "Use story-v2-compatible.ts (backward-compatible schema v2)"
+    rationale: "Existing 50+ story files use legacy format (status, epic, acceptance_criteria). v2 schema accepts both formats without migration. Unblocks AC-7 and enables reading all existing files."
+    decided_by: pm
+    constraints:
+      - "Import from src/artifacts/story-v2-compatible.ts, not src/artifacts/story.ts"
+      - "Use normalization helpers (getStoryState, getStoryFeature) for field access"
+      - "Log deprecation warnings for legacy fields in future"
+      - "Document dual format support in adapter JSDoc"
+    alternatives_considered:
+      - "Use strict v1 schema (would require migration of 50+ files)"
+      - "Create adapter-specific schema (duplication, maintenance burden)"
+      - "Version detection with separate parsers (complexity overhead)"
+
+  - id: ARCH-002
+    question: "How to implement atomic writes to prevent partial file corruption?"
+    decision: "Use temp file + rename pattern (write to .tmp, then atomic rename)"
+    rationale: "Standard pattern for atomic file writes. OS-level rename is atomic on POSIX systems. Prevents partial corruption if write fails mid-operation."
+    decided_by: auto
+    constraints:
+      - "Write to {filename}.tmp first"
+      - "Use fs.rename() for atomic move (not copy + delete)"
+      - "Cleanup temp file on error"
+      - "Ensure directory exists before write"
+      - "Handle ENOENT, EACCES, ENOSPC errors"
+    alternatives_considered:
+      - "Direct write (not atomic, risk of partial corruption)"
+      - "Copy-on-write (requires filesystem support)"
+      - "Database-backed writes (out of scope, high complexity)"
+
+  - id: ARCH-003
+    question: "Which YAML library to use (js-yaml vs yaml vs gray-matter)?"
+    decision: "Use gray-matter for frontmatter parsing + js-yaml for serialization"
+    rationale: "gray-matter is specialized for frontmatter extraction (YAML + Markdown content). js-yaml provides lower-level YAML control for serialization. Combined approach gives best of both."
+    decided_by: auto
+    constraints:
+      - "gray-matter.read() for parsing files"
+      - "gray-matter.stringify() for serialization"
+      - "js-yaml for custom YAML formatting options if needed"
+      - "Handle YAML parsing errors gracefully with InvalidYAMLError"
+    alternatives_considered:
+      - "js-yaml only (less convenient for frontmatter)"
+      - "yaml library (newer, but less battle-tested)"
+      - "Custom parser (reinventing wheel, high effort)"
+
+  - id: ARCH-004
+    question: "Should adapter support streaming reads for large files?"
+    decision: "No streaming for MVP - read full file into memory"
+    rationale: "Story files are <10KB typically. Streaming adds complexity without performance benefit. Can add later if needed."
+    decided_by: auto
+    constraints:
+      - "Document file size assumption (<100KB)"
+      - "Log warning if file >100KB"
+      - "KB-log enhancement opportunity for streaming support"
+    alternatives_considered:
+      - "Stream-based parsing (complex, unnecessary for current file sizes)"
+      - "Lazy field loading (over-engineering for MVP)"
+
+  - id: ARCH-005
+    question: "How to handle errors during batch operations (fail-fast vs continue-on-error)?"
+    decision: "Fail-fast for validation errors, continue-on-error for missing files"
+    rationale: "Validation errors indicate data corruption (critical). Missing files may be intentional (e.g., story deleted). Return partial results with error array."
+    decided_by: auto
+    constraints:
+      - "readBatch() returns { results: StoryArtifact[], errors: Error[] }"
+      - "Validation errors throw immediately"
+      - "Missing files logged to errors array, processing continues"
+      - "Document error handling behavior in JSDoc"
+    alternatives_considered:
+      - "Fail-fast for all errors (too strict)"
+      - "Continue-on-error for all errors (masks critical issues)"
+      - "Promise.allSettled() for graceful degradation"
+
+complexity: moderate
+
+notes:
+  - "Story estimated at 5 points (4.5-5.5 days effort per SCOPE.yaml)"
+  - "Total estimated lines: ~1,330 (600 production + 730 tests)"
+  - "Backward-compatible schema v2 (story-v2-compatible.ts) already implemented and tested"
+  - "Performance targets: single read <100ms, batch read (50 files) <5s"
+  - "80%+ test coverage required per quality gates"
+  - "No E2E tests required (story_type: infrastructure exemption)"
+  - "Dependencies already tested: gray-matter (4M+ weekly downloads), js-yaml (30M+ weekly downloads)"
+  - "Atomic write pattern is proven technique, no custom implementation needed"
+  - "Integration tests will use real story files from plans/future/*/UAT/*/ and plans/future/*/*/"
+
+warnings:
+  - "Schema compatibility is critical - must verify story-v2-compatible.ts tests pass before proceeding"
+  - "Atomic write pattern assumes POSIX filesystem - may behave differently on Windows"
+  - "Performance targets unvalidated - may need optimization after benchmarking"
+  - "No file locking mechanism - concurrent writes may cause race conditions (KB-logged enhancement)"
+  - "No path injection validation - malicious paths could escape monorepo (KB-logged security)"
+  - "Backward-compatible schema uses .passthrough() - unknown fields preserved but not validated"

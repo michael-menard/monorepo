@@ -107,3 +107,21 @@ export {
   type ElaborationState,
   type GraphStateWithElaboration,
 } from './elaboration.js'
+
+// Code Audit Graph (FLOW-045)
+export {
+  // Graph factory and runner
+  createCodeAuditGraph,
+  runCodeAudit,
+  // Node adapters for workflow integration
+  codeAuditNode,
+  createCodeAuditNode,
+  // Schemas
+  CodeAuditConfigSchema,
+  // State annotation
+  CodeAuditStateAnnotation,
+  // Types
+  type CodeAuditConfig,
+  type CodeAuditState,
+  type GraphStateWithCodeAudit,
+} from './code-audit.js'

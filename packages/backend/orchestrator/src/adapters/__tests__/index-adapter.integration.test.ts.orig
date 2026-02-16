@@ -1,0 +1,171 @@
+/**
+ * Index Adapter Integration Tests
+ *
+ * Tests against the ACTUAL platform.stories.index.md file to ensure
+ * the adapter works with real production data.
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest'
+import path from 'node:path'
+import { IndexAdapter } from '../index-adapter.js'
+
+describe('IndexAdapter - Integration Tests', () => {
+  let adapter: IndexAdapter
+  const actualIndexPath = path.join(
+    __dirname,
+    '../../../../../..',
+    'plans/future/platform/platform.stories.index.md',
+  )
+
+  beforeEach(() => {
+    adapter = new IndexAdapter()
+  })
+
+  it('should parse the actual platform.stories.index.md without errors', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    expect(index).toBeDefined()
+    expect(index.frontmatter.doc_type).toBe('stories_index')
+    expect(index.frontmatter.title).toContain('Platform')
+  })
+
+  it('should parse all wave sections', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    expect(index.waves.length).toBeGreaterThan(0)
+
+    // Verify wave structure
+    for (const wave of index.waves) {
+      expect(wave.name).toBeDefined()
+      expect(wave.stories).toBeDefined()
+      expect(wave.story_count).toBe(wave.stories.length)
+    }
+  })
+
+  it('should parse all stories with valid structure', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    expect(index.stories.length).toBeGreaterThan(0)
+
+    // Verify each story has required fields
+    for (const story of index.stories) {
+      expect(story.number).toBeGreaterThan(0)
+      expect(story.story_id).toMatch(/^[A-Z]+-\d+$/)
+      expect(story.title).toBeDefined()
+      expect(story.status).toBeDefined()
+      expect(story.wave).toBeDefined()
+      expect(story.raw_title).toBeDefined()
+    }
+  })
+
+  it('should validate story ID uniqueness', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    const validation = adapter.validate(index)
+
+    // Should not have duplicate IDs
+    const duplicateErrors = validation.errors.filter(e => e.type === 'duplicate_id')
+    expect(duplicateErrors).toHaveLength(0)
+  })
+
+  it('should validate dependency references exist', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    const validation = adapter.validate(index)
+
+    // Should not have missing dependencies
+    const missingDepErrors = validation.errors.filter(e => e.type === 'missing_dependency')
+
+    if (missingDepErrors.length > 0) {
+      // Log for debugging
+      console.warn('Missing dependencies found:', missingDepErrors)
+    }
+
+    // We expect this to pass, but if it fails, the errors are informative
+    expect(validation.valid).toBe(true)
+  })
+
+  it('should calculate metrics with expected ranges', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    // Sanity checks on metrics
+    expect(index.metrics.total).toBeGreaterThan(0)
+    expect(index.metrics.total).toBe(index.stories.length)
+
+    // Sum of status counts should equal total
+    const statusSum = Object.values(index.metrics.by_status).reduce((a, b) => a + b, 0)
+    expect(statusSum).toBe(index.metrics.total)
+
+    // Completion percent should be 0-100
+    expect(index.metrics.completion_percent).toBeGreaterThanOrEqual(0)
+    expect(index.metrics.completion_percent).toBeLessThanOrEqual(100)
+  })
+
+  it('should handle round-trip read/write/read', async () => {
+    const originalIndex = await adapter.readIndex(actualIndexPath)
+
+    // Serialize and re-parse
+    const serialized = (adapter as any).serializeIndex(originalIndex)
+    const tempPath = path.join(__dirname, '__temp_roundtrip.md')
+
+    // Write to temp file
+    await adapter.writeIndex(originalIndex, tempPath)
+
+    // Read back
+    const restoredIndex = await adapter.readIndex(tempPath)
+
+    // Compare key metrics
+    expect(restoredIndex.stories.length).toBe(originalIndex.stories.length)
+    expect(restoredIndex.waves.length).toBe(originalIndex.waves.length)
+    expect(restoredIndex.metrics.total).toBe(originalIndex.metrics.total)
+
+    // Cleanup
+    const fs = await import('node:fs/promises')
+    await fs.unlink(tempPath).catch(() => {})
+  })
+
+  it('should parse in under 500ms (performance)', async () => {
+    const start = Date.now()
+    await adapter.readIndex(actualIndexPath)
+    const duration = Date.now() - start
+
+    // Generous limit for CI environments
+    expect(duration).toBeLessThan(500)
+  })
+
+  it('should preserve emoji formatting in real data', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    // Find stories with emojis
+    const storiesWithEmoji = index.stories.filter(s =>
+      /[⚡🎯✨🎉]/.test(s.raw_title),
+    )
+
+    // Should have at least some stories with emojis
+    expect(storiesWithEmoji.length).toBeGreaterThan(0)
+
+    // Verify emojis are preserved
+    for (const story of storiesWithEmoji) {
+      expect(story.raw_title).toMatch(/[⚡🎯✨🎉]/)
+    }
+  })
+
+  it('should handle different column sets across waves', async () => {
+    const index = await adapter.readIndex(actualIndexPath)
+
+    // Wave 1 has "Blocks" column instead of "← Depends On"
+    const wave1 = index.waves.find(w => w.name.includes('Wave 1'))
+    if (wave1) {
+      // Check that we can parse both column formats
+      expect(wave1.stories.length).toBeGreaterThan(0)
+    }
+
+    // Later waves have "← Depends On" and "Priority"
+    const wave2 = index.waves.find(w => w.name.includes('Wave 2'))
+    if (wave2) {
+      expect(wave2.stories.length).toBeGreaterThan(0)
+      const storiesWithPriority = wave2.stories.filter(s => s.priority)
+      expect(storiesWithPriority.length).toBeGreaterThan(0)
+    }
+  })
+})

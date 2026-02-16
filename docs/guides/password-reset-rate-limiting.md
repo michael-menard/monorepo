@@ -21,7 +21,14 @@ tags:
 
 This guide provides comprehensive specifications for implementing rate limiting feedback in password reset flows (`forgotPassword` and `confirmResetPassword` operations). It covers Cognito's rate limiting behavior, frontend state management patterns, UI/UX requirements, component reuse strategies, architectural boundaries, and testing approaches.
 
-**Target Audience**: Frontend engineers implementing password reset UX improvements (see [BUGF-019](../../plans/future/bug-fix/ready-to-work/BUGF-019/BUGF-019.md))
+**Target Audience**: Frontend engineers implementing password reset UX improvements (see [BUGF-019](../../plans/future/bug-fix/in-progress/BUGF-019/BUGF-019.md))
+
+**Implementation Status**: Implemented in BUGF-019. Key components:
+- `useRateLimitCooldown` hook: `packages/core/app-component-library/src/hooks/useRateLimitCooldown.ts`
+- `RateLimitBanner` component: `packages/core/app-component-library/src/feedback/RateLimitBanner/`
+- `PasswordStrengthIndicator` component: `packages/core/app-component-library/src/forms/PasswordStrengthIndicator/`
+- ForgotPasswordPage: `apps/web/main-app/src/routes/pages/ForgotPasswordPage.tsx`
+- ResetPasswordPage: `apps/web/main-app/src/routes/pages/ResetPasswordPage.tsx`
 
 **Related Documentation**:
 - [Forgot Password Flow](../flows/auth/forgot-password.md)

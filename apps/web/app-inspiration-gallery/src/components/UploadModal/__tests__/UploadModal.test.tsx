@@ -45,4 +45,77 @@ describe('UploadModal', () => {
 
     expect(onClose).toHaveBeenCalled()
   })
+
+  /**
+   * BUGF-018: Memory leak cleanup tests
+   */
+  describe('Memory leak cleanup (BUGF-018)', () => {
+    beforeEach(() => {
+      // Mock URL.createObjectURL and URL.revokeObjectURL
+      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+      global.URL.revokeObjectURL = vi.fn()
+    })
+
+    it('revokes blob URL on unmount', async () => {
+      const user = userEvent.setup()
+      const { unmount } = render(<UploadModal {...defaultProps} />)
+
+      // Select a file to create a blob URL
+      const file = new File(['test'], 'test.png', { type: 'image/png' })
+      const input = screen.getByLabelText('Select image file')
+      await user.upload(input, file)
+
+      expect(global.URL.createObjectURL).toHaveBeenCalled()
+
+      // Unmount component
+      unmount()
+
+      // Should revoke the blob URL
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    })
+
+    it('revokes blob URL when removing image', async () => {
+      const user = userEvent.setup()
+      render(<UploadModal {...defaultProps} />)
+
+      // Select a file
+      const file = new File(['test'], 'test.png', { type: 'image/png' })
+      const input = screen.getByLabelText('Select image file')
+      await user.upload(input, file)
+
+      // Wait for preview to render
+      const preview = await screen.findByAltText('Preview')
+      expect(preview).toBeInTheDocument()
+
+      // Click remove button
+      const removeButton = screen.getByLabelText('Remove image')
+      await user.click(removeButton)
+
+      // Should revoke the blob URL
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    })
+
+    it('revokes old blob URL when replacing with new file', async () => {
+      const user = userEvent.setup()
+      render(<UploadModal {...defaultProps} />)
+
+      // Select first file
+      const file1 = new File(['test1'], 'test1.png', { type: 'image/png' })
+      const input = screen.getByLabelText('Select image file')
+      await user.upload(input, file1)
+
+      // Wait for first preview
+      await screen.findByAltText('Preview')
+
+      // Mock createObjectURL to return different URL for second file
+      ;(global.URL.createObjectURL as ReturnType<typeof vi.fn>).mockReturnValueOnce('blob:mock-url-2')
+
+      // Select second file (replacement)
+      const file2 = new File(['test2'], 'test2.png', { type: 'image/png' })
+      await user.upload(input, file2)
+
+      // Should revoke the old blob URL when new one is created
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    })
+  })
 })

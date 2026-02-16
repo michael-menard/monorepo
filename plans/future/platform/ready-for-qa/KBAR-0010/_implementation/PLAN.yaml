@@ -1,0 +1,215 @@
+schema: 1
+story_id: "KBAR-0010"
+timestamp: "2026-02-14T14:35:00Z"
+
+steps:
+  - id: 1
+    description: "Create KBAR schema file with enums (6 total: kbar_story_phase, kbar_artifact_type, kbar_sync_status, kbar_dependency_type, kbar_story_priority, kbar_conflict_resolution)"
+    files:
+      - "packages/backend/database-schema/src/schema/kbar.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Define Story Management tables (stories, story_states, story_dependencies) with indexes and relations"
+    files:
+      - "packages/backend/database-schema/src/schema/kbar.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Define Artifact tables (artifacts, artifact_versions, artifact_content_cache) with FK constraints and relations"
+    files:
+      - "packages/backend/database-schema/src/schema/kbar.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Define Sync State tables (sync_events, sync_conflicts, sync_checkpoints) with indexes"
+    files:
+      - "packages/backend/database-schema/src/schema/kbar.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 5
+    description: "Define Index Generation tables (index_metadata, index_entries) with hierarchical structure"
+    files:
+      - "packages/backend/database-schema/src/schema/kbar.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 6
+    description: "Define Drizzle relations for all tables (stories->artifacts, stories->story_states, stories->story_dependencies, artifacts->artifact_versions)"
+    files:
+      - "packages/backend/database-schema/src/schema/kbar.ts"
+    dependencies: [2, 3, 4, 5]
+    slice: packages
+
+  - id: 7
+    description: "Export KBAR schema, tables, enums, and relations from schema/index.ts"
+    files:
+      - "packages/backend/database-schema/src/schema/index.ts"
+    dependencies: [6]
+    slice: packages
+
+  - id: 8
+    description: "Generate Drizzle migration file using db:generate command"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0016_*.sql"
+    dependencies: [7]
+    slice: packages
+
+  - id: 9
+    description: "Review generated SQL migration for correctness (CREATE SCHEMA, enums, tables, indexes, FKs)"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0016_*.sql"
+    dependencies: [8]
+    slice: packages
+
+  - id: 10
+    description: "Apply migration to dev database using db:migrate command"
+    files: []
+    dependencies: [9]
+    slice: packages
+
+  - id: 11
+    description: "Update db package exports to include KBAR schemas in src/index.ts"
+    files:
+      - "packages/backend/db/src/index.ts"
+    dependencies: [10]
+    slice: packages
+
+  - id: 12
+    description: "Verify Zod schemas auto-generated in packages/backend/db/src/generated-schemas.ts"
+    files:
+      - "packages/backend/db/src/generated-schemas.ts"
+    dependencies: [11]
+    slice: packages
+
+  - id: 13
+    description: "Write unit tests for schema structure validation (AC-9) and relations (AC-11)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [12]
+    slice: packages
+
+  - id: 14
+    description: "Run TypeScript compilation to verify schema exports"
+    files: []
+    dependencies: [13]
+    slice: packages
+
+  - id: 15
+    description: "Run tests to verify schema structure and Zod validation"
+    files: []
+    dependencies: [14]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/kbar.ts"
+    action: create
+    reason: "Core KBAR schema definition with 11 tables, 6 enums, indexes, and relations per AC-1 through AC-11"
+
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modify
+    reason: "Export KBAR schema, tables, enums, and relations per AC-8"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0016_*.sql"
+    action: create
+    reason: "Generated migration file per AC-7"
+
+  - path: "packages/backend/db/src/index.ts"
+    action: modify
+    reason: "Export KBAR types and schemas per AC-8"
+
+  - path: "packages/backend/db/src/generated-schemas.ts"
+    action: modify
+    reason: "Auto-generated Zod schemas per AC-9 (via drizzle-zod)"
+
+  - path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    action: create
+    reason: "Unit tests for schema validation per AC-9 and relational queries per AC-11"
+
+commands_to_run:
+  - command: "pnpm --filter @repo/database-schema check-types"
+    when: "after schema definition (step 7)"
+    required: true
+
+  - command: "pnpm --filter @repo/database-schema db:generate"
+    when: "after schema export (step 7)"
+    required: true
+
+  - command: "pnpm --filter @repo/database-schema db:migrate"
+    when: "after reviewing generated SQL (step 9)"
+    required: true
+
+  - command: "pnpm --filter @repo/database-schema test"
+    when: "after writing tests (step 13)"
+    required: true
+
+  - command: "pnpm --filter @repo/db check-types"
+    when: "after db package updates (step 11)"
+    required: true
+
+  - command: "pnpm build"
+    when: "after all code changes (step 14)"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "SQL query: SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'kbar'"
+    evidence_type: command
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: kbar-schema.test.ts - validates stories, story_states, story_dependencies tables with indexes"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: kbar-schema.test.ts - validates artifacts, artifact_versions, artifact_content_cache tables"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: kbar-schema.test.ts - validates sync_events, sync_conflicts, sync_checkpoints tables"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: kbar-schema.test.ts - validates index_metadata, index_entries tables"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "SQL query: SELECT typname FROM pg_type WHERE typname LIKE 'kbar%' - verifies 6 enums created"
+    evidence_type: command
+
+  - ac_id: "AC-7"
+    planned_evidence: "Migration file exists at src/migrations/app/0016_*.sql and migration applied successfully"
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "TypeScript compilation succeeds for packages/backend/database-schema/src/schema/index.ts exports"
+    evidence_type: command
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: kbar-schema.test.ts - validates Zod schemas for insert/select on all tables"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Unit test: kbar-schema.test.ts - verifies indexes on all FK columns"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Unit test: kbar-schema.test.ts - tests relational queries (db.query.stories.findFirst({ with: { artifacts: true } }))"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Following WINT schema pattern from migration 0015_messy_sugar_man.sql"
+  - "All enums prefixed with 'kbar_' to avoid namespace collisions"
+  - "CASCADE delete behavior defined for artifacts, story_states, story_dependencies on stories delete"
+  - "JSONB metadata columns for extensible story and artifact metadata"
+  - "All FK columns indexed for query performance"
+  - "Zod schemas auto-generated via drizzle-zod (createInsertSchema, createSelectSchema)"
+  - "Unit tests written alongside schema implementation to avoid post-implementation fix phase"
+  - "Migration is idempotent (CREATE SCHEMA IF NOT EXISTS, CREATE TABLE IF NOT EXISTS)"

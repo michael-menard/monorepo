@@ -1,0 +1,27 @@
+story_id: LNGG-0040
+title: "Stage Movement Adapter"
+surfaces:
+  - backend
+  - packages
+touches:
+  backend: true
+  frontend: false
+  database: false
+  infrastructure: false
+packages:
+  - packages/backend/orchestrator
+new_files:
+  - packages/backend/orchestrator/src/adapters/stage-movement-adapter.ts
+  - packages/backend/orchestrator/src/adapters/__types__/stage-types.ts
+  - packages/backend/orchestrator/src/adapters/utils/stage-validator.ts
+  - packages/backend/orchestrator/src/adapters/__tests__/stage-movement-adapter.test.ts
+  - packages/backend/orchestrator/src/adapters/__tests__/stage-movement-adapter.integration.test.ts
+  - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-001.md
+  - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-002.md
+  - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-003.md
+  - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-004.md
+modified_files:
+  - packages/backend/orchestrator/src/adapters/__types__/index.ts
+  - packages/backend/orchestrator/src/adapters/index.ts
+dependencies:
+  - LNGG-0010 (Story File Adapter - COMPLETE)

@@ -2,7 +2,7 @@
  * Simple ImageUploadZone component for multi-image upload
  * Uses @repo/upload package with preview and reorder
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload, X, GripVertical } from 'lucide-react'
 import { Button } from '@repo/app-component-library'
 import { z } from 'zod'
@@ -23,6 +23,20 @@ export const ImageUploadZone = ({
   disabled = false,
 }: ImageUploadZoneProps) => {
   const [dragOver, setDragOver] = useState(false)
+  // BUGF-018: Track blob URLs for cleanup
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
+
+  // BUGF-018: Create blob URLs and cleanup on images change or unmount
+  useEffect(() => {
+    // Create new URLs
+    const newUrls = images.map(image => URL.createObjectURL(image))
+    setPreviewUrls(newUrls)
+
+    // Cleanup function - revoke URLs on unmount or before creating new ones
+    return () => {
+      newUrls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [images])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -55,6 +69,10 @@ export const ImageUploadZone = ({
   }
 
   const removeImage = (index: number) => {
+    // BUGF-018: Revoke blob URL before removing
+    if (previewUrls[index]) {
+      URL.revokeObjectURL(previewUrls[index])
+    }
     onImagesChange(images.filter((_, i) => i !== index))
   }
 
@@ -111,10 +129,10 @@ export const ImageUploadZone = ({
       {/* Image Previews */}
       {images.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {images.map((image, index) => (
+          {images.map((_, index) => (
             <div key={index} className="relative group">
               <img
-                src={URL.createObjectURL(image)}
+                src={previewUrls[index] || undefined}
                 alt={`Preview ${index + 1}`}
                 className="w-full h-32 object-cover rounded-lg"
               />

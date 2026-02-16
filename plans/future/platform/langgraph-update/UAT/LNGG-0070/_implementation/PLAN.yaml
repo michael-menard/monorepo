@@ -1,0 +1,186 @@
+schema: 1
+story_id: "LNGG-0070"
+timestamp: "2026-02-15T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create integration test directory structure"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/.gitkeep"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Implement AC-1: Story lifecycle workflow integration tests"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/workflow-lifecycle.integration.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Implement AC-2: Checkpoint + resume workflow integration tests"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/checkpoint-resume.integration.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 4
+    description: "Implement AC-3: Decision callback integration tests"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/decision-callbacks.integration.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 5
+    description: "Implement AC-4: KB writer integration tests"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/kb-writer.integration.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 6
+    description: "Implement AC-5: Real story file compatibility tests"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/real-story-compatibility.integration.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 7
+    description: "Implement AC-6: Performance benchmarking tests"
+    files:
+      - "packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 8
+    description: "Run coverage baseline before implementation (AC-7 pre-task)"
+    files: []
+    dependencies: []
+    slice: packages
+
+  - id: 9
+    description: "Run all integration tests and generate coverage report (AC-7)"
+    files: []
+    dependencies: [2, 3, 4, 5, 6, 7]
+    slice: packages
+
+  - id: 10
+    description: "Perform quality comparison against Claude Code baseline (AC-8)"
+    files: []
+    dependencies: [2, 3, 4, 5, 6]
+    slice: packages
+
+  - id: 11
+    description: "Document results in EVIDENCE.yaml"
+    files:
+      - "plans/future/platform/langgraph-update/in-progress/LNGG-0070/_implementation/EVIDENCE.yaml"
+    dependencies: [9, 10]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/.gitkeep"
+    action: create
+    reason: "Create integration test directory (may be deleted after first test file)"
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/workflow-lifecycle.integration.test.ts"
+    action: create
+    reason: "AC-1: Test story lifecycle workflow (StoryFileAdapter + StageMovementAdapter + IndexAdapter)"
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/checkpoint-resume.integration.test.ts"
+    action: create
+    reason: "AC-2: Test checkpoint save/resume workflow (CheckpointAdapter + StoryFileAdapter)"
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/decision-callbacks.integration.test.ts"
+    action: create
+    reason: "AC-3: Test decision callback integration (DecisionCallbackRegistry + StoryFileAdapter)"
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/kb-writer.integration.test.ts"
+    action: create
+    reason: "AC-4: Test KB writer integration with deferred writes (KBWriterAdapter + StoryFileAdapter)"
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/real-story-compatibility.integration.test.ts"
+    action: create
+    reason: "AC-5: Test backward compatibility with real story files (StoryFileAdapter)"
+
+  - path: "packages/backend/orchestrator/src/adapters/__tests__/integration/performance-benchmarks.integration.test.ts"
+    action: create
+    reason: "AC-6: Performance benchmarking for common operations"
+
+  - path: "plans/future/platform/langgraph-update/in-progress/LNGG-0070/_implementation/EVIDENCE.yaml"
+    action: create
+    reason: "Document test results, coverage metrics, performance benchmarks, and quality comparison"
+
+commands_to_run:
+  - command: "pnpm test --coverage --run"
+    when: "Before implementation (step 8) - establish baseline"
+    required: true
+
+  - command: "pnpm test packages/backend/orchestrator/src/adapters/__tests__/integration --run"
+    when: "After all test files created (step 9) - run integration tests"
+    required: true
+
+  - command: "pnpm test --coverage --run"
+    when: "After all test files created (step 9) - generate coverage report"
+    required: true
+
+  - command: "pnpm build"
+    when: "After all code changes"
+    required: true
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "After all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "After all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Integration test: workflow-lifecycle.integration.test.ts with 5 test cases (sequential transitions, index metrics, status updates, invalid transitions, rollback on failure, index rollback test)"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Integration test: checkpoint-resume.integration.test.ts with 4 test cases (save at different phases, resume from checkpoint, token accumulation, completed steps skip, concurrent checkpoint test)"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Integration test: decision-callbacks.integration.test.ts with 4 test cases (auto-decision mode, CLI callback mocked, noop callback, decision context propagation)"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Integration test: kb-writer.integration.test.ts with 4 test cases (deferred writes to YAML, deduplication, no-op mode, story_id tagging)"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Integration test: real-story-compatibility.integration.test.ts with 4 test cases (legacy format, v2 format, round-trip integrity, real LNGG story file)"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Integration test: performance-benchmarks.integration.test.ts with benchmarks for 4 operations (story read, story write, stage movement, index update). Results logged to EVIDENCE.yaml with environment details."
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Coverage report showing >80% line and branch coverage. Command: pnpm test --coverage --run. Results logged to EVIDENCE.yaml."
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Manual quality comparison using 5-point checklist: (1) YAML fields present, (2) No Zod errors, (3) Structure valid, (4) Checkpoint valid, (5) Index accurate. Compare 3 samples. Results documented in EVIDENCE.yaml."
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: complex
+
+notes:
+  - "Each AC maps to one test file for modularity - can be implemented independently"
+  - "Reuse existing test fixtures from __fixtures__/ and fixtures/ directories (60% target)"
+  - "Follow integration test patterns from story-file-adapter.integration.test.ts and index-adapter.integration.test.ts"
+  - "Performance benchmarks are advisory only - log environment details with results"
+  - "KB Writer tests use deferred mode only (no real KB instance) per DECISIONS.yaml"
+  - "Quality comparison uses concrete 5-point checklist per DECISIONS.yaml"
+  - "Coverage baseline run before implementation per DECISIONS.yaml pre-task"
+  - "Additional test cases from DECISIONS.yaml: AC-1 index rollback, AC-2 concurrent checkpoint"
+  - "Contingency plan: defer AC-6 and AC-8 to LNGG-0071 if work exceeds 6 hours"
+  - "All integration tests use temp directories with cleanup in afterEach hooks"
+  - "Mock @repo/logger in all tests to prevent console noise"

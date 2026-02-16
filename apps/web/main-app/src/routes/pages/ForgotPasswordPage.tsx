@@ -16,6 +16,8 @@ import {
   Alert,
   AlertDescription,
   cn,
+  RateLimitBanner,
+  useRateLimitCooldown,
 } from '@repo/app-component-library'
 import { Mail, ArrowLeft, AlertCircle, CheckCircle, KeyRound } from 'lucide-react'
 import { AuthLayout } from '@/components/Layout/RootLayout'
@@ -55,6 +57,13 @@ export function ForgotPasswordPage() {
   const [emailSent, setEmailSent] = useState(false)
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null)
 
+  const { remainingSeconds, canRetry, handleRateLimitError, clearCooldown, formattedTime } =
+    useRateLimitCooldown({
+      storageKeyPrefix: 'auth:forgotPassword',
+      baseCooldownSeconds: 60,
+      maxCooldownSeconds: 600,
+    })
+
   const {
     register,
     handleSubmit,
@@ -83,12 +92,14 @@ export function ForgotPasswordPage() {
         setSubmittedEmail(data.email)
         // Store email for reset password page
         sessionStorage.setItem('pendingResetEmail', data.email)
+        clearCooldown()
         trackNavigation('forgot_password_success', {
           source: 'forgot_password_page',
         })
       } else if (result.error?.includes('LimitExceededException')) {
         // Rate limiting - show specific error
-        setError('Too many attempts. Please try again later.')
+        handleRateLimitError()
+        setError('Too many attempts. Please wait before trying again.')
         trackNavigation('forgot_password_rate_limited', {
           source: 'forgot_password_page',
         })
@@ -114,6 +125,7 @@ export function ForgotPasswordPage() {
         setEmailSent(true)
         setSubmittedEmail(data.email)
         sessionStorage.setItem('pendingResetEmail', data.email)
+        clearCooldown()
         trackNavigation('forgot_password_success', {
           source: 'forgot_password_page',
         })
@@ -121,7 +133,8 @@ export function ForgotPasswordPage() {
       }
 
       if (errorName === 'LimitExceededException') {
-        setError('Too many attempts. Please try again later.')
+        handleRateLimitError()
+        setError('Too many attempts. Please wait before trying again.')
       } else {
         setError('Failed to send reset email. Please try again.')
       }
@@ -236,6 +249,17 @@ export function ForgotPasswordPage() {
               </motion.div>
             ) : null}
 
+            {/* Rate Limit Banner */}
+            {!canRetry && (
+              <RateLimitBanner
+                visible={!canRetry}
+                retryAfterSeconds={remainingSeconds}
+                onRetry={() => {}}
+                title="Rate Limit Exceeded"
+                message="Too many attempts. Please wait before trying again."
+              />
+            )}
+
             {!emailSent ? (
               <form
                 onSubmit={handleSubmit(onSubmit)}
@@ -285,7 +309,8 @@ export function ForgotPasswordPage() {
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     type="submit"
-                    disabled={isSubmitting || isLoading}
+                    disabled={isSubmitting || isLoading || !canRetry}
+                    aria-disabled={!canRetry ? 'true' : undefined}
                     className={cn(
                       'w-full h-11 bg-gradient-to-r from-orange-500 to-red-500',
                       'hover:from-orange-600 hover:to-red-600',
@@ -295,7 +320,11 @@ export function ForgotPasswordPage() {
                     )}
                     data-testid="submit-button"
                   >
-                    {isSubmitting || isLoading ? (
+                    {!canRetry ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <span>Wait {formattedTime}</span>
+                      </div>
+                    ) : isSubmitting || isLoading ? (
                       <div className="flex items-center justify-center gap-2">
                         <div
                           className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"
@@ -311,6 +340,13 @@ export function ForgotPasswordPage() {
                     )}
                   </Button>
                 </motion.div>
+
+                {/* ARIA timer for screen readers */}
+                {!canRetry && (
+                  <div role="timer" aria-live="polite" className="sr-only">
+                    {`Approximately ${Math.ceil(remainingSeconds / 60)} minutes remaining.`}
+                  </div>
+                )}
               </form>
             ) : (
               <div className="text-center space-y-4" data-testid="success-section">

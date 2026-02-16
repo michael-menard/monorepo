@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-02-14T21:29:15.693Z",
+  "epicPath": "test-epic-migration",
+  "totalChecks": 3,
+  "passedChecks": 2,
+  "failedChecks": 1,
+  "checks": [
+    {
+      "check": "no-lifecycle-directories",
+      "passed": false,
+      "message": "Found lifecycle directories: UAT, backlog, elaboration, in-progress, ready-for-qa, ready-to-work",
+      "expected": 0,
+      "actual": 6
+    },
+    {
+      "check": "status-fields",
+      "passed": true,
+      "message": "All stories have status field",
+      "expected": 0,
+      "actual": 0
+    },
+    {
+      "check": "file-count",
+      "passed": true,
+      "message": "File count matches: 5 stories",
+      "expected": 5,
+      "actual": 5
+    }
+  ],
+  "verificationPassed": false
+}

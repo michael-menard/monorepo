@@ -1,0 +1,189 @@
+schema: 1
+story_id: INFR-0110
+timestamp: "2026-02-15T17:16:00Z"
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Created artifacts.ts with pgSchema('artifacts') namespace"
+        line_ref: "43"
+
+  - ac_id: AC-2
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Defined artifact_type_enum in public schema with all 7 types for forward compatibility"
+        line_ref: "62-70"
+
+  - ac_id: AC-3
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Created story_artifacts table with all required fields including JSONB acceptance_criteria and risks"
+        line_ref: "195-232"
+
+  - ac_id: AC-4
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Created checkpoint_artifacts table with JSONB completed_steps field"
+        line_ref: "241-268"
+
+  - ac_id: AC-5
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Created scope_artifacts table with JSONB packages_touched, surfaces, and risk_flags"
+        line_ref: "277-305"
+
+  - ac_id: AC-6
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Created plan_artifacts table with JSONB steps, file_changes, commands, ac_mapping"
+        line_ref: "314-343"
+
+  - ac_id: AC-7
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/migrations/app/0021_wealthy_sunfire.sql
+        description: "Composite indexes created: idx_story_artifacts_story_id, idx_checkpoint_artifacts_story_phase, idx_*_created_at"
+        line_ref: "52-59"
+
+  - ac_id: AC-8
+    status: COMPLETE
+    evidence:
+      - type: command
+        command: "pnpm --filter @repo/database-schema db:generate"
+        output: "[✓] Your SQL migration file ➜ src/migrations/app/0021_wealthy_sunfire.sql 🚀"
+        description: "Generated Drizzle migration for artifacts schema, enum, and 4 core tables"
+
+  - ac_id: AC-9
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Auto-generated Zod insert/select schemas using createInsertSchema/createSelectSchema for 4 core artifact tables"
+        line_ref: "386-421"
+
+  - ac_id: AC-10
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: packages/backend/database-schema/src/schema/artifacts.ts
+        description: "Drizzle relations defined: story → artifacts (one-to-many, lazy), artifact → story (many-to-one, eager)"
+        line_ref: "348-383"
+
+  - ac_id: AC-11
+    status: COMPLETE
+    evidence:
+      - type: test
+        command: "pnpm --filter @repo/database-schema test"
+        description: "Unit tests pass (19 tests in core-artifacts-schema.test.ts): insert valid artifact, reject invalid artifact, JSONB field structure"
+        test_file: packages/backend/database-schema/src/schema/__tests__/core-artifacts-schema.test.ts
+        result: "✓ 19 passed"
+
+  - ac_id: AC-12
+    status: COMPLETE
+    evidence:
+      - type: file
+        path: plans/future/platform/in-progress/INFR-0110/_implementation/SCHEMA-REFERENCE.md
+        description: "Schema design decisions documented: field alignment, JSONB denormalization, enum location, FK targets, ON DELETE CASCADE"
+
+summary: "All 12 acceptance criteria complete. Created artifacts pgSchema with 4 core artifact tables (story, checkpoint, scope, plan). Migration generated successfully, all unit tests pass."
+
+test_evidence:
+  unit_tests:
+    - framework: vitest
+      package: "@repo/database-schema"
+      file: src/schema/__tests__/core-artifacts-schema.test.ts
+      tests_passed: 19
+      coverage: "Schema validation, JSONB structure, required fields"
+      result: PASS
+
+  integration_tests:
+    - status: DEFERRED
+      reason: "No real database integration tests required for schema-only changes (AC-11 covers schema validation via unit tests)"
+
+  e2e_tests:
+    - status: NOT_APPLICABLE
+      reason: "Infrastructure story - no UI/API endpoints to test"
+
+verification:
+  build:
+    - package: "@repo/database-schema"
+      command: "pnpm test"
+      result: PASS
+      output: "242 tests passed"
+
+  type_check:
+    - package: "@repo/database-schema"
+      result: PASS
+      note: "Pre-existing pgvector error not introduced by this story"
+
+  migration:
+    - file: src/migrations/app/0021_wealthy_sunfire.sql
+      size_lines: 59
+      tables_created: 4
+      indexes_created: 8
+      foreign_keys: 4
+      result: GENERATED
+
+files_modified:
+  - path: packages/backend/database-schema/src/schema/artifacts.ts
+    action: create
+    lines: 421
+
+  - path: packages/backend/database-schema/src/schema/index.ts
+    action: modify
+    lines_added: 52
+
+  - path: packages/backend/database-schema/src/migrations/app/0021_wealthy_sunfire.sql
+    action: create
+    lines: 59
+
+  - path: packages/backend/database-schema/src/migrations/app/meta/_journal.json
+    action: modify
+    lines_added: 7
+
+  - path: packages/backend/db/src/schema.ts
+    action: modify
+    lines_added: 39
+
+  - path: packages/backend/db/package.json
+    action: modify
+    change: "Added @repo/database-schema dependency"
+
+  - path: packages/backend/database-schema/src/schema/__tests__/core-artifacts-schema.test.ts
+    action: create
+    lines: 464
+
+  - path: plans/future/platform/in-progress/INFR-0110/_implementation/SCHEMA-REFERENCE.md
+    action: create
+    lines: 561
+
+notes:
+  - "All 4 core artifact tables created with JSONB denormalization for co-location pattern"
+  - "artifact_type_enum in public schema with all 7 types for forward compatibility with INFR-0120"
+  - "ON DELETE CASCADE on all foreign keys for automatic cleanup"
+  - "Composite indexes for common query patterns (story_id, created_at, phase)"
+  - "Auto-generated Zod schemas via drizzle-zod for runtime validation"
+  - "Foreign keys reference wint.stories.id (UUID) from WINT-0010"
+  - "Schema alignment with orchestrator Zod artifacts verified via unit tests"
+  - "SCHEMA-REFERENCE.md documents all design decisions (ADRs)"
+  - "Pre-existing mcp-tools build issue not related to this story"
+
+risks_mitigated:
+  - "Schema alignment drift: Automated tests compare Drizzle to orchestrator Zod schemas"
+  - "JSONB type safety: drizzle-zod provides runtime validation before insert"
+  - "Migration dependencies: WINT-0010 verified complete (wint.stories exists)"
+  - "Enum forward compatibility: All 7 types defined upfront, no ALTER TYPE needed in INFR-0120"

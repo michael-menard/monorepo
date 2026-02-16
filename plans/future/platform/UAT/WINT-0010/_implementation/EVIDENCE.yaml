@@ -1,0 +1,294 @@
+schema: 1
+story_id: "WINT-0010"
+version: 1
+timestamp: "2026-02-13T21:35:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-001"
+    ac_text: "Create wintSchema = pgSchema('wint') namespace to isolate WINT tables from production schemas"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Line 1-33: Defined wintSchema = pgSchema('wint')"
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0015_messy_sugar_man.sql"
+        description: "Line 1: CREATE SCHEMA \"wint\""
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-001 tests pass: schema namespace defined and verified"
+
+  - ac_id: "AC-002"
+    ac_text: "Define Story Management Schema with tables for stories, states, transitions, dependencies"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 58-217: stories, storyStates, storyTransitions, storyDependencies tables with UUID PKs, timestamps, indexes, and FK relations"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-002 tests pass: all story management tables defined"
+
+  - ac_id: "AC-003"
+    ac_text: "Define Context Cache Schema with tables for cached context packs and session management"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 242-335: contextPacks (with expiresAt TTL), contextSessions, contextCacheHits tables"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-003 tests pass: all context cache tables defined with TTL fields"
+
+  - ac_id: "AC-004"
+    ac_text: "Define Telemetry Schema with tables for invocations, decisions, outcomes, state transitions"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 357-495: agentInvocations, agentDecisions, agentOutcomes, stateTransitions tables with JSONB metadata fields"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-004 tests pass: all telemetry tables defined with JSONB support"
+
+  - ac_id: "AC-005"
+    ac_text: "Define ML Pipeline Schema with tables for training data, models, predictions"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 517-661: trainingData, mlModels (with version field), modelPredictions, modelMetrics tables with JSONB hyperparameters"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-005 tests pass: all ML pipeline tables defined with version tracking"
+
+  - ac_id: "AC-006"
+    ac_text: "Define Graph Relational Schema with tables for features, capabilities, relationships, cohesion rules"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 683-833: features, capabilities, featureRelationships (with self-referencing FKs), cohesionRules tables"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-006 tests pass: all graph relational tables defined with self-referencing FKs"
+
+  - ac_id: "AC-007"
+    ac_text: "Define Workflow Tracking Schema with tables for executions, checkpoints, audit trails"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 855-1001: workflowExecutions (with status enum), workflowCheckpoints, workflowAuditLog tables"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-007 tests pass: all workflow tracking tables defined with state enum"
+
+  - ac_id: "AC-008"
+    ac_text: "Add appropriate indexes for common query patterns"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "All tables include composite indexes (e.g., stories: priority+state, agentInvocations: agentName+storyId) and single-column indexes on FKs"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-008 tests pass: indexes defined on all tables"
+
+  - ac_id: "AC-009"
+    ac_text: "Define Drizzle relations for lazy loading between related tables"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 1007-1141: Relations defined for all tables using relations() API, including circular dependencies handled correctly"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-009 tests pass: relations defined for all 6 schema groups"
+
+  - ac_id: "AC-010"
+    ac_text: "Auto-generate Zod schemas using drizzle-zod for runtime validation"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 1147-1265: Zod schemas generated via createInsertSchema/createSelectSchema for all tables, types inferred using z.infer"
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "AC-010 tests pass: Zod schemas parse correctly and validate data"
+
+  - ac_id: "AC-011"
+    ac_text: "Write unit tests validating schema structure and constraints"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        description: "22 tests covering all 6 schema groups, table definitions, relations, Zod schemas, and enums - 100% pass rate"
+      - type: command
+        command: "pnpm --filter @repo/database-schema test"
+        result: "SUCCESS - 117 tests passed (7 test files)"
+
+  - ac_id: "AC-012"
+    ac_text: "Generate initial migration files using Drizzle Kit"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0015_messy_sugar_man.sql"
+        description: "Migration file created with CREATE SCHEMA \"wint\" and all 22 WINT tables"
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/meta/0015_snapshot.json"
+        description: "Snapshot file created by drizzle-kit"
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/meta/_journal.json"
+        description: "Journal updated with migration entry"
+      - type: command
+        command: "pnpm --filter @repo/database-schema db:generate"
+        result: "SUCCESS - 51 tables discovered, migration file generated"
+
+  - ac_id: "AC-013"
+    ac_text: "Document schema design decisions and relationships in schema comments"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "Lines 1-30: Comprehensive JSDoc header explaining all 6 schema groups and their purpose. All tables have JSDoc comments explaining purpose, related stories, and relationships"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: created
+    lines: 1265
+    description: "Main WINT schema file with all 6 schema groups (Story Management, Context Cache, Telemetry, ML Pipeline, Graph Relational, Workflow Tracking)"
+  
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modified
+    lines: 143
+    description: "Added re-exports for all WINT tables, relations, enums, and Zod schemas"
+  
+  - path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+    action: created
+    lines: 278
+    description: "Comprehensive unit tests for all 6 WINT schema groups - 22 tests, 100% pass rate"
+  
+  - path: "packages/backend/database-schema/src/migrations/app/0015_messy_sugar_man.sql"
+    action: created
+    lines: 735
+    description: "Migration file generated by drizzle-kit with CREATE SCHEMA and all tables"
+  
+  - path: "packages/backend/database-schema/src/migrations/app/meta/0015_snapshot.json"
+    action: created
+    lines: 3241
+    description: "Migration snapshot generated by drizzle-kit"
+  
+  - path: "packages/backend/database-schema/src/migrations/app/meta/_journal.json"
+    action: modified
+    lines: 1
+    description: "Added migration 0015 entry to journal"
+  
+  - path: "packages/backend/database-schema/package.json"
+    action: modified
+    lines: 1
+    description: "Added drizzle-zod dependency"
+
+  - path: "packages/core/api-client/src/schemas/instructions/api.ts"
+    action: modified
+    lines: 52
+    description: "Added GetFileDownloadUrlResponseSchema and upload session schemas (INST-1105) - fixes build error"
+
+  - path: "packages/core/api-client/src/schemas/instructions/index.ts"
+    action: modified
+    lines: 6
+    description: "Exported GetFileDownloadUrlResponseSchema and upload session schemas - fixes build error"
+
+  - path: "packages/core/api-client/src/rtk/instructions-api.ts"
+    action: modified
+    lines: 10
+    description: "Fixed logging to use correct CreateUploadSessionRequest schema fields - fixes build error"
+
+  - path: "packages/core/api-client/src/schemas/index.ts"
+    action: modified
+    lines: 4
+    description: "ITERATION 2 FIX: Added FeatureSchema and Feature exports (without alias) for FeatureGate compatibility"
+
+  - path: "packages/core/api-client/src/rtk/instructions-api.ts"
+    action: modified
+    lines: 2
+    description: "ITERATION 2 FIX: Changed uploadThumbnail mutation to use UploadThumbnailResponse type and added explicit return type to transformResponse"
+
+  - path: "packages/core/app-component-library/src/gates/FeatureGate.tsx"
+    action: modified
+    lines: 3
+    description: "ITERATION 2 FIX: Added re-exports for FeatureSchema, TierSchema, Feature, and Tier types"
+
+commands_run:
+  - command: "pnpm --filter @repo/database-schema add drizzle-zod"
+    result: SUCCESS
+    output: "Package drizzle-zod installed successfully"
+    timestamp: "2026-02-13T20:29:00Z"
+  
+  - command: "pnpm --filter @repo/database-schema test"
+    result: SUCCESS
+    output: "Test Files: 7 passed (7) | Tests: 117 passed (117)"
+    timestamp: "2026-02-13T20:32:11Z"
+  
+  - command: "pnpm --filter @repo/database-schema db:generate"
+    result: SUCCESS
+    output: "51 tables discovered, migration file 0015_messy_sugar_man.sql generated"
+    timestamp: "2026-02-13T20:31:50Z"
+
+  - command: "pnpm prettier --write packages/backend/database-schema/src/schema/wint.ts packages/backend/database-schema/src/schema/index.ts"
+    result: SUCCESS
+    output: "Fixed whitespace formatting issues (113 total instances)"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - command: "pnpm --filter @repo/api-client build"
+    result: SUCCESS
+    output: "Build successful - all exports working correctly"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - command: "pnpm build"
+    result: SUCCESS
+    output: "ITERATION 2 FIX: Build successful for @repo/api-client and @repo/app-component-library - Priority 1 and 2 issues resolved"
+    timestamp: "2026-02-14T00:00:00Z"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "Followed umami.ts pattern for pgSchema() namespace isolation"
+  - "Used drizzle-zod for automatic Zod schema generation per AC-010"
+  - "Wrote tests alongside implementation per WRKF-1010 lesson learned"
+  - "All tables use UUID PKs and created_at/updated_at timestamps per WINT schema standards"
+  - "Removed partial index with .where() clause on storyDependencies to fix drizzle-kit generate compatibility"
+  - "Defined 6 schema groups as specified: Story Management, Context Cache, Telemetry, ML Pipeline, Graph Relational, Workflow Tracking"
+  - "Used JSONB extensively for flexible metadata storage (context packs, telemetry, ML features/labels)"
+  - "Self-referencing FKs implemented on featureRelationships and storyDependencies for graph structure"
+  - "Enums defined using pgEnum() for type safety: story_state, story_priority, context_pack_type, etc."
+  - "ITERATION 1 FIX: Removed unused varchar import from wint.ts (lint error)"
+  - "ITERATION 1 FIX: Added missing GetFileDownloadUrlResponseSchema and upload session schemas to fix build errors"
+  - "ITERATION 1 FIX: Fixed logging in instructions-api.ts to use correct schema fields"
+  - "ITERATION 2 FIX: Fixed type mismatch in uploadThumbnail by using UploadThumbnailResponse type instead of inline type"
+  - "ITERATION 2 FIX: Added FeatureSchema and Feature exports to @repo/api-client/src/schemas/index.ts (in addition to aliased versions)"
+  - "ITERATION 2 FIX: Re-exported FeatureSchema, TierSchema, Feature, and Tier from FeatureGate.tsx for component library consumers"
+
+known_deviations:
+  - "Removed partial index with .where() clause from storyDependencies table - not compatible with drizzle-kit 0.31.8. Added standard index instead."
+
+test_summary:
+  unit: { pass: 117, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra (database schema only, no UI)"
+  mode: null
+  tests_written: false
+
+coverage:
+  lines: null
+  branches: null
+  note: "Pure schema definition - coverage not applicable"
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 76579, out: 49234 }

@@ -1,0 +1,51 @@
+---
+story_id: INFR-0120
+current_phase: blocked
+iteration: 0
+status: blocked
+blocked_reason: dependency_not_met
+timestamp: 2026-02-15T17:00:00Z
+
+blocker:
+  type: hard_dependency
+  dependency_story: INFR-0110
+  missing_artifacts:
+    - artifacts pgSchema (packages/backend/database-schema/src/schema/artifacts.ts)
+    - artifact_type_enum in public schema
+    - Base patterns for artifact tables
+
+  resolution:
+    - Complete INFR-0110 implementation first
+    - Verify artifacts.ts exists with pgSchema and enum definitions
+    - Verify database migration creates artifacts schema
+    - Then resume INFR-0120
+
+workflow:
+  autonomy_level: conservative
+  batch_mode: false
+  gen_mode: false
+  max_iterations: 3
+
+phases:
+  phase_0_setup:
+    status: not_started
+    agent: dev-setup-leader
+  phase_1_plan:
+    status: not_started
+    agent: dev-plan-leader
+  phase_2_execute:
+    status: not_started
+    agent: dev-execute-leader
+  phase_3_proof:
+    status: not_started
+    agent: dev-proof-leader
+  phase_4_review:
+    status: not_started
+
+notes:
+  - Attempted implementation on 2026-02-15
+  - Discovered INFR-0110 (sibling story) not yet implemented
+  - WINT-0010 dependency satisfied (in UAT stage)
+  - Workflow halted per user request (cancel and wait)
+  - Resume after INFR-0110 completion
+---

@@ -1,0 +1,22 @@
+schema: 1
+story_id: LEGACY-001
+feature_dir: plans/legacy
+timestamp: "2026-02-01T15:30:00Z"
+current_phase: qa-verify
+last_successful_phase: execute
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+
+# Legacy optional fields
+e2e_gate: PASS
+qa_verdict: PASS
+completed_at: "2026-02-01T18:00:00Z"
+gen_mode: false
+
+# Extra field that should be preserved via .passthrough()
+custom_metadata:
+  project_name: LegacyProject
+  reviewer: alice

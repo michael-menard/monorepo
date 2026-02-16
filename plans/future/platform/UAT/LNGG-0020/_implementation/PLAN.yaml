@@ -1,0 +1,68 @@
+schema: 1
+story_id: LNGG-0020
+timestamp: '2026-02-14T23:50:00Z'
+approach: "regex-based-mvp"
+
+summary: |
+  Create IndexAdapter class for parsing and updating markdown table-based
+  story index files (platform.stories.index.md). Reuses file-utils, yaml-parser,
+  and error classes from LNGG-0010 story-file-adapter infrastructure.
+
+steps:
+  - id: 1
+    description: "Add index-specific error classes to __types__/index.ts"
+    files:
+      - packages/backend/orchestrator/src/adapters/__types__/index.ts
+    tests: false
+
+  - id: 2
+    description: "Create index-adapter.ts with Zod schemas, IndexAdapter class, markdown table parsing, update operations, validation, and metrics"
+    files:
+      - packages/backend/orchestrator/src/adapters/index-adapter.ts
+    tests: false
+
+  - id: 3
+    description: "Create test fixtures (minimal-index.md, invalid cases, formatting test)"
+    files:
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/minimal-index.md
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/invalid-duplicate-ids.md
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/invalid-circular-deps.md
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/formatting-test.md
+    tests: false
+
+  - id: 4
+    description: "Create unit tests for IndexAdapter"
+    files:
+      - packages/backend/orchestrator/src/adapters/__tests__/index-adapter.test.ts
+    tests: true
+
+  - id: 5
+    description: "Create integration tests using real platform.stories.index.md"
+    files:
+      - packages/backend/orchestrator/src/adapters/__tests__/index-adapter.integration.test.ts
+    tests: true
+
+  - id: 6
+    description: "Export IndexAdapter from adapters/index.ts"
+    files:
+      - packages/backend/orchestrator/src/adapters/index.ts
+    tests: false
+
+  - id: 7
+    description: "Run lint, type-check, and all tests to verify"
+    files: []
+    tests: true
+
+acceptance_criteria_mapping:
+  AC-1: [step-2, step-4, step-5]
+  AC-2: [step-2, step-4]
+  AC-3: [step-2, step-4]
+  AC-4: [step-2, step-4]
+  AC-5: [step-2, step-3, step-4]
+  AC-6: [step-2, step-4, step-5]
+
+risk_mitigations:
+  - risk: "Markdown table parsing complexity"
+    mitigation: "Start with regex MVP, comprehensive edge case tests"
+  - risk: "Format preservation"
+    mitigation: "Only modify specific table cells, round-trip testing"

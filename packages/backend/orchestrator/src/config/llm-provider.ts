@@ -87,7 +87,11 @@ export function clearLLMProviderConfigCache(): void {
 // Ollama Availability Check
 // ============================================================================
 
-interface AvailabilityCache {
+/**
+ * Availability check result cache.
+ * This is the canonical definition - re-exported by providers/base.ts to avoid duplication.
+ */
+export interface AvailabilityCache {
   available: boolean
   checkedAt: number
 }
@@ -293,4 +297,39 @@ export function getModelInfoForAgent(agentName: string): {
   const parsedOllama = isOllamaModel(model) ? parseOllamaModel(model) : null
 
   return { model, provider, parsedOllama }
+}
+
+// ============================================================================
+// WINT-0230: Provider Factory Stub (integrates with MODL-0010)
+// ============================================================================
+
+/**
+ * Get provider for a model string.
+ * Temporary stub for WINT-0230 - will integrate with MODL-0010 provider factory.
+ *
+ * @param modelString - Model string (e.g., 'anthropic/claude-sonnet-4.5',
+ *   'ollama/qwen2.5-coder:7b')
+ * @returns ILLMProvider instance
+ */
+export async function getProviderForModel(modelString: string): Promise<any> {
+  // Stub implementation - in production, delegates to MODL-0010 provider factory
+  const provider = modelString.split('/')[0]
+
+  // For MVP, return a minimal mock provider
+  // In production, this would call the MODL-0010 provider factory
+  return {
+    getModel: () => {
+      throw new Error('Provider getModel not implemented - use MODL-0010 provider factory')
+    },
+    checkAvailability: async (_timeout?: number, forceCheck?: boolean) => {
+      // Mock Ollama as unavailable for testing
+      if (provider === 'ollama') {
+        return await isOllamaAvailable(forceCheck ?? false)
+      }
+      return true // Anthropic/OpenRouter assumed available
+    },
+    loadConfig: () => {
+      return loadLLMProviderConfig()
+    },
+  }
 }

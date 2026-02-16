@@ -1,0 +1,127 @@
+{
+  "full_validation": [
+    {"name": "Build", "command": "pnpm build"},
+    {"name": "Type check", "command": "pnpm check-types"},
+    {"name": "Unit tests", "command": "pnpm test"}
+  ],
+  "batches": {
+    "1": {
+      "name": "Foundation",
+      "stories": [
+        "INFR-0010", "INFR-0040", "MODL-0010", "WINT-0010", "LNGG-0010",
+        "LNGG-0030", "LNGG-0050", "KBAR-0010", "AUDT-0010", "WINT-0150",
+        "WINT-0180", "WINT-0220", "WINT-1020", "WINT-7010", "GATE-01"
+      ],
+      "smoke_tests": [
+        {"name": "Database schema tests", "command": "pnpm --filter database-schema test"},
+        {"name": "Orchestrator tests", "command": "pnpm --filter orchestrator test"},
+        {"name": "Doc-sync skill exists", "command": "test -f .claude/skills/doc-sync/doc-sync.md"}
+      ]
+    },
+    "2": {
+      "name": "LNGG Adapters",
+      "stories": ["LNGG-0020", "LNGG-0040", "LNGG-0060", "GATE-02"],
+      "smoke_tests": [
+        {"name": "LangGraph adapter tests", "command": "pnpm --filter orchestrator test -- --grep adapter"}
+      ]
+    },
+    "3": {
+      "name": "Schema & Core Services",
+      "stories": [
+        "WINT-1080", "WINT-0020", "WINT-0070", "WINT-0030", "WINT-0060",
+        "WINT-0040", "WINT-0050", "WINT-0230", "GATE-03"
+      ],
+      "smoke_tests": [
+        {"name": "Database schema migrations", "command": "pnpm --filter database-schema test"},
+        {"name": "Schema types compile", "command": "pnpm --filter database-schema check-types"}
+      ]
+    },
+    "4": {
+      "name": "Agent & Services",
+      "stories": ["WINT-0160", "INFR-0020", "KBAR-0020", "MODL-0020", "MODL-0050", "GATE-04"],
+      "smoke_tests": [
+        {"name": "KBAR schema validation", "command": "pnpm --filter database-schema test -- --grep kbar"}
+      ]
+    },
+    "5": {
+      "name": "User Flows & Infrastructure",
+      "stories": ["WINT-0200", "INFR-0050", "INFR-0030", "GATE-05"],
+      "smoke_tests": []
+    },
+    "6": {
+      "name": "LangGraph Types Foundation",
+      "stories": ["LNGG-0070", "WINT-1090", "WINT-1100", "WINT-0090", "GATE-06"],
+      "smoke_tests": [
+        {"name": "LangGraph integration suite", "command": "pnpm --filter orchestrator test -- --grep integration"},
+        {"name": "Shared types compile", "command": "pnpm --filter orchestrator check-types"}
+      ]
+    },
+    "7": {
+      "name": "MCP Tools & Status",
+      "stories": [
+        "KBAR-0030", "WINT-1030", "WINT-0100", "WINT-0110", "WINT-0130",
+        "WINT-0080", "WINT-0170", "WINT-1130", "WINT-0210", "MODL-0030", "GATE-07"
+      ],
+      "smoke_tests": []
+    },
+    "8": {
+      "name": "Pre-LangGraph Prep",
+      "stories": [
+        "WINT-1110", "WINT-1010", "KBAR-0040", "WINT-1140", "WINT-1150",
+        "WINT-1070", "WINT-1040", "WINT-1050", "WINT-1060", "KBAR-0050", "GATE-08"
+      ],
+      "smoke_tests": [
+        {"name": "Compatibility shim tests", "command": "pnpm --filter orchestrator test -- --grep shim"}
+      ]
+    },
+    "9": {
+      "name": "Shared Business Logic",
+      "stories": [
+        "WINT-9010", "KBAR-0060", "WINT-1160", "WINT-1120",
+        "WINT-7020", "MODL-0040", "AUDT-0020", "GATE-09"
+      ],
+      "smoke_tests": [
+        {"name": "Business logic package tests", "command": "pnpm --filter orchestrator test -- --grep business-logic"},
+        {"name": "Foundation validation", "command": "pnpm build && pnpm check-types && pnpm test"}
+      ]
+    },
+    "10": {
+      "name": "First LangGraph Nodes",
+      "stories": [
+        "WINT-9020", "WINT-4080", "WINT-4090", "KBAR-0070", "KBAR-0080",
+        "WINT-0190", "WINT-0240", "WINT-0250", "GATE-10"
+      ],
+      "smoke_tests": [
+        {"name": "LangGraph node tests", "command": "pnpm --filter orchestrator test -- --grep node"}
+      ]
+    },
+    "11": {
+      "name": "KBAR Tooling",
+      "stories": [
+        "KBAR-0090", "KBAR-0100", "KBAR-0110", "KBAR-0120", "KBAR-0130",
+        "KBAR-0140", "KBAR-0150", "AUDT-0030", "TELE-0010", "GATE-11"
+      ],
+      "smoke_tests": [
+        {"name": "KBAR tool integration tests", "command": "pnpm --filter orchestrator test -- --grep kbar"}
+      ]
+    },
+    "12": {
+      "name": "Context & Session",
+      "stories": [
+        "WINT-2090", "WINT-2100", "WINT-9090", "KBAR-0160", "KBAR-0170",
+        "KBAR-0180", "KBAR-0190", "KBAR-0200", "KBAR-0210", "KBAR-0220", "GATE-12"
+      ],
+      "smoke_tests": [
+        {"name": "Agent migration tests", "command": "pnpm --filter orchestrator test -- --grep migration"}
+      ]
+    },
+    "13": {
+      "name": "LangGraph Operational",
+      "stories": ["WINT-9110", "WINT-9120", "WINT-9130", "WINT-9140", "KBAR-0230", "KBAR-0240", "GATE-13"],
+      "smoke_tests": [
+        {"name": "Full workflow parity", "command": "pnpm --filter orchestrator test -- --grep parity"},
+        {"name": "Full build + test", "command": "pnpm build && pnpm check-types:all && pnpm test:all"}
+      ]
+    }
+  }
+}

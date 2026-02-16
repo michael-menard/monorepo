@@ -1,0 +1,66 @@
+---
+# Deferred Knowledge Base Writes
+# Story: WINT-0060
+# Reason: KB unavailable during story generation
+# Retry: When KB connection restored
+---
+
+deferred_writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: WINT-0060
+      feature: platform
+      title: "Create Graph Relational Tables"
+      story_dir: plans/future/platform/UAT/WINT-0060
+      story_file: plans/future/platform/UAT/WINT-0060/WINT-0060.md
+      story_type: feature
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    conflict_resolution: update_on_conflict
+    attempted_at: "2026-02-14T00:00:00Z"
+    retry_count: 0
+
+retry_instructions: |
+  When KB connection is restored, run:
+
+  psql postgresql://postgres:postgres@localhost:5432/knowledge_base -c "
+  INSERT INTO stories (
+    story_id, feature, title, story_dir, story_file, story_type,
+    points, priority, state, touches_backend, touches_frontend,
+    touches_database, touches_infra
+  ) VALUES (
+    'WINT-0060',
+    'platform',
+    'Create Graph Relational Tables',
+    'plans/future/platform/UAT/WINT-0060',
+    'plans/future/platform/UAT/WINT-0060/WINT-0060.md',
+    'feature',
+    3,
+    'medium',
+    'backlog',
+    true,
+    false,
+    true,
+    false
+  )
+  ON CONFLICT (story_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    story_dir = EXCLUDED.story_dir,
+    story_file = EXCLUDED.story_file,
+    story_type = EXCLUDED.story_type,
+    points = EXCLUDED.points,
+    priority = EXCLUDED.priority,
+    state = EXCLUDED.state,
+    touches_backend = EXCLUDED.touches_backend,
+    touches_frontend = EXCLUDED.touches_frontend,
+    touches_database = EXCLUDED.touches_database,
+    touches_infra = EXCLUDED.touches_infra,
+    updated_at = NOW()
+  RETURNING story_id, title, state;
+  "

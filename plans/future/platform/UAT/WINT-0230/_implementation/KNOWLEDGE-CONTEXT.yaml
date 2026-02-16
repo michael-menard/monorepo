@@ -1,0 +1,97 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-14T21:00:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "MODL-0010"
+        lesson: "Provider adapters use BaseProvider abstract class with static instance caching for performance"
+        category: reuse
+        applies_because: "WINT-0230 must wrap/extend MODL-0010 provider adapters, not modify base interfaces"
+
+      - story_id: "WINT-0220"
+        lesson: "Strategy YAML configuration is canonical source for tier definitions, escalation rules, task type taxonomy"
+        category: reuse
+        applies_because: "WINT-0230 loads and validates WINT-0220-STRATEGY.yaml to implement tier-based routing"
+
+      - story_id: "MODL-0011"
+        lesson: "Abstract base class pattern eliminates code duplication across provider implementations"
+        category: pattern
+        applies_because: "May apply similar template method pattern for tier-aware routing layer"
+
+      - story_id: "General"
+        lesson: "Zod schemas provide runtime validation and type inference, preventing config errors at startup"
+        category: pattern
+        applies_because: "Strategy YAML validation requires comprehensive Zod schema definition (AC-9)"
+
+    blockers_to_avoid:
+      - "Modifying BaseProvider interface in MODL-0010 - protected by completion status"
+      - "Circular escalation paths in strategy configuration - requires graph validation (AC-10)"
+      - "Cache invalidation bugs when strategy YAML changes - requires TTL + file watch"
+      - "Provider instance duplication - must reuse MODL-0010 factory pattern"
+
+    patterns_to_follow:
+      - "Zod-first types: define schemas with Zod, infer types via z.infer<>"
+      - "YAML + Zod validation for configuration files (model-assignments.ts pattern)"
+      - "Static instance caching with config hash keys (BaseProvider pattern)"
+      - "Availability checking with 30s TTL cache (checkEndpointAvailability pattern)"
+      - "Factory pattern with singleton for router instantiation"
+      - "Template method pattern for common algorithm with provider-specific steps"
+      - "Discriminated unions for result types (success/error cases)"
+
+    patterns_to_avoid:
+      - "Reading full YAML files multiple times - use caching with TTL"
+      - "Creating new provider instances instead of reusing cached instances"
+      - "console.log for logging - use @repo/logger exclusively"
+      - "TypeScript interfaces instead of Zod schemas"
+      - "Barrel files (index.ts re-exports)"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Integration tests must use real WINT-0220-STRATEGY.yaml, not mocks"
+        applies_to: ["testing", "backend"]
+
+      - id: "Pattern-Zod-First"
+        title: "Zod-First Type System"
+        status: active
+        constraint: "All types defined via Zod schemas with z.infer<>, no TypeScript interfaces"
+        applies_to: ["backend", "contracts"]
+
+    constraints:
+      testing: "UAT integration tests must load actual WINT-0220-STRATEGY.yaml and validate against 143 real agents"
+      type_system: "All configuration schemas must be Zod-first with runtime validation"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full WINT-0220-STRATEGY.yaml on every request"
+        typical_tokens: 8000
+        mitigation: "Cache parsed strategy with 30s TTL, invalidate on file change"
+
+      - operation: "Loading all 143 agent definitions to validate tier assignments"
+        typical_tokens: 15000
+        mitigation: "Use integration tests only, not runtime validation"
+
+      - operation: "Grep for KB lessons across entire codebase"
+        typical_tokens: 3000
+        mitigation: "Targeted search with domain filters (orchestrator, providers, config)"
+
+    recommended_patterns:
+      - "Targeted file reads for WINT-0220-STRATEGY.yaml, base.ts, model-assignments.ts"
+      - "Cache strategy configuration after first load"
+      - "Use Grep with glob filters to find relevant test fixtures"
+      - "Batch related file operations (create all test files in one session)"
+
+  warnings:
+    - "MODL-0010 is complete but base.ts interface is protected - do not modify ILLMProvider"
+    - "WINT-0220 strategy is in UAT but qa_verdict: PASS - safe to depend on YAML schema"
+    - "143 agents currently exist - comprehensive integration test required to validate all assignments"
+    - "Ollama models specified in strategy may not be installed locally - fallback logic critical"
+
+  tokens:
+    in: 4200
+    out: 1100

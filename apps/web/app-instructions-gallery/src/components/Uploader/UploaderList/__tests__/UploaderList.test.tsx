@@ -20,7 +20,6 @@ const createMockState = (overrides?: Partial<UploadBatchState>): UploadBatchStat
   files: [],
   isUploading: false,
   isComplete: false,
-  isPaused: false,
   overallProgress: 0,
   queuedCount: 0,
   uploadingCount: 0,
@@ -28,8 +27,6 @@ const createMockState = (overrides?: Partial<UploadBatchState>): UploadBatchStat
   failedCount: 0,
   canceledCount: 0,
   expiredCount: 0,
-  totalSize: 0,
-  uploadedSize: 0,
   ...overrides,
 })
 
@@ -42,8 +39,8 @@ const createMockFile = (overrides?: Partial<UploaderFileItem>): UploaderFileItem
   category: 'instruction',
   status: 'queued',
   progress: 0,
-  uploadUrl: 'https://s3.mock.com/upload',
-  errorMessage: null,
+  lastModified: Date.now(),
+  expired: false,
   ...overrides,
 })
 

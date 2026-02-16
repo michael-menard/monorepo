@@ -1,0 +1,244 @@
+schema: 1
+story_id: INFR-0041
+timestamp: "2026-02-14T20:25:00Z"
+phase: qa-verification
+status: completed
+
+verdict: PASS
+
+# Verification execution
+tests_executed: true
+test_results:
+  unit:
+    pass: 78
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    status: EXEMPT
+    reason: "Infrastructure story - backend/database schema work with no UI changes"
+
+coverage: 100
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: |
+    Excellent test quality throughout:
+    - Comprehensive coverage of all 5 event type schemas (29 tests)
+    - Helper function tests cover all edge cases (18 tests)
+    - Validation tests verify discriminated union pattern (31 tests)
+    - Tests match AC examples exactly (e.g., AC-1 example in schemas.test.ts)
+    - Proper use of Vitest mocking patterns (vi.hoisted for mock setup)
+    - No anti-patterns detected (no setTimeout, proper async/await)
+
+# Acceptance Criteria Verification
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: |
+      ✓ ItemStateChangedPayloadSchema defined in schemas.ts (lines 21-29)
+      ✓ All required fields present: from_state, to_state, item_id, item_type
+      ✓ Optional reason field correctly defined with .optional()
+      ✓ AC-1 example payload matches schema exactly
+      ✓ 4 unit tests verify valid/invalid payloads
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: |
+      ✓ StepCompletedPayloadSchema defined in schemas.ts (lines 35-44)
+      ✓ All required fields: step_name, duration_ms, status
+      ✓ Optional fields: tokens_used, model, error_message
+      ✓ Enum validation for status: ['success', 'error']
+      ✓ Unit tests verify enum validation
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: |
+      ✓ StoryChangedPayloadSchema defined in schemas.ts (lines 50-58)
+      ✓ Enum validation for change_type: ['created', 'updated', 'deleted']
+      ✓ Uses z.unknown() for old_value/new_value (correct pattern)
+      ✓ AC-3 example payload matches schema
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: |
+      ✓ GapFoundPayloadSchema defined in schemas.ts (lines 64-72)
+      ✓ Enum for gap_type: ['missing_ac', 'scope_creep', 'dependency_missing', 'other']
+      ✓ Enum for severity: ['low', 'medium', 'high']
+      ✓ All required fields present
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: |
+      ✓ FlowIssuePayloadSchema defined in schemas.ts (lines 78-86)
+      ✓ Enum for issue_type: ['agent_blocked', 'tool_failure', 'timeout', 'other']
+      ✓ Optional fields: recovery_action, agent_role
+      ✓ AC-5 example payload matches schema
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: |
+      ✓ Migration 0017_majestic_mulholland_black.sql adds correlation_id column
+      ✓ Column type: uuid (correct for OpenTelemetry trace IDs)
+      ✓ Column is nullable (backward compatible)
+      ✓ Schema updated in telemetry.ts (line 81)
+      ✓ Tests verify NULL and valid UUID values accepted
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: |
+      ✓ Migration 0017_majestic_mulholland_black.sql adds source column
+      ✓ Column type: text (correct)
+      ✓ Column is nullable (backward compatible)
+      ✓ Schema updated in telemetry.ts (line 82)
+      ✓ Tests verify NULL and text values accepted
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: |
+      ✓ Migration 0017_majestic_mulholland_black.sql adds emitted_by column
+      ✓ Column type: text (correct)
+      ✓ Column is nullable (backward compatible)
+      ✓ Schema updated in telemetry.ts (line 83)
+      ✓ Tests verify NULL and text values accepted
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: |
+      ✓ insertWorkflowEvent updated in workflow-events.ts (lines 54-64)
+      ✓ Discriminated union pattern: selects schema based on event_type
+      ✓ Fail-fast validation: throws Error with detailed message on invalid payload
+      ✓ Error message includes event_type and field name for debugging
+      ✓ 10+ tests verify validation for all 5 event types
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: |
+      ✓ createItemStateChangedEvent defined in helpers.ts (lines 37-67)
+      ✓ Signature matches AC-10 specification exactly
+      ✓ Named parameters with object destructuring
+      ✓ Auto-generates UUID for event_id
+      ✓ Validates payload before returning
+      ✓ All metadata fields supported (correlationId, source, emittedBy)
+      ✓ Exported from index.ts (line 43)
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: |
+      ✓ All 4 helper functions implemented in helpers.ts:
+        - createStepCompletedEvent (lines 73-104)
+        - createStoryChangedEvent (lines 111-141)
+        - createGapFoundEvent (lines 147-177)
+        - createFlowIssueEvent (lines 183-218)
+      ✓ All follow same pattern as AC-10
+      ✓ All exported from index.ts (lines 44-47)
+      ✓ 18 unit tests verify all helpers
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: |
+      ✓ WorkflowEventSchemas object defined in schemas.ts (lines 92-98)
+      ✓ Contains all 5 schemas: item_state_changed, step_completed, story_changed, gap_found, flow_issue
+      ✓ Uses 'as const' for type safety
+      ✓ Exported from index.ts (line 26)
+      ✓ Unit tests verify object structure
+
+  - ac_id: "AC-13"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    notes: |
+      ✓ Test file: packages/backend/db/src/workflow-events/__tests__/schemas.test.ts
+      ✓ 29 test cases covering all 5 schemas
+      ✓ Tests verify valid payloads parse successfully
+      ✓ Tests verify invalid payloads throw validation errors
+      ✓ Tests verify required vs optional fields enforced
+      ✓ Tests verify enum values validated
+      ✓ Tests use AC examples exactly (e.g., AC-1 example)
+      ✓ All 29 tests PASS
+
+  - ac_id: "AC-14"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[13]"
+    notes: |
+      ✓ Test file: packages/backend/db/src/__tests__/workflow-events.test.ts
+      ✓ Extended with 22 new tests for validation and metadata
+      ✓ Tests verify valid events for all 5 event types insert successfully
+      ✓ Tests verify invalid events throw validation error with clear message
+      ✓ Tests verify validation error includes event_type and field name
+      ✓ Tests verify all 3 new metadata columns (correlation_id, source, emitted_by)
+      ✓ All 31 workflow-events tests PASS (includes 9 from INFR-0040)
+
+  - ac_id: "AC-15"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[14]"
+    notes: |
+      ✓ Documentation: packages/backend/db/src/workflow-events/README.md
+      ✓ Comprehensive table of all 5 event types with descriptions
+      ✓ For each event type: payload fields, types, descriptions, example JSON
+      ✓ Usage examples for all 5 helper functions
+      ✓ Migration notes for new metadata columns
+      ✓ Links to INFR-0040 for table schema reference
+      ✓ Clear, well-structured, ready for downstream consumers
+
+architecture_compliant: true
+architecture_notes: |
+  ✓ Zod-first types throughout (no TypeScript interfaces)
+  ✓ Named exports preferred (no default exports)
+  ✓ No barrel files (direct imports)
+  ✓ Uses @repo/logger instead of console (except client.ts debug statements)
+  ✓ Functional programming patterns
+  ✓ Proper file/directory structure with __tests__/ subdirectories
+  ✓ Discriminated union pattern for type-safe validation
+  ✓ Fail-fast validation (uses .parse() not .safeParse())
+  ✓ Backward compatible migration (nullable columns)
+  ✓ All exports properly added to index.ts
+
+issues: []
+
+regressions:
+  detected: false
+  notes: |
+    No regressions detected:
+    ✓ All 78 tests PASS (29 schema + 18 helpers + 31 workflow-events)
+    ✓ TypeScript compilation succeeds (pnpm tsc --noEmit)
+    ✓ Build succeeds (pnpm build --filter @repo/db)
+    ✓ ESLint passes (only 2 pre-existing console warnings in client.ts)
+    ✓ Prettier formatting applied (auto-fixed 36 formatting errors in helpers.ts)
+    ✓ Migration backward compatible (existing events unaffected)
+
+lessons_to_record:
+  - lesson: "Discriminated union pattern with Zod provides excellent type-safe payload validation"
+    category: pattern
+    tags: ["backend", "validation", "typescript", "zod"]
+
+  - lesson: "Helper functions that auto-generate UUIDs reduce caller boilerplate and prevent errors"
+    category: reuse
+    tags: ["backend", "api-design", "dx"]
+
+  - lesson: "Prettier formatting issues can slip through in small PRs - enforce auto-formatting in pre-commit hook"
+    category: anti_pattern
+    tags: ["tooling", "dx"]
+
+gate:
+  decision: PASS
+  reason: "All 15 ACs verified, 78/78 unit tests passing, 100% coverage, excellent architecture compliance, no regressions detected"
+  blocking_issues: []
+
+tokens:
+  in: 48434
+  out: 2500

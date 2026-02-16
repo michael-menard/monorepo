@@ -64,6 +64,128 @@ If a locked preference matches → **Auto-accept using that preference**
 
 ---
 
+## Step 3.5: Query Examples (Tier 1-3 only)
+
+**Integration**: See [examples-framework.md](./examples-framework.md) for full specification.
+
+Before escalating Tier 1-3 decisions, check if there are validated examples to guide the choice:
+
+### When to Query Examples
+
+| Tier | Query Examples? | How to Use |
+|------|----------------|------------|
+| 1 (Clarification) | **Yes** | Check for naming/style patterns |
+| 2 (Preference) | **Yes** | Check for project patterns (after preferences.yaml) |
+| 3 (Ambiguous) | **Yes** | Check for interpretation patterns |
+| 4 (Destructive) | **No** | Always escalate (never query) |
+| 5 (External) | **Yes** | Check for approved packages/APIs |
+
+### Query Pattern
+
+```typescript
+// Query by category and scenario
+const examples = queryExamples({
+  category: 'decision-making', // Or 'code-patterns', 'testing', etc.
+  scenario: 'choosing state management', // Substring match
+  status: 'validated', // Only use validated examples
+  limit: 5
+})
+
+// If examples found
+if (examples.length > 0) {
+  // Use positive/negative examples to inform decision
+  // If auto-accept: follow positive example
+  // If escalate: present examples in escalation
+
+  // Record usage
+  recordExampleUsage(example, followed: true, success: <outcome>)
+}
+```
+
+### Integration with Decision Flow
+
+**Tier 1 (Clarification):**
+1. Query examples by category (`code-patterns`, `testing`, etc.)
+2. If example found → Auto-accept using positive example pattern
+3. If no example → Escalate (conservative) or use heuristic (moderate/aggressive)
+
+**Tier 2 (Preference):**
+1. Check `preferences.yaml` (Step 3)
+2. If no locked preference → Query examples
+3. If example found → Present as recommendation
+4. If no example → Query KB precedents
+5. If no precedents → Escalate
+
+**Tier 3 (Ambiguous Scope):**
+1. Query examples by scenario
+2. If example found → Use to clarify ambiguity
+3. If no example → Query KB precedents
+4. If no precedents → Escalate with options
+
+### Example: Tier 1 with Examples
+
+**Situation**: Need to name a test file.
+
+```typescript
+// Query for naming pattern
+const examples = queryExamples({
+  category: 'code-patterns',
+  scenario: 'test file naming',
+  status: 'validated'
+})
+
+// Result: example shows "use kebab-case for test files"
+// Action: Auto-accept kebab-case, log decision with example_id
+```
+
+### Escalation Format (with examples)
+
+If escalating with examples found:
+
+```markdown
+## Decision Required: {Title}
+
+**Tier**: {N} ({category})
+**Context**: {why this decision is needed}
+
+**Examples Found**:
+- **Positive**: {example.positive_example}
+- **Negative**: {example.negative_example}
+- **When**: {example.scenario}
+
+**Prior Decisions**: {KB results, if any}
+
+**Options**:
+1. **{Option A}** (follows example): {description}
+2. **{Option B}**: {description}
+
+**Recommendation**: {Option X} because {matches example pattern}
+```
+
+### After Decision: Record Outcome
+
+Whether auto-accepted or escalated, record example usage:
+
+```typescript
+// After decision is made
+const updatedExample = recordExampleUsage(
+  example,
+  followed: true,  // Did we follow this example?
+  success: true    // Did it work? (update later if needed)
+)
+
+// Also log decision to KB with example reference
+kb_add_decision({
+  title: "{decision title}",
+  decision: "{choice made}",
+  example_id: example.id, // Link to example used
+  story_id: "{STORY_ID}",
+  tags: ["{domain}", "example-guided"]
+})
+```
+
+---
+
 ## Step 4: Execute Decision
 
 ### If Auto-Accept
@@ -233,6 +355,7 @@ Action: Log to DEFERRED-BACKLOG.yaml, continue without implementing
 ## Reference
 
 - `.claude/agents/_shared/autonomy-tiers.md` - Tier definitions
+- `.claude/agents/_shared/examples-framework.md` - Example query patterns and lifecycle
 - `.claude/config/autonomy.yaml` - Level configurations
 - `.claude/config/preferences.yaml` - Project preferences
 - `.claude/config/decision-classification.yaml` - Pattern rules

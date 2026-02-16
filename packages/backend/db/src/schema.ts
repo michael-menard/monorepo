@@ -3,6 +3,7 @@ import {
   index,
   integer,
   jsonb,
+  pgSchema,
   pgTable,
   text,
   timestamp,
@@ -10,6 +11,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
+import { z } from 'zod'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
 // Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
@@ -505,3 +507,125 @@ export const mocPartsRelations = relations(mocParts, ({ one }) => ({
 }))
 
 // Note: No user relations - userId is a Cognito reference, not a FK
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Telemetry Schema (INFR-0040)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const telemetrySchema = pgSchema('telemetry')
+
+export const workflowEventTypeEnum = telemetrySchema.enum('workflow_event_type', [
+  'item_state_changed',
+  'step_completed',
+  'story_changed',
+  'gap_found',
+  'flow_issue',
+])
+
+/**
+ * Workflow Event Payload Schema
+ * Event-specific data stored in JSONB payload column.
+ * Each event_type may have different payload structure.
+ * Per CLAUDE.md: Using Zod schema with z.infer<> instead of TypeScript type alias
+ */
+export const WorkflowEventPayloadSchema = z
+  .object({
+    // Common fields across all event types
+    message: z.string().optional(),
+    error: z.string().optional(),
+    metadata: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+    // Event-type specific fields
+    previousState: z.string().optional(),
+    newState: z.string().optional(),
+    stepName: z.string().optional(),
+    duration: z.number().optional(),
+    tokens: z.number().optional(),
+    cost: z.number().optional(),
+    gapType: z.string().optional(),
+    severity: z.string().optional(),
+  })
+  .passthrough() // Allow additional properties like Record<string, unknown>
+
+export type WorkflowEventPayload = z.infer<typeof WorkflowEventPayloadSchema>
+
+export const workflowEvents = telemetrySchema.table(
+  'workflow_events',
+  {
+    eventId: uuid('event_id').primaryKey().defaultRandom(),
+    eventType: workflowEventTypeEnum('event_type').notNull(),
+    eventVersion: integer('event_version').notNull().default(1),
+    ts: timestamp('ts').notNull().defaultNow(),
+    runId: text('run_id'),
+    itemId: text('item_id'),
+    workflowName: text('workflow_name'),
+    agentRole: text('agent_role'),
+    status: text('status'),
+    payload: jsonb('payload').$type<WorkflowEventPayload>(),
+    // INFR-0041: Metadata columns for distributed tracing and debugging
+    correlationId: uuid('correlation_id'), // AC-6: Link to OpenTelemetry trace IDs
+    source: text('source'), // AC-7: Source system/service that emitted event
+    emittedBy: text('emitted_by'), // AC-8: Agent/node that emitted event
+  },
+  table => ({
+    uniqueEventId: uniqueIndex('idx_workflow_events_event_id_unique').on(table.eventId),
+    eventTypeTsIdx: index('idx_workflow_events_event_type_ts').on(table.eventType, table.ts),
+    runIdTsIdx: index('idx_workflow_events_run_id_ts').on(table.runId, table.ts),
+    itemIdIdx: index('idx_workflow_events_item_id').on(table.itemId),
+    workflowNameIdx: index('idx_workflow_events_workflow_name').on(table.workflowName),
+    agentRoleIdx: index('idx_workflow_events_agent_role').on(table.agentRole),
+    statusIdx: index('idx_workflow_events_status').on(table.status),
+    tsIdx: index('idx_workflow_events_ts').on(table.ts),
+  }),
+)
+
+// Note (KBAR-0010): KBAR schemas are defined in @repo/database-schema package
+// and exported from the schema/index.ts file. They are automatically discovered
+// by Drizzle when the db client is initialized with the full schema.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Artifacts Schema (INFR-0110)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Re-export artifacts schema for queryable artifact content storage
+export {
+  artifactsSchema,
+  artifactContentTypeEnum,
+  storyArtifactsContent,
+  checkpointArtifactsContent,
+  scopeArtifactsContent,
+  planArtifactsContent,
+  storyArtifactsContentRelations,
+  checkpointArtifactsContentRelations,
+  scopeArtifactsContentRelations,
+  planArtifactsContentRelations,
+  insertStoryArtifactContentSchema,
+  selectStoryArtifactContentSchema,
+  insertCheckpointArtifactContentSchema,
+  selectCheckpointArtifactContentSchema,
+  insertScopeArtifactContentSchema,
+  selectScopeArtifactContentSchema,
+  insertPlanArtifactContentSchema,
+  selectPlanArtifactContentSchema,
+  type AcceptanceCriterion,
+  type Risk,
+  type ScopeTouches,
+  type RiskFlags,
+  type PlanStep,
+  type FileChange,
+  type Command,
+  type AcceptanceCriteriaMap,
+  type InsertStoryArtifactContent,
+  type SelectStoryArtifactContent,
+  type InsertCheckpointArtifactContent,
+  type SelectCheckpointArtifactContent,
+  type InsertScopeArtifactContent,
+  type SelectScopeArtifactContent,
+  type InsertPlanArtifactContent,
+  type SelectPlanArtifactContent,
+  // WINT Context Sessions (WINT-0110)
+  contextSessions,
+  insertContextSessionSchema,
+  selectContextSessionSchema,
+  type InsertContextSession,
+  type SelectContextSession,
+} from '@repo/database-schema'

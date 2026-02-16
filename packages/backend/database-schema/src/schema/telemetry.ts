@@ -77,6 +77,10 @@ export const workflowEvents = telemetrySchema.table(
     agentRole: text('agent_role'),
     status: text('status'),
     payload: jsonb('payload').$type<WorkflowEventPayload>(),
+    // INFR-0041: Metadata columns for distributed tracing and debugging
+    correlationId: uuid('correlation_id'), // AC-6: Link to OpenTelemetry trace IDs
+    source: text('source'), // AC-7: Source system/service that emitted event
+    emittedBy: text('emitted_by'), // AC-8: Agent/node that emitted event
   },
   table => ({
     // Unique index on event_id for idempotent ingestion (AC-4)

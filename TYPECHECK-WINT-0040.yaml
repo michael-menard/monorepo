@@ -1,0 +1,47 @@
+typecheck:
+  verdict: PASS
+  files_checked: 2
+  errors: 0
+  findings: []
+  summary: |-
+    WINT-0040 telemetry schema additions verified:
+    - wint.ts: Zod schemas for JSONB types properly defined and typed
+    - index.ts: All WINT-0040 schemas correctly exported
+    - Migration 0019: Properly recorded in _journal.json
+    - Type signatures: All agentDecisions, agentOutcomes, and stateTransitions
+      WINT-0040 fields use correct Drizzle type inference with Zod schemas
+  files:
+    - path: packages/backend/database-schema/src/schema/wint.ts
+      status: PASS
+      notes: |-
+        WINT-0040 additions verified:
+        - securityIssueSchema: z.object with severity enum, description, location
+        - performanceMetricsSchema: z.object with duration_ms, memory_mb, api_calls
+        - artifactsMetadataSchema: z.object with file metrics
+        - validationErrorSchema: z.object with field, message
+        - agentDecisions.correctnessScore: integer().$type<number | null>()
+        - agentDecisions.alternativesConsidered: integer().default(0)
+        - agentDecisions CHECK constraint: correctness_score_range (0-100)
+        - agentOutcomes.lintErrors: integer().default(0)
+        - agentOutcomes.typeErrors: integer().default(0)
+        - agentOutcomes.securityIssues: jsonb.$type<z.infer<typeof securityIssueSchema>[]>()
+        - agentOutcomes.performanceMetrics: jsonb.$type<z.infer<typeof performanceMetricsSchema>>()
+        - agentOutcomes.artifactsMetadata: jsonb.$type<z.infer<typeof artifactsMetadataSchema>>()
+        - stateTransitions.previousMetadata: jsonb.$type<Record<string, unknown>>()
+        - stateTransitions.newMetadata: jsonb.$type<Record<string, unknown>>()
+        - stateTransitions.validationErrors: jsonb.$type<z.infer<typeof validationErrorSchema>[]>()
+        - stateTransitions.rollbackAllowed: boolean().default(true)
+        - Composite indexes added per WINT-0010 high-cardinality pattern
+    - path: packages/backend/database-schema/src/schema/index.ts
+      status: PASS
+      notes: |-
+        All WINT-0040 schemas exported:
+        - securityIssueSchema
+        - performanceMetricsSchema
+        - artifactsMetadataSchema
+        - validationErrorSchema
+        - All corresponding types exported via z.infer<>
+  command: "npx tsc --noEmit (package-specific)"
+  tokens:
+    in: 8200
+    out: 1100

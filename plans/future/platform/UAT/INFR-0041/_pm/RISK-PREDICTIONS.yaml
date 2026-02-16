@@ -1,0 +1,198 @@
+---
+story_id: INFR-0041
+title: "Workflow Event SDK - Typed Schemas & Validation"
+generated_at: "2026-02-14T00:00:00Z"
+model: sonnet
+wkfl_version: "007-v1"
+parent_story: INFR-0040
+similar_stories:
+  - INFR-0040  # Direct parent, similar schema work
+
+# Risk Predictions
+predictions:
+  split_risk: 0.1
+  review_cycles: 1
+  token_estimate: 75000
+  confidence: medium
+
+# Detailed Risk Analysis
+risks:
+  technical:
+    - risk: "Zod validation performance overhead"
+      likelihood: low
+      impact: low
+      mitigation: "Benchmark validation time, target <5ms per event"
+
+    - risk: "Schema evolution complexity"
+      likelihood: medium
+      impact: medium
+      mitigation: "Use event_version field, document schema change process"
+
+    - risk: "Enum value growth requires code changes"
+      likelihood: high
+      impact: low
+      mitigation: "Document process for adding new enum values"
+
+    - risk: "Migration conflicts with concurrent schema changes"
+      likelihood: low
+      impact: low
+      mitigation: "Coordinate with Wave 2 DB stories (WINT-0010, etc.)"
+
+  scope:
+    - risk: "Helper function API design bikeshedding"
+      likelihood: medium
+      impact: low
+      mitigation: "Follow established patterns from INFR-0040"
+
+    - risk: "Schema field naming inconsistencies"
+      likelihood: low
+      impact: low
+      mitigation: "Use snake_case consistently (from_state, to_state, etc.)"
+
+  dependencies:
+    - risk: "INFR-0040 QA reveals breaking issues"
+      likelihood: low
+      impact: high
+      mitigation: "Wait for INFR-0040 UAT promotion before starting"
+
+    - risk: "Drizzle migration generation conflicts"
+      likelihood: low
+      impact: low
+      mitigation: "Regenerate migration if conflicts arise"
+
+  integration:
+    - risk: "Validation breaks existing event insertion"
+      likelihood: low
+      impact: medium
+      mitigation: "Additive changes only, no breaking changes to insertWorkflowEvent signature"
+
+    - risk: "Helper functions not adopted by orchestrator nodes"
+      likelihood: medium
+      impact: low
+      mitigation: "Document usage in README.md, defer orchestrator migration to INFR-0050"
+
+# Story Split Risk (0.1 = Very Low)
+split_analysis:
+  likelihood: 0.1
+  reasoning: |
+    Very low split risk. Story is well-scoped with 15 clear ACs.
+    All work is backend-only (no UI, no API changes).
+    Similar complexity to INFR-0040 which completed successfully.
+    Clear phases: schema → migration → validation → helpers → docs.
+
+  factors_against_split:
+    - "Backend-only work (no cross-surface coordination)"
+    - "All ACs are independent and testable"
+    - "Clear dependency on INFR-0040 (no parallel conflicts)"
+    - "Similar scope to INFR-0040 (1 story point)"
+    - "No external API changes (internal @repo/db package)"
+
+# Review Cycle Prediction (1 cycle)
+review_analysis:
+  expected_cycles: 1
+  reasoning: |
+    Low review risk. Infrastructure work follows established patterns.
+    Clear acceptance criteria with testable outcomes.
+    No UI/UX review needed (backend only).
+    Similar to INFR-0040 which had minimal review cycles.
+
+  review_triggers:
+    - "Helper function API design (minor feedback expected)"
+    - "Validation error message clarity (may need iteration)"
+    - "README.md documentation completeness (may need examples added)"
+
+# Token Estimate (75,000 tokens)
+token_analysis:
+  estimate: 75000
+  reasoning: |
+    Similar to INFR-0040 (80K tokens) but slightly less complex.
+    Schema definitions are concise (5 schemas × 5-10 lines each).
+    Validation logic is straightforward (discriminated union pattern).
+    Helper functions are simple constructors (5 functions × 20 lines each).
+    Tests are standard Vitest + Zod patterns.
+
+  breakdown:
+    schema_definition: 15000      # 5 Zod schemas + exports
+    migration: 5000                # 3 new columns, migration file
+    validation_logic: 12000        # Update insertWorkflowEvent with validation
+    helper_functions: 18000        # 5 helper functions
+    testing: 20000                 # Unit tests for schemas, validation, helpers
+    documentation: 5000            # README.md with examples
+
+# Confidence (Medium)
+confidence_analysis:
+  level: medium
+  reasoning: |
+    Medium confidence (higher than INFR-0040's "low" due to similar story reference).
+    Similar scope and patterns to INFR-0040 which is now at ready-for-qa.
+    Clear implementation path with known tooling (Drizzle, Zod, Vitest).
+    Some uncertainty around validation performance and enum evolution.
+
+  confidence_factors:
+    positive:
+      - "Direct parent story (INFR-0040) as reference"
+      - "All tooling already in place (Drizzle, Zod, Vitest)"
+      - "No cross-team dependencies"
+      - "Clear acceptance criteria (15 ACs)"
+
+    negative:
+      - "No similar event validation stories in KB"
+      - "Validation performance unknown (need benchmarks)"
+      - "Schema evolution strategy not fully defined"
+
+# Blockers & Dependencies
+blockers:
+  hard:
+    - blocker: "INFR-0040 must complete QA"
+      current_status: "ready-for-qa"
+      unblock_date: "2026-02-16 (estimated)"
+      impact: "Cannot start implementation until INFR-0040 promoted to UAT"
+
+  soft: []
+
+dependencies:
+  upstream:
+    - story: "INFR-0040"
+      status: "ready-for-qa"
+      risk: "low"
+      notes: "Direct parent, must complete before starting"
+
+  downstream:
+    - story: "INFR-0050"
+      impact: "Blocked until INFR-0041 completes (needs typed schemas)"
+    - story: "TELE-0010"
+      impact: "Soft dependency (can start with INFR-0040 but INFR-0041 improves data quality)"
+
+# Success Indicators
+success_criteria:
+  must_have:
+    - "All 15 ACs implemented"
+    - "All tests pass (unit + integration)"
+    - "Migration applies cleanly"
+    - "README.md documentation complete"
+    - "No breaking changes to INFR-0040 functionality"
+
+  should_have:
+    - "Code coverage >80% for new code"
+    - "Validation performance <5ms per event"
+    - "Clear error messages for validation failures"
+
+  nice_to_have:
+    - "Snapshot tests for example payloads"
+    - "Performance benchmarks in CI"
+    - "Migration rollback tested in local dev"
+
+# Notes
+notes: |
+  This is a well-scoped follow-up story that addresses deferred items from INFR-0040.
+  The pre-allocated ID (INFR-0041) was verified to avoid conflicts.
+  Story provides schema foundation for INFR-0050 (Event SDK) and TELE-0010 (telemetry dashboards).
+
+  Key implementation phases:
+  1. Database schema (add 3 metadata columns)
+  2. Event type schemas (5 Zod schemas)
+  3. Validation logic (update insertWorkflowEvent)
+  4. Helper functions (5 typed constructors)
+  5. Testing & documentation
+
+  Estimated timeline: 1-2 days dev + 1 day review/QA = 3 days total

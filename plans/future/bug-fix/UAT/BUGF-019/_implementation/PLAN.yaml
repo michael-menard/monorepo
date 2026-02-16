@@ -1,0 +1,231 @@
+schema: 1
+story_id: "BUGF-019"
+timestamp: "2026-02-13T12:00:00Z"
+
+# Implementation Plan for Password Reset Rate Limiting and UX Improvements
+# This plan implements countdown timers, rate limit UX, and consolidates password strength logic
+
+steps:
+  - step: 1
+    description: "Extract PasswordStrengthIndicator to @repo/app-component-library"
+    acceptance_criteria:
+      - AC-4
+    rationale: "Extract first to avoid duplication when modifying ResetPasswordPage"
+    files:
+      create:
+        - path: "packages/core/app-component-library/src/forms/PasswordStrengthIndicator/index.tsx"
+          purpose: "Extracted password strength indicator component with 5-bar color-coded display"
+        - path: "packages/core/app-component-library/src/forms/PasswordStrengthIndicator/__types__/index.ts"
+          purpose: "Zod schema for PasswordStrengthIndicator props (password, showLabel, className)"
+        - path: "packages/core/app-component-library/src/forms/PasswordStrengthIndicator/utils/getPasswordStrength.ts"
+          purpose: "Shared utility function for password strength calculation (1-5 scale)"
+        - path: "packages/core/app-component-library/src/forms/PasswordStrengthIndicator/__tests__/PasswordStrengthIndicator.test.tsx"
+          purpose: "Unit tests for password strength calculation and component rendering"
+      modify:
+        - path: "packages/core/app-component-library/src/index.ts"
+          purpose: "Export PasswordStrengthIndicator component for barrel import"
+    tasks:
+      - "Copy getPasswordStrength() function from ResetPasswordPage (lines 56-74) to utils/getPasswordStrength.ts"
+      - "Copy inline PasswordStrengthIndicator component from ResetPasswordPage (lines 77-108) to index.tsx"
+      - "Create Zod schema in __types__/index.ts with password, showLabel (optional, default true), className (optional)"
+      - "Write unit tests covering all strength levels (0-5 bars), color coding, label display"
+      - "Add barrel export to app-component-library/src/index.ts"
+
+  - step: 2
+    description: "Move RateLimitBanner from @repo/upload to @repo/app-component-library"
+    acceptance_criteria:
+      - AC-2
+    rationale: "Make RateLimitBanner available for auth flows, not just upload flows"
+    files:
+      create:
+        - path: "packages/core/app-component-library/src/feedback/RateLimitBanner/index.tsx"
+          purpose: "Moved RateLimitBanner with countdown timer, progress bar, accessibility features"
+        - path: "packages/core/app-component-library/src/feedback/RateLimitBanner/__types__/index.ts"
+          purpose: "Enhanced Zod schema with optional message and title props"
+        - path: "packages/core/app-component-library/src/feedback/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+          purpose: "Ported unit tests from upload package"
+      modify:
+        - path: "packages/core/app-component-library/src/index.ts"
+          purpose: "Export RateLimitBanner component for barrel import"
+        - path: "packages/core/upload/src/components/RateLimitBanner/index.tsx"
+          purpose: "Update to import from @repo/app-component-library instead of local implementation"
+        - path: "packages/core/upload/src/components/RateLimitBanner/__types__/index.ts"
+          purpose: "Update to re-export types from @repo/app-component-library"
+      delete:
+        - path: "packages/core/upload/src/components/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+          purpose: "Tests moved to app-component-library, keeping wrapper stub"
+    tasks:
+      - "Copy RateLimitBanner component to app-component-library/src/feedback/RateLimitBanner/"
+      - "Enhance __types__/index.ts with optional message and title props (per AC-2)"
+      - "Update RateLimitBanner component to use message/title props if provided"
+      - "Port existing tests to new location"
+      - "Update upload package to import from @repo/app-component-library"
+      - "Run upload package tests to verify no regressions"
+      - "Add barrel export to app-component-library/src/index.ts"
+
+  - step: 3
+    description: "Create shared rate limiting utilities and hooks"
+    acceptance_criteria:
+      - AC-1
+      - AC-3
+    rationale: "DRY principle - shared cooldown logic prevents duplication across ForgotPasswordPage and ResetPasswordPage"
+    files:
+      create:
+        - path: "packages/core/app-component-library/src/hooks/useRateLimitCooldown.ts"
+          purpose: "Hook for managing rate limit cooldown state with exponential backoff and sessionStorage persistence"
+        - path: "packages/core/app-component-library/src/hooks/__tests__/useRateLimitCooldown.test.tsx"
+          purpose: "Unit tests for cooldown calculation, sessionStorage persistence, countdown timer"
+      modify:
+        - path: "packages/core/app-component-library/src/index.ts"
+          purpose: "Export useRateLimitCooldown hook"
+    tasks:
+      - "Study ResendCodeButton pattern (lines 23-100) for exponential backoff and sessionStorage logic"
+      - "Create useRateLimitCooldown hook with params: baseCooldownSeconds, maxCooldownSeconds, storageKeyPrefix"
+      - "Implement exponential backoff: base * 2^(attempt-1), capped at max (600s)"
+      - "Implement sessionStorage tracking: {prefix}:attempts, {prefix}:lastAttempt, {prefix}:cooldownUntil"
+      - "Return: { remainingSeconds, canRetry, handleRateLimitError, clearCooldown }"
+      - "Write unit tests with vi.useFakeTimers() for countdown, sessionStorage persistence, attempt tracking"
+      - "Export from app-component-library/src/index.ts"
+
+  - step: 4
+    description: "Add rate limiting to ForgotPasswordPage"
+    acceptance_criteria:
+      - AC-1
+      - AC-5
+      - AC-6
+    rationale: "Implement countdown timer, RateLimitBanner integration, and accessibility features"
+    files:
+      modify:
+        - path: "apps/web/main-app/src/routes/pages/ForgotPasswordPage.tsx"
+          purpose: "Add countdown timer on submit button, integrate RateLimitBanner, handle LimitExceededException"
+      create:
+        - path: "apps/web/main-app/src/test/handlers/auth.ts"
+          purpose: "MSW handler for mocking Cognito LimitExceededException"
+    tasks:
+      - "Import useRateLimitCooldown hook and RateLimitBanner component"
+      - "Add useRateLimitCooldown('auth:forgotPassword', 60, 600) hook call"
+      - "Update onSubmit error handler to call handleRateLimitError() on LimitExceededException (lines 89-94)"
+      - "Add RateLimitBanner component above form (visible when cooldown active)"
+      - "Update submit button: disabled when cooldown active, text shows 'Wait {countdown}' during cooldown"
+      - "Add ARIA attributes: role='timer', aria-live='polite' for countdown announcements (throttled to 30s)"
+      - "Add prefers-reduced-motion support for progress bar animations"
+      - "Maintain generic error messages for account enumeration prevention (lines 89-94, 123-124)"
+      - "Create MSW handler in apps/web/main-app/src/test/handlers/auth.ts for Cognito API mocking"
+
+  - step: 5
+    description: "Add rate limiting to ResetPasswordPage and wire resend code button"
+    acceptance_criteria:
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+    rationale: "Implement countdown timer, integrate extracted PasswordStrengthIndicator, wire resend code with rate limiting"
+    files:
+      modify:
+        - path: "apps/web/main-app/src/routes/pages/ResetPasswordPage.tsx"
+          purpose: "Replace inline PasswordStrengthIndicator, add countdown timer, wire resend code with exponential backoff"
+    tasks:
+      - "Import PasswordStrengthIndicator from @repo/app-component-library"
+      - "Remove inline getPasswordStrength function (lines 56-74)"
+      - "Remove inline PasswordStrengthIndicator component (lines 77-108)"
+      - "Replace with imported PasswordStrengthIndicator at line 508"
+      - "Import useRateLimitCooldown hook for confirmResetPassword and resendCode operations"
+      - "Add useRateLimitCooldown('auth:confirmResetPassword', 60, 600) for submit button"
+      - "Update handleResendCode (lines 199-227) to use useRateLimitCooldown('auth:resendCode', 60, 600)"
+      - "Add RateLimitBanner component above form for submit button cooldown"
+      - "Update submit button: disabled during cooldown, text shows 'Wait {countdown}'"
+      - "Update resend code button: disabled during cooldown, text shows countdown"
+      - "Add ARIA attributes for accessibility (role='timer', aria-live='polite')"
+      - "Maintain generic error messages for account enumeration prevention"
+
+  - step: 6
+    description: "Write and expand unit tests for rate limiting behavior"
+    acceptance_criteria:
+      - AC-7
+    rationale: "Ensure 80% coverage for all affected components with comprehensive rate limit testing"
+    files:
+      modify:
+        - path: "apps/web/main-app/src/routes/pages/__tests__/ForgotPasswordPage.test.tsx"
+          purpose: "Add tests for countdown timer, rate limiting, RateLimitBanner visibility, sessionStorage persistence"
+        - path: "apps/web/main-app/src/routes/pages/__tests__/ResetPasswordPage.test.tsx"
+          purpose: "Add tests for PasswordStrengthIndicator extraction, countdown timer, resend code rate limiting"
+      create:
+        - path: "apps/web/main-app/src/test/handlers/auth.ts"
+          purpose: "MSW handlers for Cognito forgotPassword and confirmResetPassword rate limiting"
+    tasks:
+      - "Write ForgotPasswordPage tests: countdown updates every second (vi.useFakeTimers)"
+      - "Test sessionStorage state tracking (attempts, cooldown expiration)"
+      - "Test exponential backoff calculation (3rd attempt = 240s)"
+      - "Test button disable states (disabled={true}, aria-disabled='true')"
+      - "Test RateLimitBanner visibility based on cooldown state"
+      - "Test cooldown persistence across page refresh (reload sessionStorage)"
+      - "Write ResetPasswordPage tests: PasswordStrengthIndicator works identically after extraction"
+      - "Test resend code button rate limiting with exponential backoff"
+      - "Test submit button countdown timer behavior"
+      - "Test accessibility ARIA attributes (role='timer', aria-live='polite')"
+      - "Test prefers-reduced-motion support (animations disabled, countdown continues)"
+      - "Create MSW handlers for Cognito LimitExceededException (low-level HTTP API intercept)"
+      - "Verify 80% coverage threshold for ForgotPasswordPage, ResetPasswordPage, RateLimitBanner, PasswordStrengthIndicator"
+
+  - step: 7
+    description: "Update documentation and verify CLAUDE.md compliance"
+    acceptance_criteria:
+      - AC-8
+    rationale: "Ensure implementation is documented and follows project guidelines"
+    files:
+      modify:
+        - path: "docs/guides/password-reset-rate-limiting.md"
+          purpose: "Update to reference BUGF-019 actual implementation, link to components"
+        - path: "packages/core/app-component-library/README.md"
+          purpose: "Document RateLimitBanner and PasswordStrengthIndicator usage"
+    tasks:
+      - "Update password-reset-rate-limiting.md to reference actual BUGF-019 implementation"
+      - "Add inline code comments for sessionStorage key conventions (auth:{operation}:{attribute})"
+      - "Document RateLimitBanner new location and enhanced props (message, title)"
+      - "Add PasswordStrengthIndicator usage examples to app-component-library docs"
+      - "Verify all Zod schemas used (no TypeScript interfaces)"
+      - "Verify barrel imports from @repo/app-component-library (no individual paths)"
+      - "Verify @repo/logger used instead of console.log"
+      - "Run pnpm lint, pnpm check-types, pnpm test to verify all quality gates pass"
+
+critical_paths:
+  - "Step 1 must complete before Step 5 (PasswordStrengthIndicator extraction needed for ResetPasswordPage)"
+  - "Step 2 must complete before Step 4 (RateLimitBanner needed for ForgotPasswordPage)"
+  - "Step 3 must complete before Steps 4 and 5 (useRateLimitCooldown hook needed for both pages)"
+  - "Steps 1-5 must complete before Step 6 (tests require implementation)"
+  - "Step 6 must complete before Step 7 (verify coverage before finalizing docs)"
+
+risks:
+  - risk: "Countdown timer memory leaks"
+    mitigation: "Use useEffect cleanup functions, test with vi.useFakeTimers()"
+  - risk: "SessionStorage key collisions"
+    mitigation: "Use clear naming convention: auth:{operation}:{attribute}"
+  - risk: "Cognito rate limit behavior variability"
+    mitigation: "UAT testing with real Cognito required (per ADR-005)"
+  - risk: "Account enumeration through rate limit messages"
+    mitigation: "Maintain generic messages, verify in AC-6 tests"
+
+completion_criteria:
+  - "All 8 acceptance criteria pass"
+  - "PasswordStrengthIndicator extracted and working identically in ResetPasswordPage"
+  - "RateLimitBanner moved to app-component-library and working in ForgotPasswordPage and ResetPasswordPage"
+  - "Countdown timers display MM:SS format and update every second"
+  - "Exponential backoff working (60s → 120s → 240s → 480s → 600s)"
+  - "SessionStorage persistence survives page refresh"
+  - "All accessibility ARIA attributes present and correct"
+  - "Account enumeration prevention maintained (generic error messages)"
+  - "80% test coverage for affected components"
+  - "MSW mocking for Cognito LimitExceededException working"
+  - "pnpm lint, pnpm check-types, pnpm test all pass"
+  - "Documentation updated with implementation details"
+
+notes:
+  - "Follow ResendCodeButton pattern for exponential backoff and sessionStorage (apps/web/main-app/src/components/Auth/ResendCodeButton.tsx lines 23-100)"
+  - "RateLimitBanner already has countdown timer, progress bar, and accessibility features - reuse as-is"
+  - "Password strength calculation in ResetPasswordPage lines 56-74 is the source of truth for extraction"
+  - "Cognito operations use Amplify SDK v6: resetPassword() and confirmResetPassword()"
+  - "MSW must intercept low-level Cognito HTTP API, not Amplify SDK calls"
+  - "SessionStorage keys: auth:{operation}:{attribute} where operation is forgotPassword, confirmResetPassword, or resendCode"
+  - "Accessibility: throttle screen reader announcements to every 30 seconds (not every second)"
+  - "Prefers-reduced-motion: disable progress bar animations, keep countdown timer functional"
+  - "Generic error messages required: 'Too many attempts. Please wait before trying again.' (not 'Account locked for 5 minutes')"

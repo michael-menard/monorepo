@@ -1,0 +1,85 @@
+reusability:
+  verdict: FAIL
+  files_checked: 9
+  errors: 3
+  warnings: 2
+  findings:
+    - severity: error
+      file: packages/backend/orchestrator/src/providers/ollama.ts
+      line: 97
+      message: "Duplicated getCachedInstance() pattern — identical implementation across ollama.ts, openrouter.ts, anthropic.ts (3x). Should be extracted to base.ts or unified pattern"
+      rule: no-app-duplication
+      auto_fixable: true
+      existing_package: "internal"
+      existing_path: "packages/backend/orchestrator/src/providers/base.ts"
+      recommendation: "Extract getCachedInstance() to a protected base class method or utility function in base.ts to eliminate 3x identical 6-line pattern"
+      duplicate_count: 3
+      duplicate_locations:
+        - packages/backend/orchestrator/src/providers/ollama.ts:97-103
+        - packages/backend/orchestrator/src/providers/openrouter.ts:115-121
+        - packages/backend/orchestrator/src/providers/anthropic.ts:112-118
+
+    - severity: error
+      file: packages/backend/orchestrator/src/providers/ollama.ts
+      line: 111
+      message: "Duplicated getModel() cache retrieval pattern — identical 3x. All three providers check cache, generate hash, check again identically"
+      rule: no-app-duplication
+      auto_fixable: true
+      existing_package: "internal"
+      existing_path: "packages/backend/orchestrator/src/providers/base.ts"
+      recommendation: "Extract cache-check-hash-return pattern to base class template method or generic utility in base.ts"
+      duplicate_count: 3
+      duplicate_locations:
+        - packages/backend/orchestrator/src/providers/ollama.ts:125-131
+        - packages/backend/orchestrator/src/providers/openrouter.ts:135-141
+        - packages/backend/orchestrator/src/providers/anthropic.ts:132-138
+
+    - severity: error
+      file: packages/backend/orchestrator/src/providers/ollama.ts
+      line: 148
+      message: "Duplicated clearCaches() pattern — identical 3x across providers. All call configCache=null, instanceCache.clear(), availabilityCache=null"
+      rule: no-app-duplication
+      auto_fixable: true
+      existing_package: "internal"
+      existing_path: "packages/backend/orchestrator/src/providers/base.ts"
+      recommendation: "Extract clearCaches() template to base class or shared factory function to standardize test cleanup"
+      duplicate_count: 3
+      duplicate_locations:
+        - packages/backend/orchestrator/src/providers/ollama.ts:148-152
+        - packages/backend/orchestrator/src/providers/openrouter.ts:163-167
+        - packages/backend/orchestrator/src/providers/anthropic.ts:156-160
+
+    - severity: warning
+      file: packages/backend/orchestrator/src/providers/ollama.ts
+      line: 53
+      message: "Duplicated loadConfig() boilerplate — check cache, parse schema, return. Pattern identical across all three providers with only env var names changing"
+      rule: no-app-duplication
+      auto_fixable: false
+      existing_package: "internal"
+      recommendation: "Consider template method pattern or abstract base with configurable env var mapping to reduce ~50 LOC duplication"
+
+    - severity: warning
+      file: packages/backend/orchestrator/src/providers/openrouter.ts
+      line: 129
+      message: "Duplicated model name parsing — each provider has slightly different variant (ollama: vs ollama/, openrouter/ prefix removal, anthropic/ prefix). Could use unified parseModelString() helper"
+      rule: no-app-duplication
+      auto_fixable: true
+      existing_package: "internal"
+      existing_path: "packages/backend/orchestrator/src/providers/base.ts"
+      recommendation: "Extend parseModelString() in base.ts to include model name extraction after prefix removal, reducing variant logic in each provider"
+
+  summary: |
+    Fix Iteration 2 successfully resolved SEC-002 and PERF-002 issues:
+    - SEC-002 (weak cache key): FIXED ✓ — generateConfigHash() now uses crypto.createHash('sha256') with sanitized config (API key excluded)
+    - PERF-002 (inefficient hashing): FIXED ✓ — Uses deterministic SHA-256 hash, 16-char output instead of verbose JSON.stringify()
+
+    However, code duplication patterns persist across the three provider adapters:
+    - 3 HIGH duplication instances: getCachedInstance(), getModel() cache pattern, clearCaches()
+    - 2 MEDIUM duplication instances: loadConfig() boilerplate, model name parsing logic
+
+    These duplication patterns represent ~80 LOC of identical/similar code that should be consolidated
+    in base.ts or via abstract base class to improve maintainability and reduce defect surface.
+
+  tokens:
+    in: 15000
+    out: 1200

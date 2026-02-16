@@ -1,0 +1,63 @@
+story_id: LNGG-0040
+plan_version: 1
+created_at: "2026-02-14T00:00:00Z"
+
+steps:
+  - id: 1
+    name: "Create stage type definitions (Zod-first)"
+    description: "Create __types__/stage-types.ts with StageSchema, StageTransitionSchema, MoveStageRequestSchema, MoveStageResultSchema, BatchMoveStageRequestSchema"
+    files:
+      - packages/backend/orchestrator/src/adapters/__types__/stage-types.ts
+
+  - id: 2
+    name: "Add error classes for stage movement"
+    description: "Add InvalidStageError, InvalidTransitionError, StageConflictError, FileOperationError to __types__/index.ts"
+    files:
+      - packages/backend/orchestrator/src/adapters/__types__/index.ts
+
+  - id: 3
+    name: "Create stage validator utility"
+    description: "Create stage-validator.ts with validateTransition(), isValidStage(), getStageGraph() implementing the transition DAG"
+    files:
+      - packages/backend/orchestrator/src/adapters/utils/stage-validator.ts
+
+  - id: 4
+    name: "Create stage movement adapter"
+    description: "Create stage-movement-adapter.ts with StageMovementAdapter class: moveStage(), batchMoveStage(), findStory()"
+    files:
+      - packages/backend/orchestrator/src/adapters/stage-movement-adapter.ts
+
+  - id: 5
+    name: "Update adapter exports"
+    description: "Add StageMovementAdapter export to adapters/index.ts"
+    files:
+      - packages/backend/orchestrator/src/adapters/index.ts
+
+  - id: 6
+    name: "Create test fixtures"
+    description: "Create test story YAML files for unit and integration tests"
+    files:
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-001.md
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-002.md
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-003.md
+      - packages/backend/orchestrator/src/adapters/__tests__/fixtures/stage-test-epic/TEST-004.md
+
+  - id: 7
+    name: "Create unit tests"
+    description: "Create stage-movement-adapter.test.ts covering all 6 ACs, error cases, edge cases"
+    files:
+      - packages/backend/orchestrator/src/adapters/__tests__/stage-movement-adapter.test.ts
+
+  - id: 8
+    name: "Create integration tests"
+    description: "Create stage-movement-adapter.integration.test.ts with real file operations, full lifecycle, batch, performance"
+    files:
+      - packages/backend/orchestrator/src/adapters/__tests__/stage-movement-adapter.integration.test.ts
+
+  - id: 9
+    name: "Run tests and verify"
+    description: "Run all tests, lint, typecheck, verify coverage"
+    commands:
+      - "pnpm --filter @repo/orchestrator test"
+      - "pnpm --filter @repo/orchestrator exec eslint src/adapters/stage-movement-adapter.ts"
+      - "pnpm --filter @repo/orchestrator exec tsc --noEmit"

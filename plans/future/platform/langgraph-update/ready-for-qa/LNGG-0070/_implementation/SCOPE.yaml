@@ -1,0 +1,29 @@
+schema: 1
+story_id: LNGG-0070
+timestamp: "2026-02-15T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - packages/backend/orchestrator/**
+  - packages/backend/orchestrator/src/adapters/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: Build comprehensive integration test suite validating adapter interactions and multi-adapter workflow scenarios
+
+elaboration: completed

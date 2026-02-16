@@ -2,7 +2,7 @@
  * Simple TagInput component for adding/removing tags
  * Uses shadcn Input and Badge components
  */
-import { useState, KeyboardEvent } from 'react'
+import { useState, KeyboardEvent, useId } from 'react'
 import { Input, Badge } from '@repo/app-component-library'
 import { X } from 'lucide-react'
 import { z } from 'zod'
@@ -27,6 +27,7 @@ export const TagInput = ({
   disabled = false,
 }: TagInputProps) => {
   const [inputValue, setInputValue] = useState('')
+  const instructionsId = useId()
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim()) {
@@ -66,21 +67,32 @@ export const TagInput = ({
 
   return (
     <div className="space-y-2">
+      {/* Hidden instructions for screen readers */}
+      <span id={instructionsId} className="sr-only">
+        Press Enter or comma to add tag. Press Backspace with empty input to remove last tag.
+      </span>
+      
       <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-background">
-        {value.map(tag => (
-          <Badge key={tag} variant="secondary" className="gap-1">
-            {tag}
-            <button
-              type="button"
-              onClick={() => removeTag(tag)}
-              disabled={disabled}
-              className="ml-1 hover:bg-muted rounded-full p-0.5"
-              aria-label={`Remove ${tag}`}
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </Badge>
-        ))}
+        {value.length > 0 && (
+          <ul role="list" className="contents">
+            {value.map(tag => (
+              <li key={tag} role="listitem">
+                <Badge variant="secondary" className="gap-1">
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    disabled={disabled}
+                    className="ml-1 hover:bg-muted rounded-full p-0.5"
+                    aria-label={`Remove ${tag}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
         <Input
           type="text"
           value={inputValue}
@@ -89,6 +101,7 @@ export const TagInput = ({
           placeholder={value.length === 0 ? placeholder : ''}
           disabled={disabled}
           className="flex-1 min-w-[120px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+          aria-describedby={instructionsId}
         />
       </div>
       {maxTags ? (

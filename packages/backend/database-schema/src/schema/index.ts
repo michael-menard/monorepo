@@ -17,6 +17,69 @@ import { relations, sql } from 'drizzle-orm'
 import { setImages, sets } from './sets'
 export { setImages, sets }
 
+// Re-export Telemetry tables (INFR-0040)
+export { telemetrySchema, workflowEventTypeEnum, workflowEvents } from './telemetry'
+
+// Re-export Artifacts tables (INFR-0110)
+// Note: Using 'artifactsContent' prefix to avoid conflicts with wint.storyArtifacts
+export {
+  // Schema namespace
+  artifactsSchema,
+
+  // Enums
+  artifactTypeEnum as artifactContentTypeEnum,
+
+  // JSONB Type Schemas
+  acceptanceCriterionSchema,
+  riskSchema,
+  scopeTouchesSchema,
+  riskFlagsSchema,
+  planStepSchema,
+  fileChangeSchema,
+  commandSchema,
+  acceptanceCriteriaMapSchema,
+
+  // Core Artifact tables
+  storyArtifacts as storyArtifactsContent,
+  checkpointArtifacts as checkpointArtifactsContent,
+  scopeArtifacts as scopeArtifactsContent,
+  planArtifacts as planArtifactsContent,
+
+  // Relations
+  storyArtifactsRelations as storyArtifactsContentRelations,
+  checkpointArtifactsRelations as checkpointArtifactsContentRelations,
+  scopeArtifactsRelations as scopeArtifactsContentRelations,
+  planArtifactsRelations as planArtifactsContentRelations,
+
+  // Zod Schemas
+  insertStoryArtifactSchema as insertStoryArtifactContentSchema,
+  selectStoryArtifactSchema as selectStoryArtifactContentSchema,
+  insertCheckpointArtifactSchema as insertCheckpointArtifactContentSchema,
+  selectCheckpointArtifactSchema as selectCheckpointArtifactContentSchema,
+  insertScopeArtifactSchema as insertScopeArtifactContentSchema,
+  selectScopeArtifactSchema as selectScopeArtifactContentSchema,
+  insertPlanArtifactSchema as insertPlanArtifactContentSchema,
+  selectPlanArtifactSchema as selectPlanArtifactContentSchema,
+
+  // TypeScript types (prefixed to avoid conflicts with WINT schema)
+  type AcceptanceCriterion,
+  type Risk,
+  type ScopeTouches,
+  type RiskFlags,
+  type PlanStep,
+  type FileChange,
+  type Command,
+  type AcceptanceCriteriaMap,
+  type InsertStoryArtifact as InsertStoryArtifactContent,
+  type SelectStoryArtifact as SelectStoryArtifactContent,
+  type InsertCheckpointArtifact as InsertCheckpointArtifactContent,
+  type SelectCheckpointArtifact as SelectCheckpointArtifactContent,
+  type InsertScopeArtifact as InsertScopeArtifactContent,
+  type SelectScopeArtifact as SelectScopeArtifactContent,
+  type InsertPlanArtifact as InsertPlanArtifactContent,
+  type SelectPlanArtifact as SelectPlanArtifactContent,
+} from './artifacts'
+
 // Re-export Feature Flags tables (WISH-2009, WISH-2039)
 export { featureFlags, featureFlagUserOverrides, featureFlagSchedules } from './feature-flags'
 
@@ -780,3 +843,302 @@ export const setImagesRelations = relations(setImages, ({ one }) => ({
     references: [sets.id],
   }),
 }))
+
+// Re-export WINT schemas (WINT-0010)
+export {
+  // Schema namespace
+  wintSchema,
+
+  // Enums
+  storyStateEnum,
+  storyPriorityEnum,
+  artifactTypeEnum,
+  phaseEnum,
+  phaseStatusEnum,
+  assigneeTypeEnum,
+  assignmentStatusEnum,
+  blockerTypeEnum,
+  severityEnum,
+  contextPackTypeEnum,
+  agentDecisionTypeEnum,
+  modelTypeEnum,
+  featureRelationshipTypeEnum,
+  workflowStatusEnum,
+
+  // JSONB Type Schemas (WINT-0040)
+  securityIssueSchema,
+  performanceMetricsSchema,
+  artifactsMetadataSchema,
+  validationErrorSchema,
+
+  // Story Management tables
+  stories,
+  storyStates,
+  storyTransitions,
+  storyDependencies,
+  storyArtifacts,
+  storyPhaseHistory,
+  storyMetadataVersions,
+  storyAssignments,
+  storyBlockers,
+
+  // Context Cache tables
+  contextPacks,
+  contextSessions,
+  contextCacheHits,
+
+  // Telemetry tables
+  agentInvocations,
+  agentDecisions,
+  agentOutcomes,
+  stateTransitions,
+
+  // ML Pipeline tables
+  trainingData,
+  mlModels,
+  modelPredictions,
+  modelMetrics,
+
+  // Graph Relational tables
+  features,
+  capabilities,
+  featureRelationships,
+  cohesionRules,
+
+  // Workflow Tracking tables
+  workflowExecutions,
+  workflowCheckpoints,
+  workflowAuditLog,
+
+  // Relations
+  storiesRelations,
+  storyStatesRelations,
+  storyTransitionsRelations,
+  storyDependenciesRelations,
+  storyArtifactsRelations,
+  storyPhaseHistoryRelations,
+  storyMetadataVersionsRelations,
+  storyAssignmentsRelations,
+  storyBlockersRelations,
+  contextSessionsRelations,
+  contextPacksRelations,
+  contextCacheHitsRelations,
+  agentInvocationsRelations,
+  agentDecisionsRelations,
+  agentOutcomesRelations,
+  mlModelsRelations,
+  modelPredictionsRelations,
+  modelMetricsRelations,
+  featuresRelations,
+  capabilitiesRelations,
+  featureRelationshipsRelations,
+  cohesionRulesRelations,
+  workflowExecutionsRelations,
+  workflowCheckpointsRelations,
+  workflowAuditLogRelations,
+
+  // Zod Schemas
+  insertStorySchema,
+  selectStorySchema,
+  insertStoryStateSchema,
+  selectStoryStateSchema,
+  insertStoryTransitionSchema,
+  selectStoryTransitionSchema,
+  insertStoryDependencySchema,
+  selectStoryDependencySchema,
+  insertStoryArtifactSchema,
+  selectStoryArtifactSchema,
+  insertStoryPhaseHistorySchema,
+  selectStoryPhaseHistorySchema,
+  insertStoryMetadataVersionSchema,
+  selectStoryMetadataVersionSchema,
+  insertStoryAssignmentSchema,
+  selectStoryAssignmentSchema,
+  insertStoryBlockerSchema,
+  selectStoryBlockerSchema,
+  insertContextPackSchema,
+  selectContextPackSchema,
+  insertContextSessionSchema,
+  selectContextSessionSchema,
+  insertContextCacheHitSchema,
+  selectContextCacheHitSchema,
+  insertAgentInvocationSchema,
+  selectAgentInvocationSchema,
+  insertAgentDecisionSchema,
+  selectAgentDecisionSchema,
+  insertAgentOutcomeSchema,
+  selectAgentOutcomeSchema,
+  insertStateTransitionSchema,
+  selectStateTransitionSchema,
+  insertTrainingDataSchema,
+  selectTrainingDataSchema,
+  insertMlModelSchema,
+  selectMlModelSchema,
+  insertModelPredictionSchema,
+  selectModelPredictionSchema,
+  insertModelMetricSchema,
+  selectModelMetricSchema,
+  insertFeatureSchema,
+  selectFeatureSchema,
+  insertCapabilitySchema,
+  selectCapabilitySchema,
+  insertFeatureRelationshipSchema,
+  selectFeatureRelationshipSchema,
+  insertCohesionRuleSchema,
+  selectCohesionRuleSchema,
+  insertWorkflowExecutionSchema,
+  selectWorkflowExecutionSchema,
+  insertWorkflowCheckpointSchema,
+  selectWorkflowCheckpointSchema,
+  insertWorkflowAuditLogSchema,
+  selectWorkflowAuditLogSchema,
+
+  // TypeScript types
+  type InsertStory,
+  type SelectStory,
+  type InsertStoryState,
+  type SelectStoryState,
+  type InsertStoryTransition,
+  type SelectStoryTransition,
+  type InsertStoryDependency,
+  type SelectStoryDependency,
+  type InsertStoryArtifact,
+  type SelectStoryArtifact,
+  type InsertStoryPhaseHistory,
+  type SelectStoryPhaseHistory,
+  type InsertStoryMetadataVersion,
+  type SelectStoryMetadataVersion,
+  type InsertStoryAssignment,
+  type SelectStoryAssignment,
+  type InsertStoryBlocker,
+  type SelectStoryBlocker,
+  type InsertContextPack,
+  type SelectContextPack,
+  type InsertContextSession,
+  type SelectContextSession,
+  type InsertContextCacheHit,
+  type SelectContextCacheHit,
+  type InsertAgentInvocation,
+  type SelectAgentInvocation,
+  type InsertAgentDecision,
+  type SelectAgentDecision,
+  type InsertAgentOutcome,
+  type SelectAgentOutcome,
+  type InsertStateTransition,
+  type SelectStateTransition,
+  type InsertTrainingData,
+  type SelectTrainingData,
+  type InsertMlModel,
+  type SelectMlModel,
+  type InsertModelPrediction,
+  type SelectModelPrediction,
+  type InsertModelMetric,
+  type SelectModelMetric,
+  type InsertFeature,
+  type SelectFeature,
+  type InsertCapability,
+  type SelectCapability,
+  type InsertFeatureRelationship,
+  type SelectFeatureRelationship,
+  type InsertCohesionRule,
+  type SelectCohesionRule,
+  type InsertWorkflowExecution,
+  type SelectWorkflowExecution,
+  type InsertWorkflowCheckpoint,
+  type SelectWorkflowCheckpoint,
+  type InsertWorkflowAuditLog,
+  type SelectWorkflowAuditLog,
+} from './wint'
+
+// Re-export KBAR schemas (KBAR-0010)
+export {
+  // Schema namespace
+  kbarSchema,
+
+  // Enums
+  kbarStoryPhaseEnum,
+  kbarArtifactTypeEnum,
+  kbarSyncStatusEnum,
+  kbarDependencyTypeEnum,
+  kbarStoryPriorityEnum,
+  kbarConflictResolutionEnum,
+
+  // Story Management tables
+  stories as kbarStories,
+  storyStates as kbarStoryStates,
+  storyDependencies as kbarStoryDependencies,
+
+  // Artifact Management tables
+  artifacts,
+  artifactVersions,
+  artifactContentCache,
+
+  // Sync State tables
+  syncEvents,
+  syncConflicts,
+  syncCheckpoints,
+
+  // Index Generation tables
+  indexMetadata,
+  indexEntries,
+
+  // Relations
+  storiesRelations as kbarStoriesRelations,
+  storyStatesRelations as kbarStoryStatesRelations,
+  storyDependenciesRelations as kbarStoryDependenciesRelations,
+  artifactsRelations,
+  artifactVersionsRelations,
+  artifactContentCacheRelations,
+  syncEventsRelations,
+  syncConflictsRelations,
+  indexMetadataRelations,
+  indexEntriesRelations,
+
+  // Zod Schemas
+  insertStorySchema as insertKbarStorySchema,
+  selectStorySchema as selectKbarStorySchema,
+  insertStoryStateSchema as insertKbarStoryStateSchema,
+  selectStoryStateSchema as selectKbarStoryStateSchema,
+  insertStoryDependencySchema as insertKbarStoryDependencySchema,
+  selectStoryDependencySchema as selectKbarStoryDependencySchema,
+  insertArtifactSchema,
+  selectArtifactSchema,
+  insertArtifactVersionSchema,
+  selectArtifactVersionSchema,
+  insertArtifactContentCacheSchema,
+  selectArtifactContentCacheSchema,
+  insertSyncEventSchema,
+  selectSyncEventSchema,
+  insertSyncConflictSchema,
+  selectSyncConflictSchema,
+  insertSyncCheckpointSchema,
+  selectSyncCheckpointSchema,
+  insertIndexMetadataSchema,
+  selectIndexMetadataSchema,
+  insertIndexEntrySchema,
+  selectIndexEntrySchema,
+
+  // TypeScript types
+  type InsertStory as InsertKbarStory,
+  type SelectStory as SelectKbarStory,
+  type InsertStoryState as InsertKbarStoryState,
+  type SelectStoryState as SelectKbarStoryState,
+  type InsertStoryDependency as InsertKbarStoryDependency,
+  type SelectStoryDependency as SelectKbarStoryDependency,
+  type InsertArtifact,
+  type SelectArtifact,
+  type InsertArtifactVersion,
+  type SelectArtifactVersion,
+  type InsertArtifactContentCache,
+  type SelectArtifactContentCache,
+  type InsertSyncEvent,
+  type SelectSyncEvent,
+  type InsertSyncConflict,
+  type SelectSyncConflict,
+  type InsertSyncCheckpoint,
+  type SelectSyncCheckpoint,
+  type InsertIndexMetadata,
+  type SelectIndexMetadata,
+  type InsertIndexEntry,
+  type SelectIndexEntry,
+} from './kbar'

@@ -12,8 +12,7 @@
  * - AC12-13: Upload with loading state
  * - AC14-17: Success/error handling, thumbnail replacement
  */
-
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Upload, X, Image as ImageIcon } from 'lucide-react'
 import {
   Button,
@@ -75,6 +74,15 @@ export function ThumbnailUpload({ mocId, existingThumbnailUrl, onSuccess }: Thum
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [uploadThumbnail, { isLoading }] = useUploadThumbnailMutation()
+
+  // BUGF-018: Cleanup blob URL on unmount or when previewUrl changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   /**
    * Handle file selection from input (AC4)

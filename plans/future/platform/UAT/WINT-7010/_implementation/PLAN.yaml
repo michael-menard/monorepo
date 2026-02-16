@@ -1,0 +1,184 @@
+schema: 1
+story_id: "WINT-7010"
+timestamp: "2026-02-14T14:35:00Z"
+
+steps:
+  - id: 1
+    description: "Scan .claude/agents directory and extract frontmatter metadata from all agent files"
+    files:
+      - ".claude/agents/**/*.agent.md"
+    dependencies: []
+    slice: packages
+    notes: "Use Glob to find all agent files, Grep to extract frontmatter, Read for parsing errors"
+
+  - id: 2
+    description: "Generate directory structure documentation including _shared, _reference, _archive, _migration"
+    files:
+      - ".claude/agents/"
+    dependencies: [1]
+    slice: packages
+    notes: "Use Bash tree/ls to document structure, catalog file counts per directory"
+
+  - id: 3
+    description: "Extract spawn relationships from spawned_by frontmatter fields"
+    files:
+      - ".claude/agents/**/*.agent.md"
+    dependencies: [1]
+    slice: packages
+    notes: "Parse cataloged frontmatter from step 1, build spawn relationship map"
+
+  - id: 4
+    description: "Scan command files for cross-references to agent paths"
+    files:
+      - ".claude/commands/**/*.md"
+    dependencies: []
+    slice: packages
+    notes: "Use Grep with pattern .claude/agents/ to find all command-to-agent references"
+
+  - id: 5
+    description: "Scan agent files for cross-references to other agents"
+    files:
+      - ".claude/agents/**/*.agent.md"
+    dependencies: []
+    slice: packages
+    notes: "Use Grep with pattern .claude/agents/ to find agent-to-agent references"
+
+  - id: 6
+    description: "Identify shared resource dependencies from agent files"
+    files:
+      - ".claude/agents/_shared/**/*.md"
+      - ".claude/agents/**/*.agent.md"
+    dependencies: [1]
+    slice: packages
+    notes: "Use Grep with pattern _shared/ to find includes, cross-reference with catalog"
+
+  - id: 7
+    description: "Generate Mermaid dependency graph from spawn relationships"
+    files: []
+    dependencies: [3]
+    slice: packages
+    notes: "Transform spawn relationship data into Mermaid graph syntax, group by agent type"
+
+  - id: 8
+    description: "Identify orphaned agents not in spawn chain or command references"
+    files: []
+    dependencies: [3, 4, 5]
+    slice: packages
+    notes: "Cross-reference catalog with spawn data and command/agent references"
+
+  - id: 9
+    description: "Write all 7 output artifacts to story directory"
+    files:
+      - "plans/future/platform/in-progress/WINT-7010/AGENT-CATALOG.yaml"
+      - "plans/future/platform/in-progress/WINT-7010/DIRECTORY-STRUCTURE.md"
+      - "plans/future/platform/in-progress/WINT-7010/CROSS-REFERENCES.yaml"
+      - "plans/future/platform/in-progress/WINT-7010/SPAWN-GRAPH.md"
+      - "plans/future/platform/in-progress/WINT-7010/SHARED-DEPENDENCIES.yaml"
+      - "plans/future/platform/in-progress/WINT-7010/ORPHANED-AGENTS.yaml"
+      - "plans/future/platform/in-progress/WINT-7010/AUDIT-SUMMARY.md"
+    dependencies: [1, 2, 3, 4, 5, 6, 7, 8]
+    slice: packages
+    notes: "Consolidate all findings into structured YAML and markdown artifacts"
+
+files_to_change:
+  - path: "plans/future/platform/in-progress/WINT-7010/AGENT-CATALOG.yaml"
+    action: create
+    reason: "AC-1: Catalog all agent files with frontmatter metadata"
+  - path: "plans/future/platform/in-progress/WINT-7010/DIRECTORY-STRUCTURE.md"
+    action: create
+    reason: "AC-2 and AC-7: Document directory structure and reference documentation"
+  - path: "plans/future/platform/in-progress/WINT-7010/CROSS-REFERENCES.yaml"
+    action: create
+    reason: "AC-3, AC-4, AC-5: Map spawn relationships and all cross-references"
+  - path: "plans/future/platform/in-progress/WINT-7010/SPAWN-GRAPH.md"
+    action: create
+    reason: "AC-8: Create Mermaid visualization of agent spawn hierarchy"
+  - path: "plans/future/platform/in-progress/WINT-7010/SHARED-DEPENDENCIES.yaml"
+    action: create
+    reason: "AC-6: Document shared resource dependencies"
+  - path: "plans/future/platform/in-progress/WINT-7010/ORPHANED-AGENTS.yaml"
+    action: create
+    reason: "AC-9: Identify agents not in spawn chain or references"
+  - path: "plans/future/platform/in-progress/WINT-7010/AUDIT-SUMMARY.md"
+    action: create
+    reason: "AC-10: Executive summary of all findings for WINT-7020"
+
+commands_to_run:
+  - command: "# No build required - documentation story"
+    when: "n/a"
+    required: false
+  - command: "# No tests required - documentation story"
+    when: "n/a"
+    required: false
+  - command: "yamllint plans/future/platform/in-progress/WINT-7010/*.yaml"
+    when: "after artifact generation"
+    required: true
+    notes: "Validate YAML syntax for all 4 YAML artifacts"
+  - command: "ls -la plans/future/platform/in-progress/WINT-7010/*.{yaml,md}"
+    when: "after artifact generation"
+    required: true
+    notes: "Verify all 7 artifacts exist"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "AGENT-CATALOG.yaml contains all agent files with frontmatter metadata (name, type, version, permission_level, spawned_by)"
+    evidence_type: file
+    verification_method: "Count in catalog matches filesystem count (143+ files)"
+
+  - ac_id: "AC-2"
+    planned_evidence: "DIRECTORY-STRUCTURE.md documents all subdirectories with file counts"
+    evidence_type: file
+    verification_method: "All subdirectories (_shared, _reference, _archive, _migration) documented"
+
+  - ac_id: "AC-3"
+    planned_evidence: "CROSS-REFERENCES.yaml spawn_relationships section contains spawned_by mappings"
+    evidence_type: file
+    verification_method: "Spot-check 3 known spawn chains (e.g., dev-setup-leader → workers)"
+
+  - ac_id: "AC-4"
+    planned_evidence: "CROSS-REFERENCES.yaml command_references section contains command-to-agent paths"
+    evidence_type: file
+    verification_method: "Spot-check 10 known command references from .claude/commands/"
+
+  - ac_id: "AC-5"
+    planned_evidence: "CROSS-REFERENCES.yaml agent_references section contains agent-to-agent references"
+    evidence_type: file
+    verification_method: "Grep patterns comprehensive, spot-check known references"
+
+  - ac_id: "AC-6"
+    planned_evidence: "SHARED-DEPENDENCIES.yaml catalogs all 17 _shared/*.md files and their usage"
+    evidence_type: file
+    verification_method: "All 17 shared files cataloged with dependent agents listed"
+
+  - ac_id: "AC-7"
+    planned_evidence: "DIRECTORY-STRUCTURE.md includes reference documentation section (_reference/patterns/, schemas/, examples/)"
+    evidence_type: file
+    verification_method: "All reference subdirectories documented with descriptions"
+
+  - ac_id: "AC-8"
+    planned_evidence: "SPAWN-GRAPH.md contains Mermaid diagram of agent spawn hierarchy"
+    evidence_type: file
+    verification_method: "Graph renders in Mermaid viewer without errors"
+
+  - ac_id: "AC-9"
+    planned_evidence: "ORPHANED-AGENTS.yaml lists agents not in spawn chain or command/agent references"
+    evidence_type: file
+    verification_method: "No false positives (active agents incorrectly marked orphaned)"
+
+  - ac_id: "AC-10"
+    planned_evidence: "All 7 artifacts exist and parse correctly (YAML syntax valid, markdown renders)"
+    evidence_type: file
+    verification_method: "yamllint passes, markdown renders, all files present"
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Documentation/audit story - no code changes, no executable tests"
+  - "All work is read-only filesystem scanning and structured output generation"
+  - "Output artifacts go into story directory, not into codebase"
+  - "Verification is manual completeness review with spot-checking"
+  - "Token optimization: use Grep before Read, cache parsed frontmatter"
+  - "Mermaid graph may need grouping strategy for 143+ agents"
+  - "E2E tests: EXEMPT (documentation story per AC requirements)"

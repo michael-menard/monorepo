@@ -1,0 +1,127 @@
+schema: 1
+story_id: "LNGG-0030"
+timestamp: "2026-02-13T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create adapters/decision-callbacks/ directory structure"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/"
+        action: create
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/"
+        action: create
+    ac_coverage: []
+
+  - id: 2
+    description: "Create DecisionCallback interface and Zod schemas in types.ts"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/types.ts"
+        action: create
+    ac_coverage: ["AC-1"]
+
+  - id: 3
+    description: "Implement NoopDecisionCallback in noop-callback.ts"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/noop-callback.ts"
+        action: create
+    ac_coverage: ["AC-4"]
+
+  - id: 4
+    description: "Implement AutoDecisionCallback with rule engine in auto-callback.ts"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/auto-callback.ts"
+        action: create
+    ac_coverage: ["AC-3"]
+
+  - id: 5
+    description: "Implement CLIDecisionCallback using inquirer in cli-callback.ts"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/cli-callback.ts"
+        action: create
+    ac_coverage: ["AC-2"]
+
+  - id: 6
+    description: "Create DecisionCallbackRegistry in registry.ts"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/registry.ts"
+        action: create
+    ac_coverage: ["AC-4"]
+
+  - id: 7
+    description: "Create barrel export file for decision-callbacks adapter"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/index.ts"
+        action: create
+    ac_coverage: []
+
+  - id: 8
+    description: "Update adapters/index.ts to export decision-callbacks module"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/index.ts"
+        action: create
+    ac_coverage: []
+
+  - id: 9
+    description: "Update main orchestrator index.ts to export decision-callbacks"
+    files:
+      - path: "packages/backend/orchestrator/src/index.ts"
+        action: modify
+    ac_coverage: []
+
+  - id: 10
+    description: "Write unit tests for CLIDecisionCallback (timeout, cancel, happy path)"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/cli-callback.test.ts"
+        action: create
+    ac_coverage: ["AC-2", "AC-6"]
+
+  - id: 11
+    description: "Write unit tests for AutoDecisionCallback (rule matching, fallback)"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/auto-callback.test.ts"
+        action: create
+    ac_coverage: ["AC-3", "AC-6"]
+
+  - id: 12
+    description: "Write unit tests for DecisionCallbackRegistry"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/registry.test.ts"
+        action: create
+    ac_coverage: ["AC-4", "AC-6"]
+
+  - id: 13
+    description: "Write integration tests with LangGraph elaboration workflow"
+    files:
+      - path: "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/integration.test.ts"
+        action: create
+    ac_coverage: ["AC-5", "AC-7"]
+
+  - id: 14
+    description: "Add decisionCallback field to ElaborationConfig schema"
+    files:
+      - path: "packages/backend/orchestrator/src/graphs/elaboration.ts"
+        action: modify
+    ac_coverage: ["AC-5"]
+
+  - id: 15
+    description: "Update elaboration graph node to invoke callback for gap decisions"
+    files:
+      - path: "packages/backend/orchestrator/src/nodes/elaboration/gap-handler.ts"
+        action: create
+    ac_coverage: ["AC-5"]
+
+dependencies_to_install:
+  - name: "inquirer"
+    version: "^9.2.0"
+    dev: false
+
+test_strategy:
+  unit_test_files:
+    - "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/cli-callback.test.ts"
+    - "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/auto-callback.test.ts"
+    - "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/registry.test.ts"
+  integration_test_files:
+    - "packages/backend/orchestrator/src/adapters/decision-callbacks/__tests__/integration.test.ts"
+  coverage_target: 80
+
+estimated_files_changed: 15

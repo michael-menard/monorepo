@@ -1,0 +1,28 @@
+schema: 1
+story_id: INFR-0110
+timestamp: "2026-02-15T14:22:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - packages/backend/database-schema/**
+  - packages/backend/db/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Create PostgreSQL schemas for 4 core workflow artifacts (story, checkpoint, scope, plan) with Drizzle ORM and auto-generated Zod schemas, enabling dual persistence and structured querying
+elaboration: completed

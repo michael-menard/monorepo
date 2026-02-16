@@ -1,0 +1,238 @@
+schema: 1
+story_id: "WINT-0110"
+timestamp: "2026-02-15T16:30:00Z"
+
+steps:
+  - id: 1
+    description: "Create package structure and Zod input schemas for all 5 MCP tools"
+    files:
+      - "packages/backend/mcp-tools/package.json"
+      - "packages/backend/mcp-tools/tsconfig.json"
+      - "packages/backend/mcp-tools/session-management/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Implement session_create tool with UUID generation and database insert"
+    files:
+      - "packages/backend/mcp-tools/session-management/session-create.ts"
+      - "packages/backend/mcp-tools/session-management/__tests__/session-create.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Implement session_update tool with incremental/absolute modes"
+    files:
+      - "packages/backend/mcp-tools/session-management/session-update.ts"
+      - "packages/backend/mcp-tools/session-management/__tests__/session-update.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 4
+    description: "Implement session_complete tool with timestamp handling and validation"
+    files:
+      - "packages/backend/mcp-tools/session-management/session-complete.ts"
+      - "packages/backend/mcp-tools/session-management/__tests__/session-complete.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 5
+    description: "Implement session_query tool with filtering and pagination"
+    files:
+      - "packages/backend/mcp-tools/session-management/session-query.ts"
+      - "packages/backend/mcp-tools/session-management/__tests__/session-query.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 6
+    description: "Implement session_cleanup tool with dryRun safety mechanism"
+    files:
+      - "packages/backend/mcp-tools/session-management/session-cleanup.ts"
+      - "packages/backend/mcp-tools/session-management/__tests__/session-cleanup.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 7
+    description: "Write schema validation tests for all Zod schemas"
+    files:
+      - "packages/backend/mcp-tools/session-management/__tests__/schemas.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 8
+    description: "Write integration tests for full session lifecycle"
+    files:
+      - "packages/backend/mcp-tools/session-management/__tests__/integration.test.ts"
+    dependencies: [2, 3, 4, 5, 6]
+    slice: packages
+
+  - id: 9
+    description: "Create SESSION-MANAGEMENT-TOOLS.md documentation with usage examples"
+    files:
+      - "packages/backend/mcp-tools/session-management/SESSION-MANAGEMENT-TOOLS.md"
+    dependencies: [2, 3, 4, 5, 6]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/mcp-tools/package.json"
+    action: create
+    reason: "New package for MCP tools infrastructure (AC-6)"
+
+  - path: "packages/backend/mcp-tools/tsconfig.json"
+    action: create
+    reason: "TypeScript configuration for MCP tools package"
+
+  - path: "packages/backend/mcp-tools/session-management/__types__/index.ts"
+    action: create
+    reason: "Zod input schemas for all 5 tools (AC-6)"
+
+  - path: "packages/backend/mcp-tools/session-management/session-create.ts"
+    action: create
+    reason: "Implements AC-1: session_create tool"
+
+  - path: "packages/backend/mcp-tools/session-management/session-update.ts"
+    action: create
+    reason: "Implements AC-2: session_update tool with incremental/absolute modes"
+
+  - path: "packages/backend/mcp-tools/session-management/session-complete.ts"
+    action: create
+    reason: "Implements AC-3: session_complete tool"
+
+  - path: "packages/backend/mcp-tools/session-management/session-query.ts"
+    action: create
+    reason: "Implements AC-4: session_query tool with filtering"
+
+  - path: "packages/backend/mcp-tools/session-management/session-cleanup.ts"
+    action: create
+    reason: "Implements AC-5: session_cleanup tool with dryRun safety"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/session-create.test.ts"
+    action: create
+    reason: "Unit tests for session_create (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/session-update.test.ts"
+    action: create
+    reason: "Unit tests for session_update (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/session-complete.test.ts"
+    action: create
+    reason: "Unit tests for session_complete (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/session-query.test.ts"
+    action: create
+    reason: "Unit tests for session_query (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/session-cleanup.test.ts"
+    action: create
+    reason: "Unit tests for session_cleanup (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/schemas.test.ts"
+    action: create
+    reason: "Zod schema validation tests (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/__tests__/integration.test.ts"
+    action: create
+    reason: "Full lifecycle integration tests (AC-7)"
+
+  - path: "packages/backend/mcp-tools/session-management/SESSION-MANAGEMENT-TOOLS.md"
+    action: create
+    reason: "Tool usage documentation (AC-8)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after creating package.json"
+    required: true
+
+  - command: "pnpm build --filter @repo/mcp-tools"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/mcp-tools"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/mcp-tools"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint --filter @repo/mcp-tools"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit tests in session-create.test.ts + integration.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests in session-update.test.ts + integration.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests in session-complete.test.ts + integration.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests in session-query.test.ts + integration.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit tests in session-cleanup.test.ts + integration.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Zod schemas in __types__/index.ts + schemas.test.ts validation"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "7 test suites with ≥80% coverage per vitest coverage report"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "SESSION-MANAGEMENT-TOOLS.md with signatures, examples, error handling"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Package location for MCP tools infrastructure"
+    decision: "packages/backend/mcp-tools/"
+    rationale: "New standalone package for reusability across future MCP tool development. Separates MCP infrastructure from orchestrator and db packages."
+    decided_by: auto
+
+  - id: ARCH-002
+    question: "Default mode for session_update incremental vs absolute"
+    decision: "mode='incremental' as default"
+    rationale: "Safer default prevents accidental token count overwrites. Incremental mode uses SQL arithmetic for concurrent-safe updates."
+    decided_by: auto
+
+  - id: ARCH-003
+    question: "Default dryRun value for session_cleanup"
+    decision: "dryRun=true as default"
+    rationale: "High-severity safety mechanism. Requires explicit opt-in (dryRun=false) to prevent accidental data deletion."
+    decided_by: auto
+
+  - id: ARCH-004
+    question: "Query result ordering for session_query"
+    decision: "ORDER BY started_at DESC (most recent first)"
+    rationale: "Aligns with typical use case of viewing recent sessions first. Matches existing WINT schema patterns."
+    decided_by: auto
+
+  - id: ARCH-005
+    question: "Schema reuse vs custom Zod schemas"
+    decision: "Use auto-generated Drizzle Zod schemas from @repo/db for output types, custom Zod schemas for tool inputs"
+    rationale: "Reuses existing schema infrastructure. Input schemas need tool-specific validation (defaults, optionals) that differ from DB schema."
+    decided_by: auto
+
+complexity: moderate
+
+notes:
+  - "Schema already exists in wint.contextSessions (WINT-0010), no migrations needed"
+  - "Pattern follows insertWorkflowEvent() from @repo/db for resilient error handling"
+  - "Test pattern follows workflow-events.test.ts: mock db, validate inputs, check error paths"
+  - "All tools are standalone functions, MCP server integration deferred to future story"
+  - "Each tool function will be async and return Promise for database operations"
+  - "Use drizzle-orm's eq, and, isNull, isNotNull, lt, desc for type-safe queries"
+  - "Import contextSessions schema and auto-generated Zod schemas from @repo/db"
+  - "Session IDs use text field (not UUID type) to match schema - auto-generate UUID string with crypto.randomUUID()"
+  - "NO BARREL FILES - import directly from source files (session-create.ts, session-update.ts, etc.)"
+  - "Each tool exports named functions - consumers import from specific files, not index.ts"

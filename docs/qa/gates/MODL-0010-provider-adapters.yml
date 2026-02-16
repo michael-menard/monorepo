@@ -1,0 +1,180 @@
+schema: 1
+story: "MODL-0010"
+story_title: "Provider Adapters (OpenRouter/Ollama/Anthropic)"
+gate: WAIVED
+status_reason: "Code reusability concerns accepted for MVP deployment. Duplicated methods are localized to 3 provider files, pose low risk, and will be refactored in follow-up story MODL-0011. All functionality verified correct, security issues addressed, and tests passing."
+reviewer: "Development Team"
+updated: "2026-02-14T19:00:00Z"
+
+# Waiver tracking
+waiver:
+  active: true
+  reason: "Code reusability concerns acceptable for MVP. Duplicated methods (getCachedInstance, getModel cache pattern, clearCaches) are localized, low-risk, and will be refactored in MODL-0011. All functionality correct, security addressed, tests passing."
+  approved_by: "Development Team"
+  approved_at: "2026-02-14T19:00:00Z"
+  follow_up_story: "MODL-0011"
+  conditions:
+    - "MODL-0011 must be prioritized for next sprint"
+    - "No additional providers added until refactoring complete"
+    - "Technical debt tracked in story backlog"
+
+# Issues acknowledged but waived
+top_issues:
+  - id: "REUSE-001"
+    severity: high
+    finding: "Duplicated getCachedInstance() pattern — identical 6-line implementation across 3 providers"
+    file: "packages/backend/orchestrator/src/providers/ollama.ts"
+    line: 97
+    suggested_action: "Extract to base class method (MODL-0011)"
+    status: waived
+
+  - id: "REUSE-002"
+    severity: high
+    finding: "Duplicated getModel() cache retrieval — configHash generation and cache-check pattern identical 3x"
+    file: "packages/backend/orchestrator/src/providers/ollama.ts"
+    line: 125
+    suggested_action: "Use template method pattern in base class (MODL-0011)"
+    status: waived
+
+  - id: "REUSE-003"
+    severity: high
+    finding: "Duplicated clearCaches() — identical cleanup pattern across all 3 providers"
+    file: "packages/backend/orchestrator/src/providers/ollama.ts"
+    line: 148
+    suggested_action: "Extract to shared factory or base class static method (MODL-0011)"
+    status: waived
+
+  - id: "REUSE-004"
+    severity: medium
+    finding: "Duplicated loadConfig() boilerplate — check cache, parse schema, return pattern repeated 3x"
+    file: "packages/backend/orchestrator/src/providers/ollama.ts"
+    line: 53
+    suggested_action: "Abstract base class with template method (MODL-0011)"
+    status: waived
+
+  - id: "REUSE-005"
+    severity: medium
+    finding: "Model name parsing duplicated — each provider implements slightly different prefix-removal variant"
+    file: "packages/backend/orchestrator/src/providers/openrouter.ts"
+    line: 129
+    suggested_action: "Extend parseModelString() in base.ts (MODL-0011)"
+    status: waived
+
+# NFR validation summary
+nfr_validation:
+  security:
+    status: PASS
+    issue_count: 2
+    notes: "2 low-severity issues (API key handling) - acceptable for current implementation"
+
+  performance:
+    status: PASS
+    issue_count: 0
+    notes: "Performance issues from iteration 1 resolved (SHA-256 hashing implemented)"
+
+  accessibility:
+    status: SKIPPED
+    issue_count: 0
+    notes: "Backend-only code, no UI components"
+
+  tests:
+    status: PASS
+    details: "2273 tests passing (including 8 provider-specific tests)"
+
+  types:
+    status: PASS
+    details: "TypeScript compilation successful with strict mode"
+
+  lint:
+    status: PASS
+    details: "ESLint validation passed with zero violations"
+
+  reusability:
+    status: WAIVED
+    issue_count: 5
+    notes: "Code duplication accepted for MVP, tracked in MODL-0011"
+
+# Risk summary
+risk_summary:
+  totals:
+    high: 3
+    medium: 2
+    low: 0
+
+  all_waived: true
+
+  recommendations:
+    must_fix:
+      - "REUSE-001: Extract getCachedInstance() to base class (MODL-0011)"
+      - "REUSE-002: Extract getModel() cache pattern to template method (MODL-0011)"
+      - "REUSE-003: Extract clearCaches() to shared implementation (MODL-0011)"
+
+    should_fix:
+      - "REUSE-004: Extract loadConfig() boilerplate to abstract base class (MODL-0011)"
+      - "REUSE-005: Consolidate model name parsing logic (MODL-0011)"
+
+    technical_debt:
+      estimated_effort: "2 story points (4-6 hours)"
+      risk_level: "low"
+      impact: "Maintainability improvement, easier to add new providers"
+
+# Code review history
+code_review_iterations:
+  - iteration: 1
+    verdict: FAIL
+    issues: 9
+    severity: HIGH
+    focus: "CLAUDE.md compliance, security, performance"
+
+  - iteration: 2
+    verdict: PASS
+    issues: 0
+    notes: "All 9 HIGH severity issues from iteration 1 resolved"
+
+  - iteration: 3
+    verdict: FAIL
+    issues: 3
+    severity: HIGH
+    focus: "Code reusability, duplication patterns"
+
+  - iteration: 4
+    verdict: FAIL
+    issues: 5
+    severity: "3 HIGH, 2 MEDIUM"
+    focus: "Method-level duplication across providers"
+    notes: "Partial resolution - availability check consolidated, but method patterns still duplicated"
+
+# Rationale for waiver
+rationale: |
+  MODL-0010 successfully implements a working multi-provider abstraction for LLMs with:
+  - Full functionality verified (all tests passing)
+  - Security issues addressed (API key handling, crypto hashing)
+  - Performance optimized (SHA-256 cache keys)
+  - CLAUDE.md compliance (Zod schemas, no barrel files, logger usage)
+
+  The remaining code duplication is:
+  - Localized to 3 provider implementation files
+  - Well-defined and easy to refactor (identical method signatures)
+  - Low risk (no functional bugs, comprehensive test coverage)
+  - Clear refactoring path (abstract base class pattern)
+
+  Business justification:
+  - MVP delivery timeline requires deployment
+  - Functionality is correct and well-tested
+  - Duplication doesn't affect runtime behavior or security
+  - Refactoring effort is small (2 story points) and low-risk
+
+  Follow-up commitment:
+  - MODL-0011 created and prioritized for next sprint
+  - Technical debt documented and tracked
+  - No additional providers until refactoring complete
+
+# References
+references:
+  story_file: "plans/future/platform/ready-for-qa/MODL-0010/MODL-0010.md"
+  technical_debt_doc: "plans/future/platform/ready-for-qa/MODL-0010/_implementation/TECHNICAL-DEBT.md"
+  code_review: "plans/future/platform/ready-for-qa/MODL-0010/_implementation/REVIEW.yaml"
+  follow_up_story: "plans/future/platform/backlog/MODL-0011/MODL-0011.md"
+  fix_iterations:
+    - "plans/future/platform/ready-for-qa/MODL-0010/_implementation/FIX-ITERATION-1.md"
+    - "plans/future/platform/ready-for-qa/MODL-0010/_implementation/FIX-ITERATION-2.md"

@@ -1,0 +1,25 @@
+---
+# Deferred Knowledge Base Writes
+# These writes will be retried when KB is available
+---
+
+deferred_writes:
+  - operation: insert_story
+    table: stories
+    timestamp: "2026-02-14T21:30:00Z"
+    data:
+      story_id: WINT-0100
+      feature: platform
+      title: Create Context Cache MCP Tools
+      story_dir: plans/future/platform/backlog/WINT-0100
+      story_file: plans/future/platform/backlog/WINT-0100/WINT-0100.md
+      story_type: feature
+      points: 8
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    reason: KB tools not available during story generation
+    retry_count: 0

@@ -81,6 +81,15 @@ export {
   type GetMocDetailResponse,
   UploadThumbnailResponseSchema,
   type UploadThumbnailResponse,
+  GetFileDownloadUrlResponseSchema,
+  type GetFileDownloadUrlResponse,
+  // INST-1105: Upload session schemas
+  CreateUploadSessionRequestSchema,
+  type CreateUploadSessionRequest,
+  CreateUploadSessionResponseSchema,
+  type CreateUploadSessionResponse,
+  CompleteUploadSessionResponseSchema,
+  type CompleteUploadSessionResponse,
 } from './api'
 
 // Utility functions

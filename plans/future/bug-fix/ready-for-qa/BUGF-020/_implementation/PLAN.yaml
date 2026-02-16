@@ -1,0 +1,460 @@
+schema: 1
+story_id: "BUGF-020"
+timestamp: "2026-02-13T20:30:00Z"
+
+steps:
+  # AC1: Fix Misleading Drag Handle Instructions
+  - id: 1
+    description: "Update SortableWishlistCard drag handle instructions to remove keyboard drag references"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/index.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 2
+    description: "Update SortableInspirationCard drag handle instructions to remove keyboard drag references"
+    files:
+      - "apps/web/app-inspiration-gallery/src/components/SortableInspirationCard/index.tsx"
+    dependencies: []
+    slice: frontend
+
+  # AC2: Add Accessible Instructions to TagInput
+  - id: 3
+    description: "Add aria-describedby and hidden instructions to sets-gallery TagInput"
+    files:
+      - "apps/web/app-sets-gallery/src/components/TagInput.tsx"
+    dependencies: []
+    slice: frontend
+
+  - id: 4
+    description: "Add aria-describedby and hidden instructions to wishlist-gallery TagInput (if exists separately)"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/TagInput/index.tsx"
+    dependencies: []
+    slice: frontend
+
+  # AC3: Promote A11y Test Utilities to Shared Package
+  - id: 5
+    description: "Create @repo/accessibility-testing package structure with package.json, tsconfig, vite config"
+    files:
+      - "packages/core/accessibility-testing/package.json"
+      - "packages/core/accessibility-testing/tsconfig.json"
+      - "packages/core/accessibility-testing/vite.config.ts"
+      - "packages/core/accessibility-testing/vitest.config.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 6
+    description: "Move a11y test utilities from wishlist-gallery to @repo/accessibility-testing"
+    files:
+      - "packages/core/accessibility-testing/src/screen-reader.ts"
+      - "packages/core/accessibility-testing/src/keyboard.ts"
+      - "packages/core/accessibility-testing/src/axe.ts"
+      - "packages/core/accessibility-testing/src/config.ts"
+      - "packages/core/accessibility-testing/src/index.ts"
+    dependencies: [5]
+    slice: packages
+
+  - id: 7
+    description: "Update wishlist-gallery to import from @repo/accessibility-testing"
+    files:
+      - "apps/web/app-wishlist-gallery/src/test/a11y/index.ts"
+      - "apps/web/app-wishlist-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+      - "apps/web/app-wishlist-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+      - "apps/web/app-wishlist-gallery/src/test/a11y/__tests__/axe.test.tsx"
+      - "apps/web/app-wishlist-gallery/package.json"
+    dependencies: [6]
+    slice: frontend
+
+  - id: 8
+    description: "Add @repo/accessibility-testing as dev dependency to all app package.json files"
+    files:
+      - "apps/web/app-inspiration-gallery/package.json"
+      - "apps/web/app-sets-gallery/package.json"
+      - "apps/web/app-instructions-gallery/package.json"
+      - "apps/web/app-dashboard/package.json"
+    dependencies: [6]
+    slice: frontend
+
+  # AC4: Add A11y Test Coverage to Inspiration Gallery
+  - id: 9
+    description: "Create a11y test structure and screen-reader tests for inspiration-gallery"
+    files:
+      - "apps/web/app-inspiration-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 10
+    description: "Add keyboard navigation tests for inspiration-gallery"
+    files:
+      - "apps/web/app-inspiration-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 11
+    description: "Add axe-core compliance tests for inspiration-gallery"
+    files:
+      - "apps/web/app-inspiration-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  # AC5: Add A11y Test Coverage to Sets Gallery
+  - id: 12
+    description: "Create a11y test structure and screen-reader tests for sets-gallery"
+    files:
+      - "apps/web/app-sets-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 13
+    description: "Add keyboard navigation tests for sets-gallery (including TagInput tests)"
+    files:
+      - "apps/web/app-sets-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    dependencies: [3, 7, 8]
+    slice: frontend
+
+  - id: 14
+    description: "Add axe-core compliance tests for sets-gallery"
+    files:
+      - "apps/web/app-sets-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  # AC6: Add A11y Test Coverage to Instructions Gallery
+  - id: 15
+    description: "Create a11y test structure and screen-reader tests for instructions-gallery"
+    files:
+      - "apps/web/app-instructions-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 16
+    description: "Add keyboard navigation tests for instructions-gallery"
+    files:
+      - "apps/web/app-instructions-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 17
+    description: "Add axe-core compliance tests for instructions-gallery"
+    files:
+      - "apps/web/app-instructions-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  # AC7: Add A11y Test Coverage to Dashboard
+  - id: 18
+    description: "Create a11y test structure and screen-reader tests for dashboard"
+    files:
+      - "apps/web/app-dashboard/src/test/a11y/__tests__/screen-reader.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 19
+    description: "Add keyboard navigation tests for dashboard"
+    files:
+      - "apps/web/app-dashboard/src/test/a11y/__tests__/keyboard.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  - id: 20
+    description: "Add axe-core compliance tests for dashboard"
+    files:
+      - "apps/web/app-dashboard/src/test/a11y/__tests__/axe.test.tsx"
+    dependencies: [7, 8]
+    slice: frontend
+
+  # AC8: Focus Visible Compliance Documentation
+  - id: 21
+    description: "Create focus management documentation"
+    files:
+      - "docs/accessibility/focus-management.md"
+    dependencies: []
+    slice: frontend
+
+  # Final validation
+  - id: 22
+    description: "Update component tests to validate AC1 and AC2 fixes"
+    files:
+      - "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/__tests__/SortableWishlistCard.test.tsx"
+      - "apps/web/app-inspiration-gallery/src/components/SortableInspirationCard/__tests__/SortableInspirationCard.test.tsx"
+      - "apps/web/app-sets-gallery/src/components/__tests__/TagInput.test.tsx"
+    dependencies: [1, 2, 3, 4]
+    slice: frontend
+
+files_to_change:
+  # AC1: Fix drag handle instructions
+  - path: "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/index.tsx"
+    action: modify
+    reason: "Remove misleading 'Press Space' keyboard drag instructions (AC1)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/SortableInspirationCard/index.tsx"
+    action: modify
+    reason: "Remove misleading 'Press Space' keyboard drag instructions (AC1)"
+
+  # AC2: Add accessible TagInput instructions
+  - path: "apps/web/app-sets-gallery/src/components/TagInput.tsx"
+    action: modify
+    reason: "Add aria-describedby with keyboard shortcut instructions (AC2)"
+
+  - path: "apps/web/app-wishlist-gallery/src/components/TagInput/index.tsx"
+    action: modify
+    reason: "Add aria-describedby with keyboard shortcut instructions (AC2)"
+
+  # AC3: Create @repo/accessibility-testing package
+  - path: "packages/core/accessibility-testing/package.json"
+    action: create
+    reason: "New package for shared a11y test utilities (AC3)"
+
+  - path: "packages/core/accessibility-testing/tsconfig.json"
+    action: create
+    reason: "TypeScript config for accessibility-testing package (AC3)"
+
+  - path: "packages/core/accessibility-testing/vite.config.ts"
+    action: create
+    reason: "Vite build config for accessibility-testing package (AC3)"
+
+  - path: "packages/core/accessibility-testing/vitest.config.ts"
+    action: create
+    reason: "Vitest test config for accessibility-testing package (AC3)"
+
+  - path: "packages/core/accessibility-testing/src/screen-reader.ts"
+    action: create
+    reason: "Moved from wishlist-gallery - screen reader test utilities (AC3)"
+
+  - path: "packages/core/accessibility-testing/src/keyboard.ts"
+    action: create
+    reason: "Moved from wishlist-gallery - keyboard navigation test utilities (AC3)"
+
+  - path: "packages/core/accessibility-testing/src/axe.ts"
+    action: create
+    reason: "Moved from wishlist-gallery - axe-core integration utilities (AC3)"
+
+  - path: "packages/core/accessibility-testing/src/config.ts"
+    action: create
+    reason: "Moved from wishlist-gallery - a11y test configuration (AC3)"
+
+  - path: "packages/core/accessibility-testing/src/index.ts"
+    action: create
+    reason: "Main export file for accessibility-testing package (AC3)"
+
+  # Update wishlist-gallery to use new package
+  - path: "apps/web/app-wishlist-gallery/src/test/a11y/index.ts"
+    action: modify
+    reason: "Re-export from @repo/accessibility-testing instead of local files (AC3)"
+
+  - path: "apps/web/app-wishlist-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    action: modify
+    reason: "Import from @repo/accessibility-testing (AC3)"
+
+  - path: "apps/web/app-wishlist-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    action: modify
+    reason: "Import from @repo/accessibility-testing (AC3)"
+
+  - path: "apps/web/app-wishlist-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    action: modify
+    reason: "Import from @repo/accessibility-testing (AC3)"
+
+  - path: "apps/web/app-wishlist-gallery/package.json"
+    action: modify
+    reason: "Add @repo/accessibility-testing as dev dependency (AC3)"
+
+  # Add dependency to other apps
+  - path: "apps/web/app-inspiration-gallery/package.json"
+    action: modify
+    reason: "Add @repo/accessibility-testing as dev dependency (AC3)"
+
+  - path: "apps/web/app-sets-gallery/package.json"
+    action: modify
+    reason: "Add @repo/accessibility-testing as dev dependency (AC3)"
+
+  - path: "apps/web/app-instructions-gallery/package.json"
+    action: modify
+    reason: "Add @repo/accessibility-testing as dev dependency (AC3)"
+
+  - path: "apps/web/app-dashboard/package.json"
+    action: modify
+    reason: "Add @repo/accessibility-testing as dev dependency (AC3)"
+
+  # AC4: Inspiration gallery a11y tests
+  - path: "apps/web/app-inspiration-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    action: create
+    reason: "Screen reader tests for inspiration gallery (AC4)"
+
+  - path: "apps/web/app-inspiration-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    action: create
+    reason: "Keyboard navigation tests for inspiration gallery (AC4)"
+
+  - path: "apps/web/app-inspiration-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    action: create
+    reason: "Axe-core compliance tests for inspiration gallery (AC4)"
+
+  # AC5: Sets gallery a11y tests
+  - path: "apps/web/app-sets-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    action: create
+    reason: "Screen reader tests for sets gallery (AC5)"
+
+  - path: "apps/web/app-sets-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    action: create
+    reason: "Keyboard navigation tests for sets gallery (AC5)"
+
+  - path: "apps/web/app-sets-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    action: create
+    reason: "Axe-core compliance tests for sets gallery (AC5)"
+
+  # AC6: Instructions gallery a11y tests
+  - path: "apps/web/app-instructions-gallery/src/test/a11y/__tests__/screen-reader.test.tsx"
+    action: create
+    reason: "Screen reader tests for instructions gallery (AC6)"
+
+  - path: "apps/web/app-instructions-gallery/src/test/a11y/__tests__/keyboard.test.tsx"
+    action: create
+    reason: "Keyboard navigation tests for instructions gallery (AC6)"
+
+  - path: "apps/web/app-instructions-gallery/src/test/a11y/__tests__/axe.test.tsx"
+    action: create
+    reason: "Axe-core compliance tests for instructions gallery (AC6)"
+
+  # AC7: Dashboard a11y tests
+  - path: "apps/web/app-dashboard/src/test/a11y/__tests__/screen-reader.test.tsx"
+    action: create
+    reason: "Screen reader tests for dashboard (AC7)"
+
+  - path: "apps/web/app-dashboard/src/test/a11y/__tests__/keyboard.test.tsx"
+    action: create
+    reason: "Keyboard navigation tests for dashboard (AC7)"
+
+  - path: "apps/web/app-dashboard/src/test/a11y/__tests__/axe.test.tsx"
+    action: create
+    reason: "Axe-core compliance tests for dashboard (AC7)"
+
+  # AC8: Documentation
+  - path: "docs/accessibility/focus-management.md"
+    action: create
+    reason: "Document focus management patterns and WCAG 2.4.7 compliance (AC8)"
+
+  # Updated component tests
+  - path: "apps/web/app-wishlist-gallery/src/components/SortableWishlistCard/__tests__/SortableWishlistCard.test.tsx"
+    action: modify
+    reason: "Add test for accurate drag handle instructions (AC1)"
+
+  - path: "apps/web/app-inspiration-gallery/src/components/SortableInspirationCard/__tests__/SortableInspirationCard.test.tsx"
+    action: modify
+    reason: "Add test for accurate drag handle instructions (AC1)"
+
+  - path: "apps/web/app-sets-gallery/src/components/__tests__/TagInput.test.tsx"
+    action: modify
+    reason: "Add test for accessible keyboard instructions (AC2)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after creating @repo/accessibility-testing package"
+    required: true
+
+  - command: "pnpm build --filter @repo/accessibility-testing"
+    when: "after creating @repo/accessibility-testing package"
+    required: true
+
+  - command: "pnpm test --filter @repo/accessibility-testing"
+    when: "after building @repo/accessibility-testing"
+    required: true
+
+  - command: "pnpm test --filter app-wishlist-gallery"
+    when: "after updating wishlist-gallery imports"
+    required: true
+
+  - command: "pnpm test --filter app-inspiration-gallery"
+    when: "after adding inspiration-gallery a11y tests"
+    required: true
+
+  - command: "pnpm test --filter app-sets-gallery"
+    when: "after adding sets-gallery a11y tests"
+    required: true
+
+  - command: "pnpm test --filter app-instructions-gallery"
+    when: "after adding instructions-gallery a11y tests"
+    required: true
+
+  - command: "pnpm test --filter app-dashboard"
+    when: "after adding dashboard a11y tests"
+    required: true
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "Unit tests in SortableWishlistCard.test.tsx and SortableInspirationCard.test.tsx verify accurate drag handle instructions without keyboard drag references"
+    evidence_type: test
+
+  - ac_id: "AC2"
+    planned_evidence: "Unit tests in TagInput.test.tsx verify aria-describedby connects to hidden instructions element"
+    evidence_type: test
+
+  - ac_id: "AC3"
+    planned_evidence: "@repo/accessibility-testing package builds successfully and exports all utilities; wishlist-gallery tests pass using new imports"
+    evidence_type: test
+
+  - ac_id: "AC4"
+    planned_evidence: "Inspiration gallery a11y tests in src/test/a11y/__tests__/ pass and achieve 80%+ coverage of critical components"
+    evidence_type: test
+
+  - ac_id: "AC5"
+    planned_evidence: "Sets gallery a11y tests in src/test/a11y/__tests__/ pass and achieve 80%+ coverage of critical components"
+    evidence_type: test
+
+  - ac_id: "AC6"
+    planned_evidence: "Instructions gallery a11y tests in src/test/a11y/__tests__/ pass and achieve 80%+ coverage of critical components"
+    evidence_type: test
+
+  - ac_id: "AC7"
+    planned_evidence: "Dashboard a11y tests in src/test/a11y/__tests__/ pass and achieve 80%+ coverage of critical components"
+    evidence_type: test
+
+  - ac_id: "AC8"
+    planned_evidence: "Documentation file docs/accessibility/focus-management.md created with focusRingClasses usage guide and WCAG 2.4.7 requirements"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-BUGF020-001
+    question: "Should @repo/accessibility-testing be a separate package or a subdirectory export of @repo/accessibility?"
+    decision: "Separate package @repo/accessibility-testing"
+    rationale: "Clearer separation of concerns - runtime utilities vs test utilities. Prevents test dependencies from being bundled in production. Follows pattern of other testing packages in monorepo."
+    decided_by: auto-accepted
+    tier: 2
+
+  - id: ARCH-BUGF020-002
+    question: "Should TagInput have role='list' on the tags container?"
+    decision: "Yes, add role='list' to tag container and role='listitem' to each tag badge"
+    rationale: "Per AC2 requirements and ARIA best practices for tag lists. Improves screen reader understanding of tag collection structure."
+    decided_by: auto-accepted
+    tier: 1
+
+  - id: ARCH-BUGF020-003
+    question: "Should we remove the original a11y files from wishlist-gallery or keep them as re-exports?"
+    decision: "Keep as re-exports initially for backwards compatibility"
+    rationale: "Minimize breaking changes. Apps can migrate gradually. Re-exports add negligible overhead."
+    decided_by: auto-accepted
+    tier: 1
+
+complexity: moderate
+
+notes:
+  - "Per CLAUDE.md: All types must use Zod schemas with z.infer"
+  - "Per CLAUDE.md: No barrel files - but package index.ts is allowed as main export"
+  - "Test utilities are proven code from wishlist-gallery, just being promoted"
+  - "AC8 is documentation only, no code changes required"
+  - "Coverage target is 80%+ for a11y-critical components per story requirements"
+  - "All new tests follow existing patterns from wishlist-gallery a11y tests"
+  - "Story is primarily additive with minimal risk to existing functionality"
+  - "Focus on WCAG 2.1 AA compliance per story requirements"
+  - "Need to verify focusRingClasses usage across apps for AC8 audit"

@@ -1,0 +1,388 @@
+---
+# Deferred Knowledge Base Writes
+# These writes failed during story generation and should be retried later
+created_at: "2026-02-13T20:31:00Z"
+updated_at: "2026-02-14T00:00:00Z"
+retry_count: 0
+---
+
+deferred_writes:
+  - type: story_metadata
+    table: stories
+    operation: upsert
+    data:
+      story_id: "LNGG-0050"
+      feature: "langgraph-update"
+      title: "KB Writing Adapter - Unified Interface for Knowledge Base Write Operations"
+      story_dir: "plans/future/platform/elaboration/LNGG-0050"
+      story_file: "plans/future/platform/elaboration/LNGG-0050/LNGG-0050.md"
+      story_type: "feature"
+      points: 5
+      priority: "medium"
+      state: "elaboration"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    reason: "KB MCP tools not available during story generation"
+    timestamp: "2026-02-13T20:31:00Z"
+
+  # Autonomous Decision Phase - Non-blocking findings from FUTURE-OPPORTUNITIES.md
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Performance: Batch Embedding Optimization**
+
+        - **Finding**: Initial implementation calls embedding API sequentially for each entry. At scale (>100 concurrent writes), this could cause latency.
+        - **Impact**: Low | **Effort**: Medium
+        - **Recommendation**: Defer to performance story. Add batch embedding support when throughput requirements increase. Document in adapter README that batching is not yet implemented.
+        - **Context**: LNGG-0050 KB Writing Adapter - Gap #1
+      tags:
+        - "non-blocking"
+        - "performance"
+        - "edge-case"
+        - "future-work"
+        - "optimization"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Reliability: Retry Logic for Transient Failures**
+
+        - **Finding**: Network failures or temporary KB unavailability cause write failures without retry.
+        - **Impact**: Low | **Effort**: Low
+        - **Recommendation**: Add exponential backoff retry (max 3 attempts) in follow-up story. Initially acceptable since KB writes are non-blocking to workflows.
+        - **Context**: LNGG-0050 KB Writing Adapter - Gap #2
+        - **Priority**: Recommended for short-term follow-up (next sprint)
+      tags:
+        - "non-blocking"
+        - "reliability"
+        - "edge-case"
+        - "future-work"
+        - "error-handling"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Edge Case: Content Hash Deduplication Ambiguity**
+
+        - **Finding**: Migration script uses content hash for deduplication but AC-2 only mentions "similarity search." Unclear if hash-based dedup is needed in addition to embedding similarity.
+        - **Impact**: Low | **Effort**: Low
+        - **Recommendation**: Clarify in implementation: use embedding similarity only (simpler), or add content hash as fast pre-filter before expensive embedding comparison.
+        - **Context**: LNGG-0050 KB Writing Adapter - Gap #3
+      tags:
+        - "non-blocking"
+        - "edge-case"
+        - "future-work"
+        - "deduplication"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Observability: Metrics and Telemetry**
+
+        - **Finding**: Adapter doesn't emit metrics (write latency, dedup rate, error rate) for monitoring KB health.
+        - **Impact**: Low | **Effort**: Medium
+        - **Recommendation**: Add telemetry hooks in follow-up story. Export metrics to Prometheus/Grafana when observability epic is prioritized.
+        - **Context**: LNGG-0050 KB Writing Adapter - Gap #4
+        - **Priority**: Recommended for short-term follow-up (next sprint)
+      tags:
+        - "non-blocking"
+        - "observability"
+        - "monitoring"
+        - "future-work"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Performance: Vector Index Scale Validation**
+
+        - **Finding**: Story assumes IVFFlat works well <10k entries but doesn't validate performance degradation threshold.
+        - **Impact**: Low | **Effort**: Low
+        - **Recommendation**: Add performance benchmarks in integration tests. Document KB entry count thresholds where re-indexing or index tuning is needed.
+        - **Context**: LNGG-0050 KB Writing Adapter - Gap #5
+      tags:
+        - "non-blocking"
+        - "performance"
+        - "edge-case"
+        - "future-work"
+        - "benchmarking"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Reliability: Batch Write Transactions**
+
+        - **Finding**: Current addMany() doesn't guarantee all-or-nothing semantics. Partial failures leave KB in inconsistent state.
+        - **Impact**: Medium | **Effort**: High
+        - **Recommendation**: Add transaction wrapper for batch operations. Requires DB transaction support in KB service. Defer until multi-entry workflows require atomicity.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #1
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "reliability"
+        - "future-work"
+        - "transactions"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Integration: Read/Write Adapter Unification**
+
+        - **Finding**: Story correctly defers KB read operations, but future unified adapter could share embedding client and connection pooling.
+        - **Impact**: Medium | **Effort**: Medium
+        - **Recommendation**: After read adapter story (separate from LNGG-0050), consider unified KbAdapter with read/write methods sharing resources. Improves resource efficiency.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #2
+        - **Priority**: Medium-term follow-up (within 1-2 months)
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "integration"
+        - "future-work"
+        - "architecture"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **UX Polish: Custom Deduplication Strategies**
+
+        - **Finding**: Hardcoded 0.85 threshold may not suit all entry types. Lessons might need higher threshold (0.90), notes lower (0.75).
+        - **Impact**: Low | **Effort**: Medium
+        - **Recommendation**: Add per-entry-type threshold configuration in follow-up. Allow workflow-specific dedup rules. Track false positive/negative rates to tune defaults.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #3
+        - **Priority**: Medium-term follow-up (within 1-2 months)
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "ux-polish"
+        - "future-work"
+        - "deduplication"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Integration: Embedding Model Flexibility**
+
+        - **Finding**: Story locks to OpenAI text-embedding-3-small. Future may need local embeddings (Ollama) or different OpenAI models for cost/quality tradeoffs.
+        - **Impact**: Low | **Effort**: High
+        - **Recommendation**: Abstract embedding client behind interface. Add model selection config. Requires schema migration if dimensions change. Defer until cost or latency becomes issue.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #4
+        - **Priority**: Defer indefinitely until proven necessary
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "integration"
+        - "future-work"
+        - "embedding"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **UX Polish: Content Formatting Templates**
+
+        - **Finding**: formatLesson(), formatDecision() use hardcoded format. Different workflows might want custom formatting.
+        - **Impact**: Low | **Effort**: Low
+        - **Recommendation**: Extract format templates to config. Allow injectable formatters per entry type. Useful when KB consumers (agents, search) have specific format requirements. YAGNI until proven necessary.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #5
+        - **Priority**: Defer indefinitely until proven necessary
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "ux-polish"
+        - "future-work"
+        - "formatting"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Integration: KB Schema Versioning**
+
+        - **Finding**: If KB entry structure evolves (new fields, format changes), old entries may become incompatible.
+        - **Impact**: Low | **Effort**: Medium
+        - **Recommendation**: Add schema version field to KB entries. Implement migration utilities for schema upgrades. Track breaking changes in KB API contract.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #6
+        - **Priority**: Long-term follow-up (3+ months)
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "integration"
+        - "future-work"
+        - "schema-migration"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Reliability: Offline Write Queue**
+
+        - **Finding**: When KB service is down, writes fail and learnings are lost. Could queue writes for later replay.
+        - **Impact**: Medium | **Effort**: High
+        - **Recommendation**: Add persistent write queue (file or Redis). Retry failed writes on next KB availability. Requires queue management and conflict resolution logic.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #7
+        - **Priority**: Long-term follow-up (3+ months, defer until KB downtime becomes measurable issue)
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "reliability"
+        - "future-work"
+        - "queue"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"
+
+  - type: finding
+    table: knowledge_entries
+    operation: insert
+    entry_type: finding
+    source_stage: elab
+    story_id: "LNGG-0050"
+    category: "future-opportunities"
+    role: "dev"
+    data:
+      content: |
+        **Integration: Multi-Tenancy Support**
+
+        - **Finding**: Story assumes single KB for entire monorepo. Future may need per-team or per-project KB isolation.
+        - **Impact**: Low | **Effort**: High
+        - **Recommendation**: Add tenantId to KB schema. Update adapter to filter by tenant. Requires significant KB service refactor. Only needed if teams require knowledge isolation.
+        - **Context**: LNGG-0050 KB Writing Adapter - Enhancement #8
+        - **Priority**: Defer indefinitely until proven necessary
+      tags:
+        - "non-blocking"
+        - "enhancement"
+        - "integration"
+        - "future-work"
+        - "multi-tenancy"
+        - "story:LNGG-0050"
+        - "date:2026-02"
+    reason: "KB MCP tools not available during elaboration"
+    timestamp: "2026-02-14T00:00:00Z"

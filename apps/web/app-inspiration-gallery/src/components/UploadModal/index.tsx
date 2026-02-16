@@ -7,8 +7,7 @@
  * INSP-004: Upload Page
  * INSP-008-A: Basic Upload Modal
  */
-
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { z } from 'zod'
 import {
   Dialog,
@@ -82,6 +81,15 @@ export function UploadModal({
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // BUGF-018: Cleanup blob URL on unmount or when previewUrl changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   const resetForm = useCallback(() => {
     setMode('file')
@@ -277,6 +285,7 @@ export function UploadModal({
                   <button
                     onClick={() => {
                       setSelectedFile(null)
+                      if (previewUrl) URL.revokeObjectURL(previewUrl)
                       setPreviewUrl(null)
                     }}
                     className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"

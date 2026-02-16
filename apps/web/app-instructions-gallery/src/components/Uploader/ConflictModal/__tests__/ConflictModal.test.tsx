@@ -68,7 +68,6 @@ describe('ConflictModal', () => {
       const user = userEvent.setup()
       render(<ConflictModal {...defaultProps} />)
 
-      const input = screen.getByLabelText(/New Title/i)
       const saveButton = screen.getByRole('button', { name: /Save & Retry/i })
 
       // Click save without changing title

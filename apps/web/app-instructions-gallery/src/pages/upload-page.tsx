@@ -30,8 +30,8 @@ import {
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
 import { useGeneratePresignedUrlMutation } from '@repo/api-client'
-import { mapHttpErrorToUploadError, getErrorMessage } from '@repo/upload-types'
-import type { UploaderSession, FileCategory } from '@repo/upload-types'
+import { mapHttpErrorToUploadError, getErrorMessage } from '@repo/upload'
+import type { UploaderSession, FileCategory } from '@repo/upload'
 import {
   UploaderSessionProvider,
   useUploaderSessionContext,
@@ -40,14 +40,14 @@ import { UploaderList } from '@/components/Uploader/UploaderList'
 import { ConflictModal } from '@/components/Uploader/ConflictModal'
 import { RateLimitBanner } from '@/components/Uploader/RateLimitBanner'
 import { SessionExpiredBanner } from '@/components/Uploader/SessionExpiredBanner'
-import { useUploadManager, type FileWithUploadUrl } from '@/hooks/useUploadManager'
-import { finalizeSession, type FileValidationError } from '@/services/api/finalizeClient'
+import { useUploadManager, type FileWithUploadUrl } from '@repo/upload/hooks'
+import { finalizeSession, type FileValidationError } from '@repo/upload/client'
 import {
   MocInstructionFormSchema,
   createEmptyMocForm,
   createEmptySetForm,
   type MocInstructionFormInput,
-} from '@/types/moc-form'
+} from '@repo/api-client/schemas/instructions'
 
 const ROUTE = '/instructions/new'
 

@@ -24,8 +24,8 @@ const createMockFileItem = (overrides?: Partial<FileItemType>): FileItemType => 
   category: 'instruction',
   status: 'queued',
   progress: 0,
-  uploadUrl: 'https://s3.mock.com/upload',
-  errorMessage: null,
+  lastModified: Date.now(),
+  expired: false,
   ...overrides,
 })
 
@@ -199,8 +199,8 @@ describe('UploaderFileItem', () => {
       expect(errorElement).toHaveAttribute('aria-live', 'polite')
     })
 
-    it('should not show error message when null', () => {
-      const file = createMockFileItem({ errorMessage: null })
+    it('should not show error message when undefined', () => {
+      const file = createMockFileItem({ errorMessage: undefined })
       
       render(<UploaderFileItem file={file} />)
       

@@ -1,0 +1,67 @@
+strategy_version: "0.1.0-minimal"
+effective_date: "2026-02-14"
+
+tiers:
+  - tier: 0
+    name: "High Tier"
+    description: "Complex work"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+      fallback: []
+    use_cases:
+      - "Complex tasks"
+    quality_expectations: "High"
+    latency_tolerance: "medium"
+
+  - tier: 1
+    name: "Mid Tier"
+    description: "Medium work"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+      fallback: []
+    use_cases:
+      - "Medium tasks"
+    quality_expectations: "Good"
+    latency_tolerance: "low"
+
+  - tier: 2
+    name: "Low Tier"
+    description: "Simple work"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+      fallback: []
+    use_cases:
+      - "Simple tasks"
+    quality_expectations: "Adequate"
+    latency_tolerance: "very low"
+
+  - tier: 3
+    name: "Basic Tier"
+    description: "Basic work"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+      fallback: []
+    use_cases:
+      - "Basic tasks"
+    quality_expectations: "Adequate"
+    latency_tolerance: "very low"
+
+task_types: []
+
+escalation_triggers:
+  quality: []
+  cost: []
+  failure: []
+  human: []

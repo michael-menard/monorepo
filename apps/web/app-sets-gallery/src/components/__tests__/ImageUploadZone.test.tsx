@@ -8,9 +8,10 @@ import userEvent from '@testing-library/user-event'
 
 import { ImageUploadZone } from '../ImageUploadZone'
 
-// Stub URL.createObjectURL to avoid issues in jsdom
+// Stub URL.createObjectURL and revokeObjectURL to avoid issues in jsdom
 beforeEach(() => {
-  vi.spyOn(URL, 'createObjectURL').mockImplementation(() => 'blob:mock-url')
+  global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+  global.URL.revokeObjectURL = vi.fn()
 })
 
 describe('ImageUploadZone', () => {
@@ -131,5 +132,55 @@ describe('ImageUploadZone', () => {
     await user.click(dropZone)
 
     expect(handleChange).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * BUGF-018: Memory leak cleanup tests
+ */
+describe('Memory leak cleanup (BUGF-018)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => 'blob:mock-url')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  })
+
+  it('revokes all blob URLs on unmount (multiple files)', () => {
+    const file1 = new File(['file-1'], 'file1.jpg', { type: 'image/jpeg' })
+    const file2 = new File(['file-2'], 'file2.jpg', { type: 'image/jpeg' })
+    const file3 = new File(['file-3'], 'file3.jpg', { type: 'image/jpeg' })
+
+    const { unmount } = render(
+      <ImageUploadZone images={[file1, file2, file3]} onImagesChange={vi.fn()} maxImages={5} />,
+    )
+
+    // Should create blob URLs for all images
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(3)
+
+    // Unmount component
+    unmount()
+
+    // Should revoke all blob URLs
+    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(3)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+  })
+
+  it('revokes blob URL when removing individual image', () => {
+    const file1 = new File(['file-1'], 'file1.jpg', { type: 'image/jpeg' })
+    const file2 = new File(['file-2'], 'file2.jpg', { type: 'image/jpeg' })
+    const handleChange = vi.fn()
+
+    render(<ImageUploadZone images={[file1, file2]} onImagesChange={handleChange} maxImages={5} />)
+
+    // Should create blob URLs for both images
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+
+    // Click remove button for first image
+    const removeButtons = screen.getAllByLabelText(/remove image/i)
+    fireEvent.click(removeButtons[0])
+
+    // Should revoke the blob URL for removed image
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    expect(handleChange).toHaveBeenCalled()
   })
 })

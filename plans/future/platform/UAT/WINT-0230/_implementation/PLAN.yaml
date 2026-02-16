@@ -1,0 +1,246 @@
+schema: 1
+story_id: "WINT-0230"
+timestamp: "2026-02-14T21:05:00Z"
+
+steps:
+  - id: 1
+    description: "Define Zod schemas for WINT-0220-STRATEGY.yaml structure in strategy-loader.ts"
+    files:
+      - "packages/backend/orchestrator/src/models/strategy-loader.ts"
+    dependencies: []
+    slice: packages
+    rationale: "AC-9 - Schema blocks core routing logic, must come first"
+
+  - id: 2
+    description: "Implement strategy loader with YAML parsing, caching, and fallback defaults"
+    files:
+      - "packages/backend/orchestrator/src/models/strategy-loader.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "AC-1 - Strategy loading is foundation for all routing logic"
+
+  - id: 3
+    description: "Implement escalation graph validator using DFS to detect circular paths"
+    files:
+      - "packages/backend/orchestrator/src/models/strategy-loader.ts"
+    dependencies: [1, 2]
+    slice: packages
+    rationale: "AC-10 - Graph validation must run on strategy load to ensure correctness"
+
+  - id: 4
+    description: "Create ModelRouter class with tier-based selection logic"
+    files:
+      - "packages/backend/orchestrator/src/models/unified-interface.ts"
+    dependencies: [2, 3]
+    slice: packages
+    rationale: "AC-2 - Core routing interface that delegates to strategy loader"
+
+  - id: 5
+    description: "Implement escalation logic with quality/cost/failure/human triggers"
+    files:
+      - "packages/backend/orchestrator/src/models/unified-interface.ts"
+    dependencies: [4]
+    slice: packages
+    rationale: "AC-3 - Escalation paths depend on tier selection being operational"
+
+  - id: 6
+    description: "Implement fallback chain handling for Ollama unavailable and model missing"
+    files:
+      - "packages/backend/orchestrator/src/models/unified-interface.ts"
+    dependencies: [4, 5]
+    slice: packages
+    rationale: "AC-4 - Fallback logic integrates with tier selection and escalation"
+
+  - id: 7
+    description: "Add backward compatibility layer for legacy model: frontmatter mappings"
+    files:
+      - "packages/backend/orchestrator/src/models/unified-interface.ts"
+    dependencies: [4]
+    slice: packages
+    rationale: "AC-5 - Compatibility layer ensures no breaking changes"
+
+  - id: 8
+    description: "Create ModelRouterFactory with singleton pattern and provider integration"
+    files:
+      - "packages/backend/orchestrator/src/models/unified-interface.ts"
+    dependencies: [4, 6]
+    slice: packages
+    rationale: "AC-11 - Factory pattern wraps MODL-0010 provider factory, required for AC-6"
+
+  - id: 9
+    description: "Implement configuration API methods (getStrategyVersion, getTierForAgent, etc.)"
+    files:
+      - "packages/backend/orchestrator/src/models/unified-interface.ts"
+    dependencies: [4, 8]
+    slice: packages
+    rationale: "AC-7 - Public API for querying strategy configuration"
+
+  - id: 10
+    description: "Extend model-assignments.ts with optional tier field and fallback logic"
+    files:
+      - "packages/backend/orchestrator/src/config/model-assignments.ts"
+    dependencies: [2, 4]
+    slice: packages
+    rationale: "AC-5 - Backward compatibility requires extending existing loader"
+
+  - id: 11
+    description: "Create unit tests for strategy loader (validation, caching, defaults, graph analysis)"
+    files:
+      - "packages/backend/orchestrator/src/models/__tests__/strategy-loader.test.ts"
+      - "packages/backend/orchestrator/src/models/__tests__/fixtures/valid-strategy.yaml"
+      - "packages/backend/orchestrator/src/models/__tests__/fixtures/minimal-strategy.yaml"
+      - "packages/backend/orchestrator/src/models/__tests__/fixtures/invalid-schema.yaml"
+      - "packages/backend/orchestrator/src/models/__tests__/fixtures/circular-escalation.yaml"
+    dependencies: [1, 2, 3]
+    slice: packages
+    rationale: "AC-8 - Test strategy loading, Zod validation, graph analysis in isolation"
+
+  - id: 12
+    description: "Create unit tests for unified interface (tier selection, escalation, fallback chains)"
+    files:
+      - "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+    dependencies: [4, 5, 6, 7, 8, 9]
+    slice: packages
+    rationale: "AC-8 - Test routing logic, escalation triggers, provider integration"
+
+  - id: 13
+    description: "Create integration tests with real WINT-0220-STRATEGY.yaml and agent validation"
+    files:
+      - "packages/backend/orchestrator/src/models/__tests__/integration.test.ts"
+    dependencies: [10, 11, 12]
+    slice: packages
+    rationale: "AC-8 - Validate against 143 real agents, no mocks per ADR-005"
+
+  - id: 14
+    description: "Run pnpm build and verify TypeScript compilation passes"
+    files: []
+    dependencies: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    slice: packages
+    rationale: "Quality gate - ensure no type errors before testing"
+
+  - id: 15
+    description: "Run pnpm test --filter @repo/orchestrator and verify 80%+ coverage"
+    files: []
+    dependencies: [11, 12, 13, 14]
+    slice: packages
+    rationale: "Quality gate - AC-8 requires 80% coverage (higher than 45% project standard)"
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/models/strategy-loader.ts"
+    action: create
+    reason: "AC-1, AC-9, AC-10 - YAML loading, Zod validation, graph analysis"
+
+  - path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+    action: create
+    reason: "AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-11 - Main routing interface"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/strategy-loader.test.ts"
+    action: create
+    reason: "AC-8 - Unit tests for strategy loading and validation"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+    action: create
+    reason: "AC-8 - Unit tests for routing logic and escalation"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/integration.test.ts"
+    action: create
+    reason: "AC-8 - End-to-end integration tests with real strategy YAML"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/valid-strategy.yaml"
+    action: create
+    reason: "AC-8 - Test fixture for complete valid strategy"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/minimal-strategy.yaml"
+    action: create
+    reason: "AC-8 - Test fixture for minimal valid strategy (2 tiers only)"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/invalid-schema.yaml"
+    action: create
+    reason: "AC-8 - Test fixture for invalid schema validation"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/circular-escalation.yaml"
+    action: create
+    reason: "AC-10 - Test fixture for circular escalation path detection"
+
+  - path: "packages/backend/orchestrator/src/config/model-assignments.ts"
+    action: modify
+    reason: "AC-5 - Extend with optional tier field and fallback mapping logic"
+
+commands_to_run:
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes (step 14)"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after build passes (step 15)"
+    required: true
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after tests pass"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after tests pass"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: strategy-loader.test.ts - loadStrategy() returns 4 tiers, caches with 30s TTL, forceReload bypasses cache"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: unified-interface.test.ts - selectModelForAgent() returns tier + provider for various agents (strategy, legacy, task type fallback)"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: unified-interface.test.ts - escalate() handles quality/cost/failure/human triggers correctly"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: unified-interface.test.ts - selectModelForAgent() falls back to Haiku when Ollama unavailable, logs warn events"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: unified-interface.test.ts - legacy agents with model: haiku/sonnet/opus map to correct tiers"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: unified-interface.test.ts - getProvider() wraps MODL-0010 provider factory, caches instances"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test: unified-interface.test.ts - getStrategyVersion(), getTierForAgent(), getModelForTier() return correct values"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Command output: pnpm test --filter @repo/orchestrator --coverage shows 80%+ coverage"
+    evidence_type: command
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: strategy-loader.test.ts - StrategySchema.parse() validates complete structure, rejects invalid YAML with clear errors"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Unit test: strategy-loader.test.ts - analyzeEscalationPaths() detects circular paths, validates all paths terminate at Tier 0 or human"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Unit test: unified-interface.test.ts - ModelRouterFactory.getInstance() returns singleton, forceReload creates new instance"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: complex
+
+notes:
+  - "Strategy YAML is canonical source - WINT-0220-STRATEGY.yaml is protected by qa_verdict: PASS"
+  - "MODL-0010 base.ts is protected - do not modify ILLMProvider interface, wrap only"
+  - "Backward compatibility is critical - all existing agents must continue working without changes"
+  - "Integration tests must use real WINT-0220-STRATEGY.yaml per ADR-005 (no mocking)"
+  - "Zod schema for strategy config is MVP-critical - blocks AC-1, AC-2, AC-3"
+  - "Graph validation prevents circular escalation paths - blocks AC-3 correctness"
+  - "Factory pattern wraps MODL-0010 provider factory - blocks AC-6 provider integration"
+  - "80% coverage target (vs 45% project standard) due to critical infrastructure role"
+  - "30s TTL cache on strategy config to balance performance vs. config reload needs"
+  - "Escalation logic must handle all 4 triggers: quality, cost, failure, human-in-loop"
+  - "Fallback chains must prevent infinite loops (max 3 attempts per AC-4)"

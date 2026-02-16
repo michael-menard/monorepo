@@ -1,0 +1,90 @@
+schema: 1
+story_id: LNGG-0010
+timestamp: "2026-02-14T17:25:00Z"
+failure_source: needs-work
+iteration: 2
+
+# Critical Issues to Fix
+issues_to_fix:
+  - id: 1
+    file: "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    lines: [45, 52, 61, 68, 80, 90, 105, 115, 125, 135]
+    issue: "Logger API signature mismatch - using pino.js style logger.info(object, 'message')"
+    correct_usage: "logger.info('message', object)"
+    severity: critical
+    auto_fixable: true
+    error_count: 10
+
+  - id: 2
+    file: "packages/backend/orchestrator/src/adapters/utils/file-utils.ts"
+    lines: [28, 35]
+    issue: "Logger API signature mismatch - using pino.js style logger.info(object, 'message')"
+    correct_usage: "logger.info('message', object)"
+    severity: critical
+    auto_fixable: true
+    error_count: 2
+
+  - id: 3
+    file: "packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts"
+    lines: [18, 25, 42, 55]
+    issue: "Logger API signature mismatch - using pino.js style logger.info(object, 'message')"
+    correct_usage: "logger.info('message', object)"
+    severity: critical
+    auto_fixable: true
+    error_count: 4
+
+# Summary
+total_issues: 3
+total_errors: 16
+total_auto_fixable: true
+
+# Files to Focus On
+focus_files:
+  - packages/backend/orchestrator/src/adapters/story-file-adapter.ts
+  - packages/backend/orchestrator/src/adapters/utils/file-utils.ts
+  - packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts
+
+# Verification Steps After Fix
+verification_steps:
+  - step: 1
+    description: "Run TypeScript compilation to verify no errors"
+    command: "cd /Users/michaelmenard/Development/monorepo && pnpm tsc --noEmit"
+    expected_result: "0 errors"
+
+  - step: 2
+    description: "Run tests to ensure functionality preserved"
+    command: "cd /Users/michaelmenard/Development/monorepo/packages/backend/orchestrator && pnpm test"
+    expected_result: "All tests passing"
+
+  - step: 3
+    description: "Run full build to verify no downstream errors"
+    command: "cd /Users/michaelmenard/Development/monorepo && pnpm build"
+    expected_result: "Build success"
+
+# Context About the Issue
+context: |
+  The implementation was completed with high quality (90.52% coverage, all tests passing).
+  The logger API signature mismatch is the ONLY blocker - it's a simple find-and-replace fix.
+
+  The @repo/logger SimpleLogger expects: logger.info(message, ...args)
+  But the implementation uses: logger.info(object, message) [pino.js style]
+
+  Pattern to find: logger\.(info|debug|warn|error)\(\{[^}]+\},\s*'[^']+'\)
+  Pattern to replace: Move the object to second position after the message string
+
+  Example:
+  Before: logger.info({ filePath }, 'Reading story file')
+  After:  logger.info('Reading story file', { filePath })
+
+# Acceptance Criteria Status
+acceptance_criteria_status: |
+  All 7 ACs are functionally complete and tested.
+  Fixing the logger API signature will unblock all ACs for acceptance.
+
+  AC-1: BLOCKED (build fails)
+  AC-2: BLOCKED (build fails)
+  AC-3: BLOCKED (build fails)
+  AC-4: BLOCKED (build fails)
+  AC-5: BLOCKED (build fails)
+  AC-6: BLOCKED (build fails)
+  AC-7: BLOCKED (build fails)

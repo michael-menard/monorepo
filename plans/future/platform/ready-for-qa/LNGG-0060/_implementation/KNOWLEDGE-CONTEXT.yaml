@@ -1,0 +1,605 @@
+schema: 1
+story_id: LNGG-0060
+timestamp: "2026-02-14T20:00:00Z"
+
+# Knowledge context loaded for CheckpointAdapter implementation
+# Based on LNGG-0010 (StoryFileAdapter) patterns and orchestrator code patterns
+
+---
+
+## Reusable Code Patterns from LNGG-0010
+
+### Pattern 1: Adapter Class Structure
+
+**Source**: `packages/backend/orchestrator/src/adapters/story-file-adapter.ts`
+
+**Pattern**: File adapter with CRUD operations
+```typescript
+export class StoryFileAdapter {
+  async read(filePath: string): Promise<StoryArtifact>
+  async write(filePath: string, story: StoryArtifact): Promise<void>
+  async update(filePath: string, updates: Partial<StoryArtifact>): Promise<void>
+  async exists(filePath: string): Promise<boolean>
+  async readBatch(filePaths: string[]): Promise<BatchReadResult>
+}
+```
+
+**Adaptation for CheckpointAdapter**:
+- Same structure but with Checkpoint type instead of StoryArtifact
+- Add phase-specific helpers: advancePhase(), markPhaseBlocked(), clearBlocked()
+- Use CheckpointSchema instead of StoryArtifactSchema for validation
+
+**Key Implementation Details**:
+1. Class is stateless (no instance variables)
+2. All methods are async
+3. Error handling uses typed error classes from __types__/index.ts
+4. Logging via @repo/logger (not console.log)
+5. File paths are absolute (no relative paths)
+
+### Pattern 2: Atomic Write Implementation
+
+**Source**: `packages/backend/orchestrator/src/adapters/utils/file-utils.ts`
+
+**Pattern**: writeFileAtomic function
+```typescript
+export async function writeFileAtomic(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.tmp`
+  try {
+    await ensureDirectory(path.dirname(filePath))
+    await fs.writeFile(tempPath, content, 'utf-8')
+    await fs.rename(tempPath, filePath)  // Atomic rename
+    logger.debug('File written atomically', { filePath })
+  } catch (error) {
+    try { await fs.unlink(tempPath) } catch {}  // Cleanup temp file
+    throw new WriteError(filePath, error as Error)
+  }
+}
+```
+
+**Reuse Strategy**:
+- Import writeFileAtomic directly from utils/file-utils.ts
+- Already implements parent directory creation via ensureDirectory()
+- Already handles temp file cleanup on error
+- No modification needed for CheckpointAdapter
+
+**Critical Success Factors**:
+- Temp file must use .tmp extension
+- Cleanup must happen in catch block (try/catch inside catch)
+- Parent directory creation must happen before write
+- Rename is atomic on POSIX filesystems (prevents corruption)
+
+### Pattern 3: Zod Validation with Error Handling
+
+**Source**: `packages/backend/orchestrator/src/adapters/story-file-adapter.ts` (lines 85-93)
+
+**Pattern**: safeParse with ValidationError
+```typescript
+const result = StoryArtifactSchema.safeParse(parsed.frontmatter)
+
+if (!result.success) {
+  const errors = result.error.errors.map(err => ({
+    path: err.path.map(String),
+    message: err.message,
+  }))
+  throw new ValidationError(filePath, errors)
+}
+
+return result.data  // Type-narrowed to StoryArtifact
+```
+
+**Adaptation for CheckpointAdapter**:
+- Replace StoryArtifactSchema with CheckpointSchema
+- Same error mapping pattern (path + message)
+- Same ValidationError constructor signature
+- Return result.data (type-narrowed to Checkpoint)
+
+**Key Insights**:
+- Use safeParse (not parse) to get ZodError details
+- Map ZodError.errors to simplified { path, message } format
+- ValidationError class already exists in __types__/index.ts
+- Type narrowing happens automatically after successful validation
+
+### Pattern 4: File Read with Custom Error Types
+
+**Source**: `packages/backend/orchestrator/src/adapters/story-file-adapter.ts` (lines 74-109)
+
+**Pattern**: readFileSafe + ENOENT handling
+```typescript
+try {
+  const content = await readFileSafe(filePath)
+  const parsed = parseFrontmatter(content, filePath)
+  const result = CheckpointSchema.safeParse(parsed)
+  // ... validation ...
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    throw new StoryNotFoundError(filePath)
+  }
+  throw error
+}
+```
+
+**Adaptation for CheckpointAdapter**:
+- Create CheckpointNotFoundError (same pattern as StoryNotFoundError)
+- Add to __types__/index.ts
+- Same ENOENT detection logic
+- readFileSafe already handles other read errors as ReadError
+
+**Error Hierarchy**:
+```
+Error
+└─ StoryFileAdapterError (base)
+   ├─ StoryNotFoundError (ENOENT)
+   ├─ CheckpointNotFoundError (ENOENT) ← NEW
+   ├─ InvalidYAMLError (parse failure)
+   ├─ ValidationError (Zod schema mismatch)
+   ├─ ReadError (other read failures)
+   └─ WriteError (write failures)
+```
+
+### Pattern 5: Batch Read Operation
+
+**Source**: `packages/backend/orchestrator/src/adapters/story-file-adapter.ts` (lines 213-245)
+
+**Pattern**: Parallel reads with error collection
+```typescript
+async readBatch(filePaths: string[]): Promise<BatchReadResult> {
+  const results: StoryArtifact[] = []
+  const errors: Array<{ filePath: string; error: Error }> = []
+
+  await Promise.all(
+    filePaths.map(async filePath => {
+      try {
+        const story = await this.read(filePath)
+        results.push(story)
+      } catch (error) {
+        errors.push({ filePath, error: error as Error })
+      }
+    })
+  )
+
+  return { results, errors }
+}
+```
+
+**Adaptation for CheckpointAdapter**:
+- Replace StoryArtifact with Checkpoint
+- Same BatchReadResult interface pattern
+- Same Promise.all with error collection
+- Continue on individual errors (don't throw on first failure)
+
+**Key Insights**:
+- Uses Promise.all for parallel execution
+- Errors don't fail entire batch
+- Both results and errors are returned together
+- Caller decides how to handle partial failures
+
+### Pattern 6: YAML Parsing (Checkpoint-specific)
+
+**Source**: `packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts`
+
+**Existing Pattern**: parseFrontmatter (for story files with --- delimiters)
+```typescript
+export function parseFrontmatter(fileContent: string, filePath: string): ParsedStory {
+  const result = matter(fileContent)  // gray-matter library
+  return {
+    frontmatter: result.data,
+    content: result.content.trim(),
+  }
+}
+```
+
+**Checkpoint Adaptation Required**:
+- Checkpoint files are pure YAML (no markdown content)
+- Do NOT use gray-matter (overkill for pure YAML)
+- Use js-yaml directly: `yaml.load(content)`
+- Create new parseCheckpointYAML function in yaml-parser.ts or inline in adapter
+
+**Recommended Approach**:
+```typescript
+import yaml from 'js-yaml'
+
+function parseCheckpointYAML(content: string, filePath: string): unknown {
+  try {
+    return yaml.load(content)
+  } catch (error) {
+    throw new InvalidYAMLError(filePath, error as Error)
+  }
+}
+```
+
+**Rationale**: Checkpoint files don't have frontmatter delimiters, so gray-matter is not needed.
+
+---
+
+## Known Architectural Decisions from LNGG-0010
+
+### ADR-001: Use Zod for Runtime Validation
+
+**Decision**: All file adapters use Zod schemas for runtime validation, not just TypeScript types.
+
+**Rationale**: TypeScript types are compile-time only; Zod provides runtime validation and type inference.
+
+**Impact on LNGG-0060**:
+- CheckpointSchema must use z.infer<> for type generation
+- All read/write operations must validate against CheckpointSchema
+- ValidationError must include Zod error details
+
+**Example**:
+```typescript
+import { CheckpointSchema, type Checkpoint } from '../artifacts/checkpoint.js'
+
+const result = CheckpointSchema.safeParse(data)
+if (!result.success) {
+  throw new ValidationError(filePath, result.error.errors)
+}
+```
+
+### ADR-002: Atomic Writes via Temp File + Rename
+
+**Decision**: All write operations use temp file + rename pattern to prevent corruption.
+
+**Rationale**: Prevents partial file corruption if write operation fails mid-way. Rename is atomic on POSIX systems.
+
+**Impact on LNGG-0060**:
+- Reuse writeFileAtomic from file-utils.ts
+- Temp file must use .tmp extension
+- Cleanup must happen in error handler
+
+**Trade-offs Accepted**:
+- Slight performance overhead (extra rename operation)
+- Temp file cleanup on error (not guaranteed if process crashes)
+- Assumes POSIX filesystem (atomic rename)
+
+### ADR-003: Error Types Extend Base Error Class
+
+**Decision**: Custom error types extend base Error class with additional context.
+
+**Rationale**: Type-safe error handling, better error messages, structured logging.
+
+**Impact on LNGG-0060**:
+- Create CheckpointNotFoundError extending StoryFileAdapterError
+- Reuse ValidationError, ReadError, WriteError from __types__/index.ts
+- Include filePath in all error constructors
+
+**Example**:
+```typescript
+export class CheckpointNotFoundError extends StoryFileAdapterError {
+  constructor(public readonly filePath: string) {
+    super(`Checkpoint file not found: ${filePath}`, { filePath })
+    this.name = 'CheckpointNotFoundError'
+  }
+}
+```
+
+### ADR-004: Logging via @repo/logger, not console
+
+**Decision**: Use @repo/logger for all logging, never console.log.
+
+**Rationale**: Structured logging, log levels, consistent format across codebase.
+
+**Impact on LNGG-0060**:
+```typescript
+import { logger } from '@repo/logger'
+
+logger.info('Reading checkpoint file', { filePath, storyId })
+logger.debug('Checkpoint validated', { phase: checkpoint.current_phase })
+logger.warn('Numeric phase detected', { phase: rawPhase })
+```
+
+**Levels**:
+- error: Unhandled errors, throw after logging
+- warn: Expected edge cases (legacy formats, deprecations)
+- info: Key operations (read, write, update)
+- debug: Detailed execution (validation, temp file paths)
+
+---
+
+## Lessons Learned from LNGG-0010
+
+### Lesson 1: Schema Mismatch Blocker
+
+**Context**: LNGG-0010 was blocked for 3 iterations due to StoryArtifact type missing `content?: string` field.
+
+**Root Cause**: Adapter assumed content field existed, but schema didn't define it.
+
+**Impact on LNGG-0060**:
+- AC-9 requires pre-implementation schema survey to identify missing optional fields
+- Extend CheckpointSchema with discovered optional fields (e2e_gate, completed_at, qa_verdict)
+- Use .passthrough() to preserve unknown fields for backward compatibility
+
+**Mitigation**:
+- Survey 10+ existing CHECKPOINT.yaml files before coding (completed in Phase 0)
+- Add optional fields to CheckpointSchema for high-frequency extras
+- Test with real checkpoint files, not just synthetic fixtures
+
+### Lesson 2: Logger API Confusion
+
+**Context**: LNGG-0010 had 16 compilation errors due to incorrect logger method names.
+
+**Root Cause**: Used logger.log() instead of logger.info().
+
+**Impact on LNGG-0060**:
+- Use only: logger.error(), logger.warn(), logger.info(), logger.debug()
+- Never use: logger.log() (doesn't exist)
+- Check @repo/logger API before writing logging code
+
+**Correct Usage**:
+```typescript
+logger.info('Checkpoint file read successfully', { filePath, storyId })
+logger.debug('Phase advanced', { from: oldPhase, to: newPhase })
+logger.warn('Legacy phase format detected', { phase: numericPhase })
+```
+
+### Lesson 3: Import Path Extensions Required
+
+**Context**: LNGG-0010 required .js extensions in import paths for ESM compatibility.
+
+**Example**:
+```typescript
+// CORRECT
+import { writeFileAtomic } from './utils/file-utils.js'
+
+// WRONG (causes compilation error)
+import { writeFileAtomic } from './utils/file-utils'
+```
+
+**Impact on LNGG-0060**:
+- All relative imports must include .js extension
+- Package imports (e.g., @repo/logger) do NOT need extension
+- Check existing adapters for correct import format
+
+### Lesson 4: Batch Operation Error Handling
+
+**Context**: readBatch must continue on individual errors, not throw on first failure.
+
+**Pattern**:
+```typescript
+await Promise.all(
+  filePaths.map(async filePath => {
+    try {
+      const checkpoint = await this.read(filePath)
+      results.push(checkpoint)
+    } catch (error) {
+      errors.push({ filePath, error: error as Error })
+    }
+  })
+)
+
+return { results, errors }  // Both successes and failures
+```
+
+**Impact on LNGG-0060**:
+- CheckpointAdapter.readBatch must match this pattern
+- Caller decides whether partial failures are acceptable
+- Logging should occur at info level for failures (not error)
+
+---
+
+## Code Dependencies from LNGG-0010
+
+### File Utilities (Reuse)
+
+**Path**: `packages/backend/orchestrator/src/adapters/utils/file-utils.ts`
+
+**Functions to Import**:
+- writeFileAtomic(filePath, content) - Atomic write with temp file
+- readFileSafe(filePath) - Safe read with error handling
+- fileExists(filePath) - File existence check
+- ensureDirectory(dirPath) - Recursive directory creation
+
+**Import Statement**:
+```typescript
+import { writeFileAtomic, readFileSafe, fileExists } from './utils/file-utils.js'
+```
+
+### YAML Parser (Adapt)
+
+**Path**: `packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts`
+
+**Existing Functions**:
+- parseFrontmatter(content, filePath) - For story files with --- delimiters
+- serializeStory(story, content) - For story files with frontmatter
+
+**Adaptation Required**:
+- Add parseCheckpointYAML(content, filePath) - For pure YAML (no frontmatter)
+- Add serializeCheckpoint(checkpoint) - For pure YAML serialization
+
+**Implementation**:
+```typescript
+import yaml from 'js-yaml'
+import { InvalidYAMLError } from '../__types__/index.js'
+
+export function parseCheckpointYAML(content: string, filePath: string): unknown {
+  try {
+    return yaml.load(content)
+  } catch (error) {
+    throw new InvalidYAMLError(filePath, error as Error)
+  }
+}
+
+export function serializeCheckpoint(checkpoint: Checkpoint): string {
+  try {
+    return yaml.dump(checkpoint, { lineWidth: 120, noRefs: true })
+  } catch (error) {
+    throw new InvalidYAMLError('(memory)', error as Error)
+  }
+}
+```
+
+### Error Types (Extend)
+
+**Path**: `packages/backend/orchestrator/src/adapters/__types__/index.ts`
+
+**Existing Types**:
+- StoryFileAdapterError (base)
+- StoryNotFoundError
+- InvalidYAMLError
+- ValidationError
+- ReadError
+- WriteError
+
+**New Type Required**:
+```typescript
+export class CheckpointNotFoundError extends StoryFileAdapterError {
+  constructor(public readonly filePath: string) {
+    super(`Checkpoint file not found: ${filePath}`, { filePath })
+    this.name = 'CheckpointNotFoundError'
+  }
+}
+```
+
+**Export Update**:
+Add to existing exports in __types__/index.ts
+
+---
+
+## Checkpoint Schema Context
+
+### Core Schema Fields (13 required)
+
+**Source**: `packages/backend/orchestrator/src/artifacts/checkpoint.ts`
+
+**Fields**:
+1. schema: z.literal(1)
+2. story_id: z.string()
+3. feature_dir: z.string()
+4. timestamp: z.string().datetime()
+5. current_phase: PhaseSchema
+6. last_successful_phase: PhaseSchema.nullable()
+7. iteration: z.number().int().min(0).default(0)
+8. max_iterations: z.number().int().min(1).default(3)
+9. gate: z.object({...}).optional()
+10. resume_hints: z.object({...}).optional()
+11. blocked: z.boolean().default(false)
+12. forced: z.boolean().default(false)
+13. warnings: z.array(z.string()).default([])
+
+**Additional Optional Fields** (from Phase 0 survey):
+- completed_at: z.string().datetime().nullable().optional()
+- e2e_gate: z.union([z.string(), z.object({...})]).optional()
+- qa_verdict: z.enum(['PASS', 'FAIL', 'DEFERRED']).optional()
+- blocked_reason: z.string().nullable().optional()
+
+### Phase Enum Extension (from AC-10)
+
+**Original PhaseSchema**:
+```typescript
+export const PhaseSchema = z.enum([
+  'setup', 'plan', 'execute', 'proof', 'review', 'fix',
+  'qa-setup', 'qa-verify', 'qa-complete', 'done',
+])
+```
+
+**Extended PhaseSchema** (to support legacy checkpoints):
+```typescript
+export const PhaseSchema = z.enum([
+  'setup', 'plan', 'execute', 'proof', 'review', 'fix',
+  'qa-setup', 'qa-verify', 'qa-complete', 'qa-completion', 'uat-complete', 'done',
+])
+```
+
+**Numeric Phase Handling**:
+- If current_phase is number, convert to string in adapter.read()
+- Mapping: 1='setup', 2='plan', 3='execute', etc.
+- Log warning when numeric phase detected
+
+---
+
+## Test Fixtures Strategy (from LNGG-0010)
+
+### Unit Test Fixtures
+
+**Path**: `packages/backend/orchestrator/src/adapters/__tests__/__fixtures__/`
+
+**Files to Create**:
+1. valid-checkpoint.yaml - Complete checkpoint with all required fields
+2. minimal-checkpoint.yaml - Only required fields (no optional fields)
+3. invalid-missing-field.yaml - Missing story_id (validation test)
+4. invalid-yaml-syntax.yaml - Malformed YAML (parse error test)
+5. legacy-checkpoint-with-extras.yaml - Has e2e_gate, completed_at fields
+6. numeric-phase-checkpoint.yaml - Has current_phase: 3 (legacy format)
+7. qa-completion-variant.yaml - Has current_phase: qa-completion
+
+### Integration Test Strategy
+
+**Path**: `packages/backend/orchestrator/src/adapters/__tests__/checkpoint-adapter.integration.test.ts`
+
+**Test Cases**:
+1. Write + read roundtrip with real filesystem
+2. Atomic write verification (no temp files after completion)
+3. Concurrent write scenarios (race condition test)
+4. Batch read with mixed results (valid + invalid + missing files)
+
+**Setup**:
+```typescript
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
+const testDir = path.join(tmpdir(), `checkpoint-adapter-test-${Date.now()}`)
+
+beforeEach(async () => {
+  await ensureDirectory(testDir)
+})
+
+afterEach(async () => {
+  await fs.rm(testDir, { recursive: true, force: true })
+})
+```
+
+---
+
+## Performance Considerations
+
+### Batch Read Optimization
+
+**Pattern**: Use Promise.all for parallel reads
+```typescript
+await Promise.all(filePaths.map(async filePath => {
+  // Parallel read operations
+}))
+```
+
+**Trade-offs**:
+- Faster than sequential reads (10+ files)
+- Higher memory usage (all results in memory)
+- Error isolation (one failure doesn't block others)
+
+**Recommendation**: Use batch operations when reading 5+ checkpoints (e.g., dashboard metrics)
+
+### File I/O Considerations
+
+**Atomic Write Overhead**:
+- Extra rename operation (~1ms per file)
+- Temp file creation/deletion
+- Acceptable for checkpoint writes (low frequency)
+
+**Read Optimization**:
+- No caching layer (checkpoints change frequently)
+- Direct filesystem reads (no in-memory cache)
+- readFileSafe handles encoding automatically
+
+---
+
+## Summary
+
+**Reusable Code** (from LNGG-0010):
+- File utilities: writeFileAtomic, readFileSafe, fileExists
+- Error types: ValidationError, ReadError, WriteError, InvalidYAMLError
+- Patterns: Zod validation, batch reads, atomic writes
+
+**New Code Required**:
+- CheckpointAdapter class (200-250 lines)
+- CheckpointNotFoundError type
+- parseCheckpointYAML + serializeCheckpoint functions
+- Unit tests (300-400 lines)
+- Integration tests (150-200 lines)
+- Test fixtures (7 YAML files)
+
+**Critical Success Factors**:
+1. Survey existing checkpoint files before coding (AC-9, AC-10)
+2. Extend CheckpointSchema with optional fields for backward compatibility
+3. Use .passthrough() to preserve unknown extra fields
+4. Test with real checkpoint files, not just synthetic fixtures
+5. Handle numeric phase values gracefully (convert + warn)
+
+**Estimated Complexity**: Moderate (8 ACs, proven pattern reuse, pre-implementation survey completed)

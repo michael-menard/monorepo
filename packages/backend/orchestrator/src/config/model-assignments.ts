@@ -7,11 +7,11 @@
  * @module config/model-assignments
  */
 
-import { z } from 'zod'
 import { readFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { parse as parseYaml } from 'yaml'
+import { z } from 'zod'
 
 // ============================================================================
 // Types
@@ -169,7 +169,10 @@ export function loadModelAssignments(yamlPath?: string): ModelAssignments {
     ? [yamlPath]
     : [
         // Relative to this file (in dist)
-        resolve(dirname(fileURLToPath(import.meta.url)), '../../../../.claude/config/model-assignments.yaml'),
+        resolve(
+          dirname(fileURLToPath(import.meta.url)),
+          '../../../../.claude/config/model-assignments.yaml',
+        ),
         // Relative to project root (common case)
         resolve(process.cwd(), '.claude/config/model-assignments.yaml'),
       ]
@@ -237,7 +240,7 @@ export function getAgentsForModel(model: Model): string[] {
   const assignments = loadModelAssignments()
 
   return Object.entries(assignments)
-    .filter(([_, m]) => m === model)
+    .filter(([, m]) => m === model)
     .map(([agent]) => agent)
 }
 
@@ -303,4 +306,38 @@ export function suggestModel(characteristics: {
   }
 
   return 'haiku'
+}
+
+// ============================================================================
+// WINT-0230: Tier-Aware Extensions (Backward Compatible)
+// ============================================================================
+
+/**
+ * Legacy model to tier mapping for backward compatibility.
+ */
+export const LEGACY_MODEL_TO_TIER = {
+  opus: 0,
+  sonnet: 1,
+  haiku: 2,
+} as const
+
+/**
+ * Gets the tier for an agent based on legacy model assignment.
+ * Maps opus/sonnet/haiku to tiers 0/1/2, Ollama to tier 3.
+ *
+ * @param agentName - Name of the agent
+ * @returns Tier number (0-3) or null if not found
+ */
+export function getTierForAgent(agentName: string): number | null {
+  const model = getModelForAgent(agentName, 'sonnet' as any) // Use existing function
+
+  if (isClaudeModel(model)) {
+    return LEGACY_MODEL_TO_TIER[model]
+  }
+
+  if (isOllamaModel(model)) {
+    return 3
+  }
+
+  return null
 }

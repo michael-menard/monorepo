@@ -1,0 +1,130 @@
+schema: 1
+story_id: "WINT-0220"
+timestamp: "2026-02-14T20:45:00Z"
+
+steps:
+  - id: 1
+    description: "Parse 143 agent files to extract current model assignments"
+    files:
+      - ".claude/agents/*.agent.md"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create machine-readable strategy configuration (WINT-0220-STRATEGY.yaml)"
+    files:
+      - "packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Create Zod validation script for strategy YAML"
+    files:
+      - "packages/backend/orchestrator/scripts/validate-strategy.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Create human-readable strategy document (WINT-0220-STRATEGY.md) with all 8 ACs"
+    files:
+      - "packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md"
+    dependencies: [1, 2, 3]
+    slice: packages
+
+  - id: 5
+    description: "Validate strategy YAML with Zod schema"
+    files:
+      - "packages/backend/orchestrator/scripts/validate-strategy.ts"
+    dependencies: [2, 3, 4]
+    slice: packages
+
+  - id: 6
+    description: "Generate Mermaid decision flowchart and embed in strategy doc"
+    files:
+      - "packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md"
+    dependencies: [4]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md"
+    action: create
+    reason: "AC-1: Human-readable strategy document with decision flowchart, task taxonomy, tier specs, escalation triggers, cost analysis, and examples"
+
+  - path: "packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml"
+    action: create
+    reason: "AC-3: Machine-readable tier definitions, mappings, and escalation rules"
+
+  - path: "packages/backend/orchestrator/scripts/validate-strategy.ts"
+    action: create
+    reason: "AC-1: Zod schema validation for strategy YAML"
+
+commands_to_run:
+  - command: "pnpm --filter @repo/orchestrator exec tsx packages/backend/orchestrator/scripts/validate-strategy.ts"
+    when: "after strategy YAML created"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after validation script created"
+    required: true
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Strategy document exists with all required sections (tiers, flowchart, escalation, versioning)"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "Task taxonomy section maps all workflow task types to tiers with rationale"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "Tier specifications table with 4 tiers (0-3), models, use cases, fallbacks, cost estimates"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Agent analysis section shows 143 agents reviewed, current vs proposed mappings, migration plan"
+    evidence_type: file
+
+  - ac_id: "AC-5"
+    planned_evidence: "Escalation triggers section defines quality thresholds, cost thresholds, failure-based escalation, human-in-loop triggers"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "Integration notes section aligns with MODL-0010, compatible with model-assignments.ts, no breaking changes"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "Cost analysis section with baseline vs projected, savings estimate (40-60% target), assumptions documented"
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "Example scenarios section with 5+ real workflow scenarios, model selection walkthrough, edge case handling"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should validation script be executable standalone or integrated into CI pipeline?"
+    decision: "Standalone script for initial validation, CI integration deferred to WINT-0230"
+    rationale: "Story scope is strategy definition, not implementation. CI integration belongs in auto-selection story."
+    decided_by: auto-accepted
+
+  - id: ARCH-002
+    question: "Should strategy YAML extend model-assignments.yaml or be separate file?"
+    decision: "Separate file for strategy, document migration path to merge later"
+    rationale: "Preserves backward compatibility, allows iterative refinement without breaking existing agents"
+    decided_by: auto-accepted
+
+complexity: moderate
+
+notes:
+  - "Agent analysis automated via Glob + gray-matter frontmatter parsing"
+  - "Cost estimates use MODEL_STRATEGY.md baseline + projected Ollama usage"
+  - "MODL-0010 coordination: reference provider-agnostic model names (anthropic/claude-opus-4.6, ollama/deepseek-coder-v2:16b)"
+  - "Backward compatibility critical: existing agents must continue working"
+  - "Validation script uses Zod schema from model-assignments.ts as reference"
+  - "Mermaid flowchart embedded in strategy doc for visual decision guide"
+  - "Migration plan phased: Wave 1 (critical), Wave 2 (recommended), Wave 3 (optional)"
+  - "Escalation triggers conceptual in this story, quantified in WINT-0250"

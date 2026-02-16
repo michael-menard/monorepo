@@ -122,6 +122,7 @@ export {
   // Core enums
   TierSchema,
   FeatureSchema as PermissionFeatureSchema,
+  FeatureSchema, // Also export without alias for FeatureGate (WINT-0010 iteration 2)
   QuotaTypeSchema,
   AddonTypeSchema,
   // Quota schemas
@@ -145,6 +146,7 @@ export {
   // Types
   type Tier,
   type Feature as PermissionFeature,
+  type Feature, // Also export without alias for FeatureGate (WINT-0010 iteration 2)
   type QuotaType,
   type AddonType,
   type QuotaInfo,

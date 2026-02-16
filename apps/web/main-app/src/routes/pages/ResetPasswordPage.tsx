@@ -16,6 +16,9 @@ import {
   Alert,
   AlertDescription,
   cn,
+  RateLimitBanner,
+  PasswordStrengthIndicator,
+  useRateLimitCooldown,
 } from '@repo/app-component-library'
 import {
   Mail,
@@ -53,60 +56,6 @@ const ResetPasswordSchema = z
 
 type ResetPasswordFormData = z.infer<typeof ResetPasswordSchema>
 
-// Password strength calculation
-const getPasswordStrength = (password: string): { score: number; label: string; color: string } => {
-  let score = 0
-
-  if (password.length >= 8) score++
-  if (password.length >= 12) score++
-  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++
-  if (/[0-9]/.test(password)) score++
-  if (/[^A-Za-z0-9]/.test(password)) score++
-
-  const labels = ['Weak', 'Fair', 'Good', 'Strong', 'Very Strong']
-  const colors = ['red', 'orange', 'yellow', 'lime', 'green']
-
-  return {
-    score: Math.min(score, 4),
-    label: labels[Math.min(score, 4)],
-    color: colors[Math.min(score, 4)],
-  }
-}
-
-// Password strength indicator component
-const PasswordStrengthIndicator = ({ password }: { password: string }) => {
-  const strength = getPasswordStrength(password)
-
-  if (!password) return null
-
-  return (
-    <div className="space-y-1" data-testid="password-strength-indicator">
-      <div className="flex gap-1">
-        {[0, 1, 2, 3, 4].map(i => (
-          <div
-            key={i}
-            className={cn(
-              'h-1 flex-1 rounded transition-colors duration-200',
-              i <= strength.score
-                ? strength.color === 'red'
-                  ? 'bg-red-500'
-                  : strength.color === 'orange'
-                    ? 'bg-orange-500'
-                    : strength.color === 'yellow'
-                      ? 'bg-yellow-500'
-                      : strength.color === 'lime'
-                        ? 'bg-lime-500'
-                        : 'bg-green-500'
-                : 'bg-gray-200',
-            )}
-          />
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">Password strength: {strength.label}</p>
-    </div>
-  )
-}
-
 // LEGO brick animation variants
 const legoBrickVariants = {
   initial: { scale: 0, rotate: -180, opacity: 0 },
@@ -134,6 +83,30 @@ export function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
+
+  const {
+    remainingSeconds: submitRemainingSeconds,
+    canRetry: submitCanRetry,
+    handleRateLimitError: handleSubmitRateLimitError,
+    clearCooldown: clearSubmitCooldown,
+    formattedTime: submitFormattedTime,
+  } = useRateLimitCooldown({
+    storageKeyPrefix: 'auth:confirmResetPassword',
+    baseCooldownSeconds: 60,
+    maxCooldownSeconds: 600,
+  })
+
+  const {
+    remainingSeconds: resendRemainingSeconds,
+    canRetry: resendCanRetry,
+    handleRateLimitError: handleResendRateLimitError,
+    clearCooldown: clearResendCooldown,
+    formattedTime: resendFormattedTime,
+  } = useRateLimitCooldown({
+    storageKeyPrefix: 'auth:resendCode',
+    baseCooldownSeconds: 60,
+    maxCooldownSeconds: 600,
+  })
 
   // Get pre-filled email from sessionStorage (set by ForgotPasswordPage)
   const prefillEmail =
@@ -173,6 +146,7 @@ export function ResetPasswordPage() {
         setSuccess(true)
         // Clear session storage
         sessionStorage.removeItem('pendingResetEmail')
+        clearSubmitCooldown()
         trackNavigation('reset_password_success', {
           source: 'reset_password_page',
         })
@@ -180,6 +154,13 @@ export function ResetPasswordPage() {
         setTimeout(() => {
           router.navigate({ to: '/login' })
         }, 3000)
+      } else if (result.error?.includes('LimitExceededException')) {
+        handleSubmitRateLimitError()
+        setError('Too many attempts. Please wait before trying again.')
+        trackNavigation('reset_password_error', {
+          source: 'reset_password_page',
+          error: result.error,
+        })
       } else {
         setError(result.error || 'Failed to reset password. Please try again.')
         trackNavigation('reset_password_error', {
@@ -188,7 +169,13 @@ export function ResetPasswordPage() {
         })
       }
     } catch (err: any) {
-      setError('Failed to reset password. Please try again.')
+      const errorName = err?.name || ''
+      if (errorName === 'LimitExceededException') {
+        handleSubmitRateLimitError()
+        setError('Too many attempts. Please wait before trying again.')
+      } else {
+        setError('Failed to reset password. Please try again.')
+      }
       trackNavigation('reset_password_error', {
         source: 'reset_password_page',
         error: err?.message,
@@ -211,16 +198,26 @@ export function ResetPasswordPage() {
 
       if (result.success) {
         setResendSuccess(true)
+        clearResendCooldown()
         trackNavigation('reset_password_resend_code', {
           source: 'reset_password_page',
         })
         // Hide success message after 5 seconds
         setTimeout(() => setResendSuccess(false), 5000)
+      } else if (result.error?.includes('LimitExceededException')) {
+        handleResendRateLimitError()
+        setError('Too many attempts. Please wait before trying again.')
       } else {
         setError(result.error || 'Failed to resend code. Please try again.')
       }
     } catch (err: any) {
-      setError('Failed to resend code. Please try again.')
+      const errorName = err?.name || ''
+      if (errorName === 'LimitExceededException') {
+        handleResendRateLimitError()
+        setError('Too many attempts. Please wait before trying again.')
+      } else {
+        setError('Failed to resend code. Please try again.')
+      }
     } finally {
       setResendLoading(false)
     }
@@ -369,6 +366,17 @@ export function ResetPasswordPage() {
               </motion.div>
             ) : null}
 
+            {/* Rate Limit Banner */}
+            {(!submitCanRetry || !resendCanRetry) && (
+              <RateLimitBanner
+                visible={!submitCanRetry || !resendCanRetry}
+                retryAfterSeconds={Math.max(submitRemainingSeconds, resendRemainingSeconds)}
+                onRetry={() => {}}
+                title="Rate Limit Exceeded"
+                message="Too many attempts. Please wait before trying again."
+              />
+            )}
+
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="space-y-5"
@@ -505,7 +513,7 @@ export function ResetPasswordPage() {
                     character.
                   </p>
                 )}
-                <PasswordStrengthIndicator password={watchedPassword} />
+                <PasswordStrengthIndicator password={watchedPassword} showLabel={true} />
               </div>
 
               {/* Confirm Password Field */}
@@ -565,7 +573,8 @@ export function ResetPasswordPage() {
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   type="submit"
-                  disabled={isSubmitting || isLoading}
+                  disabled={isSubmitting || isLoading || !submitCanRetry}
+                  aria-disabled={!submitCanRetry ? 'true' : undefined}
                   className={cn(
                     'w-full h-11 bg-gradient-to-r from-orange-500 to-red-500',
                     'hover:from-orange-600 hover:to-red-600',
@@ -575,7 +584,11 @@ export function ResetPasswordPage() {
                   )}
                   data-testid="submit-button"
                 >
-                  {isSubmitting || isLoading ? (
+                  {!submitCanRetry ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <span>Wait {submitFormattedTime}</span>
+                    </div>
+                  ) : isSubmitting || isLoading ? (
                     <div className="flex items-center justify-center gap-2">
                       <div
                         className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"
@@ -593,6 +606,13 @@ export function ResetPasswordPage() {
               </motion.div>
             </form>
 
+            {/* ARIA timer for screen readers */}
+            {!submitCanRetry && (
+              <div role="timer" aria-live="polite" className="sr-only">
+                {`Approximately ${Math.ceil(submitRemainingSeconds / 60)} minutes remaining.`}
+              </div>
+            )}
+
             {/* Resend Code Link */}
             <div className="text-center">
               <p className="text-sm text-slate-600">
@@ -600,11 +620,15 @@ export function ResetPasswordPage() {
                 <button
                   type="button"
                   onClick={handleResendCode}
-                  disabled={resendLoading || isLoading}
+                  disabled={resendLoading || isLoading || !resendCanRetry}
                   className="text-sky-600 hover:text-sky-500 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="resend-code-button"
                 >
-                  {resendLoading ? 'Sending...' : 'Resend code'}
+                  {resendLoading
+                    ? 'Sending...'
+                    : !resendCanRetry
+                      ? `Wait ${resendFormattedTime}`
+                      : 'Resend code'}
                 </button>
               </p>
             </div>

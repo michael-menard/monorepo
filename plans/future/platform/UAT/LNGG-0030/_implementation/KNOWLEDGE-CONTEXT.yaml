@@ -1,0 +1,93 @@
+schema: 1
+story_id: "LNGG-0030"
+timestamp: "2026-02-13T00:00:00Z"
+
+patterns_to_follow:
+  - name: "Zod-first type definitions"
+    source: "packages/backend/orchestrator/src/state/graph-state.ts"
+    description: "All types must be defined using Zod schemas with z.infer<> for TypeScript types. Never use TypeScript interfaces or type aliases without Zod schemas. Use discriminated unions for result types."
+
+  - name: "ESM module pattern"
+    source: "packages/backend/orchestrator/package.json"
+    description: "Package uses 'type: module' in package.json. All imports must use .js extensions. Use import/export syntax, not CommonJS require."
+
+  - name: "Promise.race timeout pattern"
+    source: "packages/backend/orchestrator/src/runner/timeout.ts"
+    description: "Use Promise.race([operation, timeoutPromise]) for timeout handling. Clean up with clearTimeout and remove event listeners. Return discriminated union results { success: true, value } | { success: false, error }."
+
+  - name: "@repo/logger usage"
+    source: "packages/backend/orchestrator/src/runner/logger.ts"
+    description: "Always use @repo/logger, never console.log. Import with: import { logger } from '@repo/logger'. Use logger.info, logger.warn, logger.error with structured context objects."
+
+  - name: "Graph configuration pattern"
+    source: "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    description: "LangGraph configs are Zod schemas with default values using z.object().default({}). Pass config via graph invocation: createGraph().invoke(state, { config }). Nodes access via second parameter."
+
+  - name: "Node factory pattern"
+    source: "packages/backend/orchestrator/src/runner/node-factory.ts"
+    description: "Nodes are created with createNode({ name }, async (state, config) => {...}). Return StateUpdate object or partial state. Use updateState helper from runner/state-helpers."
+
+  - name: "Test file structure"
+    source: "packages/backend/orchestrator/src/runner/__tests__/timeout.test.ts"
+    description: "Use Vitest with describe/it blocks. Mock @repo/logger with vi.mock(). Use vi.useFakeTimers() for timeout tests. Test files in __tests__/ directories adjacent to source files."
+
+  - name: "Named exports only"
+    source: "packages/backend/orchestrator/src/graphs/index.ts"
+    description: "Use named exports, never default exports. Export all public APIs through barrel files. Do NOT create barrel files that just re-export (imports must reference actual source files)."
+
+  - name: "Registry singleton pattern"
+    source: "packages/backend/orchestrator/src/config/model-assignments.ts (referenced in story)"
+    description: "Use singleton pattern with getInstance() for registries. Private constructor, static instance field. Register built-in implementations in constructor."
+
+  - name: "Functional programming style"
+    source: "CLAUDE.md"
+    description: "Use functional components/factories only. Prefer named function declarations over arrow functions for exports. Use const for immutability."
+
+constraints:
+  - "Must use inquirer@^9.2.0 which is ESM-only - verify compatibility with 'type: module' package.json setting"
+  - "All imports must use .js extension for ESM compatibility (e.g., import { x } from './types.js')"
+  - "No console.log - use @repo/logger exclusively per CLAUDE.md"
+  - "No TypeScript interfaces without Zod schemas - use z.infer<typeof Schema> pattern"
+  - "No barrel files that just re-export - direct imports from source files required"
+  - "All tests must achieve >80% line coverage per AC-6"
+  - "CLI callback must handle Ctrl+C gracefully - inquirer provides built-in interrupt handling"
+  - "Timeout cleanup must prevent memory leaks - clear timers and remove event listeners"
+  - "DecisionRequest must include UUID id field for tracking decisions"
+  - "DecisionResponse must include timestamp for audit trail"
+  - "Auto-decision rules use predicate functions, not eval() or arbitrary code execution"
+  - "Registry must throw clear error messages when callback not found"
+  - "Graph config must be validated with Zod schema before passing to nodes"
+  - "Integration tests must use real callback implementations, not mocks"
+
+risks:
+  - id: 1
+    description: "inquirer v9+ is ESM-only and may have import compatibility issues"
+    mitigation: "Package already uses 'type: module' so ESM should work. Test early in step 5 (CLI callback implementation). If issues arise, verify tsconfig.json moduleResolution is 'NodeNext' and all imports use .js extensions."
+
+  - id: 2
+    description: "Promise.race timeout may leave hanging promises if operation doesn't clean up"
+    mitigation: "Follow timeout.ts pattern: track settled state, clear timeout on completion, remove abort listeners. Use cleanup callback pattern. Test with long-running operations to verify no memory leaks."
+
+  - id: 3
+    description: "Ctrl+C signal handling is platform-specific (Windows vs Unix)"
+    mitigation: "inquirer handles cross-platform signal handling internally. Return { cancelled: true } on interrupt. Test on macOS (current platform) and document Windows compatibility as future work."
+
+  - id: 4
+    description: "Mocking inquirer in unit tests may be complex"
+    mitigation: "Use vi.mock('inquirer') with mock prompt implementation. Provide integration tests with real inquirer for high-confidence validation. Test suite should have both mocked unit tests and real integration tests."
+
+  - id: 5
+    description: "LangGraph node integration requires config threading through graph invocation"
+    mitigation: "Follow elaboration.ts config pattern: ElaborationConfigSchema.default({}), pass in runElaboration(). Nodes receive config as second parameter. Test integration early in step 14-15."
+
+  - id: 6
+    description: "Registry singleton may cause test pollution if not reset between tests"
+    mitigation: "Do NOT provide reset() method (singleton should be stable). Test registration with unique callback names per test. Use beforeEach to create new registry instances for isolated tests if needed."
+
+  - id: 7
+    description: "Timeout of 30s default may be too short for complex decisions"
+    mitigation: "Make timeout_ms configurable in DecisionRequest schema. Default to 30000ms but allow override. Document timeout configuration in ElaborationConfig. Long timeout tests should use vi.useFakeTimers()."
+
+  - id: 8
+    description: "Auto-decision rule engine may become complex with many conditions"
+    mitigation: "Keep rules simple: { condition: (ctx) => boolean, answer: string }. No DSL or complex matching. Default fallback ensures always returns valid answer. Document rule structure in types.ts."

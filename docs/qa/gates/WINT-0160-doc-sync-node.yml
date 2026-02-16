@@ -1,0 +1,205 @@
+schema: 1
+story: "WINT-0160"
+story_title: "Create doc-sync Agent (LangGraph Node Integration)"
+gate: CONCERNS
+status_reason: "Implementation is functionally complete with excellent test coverage (16/16 tests passing), but has 3 high-priority design pattern improvements recommended before production release: subprocess shell=true usage, unbuffered string concatenation, and missing resource limits."
+reviewer: "Claude Code"
+updated: "2026-02-15T04:08:00Z"
+
+waiver:
+  active: false
+  reason: ""
+  approved_by: ""
+
+# Top priority issues requiring attention
+top_issues:
+  - id: "SEC-001"
+    severity: high
+    finding: "Subprocess spawned with shell=true creates potential command injection vector"
+    suggested_action: "Remove shell=true from spawn() call (5 minute fix, high impact)"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 102
+
+  - id: "PERF-001"
+    severity: high
+    finding: "Unbuffered string concatenation in subprocess stdout/stderr handlers causes O(n²) memory operations for large output"
+    suggested_action: "Replace string concatenation with Buffer array pooling pattern"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 109
+
+  - id: "PERF-002"
+    severity: high
+    finding: "Subprocess execution blocks entire workflow with no resource limits"
+    suggested_action: "Add maxBuffer, explicit timeout, and cleanup handling to spawn() options"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 100
+
+  - id: "SEC-002"
+    severity: medium
+    finding: "Path traversal vulnerability in workingDir parameter - no validation that paths stay within allowed bounds"
+    suggested_action: "Add path validation to ensure workingDir and reportPath stay within sandbox"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 204
+
+  - id: "QUAL-001"
+    severity: medium
+    finding: "GraphStateWithDocSync interface violates CLAUDE.md Zod-first policy - uses TypeScript interface instead of Zod schema"
+    suggested_action: "Convert GraphStateWithDocSync to Zod schema using GraphStateSchema.extend({ docSync: DocSyncResultSchema.optional() })"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 66
+
+  - id: "QUAL-002"
+    severity: high
+    finding: "Inconsistent exit code handling - line 212 checks 'exitCode !== 0 && exitCode !== 1' but logic for exit code 1 semantics is ambiguous"
+    suggested_action: "Create exit code constants (EXIT_SUCCESS=0, EXIT_OUT_OF_SYNC=1) and clarify subprocess contract documentation"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 212
+
+  - id: "TEST-003"
+    severity: medium
+    finding: "Exit code boundary not tested - missing tests for edge cases like exitCode=127 (command not found), exitCode=-1, or exitCode=null"
+    suggested_action: "Add tests for uncommon exit codes to validate error handling robustness"
+    file: "packages/backend/orchestrator/src/nodes/workflow/__tests__/doc-sync.test.ts"
+
+  - id: "PERF-003"
+    severity: medium
+    finding: "Regex scanning entire SYNC-REPORT.md file 4 times with separate patterns - cumulative overhead for large reports"
+    suggested_action: "Consider single-pass parsing or line-based parsing for 1MB+ reports"
+    file: "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+    line: 148
+
+# NFR validation summary
+nfr_validation:
+  security:
+    status: CONCERNS
+    issue_count: 5
+    details: "1 high-severity (shell=true), 1 medium-severity (path traversal), 3 low-severity issues. Backend-only with no direct UI exposure reduces practical attack surface."
+
+  performance:
+    status: CONCERNS
+    issue_count: 7
+    details: "2 high-severity (string concatenation, blocking I/O), 2 medium-severity, 3 low-severity issues. Primary concerns are subprocess overhead and stream handling patterns."
+
+  accessibility:
+    status: PASS
+    issue_count: 0
+    details: "Backend-only implementation with no user-facing UI. No accessibility concerns."
+
+  code_quality:
+    status: CONCERNS
+    issue_count: 15
+    details: "Moderate complexity (6/10) with well-structured code but several improvement opportunities including Zod compliance, exit code semantics, and code duplication."
+
+  test_coverage:
+    status: PASS
+    issue_count: 13
+    details: "Excellent test coverage (16/16 tests passing, 85%+) with solid primary paths. Gaps in edge case coverage and private function isolation."
+
+  technical_debt:
+    status: PASS
+    issue_count: 10
+    details: "Low maintenance burden. Well-documented with comprehensive testing. Primary concerns are subprocess interaction patterns and missing timeout mechanisms."
+
+  tests:
+    status: PASS
+    details: "16/16 tests passed in 9ms - all schema validation, happy path, error scenarios, and state immutability tests passing"
+
+  types:
+    status: PASS
+    details: "No TypeScript compilation errors. Full type safety with Zod schema inference."
+
+  lint:
+    status: PASS
+    details: "No ESLint errors or warnings"
+
+# Requirements traceability
+requirements:
+  t_shirt_size: S
+  total_acs: 7
+  covered_acs: 7
+  test_mapping: "All 7 acceptance criteria have complete test coverage with passing tests"
+  gaps: []
+
+# Risk summary
+risk_summary:
+  totals:
+    high: 4
+    medium: 8
+    low: 38
+
+  overall_assessment: |
+    Functionally complete implementation with excellent test coverage and proper patterns.
+    Primary risks are design choices (shell=true, unbuffered streams, no resource limits)
+    that should be addressed before production deployment but do not block MVP release.
+
+    All acceptance criteria met, comprehensive documentation, follows LangGraph patterns.
+    Backend-only implementation reduces security attack surface significantly.
+
+  recommendations:
+    must_fix:
+      - "Remove shell=true from subprocess spawn (SEC-001) - 5 minute fix"
+      - "Add subprocess resource limits and timeout handling (PERF-002) - 15 minute fix"
+      - "Implement buffer pooling for stream concatenation (PERF-001) - 15 minute fix"
+      - "Clarify exit code semantics with constants (QUAL-002) - 10 minute fix"
+
+    should_fix:
+      - "Add path validation for workingDir/reportPath (SEC-002)"
+      - "Convert GraphStateWithDocSync to Zod schema (QUAL-001)"
+      - "Add edge case tests for exit codes (TEST-003)"
+      - "Consider line-based parsing for large reports (PERF-003)"
+
+    nice_to_have:
+      - "Improve test mock realism for subprocess streams"
+      - "Add structured logging for subprocess lifecycle"
+      - "Add file size limits to prevent resource exhaustion"
+      - "Document 'claude' CLI dependency requirement"
+
+# Specialist sizing consensus
+t_shirt_sizing:
+  recommended_size: M
+  confidence: high
+  specialist_breakdown:
+    requirements: S
+    code_quality: M
+    security: M
+    performance: M
+    accessibility: XS
+    test_coverage: M
+    technical_debt: S
+
+  size_distribution:
+    XS: 1
+    S: 2
+    M: 4
+    L: 0
+    XL: 0
+    XXL: 0
+
+  synthesis: |
+    Modal size is M (4/7 specialists agree). This is a moderate complexity story with
+    well-established patterns, comprehensive testing, and clear documentation. The
+    implementation is production-ready with the recommended fixes applied.
+
+    Lower estimates (S, XS) reflect clean code structure and established patterns.
+    Medium estimates reflect subprocess complexity, file I/O operations, and areas
+    for improvement in error handling and resource management.
+
+# Files analyzed
+files_analyzed: 4
+files_created:
+  - "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+  - "packages/backend/orchestrator/src/nodes/workflow/index.ts"
+  - "packages/backend/orchestrator/src/nodes/workflow/__tests__/doc-sync.test.ts"
+files_modified:
+  - "packages/backend/orchestrator/src/nodes/index.ts"
+
+# Review metadata
+review_metadata:
+  reviewed_at: "2026-02-15T04:00:00Z"
+  review_type: "comprehensive"
+  specialists_invoked: 7
+  total_findings: 50
+  review_duration_estimate: "15 minutes"
+  models_used:
+    - "claude-sonnet-4-5 (orchestrator)"
+    - "claude-haiku-4-5 (7x specialists)"

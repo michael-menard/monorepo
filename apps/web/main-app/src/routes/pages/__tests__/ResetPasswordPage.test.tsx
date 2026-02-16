@@ -127,6 +127,32 @@ vi.mock('@repo/app-component-library', () => ({
     </div>
   ),
   AlertDescription: ({ children }: any) => <span>{children}</span>,
+  RateLimitBanner: ({ visible, retryAfterSeconds, onRetry, message, title, ...props }: any) => {
+    if (!visible) return null
+    return (
+      <div data-testid="rate-limit-banner" {...props}>
+        <span data-testid="rate-limit-title">{title || 'Rate Limit Exceeded'}</span>
+        <span data-testid="rate-limit-message">{message}</span>
+        <span data-testid="rate-limit-countdown">{retryAfterSeconds}</span>
+        <button onClick={onRetry} data-testid="rate-limit-retry-button">
+          Retry
+        </button>
+      </div>
+    )
+  },
+  useRateLimitCooldown: ({ storageKeyPrefix }: any) => {
+    if (storageKeyPrefix === 'auth:confirmResetPassword') return mockSubmitCooldownState
+    if (storageKeyPrefix === 'auth:resendCode') return mockResendCooldownState
+    return mockSubmitCooldownState
+  },
+  PasswordStrengthIndicator: ({ password }: any) => {
+    if (!password) return null
+    return (
+      <div data-testid="password-strength-indicator">
+        <span>Password strength: Good</span>
+      </div>
+    )
+  },
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
 }))
 
@@ -142,6 +168,30 @@ vi.mock('lucide-react', () => ({
   KeyRound: () => <span data-testid="key-round-icon">KeyRound</span>,
 }))
 
+// Mock rate limit cooldown state for submit and resend operations
+const mockSubmitHandleRateLimitError = vi.fn()
+const mockSubmitClearCooldown = vi.fn()
+const mockResendHandleRateLimitError = vi.fn()
+const mockResendClearCooldown = vi.fn()
+
+let mockSubmitCooldownState = {
+  remainingSeconds: 0,
+  canRetry: true,
+  handleRateLimitError: mockSubmitHandleRateLimitError,
+  clearCooldown: mockSubmitClearCooldown,
+  attemptCount: 0,
+  formattedTime: '0:00',
+}
+
+let mockResendCooldownState = {
+  remainingSeconds: 0,
+  canRetry: true,
+  handleRateLimitError: mockResendHandleRateLimitError,
+  clearCooldown: mockResendClearCooldown,
+  attemptCount: 0,
+  formattedTime: '0:00',
+}
+
 const renderResetPasswordPage = () => {
   const user = userEvent.setup()
   render(<ResetPasswordPage />)
@@ -155,7 +205,30 @@ describe('ResetPasswordPage', () => {
     mockForgotPassword.mockReset()
     mockNavigate.mockReset()
     mockTrackNavigation.mockReset()
+    mockSubmitHandleRateLimitError.mockReset()
+    mockSubmitClearCooldown.mockReset()
+    mockResendHandleRateLimitError.mockReset()
+    mockResendClearCooldown.mockReset()
     sessionStorage.clear()
+
+    // Reset cooldown states to default
+    mockSubmitCooldownState = {
+      remainingSeconds: 0,
+      canRetry: true,
+      handleRateLimitError: mockSubmitHandleRateLimitError,
+      clearCooldown: mockSubmitClearCooldown,
+      attemptCount: 0,
+      formattedTime: '0:00',
+    }
+
+    mockResendCooldownState = {
+      remainingSeconds: 0,
+      canRetry: true,
+      handleRateLimitError: mockResendHandleRateLimitError,
+      clearCooldown: mockResendClearCooldown,
+      attemptCount: 0,
+      formattedTime: '0:00',
+    }
   })
 
   afterEach(() => {
@@ -772,6 +845,190 @@ describe('ResetPasswordPage', () => {
 
       const toggleButtons = screen.getAllByLabelText(/password/i)
       expect(toggleButtons.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Rate Limiting', () => {
+    describe('Submit Rate Limiting', () => {
+      it('calls handleRateLimitError when LimitExceededException occurs on submit', async () => {
+        mockConfirmResetPassword.mockResolvedValue({
+          success: false,
+          error: 'LimitExceededException: Too many requests',
+        })
+        const { user } = renderResetPasswordPage()
+
+        const emailInput = screen.getByTestId('email-input')
+        await user.type(emailInput, 'test@example.com')
+
+        const codeInput = screen.getByTestId('otp-input')
+        await user.type(codeInput, '123456')
+
+        const passwordInput = screen.getByTestId('new-password-input')
+        await user.type(passwordInput, 'ValidPass1!')
+
+        const confirmPasswordInput = screen.getByTestId('confirm-password-input')
+        await user.type(confirmPasswordInput, 'ValidPass1!')
+
+        const submitButton = screen.getByTestId('submit-button')
+        await user.click(submitButton)
+
+        await waitFor(() => {
+          expect(mockSubmitHandleRateLimitError).toHaveBeenCalled()
+        })
+      })
+
+      it('disables submit button during cooldown', () => {
+        mockSubmitCooldownState = {
+          ...mockSubmitCooldownState,
+          remainingSeconds: 120,
+          canRetry: false,
+          formattedTime: '2:00',
+        }
+
+        renderResetPasswordPage()
+
+        const submitButton = screen.getByTestId('submit-button')
+        expect(submitButton).toBeDisabled()
+      })
+
+      it('shows countdown timer on submit button during cooldown', () => {
+        mockSubmitCooldownState = {
+          ...mockSubmitCooldownState,
+          remainingSeconds: 120,
+          canRetry: false,
+          formattedTime: '2:00',
+        }
+
+        renderResetPasswordPage()
+
+        expect(screen.getByText(/Wait 2:00/)).toBeInTheDocument()
+      })
+
+      it('shows RateLimitBanner during submit cooldown', () => {
+        mockSubmitCooldownState = {
+          ...mockSubmitCooldownState,
+          remainingSeconds: 120,
+          canRetry: false,
+          formattedTime: '2:00',
+        }
+
+        renderResetPasswordPage()
+
+        expect(screen.getByTestId('rate-limit-banner')).toBeInTheDocument()
+        expect(screen.getByTestId('rate-limit-countdown')).toHaveTextContent('120')
+      })
+
+      it('clears submit cooldown on successful form submission', async () => {
+        mockConfirmResetPassword.mockResolvedValue({ success: true })
+        const { user } = renderResetPasswordPage()
+
+        const emailInput = screen.getByTestId('email-input')
+        await user.type(emailInput, 'test@example.com')
+
+        const codeInput = screen.getByTestId('otp-input')
+        await user.type(codeInput, '123456')
+
+        const passwordInput = screen.getByTestId('new-password-input')
+        await user.type(passwordInput, 'ValidPass1!')
+
+        const confirmPasswordInput = screen.getByTestId('confirm-password-input')
+        await user.type(confirmPasswordInput, 'ValidPass1!')
+
+        const submitButton = screen.getByTestId('submit-button')
+        await user.click(submitButton)
+
+        await waitFor(() => {
+          expect(mockSubmitClearCooldown).toHaveBeenCalled()
+        })
+      })
+    })
+
+    describe('Resend Code Rate Limiting', () => {
+      it('calls handleRateLimitError when LimitExceededException occurs on resend', async () => {
+        mockForgotPassword.mockResolvedValue({
+          success: false,
+          error: 'LimitExceededException: Too many requests',
+        })
+        const { user } = renderResetPasswordPage()
+
+        const emailInput = screen.getByTestId('email-input')
+        await user.type(emailInput, 'test@example.com')
+
+        const resendButton = screen.getByTestId('resend-code-button')
+        await user.click(resendButton)
+
+        await waitFor(() => {
+          expect(mockResendHandleRateLimitError).toHaveBeenCalled()
+        })
+      })
+
+      it('disables resend button during cooldown', () => {
+        mockResendCooldownState = {
+          ...mockResendCooldownState,
+          remainingSeconds: 60,
+          canRetry: false,
+          formattedTime: '1:00',
+        }
+
+        renderResetPasswordPage()
+
+        const resendButton = screen.getByTestId('resend-code-button')
+        expect(resendButton).toBeDisabled()
+      })
+
+      it('shows countdown timer on resend button during cooldown', () => {
+        mockResendCooldownState = {
+          ...mockResendCooldownState,
+          remainingSeconds: 60,
+          canRetry: false,
+          formattedTime: '1:00',
+        }
+
+        renderResetPasswordPage()
+
+        expect(screen.getByText(/Wait 1:00/)).toBeInTheDocument()
+      })
+
+      it('clears resend cooldown on successful code resend', async () => {
+        mockForgotPassword.mockResolvedValue({ success: true })
+        const { user } = renderResetPasswordPage()
+
+        const emailInput = screen.getByTestId('email-input')
+        await user.type(emailInput, 'test@example.com')
+
+        const resendButton = screen.getByTestId('resend-code-button')
+        await user.click(resendButton)
+
+        await waitFor(() => {
+          expect(mockResendClearCooldown).toHaveBeenCalled()
+        })
+      })
+    })
+
+    describe('Independent Cooldowns', () => {
+      it('submit and resend have independent cooldowns', () => {
+        mockSubmitCooldownState = {
+          ...mockSubmitCooldownState,
+          remainingSeconds: 120,
+          canRetry: false,
+          formattedTime: '2:00',
+        }
+
+        mockResendCooldownState = {
+          ...mockResendCooldownState,
+          remainingSeconds: 0,
+          canRetry: true,
+          formattedTime: '0:00',
+        }
+
+        renderResetPasswordPage()
+
+        const submitButton = screen.getByTestId('submit-button')
+        const resendButton = screen.getByTestId('resend-code-button')
+
+        expect(submitButton).toBeDisabled()
+        expect(resendButton).not.toBeDisabled()
+      })
     })
   })
 

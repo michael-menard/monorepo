@@ -1,0 +1,28 @@
+schema: 1
+story_id: KBAR-0010
+timestamp: 2026-02-14T14:15:00Z
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "packages/backend/database-schema/**"
+  - "packages/backend/db/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: true
+
+summary: Create production-ready KBAR database schema with 11 tables across 4 functional groups (stories, artifacts, sync state, index generation) following WINT pattern
+elaboration: completed

@@ -1,0 +1,8 @@
+---
+title: Invalid Story Missing ID
+status: backlog
+epic: test-epic
+---
+# Invalid Story
+
+This story file is missing the required 'id' field and should fail validation.

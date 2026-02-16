@@ -1,0 +1,366 @@
+---
+# Deferred Knowledge Base Writes
+# Created: 2026-02-14
+# Reason: KB tools unavailable during story generation
+# Retry: Run kb-sync command when KB is available
+---
+
+deferred_writes:
+  - table: stories
+    operation: INSERT_ON_CONFLICT_UPDATE
+    data:
+      story_id: WINT-7010
+      feature: platform
+      title: "Audit Agent Directory References"
+      story_dir: plans/future/platform/WINT-7010
+      story_file: plans/future/platform/WINT-7010/WINT-7010.md
+      story_type: chore
+      points: 2
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      epic: WINT
+      phase: "Phase 7: Migration"
+      wave: 1
+      position: 14
+      experiment_variant: control
+      created_at: "2026-02-14T00:00:00Z"
+    conflict_resolution: UPDATE
+    retry_count: 0
+    last_attempt: null
+
+  # Non-blocking findings from elaboration phase (elab-autonomous-decider)
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - agent-versioning
+        - future-work
+      content: |
+        **Agent versioning strategy not defined**
+        - Impact: Low | Effort: Medium
+        - Recommendation: Design agent version compatibility matrix (WINT-7020)
+        - Context: Currently no documented strategy for managing agent version compatibility across migrations
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - agent-lifecycle
+        - future-work
+      content: |
+        **Agent deprecation process not documented**
+        - Impact: Low | Effort: Low
+        - Recommendation: Create agent lifecycle management guide (WINT-7020+)
+        - Context: No formal process for deprecating or archiving agents
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - observability
+        - telemetry
+      content: |
+        **Agent health monitoring not included**
+        - Impact: Low | Effort: Medium
+        - Recommendation: Add agent execution telemetry (WINT Phase 3)
+        - Context: No runtime health monitoring for agent execution
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - performance
+        - telemetry
+      content: |
+        **Agent performance profiling not in scope**
+        - Impact: Low | Effort: Medium
+        - Recommendation: Add agent performance metrics (WINT Phase 3)
+        - Context: No performance profiling or benchmarking for agent execution times
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - agent-loading
+        - future-work
+      content: |
+        **Dynamic agent loading strategy not defined**
+        - Impact: Low | Effort: High
+        - Recommendation: Design runtime agent registry (WINT-7030+)
+        - Context: No strategy for loading agents dynamically at runtime vs compile-time
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - agent-permissions
+        - security
+      content: |
+        **Agent permission model not fully documented**
+        - Impact: Medium | Effort: Low
+        - Recommendation: Catalog permission level patterns in WINT-7020
+        - Context: Permission levels exist but usage patterns not systematically documented
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - spawn-depth
+        - edge-case
+      content: |
+        **Agent spawn depth limits not analyzed**
+        - Impact: Low | Effort: Low
+        - Recommendation: Add spawn depth analysis to SPAWN-GRAPH.md
+        - Context: No analysis of maximum spawn chain depth or potential recursion risks
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: gaps
+      tags:
+        - non-blocking
+        - circular-dependencies
+        - edge-case
+      content: |
+        **Circular spawn dependencies not checked**
+        - Impact: Medium | Effort: Low
+        - Recommendation: Add circular dependency detection to Phase 3
+        - Context: No automated detection of circular spawn relationships between agents
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - ux-polish
+        - visualization
+      content: |
+        **Interactive graph visualization**
+        - Impact: Medium | Effort: High
+        - Recommendation: Create interactive Mermaid viewer with filtering (post-WINT)
+        - Context: Static Mermaid graph may be hard to navigate with 143+ agents
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - observability
+        - analytics
+      content: |
+        **Agent usage analytics**
+        - Impact: Medium | Effort: Medium
+        - Recommendation: Track agent invocation frequency from telemetry (WINT Phase 3)
+        - Context: No analytics on which agents are most/least used
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - validation
+        - automation
+      content: |
+        **Automated frontmatter validation**
+        - Impact: Medium | Effort: Low
+        - Recommendation: Add YAML schema validation for agent frontmatter (WINT-7020)
+        - Context: Frontmatter validation currently manual; could be automated with JSON Schema
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - tooling
+        - version-control
+      content: |
+        **Agent diff tool**
+        - Impact: Low | Effort: Medium
+        - Recommendation: Create tool to compare agent versions over time (post-WINT)
+        - Context: No tooling for comparing agent definitions across versions
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - tooling
+        - developer-experience
+      content: |
+        **Agent template generator**
+        - Impact: Low | Effort: Medium
+        - Recommendation: Create scaffolding tool for new agents (post-WINT)
+        - Context: No tooling to scaffold new agent files with proper frontmatter
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - portability
+        - future-work
+      content: |
+        **Cross-platform agent compatibility**
+        - Impact: Low | Effort: High
+        - Recommendation: Analyze agent portability across OS/environments (post-WINT)
+        - Context: No analysis of agent behavior differences across platforms
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - documentation
+        - automation
+      content: |
+        **Agent documentation auto-generation**
+        - Impact: Medium | Effort: Medium
+        - Recommendation: Generate agent API docs from frontmatter (WINT-7120)
+        - Context: Agent documentation currently manual; could be auto-generated from metadata
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - tooling
+        - search
+      content: |
+        **Agent search/filter CLI**
+        - Impact: Low | Effort: Low
+        - Recommendation: Add `agent-search` command for querying catalog (post-WINT)
+        - Context: No CLI tool to search/filter agent catalog by metadata
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - impact-analysis
+        - tooling
+      content: |
+        **Agent dependency impact analysis**
+        - Impact: Medium | Effort: Medium
+        - Recommendation: Tool to show cascade effects of agent changes (WINT-7020)
+        - Context: No tooling to analyze downstream impact of modifying an agent
+    retry_count: 0
+
+  - table: findings
+    operation: INSERT
+    data:
+      source_story_id: WINT-7010
+      source_stage: elab
+      category: future-opportunities
+      subcategory: enhancements
+      tags:
+        - enhancement
+        - performance
+        - benchmarking
+      content: |
+        **Agent performance benchmarking**
+        - Impact: Low | Effort: High
+        - Recommendation: Benchmark agent execution times for optimization (post-WINT)
+        - Context: No performance benchmarks for comparing agent efficiency
+    retry_count: 0
+
+notes:
+  - KB unavailable during pm-story-generation-leader execution
+  - Story successfully created but not persisted to KB
+  - KB unavailable during elab-autonomous-decider execution
+  - 18 non-blocking findings from elaboration deferred to KB
+  - Run /kb-sync or kb-artifact-migration command to retry
+  - Story is fully functional without KB persistence (KB is index optimization)

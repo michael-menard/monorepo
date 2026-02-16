@@ -1,0 +1,123 @@
+schema: 1
+story_id: MODL-0011
+timestamp: '2026-02-14T19:00:00Z'
+loaded: true
+
+lessons_learned:
+  count: 3
+  relevant_to_scope:
+    - story_id: MODL-0010
+      lesson: "Identified ~150 lines of duplicated code across 3 providers during code review iteration 4"
+      category: tech_debt
+      applies_because: "This story is resolving the technical debt identified in MODL-0010"
+
+    - story_id: MODL-0010
+      lesson: "Template method pattern is ideal for extracting common caching/lifecycle logic while preserving provider-specific behavior"
+      category: pattern
+      applies_because: "Story explicitly uses template method pattern for refactoring"
+
+    - story_id: MODL-0010
+      lesson: "Provider caching pattern (configCache, instanceCache, availabilityCache) is identical across all 3 providers"
+      category: reuse
+      applies_because: "These are the exact methods being extracted to BaseProvider"
+
+  blockers_to_avoid:
+    - "Breaking backward compatibility with existing provider factory API"
+    - "TypeScript compilation errors from abstract class implementation"
+    - "Cache invalidation behavior changes affecting tests"
+
+  patterns_to_follow:
+    - "Template Method Pattern: Define algorithm structure in base class, defer steps to subclasses"
+    - "Static cache instances: Preserve existing pattern of static caches per provider class"
+    - "Zod-first types for all schemas and configuration"
+    - "Use abstract keyword for methods that must be implemented by subclasses"
+
+  patterns_to_avoid:
+    - "Changing method signatures or return types (breaks backward compatibility)"
+    - "Creating non-static caches (would change caching behavior)"
+    - "Over-engineering with complex inheritance hierarchies"
+
+architecture_decisions:
+  active_count: 2
+  relevant_adrs:
+    - id: "MODL-0010-ARCH-001"
+      title: "Provider Abstraction Pattern"
+      status: active
+      constraint: "All providers implement ILLMProvider interface with getModel(), checkAvailability(), loadConfig()"
+      applies_to: ["orchestrator", "providers"]
+
+    - id: "MODL-0010-ARCH-002"
+      title: "Provider Caching Strategy"
+      status: active
+      constraint: "Static caches per provider class: configCache, instanceCache, availabilityCache"
+      applies_to: ["orchestrator", "providers"]
+
+  constraints:
+    interface: "All providers must implement ILLMProvider interface"
+    caching: "Static caches must be preserved (configCache, instanceCache, availabilityCache)"
+    backward_compatibility: "Existing factory pattern and method signatures cannot change"
+    testing: "All 8 existing provider factory tests must pass without modification"
+
+tech_debt_context:
+  origin_story: MODL-0010
+  code_review_iteration: 4
+  duplication_identified:
+    - method: "getCachedInstance()"
+      lines_per_provider: 6
+      total_lines: 18
+      pattern: "Identical implementation across all 3 providers"
+
+    - method: "clearCaches()"
+      lines_per_provider: 5
+      total_lines: 15
+      pattern: "Identical implementation across all 3 providers"
+
+    - method: "getModel() cache logic"
+      lines_per_provider: 8
+      total_lines: 24
+      pattern: "Cache hash generation and cache lookup identical"
+
+    - property: "static caches"
+      lines_per_provider: 3
+      total_lines: 9
+      pattern: "Same 3 static properties in each provider"
+
+  total_duplication:
+    lines: 66
+    percentage: 80
+
+  target_metrics:
+    duplication_after: "<10%"
+    code_reduction: "40% (150 lines removed, 80 added)"
+
+token_optimization:
+  high_cost_operations: []
+
+  recommended_patterns:
+    - "Read only provider files to identify duplication, not full codebase"
+    - "Use targeted grep for finding usage patterns"
+    - "Focus on AC sections of story, not full story file"
+
+refactoring_strategy:
+  approach: "Extract common code to abstract BaseProvider class"
+
+  steps:
+    1: "Add abstract BaseProvider class to base.ts"
+    2: "Extract common methods: getCachedInstance(), clearCaches()"
+    3: "Extract template method pattern for getModel()"
+    4: "Define abstract methods: loadConfig(), createModel(), checkAvailability()"
+    5: "Refactor OllamaProvider to extend BaseProvider"
+    6: "Refactor OpenRouterProvider to extend BaseProvider"
+    7: "Refactor AnthropicProvider to extend BaseProvider"
+    8: "Run tests to verify backward compatibility"
+
+  typescript_considerations:
+    - "Use abstract class (not interface) to allow method implementations"
+    - "Static methods cannot be abstract (use pattern: each class has own static cache)"
+    - "Protected methods for provider-specific hooks"
+    - "Public methods match ILLMProvider interface"
+
+warnings:
+  - "MODL-0010 is in UAT status, not production (dependency risk acknowledged)"
+  - "Static methods like getCachedInstance() and clearCaches() must remain static"
+  - "Template method pattern requires careful separation of common vs provider-specific logic"

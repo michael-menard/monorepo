@@ -233,5 +233,6 @@ export function withFeatureGate<P extends object>(
   }
 }
 
-// Re-export constants for backward compatibility
-export { FEATURE_REQUIRED_TIER, TIER_DISPLAY_NAMES, FEATURE_DISPLAY_NAMES }
+// Re-export constants and schemas for backward compatibility (WINT-0010 iteration 2)
+export { FeatureSchema, TierSchema, FEATURE_REQUIRED_TIER, TIER_DISPLAY_NAMES, FEATURE_DISPLAY_NAMES }
+export type { Feature, Tier }

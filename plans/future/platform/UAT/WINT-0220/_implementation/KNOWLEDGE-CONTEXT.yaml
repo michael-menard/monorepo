@@ -1,0 +1,72 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-14T20:45:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "MODEL_STRATEGY.md"
+        lesson: "Existing informal strategy provides 50% cost reduction target via Ollama for routine tasks"
+        category: reuse
+        applies_because: "Story formalizes this existing strategy"
+
+      - story_id: "general"
+        lesson: "Documentation stories benefit from clear structure: strategy doc (human) + config YAML (machine) + validation script"
+        category: pattern
+        applies_because: "Story requires both human-readable and machine-readable outputs"
+
+      - story_id: "general"
+        lesson: "Agent analysis at scale (100+) requires automated parsing to avoid manual errors"
+        category: pattern
+        applies_because: "Story must analyze 143 agent files"
+
+    blockers_to_avoid:
+      - "Manual agent analysis - use automated frontmatter parsing"
+      - "Breaking changes to model-assignments.ts schema - extend only"
+      - "Dependency on MODL-0010 completion - coordinate but don't block"
+
+    patterns_to_follow:
+      - "Zod schema validation for YAML configuration"
+      - "Backward compatibility via optional fields"
+      - "Graceful degradation (Ollama → Claude fallback)"
+      - "Version-controlled strategy with effective dates"
+
+    patterns_to_avoid:
+      - "Hardcoding model names without tier abstraction"
+      - "Circular escalation logic"
+      - "Cost estimates without documented assumptions"
+
+  architecture_decisions:
+    active_count: 0
+    relevant_adrs: []
+    constraints:
+      api_paths: "N/A - no API work"
+      infrastructure: "N/A - documentation only"
+      storage: "N/A - documentation only"
+      auth: "N/A - documentation only"
+      testing: "Validation script with Zod schema required"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading all 143 agent files individually"
+        typical_tokens: 150000
+        mitigation: "Use Glob + selective Read for frontmatter only"
+
+      - operation: "Full MODEL_STRATEGY.md read"
+        typical_tokens: 5000
+        mitigation: "Already read - extract insights, don't re-read"
+
+    recommended_patterns:
+      - "Use Glob to get agent file list"
+      - "Parse frontmatter with gray-matter (already in dependencies)"
+      - "Batch related analysis tasks"
+      - "Reference existing model-assignments.ts schema instead of re-inventing"
+
+  warnings:
+    - "MODL-0010 is in-progress - coordinate on provider model naming conventions"
+    - "No telemetry data available yet (INFR-0040) - cost estimates must use projections"
+    - "Ollama availability varies by environment - document minimum requirements clearly"
+
+  tokens:
+    in: 8500
+    out: 450

@@ -1,0 +1,423 @@
+# ==============================================================================
+# WINT-0220: Model-per-Task Strategy Configuration
+# ==============================================================================
+# Version: 1.0.0
+# Effective Date: 2026-02-15
+# Review Date: 2026-03-15
+# Related: MODL-0010 (Provider Adapters), WINT-0230 (Unified Interface)
+# ==============================================================================
+
+strategy_version: "1.0.0"
+effective_date: "2026-02-15"
+review_date: "2026-03-15"
+
+# ==============================================================================
+# Model Tiers (0-3)
+# ==============================================================================
+tiers:
+  - tier: 0
+    name: "Critical Decision"
+    description: "High-stakes decisions, complex multi-factor reasoning, strategic planning"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-opus-4.6
+          cost_per_1m_tokens: 15.00
+      fallback:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+    use_cases:
+      - "Epic-level strategic planning"
+      - "Critical go/no-go decisions"
+      - "Multi-stakeholder synthesis requiring nuanced judgment"
+      - "Architectural decisions with long-term impact"
+      - "Security threat modeling and risk assessment"
+    quality_expectations: "Highest quality, deepest reasoning, most nuanced outputs"
+    latency_tolerance: "high (5-15s acceptable)"
+
+  - tier: 1
+    name: "Complex Reasoning"
+    description: "Gap analysis, synthesis, code review, elaboration"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - "PM/UX/QA gap analysis"
+      - "Story elaboration and refinement"
+      - "Code review with contextual understanding"
+      - "Implementation planning and strategy"
+      - "Multi-file code generation"
+      - "Attack analysis (red team thinking)"
+    quality_expectations: "High quality reasoning, coherent multi-factor analysis"
+    latency_tolerance: "medium (3-8s acceptable)"
+
+  - tier: 2
+    name: "Routine Work"
+    description: "Code generation, refactoring, test writing"
+    models:
+      primary:
+        - provider: ollama
+          model: deepseek-coder-v2:16b
+          cost_per_1m_tokens: 0.00
+        - provider: ollama
+          model: codellama:13b
+          cost_per_1m_tokens: 0.00
+        - provider: ollama
+          model: qwen2.5-coder:14b
+          cost_per_1m_tokens: 0.00
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - "Single-file code generation"
+      - "Refactoring within well-defined scope"
+      - "Test generation from specifications"
+      - "Contract/interface definition"
+      - "Mid-complexity technical analysis"
+    quality_expectations: "Good code quality, follows established patterns"
+    latency_tolerance: "low (1-5s preferred)"
+    availability_requirement: "Ollama must be available; fallback to Haiku if not"
+
+  - tier: 3
+    name: "Simple Tasks"
+    description: "Lint, formatting, status updates, simple validation"
+    models:
+      primary:
+        - provider: ollama
+          model: qwen2.5-coder:7b
+          cost_per_1m_tokens: 0.00
+        - provider: ollama
+          model: llama3.2:3b
+          cost_per_1m_tokens: 0.00
+      fallback:
+        - provider: ollama
+          model: deepseek-coder-v2:16b
+          cost_per_1m_tokens: 0.00
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - "Lint and syntax validation"
+      - "Code formatting checks"
+      - "Status updates and progress reporting"
+      - "Simple file structure validation"
+      - "Template filling and boilerplate"
+    quality_expectations: "Adequate for deterministic, rule-based tasks"
+    latency_tolerance: "very low (<2s preferred)"
+    availability_requirement: "Ollama preferred; graceful degradation if unavailable"
+
+# ==============================================================================
+# Task Type Taxonomy
+# ==============================================================================
+task_types:
+  # Setup & Validation
+  - type: "setup_validation"
+    description: "Pre-flight checks, file existence, schema validation"
+    recommended_tier: 3
+    rationale: "Deterministic checks, no reasoning required"
+    examples:
+      - "elab-setup-leader"
+      - "dev-setup-leader"
+      - "qa-verify-setup-leader"
+
+  - type: "completion_reporting"
+    description: "Status updates, artifact formatting, summary generation"
+    recommended_tier: 3
+    rationale: "Template-based, minimal judgment required"
+    examples:
+      - "elab-completion-leader"
+      - "dev-documentation-leader"
+      - "qa-verify-completion-leader"
+
+  # Analysis & Reasoning
+  - type: "gap_analysis"
+    description: "Identify missing requirements, stakeholder perspective analysis"
+    recommended_tier: 1
+    rationale: "Requires empathy, domain knowledge, multi-factor reasoning"
+    escalation_to_tier_0: "If epic-level or cross-cutting concerns"
+    examples:
+      - "story-fanout-pm"
+      - "story-fanout-ux"
+      - "story-fanout-qa"
+
+  - type: "attack_analysis"
+    description: "Red team thinking, challenge assumptions, find edge cases"
+    recommended_tier: 1
+    rationale: "Adversarial reasoning, creativity, critical thinking"
+    escalation_to_tier_0: "If security-critical or strategic scope"
+    examples:
+      - "story-attack-agent"
+
+  - type: "synthesis"
+    description: "Combine multiple analyses, resolve conflicts, create coherent narrative"
+    recommended_tier: 1
+    rationale: "Multi-dimensional integration, judgment on priority/trade-offs"
+    examples:
+      - "story-synthesize-agent"
+
+  - type: "readiness_scoring"
+    description: "Multi-factor decision making, weighted scoring"
+    recommended_tier: 1
+    rationale: "Complex algorithm with subjective judgment calls"
+    examples:
+      - "readiness-score-agent"
+
+  # Code Generation
+  - type: "simple_code_generation"
+    description: "Single-file generation, template-based, well-defined specs"
+    recommended_tier: 2
+    rationale: "Pattern-following, Ollama models perform well"
+    escalation_to_tier_1: "If >300 lines or complex business logic"
+    examples:
+      - "dev-implement-contracts"
+      - "dev-implement-playwright"
+
+  - type: "complex_code_generation"
+    description: "Multi-file generation, requires context and reasoning"
+    recommended_tier: 1
+    rationale: "Context-dependent decisions, architectural implications"
+    examples:
+      - "dev-implement-backend-coder"
+      - "dev-implement-frontend-coder"
+
+  # Code Review
+  - type: "lint_and_syntax"
+    description: "Rule-based checks, pattern matching"
+    recommended_tier: 3
+    rationale: "Deterministic, fast Ollama models sufficient"
+    examples:
+      - "code-review-lint"
+      - "code-review-syntax"
+      - "code-review-style-compliance"
+
+  - type: "security_review"
+    description: "Threat modeling, attack vector analysis"
+    recommended_tier: 1
+    rationale: "Requires deep reasoning, high-stakes if missed"
+    escalation_to_tier_0: "If production security-critical"
+    examples:
+      - "code-review-security"
+      - "elab-epic-security"
+
+  # Strategic Planning
+  - type: "implementation_planning"
+    description: "Strategy definition, sequencing, dependency analysis"
+    recommended_tier: 1
+    rationale: "Multi-factor planning, trade-off evaluation"
+    examples:
+      - "dev-implement-planner"
+      - "pm-story-generation-leader"
+
+  - type: "epic_planning"
+    description: "Large-scale strategic planning, cross-cutting concerns"
+    recommended_tier: 0
+    rationale: "High-stakes, long-term impact, requires deepest reasoning"
+    examples:
+      - "elab-epic-interactive-leader"
+
+  # Decision Making
+  - type: "commitment_gate"
+    description: "Go/no-go decisions, quality gates"
+    recommended_tier: 0
+    rationale: "Critical blocking decisions, high cost of error"
+    examples:
+      - "commitment-gate-agent"
+
+  - type: "triage"
+    description: "Prioritization, urgency assessment"
+    recommended_tier: 1
+    rationale: "Multi-factor judgment, but not blocking"
+    examples:
+      - "pm-triage-leader"
+
+# ==============================================================================
+# Escalation Triggers
+# ==============================================================================
+escalation_triggers:
+  # Quality-based escalation
+  quality:
+    - trigger: "gate_failure"
+      description: "QA gate fails on first attempt"
+      action: "Escalate from Tier 3 → 2 → 1 → 0 until pass"
+      max_retries: 3
+
+    - trigger: "confidence_threshold"
+      description: "Agent reports confidence <70% on task"
+      action: "Escalate to next higher tier"
+
+    - trigger: "complexity_detection"
+      description: "File count >10 for analysis tasks"
+      action: "Escalate Tier 2 → Tier 1"
+
+    - trigger: "multi_factor_decision"
+      description: "Task requires >3 weighted factors"
+      action: "Escalate Tier 2 → Tier 1, Tier 1 → Tier 0"
+
+  # Cost-based de-escalation
+  cost:
+    - trigger: "budget_warning"
+      description: "80% of workflow budget consumed"
+      action: "De-escalate non-critical Tier 1 → Tier 2, Tier 0 → Tier 1"
+
+    - trigger: "budget_critical"
+      description: "95% of workflow budget consumed"
+      action: "Pause workflow, require human approval to continue"
+
+  # Failure-based escalation
+  failure:
+    - trigger: "retry_exhaustion"
+      description: "Task fails 3 times at current tier"
+      action: "Escalate to Tier 0 or human review"
+
+    - trigger: "ollama_unavailable"
+      description: "Ollama service down or model missing"
+      action: "Fallback all Tier 2/3 tasks to Claude Haiku"
+
+    - trigger: "timeout"
+      description: "Task exceeds latency tolerance by 2x"
+      action: "Abort and retry with different model in same tier"
+
+  # Human-in-the-loop
+  human:
+    - trigger: "confidence_too_low"
+      description: "Agent confidence <50% on critical decision"
+      action: "Pause workflow, request human review"
+
+    - trigger: "scope_violation_detected"
+      description: "Agent detects out-of-scope changes required"
+      action: "Pause workflow, request human approval"
+
+    - trigger: "security_concern"
+      description: "Potential security issue detected"
+      action: "Immediately escalate to human security review"
+
+# ==============================================================================
+# Cost Analysis
+# ==============================================================================
+cost_analysis:
+  baseline_scenario: "All Claude (current informal practice)"
+  baseline_workflow_cost:
+    setup: 0.003  # Haiku
+    analysis: 0.045  # 3x Sonnet tasks @ $0.015 each
+    generation: 0.060  # 2x Sonnet code gen @ $0.030 each
+    validation: 0.005  # Haiku
+    total: 0.113
+
+  proposed_scenario: "Hybrid Ollama + Claude (formal strategy)"
+  proposed_workflow_cost:
+    setup: 0.000  # Ollama Tier 3
+    analysis: 0.045  # 3x Sonnet (keep on Tier 1)
+    generation: 0.000  # 2x Ollama Tier 2
+    validation: 0.000  # Ollama Tier 3
+    total: 0.045
+
+  savings:
+    absolute: 0.068
+    percentage: 60.2
+    assumptions:
+      - "Ollama available 95% of time"
+      - "Tier 2 code generation quality acceptable for routine work"
+      - "No quality degradation on Tier 1 reasoning tasks"
+
+  projected_monthly:
+    workflows_per_month: 100
+    baseline_monthly_cost: 11.30
+    proposed_monthly_cost: 4.50
+    monthly_savings: 6.80
+    annual_savings: 81.60
+
+# ==============================================================================
+# Integration Notes
+# ==============================================================================
+integration:
+  modl_0010:
+    status: "in-progress"
+    coordination: "Strategy references provider-agnostic model names"
+    provider_format: "provider/model (e.g., anthropic/claude-opus-4.6)"
+    backward_compatibility: "Existing frontmatter `model:` field preserved"
+
+  model_assignments_ts:
+    location: "packages/backend/orchestrator/src/config/model-assignments.ts"
+    extension_required: "Add optional `tier` and `escalation` fields to ModelAssignment interface"
+    breaking_changes: "None - all extensions are optional"
+    migration_path: "Agents without tier use fallback mapping (opus→0, sonnet→1, haiku→2)"
+
+  ollama_requirements:
+    minimum_models:
+      tier_2:
+        - "deepseek-coder-v2:16b (required)"
+        - "codellama:13b (required)"
+      tier_3:
+        - "qwen2.5-coder:7b (required)"
+        - "llama3.2:3b (required)"
+    fallback_policy: "If Ollama unavailable, escalate Tier 2/3 → Haiku"
+    health_check: "30s cache on Ollama availability check"
+
+# ==============================================================================
+# Agent Migration Plan
+# ==============================================================================
+agent_migration:
+  analysis_summary:
+    total_agents: 143
+    with_model_assignment: 62
+    without_model_assignment: 81
+    current_distribution:
+      haiku: 37
+      sonnet: 23
+      opus: 2
+
+  proposed_distribution:
+    tier_0: 5  # Epic planning, commitment gates
+    tier_1: 30  # Gap analysis, synthesis, planning, complex code
+    tier_2: 20  # Routine code generation, mid-complexity
+    tier_3: 88  # Setup, validation, lint, simple tasks
+
+  migration_waves:
+    wave_1_critical:
+      priority: "High"
+      agents:
+        - "All setup leaders → Tier 3"
+        - "All completion leaders → Tier 3"
+        - "All lint/syntax workers → Tier 3"
+      timeline: "Week 1"
+      risk: "Low - deterministic tasks"
+
+    wave_2_recommended:
+      priority: "Medium"
+      agents:
+        - "Simple code gen → Tier 2"
+        - "Mid-complexity analysis → Tier 2"
+      timeline: "Week 2-3"
+      risk: "Medium - validate quality on Tier 2"
+
+    wave_3_optimization:
+      priority: "Low"
+      agents:
+        - "Review Tier 1 assignments for possible downgrade"
+      timeline: "Week 4+"
+      risk: "Low - incremental optimization"
+
+# ==============================================================================
+# Versioning & Review
+# ==============================================================================
+versioning:
+  current_version: "1.0.0"
+  review_schedule: "Monthly for first 3 months, then quarterly"
+  success_metrics:
+    - "Cost reduction: 40-60% target"
+    - "Quality: No degradation on critical tasks"
+    - "Latency: <5s for Tier 2/3 tasks"
+    - "Availability: Ollama uptime >95%"
+  revision_triggers:
+    - "Telemetry data available from INFR-0040"
+    - "New models released (Claude, Ollama)"
+    - "Quality issues detected in production"
+    - "Cost targets not met"

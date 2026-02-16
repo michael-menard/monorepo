@@ -1,0 +1,586 @@
+schema: 1
+story_id: LNGG-0050
+timestamp: "2026-02-14T21:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create adapter directory structure and Zod type schemas"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__types__/index.ts"
+    dependencies: []
+    slice: packages
+    details: |
+      Define all Zod schemas for the KB Writer Adapter:
+      - KbWriterConfigSchema (config with optional kbDeps)
+      - KbWriteRequestSchema (generic write request)
+      - KbLessonRequestSchema (lesson-specific)
+      - KbDecisionRequestSchema (decision-specific)
+      - KbConstraintRequestSchema (constraint-specific)
+      - KbRunbookRequestSchema (runbook-specific)
+      - KbNoteRequestSchema (note-specific)
+      - KbWriteResultSchema (discriminated union: success | skipped | error)
+      - KbBatchWriteResultSchema (batch results with counts)
+      - EntryTypeSchema (enum: note, decision, constraint, runbook, lesson)
+      - RoleSchema (enum: pm, dev, qa, all)
+
+      All schemas must include:
+      - Runtime validation
+      - Clear error messages
+      - Type inference exports (z.infer<typeof Schema>)
+
+  - id: 2
+    description: "Implement content formatting utilities"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/utils/content-formatter.ts"
+      - "packages/backend/orchestrator/src/adapters/kb-writer/utils/index.ts"
+    dependencies: [1]
+    slice: packages
+    details: |
+      Create content formatters for each entry type:
+      - formatLesson(content, storyId) - header: **[STORY-ID] LESSON**
+      - formatDecision(content, storyId) - header: **[STORY-ID] DECISION**
+      - formatConstraint(content, storyId) - header: **[STORY-ID] CONSTRAINT**
+      - formatRunbook(content, storyId) - header: **[STORY-ID] RUNBOOK**
+      - formatNote(content, storyId) - header: **[STORY-ID] NOTE**
+
+      Extract from persist-learnings.ts formatLearningContent():
+      - Consistent header format
+      - Include severity/priority if provided
+      - Clean content formatting
+
+      Export all formatters from utils/index.ts
+
+  - id: 3
+    description: "Implement tag generation utilities"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/utils/tag-generator.ts"
+      - "packages/backend/orchestrator/src/adapters/kb-writer/utils/index.ts"
+    dependencies: [1]
+    slice: packages
+    details: |
+      Create tag generator for KB entries:
+      - generateTags(entryType, storyId, domain, customTags)
+      - Standard tags: entry type, story ID, date (YYYY-MM)
+      - Optional tags: domain, severity, priority
+      - Tag format: 'type:lesson', 'story:lngg-0050', 'date:2026-02'
+      - Deduplicate tags before returning
+
+      Extract from persist-learnings.ts generateLearningTags():
+      - Tag structure
+      - Date formatting
+      - Deduplication logic
+
+      Update utils/index.ts to export tag generator
+
+  - id: 4
+    description: "Implement KbWriterAdapter class with deduplication"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/kb-writer-adapter.ts"
+    dependencies: [1, 2, 3]
+    slice: packages
+    details: |
+      Core adapter implementation:
+
+      Class: KbWriterAdapter
+      Constructor: (kbDeps: KbDeps)
+
+      Methods:
+      - addLesson(request: KbLessonRequest): Promise<KbWriteResult>
+      - addDecision(request: KbDecisionRequest): Promise<KbWriteResult>
+      - addConstraint(request: KbConstraintRequest): Promise<KbWriteResult>
+      - addRunbook(request: KbRunbookRequest): Promise<KbWriteResult>
+      - addNote(request: KbNoteRequest): Promise<KbWriteResult>
+      - addMany(requests: KbWriteRequest[]): Promise<KbBatchWriteResult>
+
+      Deduplication algorithm (per persist-learnings.ts):
+      1. Format content using formatters
+      2. Generate embedding via embeddingClient
+      3. Search KB for similar content (kbSearchFn)
+      4. If similarity > 0.85, return skipped result
+      5. If similarity <= 0.85, write to KB
+      6. Return success/error result
+
+      Error handling:
+      - Return error result (don't throw)
+      - Log errors via @repo/logger
+      - Include error details in result
+
+      Logging:
+      - Debug: deduplication checks
+      - Info: successful writes
+      - Warn: skipped duplicates
+      - Error: write failures
+
+  - id: 5
+    description: "Implement no-op writer for graceful fallback"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/no-op-writer.ts"
+    dependencies: [1]
+    slice: packages
+    details: |
+      NoOpKbWriter class with same interface as KbWriterAdapter:
+      - All methods return success: false results
+      - Log warnings (not errors) about missing KB
+      - No actual KB operations
+      - Used when kbDeps not provided
+
+      Purpose:
+      - Workflow continues when KB unavailable
+      - Clear logging about what's missing
+      - No crashes or exceptions
+
+      Return format:
+      - success: false
+      - error: "KB dependencies not configured"
+      - skipped: false
+
+  - id: 6
+    description: "Implement factory function with dependency injection"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/factory.ts"
+    dependencies: [1, 4, 5]
+    slice: packages
+    details: |
+      Factory: createKbWriter(config: Partial<KbWriterConfig>)
+
+      Logic:
+      1. Validate config with KbWriterConfigSchema (Zod)
+      2. If kbDeps provided and valid, return KbWriterAdapter
+      3. If kbDeps missing/invalid, return NoOpKbWriter
+      4. Log which writer was created
+
+      Extract pattern from persist-learnings.ts createPersistLearningsNode():
+      - Zod validation
+      - Conditional instantiation
+      - Graceful fallback
+
+      Config validation:
+      - If kbDeps provided, validate all required fields
+      - db, embeddingClient required
+      - kbAddFn, kbSearchFn required
+      - dedupeThreshold optional (default 0.85)
+
+  - id: 7
+    description: "Create main index.ts with public API exports"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/index.ts"
+    dependencies: [1, 2, 3, 4, 5, 6]
+    slice: packages
+    details: |
+      Export public API:
+      - createKbWriter (factory)
+      - All Zod schemas from __types__/
+      - All type inferences
+      - Utility functions (formatters, tag generators)
+
+      Do NOT export:
+      - KbWriterAdapter class directly (use factory)
+      - NoOpKbWriter class directly (internal)
+      - Internal helper functions
+
+      Follow CLAUDE.md: no barrel file exports from individual paths
+
+  - id: 8
+    description: "Write unit tests for content formatters"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/content-formatter.test.ts"
+    dependencies: [2]
+    slice: packages
+    details: |
+      Test cases for each formatter:
+
+      formatLesson():
+      - Basic lesson formatting
+      - With severity field
+      - With optional fields
+      - Header format validation
+
+      formatDecision():
+      - Basic decision formatting
+      - With rationale
+      - Header format validation
+
+      formatConstraint():
+      - Basic constraint formatting
+      - With scope
+      - Header format validation
+
+      formatRunbook():
+      - Basic runbook formatting
+      - Multi-step runbook
+      - Header format validation
+
+      formatNote():
+      - Basic note formatting
+      - With metadata
+      - Header format validation
+
+      Coverage target: 100% (simple functions)
+
+  - id: 9
+    description: "Write unit tests for tag generator"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/tag-generator.test.ts"
+    dependencies: [3]
+    slice: packages
+    details: |
+      Test cases:
+
+      generateTags():
+      - Lesson tags (includes 'lesson-learned')
+      - Decision tags (includes 'decision', 'architecture')
+      - Constraint tags (includes 'constraint')
+      - Story ID formatting (lowercase)
+      - Date tag format (YYYY-MM)
+      - Domain tag inclusion
+      - Severity tag inclusion
+      - Tag deduplication
+      - Custom tags merging
+
+      Coverage target: 100%
+
+  - id: 10
+    description: "Write unit tests for KbWriterAdapter"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/kb-writer-adapter.test.ts"
+    dependencies: [4]
+    slice: packages
+    details: |
+      Test cases (with mocked KB dependencies):
+
+      Deduplication logic:
+      - Similarity 0.84 → should write (below threshold)
+      - Similarity 0.85 → should skip (at threshold)
+      - Similarity 0.86 → should skip (above threshold)
+      - Exact duplicate (1.0) → should skip
+      - New content (<0.85) → should write
+      - Verify skipped count in result
+
+      Error handling:
+      - DB connection failure → error result
+      - Embedding generation failure → error result
+      - KB search failure → fallback to write without dedup
+      - Verify @repo/logger calls
+
+      Batch operations:
+      - All successes → correct counts
+      - Partial failures → correct counts
+      - All duplicates → all skipped
+      - Mixed results → accurate metadata
+
+      Entry type methods:
+      - addLesson() works
+      - addDecision() works
+      - addConstraint() works
+      - addRunbook() works
+      - addNote() works
+
+      Coverage target: >80%
+
+  - id: 11
+    description: "Write unit tests for factory function"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/factory.test.ts"
+    dependencies: [6]
+    slice: packages
+    details: |
+      Test cases:
+
+      createKbWriter():
+      - With full kbDeps → returns KbWriterAdapter
+      - Without kbDeps → returns NoOpKbWriter
+      - With partial kbDeps → validation error
+      - With invalid kbDeps → validation error
+      - Config schema validation with Zod
+      - Default dedupeThreshold (0.85)
+      - Custom dedupeThreshold
+
+      Type checking:
+      - Returned writer has correct interface
+      - All methods callable
+
+      Coverage target: 100%
+
+  - id: 12
+    description: "Write unit tests for NoOpKbWriter"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/no-op-writer.test.ts"
+    dependencies: [5]
+    slice: packages
+    details: |
+      Test cases:
+
+      NoOpKbWriter:
+      - addLesson() returns success:false
+      - addDecision() returns success:false
+      - addConstraint() returns success:false
+      - addRunbook() returns success:false
+      - addNote() returns success:false
+      - addMany() returns batch failure
+      - Logs warnings (not errors)
+      - No exceptions thrown
+      - Error message clear
+
+      Coverage target: 100%
+
+  - id: 13
+    description: "Write integration tests with real KB schema"
+    files:
+      - "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/integration.test.ts"
+    dependencies: [7]
+    slice: packages
+    details: |
+      Integration tests (requires KB instance):
+
+      Setup:
+      - Connect to test KB (port 5433)
+      - Clean test data before each test
+      - Use test OpenAI key or mock embedding client
+
+      Test cases:
+
+      End-to-end write:
+      - Write lesson to KB
+      - Verify in knowledgeEntries table
+      - Verify embedding dimensions (1536)
+      - Verify tags stored correctly
+      - Verify content formatted correctly
+
+      Deduplication:
+      - Write lesson
+      - Attempt duplicate write → skipped
+      - Verify similarity search works
+      - Verify only one entry in KB
+
+      Vector index:
+      - Write multiple entries (10+)
+      - Verify IVFFlat index used
+      - Verify search performance (<500ms)
+
+      All entry types:
+      - Write lesson, decision, constraint, runbook, note
+      - Verify all persist correctly
+      - Verify entryType field set correctly
+
+      Batch writes:
+      - Write 10 entries in batch
+      - Verify all persisted
+      - Verify performance acceptable
+
+      Coverage target: E2E flows covered
+
+      NOTE: These tests may be skipped in CI if KB not available
+
+  - id: 14
+    description: "Run tests and verify coverage"
+    files: []
+    dependencies: [8, 9, 10, 11, 12, 13]
+    slice: packages
+    details: |
+      Execute test suite:
+
+      Commands:
+      - pnpm test --filter @repo/orchestrator
+      - pnpm test:coverage --filter @repo/orchestrator
+
+      Verify:
+      - All unit tests pass
+      - Coverage >80% overall
+      - Integration tests pass (or skipped if KB unavailable)
+      - No test warnings
+
+      Coverage breakdown:
+      - content-formatter.ts: 100%
+      - tag-generator.ts: 100%
+      - factory.ts: 100%
+      - no-op-writer.ts: 100%
+      - kb-writer-adapter.ts: >80%
+      - __types__/index.ts: 100%
+
+  - id: 15
+    description: "Build and verify no type errors"
+    files: []
+    dependencies: [14]
+    slice: packages
+    details: |
+      Build verification:
+
+      Commands:
+      - pnpm build --filter @repo/orchestrator
+      - pnpm check-types --filter @repo/orchestrator
+
+      Verify:
+      - TypeScript compilation succeeds
+      - No type errors
+      - No implicit any warnings
+      - Exports resolve correctly
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for all KB Writer types (AC-1)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/utils/content-formatter.ts"
+    action: create
+    reason: "Content formatting utilities for all entry types (AC-4)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/utils/tag-generator.ts"
+    action: create
+    reason: "Tag generation utilities (AC-4)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/utils/index.ts"
+    action: create
+    reason: "Utility exports"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/kb-writer-adapter.ts"
+    action: create
+    reason: "Main adapter implementation with deduplication (AC-2, AC-5)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/no-op-writer.ts"
+    action: create
+    reason: "No-op writer for graceful fallback (AC-3)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/factory.ts"
+    action: create
+    reason: "Factory function with dependency injection (AC-3)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/index.ts"
+    action: create
+    reason: "Main exports for adapter"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/content-formatter.test.ts"
+    action: create
+    reason: "Unit tests for formatters (AC-6)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/tag-generator.test.ts"
+    action: create
+    reason: "Unit tests for tag generator (AC-6)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/kb-writer-adapter.test.ts"
+    action: create
+    reason: "Unit tests for adapter (AC-6)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/factory.test.ts"
+    action: create
+    reason: "Unit tests for factory (AC-6)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/no-op-writer.test.ts"
+    action: create
+    reason: "Unit tests for no-op writer (AC-6)"
+
+  - path: "packages/backend/orchestrator/src/adapters/kb-writer/__tests__/integration.test.ts"
+    action: create
+    reason: "Integration tests with real KB (AC-7)"
+
+commands_to_run:
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify all tests pass (AC-6)"
+
+  - command: "pnpm test:coverage --filter @repo/orchestrator"
+    when: "after all tests pass"
+    required: true
+    reason: "Verify >80% coverage (AC-6)"
+
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify TypeScript compilation"
+
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify no type errors"
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify code style compliance"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Zod schemas in __types__/index.ts with all entry types and exports"
+    evidence_type: file
+    verification: "Read __types__/index.ts and verify all schemas defined"
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests for deduplication logic with threshold edge cases (0.84, 0.85, 0.86)"
+    evidence_type: test
+    verification: "Run kb-writer-adapter.test.ts and verify dedup tests pass"
+
+  - ac_id: "AC-3"
+    planned_evidence: "Factory tests showing real adapter vs no-op writer based on config"
+    evidence_type: test
+    verification: "Run factory.test.ts and verify conditional instantiation"
+
+  - ac_id: "AC-4"
+    planned_evidence: "Content formatter and tag generator tests with 100% coverage"
+    evidence_type: test
+    verification: "Run formatter and tag-generator tests"
+
+  - ac_id: "AC-5"
+    planned_evidence: "Adapter supports all 5 entry types (lesson, decision, constraint, runbook, note)"
+    evidence_type: file
+    verification: "Read kb-writer-adapter.ts and verify all 5 methods exist"
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test coverage >80% across all adapter files"
+    evidence_type: command
+    verification: "Run pnpm test:coverage and verify threshold met"
+
+  - ac_id: "AC-7"
+    planned_evidence: "Integration tests with real KB instance pass"
+    evidence_type: test
+    verification: "Run integration.test.ts (may skip if KB unavailable)"
+
+architectural_decisions: []
+
+complexity: moderate
+
+implementation_notes:
+  - "Extract patterns from persist-learnings.ts (formatLearningContent, generateLearningTags, persistLearnings)"
+  - "Reuse factory pattern from createPersistLearningsNode()"
+  - "Use discriminated union result types throughout"
+  - "All KB dependencies injected via factory config"
+  - "No-op writer logs warnings, not errors"
+  - "Deduplication threshold configurable (default 0.85)"
+  - "Integration tests may be skipped in CI if KB unavailable"
+  - "Follow CLAUDE.md: Zod-first types, @repo/logger, no barrel files"
+
+performance_targets:
+  - "Single write: <300ms (including embedding generation)"
+  - "Batch write (10 entries): <2s"
+  - "Similarity search: <100ms"
+  - "Deduplication check: <200ms total"
+
+dependencies:
+  external: []
+  internal:
+    - "zod (already in orchestrator)"
+    - "@repo/logger (already in orchestrator)"
+    - "drizzle-orm (via kbDeps injection)"
+    - "Embedding client (via kbDeps injection)"
+
+blockers: []
+
+risks:
+  - risk: "OpenAI API latency affects write throughput"
+    mitigation: "Document expected latency, defer batch optimization"
+    severity: medium
+
+  - risk: "Similarity search slows with large KB"
+    mitigation: "IVFFlat index configured, acceptable for <10k entries"
+    severity: medium
+
+  - risk: "Integration tests require KB instance"
+    mitigation: "Allow tests to be skipped if KB unavailable"
+    severity: low
+
+notes:
+  - "Per story scope: backend-only adapter, no web API endpoints"
+  - "Per non-goals: no KB read operations (separate concern)"
+  - "Per non-goals: no schema changes needed"
+  - "Per ADR-005: Integration tests use real KB (no mocks)"
+  - "Per CLAUDE.md: Use Zod schemas, not TypeScript interfaces"
+  - "Estimated 5 story points: reasonable for scope"

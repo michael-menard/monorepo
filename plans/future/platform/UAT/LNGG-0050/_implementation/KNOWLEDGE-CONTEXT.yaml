@@ -1,0 +1,118 @@
+schema: 1
+story_id: LNGG-0050
+timestamp: "2026-02-14T21:00:00Z"
+loaded: true
+
+lessons_learned:
+  count: 3
+  relevant_to_scope:
+    - story_id: "persist-learnings.ts"
+      lesson: "Factory pattern with dependency injection enables graceful fallback when KB dependencies missing"
+      category: pattern
+      applies_because: "Same factory pattern needed for KB Writer Adapter with optional KB dependencies"
+
+    - story_id: "persist-learnings.ts"
+      lesson: "Deduplication before write prevents KB bloat - similarity threshold >0.85 works well"
+      category: pattern
+      applies_because: "KB Writer Adapter must implement same deduplication strategy"
+
+    - story_id: "migrate-workflow-knowledge.ts"
+      lesson: "Content hash-based deduplication more reliable than pure similarity for exact duplicates"
+      category: pattern
+      applies_because: "Adapter should use both content hash and embedding similarity for comprehensive dedup"
+
+  blockers_to_avoid:
+    - "Missing KB dependencies should not crash workflow - use no-op writer pattern"
+    - "Embedding API latency can slow batch operations - document performance expectations"
+    - "Testing requires real KB instance - set up integration test environment early"
+
+  patterns_to_follow:
+    - "Use discriminated union result types (success/failure) instead of throwing errors"
+    - "Factory function with Zod-validated config for dependency injection"
+    - "Separate no-op implementation for graceful degradation when KB unavailable"
+    - "formatContent() and generateTags() utility functions for consistent formatting"
+    - "Similarity search before write with configurable threshold (default 0.85)"
+
+  patterns_to_avoid:
+    - "Don't throw errors on KB write failures - return error result types"
+    - "Don't couple workflow logic to KB implementation details"
+    - "Don't skip Zod validation for config - catches missing dependencies early"
+
+architecture_decisions:
+  active_count: 0
+  relevant_adrs: []
+  constraints:
+    api_paths: "N/A - backend-only adapter"
+    infrastructure: "Uses existing KB service on port 5433"
+    storage: "PostgreSQL with pgvector extension"
+    auth: "N/A - internal adapter"
+    testing: "Unit tests with mocked KB, integration tests with real KB instance"
+
+token_optimization:
+  high_cost_operations:
+    - operation: "Reading full migration script for patterns"
+      typical_tokens: 8000
+      mitigation: "Focus on specific functions (formatLearningContent, generateLearningTags, persistLearnings)"
+
+    - operation: "Reading all KB schema tables"
+      typical_tokens: 12000
+      mitigation: "Only need knowledgeEntries table definition and vector type"
+
+  recommended_patterns:
+    - "Read only the functions being extracted/adapted, not entire files"
+    - "Use Grep to find specific patterns before reading files"
+    - "Batch related file reads in parallel when no dependencies"
+
+reuse_candidates:
+  from_persist_learnings:
+    file: "packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts"
+    functions:
+      - name: "formatLearningContent"
+        lines: "183-188"
+        adaptation: "Generalize to formatLesson(), formatDecision(), etc."
+
+      - name: "generateLearningTags"
+        lines: "193-210"
+        adaptation: "Generalize to generateTags(entryType, ...)"
+
+      - name: "persistLearnings"
+        lines: "219-301"
+        adaptation: "Extract core logic to KbWriterAdapter.addLesson()"
+
+      - name: "createPersistLearningsNode"
+        lines: "333-395"
+        adaptation: "Pattern for createKbWriter() factory"
+
+    patterns:
+      - "Zod schemas for config validation (PersistLearningsConfigSchema)"
+      - "Discriminated union result types (PersistLearningsResult)"
+      - "No-op behavior when kbDeps missing"
+      - "Deduplication with similarity threshold"
+
+  from_migrate_workflow:
+    file: "apps/api/knowledge-base/src/scripts/migrate-workflow-knowledge.ts"
+    patterns:
+      - "kbBulkImport() integration"
+      - "Content hash generation"
+      - "Embedding client usage"
+      - "Dry-run mode for testing"
+
+  from_kb_schema:
+    file: "apps/api/knowledge-base/src/db/schema.ts"
+    patterns:
+      - "knowledgeEntries table structure (lines 81-218)"
+      - "entryType enum: note, decision, constraint, runbook, lesson"
+      - "role enum: pm, dev, qa, all"
+      - "Vector dimension: 1536 for OpenAI text-embedding-3-small"
+      - "IVFFlat index for similarity search"
+
+kb_dependencies:
+  database: "PostgreSQL with pgvector at localhost:5433"
+  table: "knowledgeEntries"
+  vector_dimension: 1536
+  embedding_model: "text-embedding-3-small"
+  similarity_metric: "cosine"
+  index_type: "IVFFlat"
+  dedup_threshold: 0.85
+
+warnings: []

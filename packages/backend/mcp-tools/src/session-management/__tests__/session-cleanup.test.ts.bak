@@ -1,0 +1,281 @@
+/* eslint-disable import/order */
+import { randomUUID } from 'crypto'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+/* eslint-enable import/order */
+
+// Hoist mock functions
+const { mockReturning, mockWhere, mockDelete, mockFrom, mockSelect, mockWarn } = vi.hoisted(
+  () => {
+    const mockReturning = vi.fn().mockResolvedValue([])
+    const mockWhere = vi.fn(() => ({ returning: mockReturning }))
+    const mockDelete = vi.fn(() => ({ where: mockWhere }))
+
+    const mockSelectWhere = vi.fn().mockResolvedValue([{ count: 0 }])
+    const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
+    const mockSelect = vi.fn(() => ({ from: mockFrom }))
+
+    const mockWarn = vi.fn()
+
+    return {
+      mockReturning,
+      mockWhere,
+      mockDelete,
+      mockFrom,
+      mockSelect,
+      mockWarn,
+    }
+  },
+)
+
+vi.mock('@repo/db/client', () => ({
+  db: {
+    select: mockSelect,
+    delete: mockDelete,
+  },
+}))
+
+vi.mock('@repo/logger', () => ({
+  logger: {
+    warn: mockWarn,
+  },
+}))
+
+import { sessionCleanup } from '../session-cleanup'
+import type { SessionCleanupInput } from '../__types__/index'
+
+describe('sessionCleanup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    const mockSelectWhere = vi.fn().mockResolvedValue([{ count: 0 }])
+    const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
+    mockSelect.mockReturnValue({ from: mockFrom })
+
+    mockReturning.mockResolvedValue([])
+    mockWhere.mockReturnValue({ returning: mockReturning })
+    mockDelete.mockReturnValue({ where: mockWhere })
+
+    mockWarn.mockClear()
+  })
+
+  it('should default to dryRun=true (safety mechanism) (AC-5)', async () => {
+    const result = await sessionCleanup({})
+
+    expect(result.dryRun).toBe(true)
+    expect(mockDelete).not.toHaveBeenCalled() // No deletion in dryRun
+    expect(mockSelect).toHaveBeenCalled() // Only count query
+  })
+
+  it('should return count of sessions that would be deleted in dryRun mode (AC-5)', async () => {
+    const mockSelectWhere = vi.fn().mockResolvedValue([{ count: 42 }])
+    const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
+    mockSelect.mockReturnValue({ from: mockFrom })
+
+    const result = await sessionCleanup({
+      retentionDays: 90,
+      dryRun: true,
+    })
+
+    expect(result.deletedCount).toBe(42)
+    expect(result.dryRun).toBe(true)
+    expect(mockDelete).not.toHaveBeenCalled()
+  })
+
+  it('should delete old sessions when dryRun=false (AC-5)', async () => {
+    const oldSessions = [
+      {
+        id: randomUUID(),
+        sessionId: randomUUID(),
+        agentName: 'test-agent',
+        storyId: null,
+        phase: null,
+        inputTokens: 100,
+        outputTokens: 50,
+        cachedTokens: 25,
+        startedAt: new Date('2025-11-01T10:00:00Z'),
+        endedAt: new Date('2025-11-01T11:00:00Z'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: randomUUID(),
+        sessionId: randomUUID(),
+        agentName: 'test-agent-2',
+        storyId: null,
+        phase: null,
+        inputTokens: 200,
+        outputTokens: 100,
+        cachedTokens: 50,
+        startedAt: new Date('2025-10-15T10:00:00Z'),
+        endedAt: new Date('2025-10-15T11:00:00Z'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]
+
+    mockReturning.mockResolvedValue(oldSessions)
+
+    const result = await sessionCleanup({
+      retentionDays: 90,
+      dryRun: false, // Explicit opt-in
+    })
+
+    expect(result.deletedCount).toBe(2)
+    expect(result.dryRun).toBe(false)
+    expect(mockDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('should preserve recent completed sessions (AC-5)', async () => {
+    // Recent completed session (within retention period)
+    mockReturning.mockResolvedValue([]) // No sessions to delete
+
+    const result = await sessionCleanup({
+      retentionDays: 90,
+      dryRun: false,
+    })
+
+    expect(result.deletedCount).toBe(0)
+  })
+
+  it('should preserve active sessions regardless of age (AC-5)', async () => {
+    // Active sessions (endedAt IS NULL) should never be deleted
+    mockReturning.mockResolvedValue([]) // WHERE clause excludes active sessions
+
+    const result = await sessionCleanup({
+      retentionDays: 90,
+      dryRun: false,
+    })
+
+    expect(result.deletedCount).toBe(0)
+  })
+
+  it('should throw validation error for negative retentionDays (AC-6)', async () => {
+    await expect(
+      sessionCleanup({
+        retentionDays: -10,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('should throw validation error for zero retentionDays (AC-6)', async () => {
+    await expect(
+      sessionCleanup({
+        retentionDays: 0,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('should use default retentionDays=90 if not specified', async () => {
+    const result = await sessionCleanup({})
+
+    expect(result.cutoffDate).toBeInstanceOf(Date)
+    expect(result.dryRun).toBe(true)
+  })
+
+  it('should calculate cutoff date correctly', async () => {
+    const before = new Date()
+    const result = await sessionCleanup({
+      retentionDays: 30,
+    })
+    const after = new Date()
+
+    expect(result.cutoffDate).toBeInstanceOf(Date)
+
+    // Cutoff should be approximately 30 days ago
+    const expectedCutoff = new Date()
+    expectedCutoff.setDate(expectedCutoff.getDate() - 30)
+
+    const diffMs = Math.abs(result.cutoffDate.getTime() - expectedCutoff.getTime())
+    const diffMinutes = diffMs / (1000 * 60)
+
+    // Allow 1 minute tolerance for test execution time
+    expect(diffMinutes).toBeLessThan(1)
+  })
+
+  it('should return cutoff date in result', async () => {
+    const result = await sessionCleanup({
+      retentionDays: 60,
+    })
+
+    expect(result.cutoffDate).toBeInstanceOf(Date)
+  })
+
+  it('should catch DB errors and log warning instead of throwing', async () => {
+    const mockSelectWhere = vi.fn().mockRejectedValue(new Error('Database unavailable'))
+    const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
+    mockSelect.mockReturnValue({ from: mockFrom })
+
+    const result = await sessionCleanup({
+      retentionDays: 90,
+    })
+
+    expect(result.deletedCount).toBe(0)
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.stringContaining('[mcp-tools] Failed to cleanup sessions'),
+      expect.stringContaining('Database unavailable'),
+    )
+  })
+
+  it('should handle delete errors gracefully when dryRun=false', async () => {
+    mockReturning.mockRejectedValue(new Error('Delete failed'))
+
+    const result = await sessionCleanup({
+      retentionDays: 90,
+      dryRun: false,
+    })
+
+    expect(result.deletedCount).toBe(0)
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.stringContaining('[mcp-tools] Failed to cleanup sessions'),
+      expect.stringContaining('Delete failed'),
+    )
+  })
+
+  it('should accept different retention periods', async () => {
+    const retentionPeriods = [1, 7, 30, 90, 180, 365]
+
+    for (const retentionDays of retentionPeriods) {
+      vi.clearAllMocks()
+
+      const mockSelectWhere = vi.fn().mockResolvedValue([{ count: 0 }])
+      const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
+      mockSelect.mockReturnValue({ from: mockFrom })
+
+      const result = await sessionCleanup({ retentionDays })
+
+      expect(result.cutoffDate).toBeInstanceOf(Date)
+      expect(mockSelect).toHaveBeenCalled()
+    }
+  })
+
+  it('should log dryRun mode in error messages', async () => {
+    const mockSelectWhere = vi.fn().mockRejectedValue(new Error('Test error'))
+    const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
+    mockSelect.mockReturnValue({ from: mockFrom })
+
+    await sessionCleanup({
+      retentionDays: 90,
+      dryRun: true,
+    })
+
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.stringContaining('dryRun=true'),
+      expect.any(String),
+    )
+
+    vi.clearAllMocks()
+    mockWarn.mockClear()
+
+    mockReturning.mockRejectedValue(new Error('Test error'))
+
+    await sessionCleanup({
+      retentionDays: 90,
+      dryRun: false,
+    })
+
+    expect(mockWarn).toHaveBeenCalledWith(
+      expect.stringContaining('dryRun=false'),
+      expect.any(String),
+    )
+  })
+})

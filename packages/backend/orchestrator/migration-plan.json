@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-02-14T21:29:15.659Z",
+  "epicPath": "test-epic-migration",
+  "totalOperations": 5,
+  "operations": [
+    {
+      "storyId": "TEST-003",
+      "sourcePath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/UAT/TEST-003",
+      "targetPath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/TEST-003",
+      "status": "uat",
+      "sourceLifecycleDir": "UAT",
+      "isDuplicate": false
+    },
+    {
+      "storyId": "TEST-001",
+      "sourcePath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/backlog/TEST-001",
+      "targetPath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/TEST-001",
+      "status": "backlog",
+      "sourceLifecycleDir": "backlog",
+      "isDuplicate": false
+    },
+    {
+      "storyId": "TEST-002",
+      "sourcePath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/in-progress/TEST-002",
+      "targetPath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/TEST-002",
+      "status": "in-progress",
+      "sourceLifecycleDir": "in-progress",
+      "isDuplicate": false
+    },
+    {
+      "storyId": "TEST-004",
+      "sourcePath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/in-progress/TEST-004",
+      "targetPath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/TEST-004",
+      "status": "in-progress",
+      "sourceLifecycleDir": "in-progress",
+      "isDuplicate": true
+    },
+    {
+      "storyId": "TEST-005",
+      "sourcePath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/ready-for-qa/TEST-005",
+      "targetPath": "/Users/michaelmenard/Development/monorepo/plans/future/test-epic-migration/TEST-005",
+      "status": "ready-for-qa",
+      "sourceLifecycleDir": "ready-for-qa",
+      "isDuplicate": false
+    }
+  ],
+  "collisions": [],
+  "canExecute": true
+}

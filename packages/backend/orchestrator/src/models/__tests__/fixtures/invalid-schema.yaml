@@ -1,0 +1,40 @@
+strategy_version: "1.0.0"
+effective_date: "2026-02-14"
+
+# Missing required tiers array (only has 2 tiers, needs 4)
+tiers:
+  - tier: 0
+    name: "Tier 0"
+    description: "Test"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+      fallback: []
+    use_cases:
+      - "Test"
+    quality_expectations: "High"
+    latency_tolerance: "medium"
+
+  - tier: 1
+    name: "Tier 1"
+    description: "Test"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+      fallback: []
+    use_cases:
+      - "Test"
+    quality_expectations: "Good"
+    latency_tolerance: "low"
+
+task_types: []
+
+escalation_triggers:
+  quality: []
+  cost: []
+  failure: []
+  human: []

@@ -29,6 +29,7 @@ import {
   type ListMocsQuery,
   type MocListResponse,
   type GetMocDetailResponse,
+  type UploadThumbnailResponse,
   type GetFileDownloadUrlResponse,
   type CreateUploadSessionRequest,
   type CreateUploadSessionResponse,
@@ -340,7 +341,10 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
        *
        * Story INST-1008: Upload thumbnail mutation
        */
-      uploadThumbnail: builder.mutation<{ thumbnailUrl: string }, { mocId: string; file: File }>({
+      uploadThumbnail: builder.mutation<
+        UploadThumbnailResponse,
+        { mocId: string; file: File }
+      >({
         query: ({ mocId, file }) => {
           logger.debug('Uploading thumbnail', undefined, {
             mocId,
@@ -357,7 +361,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
             body: formData,
           }
         },
-        transformResponse: (response: unknown) => {
+        transformResponse: (response: unknown): UploadThumbnailResponse => {
           const validated = UploadThumbnailResponseSchema.parse(response)
           logger.info('Thumbnail uploaded', undefined, {
             thumbnailUrl: validated.thumbnailUrl,
@@ -430,8 +434,8 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
         query: ({ mocId, request }) => {
           logger.debug('Creating upload session for presigned upload', undefined, {
             mocId,
-            filename: request.filename,
-            fileSize: request.fileSize,
+            filesCount: request.files.length,
+            partSizeBytes: request.partSizeBytes,
           })
           return {
             url: buildEndpoint(SERVERLESS_ENDPOINTS.MOC.CREATE_UPLOAD_SESSION, { id: mocId }),
@@ -475,7 +479,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
         transformResponse: (response: unknown) => {
           const validated = CompleteUploadSessionResponseSchema.parse(response)
           logger.info('Upload session completed', undefined, {
-            fileId: validated.id,
+            filesCount: validated.files.length,
             mocId: validated.mocId,
           })
           return validated

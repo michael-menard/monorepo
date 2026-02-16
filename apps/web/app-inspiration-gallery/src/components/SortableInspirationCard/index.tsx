@@ -139,9 +139,9 @@ export const SortableInspirationCard = forwardRef<HTMLDivElement, SortableInspir
         ) : null}
 
         {/* Hidden instructions for screen readers */}
+        {/* Hidden instructions for screen readers */}
         <span id={`sortable-instructions-${id}`} className="sr-only">
-          Press Space to start dragging. Use arrow keys to move. Press Space again to drop, or
-          Escape to cancel.
+          Drag to reorder. Use arrow keys to navigate between items.
         </span>
 
         {/* The actual card - offset to make room for drag handle */}

@@ -21,6 +21,7 @@ import {
   wishlistItems,
   mocPartsLists,
   mocParts,
+  workflowEvents,
 } from './schema'
 
 // =============================================================================
@@ -285,6 +286,15 @@ export const updateMocPartSchema = z.object({
     .optional(),
   color: z.string().min(1, 'Color is required').max(100, 'Color name too long').optional(),
 })
+
+// =============================================================================
+// WORKFLOW EVENT SCHEMAS (INFR-0040)
+// =============================================================================
+
+export const workflowEventSchemas = {
+  select: createSelectSchema(workflowEvents),
+  insert: createInsertSchema(workflowEvents),
+}
 
 // =============================================================================
 // UTILITY SCHEMAS

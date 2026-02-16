@@ -1,0 +1,219 @@
+schema: 1
+story_id: "BUGF-019"
+timestamp: "2026-02-14T13:24:30Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit:
+    pass: 172
+    fail: 0
+  integration:
+    pass: 0
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+
+coverage: 85
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: |
+    - Tests use vi.useFakeTimers() for countdown timer verification
+    - MSW handlers not required (Auth operations mocked at SDK level)
+    - Comprehensive coverage: 39 tests for ForgotPasswordPage, 48 for ResetPasswordPage
+    - Component-level tests: 12 PasswordStrengthIndicator, 42 RateLimitBanner, 31 useRateLimitCooldown
+    - All tests use semantic queries (getByRole, getByLabelText) per ADR-005
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification_method: "Code inspection + test execution"
+    findings: |
+      VERIFIED:
+      - useRateLimitCooldown hook integrated in ForgotPasswordPage (lines 60-65)
+      - Exponential backoff calculation verified: 60s → 120s → 240s → 480s → 600s
+      - Submit button shows 'Wait {formattedTime}' during cooldown (line 313)
+      - Button disabled with aria-disabled="true" (line 313)
+      - SessionStorage keys follow convention: auth:forgotPassword:attempts, auth:forgotPassword:cooldownUntil
+      - Countdown updates every second via useEffect in hook (useRateLimitCooldown.ts lines 112-128)
+      - Tests verify button disabled, countdown display, RateLimitBanner visibility (39 tests pass)
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification_method: "Code inspection + build verification"
+    findings: |
+      VERIFIED:
+      - RateLimitBanner moved to packages/core/app-component-library/src/feedback/RateLimitBanner/
+      - Zod props schema with enhanced message and title optional props (__types__/index.ts)
+      - Exported from app-component-library barrel (src/index.ts lines 121-122)
+      - Upload package re-exports from @repo/app-component-library (backward compatible)
+      - Upload package builds successfully with re-export
+      - Integrated into ForgotPasswordPage and ResetPasswordPage
+      - 42 tests ported and passing
+      - Accessibility features present: role="timer", aria-live="polite", motion-reduce:transition-none
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification_method: "Code inspection + test execution"
+    findings: |
+      VERIFIED:
+      - ResetPasswordPage uses separate useRateLimitCooldown for resend code (lines 99-109)
+      - Exponential backoff applied with storageKeyPrefix: 'auth:resendCode'
+      - Button shows 'Wait {formattedTime}' during cooldown
+      - Button disabled with aria-disabled during cooldown
+      - Independent cooldown states for submit vs resend (verified in tests)
+      - Tests verify resend button disabled during cooldown, countdown display
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification_method: "Code inspection + component comparison"
+    findings: |
+      VERIFIED:
+      - getPasswordStrength() utility extracted to utils/getPasswordStrength.ts
+      - Zod schema created for props in __types__/index.ts
+      - PasswordStrengthIndicator component in packages/core/app-component-library/src/forms/PasswordStrengthIndicator/
+      - Exported from app-component-library barrel (src/index.ts lines 486-487)
+      - ResetPasswordPage imports from @repo/app-component-library (line 20)
+      - Inline implementation removed from ResetPasswordPage
+      - 5-bar color-coded display matches original: red, orange, yellow, lime, green
+      - Strength calculation verified: 0-4 score based on length, mixed case, numbers, special chars
+      - 12 tests pass covering all strength levels
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification_method: "Code inspection for ARIA attributes"
+    findings: |
+      VERIFIED:
+      - ForgotPasswordPage: role="timer" aria-live="polite" (line 346), aria-disabled on button (line 313)
+      - ResetPasswordPage: role="timer" aria-live="polite" (line 611), aria-disabled on both buttons (line 577)
+      - RateLimitBanner: role="timer" aria-live="polite" (line 133), motion-reduce:transition-none on progress bar (line 116)
+      - Screen reader announcements show rounded minutes remaining (verified in code)
+      - Prefers-reduced-motion support implemented (motion-reduce:transition-none class)
+      - Visual countdown continues to function normally (independent of reduced motion)
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verification_method: "Code inspection + security review"
+    findings: |
+      VERIFIED:
+      - ForgotPasswordPage: Generic message "Too many attempts. Please wait before trying again." (line 102)
+      - ForgotPasswordPage: UserNotFoundException shows success message (lines 89, 123-132) - prevents account enumeration
+      - ResetPasswordPage: Generic error messages, no email-specific or account-specific messages
+      - Tests verify UserNotFoundException shows success (ForgotPasswordPage.test.tsx)
+      - No prohibited messages found (no account existence disclosure)
+      - Follows AC-6 approved messages pattern
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verification_method: "Test execution + coverage analysis"
+    findings: |
+      VERIFIED:
+      - ForgotPasswordPage: 39 tests pass (rendering, validation, success, security, error handling, rate limiting, accessibility, navigation)
+      - ResetPasswordPage: 48 tests pass (rendering, validation, password strength, success, error handling, resend code, rate limiting, accessibility)
+      - PasswordStrengthIndicator: 12 tests pass
+      - RateLimitBanner: 42 tests pass
+      - useRateLimitCooldown: 31 tests pass
+      - Total: 172 tests across all affected components
+      - Tests use vi.useFakeTimers() for countdown timer verification
+      - SessionStorage state tracking tested
+      - Exponential backoff calculation tested (3rd attempt = 240 seconds verified)
+      - Button disable states tested with ARIA attributes
+      - RateLimitBanner visibility tested
+      - Password strength consolidation tested (identical behavior)
+      - Accessibility ARIA attributes tested
+      - Prefers-reduced-motion support tested
+      - Coverage exceeds 80% threshold for new components
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verification_method: "Documentation review"
+    findings: |
+      VERIFIED:
+      - docs/guides/password-reset-rate-limiting.md updated (lines 24-31)
+      - References BUGF-019 implementation with actual file paths
+      - Lists all key components: useRateLimitCooldown, RateLimitBanner, PasswordStrengthIndicator, ForgotPasswordPage, ResetPasswordPage
+      - Implementation status marked as "Implemented in BUGF-019"
+
+architecture_compliant: true
+architecture_notes: |
+  ADR-004 COMPLIANT:
+  - Password reset operations go directly to Cognito (no backend API) - VERIFIED
+  - Frontend estimates cooldown using exponential backoff (no Retry-After header from Cognito) - VERIFIED
+  - Client-side cooldown is UX feedback, not security enforcement - VERIFIED (Cognito enforces server-side)
+
+  ADR-005 COMPLIANT:
+  - Unit tests only (E2E deferred to BUGF-030) - VERIFIED
+  - Tests use semantic queries (getByRole, getByLabelText) - VERIFIED
+  - Coverage meets 45% threshold (85% for affected components) - VERIFIED
+
+  CLAUDE.md COMPLIANCE:
+  - Zod schemas used for all component props - VERIFIED
+  - Barrel exports from @repo/app-component-library - VERIFIED
+  - Component directory structure followed - VERIFIED
+  - Known deviation: useRateLimitCooldown uses TypeScript interfaces for internal types (documented in EVIDENCE.yaml)
+
+issues: []
+
+lessons_to_record:
+  - lesson: "useRateLimitCooldown hook provides excellent DRY pattern for rate limiting across multiple operations"
+    category: reuse
+    tags: ["auth", "rate-limiting", "hooks"]
+
+  - lesson: "Exponential backoff with sessionStorage persistence provides good UX during Cognito rate limits despite no Retry-After header"
+    category: pattern
+    tags: ["cognito", "rate-limiting", "ux"]
+
+  - lesson: "Moving RateLimitBanner to app-component-library with backward-compatible re-export in upload package avoids breaking changes"
+    category: pattern
+    tags: ["refactoring", "backward-compatibility"]
+
+  - lesson: "Separate cooldown states for submit vs resend operations in same page prevents UX confusion"
+    category: pattern
+    tags: ["rate-limiting", "ux"]
+
+  - lesson: "TypeScript interfaces acceptable for hook internal types when not used as validation schemas"
+    category: blocker
+    tags: ["typescript", "zod", "claude-md"]
+
+independent_verification_notes: |
+  VERIFICATION APPROACH:
+  1. Read story file for AC definitions - COMPLETED
+  2. Read EVIDENCE.yaml for claimed evidence - COMPLETED
+  3. Independently verified each claim by:
+     - Reading actual code files (ForgotPasswordPage, ResetPasswordPage, useRateLimitCooldown, RateLimitBanner, PasswordStrengthIndicator)
+     - Running tests: 87 tests passed for main-app auth pages, 85 tests passed for app-component-library components
+     - Verified builds: app-component-library and upload packages build successfully
+     - Checked ARIA attributes with grep: role="timer", aria-live="polite", aria-disabled, motion-reduce all present
+     - Verified exponential backoff calculation: 60s → 120s → 240s → 480s → 600s (tested with Node)
+     - Checked account enumeration prevention: UserNotFoundException shows success message
+     - Verified documentation updated with BUGF-019 references
+  4. Did NOT trust EVIDENCE.yaml at face value - independently verified all claims
+  5. All 8 acceptance criteria independently verified and pass
+
+  QUALITY GATES:
+  - TypeScript compilation: PASS (pre-existing errors in unrelated files only)
+  - ESLint: PASS (8 lint errors found and fixed in iteration 1 per REVIEW.yaml)
+  - Tests: PASS (172 tests passing, 0 failing)
+  - Coverage: PASS (85% for affected components, exceeds 45% threshold)
+  - Architecture compliance: PASS (ADR-004, ADR-005, CLAUDE.md)
+  - Account enumeration prevention: PASS (generic messages, UserNotFoundException shows success)
+
+tokens:
+  in: 64243
+  out: 2150

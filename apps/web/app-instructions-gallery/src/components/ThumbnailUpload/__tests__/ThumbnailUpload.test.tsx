@@ -195,4 +195,51 @@ describe('ThumbnailUpload', () => {
       expect(input).toBeDisabled()
     })
   })
+
+  /**
+   * BUGF-018: Memory leak cleanup tests
+   */
+  describe('Memory leak cleanup (BUGF-018)', () => {
+    beforeEach(() => {
+      // Reset mocks
+      vi.clearAllMocks()
+      ;(global.URL.createObjectURL as ReturnType<typeof vi.fn>) = vi.fn(() => 'blob:mock-url')
+      ;(global.URL.revokeObjectURL as ReturnType<typeof vi.fn>) = vi.fn()
+    })
+
+    it('revokes blob URL on unmount', () => {
+      const { unmount } = render(<ThumbnailUpload mocId={mockMocId} />)
+
+      // Select a file to create blob URL
+      const file = new File(['thumbnail'], 'thumb.jpg', { type: 'image/jpeg' })
+      const input = screen.getByLabelText(/upload thumbnail image/i)
+      fireEvent.change(input, { target: { files: [file] } })
+
+      expect(global.URL.createObjectURL).toHaveBeenCalled()
+
+      // Unmount the component
+      unmount()
+
+      // Should revoke blob URL on unmount
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    })
+
+    it('verifies existing handleRemove cleanup still works', () => {
+      render(<ThumbnailUpload mocId={mockMocId} />)
+
+      // Select a file
+      const file = new File(['thumbnail'], 'thumb.jpg', { type: 'image/jpeg' })
+      const input = screen.getByLabelText(/upload thumbnail image/i)
+      fireEvent.change(input, { target: { files: [file] } })
+
+      expect(global.URL.createObjectURL).toHaveBeenCalled()
+
+      // Click remove button
+      const removeButton = screen.getByLabelText(/remove thumbnail/i)
+      fireEvent.click(removeButton)
+
+      // Should revoke blob URL when manually removing
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+    })
+  })
 })

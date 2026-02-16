@@ -3,6 +3,8 @@
  *
  * Provides configured S3 client for image and file uploads in Lambda functions.
  * Optimized for serverless with connection reuse across Lambda invocations.
+ *
+ * Supports both AWS S3 (production) and MinIO (local development).
  */
 
 import {
@@ -13,23 +15,88 @@ import {
   UploadPartCommand,
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
 } from '@aws-sdk/client-s3'
+import { loadS3Config, isLocalMode } from './config'
 
 let _s3Client: S3Client | null = null
 
 /**
  * Get or create S3 client instance
- * - Client is reused across Lambda invocations
- * - Uses default AWS credentials from Lambda execution role
+ *
+ * Environment Detection:
+ * - Local development (NODE_ENV=development + S3_ENDPOINT): Uses MinIO with forcePathStyle
+ * - Production: Uses AWS S3 with standard configuration
+ *
+ * Client is reused across Lambda invocations for performance.
+ *
+ * @param region - AWS region (optional, overrides environment)
+ * @returns Configured S3Client instance
  */
 export function getS3Client(region?: string): S3Client {
   if (!_s3Client) {
-    _s3Client = new S3Client({
-      region: region || process.env.AWS_REGION || 'us-east-1',
-    })
+    const config = loadS3Config()
+
+    // Build S3Client configuration
+    const clientConfig: any = {
+      region: region || config.region,
+    }
+
+    // Add endpoint and forcePathStyle for MinIO
+    if (config.endpoint) {
+      clientConfig.endpoint = config.endpoint
+      clientConfig.forcePathStyle = config.forcePathStyle
+    }
+
+    // Add credentials if provided (required for MinIO)
+    if (config.accessKeyId && config.secretAccessKey) {
+      clientConfig.credentials = {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      }
+    }
+
+    _s3Client = new S3Client(clientConfig)
   }
 
   return _s3Client
+}
+
+/**
+ * Initialize S3 bucket (create if it doesn't exist)
+ *
+ * This function is idempotent - it succeeds if the bucket already exists.
+ * Useful for local development with MinIO or testing environments.
+ *
+ * @param bucketName - Name of the bucket to create
+ * @throws Error if bucket creation fails (except for "already exists")
+ */
+export async function initializeBucket(bucketName: string): Promise<void> {
+  const s3 = getS3Client()
+
+  try {
+    // Check if bucket exists
+    await s3.send(new HeadBucketCommand({ Bucket: bucketName }))
+    // Bucket exists, nothing to do
+  } catch (error: any) {
+    // Bucket doesn't exist, create it
+    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      try {
+        await s3.send(new CreateBucketCommand({ Bucket: bucketName }))
+      } catch (createError: any) {
+        // Handle race condition: bucket was created between check and create
+        if (
+          createError.name !== 'BucketAlreadyOwnedByYou' &&
+          createError.name !== 'BucketAlreadyExists'
+        ) {
+          throw new Error(`Failed to create bucket ${bucketName}: ${createError.message}`)
+        }
+      }
+    } else {
+      throw new Error(`Failed to check bucket ${bucketName}: ${error.message}`)
+    }
+  }
 }
 
 /**
@@ -44,18 +111,23 @@ export async function uploadToS3(params: {
 }): Promise<string> {
   const s3 = getS3Client()
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: params.bucket,
-      Key: params.key,
-      Body: params.body,
-      ContentType: params.contentType,
-      ServerSideEncryption: (params.serverSideEncryption || 'AES256') as 'AES256',
-    }),
-  )
+  // Build command parameters
+  const commandParams: any = {
+    Bucket: params.bucket,
+    Key: params.key,
+    Body: params.body,
+    ContentType: params.contentType,
+  }
 
-  // Return S3 URL
-  return `https://${params.bucket}.s3.amazonaws.com/${params.key}`
+  // Only add server-side encryption for AWS S3 (not MinIO)
+  if (!isLocalMode()) {
+    commandParams.ServerSideEncryption = (params.serverSideEncryption || 'AES256') as 'AES256'
+  }
+
+  await s3.send(new PutObjectCommand(commandParams))
+
+  // Return URL (MinIO-aware)
+  return getObjectUrl(params.bucket, params.key)
 }
 
 /**
@@ -90,15 +162,20 @@ export async function uploadToS3Multipart(params: {
   let uploadId: string | undefined
 
   try {
+    // Build create multipart upload parameters
+    const createParams: any = {
+      Bucket: params.bucket,
+      Key: params.key,
+      ContentType: params.contentType,
+    }
+
+    // Only add server-side encryption for AWS S3 (not MinIO)
+    if (!isLocalMode()) {
+      createParams.ServerSideEncryption = (params.serverSideEncryption || 'AES256') as 'AES256'
+    }
+
     // Initiate multipart upload
-    const createResponse = await s3.send(
-      new CreateMultipartUploadCommand({
-        Bucket: params.bucket,
-        Key: params.key,
-        ContentType: params.contentType,
-        ServerSideEncryption: (params.serverSideEncryption || 'AES256') as 'AES256',
-      }),
-    )
+    const createResponse = await s3.send(new CreateMultipartUploadCommand(createParams))
 
     uploadId = createResponse.UploadId
 
@@ -145,8 +222,8 @@ export async function uploadToS3Multipart(params: {
       }),
     )
 
-    // Return S3 URL
-    return `https://${params.bucket}.s3.amazonaws.com/${params.key}`
+    // Return URL (MinIO-aware)
+    return getObjectUrl(params.bucket, params.key)
   } catch (error) {
     // Abort multipart upload on error
     if (uploadId) {
@@ -159,9 +236,27 @@ export async function uploadToS3Multipart(params: {
           }),
         )
       } catch (abortError) {
-        console.error('Failed to abort multipart upload:', abortError)
+        // Silently ignore abort errors - original error is more important
       }
     }
     throw error
+  }
+}
+
+/**
+ * Get object URL for S3 or MinIO
+ *
+ * @param bucket - Bucket name
+ * @param key - Object key
+ * @returns URL to access the object
+ */
+function getObjectUrl(bucket: string, key: string): string {
+  if (isLocalMode()) {
+    // MinIO path-style URL
+    const endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000'
+    return `${endpoint}/${bucket}/${key}`
+  } else {
+    // AWS S3 virtual-hosted style URL
+    return `https://${bucket}.s3.amazonaws.com/${key}`
   }
 }

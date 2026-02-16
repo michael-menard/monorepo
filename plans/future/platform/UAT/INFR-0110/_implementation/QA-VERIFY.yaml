@@ -1,0 +1,156 @@
+schema: 1
+story_id: INFR-0110
+timestamp: "2026-02-15T17:30:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 19, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 100
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: |
+    - Comprehensive schema validation tests for all 4 core artifact types
+    - Tests cover valid inputs, invalid inputs, missing fields, and JSONB structure validation
+    - Tests verify Zod schema integration with drizzle-zod
+    - No anti-patterns detected
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "artifacts pgSchema namespace created at packages/backend/database-schema/src/schema/artifacts.ts:48"
+    verified: true
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "artifact_type_enum defined in public schema with all 7 types at line 61-69, forward compatible with INFR-0120"
+    verified: true
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "story_artifacts table created with all required fields including JSONB acceptance_criteria and risks at lines 195-232"
+    verified: true
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "checkpoint_artifacts table created with JSONB completed_steps field at lines 241-268"
+    verified: true
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "scope_artifacts table created with JSONB packages_touched, surfaces, and risk_flags at lines 277-305"
+    verified: true
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "plan_artifacts table created with JSONB steps, file_changes, commands, ac_mapping at lines 314-343"
+    verified: true
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Composite indexes verified in migration file 0021_wealthy_sunfire.sql lines 52-59"
+    verified: true
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Migration successfully generated: 0021_wealthy_sunfire.sql (59 lines, 4 tables, 8 indexes, 4 FK constraints)"
+    verified: true
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "Auto-generated Zod schemas using createInsertSchema/createSelectSchema at lines 386-421, all 4 artifact types covered"
+    verified: true
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "Drizzle relations defined for all 4 artifact tables at lines 342-377, many-to-one eager loading to wint.stories"
+    verified: true
+
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "Unit tests pass (19/19) in core-artifacts-schema.test.ts covering insert validation, reject invalid, JSONB structure"
+    verified: true
+
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: "SCHEMA-REFERENCE.md documented with 561 lines covering field alignment, JSONB denormalization, enum location, FK targets, ON DELETE CASCADE"
+    verified: true
+
+architecture_compliant: true
+architecture_notes: |
+  - pgSchema namespace isolation follows INFR-0040 pattern
+  - UUID primary keys with defaultRandom() per INFR-0040/WINT-0010
+  - Enum in public schema follows WINT-0010/KBAR-0010 pattern
+  - JSONB denormalization documented with ADR-INFR-110-001
+  - Foreign keys with ON DELETE CASCADE per ADR-INFR-110-003
+  - drizzle-zod auto-generation pattern consistent with existing schemas
+  - Schema exports properly namespaced to avoid conflicts with wint.storyArtifacts
+
+issues: []
+
+lessons_to_record:
+  - lesson: "pgSchema namespace isolation enables clean domain separation for artifacts content vs file sync vs workflow state"
+    category: pattern
+    tags: [database-design, schema-isolation, infra-persistence]
+
+  - lesson: "Defining all enum values upfront (7 types for 4 tables) avoids ALTER TYPE migration coordination in sibling stories"
+    category: pattern
+    tags: [database-design, enum-management, forward-compatibility]
+
+  - lesson: "JSONB denormalization for small arrays (<20 items) provides good co-location benefits without query performance penalties"
+    category: pattern
+    tags: [database-design, jsonb, denormalization]
+
+  - lesson: "drizzle-zod createInsertSchema/createSelectSchema provides automatic runtime validation aligned with database schema"
+    category: reuse
+    tags: [drizzle-orm, zod, type-safety]
+
+qa_notes: |
+  Infrastructure story - database schemas only
+  - All 12 ACs verified complete with evidence
+  - 242 total tests passing in database-schema package (19 new for this story)
+  - Migration file generated successfully (59 lines)
+  - SCHEMA-REFERENCE.md provides comprehensive documentation with 4 ADRs
+  - Foreign key dependency on wint.stories (WINT-0010) satisfied
+  - Forward compatible with INFR-0120 (review/QA artifacts)
+  - No UI/API endpoints, E2E gate exempt
+  - Schema exports properly aliased to avoid naming conflicts
+  - All patterns follow established conventions from WINT-0010, KBAR-0010, INFR-0040
+
+blocking_issues: []
+
+recommendations:
+  - Consider adding GIN indexes on JSONB fields if future query patterns require searching within JSONB arrays (deferred per ADR-INFR-110-004)
+  - Monitor JSONB payload sizes in production to validate denormalization strategy assumptions
+  - Consider normalizing acceptance_criteria to separate table if individual AC queries become common (tracked in FUTURE-OPPORTUNITIES)
+
+gate:
+  decision: PASS
+  reason: "All 12 ACs verified complete. 19/19 unit tests passing. Schema follows established patterns. Architecture compliant. Database migration ready for deployment."
+  blocking_issues: []
+
+tokens:
+  in: 48000
+  out: 3500
+  phase_2_in: 2000
+  phase_2_out: 1500

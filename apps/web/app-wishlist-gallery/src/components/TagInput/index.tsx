@@ -7,7 +7,7 @@
  * Story wish-2002: Add Item Flow
  */
 
-import { useState, useCallback, type KeyboardEvent, type ChangeEvent } from 'react'
+import { useState, useCallback, useId, type KeyboardEvent, type ChangeEvent } from 'react'
 import { X } from 'lucide-react'
 import { Badge, Input, cn } from '@repo/app-component-library'
 
@@ -55,6 +55,8 @@ export function TagInput({
   id,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
+  const instructionsId = useId()
+  const hintId = id ? `${id}-hint` : useId()
 
   const addTag = useCallback(
     (tag: string) => {
@@ -147,6 +149,11 @@ export function TagInput({
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
+      {/* Hidden instructions for screen readers */}
+      <span id={instructionsId} className="sr-only">
+        Press Enter or comma to add tag. Press Backspace with empty input to remove last tag.
+      </span>
+
       {/* Tags display */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5" role="list" aria-label="Selected tags">
@@ -183,11 +190,11 @@ export function TagInput({
         placeholder={value.length >= MAX_TAGS ? 'Max tags reached' : placeholder}
         disabled={disabled || value.length >= MAX_TAGS}
         className="h-9"
-        aria-describedby={`${id}-hint`}
+        aria-describedby={`${instructionsId} ${hintId}`}
       />
 
       {/* Hint text */}
-      <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+      <p id={hintId} className="text-xs text-muted-foreground">
         Press Enter or comma to add. {MAX_TAGS - value.length} tags remaining.
       </p>
     </div>

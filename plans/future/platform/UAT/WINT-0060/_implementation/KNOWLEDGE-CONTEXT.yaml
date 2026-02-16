@@ -1,0 +1,124 @@
+schema: 1
+story_id: "WINT-0060"
+timestamp: "2026-02-14T20:50:00Z"
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 5
+    relevant_to_scope:
+      - story_id: "WINT-0010"
+        lesson: "Write tests alongside implementation, not after - the 141-test fix phase could have been avoided by writing tests immediately"
+        category: pattern
+        applies_because: "AC-010 requires comprehensive unit tests - should write them alongside schema enhancements"
+
+      - story_id: "WINT-0010"
+        lesson: "Pure schema stories are efficient - schema-only stories with no I/O operations complete faster"
+        category: reuse
+        applies_because: "WINT-0060 is a pure database schema enhancement story like WINT-0010"
+
+      - story_id: "WINT-0010"
+        lesson: "Use drizzle-zod createInsertSchema/createSelectSchema for auto-generation"
+        category: pattern
+        applies_because: "AC-008 requires Zod schema generation using same pattern as WINT-0010"
+
+      - story_id: "WINT-0010"
+        lesson: "For composite indexes, order columns from most selective to least selective (highest cardinality first)"
+        category: pattern
+        applies_because: "AC-007 requires composite indexes with proper column ordering"
+
+      - story_id: "WINT-0010"
+        lesson: "Self-referencing foreign keys require forward references pattern in Drizzle ORM"
+        category: pattern
+        applies_because: "AC-004 requires self-referencing FKs in featureRelationships table"
+
+    blockers_to_avoid:
+      - "Deferring unit tests until after implementation causes large fix phases"
+      - "Incorrect composite index column ordering reduces query performance"
+      - "Forward reference syntax errors in self-referencing foreign keys"
+      - "Missing Zod schemas in index.ts exports"
+
+    patterns_to_follow:
+      - "UUID primary keys with created_at/updated_at timestamps on all tables (established in WINT-0010)"
+      - "Write tests alongside each schema enhancement for immediate validation"
+      - "Use forward references () => tableName.column for self-referencing FKs"
+      - "Composite indexes ordered high cardinality → low cardinality"
+      - "Export both Drizzle tables AND Zod schemas in index.ts"
+      - "Use JSONB.$type<T>() for typed JSONB fields"
+      - "Define relations in separate *Relations objects using relations() API"
+      - "JSDoc comments on all table definitions"
+
+    patterns_to_avoid:
+      - "Creating manual SQL migrations instead of using drizzle-kit generate"
+      - "Single-column indexes that duplicate composite index coverage"
+      - "Omitting strength validation constraints in Zod schemas"
+
+  architecture_decisions:
+    active_count: 1
+    relevant_decisions:
+      - decision_id: "WINT-0060-AC-013"
+        title: "Use single conditions JSONB field for cohesionRules"
+        context: "AC-005 originally described three separate JSONB fields, but existing stub uses single conditions field with nested structure"
+        decision: "Use single conditions JSONB field with nested structure: { featurePatterns?: string[], packagePatterns?: string[], relationshipTypes?: string[] }"
+        rationale: "Simpler schema evolution, fewer columns, consistency with existing stub implementation"
+        decided_by: "elab-autonomous-decider"
+        story_id: "WINT-0060"
+
+    constraints:
+      api_paths: "N/A - database schema only"
+      infrastructure: "N/A - uses existing Aurora PostgreSQL"
+      storage: "N/A - database only"
+      auth: "N/A - no authentication in schema layer"
+      testing: "Unit tests required for schema structure validation per AC-010, minimum 80% coverage (target 100%)"
+
+  existing_implementation:
+    current_state:
+      - file: "packages/backend/database-schema/src/schema/wint.ts"
+        lines: "935-1108"
+        status: "Stub tables exist for all 4 graph tables"
+        description: "Features, capabilities, featureRelationships, cohesionRules tables defined as stubs with partial implementation"
+
+      - file: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+        status: "Exists for WINT-0010 schema groups"
+        description: "Comprehensive test pattern established, 100% coverage achieved on WINT-0010 schemas"
+
+    reuse_opportunities:
+      - "Follow exact test structure pattern from wint-schema.test.ts for graph schema tests"
+      - "Reuse Zod schema generation pattern from WINT-0010 (createInsertSchema, createSelectSchema)"
+      - "Follow composite index pattern from existing WINT tables"
+      - "Follow self-referencing FK pattern from storyDependencies table if similar pattern exists"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file"
+        typical_tokens: 3000
+        mitigation: "Already read AC section only - optimization applied"
+
+      - operation: "Re-reading WINT-0010 implementation artifacts"
+        typical_tokens: 5000
+        mitigation: "Knowledge context already extracted - skip re-reading"
+
+    recommended_patterns:
+      - "Focus implementation on lines 935-1108 in wint.ts (existing stubs)"
+      - "Create separate test file wint-graph-schema.test.ts to isolate graph tests"
+      - "Generate migration at end using drizzle-kit (automated, minimal token cost)"
+
+  dependencies:
+    satisfied:
+      - story_id: "WINT-0010"
+        provides: "Foundational WINT schema namespace, test patterns, export patterns"
+        status: "completed"
+
+    blocks_future:
+      - story_id: "WINT-0130"
+        reason: "Graph query API endpoints need production-ready schema tables"
+
+      - story_id: "WINT-4030"
+        reason: "Bulk import/export needs complete schema structure"
+
+  warnings:
+    - "Strength field validation (0-100) must be enforced in Zod schema with custom refinement"
+    - "Self-referencing FKs in featureRelationships require forward reference syntax: () => features.id"
+    - "Composite indexes must follow high→low cardinality ordering"
+    - "AC-013 resolves cohesionRules schema design - use single conditions field per decision"

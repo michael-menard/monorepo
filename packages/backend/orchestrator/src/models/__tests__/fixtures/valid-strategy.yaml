@@ -1,0 +1,112 @@
+strategy_version: "1.0.0-test"
+effective_date: "2026-02-14"
+review_date: "2026-03-14"
+
+tiers:
+  - tier: 0
+    name: "Critical Decision"
+    description: "High-stakes decisions"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-opus-4.6
+          cost_per_1m_tokens: 15.00
+      fallback:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+    use_cases:
+      - "Epic-level planning"
+      - "Critical decisions"
+    quality_expectations: "Highest quality"
+    latency_tolerance: "high"
+
+  - tier: 1
+    name: "Complex Reasoning"
+    description: "Gap analysis, synthesis"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - "PM gap analysis"
+      - "Code review"
+    quality_expectations: "High quality"
+    latency_tolerance: "medium"
+
+  - tier: 2
+    name: "Routine Work"
+    description: "Code generation"
+    models:
+      primary:
+        - provider: ollama
+          model: deepseek-coder-v2:16b
+          cost_per_1m_tokens: 0.00
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - "Single-file code gen"
+    quality_expectations: "Good quality"
+    latency_tolerance: "low"
+
+  - tier: 3
+    name: "Simple Tasks"
+    description: "Lint, formatting"
+    models:
+      primary:
+        - provider: ollama
+          model: qwen2.5-coder:7b
+          cost_per_1m_tokens: 0.00
+      fallback:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+    use_cases:
+      - "Lint validation"
+    quality_expectations: "Adequate"
+    latency_tolerance: "very low"
+
+task_types:
+  - type: "setup_validation"
+    description: "Pre-flight checks"
+    recommended_tier: 3
+    rationale: "Deterministic checks"
+    examples:
+      - "elab-setup-leader"
+
+  - type: "gap_analysis"
+    description: "Identify missing requirements"
+    recommended_tier: 1
+    rationale: "Requires empathy and reasoning"
+    examples:
+      - "story-fanout-pm"
+
+escalation_triggers:
+  quality:
+    - trigger: "gate_failure"
+      description: "QA gate fails"
+      action: "Escalate from Tier 3 → 2 → 1 → 0 until pass"
+      max_retries: 3
+
+  cost:
+    - trigger: "budget_warning"
+      description: "80% budget consumed"
+      action: "De-escalate Tier 1 → Tier 2"
+
+  failure:
+    - trigger: "retry_exhaustion"
+      description: "3 failures at current tier"
+      action: "Escalate to Tier 0"
+      max_retries: 3
+
+  human:
+    - trigger: "confidence_too_low"
+      description: "Confidence <50%"
+      action: "Pause workflow"

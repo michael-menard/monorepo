@@ -1,0 +1,73 @@
+strategy_version: "1.0.0-circular"
+effective_date: "2026-02-14"
+
+tiers:
+  - tier: 0
+    name: "Tier 0"
+    description: "Test"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-opus-4.6
+          cost_per_1m_tokens: 15.00
+      fallback: []
+    use_cases:
+      - "Test"
+    quality_expectations: "Highest"
+    latency_tolerance: "high"
+
+  - tier: 1
+    name: "Tier 1"
+    description: "Test"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-sonnet-4.5
+          cost_per_1m_tokens: 3.00
+      fallback: []
+    use_cases:
+      - "Test"
+    quality_expectations: "High"
+    latency_tolerance: "medium"
+
+  - tier: 2
+    name: "Tier 2"
+    description: "Test"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+      fallback: []
+    use_cases:
+      - "Test"
+    quality_expectations: "Good"
+    latency_tolerance: "low"
+
+  - tier: 3
+    name: "Tier 3"
+    description: "Test"
+    models:
+      primary:
+        - provider: anthropic
+          model: claude-haiku-3.5
+          cost_per_1m_tokens: 0.25
+      fallback: []
+    use_cases:
+      - "Test"
+    quality_expectations: "Adequate"
+    latency_tolerance: "very low"
+
+task_types: []
+
+# Circular escalation: Tier 2 → 3 → 2
+escalation_triggers:
+  quality:
+    - trigger: "circular_test"
+      description: "Creates a cycle"
+      action: "Escalate from Tier 2 → 3 then Tier 3 → 2"
+      max_retries: 3
+
+  cost: []
+  failure: []
+  human: []

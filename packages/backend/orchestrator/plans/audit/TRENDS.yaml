@@ -1,0 +1,42 @@
+schema: 1
+generated: 2026-02-15T04:27:35.226Z
+window_days: 30
+audits_analyzed: 2
+overall:
+  trend: stable
+  total_findings_current: 0
+  total_findings_previous: 0
+  delta: 0
+  fix_rate: 0
+by_severity:
+  critical:
+    current: 0
+    previous: 0
+    trend: stable
+  high:
+    current: 0
+    previous: 0
+    trend: stable
+  medium:
+    current: 0
+    previous: 0
+    trend: stable
+  low:
+    current: 0
+    previous: 0
+    trend: stable
+by_lens: {}
+worst_offenders: []
+timeline:
+  - date: 2026-02-14
+    total: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+  - date: 2026-02-15
+    total: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0

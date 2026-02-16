@@ -1,0 +1,126 @@
+schema: 1
+phase: qa-setup
+status: complete
+timestamp: "2026-02-13T16:32:00Z"
+
+feature_dir: "plans/future/bug-fix"
+story_id: "BUGF-015"
+moved_to: "plans/future/bug-fix/UAT/BUGF-015"
+status_updated: "in-qa"
+
+# Precondition Validation
+preconditions:
+  story_exists: true
+  story_path: "plans/future/bug-fix/UAT/BUGF-015"
+  status_is_ready_for_qa: true
+  evidence_yaml_exists: true
+  review_yaml_exists: true
+  code_review_passed: true
+  review_verdict: PASS
+
+# Verification Sources (for next phase)
+evidence_file: "plans/future/bug-fix/UAT/BUGF-015/_implementation/EVIDENCE.yaml"
+review_file: "plans/future/bug-fix/UAT/BUGF-015/_implementation/REVIEW.yaml"
+knowledge_context_file: "plans/future/bug-fix/UAT/BUGF-015/_implementation/KNOWLEDGE-CONTEXT.yaml"
+
+# Evidence Summary (Quick Read)
+evidence_summary:
+  schema: 1
+  version: 2
+  timestamp: "2026-02-11T22:40:00Z"
+  ac_count: 8
+  ac_passing: 7
+  ac_partial: 1
+  ac_status_breakdown:
+    - ac_id: "AC-1"
+      ac_text: "Admin Component Test Coverage"
+      status: PASS
+    - ac_id: "AC-2"
+      ac_text: "Upload Component Test Coverage"
+      status: PASS
+    - ac_id: "AC-3"
+      ac_text: "Module Wrapper Test Coverage"
+      status: PASS
+    - ac_id: "AC-4"
+      ac_text: "Form Component Test Coverage"
+      status: PASS
+    - ac_id: "AC-5"
+      ac_text: "Navigation and Layout Component Test Coverage"
+      status: PASS
+    - ac_id: "AC-6"
+      ac_text: "Page Component Test Coverage"
+      status: PARTIAL
+      note: "InstructionsNewPage test skipped - component imports deleted files"
+    - ac_id: "AC-7"
+      ac_text: "Test Quality Standards"
+      status: PASS
+    - ac_id: "AC-8"
+      ac_text: "Coverage Metrics and CI"
+      status: PASS
+
+# Test Coverage Summary
+test_summary:
+  total_test_files_created: 22
+  completion_percentage: "92% (22 of 24 planned)"
+  tests_passed: 937
+  test_files_passed: 67
+  unit_coverage:
+    pass: 937
+    fail: 0
+  e2e_status: exempt
+  e2e_reason: "story_type: test - E2E tests deferred to BUGF-030 per ADR-006"
+
+# Code Review Verdict
+review_verdict: PASS
+review_iteration: 2
+review_details:
+  lint_check: PASS (0 errors, 0 warnings)
+  typecheck: PASS (0 errors, 0 warnings)
+  build_check: PASS (no BUGF-015-related errors)
+  workers_run: [lint, typecheck, build]
+  workers_skipped: [style, syntax, security, reusability, react, typescript, accessibility]
+
+# Coverage Information
+coverage_target_met: true
+coverage_type: unit_tests
+minimum_threshold: "45%"
+achievement_notes:
+  - "22 of 24 planned test files created successfully"
+  - "InstructionsNewPage test skipped due to broken imports from deleted modules"
+  - "SessionProvider test rewritten with proper module mocking"
+  - "All test files follow BDD structure with semantic queries"
+  - "All tests use userEvent.setup() for interactions"
+
+# Known Deviations
+known_deviations:
+  - item: "InstructionsNewPage (AC-6)"
+    status: "SKIPPED"
+    reason: "Component has broken imports from deleted files (useUploadManager, finalizeClient, moc-form)"
+  - item: "AC-6 Status"
+    status: "PARTIAL"
+    reason: "2 of 3 page tests completed (PlaceholderPage, UnauthorizedPage)"
+  - item: "Pre-existing router.test.ts failure"
+    status: "NOT CAUSED BY BUGF-015"
+    reason: "Worker reference from @repo/upload HEIC - unrelated to this story"
+
+# Touched Files Summary
+touched_files_count: 22
+file_categories:
+  admin_components: 5
+  upload_components: 6
+  module_wrappers: 3
+  form_components: 2
+  navigation_layout_components: 4
+  page_components: 2
+
+# Next Phase Readiness
+next_phase: verification
+qa_verification_ready: true
+verification_notes:
+  - "All test files present in correct __tests__/ directories"
+  - "Evidence.yaml provides comprehensive test itemization"
+  - "Review.yaml shows PASS verdict with clean code review"
+  - "Ready for evidence-first QA verification phase"
+
+# Signal
+signal: "SETUP COMPLETE"

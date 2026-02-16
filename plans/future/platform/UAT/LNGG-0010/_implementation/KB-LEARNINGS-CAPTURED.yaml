@@ -1,0 +1,418 @@
+---
+schema: 1
+story_id: LNGG-0010
+feature: platform
+timestamp: "2026-02-15T00:45:48Z"
+doc_type: kb_learnings_captured
+phase: qa-verify-completion
+
+# Quality Metrics for KB
+quality_metrics:
+  final_verdict: PASS
+  acceptance_criteria_verified: 7/7
+  tests_passing: 28/28
+  code_coverage: 90.52
+  typescript_errors: 0
+  eslint_issues: 0
+  blocking_issues: 0
+  production_ready: true
+
+# Learnings Captured for KB
+
+learnings:
+
+  - lesson_id: 1
+    title: "Re-verification after fix cycle should validate ALL fixes plus original implementation"
+    category: process
+    priority: high
+    tags:
+      - qa
+      - verification
+      - fix-cycle
+    context: |
+      When a story fails initial QA verification and undergoes a fix cycle, the re-verification phase
+      must not only validate the fixes themselves but also re-confirm that the original implementation
+      still meets all acceptance criteria.
+
+      In LNGG-0010, Phase 1 QA identified TypeScript compilation failures (logger API signature mismatch).
+      During the fix cycle, three categories of fixes were applied:
+      1. Logger API signature correction (16 call sites)
+      2. Content field type support (added content?: string field)
+      3. Linting and formatting fixes (import ordering, formatting)
+
+      The re-verification phase (Phase 1 re-verification) validated ALL THREE fixes against the original
+      7 acceptance criteria plus the fixed code. Result: all 28 tests passing, 90.52% coverage, 0 errors.
+
+    evidence: |
+      - QA-VERIFY.yaml: fix_validation section documents all 3 fixes with VERIFIED status
+      - Test Results: 24/24 unit tests + 4/4 integration tests = 28/28 PASS
+      - Coverage: 90.52% (exceeds 80% requirement)
+      - TypeScript: 0 compilation errors
+      - ESLint: All files pass linting
+
+    lesson_learned: |
+      Re-verification protocol should follow this checklist:
+      1. Validate each fix independently (was it actually applied?)
+      2. Re-run all acceptance criteria tests (does implementation still meet ACs?)
+      3. Re-run all quality gates (TypeScript, ESLint, coverage, build)
+      4. Re-verify architecture compliance (no regressions)
+      5. Document evidence for each fix validation
+
+    applicability: HIGH (applies to all stories with fix cycles)
+    relevant_downstream_stories:
+      - LNGG-0020  # Index Management Adapter
+      - LNGG-0040  # Stage Movement Adapter
+      - LNGG-0060  # Checkpoint Adapter
+      - LNGG-0070  # Integration Test Suite
+
+
+  - lesson_id: 2
+    title: "Atomic write pattern (temp file + rename) is essential for file adapters to prevent corruption"
+    category: pattern
+    priority: high
+    tags:
+      - file-io
+      - atomicity
+      - adapter
+      - reliability
+    context: |
+      File-based operations are subject to unexpected failures (power loss, disk full, process crash).
+      A write operation that is partially complete can leave corrupted data on disk that is worse than
+      no data at all.
+
+      The atomic write pattern uses a two-step process:
+      1. Write to a temporary file (suffixed .tmp)
+      2. Rename the temp file to the target file (atomic OS operation)
+
+      The rename operation is atomic at the OS level - either it succeeds completely or fails without
+      modifying the target file. Crucially, cleanup must be in a finally block to ensure temp files
+      are cleaned up even if rename fails.
+
+      LNGG-0010 implements this pattern in utils/file-utils.ts:writeFileAtomic():
+      - Try: write temp file → rename to target
+      - Finally: always cleanup temp file
+
+    evidence: |
+      File: src/adapters/utils/file-utils.ts (lines 50-70)
+      ```typescript
+      async function writeFileAtomic(filePath: string, content: string): Promise<void> {
+        const tmpPath = `${filePath}.tmp`
+        try {
+          await fs.writeFile(tmpPath, content, 'utf-8')
+          await fs.rename(tmpPath, filePath)  // Atomic operation
+        } finally {
+          try {
+            await fs.unlink(tmpPath)  // Always cleanup
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+      }
+      ```
+
+      Tests verify this pattern:
+      - AC-5 Unit Test: "should use temp file during write operation"
+      - AC-5 Unit Test: "should cleanup temp file on write failure"
+
+    lesson_learned: |
+      For all file-based adapters, implement atomic writes using:
+      1. Create a .tmp file path
+      2. Write content to .tmp file
+      3. Use fs.rename(tmpPath, targetPath) to move atomically
+      4. Always cleanup in finally block with fs.unlink(tmpPath)
+
+      This prevents data corruption from:
+      - Process crashes mid-write
+      - Disk full errors
+      - Permission changes
+      - Power loss during write
+
+    applicability: CRITICAL (applies to all file I/O adapters)
+    relevant_downstream_stories:
+      - LNGG-0020  # Index Management Adapter (reads/writes index files)
+      - LNGG-0040  # Stage Movement Adapter (modifies story files)
+      - LNGG-0060  # Checkpoint Adapter (writes checkpoint files)
+
+
+  - lesson_id: 3
+    title: "Backward-compatible schema design using optional fields + .passthrough() enables zero-migration adoption"
+    category: pattern
+    priority: high
+    tags:
+      - schema-design
+      - backward-compatibility
+      - zod
+      - migration
+    context: |
+      When introducing new field names or format changes, data migration is costly and risky.
+      Backward-compatible schema design allows new code to work with old data without requiring
+      migration, enabling zero-downtime adoption.
+
+      LNGG-0010 faced a critical blocker: existing 50+ story YAML files use the legacy format
+      (status, epic, acceptance_criteria) but the story schema was defined with new field names
+      (state, feature, acs).
+
+      Solution: StoryArtifactSchema v2 with:
+      1. Optional fields for all new fields (state, feature, acs)
+      2. Optional fields for all legacy fields (status, epic, acceptance_criteria)
+      3. .passthrough() to preserve unknown fields
+      4. Normalization helpers (getStoryState, getStoryFeature, etc.)
+
+      Result: All 50+ existing files work immediately with no migration.
+
+    evidence: |
+      File: src/artifacts/story-v2-compatible.ts (430 lines)
+
+      Schema features:
+      - Both legacy (status, epic) and new (state, feature) formats supported
+      - .passthrough() preserves unknown fields
+      - Normalization helpers map old → new fields
+      - 20+ test cases verify both formats work
+
+      Backward compatibility test results (AC-7):
+      - Unit Test: "should parse legacy format (status, epic, acceptance_criteria)"
+      - Unit Test: "should parse new format (state, feature, acs)"
+      - Integration Test: "should handle legacy format"
+      - Integration Test: "should handle v2 format"
+      - Integration Test: "should preserve unknown fields via passthrough"
+      - Integration Test: "round-trip compatibility preserves all fields"
+
+    lesson_learned: |
+      When designing schemas that will evolve over time:
+      1. Make all new fields optional to accept old data
+      2. Make all old fields optional to accept new data
+      3. Use Zod's .passthrough() to preserve unknown fields
+      4. Create normalization helpers to map old → new fields
+      5. Test both old and new formats thoroughly
+
+      Benefits:
+      - Zero migration required
+      - Gradual rollout possible
+      - Old and new clients can coexist
+      - Bidirectional compatibility
+      - No data loss
+
+    applicability: HIGH (applies to all schema evolution scenarios)
+    relevant_downstream_stories:
+      - WINT-0010  # Create Core Database Schemas (will evolve)
+      - WINT-0020  # Story Management Tables (schema evolution)
+      - LNGG-0020  # Index Management Adapter (may evolve index format)
+
+
+  - lesson_id: 4
+    title: "TypeScript compilation errors may not be caught by vitest - always run build step in verification"
+    category: anti_pattern
+    priority: medium
+    tags:
+      - testing
+      - typescript
+      - build
+      - verification
+    context: |
+      Vitest runs tests using ts-node or similar transpilation that may not perform the same
+      type checking as the TypeScript compiler. Tests can pass while TypeScript compilation fails,
+      creating a false sense of confidence.
+
+      In LNGG-0010 Phase 1 QA:
+      - All 28 tests passed locally
+      - But `pnpm build` (which runs `tsc --noEmit`) revealed 16 TypeScript errors
+      - Logger API signature was wrong in production build even though tests passed
+      - This required a fix cycle to correct
+
+      Root cause: Tests mock/override the logger, so type errors in logger usage weren't caught
+      by test execution. Only the TypeScript compiler caught them.
+
+    evidence: |
+      Phase 1 QA Results:
+      - Vitest: 28/28 tests PASS
+      - `pnpm build`: 16 TypeScript errors
+
+      Errors were in:
+      - src/adapters/story-file-adapter.ts (10 call sites)
+      - src/adapters/utils/file-utils.ts (2 call sites)
+      - src/adapters/utils/yaml-parser.ts (4 call sites)
+
+      Error type: logger.info(message, context) called with wrong signature
+
+    lesson_learned: |
+      QA verification checklist must include:
+      1. Vitest passes (tests pass)
+      2. ESLint passes (linting)
+      3. tsc --noEmit passes (TypeScript compilation)
+      4. pnpm build succeeds (actual build)
+      5. Coverage requirement met (coverage)
+
+      Do NOT assume tests passing = code compiles. Always run the build step.
+
+      Implementation: Add build step to QA verification checklist as a mandatory gate
+      before tests pass.
+
+    applicability: CRITICAL (applies to all QA verification)
+    relevant_downstream_stories:
+      - ALL (this is a process improvement for QA workflow)
+
+
+  - lesson_id: 5
+    title: "Comprehensive test fixtures (minimal, full, invalid, malformed) improve test coverage"
+    category: pattern
+    priority: medium
+    tags:
+      - testing
+      - fixtures
+      - coverage
+      - edge-cases
+    context: |
+      Test fixtures are example data that represent different scenarios. Comprehensive fixtures
+      ensure tests exercise the full range of code paths including edge cases and error conditions.
+
+      LNGG-0010 uses four categories of fixtures:
+
+      1. MINIMAL FIXTURE (minimal-story.yaml)
+         - Contains only required fields
+         - Smallest valid story
+         - Tests basic happy path
+
+      2. FULL FIXTURE (full-story.yaml)
+         - Contains all possible fields
+         - All combinations of optional fields
+         - Tests comprehensive round-trip fidelity
+
+      3. INVALID FIXTURE (invalid-missing-id.yaml)
+         - Missing required field (id)
+         - Tests validation catches missing fields
+
+      4. MALFORMED FIXTURE (malformed.yaml)
+         - Not valid YAML syntax
+         - Tests error handling for parse failures
+
+      Additionally, fixtures cover both legacy and v2 formats to test backward compatibility.
+
+    evidence: |
+      Test fixtures location: src/adapters/__tests__/fixtures/
+
+      Fixture coverage achieved:
+      - Minimal valid story (1 fixture)
+      - Full story with all fields (1 fixture)
+      - Invalid stories - missing required fields (3 variations)
+      - Invalid stories - wrong field types (2 variations)
+      - Malformed YAML syntax (1 fixture)
+      - Legacy format (status, epic, acceptance_criteria) (1 fixture)
+      - V2 format (state, feature, acs) (1 fixture)
+      - Round-trip compatibility (covered in integration tests)
+
+      Test organization:
+      - Tests grouped by acceptance criteria
+      - Fixtures referenced by test description
+      - Both unit and integration tests use fixtures
+
+      Coverage achieved: 90.52% (exceeds 80% requirement)
+
+    lesson_learned: |
+      For file format adapters, create fixtures covering:
+      1. Minimal valid data (smallest possible)
+      2. Full valid data (all fields)
+      3. Invalid data - missing required (catches validation)
+      4. Invalid data - wrong types (catches validation)
+      5. Malformed syntax (catches parse errors)
+      6. Legacy formats (if backward compatibility needed)
+      7. New formats (to test forward compat)
+      8. Edge cases (empty arrays, null values, special characters)
+
+      Organize tests:
+      - Group by acceptance criterion
+      - Use clear fixture names
+      - Document what each fixture tests
+      - Re-use fixtures across multiple tests
+      - Track coverage to ensure all paths tested
+
+    applicability: HIGH (applies to all file I/O adapters and schema/parsing code)
+    relevant_downstream_stories:
+      - LNGG-0020  # Index Management Adapter (file format parsing)
+      - LNGG-0040  # Stage Movement Adapter (file modifications)
+      - LNGG-0060  # Checkpoint Adapter (file persistence)
+
+
+# Quality Standards Reference
+
+quality_standards:
+  code_coverage:
+    minimum: 80.0
+    target: 90.0
+    achieved: 90.52
+    notes: "LNGG-0010 exceeds target coverage by 0.52%"
+
+  test_quality:
+    verdict: EXCELLENT
+    strengths:
+      - "Well-organized by acceptance criteria"
+      - "Comprehensive edge case coverage"
+      - "No anti-patterns detected"
+      - "Proper async/await usage"
+      - "Comprehensive error handling tests"
+
+  architecture_quality:
+    verdict: EXCELLENT
+    patterns:
+      - "Adapter pattern correctly implemented"
+      - "Atomic operations for file I/O"
+      - "Typed error hierarchy"
+      - "Zod-first validation"
+      - "Proper separation of concerns"
+
+  documentation:
+    verdict: EXCELLENT
+    elements:
+      - "JSDoc comments on all public functions"
+      - "README with usage examples"
+      - "Error handling documentation"
+      - "Schema migration guide"
+
+
+# Recommendations for Downstream Stories
+
+recommendations:
+
+  - for_story: LNGG-0020
+    category: architecture
+    recommendation: "Use atomic write pattern for index file updates (lesson #2)"
+    rationale: "Index files are critical; corruption could break entire system"
+
+  - for_story: LNGG-0020
+    category: schema
+    recommendation: "Design index schema as backward-compatible from day 1 (lesson #3)"
+    rationale: "50+ existing index files may need to coexist with new format"
+
+  - for_story: LNGG-0040
+    category: testing
+    recommendation: "Create comprehensive test fixtures before implementation (lesson #5)"
+    rationale: "File adapter testing benefits from diverse fixtures"
+
+  - for_story: LNGG-0060
+    category: qa
+    recommendation: "Include build step in QA verification checklist (lesson #4)"
+    rationale: "TypeScript errors not always caught by tests"
+
+  - for_story: LNGG-0070
+    category: qa
+    recommendation: "If integration test suite includes file I/O, use re-verification protocol (lesson #1)"
+    rationale: "File adapters often have subtle interactions"
+
+
+# Sign-Off
+
+kb_capture_complete: true
+timestamp: "2026-02-15T00:45:48Z"
+learnings_ready_for_kb: true
+quality_metrics_valid: true
+recommendations_valid: true
+
+notes: |
+  All 5 key learnings from LNGG-0010 QA verification have been captured and documented
+  with evidence, applicability, and recommendations for downstream stories.
+
+  These learnings provide valuable guidance for:
+  - LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070 (file adapters)
+  - All stories involving schema evolution (WINT-0010, WINT-0020, etc.)
+  - All QA verification phases across the platform
+
+  Ready for Knowledge Base integration and downstream story teams to reference.

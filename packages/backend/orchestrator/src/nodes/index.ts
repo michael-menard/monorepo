@@ -207,3 +207,40 @@ export {
   type LintReviewResult,
   type GraphStateWithLintReview,
 } from './llm/index.js'
+
+// Audit Nodes
+export {
+  // Scope discovery
+  scanScope,
+  ScanScopeResultSchema,
+  type ScanScopeResult,
+  // Lens nodes
+  runSecurityLens,
+  runDuplicationLens,
+  runReactLens,
+  runTypeScriptLens,
+  runAccessibilityLens,
+  runUiUxLens,
+  runPerformanceLens,
+  runTestCoverageLens,
+  runCodeQualityLens,
+  // Orchestration nodes
+  runDevilsAdvocate,
+  runRoundtable,
+  synthesize,
+  deduplicate,
+  persistFindings,
+  persistTrends,
+} from './audit/index.js'
+
+// Workflow Nodes
+export {
+  // Doc-sync node
+  docSyncNode,
+  createDocSyncNode,
+  DocSyncConfigSchema,
+  DocSyncResultSchema,
+  type DocSyncConfig,
+  type DocSyncResult,
+  type GraphStateWithDocSync,
+} from './workflow/index.js'

@@ -1,0 +1,240 @@
+schema: 1
+story_id: BUGF-013
+created_at: "2026-02-11"
+last_updated: "2026-02-12T00:00:00Z"
+
+# Test Coverage Summary
+total_test_files_created: 9
+total_test_cases_created: 182
+total_tests_passing: 156
+total_tests_failing: 0
+tests_blocked: 26
+blocked_reason: "upload-page.test.tsx cannot execute - source file has broken imports"
+
+overall_pass_rate: 100%
+pass_rate_note: "100% of executable tests passing (156/156). 26 blocked tests excluded."
+
+# Phase Breakdown
+phases:
+  - id: 1
+    name: "Error Handling Components Tests"
+    status: COMPLETE
+    test_files:
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/ConflictModal/__tests__/ConflictModal.test.tsx"
+        tests_created: 19
+        tests_passing: 19
+        tests_failing: 0
+        notes: "All tests passing - dialog rendering, validation, interactions, accessibility, focus management"
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+        tests_created: 14
+        tests_passing: 14
+        tests_failing: 0
+        notes: "All tests passing - countdown timer, progress bar, screen reader announcements"
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+        tests_created: 10
+        tests_passing: 10
+        tests_failing: 0
+        notes: "All tests passing - banner rendering, expired file count, refresh action"
+
+  - id: 2
+    name: "Upload Page Integration Tests"
+    status: BLOCKED
+    test_files:
+      - path: "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+        tests_created: 26
+        tests_passing: 0
+        tests_failing: 0
+        tests_blocked: 26
+        blocking_issue: "Source file upload-page.tsx has broken imports - cannot run tests"
+        details: |
+          The source file imports from:
+          - @/hooks/useUploadManager (does not exist)
+          - @/services/api/finalizeClient (does not exist)
+          - @repo/upload-types (should be @repo/upload/types)
+          These are pre-existing issues in the codebase, not test failures.
+
+  - id: 3
+    name: "Form Validation Tests"
+    status: COMPLETE
+    test_files:
+      - path: "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/SlugField.test.tsx"
+        tests_created: 18
+        tests_passing: 18
+        tests_failing: 0
+        notes: "All tests passing - slug generation, debounced availability check via MSW, ARIA indicators"
+
+      - path: "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/TagInput.test.tsx"
+        tests_created: 32
+        tests_passing: 32
+        tests_failing: 0
+        notes: "All tests passing - tag CRUD, length/format validation, duplicates, disabled state, a11y"
+
+  - id: 4
+    name: "Upload Flow Component Tests"
+    status: COMPLETE
+    test_files:
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+        tests_created: 12
+        tests_passing: 12
+        tests_failing: 0
+        notes: "All tests passing - context provider, session initialization, unsaved changes dialog"
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+        tests_created: 30
+        tests_passing: 30
+        tests_failing: 0
+        notes: "All tests passing - file info display, status badges, progress bar, action buttons, a11y"
+
+      - path: "apps/web/app-instructions-gallery/src/components/Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+        tests_created: 21
+        tests_passing: 21
+        tests_failing: 0
+        notes: "All tests passing - file grouping by category, aggregate progress, status summary, a11y"
+
+# Acceptance Criteria Evidence Map
+acceptance_criteria:
+  - id: AC-1
+    description: "Create comprehensive unit tests for error handling components"
+    status: PASS
+    evidence:
+      - "ConflictModal: 19 tests, 19 passing (100%)"
+      - "RateLimitBanner: 14 tests, 14 passing (100%)"
+      - "SessionExpiredBanner: 10 tests, 10 passing (100%)"
+      - "Total: 43 error handling tests, all passing"
+    artifacts:
+      - "ConflictModal/__tests__/ConflictModal.test.tsx"
+      - "RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+      - "SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+
+  - id: AC-2
+    description: "Create integration tests for upload page"
+    status: BLOCKED
+    evidence:
+      - "26 test cases written for upload-page.tsx"
+      - "Cannot execute due to broken source file imports (pre-existing issue)"
+    blocking_issue: |
+      upload-page.tsx imports from non-existent modules:
+      - @/hooks/useUploadManager
+      - @/services/api/finalizeClient
+      - @repo/upload-types
+    artifacts:
+      - "pages/__tests__/upload-page.test.tsx"
+
+  - id: AC-3
+    description: "Create tests for form validation components"
+    status: PASS
+    evidence:
+      - "SlugField: 18 tests, 18 passing (100%)"
+      - "TagInput: 32 tests, 32 passing (100%)"
+    artifacts:
+      - "MocEdit/__tests__/SlugField.test.tsx"
+      - "MocEdit/__tests__/TagInput.test.tsx"
+
+  - id: AC-4
+    description: "Create tests for upload flow components"
+    status: PASS
+    evidence:
+      - "SessionProvider: 12 tests, 12 passing (100%)"
+      - "UploaderFileItem: 30 tests, 30 passing (100%)"
+      - "UploaderList: 21 tests, 21 passing (100%)"
+      - "Total: 63 upload flow tests, all passing"
+    artifacts:
+      - "Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+      - "Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+      - "Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+
+  - id: AC-5
+    description: "Ensure all tests use semantic queries (no data-testid)"
+    status: PASS
+    evidence:
+      - "All 156 tests use semantic queries: getByRole, getByLabelText, getByText, getByPlaceholderText"
+      - "Zero uses of getByTestId in new test files"
+
+  - id: AC-6
+    description: "Achieve 45% overall test coverage"
+    status: PARTIAL
+    evidence:
+      - "156 new test cases passing across 8 executable files"
+      - "26 additional tests written but blocked by source code issues"
+      - "Coverage measurement blocked by build failures in upload-page.tsx"
+
+# E2E Tests
+e2e_tests:
+  status: exempt
+  reason: "Test-only story - no source code modifications, only test files created"
+
+# Test Execution Summary
+test_execution:
+  individual_results:
+    - file: "SlugField.test.tsx"
+      passed: 18
+      failed: 0
+    - file: "TagInput.test.tsx"
+      passed: 32
+      failed: 0
+    - file: "ConflictModal.test.tsx"
+      passed: 19
+      failed: 0
+    - file: "RateLimitBanner.test.tsx"
+      passed: 14
+      failed: 0
+    - file: "SessionExpiredBanner.test.tsx"
+      passed: 10
+      failed: 0
+    - file: "UploaderFileItem.test.tsx"
+      passed: 30
+      failed: 0
+    - file: "UploaderList.test.tsx"
+      passed: 21
+      failed: 0
+    - file: "SessionProvider.test.tsx"
+      passed: 12
+      failed: 0
+
+# Critical Findings
+critical_findings:
+  - finding: "upload-page.tsx source file has broken imports"
+    impact: "Cannot test or build upload page - blocks AC-2"
+    action: "File separate bug report for upload-page.tsx import issues"
+
+# Test Quality Metrics
+quality_metrics:
+  semantic_queries_used: true
+  msw_mocking: true
+  accessibility_tested: true
+  fake_timers_used: true
+  user_event_interactions: true
+  proper_aria_labels: true
+  screen_reader_support_tested: true
+  test_patterns_followed:
+    - "Arrange-Act-Assert pattern"
+    - "Descriptive test names"
+    - "Proper cleanup in afterEach"
+    - "Mock isolation between tests"
+    - "Real timers for MSW-dependent tests"
+    - "Fake timers for countdown/debounce tests"
+
+# Files Created
+files_created:
+  tests:
+    - "apps/web/app-instructions-gallery/src/components/Uploader/ConflictModal/__tests__/ConflictModal.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/Uploader/RateLimitBanner/__tests__/RateLimitBanner.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/Uploader/SessionExpiredBanner/__tests__/SessionExpiredBanner.test.tsx"
+    - "apps/web/app-instructions-gallery/src/pages/__tests__/upload-page.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/SlugField.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/MocEdit/__tests__/TagInput.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/Uploader/SessionProvider/__tests__/SessionProvider.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/Uploader/UploaderFileItem/__tests__/UploaderFileItem.test.tsx"
+    - "apps/web/app-instructions-gallery/src/components/Uploader/UploaderList/__tests__/UploaderList.test.tsx"
+
+# Conclusion
+conclusion: |
+  BUGF-013 test creation COMPLETE for all executable components.
+
+  Results: 156 tests passing, 0 failures across 8 test files.
+  26 additional tests blocked by pre-existing upload-page.tsx import issues.
+
+  Coverage: Error handling (43 tests), Form validation (50 tests), Upload flow (63 tests).
+  All tests use semantic queries, follow a11y-first patterns, and test screen reader support.

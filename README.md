@@ -99,6 +99,53 @@ pnpm dev
 - **Auth API**: http://localhost:9300
 - **Main API**: http://localhost:9000
 
+### 🗄️ Local Object Storage (MinIO)
+
+For local development, MinIO provides S3-compatible object storage for artifact blobs and file uploads.
+
+**Start MinIO:**
+
+```bash
+docker compose -f infra/compose.lego-app.yaml up -d minio
+```
+
+**Verify MinIO is running:**
+
+```bash
+# Check service health
+docker ps | grep minio
+
+# Verify default bucket exists
+docker exec monorepo-minio mc ls local/workflow-artifacts
+```
+
+**Access MinIO Console:**
+
+- **Web Console**: http://localhost:9001
+- **S3 API**: http://localhost:9000
+- **Credentials**: `minioadmin` / `minioadmin` (local development only)
+
+**Test S3 client operations:**
+
+```bash
+# Run smoke test script
+pnpm tsx packages/backend/s3-client/scripts/test-minio.ts
+```
+
+**Important Notes:**
+
+- MinIO data persists in a Docker volume (`minio_data`)
+- Default bucket `workflow-artifacts` is created automatically on startup
+- Never use default credentials (`minioadmin`) in production
+- For production, use AWS S3 with IAM roles (no credentials in code)
+
+**Troubleshooting MinIO:**
+
+- **Port conflict (9000/9001)**: Stop conflicting services or change ports in `infra/compose.lego-app.yaml`
+- **Bucket not created**: Check logs with `docker logs monorepo-minio`
+- **Connection refused**: Ensure MinIO is running with `docker ps | grep minio`
+- **Credentials error**: Verify environment variables in `.env` match `.env.example`
+
 ### 🔧 Troubleshooting
 
 #### Port Conflicts

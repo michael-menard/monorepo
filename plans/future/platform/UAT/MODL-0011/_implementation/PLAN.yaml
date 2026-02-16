@@ -1,0 +1,247 @@
+schema: 1
+story_id: MODL-0011
+timestamp: '2026-02-14T19:00:00Z'
+
+steps:
+  - id: 1
+    description: "Create abstract BaseProvider class in base.ts with template method pattern"
+    files:
+      - "packages/backend/orchestrator/src/providers/base.ts"
+    dependencies: []
+    slice: packages
+    details: |
+      Add abstract BaseProvider class to base.ts that:
+      - Implements ILLMProvider interface
+      - Provides static getCachedInstance(configHash: string) method
+      - Provides static clearCaches() method
+      - Provides template method getModel(modelName: string) with hooks
+      - Defines abstract methods: loadConfig(), createModel(), checkAvailability()
+      - Maintains static caches: configCache, instanceCache, availabilityCache
+
+  - id: 2
+    description: "Refactor OllamaProvider to extend BaseProvider and remove duplicated code"
+    files:
+      - "packages/backend/orchestrator/src/providers/ollama.ts"
+    dependencies: [1]
+    slice: packages
+    details: |
+      Modify OllamaProvider to:
+      - Extend BaseProvider abstract class
+      - Remove getCachedInstance() method (use inherited)
+      - Remove clearCaches() method (use inherited)
+      - Remove cache management boilerplate from getModel()
+      - Implement abstract methods: loadConfig(), createModel(), checkAvailability()
+      - Keep provider-specific model name parsing logic
+
+  - id: 3
+    description: "Refactor OpenRouterProvider to extend BaseProvider and remove duplicated code"
+    files:
+      - "packages/backend/orchestrator/src/providers/openrouter.ts"
+    dependencies: [1]
+    slice: packages
+    details: |
+      Modify OpenRouterProvider to:
+      - Extend BaseProvider abstract class
+      - Remove getCachedInstance() method (use inherited)
+      - Remove clearCaches() method (use inherited)
+      - Remove cache management boilerplate from getModel()
+      - Implement abstract methods: loadConfig(), createModel(), checkAvailability()
+      - Keep provider-specific OpenAI configuration logic
+
+  - id: 4
+    description: "Refactor AnthropicProvider to extend BaseProvider and remove duplicated code"
+    files:
+      - "packages/backend/orchestrator/src/providers/anthropic.ts"
+    dependencies: [1]
+    slice: packages
+    details: |
+      Modify AnthropicProvider to:
+      - Extend BaseProvider abstract class
+      - Remove getCachedInstance() method (use inherited)
+      - Remove clearCaches() method (use inherited)
+      - Remove cache management boilerplate from getModel()
+      - Implement abstract methods: loadConfig(), createModel(), checkAvailability()
+      - Keep provider-specific ChatAnthropic instantiation logic
+
+  - id: 5
+    description: "Add comprehensive tests for BaseProvider abstract class"
+    files:
+      - "packages/backend/orchestrator/src/providers/__tests__/base.test.ts"
+    dependencies: [1, 2, 3, 4]
+    slice: packages
+    details: |
+      Create new test file for BaseProvider:
+      - Test getCachedInstance() returns cached models
+      - Test clearCaches() clears all cache types
+      - Test template method pattern in getModel()
+      - Test abstract method enforcement (TypeScript compilation)
+      - Test inheritance from all 3 providers
+
+  - id: 6
+    description: "Verify backward compatibility with existing provider factory tests"
+    files:
+      - "packages/backend/orchestrator/src/providers/__tests__/factory.test.ts"
+    dependencies: [1, 2, 3, 4]
+    slice: packages
+    details: |
+      Run existing factory tests to verify:
+      - All 8 tests pass without modification
+      - Provider routing works identically
+      - Cache behavior unchanged
+      - clearProviderRegistry() still works
+      No code changes to this file - verification only
+
+  - id: 7
+    description: "Update JSDoc and inline comments for inheritance pattern"
+    files:
+      - "packages/backend/orchestrator/src/providers/base.ts"
+      - "packages/backend/orchestrator/src/providers/ollama.ts"
+      - "packages/backend/orchestrator/src/providers/openrouter.ts"
+      - "packages/backend/orchestrator/src/providers/anthropic.ts"
+    dependencies: [1, 2, 3, 4]
+    slice: packages
+    details: |
+      Update documentation:
+      - Add JSDoc to BaseProvider explaining template method pattern
+      - Add JSDoc to abstract methods explaining provider responsibilities
+      - Update provider-specific files to document inheritance
+      - Add inline comments explaining what each provider implements
+      - Document cache strategy in base class
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/providers/base.ts"
+    action: modify
+    reason: "Add abstract BaseProvider class with template method pattern (AC-1)"
+
+  - path: "packages/backend/orchestrator/src/providers/ollama.ts"
+    action: modify
+    reason: "Refactor to extend BaseProvider and remove duplicated methods (AC-2)"
+
+  - path: "packages/backend/orchestrator/src/providers/openrouter.ts"
+    action: modify
+    reason: "Refactor to extend BaseProvider and remove duplicated methods (AC-3)"
+
+  - path: "packages/backend/orchestrator/src/providers/anthropic.ts"
+    action: modify
+    reason: "Refactor to extend BaseProvider and remove duplicated methods (AC-4)"
+
+  - path: "packages/backend/orchestrator/src/providers/__tests__/base.test.ts"
+    action: create
+    reason: "Add tests for BaseProvider abstract class methods (AC-6)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify TypeScript compilation with abstract class pattern"
+
+  - command: "pnpm test --filter @repo/orchestrator -- providers"
+    when: "after all code changes"
+    required: true
+    reason: "Verify all 8 existing provider factory tests pass + new base class tests"
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Ensure code quality and style compliance"
+
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+    reason: "Verify package builds successfully with refactored code"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "BaseProvider abstract class in base.ts with getCachedInstance(), clearCaches(), template method getModel()"
+    evidence_type: file
+    verification: "Read base.ts and verify abstract class exports with all required methods"
+
+  - ac_id: "AC-2"
+    planned_evidence: "OllamaProvider extends BaseProvider with reduced file size (~30-40 lines removed)"
+    evidence_type: file
+    verification: "Read ollama.ts and verify extends BaseProvider, implements abstract methods, removed duplicated code"
+
+  - ac_id: "AC-3"
+    planned_evidence: "OpenRouterProvider extends BaseProvider with reduced file size (~30-40 lines removed)"
+    evidence_type: file
+    verification: "Read openrouter.ts and verify extends BaseProvider, implements abstract methods, removed duplicated code"
+
+  - ac_id: "AC-4"
+    planned_evidence: "AnthropicProvider extends BaseProvider with reduced file size (~30-40 lines removed)"
+    evidence_type: file
+    verification: "Read anthropic.ts and verify extends BaseProvider, implements abstract methods, removed duplicated code"
+
+  - ac_id: "AC-5"
+    planned_evidence: "All 8 existing provider factory tests pass without modification"
+    evidence_type: test
+    verification: "pnpm test --filter @repo/orchestrator -- factory.test.ts shows 8/8 PASS"
+
+  - ac_id: "AC-6"
+    planned_evidence: "Code duplication reduced from ~80% to <10%, net -70 lines"
+    evidence_type: manual
+    verification: "Compare line counts before/after refactoring and verify reusability code review passes"
+
+  - ac_id: "AC-7"
+    planned_evidence: "JSDoc and inline comments updated in all provider files"
+    evidence_type: file
+    verification: "Read all provider files and verify comprehensive documentation of inheritance pattern"
+
+architectural_decisions:
+  - id: "MODL-0011-ARCH-001"
+    question: "Should BaseProvider be an abstract class or interface with mixins?"
+    decision: "Use abstract class"
+    rationale: |
+      Abstract class allows providing concrete implementations of common methods
+      (getCachedInstance, clearCaches, template method getModel) while still
+      enforcing implementation of provider-specific methods. This is the standard
+      Template Method pattern from Gang of Four.
+
+      Interface + mixins would be more complex and not idiomatic TypeScript.
+    decided_by: "auto-accepted"
+    tier: 1
+    tags: ["architecture", "typescript", "template-method"]
+
+  - id: "MODL-0011-ARCH-002"
+    question: "Should caches be static or instance-based?"
+    decision: "Keep static caches (preserve existing pattern)"
+    rationale: |
+      All 3 providers currently use static caches. Changing to instance-based
+      would be a breaking change affecting cache invalidation behavior.
+
+      Static caches are acceptable because:
+      1. Typical usage involves 3-5 unique provider configs (low memory)
+      2. Provider instances are singletons via factory pattern
+      3. Cache invalidation happens on process restart
+
+      This maintains backward compatibility per AC-5.
+    decided_by: "auto-accepted"
+    tier: 1
+    tags: ["architecture", "caching", "backward-compatibility"]
+
+complexity: moderate
+
+notes:
+  - "This story resolves technical debt from MODL-0010 code review iteration 4"
+  - "Template Method Pattern: base class defines algorithm, subclasses fill in steps"
+  - "TypeScript abstract classes: can have both concrete and abstract methods"
+  - "Static methods like getCachedInstance() cannot be abstract, so each provider keeps its own static cache reference"
+  - "All 3 providers must be refactored together to ensure consistency"
+  - "Tests must pass without modification to verify backward compatibility"
+  - "Expected code reduction: ~150 lines removed, ~80 added = net -70 lines"
+  - "Duplication reduction: 80% → <10% per AC-6"
+
+risks_and_mitigations:
+  - risk: "Breaking existing provider factory API"
+    likelihood: "low"
+    impact: "high"
+    mitigation: "Maintain exact method signatures, comprehensive backward compatibility tests"
+
+  - risk: "Cache behavior regression"
+    likelihood: "low"
+    impact: "medium"
+    mitigation: "Preserve static cache instances, verify cache tests pass"
+
+  - risk: "TypeScript compilation errors"
+    likelihood: "low"
+    impact: "low"
+    mitigation: "Abstract classes are well-supported TypeScript feature, run check-types frequently"

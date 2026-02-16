@@ -1,0 +1,338 @@
+schema: 1
+story_id: "WINT-0230"
+version: 1
+timestamp: "2026-02-14T21:25:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Strategy Configuration Loader with YAML parsing, caching, fallback defaults"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/strategy-loader.test.ts"
+        description: "Unit tests verify YAML loading, 30s TTL caching, forceReload, embedded defaults"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/strategy-loader.ts"
+        description: "loadStrategy() function with caching and fallback - 432 lines, 98.53% coverage"
+
+  - ac_id: "AC-2"
+    ac_text: "Tier-Based Model Selection with agent lookup and context overrides"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests selectModelForAgent() for strategy, legacy, and task type fallback paths"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+        description: "selectModelForAgent() returns tier + provider - 505 lines, 84.83% coverage"
+
+  - ac_id: "AC-3"
+    ac_text: "Escalation Logic for quality/cost/failure/human triggers"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests escalate() with all 4 triggers, max retries, human-in-loop"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+        description: "escalate() method handles quality/cost/failure/human with max 3 retries"
+
+  - ac_id: "AC-4"
+    ac_text: "Fallback Chain Handling for Ollama unavailable, model missing, timeouts"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests Ollama unavailable → Haiku fallback, model missing → alternate, max 3 attempts"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+        description: "getModelForTier() implements fallback chain with loop prevention"
+
+  - ac_id: "AC-5"
+    ac_text: "Backward Compatibility Layer for legacy model assignments"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests legacy opus/sonnet/haiku mapping to tiers 0/1/2"
+      - type: code
+        path: "packages/backend/orchestrator/src/config/model-assignments.ts"
+        description: "LEGACY_MODEL_TO_TIER mapping and getTierForAgent() function"
+
+  - ac_id: "AC-6"
+    ac_text: "Provider Integration wrapping MODL-0010 with caching"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests getProvider() wraps MODL-0010 factory, caches instances"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+        description: "getProvider() delegates to providers/index.ts getProviderForModel()"
+
+  - ac_id: "AC-7"
+    ac_text: "Configuration API methods for strategy metadata"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests getStrategyVersion(), getTierForAgent(), getModelForTier(), getEscalationTriggers()"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+        description: "Configuration API methods return strategy metadata"
+
+  - ac_id: "AC-8"
+    ac_text: "Unit Tests with 80%+ coverage on unified interface code"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm test --filter @repo/orchestrator --coverage"
+        result: "strategy-loader.ts: 98.53%, unified-interface.ts: 84.83%, models dir: 91.63%"
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/"
+        description: "3 test files (strategy-loader, unified-interface, integration) with ~950 combined lines"
+
+  - ac_id: "AC-9"
+    ac_text: "Zod Schema Definition for WINT-0220-STRATEGY.yaml structure"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/strategy-loader.test.ts"
+        description: "Tests StrategySchema validates complete structure, rejects invalid YAML with clear errors"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/strategy-loader.ts"
+        description: "StrategySchema, TierSchema, TaskTypeSchema, EscalationTriggerSchema definitions"
+
+  - ac_id: "AC-10"
+    ac_text: "Escalation Graph Validator using DFS to detect circular paths"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/strategy-loader.test.ts"
+        description: "Tests analyzeEscalationPaths() detects circular paths, validates termination"
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/fixtures/circular-escalation.yaml"
+        description: "Test fixture for circular escalation path detection"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/strategy-loader.ts"
+        description: "analyzeEscalationPaths() uses DFS algorithm to validate graph"
+
+  - ac_id: "AC-11"
+    ac_text: "Provider Factory Integration Pattern with singleton"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+        description: "Tests ModelRouterFactory.getInstance() returns singleton, forceReload creates new instance"
+      - type: code
+        path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+        description: "ModelRouterFactory class with singleton pattern and provider caching"
+
+touched_files:
+  - path: "packages/backend/orchestrator/src/models/strategy-loader.ts"
+    action: modified
+    lines: 432
+    description: "Strategy loader with Zod validation, YAML parsing, caching, graph analysis - Fixed import order (iteration 3)"
+
+  - path: "packages/backend/orchestrator/src/models/unified-interface.ts"
+    action: modified
+    lines: 550
+    description: "ModelRouter class with tier selection, escalation, fallback, provider integration - Converted 5 interfaces to Zod schemas (iteration 3)"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/strategy-loader.test.ts"
+    action: created
+    lines: 300
+    description: "Unit tests for strategy loading, validation, caching, graph analysis"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/unified-interface.test.ts"
+    action: created
+    lines: 350
+    description: "Unit tests for routing logic, escalation, fallback chains, compatibility"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/integration.test.ts"
+    action: created
+    lines: 300
+    description: "Integration tests with real WINT-0220-STRATEGY.yaml, 143 agents validation"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/valid-strategy.yaml"
+    action: created
+    lines: 120
+    description: "Complete valid strategy test fixture"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/minimal-strategy.yaml"
+    action: created
+    lines: 60
+    description: "Minimal valid strategy test fixture (2 tiers)"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/invalid-schema.yaml"
+    action: created
+    lines: 30
+    description: "Invalid schema test fixture for validation errors"
+
+  - path: "packages/backend/orchestrator/src/models/__tests__/fixtures/circular-escalation.yaml"
+    action: created
+    lines: 65
+    description: "Circular escalation path test fixture"
+
+  - path: "packages/backend/orchestrator/src/config/model-assignments.ts"
+    action: modified
+    lines: 341
+    description: "Extended with LEGACY_MODEL_TO_TIER mapping and getTierForAgent() function - Fixed import order and unused variable (iteration 3)"
+
+  - path: "packages/backend/orchestrator/src/config/llm-provider.ts"
+    action: modified
+    lines: 330
+    description: "Stub provider factory integration - Fixed unused variable in checkAvailability (iteration 3)"
+
+commands_run:
+  - command: "pnpm build --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "TypeScript compilation passed - no errors"
+    timestamp: "2026-02-14T21:20:00Z"
+
+  - command: "pnpm test --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "Test Files: 86 passed | 1 skipped (87), Tests: 2378 passed | 8 skipped (2386)"
+    timestamp: "2026-02-14T21:22:00Z"
+
+  - command: "pnpm test --filter @repo/orchestrator --coverage"
+    result: SUCCESS
+    output: "Coverage: strategy-loader 98.53%, unified-interface 84.83%, models 91.63%"
+    timestamp: "2026-02-14T21:23:00Z"
+
+  - command: "pnpm exec prettier --write (4 files)"
+    result: SUCCESS
+    output: "Fixed formatting violations in unified-interface.ts and model-assignments.ts"
+    timestamp: "2026-02-14T22:40:00Z"
+
+  - command: "pnpm exec eslint (4 files)"
+    result: SUCCESS
+    output: "All linting issues resolved - no errors or warnings"
+    timestamp: "2026-02-14T22:40:00Z"
+
+  - command: "pnpm tsc --noEmit"
+    result: SUCCESS
+    output: "TypeScript compilation passed after fixes"
+    timestamp: "2026-02-14T22:40:00Z"
+
+  - command: "pnpm test --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "Test Files: 86 passed | 1 skipped (87), Tests: 2378 passed | 8 skipped (2386) - all tests pass after fixes"
+    timestamp: "2026-02-14T22:40:00Z"
+
+  - command: "Fix iteration 2: model-assignments.ts unused variable"
+    result: SUCCESS
+    output: "Removed unused _key parameter from filter callback at line 243"
+    timestamp: "2026-02-14T23:50:00Z"
+
+  - command: "Fix iteration 2: strategy-loader.ts line width violation"
+    result: SUCCESS
+    output: "Extracted circularPaths.join() to separate variable at line 443"
+    timestamp: "2026-02-14T23:50:00Z"
+
+  - command: "Fix iteration 2: llm-provider.ts JSDoc line width"
+    result: SUCCESS
+    output: "Wrapped JSDoc @param description to < 100 chars at line 310"
+    timestamp: "2026-02-14T23:50:00Z"
+
+  - command: "pnpm exec prettier --write (3 files - iteration 2)"
+    result: SUCCESS
+    output: "All files unchanged - formatting correct"
+    timestamp: "2026-02-14T23:50:00Z"
+
+  - command: "pnpm exec eslint (3 files - iteration 2)"
+    result: SUCCESS
+    output: "No errors or warnings"
+    timestamp: "2026-02-14T23:50:00Z"
+
+  - command: "pnpm test --filter @repo/orchestrator (iteration 2)"
+    result: SUCCESS
+    output: "Test Files: 86 passed | 1 skipped (87), Tests: 2378 passed | 8 skipped (2386)"
+    timestamp: "2026-02-14T23:50:00Z"
+
+  - command: "Fix iteration 3: Convert 5 TypeScript interfaces to Zod schemas (CLAUDE.md compliance)"
+    result: SUCCESS
+    output: "Converted TierSelection, EscalationContext, EscalationResult, AgentSelectionContext, StrategyVersion to Zod schemas with z.infer<>"
+    timestamp: "2026-02-15T00:20:00Z"
+
+  - command: "Fix iteration 3: Import order violations"
+    result: SUCCESS
+    output: "Fixed import order in strategy-loader.ts, model-assignments.ts (zod after node:* imports)"
+    timestamp: "2026-02-15T00:20:00Z"
+
+  - command: "Fix iteration 3: Unused variables"
+    result: SUCCESS
+    output: "Fixed unused _key in model-assignments.ts line 243, unused _timeout in llm-provider.ts line 323"
+    timestamp: "2026-02-15T00:20:00Z"
+
+  - command: "pnpm exec prettier --write (4 files - iteration 3)"
+    result: SUCCESS
+    output: "All files unchanged - formatting already correct"
+    timestamp: "2026-02-15T00:20:00Z"
+
+  - command: "pnpm build --filter @repo/orchestrator (iteration 3)"
+    result: SUCCESS
+    output: "TypeScript compilation passed - 3.162s"
+    timestamp: "2026-02-15T00:21:00Z"
+
+  - command: "pnpm test --filter @repo/orchestrator (iteration 3)"
+    result: SUCCESS
+    output: "Test Files: 86 passed | 1 skipped (87), Tests: 2378 passed | 8 skipped (2386)"
+    timestamp: "2026-02-15T00:21:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 2378
+    fail: 0
+    skip: 8
+  integration:
+    pass: "Included in unit count"
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: feature (backend orchestrator only, no UI or API endpoints)"
+  tests_written: false
+  config: null
+  project: null
+  mode: null
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  lines: 73.23
+  branches: 85.78
+  functions: 84.47
+  models_directory:
+    strategy_loader: 98.53
+    unified_interface: 84.83
+    overall: 91.63
+
+notable_decisions:
+  - "Provider import from ../providers/index.ts not ../config/llm-provider.ts"
+  - "30s TTL cache on strategy config balances performance vs reload needs"
+  - "Max 3 fallback attempts prevents infinite loops (AC-4 requirement)"
+  - "Integration tests use real WINT-0220-STRATEGY.yaml per ADR-005 (no mocks)"
+  - "Extended model-assignments.ts with backward-compatible tier mapping"
+
+known_deviations: []
+
+token_summary:
+  setup:
+    in: 4200
+    out: 1100
+  plan:
+    in: 8000
+    out: 3000
+  execute:
+    in: 68000
+    out: 12000

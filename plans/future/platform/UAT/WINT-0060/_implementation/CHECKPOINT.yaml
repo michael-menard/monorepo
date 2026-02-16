@@ -1,0 +1,20 @@
+---
+schema: 1
+story_id: WINT-0060
+feature_dir: /Users/michaelmenard/Development/monorepo/plans/future/platform
+timestamp: '2026-02-14T21:00:00Z'
+
+current_phase: qa-verify
+last_successful_phase: qa-verify
+e2e_gate: passed
+iteration: 1
+max_iterations: 3
+blocked: false
+blocked_reason: ""
+forced: false
+warnings: []
+gen_mode: false
+review_status: PASSED
+review_timestamp: '2026-02-14T21:03:30Z'
+qa_status: PASSED
+qa_timestamp: '2026-02-14T21:24:00Z'
