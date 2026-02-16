@@ -3,7 +3,7 @@
 ## Metadata
 - **Feature ID:** LNGG
 - **Feature Name:** LangGraph Integration Adapters
-- **Total Stories:** 7
+- **Total Stories:** 8
 - **Status:** Planning
 - **Owner:** Engineering
 - **Start Date:** 2026-02-17 (Week 2)
@@ -17,10 +17,11 @@
 | In Elaboration | 0 |
 | Ready to Work | 0 |
 | In Progress | 0 |
+| Ready for QA | 0 |
 | UAT | 0 |
-| Done | 1 |
+| Done | 2 |
 
-**Completion:** 14% (1/7 stories done)
+**Completion:** 25% (2/8 stories done)
 
 ---
 
@@ -188,6 +189,26 @@ LNGG-005 (KB Adapter)
   - Quality comparison vs Claude Code baseline
 - **Elaboration Summary:** CONDITIONAL PASS - 6 non-blocking issues resolved through implementation notes, additional test cases, and clarified AC criteria. See ELAB-LNGG-0070.md for details.
 - **QA Verification Summary:** All 8 ACs verified. 48/48 tests pass with 96.5% coverage. Performance within targets. No blocking issues. Gate: PASS
+
+---
+
+#### LNGG-0080: Workflow Command Integration - Connect Adapters to LangGraph Commands
+- **Status:** completed (QA PASS: 2026-02-16)
+- **Priority:** P0 (Critical)
+- **Size:** large (10 hours)
+- **Complexity:** high
+- **Risk:** medium (integration complexity)
+- **Blocked By:** LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, LNGG-0070
+- **Blocks:** None
+- **Tags:** integration, langgraph, workflow, adapters, commands
+- **Description:** Create LangGraph workflow nodes that integrate existing adapters with workflow commands
+- **Key Deliverables:**
+  - Workflow nodes wrapping all 6 adapters
+  - Updated workflow commands using adapter nodes
+  - Integration tests validating adapters in workflow context
+  - Updated LangGraph graphs using adapter nodes
+  - Documentation and examples
+- **Elaboration Summary:** CONDITIONAL PASS - All prerequisites met (LNGG-0010 through LNGG-0070 complete). 1 MVP-critical gap resolved: AC-11 added to clarify command documentation scope. 5 implementation notes added for AC-7, AC-9, test plan clarity. 18 non-blocking findings deferred to KB. 8/8 audit checks passed. See ELAB-LNGG-0080.md for details.
 
 ---
 
