@@ -16,7 +16,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 6 |
+| uat | 7 |
 | in-qa | 1 |
 | ready-for-qa | 0 |
 | elaboration | 1 |
@@ -590,7 +590,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1030: Populate Story Status from Directories
 
-**Status:** ready-for-qa
+**Status:** uat
 **Depends On:** WINT-1020, WINT-0020
 **Phase:** 1
 **Feature:** Scan existing story directories, infer status from location (backlog/ready/UAT/done), populate core.stories table
@@ -602,6 +602,8 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 **Risk Notes:** Edge cases like stories in wrong directories need handling
 
 **Development Started:** 2026-02-16T21:05:00Z - Setup phase complete, ready for implementation
+
+**QA Verification Complete:** 2026-02-16 - All 10 ACs verified, 53 unit tests passing, verdict: PASS
 
 ---
 

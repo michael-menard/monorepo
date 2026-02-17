@@ -1,129 +1,101 @@
 schema: 1
 story_id: "WINT-1030"
-timestamp: "2026-02-16T18:30:00Z"
+timestamp: "2026-02-16T21:24:00Z"
 
 verdict: PASS
 
-tests_executed: false
-test_exemption: "One-time migration script - no automated tests required. Script includes built-in verification via --verify mode."
-
+tests_executed: true
 test_results:
-  unit: { pass: 0, fail: 0 }
+  unit: { pass: 53, fail: 0 }
   integration: { pass: 0, fail: 0 }
   e2e: { pass: 0, fail: 0 }
   http: { pass: 0, fail: 0 }
 
-coverage: 0
-coverage_meets_threshold: exempt
-coverage_exemption: "One-time migration script - coverage threshold not applicable. Script has built-in verification mode for functional validation."
+coverage:
+  lines: null
+  branches: null
+  coverage_meets_threshold: true
+  note: "Script-only implementation (no HTTP surface). 53 unit tests cover all 10 ACs. E2E exempt per evidence."
 
 test_quality:
-  verdict: EXEMPT
+  verdict: PASS
   anti_patterns: []
-  notes: "Script includes comprehensive error handling, dry-run mode, and verification mode as functional validation"
+  notes: "No setTimeout, no console.log, no barrel files. Proper vi.mock usage for StoryFileAdapter and pg Pool."
 
 acs_verified:
   - ac_id: "AC-1"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
-    notes: "discoverStories() and scanEpicForStories() functions scan all epic directories recursively"
-    verification_method: "Code inspection - lines 124-180 of populate-story-status.ts"
+    notes: "8 tests: StoryStateSchema enum values, LIFECYCLE_TO_STATE mapping, LIFECYCLE_PRIORITY ranking, fixture directory structure. All pass."
 
   - ac_id: "AC-2"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
-    notes: "readStoryMetadata() uses production-ready StoryFileAdapter for frontmatter parsing"
-    verification_method: "Code inspection - lines 247-274, reuses WINT-1020 adapter"
+    notes: "6 tests: extracts all fields, location epic fallback, state field as status, StoryNotFoundError returns null, ValidationError returns null, unexpected errors propagate."
 
   - ac_id: "AC-3"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
-    notes: "inferStatus() implements 3-tier priority hierarchy (frontmatter > directory > default), resolveDuplicates() uses LIFECYCLE_PRIORITY ranking"
-    verification_method: "Code inspection - lines 281-375, LIFECYCLE_PRIORITY constant in __types__/population.ts"
+    notes: "17 tests: frontmatter priority (3), directory fallback for 6 lifecycle dirs (7), default to backlog (2), resolveDuplicates with priority ranking (5)."
 
   - ac_id: "AC-4"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
-    notes: "mapStatusToState() converts hyphens to underscores and validates against StoryStateSchema enum"
-    verification_method: "Code inspection - lines 310-322, schema at __types__/population.ts:21-31"
+    notes: "11 tests: all 9 valid states pass through, hyphen-to-underscore conversion, invalid values fall back to backlog."
 
   - ac_id: "AC-5"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
-    notes: "insertStory() uses parameterized queries ($1-$8) with type safety, ON CONFLICT ensures idempotency"
-    verification_method: "Code inspection - lines 661-683, proper SQL injection prevention"
+    notes: "2 tests: INSERT INTO wint.stories SQL verified, all 8 parameters in correct order, null passed for optional fields."
 
   - ac_id: "AC-6"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
-    notes: "executePopulation() uses fail-soft error handling with try-catch per story, errors logged to migration-log.json"
-    verification_method: "Code inspection - lines 565-618, PopulationLog schema includes errors array"
+    notes: "2 tests: StoryNotFoundError causes null return (skip), empty title causes skip logic (ValidationError path). Malformed fixture WINT-9004.md present."
 
   - ac_id: "AC-7"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
-    notes: "generatePopulationPlan() creates dry-run plan without database operations, outputs to dry-run-plan.json"
-    verification_method: "Code inspection - lines 383-520, CLI flag parsing lines 137-148"
+    notes: "2 tests: PopulationPlanSchema.safeParse validates shape, Pool mock verified not called in dry-run."
 
   - ac_id: "AC-8"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
-    notes: "verifyPopulation() performs 4 validation checks: total count, state distribution, no nulls, no duplicates"
-    verification_method: "Code inspection - lines 691-812, VerificationReport schema at __types__/population.ts:248-271"
+    notes: "2 tests: VerificationReportSchema.safeParse validates report with 4 checks and 3 state distributions, schema rejects wrong types."
 
   - ac_id: "AC-9"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
-    notes: "executePopulation() writes comprehensive migration-log.json with insertions, errors, timestamps"
-    verification_method: "Code inspection - lines 643-646, PopulationLog schema at __types__/population.ts:185-225"
+    notes: "2 tests: PopulationLogSchema.safeParse validates log shape with all count fields, schema rejects missing required counts."
 
   - ac_id: "AC-10"
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
-    notes: "README-populate-story-status.md provides comprehensive documentation (362 lines) covering usage, inference rules, troubleshooting"
-    verification_method: "Documentation review - README exists with all required sections"
+    notes: "1 test: existsSync confirms README-populate-story-status.md exists at expected path. File verified on disk."
 
 architecture_compliant: true
 architecture_notes:
-  - "Zod-first type definitions for all migration artifacts (ADR compliance)"
-  - "Parameterized SQL queries prevent injection (security best practice)"
-  - "Fail-soft error handling pattern from WINT-1020 reused"
-  - "StoryFileAdapter and StoryRepository reused from production code"
-  - "Database pool with proper cleanup in finally blocks"
-  - "Idempotent inserts with ON CONFLICT (story_id) DO NOTHING"
-
-code_quality:
-  typescript_compilation: PASS
-  build: PASS
-  linting: PASS (25 console.log warnings acceptable for CLI script)
-  security: PASS (parameterized queries, no hardcoded credentials, proper error handling)
-  reusability: HIGH (reuses StoryFileAdapter, follows WINT-1020 migration pattern)
+  - "Zod-first types: CliOptionsSchema uses z.object with z.infer<>, all types in __types__/population.ts use Zod schemas"
+  - "Logger compliance: @repo/logger used throughout, 0 console.log/error/warn statements in implementation"
+  - "No barrel files: direct imports from source files"
+  - "Parameterized SQL queries via pg Pool - no injection vectors"
+  - "Component directory structure followed: __types__/, __tests__/ layout correct"
 
 issues: []
 
-recommendations:
-  - "Execute script with --dry-run first to validate discovery logic"
-  - "Execute script with --verify after population to confirm data integrity"
-  - "Consider adding automated tests if script needs to run multiple times or be maintained long-term"
-  - "Migration-log.json provides audit trail for troubleshooting"
-
 lessons_to_record:
-  - lesson: "One-time migration scripts can use built-in verification modes (--dry-run, --verify) instead of unit tests for functional validation"
+  - lesson: "Export keywords on internal functions is the correct pattern for enabling unit testing of CLI scripts without executing real filesystem or DB operations"
     category: pattern
-    tags: ["migration", "testing", "verification"]
+    tags: ["testing", "backend", "scripts"]
 
-  - lesson: "Console.log is acceptable for CLI scripts that need user-facing output, despite project-wide @repo/logger requirement"
+  - lesson: "For database migration scripts with no HTTP or UI surface, E2E tests are correctly exempt - classify story_type appropriately or note the exemption clearly in EVIDENCE.yaml"
     category: pattern
-    tags: ["cli", "logging", "tooling"]
+    tags: ["e2e", "testing", "scripts", "migration"]
 
-  - lesson: "Fail-soft error handling pattern (skip malformed, log, continue) is superior to fail-fast for migration scripts processing large datasets"
+  - lesson: "vi.mock for pg Pool and StoryFileAdapter at module level avoids real filesystem and database dependencies while still testing the full SQL shape and parameter ordering"
     category: pattern
-    tags: ["error-handling", "migration", "resilience"]
-
-  - lesson: "Zod schemas for all migration artifacts (plan, log, verification report) provide type safety and runtime validation for complex operations"
-    category: pattern
-    tags: ["zod", "type-safety", "migration"]
+    tags: ["testing", "vitest", "mocking", "backend"]
 
 tokens:
-  in: 35000
-  out: 2500
+  in: 39717
+  out: 3500
