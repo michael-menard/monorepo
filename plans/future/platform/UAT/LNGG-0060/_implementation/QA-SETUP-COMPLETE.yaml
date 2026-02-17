@@ -1,0 +1,52 @@
+phase: qa-setup
+status: complete
+timestamp: "2026-02-17T10:00:00Z"
+
+feature_dir: "plans/future/platform"
+story_id: "LNGG-0060"
+moved_to: "plans/future/platform/UAT/LNGG-0060"
+status_updated: in-qa
+
+# Verification sources (for next phase)
+evidence_file: "plans/future/platform/UAT/LNGG-0060/_implementation/EVIDENCE.yaml"
+review_file: "plans/future/platform/UAT/LNGG-0060/_implementation/REVIEW.yaml"
+knowledge_context_file: "plans/future/platform/UAT/LNGG-0060/_implementation/KNOWLEDGE-CONTEXT.yaml"
+
+# Evidence summary (quick read)
+evidence_version: 1
+ac_count: 10
+ac_passing: 10
+ac_status: all_verified
+review_verdict: PASS
+review_iteration: 0
+
+# Test summary
+test_summary:
+  total_tests: 36
+  passed: 36
+  failed: 0
+
+# Coverage metrics
+coverage:
+  statements: 100%
+  branches: 93.33%
+  functions: 100%
+  lines: 100%
+  threshold: 85%
+  status: passed
+
+# Build verification
+build_status: passed
+type_check: passed
+lint_status: passed
+
+# Signal
+signal: SETUP COMPLETE
+
+# Preconditions verified
+preconditions:
+  story_exists: true
+  status_is_ready_for_qa: true
+  evidence_yaml_exists: true
+  review_yaml_exists: true
+  code_review_passed: true

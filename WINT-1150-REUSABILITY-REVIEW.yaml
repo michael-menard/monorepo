@@ -1,0 +1,109 @@
+---
+reusability:
+  verdict: PASS
+  files_checked: 4
+  errors: 0
+  warnings: 2
+  notes: |
+    WINT-1150 introduces new schema types and test patterns for worktree cleanup orchestration.
+    Primary finding: StoryIdSchema duplication already flagged in code comments (DEBT-RU-001).
+    Secondary finding: Story state enums duplicated in story-management (DEBT-RU-002, DEBT-RU-003).
+    Both are pre-existing architectural debts unrelated to WINT-1150 scope.
+    All new code follows Zod-first pattern per CLAUDE.md requirements.
+
+  findings:
+    - severity: warning
+      file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+      line: 25
+      message: "StoryIdSchema is duplicated between worktree-management and story-management modules."
+      rule: no-cross-module-duplication
+      auto_fixable: false
+      existing_package: "@repo/backend-mcp-tools (internal, not shared)"
+      existing_path: "packages/backend/mcp-tools/src/story-management/__types__/index.ts:16-24"
+      recommendation: |
+        Extract StoryIdSchema to shared @repo/mcp-tools-types package (future work).
+        This is pre-existing architecture debt (DEBT-RU-001) documented in WINT-1150 types file.
+        No action required for WINT-1150 MVP — keep both copies in sync manually or defer to
+        follow-up story that creates @repo/mcp-tools-types.
+      scope: pre-existing-debt
+
+    - severity: warning
+      file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+      line: 56
+      message: "Story state enum ['backlog','ready_to_work','in_progress','ready_for_qa','in_qa','blocked','done','cancelled'] is repeated 4 times in this file."
+      rule: no-enum-duplication
+      auto_fixable: false
+      existing_package: None (pre-existing code)
+      existing_path: "Repeated in: StoryGetStatusOutputSchema, StoryUpdateStatusInputSchema, StoryUpdateStatusOutputSchema, StoryGetByStatusOutputSchema, StoryGetByFeatureOutputSchema"
+      recommendation: |
+        Extract StoryStateSchema constant to consolidate enum definitions (DEBT-RU-002).
+        Additionally, PriorityEnum ['P0','P1','P2','P3','P4'] is repeated 3 times (DEBT-RU-003).
+        These are pre-existing architectural debts. Create shared @repo/mcp-tools-types
+        package in follow-up story to consolidate all cross-module constants.
+      scope: pre-existing-debt
+
+  usage_patterns:
+    - pattern: "Zod-First Type Definition"
+      location: "packages/backend/mcp-tools/src/worktree-management/__types__/index.ts"
+      status: CORRECT
+      note: "All schemas use z.infer<typeof X> pattern per CLAUDE.md. No TypeScript interfaces."
+
+    - pattern: "MCP Tool Input/Output Schemas"
+      location: "packages/backend/mcp-tools/src/worktree-management/__types__/index.ts"
+      status: COMPLIANT
+      note: "WorktreeRegisterInputSchema, WorktreeRegisterOutputSchema, etc. follow established patterns from story-management and graph-query modules."
+
+    - pattern: "Agent Instruction Implementation"
+      location: "packages/backend/mcp-tools/src/worktree-management/__tests__/cleanup-integration.test.ts"
+      status: COMPLIANT
+      note: "Test file implements cleanupWorktreeForStory() logic matching qa-verify-completion-leader.agent.md and story-update.md instructions. Inline orchestration pattern is valid for behavioral testing."
+
+    - pattern: "Shared Logging"
+      location: "packages/backend/mcp-tools/src/worktree-management/__tests__/cleanup-integration.test.ts:28"
+      status: CORRECT
+      note: "Uses @repo/logger pattern (vi.mock) per CLAUDE.md. Does not use console.log."
+
+    - pattern: "Schema Validation"
+      location: "packages/backend/mcp-tools/src/worktree-management/__types__/index.ts:177-182"
+      status: COMPLIANT
+      note: "WorktreeCleanupDeferralReasonSchema and WorktreeCleanupResultSchema follow established enum patterns."
+
+  cross_module_duplication_check:
+    status: NONE
+    note: |
+      No new duplication introduced by WINT-1150. Only pre-existing debt flagged:
+      - StoryIdSchema duplicated in worktree-management and story-management (documented as DEBT-RU-001)
+      - Story state enums duplicated in story-management (documented as DEBT-RU-002, DEBT-RU-003)
+      These should be extracted to @repo/mcp-tools-types in a future story.
+
+  shared_package_compliance:
+    status: COMPLIANT
+    packages_checked:
+      - "@repo/logger": Used correctly in tests (vi.mock for @repo/logger)
+      - "@repo/mcp-tools": No duplication of exports — new schemas are additions only
+    packages_not_needed:
+      - "@repo/accessibility": No accessibility hooks used
+      - "@repo/app-component-library": Backend package, not applicable
+      - "@repo/hooks": Backend package, not applicable
+
+  decisions_yaml_review:
+    file: "plans/future/platform/wint/in-progress/WINT-1150/_implementation/DECISIONS.yaml"
+    status: REVIEWED
+    note: |
+      Decisions file documents implementation discovery (AC-12 pre-work) confirming
+      wt-finish has no structured output. This decision drives schema design choice
+      (WorktreeCleanupDeferralReason 'unknown' as primary fallback). Pattern is sound.
+
+  test_pattern_review:
+    file: "packages/backend/mcp-tools/src/worktree-management/__tests__/cleanup-integration.test.ts"
+    status: APPROVED
+    pattern: "Inline orchestration function with mock injection (vitest)"
+    note: |
+      Test implements cleanupWorktreeForStory() as testable function that mirrors
+      agent instruction pattern from qa-verify-completion-leader.agent.md (Step 0)
+      and story-update.md (Worktree Cleanup on Completed Transition).
+      This is appropriate for behavioral testing without creating new modules.
+
+  tokens:
+    in: 12000
+    out: 800

@@ -1,0 +1,108 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-17T17:00:00Z"
+  story_id: "WINT-1011"
+  domain: "backend"
+
+  lessons_learned:
+    count: 6
+    relevant_to_scope:
+      - story_id: "WINT-0090"
+        lesson: "storyGetStatus returns null on DB miss AND on DB error (resilient null pattern); storyGetByStatus/storyGetByFeature return [] on both DB error and genuine empty result — shim cannot distinguish the two"
+        category: behavioral
+        applies_because: "Shim must trigger directory fallback on both null-DB-miss and null-DB-error for get; on empty [] for list queries — document as known behavioral nuance in __types__/index.ts"
+
+      - story_id: "WINT-0090"
+        lesson: "Vitest mocking pattern with vi.hoisted() + vi.mock('@repo/db') at module level; chain mock pattern: mockSelect → from → where → limit each returning next step"
+        category: pattern
+        applies_because: "Shim unit tests must follow the same vi.hoisted + chained mock pattern established in story-management __tests__"
+
+      - story_id: "WINT-0090"
+        lesson: "StoryIdSchema accepts UUID OR human-readable format (XXXX-NNNN regex); Zod parse at function entry for fail-fast validation"
+        category: reuse
+        applies_because: "Shim must reuse StoryIdSchema from story-management __types__ for storyId validation"
+
+      - story_id: "WINT-1030"
+        lesson: "Swim-lane → state mapping proven: backlog→backlog, ready-to-work→ready_to_work, in-progress→in_progress, ready-for-qa→ready_for_qa, UAT→in_qa, done→done; blocked/cancelled have no directory equivalent (DB-only states)"
+        category: pattern
+        applies_because: "Shim directory fallback must use exactly this mapping; KNOWN_DB_ONLY_STATES constant for blocked/cancelled"
+
+      - story_id: "WINT-1020"
+        lesson: "Hardcoded monorepo paths break across environments; use findMonorepoRoot or process.env injectable pattern"
+        category: blocker-to-avoid
+        applies_because: "ShimOptions.storiesRoot injection pattern (AC-12) is the mitigation — injectable in tests, env-var fallback in production"
+
+      - story_id: "WINT-0090"
+        lesson: "Integration tests in mcp-tools use real database: import db from @repo/db, insert test story in beforeAll, delete in afterAll with cascade"
+        category: pattern
+        applies_because: "shim.integration.test.ts must follow same pattern: real PostgreSQL (ADR-005), no DB mocks, test story with epic='TEST' wave=99 priority='P4'"
+
+    blockers_to_avoid:
+      - "Using console.log instead of @repo/logger"
+      - "Creating TypeScript interfaces instead of Zod schemas"
+      - "Creating barrel files (index.ts re-exports at top of module)"
+      - "Importing from individual shadcn/ui paths (not applicable here — backend module)"
+      - "Writing to the filesystem on write failure (AC-2 explicitly forbids this)"
+      - "Double-scanning directories when DB returns a result (AC-10)"
+      - "Hardcoding STORIES_ROOT path without ShimOptions injection"
+
+    patterns_to_follow:
+      - "Zod-first: ShimOptionsSchema z.object({ storiesRoot: z.string().optional() }) in __types__/index.ts"
+      - "No barrel files: import storyGetStatus directly from story-management source files"
+      - "vi.hoisted() mock pattern for @repo/db, @repo/logger in unit tests"
+      - "fs.readdirSync or fs.existsSync for directory scanning (synchronous OK for Phase 1)"
+      - "Return type conforms to existing WINT-0090 output schemas: StoryGetStatusOutput (nullable), StoryGetByStatusOutput (array)"
+      - "Integration test: insert test story with epic='TEST', cleanup in afterAll"
+      - "test script: pnpm --filter @repo/mcp-tools test (vitest run, no --testPathPattern; use vitest run src/story-compatibility/__tests__ pattern)"
+
+    patterns_to_avoid:
+      - "Dual-write on write path: shim NEVER writes to filesystem (AC-2 hard constraint)"
+      - "Using --testPathPattern (not valid in Vitest); use positional path argument or --reporter"
+      - "Frontmatter parsing in directory fallback: parent-dir-name approach is sufficient for Phase 1"
+      - "In-memory caching of STORIES_ROOT (deferred to Phase 2)"
+
+  architecture_decisions:
+    active_count: 1
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Integration Tests Must Use Real PostgreSQL"
+        status: active
+        constraint: "Integration tests MUST use real PostgreSQL — no mocking of DB calls in integration or UAT test suite"
+        applies_to: ["backend", "database", "testing"]
+
+    constraints:
+      testing: "Integration tests must use real database, not mocks"
+      no_new_packages: "Shim lives in packages/backend/mcp-tools/src/story-compatibility/ — no new pnpm package"
+      no_schema_changes: "No database schema changes — uses existing tables only"
+      deletion_safe: "Only exports from src/index.ts; no external packages import story-compatibility/ directly"
+
+  code_patterns:
+    mcp_tools_unit_test_mock: |
+      // Pattern from story-get-status.test.ts (replicate for shim tests)
+      const { mockLimit, mockWhere, mockFrom, mockSelect, mockWarn } = vi.hoisted(() => ({
+        mockLimit: vi.fn(), mockWhere: vi.fn(), mockFrom: vi.fn(),
+        mockSelect: vi.fn(), mockWarn: vi.fn(),
+      }))
+      vi.mock('@repo/db', () => ({ db: { select: mockSelect } }))
+      vi.mock('@repo/logger', () => ({ logger: { warn: mockWarn } }))
+
+    swim_lane_mapping: |
+      // From WINT-1030 (proven mapping)
+      const SWIM_LANE_TO_STATE = {
+        'backlog': 'backlog',
+        'ready-to-work': 'ready_to_work',
+        'in-progress': 'in_progress',
+        'ready-for-qa': 'ready_for_qa',
+        'UAT': 'in_qa',
+        'done': 'done',
+      } as const
+      // KNOWN_DB_ONLY_STATES: ['blocked', 'cancelled'] — no directory equivalent
+
+  warnings:
+    - "storyGetStatus returns null on BOTH DB-miss and DB-error — shim cannot distinguish; both trigger directory fallback (acceptable for Phase 1, document in __types__)"
+    - "storyGetByStatus/storyGetByFeature return [] on BOTH empty result and DB error — both trigger directory fallback (acceptable, document in __types__)"
+    - "Vitest run command is 'vitest run' not 'vitest run --testPathPattern'; use positional path to scope tests"
+
+  tokens:
+    in: 12000
+    out: 1200

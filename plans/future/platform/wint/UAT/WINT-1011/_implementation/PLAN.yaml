@@ -1,0 +1,170 @@
+schema: 1
+story_id: "WINT-1011"
+timestamp: "2026-02-17T17:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create __types__/index.ts with ShimOptionsSchema, swim-lane mapping, and KNOWN_DB_ONLY_STATES constant"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create story-compatibility/index.ts implementing all four shim functions: shimGetStoryStatus, shimUpdateStoryStatus, shimGetStoriesByStatus, shimGetStoriesByFeature"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Add named exports for all four shim functions and their types to packages/backend/mcp-tools/src/index.ts (AC-8)"
+    files:
+      - "packages/backend/mcp-tools/src/index.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Write unit tests for shimGetStoryStatus: DB-hit (no dir scan), DB-miss (dir fallback), DB-unavailable (dir fallback), invalid storyId (Zod rejection)"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoryStatus.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 5
+    description: "Write unit tests for shimUpdateStoryStatus: DB-write success, DB-unavailable (null + warn, NO filesystem write)"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimUpdateStoryStatus.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 6
+    description: "Write unit tests for shimGetStoriesByStatus: DB results returned (no dir scan), empty DB result triggers dir fallback"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByStatus.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 7
+    description: "Write unit tests for shimGetStoriesByFeature: DB results returned (no dir scan), empty DB result triggers dir fallback"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByFeature.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 8
+    description: "Write integration tests for shim module against real PostgreSQL: DB-hit path, DB-miss + directory fallback, write success, write failure (no filesystem write)"
+    files:
+      - "packages/backend/mcp-tools/src/story-compatibility/__tests__/integration/shim.integration.test.ts"
+    dependencies: [2, 4, 5, 6, 7]
+    slice: packages
+
+  - id: 9
+    description: "Run type-check, lint, and tests to validate all quality gates pass"
+    files: []
+    dependencies: [3, 4, 5, 6, 7, 8]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    action: create
+    reason: "Zod-first types: ShimOptionsSchema (storiesRoot injectable per AC-12), SWIM_LANE_TO_STATE mapping (AC-7), KNOWN_DB_ONLY_STATES constant (blocked/cancelled doc)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+    action: create
+    reason: "Four shim functions implementing DB-first, directory-fallback routing (AC-1 through AC-5, AC-7, AC-10, AC-12)"
+
+  - path: "packages/backend/mcp-tools/src/index.ts"
+    action: modify
+    reason: "Add named exports for shimGetStoryStatus, shimUpdateStoryStatus, shimGetStoriesByStatus, shimGetStoriesByFeature (AC-8)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoryStatus.test.ts"
+    action: create
+    reason: "Unit tests for shimGetStoryStatus covering DB-hit, DB-miss+fallback, DB-unavailable, invalid input (AC-1, AC-10)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimUpdateStoryStatus.test.ts"
+    action: create
+    reason: "Unit tests for shimUpdateStoryStatus covering write success and DB-unavailable (null + warn, no filesystem write) (AC-2)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByStatus.test.ts"
+    action: create
+    reason: "Unit tests for shimGetStoriesByStatus covering DB results and empty+fallback (AC-3, AC-10)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByFeature.test.ts"
+    action: create
+    reason: "Unit tests for shimGetStoriesByFeature covering DB results and empty+fallback (AC-4, AC-10)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/integration/shim.integration.test.ts"
+    action: create
+    reason: "Integration tests against real PostgreSQL per ADR-005: DB-hit, DB-miss+fallback, write success, write unavailable (AC-1 through AC-5)"
+
+commands_to_run:
+  - command: "pnpm --filter @repo/mcp-tools type-check"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools test"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test shimGetStoryStatus.test.ts: 'DB-miss triggers directory fallback' scenario; integration test DB-miss path with real PostgreSQL"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test shimUpdateStoryStatus.test.ts: 'DB-unavailable returns null + warn log, no filesystem write' scenario verified with fs.writeFile mock assertion"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test shimGetStoriesByStatus.test.ts: 'empty DB result triggers directory scan' scenario"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test shimGetStoriesByFeature.test.ts: 'empty DB result triggers directory scan for epic' scenario"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Integration test: both DB-sourced and directory-sourced results parsed through same StoryGetStatusOutputSchema; type assertion in unit tests that return type is z.infer<typeof StoryGetStatusOutputSchema>"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests verify SWIM_LANE_TO_STATE mapping exhaustively: all 6 swim-lane directory names map to correct storyStateEnum values; KNOWN_DB_ONLY_STATES documented in __types__/index.ts"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "packages/backend/mcp-tools/src/index.ts contains named exports for all four shim functions; file change verified by code review"
+    evidence_type: file
+
+  - ac_id: "AC-10"
+    planned_evidence: "Unit test shimGetStoryStatus.test.ts: 'DB-hit — directory not scanned' scenario asserts that directory scan mock is NOT called when DB returns result; same for shimGetStoriesByStatus and shimGetStoriesByFeature"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "Unit tests inject storiesRoot via ShimOptions to point at a temp directory fixture; all four shim functions accept options as second parameter; integration test passes storiesRoot pointing to real wint stories path"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "storyGetStatus returns null on BOTH DB-miss and DB-error — shim treats both as 'not in DB, try directory fallback' for reads (acceptable per DECISIONS.yaml)"
+  - "storyGetByStatus/storyGetByFeature return [] on BOTH empty result and DB error — shim triggers directory fallback on empty [] for list queries (documented in __types__/index.ts)"
+  - "No barrel file: story-compatibility/index.ts exports the four functions directly; __types__/index.ts is imported directly in the shim implementation"
+  - "Directory fallback scan: fs.readdirSync on each swim-lane directory, filter by story ID regex /^[A-Z]{2,10}-\\d{3,4}$/, infer state from parent dir name"
+  - "shimUpdateStoryStatus does NOT create a directory fallback path — write-only, returns null on DB unavailable (AC-2 hard constraint)"
+  - "STORIES_ROOT resolution order: options.storiesRoot ?? process.env.STORIES_ROOT ?? detectMonorepoRoot() — defined in __types__/index.ts as resolveStoriesRoot(options)"
+  - "Integration test uses real PostgreSQL; requires live DB connection; test story uses epic='TEST', wave=99, priority='P4' to match existing integration test pattern"
+  - "Vitest test command is 'pnpm --filter @repo/mcp-tools test' (runs vitest run); no --testPathPattern flag; integration tests are in __tests__/integration/ and will be included automatically"
+  - "Per ELAB-WINT-1011.md: AC-6, AC-9, AC-11 are intentionally excluded from this story (split context)"
+  - "vitest.config.ts in mcp-tools has 80% coverage thresholds — WINT-1012 owns the 80% requirement; this story targets 45% global floor minimum"
+  - "No new pnpm package: shim co-locates in packages/backend/mcp-tools/src/story-compatibility/ per architecture decision in WINT-1011.md"

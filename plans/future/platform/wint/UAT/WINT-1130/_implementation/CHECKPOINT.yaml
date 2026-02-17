@@ -3,11 +3,11 @@
 
 story_id: "WINT-1130"
 title: "Track Worktree-to-Story Mapping in Database"
-status: "in-qa"
+status: "uat"
 
 # Current Phase Information
-phase: "qa-setup"
-phase_description: "QA setup complete. Story moved to UAT. All preconditions validated: EVIDENCE.yaml exists with 12 ACs (12 passing), REVIEW.yaml exists with PASS verdict. Ready for verification phase."
+phase: "qa-verify"
+phase_description: "QA verification complete. All 12 ACs verified. 25 unit tests pass. Integration tests require CI database (expected). Architecture compliant. QA-VERIFY.yaml written with PASS verdict. Gate decision: PASS. Story moved to UAT."
 iteration: 1
 started_at: "2026-02-16T00:00:00Z"
 completed_at: "2026-02-16T18:35:00Z"
@@ -15,6 +15,7 @@ proof_generated_at: "2026-02-16T20:45:00Z"
 review_completed_at: "2026-02-16T23:00:00Z"
 qa_ready_at: "2026-02-16T23:15:00Z"
 qa_setup_at: "2026-02-16T23:30:00Z"
+qa_verify_completed_at: "2026-02-16T21:30:00Z"
 
 # Gate Status
 e2e_gate: "exempt"

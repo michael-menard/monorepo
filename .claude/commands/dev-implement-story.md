@@ -39,6 +39,7 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 /dev-implement-story plans/future/wishlist WISH-001 --dry-run
 /dev-implement-story plans/future/wishlist WISH-001 --max-iterations=5
 /dev-implement-story plans/future/wishlist WISH-001 --force-continue
+/dev-implement-story plans/future/wishlist WISH-001 --skip-worktree
 ```
 
 ## Flags
@@ -50,6 +51,7 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 | `--max-iterations=N` | 3 | Max review/fix loops |
 | `--force-continue` | false | Proceed with warnings |
 | `--autonomous=LEVEL` | conservative | Escalation level (see below) |
+| `--skip-worktree` | false | Skip worktree pre-flight (Step 1.3); proceed without worktree isolation |
 
 ### --gen Flag (Story Generation)
 
@@ -169,6 +171,7 @@ artifacts_path = f"{feature_dir}/in-progress/{story_id}/_implementation/"
 autonomy_level = flags.autonomous || "conservative"
 batch_mode = false  # true only when called from /workflow-batch
 gen_mode = flags.gen || false
+skip_worktree = flags.skip_worktree || false
 ```
 
 ### Step 1.5: Generate Story (if --gen flag)
@@ -238,6 +241,144 @@ gen_mode = flags.gen || false
 - Expect story to exist in `ready-to-work/` stage (standard flow)
 - Validate story exists with elab artifacts
 
+### Step 1.3: Worktree Pre-flight
+
+**Flow position:**
+- Standard flow: Step 1 → Step 1.3 → Step 2
+- Gen flow: Step 1 → Step 1.5 → Step 1.3 → Step 2
+
+**IF `--skip-worktree` flag is present:**
+
+```
+WARN: Worktree pre-flight skipped (--skip-worktree flag). Proceeding without worktree isolation.
+     worktree_id will NOT be written to CHECKPOINT.yaml.
+```
+
+Skip the rest of Step 1.3 and continue to Step 2.
+
+**IF `--skip-worktree` NOT present:**
+
+**1. Check CHECKPOINT.yaml for existing worktree_id**
+
+```
+checkpoint_worktree_id = read CHECKPOINT.yaml.worktree_id (may be null/absent)
+```
+
+**2. Query database for active worktree record**
+
+Call MCP tool: `worktree_get_by_story({ story_id: "{STORY_ID}" })`
+
+```
+db_record = worktree_get_by_story({ story_id: "{STORY_ID}" })
+```
+
+**3. Branch on result**
+
+**Case A: db_record is null (no registered worktree)**
+
+No active worktree exists for this story. Guide the user through creating one.
+
+```
+INFO: No worktree registered for {STORY_ID}. Initiating guided worktree creation.
+```
+
+Invoke the guided creation step:
+```
+/wt:new
+```
+
+Note: `/wt:new` is an interactive skill. It will prompt the user for base branch and feature branch name interactively. The user must complete the prompts before continuing.
+
+After the user completes `/wt:new`:
+
+Call MCP tool to register the new worktree:
+```
+result = worktree_register({ story_id: "{STORY_ID}", ... })
+```
+
+**If `worktree_register` returns null (registration failed):**
+```
+WARN: worktree_register returned null. Could not record worktree in database.
+     Confirm before proceeding without worktree tracking:
+     [y] Proceed without worktree_id (no isolation tracking)
+     [n] Stop and investigate registration failure
+```
+- Wait for user confirmation.
+- If confirmed: continue without writing worktree_id to CHECKPOINT.yaml. Log warning.
+- If declined: STOP. Report: "Worktree registration failed. Use --skip-worktree to bypass."
+
+**If `worktree_register` returns a valid record:**
+- Write `worktree_id: {uuid}` to CHECKPOINT.yaml.
+- Log: `worktree_id {uuid} registered and written to CHECKPOINT.yaml`
+- Continue to Step 2.
+
+---
+
+**Case B: db_record is not null AND checkpoint_worktree_id matches db_record.worktree_id**
+
+A registered worktree exists and the checkpoint references the same worktree. Guide the user to switch to it.
+
+```
+INFO: Worktree {db_record.worktree_id} found. Switching to existing worktree for {STORY_ID}.
+```
+
+Invoke the guided switch step:
+```
+/wt:switch
+```
+
+Note: `/wt:switch` is an interactive skill. It will present a list of available worktrees for the user to select from, then provide a `cd` command. The user must complete the selection and navigate to the worktree before continuing.
+
+After the user completes `/wt:switch`, continue to Step 2.
+
+---
+
+**Case C: db_record is not null BUT checkpoint_worktree_id is absent or does not match db_record.worktree_id**
+
+A registered worktree exists but the checkpoint is stale or from a different context. Present a 3-option warning.
+
+```
+WARN: Worktree conflict detected for {STORY_ID}.
+  DB record worktree_id: {db_record.worktree_id}
+  CHECKPOINT.yaml worktree_id: {checkpoint_worktree_id or "absent"}
+
+  Options:
+  (a) Switch to existing worktree — recommended, guided /wt:switch step
+  (b) Create a new worktree — will register a new record, guided /wt:new step
+  (c) Proceed without worktree — no isolation, worktree_id not updated in CHECKPOINT.yaml
+```
+
+**Autonomy level branching for Case C:**
+
+- `conservative`: Present all 3 options to the user. Wait for selection.
+- `moderate` or `aggressive`: Auto-select option (a). Log: `Auto-selected option (a): switch to existing worktree (autonomy={autonomy_level})`. Skip 3-option prompt. Proceed directly to guided /wt:switch step.
+
+**If option (a) selected or auto-selected:**
+```
+INFO: Proceeding with guided worktree switch.
+/wt:switch
+```
+After the user completes `/wt:switch`, continue to Step 2.
+
+**If option (b) selected:**
+```
+INFO: Creating a new worktree.
+/wt:new
+```
+After the user completes `/wt:new`:
+- Call `worktree_register({ story_id: "{STORY_ID}", ... })`
+- Handle null return as in Case A (warn + confirm).
+- If registration succeeds: write new `worktree_id` to CHECKPOINT.yaml.
+- Continue to Step 2.
+
+**If option (c) selected:**
+```
+WARN: Proceeding without worktree isolation. CHECKPOINT.yaml worktree_id not updated.
+```
+Continue to Step 2.
+
+---
+
 ### Step 2: Detect Phase
 Read CHECKPOINT.yaml → determine current_phase and iteration.
 
@@ -290,12 +431,18 @@ If gate fails → BLOCKED, do not proceed.
 
 ### Clean Pass
 1. Update CHECKPOINT.yaml: `current_phase: done`, `e2e_gate: passed`
-2. Move: `in-progress/{STORY_ID}` → `ready-for-qa/{STORY_ID}`
+2. Move story and update status:
+   ```
+   /story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
+   ```
 3. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
 
 ### Forced Continue
 1. CHECKPOINT.yaml: `forced: true`, `warnings: [...]`
-2. Move to `ready-for-qa-with-warnings`
+2. Move story and update status:
+   ```
+   /story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
+   ```
 3. Report with warnings
 
 ---

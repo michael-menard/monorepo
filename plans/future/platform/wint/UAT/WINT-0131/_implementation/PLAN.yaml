@@ -1,0 +1,237 @@
+schema: 1
+story_id: "WINT-0131"
+timestamp: "2026-02-17T05:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create migration 0027 SQL file: ALTER TABLE wint.capabilities ADD COLUMN feature_id uuid REFERENCES wint.features(id) ON DELETE SET NULL + CREATE INDEX"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk.sql"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create rollback SQL file for migration 0027: DROP INDEX + DROP COLUMN feature_id"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk_rollback.sql"
+    dependencies: []
+    slice: packages
+
+  - id: 3
+    description: "Update wint.ts Drizzle schema: add featureId nullable FK column to capabilities table definition; update capabilitiesRelations (add feature one relation) and featuresRelations (add capabilities many relation)"
+    files:
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 4
+    description: "Add TODO comment to unified-wint.ts capabilities table definition for WINT-1100 traceability"
+    files:
+      - "packages/backend/database-schema/src/schema/unified-wint.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Replace graph_get_franken_features stub with full Drizzle implementation: innerJoin features + capabilities on featureId, group by feature in TypeScript, detect missing CRUD types, return FrankenFeatureItem[]"
+    files:
+      - "packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 6
+    description: "Replace graph_get_capability_coverage stub with full Drizzle implementation: dual-ID feature lookup, select capabilities by featureId, aggregate CRUD counts + maturity distribution in TypeScript, return CapabilityCoverageOutput | null"
+    files:
+      - "packages/backend/mcp-tools/src/graph-query/graph-get-capability-coverage.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 7
+    description: "Write unit tests for graph_get_franken_features: happy path (feature with < 4 CRUD types), complete feature (all 4 CRUD) excluded from result, empty result, feature not found, DB error resilience"
+    files:
+      - "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-franken-features.test.ts"
+    dependencies: [5]
+    slice: backend
+
+  - id: 8
+    description: "Write unit tests for graph_get_capability_coverage: happy path with data, CRUD counts correct, maturity distribution correct, dual-ID lookup (UUID + name), feature not found returns null, DB error resilience"
+    files:
+      - "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-capability-coverage.test.ts"
+    dependencies: [6]
+    slice: backend
+
+  - id: 9
+    description: "Write unit tests for graph_check_cohesion: happy path (feature found, no violations), happy path (feature found, violations), feature not found returns unknown, no active rules returns complete, DB error resilience, invalid input throws ZodError, malformed JSONB conditions handled without crash"
+    files:
+      - "packages/backend/mcp-tools/src/graph-query/__tests__/graph-check-cohesion.test.ts"
+    dependencies: []
+    slice: backend
+
+  - id: 10
+    description: "Write unit tests for graph_apply_rules: happy path (rules + violations returned), no active rules returns empty array, optional ruleType filter works, DB error resilience, invalid input throws ZodError, malformed JSONB conditions handled"
+    files:
+      - "packages/backend/mcp-tools/src/graph-query/__tests__/graph-apply-rules.test.ts"
+    dependencies: []
+    slice: backend
+
+  - id: 11
+    description: "Run pnpm build for database-schema and mcp-tools packages to verify TypeScript compilation"
+    files: []
+    dependencies: [3, 4, 5, 6, 7, 8, 9, 10]
+    slice: packages
+
+  - id: 12
+    description: "Run pnpm test for database-schema and mcp-tools packages to verify all tests pass"
+    files: []
+    dependencies: [11]
+    slice: packages
+
+  - id: 13
+    description: "Run pnpm lint on all new/changed files to verify ESLint passes"
+    files: []
+    dependencies: [11]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk.sql"
+    action: create
+    reason: "AC-1: Migration 0027 adding feature_id FK column + index to wint.capabilities"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk_rollback.sql"
+    action: create
+    reason: "AC-3: Rollback SQL for migration 0027"
+
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: modify
+    reason: "AC-4: Add featureId nullable FK column to capabilities table + update capabilitiesRelations and featuresRelations"
+
+  - path: "packages/backend/database-schema/src/schema/unified-wint.ts"
+    action: modify
+    reason: "Architecture Notes: Add TODO comment for WINT-1100 traceability (featureId drift)"
+
+  - path: "packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts"
+    action: modify
+    reason: "AC-5: Replace stub with full Drizzle implementation using innerJoin + TypeScript groupBy logic"
+
+  - path: "packages/backend/mcp-tools/src/graph-query/graph-get-capability-coverage.ts"
+    action: modify
+    reason: "AC-6: Replace stub with full Drizzle implementation using dual-ID lookup + TypeScript aggregation"
+
+  - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-franken-features.test.ts"
+    action: create
+    reason: "AC-10: Unit tests for graph_get_franken_features"
+
+  - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-capability-coverage.test.ts"
+    action: create
+    reason: "AC-10: Unit tests for graph_get_capability_coverage"
+
+  - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-check-cohesion.test.ts"
+    action: create
+    reason: "AC-14: Unit tests for graph_check_cohesion (previously untested)"
+
+  - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-apply-rules.test.ts"
+    action: create
+    reason: "AC-14: Unit tests for graph_apply_rules (previously untested)"
+
+commands_to_run:
+  - command: "pnpm --filter @repo/database-schema build"
+    when: "after schema and migration files created"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools build"
+    when: "after all tool implementations created"
+    required: true
+
+  - command: "pnpm --filter @repo/database-schema test"
+    when: "after build passes"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools test"
+    when: "after build passes"
+    required: true
+
+  - command: "pnpm --filter @repo/database-schema lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File: packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk.sql exists with ALTER TABLE + CREATE INDEX statements"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "Manual: migration applied against local dev database without errors"
+    evidence_type: manual
+
+  - ac_id: "AC-3"
+    planned_evidence: "File: packages/backend/database-schema/src/migrations/app/0027_wint_0131_capabilities_feature_fk_rollback.sql exists with DROP INDEX + DROP COLUMN statements"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Code review: wint.ts capabilities table has featureId column definition; capabilitiesRelations has one(features) entry; featuresRelations has many(capabilities) entry; TypeScript build passes"
+    evidence_type: command
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: graph-get-franken-features.test.ts — happy path with < 4 CRUD types returns correct FrankenFeatureItem; complete feature (all 4) excluded"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: graph-get-capability-coverage.test.ts — CRUD counts + maturity distribution correct; dual-ID lookup verified; null returned for missing feature"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Code review: both tools use only Drizzle ORM query builder (eq, or, isNotNull, innerJoin); no raw SQL string interpolation present"
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit tests: invalid input tests in both graph-get-franken-features.test.ts and graph-get-capability-coverage.test.ts throw ZodError"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit tests: DB error tests in both test files verify logger.warn is called and empty array / null returned"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Test files: graph-get-franken-features.test.ts and graph-get-capability-coverage.test.ts cover all 5 required scenarios per AC-10"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Command: pnpm check-types passes with zero errors across both packages"
+    evidence_type: command
+
+  - ac_id: "AC-12"
+    planned_evidence: "Command: pnpm lint passes with zero errors on all new/changed files"
+    evidence_type: command
+
+  - ac_id: "AC-13"
+    planned_evidence: "Tests: pnpm test for mcp-tools passes including graph-check-cohesion.test.ts and graph-apply-rules.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-14"
+    planned_evidence: "Test files: graph-check-cohesion.test.ts and graph-apply-rules.test.ts cover happy path, feature not found, no active rules, DB error resilience, invalid input ZodError, malformed JSONB"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Migration number confirmed: next is 0027 (last applied is 0026_wint_1130_worktree_tracking per _journal.json idx=26)"
+  - "capabilitiesRelations currently a placeholder: relations(capabilities, () => ({})). Must be updated to include one(features) for featureId FK."
+  - "featuresRelations currently has outgoingRelationships + incomingRelationships only. Must add many(capabilities) to complete bidirectional relation."
+  - "The capabilities.capabilityType field in wint.ts is documented as 'business', 'technical', 'infrastructure' — NOT CRUD types. The CRUD types (create, read, update, delete) are lifecycle_stage / or capabilityType values used in Franken-feature detection. Confirm: AC-5 refers to capabilityType field being one of 'create', 'read', 'update', 'delete' per the Architecture Notes. The existing schema has capabilityType as text — the CRUD lifecycle constraint is enforced at application level only."
+  - "graph_get_franken_features must import capabilities + features from @repo/database-schema and db from @repo/db, following the pattern in graph-check-cohesion.ts."
+  - "graph_get_capability_coverage must use isNotNull import from drizzle-orm for the featureId filter."
+  - "ADR-005 constraint: tests must use real PostgreSQL. But existing story-management unit tests use vi.mock() for @repo/db. The test pattern to follow uses vi.mock — this is the unit test pattern (not integration test). Integration tests in story-management/integration.test.ts use real DB. Story specifies unit tests for graph query tools — mocked DB is acceptable for unit tests (only integration.test.ts uses real DB per the pattern reference)."
+  - "Test mock pattern: mock @repo/db and @repo/database-schema following story-management/__tests__/story-get-status.test.ts vi.hoisted + vi.mock pattern."
+  - "unified-wint.ts capabilities table is at approximately line 492 — only a TODO comment is added, no functional change."
+  - "WINT-0130 decision_002: wint.ts is authoritative. Do NOT touch unified-wint.ts capabilities functionally — only add TODO comment."
+  - "No changes to __types__/index.ts — Zod schemas already correctly define FrankenFeatureItemSchema and CapabilityCoverageOutputSchema."
+  - "No changes to graph_check_cohesion.ts or graph_apply_rules.ts source — only test files are created for these."

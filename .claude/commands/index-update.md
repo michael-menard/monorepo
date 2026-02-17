@@ -112,10 +112,10 @@ Recalculate counts after any status change:
 ### 4. Update Ready to Start Section
 
 A story is READY if:
-- Status is `pending` or `backlog` or `Draft`
+- Status is `pending`, `backlog`, `Draft`, or `ready-to-work`
 - `**Depends On:**` is `none`
 
-**Note:** Stories with status `Created`, `generated`, `In Elaboration`, or `elaboration` are NOT ready to start - they need elaboration first.
+**Note:** Stories with status `Created`, `generated`, `In Elaboration`, or `elaboration` are NOT ready to start — they need elaboration first. Stories at `in-progress` or beyond are already being worked.
 
 Rebuild the "Ready to Start" section with qualifying stories.
 
@@ -136,17 +136,25 @@ ready_to_start_updated: true
 
 ## Common Patterns
 
-### Story Completed
+### Story Reaches UAT (QA Passed)
+
+```bash
+/index-update plans/future/wishlist WISH-001 --status=uat --clear-deps
+```
+
+This:
+1. Sets WISH-001 status to `uat`
+2. Removes WISH-001 from all other stories' Depends On
+3. Updates Progress Summary
+4. Updates Ready to Start (newly unblocked stories appear)
+
+### Story Fully Completed (manual sign-off)
 
 ```bash
 /index-update plans/future/wishlist WISH-001 --status=completed --clear-deps
 ```
 
-This:
-1. Sets WISH-001 status to `completed`
-2. Removes WISH-001 from all other stories' Depends On
-3. Updates Progress Summary
-4. Updates Ready to Start (newly unblocked stories appear)
+Use only when manually marking a story as fully done after UAT acceptance.
 
 ### Story Blocked
 

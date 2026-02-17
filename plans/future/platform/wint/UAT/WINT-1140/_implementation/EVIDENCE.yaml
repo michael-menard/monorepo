@@ -1,0 +1,170 @@
+schema: 1
+story_id: "WINT-1140"
+version: 1
+timestamp: "2026-02-17T18:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Command doc describes guided /wt:new invocation when worktree_get_by_story returns null"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case A describes guided /wt:new invocation when db_record is null. Text explicitly states /wt:new is an interactive skill that prompts for base branch and feature branch. Uses 'guided creation step' language."
+
+  - ac_id: "AC-2"
+    ac_text: "worktree_id written to CHECKPOINT.yaml after worktree_register returns. CheckpointSchema updated with worktree_id field."
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/orchestrator/src/artifacts/checkpoint.ts"
+        description: "Added worktree_id: z.string().uuid().optional() field to CheckpointSchema at line 86."
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case A: after worktree_register returns, instructs writing worktree_id to CHECKPOINT.yaml."
+      - type: test
+        path: "packages/backend/orchestrator/src/artifacts/__tests__/checkpoint.test.ts"
+        description: "4 new unit tests in 'worktree_id field' describe block: valid UUID accepted, absent field passes (optional), non-UUID rejected, invalid UUID format rejected. Plus 1 test in advanceCheckpoint: worktree_id preserved across advancement. 19 checkpoint tests pass total."
+
+  - ac_id: "AC-3"
+    ac_text: "Command doc describes CHECKPOINT.yaml.worktree_id match detection path leading to guided /wt:switch"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case B describes the match path: when db_record.worktree_id matches checkpoint_worktree_id, invoke guided /wt:switch step. Text states /wt:switch is interactive and presents a worktree list."
+
+  - ac_id: "AC-4"
+    ac_text: "Command doc describes 3-option warning format (a/b/c) when DB has active worktree but CHECKPOINT.yaml has no/mismatched worktree_id"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case C presents 3-option WARN format: (a) Switch to existing worktree, (b) Create a new worktree, (c) Proceed without worktree. Includes worktree_id conflict details."
+
+  - ac_id: "AC-5"
+    ac_text: "Flags table includes --skip-worktree. Step 1.3 logic includes skip-worktree early exit path with warning message."
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "--skip-worktree added to Flags table (line 54). Step 1.3 starts with skip-worktree early exit: logs WARN message and skips remainder of Step 1.3."
+
+  - ac_id: "AC-6"
+    ac_text: "Command doc shows Step 1.3 inserted between Step 1 (Initialize) and Step 2 (Detect Phase)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 header appears at line 244, after Step 1.5 (gen flow) and before Step 2 (Detect Phase, line 380). The section header reads 'Step 1.3: Worktree Pre-flight'."
+
+  - ac_id: "AC-7"
+    ac_text: "Command doc Step 1.3 placement in --gen flow: Step 1 → Step 1.5 → Step 1.3 → Step 2"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 opens with 'Flow position:' section explicitly documenting both flows: 'Standard flow: Step 1 → Step 1.3 → Step 2' and 'Gen flow: Step 1 → Step 1.5 → Step 1.3 → Step 2'."
+
+  - ac_id: "AC-8"
+    ac_text: "Command doc Step 1.3 describes graceful degradation when worktree_register returns null"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case A includes worktree_register null-return handling: logs WARN, presents [y/n] prompt. If confirmed: continues without worktree_id. If declined: STOP with message. Matches null-check resilience pattern from WINT-1130."
+
+  - ac_id: "AC-9"
+    ac_text: "Command doc Step 1.3 documents autonomy level branching for 3-option conflict scenario: conservative=prompt, moderate/aggressive=skip prompt and go to /wt:switch guided step"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case C includes 'Autonomy level branching for Case C': conservative=present 3 options to user; moderate or aggressive=auto-select option (a), log auto-selection, skip 3-option prompt, proceed to guided /wt:switch."
+
+  - ac_id: "AC-10"
+    ac_text: "Command doc Step 1.3 describes /wt:switch as guided/assisted step (not silent auto-switch)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case B and Case C both describe /wt:switch as interactive: 'it will present a list of available worktrees for the user to select from, then provide a cd command'. Uses 'guided switch step' language. Does not claim silent/automatic switching."
+
+  - ac_id: "AC-11"
+    ac_text: "Command doc Step 1.3 describes /wt:new as guided creation step (not silent creation)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/dev-implement-story.md"
+        description: "Step 1.3 Case A and Case C option (b) both describe /wt:new as interactive: 'It will prompt the user for base branch and feature branch name interactively. The user must complete the prompts before continuing.' Uses 'guided creation step' language."
+
+touched_files:
+  - path: "packages/backend/orchestrator/src/artifacts/checkpoint.ts"
+    action: modified
+    lines: 129
+    description: "Added worktree_id: z.string().uuid().optional() field to CheckpointSchema for TypeScript type safety and explicit schema documentation"
+
+  - path: "packages/backend/orchestrator/src/artifacts/__tests__/checkpoint.test.ts"
+    action: modified
+    lines: 259
+    description: "Added worktree_id field describe block (5 tests) plus advanceCheckpoint worktree_id preservation test. Total 19 checkpoint tests."
+
+  - path: ".claude/commands/dev-implement-story.md"
+    action: modified
+    lines: 452
+    description: "Added --skip-worktree to Flags table. Added Step 1.3 (Worktree Pre-flight) between Step 1.5 and Step 2 covering all 3 cases (null DB record, match, mismatch), skip-worktree path, autonomy branching, graceful degradation."
+
+commands_run:
+  - command: "pnpm test --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "116 test files passed (1 skipped), 2951 tests passed (18 skipped). checkpoint.test.ts: 19 tests passed."
+    timestamp: "2026-02-17T17:50:00Z"
+
+  - command: "pnpm build --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "2 tasks successful, 1 cached. tsc build completed."
+    timestamp: "2026-02-17T17:55:00Z"
+
+  - command: "pnpm --filter @repo/orchestrator type-check"
+    result: SUCCESS
+    output: "tsc --noEmit passed with no errors."
+    timestamp: "2026-02-17T17:56:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 2951, fail: 0 }
+  http: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra — no browser surface. This story modifies orchestrator packages and command documentation only. No UI components or API endpoints introduced. Integration tests require WINT-1130 live MCP tools (worktree_register, worktree_get_by_story) which are pending deployment confirmation per KNOWLEDGE-CONTEXT.yaml ADR-005."
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+
+coverage:
+  notes: "Full orchestrator test suite: 2951 tests pass. checkpoint.test.ts specifically exercises worktree_id field with 5 new test cases covering valid UUID, absent (optional), non-UUID rejection, invalid UUID format rejection, and preservation across advanceCheckpoint."
+
+notable_decisions:
+  - "worktree_id added as z.string().uuid().optional() — not required — so existing CHECKPOINT.yaml files (which lack this field) parse without error. Uses .passthrough() compatibility."
+  - "wt-new and wt-switch described as guided/interactive skills in all cases. No silent automation language used per KNOWLEDGE-CONTEXT.yaml L-001."
+  - "autonomy_level branching in Case C: conservative=3-option prompt to user; moderate/aggressive=auto-select option (a) and proceed directly to guided /wt:switch. The autonomy level governs only the orchestrator's own decision prompt, not the interactive skill itself (per PLAN.yaml ARCH-001)."
+  - "createCheckpoint() does not include worktree_id in its return value — consistent with optional field semantics. worktree_id is written separately after worktree_register returns."
+  - "Steps 3 and 4 from PLAN.yaml (both touching dev-implement-story.md) were done in a single edit pass per PLAN.yaml notes."
+
+known_deviations:
+  - "E2E marked exempt per ADR-006: no browser surface. Integration tests with real DB (worktree_register, worktree_get_by_story) blocked by WINT-1130 deployment confirmation. Command doc verified by file review."
+  - "pnpm lint command not found at root or filter level for orchestrator package (no lint script defined in package.json). TypeScript compilation (build + type-check) serves as the primary static analysis gate."
+
+token_summary:
+  execute: { in: 40000, out: 6000 }

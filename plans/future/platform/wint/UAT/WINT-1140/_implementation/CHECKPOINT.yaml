@@ -1,0 +1,17 @@
+schema: 1
+story_id: WINT-1140
+feature_dir: /Users/michaelmenard/Development/monorepo/plans/future/platform/wint
+timestamp: "2026-02-17T18:00:00Z"
+
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: true
+e2e_gate: exempt
+qa_setup_complete_at: "2026-02-17T18:45:00Z"
+warnings:
+  - "Dependency WINT-1130 in UAT status, not completed. Proceeding per force_continue override."
+  - "E2E marked exempt: no browser surface (infra story). Integration tests blocked pending WINT-1130 deployment."
+gen_mode: false

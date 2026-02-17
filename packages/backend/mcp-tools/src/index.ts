@@ -51,3 +51,12 @@ export type {
   WorktreeMarkCompleteOutput,
   WorktreeRecord,
 } from './worktree-management/index.js'
+
+// Re-export story compatibility shim tools (WINT-1011)
+export {
+  shimGetStoryStatus,
+  shimUpdateStoryStatus,
+  shimGetStoriesByStatus,
+  shimGetStoriesByFeature,
+} from './story-compatibility/index.js'
+export type { ShimOptions } from './story-compatibility/__types__/index.js'

@@ -22,8 +22,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | ready-for-code-review | 1 |
 | elaboration | 0 |
 | backlog | 0 |
-| in-progress | 0 |
-| ready-to-work | 3 |
+| in-progress | 1 |
+| ready-to-work | 2 |
 | pending | 126 |
 
 ---
@@ -598,8 +598,8 @@ Create the four core shim functions (`shimGetStoryStatus`, `shimUpdateStoryStatu
 
 ### WINT-1012: Compatibility Shim Module — Observability and Quality
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-1012/WINT-1012.md`
+**Status:** in-progress
+**Story File:** `wint/in-progress/WINT-1012/WINT-1012.md`
 **Elaboration Complete:** 2026-02-16
 **Verdict:** PASS
 **Split From:** WINT-1010
@@ -695,7 +695,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1060: Update story-move Command to Use DB
 
 **Status:** pending
-**Depends On:** WINT-1011, WINT-1030
+**Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-move command to update database status instead of moving directories
 **Infrastructure:**
@@ -2033,7 +2033,7 @@ Backlog management phase - Storage, refinement, and promotion of post-MVP items 
 ### WINT-8010: Add Backlog Status to Stories Schema
 
 **Status:** pending
-**Depends On:** WINT-1011
+**Depends On:** none
 **Phase:** 8
 **Feature:** Extend core.stories table to support status='backlog' with priority, source, and category fields
 **Infrastructure:**

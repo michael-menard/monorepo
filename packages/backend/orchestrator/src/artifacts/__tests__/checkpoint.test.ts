@@ -125,6 +125,55 @@ describe('CheckpointSchema', () => {
     })
   })
 
+  describe('worktree_id field', () => {
+    const baseCheckpoint = {
+      schema: 1,
+      story_id: 'WISH-001',
+      feature_dir: 'plans/future/wishlist',
+      timestamp: '2026-02-01T12:00:00.000Z',
+      current_phase: 'setup',
+      last_successful_phase: null,
+      iteration: 0,
+      max_iterations: 3,
+      blocked: false,
+      forced: false,
+      warnings: [],
+    }
+
+    it('accepts a valid UUID as worktree_id', () => {
+      const checkpoint = {
+        ...baseCheckpoint,
+        worktree_id: '550e8400-e29b-41d4-a716-446655440000',
+      }
+
+      const result = CheckpointSchema.parse(checkpoint)
+      expect(result.worktree_id).toBe('550e8400-e29b-41d4-a716-446655440000')
+    })
+
+    it('passes when worktree_id is absent (optional field)', () => {
+      const result = CheckpointSchema.parse(baseCheckpoint)
+      expect(result.worktree_id).toBeUndefined()
+    })
+
+    it('rejects a non-UUID string as worktree_id', () => {
+      const checkpoint = {
+        ...baseCheckpoint,
+        worktree_id: 'not-a-uuid',
+      }
+
+      expect(() => CheckpointSchema.parse(checkpoint)).toThrow()
+    })
+
+    it('rejects an invalid UUID format as worktree_id', () => {
+      const checkpoint = {
+        ...baseCheckpoint,
+        worktree_id: '12345678-1234-1234-1234-123456789XYZ',
+      }
+
+      expect(() => CheckpointSchema.parse(checkpoint)).toThrow()
+    })
+  })
+
   describe('createCheckpoint', () => {
     it('creates a checkpoint with default phase', () => {
       const checkpoint = createCheckpoint('WISH-001', 'plans/future/wishlist')
@@ -151,6 +200,13 @@ describe('CheckpointSchema', () => {
       const checkpoint = createCheckpoint('WISH-001', 'plans/future/wishlist')
 
       expect(() => CheckpointSchema.parse(checkpoint)).not.toThrow()
+    })
+
+    it('does not include worktree_id by default', () => {
+      const checkpoint = createCheckpoint('WISH-001', 'plans/future/wishlist')
+
+      expect(checkpoint.worktree_id).toBeUndefined()
+      expect(Object.prototype.hasOwnProperty.call(checkpoint, 'worktree_id')).toBe(false)
     })
   })
 
@@ -190,6 +246,14 @@ describe('CheckpointSchema', () => {
       const advanced = advanceCheckpoint(initial, 'setup', 'plan')
 
       expect(() => CheckpointSchema.parse(advanced)).not.toThrow()
+    })
+
+    it('preserves worktree_id across checkpoint advancement', () => {
+      const initial = createCheckpoint('WISH-001', 'plans/future/wishlist')
+      const withWorktree = { ...initial, worktree_id: '550e8400-e29b-41d4-a716-446655440000' }
+      const advanced = advanceCheckpoint(withWorktree, 'setup', 'plan')
+
+      expect(advanced.worktree_id).toBe('550e8400-e29b-41d4-a716-446655440000')
     })
   })
 })

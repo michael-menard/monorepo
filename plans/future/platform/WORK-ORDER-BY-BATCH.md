@@ -158,14 +158,13 @@ Stories grouped by dependencies showing what can be worked in parallel.
 |---|---|----------|-------|--------|--------------|----------|
 | [ ] | 47 | WINT-1110 | Migrate Existing LangGraph Data ⚡ | ⏳ | WINT-1090 (#34) | P0 |
 | [ ] | 48 | WINT-1010 | Create Compatibility Shim Module ⚡ | ⏳ | WINT-0090 (#36) | P0 |
-| [ ] | 49 | KBAR-0040 | Artifact Sync Functions | ⏳ | KBAR-0030 (#37) | P1 |
 | [ ] | 50 | WINT-1140 | Integrate Worktree into dev-implement-story | ⏸️ | WINT-1130 (#44) | P1 |
 | [ ] | 51 | WINT-1150 | Integrate Worktree Cleanup into Completion | ⏸️ | WINT-1130 (#44) | P1 |
 | [ ] | 52 | WINT-1070 | Deprecate stories.index.md | ⏳ | WINT-1030 (#38) | P2 |
 | [ ] | 53 | WINT-1040 | Update story-status to Use DB | ⏸️ | #48, #38 | P2 |
 | [ ] | 54 | WINT-1050 | Update story-update to Use DB | ⏸️ | #48, #38 | P2 |
 | [ ] | 55 | WINT-1060 | Update story-move to Use DB | ⏸️ | #48, #38 | P2 |
-| [ ] | 56 | KBAR-0050 | CLI Sync Commands | ⏸️ | KBAR-0040 (#49) | P2 |
+| [ ] | 56 | KBAR-0050 | CLI Sync Commands | ⏳ | KBAR-0040 (#49) | P2 |
 
 ### E2E Gate:
 
@@ -325,12 +324,12 @@ Once story #94 (WINT-9140) is complete and validated, you can switch to working 
 ## Progress Tracking
 
 **Current Status Summary:**
-- ✅ UAT Verified: 46 stories (AUDT-0010, INFR-0020, INFR-0030, INFR-0040, INFR-0041, INFR-0050, INFR-0110, INFR-0120, KBAR-0010, KBAR-0020, KBAR-0030, LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, LNGG-0070, MODL-0010, MODL-0011, MODL-0020, MODL-0030, MODL-0050, WINT-0010, WINT-0020, WINT-0030, WINT-0040, WINT-0060, WINT-0070, WINT-0080, WINT-0090, WINT-0100, WINT-0110, WINT-0130, WINT-0150, WINT-0160, WINT-0180, WINT-0200, WINT-0220, WINT-0230, WINT-1020, WINT-1030, WINT-1080, WINT-1090, WINT-1100, WINT-7010)
+- ✅ UAT Verified: 47 stories (AUDT-0010, INFR-0020, INFR-0030, INFR-0040, INFR-0041, INFR-0050, INFR-0110, INFR-0120, KBAR-0010, KBAR-0020, KBAR-0030, KBAR-0040, LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, LNGG-0070, MODL-0010, MODL-0011, MODL-0020, MODL-0030, MODL-0050, WINT-0010, WINT-0020, WINT-0030, WINT-0040, WINT-0060, WINT-0070, WINT-0080, WINT-0090, WINT-0100, WINT-0110, WINT-0130, WINT-0150, WINT-0160, WINT-0180, WINT-0200, WINT-0220, WINT-0230, WINT-1020, WINT-1030, WINT-1080, WINT-1090, WINT-1100, WINT-7010)
 - 🔍 Ready for QA: 0 stories
 - 🚧 In Progress: 0 stories
 - ⏸️ Blocked: remaining stories (waiting on dependencies)
 
-**Active Stories: 46 tracked**
+**Active Stories: 47 tracked**
 
 **Critical Path Tracking:**
 - [~] LNGG-0010 in progress → Unblocks Batch 2 (3 stories)

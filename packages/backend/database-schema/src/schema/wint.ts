@@ -1160,7 +1160,11 @@ export const capabilities = wintSchema.table(
 
     // Status
     maturityLevel: text('maturity_level'), // 'experimental', 'beta', 'stable', 'deprecated'
-    lifecycleStage: text('lifecycle_stage'), // 'experimental', 'beta', 'stable', 'deprecated'
+    lifecycleStage: text('lifecycle_stage'), // 'create', 'read', 'update', 'delete' — CRUD lifecycle (app-enforced)
+
+    // Feature linkage (WINT-0131)
+    // Nullable FK: null = capability not yet linked to a feature
+    featureId: uuid('feature_id').references(() => features.id, { onDelete: 'set null' }),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1169,6 +1173,7 @@ export const capabilities = wintSchema.table(
     capabilityNameIdx: uniqueIndex('capabilities_capability_name_idx').on(table.capabilityName),
     capabilityTypeIdx: index('capabilities_capability_type_idx').on(table.capabilityType),
     maturityLevelIdx: index('capabilities_maturity_level_idx').on(table.maturityLevel),
+    featureIdIdx: index('idx_capabilities_feature_id').on(table.featureId),
   }),
 )
 
@@ -1278,6 +1283,8 @@ export const featuresRelations = relations(features, ({ many }) => ({
   incomingRelationships: many(featureRelationships, {
     relationName: 'targetFeature',
   }),
+  // WINT-0131: bidirectional relation — features have many capabilities
+  capabilities: many(capabilities),
 }))
 
 // Feature Relationships Relations
@@ -1294,8 +1301,13 @@ export const featureRelationshipsRelations = relations(featureRelationships, ({ 
   }),
 }))
 
-// Capabilities Relations (placeholder for future expansion)
-export const capabilitiesRelations = relations(capabilities, () => ({}))
+// Capabilities Relations (WINT-0131: add feature FK relation)
+export const capabilitiesRelations = relations(capabilities, ({ one }) => ({
+  feature: one(features, {
+    fields: [capabilities.featureId],
+    references: [features.id],
+  }),
+}))
 
 // Cohesion Rules Relations (placeholder for future expansion)
 export const cohesionRulesRelations = relations(cohesionRules, () => ({}))

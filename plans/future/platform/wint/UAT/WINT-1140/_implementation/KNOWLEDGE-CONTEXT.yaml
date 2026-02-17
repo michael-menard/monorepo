@@ -1,0 +1,45 @@
+schema: 1
+story_id: WINT-1140
+generated_at: "2026-02-17T17:10:00Z"
+domain: orchestrator
+scope_summary: "Integrate worktree creation into dev-implement-story orchestrator with database-backed tracking"
+
+lessons:
+  - id: L-001
+    title: "wt-new and wt-switch are fully interactive — no parameter interface"
+    summary: "Both /wt:new and /wt:switch are guided/interactive skills. wt-new prompts for base branch and feature branch interactively. wt-switch lists available worktrees and prompts for selection, then provides a cd command (cannot change directory itself). Step 1.3 must present these as guided/assisted steps, not silent automation."
+    source: ".claude/skills/wt-new/SKILL.md and .claude/skills/wt-switch/SKILL.md (verified during setup)"
+    applies_to: [AC-1, AC-2, AC-3, AC-10, AC-11]
+
+  - id: L-002
+    title: "CheckpointSchema uses .passthrough() — safe to add optional fields"
+    summary: "The CheckpointSchema in checkpoint.ts uses .passthrough() for backward compatibility. Adding worktree_id as an optional field is safe and non-breaking. Existing checkpoint files will parse without errors. The field must still be added explicitly to the schema for type safety."
+    source: "packages/backend/orchestrator/src/artifacts/checkpoint.ts"
+    applies_to: [AC-2, AC-3]
+
+  - id: L-003
+    title: "Null-check resilience pattern from WINT-1130"
+    summary: "MCP tool calls (worktree_register, worktree_get_by_story) must handle null returns gracefully. The pattern established in WINT-1130: check for null explicitly before proceeding, show warning + user prompt on null, never assume success. This is the same pattern as story_get_status / story_update_status from WINT-0090."
+    source: "WINT-1130 implementation lessons, story Reuse Plan section"
+    applies_to: [AC-8]
+
+  - id: L-004
+    title: "Checkpoint .passthrough() preserves worktree_id without schema change — but add explicitly"
+    summary: "While .passthrough() would silently preserve worktree_id written to YAML, the field must be added to CheckpointSchema formally for (a) TypeScript type safety, (b) createCheckpoint() helper awareness, (c) downstream agents reading the field reliably. Do not rely on passthrough for a first-class field."
+    source: "Analysis of checkpoint.ts schema"
+    applies_to: [AC-2]
+
+adrs:
+  - id: ADR-005
+    title: "Integration tests use real DB (no mocking of MCP tools)"
+    relevance: "worktree_register and worktree_get_by_story must not be mocked in integration tests. Requires WINT-1130 MCP tools to be live before running integration test suite."
+    applies_to: [AC-1, AC-2, AC-3]
+
+  - id: ADR-006
+    title: "No Playwright for non-UI stories"
+    relevance: "This story has no browser surface. Integration tests serve as the E2E equivalent. The E2E gate in the orchestrator must accept 'exempt' for this story."
+    applies_to: []
+
+warnings:
+  - "WINT-1130 deployment dependency: worktree_register and worktree_get_by_story must be confirmed live in MCP server before integration tests can run. Command doc can be written and reviewed independently."
+  - "wt-new and wt-switch are interactive — autonomous/silent invocation is not possible. All AC language describing 'automatically' must be interpreted as 'the orchestrator guides the user through the interactive skill'."

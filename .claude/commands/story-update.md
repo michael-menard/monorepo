@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 2.0.0
+updated: 2026-02-17
+version: 2.1.0
 type: utility-skill
 permission_level: docs-only
 ---
@@ -42,6 +42,40 @@ backlog → elaboration → ready-to-work → in-progress → ready-for-qa → u
 | `BLOCKED` | Cannot proceed, needs resolution |
 | `superseded` | Replaced by other stories |
 
+## Worktree Cleanup on Completed Transition (WINT-1150)
+
+**Applies to**: `uat → completed` transition ONLY.
+
+**Scope constraint**: This check only runs when transitioning to `completed` from `uat`.
+Direct admin overrides (e.g., forcing `in-progress → completed`) do not trigger this check.
+
+When `NEW_STATUS == 'completed'`, perform the following BEFORE updating the story status:
+
+### Step A: Look up active worktree
+```
+Call: worktree_get_by_story({storyId: STORY_ID})
+```
+
+### Step B: Branch on result
+- If `null` → skip silently, continue with status update (no worktree to clean up)
+- If active worktree found → proceed to Step C
+
+### Step C: Invoke wt-finish and handle result
+```
+Invoke: /wt:finish {branchName} {worktreePath}
+```
+- On success:
+  - Call `worktree_mark_complete({worktreeId: record.id, status: 'merged'})`
+- On any failure (any error or non-success):
+  - Call `worktree_mark_complete({worktreeId: record.id, status: 'abandoned', metadata: {cleanup_deferred: true, reason: 'unknown'}})`
+  - Emit WARNING: `"WARNING: Worktree '{branchName}' at '{worktreePath}' was not cleaned up. Reason: unknown. Action: Run /wt:finish {STORY_ID} when ready."`
+
+**Continue status transition regardless of outcome** — story completion is never blocked by worktree cleanup.
+
+### Note on MCP Tool Access
+
+The MCP tools (`worktree_get_by_story`, `worktree_mark_complete`) are called by the executing agent reading this command. The `docs-only` permission constraint on this file applies to filesystem writes, not MCP tool access. The executing agent must have `worktree_get_by_story` and `worktree_mark_complete` tools available. If MCP tools are unavailable, emit a note instructing the user to manually run `/wt:finish {STORY_ID}`.
+
 ## Execution Steps
 
 ### 1. Locate Story File
@@ -55,7 +89,11 @@ Search within `{FEATURE_DIR}`:
 
 If not found: `UPDATE FAILED: Story not found`
 
-### 2. Update Frontmatter
+### 2. Worktree Cleanup (if NEW_STATUS == 'completed')
+
+Perform cleanup check per "Worktree Cleanup on Completed Transition" section above.
+
+### 3. Update Frontmatter
 
 In `{STORY_ID}.md`:
 
@@ -66,7 +104,7 @@ updated_at: "<TIMESTAMP>"
 ---
 ```
 
-### 3. Update Index (unless --no-index)
+### 4. Update Index (unless --no-index)
 
 In `{FEATURE_DIR}/stories.index.md`:
 
@@ -74,7 +112,7 @@ In `{FEATURE_DIR}/stories.index.md`:
 2. Change `**Status:** <old>` to `**Status:** <NEW_STATUS>`
 3. Update Progress Summary counts
 
-### 4. Return Result
+### 5. Return Result
 
 ```yaml
 feature_dir: {FEATURE_DIR}
@@ -83,6 +121,7 @@ old_status: <previous>
 new_status: <NEW_STATUS>
 file_updated: {FEATURE_DIR}/<stage>/{STORY_ID}/{STORY_ID}.md
 index_updated: true | false | skipped
+worktree_cleanup: completed | deferred | skipped | not_found  # only when NEW_STATUS == 'completed'
 ```
 
 ## Status Transition Rules
@@ -121,7 +160,7 @@ index_updated: true | false | skipped
 # Move story to in-progress
 /story-update plans/future/wishlist WISH-001 in-progress
 
-# Mark UAT complete
+# Mark UAT complete (triggers worktree cleanup check)
 /story-update plans/future/wishlist WISH-001 completed
 
 # Frontmatter only (skip index)

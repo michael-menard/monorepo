@@ -1,0 +1,222 @@
+schema: 1
+story_id: "KBAR-0040"
+timestamp: "2026-02-17T10:00:00Z"
+
+steps:
+  - id: 1
+    description: "Extend __types__/index.ts with ARTIFACT_FILENAME_MAP, non-story artifact type enum, and all Zod input/output schemas for AC-7 and AC-10"
+    files:
+      - "packages/backend/kbar-sync/src/__types__/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Implement sync-artifact-to-database.ts — filesystem→DB sync with checksum idempotency, artifact row upsert, artifactVersions insert, artifactContentCache upsert, syncEvents lifecycle, path security (AC-1, AC-3, AC-8)"
+    files:
+      - "packages/backend/kbar-sync/src/sync-artifact-to-database.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 3
+    description: "Implement sync-artifact-from-database.ts — DB→filesystem sync with cache read/hit-count increment, atomic write, mkdir for parent dir, syncEvents lifecycle, path security (AC-2, AC-3, AC-8)"
+    files:
+      - "packages/backend/kbar-sync/src/sync-artifact-from-database.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 4
+    description: "Implement detect-artifact-conflicts.ts — checksum comparison, syncConflicts row insert on mismatch, resolutionOptions return, path security (AC-6, AC-8)"
+    files:
+      - "packages/backend/kbar-sync/src/detect-artifact-conflicts.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 5
+    description: "Implement batch-sync-artifacts.ts — discover artifacts via ARTIFACT_FILENAME_MAP and PROOF-*.md glob, call syncArtifactToDatabase per artifact with fault isolation, aggregate results, single syncEvent (AC-4, AC-8)"
+    files:
+      - "packages/backend/kbar-sync/src/batch-sync-artifacts.ts"
+    dependencies: [2]
+    slice: backend
+
+  - id: 6
+    description: "Implement batch-sync-by-type.ts — cross-story artifact discovery by type, syncCheckpoints progress tracking and resumption, per-artifact fault isolation (AC-5, AC-8)"
+    files:
+      - "packages/backend/kbar-sync/src/batch-sync-by-type.ts"
+    dependencies: [2]
+    slice: backend
+
+  - id: 7
+    description: "Update src/index.ts to export all new functions, schemas, types, and ARTIFACT_FILENAME_MAP"
+    files:
+      - "packages/backend/kbar-sync/src/index.ts"
+    dependencies: [2, 3, 4, 5, 6]
+    slice: packages
+
+  - id: 8
+    description: "Write unit tests for sync-artifact-to-database.ts — happy path, checksum skip, cache upsert, version record, path security rejection, Zod validation, error handling (AC-9)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/sync-artifact-to-database.test.ts"
+    dependencies: [2]
+    slice: backend
+
+  - id: 9
+    description: "Write unit tests for sync-artifact-from-database.ts — happy path, cache hit/miss, atomic write, path security rejection, file-not-found, DB error (AC-9)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/sync-artifact-from-database.test.ts"
+    dependencies: [3]
+    slice: backend
+
+  - id: 10
+    description: "Write unit tests for batch-sync-artifacts.ts — all-success, partial-failure isolation, all-failure, Zod validation (AC-9)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/batch-sync-artifacts.test.ts"
+    dependencies: [5]
+    slice: backend
+
+  - id: 11
+    description: "Write unit tests for batch-sync-by-type.ts — happy path, checkpoint resumption mock, fault isolation (AC-9, AC-10)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/batch-sync-by-type.test.ts"
+    dependencies: [6]
+    slice: backend
+
+  - id: 12
+    description: "Write unit tests for detect-artifact-conflicts.ts — no-conflict (match), conflict (mismatch), symlink/traversal rejection (AC-9)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/detect-artifact-conflicts.test.ts"
+    dependencies: [4]
+    slice: backend
+
+  - id: 13
+    description: "Write integration tests (testcontainers) — idempotency skip (AC-1), conflict detection no-conflict (AC-6), batch checkpoint resumption (AC-5), 100+ artifact batch scale (AC-4, AC-5)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/artifact-sync.integration.test.ts"
+    dependencies: [2, 3, 4, 5, 6]
+    slice: backend
+
+files_to_change:
+  - path: "packages/backend/kbar-sync/src/__types__/index.ts"
+    action: modify
+    reason: "Add ARTIFACT_FILENAME_MAP, non-story artifact type Zod enum, and all AC-7 input/output schemas (SyncArtifactToDatabaseInputSchema, SyncArtifactToDatabaseOutputSchema, SyncArtifactFromDatabaseInputSchema, SyncArtifactFromDatabaseOutputSchema, BatchSyncArtifactsInputSchema, BatchSyncArtifactsOutputSchema, BatchSyncByTypeInputSchema, BatchSyncByTypeOutputSchema, DetectArtifactConflictsInputSchema, DetectArtifactConflictsOutputSchema). Add AC-10 documentation comments."
+
+  - path: "packages/backend/kbar-sync/src/sync-artifact-to-database.ts"
+    action: create
+    reason: "New function syncArtifactToDatabase — AC-1, AC-3, AC-8"
+
+  - path: "packages/backend/kbar-sync/src/sync-artifact-from-database.ts"
+    action: create
+    reason: "New function syncArtifactFromDatabase — AC-2, AC-3, AC-8"
+
+  - path: "packages/backend/kbar-sync/src/detect-artifact-conflicts.ts"
+    action: create
+    reason: "New function detectArtifactConflicts — AC-6, AC-8"
+
+  - path: "packages/backend/kbar-sync/src/batch-sync-artifacts.ts"
+    action: create
+    reason: "New function batchSyncArtifactsForStory — AC-4, AC-8"
+
+  - path: "packages/backend/kbar-sync/src/batch-sync-by-type.ts"
+    action: create
+    reason: "New function batchSyncByType — AC-5, AC-8"
+
+  - path: "packages/backend/kbar-sync/src/index.ts"
+    action: modify
+    reason: "Export all new functions, schemas, types, and ARTIFACT_FILENAME_MAP per AC-7"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/sync-artifact-to-database.test.ts"
+    action: create
+    reason: "Unit tests for syncArtifactToDatabase — AC-9"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/sync-artifact-from-database.test.ts"
+    action: create
+    reason: "Unit tests for syncArtifactFromDatabase — AC-9"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/batch-sync-artifacts.test.ts"
+    action: create
+    reason: "Unit tests for batchSyncArtifactsForStory — AC-9"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/batch-sync-by-type.test.ts"
+    action: create
+    reason: "Unit tests for batchSyncByType — AC-9, AC-10 (required for >80% coverage calculation)"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/detect-artifact-conflicts.test.ts"
+    action: create
+    reason: "Unit tests for detectArtifactConflicts — AC-9"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/artifact-sync.integration.test.ts"
+    action: create
+    reason: "Testcontainers integration tests for idempotency, conflict detection, batch checkpoint resumption, and scale (ADR-005, ADR-006)"
+
+commands_to_run:
+  - command: "pnpm --filter @repo/kbar-sync build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/kbar-sync test"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/kbar-sync lint"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/kbar-sync check-types"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: sync-artifact-to-database.test.ts (happy path, checksum skip, version insert, syncEvent lifecycle). Integration test: artifact-sync.integration.test.ts (real PostgreSQL idempotency skip)"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: sync-artifact-from-database.test.ts (happy path, cache hit/miss, atomic write, parent mkdir, syncEvent). Integration test: artifact-sync.integration.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: sync-artifact-to-database.test.ts (cache upsert after sync, graceful YAML parse failure). Unit test: sync-artifact-from-database.test.ts (hitCount increment on cache read)"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: batch-sync-artifacts.test.ts (all-success, partial-failure isolation, all-failure, single syncEvent). Integration test: artifact-sync.integration.test.ts (100+ artifact batch, no N+1)"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: batch-sync-by-type.test.ts (happy path, checkpoint state mock for resumption). Integration test: artifact-sync.integration.test.ts (real PostgreSQL checkpoint resumption with partial state pre-inserted)"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: detect-artifact-conflicts.test.ts (no-conflict matching checksums, conflict mismatch with syncConflicts insert, path security). Integration test: artifact-sync.integration.test.ts (real PostgreSQL no-conflict scenario)"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests across all test files (Zod validation rejection on invalid artifactType, path traversal). Schema exports verified via pnpm build + check-types. All schemas exported from src/index.ts."
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit tests: traversal path rejection, symlink path rejection in sync-artifact-to-database.test.ts, sync-artifact-from-database.test.ts, detect-artifact-conflicts.test.ts, batch-sync-artifacts.test.ts"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "pnpm test --filter @repo/kbar-sync coverage report showing >80% coverage. All test scenarios from AC-9 list present in test files."
+    evidence_type: command
+
+  - ac_id: "AC-10"
+    planned_evidence: "Inline comments in __types__/index.ts: ARTIFACT_FILENAME_MAP disambiguator note, elaboration type non-uniqueness, story_file exclusion, syncStatus 'synced' vs 'completed' explanation. batch-sync-by-type.test.ts present in test suite."
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: complex
+
+notes:
+  - "KBAR-0030 must be merged before implementation begins — __types__/index.ts changes from KBAR-0030 review must be accommodated before Step 1"
+  - "Per DECISIONS.yaml and ANALYSIS.md: kbar.artifacts has no unique constraint on (storyId, artifactType) — confirmed safe for multiple 'elaboration' rows per story"
+  - "syncStatus 'synced' (not 'completed') is intentional deviation from KBAR-0030 story sync pattern — document in SyncArtifactToDatabaseOutputSchema per AC-10"
+  - "PROOF-*.md files require glob pattern matching in batch discovery — compose with static ARTIFACT_FILENAME_MAP keys using Node.js glob/micromatch"
+  - "batchSyncByType omits conflictsDetected field intentionally — AC-5 does not specify it; document omission as intentional in code comment"
+  - "5MB file size limit defaults to hard error: { success: false, error: 'File too large', sizeBytes: N } per DECISIONS.yaml auto-resolution"
+  - "Idempotency (AC-1 checksum skip) and conflict detection (AC-6 no-conflict) must be integration tests using real PostgreSQL — cannot be unit-tested via mocks (KBAR-0030 lesson)"
+  - "Per ADR-005 and ADR-006: at least one happy-path integration test per AC required during dev phase"
+  - "Test files must NOT use barrel file imports — import directly from source files per CLAUDE.md"
+  - "No changes to sync-story-to-database.ts, sync-story-from-database.ts, detect-sync-conflicts.ts, or database-schema package"

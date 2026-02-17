@@ -1,0 +1,68 @@
+schema: 1
+story_id: WINT-1150
+timestamp: 2026-02-17T10:05:00Z
+failure_source: code-review-failed
+iteration: 2
+
+issues_to_fix:
+  - id: 1
+    file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+    line: 25
+    issue: StoryIdSchema duplicated across worktree-management and story-management __types__ files — pre-existing issue, not introduced by WINT-1150
+    severity: high
+    auto_fixable: false
+    worker: reusability
+
+  - id: 2
+    file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+    line: 45
+    issue: Story state enum repeated 4 times in same file — pre-existing issue
+    severity: high
+    auto_fixable: false
+    worker: reusability
+
+  - id: 3
+    file: packages/backend/mcp-tools/src/story-management/__types__/index.ts
+    line: 55
+    issue: Priority enum ['P0'-'P4'] repeated 3 times — pre-existing issue
+    severity: high
+    auto_fixable: false
+    worker: reusability
+
+  - id: 4
+    file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+    line: 29
+    issue: Pre-existing Prettier formatting error in StoryIdSchema (predates WINT-1150, documented in EVIDENCE.yaml as known deviation)
+    severity: medium
+    auto_fixable: true
+    worker: lint
+
+  - id: 5
+    file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+    line: 144
+    issue: metadata z.record(z.unknown()) accepts arbitrary JSON — consider WorktreeMetadataSchema for stricter validation. Non-blocking admin-only internal code path.
+    severity: low
+    auto_fixable: false
+    worker: security
+
+  - id: 6
+    file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+    line: 97
+    issue: metadata z.record(z.unknown()) — loose generic, non-blocking
+    severity: low
+    auto_fixable: false
+    worker: typescript
+
+  - id: 7
+    file: packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+    line: 144
+    issue: metadata z.record(z.unknown()).optional() — loose generic, non-blocking
+    severity: low
+    auto_fixable: false
+    worker: typescript
+
+focus_files:
+  - packages/backend/mcp-tools/src/worktree-management/__types__/index.ts
+  - packages/backend/mcp-tools/src/story-management/__types__/index.ts
+
+summary: All FAIL verdicts (lint and reusability) are pre-existing issues that predate WINT-1150 and are documented in EVIDENCE.yaml as known deviations. WINT-1150 introduced no regressions.

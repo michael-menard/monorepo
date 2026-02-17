@@ -36,6 +36,17 @@ export type StoryGetStatusInput = z.infer<typeof StoryGetStatusInputSchema>
 /**
  * Story Get Status Output Schema
  * Returns story status with metadata or null if not found
+ *
+ * DEBT-RU-002: The story state enum ['backlog','ready_to_work','in_progress','ready_for_qa',
+ * 'in_qa','blocked','done','cancelled'] is repeated 4 times in this file (StoryGetStatusOutputSchema,
+ * StoryUpdateStatusInputSchema, StoryUpdateStatusOutputSchema, StoryGetByStatusOutputSchema /
+ * StoryGetByFeatureOutputSchema). This is a pre-existing issue that predates WINT-1150.
+ * No shared @repo/mcp-tools-types or @repo/backend-utils package currently exists to consolidate
+ * this. A future refactor should extract a StoryStateSchema constant to eliminate the repetition.
+ *
+ * DEBT-RU-003: The priority enum ['P0','P1','P2','P3','P4'] is similarly repeated 3 times in this
+ * file. Same root cause as DEBT-RU-002 — no shared package exists for cross-module enum constants.
+ * Should be extracted alongside StoryStateSchema in the same future refactor.
  */
 export const StoryGetStatusOutputSchema = z
   .object({

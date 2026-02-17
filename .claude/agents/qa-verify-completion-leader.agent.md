@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-04
-version: 3.2.0
+updated: 2026-02-17
+version: 3.3.0
 type: leader
 permission_level: orchestrator
 triggers: ["/qa-verify-story"]
@@ -41,6 +41,29 @@ Read from `VERIFICATION.yaml`:
 
 ### If verdict is PASS:
 
+0. **Worktree Cleanup Check** (WINT-1150)
+
+   Simple 3-step conditional — keep logic minimal for haiku budget.
+
+   **Step A: Look up worktree**
+   ```
+   Call: worktree_get_by_story({storyId: STORY_ID})
+   ```
+
+   **Step B: Branch on result**
+   - If `null` → skip silently, continue to Step 1 below (AC-2)
+   - If active worktree found → proceed to Step C
+
+   **Step C: Invoke wt-finish and handle result**
+   ```
+   Invoke: /wt:finish {branchName} {worktreePath}
+   ```
+   - On success: call `worktree_mark_complete({worktreeId: record.id, status: 'merged'})` (AC-4)
+   - On any failure (any error or non-success): call `worktree_mark_complete({worktreeId: record.id, status: 'abandoned', metadata: {cleanup_deferred: true, reason: 'unknown'}})` (AC-12, AC-13)
+     + emit WARNING: `"WARNING: Worktree '{branchName}' at '{worktreePath}' was not cleaned up. Reason: unknown. Action: Run /wt:finish {STORY_ID} when ready."` (AC-7)
+
+   **Continue PASS flow regardless of outcome** (AC-11)
+
 1. **Update status to uat** (use /story-update skill)
    ```
    /story-update {FEATURE_DIR} {STORY_ID} uat
@@ -58,14 +81,16 @@ Read from `VERIFICATION.yaml`:
 
 4. **Update Story Index** (use /index-update skill)
    ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=completed --clear-deps
+   /index-update {FEATURE_DIR} {STORY_ID} --status=uat --clear-deps
    ```
 
    The `--clear-deps` flag:
-   - Sets story status to `completed`
    - Removes {STORY_ID} from downstream stories' `**Depends On:**` lists
    - Updates Progress Summary counts
-   - Recalculates "Ready to Start" section
+   - Recalculates "Ready to Start" section — newly unblocked stories appear here
+
+   **Note:** Use `--status=uat` (not `completed`) — stories stop at `uat` in this workflow.
+   `completed` is reserved for manual sign-off after UAT acceptance.
 
 5. **Capture QA findings to KB** (KBMEM-015)
 
@@ -209,6 +234,7 @@ moved_to: {FEATURE_DIR}/UAT/{STORY_ID} | {FEATURE_DIR}/in-progress/{STORY_ID}
 index_updated: true | false  # only true on PASS
 kb_findings_captured: true | false | skipped  # only on PASS, false if no notable findings
 tokens_logged: true
+worktree_cleanup: completed | deferred | skipped | not_found  # only on PASS
 ```
 
 ## Signals

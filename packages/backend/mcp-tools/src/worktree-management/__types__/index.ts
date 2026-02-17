@@ -21,15 +21,18 @@ export const WorktreeStatusSchema = z.enum(['active', 'merged', 'abandoned'])
 /**
  * Story ID Schema
  * Accepts both UUID format and human-readable format (e.g., "WINT-1130")
+ *
+ * DEBT-RU-001: StoryIdSchema is duplicated between worktree-management and
+ * story-management __types__ files. Both define the same z.union([uuid, regex]) pattern.
+ * No shared @repo/mcp-tools-types or @repo/backend-utils package currently exists to
+ * consolidate this. A future refactor should extract StoryIdSchema to a shared package
+ * to eliminate duplication across MCP tool modules.
  */
 export const StoryIdSchema = z.union([
   z.string().uuid('storyId must be a valid UUID'),
   z
     .string()
-    .regex(
-      /^[A-Z]{2,10}-\d{3,4}$/,
-      'storyId must be in format XXXX-NNNN (e.g., WINT-1130)',
-    ),
+    .regex(/^[A-Z]{2,10}-\d{3,4}$/, 'storyId must be in format XXXX-NNNN (e.g., WINT-1130)'),
 ])
 
 // ============================================================================
@@ -157,3 +160,38 @@ export const WorktreeMarkCompleteOutputSchema = z
   .nullable()
 
 export type WorktreeMarkCompleteOutput = z.infer<typeof WorktreeMarkCompleteOutputSchema>
+
+// ============================================================================
+// WORKTREE CLEANUP RESULT SCHEMAS (AC-9, WINT-1150)
+// ============================================================================
+
+/**
+ * Worktree Cleanup Deferral Reason Schema
+ * Reason why worktree cleanup was deferred.
+ *
+ * Note (WINT-1150 DECISIONS.yaml): wt-finish is an interactive guided skill
+ * with no structured output. Any wt-finish failure maps to 'unknown'.
+ * The ci_failing and pr_review_pending variants are reserved for future use
+ * when wt-finish exposes structured output.
+ */
+export const WorktreeCleanupDeferralReasonSchema = z.enum([
+  'ci_failing',
+  'pr_review_pending',
+  'user_requested',
+  'unknown',
+])
+
+export type WorktreeCleanupDeferralReason = z.infer<typeof WorktreeCleanupDeferralReasonSchema>
+
+/**
+ * Worktree Cleanup Result Schema
+ * Documents the outcome of an automatic worktree cleanup attempt.
+ *
+ * - success: wt-finish ran and worktree was marked merged
+ * - deferred: wt-finish failed; worktree marked abandoned with cleanup_deferred:true metadata
+ * - skipped: no active worktree found for story (no-op)
+ * - not_found: worktree_get_by_story returned null
+ */
+export const WorktreeCleanupResultSchema = z.enum(['success', 'deferred', 'skipped', 'not_found'])
+
+export type WorktreeCleanupResult = z.infer<typeof WorktreeCleanupResultSchema>

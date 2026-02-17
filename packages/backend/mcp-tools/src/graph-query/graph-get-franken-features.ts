@@ -1,69 +1,106 @@
 /**
  * Graph Get Franken Features MCP Tool
- * WINT-0130 AC-7: Identifies features with incomplete CRUD capabilities
+ * WINT-0131 AC-5: Identifies features with incomplete CRUD capabilities
  *
  * Features:
  * - Optional package name filter
  * - Zod validation at entry (fail fast)
  * - Resilient error handling (logs warnings, never throws DB errors)
- * - Uses Drizzle ORM with features schema from @repo/database-schema
+ * - Uses Drizzle ORM with features + capabilities schemas from @repo/database-schema
  *
- * Security: AC-2 (Parameterized Queries Mandatory), AC-10 (Zod Validation at Entry)
+ * Security: AC-7 (Parameterized Queries Mandatory via Drizzle ORM), AC-8 (Zod Validation at Entry)
  *
- * SCHEMA LIMITATION (WINT-0130-SCHEMA-FIX):
- * Current WINT schema does not have feature-capability linkage (capabilities.featureId missing).
- * This tool returns empty array until schema is updated.
- * See DECISIONS.yaml decision_001 for details.
+ * Franken-feature definition: feature with < 4 distinct lifecycle_stage values
+ * among linked capabilities (create, read, update, delete).
  */
 
 import { logger } from '@repo/logger'
+import { db } from '@repo/db'
+import { features, capabilities } from '@repo/database-schema'
+import { eq, isNotNull } from 'drizzle-orm'
 import {
   GraphGetFrankenFeaturesInputSchema,
   type GraphGetFrankenFeaturesInput,
   type FrankenFeatureItem,
 } from './__types__/index.js'
 
+const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
+
 /**
  * Identify features with incomplete CRUD capabilities (Franken-features)
  *
- * Definition: Franken-feature = feature with < 4 CRUD capabilities (create, read, update, delete)
+ * Definition: Franken-feature = feature with < 4 distinct lifecycle_stage values
+ * among its linked capabilities (create, read, update, delete).
  *
  * @param input - Optional package name filter
- * @returns Array of features with missing capabilities
+ * @returns Array of features with missing CRUD capabilities
  *
  * @example
  * ```typescript
- * const franken = await graphGetFrankenFeatures({})
+ * const franken = await graph_get_franken_features({})
  * // => [{ featureId: 'uuid', featureName: 'incomplete-feature', missingCapabilities: ['create', 'update'] }]
  *
- * const filtered = await graphGetFrankenFeatures({ packageName: '@repo/ui' })
+ * const filtered = await graph_get_franken_features({ packageName: '@repo/ui' })
  * // => Only Franken-features from @repo/ui package
  * ```
- *
- * **SCHEMA LIMITATION:** Current implementation returns empty array due to missing
- * feature-capability linkage in WINT schema. Requires capabilities.featureId foreign key.
- * Follow-up story: WINT-0130-SCHEMA-FIX
  */
 export async function graph_get_franken_features(
   input: GraphGetFrankenFeaturesInput,
 ): Promise<FrankenFeatureItem[]> {
+  // Validate input - fail fast if invalid (AC-8: Zod Validation at Entry)
+  const parsed = GraphGetFrankenFeaturesInputSchema.parse(input)
+
   try {
-    // Validate input - fail fast if invalid (AC-10: Zod Validation at Entry)
-    GraphGetFrankenFeaturesInputSchema.parse(input)
+    // Query all features with their linked capabilities (AC-7: Drizzle ORM only, no raw SQL)
+    const rows = await db
+      .select({
+        featureId: features.id,
+        featureName: features.featureName,
+        packageName: features.packageName,
+        lifecycleStage: capabilities.lifecycleStage,
+      })
+      .from(features)
+      .innerJoin(capabilities, eq(capabilities.featureId, features.id))
+      .where(isNotNull(capabilities.featureId))
 
+    // Apply optional package name filter in TypeScript (avoids additional DB round-trip)
+    const filteredRows = parsed.packageName
+      ? rows.filter(row => row.packageName === parsed.packageName)
+      : rows
 
-    // SCHEMA LIMITATION: capabilities table missing featureId foreign key
-    // Cannot query feature-capability relationship until schema is fixed
-    // See DECISIONS.yaml decision_001
+    // Group capabilities by featureId in TypeScript
+    const featureMap = new Map<string, { featureName: string; stages: Set<string> }>()
 
-    logger.warn(
-      '[mcp-tools] graph_get_franken_features: Schema limitation - capabilities.featureId missing. Returning empty array.',
-      { packageName: input.packageName },
-    )
+    for (const row of filteredRows) {
+      if (!featureMap.has(row.featureId)) {
+        featureMap.set(row.featureId, {
+          featureName: row.featureName,
+          stages: new Set(),
+        })
+      }
+      if (row.lifecycleStage) {
+        featureMap.get(row.featureId)!.stages.add(row.lifecycleStage)
+      }
+    }
 
-    return []
+    // Detect features with < 4 distinct CRUD lifecycle_stage values
+    const frankenFeatures: FrankenFeatureItem[] = []
+
+    for (const [featureId, { featureName, stages }] of featureMap) {
+      const missingCapabilities = CRUD_STAGES.filter(stage => !stages.has(stage))
+
+      if (missingCapabilities.length > 0) {
+        frankenFeatures.push({
+          featureId,
+          featureName,
+          missingCapabilities,
+        })
+      }
+    }
+
+    return frankenFeatures
   } catch (error) {
-    // Resilient error handling: log warning, don't crash (AC-12: Resilient Error Handling)
+    // Resilient error handling: log warning, don't crash (AC-9: Resilient Error Handling)
     logger.warn(
       '[mcp-tools] Failed to get Franken-features:',
       error instanceof Error ? error.message : String(error),

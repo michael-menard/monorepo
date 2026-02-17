@@ -307,3 +307,269 @@ export function validateInput<T>(
 export function normalizeOptionalField<T>(value: T | null | undefined): T | undefined {
   return value || undefined
 }
+
+// ============================================================================
+// KBAR-0040: Artifact Sync Types
+// ============================================================================
+
+/**
+ * Non-story artifact type enum
+ *
+ * Maps kbar_artifact_type values that are NOT 'story_file'.
+ * 'story_file' is excluded because it is synced by syncStoryToDatabase/syncStoryFromDatabase.
+ *
+ * NOTE: 'elaboration' (and other types) can appear multiple times per story — the
+ * kbar.artifacts table uses a non-unique index (storyArtifactTypeIdx), NOT a
+ * unique index on (storyId, artifactType). Multiple 'elaboration' rows per story
+ * are intentional (e.g., STORY-SEED.md and DEV-FEASIBILITY.md both map to 'elaboration').
+ */
+export const NonStoryArtifactTypeSchema = z.enum([
+  'elaboration',
+  'plan',
+  'scope',
+  'evidence',
+  'review',
+  'test_plan',
+  'decisions',
+  'checkpoint',
+  'knowledge_context',
+])
+
+export type NonStoryArtifactType = z.infer<typeof NonStoryArtifactTypeSchema>
+
+/**
+ * ARTIFACT_FILENAME_MAP — Static mapping of artifact filenames to artifact types.
+ *
+ * Maps known _implementation/ and _pm/ filenames to their canonical kbar_artifact_type.
+ *
+ * IMPORTANT NOTES (AC-10):
+ * - 'story_file' is excluded — it is the story's own YAML/md file, handled separately.
+ * - Both '_pm/STORY-SEED.md' and '_pm/DEV-FEASIBILITY.md' map to 'elaboration' because
+ *   both describe the story's elaboration phase. kbar.artifacts does NOT enforce uniqueness
+ *   on (storyId, artifactType), so multiple 'elaboration' rows are valid.
+ * - PROOF-*.md files are NOT listed here — they are discovered by glob pattern in
+ *   batchSyncArtifactsForStory and use 'evidence' type.
+ * - All paths are relative to the story directory root.
+ */
+export const ARTIFACT_FILENAME_MAP: Record<string, NonStoryArtifactType> = {
+  // _implementation/ artifacts
+  '_implementation/PLAN.yaml': 'plan',
+  '_implementation/SCOPE.yaml': 'scope',
+  '_implementation/EVIDENCE.yaml': 'evidence',
+  '_implementation/REVIEW.yaml': 'review',
+  '_implementation/CHECKPOINT.yaml': 'checkpoint',
+  '_implementation/KNOWLEDGE-CONTEXT.yaml': 'knowledge_context',
+  '_implementation/DECISIONS.yaml': 'decisions',
+  // _pm/ artifacts
+  '_pm/STORY-SEED.md': 'elaboration',
+  '_pm/DEV-FEASIBILITY.md': 'elaboration',
+  '_pm/TEST-PLAN.md': 'test_plan',
+}
+
+// ============================================================================
+// Sync Artifact To Database - AC-1, AC-3, AC-7
+// ============================================================================
+
+/**
+ * Input schema for syncArtifactToDatabase
+ * Syncs a non-story artifact from filesystem to database.
+ *
+ * syncStatus 'synced': Artifact sync uses 'synced' rather than 'completed' to distinguish
+ * artifact sync events from story sync events ('completed'). This is intentional — artifact
+ * sync is a lighter-weight operation and 'synced' better reflects its semantic. Per DECISIONS.yaml.
+ */
+export const SyncArtifactToDatabaseInputSchema = z.object({
+  storyId: z.string().min(1, 'storyId is required'),
+  artifactType: NonStoryArtifactTypeSchema,
+  filePath: z.string().min(1, 'filePath is required'),
+  triggeredBy: z.enum(['user', 'agent', 'automation']).default('user'),
+})
+
+export type SyncArtifactToDatabaseInput = z.infer<typeof SyncArtifactToDatabaseInputSchema>
+
+/**
+ * Output schema for syncArtifactToDatabase
+ *
+ * syncStatus values:
+ * - 'synced': artifact was written to DB for the first time or content changed
+ * - 'skipped': checksum unchanged, no DB write needed (idempotency)
+ * - 'failed': operation failed, see error field
+ *
+ * NOTE: 'synced' is intentionally different from story sync's 'completed' —
+ * document this distinction per AC-10.
+ */
+export const SyncArtifactToDatabaseOutputSchema = z.object({
+  success: z.boolean(),
+  storyId: z.string(),
+  artifactType: z.string(),
+  checksum: z.string().optional(),
+  syncStatus: z.enum(['synced', 'skipped', 'failed']),
+  message: z.string().optional(),
+  syncEventId: z.string().uuid().optional(),
+  artifactId: z.string().uuid().optional(),
+  error: z.string().optional(),
+  skipped: z.boolean().optional(),
+  sizeBytes: z.number().optional(),
+})
+
+export type SyncArtifactToDatabaseOutput = z.infer<typeof SyncArtifactToDatabaseOutputSchema>
+
+// ============================================================================
+// Sync Artifact From Database - AC-2, AC-3, AC-7
+// ============================================================================
+
+/**
+ * Input schema for syncArtifactFromDatabase
+ * Syncs a non-story artifact from database back to filesystem.
+ */
+export const SyncArtifactFromDatabaseInputSchema = z.object({
+  storyId: z.string().min(1, 'storyId is required'),
+  artifactType: NonStoryArtifactTypeSchema,
+  outputPath: z.string().min(1, 'outputPath is required'),
+  triggeredBy: z.enum(['user', 'agent', 'automation']).default('user'),
+})
+
+export type SyncArtifactFromDatabaseInput = z.infer<typeof SyncArtifactFromDatabaseInputSchema>
+
+/**
+ * Output schema for syncArtifactFromDatabase
+ */
+export const SyncArtifactFromDatabaseOutputSchema = z.object({
+  success: z.boolean(),
+  storyId: z.string(),
+  artifactType: z.string(),
+  filePath: z.string().optional(),
+  syncStatus: z.enum(['synced', 'failed']),
+  message: z.string().optional(),
+  syncEventId: z.string().uuid().optional(),
+  cacheHit: z.boolean().optional(),
+  error: z.string().optional(),
+})
+
+export type SyncArtifactFromDatabaseOutput = z.infer<typeof SyncArtifactFromDatabaseOutputSchema>
+
+// ============================================================================
+// Batch Sync Artifacts For Story - AC-4, AC-7
+// ============================================================================
+
+/**
+ * Input schema for batchSyncArtifactsForStory
+ * Discovers and syncs all known artifacts for a story.
+ */
+export const BatchSyncArtifactsInputSchema = z.object({
+  storyId: z.string().min(1, 'storyId is required'),
+  storyDir: z.string().min(1, 'storyDir is required'),
+  triggeredBy: z.enum(['user', 'agent', 'automation']).default('user'),
+})
+
+export type BatchSyncArtifactsInput = z.infer<typeof BatchSyncArtifactsInputSchema>
+
+/**
+ * Per-artifact result in batch sync
+ */
+export const ArtifactSyncResultSchema = z.object({
+  filePath: z.string(),
+  artifactType: z.string(),
+  status: z.enum(['synced', 'skipped', 'failed']),
+  error: z.string().optional(),
+})
+
+export type ArtifactSyncResult = z.infer<typeof ArtifactSyncResultSchema>
+
+/**
+ * Output schema for batchSyncArtifactsForStory
+ */
+export const BatchSyncArtifactsOutputSchema = z.object({
+  success: z.boolean(),
+  storyId: z.string(),
+  syncEventId: z.string().uuid().optional(),
+  totalDiscovered: z.number(),
+  totalSynced: z.number(),
+  totalSkipped: z.number(),
+  totalFailed: z.number(),
+  results: z.array(ArtifactSyncResultSchema),
+  error: z.string().optional(),
+})
+
+export type BatchSyncArtifactsOutput = z.infer<typeof BatchSyncArtifactsOutputSchema>
+
+// ============================================================================
+// Batch Sync By Type - AC-5, AC-7, AC-10
+// ============================================================================
+
+/**
+ * Input schema for batchSyncByType
+ * Cross-story sync of all artifacts of a given type.
+ *
+ * NOTE: batchSyncByType intentionally omits conflictsDetected in its output.
+ * AC-5 does not specify conflict detection for cross-story batch operations.
+ * Conflict detection is handled separately by detectArtifactConflicts.
+ */
+export const BatchSyncByTypeInputSchema = z.object({
+  artifactType: NonStoryArtifactTypeSchema,
+  baseDir: z.string().min(1, 'baseDir is required'),
+  triggeredBy: z.enum(['user', 'agent', 'automation']).default('user'),
+  /**
+   * Checkpoint name for resumption (AC-5, AC-10).
+   * syncCheckpoints record is keyed by checkpointName.
+   * If provided, batch will resume from lastProcessedPath recorded in DB.
+   */
+  checkpointName: z.string().optional(),
+})
+
+export type BatchSyncByTypeInput = z.infer<typeof BatchSyncByTypeInputSchema>
+
+/**
+ * Output schema for batchSyncByType
+ *
+ * NOTE: conflictsDetected field is intentionally OMITTED — see AC-10 note above.
+ */
+export const BatchSyncByTypeOutputSchema = z.object({
+  success: z.boolean(),
+  artifactType: z.string(),
+  checkpointName: z.string().optional(),
+  totalDiscovered: z.number(),
+  totalSynced: z.number(),
+  totalSkipped: z.number(),
+  totalFailed: z.number(),
+  lastProcessedPath: z.string().optional(),
+  results: z.array(ArtifactSyncResultSchema),
+  error: z.string().optional(),
+})
+
+export type BatchSyncByTypeOutput = z.infer<typeof BatchSyncByTypeOutputSchema>
+
+// ============================================================================
+// Detect Artifact Conflicts - AC-6, AC-7
+// ============================================================================
+
+/**
+ * Input schema for detectArtifactConflicts
+ * Compares filesystem checksum with database checksum for a non-story artifact.
+ */
+export const DetectArtifactConflictsInputSchema = z.object({
+  storyId: z.string().min(1, 'storyId is required'),
+  artifactType: NonStoryArtifactTypeSchema,
+  filePath: z.string().min(1, 'filePath is required'),
+})
+
+export type DetectArtifactConflictsInput = z.infer<typeof DetectArtifactConflictsInputSchema>
+
+/**
+ * Output schema for detectArtifactConflicts
+ */
+export const DetectArtifactConflictsOutputSchema = z.object({
+  success: z.boolean(),
+  storyId: z.string(),
+  artifactType: z.string(),
+  hasConflict: z.boolean(),
+  conflictType: z.enum(['checksum_mismatch', 'missing_file', 'none']),
+  filesystemChecksum: z.string().optional(),
+  databaseChecksum: z.string().optional(),
+  conflictId: z.string().uuid().optional(),
+  resolutionOptions: z.array(ConflictResolutionSchema).optional(),
+  message: z.string().optional(),
+  error: z.string().optional(),
+})
+
+export type DetectArtifactConflictsOutput = z.infer<typeof DetectArtifactConflictsOutputSchema>

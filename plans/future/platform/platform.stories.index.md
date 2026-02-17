@@ -4,7 +4,7 @@ title: "Platform — LangGraph Fast-Track Work Order"
 status: active
 story_prefix: PLATFORM
 created_at: "2026-02-13T00:00:00Z"
-updated_at: "2026-02-16T06:00:00Z"
+updated_at: "2026-02-17T13:00:00Z"
 reorganization: "LangGraph Fast-Track: Prioritizes stories that enable LangGraph workflow"
 ---
 
@@ -57,9 +57,9 @@ All can start immediately. Ordered by downstream impact.
 |---|---|-------|-------|---------------|------|----------|
 | 15 | x | LNGG-0020 | Index Management Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
 | 16 | x | LNGG-0040 | Stage Movement Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
-| 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **ready-for-qa** | ← LNGG-0010 | LNGG | **P0** |
+| 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
 | 18 | x | WINT-1080 | Reconcile WINT Schema with LangGraph ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
-| 19 | x | WINT-0020 | Create Story Management Tables ⚡ **ready-for-qa** | ← WINT-0010 | WINT | **P0** |
+| 19 | x | WINT-0020 | Create Story Management Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 20 | x | WINT-0070 | Create Workflow Tracking Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 21 | | WINT-0160 | Create doc-sync Agent ⚡ **ready-to-work** | ← WINT-0150 | WINT | **P0** |
 | 22 | x | INFR-0020 | Artifact Writer/Reader Service **uat** | ← INFR-0110 ✓, INFR-0120 ✓ | INFR | P1 |
@@ -113,7 +113,7 @@ All can start immediately. Ordered by downstream impact.
 |---|---|-------|-------|---------------|------|----------|
 | 48 | | WINT-1110 | Migrate Existing LangGraph Data ⚡ | ← WINT-1090 | WINT | **P0** |
 | 49 | | WINT-1010 | Create Compatibility Shim Module ⚡ | ← WINT-0090 | WINT | **P0** |
-| 50 | | KBAR-0040 | Artifact Sync Functions | ← KBAR-0030 | KBAR | P1 |
+| 50 | x | KBAR-0040 | Artifact Sync Functions **uat** | ← KBAR-0030 | KBAR | P1 |
 | 51 | | WINT-1140 | Integrate Worktree into dev-implement-story | ← WINT-1130 | WINT | P1 |
 | 52 | | WINT-1150 | Integrate Worktree Cleanup into Completion | ← WINT-1130 | WINT | P1 |
 | 53 | | WINT-1070 | Deprecate stories.index.md | ← WINT-1030 | WINT | P2 |

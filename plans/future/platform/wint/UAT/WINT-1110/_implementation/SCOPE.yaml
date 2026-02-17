@@ -1,0 +1,176 @@
+schema: 1
+story_id: "WINT-1110"
+title: "Migrate Existing LangGraph Data"
+timestamp: "2026-02-16T21:30:00Z"
+gen_mode: false
+
+in_scope:
+  - "Migration script connecting to both databases (port 5432 wint, port 5433 langgraph)"
+  - "Story data migration (public.stories → wint.stories) with enum normalization"
+  - "Enum transformations: ready-to-work → ready_to_work, in-progress → in_progress, ready-for-qa → ready_for_qa, uat → in_qa"
+  - "Feature data migration (public.features → wint.features) with column rename (name → feature_name)"
+  - "Workflow events migration (public.workflow_events → wint.state_transitions + wint.workflow_audit_log)"
+  - "Idempotent UPSERT with ON CONFLICT DO NOTHING to prevent overwriting existing WINT data"
+  - "Progress logging with row counts (migrated, skipped, errors)"
+  - "Rollback script to undo migration"
+  - "Unit tests for all transformation functions"
+  - "Dry-run mode for safe preview before execution"
+  - "Comprehensive error handling and reporting"
+
+out_of_scope:
+  - "Migrating LangGraph-specific tables (elaborations, proofs, verifications, gaps, implementation_plans, adrs)"
+  - "pgvector embedding backfill (embeddings can be null in WINT)"
+  - "Production deployment or continuous deployment automation"
+  - "Database consolidation (merging into single database)"
+  - "LangGraph database modifications or schema changes"
+  - "Data validation beyond enum normalization (assume source data is valid)"
+  - "UI or monitoring dashboard for migration status"
+
+affected_domains:
+  - "Story Management (stories table)"
+  - "Feature Management (features table)"
+  - "Workflow Audit (state_transitions and workflow_audit_log tables)"
+
+files_to_create:
+  - path: "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+    purpose: "Main migration script"
+    type: "executable-script"
+    language: "typescript"
+    key_functions:
+      - "connectToLangGraphDb() - Creates connection to port 5433"
+      - "connectToWintDb() - Creates connection to port 5432"
+      - "normalizeStoryState() - Converts enum values with proper transformation"
+      - "normalizeWorkflowEvents() - Splits events into state_transitions and audit_log"
+      - "migrateStories() - Core migration logic with UPSERT"
+      - "migrateFeatures() - Feature table migration"
+      - "migrateWorkflowEvents() - Event table migration"
+      - "main() - Orchestrates migration with dry-run support"
+
+  - path: "packages/backend/orchestrator/src/scripts/migrate-langgraph-data-rollback.ts"
+    purpose: "Rollback script to undo migration"
+    type: "executable-script"
+    language: "typescript"
+    key_functions:
+      - "rollbackMigration() - Removes records inserted by forward migration"
+      - "verifyRollback() - Confirms rollback completed"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/migrate-langgraph-data.test.ts"
+    purpose: "Unit tests for transformation functions"
+    type: "test-file"
+    language: "typescript"
+    test_coverage_areas:
+      - "normalizeStoryState() with all enum values"
+      - "normalizeStoryState() with invalid input"
+      - "normalizeWorkflowEvents() event type splitting"
+      - "Column mapping for stories and features"
+      - "UPSERT behavior with duplicate keys"
+      - "Database connection error handling"
+      - "Idempotency validation (running twice)"
+
+files_to_modify: []
+
+packages_affected:
+  - "packages/backend/orchestrator"
+
+related_stories:
+  - "WINT-1080: Schema Diff Analysis (provides migration mapping)"
+  - "WINT-1090: Update LangGraph Repositories (provides unified schema)"
+
+key_transformations:
+  story_state_enum:
+    ready-to-work: "ready_to_work"
+    in-progress: "in_progress"
+    ready-for-qa: "ready_for_qa"
+    uat: "in_qa"
+    backlog: "backlog"
+    done: "done"
+    cancelled: "cancelled"
+
+  features_column_mapping:
+    source_column: "public.features.name"
+    target_column: "wint.features.feature_name"
+
+  workflow_events_routing:
+    "state_change_* events": "wint.state_transitions"
+    "audit_* events": "wint.workflow_audit_log"
+
+database_connections:
+  langgraph:
+    host: "localhost"
+    port: 5433
+    database: "postgres"
+    schema: "public"
+    tables:
+      - "stories (id, story_id, goal, non_goals, packages, surfaces, blocked_by, depends_on, follow_up_from, state)"
+      - "features (id, name, description)"
+      - "workflow_events (id, entity_type, entity_id, event_type, old_value, new_value, actor, created_at)"
+
+  wint:
+    host: "localhost"
+    port: 5432
+    database: "postgres"
+    schema: "wint"
+    tables:
+      - "stories (id, story_id, feature_id, type, state, title, goal, points, priority, blocked_by, depends_on, follow_up_from, packages, surfaces, non_goals, created_at, updated_at)"
+      - "features (id, feature_name, description, feature_type, package_name, file_path, is_active, created_at, updated_at)"
+      - "state_transitions (id, entity_type, entity_id, from_state, to_state, triggered_by, metadata, transitioned_at, created_at)"
+      - "workflow_audit_log (id, entity_type, entity_id, event_type, actor, metadata, created_at)"
+
+acceptance_criteria:
+  AC-001:
+    description: "Migration script connects to both databases successfully"
+    validation: "Script initializes both Pool connections without errors"
+
+  AC-002:
+    description: "All stories from LangGraph migrated to wint.stories with correct enum normalization"
+    validation: "SELECT COUNT(*) FROM wint.stories WHERE story_id in (SELECT story_id FROM langgraph.public.stories)"
+
+  AC-003:
+    description: "All features from LangGraph migrated to wint.features"
+    validation: "SELECT COUNT(*) FROM wint.features WHERE feature_name in (SELECT name FROM langgraph.public.features)"
+
+  AC-004:
+    description: "Duplicate handling: existing records not overwritten (UPSERT with ON CONFLICT DO NOTHING)"
+    validation: "Run migration twice, verify row counts identical both times"
+
+  AC-005:
+    description: "Migration script logs progress and row counts (migrated, skipped, errors)"
+    validation: "Log file contains entries for each phase with counts"
+
+  AC-006:
+    description: "Rollback script provided that can undo migration"
+    validation: "Rollback script exists and successfully removes migrated records"
+
+  AC-007:
+    description: "Migration is idempotent - running twice produces same result"
+    validation: "Run migration twice, verify identical row counts and data"
+
+  AC-008:
+    description: "All migrated stories have valid story_state enum values in wint schema"
+    validation: "SELECT * FROM wint.stories WHERE state NOT IN ('backlog', 'ready_to_work', 'in_progress', 'ready_for_qa', 'in_qa', 'done', 'cancelled')"
+
+risk_level: "medium"
+risk_analysis:
+  data_loss_risk: "Medium - UPSERT protects existing data but migration must be carefully tested"
+  database_connection_risk: "Low - connection failures are handled with clear error messages"
+  enum_normalization_risk: "Low - transformation logic is straightforward and well-tested"
+  idempotency_risk: "Medium - must ensure ON CONFLICT DO NOTHING works correctly"
+
+estimated_effort:
+  implementation_hours: 8
+  testing_hours: 4
+  total_hours: 12
+
+estimated_tokens: 45000
+estimated_implementation_tokens: 35000
+estimated_test_tokens: 10000
+
+implementation_notes:
+  - "Use pg Pool from 'pg' package (already dependency)"
+  - "Follow populate-story-status.ts pattern for script structure"
+  - "Implement dry-run mode for safe preview"
+  - "Add comprehensive error handling and logging"
+  - "Create migration-log.json for detailed audit trail"
+  - "Use existing StoryStateSchema for validation"
+  - "Batch migrations in groups of 50 to manage memory"
+  - "Transaction boundaries for data consistency"

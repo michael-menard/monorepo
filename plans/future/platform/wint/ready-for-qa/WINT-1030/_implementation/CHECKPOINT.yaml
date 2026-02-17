@@ -3,8 +3,8 @@ story_id: WINT-1030
 feature_dir: plans/future/platform/wint
 timestamp: "2026-02-16T22:00:00Z"
 
-current_phase: done
-last_successful_phase: review
+current_phase: qa-verify
+last_successful_phase: qa-verify
 iteration: 1
 max_iterations: 3
 blocked: false

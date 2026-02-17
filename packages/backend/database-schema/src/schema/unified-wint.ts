@@ -488,6 +488,9 @@ export const features = wintSchema.table(
 /**
  * Capabilities Table (from WINT)
  * Tracks high-level capabilities provided by features
+ *
+ * TODO (WINT-1100): featureId FK column added in wint.ts (WINT-0131) is NOT present here.
+ * unified-wint.ts is maintained separately; sync featureId column when unified schema is updated.
  */
 export const capabilities = wintSchema.table(
   'capabilities',

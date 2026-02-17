@@ -1,0 +1,681 @@
+schema: 1
+story_id: "WINT-1110"
+title: "Migrate Existing LangGraph Data"
+timestamp: "2026-02-16T21:30:00Z"
+
+# ============================================================================
+# REUSABLE PATTERNS FROM CODEBASE
+# ============================================================================
+
+reuse_patterns:
+  - pattern_id: "RP-001"
+    name: "Database Script Pattern"
+    source: "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    apply_to: "Main migration script structure (migrate-langgraph-data.ts)"
+    pattern_details: |
+      Structure for database CLI scripts:
+      1. Parse CLI arguments (dry-run, execute, verify modes)
+      2. Create database connection pool(s)
+      3. Implement discovery/reading phase
+      4. Implement processing phase
+      5. Implement verification phase
+      6. Write audit log to JSON file
+      7. Handle errors gracefully with logging
+
+    code_excerpt: |
+      // From populate-story-status.ts (lines 93-103)
+      function createDbPool(): Pool {
+        const pool = new Pool({
+          host: process.env.POSTGRES_HOST || 'localhost',
+          port: parseInt(process.env.POSTGRES_PORT || '5432'),
+          database: process.env.POSTGRES_DATABASE || 'postgres',
+          user: process.env.POSTGRES_USER || 'postgres',
+          password: process.env.POSTGRES_PASSWORD || 'postgres',
+        })
+        return pool
+      }
+
+  - pattern_id: "RP-002"
+    name: "Zod Schema Pattern"
+    source: "packages/backend/orchestrator/src/scripts/__types__/population.ts"
+    apply_to: "Migration type definitions (__types__/migration.ts)"
+    pattern_details: |
+      REQUIRED per CLAUDE.md: Use Zod schemas for ALL types (never use interfaces).
+      Pattern:
+      1. Define Zod schema with constraints
+      2. Export inferred type using z.infer<typeof SchemaName>
+      3. Use schema.safeParse() for validation
+      4. Leverage Zod for runtime validation at DB boundaries
+
+    code_excerpt: |
+      // CORRECT pattern (from CLAUDE.md)
+      const UserSchema = z.object({
+        id: z.string().uuid(),
+        email: z.string().email(),
+        name: z.string().min(1),
+      })
+      type User = z.infer<typeof UserSchema>
+
+  - pattern_id: "RP-003"
+    name: "Batch Processing Pattern"
+    source: "packages/backend/orchestrator/src/scripts/populate-story-status.ts (lines 567-621)"
+    apply_to: "migrateStories(), migrateFeatures(), migrateWorkflowEvents()"
+    pattern_details: |
+      Process large datasets in batches:
+      1. Define BATCH_SIZE constant (50 records typical)
+      2. Loop with i += BATCH_SIZE
+      3. Use array.slice(i, i + BATCH_SIZE)
+      4. Process each batch in transaction or atomic operation
+      5. Catch and log individual record failures without stopping batch
+      6. Track counts for audit logging
+
+    code_excerpt: |
+      // From populate-story-status.ts (lines 568-570)
+      for (let i = 0; i < storiesArray.length; i += BATCH_SIZE) {
+        const batch = storiesArray.slice(i, i + BATCH_SIZE)
+        // process batch...
+      }
+
+  - pattern_id: "RP-004"
+    name: "Error Handling Pattern"
+    source: "packages/backend/orchestrator/src/scripts/populate-story-status.ts (lines 599-620)"
+    apply_to: "Main migration functions"
+    pattern_details: |
+      Fail-soft error handling:
+      1. Wrap individual operations in try-catch
+      2. Log error with context (story_id, error message)
+      3. Add to errors array, continue processing
+      4. Track error_count separately
+      5. Report summary at end
+
+    code_excerpt: |
+      try {
+        // operation...
+      } catch (error) {
+        errors.push({
+          story_id: location.story_id,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        })
+        logger.warn('Failed to insert story', { storyId: location.story_id, error })
+      }
+
+  - pattern_id: "RP-005"
+    name: "Logging Pattern"
+    source: "packages/backend/orchestrator/src/scripts/populate-story-status.ts (lines 148-179)"
+    apply_to: "All migration phases"
+    pattern_details: |
+      Structured logging via @repo/logger:
+      1. Use logger.info() for phase transitions
+      2. Use logger.warn() for non-fatal issues
+      3. Use logger.error() for failures
+      4. Include context objects with relevant IDs and counts
+      5. Never use console.log (CLAUDE.md requirement)
+      6. Write detailed audit log to migration-log.json
+
+    code_excerpt: |
+      import { logger } from '@repo/logger'
+      logger.info('Discovery complete', { totalStories: locations.length })
+      logger.warn('Failed to read story frontmatter', { storyId, error: error.message })
+
+# ============================================================================
+# KEY FILES AND THEIR ROLES
+# ============================================================================
+
+key_files:
+  - file_id: "KF-001"
+    path: "packages/backend/orchestrator/src/db/story-repository.ts"
+    relevance: "Shows exact wint.stories column names and types"
+    importance: "critical"
+    usage: |
+      Reference for wint.stories INSERT columns:
+      - story_id (TEXT, UNIQUE)
+      - feature_id (UUID, nullable, FK to wint.features)
+      - type (TEXT)
+      - state (wint.story_state enum)
+      - title (TEXT)
+      - goal (TEXT, nullable)
+      - points (INTEGER, nullable)
+      - priority (wint.priority_level enum)
+      - blocked_by (TEXT, nullable)
+      - depends_on (TEXT[], nullable)
+      - follow_up_from (TEXT, nullable)
+      - packages (TEXT[], nullable)
+      - surfaces (TEXT[], nullable)
+      - non_goals (TEXT[], nullable)
+      - created_at (TIMESTAMPTZ)
+      - updated_at (TIMESTAMPTZ)
+    key_code_sections:
+      - Lines 56-64: SELECT query shows all columns
+      - Lines 89-113: INSERT shows column order and type casts
+
+  - file_id: "KF-002"
+    path: "packages/backend/database-schema/src/schema/unified-wint.ts"
+    relevance: "Defines exact wint.story_state enum values"
+    importance: "critical"
+    usage: |
+      Source of truth for enum values (lines 81-91):
+      'draft' | 'backlog' | 'ready_to_work' | 'in_progress' | 'ready_for_qa' | 'in_qa' | 'blocked' | 'done' | 'cancelled'
+
+      Also defines:
+      - wint.priority_level enum: 'P0' | 'P1' | 'P2' | 'P3' | 'P4' (uppercase!)
+      - wint.story_type enum: 'feature' | 'bug' | 'tech-debt' | 'spike' | 'chore' | 'infra' | 'docs'
+
+      Features table definition (lines 447-486):
+      - feature_name (TEXT, UNIQUE) - maps from LangGraph 'name'
+      - feature_type (TEXT)
+      - description (TEXT, nullable)
+      - is_active (BOOLEAN, default true)
+      - embedding (vector[1536], nullable)
+
+  - file_id: "KF-003"
+    path: "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    relevance: "Template for script structure and patterns"
+    importance: "high"
+    usage: |
+      Follow this script as template for migrate-langgraph-data.ts:
+      - CLI argument parsing (lines 129-139)
+      - Database pool creation (lines 93-103)
+      - Zod schema usage (imports at top)
+      - Batch processing loop (lines 568-621)
+      - Error handling try-catch (lines 599-620)
+      - JSON log file writing (lines 648-651)
+      - Main function structure (lines 829-883)
+
+  - file_id: "KF-004"
+    path: "packages/backend/database-schema/src/migrations/app/0015_messy_sugar_man.sql"
+    relevance: "Defines state_transitions and workflow_audit_log table schemas"
+    importance: "high"
+    usage: |
+      state_transitions table (lines 189-200):
+      - id (UUID, PK)
+      - entity_type (TEXT)
+      - entity_id (TEXT)
+      - from_state (TEXT)
+      - to_state (TEXT)
+      - triggered_by (TEXT)
+      - reason (TEXT, nullable)
+      - metadata (JSONB, nullable)
+      - transitioned_at (TIMESTAMPTZ)
+      - created_at (TIMESTAMPTZ)
+
+      workflow_audit_log table (lines 268-276):
+      - id (UUID, PK)
+      - execution_id (UUID)
+      - event_type (TEXT)
+      - event_data (JSONB)
+      - triggered_by (TEXT)
+      - occurred_at (TIMESTAMPTZ)
+      - created_at (TIMESTAMPTZ)
+
+  - file_id: "KF-005"
+    path: "packages/backend/orchestrator/package.json"
+    relevance: "Shows available dependencies"
+    importance: "medium"
+    usage: |
+      Key dependencies already available:
+      - pg 8.18.0 (for Pool, query)
+      - zod ^3.23.8 (for schemas and validation)
+      - @repo/logger (for logging)
+      - typescript 5.8.0 (for types)
+      - vitest 3.2.4 (for tests)
+
+# ============================================================================
+# DATABASE CONNECTION DETAILS
+# ============================================================================
+
+database_connections:
+  langgraph:
+    name: "LangGraph Database"
+    port: 5433
+    schema: "public"
+    connection_env_var: "LANGGRAPH_DATABASE_URL"
+    env_var_fallback: |
+      Host: process.env.LANGGRAPH_DB_HOST || 'localhost'
+      Port: process.env.LANGGRAPH_DB_PORT || '5433'
+      Database: process.env.LANGGRAPH_DB_NAME || 'postgres'
+      User: process.env.LANGGRAPH_DB_USER || 'postgres'
+      Password: process.env.LANGGRAPH_DB_PASSWORD || 'postgres'
+
+    tables_to_read:
+      - table: "public.stories"
+        key_columns: "id, story_id, state, type, title, goal, non_goals, packages, surfaces, blocked_by, depends_on, follow_up_from, priority, embedding, created_at, updated_at"
+        notes: "State values are hyphenated (ready-to-work, in-progress, ready-for-qa, uat)"
+
+      - table: "public.features"
+        key_columns: "id, name, description, embedding, created_at"
+        notes: "name column must be mapped to wint.features.feature_name"
+
+      - table: "public.workflow_events"
+        key_columns: "id, entity_type, entity_id, event_type, old_value, new_value, actor, created_at"
+        notes: "Route to state_transitions if state_change_*, else to workflow_audit_log"
+
+  wint:
+    name: "WINT Database"
+    port: 5432
+    schema: "wint"
+    connection_env_var: "DATABASE_URL"
+    env_var_fallback: |
+      Host: process.env.POSTGRES_HOST || 'localhost'
+      Port: process.env.POSTGRES_PORT || '5432'
+      Database: process.env.POSTGRES_DATABASE || 'postgres'
+      User: process.env.POSTGRES_USER || 'postgres'
+      Password: process.env.POSTGRES_PASSWORD || 'postgres'
+
+    tables_to_write:
+      - table: "wint.stories"
+        insert_columns: "story_id, feature_id, type, state, title, goal, points, priority, blocked_by, depends_on, follow_up_from, packages, surfaces, non_goals, created_at, updated_at"
+        unique_constraint: "story_id (UNIQUE)"
+        upsert_strategy: "ON CONFLICT (story_id) DO NOTHING"
+        notes: "All story_ids must be unique; idempotent UPSERT"
+
+      - table: "wint.features"
+        insert_columns: "feature_name, feature_type, description, is_active, created_at, updated_at"
+        unique_constraint: "feature_name (UNIQUE)"
+        upsert_strategy: "ON CONFLICT (feature_name) DO NOTHING"
+        notes: "LangGraph 'name' → wint 'feature_name'"
+
+      - table: "wint.state_transitions"
+        insert_columns: "entity_type, entity_id, from_state, to_state, triggered_by, reason, metadata, transitioned_at, created_at"
+        unique_constraint: "none (natural ordering by transitioned_at)"
+        notes: "For state_change_* events from LangGraph workflow_events"
+
+      - table: "wint.workflow_audit_log"
+        insert_columns: "entity_type, entity_id, event_type, actor, metadata, created_at"
+        unique_constraint: "none (audit log appends)"
+        notes: "For audit_* events from LangGraph workflow_events"
+
+# ============================================================================
+# CRITICAL GOTCHAS AND CONSTRAINTS
+# ============================================================================
+
+gotchas:
+  - gotcha_id: "G-001"
+    issue: "WINT uses uppercase priority (P0-P4) but LangGraph uses lowercase (p0-p3)"
+    solution: |
+      Map priority values:
+      - LangGraph: p0, p1, p2, p3
+      - WINT: P0, P1, P2, P3, P4
+
+      Transformation: toUpperCase() + 'P' prefix if needed
+      Test: All priorities must match valid WINT enum values
+
+  - gotcha_id: "G-002"
+    issue: "WINT.story_state uses underscored enum values, LangGraph uses hyphenated"
+    solution: |
+      normalizeStoryState() function must map:
+      - 'ready-to-work' → 'ready_to_work'
+      - 'in-progress' → 'in_progress'
+      - 'ready-for-qa' → 'ready_for_qa'
+      - 'uat' → 'in_qa' (semantic mapping - uat is intermediate state)
+
+      Exhaustive mapping with fallback to 'backlog' for invalid values
+
+  - gotcha_id: "G-003"
+    issue: "LangGraph features.name must map to wint.features.feature_name"
+    solution: |
+      Not a direct copy - column rename required.
+      In migration SQL: 'name' AS 'feature_name'
+      In TypeScript: mapLangGraphFeatureToWint() explicitly maps name → feature_name
+
+  - gotcha_id: "G-004"
+    issue: "LangGraph workflow_events must be routed to different tables"
+    solution: |
+      Routing logic based on event_type prefix:
+      - 'state_change_*' events → wint.state_transitions
+        - from_state comes from old_value.state
+        - to_state comes from new_value.state
+      - 'audit_*' events → wint.workflow_audit_log
+        - Standard audit fields with metadata JSONB
+
+      Create splitWorkflowEventToWint() function to handle routing
+
+  - gotcha_id: "G-005"
+    issue: "UPSERT with ON CONFLICT DO NOTHING requires exact unique constraint name"
+    solution: |
+      Use story_id for stories (UNIQUE constraint)
+      Use feature_name for features (UNIQUE constraint)
+
+      SQL: INSERT INTO wint.stories (...) VALUES (...) ON CONFLICT (story_id) DO NOTHING
+      This is idempotent - second run inserts 0 rows
+
+  - gotcha_id: "G-006"
+    issue: "LangGraph DB may be empty or unreachable"
+    solution: |
+      Handle gracefully:
+      1. Test connection before migration
+      2. If unreachable, log clear error message
+      3. If empty, log 0 rows discovered and exit cleanly
+      4. Don't crash script - provide feedback and opportunity to retry
+
+  - gotcha_id: "G-007"
+    issue: "WINT features table has additional columns not in LangGraph"
+    solution: |
+      LangGraph features only have: id, name, description, embedding, created_at
+      WINT features have additional: feature_type, package_name, file_path, is_active, updated_at
+
+      Set defaults:
+      - feature_type: 'unknown' (or from metadata if available)
+      - package_name: NULL
+      - file_path: NULL
+      - is_active: true (default)
+      - updated_at: now()
+
+  - gotcha_id: "G-008"
+    issue: "Environment variables for both databases must be different"
+    solution: |
+      LangGraph connection uses: LANGGRAPH_DATABASE_URL or individual env vars
+      WINT connection uses: DATABASE_URL or individual env vars
+
+      Both connections must be configured independently.
+      Test script with --dry-run first to verify connectivity.
+
+  - gotcha_id: "G-009"
+    issue: "Story type enum values differ between schemas"
+    solution: |
+      LangGraph has: feature, bug, tech-debt, spike, chore (hyphenated types)
+      WINT has: feature, bug, tech-debt, spike, chore, infra, docs
+
+      Map values: Remove hyphens if needed; default to 'feature' if unknown
+
+  - gotcha_id: "G-010"
+    issue: "Embeddings are pgvector columns - may cause connection issues"
+    solution: |
+      pgvector is optional (nullable):
+      1. Migrate embeddings as-is if present
+      2. Leave NULL if not present
+      3. Don't fail on missing pgvector extension
+      4. Future story (WINT-1111) can backfill embeddings
+
+# ============================================================================
+# ENUM MAPPINGS - DEFINITIVE REFERENCE
+# ============================================================================
+
+enum_mappings:
+  story_state:
+    label: "Story State Enum Normalization"
+    source_format: "LangGraph (hyphenated)"
+    target_format: "WINT (underscored)"
+    values:
+      "draft": "draft"
+      "backlog": "backlog"
+      "ready-to-work": "ready_to_work"
+      "in-progress": "in_progress"
+      "ready-for-qa": "ready_for_qa"
+      "uat": "in_qa"
+      "done": "done"
+      "cancelled": "cancelled"
+      "blocked": "blocked"
+    additional_notes: |
+      - 'uat' maps to 'in_qa' (semantic change: intermediate state in WINT)
+      - 'blocked' is new in WINT (not in LangGraph)
+      - Hyphenated states must all be normalized to underscored
+      - Invalid values fall back to 'backlog'
+
+  priority:
+    label: "Story Priority Enum"
+    source_format: "LangGraph (lowercase p0-p3)"
+    target_format: "WINT (uppercase P0-P4)"
+    values:
+      "p0": "P0"
+      "p1": "P1"
+      "p2": "P2"
+      "p3": "P3"
+      "null": "P2"  # WINT default
+    additional_notes: |
+      - WINT adds P4 (new priority level)
+      - Case conversion required (lowercase → uppercase)
+      - Default priority in WINT is P2
+
+  story_type:
+    label: "Story Type Enum"
+    source_format: "LangGraph (hyphenated)"
+    target_format: "WINT (hyphenated, extended)"
+    values:
+      "feature": "feature"
+      "bug": "bug"
+      "tech-debt": "tech-debt"
+      "spike": "spike"
+      "chore": "chore"
+      "unknown": "feature"  # fallback
+    additional_notes: |
+      - WINT adds: 'infra', 'docs'
+      - Hyphenated names remain (tech-debt not tech_debt)
+      - Default to 'feature' if unknown
+
+# ============================================================================
+# TRANSFORMATION FUNCTIONS SPECIFICATION
+# ============================================================================
+
+transformation_functions:
+  - function: "normalizeStoryState"
+    input: "state: string (from LangGraph)"
+    output: "StoryState (WINT enum value)"
+    logic: |
+      // Exhaustive mapping
+      switch(state.toLowerCase()) {
+        case 'draft': return 'draft'
+        case 'backlog': return 'backlog'
+        case 'ready-to-work': return 'ready_to_work'
+        case 'in-progress': return 'in_progress'
+        case 'ready-for-qa': return 'ready_for_qa'
+        case 'uat': return 'in_qa'
+        case 'done': return 'done'
+        case 'cancelled': return 'cancelled'
+        case 'blocked': return 'blocked'
+        default: return 'backlog'  // fallback
+      }
+    test_cases:
+      - input: "ready-to-work"
+        expected: "ready_to_work"
+      - input: "in-progress"
+        expected: "in_progress"
+      - input: "uat"
+        expected: "in_qa"
+      - input: "UNKNOWN"
+        expected: "backlog"
+      - input: null
+        expected: "backlog"
+
+  - function: "mapLangGraphStoryToWint"
+    input: "LangGraphStory"
+    output: "WintStory (ready for INSERT)"
+    fields_mapped:
+      story_id: "story_id → story_id (no change)"
+      title: "title → title (no change)"
+      type: "type → type (normalize if hyphenated)"
+      state: "state → state (via normalizeStoryState)"
+      goal: "goal → goal"
+      non_goals: "non_goals → non_goals"
+      packages: "packages → packages (TEXT[] array)"
+      surfaces: "surfaces → surfaces (TEXT[] array)"
+      blocked_by: "blocked_by → blocked_by"
+      depends_on: "depends_on → depends_on (TEXT[] array)"
+      follow_up_from: "follow_up_from → follow_up_from"
+      priority: "priority → priority (p0 → P0)"
+      embedding: "embedding → embedding (nullable, kept as-is)"
+      feature_id: "null (no feature mapping in this step)"
+      points: "null (not in LangGraph)"
+      created_at: "created_at → created_at (preserve)"
+      updated_at: "updated_at → updated_at (preserve)"
+
+  - function: "mapLangGraphFeatureToWint"
+    input: "LangGraphFeature"
+    output: "WintFeature (ready for INSERT)"
+    fields_mapped:
+      feature_name: "name → feature_name (column rename!)"
+      description: "description → description"
+      embedding: "embedding → embedding (nullable)"
+      feature_type: "null → 'unknown' (not in LangGraph)"
+      package_name: "null (not in LangGraph)"
+      file_path: "null (not in LangGraph)"
+      is_active: "null → true (default)"
+      created_at: "created_at → created_at"
+      updated_at: "now() (new record)"
+
+  - function: "splitWorkflowEventToWint"
+    input: "LangGraphWorkflowEvent"
+    outputs: "WintStateTransition | WintWorkflowAuditLog (routed by event_type)"
+    routing_logic: |
+      if (event_type.startsWith('state_change_')) {
+        return mapToStateTransition()
+      } else if (event_type.startsWith('audit_')) {
+        return mapToAuditLog()
+      } else {
+        return mapToAuditLog()  // default to audit log
+      }
+    state_transition_mapping:
+      entity_type: "entity_type (e.g., 'story')"
+      entity_id: "entity_id (story UUID)"
+      from_state: "old_value.state"
+      to_state: "new_value.state"
+      triggered_by: "actor"
+      reason: "reason (nullable)"
+      metadata: "{ old_value, new_value, event_type } (JSON)"
+    audit_log_mapping:
+      entity_type: "entity_type"
+      entity_id: "entity_id"
+      event_type: "event_type"
+      actor: "actor"
+      metadata: "{ old_value, new_value } (JSON)"
+
+# ============================================================================
+# TESTING STRATEGY
+# ============================================================================
+
+testing_strategy:
+  unit_tests:
+    - test_group: "normalizeStoryState()"
+      tests:
+        - "All hyphenated states map to underscored"
+        - "uat maps to in_qa"
+        - "Pass-through values unchanged (backlog, done, draft, cancelled)"
+        - "Invalid input falls back to backlog"
+        - "Case insensitivity (DRAFT → draft)"
+        - "Null/undefined handled gracefully"
+
+    - test_group: "mapLangGraphStoryToWint()"
+      tests:
+        - "All fields mapped correctly"
+        - "State normalized via normalizeStoryState()"
+        - "Arrays preserved as TEXT[]"
+        - "Null fields stay null"
+        - "Timestamps preserved"
+
+    - test_group: "Zod Schema Validation"
+      tests:
+        - "LangGraphStorySchema parses valid records"
+        - "WintStorySchema rejects invalid state values"
+        - "All schemas enforce required fields"
+
+  integration_tests:
+    - test_group: "Database Connection"
+      tests:
+        - "Connect to LangGraph on port 5433"
+        - "Connect to WINT on port 5432"
+        - "Graceful failure on unreachable database"
+        - "Pool cleanup on error"
+
+    - test_group: "UPSERT Behavior"
+      tests:
+        - "INSERT new record succeeds"
+        - "Duplicate story_id triggers CONFLICT, inserts 0 rows"
+        - "Running twice produces identical row counts"
+        - "No data is overwritten"
+
+    - test_group: "Batch Processing"
+      tests:
+        - "Process 50 records per batch"
+        - "Error in one record doesn't stop batch"
+        - "Track counts: inserted, skipped, errored"
+
+  test_coverage_targets:
+    unit: "≥90% for transformation functions"
+    integration: "≥45% overall"
+    critical_paths: "100%"
+
+# ============================================================================
+# DEPENDENCY INFORMATION
+# ============================================================================
+
+dependencies:
+  resolved:
+    - story: "WINT-1090"
+      title: "Update LangGraph Repositories for Unified Schema"
+      status: "uat"
+      provides: "Unified schema tables in WINT database"
+      dependency_type: "soft"
+      notes: "Schema must exist; WINT-1110 can run independently"
+
+  runtime_packages:
+    - package: "pg"
+      version: "8.18.0"
+      usage: "Database connection Pool and query execution"
+    - package: "zod"
+      version: "^3.23.8"
+      usage: "Schema definition and validation"
+    - package: "@repo/logger"
+      version: "workspace:*"
+      usage: "Structured logging (no console.log)"
+
+  dev_packages:
+    - package: "vitest"
+      version: "^3.2.4"
+      usage: "Unit and integration tests"
+    - package: "typescript"
+      version: "^5.8.0"
+      usage: "Type checking"
+    - package: "@types/pg"
+      version: "8.16.0"
+      usage: "Type definitions for pg library"
+
+# ============================================================================
+# GLOSSARY AND TERMINOLOGY
+# ============================================================================
+
+glossary:
+  LangGraph: "Source database at port 5433 with public schema; holds original story/feature data"
+  WINT: "Target database at port 5432 with wint schema; unified destination"
+  story_state: "Enum for story lifecycle states (draft, backlog, ready_to_work, etc.)"
+  normalization: "Converting hyphenated states (ready-to-work) to underscored (ready_to_work)"
+  UPSERT: "INSERT ... ON CONFLICT DO NOTHING; prevents duplicate inserts"
+  idempotent: "Running script twice produces identical result; safe to re-run"
+  state_transitions: "Table tracking when stories move between states"
+  workflow_audit_log: "General audit trail of all workflow events"
+  embedding: "Vector representation (1536-dimensional) for semantic search; pgvector extension"
+  pgvector: "PostgreSQL extension for vector operations; optional but recommended"
+
+# ============================================================================
+# EXTERNAL REFERENCES
+# ============================================================================
+
+external_references:
+  - title: "CLAUDE.md Project Guidelines"
+    location: "/CLAUDE.md"
+    relevance: "Code style, Zod-first types, no console logging, ESLint rules"
+
+  - title: "WINT-1080: Schema Diff Analysis"
+    location: "plans/future/platform/wint/WINT-1080.md"
+    relevance: "Initial schema reconciliation analysis and mappings"
+
+  - title: "WINT-1090: Update LangGraph Repositories"
+    location: "plans/future/platform/wint/WINT-1090.md"
+    relevance: "Unified schema deployment; provides schema DDL"
+
+  - title: "Unified WINT Schema Definition"
+    location: "packages/backend/database-schema/src/schema/unified-wint.ts"
+    relevance: "Source of truth for all table definitions and enum values"
+
+  - title: "Story Repository Implementation"
+    location: "packages/backend/orchestrator/src/db/story-repository.ts"
+    relevance: "Shows exact wint.stories columns and insert patterns"
+
+# ============================================================================
+# VERSION HISTORY
+# ============================================================================
+
+version_history:
+  - version: 1
+    created_at: "2026-02-16T21:30:00Z"
+    created_by: "dev-plan-leader"
+    changes: "Initial planning document"

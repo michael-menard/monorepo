@@ -81,6 +81,9 @@ export const CheckpointSchema = z
 
     // Gen mode flag (found in some checkpoints)
     gen_mode: z.boolean().optional(),
+
+    // Worktree ID associated with this story's implementation (UUID from worktree_register)
+    worktree_id: z.string().uuid().optional(),
   })
   .passthrough() // Preserve unknown fields for full backward compatibility
 

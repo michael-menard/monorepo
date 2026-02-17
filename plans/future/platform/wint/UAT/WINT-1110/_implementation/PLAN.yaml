@@ -1,0 +1,526 @@
+schema: 1
+story_id: "WINT-1110"
+title: "Migrate Existing LangGraph Data"
+plan_version: 1
+timestamp: "2026-02-16T21:30:00Z"
+
+# Token and Complexity Estimates
+estimated_tokens: 50000
+estimated_implementation_tokens: 35000
+estimated_test_tokens: 10000
+complexity_level: "medium"
+
+# ============================================================================
+# IMPLEMENTATION PHASES
+# ============================================================================
+
+phases:
+  - id: "phase-1"
+    name: "Types and Transformation Functions"
+    description: "Create Zod schemas for LangGraph and WINT types, implement transformation logic"
+    sequence: 1
+    estimated_hours: 2
+    estimated_tokens: 8000
+
+    files:
+      - path: "packages/backend/orchestrator/src/scripts/__types__/migration.ts"
+        action: "create"
+        language: "typescript"
+        description: "Zod schemas for source and target data types, transformation functions"
+
+    tasks:
+      - task_id: "1.1"
+        title: "Define source LangGraph schemas"
+        description: |
+          Create Zod schemas for reading from LangGraph public schema:
+          - LangGraphStory: id, story_id, state, type, title, goal, non_goals, packages, surfaces, blocked_by, depends_on, follow_up_from, priority, embedding, created_at, updated_at
+          - LangGraphFeature: id, name, description, embedding, created_at
+          - LangGraphWorkflowEvent: id, entity_type, entity_id, event_type, old_value, new_value, actor, created_at
+
+      - task_id: "1.2"
+        title: "Define target WINT schemas"
+        description: |
+          Create Zod schemas for writing to WINT wint schema:
+          - WintStory: id, story_id, feature_id, type, state, title, goal, points, priority, blocked_by, depends_on, follow_up_from, packages, surfaces, non_goals, created_at, updated_at
+          - WintFeature: id, feature_name, description, feature_type, package_name, file_path, is_active, created_at, updated_at
+          - WintStateTransition: id, entity_type, entity_id, from_state, to_state, triggered_by, reason, metadata, transitioned_at, created_at
+          - WintWorkflowAuditLog: id, entity_type, entity_id, event_type, actor, metadata, created_at
+
+      - task_id: "1.3"
+        title: "Implement normalizeStoryState()"
+        description: |
+          Create transformation function to map LangGraph hyphenated states to WINT underscored states:
+          - 'ready-to-work' → 'ready_to_work'
+          - 'in-progress' → 'in_progress'
+          - 'ready-for-qa' → 'ready_for_qa'
+          - 'uat' → 'in_qa'
+          - 'draft', 'backlog', 'done', 'cancelled' → unchanged
+          Handle invalid states gracefully with logging
+
+      - task_id: "1.4"
+        title: "Implement transformation helpers"
+        description: |
+          Create pure functions for data mapping:
+          - mapLangGraphStoryToWint(): Convert story record with all field mappings
+          - mapLangGraphFeatureToWint(): Map 'name' → 'feature_name'
+          - splitWorkflowEventToWint(): Route events to state_transitions or workflow_audit_log
+          - validateWintStoryState(): Verify state enum values
+
+    verification:
+      - "Zod schemas parse without validation errors"
+      - "Type inference works correctly for all schemas"
+      - "normalizeStoryState() handles all enum values and edge cases"
+      - "All transformation functions have 100% test coverage"
+      - "No type errors in TypeScript compilation"
+
+    deliverables:
+      - file: "packages/backend/orchestrator/src/scripts/__types__/migration.ts"
+        description: "Complete type definitions and transformation functions"
+
+  - id: "phase-2"
+    name: "Database Connection & Configuration"
+    description: "Set up database connection pools and environment configuration"
+    sequence: 2
+    estimated_hours: 1
+    estimated_tokens: 4000
+
+    files:
+      - path: "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+        action: "create"
+        language: "typescript"
+        description: "Main migration script with dual database connections"
+
+    tasks:
+      - task_id: "2.1"
+        title: "Create database connection factory"
+        description: |
+          Implement connection setup following populate-story-status.ts pattern:
+          - createLangGraphPool(): Connect to port 5433, public schema, LANGGRAPH_DATABASE_URL or defaults
+          - createWintPool(): Connect to port 5432, wint schema, DATABASE_URL or defaults
+          - Implement graceful error handling for connection failures
+          - Log connection details (host/port, not credentials)
+
+      - task_id: "2.2"
+        title: "Add CLI argument parsing"
+        description: |
+          Implement CLI interface for safe operations:
+          - --dry-run: Preview migration without writing to database
+          - --execute: Perform actual migration
+          - --rollback: Undo migration (separate phase)
+          - --verbose: Detailed logging
+          - --batch-size: Override default batch size (default 50)
+
+      - task_id: "2.3"
+        title: "Implement logging infrastructure"
+        description: |
+          Set up structured logging:
+          - Use @repo/logger for all log messages
+          - Create migration-log.json for detailed audit trail
+          - Track: started_at, completed_at, discovered_count, migrated_count, skipped_count, error_count
+          - Log each phase with row counts and timing
+
+    verification:
+      - "Both database pools connect successfully in test environment"
+      - "CLI parsing handles all argument combinations"
+      - "Environment variables default correctly when not set"
+      - "Logging output is valid JSON and includes all required fields"
+
+  - id: "phase-3"
+    name: "Core Migration Logic"
+    description: "Implement data migration functions for stories, features, and events"
+    sequence: 3
+    estimated_hours: 4
+    estimated_tokens: 15000
+
+    tasks:
+      - task_id: "3.1"
+        title: "Implement migrateStories()"
+        description: |
+          Core story migration logic:
+          - Query LangGraph public.stories
+          - Transform each record with normalizeStoryState()
+          - Use UPSERT: INSERT INTO wint.stories ... ON CONFLICT (story_id) DO NOTHING
+          - Batch operations in groups of 50 to manage memory
+          - Track: total_queried, inserted_count, skipped_count (duplicates), error_count
+          - Idempotent: running twice produces identical results
+
+      - task_id: "3.2"
+        title: "Implement migrateFeatures()"
+        description: |
+          Feature migration logic:
+          - Query LangGraph public.features
+          - Map 'name' → 'feature_name'
+          - Use UPSERT: INSERT INTO wint.features ... ON CONFLICT (feature_name) DO NOTHING
+          - Handle embeddings as nullable (can be migrated as-is or left null)
+          - Track row counts and errors
+
+      - task_id: "3.3"
+        title: "Implement migrateWorkflowEvents()"
+        description: |
+          Event routing and transformation:
+          - Query LangGraph public.workflow_events
+          - For state_change_* events: INSERT into wint.state_transitions
+            - from_state, to_state from old_value, new_value
+            - triggered_by from actor
+            - metadata from old_value, new_value
+          - For audit_* events: INSERT into wint.workflow_audit_log
+            - event_type, actor, metadata from event fields
+          - Use UPSERT with ON CONFLICT DO NOTHING for idempotency
+          - Handle missing/null fields gracefully
+
+      - task_id: "3.4"
+        title: "Implement main orchestration function"
+        description: |
+          Execute migration phases in order:
+          - Start timer, log migration start
+          - Call migrateStories()
+          - Call migrateFeatures()
+          - Call migrateWorkflowEvents()
+          - Record completion time
+          - Write migration-log.json with summary statistics
+          - Return success/failure status
+
+    verification:
+      - "Dry-run mode executes without database writes"
+      - "Execute mode successfully inserts records"
+      - "UPSERT prevents duplicate inserts (idempotent)"
+      - "All transformed states match WINT enum values"
+      - "Feature migrations preserve feature_name uniqueness"
+      - "Batch operations don't exceed memory limits"
+      - "Error handling doesn't crash script on individual record failures"
+
+  - id: "phase-4"
+    name: "Rollback Functionality"
+    description: "Create idempotent rollback script to undo migration"
+    sequence: 4
+    estimated_hours: 1.5
+    estimated_tokens: 5000
+
+    files:
+      - path: "packages/backend/orchestrator/src/scripts/migrate-langgraph-data-rollback.ts"
+        action: "create"
+        language: "typescript"
+        description: "Rollback script to remove migrated records"
+
+    tasks:
+      - task_id: "4.1"
+        title: "Implement rollback_migration()"
+        description: |
+          Remove records inserted by forward migration:
+          - Read migration-log.json to find migrated story IDs and feature names
+          - DELETE from wint.state_transitions where entity_id IN (migrated_story_ids)
+          - DELETE from wint.workflow_audit_log where entity_id IN (migrated_story_ids)
+          - DELETE from wint.stories where story_id IN (migrated_story_ids)
+          - DELETE from wint.features where feature_name IN (migrated_feature_names)
+          - Use transactions to ensure consistency
+          - Log removed record counts
+
+      - task_id: "4.2"
+        title: "Implement verify_rollback()"
+        description: |
+          Confirm rollback completion:
+          - Query wint.stories for any remaining records from migration
+          - Verify counts match expectations
+          - Log verification results
+          - Return pass/fail status
+
+    verification:
+      - "Rollback script connects to WINT database successfully"
+      - "Rollback removes only migrated records (not pre-existing data)"
+      - "Verification confirms rollback completion"
+      - "Rollback is safe to run multiple times (idempotent)"
+
+  - id: "phase-5"
+    name: "Unit Tests"
+    description: "Comprehensive test coverage for transformation and migration logic"
+    sequence: 5
+    estimated_hours: 3
+    estimated_tokens: 10000
+
+    files:
+      - path: "packages/backend/orchestrator/src/scripts/__tests__/migrate-langgraph-data.test.ts"
+        action: "create"
+        language: "typescript"
+        description: "Unit tests for migration functions"
+
+    tasks:
+      - task_id: "5.1"
+        title: "Test normalizeStoryState()"
+        description: |
+          Comprehensive enum transformation tests:
+          - Test each valid hyphenated → underscored mapping
+          - Test 'uat' → 'in_qa' semantic mapping
+          - Test pass-through values (backlog, done, cancelled, draft)
+          - Test invalid input handling with fallback
+          - Test case sensitivity
+          - Test null/undefined handling
+          Target: 100% coverage on this function
+
+      - task_id: "5.2"
+        title: "Test story transformation"
+        description: |
+          Test mapLangGraphStoryToWint():
+          - Test field mapping completeness
+          - Test state normalization in context
+          - Test null/optional field handling
+          - Test timestamp preservation
+          - Test array field transformation (depends_on, packages, surfaces)
+
+      - task_id: "5.3"
+        title: "Test feature transformation"
+        description: |
+          Test mapLangGraphFeatureToWint():
+          - Test 'name' → 'feature_name' mapping
+          - Test embedding nullable handling
+          - Test description preservation
+          - Test timestamp handling
+
+      - task_id: "5.4"
+        title: "Test event routing"
+        description: |
+          Test splitWorkflowEventToWint():
+          - Test state_change_* event routing to state_transitions
+          - Test audit_* event routing to workflow_audit_log
+          - Test metadata transformation
+          - Test actor → triggered_by mapping
+          - Test null value handling
+
+      - task_id: "5.5"
+        title: "Test UPSERT behavior"
+        description: |
+          Integration tests with mock database:
+          - Test INSERT on new records
+          - Test CONFLICT DO NOTHING on duplicate story_id
+          - Test idempotency: running twice produces same result
+          - Test batch operations
+          - Test transaction rollback on error
+
+      - task_id: "5.6"
+        title: "Test database connections"
+        description: |
+          Connection and error handling:
+          - Test successful connection to both databases
+          - Test graceful failure on unreachable database
+          - Test connection pool cleanup
+          - Test environment variable resolution
+
+      - task_id: "5.7"
+        title: "Test dry-run mode"
+        description: |
+          Dry-run validation:
+          - Verify queries execute without writes
+          - Verify row counts are calculated
+          - Verify plan output is generated
+          - Verify no side effects occur
+
+    verification:
+      - "All tests pass (vitest run)"
+      - "Test coverage >= 45% on new code"
+      - "Integration tests pass with mock data"
+      - "No linting errors (ESLint)"
+      - "TypeScript compilation succeeds"
+
+# ============================================================================
+# FILE MANIFEST
+# ============================================================================
+
+files_to_create:
+  - path: "packages/backend/orchestrator/src/scripts/__types__/migration.ts"
+    purpose: "Type definitions and transformation functions"
+    type: "typescript"
+    purpose_detail: "Zod schemas for LangGraph and WINT types, pure transformation functions"
+
+  - path: "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+    purpose: "Main migration script"
+    type: "typescript"
+    purpose_detail: "Entry point for forward migration with dry-run and execute modes"
+
+  - path: "packages/backend/orchestrator/src/scripts/migrate-langgraph-data-rollback.ts"
+    purpose: "Rollback script"
+    type: "typescript"
+    purpose_detail: "Idempotent rollback to remove migrated records"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/migrate-langgraph-data.test.ts"
+    purpose: "Test suite"
+    type: "typescript"
+    purpose_detail: "Comprehensive unit and integration tests"
+
+files_to_modify: []
+
+affected_packages:
+  - "packages/backend/orchestrator"
+
+# ============================================================================
+# ACCEPTANCE CRITERIA MAPPING
+# ============================================================================
+
+acceptance_criteria_mapping:
+  - ac: "AC-001"
+    description: "Migration script connects to both databases (port 5432 and 5433) successfully"
+    how: "createLangGraphPool() and createWintPool() functions establish dual connections with logging"
+    verification: "Unit tests verify successful connections; dry-run mode confirms connectivity"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+
+  - ac: "AC-002"
+    description: "All stories from LangGraph migrated to wint.stories with correct enum normalization"
+    how: "normalizeStoryState() transforms all hyphenated states to underscored; migrateStories() uses UPSERT"
+    verification: "Query wint.stories for all story_ids present in LangGraph; verify all states valid"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/__types__/migration.ts"
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+      - "packages/backend/orchestrator/src/scripts/__tests__/migrate-langgraph-data.test.ts"
+
+  - ac: "AC-003"
+    description: "All features from LangGraph migrated to wint.features"
+    how: "migrateFeatures() maps 'name' → 'feature_name' and uses UPSERT"
+    verification: "Query wint.features and verify feature_name matches source names"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+
+  - ac: "AC-004"
+    description: "Duplicate handling: existing records not overwritten (UPSERT with ON CONFLICT DO NOTHING)"
+    how: "All INSERT statements use ON CONFLICT (story_id/feature_name) DO NOTHING"
+    verification: "Run migration twice; verify identical row counts both times; no data changes"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+      - "packages/backend/orchestrator/src/scripts/__tests__/migrate-langgraph-data.test.ts"
+
+  - ac: "AC-005"
+    description: "Migration script logs progress and row counts (migrated, skipped, errors)"
+    how: "@repo/logger logs each phase; migration-log.json writes summary statistics"
+    verification: "migration-log.json contains fields: started_at, completed_at, migrated_count, skipped_count, error_count"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+
+  - ac: "AC-006"
+    description: "Rollback script provided that can undo migration"
+    how: "migrate-langgraph-data-rollback.ts reads migration-log.json and deletes inserted records"
+    verification: "Rollback script successfully removes migrated records; verify_rollback() confirms"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data-rollback.ts"
+
+  - ac: "AC-007"
+    description: "Migration is idempotent - running twice produces same result"
+    how: "ON CONFLICT DO NOTHING prevents duplicate inserts; all queries are read-only until final insert"
+    verification: "Integration test: run twice, verify identical output and row counts"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+      - "packages/backend/orchestrator/src/scripts/__tests__/migrate-langgraph-data.test.ts"
+
+  - ac: "AC-008"
+    description: "All migrated stories have valid story_state enum values in wint schema"
+    how: "normalizeStoryState() validates against WINT enum; validation at INSERT time"
+    verification: "Query: SELECT * FROM wint.stories WHERE state NOT IN valid_enum_values; expect 0 rows"
+    files_involved:
+      - "packages/backend/orchestrator/src/scripts/__types__/migration.ts"
+      - "packages/backend/orchestrator/src/scripts/migrate-langgraph-data.ts"
+
+# ============================================================================
+# KEY TECHNICAL DECISIONS
+# ============================================================================
+
+technical_decisions:
+  - id: "TD-001"
+    title: "Dual Database Connection Pattern"
+    decision: "Use separate Pool instances for LangGraph (5433) and WINT (5432)"
+    rationale: "Prevents database consolidation; allows independent scaling and management"
+    implementation: "createLangGraphPool() and createWintPool() functions with environment variables"
+
+  - id: "TD-002"
+    title: "Enum Normalization Strategy"
+    decision: "Map hyphenated → underscored states; 'uat' → 'in_qa' semantic mapping"
+    rationale: "WINT uses underscored naming; 'uat' is intermediate state, 'in_qa' is WINT semantic"
+    implementation: "normalizeStoryState() pure function with exhaustive match"
+
+  - id: "TD-003"
+    title: "UPSERT with ON CONFLICT DO NOTHING"
+    decision: "Preserve existing WINT data; don't overwrite on duplicate key"
+    rationale: "Idempotent; safe to run multiple times; protects pre-existing WINT records"
+    implementation: "All INSERT statements include ON CONFLICT (...) DO NOTHING clause"
+
+  - id: "TD-004"
+    title: "Batch Processing"
+    decision: "Process stories in groups of 50 to manage memory"
+    rationale: "Large LangGraph datasets require streaming; prevents memory exhaustion"
+    implementation: "BATCH_SIZE constant; array.slice() for batch iteration"
+
+  - id: "TD-005"
+    title: "Workflow Events Routing"
+    decision: "Route state_change_* events to state_transitions; audit_* to workflow_audit_log"
+    rationale: "Semantic separation: state changes vs. general audit events"
+    implementation: "splitWorkflowEventToWint() function with event_type prefix matching"
+
+# ============================================================================
+# RISK MITIGATION
+# ============================================================================
+
+risk_mitigations:
+  - risk: "Data loss from overwriting existing WINT records"
+    severity: "high"
+    mitigation: "Use ON CONFLICT DO NOTHING; test idempotency; run in dry-run first"
+    owner: "Developer running migration"
+
+  - risk: "Database connection failures (LangGraph DB unreachable)"
+    severity: "medium"
+    mitigation: "Graceful error handling with clear messages; connection validation before migration"
+    owner: "Test environment setup"
+
+  - risk: "Invalid enum values causing INSERT failure"
+    severity: "medium"
+    mitigation: "normalizeStoryState() with exhaustive validation; 100% test coverage"
+    owner: "Test suite validation"
+
+  - risk: "Memory exhaustion with large datasets"
+    severity: "medium"
+    mitigation: "Batch processing; streaming queries; BATCH_SIZE configuration"
+    owner: "Optimization during implementation"
+
+  - risk: "Incomplete rollback leaving orphaned records"
+    severity: "low"
+    mitigation: "Rollback script tracks all inserted records; verify_rollback() confirmation"
+    owner: "Rollback testing"
+
+# ============================================================================
+# COMPLETION CRITERIA
+# ============================================================================
+
+completion_criteria:
+  - "All 5 phases completed in sequence"
+  - "All 8 acceptance criteria satisfied"
+  - "Test coverage >= 45% on new code"
+  - "No linting or type errors"
+  - "Dry-run mode validates without database writes"
+  - "Execute mode successfully migrates data"
+  - "Idempotency verified: running twice produces identical results"
+  - "Rollback script successfully undoes migration"
+  - "migration-log.json contains complete audit trail"
+  - "All CLAUDE.md guidelines followed (Zod schemas, no console, ESLint)"
+
+# ============================================================================
+# PERFORMANCE TARGETS
+# ============================================================================
+
+performance_targets:
+  stories_migrated_per_second: 100
+  features_migrated_per_second: 500
+  events_migrated_per_second: 200
+  memory_peak_usage_mb: 256
+  migration_total_duration_estimate_minutes: "5-10 (depending on data volume)"
+
+# ============================================================================
+# SUCCESS METRICS
+# ============================================================================
+
+success_metrics:
+  - "AC-001: Both databases connected successfully"
+  - "AC-002: All stories migrated with valid enum states"
+  - "AC-003: All features migrated with correct field names"
+  - "AC-004: UPSERT prevents overwriting existing data"
+  - "AC-005: migration-log.json contains complete audit trail"
+  - "AC-006: Rollback script removes all migrated records"
+  - "AC-007: Migration idempotency verified"
+  - "AC-008: All story states valid per WINT enum"
+  - "Test coverage >= 45%"
+  - "Zero linting/type errors"
+  - "Manual UAT: dry-run successfully previews migration"

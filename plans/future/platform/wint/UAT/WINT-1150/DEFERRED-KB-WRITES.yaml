@@ -1,0 +1,27 @@
+# Deferred KB Writes - WINT-1150
+# Reason: KB database unavailable at story generation time
+# Retry: Run /kb-write-retry WINT-1150 when DB is available
+
+deferred_at: "2026-02-16"
+story_id: "WINT-1150"
+
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: "WINT-1150"
+      feature: "wint"
+      title: "Integrate Worktree Cleanup into Story Completion"
+      story_dir: "plans/future/platform/wint/backlog/WINT-1150"
+      story_file: "plans/future/platform/wint/backlog/WINT-1150/WINT-1150.md"
+      story_type: "feature"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      touches_agents: true
+      touches_commands: true

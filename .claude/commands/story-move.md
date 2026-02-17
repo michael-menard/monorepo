@@ -61,10 +61,12 @@ mv {FEATURE_DIR}/{FROM_STAGE}/{STORY_ID} {FEATURE_DIR}/{TO_STAGE}/{STORY_ID}
 
 If flag provided, also run:
 ```
-/story-update {FEATURE_DIR} {STORY_ID} {STAGE_STATUS} --no-index
+/story-update {FEATURE_DIR} {STORY_ID} {STAGE_STATUS}
 ```
 
 Where `STAGE_STATUS` is the typical status for that stage (see table above).
+
+This updates both the story frontmatter and the index in one atomic step.
 
 ### 5. Return Result
 
