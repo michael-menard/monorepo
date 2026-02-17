@@ -380,4 +380,257 @@ status: backlog
     expect(result.checksum).toBeDefined()
     expect(result.checksum).toMatch(/^[a-f0-9]{64}$/) // SHA-256 is 64 hex chars
   })
+
+  it('should update existing story when story exists', async () => {
+    const yamlContent = `schema: 1
+story_id: KBAR-0030
+epic: KBAR
+title: Updated Story
+description: New description
+story_type: feature
+priority: P2
+complexity: high
+story_points: 8
+current_phase: setup
+status: backlog
+`
+
+    vi.mocked(fs.readFile).mockResolvedValue(yamlContent)
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }]),
+      }),
+    })
+
+    db.transaction.mockImplementation(async (callback: any) => {
+      let selectCallCount = 0
+      const tx = {
+        select: vi.fn(() => {
+          selectCallCount++
+          if (selectCallCount === 1) {
+            // First select: return existing story
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440002' }]),
+                }),
+              }),
+            }
+          } else {
+            // Second select: return artifact without checksum match
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([
+                    { id: '550e8400-e29b-41d4-a716-446655440003', checksum: 'different-checksum' },
+                  ]),
+                }),
+              }),
+            }
+          }
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      }
+      return await callback(tx)
+    })
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+
+    const result = await syncStoryToDatabase({
+      storyId: 'KBAR-0030',
+      filePath: '/path/to/KBAR-0030.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.syncStatus).toBe('completed')
+  })
+
+  it('should handle artifact caching when story exists but artifact lookup already done', async () => {
+    const yamlContent = `schema: 1
+story_id: KBAR-0030
+epic: KBAR
+title: Test Story
+story_type: feature
+priority: P2
+current_phase: setup
+status: backlog
+`
+
+    vi.mocked(fs.readFile).mockResolvedValue(yamlContent)
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }]),
+      }),
+    })
+
+    db.transaction.mockImplementation(async (callback: any) => {
+      let selectCallCount = 0
+      const tx = {
+        select: vi.fn(() => {
+          selectCallCount++
+          if (selectCallCount === 1) {
+            // First select: return existing story
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440002' }]),
+                }),
+              }),
+            }
+          } else {
+            // Second select: return artifact (doesn't match for caching test)
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([
+                    { id: '550e8400-e29b-41d4-a716-446655440003', checksum: 'cached-checksum' },
+                  ]),
+                }),
+              }),
+            }
+          }
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      }
+      return await callback(tx)
+    })
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+
+    const result = await syncStoryToDatabase({
+      storyId: 'KBAR-0030',
+      filePath: '/path/to/KBAR-0030.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.syncStatus).toBe('completed')
+  })
+
+  it('should create new artifact when none exists', async () => {
+    const yamlContent = `schema: 1
+story_id: KBAR-0030
+epic: KBAR
+title: New Story
+story_type: feature
+priority: P2
+current_phase: setup
+status: backlog
+`
+
+    vi.mocked(fs.readFile).mockResolvedValue(yamlContent)
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }]),
+      }),
+    })
+
+    db.transaction.mockImplementation(async (callback: any) => {
+      let selectCallCount = 0
+      const tx = {
+        select: vi.fn(() => {
+          selectCallCount++
+          if (selectCallCount === 1) {
+            // First select: return new story (created in transaction)
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([]), // No existing story
+                }),
+              }),
+            }
+          } else {
+            // Second select: no artifact exists
+            return {
+              from: vi.fn().mockReturnValue({
+                where: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockResolvedValue([]), // No existing artifact
+                }),
+              }),
+            }
+          }
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440002' }]),
+          }),
+        }),
+      }
+      return await callback(tx)
+    })
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+
+    const result = await syncStoryToDatabase({
+      storyId: 'KBAR-0030',
+      filePath: '/path/to/KBAR-0030.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.syncStatus).toBe('completed')
+  })
+
+  it('should handle database error during transaction (AC-6)', async () => {
+    const yamlContent = `schema: 1
+story_id: KBAR-0030
+epic: KBAR
+title: Test Story
+story_type: feature
+priority: P2
+current_phase: setup
+status: backlog
+`
+
+    vi.mocked(fs.readFile).mockResolvedValue(yamlContent)
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001' }]),
+      }),
+    })
+
+    // Transaction itself fails
+    db.transaction.mockRejectedValue(new Error('Transaction failed'))
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+
+    const result = await syncStoryToDatabase({
+      storyId: 'KBAR-0030',
+      filePath: '/path/to/KBAR-0030.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.syncStatus).toBe('failed')
+    expect(result.error).toContain('Transaction failed')
+  })
 })

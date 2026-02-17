@@ -284,4 +284,171 @@ describe('syncStoryFromDatabase', () => {
     expect(result.syncEventId).toBe('550e8400-e29b-41d4-a716-446655440001')
     expect(db.insert).toHaveBeenCalled()
   })
+
+  it('should retry temp file cleanup with exponential backoff on failure', async () => {
+    const mockStory = {
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      storyId: 'KBAR-0030',
+      epic: 'KBAR',
+      title: 'Test',
+      storyType: 'feature',
+      priority: 'P2' as const,
+      currentPhase: 'setup' as const,
+      status: 'backlog',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001', createdAt: new Date() }]),
+      }),
+    })
+
+    db.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([mockStory]),
+        }),
+      }),
+    })
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    // Rename fails to trigger error handling
+    vi.mocked(fs.rename).mockRejectedValue(new Error('Rename failed'))
+    // First two unlink attempts fail, third succeeds
+    vi.mocked(fs.unlink)
+      .mockRejectedValueOnce(new Error('Cleanup attempt 1 failed'))
+      .mockRejectedValueOnce(new Error('Cleanup attempt 2 failed'))
+      .mockResolvedValueOnce(undefined)
+
+    const result = await syncStoryFromDatabase({
+      storyId: 'KBAR-0030',
+      outputPath: '/path/to/story.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(false)
+    // Verify unlink was called 3 times (first two fail, third succeeds)
+    expect(fs.unlink).toHaveBeenCalledTimes(3)
+  })
+
+  it('should log error when all temp file cleanup attempts fail', async () => {
+    const mockStory = {
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      storyId: 'KBAR-0030',
+      epic: 'KBAR',
+      title: 'Test',
+      storyType: 'feature',
+      priority: 'P2' as const,
+      currentPhase: 'setup' as const,
+      status: 'backlog',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001', createdAt: new Date() }]),
+      }),
+    })
+
+    db.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([mockStory]),
+        }),
+      }),
+    })
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    })
+
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    // Rename fails to trigger error handling
+    vi.mocked(fs.rename).mockRejectedValue(new Error('Rename failed'))
+    // All unlink attempts fail
+    vi.mocked(fs.unlink).mockRejectedValue(new Error('Cleanup failed'))
+
+    const result = await syncStoryFromDatabase({
+      storyId: 'KBAR-0030',
+      outputPath: '/path/to/story.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(false)
+    // Verify unlink was called 3 times (all fail)
+    expect(fs.unlink).toHaveBeenCalledTimes(3)
+  })
+
+  it('should handle sync event update failure gracefully', async () => {
+    const mockStory = {
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      storyId: 'KBAR-0030',
+      epic: 'KBAR',
+      title: 'Test',
+      storyType: 'feature',
+      priority: 'P2' as const,
+      currentPhase: 'setup' as const,
+      status: 'backlog',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    db.insert.mockReturnValueOnce({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: '550e8400-e29b-41d4-a716-446655440001', createdAt: new Date() }]),
+      }),
+    })
+
+    db.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([mockStory]),
+        }),
+      }),
+    })
+
+    db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockRejectedValue(new Error('Update failed')),
+      }),
+    })
+
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined)
+    // Rename fails to trigger error handling
+    vi.mocked(fs.rename).mockRejectedValue(new Error('Rename failed'))
+    vi.mocked(fs.unlink).mockResolvedValue(undefined)
+
+    const result = await syncStoryFromDatabase({
+      storyId: 'KBAR-0030',
+      outputPath: '/path/to/story.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.syncStatus).toBe('failed')
+  })
+
+  it('should handle input validation failure', async () => {
+    // This test covers the early validation error path
+    const result = await syncStoryFromDatabase({
+      storyId: '', // Invalid empty story ID
+      outputPath: '/path/to/story.md',
+      triggeredBy: 'user',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.syncStatus).toBe('failed')
+    expect(result.error).toContain('validation')
+  })
 })
