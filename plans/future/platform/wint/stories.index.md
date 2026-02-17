@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-09T22:30:00Z"
+updated_at: "2026-02-17T23:00:00Z"
 ---
 
 # WINT Stories Index
@@ -15,14 +15,16 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 
 | Status | Count |
 |--------|-------|
-| completed | 1 |
-| uat | 7 |
-| in-qa | 1 |
+| completed | 2 |
+| uat | 13 |
+| in-qa | 0 |
 | ready-for-qa | 0 |
-| elaboration | 1 |
+| ready-for-code-review | 1 |
+| elaboration | 0 |
+| backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 0 |
-| pending | 131 |
+| ready-to-work | 3 |
+| pending | 126 |
 
 ---
 
@@ -32,7 +34,6 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| WINT-0150 | Create doc-sync Skill | — |
 | WINT-0180 | Define Examples + Negative Examples Framework | — |
 | WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-4060 | Create scope-defender Agent | — |
@@ -270,17 +271,26 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0131: Add Feature-Capability Linkage to WINT Schema
 
-**Status:** pending
+**Status:** uat
+**Story File:** `UAT/WINT-0131/WINT-0131.md`
+**Elaboration Complete:** 2026-02-16
+**Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-17
+**QA Verification Complete:** 2026-02-17
 **Depends On:** WINT-0060, WINT-0130
 **Phase:** 0
-**Feature:** Add featureId foreign key to capabilities table in the WINT graph schema (WINT-0060). Update graph_get_franken_features and graph_get_capability_coverage MCP tools to use feature-capability linkage. Create database migration, update schema definitions, and deliver fully functional implementations of the 2 tools that are currently limited due to missing schema column.
+**Priority:** P0 (blocks WINT-4060, WINT-4030)
+**Points:** 3
+**Feature:** Add featureId foreign key to capabilities table in the WINT graph schema (WINT-0060). Update graph_get_franken_features and graph_get_capability_coverage MCP tools to use feature-capability linkage. Create database migration 0027, update Drizzle schema definitions in wint.ts (source of truth), and deliver fully functional implementations of the 2 tools that are currently limited due to missing schema column.
 **Infrastructure:**
-- packages/backend/database-schema (schema migration)
+- packages/backend/database-schema (schema migration 0027)
 - packages/backend/mcp-tools/src/graph-query (tool updates)
 
 **Goal:** Complete the WINT-0130 graph query implementation by fixing the schema gap that caused graph_get_franken_features and graph_get_capability_coverage to operate in limited mode
 
-**Risk Notes:** Schema migration must not break existing graph query functionality; featureId FK is a new column addition to capabilities table
+**Risk Notes:** Schema migration must not break existing graph query functionality; featureId FK is a new nullable column addition to capabilities table. unified-wint.ts NOT modified (deferred to WINT-1100).
+
+**QA Result:** PASS — 14/14 ACs verified, 200 unit tests passing (0 fail), 0 TypeScript errors, 0 ESLint errors. Migration 0027 applied to live DB and verified (feature_id column + index confirmed). All acceptance criteria met.
 
 ---
 
@@ -308,7 +318,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0150: Create doc-sync Skill
 
-**Status:** pending
+**Status:** uat
+**Story File:** `wint/UAT/WINT-0150/WINT-0150.md`
 **Depends On:** none
 **Phase:** 0
 **Feature:** Create skill that updates AGENTS.md, COMMANDS.md, SKILLS.md, and docs/workflow/ by reading current state from database and .agent.md/.command.md/.skill.md files
@@ -402,9 +413,15 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0210: Populate Role Pack Templates
 
-**Status:** pending
+**Status:** ready-to-work
+**Story File:** `wint/ready-to-work/WINT-0210/WINT-0210.md`
+**Story Generated:** 2026-02-17
+**Elaboration Complete:** 2026-02-17
+**Verdict:** CONDITIONAL PASS
 **Depends On:** WINT-0180, WINT-0190, WINT-0200
 **Phase:** 0
+**Points:** 5
+**Priority:** P2
 **Feature:** Create role pack templates with examples: Dev (Patch Queue + Reuse Shared Packages + Repair Loop), PO (hard caps: max 5 findings, max 2 blocking), DA (hard caps: max 5 challenges, cannot challenge blocking items), QA (AC→Evidence trace pattern, ac-trace.json output).
 **Infrastructure:**
 - .claude/prompts/role-packs/dev.md
@@ -414,7 +431,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 **Goal:** Provide focused 150-300 token role instructions with canonical examples
 
-**Risk Notes:** Must keep under token budget while being actionable
+**Risk Notes:** Must keep under token budget while being actionable; implementation gate: WINT-0180, WINT-0190, and WINT-0200 must all be complete
 
 ---
 
@@ -549,25 +566,59 @@ Create escalation-rules.yaml. Log all escalations for analysis.
 
 Foundation phase - Story flattening, core tables, compatibility shim for directory→DB fallback, single source of truth
 
-### WINT-1010: Create Compatibility Shim Module
+### WINT-1011: Create Compatibility Shim Module — Core Functions
 
-**Status:** pending
+**Status:** uat
+**Split From:** WINT-1010
 **Depends On:** WINT-0090
 **Phase:** 1
-**Feature:** Create shared module that checks DB first, falls back to directory structure, used by all agents during migration
-**Infrastructure:**
-- shared TypeScript/Python module
+**Priority:** high
+**Points:** 3
+**Story File:** `wint/UAT/WINT-1011/WINT-1011.md`
+**Elaboration Complete:** 2026-02-16
+**Verdict:** PASS
+**Implementation Complete:** 2026-02-17
+**QA Setup Complete:** 2026-02-17
+**QA Complete:** 2026-02-17
 
-**Goal:** Enable gradual migration without breaking existing agents
+### Scope
+Create the four core shim functions (`shimGetStoryStatus`, `shimUpdateStoryStatus`, `shimGetStoriesByStatus`, `shimGetStoriesByFeature`) in `packages/backend/mcp-tools/src/story-compatibility/`. Implements DB-first, directory-fallback strategy using WINT-0090 MCP tools. Outputs conform to WINT-0090 Zod schemas. Exported from `mcp-tools/src/index.ts` for downstream consumption by WINT-1040, WINT-1050, WINT-1060. No-double-read guarantee enforced. Designed for deletion in WINT-7100.
 
-**Acceptance Criteria (Phase 0):**
-- Database migration rollback script development completed
-- Rollback procedure pre-tested with recovery validation
-- Disaster recovery documentation provided
-- Rollback testing conducted in staging environment
-- Phase 1 gate validation (WINT-1080) includes rollback procedure sign-off
+### Acceptance Criteria (from parent)
+- AC-1: shimGetStoryStatus — DB-first, directory fallback
+- AC-2: shimUpdateStoryStatus — DB write only, fail-safe on error
+- AC-3: shimGetStoriesByStatus — DB-first, directory fallback
+- AC-4: shimGetStoriesByFeature — DB-first, directory fallback
+- AC-5: Output conforms to WINT-0090 Zod schemas
+- AC-7: Directory fallback uses WINT-1030 swim-lane mapping
+- AC-8: Exported from mcp-tools/src/index.ts
+- AC-10: No double-reads guarantee
 
-**Risk Notes:** Must maintain performance, avoid double-reads
+---
+
+### WINT-1012: Compatibility Shim Module — Observability and Quality
+
+**Status:** ready-to-work
+**Story File:** `wint/ready-to-work/WINT-1012/WINT-1012.md`
+**Elaboration Complete:** 2026-02-16
+**Verdict:** PASS
+**Split From:** WINT-1010
+**Depends On:** none
+**Phase:** 1
+**Priority:** high
+**Points:** 2
+
+### Scope
+Add `ShimDiagnostics` opt-in field (source: `db | directory | not_found`) to all four shim functions from WINT-1011. Deliver unit test suite achieving minimum 80% coverage across all four test paths (DB-hit, DB-miss+fallback, DB-unavailable, invalid input). Requires WINT-1011 core shim to be complete before diagnostics can be tested.
+
+### Acceptance Criteria (from parent)
+- AC-6: ShimDiagnostics opt-in field (db | directory | not_found source)
+- AC-9: Unit tests achieve minimum 80% coverage across all four test paths
+
+---
+
+### Note on AC-11 (Rollback Script — assigned to WINT-1080)
+AC-11 from the original WINT-1010 (database migration rollback script) has been explicitly removed from scope and reassigned to **WINT-1080** (Reconcile WINT Schema with LangGraph). The rollback script is a Phase 1 gate concern, not a shim module concern. WINT-1080 elaboration should include this as a formal AC.
 
 ---
 
@@ -610,7 +661,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 ### WINT-1040: Update story-status Command to Use DB
 
 **Status:** pending
-**Depends On:** WINT-1010, WINT-1030
+**Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
 **Infrastructure:**
@@ -624,7 +675,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 ### WINT-1050: Update story-update Command to Use DB
 
 **Status:** pending
-**Depends On:** WINT-1010, WINT-1030
+**Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-update command to update core.stories table instead of moving directories
 **Infrastructure:**
@@ -644,7 +695,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 ### WINT-1060: Update story-move Command to Use DB
 
 **Status:** pending
-**Depends On:** WINT-1010, WINT-1030
+**Depends On:** WINT-1011, WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-move command to update database status instead of moving directories
 **Infrastructure:**
@@ -690,6 +741,8 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 **Risk Notes:** Must preserve existing LangGraph functionality
 
+**AC-11 Assignment (from WINT-1010 split):** During WINT-1010 elaboration, AC-11 (database migration rollback script for `core.stories` table population) was identified as a Phase 1 gate concern and reassigned here. WINT-1080 elaboration must include: a rollback script that can revert the `core.stories` table population from WINT-1030, with documented rollback procedure. Evaluate Drizzle Kit downward migration support for this use case.
+
 ---
 
 ### WINT-1090: Update LangGraph Repositories for Unified Schema
@@ -709,7 +762,8 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1100: Create Shared TypeScript Types
 
-**Status:** pending
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1100/WINT-1100.md`
 **Depends On:** WINT-1080
 **Phase:** 1
 **Feature:** Create shared Zod schemas in packages/backend/orchestrator that both LangGraph nodes and MCP tools use
@@ -724,7 +778,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1110: Migrate Existing LangGraph Data
 
-**Status:** pending
+**Status:** completed
 **Depends On:** WINT-1090
 **Phase:** 1
 **Feature:** Create migration script to move any existing data from LangGraph tables to unified schema format
@@ -735,12 +789,16 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 **Risk Notes:** Must test thoroughly before production run
 
+**QA Setup Complete:** 2026-02-17 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-17 - All 8 ACs verified PASS, 76/76 tests pass, verdict: PASS
+**Completed:** 2026-02-17 - Status updated to completed
+
 ---
 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1110, WINT-1160
+**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -753,7 +811,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1130: Track Worktree-to-Story Mapping in Database
 
-**Status:** in-qa
+**Status:** uat
 **Depends On:** WINT-0020
 **Phase:** 1
 **Feature:** Add worktree tracking table to core schema: story_id, worktree_path, branch_name, created_at, status (active/merged/abandoned). Create MCP tools: worktree_register, worktree_get_by_story, worktree_list_active, worktree_mark_complete.
@@ -765,38 +823,63 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 **Risk Notes:** Must handle orphaned worktrees (session died without cleanup)
 
+**QA Verification Complete:** 2026-02-16 - All 12 ACs verified PASS, 25 unit tests passing with 100% coverage, 8 integration tests created (require CI DB), architecture fully compliant. Verdict: PASS
+
 ---
 
 ### WINT-1140: Integrate Worktree Creation into dev-implement-story
 
-**Status:** pending
+**Status:** uat
+**Elaboration Complete:** 2026-02-16
+**Verdict:** CONDITIONAL PASS
+**Development Started:** 2026-02-17T17:00:00Z - Setup phase complete, ready for implementation
+**Implementation Complete:** 2026-02-17 - All 11 ACs implemented, 2951 tests passing, review PASS
+**QA Setup Complete:** 2026-02-17T18:45:00Z - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-17T19:10:00Z - All 11 ACs verified PASS, verdict: PASS
+**Story File:** `wint/UAT/WINT-1140/WINT-1140.md`
+**Points:** 3
+**Priority:** high
 **Depends On:** WINT-1130
 **Phase:** 1
-**Feature:** Modify dev-implement-story to automatically create worktree via /wt-new at story start. Register worktree in database. If worktree already exists for story, switch to it instead of creating new. Add pre-flight check: if story has active worktree in different session, warn and confirm.
+**Feature:** Modify dev-implement-story to automatically create worktree via /wt:new at story start (Step 1.3). Register worktree in database via worktree_register MCP tool. If worktree already exists for story (matching CHECKPOINT.yaml worktree_id), switch to it instead of creating new. If different-session worktree detected, warn and present 3 options. Store worktree_id in CHECKPOINT.yaml for session continuity. --skip-worktree flag for escape hatch.
 **Infrastructure:**
-- dev-implement-story agent update
-- Integration with wt-new skill
+- .claude/commands/dev-implement-story.md (Step 1.3 insertion)
+- packages/backend/orchestrator/src/artifacts/ (CHECKPOINT.yaml schema: add worktree_id)
 
-**Goal:** Automatic isolation for every story implementation
+**Goal:** Automatic worktree isolation for every story implementation with session continuity via CHECKPOINT.yaml
 
-**Risk Notes:** Must handle case where user wants to continue in existing worktree
+**Risk Notes:** wt-switch interface must be verified during setup; WINT-1130 MCP tools must be live before integration testing; must not duplicate worktree_mark_complete usage (owned by WINT-1150)
+
+**Elaboration Notes:** ACs added: 2 (AC-10, AC-11) for verification requirements. KB entries queued: 10. Both gaps (wt-switch and wt-new interface assumptions) resolved as setup-phase verification requirements rather than scope blockers.
 
 ---
 
 ### WINT-1150: Integrate Worktree Cleanup into Story Completion
 
-**Status:** pending
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1150/WINT-1150.md`
+**Story Generated:** 2026-02-16
+**Elaboration Complete:** 2026-02-16
+**Verdict:** PASS
+**QA Verified:** 2026-02-17
 **Depends On:** WINT-1130
 **Phase:** 1
+**Points:** 3
+**Priority:** P2
 **Feature:** Modify story completion workflow (qa-verify-story success, story-update to 'done') to automatically run /wt-finish: merge branch, push, cleanup worktree, update database status. Add option to defer cleanup if PR review pending.
 **Infrastructure:**
-- qa-verify-story agent update
-- story-update command update
+- qa-verify-completion-leader agent update (PASS branch only)
+- story-update command update (completed transition)
 - Integration with wt-finish skill
+- worktree_get_by_story and worktree_mark_complete MCP tools (WINT-1130)
 
 **Goal:** Automatic cleanup prevents worktree sprawl and ensures branches are merged
 
-**Risk Notes:** Must not auto-merge if CI is failing or PR has requested changes
+**Risk Notes:** Must not auto-merge if CI is failing or PR has requested changes. wt-finish structured output must surface CI/PR failure reasons for AC-5/AC-6.
+
+**Elaboration Notes:** Both MVP-critical gaps resolved via new ACs (AC-12, AC-13). All non-blocking findings logged to KB. Ready for implementation.
+
+**QA Notes:** All 13 acceptance criteria verified PASS. 21/21 tests pass. No blocking issues. Architecture compliant. Lessons captured to KB.
 
 ---
 
@@ -1950,7 +2033,7 @@ Backlog management phase - Storage, refinement, and promotion of post-MVP items 
 ### WINT-8010: Add Backlog Status to Stories Schema
 
 **Status:** pending
-**Depends On:** WINT-1010
+**Depends On:** WINT-1011
 **Phase:** 8
 **Feature:** Extend core.stories table to support status='backlog' with priority, source, and category fields
 **Infrastructure:**
