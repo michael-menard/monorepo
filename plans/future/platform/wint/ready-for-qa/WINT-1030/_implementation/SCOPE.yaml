@@ -1,0 +1,29 @@
+schema: 1
+story_id: WINT-1030
+timestamp: "2026-02-16T21:05:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/**"
+  - "packages/backend/orchestrator/**"
+  - "packages/backend/db/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create migration script to scan story directories, infer status from location, and populate core.stories table for database-driven workflow"
+elaboration: "completed"

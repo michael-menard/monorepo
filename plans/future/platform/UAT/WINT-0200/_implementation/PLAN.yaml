@@ -1,0 +1,489 @@
+---
+# PLAN.yaml - WINT-0200 Implementation Plan
+# Story: Create User Flows Schema with State/Capability Enums
+# Purpose: Detailed execution plan for all 7 acceptance criteria
+
+story_id: WINT-0200
+plan_version: 1.0
+created: 2026-02-16T05:00:00Z
+test_first: true
+
+# === IMPLEMENTATION PHASES ===
+phases:
+  phase_1:
+    name: Setup & Schema Definition
+    description: Create Zod schema with enums, constraints, and TSDoc comments
+    duration_estimate: 1.5-2h
+    critical: true
+    steps:
+      - step: 1.1
+        name: Create __types__ directory
+        action: Create packages/backend/orchestrator/src/artifacts/__types__/
+        verification: Directory exists
+        notes: Follows pattern from adapters/__types__, services/__types__
+
+      - step: 1.2
+        name: Create Zod schema with states enum
+        action: Define UserFlowStateEnum with 5 values in user-flows.ts
+        deliverable: packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+        details: |
+          - States: 'loading', 'empty', 'validation_error', 'server_error', 'permission_denied'
+          - Use z.enum() for enum definition
+          - Add TSDoc comment for each state value (AC-3)
+        acceptance_criteria: AC-2, AC-3
+        verification: Enum validates all 5 state values
+
+      - step: 1.3
+        name: Add capabilities enum to Zod schema
+        action: Define UserFlowCapabilityEnum with 7 values
+        details: |
+          - Capabilities: 'create', 'view', 'edit', 'delete', 'upload', 'replace', 'download'
+          - Use z.enum() for enum definition
+          - Add TSDoc comments with CRUD mapping for each capability (AC-4)
+        acceptance_criteria: AC-2, AC-4
+        verification: Enum validates all 7 capability values
+
+      - step: 1.4
+        name: Define UserFlow and UserFlows schemas
+        action: Create complete Zod object schemas
+        details: |
+          - UserFlowStep schema (name, state, capabilities array)
+          - UserFlow schema (flowName, steps array with max(7) constraint)
+          - UserFlows schema (flows array with max(5) constraint, schema_version field)
+          - Infer types: UserFlowState, UserFlowCapability, UserFlowStep, UserFlow, UserFlows
+        acceptance_criteria: AC-2
+        verification: All types inferred via z.infer<>
+
+      - step: 1.5
+        name: Add extensibility documentation
+        action: Create README.md with extensibility guidance
+        deliverable: packages/backend/orchestrator/src/artifacts/README.md
+        details: |
+          - TSDoc comments in schema for inline documentation (AC-3, AC-4)
+          - README for high-level extensibility process
+          - Document how to add new states/capabilities
+          - Document schema version increment process
+        acceptance_criteria: AC-3, AC-4, AC-7
+        verification: README exists with extensibility section
+
+  phase_2:
+    name: Test Suite Creation (Test-First)
+    description: Comprehensive validation tests before JSON Schema creation
+    duration_estimate: 2-3h
+    critical: true
+    steps:
+      - step: 2.1
+        name: Create test file and setup
+        action: Create user-flows.test.ts with Vitest imports
+        deliverable: packages/backend/orchestrator/src/artifacts/__tests__/user-flows.test.ts
+        details: |
+          - Import Zod schema from __types__/user-flows
+          - Set up test fixtures for valid/invalid flows
+          - Follow existing test pattern (see scope.test.ts)
+        acceptance_criteria: AC-5
+        verification: Test file exists and imports schema
+
+      - step: 2.2
+        name: Write happy path tests
+        action: Create valid flow test cases
+        details: |
+          - Test: valid flow with all 5 states
+          - Test: valid flow with all 7 capabilities
+          - Test: flow with max 7 steps (boundary test)
+          - Test: feature with max 5 flows (boundary test)
+          - All tests should use .parse() and expect success
+        acceptance_criteria: AC-5
+        verification: Happy path tests pass
+
+      - step: 2.3
+        name: Write error case tests
+        action: Create invalid flow test cases
+        details: |
+          - Test: flow with >7 steps (expect ZodError)
+          - Test: feature with >5 flows (expect ZodError)
+          - Test: invalid state enum value (expect ZodError)
+          - Test: invalid capability enum value (expect ZodError)
+          - Verify error messages are clear and actionable
+        acceptance_criteria: AC-5
+        verification: Error tests pass with clear error messages
+
+      - step: 2.4
+        name: Write edge case tests
+        action: Create boundary and edge case tests
+        details: |
+          - Test: empty flows array (document decision in schema)
+          - Test: single flow with single step (minimum valid)
+          - Test: flow using all 7 capabilities in different steps
+          - Test: flow using all 5 states in different steps
+        acceptance_criteria: AC-5
+        verification: Edge case tests pass
+
+      - step: 2.5
+        name: Write round-trip validation test
+        action: Create JSON serialization consistency test
+        details: |
+          - Test: JSON.parse(input) → Zod.parse() → JSON.stringify() matches input
+          - Validation consistency only (no custom serialization needed)
+          - Ensures schema doesn't lose data during validation
+        acceptance_criteria: AC-5
+        verification: Round-trip test passes
+
+  phase_3:
+    name: Example Flow Creation
+    description: Create example flow demonstrating all states and capabilities
+    duration_estimate: 0.5h
+    critical: false
+    steps:
+      - step: 3.1
+        name: Create example flow fixture
+        action: Create example-user-flow.json in test fixtures
+        deliverable: packages/backend/orchestrator/src/artifacts/__tests__/fixtures/example-user-flow.json
+        details: |
+          - Demonstrate all 5 required states (loading, empty, validation_error, server_error, permission_denied)
+          - Demonstrate common capabilities (create, view, edit, delete)
+          - Stay within max constraints (≤5 flows, ≤7 steps each)
+          - Use realistic flow names and step descriptions
+        acceptance_criteria: AC-6
+        verification: Example flow exists in test fixtures
+
+      - step: 3.2
+        name: Add example validation to test suite
+        action: Import example flow and validate in tests
+        details: |
+          - Load example-user-flow.json in test file
+          - Validate against Zod schema using .parse()
+          - Assert all 5 states are present in example
+          - Assert at least 4 capabilities are present
+        acceptance_criteria: AC-6
+        verification: Example validates successfully
+
+  phase_4:
+    name: JSON Schema Creation
+    description: Create JSON Schema matching Zod structure (deferred to WINT-0180 decision)
+    duration_estimate: 1h
+    critical: false
+    depends_on: WINT-0180 AC-2 (storage strategy decision)
+    steps:
+      - step: 4.1
+        name: Create JSON Schema file
+        action: Create user-flows.schema.json at location TBD
+        deliverable: Location TBD by WINT-0180 (likely packages/backend/orchestrator/src/schemas/)
+        details: |
+          - JSON Schema Draft 2020-12 format
+          - Include $schema, $id, title, description metadata
+          - Mirror Zod schema structure exactly
+          - States enum definition
+          - Capabilities enum definition
+          - Max constraints: flows (5), steps per flow (7)
+          - schema_version field (semver format)
+        acceptance_criteria: AC-1
+        verification: JSON Schema file is valid Draft 2020-12
+
+      - step: 4.2
+        name: Validate JSON Schema with ajv
+        action: Test JSON Schema validation with ajv library
+        details: |
+          - Install ajv if not present in orchestrator package
+          - Load JSON Schema with ajv
+          - Validate example flow against JSON Schema
+          - Ensure error messages match Zod error clarity
+        acceptance_criteria: AC-1
+        verification: Example flow validates with ajv
+
+  phase_5:
+    name: Documentation & Integration
+    description: Complete integration docs and verify all ACs
+    duration_estimate: 1h
+    critical: true
+    steps:
+      - step: 5.1
+        name: Document schema file locations
+        action: Update README.md with file path documentation
+        details: |
+          - Document Zod schema location (artifacts/__types__/user-flows.ts)
+          - Document JSON Schema location (TBD, update post-WINT-0180)
+          - Document example flow location (artifacts/__tests__/fixtures/)
+        acceptance_criteria: AC-7
+        verification: All file paths documented
+
+      - step: 5.2
+        name: Document agent usage
+        action: Add agent validation examples to README
+        details: |
+          - Show import statement for Zod schema
+          - Show .parse() usage example
+          - Show error handling pattern
+          - Show type inference usage (z.infer<>)
+        acceptance_criteria: AC-7
+        verification: Agent usage examples present
+
+      - step: 5.3
+        name: Document PO cohesion integration
+        action: Add PO cohesion check integration section
+        details: |
+          - Explain WINT-0210 integration (Role Pack Templates)
+          - Explain WINT-4010 integration (Cohesion Sidecar)
+          - Explain WINT-4070 integration (cohesion-prosecutor Agent)
+          - Link to related stories
+        acceptance_criteria: AC-7
+        verification: Integration points documented
+
+      - step: 5.4
+        name: Link to WINT-0180 framework
+        action: Add reference to examples framework
+        details: |
+          - Link to WINT-0180 for storage patterns
+          - Note that JSON Schema location depends on WINT-0180 AC-2
+          - Explain storage-agnostic design (both Zod + JSON Schema)
+        acceptance_criteria: AC-7
+        verification: WINT-0180 dependency documented
+
+  phase_6:
+    name: Verification & Completion
+    description: Final verification of all ACs and quality gates
+    duration_estimate: 0.5h
+    critical: true
+    steps:
+      - step: 6.1
+        name: Run all tests
+        action: Execute pnpm test user-flows.test.ts
+        verification: All tests pass
+        acceptance_criteria: AC-5
+
+      - step: 6.2
+        name: Verify test coverage
+        action: Check test coverage ≥100%
+        verification: Coverage report shows 100% for user-flows.ts
+        acceptance_criteria: AC-5
+        notes: Validation logic is deterministic, 100% coverage achievable
+
+      - step: 6.3
+        name: Run linting
+        action: Execute pnpm lint on new files
+        verification: No linting errors
+        notes: Fix any formatting issues
+
+      - step: 6.4
+        name: Run type checking
+        action: Execute pnpm check-types
+        verification: No TypeScript errors
+        notes: Ensure all types are correctly inferred
+
+      - step: 6.5
+        name: Verify all ACs
+        action: Manual checklist of all 7 acceptance criteria
+        verification: All AC verification steps pass
+        details: |
+          AC-1: JSON Schema created and valid ✓
+          AC-2: Zod schema created with all enums and types ✓
+          AC-3: States enum documented with TSDoc ✓
+          AC-4: Capabilities enum documented with CRUD mapping ✓
+          AC-5: Test suite complete with 100% coverage ✓
+          AC-6: Example flow created and validates ✓
+          AC-7: Integration documentation complete ✓
+
+# === CRITICAL PATHS ===
+critical_paths:
+  path_1:
+    name: Schema Accuracy
+    description: Ensure Zod and JSON schemas are accurate and consistent
+    risk: Medium
+    steps:
+      - Phase 1, Step 1.2-1.4 (Zod schema creation)
+      - Phase 2, Step 2.1-2.5 (comprehensive tests)
+      - Phase 4, Step 4.1-4.2 (JSON Schema creation and validation)
+    mitigation: |
+      - Test-first approach ensures schema correctness
+      - Round-trip validation catches inconsistencies
+      - Example flow validates against both schemas
+      - Clear error messages guide users
+
+  path_2:
+    name: Enum Completeness
+    description: Verify states and capabilities cover PO cohesion requirements
+    risk: Low
+    steps:
+      - Phase 1, Step 1.2-1.3 (enum definitions)
+      - Phase 3, Step 3.1 (example demonstrates all states/capabilities)
+    mitigation: |
+      - Requirements are well-defined in story
+      - Extensibility docs enable future additions
+      - Schema versioning tracks evolution
+
+  path_3:
+    name: Downstream Integration
+    description: Ensure schema is consumable by WINT-0210 and WINT-4xxx
+    risk: Low
+    steps:
+      - Phase 5, Step 5.2-5.3 (agent usage and PO integration docs)
+      - Phase 6, Step 6.5 (final AC verification)
+    mitigation: |
+      - Clear import and usage examples
+      - Storage-agnostic design supports any consumption pattern
+      - Integration points documented
+
+# === DEPENDENCIES ===
+dependencies:
+  blocking:
+    - dependency_id: WINT-0180
+      description: Storage strategy decision (AC-2)
+      impact: JSON Schema file location (AC-1)
+      mitigation: |
+        - Create Zod schema regardless of WINT-0180 status
+        - Defer JSON Schema creation until storage decision known
+        - AC-7 integration docs note location is TBD
+        - If WINT-0180 delayed, create JSON Schema in temporary location and move later
+
+  non_blocking:
+    - Review session management Zod pattern (WINT-0110) for consistency
+    - Reference WINT database enum pattern (wint.ts) if database storage chosen
+
+# === DECISION POINTS ===
+decision_points:
+  decision_1:
+    phase: 2
+    step: 2.4
+    question: Should empty flows array be allowed?
+    options:
+      - Allow empty array (min: 0)
+      - Require at least 1 flow (min: 1)
+    recommendation: Allow empty array for partial feature definitions
+    rationale: |
+      Features in early planning may not have flows defined yet.
+      Schema should support incremental flow addition.
+      Cohesion checks can enforce minimum flows at validation time.
+
+  decision_2:
+    phase: 4
+    step: 4.1
+    question: Where to place JSON Schema file?
+    options:
+      - Option 1 (Filesystem): packages/backend/orchestrator/src/schemas/
+      - Option 2 (Database): Add pgEnum to database-schema
+      - Option 3 (Hybrid): Both
+    recommendation: Defer to WINT-0180 AC-2 decision
+    rationale: |
+      WINT-0180 is defining storage patterns for all examples/schemas.
+      Creating both Zod and JSON Schema ensures compatibility with any choice.
+      AC-7 docs will be updated once location is finalized.
+
+# === VERIFICATION CHECKLIST ===
+verification_checklist:
+  AC-1:
+    - JSON Schema file exists at location determined by WINT-0180
+    - Schema includes $schema, $id, title, description metadata
+    - States enum has 5 values
+    - Capabilities enum has 7 values
+    - Max 5 flows constraint present
+    - Max 7 steps per flow constraint present
+    - schema_version field present
+    - Validates with ajv library
+    - Example flow validates successfully
+
+  AC-2:
+    - Zod schema exists at packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+    - States enum defined with z.enum()
+    - Capabilities enum defined with z.enum()
+    - Flows array has .max(5) constraint
+    - Steps array has .max(7) constraint
+    - All types exported (UserFlowState, UserFlowCapability, UserFlowStep, UserFlow, UserFlows)
+    - Types correctly inferred via z.infer<>
+    - Valid flow parses successfully
+    - Invalid flow throws ZodError
+
+  AC-3:
+    - TSDoc comment exists for 'loading' state
+    - TSDoc comment exists for 'empty' state
+    - TSDoc comment exists for 'validation_error' state
+    - TSDoc comment exists for 'server_error' state
+    - TSDoc comment exists for 'permission_denied' state
+    - Extensibility section exists in README
+    - Documentation explains when to use each state
+
+  AC-4:
+    - TSDoc comment exists for 'create' capability with CRUD mapping
+    - TSDoc comment exists for 'view' capability with CRUD mapping
+    - TSDoc comment exists for 'edit' capability with CRUD mapping
+    - TSDoc comment exists for 'delete' capability with CRUD mapping
+    - TSDoc comment exists for 'upload' capability
+    - TSDoc comment exists for 'replace' capability
+    - TSDoc comment exists for 'download' capability
+    - Extensibility section exists in README
+    - CRUD mapping is clear for each capability
+
+  AC-5:
+    - Test file exists at packages/backend/orchestrator/src/artifacts/__tests__/user-flows.test.ts
+    - Happy path test: valid flow with all states passes
+    - Happy path test: valid flow with all capabilities passes
+    - Error test: >7 steps fails with clear error
+    - Error test: >5 flows fails with clear error
+    - Error test: invalid state enum fails with clear error
+    - Error test: invalid capability enum fails with clear error
+    - Round-trip validation test passes
+    - Edge case: empty flows array test exists
+    - Edge case: single flow with single step test passes
+    - Edge case: all 7 capabilities test passes
+    - Edge case: all 5 states test passes
+    - Test coverage ≥100%
+    - All tests pass with pnpm test
+
+  AC-6:
+    - Example flow file exists (test fixtures or schemas/examples/)
+    - Example includes all 5 required states
+    - Example includes at least 4 capabilities (create, view, edit, delete)
+    - Example has ≤5 flows
+    - Each flow has ≤7 steps
+    - JSON Schema validation passes
+    - Zod schema parsing succeeds
+
+  AC-7:
+    - README exists at packages/backend/orchestrator/src/artifacts/README.md
+    - Schema file locations documented
+    - Agent validation usage example provided
+    - PO cohesion check integration explained
+    - WINT-0180 link present
+    - Related stories linked (WINT-0210, WINT-4010, WINT-4070)
+
+# === NOTES ===
+implementation_notes: |
+  1. **Test-First Approach**: Create tests (Phase 2) before JSON Schema (Phase 4).
+     This ensures schema correctness and provides immediate feedback.
+
+  2. **Dual Schema Strategy**: Both Zod (runtime) and JSON Schema (file validation)
+     are required to support any storage choice from WINT-0180.
+
+  3. **Extensibility Focus**: AC-3 and AC-4 require extensibility docs.
+     Place inline TSDoc for code-level docs, README for process-level docs.
+
+  4. **Round-Trip Validation**: Ensures JSON → Zod → JSON consistency.
+     No custom serialization needed, just validation accuracy.
+
+  5. **Example Flow Placement**: Use test fixtures for automatic validation
+     and discoverability. Example becomes part of test suite.
+
+  6. **Error Messages**: Use Zod's .describe() for clear validation failures.
+     Test suite verifies error message clarity (AC-5).
+
+  7. **WINT-0180 Coordination**: JSON Schema location TBD. If WINT-0180 delayed,
+     create in temporary location and move later. AC-7 docs note this dependency.
+
+  8. **Coverage Target**: 100% coverage is achievable because validation logic
+     is deterministic. No behavioral complexity, just schema enforcement.
+
+risk_mitigation: |
+  - Risk 1 (WINT-0180 delay): Create Zod schema first, defer JSON Schema.
+    Both schemas are independent deliverables.
+
+  - Risk 2 (Enum incompleteness): Extensibility docs enable future additions.
+    Schema versioning tracks evolution. Non-blocking for MVP.
+
+  - Risk 3 (Downstream integration unknown): Clear usage examples and
+    storage-agnostic design ensure any downstream story can consume schema.
+
+next_steps: |
+  After PLAN.yaml approval:
+  1. Begin Phase 1: Setup & Schema Definition
+  2. Create Zod schema with all enums and constraints
+  3. Add TSDoc comments for states and capabilities
+  4. Proceed to Phase 2: Test Suite Creation (test-first)
+  5. Coordinate with WINT-0180 for JSON Schema location decision

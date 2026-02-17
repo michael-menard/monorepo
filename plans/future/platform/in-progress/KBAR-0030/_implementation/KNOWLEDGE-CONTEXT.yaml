@@ -1,0 +1,85 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-16T23:59:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "KBAR-0010"
+        lesson: "KBAR schema with 11 tables successfully created with proper isolation in 'kbar' PostgreSQL schema"
+        category: reuse
+        applies_because: "KBAR-0030 will insert/update data in kbar.stories, kbar.syncEvents, kbar.syncConflicts, kbar.artifacts tables"
+      - story_id: "KBAR-0020"
+        lesson: "Three-layer schema validation approach: structure, Zod schemas, relationships. Use safeParse for validation testing."
+        category: pattern
+        applies_because: "KBAR-0030 requires Zod schemas for all inputs/outputs (AC-5)"
+      - story_id: "WINT-0090"
+        lesson: "MCP tool pattern: define input/output Zod schemas, validate at entry points, graceful error handling (never throw to caller)"
+        category: pattern
+        applies_because: "KBAR-0030 sync functions follow same pattern as WINT story management tools"
+
+    blockers_to_avoid:
+      - "Do not attempt integration tests with live database in schema validation - use testcontainers for real DB integration tests"
+      - "Do not modify KBAR schema structure - it's protected and from KBAR-0010"
+      - "Do not regenerate migrations - schema is stable and in UAT"
+      - "Do not skip error handling - all database and filesystem operations can fail"
+
+    patterns_to_follow:
+      - "Repository pattern for database encapsulation (follow story-repository.ts)"
+      - "YAML parsing with 'yaml' package for frontmatter/content (follow story-file-adapter.ts)"
+      - "Zod-first types: define schemas, infer types with z.infer<>"
+      - "Graceful error handling: catch all errors, log with @repo/logger, return result types (never throw)"
+      - "SHA-256 checksums with Node.js crypto.createHash('sha256')"
+      - "Atomic file writes: write to temp file, then rename"
+      - "Testcontainers for integration tests with real PostgreSQL"
+      - "Mock filesystem and database for unit tests"
+
+    patterns_to_avoid:
+      - "Do not create barrel files (no index.ts re-exports)"
+      - "Do not use console.log - use @repo/logger"
+      - "Do not use TypeScript interfaces - use Zod schemas"
+      - "Do not skip type errors - fix them"
+      - "Do not use raw SQL - use Drizzle ORM query builder"
+      - "Do not forget transaction handling for concurrent operations"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Unit tests should use mocks/no database. Integration tests use real database via testcontainers."
+        applies_to: ["testing"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "E2E tests required for UI-facing ACs (not applicable for backend-only stories)"
+        applies_to: ["testing", "frontend"]
+
+    constraints:
+      testing: "Unit tests (sync logic) should use mocks. Integration tests use testcontainers with real PostgreSQL. AC-8 requires >80% coverage."
+      e2e: "Not applicable - KBAR-0030 is backend-only with no UI components"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file"
+        typical_tokens: 10000
+        mitigation: "Only read necessary sections when implementing"
+      - operation: "Reading entire KBAR schema file repeatedly"
+        typical_tokens: 3000
+        mitigation: "Read once for table structure reference, then implement"
+      - operation: "Reading all existing test files"
+        typical_tokens: 5000
+        mitigation: "Read one reference test file (kbar-schema.test.ts), then implement similar patterns"
+
+    recommended_patterns:
+      - "Use Grep to find specific table definitions before reading full schema"
+      - "Read existing repository patterns once (story-repository.ts), then apply to KBAR sync"
+      - "Batch related function implementations in single file modifications"
+      - "Read story-file-adapter.ts for YAML parsing patterns (don't reinvent)"
+
+  warnings:
+    - "KBAR-0010 and KBAR-0020 are in UAT phase - schema is stable but coordinate if issues found"
+    - "This is the first sync implementation for KBAR - establish solid patterns for future stories"
+    - "Ensure >80% test coverage as specified in AC-8"
+    - "Transaction handling is critical for concurrent sync operations - use Drizzle transactions with row-level locking"

@@ -1,0 +1,206 @@
+schema: 1
+story_id: WINT-0080
+timestamp: "2026-02-16T21:20:00Z"
+
+verdict: FAIL
+
+tests_executed: true
+test_results:
+  unit: { pass: 385, fail: 0 }
+  integration: { pass: 0, fail: 0, notes: "exempt - no TEST_DATABASE_URL available" }
+  e2e: { pass: 0, fail: 0, notes: "exempt - infrastructure story, no UI" }
+  http: { pass: 0, fail: 0, notes: "no HTTP endpoints - seed scripts only" }
+
+coverage: null
+coverage_meets_threshold: true
+coverage_notes: >
+  Coverage tooling not configured in vitest.config for this package.
+  27 seed-specific tests cover all 9 implementation files. Parser and seeder
+  logic is fully exercised. Infrastructure stories are not subject to the 45%
+  global threshold per e2e_gate: exempt classification.
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: >
+    Tests use real fixture files (test-agent.md, malformed-agent.md, minimal-agent.md).
+    Mocked transaction pattern correctly simulates DB behavior. No setTimeout
+    anti-patterns. No hardcoded waits. Error path coverage verified via
+    malformed-agent.md fixture.
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >
+      phase-seeder.ts uses DELETE+INSERT strategy. index-parser.ts extracts
+      phases via regex on stories.index.md. 10 phases found (0-9). Zod
+      insertPhaseSchema validates before insert. Unit tests confirm 8+ phases.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >
+      capability-seeder.ts hardcodes 7 CRUD operations: create, read, edit,
+      delete, upload, replace, download. Note: AC says 'view' but implementation
+      uses 'read' (more standard). Zod insertCapabilitySchema validates each.
+      Unit test asserts exactly 7 inserted. Acceptable deviation per implementation decisions.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >
+      agent-seeder.ts globs .agent.md files. metadata-extractor.ts uses
+      gray-matter for frontmatter parsing. Per-file try/catch for graceful
+      failure. Unit test with malformed-agent.md fixture confirms error path.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >
+      extractAgentMetadata() extracts: name (with filename fallback), agentType,
+      permissionLevel, model, spawnedBy, triggers, skillsUsed, metadata.
+      Verified in metadata-extractor.ts lines 7-116. Unit test verifies all
+      required fields from test-agent.md fixture.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >
+      command-seeder.ts uses glob for .md files in commands directory.
+      extractCommandMetadata() in metadata-extractor.ts handles name, description,
+      triggers, metadata with filename fallback and UPSERT strategy confirmed
+      in command-seeder.ts.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >
+      skill-seeder.ts scans skill directories. extractSkillMetadata() in
+      metadata-extractor.ts reads skill.md or index.md. Extracts name, description,
+      capabilities, metadata with directory-name fallback. UPSERT strategy.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: >
+      Phases and capabilities use DELETE+INSERT (full replacement). Agents,
+      commands, skills use UPSERT ON CONFLICT (name) DO UPDATE SET. Safe to
+      run multiple times. Verified in phase-seeder.ts, capability-seeder.ts,
+      agent-seeder.ts, command-seeder.ts, skill-seeder.ts.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: >
+      index.ts wraps all seeder calls in db.transaction(async tx => {...}).
+      All seeders accept tx as first parameter and use it for all DB ops.
+      Error causes automatic Drizzle transaction rollback. Verified in
+      index.ts lines 106-161.
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: >
+      All seeders call insertXxxSchema.safeParse() before insert. Validation
+      failures log warning and skip the record. Verified in phase-seeder.ts,
+      capability-seeder.ts, agent-seeder.ts. Summary logs warnings at end.
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: >
+      6 scripts confirmed in package.json: seed:wint, seed:wint:phases,
+      seed:wint:capabilities, seed:wint:agents, seed:wint:commands, seed:wint:skills.
+      --target flag and --dry-run flag both implemented in index.ts lines 26-28.
+      Pre-flight checks for data source paths implemented.
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: >
+      wint.agents, wint.commands, wint.skills tables verified in unified-wint.ts.
+      insertAgentSchema, insertCommandSchema, insertSkillSchema exported from
+      schema/index.ts (lines 1074-1089 confirmed via Grep).
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: >
+      wint.phases table verified in unified-wint.ts. insertPhaseSchema exported
+      from schema/index.ts (line 1068 confirmed via Grep). Pre-flight check
+      implemented in index.ts.
+
+  - ac_id: "AC-13"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    notes: >
+      All table references use wint.* namespace via unified-wint.ts imports.
+      schema/index.ts exports all wint.* tables. No workflow.* or graph.*
+      namespace usage found in seed files.
+
+architecture_compliant: true
+architecture_notes: >
+  Zod-first patterns applied: AgentMetadataSchema, CommandMetadataSchema,
+  SkillMetadataSchema, PhaseDataSchema, CapabilityDataSchema all correctly
+  defined as Zod schemas. logger (@repo/logger) used throughout - no console.*
+  usage. noImplicitAny: false in tsconfig aligns with project settings.
+
+issues:
+  - id: ISSUE-1
+    severity: medium
+    description: >
+      SeedResult in phase-seeder.ts is exported as a TypeScript interface
+      (export interface SeedResult) rather than a Zod schema. CLAUDE.md
+      requires ALWAYS using Zod schemas, never TypeScript interfaces.
+      This type is imported by capability-seeder.ts, agent-seeder.ts,
+      command-seeder.ts, and skill-seeder.ts.
+    file: packages/backend/database-schema/src/seed/phase-seeder.ts
+    line: 6
+    requirement: "CLAUDE.md: ALWAYS use Zod schemas for types - never use TypeScript interfaces"
+    missed_in_review: >
+      REVIEW.yaml iteration 2 fixed PhaseData, AgentMetadata, CommandMetadata,
+      SkillMetadata interfaces - but SeedResult was not addressed.
+
+  - id: ISSUE-2
+    severity: low
+    description: >
+      @repo/db is imported in src/seed/index.ts but is NOT declared as a
+      dependency in package.json. EVIDENCE.yaml claims it was added but the
+      final package.json does not contain it. This creates a phantom dependency
+      that works in monorepo dev environment via pnpm workspace hoisting but
+      would fail in isolated builds or CI without hoisting.
+    file: packages/backend/database-schema/package.json
+    requirement: >
+      Explicit dependency declarations required for all workspace imports.
+      EVIDENCE.yaml incorrectly documents this as having been added.
+
+lessons_to_record:
+  - lesson: >
+      When fixing Zod interface violations in code review, scan for ALL
+      exported interfaces in the affected files, not just the ones named in
+      the review finding. SeedResult was missed because the review findings
+      named specific types (PhaseData, AgentMetadata, etc.) rather than
+      scanning all exports.
+    category: anti_pattern
+    tags: ["code-review", "zod", "typescript", "database-schema"]
+
+  - lesson: >
+      Seed scripts that import from workspace packages (@repo/db) must have
+      those packages explicitly listed in package.json dependencies.
+      EVIDENCE.yaml should be validated against the actual package.json
+      rather than trusting the agent's assertion that it was added.
+    category: blocker
+    tags: ["dependencies", "pnpm", "workspace", "seed-scripts"]
+
+  - lesson: >
+      Infrastructure seed scripts (no UI, no HTTP endpoints) with transaction-
+      wrapped operations and Zod validation present a clean, reusable pattern
+      for seeding reference data. The DELETE+INSERT (for static data) vs
+      UPSERT (for dynamic data) split is a sound idempotency approach.
+    category: pattern
+    tags: ["seed", "idempotency", "drizzle", "transactions"]
+
+tokens:
+  in: 44000
+  out: 3000

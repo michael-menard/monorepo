@@ -1,0 +1,119 @@
+---
+schema: 1
+phase: qa-setup
+status: complete
+story_id: MODL-0020
+timestamp: '2026-02-15T23:45:00Z'
+
+# Precondition Validation
+preconditions:
+  - check: "Story exists in ready-for-qa directory"
+    result: PASS
+    evidence: "Located at /Users/michaelmenard/Development/monorepo/plans/future/platform/ready-for-qa/MODL-0020"
+
+  - check: "Status is ready-for-qa"
+    result: PASS
+    evidence: "Confirmed in story frontmatter before move"
+
+  - check: "EVIDENCE.yaml exists"
+    result: PASS
+    evidence: "_implementation/EVIDENCE.yaml present with 8 acceptance criteria"
+
+  - check: "REVIEW.yaml exists"
+    result: PASS
+    evidence: "_implementation/REVIEW.yaml present with code review verdict"
+
+  - check: "Code review verdict is PASS"
+    result: PASS
+    evidence: "REVIEW.yaml verdict: PASS, overall_verdict: PASS, 0 blocking issues"
+
+# Setup Actions
+actions:
+  - action: "Move story to UAT"
+    status: COMPLETE
+    from: "/Users/michaelmenard/Development/monorepo/plans/future/platform/ready-for-qa/MODL-0020"
+    to: "/Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020"
+    timestamp: '2026-02-15T23:45:00Z'
+
+  - action: "Update story status to in-qa"
+    status: COMPLETE
+    file: "MODL-0020.md"
+    old_status: "ready-for-qa"
+    new_status: "in-qa"
+    timestamp: '2026-02-15T23:45:00Z'
+
+  - action: "Update CHECKPOINT.yaml phase"
+    status: COMPLETE
+    old_phase: "execute"
+    new_phase: "qa-setup"
+    timestamp: '2026-02-15T23:45:00Z'
+
+# Verification Sources (for QA verification phase)
+verification_sources:
+  feature_dir: "/Users/michaelmenard/Development/monorepo/plans/future/platform"
+  story_dir: "/Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020"
+  evidence_file: "/Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/EVIDENCE.yaml"
+  review_file: "/Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/REVIEW.yaml"
+  knowledge_context_file: "/Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/KNOWLEDGE-CONTEXT.yaml"
+  checkpoint_file: "/Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/CHECKPOINT.yaml"
+
+# Evidence Summary (Quick Reference)
+evidence_summary:
+  evidence_version: 1
+  ac_total: 8
+  ac_passing: 8
+  ac_failing: 0
+  review_verdict: PASS
+  review_iteration: 1
+
+  acceptance_criteria:
+    - "AC-1: Task Contract Schema - PASS"
+    - "AC-2: Task Type Taxonomy Integration - PASS"
+    - "AC-3: Task-Based Model Selector - PASS"
+    - "AC-4: Backward Compatibility with Agent-Based Selection - PASS"
+    - "AC-5: Fallback Chain Validation - PASS"
+    - "AC-6: Contract Validation & Defaults - PASS"
+    - "AC-7: Integration Tests - PASS"
+    - "AC-8: Documentation - PASS"
+
+  test_summary:
+    unit_tests: { pass: 22, fail: 0 }
+    integration_tests: { pass: 30, fail: 0 }
+    e2e_tests: { pass: 0, fail: 0, exempt: true }
+    total_pass: 52
+    total_fail: 0
+
+  code_quality:
+    lint_verdict: "PASS_WITH_MINOR_FIX (1 auto-fixable line length issue)"
+    style_verdict: "PASS"
+    syntax_verdict: "PASS"
+    security_verdict: "PASS"
+    typecheck_verdict: "PASS"
+    build_verdict: "PASS"
+
+  coverage:
+    lines: 100
+    branches: 95
+    notes: "Task contract validation 100%, selector integration 95%"
+
+# Signal
+signal: "SETUP COMPLETE"
+
+# Next Phase
+next_phase: "qa-verification"
+next_phase_description: "Evidence-first QA verification will validate all acceptance criteria using EVIDENCE.yaml as source of truth"
+
+# Notes
+notes:
+  - "All preconditions validated successfully"
+  - "Story moved to UAT directory for verification phase"
+  - "Status updated to in-qa in story frontmatter"
+  - "CHECKPOINT.yaml updated with qa-setup phase marker"
+  - "8 acceptance criteria all marked PASS in EVIDENCE.yaml"
+  - "Code review PASSED with 0 blocking issues"
+  - "All tests pass (52/52) - 100% acceptance criteria coverage"
+  - "Ready to proceed with qa-verification phase"
+
+tokens:
+  input: 8000
+  output: 2500

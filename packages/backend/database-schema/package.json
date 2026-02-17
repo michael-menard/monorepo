@@ -19,6 +19,10 @@
     "./schema/umami": {
       "import": "./src/schema/umami.ts",
       "types": "./src/schema/umami.ts"
+    },
+    "./schema/wint": {
+      "import": "./src/schema/wint.ts",
+      "types": "./src/schema/wint.ts"
     }
   },
   "scripts": {
@@ -28,14 +32,23 @@
     "db:studio": "drizzle-kit studio",
     "db:impact-analysis": "tsx scripts/impact-analysis/index.ts",
     "validate:schema": "tsx scripts/validate-schema-changes.ts",
+    "seed:wint": "tsx src/seed/index.ts",
+    "seed:wint:phases": "tsx src/seed/index.ts --target=phases",
+    "seed:wint:capabilities": "tsx src/seed/index.ts --target=capabilities",
+    "seed:wint:agents": "tsx src/seed/index.ts --target=agents",
+    "seed:wint:commands": "tsx src/seed/index.ts --target=commands",
+    "seed:wint:skills": "tsx src/seed/index.ts --target=skills",
     "test": "vitest run",
     "clean": "rm -rf dist node_modules .turbo"
   },
   "dependencies": {
+    "@repo/logger": "workspace:*",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.3",
     "drizzle-zod": "0.8.3",
+    "gray-matter": "^4.0.3",
     "pg": "^8.16.3",
+    "pgvector": "0.2.1",
     "zod": "^4.0.5"
   },
   "devDependencies": {

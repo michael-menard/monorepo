@@ -1,7 +1,7 @@
 ---
 name: doc-sync
 description: Automatically synchronize workflow documentation when agent/command files change, ensuring docs stay in sync with implementation
-mcp_tools_available: []
+mcp_tools_available: [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-knowledgebase__query-workflow-components]
 ---
 
 # /doc-sync - Automated Documentation Synchronization
@@ -95,6 +95,8 @@ find .claude/agents/ .claude/commands/ -name '*.agent.md' -o -name '*.md' -mtime
 
 ### Phase 2: Frontmatter Parsing
 
+**Step 2.1: Parse File Frontmatter**
+
 Extract and validate YAML frontmatter from each changed file:
 
 **Extraction Method:**
@@ -119,10 +121,79 @@ sed -n '/^---$/,/^---$/p' FILE.agent.md | sed '1d;$d'
 - `kb_tools` - Array of KB tools used
 - `mcp_tools` - Array of MCP tools used
 
+**Step 2.2: Query Database (if available)**
+
+If `postgres-knowledgebase` MCP tools are available, query for agent/command/skill metadata from the database. This enables hybrid file+database documentation synchronization.
+
+**Database Query Example:**
+
+```javascript
+const DB_QUERY_TIMEOUT_MS = 30000; // Configurable timeout (default: 30 seconds)
+
+try {
+  // Query workflow.components for agent/command/skill metadata
+  const components = await mcp__postgres_knowledgebase__query_workflow_components({
+    component_types: ['agent', 'command', 'skill'],
+    timeout: DB_QUERY_TIMEOUT_MS
+  });
+
+  // Query workflow.phases for phase status and completion
+  const phases = await mcp__postgres_knowledgebase__query_workflow_phases({
+    timeout: DB_QUERY_TIMEOUT_MS
+  });
+
+  console.log(`Retrieved ${components.length} components and ${phases.length} phases from database`);
+} catch (error) {
+  if (error.type === 'TIMEOUT') {
+    logger.warn(`Database query timeout after ${DB_QUERY_TIMEOUT_MS/1000}s - falling back to file-only mode`);
+  } else if (error.type === 'CONNECTION_FAILED') {
+    logger.warn('Database connection failed - falling back to file-only mode');
+  } else {
+    logger.error('Database query error:', error.message);
+  }
+  // Continue with file-only mode (graceful degradation)
+}
+```
+
+**Step 2.3: Merge Sources**
+
+If database data is available, merge with file frontmatter:
+- **Database overrides file** if both present for same component
+- **File-only** if database unavailable or query fails
+- **Database-only** for components not in files (future expansion)
+
+**Example Merge Logic:**
+
+```javascript
+function mergeMetadata(fileMetadata, dbMetadata) {
+  if (!dbMetadata) return fileMetadata;
+
+  return {
+    ...fileMetadata,
+    ...dbMetadata,  // Database takes precedence
+    source: 'hybrid', // Track data source
+    file_version: fileMetadata?.version,
+    db_version: dbMetadata?.version
+  };
+}
+```
+
+**Step 2.4: Track Database Status**
+
+Record database query status for inclusion in SYNC-REPORT.md:
+- `database_queried: true/false`
+- `database_status: success | timeout | connection_failed | unavailable`
+- `database_components_count: N`
+- `database_phases_count: N`
+- `query_duration_ms: N`
+
 **Error Handling:**
 - **Invalid YAML:** Skip file, add to manual_review_needed section in report
 - **Missing required fields:** Log warning but continue processing with defaults
 - **Missing optional fields:** Use sensible defaults or omit from output
+- **Database timeout:** Log timeout error with duration, fall back to file-only mode
+- **Database connection failed:** Log connection error, fall back to file-only mode
+- **Database unavailable:** Silently continue with file-only mode
 
 ---
 
@@ -301,6 +372,93 @@ Create comprehensive sync report:
 ```
 
 Report is written to current directory or story artifacts directory if invoked from workflow.
+
+---
+
+## Hybrid File+Database Sync Examples
+
+### Example 5: Hybrid Sync with Database-Sourced Agents
+
+When `postgres-knowledgebase` MCP tools are available, doc-sync queries the database for agent/command/skill metadata and merges it with file frontmatter.
+
+```bash
+# Run sync with database available
+/doc-sync
+
+# Check SYNC-REPORT.md for database query status
+cat SYNC-REPORT.md
+
+## Database Query Status
+
+**Status:** Success
+**Queried:** Yes
+**Components Retrieved:** 24
+**Phases Retrieved:** 10
+**Query Time:** 1.2s
+
+**Details:**
+- Successfully queried `workflow.components` table (24 components)
+- Successfully queried `workflow.phases` table (10 phases)
+- Database metadata merged with file frontmatter (database overrides on conflict)
+
+# Documentation includes both file-based and database-sourced agents
+cat docs/workflow/AGENTS.md
+```
+
+### Example 6: Database Timeout Fallback
+
+If database queries exceed the 30-second timeout threshold, doc-sync gracefully falls back to file-only mode:
+
+```bash
+# Run sync when database is slow/unavailable
+/doc-sync
+
+# Check SYNC-REPORT.md
+cat SYNC-REPORT.md
+
+## Database Query Status
+
+**Status:** Timeout
+**Queried:** Yes
+**Components Retrieved:** 0
+**Phases Retrieved:** 0
+**Query Time:** Timeout (30s threshold exceeded)
+
+**Details:**
+- Database query timeout after 30s - fell back to file-only mode
+- Timeout occurred during `workflow.components` query
+- All documentation generated from file frontmatter only
+
+# Documentation still generated successfully, just without database data
+cat docs/workflow/AGENTS.md
+```
+
+### Example 7: Database Unavailable (No MCP Tools)
+
+If `postgres-knowledgebase` MCP tools are not available, doc-sync operates in file-only mode:
+
+```bash
+# Run sync without database access
+/doc-sync
+
+# Check SYNC-REPORT.md
+cat SYNC-REPORT.md
+
+## Database Query Status
+
+**Status:** Unavailable
+**Queried:** No
+**Components Retrieved:** 0
+**Phases Retrieved:** 0
+**Query Time:** N/A
+
+**Details:**
+- postgres-knowledgebase MCP tools not available
+- All documentation generated from file frontmatter only
+
+# Documentation generated from file-based agents only
+cat docs/workflow/AGENTS.md
+```
 
 ---
 

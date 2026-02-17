@@ -11,119 +11,25 @@
  * This repository accepts story_id (VARCHAR) and looks up the UUID internally.
  */
 
-import { z } from 'zod'
 import { logger } from '@repo/logger'
 import type { DbClient } from './story-repository.js'
 import type { Plan } from '../artifacts/plan.js'
 import type { Evidence } from '../artifacts/evidence.js'
 import type { QaVerify } from '../artifacts/qa-verify.js'
-
-// ============================================================================
-// Schemas
-// ============================================================================
-
-/**
- * Elaboration record schema - matches 002 + 004 migration columns
- */
-export const ElaborationRecordSchema = z.object({
-  id: z.string().uuid(),
-  story_id: z.string().uuid(), // UUID reference to stories.id
-  date: z.date().optional(), // Original schema column
-  verdict: z.string().optional(), // Original schema column (verdict_type enum)
-  audit: z.unknown().optional(), // Original schema column (JSONB)
-  content: z.unknown().nullable(), // Added in 004 - full elaboration YAML
-  readiness_score: z.number().int().min(0).max(100).nullable(),
-  gaps_count: z.number().int().min(0).nullable(),
-  created_at: z.date(),
-  created_by: z.string().nullable(),
-})
-
-export type ElaborationRecord = z.infer<typeof ElaborationRecordSchema>
-
-/**
- * Plan record schema - matches implementation_plans table
- */
-export const PlanRecordSchema = z.object({
-  id: z.string().uuid(),
-  story_id: z.string().uuid(), // UUID reference to stories.id
-  version: z.number().int().positive(),
-  approved: z.boolean().optional(),
-  estimated_files: z.number().int().nullable(),
-  estimated_tokens: z.number().int().nullable(),
-  content: z.unknown().nullable(), // Added in 004
-  steps_count: z.number().int().min(0).nullable(),
-  files_count: z.number().int().min(0).nullable(),
-  complexity: z.string().nullable(),
-  created_at: z.date(),
-  created_by: z.string().nullable(),
-})
-
-export type PlanRecord = z.infer<typeof PlanRecordSchema>
-
-/**
- * Verification record schema - matches 002 + 004 columns
- */
-export const VerificationRecordSchema = z.object({
-  id: z.string().uuid(),
-  story_id: z.string().uuid(), // UUID reference to stories.id
-  version: z.number().int().positive().nullable(),
-  type: z.string().nullable(), // Added in 004
-  content: z.unknown().nullable(), // Added in 004
-  verdict: z.string().nullable(), // Added in 004
-  issues_count: z.number().int().min(0).nullable(),
-  qa_verdict: z.string().nullable(), // Original schema column
-  created_at: z.date(),
-  created_by: z.string().nullable(),
-})
-
-export type VerificationRecord = z.infer<typeof VerificationRecordSchema>
-
-/**
- * Proof record schema - matches 002 + 004 columns
- */
-export const ProofRecordSchema = z.object({
-  id: z.string().uuid(),
-  story_id: z.string().uuid(), // UUID reference to stories.id
-  version: z.number().int().positive().nullable(),
-  content: z.unknown().nullable(), // Added in 004
-  acs_passing: z.number().int().min(0).nullable(),
-  acs_total: z.number().int().min(0).nullable(),
-  files_touched: z.number().int().min(0).nullable(),
-  all_acs_verified: z.boolean().nullable(), // Original schema column
-  created_at: z.date(),
-  created_by: z.string().nullable(),
-})
-
-export type ProofRecord = z.infer<typeof ProofRecordSchema>
-
-/**
- * Token usage record schema - matches 002 + 004 columns
- */
-export const TokenUsageRecordSchema = z.object({
-  id: z.string().uuid(),
-  story_id: z.string().uuid(), // UUID reference to stories.id
-  phase: z.string(),
-  tokens_input: z.number().int().min(0), // Original column name
-  tokens_output: z.number().int().min(0), // Original column name
-  total_tokens: z.number().int().min(0).optional(), // Added in 004 (generated)
-  model: z.string().nullable(),
-  agent_name: z.string().nullable(),
-  created_at: z.date(),
-})
-
-export type TokenUsageRecord = z.infer<typeof TokenUsageRecordSchema>
-
-/**
- * Token usage input for logging
- */
-export const TokenUsageInputSchema = z.object({
-  inputTokens: z.number().int().min(0),
-  outputTokens: z.number().int().min(0),
-  model: z.string().optional(),
-  agentName: z.string().optional(),
-})
-
-export type TokenUsageInput = z.infer<typeof TokenUsageInputSchema>
+import {
+  ElaborationRecordSchema,
+  PlanRecordSchema,
+  VerificationRecordSchema,
+  ProofRecordSchema,
+  TokenUsageRecordSchema,
+  TokenUsageInputSchema,
+  type ElaborationRecord,
+  type PlanRecord,
+  type VerificationRecord,
+  type ProofRecord,
+  type TokenUsageRecord,
+  type TokenUsageInput,
+} from '../__types__/index.js'
 
 // ============================================================================
 // Repository Implementation
@@ -143,7 +49,7 @@ export class WorkflowRepository {
    */
   private async getStoryUuid(storyId: string): Promise<string | null> {
     const result = await this.client.query<{ id: string }>(
-      `SELECT id FROM stories WHERE story_id = $1`,
+      `SELECT id FROM wint.stories WHERE story_id = $1`,
       [storyId],
     )
     return result.rows[0]?.id ?? null
@@ -172,8 +78,8 @@ export class WorkflowRepository {
 
       // Insert elaboration
       const result = await this.client.query<ElaborationRecord>(
-        `INSERT INTO elaborations (story_id, date, verdict, content, readiness_score, gaps_count, created_by)
-        VALUES ($1, CURRENT_DATE, 'pass'::verdict_type, $2, $3, $4, $5)
+        `INSERT INTO wint.elaborations (story_id, date, verdict, content, readiness_score, gaps_count, created_by)
+        VALUES ($1, CURRENT_DATE, 'pass'::wint.verdict_type, $2, $3, $4, $5)
         RETURNING *`,
         [storyUuid, JSON.stringify(content), readinessScore, gapsCount, createdBy],
       )
@@ -201,7 +107,7 @@ export class WorkflowRepository {
       }
 
       const result = await this.client.query<ElaborationRecord>(
-        `SELECT * FROM elaborations
+        `SELECT * FROM wint.elaborations
         WHERE story_id = $1
         ORDER BY created_at DESC
         LIMIT 1`,
@@ -235,7 +141,7 @@ export class WorkflowRepository {
 
       // Get current max version
       const versionResult = await this.client.query<{ max_version: number | null }>(
-        `SELECT MAX(version) as max_version FROM implementation_plans WHERE story_id = $1`,
+        `SELECT MAX(version) as max_version FROM wint.implementation_plans WHERE story_id = $1`,
         [storyUuid],
       )
       const nextVersion = (versionResult.rows[0]?.max_version ?? 0) + 1
@@ -244,7 +150,7 @@ export class WorkflowRepository {
       const filesCount = plan.files_to_change?.length ?? 0
 
       const result = await this.client.query<PlanRecord>(
-        `INSERT INTO implementation_plans (
+        `INSERT INTO wint.implementation_plans (
           story_id, version, content, steps_count, files_count, complexity, created_by,
           estimated_files, estimated_tokens
         )
@@ -286,7 +192,7 @@ export class WorkflowRepository {
       }
 
       const result = await this.client.query<PlanRecord>(
-        `SELECT * FROM implementation_plans
+        `SELECT * FROM wint.implementation_plans
         WHERE story_id = $1
         ORDER BY version DESC
         LIMIT 1`,
@@ -327,7 +233,7 @@ export class WorkflowRepository {
 
       // Get current max version for this type
       const versionResult = await this.client.query<{ max_version: number | null }>(
-        `SELECT COALESCE(MAX(version), 0) as max_version FROM verifications WHERE story_id = $1 AND type = $2`,
+        `SELECT COALESCE(MAX(version), 0) as max_version FROM wint.verifications WHERE story_id = $1 AND type = $2`,
         [storyUuid, type],
       )
       const nextVersion = (versionResult.rows[0]?.max_version ?? 0) + 1
@@ -336,8 +242,8 @@ export class WorkflowRepository {
       const qaVerdict = verdict.toLowerCase()
 
       const result = await this.client.query<VerificationRecord>(
-        `INSERT INTO verifications (story_id, version, type, content, verdict, issues_count, created_by, qa_verdict)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::verdict_type)
+        `INSERT INTO wint.verifications (story_id, version, type, content, verdict, issues_count, created_by, qa_verdict)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::wint.verdict_type)
         RETURNING *`,
         [storyUuid, nextVersion, type, JSON.stringify(content), verdict, issuesCount, createdBy, qaVerdict],
       )
@@ -369,7 +275,7 @@ export class WorkflowRepository {
       }
 
       const result = await this.client.query<VerificationRecord>(
-        `SELECT * FROM verifications
+        `SELECT * FROM wint.verifications
         WHERE story_id = $1 AND type = $2
         ORDER BY version DESC
         LIMIT 1`,
@@ -404,7 +310,7 @@ export class WorkflowRepository {
 
       // Get current max version
       const versionResult = await this.client.query<{ max_version: number | null }>(
-        `SELECT COALESCE(MAX(version), 0) as max_version FROM proofs WHERE story_id = $1`,
+        `SELECT COALESCE(MAX(version), 0) as max_version FROM wint.proofs WHERE story_id = $1`,
         [storyUuid],
       )
       const nextVersion = (versionResult.rows[0]?.max_version ?? 0) + 1
@@ -416,7 +322,7 @@ export class WorkflowRepository {
       const allAcsVerified = acsPassing === acsTotal && acsTotal > 0
 
       const result = await this.client.query<ProofRecord>(
-        `INSERT INTO proofs (story_id, version, content, acs_passing, acs_total, files_touched, created_by, all_acs_verified)
+        `INSERT INTO wint.proofs (story_id, version, content, acs_passing, acs_total, files_touched, created_by, all_acs_verified)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *`,
         [
@@ -459,7 +365,7 @@ export class WorkflowRepository {
       }
 
       const result = await this.client.query<ProofRecord>(
-        `SELECT * FROM proofs
+        `SELECT * FROM wint.proofs
         WHERE story_id = $1
         ORDER BY version DESC
         LIMIT 1`,
@@ -498,7 +404,7 @@ export class WorkflowRepository {
       // Use tokens_input and tokens_output column names (002 schema)
       // total_tokens is a generated column added in 004
       const result = await this.client.query<TokenUsageRecord>(
-        `INSERT INTO token_usage (story_id, phase, tokens_input, tokens_output, model, agent_name)
+        `INSERT INTO wint.token_usage (story_id, phase, tokens_input, tokens_output, model, agent_name)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *`,
         [
@@ -543,7 +449,7 @@ export class WorkflowRepository {
       // Use tokens_input + tokens_output for total (or total_tokens if 004 migration ran)
       const result = await this.client.query<{ phase: string; total_tokens: number }>(
         `SELECT phase, SUM(COALESCE(total_tokens, tokens_input + tokens_output))::int as total_tokens
-        FROM token_usage
+        FROM wint.token_usage
         WHERE story_id = $1
         GROUP BY phase
         ORDER BY phase`,
@@ -573,7 +479,7 @@ export class WorkflowRepository {
 
       const result = await this.client.query<{ total: number }>(
         `SELECT COALESCE(SUM(COALESCE(total_tokens, tokens_input + tokens_output)), 0)::int as total
-        FROM token_usage
+        FROM wint.token_usage
         WHERE story_id = $1`,
         [storyUuid],
       )

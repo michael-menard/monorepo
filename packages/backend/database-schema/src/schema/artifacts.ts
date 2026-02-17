@@ -21,19 +21,10 @@
  * 7. QA-verify artifacts - (INFR-0120)
  */
 
-import {
-  index,
-  jsonb,
-  pgEnum,
-  pgSchema,
-  text,
-  timestamp,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { index, jsonb, pgEnum, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
-
 // Import WINT schema for foreign key relations
 import { stories } from './wint'
 
@@ -179,6 +170,178 @@ export const acceptanceCriteriaMapSchema = z.object({
 
 export type AcceptanceCriteriaMap = z.infer<typeof acceptanceCriteriaMapSchema>
 
+/**
+ * AC Evidence Schema (INFR-0120)
+ * Matches Evidence.ac_evidence from orchestrator artifacts
+ */
+export const acEvidenceSchema = z.object({
+  ac_id: z.string(),
+  ac_text: z.string(),
+  status: z.enum(['PASS', 'MISSING', 'PARTIAL']),
+  evidence_items: z.array(
+    z.object({
+      type: z.enum(['test', 'command', 'e2e', 'http', 'file']),
+      path: z.string().optional(),
+      command: z.string().optional(),
+      description: z.string(),
+      result: z.string().optional(),
+    }),
+  ),
+})
+
+export type AcEvidence = z.infer<typeof acEvidenceSchema>
+
+/**
+ * Touched File Schema (INFR-0120)
+ * Matches Evidence.touched_files from orchestrator artifacts
+ */
+export const touchedFileSchema = z.object({
+  path: z.string(),
+  action: z.enum(['created', 'modified', 'deleted']),
+  lines: z.number().int().positive().optional(),
+  description: z.string().optional(),
+})
+
+export type TouchedFile = z.infer<typeof touchedFileSchema>
+
+/**
+ * Command Run Schema (INFR-0120)
+ * Matches Evidence.commands_run from orchestrator artifacts
+ */
+export const commandRunSchema = z.object({
+  command: z.string(),
+  result: z.enum(['SUCCESS', 'FAILURE']),
+  output: z.string().optional(),
+  timestamp: z.string(), // ISO timestamp
+})
+
+export type CommandRun = z.infer<typeof commandRunSchema>
+
+/**
+ * E2E Test Schema (INFR-0120)
+ * Matches Evidence.e2e_tests from orchestrator artifacts
+ */
+export const e2eTestSchema = z.object({
+  status: z.enum(['pass', 'fail', 'exempt']),
+  exempt_reason: z.string().nullable(),
+  config: z.string().nullable(),
+  project: z.string().nullable(),
+  mode: z.string().nullable(),
+  tests_written: z.boolean(),
+  results: z.object({
+    total: z.number().int().nonnegative(),
+    passed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    skipped: z.number().int().nonnegative(),
+  }),
+  failed_tests: z.array(
+    z.object({
+      name: z.string(),
+      error: z.string(),
+    }),
+  ),
+  config_issues: z.array(
+    z.object({
+      type: z.string(),
+      description: z.string(),
+      expected: z.string().optional(),
+      actual: z.string().optional(),
+      files: z.array(z.string()).optional(),
+      resolution: z.string().optional(),
+    }),
+  ),
+})
+
+export type E2eTest = z.infer<typeof e2eTestSchema>
+
+/**
+ * Review Finding Schema (INFR-0120)
+ * Matches Review.findings from orchestrator artifacts
+ */
+export const reviewFindingSchema = z.object({
+  id: z.string(),
+  severity: z.enum(['critical', 'high', 'medium', 'low', 'info']),
+  category: z.string(),
+  file: z.string().optional(),
+  line: z.number().int().positive().optional(),
+  description: z.string(),
+  suggestion: z.string().optional(),
+})
+
+export type ReviewFinding = z.infer<typeof reviewFindingSchema>
+
+/**
+ * Worker Result Schema (INFR-0120)
+ * Matches Review.worker_results from orchestrator artifacts
+ */
+export const workerResultSchema = z.object({
+  worker: z.string(),
+  status: z.enum(['success', 'failure', 'blocked']),
+  files_changed: z.array(z.string()),
+  tests_passed: z.boolean().optional(),
+  notes: z.string().optional(),
+})
+
+export type WorkerResult = z.infer<typeof workerResultSchema>
+
+/**
+ * Ranked Patch Schema (INFR-0120)
+ * Matches Review.ranked_patches from orchestrator artifacts
+ */
+export const rankedPatchSchema = z.object({
+  id: z.string(),
+  rank: z.number().int().positive(),
+  file: z.string(),
+  description: z.string(),
+  diff: z.string().optional(),
+  rationale: z.string(),
+})
+
+export type RankedPatch = z.infer<typeof rankedPatchSchema>
+
+/**
+ * AC Verification Schema (INFR-0120)
+ * Matches QaVerify.ac_verifications from orchestrator artifacts
+ */
+export const acVerificationSchema = z.object({
+  ac_id: z.string(),
+  status: z.enum(['verified', 'failed', 'skipped']),
+  verification_method: z.string(),
+  notes: z.string().optional(),
+})
+
+export type AcVerification = z.infer<typeof acVerificationSchema>
+
+/**
+ * Test Result Schema (INFR-0120)
+ * Matches QaVerify.test_results from orchestrator artifacts
+ */
+export const testResultSchema = z.object({
+  test_suite: z.string(),
+  total: z.number().int().nonnegative(),
+  passed: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  duration_ms: z.number().nonnegative().optional(),
+})
+
+export type TestResult = z.infer<typeof testResultSchema>
+
+/**
+ * QA Issue Schema (INFR-0120)
+ * Matches QaVerify.qa_issues from orchestrator artifacts
+ */
+export const qaIssueSchema = z.object({
+  id: z.string(),
+  severity: z.enum(['blocker', 'critical', 'major', 'minor']),
+  category: z.string(),
+  description: z.string(),
+  steps_to_reproduce: z.string().optional(),
+  resolution: z.string().optional(),
+})
+
+export type QaIssue = z.infer<typeof qaIssueSchema>
+
 // ============================================================================
 // Story Artifacts Table
 // ============================================================================
@@ -322,18 +485,125 @@ export const planArtifacts = artifactsSchema.table(
 )
 
 // ============================================================================
+// Evidence Artifacts Table (INFR-0120)
+// ============================================================================
+
+/**
+ * Evidence Artifacts Table
+ * Stores evidence.yaml fields for acceptance criteria validation.
+ * Part of INFR-0120: Review/QA Artifact Schemas
+ */
+export const evidenceArtifacts = artifactsSchema.table(
+  'evidence_artifacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+
+    // JSONB fields for complex nested data
+    acEvidence: jsonb('ac_evidence').$type<AcEvidence[]>(), // AC to evidence mapping
+    touchedFiles: jsonb('touched_files').$type<TouchedFile[]>(), // Files created/modified
+    commandsRun: jsonb('commands_run').$type<CommandRun[]>(), // Commands executed
+    e2eTests: jsonb('e2e_tests').$type<E2eTest>(), // E2E test results
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Index for story queries (reuse INFR-0110's composite index pattern)
+    storyIdx: index('idx_evidence_artifacts_story_id').on(table.storyId),
+    // Index for time-range queries
+    createdAtIdx: index('idx_evidence_artifacts_created_at').on(table.createdAt),
+  }),
+)
+
+// ============================================================================
+// Review Artifacts Table (INFR-0120)
+// ============================================================================
+
+/**
+ * Review Artifacts Table
+ * Stores review.yaml fields for code review findings.
+ * Part of INFR-0120: Review/QA Artifact Schemas
+ */
+export const reviewArtifacts = artifactsSchema.table(
+  'review_artifacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+
+    // JSONB fields for complex nested data
+    findings: jsonb('findings').$type<ReviewFinding[]>(), // Code review findings
+    workerResults: jsonb('worker_results').$type<WorkerResult[]>(), // Worker execution results
+    rankedPatches: jsonb('ranked_patches').$type<RankedPatch[]>(), // Suggested fixes
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Index for story queries
+    storyIdx: index('idx_review_artifacts_story_id').on(table.storyId),
+    // Index for time-range queries
+    createdAtIdx: index('idx_review_artifacts_created_at').on(table.createdAt),
+  }),
+)
+
+// ============================================================================
+// QA Verify Artifacts Table (INFR-0120)
+// ============================================================================
+
+/**
+ * QA Verify Artifacts Table
+ * Stores qa-verify.yaml fields for QA validation results.
+ * Part of INFR-0120: Review/QA Artifact Schemas
+ */
+export const qaVerifyArtifacts = artifactsSchema.table(
+  'qa_verify_artifacts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+
+    // JSONB fields for complex nested data
+    acVerifications: jsonb('ac_verifications').$type<AcVerification[]>(), // AC verification results
+    testResults: jsonb('test_results').$type<TestResult[]>(), // Test suite results
+    qaIssues: jsonb('qa_issues').$type<QaIssue[]>(), // Issues found during QA
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Index for story queries
+    storyIdx: index('idx_qa_verify_artifacts_story_id').on(table.storyId),
+    // Index for time-range queries
+    createdAtIdx: index('idx_qa_verify_artifacts_created_at').on(table.createdAt),
+  }),
+)
+
+// ============================================================================
 // Relations (Drizzle ORM)
 // ============================================================================
 
 /**
  * Story to Artifacts Relations (one-to-many, lazy loading)
  * Enables lazy loading artifacts from story records
+ * Updated in INFR-0120 to include evidence, review, and qa-verify artifacts
  */
 export const storiesRelations = relations(stories, ({ many }) => ({
   storyArtifacts: many(storyArtifacts),
   checkpointArtifacts: many(checkpointArtifacts),
   scopeArtifacts: many(scopeArtifacts),
   planArtifacts: many(planArtifacts),
+  evidenceArtifacts: many(evidenceArtifacts), // INFR-0120
+  reviewArtifacts: many(reviewArtifacts), // INFR-0120
+  qaVerifyArtifacts: many(qaVerifyArtifacts), // INFR-0120
 }))
 
 /**
@@ -372,6 +642,39 @@ export const scopeArtifactsRelations = relations(scopeArtifacts, ({ one }) => ({
 export const planArtifactsRelations = relations(planArtifacts, ({ one }) => ({
   story: one(stories, {
     fields: [planArtifacts.storyId],
+    references: [stories.id],
+  }),
+}))
+
+/**
+ * Evidence Artifact to Story Relation (many-to-one, eager loading)
+ * Added in INFR-0120
+ */
+export const evidenceArtifactsRelations = relations(evidenceArtifacts, ({ one }) => ({
+  story: one(stories, {
+    fields: [evidenceArtifacts.storyId],
+    references: [stories.id],
+  }),
+}))
+
+/**
+ * Review Artifact to Story Relation (many-to-one, eager loading)
+ * Added in INFR-0120
+ */
+export const reviewArtifactsRelations = relations(reviewArtifacts, ({ one }) => ({
+  story: one(stories, {
+    fields: [reviewArtifacts.storyId],
+    references: [stories.id],
+  }),
+}))
+
+/**
+ * QA Verify Artifact to Story Relation (many-to-one, eager loading)
+ * Added in INFR-0120
+ */
+export const qaVerifyArtifactsRelations = relations(qaVerifyArtifacts, ({ one }) => ({
+  story: one(stories, {
+    fields: [qaVerifyArtifacts.storyId],
     references: [stories.id],
   }),
 }))
@@ -416,3 +719,30 @@ export const selectPlanArtifactSchema = createSelectSchema(planArtifacts)
 
 export type InsertPlanArtifact = z.infer<typeof insertPlanArtifactSchema>
 export type SelectPlanArtifact = z.infer<typeof selectPlanArtifactSchema>
+
+/**
+ * Evidence Artifact Insert/Select Schemas (INFR-0120)
+ */
+export const insertEvidenceArtifactSchema = createInsertSchema(evidenceArtifacts)
+export const selectEvidenceArtifactSchema = createSelectSchema(evidenceArtifacts)
+
+export type InsertEvidenceArtifact = z.infer<typeof insertEvidenceArtifactSchema>
+export type SelectEvidenceArtifact = z.infer<typeof selectEvidenceArtifactSchema>
+
+/**
+ * Review Artifact Insert/Select Schemas (INFR-0120)
+ */
+export const insertReviewArtifactSchema = createInsertSchema(reviewArtifacts)
+export const selectReviewArtifactSchema = createSelectSchema(reviewArtifacts)
+
+export type InsertReviewArtifact = z.infer<typeof insertReviewArtifactSchema>
+export type SelectReviewArtifact = z.infer<typeof selectReviewArtifactSchema>
+
+/**
+ * QA Verify Artifact Insert/Select Schemas (INFR-0120)
+ */
+export const insertQaVerifyArtifactSchema = createInsertSchema(qaVerifyArtifacts)
+export const selectQaVerifyArtifactSchema = createSelectSchema(qaVerifyArtifacts)
+
+export type InsertQaVerifyArtifact = z.infer<typeof insertQaVerifyArtifactSchema>
+export type SelectQaVerifyArtifact = z.infer<typeof selectQaVerifyArtifactSchema>

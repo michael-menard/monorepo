@@ -1,0 +1,72 @@
+schema: 1
+story_id: INFR-0020
+timestamp: '2026-02-16T03:40:10Z'
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: true
+
+touched_packages:
+  - packages/backend/orchestrator
+
+touched_paths_globs:
+  - packages/backend/orchestrator/src/services/**
+  - packages/backend/orchestrator/src/index.ts
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+  new_abstraction: true
+
+summary: 'Create high-level ArtifactService wrapper around existing low-level persistence utilities for reading/writing workflow artifacts'
+
+elaboration: completed
+
+files_to_create:
+  - packages/backend/orchestrator/src/services/artifact-service.ts
+  - packages/backend/orchestrator/src/services/__types__/index.ts
+  - packages/backend/orchestrator/src/services/__tests__/artifact-service.test.ts
+  - packages/backend/orchestrator/src/services/__tests__/artifact-service.integration.test.ts
+
+files_to_modify:
+  - packages/backend/orchestrator/src/index.ts
+
+files_to_reference:
+  - packages/backend/orchestrator/src/persistence/
+  - packages/backend/orchestrator/src/artifacts/
+  - packages/backend/orchestrator/src/nodes/persistence/save-to-db.ts
+  - packages/backend/orchestrator/src/nodes/persistence/load-from-db.ts
+
+acceptance_criteria_count: 11
+story_points: 5
+priority: P1
+
+complexity:
+  estimated: low-medium
+  main_complexity_areas:
+    - Stage auto-detection logic
+    - Configuration validation edge cases
+  achievability: single_session
+  risk_areas:
+    - Stage auto-detection performance
+    - Configuration validation edge cases
+    - YAML+DB mode consistency
+
+testing_requirements:
+  unit_tests_coverage_target: '80%+'
+  integration_tests: 'read/write round-trip for all artifact types'
+  e2e_tests: 'service works in LangGraph node context'
+
+dependencies:
+  - INFR-0110
+  - INFR-0120

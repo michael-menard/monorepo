@@ -1,0 +1,596 @@
+---
+story_id: WINT-0080
+phase: plan
+artifact_type: KNOWLEDGE_CONTEXT
+created_at: "2026-02-16T19:00:00Z"
+version: 1.0
+
+# Knowledge Context for WINT-0080 Implementation
+# Reusable patterns, existing code, key files, and critical constraints
+
+# Existing Patterns to Reuse
+patterns:
+  # Database Client Pattern (from WINT-0090)
+  - pattern_name: Drizzle Database Client
+    source: packages/backend/mcp-tools/src/session-management/session-create.ts
+    location: Lines 10-15
+    example: |
+      import { db } from '@repo/db'
+      import { phases } from '@repo/db/schema'
+
+      await db.insert(phases).values(phaseData).returning()
+    usage_notes:
+      - Always import db instance from @repo/db
+      - Import table schemas from @repo/db/schema (re-exported from database-schema)
+      - Use .returning() for insert operations to get inserted rows
+
+  # Idempotent Insert Pattern
+  - pattern_name: ON CONFLICT DO NOTHING (Upsert)
+    source: packages/backend/orchestrator/src/db/story-repository.ts
+    location: Lines 45-52
+    example: |
+      await db.insert(agents)
+        .values(agentData)
+        .onConflictDoUpdate({
+          target: agents.name,
+          set: {
+            agentType: sql`EXCLUDED.agent_type`,
+            permissionLevel: sql`EXCLUDED.permission_level`,
+            model: sql`EXCLUDED.model`,
+            spawnedBy: sql`EXCLUDED.spawned_by`,
+            triggers: sql`EXCLUDED.triggers`,
+            skillsUsed: sql`EXCLUDED.skills_used`,
+            metadata: sql`EXCLUDED.metadata`,
+            updatedAt: sql`NOW()`
+          }
+        })
+    usage_notes:
+      - Use for agents, commands, skills seeders (rerun-safe)
+      - Update all fields on conflict to ensure latest data
+
+  # Delete and Insert Pattern (for static data)
+  - pattern_name: DELETE + INSERT (Full Replacement)
+    source: N/A (standard SQL pattern)
+    example: |
+      await tx.delete(phases)  // Clear table
+      await tx.insert(phases).values(phaseData)  // Insert fresh data
+    usage_notes:
+      - Use for phases and capabilities seeders (small, static datasets)
+      - Guarantees exact match with source data
+      - Requires DELETE and INSERT in same transaction
+
+  # Transaction Pattern
+  - pattern_name: Drizzle Transaction API
+    source: packages/backend/orchestrator/src/db/workflow-repository.ts
+    location: Lines 120-130
+    example: |
+      import { db } from '@repo/db'
+
+      await db.transaction(async (tx) => {
+        await tx.insert(phases).values(phaseData)
+        await tx.insert(capabilities).values(capabilityData)
+        // All inserts happen in single transaction
+        // Rollback on any error
+      })
+    usage_notes:
+      - Use for all seeding operations (atomicity required)
+      - Pass tx to all seeder functions (not db)
+      - Automatic rollback on error
+
+  # Zod Validation Pattern
+  - pattern_name: Zod Schema Validation with Drizzle
+    source: packages/backend/database-schema/src/schema/unified-wint.ts
+    location: Lines 1201-1204 (insertPhaseSchema)
+    example: |
+      import { insertPhaseSchema } from '@repo/db/schema'
+
+      const validatedData = insertPhaseSchema.parse(rawData)
+      // Throws ZodError if validation fails
+    usage_notes:
+      - All schemas auto-generated via createInsertSchema from drizzle-zod
+      - Import from unified-wint.ts exports
+      - Use .parse() for validation (throws on error)
+      - Use .safeParse() for non-throwing validation (returns { success, data, error })
+
+  # Logging Pattern
+  - pattern_name: Structured Logging with @repo/logger
+    source: packages/backend/mcp-tools/src/session-management/session-create.ts
+    location: Lines 20-25
+    example: |
+      import { logger } from '@repo/logger'
+
+      logger.info('Seeding phases', { count: phaseData.length })
+      logger.warn('Parse failed', { file: filePath, error: err.message })
+      logger.error('Seed failed', { error: err })
+    usage_notes:
+      - NEVER use console.log (project rule)
+      - Always use @repo/logger for all logging
+      - Include context objects for structured logs
+
+# Key Files to Reference
+key_files:
+  # Schema Definitions
+  - path: packages/backend/database-schema/src/schema/unified-wint.ts
+    relevance: PRIMARY
+    purpose: Contains all table schemas and Zod validation schemas
+    key_sections:
+      - lines: 840-857
+        content: phases table definition
+        notes: "id is integer PK (phase number 0-7), phaseName is unique"
+      - lines: 867-904
+        content: agents table definition
+        notes: "name is unique, JSONB fields for spawned_by/triggers/skills_used"
+      - lines: 914-940
+        content: commands table definition
+        notes: "name is unique, triggers as JSONB array"
+      - lines: 950-975
+        content: skills table definition
+        notes: "name is unique, capabilities as JSONB array"
+      - lines: 492-516
+        content: capabilities table definition
+        notes: "capability_name is unique, capability_type required"
+      - lines: 1201-1219
+        content: Zod schemas (insertPhaseSchema, insertAgentSchema, etc.)
+        notes: "Auto-generated via createInsertSchema, use for validation"
+
+  # Data Sources
+  - path: plans/future/platform/wint/stories.index.md
+    relevance: PRIMARY
+    purpose: Source data for phases table (8 phases)
+    key_sections:
+      - lines: 49-66
+        content: "Phase 0: Bootstrap"
+        notes: "Extract phase name from header, description from intro paragraph"
+      - pattern: "## Phase N: {Phase Name}"
+        notes: "Regex pattern for phase extraction"
+
+  - path: .claude/agents/*.agent.md
+    relevance: PRIMARY
+    purpose: Source data for agents table (~143 files)
+    key_sections:
+      - example: .claude/agents/pm.agent.md
+        frontmatter_fields:
+          - name (optional, fallback to filename)
+          - type (required, maps to agent_type)
+          - permission_level (required)
+          - model (optional)
+          - spawned_by (optional array)
+          - triggers (optional array)
+          - skills_used (optional array)
+        notes: "Frontmatter format varies, handle missing fields gracefully"
+
+  - path: .claude/commands/*.md
+    relevance: PRIMARY
+    purpose: Source data for commands table (~33 files)
+    notes: "Frontmatter parsing similar to agents, extract name/description/triggers"
+
+  - path: .claude/skills/*/
+    relevance: PRIMARY
+    purpose: Source data for skills table (~14 directories)
+    notes: "Read skill.md or index.md in each directory for metadata"
+
+  # Database Client
+  - path: packages/backend/db/src/index.ts
+    relevance: SECONDARY
+    purpose: Database client singleton, import from @repo/db
+    notes: "Always import db instance from this package"
+
+  # Schema Exports
+  - path: packages/backend/database-schema/src/schema/index.ts
+    relevance: SECONDARY
+    purpose: Re-exports all schemas for @repo/db/schema import
+    notes: "Schemas are re-exported from unified-wint.ts"
+
+# Reusable Components
+reusable_components:
+  # Database Client
+  - component: "@repo/db"
+    package: packages/backend/db
+    exports:
+      - db (Drizzle database instance)
+    import_pattern: |
+      import { db } from '@repo/db'
+
+  # Schema Definitions
+  - component: "@repo/db/schema"
+    package: packages/backend/database-schema
+    exports:
+      - phases (table schema)
+      - agents (table schema)
+      - commands (table schema)
+      - skills (table schema)
+      - capabilities (table schema)
+      - insertPhaseSchema (Zod validation)
+      - insertAgentSchema (Zod validation)
+      - insertCommandSchema (Zod validation)
+      - insertSkillSchema (Zod validation)
+      - insertCapabilitySchema (Zod validation)
+    import_pattern: |
+      import { phases, insertPhaseSchema } from '@repo/db/schema'
+
+  # Logger
+  - component: "@repo/logger"
+    package: packages/core/logger
+    exports:
+      - logger (singleton logger instance)
+    import_pattern: |
+      import { logger } from '@repo/logger'
+
+  # Libraries
+  - component: gray-matter
+    package: gray-matter (npm)
+    exports:
+      - matter (default export, frontmatter parser)
+    import_pattern: |
+      import matter from 'gray-matter'
+      const { data, content } = matter(fileContent)
+
+  - component: glob
+    package: glob (npm)
+    exports:
+      - glob (async file pattern matching)
+    import_pattern: |
+      import { glob } from 'glob'
+      const files = await glob('.claude/agents/**/*.agent.md')
+
+# Critical Constraints
+constraints:
+  # Idempotency
+  - constraint: Idempotent Seeding
+    requirement: All seed scripts must be safe to run multiple times
+    implementation:
+      phases: DELETE existing rows + INSERT new rows (deterministic)
+      capabilities: DELETE existing rows + INSERT new rows (deterministic)
+      agents: UPSERT on conflict (name) - update all fields
+      commands: UPSERT on conflict (name) - update all fields
+      skills: UPSERT on conflict (name) - update all fields
+    verification: Run seed twice, verify identical database state
+
+  # Transaction Safety
+  - constraint: Atomic Transactions
+    requirement: All seed operations must be wrapped in single transaction
+    implementation: |
+      await db.transaction(async (tx) => {
+        await seedPhases(tx, ...)
+        await seedCapabilities(tx)
+        await seedAgents(tx, ...)
+        await seedCommands(tx, ...)
+        await seedSkills(tx, ...)
+      })
+    verification: Simulate error in one seeder, verify no partial data
+
+  # Zod Validation
+  - constraint: Schema Validation
+    requirement: All data must be validated with Zod before insertion
+    implementation: |
+      import { insertPhaseSchema } from '@repo/db/schema'
+      const validated = insertPhaseSchema.parse(rawData)
+    validation_failure_handling:
+      - Log warning with file path and error details
+      - Continue processing other files (don't fail entire seed)
+      - Summary reports validation failures at end
+
+  # Frontmatter Parsing
+  - constraint: Handle YAML Variations
+    requirement: Parser must handle diverse frontmatter formats in agent files
+    implementation:
+      - Use gray-matter for robust YAML parsing
+      - Try/catch per file (don't fail entire seed on one bad file)
+      - Log warnings for parsing failures
+      - Use filename as fallback for missing 'name' field
+      - Null for missing optional fields
+    known_variations:
+      - Some agents have 'type' field, others don't
+      - Some have 'model' field, others don't
+      - Arrays may be empty or missing
+      - YAML indentation may vary
+
+  # Namespace Consistency
+  - constraint: Schema Namespace
+    requirement: All table references must use wint.* namespace (not workflow.* or graph.*)
+    implementation: |
+      import { phases, agents, commands, skills, capabilities } from '@repo/db/schema'
+      // These are all in wint PostgreSQL schema
+    verification: Check unified-wint.ts for correct namespace
+
+  # Data Inventory
+  - constraint: Expected Row Counts
+    requirement: Verify expected row counts after seeding
+    expected_counts:
+      wint.phases: 8 rows (exactly)
+      wint.capabilities: 7 rows (exactly)
+      wint.agents: ~143 rows (may vary slightly)
+      wint.commands: ~33 rows (may vary slightly)
+      wint.skills: ~14 rows (may vary slightly)
+    verification: Log actual counts, warn if significantly different
+
+# Unique Constraints (Critical for Idempotency)
+unique_constraints:
+  wint.phases:
+    - column: id (PRIMARY KEY)
+    - column: phase_name (UNIQUE)
+    strategy: DELETE + INSERT (keyed by id and phase_name)
+
+  wint.capabilities:
+    - column: capability_name (UNIQUE)
+    strategy: DELETE + INSERT (keyed by capability_name)
+
+  wint.agents:
+    - column: name (UNIQUE)
+    strategy: UPSERT ON CONFLICT (name) DO UPDATE SET
+
+  wint.commands:
+    - column: name (UNIQUE)
+    strategy: UPSERT ON CONFLICT (name) DO UPDATE SET
+
+  wint.skills:
+    - column: name (UNIQUE)
+    strategy: UPSERT ON CONFLICT (name) DO UPDATE SET
+
+# Data Mapping Guides
+data_mapping:
+  # Phases Mapping
+  phases:
+    source: plans/future/platform/wint/stories.index.md
+    extraction: |
+      Regex match on "## Phase N: {Phase Name}"
+      Extract description from paragraph following header
+    target_columns:
+      id: Phase number (0-7) extracted from header
+      phase_name: Phase name extracted from header
+      description: Description paragraph following header
+      phase_order: Same as id (explicit ordering)
+      created_at: NOW()
+      updated_at: NOW()
+    example: |
+      Header: "## Phase 0: Bootstrap"
+      Paragraph: "Bootstrap phase - Manual setup of database schemas..."
+      Maps to:
+        id: 0
+        phase_name: "Bootstrap"
+        description: "Bootstrap phase - Manual setup of database schemas..."
+        phase_order: 0
+
+  # Capabilities Mapping
+  capabilities:
+    source: Hardcoded in capability-seeder.ts
+    target_columns:
+      capability_name: "create" | "read" | "edit" | "delete" | "upload" | "replace" | "download"
+      capability_type: "business" | "technical"
+      description: Human-readable description
+      owner: NULL (not specified for now)
+      maturity_level: "stable" (all are stable)
+      created_at: NOW()
+      updated_at: NOW()
+    example: |
+      {
+        capability_name: "create",
+        capability_type: "business",
+        description: "Create new records",
+        maturity_level: "stable"
+      }
+
+  # Agents Mapping
+  agents:
+    source: .claude/agents/**/*.agent.md frontmatter
+    target_columns:
+      name: frontmatter.name OR filename (without .agent.md extension)
+      agent_type: frontmatter.type (required: "worker" | "leader" | "orchestrator")
+      permission_level: frontmatter.permission_level (required: "docs-only" | "read-only" | "read-write" | "admin" | "orchestrator")
+      model: frontmatter.model (optional: "haiku" | "sonnet" | "opus" | null)
+      spawned_by: frontmatter.spawned_by (array of agent names, or null)
+      triggers: frontmatter.triggers (array of command triggers, or null)
+      skills_used: frontmatter.skills_used (array of skill names, or null)
+      metadata: Remaining frontmatter fields as JSONB (mission, scope, version, etc.)
+      created_at: NOW()
+      updated_at: NOW()
+    example: |
+      Frontmatter:
+        name: pm
+        type: orchestrator
+        permission_level: orchestrator
+        triggers: ["/pm-story", "/pm-fix-story"]
+        skills_used: ["/token-log", "/story-update"]
+      Maps to:
+        name: "pm"
+        agent_type: "orchestrator"
+        permission_level: "orchestrator"
+        model: null
+        spawned_by: null
+        triggers: ["/pm-story", "/pm-fix-story"]
+        skills_used: ["/token-log", "/story-update"]
+        metadata: {}
+
+  # Commands Mapping
+  commands:
+    source: .claude/commands/**/*.md frontmatter
+    target_columns:
+      name: frontmatter.name OR filename (without .md extension)
+      description: frontmatter.description (optional)
+      triggers: frontmatter.triggers (array of trigger patterns, or null)
+      metadata: Remaining frontmatter fields as JSONB
+      created_at: NOW()
+      updated_at: NOW()
+
+  # Skills Mapping
+  skills:
+    source: .claude/skills/*/ directories (read skill.md or index.md)
+    target_columns:
+      name: Directory name OR frontmatter.name
+      description: frontmatter.description (optional)
+      capabilities: frontmatter.capabilities (array of capability names, or null)
+      metadata: Remaining frontmatter fields as JSONB
+      created_at: NOW()
+      updated_at: NOW()
+
+# Environment Variables
+environment_variables:
+  DATABASE_URL:
+    required: true
+    purpose: PostgreSQL connection string for seeding
+    example: "postgresql://user:password@localhost:5432/dbname"
+    notes: Must have wint schema and all 5 tables created (migrations applied)
+
+# Pre-flight Checks Required
+preflight_checks:
+  - check: Database connection
+    command: "db.execute(sql`SELECT 1`)"
+    failure_message: "Cannot connect to database"
+
+  - check: wint.phases table exists
+    command: "db.execute(sql`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'wint' AND table_name = 'phases')`)"
+    failure_message: "wint.phases table does not exist (run migrations first)"
+
+  - check: wint.agents table exists
+    command: "db.execute(sql`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'wint' AND table_name = 'agents')`)"
+    failure_message: "wint.agents table does not exist (run migrations first)"
+
+  - check: wint.commands table exists
+    command: "db.execute(sql`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'wint' AND table_name = 'commands')`)"
+    failure_message: "wint.commands table does not exist (run migrations first)"
+
+  - check: wint.skills table exists
+    command: "db.execute(sql`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'wint' AND table_name = 'skills')`)"
+    failure_message: "wint.skills table does not exist (run migrations first)"
+
+  - check: wint.capabilities table exists
+    command: "db.execute(sql`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'wint' AND table_name = 'capabilities')`)"
+    failure_message: "wint.capabilities table does not exist (run migrations first)"
+
+  - check: stories.index.md exists
+    command: "fs.existsSync(storiesIndexPath)"
+    failure_message: "Cannot find plans/future/platform/wint/stories.index.md"
+
+  - check: agents directory exists
+    command: "fs.existsSync(agentsDir)"
+    failure_message: "Cannot find .claude/agents/ directory"
+
+  - check: commands directory exists
+    command: "fs.existsSync(commandsDir)"
+    failure_message: "Cannot find .claude/commands/ directory"
+
+  - check: skills directory exists
+    command: "fs.existsSync(skillsDir)"
+    failure_message: "Cannot find .claude/skills/ directory"
+
+# Error Handling Patterns
+error_handling:
+  file_parsing_errors:
+    strategy: Log warning, continue processing other files
+    example: |
+      try {
+        const { data } = matter(fileContent)
+        return data
+      } catch (err) {
+        logger.warn('Frontmatter parse failed', { file: filePath, error: err.message })
+        return null
+      }
+
+  validation_errors:
+    strategy: Log warning with validation details, skip record
+    example: |
+      const result = insertAgentSchema.safeParse(rawData)
+      if (!result.success) {
+        logger.warn('Validation failed', { file: filePath, errors: result.error.errors })
+        return null
+      }
+      return result.data
+
+  transaction_errors:
+    strategy: Rollback entire transaction, log error, exit with code 1
+    example: |
+      try {
+        await db.transaction(async (tx) => {
+          // ... seeding operations
+        })
+      } catch (err) {
+        logger.error('Seeding failed, transaction rolled back', { error: err })
+        process.exit(1)
+      }
+
+# Performance Considerations
+performance:
+  bulk_insert_strategy:
+    approach: Use db.insert().values([...]) with array of records (not loop)
+    example: |
+      const agentRecords = await extractAgentMetadata(agentFiles)
+      await tx.insert(agents).values(agentRecords)
+    notes: Drizzle optimizes bulk inserts with single SQL statement
+
+  transaction_timeout:
+    current_estimate: ~205 total inserts (8 + 7 + 143 + 33 + 14)
+    expected_duration: <5 seconds (modern PostgreSQL)
+    mitigation: None needed for MVP (monitor in production)
+
+# Migration Dependencies
+migration_dependencies:
+  - migration: 0025_violet_thor.sql
+    tables_created:
+      - wint.phases
+      - wint.agents
+      - wint.commands
+      - wint.skills
+    status: APPLIED
+    notes: Tables exist and empty, ready for seeding
+
+  - migration: 0020_wint_0060_graph_columns.sql
+    tables_created:
+      - wint.capabilities
+    status: APPLIED
+    notes: Table exists and empty, ready for seeding
+
+# Testing Data Sources
+testing:
+  unit_test_fixtures:
+    location: src/seed/__fixtures__/
+    files:
+      - test-agent.md (all fields populated)
+      - malformed-agent.md (invalid YAML)
+      - minimal-agent.md (only required fields)
+
+  integration_test_data:
+    use_real_data: true
+    sources:
+      - plans/future/platform/wint/stories.index.md (real phases)
+      - .claude/agents/ (real agent files, all 143)
+      - .claude/commands/ (real command files, all 33)
+      - .claude/skills/ (real skill directories, all 14)
+    database: TEST_DATABASE_URL environment variable
+    cleanup: Truncate all 5 tables after test
+
+# Common Pitfalls and How to Avoid
+pitfalls:
+  - pitfall: Forgetting to pass tx (transaction) to seeders
+    solution: All seeder signatures must accept tx as first parameter
+    example: "async function seedPhases(tx: Transaction, indexPath: string)"
+
+  - pitfall: Using console.log instead of logger
+    solution: ALWAYS use @repo/logger (import { logger } from '@repo/logger')
+    violation: Project code style rule, pre-commit hook will fail
+
+  - pitfall: Not handling null/undefined for optional fields
+    solution: Use optional chaining and nullish coalescing
+    example: "model: frontmatter.model ?? null"
+
+  - pitfall: Hardcoding paths from wrong working directory
+    solution: Resolve paths relative to monorepo root
+    example: |
+      import { fileURLToPath } from 'url'
+      import path from 'path'
+      const __dirname = path.dirname(fileURLToPath(import.meta.url))
+      const monorepoRoot = path.resolve(__dirname, '../../../../..')
+      const storiesIndexPath = path.join(monorepoRoot, 'plans/future/platform/wint/stories.index.md')
+
+  - pitfall: Not validating data before insert
+    solution: ALWAYS validate with Zod schema
+    example: |
+      const validated = insertPhaseSchema.parse(rawData)
+      await tx.insert(phases).values(validated)
+
+# Next Steps After Plan Complete
+next_steps:
+  - Update CHECKPOINT.yaml with plan completion
+  - Begin implementation (Step 1: Setup)
+  - Follow implementation steps in sequence (1-6)
+  - Run tests after each step
+  - Update CHECKPOINT.yaml after each major milestone

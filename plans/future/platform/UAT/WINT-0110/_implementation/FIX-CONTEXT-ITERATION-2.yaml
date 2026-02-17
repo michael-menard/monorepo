@@ -1,0 +1,50 @@
+schema: 1
+story_id: WINT-0110
+timestamp: "2026-02-16T03:46:00Z"
+failure_source: code-review-failed
+iteration: 2
+fix_status: pending
+
+issues_to_fix:
+  - id: 1
+    priority: 1
+    severity: critical
+    file: packages/core/api-client/src/index.ts
+    line: "48-57 (export list)"
+    issue: "useLazyGetFileDownloadUrlQuery hook is not exported from @repo/api-client. The hook exists in packages/core/api-client/src/rtk/instructions-api.ts but is missing from the re-export list in index.ts"
+    context: "Build error: useLazyGetFileDownloadUrlQuery is not exported by @repo/api-client. Hook is imported in apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx:21 and fails to resolve during build."
+    affected_imports:
+      - file: apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+        line: 21
+        imported_name: useLazyGetFileDownloadUrlQuery
+        from_package: "@repo/api-client"
+    auto_fixable: true
+    worker: build
+
+focus_files:
+  - packages/core/api-client/src/index.ts
+  - packages/core/api-client/src/rtk/instructions-api.ts
+  - apps/web/app-instructions-gallery/src/components/FileDownloadButton/index.tsx
+
+fix_strategy: |
+  Single auto-fixable issue in iteration 2:
+  1. CRITICAL (1): Add useLazyGetFileDownloadUrlQuery to the export list in packages/core/api-client/src/index.ts
+     - Verify the hook exists in instructions-api.ts
+     - Add named export to index.ts export list (lines 48-57)
+     - Verify app component can import successfully
+  2. Run build to verify fix resolves the error
+  3. Run tests to ensure no regressions
+  4. Run linting and type checking for final validation
+
+error_summary:
+  critical_count: 1
+  high_count: 0
+  medium_count: 0
+  total_errors: 1
+  auto_fixable: 1
+  requires_manual_review: 0
+
+blocking_packages:
+  - "@repo/api-client"
+
+fixes_applied: []

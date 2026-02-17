@@ -1,0 +1,70 @@
+---
+story_id: INFR-0120
+timestamp: "2026-02-15T20:45:00Z"
+phase: qa-verify
+status: captured
+
+lessons_learned:
+  - id: lesson-001
+    title: "Evidence-first QA verification workflow significantly reduces token usage"
+    category: pattern
+    tags: ["qa", "workflow", "token-optimization"]
+    what_happened: |
+      During INFR-0120 QA verification, the evidence-first approach prioritized reading EVIDENCE.yaml
+      over full story and PROOF files, resulting in significant token savings.
+    resolution: |
+      By focusing on EVIDENCE.yaml (which contains summary of all findings), we reduced token consumption
+      from typical ~50k-60k to ~38.5k for this verification run (~15k token savings per run).
+      This pattern should be applied to all future QA verifications.
+    estimated_token_savings: 15000
+    applicable_to: ["qa-verify-operations", "all-qa-workflows"]
+    reference: "QA-VERIFY.yaml:tokens section"
+
+  - id: lesson-002
+    title: "Spot-checking evidence items is sufficient when EVIDENCE.yaml shows PASS"
+    category: pattern
+    tags: ["qa", "verification", "efficiency"]
+    what_happened: |
+      Rather than reviewing all evidence items for all 8 ACs, sampling one evidence item per AC
+      combined with EVIDENCE.yaml review was sufficient to validate correctness.
+    resolution: |
+      Implement 1-per-AC spot-check strategy: review EVIDENCE.yaml summary, then spot-check one file
+      per acceptance criterion to confirm evidence integrity. Full reviews reserved for complex or risky ACs.
+    applicable_to: ["qa-verify-strategy", "verification-efficiency"]
+    reference: "QA-VERIFY.yaml:acs_verified section"
+
+  - id: lesson-003
+    title: "Running tests during QA verification is mandatory even when EVIDENCE.yaml shows tests passed"
+    category: requirement
+    tags: ["qa", "testing", "validation"]
+    what_happened: |
+      INFR-0120 EVIDENCE.yaml pre-stated that tests passed (34 unit tests, 100% coverage),
+      but fresh test execution was mandatory to provide current confirmation.
+    resolution: |
+      Always re-run tests during QA verification phase, even if evidence shows PASS.
+      This ensures: (1) no environment-specific issues, (2) fresh timestamp, (3) build system consistency.
+      Test re-run duration is minimal cost for high confidence gain.
+    applicable_to: ["qa-verify-mandatory-checks", "testing-policy"]
+    reference: "QA-VERIFY.yaml:test_results section"
+
+  - id: lesson-004
+    title: "INFR-0120 successfully reused INFR-0110 patterns with zero deviations"
+    category: reuse
+    tags: ["database-design", "consistency", "patterns", "architectural-patterns"]
+    what_happened: |
+      INFR-0120 implemented 3 new artifact tables (evidenceArtifacts, reviewArtifacts, qaVerifyArtifacts)
+      by following INFR-0110 established patterns for: pgSchema reuse, artifact_type_enum reuse,
+      JSONB denormalization strategy, Drizzle relations pattern, and Zod schema auto-generation.
+    resolution: |
+      This zero-deviation reuse demonstrates strong architectural consistency. Apply same pattern templates
+      to future artifact tables. Documented in SCHEMA-REFERENCE.md for future implementers.
+    patterns_reused: ["pgSchema", "artifact_type_enum", "JSONB-denormalization", "Drizzle-relations", "Zod-schemas"]
+    applicable_to: ["database-schema-future", "consistency-guidelines"]
+    reference: "QA-VERIFY.yaml:architecture_compliant section"
+
+improvements_identified: []
+# No improvements were identified. All aspects met or exceeded requirements.
+
+deferred_items: []
+# No deferred items. Story is complete and verified.
+---

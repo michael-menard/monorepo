@@ -212,6 +212,90 @@ def clean_notes_cell(cell, stage):
     return f' {cleaned} ' if cleaned else '  '
 
 
+def unblock_ready_stories(work_order, status_map):
+    """Promote ⏸️ → ⏳ when all dependencies are completed/UAT.
+
+    Parses dependency columns in the work order to find story IDs,
+    then checks if all referenced stories are done in the status map.
+    Returns list of (story_id, 'ready-to-work') promotions.
+    """
+    if not work_order or not os.path.isfile(work_order):
+        return []
+
+    done_stories = {s for s, stage in status_map.items()
+                    if stage in ('completed', 'UAT')}
+
+    promotions = []
+
+    with open(work_order, 'r') as f:
+        lines = f.readlines()
+
+    for i, line in enumerate(lines):
+        if '|' not in line:
+            continue
+
+        parts = line.split('|')
+        if len(parts) < 6:
+            continue
+
+        # Only act on rows that currently show ⏸️ (blocked)
+        status_cell = parts[5] if len(parts) > 5 else ''
+        if '⏸️' not in status_cell:
+            continue
+
+        # Extract this row's story ID from column 3
+        story_col = parts[3].strip() if len(parts) > 3 else ''
+        story_match = STORY_RE.search(story_col)
+        if not story_match:
+            continue
+        story_id = story_match.group(1)
+
+        # Skip if already has a status from another source
+        if story_id in status_map and STAGE_PRIORITY.get(status_map[story_id], 0) > STAGE_PRIORITY['pending']:
+            continue
+
+        # Find dependency column — look for columns containing story IDs or #refs
+        # Dependencies are typically in column 6 or 7 (after Status)
+        dep_story_ids = set()
+        dep_num_refs = set()
+        for col_idx in range(5, len(parts)):
+            col = parts[col_idx]
+            # Extract story ID references (e.g., WINT-0010)
+            for m in STORY_RE.finditer(col):
+                dep_id = m.group(1)
+                if dep_id != story_id:  # Don't count self
+                    dep_story_ids.add(dep_id)
+            # Extract #N references (e.g., #19, #13)
+            for m in re.finditer(r'#(\d+)', col):
+                dep_num_refs.add(m.group(1))
+
+        # Skip rows with no parseable dependencies (can't determine if unblocked)
+        if not dep_story_ids and not dep_num_refs:
+            continue
+
+        # Resolve #N refs to story IDs by scanning the work order for matching rows
+        # (The # column is parts[2])
+        if dep_num_refs:
+            for other_line in lines:
+                if '|' not in other_line:
+                    continue
+                other_parts = other_line.split('|')
+                if len(other_parts) < 4:
+                    continue
+                num_cell = other_parts[2].strip()
+                if num_cell in dep_num_refs:
+                    other_story = STORY_RE.search(other_parts[3].strip())
+                    if other_story:
+                        dep_story_ids.add(other_story.group(1))
+
+        # Check: are ALL dependency story IDs done?
+        if dep_story_ids and dep_story_ids.issubset(done_stories):
+            promotions.append(story_id)
+            status_map[story_id] = 'ready-to-work'
+
+    return promotions
+
+
 def update_work_order(work_order, status_map):
     """Update work order file with current statuses. Returns list of changes."""
     if not work_order or not os.path.isfile(work_order):
@@ -667,21 +751,28 @@ def main():
         merged = merge_statuses(dir_map, idx_map, proof_map)
 
         if work_order:
+            # Promote blocked stories whose deps are all done
+            promoted = unblock_ready_stories(work_order, merged)
+
             changes, removed = update_work_order(work_order, merged)
             summary_updated = update_progress_summary(work_order, merged)
 
-            has_updates = changes or removed
+            has_updates = changes or removed or promoted
             if has_updates:
                 parts = []
                 if changes:
                     parts.append(f"{len(changes)} update(s)")
                 if removed:
                     parts.append(f"{len(removed)} done row(s) removed")
+                if promoted:
+                    parts.append(f"{len(promoted)} unblocked")
                 print(f"[{ts}] Cycle {cycle} — {', '.join(parts)}:")
                 for story, old_e, new_e, stage in changes:
                     print(f"  {story}: {old_e} → {new_e} ({stage})")
                 if removed:
                     print(f"  ✅ Removed: {', '.join(sorted(removed))}")
+                if promoted:
+                    print(f"  🔓 Unblocked: {', '.join(sorted(promoted))}")
                 if summary_updated:
                     print(f"  + Progress summary refreshed")
             else:

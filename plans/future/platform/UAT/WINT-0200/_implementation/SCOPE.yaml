@@ -1,0 +1,241 @@
+---
+# SCOPE.yaml - WINT-0200 Implementation Scope
+# Story: Create User Flows Schema with State/Capability Enums
+# Purpose: Define implementation boundaries, deliverables, and dependencies
+
+story_id: WINT-0200
+title: Create User Flows Schema with State/Capability Enums
+scope_version: 1.0
+scope_date: 2026-02-16T04:15:30Z
+
+# === PACKAGES & DIRECTORIES ===
+packages_involved:
+  - id: orchestrator
+    path: packages/backend/orchestrator
+    scope: Create Zod schema + tests + documentation
+    new_directories:
+      - src/artifacts/__types__/
+    files_to_create:
+      - src/artifacts/__types__/user-flows.ts
+      - src/artifacts/__tests__/user-flows.test.ts
+      - src/artifacts/README.md (or update if exists)
+    files_not_to_touch:
+      - existing artifact types (audit-findings.ts, checkpoint.ts, evidence.ts, etc.)
+      - existing database schemas
+
+# === ACCEPTANCE CRITERIA MAPPING ===
+acceptance_criteria:
+  AC-1:
+    title: Create JSON Schema Definition
+    deliverables:
+      - JSON Schema file (location TBD by WINT-0180 AC-2)
+      - File metadata: $schema, $id, title, description
+      - Required states enum with 5 values
+      - Required capabilities enum with 7 values
+      - Hard constraints: max 5 flows, max 7 steps per flow
+      - schema_version field for evolution tracking
+    test_strategy: JSON Schema validation with ajv
+    notes: Location depends on WINT-0180 decision (filesystem vs database storage)
+
+  AC-2:
+    title: Create Zod Schema for Runtime Validation
+    deliverables:
+      - packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+      - Zod states enum (5 values)
+      - Zod capabilities enum (7 values)
+      - Zod flows array with max(5) constraint
+      - Zod steps array with max(7) constraint per flow
+      - Exported inferred types: UserFlowState, UserFlowCapability, UserFlowStep, UserFlow, UserFlows
+    test_strategy: Zod .parse() validation + type inference tests
+    notes: Primary implementation artifact
+
+  AC-3:
+    title: Document States Enum
+    deliverables:
+      - TSDoc comments for each state in Zod schema
+      - Documented states: loading, empty, validation_error, server_error, permission_denied
+      - Extensibility documentation in README
+    test_strategy: Type extraction, documentation presence checks
+    notes: Part of AC-2 deliverable
+
+  AC-4:
+    title: Document Capabilities Enum
+    deliverables:
+      - TSDoc comments for each capability in Zod schema
+      - Documented capabilities: create, view, edit, delete, upload, replace, download
+      - CRUD mapping for each capability
+      - Extensibility documentation in README
+    test_strategy: Type extraction, documentation presence checks
+    notes: Part of AC-2 deliverable
+
+  AC-5:
+    title: Create Validation Tests
+    deliverables:
+      - packages/backend/orchestrator/src/artifacts/__tests__/user-flows.test.ts
+      - Happy path test (valid flow with all states/capabilities)
+      - Error cases: too many steps, too many flows, invalid enums
+      - Round-trip validation test (JSON → Zod → JSON)
+      - Edge cases: empty flows, single flow, all capabilities, all states
+    test_strategy: Vitest + Zod validation
+    notes: Target ≥100% coverage for validation logic
+
+  AC-6:
+    title: Create Example User Flow
+    deliverables:
+      - Example flow JSON demonstrating all 5 states
+      - Example flow demonstrating 4+ common capabilities (create, view, edit, delete)
+      - Example validates against both JSON Schema and Zod
+      - Location: test fixtures (recommended for discoverability)
+    test_strategy: Validation against both schemas in AC-5 tests
+    notes: Included in AC-5 test file or separate fixtures
+
+  AC-7:
+    title: Document Schema Integration
+    deliverables:
+      - packages/backend/orchestrator/src/artifacts/README.md
+      - Schema file location documentation
+      - Agent validation usage examples (import + .parse())
+      - PO cohesion check integration explanation (WINT-0210)
+      - Links to WINT-0180, WINT-0210, WINT-4010, WINT-4070
+      - Related stories and integration points
+    test_strategy: Documentation review
+    notes: Integration docs updated post-WINT-0180 decision if location changes
+
+# === CRITICAL PATHS ===
+critical_paths:
+  path_1:
+    name: Schema Validation Foundation
+    steps:
+      - Create Zod schema (AC-2) with enums and constraints
+      - Create JSON Schema (AC-1) matching Zod structure
+      - Create comprehensive tests (AC-5) validating both schemas
+    risk: Medium - Schema accuracy impacts downstream consumers (WINT-0210, WINT-4010)
+    mitigation: Round-trip validation tests, clear error messages, thorough edge case coverage
+
+  path_2:
+    name: Documentation & Extensibility
+    steps:
+      - Document states (AC-3) with TSDoc comments
+      - Document capabilities (AC-4) with CRUD mapping
+      - Create extensibility guidance in README (AC-7)
+    risk: Low - Documentation is self-contained, no behavioral logic
+    mitigation: Clear examples in test file demonstrating each state/capability
+
+  path_3:
+    name: Example Flow Validation
+    steps:
+      - Create example flow (AC-6)
+      - Validate against JSON Schema (AC-1)
+      - Validate against Zod schema (AC-2)
+      - Include in test suite (AC-5)
+    risk: Low - Purely validation-focused
+    mitigation: Included in test fixtures for automatic validation
+
+# === DEPENDENCIES ===
+dependencies:
+  blocking_dependencies:
+    - id: WINT-0180
+      status: partial blocker
+      impact: medium
+      description: |
+        WINT-0180 AC-2 will decide storage strategy (filesystem vs database vs hybrid).
+        Impacts JSON Schema file location but NOT Zod schema creation.
+      mitigation: |
+        Create both JSON Schema and Zod schema regardless of storage decision.
+        AC-7 integration docs will reference location post-WINT-0180.
+        Schema validation logic is storage-agnostic.
+
+  non_blocking_recommendations:
+    - Review WINT-0110 session management Zod patterns for consistency
+    - Reference WINT database enum pattern in wint.ts if database option chosen later
+    - Coordinate with WINT-0210 for downstream schema consumption
+
+# === OUT OF SCOPE ===
+out_of_scope:
+  - PO cohesion checker implementation (WINT-4070)
+  - Cohesion sidecar implementation (WINT-4010)
+  - Database tables for user flows (deferred to WINT-0180 decision)
+  - UI for editing user flows (future story)
+  - Validation of existing codebase flows (future story)
+  - Automated migration of legacy flows (not applicable)
+  - Flow visualization/diagrams (future UX story)
+  - Flow complexity metrics beyond step count (future analytics story)
+  - Modification of existing WINT database schemas
+  - Modification of session management types (different concern)
+  - Modification of artifact schemas beyond Zod addition
+
+# === PROTECTED FEATURES ===
+protected_features:
+  - packages/backend/database-schema/src/schema/wint.ts (extend only if WINT-0180 recommends hybrid storage)
+  - packages/backend/mcp-tools/src/session-management/__types__/index.ts (different concern)
+  - packages/backend/database-schema/src/schema/artifacts.ts (different concern)
+
+# === SUCCESS METRICS ===
+success_criteria:
+  - All 7 ACs marked complete and verified
+  - JSON Schema validates all test cases without false negatives
+  - Zod schema rejects invalid flows with clear error messages
+  - Example flow validates against both schemas
+  - Round-trip validation succeeds (JSON → Zod → JSON)
+  - Test coverage ≥100% for validation logic
+  - All code passes linting, type-checking, and tests
+  - Integration documentation enables downstream consumption
+  - Documentation is clear and enables WINT-0210/WINT-4010 integration
+
+# === VERIFICATION CHECKLIST ===
+verification_checklist:
+  before_implementation:
+    - Read story file (WINT-0200.md) ✓
+    - Review elaboration analysis (ANALYSIS.md) ✓
+    - Verify orchestrator test framework ✓
+    - Check artifacts/__types__/ directory pattern ✓
+    - Review session management Zod pattern ✓
+
+  during_implementation:
+    - Create artifacts/__types__/ directory
+    - Create user-flows.ts Zod schema with all enums
+    - Create JSON Schema (location TBD)
+    - Write comprehensive validation tests
+    - Create example flow with all states/capabilities
+    - Document states enum with TSDoc
+    - Document capabilities enum with TSDoc + CRUD mapping
+    - Document extensibility in README
+    - Verify round-trip validation
+
+  before_completion:
+    - All tests pass (pnpm test user-flows.test.ts)
+    - Test coverage ≥100%
+    - Example validates against both schemas
+    - Linting passes (pnpm lint)
+    - Type-checking passes (pnpm check-types)
+    - Documentation is complete and clear
+
+# === NOTES FOR IMPLEMENTER ===
+implementation_notes: |
+  1. **Directory Creation**: artifacts/__types__/ follows established pattern from:
+     - packages/backend/orchestrator/src/providers/__types__
+     - packages/backend/orchestrator/src/adapters/__types__
+     - packages/backend/orchestrator/src/services/__types__
+
+  2. **Zod Pattern Reference**: Follow session management approach:
+     - File: packages/backend/mcp-tools/src/session-management/__types__/index.ts
+     - Includes schemas, type inference (z.infer<>), and documentation
+
+  3. **Schema Location**: AC-1 defers to WINT-0180 AC-2. Likely locations:
+     - Option 1 (Filesystem): packages/backend/orchestrator/src/schemas/user-flows.schema.json
+     - Option 2 (Database): Add pgEnum to database-schema + Zod schema
+     - Option 3 (Hybrid): Both
+
+  4. **Extensibility Documentation**: Place in two locations:
+     - Inline: TSDoc comments for each enum value in Zod schema
+     - High-level: README.md for schema version evolution process
+
+  5. **Example Flow Placement**: Use test fixtures for discoverability and automatic validation
+
+  6. **Round-trip Validation**: JSON input → Zod.parse() → valid object → JSON.stringify()
+     Should produce equivalent JSON (no custom serialization needed)
+
+  7. **Error Messages**: Use Zod's .describe() for clear validation failures
+
+  8. **WINT-0180 Integration**: If storage decision changes schema location,
+     update AC-7 integration docs but schema logic remains unchanged

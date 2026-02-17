@@ -13,10 +13,7 @@ import { z } from 'zod'
  * Creates new record in wint.contextSessions
  */
 export const SessionCreateInputSchema = z.object({
-  sessionId: z
-    .string()
-    .uuid('sessionId must be a valid UUID')
-    .optional(), // Auto-generated if not provided
+  sessionId: z.string().uuid('sessionId must be a valid UUID').optional(), // Auto-generated if not provided
   agentName: z.string().min(1, 'agentName is required'),
   storyId: z.string().nullable().optional(),
   phase: z.string().nullable().optional(),
@@ -64,12 +61,7 @@ export const SessionQueryInputSchema = z.object({
   agentName: z.string().optional(),
   storyId: z.string().optional(),
   activeOnly: z.boolean().default(false), // Filter for endedAt IS NULL
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(1000, 'limit cannot exceed 1000')
-    .default(50),
+  limit: z.number().int().min(1).max(1000, 'limit cannot exceed 1000').default(50),
   offset: z.number().int().min(0).default(0),
 })
 
@@ -80,11 +72,7 @@ export type SessionQueryInput = z.infer<typeof SessionQueryInputSchema>
  * Archives old completed sessions with safety mechanism
  */
 export const SessionCleanupInputSchema = z.object({
-  retentionDays: z
-    .number()
-    .int()
-    .min(1, 'retentionDays must be positive')
-    .default(90),
+  retentionDays: z.number().int().min(1, 'retentionDays must be positive').default(90),
   dryRun: z.boolean().default(true), // Safety: defaults to true
 })
 

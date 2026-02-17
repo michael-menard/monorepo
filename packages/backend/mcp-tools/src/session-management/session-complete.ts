@@ -12,8 +12,8 @@
 
 import { eq, and, isNull } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { db, contextSessions } from '@repo/db'
-import type { SelectContextSession } from '@repo/db'
+import { db } from '@repo/db'
+import { contextSessions, type SelectContextSession, type InsertContextSession } from '@repo/database-schema'
 import { SessionCompleteInputSchema, type SessionCompleteInput } from './__types__/index.js'
 
 /**
@@ -50,9 +50,7 @@ export async function sessionComplete(
     const [existingSession] = await db
       .select()
       .from(contextSessions)
-      .where(
-        and(eq(contextSessions.sessionId, parsed.sessionId), isNull(contextSessions.endedAt)),
-      )
+      .where(and(eq(contextSessions.sessionId, parsed.sessionId), isNull(contextSessions.endedAt)))
 
     if (!existingSession) {
       throw new Error(
@@ -61,7 +59,7 @@ export async function sessionComplete(
     }
 
     // Build update values
-    const updates: Record<string, any> = {
+    const updates: Partial<InsertContextSession> & { endedAt: Date; updatedAt: Date } = {
       endedAt: parsed.endedAt ?? new Date(),
       updatedAt: new Date(),
     }

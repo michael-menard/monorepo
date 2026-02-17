@@ -1,0 +1,69 @@
+---
+# Deferred Knowledge Base Writes
+# These writes will be retried later when KB becomes available
+# Format: PostgreSQL INSERT statements for knowledge base tables
+---
+
+deferred_writes:
+  - table: kbar.stories
+    operation: INSERT
+    timestamp: "2026-02-16T00:00:00Z"
+    reason: "KB unavailable during story generation"
+    data:
+      story_id: KBAR-0030
+      feature: kbar
+      title: "Story Sync Functions"
+      story_dir: plans/future/platform/KBAR-0030
+      story_file: plans/future/platform/KBAR-0030/KBAR-0030.md
+      story_type: feature
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+      epic: KBAR
+      depends_on:
+        - KBAR-0020
+      created_at: "2026-02-16T00:00:00Z"
+    sql: |
+      INSERT INTO kbar.stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra, epic, created_at
+      ) VALUES (
+        'KBAR-0030',
+        'kbar',
+        'Story Sync Functions',
+        'plans/future/platform/KBAR-0030',
+        'plans/future/platform/KBAR-0030/KBAR-0030.md',
+        'feature',
+        5,
+        'high',
+        'backlog',
+        true,
+        false,
+        true,
+        false,
+        'KBAR',
+        '2026-02-16T00:00:00Z'
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra;
+
+retry_instructions: |
+  To retry these deferred writes:
+  1. Ensure PostgreSQL knowledge base is running and accessible
+  2. Run the SQL statements in the order listed above
+  3. Verify data inserted correctly with: SELECT * FROM kbar.stories WHERE story_id = 'KBAR-0030';
+  4. Delete this file after successful write

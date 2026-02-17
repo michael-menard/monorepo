@@ -1,0 +1,142 @@
+schema: 1
+story_id: "MODL-0030"
+timestamp: "2026-02-16T21:30:00Z"
+phase: execute
+
+unit_tests:
+  status: pass
+  command: "cd packages/backend/orchestrator && pnpm test -- src/models/__types__/__tests__/quality-evaluation.test.ts src/models/__tests__/quality-evaluator.test.ts src/models/__tests__/dimension-evaluators.test.ts src/models/__tests__/contract-mismatch.test.ts src/models/__tests__/quality-config.test.ts src/models/__tests__/quality-evaluator-errors.test.ts src/models/__tests__/model-router-quality.test.ts"
+  results:
+    passed: 135
+    failed: 0
+    skipped: 0
+  files_tested:
+    - "packages/backend/orchestrator/src/models/__types__/__tests__/quality-evaluation.test.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/quality-evaluator.test.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/dimension-evaluators.test.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/contract-mismatch.test.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/model-router-quality.test.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/quality-config.test.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/quality-evaluator-errors.test.ts"
+  full_suite:
+    status: pass
+    command: "cd packages/backend/orchestrator && pnpm test"
+    passed: 2816
+    failed: 0
+    skipped: 18
+    total_files: 115
+
+build:
+  status: pass
+  command: "cd packages/backend/orchestrator && pnpm build"
+  output: "tsc (no errors)"
+
+type_check:
+  status: pass
+  command: "pnpm check-types:all (filtered for orchestrator)"
+  output: "No type errors detected"
+
+lint:
+  status: pass
+  command: "npx eslint packages/backend/orchestrator/src/models/quality-evaluator.ts packages/backend/orchestrator/src/models/__types__/quality-evaluation.ts packages/backend/orchestrator/src/models/unified-interface.ts --max-warnings 0"
+  output: "No lint errors after prettier auto-fix"
+
+fix_iteration:
+  iteration: 1
+  timestamp: "2026-02-16T21:30:00Z"
+  issues_fixed: 12
+  issues_total: 12
+  commands_run:
+    - "awk 'length > 100' quality-evaluator.ts  # identified 10 violations"
+    - "awk 'length > 100' quality-evaluator.test.ts  # identified 2 violations"
+    - "pnpm --filter @repo/orchestrator test -- src/models/__tests__/quality-evaluator.test.ts  # 20 passed"
+    - "pnpm --filter @repo/orchestrator test -- src/models/__tests__/  # 233 passed"
+    - "pnpm check-types:all  # no type errors"
+    - "npx eslint packages/backend/orchestrator/src/models/quality-evaluator.ts --max-warnings 0  # no errors"
+  touched_files:
+    - "packages/backend/orchestrator/src/models/quality-evaluator.ts"
+    - "packages/backend/orchestrator/src/models/__tests__/quality-evaluator.test.ts"
+
+e2e_tests:
+  status: exempt
+  reason: "Backend-only story with no HTTP interface, no API endpoints. Pure computation library with no browser surface."
+  mode: "exempt"
+
+acceptance_criteria:
+  - id: "AC-1"
+    status: pass
+    evidence: >
+      QualityEvaluationSchema and QualityDimensionScoreSchema defined in
+      packages/backend/orchestrator/src/models/__types__/quality-evaluation.ts.
+      26 test cases in quality-evaluation.test.ts covering all fields, optional fields,
+      invalid inputs (bad enum values, out-of-range scores, invalid timestamps),
+      and type inference verification. All 26 pass.
+
+  - id: "AC-2"
+    status: pass
+    evidence: >
+      evaluateQuality(contract, tier, output) function implemented in
+      packages/backend/orchestrator/src/models/quality-evaluator.ts.
+      Returns QualityEvaluation with overall score as weighted average of 5 dimensions.
+      Thresholds applied per qualityRequirement (adequate=60, good=75, high=85, critical=95).
+      20 test cases in quality-evaluator.test.ts, all passing.
+
+  - id: "AC-3"
+    status: pass
+    evidence: >
+      detectContractMismatch() function implemented in quality-evaluator.ts.
+      Over-provisioning flagged when score exceeds threshold by 20+ points (OVER_PROVISIONING_MARGIN=20).
+      Under-provisioning flagged when score falls below threshold.
+      logger.warn('contract_mismatch_detected', ...) called on detection.
+      15 test cases in contract-mismatch.test.ts, all passing.
+
+  - id: "AC-4"
+    status: pass
+    evidence: >
+      5 named evaluator functions implemented: evaluateCorrectness, evaluateCompleteness,
+      evaluateCoherence, evaluateCompliance, evaluateCostEfficiency.
+      Each returns { dimension, score, rationale, weight } with weight=0.2.
+      Each uses logger.info() via @repo/logger.
+      35 test cases in dimension-evaluators.test.ts (7 per dimension), all passing.
+
+  - id: "AC-5"
+    status: pass
+    evidence: >
+      ModelRouter.evaluateQuality(contract, tier, output): Promise<QualityEvaluation> added
+      to packages/backend/orchestrator/src/models/unified-interface.ts.
+      Backward compatible addition only (additive method).
+      9 test cases in model-router-quality.test.ts covering end-to-end flow,
+      backward compatibility, contract/tier pass-through, logger calls, and error propagation.
+      All 9 pass.
+
+  - id: "AC-6"
+    status: pass
+    evidence: >
+      QUALITY_THRESHOLDS (adequate=60, good=75, high=85, critical=95),
+      TIER_QUALITY_EXPECTATIONS (tier-0=95, tier-1=85, tier-2=75, tier-3=60), and
+      DEFAULT_DIMENSION_WEIGHTS (all 0.2, sum=1.0) exported from quality-evaluator.ts.
+      OVER_PROVISIONING_MARGIN=20 also exported.
+      19 test cases in quality-config.test.ts verifying all values, ordering, and behavior.
+      All 19 pass.
+
+  - id: "AC-7"
+    status: pass
+    evidence: >
+      135 total test cases across 7 test files. Full orchestrator suite: 2816 tests pass.
+      100% error path coverage in quality-evaluator-errors.test.ts (11 cases):
+      empty output, whitespace output, long output, unicode, special chars,
+      invalid contract fields, and invalid tier formats handled correctly.
+      Build passes with tsc; lint passes with ESLint + prettier.
+
+  - id: "AC-8"
+    status: pass
+    evidence: >
+      packages/backend/orchestrator/docs/QUALITY-EVALUATION.md created with sections:
+      Overview, Schema (QualityEvaluation and QualityDimensionScore tables),
+      Usage (direct function and ModelRouter examples),
+      Thresholds (table with rationale),
+      Tier Quality Expectations,
+      Dimension Evaluators (all 5 with approach descriptions),
+      Integration (post-execution pattern, MODL-0040 integration path),
+      Examples (code generation, security analysis, documentation tasks).
+      JSDoc on all exported functions and schemas.

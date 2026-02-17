@@ -1,0 +1,388 @@
+---
+# WINT-0130: Create Graph Query MCP Tools
+# Scope Definition
+# Generated: 2026-02-16T23:56:09Z
+
+story_id: "WINT-0130"
+story_title: "Create Graph Query MCP Tools"
+epic: "WINT"
+story_type: "feature"
+priority: "P2"
+
+# Packages Involved
+packages:
+  primary:
+    - name: "packages/backend/mcp-tools"
+      description: "MCP tool implementations"
+      scope: "new directory src/graph-query/ with 4 tools"
+      changes:
+        - "Create src/graph-query/ directory"
+        - "Implement graph_check_cohesion.ts"
+        - "Implement graph_get_franken_features.ts"
+        - "Implement graph_get_capability_coverage.ts"
+        - "Implement graph_apply_rules.ts"
+        - "Create __types__/index.ts with Zod schemas"
+        - "Create __tests__/ with comprehensive unit tests"
+        - "Update src/index.ts to export new tools"
+
+  read_only:
+    - name: "packages/backend/database-schema"
+      description: "Graph table schemas (read-only)"
+      dependency: "WINT-0060"
+      tables:
+        - "wint.features"
+        - "wint.capabilities"
+        - "wint.featureRelationships"
+        - "wint.cohesionRules"
+        - "wint.featuresRelations (relations)"
+        - "wint.featureRelationshipsRelations (relations)"
+
+    - name: "packages/backend/db"
+      description: "Database client (read-only)"
+      export: "db (Drizzle instance)"
+      dependency: "Connection pooling, query execution"
+
+# Implementation Surfaces
+surfaces:
+  backend:
+    location: "packages/backend/mcp-tools"
+    scope: "MCP tool implementations only"
+    technologies:
+      - "Drizzle ORM (query builder)"
+      - "Zod (input validation)"
+      - "@repo/logger (structured logging)"
+      - "TypeScript (strict mode)"
+
+  frontend: null
+  api: null
+  database: "read-only (queries only, no mutations)"
+
+# Acceptance Criteria Breakdown
+acceptance_criteria:
+  security_requirements:
+    ac_1:
+      number: "AC-1"
+      title: "Explicit Input Validation Requirements Documented"
+      status: "to-implement"
+      deliverables:
+        - "Zod schemas in __types__/index.ts"
+        - "JSDoc comments with constraints"
+        - "Validation covers: UUID format, string length, enum values"
+      tools_affected: ["all 4 tools"]
+
+    ac_2:
+      number: "AC-2"
+      title: "Parameterized Queries Mandatory"
+      status: "to-implement"
+      deliverables:
+        - "All queries use Drizzle query builder"
+        - "Zero raw SQL string concatenation"
+        - "All dynamic values as parameterized arguments"
+      tools_affected: ["all 4 tools"]
+
+    ac_3:
+      number: "AC-3"
+      title: "SQL Injection Risk Mitigation Testing"
+      status: "to-implement"
+      deliverables:
+        - "Malicious input test cases ('; DROP TABLE; --, 1' OR '1'='1, etc.)"
+        - "XSS attempt tests (<script>alert('xss')</script>)"
+        - "Boundary case tests (empty, null, extremely long strings)"
+      test_coverage: "5+ test cases per tool"
+
+    ac_4:
+      number: "AC-4"
+      title: "Input Sanitization and Validation Library Usage"
+      status: "to-implement"
+      deliverables:
+        - "All 4 tools use Zod validation at entry point"
+        - "Validation failures return descriptive errors"
+        - "JSDoc references Zod schema"
+      tools_affected: ["all 4 tools"]
+
+    ac_5:
+      number: "AC-5"
+      title: "Security Review Checklist for Phase 0 Completion"
+      status: "to-implement"
+      deliverables:
+        - "Checklist covering input validation, prepared statements, error handling, logging"
+        - "100% compliance required"
+        - "QA gate sign-off on security requirements"
+
+  functional_requirements:
+    ac_6:
+      number: "AC-6"
+      title: "graph_check_cohesion Tool Implementation"
+      status: "to-implement"
+      parameters:
+        - name: "featureId"
+          type: "UUID or string (dual ID support)"
+          required: true
+      returns:
+        - type: "{ status: string; violations?: string[] }"
+          status_values: ["complete", "incomplete", "unknown"]
+      database_access: "features, capabilities, cohesionRules tables"
+      error_handling: "Returns 'unknown' on DB errors, logs warning"
+
+    ac_7:
+      number: "AC-7"
+      title: "graph_get_franken_features Tool Implementation"
+      status: "to-implement"
+      parameters:
+        - name: "packageName"
+          type: "string"
+          required: false
+      returns:
+        - type: "{ featureId: string; featureName: string; missingCapabilities: string[] }[]"
+      definition: "Franken-feature = feature with <4 CRUD capabilities"
+      database_access: "features, capabilities tables (JOIN)"
+      error_handling: "Returns empty array on errors, logs warning"
+
+    ac_8:
+      number: "AC-8"
+      title: "graph_get_capability_coverage Tool Implementation"
+      status: "to-implement"
+      parameters:
+        - name: "featureId"
+          type: "UUID or string (dual ID support)"
+          required: true
+      returns:
+        - type: "{ featureId: string; capabilities: { create: number; read: number; update: number; delete: number }; maturityLevels: Record<string, number>; totalCount: number }"
+      database_access: "capabilities table with GROUP BY lifecycle_stage"
+      error_handling: "Returns null on errors, logs warning"
+
+    ac_9:
+      number: "AC-9"
+      title: "graph_apply_rules Tool Implementation"
+      status: "to-implement"
+      parameters:
+        - name: "ruleType"
+          type: "enum: package_cohesion | feature_completeness | relationship_consistency"
+          required: false
+      returns:
+        - type: "{ ruleId: string; ruleName: string; severity: string; violations: { featureId: string; description: string }[] }[]"
+      scope: "Active rules only (isActive = true)"
+      complexity: "Includes JSONB condition evaluation (basic pattern matching for MVP)"
+      database_access: "cohesionRules table, feature relationships"
+      error_handling: "Returns empty array on errors, logs warning"
+
+    ac_10:
+      number: "AC-10"
+      title: "Zod Validation at Entry (Fail Fast)"
+      status: "to-implement"
+      requirement: "All tools validate inputs at function entry before any business logic"
+      implementation: "Call .parse() or .safeParse() on input parameters"
+      tools_affected: ["all 4 tools"]
+
+    ac_11:
+      number: "AC-11"
+      title: "Drizzle ORM with Prepared Statements"
+      status: "to-implement"
+      requirement: "All queries use Drizzle ORM - no raw SQL concatenation"
+      implementation: "Use .select(), .where(), .eq(), .and(), .or(), .join() methods"
+      tools_affected: ["all 4 tools"]
+
+    ac_12:
+      number: "AC-12"
+      title: "Resilient Error Handling"
+      status: "to-implement"
+      requirement: "Log warnings, return safe defaults - never throw DB errors to MCP server"
+      implementation: "Try/catch all DB access, log via @repo/logger, return null/[]/unknown"
+      tools_affected: ["all 4 tools"]
+
+    ac_13:
+      number: "AC-13"
+      title: "Comprehensive JSDoc Comments"
+      status: "to-implement"
+      requirement: "Each tool has JSDoc with @description, @param, @returns, @example"
+      tools_affected: ["all 4 tools"]
+
+    ac_14:
+      number: "AC-14"
+      title: "Unit Tests with 80%+ Coverage"
+      status: "to-implement"
+      coverage_target: "80% minimum (target 100%)"
+      test_categories:
+        - "Input validation security tests (5+ cases per tool)"
+        - "Query safety tests (Drizzle usage, prepared statements)"
+        - "Functional tests (happy path, edge cases, errors)"
+        - "Integration tests (exports, TypeScript inference, logger)"
+      test_location: "__tests__/"
+
+    ac_15:
+      number: "AC-15"
+      title: "Export from MCP Tools Index"
+      status: "to-implement"
+      requirement: "Export all 4 tools from packages/backend/mcp-tools/src/index.ts"
+      constraint: "NO barrel files in subdirectories (CLAUDE.md)"
+      import_path: "import { graph_check_cohesion } from '@repo/mcp-tools'"
+
+# File Structure
+file_structure:
+  root: "packages/backend/mcp-tools/src/graph-query/"
+  files:
+    - path: "graph-check-cohesion.ts"
+      type: "tool implementation"
+      size_estimate: "~200 lines"
+    - path: "graph-get-franken-features.ts"
+      type: "tool implementation"
+      size_estimate: "~200 lines"
+    - path: "graph-get-capability-coverage.ts"
+      type: "tool implementation"
+      size_estimate: "~180 lines"
+    - path: "graph-apply-rules.ts"
+      type: "tool implementation"
+      size_estimate: "~250 lines (JSONB evaluation)"
+    - path: "__types__/index.ts"
+      type: "Zod schemas"
+      size_estimate: "~300 lines"
+    - path: "__tests__/graph-check-cohesion.test.ts"
+      type: "unit tests"
+      size_estimate: "~400 lines"
+    - path: "__tests__/graph-get-franken-features.test.ts"
+      type: "unit tests"
+      size_estimate: "~400 lines"
+    - path: "__tests__/graph-get-capability-coverage.test.ts"
+      type: "unit tests"
+      size_estimate: "~350 lines"
+    - path: "__tests__/graph-apply-rules.test.ts"
+      type: "unit tests"
+      size_estimate: "~450 lines (JSONB edge cases)"
+
+# Reuse Plan
+reuse_patterns:
+  existing_mcp_tools:
+    - source: "packages/backend/mcp-tools/src/session-management/"
+      pattern: "Directory structure, test patterns, error handling"
+    - source: "packages/backend/mcp-tools/src/story-management/"
+      pattern: "Zod validation, dual ID support, .safeParse() error handling"
+
+  zod_patterns:
+    - schema: "StoryIdSchema"
+      reuse: "Dual ID support (UUID or human-readable)"
+    - pattern: "Optional filter parameters"
+      source: "SessionQueryInputSchema"
+
+  drizzle_patterns:
+    - query: "Prepared statements with .where(), .eq(), .and()"
+      source: "Existing story-management tools"
+    - pattern: "JOIN queries for relationships"
+      source: "featureRelationships table patterns"
+
+  error_handling:
+    - pattern: "logger.warn() with context"
+      source: "storyGetStatus() error handling"
+    - pattern: "Safe default returns (null, [], 'unknown')"
+      source: "All existing MCP tools"
+
+# Testing Strategy
+testing:
+  framework: "Vitest + React Testing Library"
+  database: "Real WINT database (per ADR-005, no mocks)"
+  test_data:
+    - "Seeded test features (complete, incomplete, franken)"
+    - "Seeded capabilities with CRUD stages"
+    - "Seeded cohesion rules (active and inactive)"
+    - "Transaction rollback for test isolation"
+
+  security_test_coverage:
+    sql_injection: "5+ test cases per tool"
+    xss: "3+ test cases per tool"
+    dos: "2+ test cases per tool"
+    malformed_input: "3+ test cases per tool"
+
+  functional_test_categories:
+    happy_path: "All tools with valid inputs"
+    edge_cases: "Circular refs, self-refs, empty results, null inputs"
+    error_scenarios: "DB failures, malformed JSONB, query timeouts"
+
+# Dependencies
+dependencies:
+  internal:
+    - "@repo/db (db client, connection pooling)"
+    - "@repo/database-schema (graph table definitions)"
+    - "@repo/logger (structured logging)"
+  external:
+    - "drizzle-orm (^0.44.3)"
+    - "zod (^3.22.4)"
+  blocked_by:
+    - "WINT-0060 (graph tables exist, in UAT)"
+
+# Non-Goals
+non_goals:
+  - "Graph data population (WINT-4030)"
+  - "Feature extraction from codebase (static analysis)"
+  - "Graph visualization UI"
+  - "Materialized views for query optimization"
+  - "LangGraph node integration (WINT-9030+)"
+  - "Agent implementation using these tools (WINT-4060)"
+  - "Modifying graph schema tables"
+  - "UI/UX components (backend-only)"
+
+# Success Criteria
+success_criteria:
+  implementation:
+    - "All 4 MCP tools implemented"
+    - "All 15 acceptance criteria met"
+    - "Phase 0 security requirements complete (AC-1 through AC-5)"
+    - "Tools exported from @repo/mcp-tools without barrel files"
+
+  testing:
+    - "Test coverage ≥ 80%"
+    - "All security tests pass"
+    - "SQL injection prevention verified"
+    - "No ESLint errors or warnings"
+    - "TypeScript compilation succeeds"
+
+  quality:
+    - "JSDoc comments complete with examples"
+    - "Resilient error handling throughout"
+    - "Zod validation at all entry points"
+    - "Drizzle prepared statements in all queries"
+
+# Risks and Mitigations
+risks:
+  wint_0060_schema_changes:
+    likelihood: "LOW"
+    impact: "HIGH"
+    mitigation: "Verify UAT status before starting, use current schema as baseline"
+
+  graph_query_performance:
+    likelihood: "MEDIUM"
+    impact: "MEDIUM"
+    mitigation: "Start with simple queries, defer materialized views optimization"
+
+  jsonb_condition_logic:
+    likelihood: "MEDIUM"
+    impact: "MEDIUM"
+    mitigation: "Start with basic rule types, document condition schema, MVP scope"
+
+  security_test_coverage:
+    likelihood: "MEDIUM"
+    impact: "HIGH"
+    mitigation: "Leverage Drizzle ORM's prepared statements, add extensive test cases"
+
+# Effort Estimates
+estimates:
+  setup: "30 minutes"
+  tool_1_graph_check_cohesion: "3 hours"
+  tool_2_graph_get_franken_features: "3 hours"
+  tool_3_graph_get_capability_coverage: "2 hours"
+  tool_4_graph_apply_rules: "4 hours"
+  integration_and_exports: "1 hour"
+  documentation_and_jsdoc: "1 hour"
+  total_hours: "14.5 hours"
+  total_days: "2 days (realistic estimate: 12-15 hours)"
+
+# MVT Validation
+mvt_complete: true
+mvt_checklist:
+  scope_clear: true
+  packages_identified: true
+  acceptance_criteria_comprehensive: true
+  security_requirements_defined: true
+  reuse_patterns_available: true
+  dependencies_available: true
+  no_blockers: true
+
+scope_status: "APPROVED"

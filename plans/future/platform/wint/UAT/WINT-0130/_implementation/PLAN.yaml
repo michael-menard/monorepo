@@ -1,0 +1,833 @@
+---
+# WINT-0130: Create Graph Query MCP Tools
+# Implementation Plan
+# Generated: 2026-02-16
+
+story_id: "WINT-0130"
+story_title: "Create Graph Query MCP Tools"
+plan_version: "1.0"
+estimated_total_hours: 14.5
+estimated_days: 2
+
+# ============================================================================
+# IMPLEMENTATION PHASES
+# ============================================================================
+
+phases:
+  phase_a_schemas:
+    name: "Phase A: Zod Schema Definition"
+    duration: "30 minutes"
+    description: "Define all input/output validation schemas for 4 MCP tools"
+    order: 1
+
+    steps:
+      - step: "A1"
+        description: "Create __types__/index.ts with Zod schemas"
+        duration: "30 min"
+        files_to_create:
+          - path: "packages/backend/mcp-tools/src/graph-query/__types__/index.ts"
+            description: "Zod validation schemas for all 4 tools"
+            size_estimate: "~300 lines"
+
+        schemas_to_define:
+          - name: "FeatureIdSchema"
+            purpose: "Dual ID support (UUID or feature name)"
+            validation: "UUID format OR string.min(1)"
+            reuse_pattern: "StoryIdSchema from story-management"
+
+          - name: "GraphCheckCohesionInputSchema"
+            fields:
+              - featureId: "string (UUID or feature name)"
+            output: "{ status: string; violations?: string[] }"
+
+          - name: "GraphGetFrankenFeaturesInputSchema"
+            fields:
+              - packageName: "string (optional filter)"
+            output: "{ featureId: string; featureName: string; missingCapabilities: string[] }[]"
+
+          - name: "GraphGetCapabilityCoverageInputSchema"
+            fields:
+              - featureId: "string (UUID or feature name)"
+            output: "{ featureId: string; capabilities: { create: number; read: number; update: number; delete: number }; maturityLevels: Record<string, number>; totalCount: number }"
+
+          - name: "GraphApplyRulesInputSchema"
+            fields:
+              - ruleType: "enum (package_cohesion | feature_completeness | relationship_consistency) optional"
+            output: "{ ruleId: string; ruleName: string; severity: string; violations: { featureId: string; description: string }[] }[]"
+
+        verification:
+          - "TypeScript compilation succeeds"
+          - "All schemas export correctly"
+          - "Zod refinements include validation logic"
+
+    deliverables:
+      - "__types__/index.ts with 4+ Zod schemas"
+      - "All input/output types inferred from schemas"
+
+    security_gates:
+      - "AC-1: Explicit Input Validation Requirements Documented"
+      - "AC-4: Input Sanitization and Validation Library Usage"
+
+  phase_b_tools:
+    name: "Phase B: Tool Implementation (4 tools)"
+    duration: "12 hours"
+    description: "Implement all 4 MCP tools with Drizzle queries and security tests"
+    order: 2
+    depends_on: ["phase_a_schemas"]
+
+    sub_phases:
+      phase_b1_check_cohesion:
+        name: "B1: graph_check_cohesion"
+        duration: "3 hours"
+        order: 1
+
+        steps:
+          - step: "B1.1"
+            description: "Implement graph_check_cohesion.ts"
+            duration: "1.5 hours"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/graph-check-cohesion.ts"
+                description: "Validate feature cohesion against active rules"
+                size_estimate: "~200 lines"
+
+            implementation_details:
+              query_strategy: "JOIN features, capabilities, cohesionRules"
+              drizzle_methods: [".select()", ".from()", ".where()", ".eq()", ".and()"]
+              error_handling: "Try/catch, log warnings, return { status: 'unknown' }"
+
+              logic_flow:
+                1: "Validate featureId with Zod (fail fast)"
+                2: "Query features table (UUID or feature name via OR)"
+                3: "Query capabilities for this feature"
+                4: "Query active cohesionRules (isActive = true)"
+                5: "Apply JSONB condition evaluation (basic pattern matching)"
+                6: "Return { status: 'complete' | 'incomplete' | 'unknown', violations?: string[] }"
+
+              cohesion_logic: |
+                - Check if feature has all CRUD capabilities (create, read, update, delete)
+                - Apply active rules with featurePatterns matching
+                - Return violations array if incomplete
+
+            verification:
+              - "TypeScript compilation succeeds"
+              - "Drizzle prepared statements used (no string concat)"
+              - "Zod validation at entry point"
+              - "Resilient error handling (returns 'unknown' on errors)"
+
+          - step: "B1.2"
+            description: "Write unit tests for graph_check_cohesion"
+            duration: "1.5 hours"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-check-cohesion.test.ts"
+                description: "Comprehensive unit tests with security coverage"
+                size_estimate: "~400 lines"
+
+            test_categories:
+              functional:
+                - "TC-FUNC-001: Complete feature (all CRUD capabilities)"
+                - "TC-FUNC-002: Incomplete feature (missing capabilities)"
+                - "TC-FUNC-003: Unknown feature (not found)"
+                - "TC-FUNC-004: Inactive rules ignored"
+
+              security:
+                - "TC-SEC-001: SQL injection - '; DROP TABLE features; --'"
+                - "TC-SEC-002: Boolean injection - 1' OR '1'='1"
+                - "TC-SEC-003: XSS attempt - <script>alert('xss')</script>"
+                - "TC-SEC-004: DoS prevention - 10,000 character string"
+                - "TC-SEC-005: Invalid UUID format"
+
+              edge_cases:
+                - "TC-EDGE-001: Circular feature relationships"
+                - "TC-EDGE-002: Self-referencing features"
+                - "TC-EDGE-003: JSONB parsing errors"
+                - "TC-EDGE-004: Database connection failure"
+                - "TC-EDGE-005: Empty database"
+                - "TC-EDGE-007: Null/undefined input"
+
+            verification:
+              - "All security tests pass (SQL injection prevented)"
+              - "Test coverage ≥ 80%"
+              - "All malicious inputs rejected by Zod"
+
+      phase_b2_franken_features:
+        name: "B2: graph_get_franken_features"
+        duration: "3 hours"
+        order: 2
+
+        steps:
+          - step: "B2.1"
+            description: "Implement graph_get_franken_features.ts"
+            duration: "1.5 hours"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts"
+                description: "Identify features with incomplete capabilities"
+                size_estimate: "~200 lines"
+
+            implementation_details:
+              query_strategy: "JOIN features and capabilities, GROUP BY feature, HAVING count < 4"
+              drizzle_methods: [".select()", ".from()", ".leftJoin()", ".where()", ".groupBy()"]
+
+              logic_flow:
+                1: "Validate optional packageName filter with Zod"
+                2: "Query features with LEFT JOIN capabilities"
+                3: "Filter by packageName if provided"
+                4: "Group by feature, count capabilities by lifecycleStage"
+                5: "Identify features with < 4 CRUD capabilities"
+                6: "Return array with missing capabilities per feature"
+
+              franken_definition: "Feature with < 4 CRUD capabilities (create, read, update, delete)"
+
+            verification:
+              - "JOIN query uses Drizzle prepared statements"
+              - "Empty array returned if no Franken-features"
+              - "PackageName filter works correctly"
+
+          - step: "B2.2"
+            description: "Write unit tests for graph_get_franken_features"
+            duration: "1.5 hours"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-franken-features.test.ts"
+                description: "Unit tests with security coverage"
+                size_estimate: "~400 lines"
+
+            test_categories:
+              functional:
+                - "TC-FUNC-004: No filter (all Franken-features)"
+                - "TC-FUNC-005: Package filter (scoped results)"
+                - "TC-FUNC-006: Empty results (all complete)"
+
+              security:
+                - "SQL injection tests (5+ cases)"
+                - "XSS tests (3+ cases)"
+                - "DoS tests (2+ cases)"
+
+            verification:
+              - "All security tests pass"
+              - "Test coverage ≥ 80%"
+
+      phase_b3_capability_coverage:
+        name: "B3: graph_get_capability_coverage"
+        duration: "2 hours"
+        order: 3
+
+        steps:
+          - step: "B3.1"
+            description: "Implement graph_get_capability_coverage.ts"
+            duration: "1 hour"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/graph-get-capability-coverage.ts"
+                description: "Query capability coverage per feature"
+                size_estimate: "~180 lines"
+
+            implementation_details:
+              query_strategy: "GROUP BY lifecycleStage, maturityLevel with COUNT aggregation"
+              drizzle_methods: [".select()", ".from()", ".where()", ".groupBy()", "count()"]
+
+              logic_flow:
+                1: "Validate featureId with Zod"
+                2: "Query capabilities filtered by feature"
+                3: "Aggregate counts by lifecycleStage (create, read, update, delete)"
+                4: "Aggregate counts by maturityLevel"
+                5: "Return structured breakdown with zero counts if no capabilities"
+
+              aggregation_logic: |
+                - Count capabilities per lifecycleStage
+                - Count capabilities per maturityLevel
+                - Return totalCount sum
+
+            verification:
+              - "Aggregation query uses Drizzle count() function"
+              - "Returns zero counts for features with no capabilities"
+
+          - step: "B3.2"
+            description: "Write unit tests for graph_get_capability_coverage"
+            duration: "1 hour"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-capability-coverage.test.ts"
+                description: "Unit tests with security coverage"
+                size_estimate: "~350 lines"
+
+            test_categories:
+              functional:
+                - "TC-FUNC-007: Full coverage (all lifecycle stages)"
+                - "TC-FUNC-008: No capabilities (zero counts)"
+
+              security:
+                - "SQL injection tests (5+ cases)"
+                - "XSS tests (3+ cases)"
+
+            verification:
+              - "All security tests pass"
+              - "Test coverage ≥ 80%"
+
+      phase_b4_apply_rules:
+        name: "B4: graph_apply_rules"
+        duration: "4 hours"
+        order: 4
+
+        steps:
+          - step: "B4.1"
+            description: "Implement graph_apply_rules.ts"
+            duration: "2.5 hours"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/graph-apply-rules.ts"
+                description: "Apply active cohesion rules and return violations"
+                size_estimate: "~250 lines"
+
+            implementation_details:
+              query_strategy: "Query cohesionRules, evaluate JSONB conditions, detect violations"
+              drizzle_methods: [".select()", ".from()", ".where()", ".eq()", ".and()"]
+
+              logic_flow:
+                1: "Validate optional ruleType filter with Zod enum"
+                2: "Query active cohesionRules (isActive = true)"
+                3: "Filter by ruleType if provided"
+                4: "For each rule, parse JSONB conditions"
+                5: "Evaluate conditions against features (basic pattern matching)"
+                6: "Collect violations per rule"
+                7: "Return array of rules with violations"
+
+              jsonb_evaluation: |
+                MVP: Basic pattern matching
+                - conditions.featurePatterns.include: Array of strings to match in feature name
+                - conditions.featurePatterns.exclude: Array of strings to exclude
+                - conditions.packagePatterns: Package name filters
+                - Advanced regex/wildcards deferred to future
+
+              condition_schema:
+                type: "RuleConditions"
+                fields:
+                  featurePatterns:
+                    include: "string[] (substring match)"
+                    exclude: "string[] (substring exclude)"
+                  packagePatterns:
+                    include: "string[]"
+                    exclude: "string[]"
+                  relationshipTypes: "string[]"
+
+            verification:
+              - "JSONB parsing uses type-safe TypeScript casting"
+              - "Malformed JSONB skips rule with logged warning"
+              - "Empty array returned if no violations"
+
+          - step: "B4.2"
+            description: "Write unit tests for graph_apply_rules"
+            duration: "1.5 hours"
+            files_to_create:
+              - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-apply-rules.test.ts"
+                description: "Unit tests with JSONB edge cases and security coverage"
+                size_estimate: "~450 lines"
+
+            test_categories:
+              functional:
+                - "TC-FUNC-009: No filter (all active rules)"
+                - "TC-FUNC-010: Rule type filter"
+                - "TC-FUNC-011: No violations (compliant features)"
+                - "TC-EDGE-003: JSONB parsing errors"
+                - "TC-EDGE-006: Inactive rules not applied"
+
+              security:
+                - "SQL injection tests (5+ cases)"
+                - "XSS tests (3+ cases)"
+                - "DoS tests (2+ cases)"
+
+            verification:
+              - "All security tests pass"
+              - "JSONB edge cases handled"
+              - "Test coverage ≥ 80%"
+
+    deliverables:
+      - "4 MCP tool implementations (graph-check-cohesion, graph-get-franken-features, graph-get-capability-coverage, graph-apply-rules)"
+      - "4 comprehensive test suites with security coverage"
+      - "All security tests passing"
+
+    security_gates:
+      - "AC-2: Parameterized Queries Mandatory (Drizzle ORM throughout)"
+      - "AC-3: SQL Injection Risk Mitigation Testing (5+ test cases per tool)"
+      - "AC-10: Zod Validation at Entry (Fail Fast)"
+      - "AC-11: Drizzle ORM with Prepared Statements"
+      - "AC-12: Resilient Error Handling"
+
+  phase_c_integration:
+    name: "Phase C: Integration & Export"
+    duration: "1 hour"
+    description: "Export tools from mcp-tools index and verify integration"
+    order: 3
+    depends_on: ["phase_b_tools"]
+
+    steps:
+      - step: "C1"
+        description: "Create graph-query/index.ts (barrel file for directory)"
+        duration: "15 min"
+        files_to_create:
+          - path: "packages/backend/mcp-tools/src/graph-query/index.ts"
+            description: "Re-export all 4 tools from graph-query directory"
+            size_estimate: "~20 lines"
+
+        exports:
+          - "export { graph_check_cohesion } from './graph-check-cohesion.js'"
+          - "export { graph_get_franken_features } from './graph-get-franken-features.js'"
+          - "export { graph_get_capability_coverage } from './graph-get-capability-coverage.js'"
+          - "export { graph_apply_rules } from './graph-apply-rules.js'"
+          - "export * from './__types__/index.js'"
+
+        verification:
+          - "TypeScript compilation succeeds"
+          - "No circular dependencies"
+
+      - step: "C2"
+        description: "Update src/index.ts to export graph-query tools"
+        duration: "15 min"
+        files_to_modify:
+          - path: "packages/backend/mcp-tools/src/index.ts"
+            changes:
+              - "Add: export * from './graph-query/index.js'"
+
+        verification:
+          - "TypeScript compilation succeeds"
+          - "Import path works: import { graph_check_cohesion } from '@repo/mcp-tools'"
+
+      - step: "C3"
+        description: "Integration test - verify all exports"
+        duration: "30 min"
+
+        verification_steps:
+          - "Run TypeScript compilation: pnpm build"
+          - "Verify all 4 functions exported from @repo/mcp-tools"
+          - "Test import in external file"
+          - "Verify type inference works"
+          - "Run full test suite: pnpm test"
+
+    deliverables:
+      - "graph-query/index.ts with all exports"
+      - "Updated src/index.ts with graph-query exports"
+      - "All integration tests passing"
+
+    security_gates:
+      - "AC-15: Export from MCP Tools Index"
+
+  phase_d_documentation:
+    name: "Phase D: Documentation & JSDoc"
+    duration: "1 hour"
+    description: "Complete JSDoc comments with examples and usage"
+    order: 4
+    depends_on: ["phase_c_integration"]
+
+    steps:
+      - step: "D1"
+        description: "Add comprehensive JSDoc to all 4 tools"
+        duration: "45 min"
+
+        jsdoc_requirements:
+          - "@description: Tool purpose and functionality"
+          - "@param: Each parameter with Zod constraints referenced"
+          - "@returns: Return type with all possible values documented"
+          - "@example: Typical usage with expected output"
+
+        tools_to_document:
+          - "graph-check-cohesion.ts"
+          - "graph-get-franken-features.ts"
+          - "graph-get-capability-coverage.ts"
+          - "graph-apply-rules.ts"
+
+        verification:
+          - "All functions have JSDoc blocks"
+          - "Examples include realistic feature IDs"
+          - "Return types documented with all status values"
+
+      - step: "D2"
+        description: "Security review checklist completion"
+        duration: "15 min"
+
+        checklist_items:
+          - "Input validation: All tools use Zod at entry"
+          - "Prepared statements: All queries use Drizzle ORM"
+          - "Error handling: All DB errors caught and logged"
+          - "Logging: All errors use @repo/logger (never console.log)"
+          - "SQL injection: All security tests pass"
+          - "XSS prevention: All malicious inputs rejected"
+          - "DoS prevention: String length limits enforced"
+
+        verification:
+          - "100% checklist compliance"
+          - "All security gates documented in EVIDENCE.yaml"
+
+    deliverables:
+      - "JSDoc comments complete on all 4 tools"
+      - "Security review checklist 100% complete"
+
+    security_gates:
+      - "AC-5: Security Review Checklist for Phase 0 Completion"
+      - "AC-13: Comprehensive JSDoc Comments"
+
+# ============================================================================
+# FILE CHANGE MANIFEST
+# ============================================================================
+
+file_changes:
+  files_to_create:
+    - path: "packages/backend/mcp-tools/src/graph-query/__types__/index.ts"
+      phase: "A"
+      description: "Zod schemas for all 4 tools"
+      size: "~300 lines"
+      dependencies: []
+
+    - path: "packages/backend/mcp-tools/src/graph-query/graph-check-cohesion.ts"
+      phase: "B1"
+      description: "Validate feature cohesion against rules"
+      size: "~200 lines"
+      dependencies: ["__types__/index.ts", "@repo/db", "@repo/logger", "@repo/database-schema"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-check-cohesion.test.ts"
+      phase: "B1"
+      description: "Unit tests with security coverage"
+      size: "~400 lines"
+      dependencies: ["graph-check-cohesion.ts"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts"
+      phase: "B2"
+      description: "Identify features with incomplete capabilities"
+      size: "~200 lines"
+      dependencies: ["__types__/index.ts", "@repo/db", "@repo/logger", "@repo/database-schema"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-franken-features.test.ts"
+      phase: "B2"
+      description: "Unit tests with security coverage"
+      size: "~400 lines"
+      dependencies: ["graph-get-franken-features.ts"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/graph-get-capability-coverage.ts"
+      phase: "B3"
+      description: "Query capability coverage per feature"
+      size: "~180 lines"
+      dependencies: ["__types__/index.ts", "@repo/db", "@repo/logger", "@repo/database-schema"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-get-capability-coverage.test.ts"
+      phase: "B3"
+      description: "Unit tests with security coverage"
+      size: "~350 lines"
+      dependencies: ["graph-get-capability-coverage.ts"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/graph-apply-rules.ts"
+      phase: "B4"
+      description: "Apply active cohesion rules and return violations"
+      size: "~250 lines"
+      dependencies: ["__types__/index.ts", "@repo/db", "@repo/logger", "@repo/database-schema"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/__tests__/graph-apply-rules.test.ts"
+      phase: "B4"
+      description: "Unit tests with JSONB edge cases and security coverage"
+      size: "~450 lines"
+      dependencies: ["graph-apply-rules.ts"]
+
+    - path: "packages/backend/mcp-tools/src/graph-query/index.ts"
+      phase: "C"
+      description: "Re-export all 4 tools and types"
+      size: "~20 lines"
+      dependencies: ["all graph-query/*.ts files"]
+
+  files_to_modify:
+    - path: "packages/backend/mcp-tools/src/index.ts"
+      phase: "C"
+      changes:
+        - description: "Add graph-query exports"
+          line_changes: "+2 lines"
+          content: "export * from './graph-query/index.js'"
+
+# ============================================================================
+# VERIFICATION STRATEGY
+# ============================================================================
+
+verification_checkpoints:
+  checkpoint_1_schemas:
+    phase: "A"
+    verification:
+      - "TypeScript compilation: pnpm build"
+      - "Zod schemas export correctly"
+      - "Type inference works (z.infer<typeof Schema>)"
+    pass_criteria:
+      - "Zero TypeScript errors"
+      - "All 4+ schemas defined"
+
+  checkpoint_2_tool_b1:
+    phase: "B1"
+    verification:
+      - "graph_check_cohesion TypeScript compilation"
+      - "Unit tests pass: pnpm test graph-check-cohesion.test.ts"
+      - "Security tests pass (SQL injection, XSS, DoS)"
+    pass_criteria:
+      - "Zero TypeScript errors"
+      - "All tests pass"
+      - "Test coverage ≥ 80%"
+
+  checkpoint_3_tool_b2:
+    phase: "B2"
+    verification:
+      - "graph_get_franken_features TypeScript compilation"
+      - "Unit tests pass"
+      - "Security tests pass"
+    pass_criteria:
+      - "Zero TypeScript errors"
+      - "All tests pass"
+      - "Test coverage ≥ 80%"
+
+  checkpoint_4_tool_b3:
+    phase: "B3"
+    verification:
+      - "graph_get_capability_coverage TypeScript compilation"
+      - "Unit tests pass"
+      - "Security tests pass"
+    pass_criteria:
+      - "Zero TypeScript errors"
+      - "All tests pass"
+      - "Test coverage ≥ 80%"
+
+  checkpoint_5_tool_b4:
+    phase: "B4"
+    verification:
+      - "graph_apply_rules TypeScript compilation"
+      - "Unit tests pass (including JSONB edge cases)"
+      - "Security tests pass"
+    pass_criteria:
+      - "Zero TypeScript errors"
+      - "All tests pass"
+      - "Test coverage ≥ 80%"
+
+  checkpoint_6_integration:
+    phase: "C"
+    verification:
+      - "Full package build: pnpm build"
+      - "All exports available from @repo/mcp-tools"
+      - "Full test suite passes: pnpm test"
+      - "No circular dependencies"
+    pass_criteria:
+      - "Zero build errors"
+      - "All 4 tools importable"
+      - "All tests pass"
+
+  checkpoint_7_documentation:
+    phase: "D"
+    verification:
+      - "JSDoc comments complete on all tools"
+      - "Security review checklist 100% complete"
+      - "EVIDENCE.yaml updated with test results"
+    pass_criteria:
+      - "All tools have JSDoc with @description, @param, @returns, @example"
+      - "Security checklist 100% compliance"
+
+# ============================================================================
+# ACCEPTANCE CRITERIA MAPPING
+# ============================================================================
+
+acceptance_criteria_coverage:
+  phase_0_security:
+    AC-1:
+      phase: "A"
+      deliverable: "Zod schemas in __types__/index.ts"
+      verification: "Schemas defined with constraints documented"
+
+    AC-2:
+      phase: "B"
+      deliverable: "All queries use Drizzle ORM"
+      verification: "Code review confirms no string concatenation"
+
+    AC-3:
+      phase: "B"
+      deliverable: "Security test cases in all 4 test files"
+      verification: "SQL injection, XSS, DoS tests pass"
+
+    AC-4:
+      phase: "A, B"
+      deliverable: "Zod validation at all tool entry points"
+      verification: "All tools call .parse() before business logic"
+
+    AC-5:
+      phase: "D"
+      deliverable: "Security review checklist complete"
+      verification: "100% checklist compliance documented"
+
+  functional_requirements:
+    AC-6:
+      phase: "B1"
+      tool: "graph_check_cohesion"
+      verification: "Tool implemented, tests pass, JSDoc complete"
+
+    AC-7:
+      phase: "B2"
+      tool: "graph_get_franken_features"
+      verification: "Tool implemented, tests pass, JSDoc complete"
+
+    AC-8:
+      phase: "B3"
+      tool: "graph_get_capability_coverage"
+      verification: "Tool implemented, tests pass, JSDoc complete"
+
+    AC-9:
+      phase: "B4"
+      tool: "graph_apply_rules"
+      verification: "Tool implemented, tests pass, JSDoc complete"
+
+    AC-10:
+      phase: "B"
+      deliverable: "Zod .parse() at entry for all 4 tools"
+      verification: "Unit tests verify validation before DB access"
+
+    AC-11:
+      phase: "B"
+      deliverable: "Drizzle ORM throughout all queries"
+      verification: "Code review + grep confirms no raw SQL"
+
+    AC-12:
+      phase: "B"
+      deliverable: "Try/catch with logger.warn in all tools"
+      verification: "Error scenarios tested, safe defaults returned"
+
+    AC-13:
+      phase: "D"
+      deliverable: "JSDoc on all 4 tools"
+      verification: "All JSDoc blocks complete with examples"
+
+    AC-14:
+      phase: "B"
+      deliverable: "Unit tests for all 4 tools"
+      verification: "Test coverage ≥ 80%"
+
+    AC-15:
+      phase: "C"
+      deliverable: "Exports from src/index.ts"
+      verification: "Import from @repo/mcp-tools works"
+
+# ============================================================================
+# RISK MITIGATION
+# ============================================================================
+
+risks_and_mitigations:
+  wint_0060_schema_changes:
+    risk: "Graph schema may change if WINT-0060 UAT finds issues"
+    likelihood: "LOW"
+    impact: "HIGH"
+    mitigation:
+      - "Verify WINT-0060 UAT status before starting"
+      - "Use current wint.ts schema as baseline"
+      - "Schema is stable (UAT issues are documentation, not structural)"
+
+  graph_query_performance:
+    risk: "Complex JOIN queries may be slow on large datasets"
+    likelihood: "MEDIUM"
+    impact: "MEDIUM"
+    mitigation:
+      - "Start with simple queries (no optimization premature)"
+      - "Defer materialized views to future iteration"
+      - "Log query performance metrics for future analysis"
+
+  jsonb_condition_complexity:
+    risk: "JSONB condition evaluation logic may be complex"
+    likelihood: "MEDIUM"
+    impact: "MEDIUM"
+    mitigation:
+      - "MVP: Basic pattern matching (substring, include/exclude)"
+      - "Defer regex/wildcards to future iteration"
+      - "Document condition schema clearly in JSDoc"
+      - "Handle malformed JSONB gracefully (skip rule, log warning)"
+
+  security_test_coverage:
+    risk: "Comprehensive security testing is time-intensive"
+    likelihood: "MEDIUM"
+    impact: "HIGH"
+    mitigation:
+      - "Drizzle ORM prevents SQL injection by design"
+      - "Zod validation rejects malicious inputs"
+      - "Reuse security test patterns from session-management"
+      - "5+ test cases per tool minimum"
+
+  circular_relationship_bugs:
+    risk: "Circular feature relationships may cause infinite loops"
+    likelihood: "LOW"
+    impact: "MEDIUM"
+    mitigation:
+      - "Explicit test case for circular refs (TC-EDGE-001)"
+      - "Limit query depth (no recursive traversal in MVP)"
+      - "Self-referencing features tested explicitly"
+
+# ============================================================================
+# SUCCESS CRITERIA
+# ============================================================================
+
+success_criteria:
+  implementation:
+    - "All 4 MCP tools implemented in graph-query/ directory"
+    - "All 15 acceptance criteria met (5 security + 10 functional)"
+    - "Phase 0 security requirements 100% complete"
+    - "Tools exported from @repo/mcp-tools without barrel files"
+
+  testing:
+    - "Test coverage ≥ 80% across all 4 tools"
+    - "All security tests pass (SQL injection, XSS, DoS)"
+    - "SQL injection prevention verified (Drizzle prepared statements)"
+    - "No ESLint errors or warnings"
+    - "TypeScript compilation succeeds"
+
+  quality:
+    - "JSDoc comments complete with examples on all 4 tools"
+    - "Resilient error handling throughout (log warnings, return safe defaults)"
+    - "Zod validation at all entry points (fail fast)"
+    - "Drizzle prepared statements in all queries (no string concatenation)"
+
+  documentation:
+    - "Security review checklist 100% complete"
+    - "EVIDENCE.yaml updated with test results"
+    - "All verification checkpoints passed"
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+implementation_notes:
+  - "Follow existing MCP tool patterns from session-management and story-management"
+  - "Use Drizzle ORM exclusively - zero raw SQL concatenation"
+  - "Zod-first validation approach per CLAUDE.md (no TypeScript interfaces)"
+  - "Resilient error handling: log warnings, return safe defaults, never throw"
+  - "JSONB condition evaluation starts with basic pattern matching (MVP)"
+  - "Advanced pattern matching (regex, wildcards) deferred to future iterations"
+  - "Performance optimization (materialized views) deferred based on usage patterns"
+  - "Graph population (WINT-4030) and agent implementation (WINT-4060) are separate stories"
+
+edge_cases_documented:
+  - "Circular feature relationships: Tested explicitly, no recursive traversal"
+  - "Self-referencing features: Tested explicitly"
+  - "JSONB parsing errors: Skip rule, log warning, continue"
+  - "Database connection failure: Return safe defaults (null, [], 'unknown')"
+  - "Empty database: All tools return safe defaults"
+  - "Inactive rules: Filtered out (isActive = true only)"
+  - "Null/undefined inputs: Rejected by Zod validation"
+  - "Extremely large result sets: Pagination deferred to future"
+
+dependencies:
+  internal:
+    - "@repo/db (Drizzle client, connection pooling)"
+    - "@repo/database-schema (graph table definitions: features, capabilities, featureRelationships, cohesionRules)"
+    - "@repo/logger (structured logging, never console.log)"
+
+  external:
+    - "drizzle-orm (^0.44.3)"
+    - "zod (^3.22.4)"
+
+  blocked_by:
+    - "WINT-0060 (graph tables exist, in UAT - schema is stable)"
+
+blocks:
+  - "WINT-4030 (Populate Graph with Existing Features)"
+  - "WINT-4060 (Create graph-checker Agent)"
+
+# ============================================================================
+# METADATA
+# ============================================================================
+
+metadata:
+  plan_created_by: "dev-plan-leader"
+  plan_created_at: "2026-02-16"
+  estimated_start_date: "TBD"
+  estimated_completion_date: "TBD (2 days from start)"
+  story_points: 5
+  priority: "P2"
+  epic: "WINT"

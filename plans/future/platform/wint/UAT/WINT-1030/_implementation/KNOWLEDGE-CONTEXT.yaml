@@ -1,0 +1,85 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-16T17:00:00Z"
+
+  lessons_learned:
+    count: 5
+    relevant_to_scope:
+      - story_id: "WINT-1020"
+        lesson: "Directory flattening migration script pattern with 6-phase pipeline (Discovery → Validation → Dry Run → Backup → Execute → Verify)"
+        category: reuse
+        applies_because: "WINT-1030 needs similar migration script pattern for populating database from filesystem"
+
+      - story_id: "WINT-0090"
+        lesson: "StoryRepository and StoryFileAdapter are production-ready for story CRUD and frontmatter reading"
+        category: reuse
+        applies_because: "WINT-1030 will use both adapters for reading stories and writing to database"
+
+      - story_id: "WINT-1020"
+        lesson: "Use Zod-first type definitions for all migration artifacts (inventory, plan, log, verification)"
+        category: pattern
+        applies_because: "WINT-1030 needs type-safe migration artifacts for population script"
+
+      - story_id: "WINT-1020"
+        lesson: "Fail-soft error handling - skip malformed stories, log warnings, continue processing instead of fail-fast"
+        category: pattern
+        applies_because: "WINT-1030 must handle malformed YAML gracefully without blocking entire population"
+
+      - story_id: "WINT-1020"
+        lesson: "Duplicate story resolution using lifecycle priority ranking (UAT > ready-for-qa > in-progress > ready-to-work > elaboration > backlog)"
+        category: pattern
+        applies_because: "WINT-1030 needs to resolve duplicates when same story ID appears in multiple directories"
+
+    blockers_to_avoid:
+      - "Database connection failures without retry logic"
+      - "Unique constraint violations on story_id without graceful handling"
+      - "Reading full story files when only frontmatter is needed"
+      - "Hardcoded paths that break across environments"
+
+    patterns_to_follow:
+      - "Zod schemas for all migration artifacts with runtime validation"
+      - "Dry-run mode that outputs plan without database writes"
+      - "Comprehensive error logging to migration-log.json"
+      - "Batch operations with transaction boundaries"
+      - "Verification mode for post-execution validation"
+      - "Use @repo/logger for all logging (not console.log)"
+
+    patterns_to_avoid:
+      - "All-or-nothing transactions (fail-soft is better for migrations)"
+      - "Reading full story files (use StoryFileAdapter for frontmatter only)"
+      - "Hardcoded monorepo paths (use findMonorepoRoot pattern)"
+      - "console.log (use @repo/logger)"
+
+  architecture_decisions:
+    active_count: 1
+    relevant_adrs:
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "Integration tests must use real database (no mocks) for database operations"
+        applies_to: ["backend", "database", "testing"]
+
+    constraints:
+      testing: "Integration tests must use real database, not mocks"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read full story files (markdown body)"
+        typical_tokens: 5000-15000
+        mitigation: "Use StoryFileAdapter.readFrontmatter() to read only YAML frontmatter"
+
+      - operation: "Scan entire monorepo for story files"
+        typical_tokens: 10000+
+        mitigation: "Use targeted Glob patterns and limit search to plans/future/{epic} directories"
+
+    recommended_patterns:
+      - "Read frontmatter only (not full markdown)"
+      - "Use Glob with targeted patterns"
+      - "Batch database inserts (50-100 stories per transaction)"
+      - "Skip full story validation if only populating metadata"
+
+  warnings: []
+
+  tokens:
+    in: 3200
+    out: 950

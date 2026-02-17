@@ -4,7 +4,7 @@ title: "Platform — LangGraph Fast-Track Work Order"
 status: active
 story_prefix: PLATFORM
 created_at: "2026-02-13T00:00:00Z"
-updated_at: "2026-02-15T14:15:30Z"
+updated_at: "2026-02-16T06:00:00Z"
 reorganization: "LangGraph Fast-Track: Prioritizes stories that enable LangGraph workflow"
 ---
 
@@ -31,7 +31,7 @@ All can start immediately. Ordered by downstream impact.
 | # | S | Story | Title | Blocks | Epic |
 |---|---|-------|-------|--------|------|
 | 1 | x | INFR-0110 | Core Workflow Artifact Schemas (Story, Checkpoint, Scope, Plan) **completed** | INFR-0120, INFR-0020 | INFR |
-| 2 | | INFR-0120 | Review/QA Artifact Schemas (Evidence, Review, QA-Verify) **ready-to-work** | INFR-0020 | INFR |
+| 2 | x | INFR-0120 | Review/QA Artifact Schemas (Evidence, Review, QA-Verify) **uat** | INFR-0020 | INFR |
 | 3 | | INFR-0040 | Workflow Events Table + Ingestion **in-qa** | INFR-0050, TELE-0010 | INFR |
 | 4 | x | MODL-0010 | Provider Adapters (OpenRouter/Ollama/Anthropic) **completed** | MODL-0020 | MODL |
 | 5 | | WINT-0010 | Create Core Database Schemas (6 schemas) ⚡ | WINT-0020–0070, AUTO-0010/0020, INFR-0110 | WINT |
@@ -62,16 +62,16 @@ All can start immediately. Ordered by downstream impact.
 | 19 | x | WINT-0020 | Create Story Management Tables ⚡ **ready-for-qa** | ← WINT-0010 | WINT | **P0** |
 | 20 | x | WINT-0070 | Create Workflow Tracking Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 21 | | WINT-0160 | Create doc-sync Agent ⚡ **ready-to-work** | ← WINT-0150 | WINT | **P0** |
-| 22 | | INFR-0020 | Artifact Writer/Reader Service | ← INFR-0110, INFR-0120 | INFR | P1 |
-| 23 | | KBAR-0020 | Schema Tests & Validation | ← KBAR-0010 | KBAR | P1 |
-| 24 | | MODL-0020 | Task Contracts & Model Selector | — | MODL | P1 |
-| 24b | | MODL-0050 | Add MiniMax Model Provider to LangGraph | — | MODL | P1 |
-| 25 | | WINT-0200 | Create User Flows Schema | ← WINT-0180 | WINT | P2 |
+| 22 | x | INFR-0020 | Artifact Writer/Reader Service **uat** | ← INFR-0110 ✓, INFR-0120 ✓ | INFR | P1 |
+| 23 | x | KBAR-0020 | Schema Tests & Validation **completed** | ← KBAR-0010 | KBAR | P1 |
+| 24 | x | MODL-0020 | Task Contracts & Model Selector **uat** | — | MODL | P1 |
+| 24b | x | MODL-0050 | Add MiniMax Model Provider to LangGraph **uat** | — | MODL | P1 |
+| 25 | | WINT-0200 | Create User Flows Schema **ready-to-work** | ← WINT-0180 | WINT | P2 |
 | 26 | x | WINT-0030 | Create Context Cache Tables **UAT** | ← WINT-0010 | WINT | P2 |
 | 27 | x | WINT-0060 | Create Graph Relational Tables **uat** | ← WINT-0010 | WINT | P2 |
 | 28 | x | WINT-0230 | Create Unified Model Interface **uat** | ← WINT-0220 | WINT | P2 |
 | 29 | x | INFR-0041 | Workflow Event SDK - Typed Schemas & Validation **completed** | ← INFR-0040 | INFR | P1 |
-| 30 | x | INFR-0050 | Event SDK (Shared Telemetry Hooks) **in-progress** | ← INFR-0040, INFR-0041 | INFR | P3 |
+| 30 | x | INFR-0050 | Event SDK (Shared Telemetry Hooks) **completed** | ← INFR-0040, INFR-0041 | INFR | P3 |
 | 31 | x | WINT-0040 | Create Telemetry Tables **ready-to-work** | ← WINT-0010 | WINT | P3 |
 | 32 | | ~~WINT-0050~~ | ~~Create ML Pipeline Tables~~ **DUPLICATE** (completed in WINT-0010 AC-005) | ← WINT-0010 | WINT | ~~P3~~ |
 | 34 | x | INFR-0030 | MinIO/S3 Docker Setup + Client Adapter **uat** | ← INFR-0110, INFR-0120 | INFR | P3 |
@@ -88,20 +88,20 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 34 | | LNGG-0070 | Integration Test Suite ⚡ | ← LNGG-0010, 0020, 0030 | LNGG | **P0** |
-| 35 | | WINT-1090 | Update LangGraph Repos for Unified Schema ⚡ | ← WINT-1080 | WINT | **P0** |
-| 36 | | WINT-1100 | Create Shared TypeScript Types ⚡ 🎯 | ← WINT-1080 | WINT | **P0** |
-| 37 | | WINT-0090 | Create Story Management MCP Tools ⚡ | ← WINT-0020 | WINT | **P0** |
-| 38 | | KBAR-0030 | Story Sync Functions | ← KBAR-0020 | KBAR | P1 |
-| 39 | | WINT-1030 | Populate Story Status from Directories | ← WINT-1020, 0020 | WINT | P1 |
-| 40 | | WINT-0100 | Create Context Cache MCP Tools **ready-to-work** | none | WINT | P2 |
-| 41 | | WINT-0110 | Create Session Management MCP Tools **ready-to-work** | none | WINT | P2 |
-| 42 | | WINT-0130 | Create Graph Query MCP Tools | ← WINT-0060 | WINT | P2 |
-| 43 | | WINT-0080 | Seed Initial Workflow Data | ← WINT-0070, 0060 | WINT | P2 |
+| 34 | x | LNGG-0070 | Integration Test Suite ⚡ **uat** | ← LNGG-0010, 0020, 0030 | LNGG | **P0** |
+| 35 | x | WINT-1090 | Update LangGraph Repos for Unified Schema ⚡ **uat** | ← WINT-1080 | WINT | **P0** |
+| 36 | x | WINT-1100 | Create Shared TypeScript Types ⚡ 🎯 **completed** | ← WINT-1080 | WINT | **P0** |
+| 37 | x | WINT-0090 | Create Story Management MCP Tools ⚡ **uat** | ← WINT-0020 | WINT | **P0** |
+| 38 | x | KBAR-0030 | Story Sync Functions **ready-for-code-review** | ← KBAR-0020 | KBAR | P1 |
+| 39 | x | WINT-1030 | Populate Story Status from Directories **uat** | ← WINT-1020, 0020 | WINT | P1 |
+| 40 | x | WINT-0100 | Create Context Cache MCP Tools **uat** | none | WINT | P2 |
+| 41 | x | WINT-0110 | Create Session Management MCP Tools **completed** | none | WINT | P2 |
+| 42 | x | WINT-0130 | Create Graph Query MCP Tools **uat** | ← WINT-0060 | WINT | P2 |
+| 43 | x | WINT-0080 | Seed Initial Workflow Data **uat** | ← WINT-0070, 0060 | WINT | P2 |
 | 44 | | WINT-0170 | Add Doc-Sync Gate | ← WINT-0160 | WINT | P2 |
 | 45 | | WINT-1130 | Track Worktree-to-Story Mapping in DB | ← WINT-0020 | WINT | P2 |
 | 46 | | WINT-0210 | Populate Role Pack Templates | ← WINT-0180, 0190, 0200 | WINT | P3 |
-| 47 | | MODL-0030 | Quality Evaluator | ← MODL-0020 | MODL | P3 |
+| 47 | x | MODL-0030 | Quality Evaluator **uat** | ← MODL-0020 | MODL | P3 |
 | G6 | | GATE-06 | **E2E: Validate LangGraph Types** | ← GATE-05, LNGG-0070, WINT-1100 | GATE | **HARD GATE** |
 | G7 | | GATE-07 | **E2E: Validate MCP Tools** | ← GATE-06, all MCP tool stories | GATE | **HARD GATE** |
 

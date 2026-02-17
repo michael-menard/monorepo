@@ -12,8 +12,8 @@
 
 import { eq, and, isNull, desc, type SQL } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { db, contextSessions } from '@repo/db'
-import type { SelectContextSession } from '@repo/db'
+import { db } from '@repo/db'
+import { contextSessions, type SelectContextSession } from '@repo/database-schema'
 import { SessionQueryInputSchema, type SessionQueryInput } from './__types__/index.js'
 
 /**
@@ -45,7 +45,9 @@ import { SessionQueryInputSchema, type SessionQueryInput } from './__types__/ind
  * })
  * ```
  */
-export async function sessionQuery(input: Partial<SessionQueryInput> = {}): Promise<SelectContextSession[]> {
+export async function sessionQuery(
+  input: Partial<SessionQueryInput> = {},
+): Promise<SelectContextSession[]> {
   // Validate input - fail fast if invalid (AC-6)
   const parsed = SessionQueryInputSchema.parse(input)
 
@@ -66,19 +68,16 @@ export async function sessionQuery(input: Partial<SessionQueryInput> = {}): Prom
     }
 
     // Build query with optional WHERE clause
-    let query = db.select().from(contextSessions)
+    const baseQuery = db.select().from(contextSessions)
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any
-    }
+    // Apply conditions if present
+    const queryWithWhere = conditions.length > 0 ? baseQuery.where(and(...conditions)) : baseQuery
 
-    // Order by startedAt DESC (most recent first) (AC-4)
-    query = query.orderBy(desc(contextSessions.startedAt)) as any
-
-    // Apply pagination
-    query = query.limit(parsed.limit).offset(parsed.offset) as any
-
-    const sessions = await query
+    // Apply ordering, limit, and offset
+    const sessions = await queryWithWhere
+      .orderBy(desc(contextSessions.startedAt))
+      .limit(parsed.limit)
+      .offset(parsed.offset)
 
     return sessions
   } catch (error) {

@@ -1,0 +1,113 @@
+schema: 1
+story_id: INFR-0020
+timestamp: '2026-02-16T03:45:00Z'
+
+knowledge_context:
+  loaded: true
+
+  lessons_learned:
+    count: 8
+    relevant_to_scope:
+      - story_id: WRKF-1020
+        lesson: "DI pattern with injected functions for external operations allows platform-agnostic core packages while enabling easy mocking"
+        category: reuse
+        applies_because: "ArtifactService is a service layer wrapping existing persistence utilities - DI pattern enables testability"
+
+      - story_id: WRKF-1020
+        lesson: "Discriminated union result types ({ success: true, data } | { success: false, error, message }) are standard for all core functions"
+        category: pattern
+        applies_because: "All ArtifactService read/write operations return result types per AC-005"
+
+      - story_id: WRKF-1010
+        lesson: "Pure schema stories with Zod achieve high coverage efficiently. Circular references solved by separation pattern"
+        category: pattern
+        applies_because: "Service uses Zod schemas for config validation (AC-007)"
+
+      - story_id: STORY-016
+        lesson: "Write tests alongside implementation, not after. 141-test fix phase could have been avoided"
+        category: time_sink
+        applies_because: "AC-009 requires 80%+ coverage - tests must be written during implementation"
+
+      - story_id: WRKF-1000
+        lesson: "@repo/moc-parts-lists-core is the definitive backend package template for structure"
+        category: reuse
+        applies_because: "Backend service in orchestrator package should follow established patterns"
+
+      - story_id: WRKF-1020
+        lesson: "Run scoped lint after each file creation. 5 unused import/variable errors could have been caught incrementally"
+        category: time_sink
+        applies_because: "Avoid accumulation of lint errors during implementation"
+
+      - story_id: STORY-009
+        lesson: "Audit existing files/functions before planning new work to avoid recreating what already exists"
+        category: time_sink
+        applies_because: "Should verify which persistence utilities already exist before implementing new wrappers"
+
+      - story_id: WRKF-1021
+        lesson: "Check for naming conflicts before creating new types. Run grep before creating error-related types"
+        category: blocker
+        applies_because: "Service will have custom error types - check for conflicts first"
+
+    blockers_to_avoid:
+      - "Writing all tests in fix phase instead of alongside implementation (STORY-016)"
+      - "Lint errors accumulating due to deferred cleanup (WRKF-1020)"
+      - "Circular reference in Zod schemas without using separation pattern (WRKF-1010)"
+      - "Naming conflicts with existing types/enums in package (WRKF-1021)"
+
+    patterns_to_follow:
+      - "DI pattern for external dependencies (file system, DB repos)"
+      - "Discriminated union result types for all operations"
+      - "Factory function pattern (createArtifactService) with Zod config validation"
+      - "Write tests alongside implementation chunks, not deferred"
+      - "Run lint after each file creation"
+      - "Use @repo/logger for all logging (never console.log)"
+
+    patterns_to_avoid:
+      - "Ports & Adapters/hexagonal architecture for simple service wrappers (AC-011 explicitly avoids this)"
+      - "Reading full files when targeted reads are sufficient"
+      - "Accumulating lint errors until verification phase"
+
+  architecture_decisions:
+    active_count: 1
+    relevant_adrs:
+      - id: ADR-006
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per story during dev implementation phase using live resources"
+        applies_to: ["frontend", "e2e"]
+
+    constraints:
+      api_paths: "N/A - backend service, no API endpoints"
+      infrastructure: "N/A - orchestrator service layer"
+      storage: "YAML files + optional DB sync"
+      auth: "N/A - internal service"
+      testing: "Unit tests 80%+, integration tests for read/write round-trip, E2E in node context (AC-009, AC-010)"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file by all agents"
+        typical_tokens: 7000
+        mitigation: "Only read Acceptance Criteria section for planning"
+
+      - operation: "Reading LESSONS-LEARNED.md"
+        typical_tokens: 18300
+        mitigation: "Already deprecated - using Knowledge Base or targeted lessons"
+
+      - operation: "Full codebase Explore"
+        typical_tokens: 25000
+        mitigation: "Use targeted Grep/Read of reference files listed in SCOPE.yaml"
+
+    recommended_patterns:
+      - "Read only AC section from story file (not full file)"
+      - "Targeted file reads for persistence utilities in packages/backend/orchestrator/src/persistence/"
+      - "Grep before Read to find relevant artifact schemas"
+      - "Batch related operations in single conversation turn"
+
+  warnings:
+    - "AC-011 explicitly requires simple class-based service pattern, NOT Ports & Adapters architecture"
+    - "Stage auto-detection may have performance implications per SCOPE.yaml risk flags"
+    - "YAML+DB mode consistency is flagged as risk area in SCOPE.yaml"
+
+  tokens:
+    in: 0
+    out: 0

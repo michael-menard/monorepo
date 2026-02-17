@@ -3,29 +3,13 @@ import { randomUUID } from 'crypto'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 /* eslint-enable import/order */
 
-// Hoist mock functions so vi.mock factory can access them
-const { mockReturning, mockValues, mockInsert, mockWarn } = vi.hoisted(() => {
-  const mockReturning = vi.fn().mockResolvedValue([
-    {
-      id: randomUUID(),
-      sessionId: randomUUID(),
-      agentName: 'test-agent',
-      storyId: null,
-      phase: null,
-      inputTokens: 0,
-      outputTokens: 0,
-      cachedTokens: 0,
-      startedAt: new Date(),
-      endedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ])
-  const mockValues = vi.fn().mockReturnValue({ returning: mockReturning })
-  const mockInsert = vi.fn().mockReturnValue({ values: mockValues })
-  const mockWarn = vi.fn()
-  return { mockReturning, mockValues, mockInsert, mockWarn }
-})
+// Hoist mock functions (no function calls at hoist time)
+const { mockReturning, mockValues, mockInsert, mockWarn } = vi.hoisted(() => ({
+  mockReturning: vi.fn(),
+  mockValues: vi.fn(),
+  mockInsert: vi.fn(),
+  mockWarn: vi.fn(),
+}))
 
 vi.mock('@repo/db', () => ({
   db: {

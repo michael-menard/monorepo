@@ -1,0 +1,149 @@
+schema: 1
+story_id: MODL-0020
+timestamp: '2026-02-16T08:41:00Z'
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 22, fail: 0 }
+  integration: { pass: 30, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: 97.5
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "TaskContractSchema defined with all 7 required fields using Zod. Type exported via z.infer<typeof TaskContractSchema>. Schema includes taskType, complexity, qualityRequirement, budgetTokens, requiresReasoning, securitySensitive, allowOllama with proper validation. 22 unit tests verify all field combinations and defaults."
+    verification_method: "spot-check"
+    verified_items:
+      - "TaskContractSchema uses Zod with z.object()"
+      - "All 7 fields present with correct enums and types"
+      - "z.infer<typeof TaskContractSchema> exports TaskContract type"
+      - "ComplexityEnum and QualityRequirementEnum properly defined"
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "getTierForTaskType() loads task types from WINT-0220-STRATEGY.yaml via loadStrategy(). Validates taskType exists and returns default tier. Throws clear error with available types list. Integration tests verify correct tier mapping (setup_validation→3, gap_analysis→1, epic_planning→0)."
+    verification_method: "spot-check"
+    verified_items:
+      - "Imports loadStrategy from strategy-loader.ts"
+      - "Finds task type in strategy.task_types array"
+      - "Returns recommended_tier from task config"
+      - "Error message includes available types"
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "selectModelForTask() implements full escalation decision tree with precedence: security > quality > complexity > budget. Computes target tier from contract, applies escalation/de-escalation rules, calls ModelRouter.getModelForTier(tier) for tier→model resolution. Returns TierSelection with tier, model, provider, fallbackChain. 30 integration tests cover all scenarios including tier selection matrix."
+    verification_method: "spot-check"
+    verified_items:
+      - "Function signature matches: async function selectModelForTask(contract: TaskContract): Promise<TierSelection>"
+      - "Decision tree documented in module docstring"
+      - "Uses ModelRouter.getModelForTier(selectedTier) for tier resolution"
+      - "Returns TierSelection type from unified-interface.ts"
+      - "Structured logging via @repo/logger with event names"
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "AgentSelectionContext extended with optional taskContract field. When provided, selectModelForAgent() delegates to selectModelForTask(). When omitted, uses existing agent-based logic (backward compatible). All 2662 orchestrator tests pass, confirming no breaking changes. Migration path documented in TASK-CONTRACTS.md."
+    verification_method: "full-test-suite"
+    verified_items:
+      - "AgentSelectionContextSchema includes taskContract: z.custom<TaskContract>().optional()"
+      - "selectModelForAgent() checks context.taskContract and delegates to selectModelForTask when present"
+      - "Full test suite passes: 2662 tests (106 test files)"
+      - "Backward compatibility verified - no breaking changes"
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "validateFallbackChain() filters fallback chains based on allowOllama constraint. When allowOllama=false, removes Ollama models from chain and ensures at least one non-Ollama fallback exists. Throws clear error if no valid fallback available. Integration tests verify filtering logic."
+    verification_method: "spot-check"
+    verified_items:
+      - "Function validateFallbackChain() implemented"
+      - "Filters fallback chain using Array.filter() for allowOllama constraint"
+      - "Validates at least one non-Ollama fallback when Ollama prohibited"
+      - "Clear error message with attempted fallback chain"
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "createTaskContract() helper applies sensible defaults: complexity='medium', qualityRequirement='good', allowOllama=true, requiresReasoning=false, securitySensitive=false. Validates partial contracts with Zod. 22 unit tests verify defaults work correctly with partial overrides."
+    verification_method: "spot-check"
+    verified_items:
+      - "createTaskContract() function exported from __types__/task-contract.ts"
+      - "All 5 default values correctly applied"
+      - "Partial override tests pass"
+      - "Zod validation applied to partial contracts"
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Comprehensive test suite with 52 tests total (22 unit + 30 integration). Coverage exceeds 80% requirement (97.5% achieved). Tests cover 7+ scenarios: simple tasks, complex tasks, critical tasks, escalation rules, de-escalation rules, Ollama filtering, error handling, tier selection matrix with 14 task types. All tests pass."
+    verification_method: "full-test-suite"
+    verified_items:
+      - "task-contract-validation.test.ts: 22 tests, all pass"
+      - "task-selector.test.ts: 30 tests, all pass"
+      - "Coverage: lines 100%, branches 95%, overall 97.5%"
+      - "Test scenarios: 7+ scenarios documented in EVIDENCE.yaml"
+      - "Full orchestrator suite: 2662 tests pass"
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Comprehensive documentation in TASK-CONTRACTS.md (400+ lines) with field reference, usage examples, migration path, error handling guide. Module docstrings explain selection logic. Function JSDoc comments with examples. Inline comments explain escalation decision tree. Migration path documented in unified-interface.ts."
+    verification_method: "spot-check"
+    verified_items:
+      - "TASK-CONTRACTS.md created with 450 lines"
+      - "Contract field reference with all 7 fields explained"
+      - "4 usage examples (simple, security, budget-constrained, agent override)"
+      - "Migration path documented in 3 phases"
+      - "Module docstrings in task-selector.ts and task-contract.ts"
+      - "Function JSDoc with examples for selectModelForTask(), createTaskContract()"
+
+architecture_compliant: true
+architecture_notes:
+  - "ADR-MODL-001: Provider abstraction via ILLMProvider interface - PASS. Uses getProviderForModel() factory, no direct provider instantiation."
+  - "ADR-WINT-001: Tier-based selection with 4-tier strategy - PASS. Uses ModelRouter.getModelForTier() for tier→model mapping."
+  - "ADR-WINT-002: Strategy configuration as single source of truth - PASS. Uses loadStrategy() from strategy-loader.ts, no hardcoded mappings."
+  - "ADR-MODL-002: Task contracts enable task-level selection - PASS. TaskContract is request-scoped, optional parameter, escalation rules implemented correctly."
+  - "CLAUDE.md: Zod-first types - PASS. All types use z.infer<typeof Schema>."
+  - "CLAUDE.md: @repo/logger for logging - PASS. No console.log statements found."
+  - "CLAUDE.md: No barrel files - PASS. Direct imports from __types__/task-contract.ts, no index.ts re-exports."
+
+issues: []
+
+lessons_to_record:
+  - lesson: "Task contract system provides fine-grained model selection without requiring changes to existing agent-based selection logic"
+    category: pattern
+    tags: ["model-management", "tier-selection", "backward-compatibility"]
+
+  - lesson: "Escalation decision tree with clear precedence (security > quality > complexity > budget) is maintainable when documented in code and covered by comprehensive matrix tests"
+    category: pattern
+    tags: ["model-management", "escalation-logic", "testing"]
+
+  - lesson: "Optional parameter pattern (taskContract in AgentSelectionContext) enables gradual migration from agent-based to task-based selection"
+    category: pattern
+    tags: ["migration", "backward-compatibility", "api-design"]
+
+  - lesson: "Zod partial schema pattern with defaults (createTaskContract) enables ergonomic API with sensible defaults while maintaining type safety"
+    category: pattern
+    tags: ["zod", "type-safety", "defaults"]
+
+  - lesson: "Comprehensive documentation (400+ lines) with field reference, usage examples, and migration path significantly improves developer experience for complex selection logic"
+    category: pattern
+    tags: ["documentation", "developer-experience"]
+
+tokens:
+  in: 44776
+  out: 2400

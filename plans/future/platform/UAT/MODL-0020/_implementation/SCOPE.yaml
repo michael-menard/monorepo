@@ -1,0 +1,394 @@
+schema: 1
+story_id: MODL-0020
+story_title: Task Contracts & Model Selector
+timestamp: '2026-02-15T21:30:00Z'
+
+# ==============================================================================
+# Scope Summary
+# ==============================================================================
+summary: |
+  Create task contract system enabling task-level model selection granularity.
+  Extends WINT-0230 ModelRouter with task-based routing via contract schema.
+  8 ACs covering contract definition, tier selection logic, backward compatibility,
+  fallback chain validation, and integration tests with 80%+ coverage targets.
+
+# ==============================================================================
+# Touched Packages
+# ==============================================================================
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+# ==============================================================================
+# Primary Package
+# ==============================================================================
+primary_package: packages/backend/orchestrator
+
+touched_paths_globs:
+  - packages/backend/orchestrator/src/models/**
+
+# ==============================================================================
+# Files to Create
+# ==============================================================================
+files_to_create:
+  - path: packages/backend/orchestrator/src/models/__types__/task-contract.ts
+    purpose: Task contract Zod schema and type definitions
+    dependencies:
+      - zod
+    acceptance_criteria:
+      - AC-1 (Task Contract Schema)
+      - AC-2 (Task Type Taxonomy Integration)
+      - AC-6 (Contract Validation & Defaults)
+
+  - path: packages/backend/orchestrator/src/models/task-selector.ts
+    purpose: Task-based model selector implementation
+    dependencies:
+      - ./unified-interface.ts (ModelRouter, TierSelection)
+      - ./strategy-loader.ts (loadStrategy)
+      - ../config/llm-provider.ts (getProviderForModel)
+      - '@repo/logger'
+      - ./__types__/task-contract.ts (TaskContract)
+    acceptance_criteria:
+      - AC-3 (Task-Based Model Selector)
+      - AC-4 (Backward Compatibility)
+      - AC-5 (Fallback Chain Validation)
+
+  - path: packages/backend/orchestrator/src/models/__tests__/task-selector.test.ts
+    purpose: Integration tests for task selector
+    dependencies:
+      - ../task-selector.ts
+      - ../unified-interface.ts
+      - vitest
+      - '@testing-library/react' (if needed for mocks)
+    acceptance_criteria:
+      - AC-7 (Integration Tests)
+      - Coverage target: 80% for selection logic
+
+  - path: packages/backend/orchestrator/src/models/__tests__/task-contract-validation.test.ts
+    purpose: Unit tests for task contract validation
+    dependencies:
+      - ../__types__/task-contract.ts
+      - vitest
+    acceptance_criteria:
+      - AC-1 (Task Contract Schema validation)
+      - AC-2 (Task Type Taxonomy validation)
+      - Coverage target: 80% for contract validation
+
+  - path: packages/backend/orchestrator/docs/TASK-CONTRACTS.md
+    purpose: User-facing documentation for task contracts
+    dependencies: null
+    acceptance_criteria:
+      - AC-8 (Documentation)
+
+# ==============================================================================
+# Files to Extend
+# ==============================================================================
+files_to_extend:
+  - path: packages/backend/orchestrator/src/models/unified-interface.ts
+    modifications:
+      - Add optional TaskContract parameter to selectModelForAgent()
+      - Add selectModelForTask() function signature
+      - Update method documentation with examples
+      - Maintain backward compatibility with no-contract invocations
+    acceptance_criteria:
+      - AC-4 (Backward Compatibility with Agent-Based Selection)
+
+# ==============================================================================
+# Integration Points
+# ==============================================================================
+integration_points:
+  - component: WINT-0230 ModelRouter
+    location: packages/backend/orchestrator/src/models/unified-interface.ts
+    usage: Extend with task-based selection, reuse TierSelection type and getModelForTier()
+    required_apis:
+      - ModelRouter.getModelForTier(tier)
+      - TierSelection type
+
+  - component: WINT-0220 Strategy Loader
+    location: packages/backend/orchestrator/src/models/strategy-loader.ts
+    usage: Load task type taxonomy from WINT-0220-STRATEGY.yaml
+    required_apis:
+      - loadStrategy() function
+      - Strategy.task_types array
+
+  - component: MODL-0010 Provider Factory
+    location: packages/backend/orchestrator/src/config/llm-provider.ts
+    usage: Instantiate providers for tier→model resolution
+    required_apis:
+      - getProviderForModel(modelName)
+
+  - component: Logger
+    package: '@repo/logger'
+    usage: Structured logging for selection decisions
+    required_apis:
+      - logger.info(), logger.warn(), logger.error()
+
+# ==============================================================================
+# Dependencies
+# ==============================================================================
+dependencies:
+  - story_id: MODL-0010
+    title: Provider Adapters System
+    status: UAT
+    usage: Provider abstraction layer (ILLMProvider interface)
+    blocking: false
+    verified: true
+
+  - story_id: WINT-0230
+    title: Unified Model Interface
+    status: UAT
+    usage: ModelRouter, tier-based selection, strategy loader
+    blocking: false
+    verified: true
+
+  - story_id: WINT-0220
+    title: Model-per-Task Strategy
+    status: Active
+    usage: Strategy configuration (tiers, task types, escalation)
+    blocking: false
+    verified: true
+
+# ==============================================================================
+# Risk Flags
+# ==============================================================================
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+performance_notes:
+  - Strategy caching required to avoid re-parsing YAML on every selection
+  - Fallback chain logic must be efficient (early exit on first available model)
+  - Logging performance impact minimal (structured, non-blocking)
+
+# ==============================================================================
+# Acceptance Criteria Summary
+# ==============================================================================
+acceptance_criteria:
+  - id: AC-1
+    title: Task Contract Schema
+    status: not-started
+    scope: Define TaskContractSchema with all required fields
+    files: __types__/task-contract.ts
+
+  - id: AC-2
+    title: Task Type Taxonomy Integration
+    status: not-started
+    scope: Load and validate task types from WINT-0220-STRATEGY.yaml
+    files: task-selector.ts
+
+  - id: AC-3
+    title: Task-Based Model Selector
+    status: not-started
+    scope: Implement selectModelForTask() with escalation/de-escalation logic
+    files: task-selector.ts
+
+  - id: AC-4
+    title: Backward Compatibility with Agent-Based Selection
+    status: not-started
+    scope: Extend selectModelForAgent() with optional TaskContract parameter
+    files: unified-interface.ts, task-selector.ts
+
+  - id: AC-5
+    title: Fallback Chain Validation
+    status: not-started
+    scope: Validate and filter fallback chains based on contract constraints
+    files: task-selector.ts
+
+  - id: AC-6
+    title: Contract Validation & Defaults
+    status: not-started
+    scope: Implement createTaskContract() helper with sensible defaults
+    files: task-selector.ts, __types__/task-contract.ts
+
+  - id: AC-7
+    title: Integration Tests
+    status: not-started
+    scope: Comprehensive test suite covering 6 scenarios, 80%+ coverage
+    files: __tests__/task-selector.test.ts, __tests__/task-contract-validation.test.ts
+
+  - id: AC-8
+    title: Documentation
+    status: not-started
+    scope: Code comments, usage examples, migration path doc
+    files: task-selector.ts, __types__/task-contract.ts, docs/TASK-CONTRACTS.md
+
+# ==============================================================================
+# Technical Constraints
+# ==============================================================================
+constraints:
+  - name: Zod-first types (CLAUDE.md)
+    type: type_system
+    description: All schemas must use Zod with z.infer<> for types
+    applies_to:
+      - __types__/task-contract.ts
+      - All contract-related types
+
+  - name: No barrel files (CLAUDE.md)
+    type: structure
+    description: Import directly from source files, no __types__/index.ts re-exports
+    applies_to:
+      - __types__/task-contract.ts
+
+  - name: Use @repo/logger (CLAUDE.md)
+    type: logging
+    description: Never use console.log - must use @repo/logger
+    applies_to:
+      - task-selector.ts
+      - All logging statements
+
+  - name: Provider abstraction (MODL-0010)
+    type: architecture
+    description: Must use ILLMProvider interface, no direct provider instantiation
+    applies_to:
+      - task-selector.ts
+
+  - name: Strategy-based routing (WINT-0230)
+    type: architecture
+    description: Extend ModelRouter, reuse tier-based selection logic
+    applies_to:
+      - unified-interface.ts extension
+      - task-selector.ts
+
+  - name: Backward compatibility (AC-4)
+    type: functional
+    description: Existing agent-based selection must work unchanged without contract
+    applies_to:
+      - unified-interface.ts
+      - task-selector.ts
+
+# ==============================================================================
+# Testing Strategy
+# ==============================================================================
+testing:
+  unit:
+    - component: Task Contract Schema
+      file: __tests__/task-contract-validation.test.ts
+      coverage_target: 80%
+      key_scenarios:
+        - Valid contract with all fields
+        - Valid contract with defaults
+        - Invalid task type error
+        - Invalid complexity error
+        - Invalid quality requirement error
+
+  integration:
+    - component: Task-Based Model Selector
+      file: __tests__/task-selector.test.ts
+      coverage_target: 80%
+      key_scenarios:
+        - Simple task (low complexity, adequate quality) → Tier 3
+        - Complex task (high complexity, high quality) → Tier 1
+        - Critical task (security sensitive, critical quality) → Tier 0
+        - Budget-constrained task → de-escalates when safe
+        - Ollama-prohibited task → skips Ollama tiers
+        - Fallback chain validation with unavailable primary
+        - Backward compatibility - agent-based unchanged
+
+  matrix_testing:
+    - dimension_1: taskType
+      values:
+        - code_generation
+        - gap_analysis
+        - security_review
+        - setup_validation
+
+    - dimension_2: complexity
+      values:
+        - low
+        - medium
+        - high
+
+    - dimension_3: qualityRequirement
+      values:
+        - adequate
+        - good
+        - high
+        - critical
+
+    - dimension_4: securitySensitive
+      values:
+        - true
+        - false
+
+    - dimension_5: allowOllama
+      values:
+        - true
+        - false
+
+# ==============================================================================
+# Implementation Plan
+# ==============================================================================
+implementation_order:
+  - step: 1
+    title: Create task contract schema
+    files:
+      - __types__/task-contract.ts
+    effort_hours: 1-2
+    ac_covered: AC-1, AC-6
+
+  - step: 2
+    title: Implement task-based selector logic
+    files:
+      - task-selector.ts
+    effort_hours: 3-4
+    ac_covered: AC-2, AC-3, AC-5, AC-6
+
+  - step: 3
+    title: Write unit tests for contracts
+    files:
+      - __tests__/task-contract-validation.test.ts
+    effort_hours: 2-3
+    ac_covered: AC-1, AC-2, AC-6
+
+  - step: 4
+    title: Write integration tests for selector
+    files:
+      - __tests__/task-selector.test.ts
+    effort_hours: 3-4
+    ac_covered: AC-3, AC-4, AC-5, AC-7
+
+  - step: 5
+    title: Extend unified-interface.ts for backward compatibility
+    files:
+      - unified-interface.ts
+    effort_hours: 1-2
+    ac_covered: AC-4
+
+  - step: 6
+    title: Write documentation
+    files:
+      - docs/TASK-CONTRACTS.md
+      - Code comments in task-selector.ts and __types__/task-contract.ts
+    effort_hours: 1-2
+    ac_covered: AC-8
+
+# ==============================================================================
+# Story Points Breakdown
+# ==============================================================================
+points:
+  total: 5
+  breakdown:
+    contract_schema: 0.5
+    selector_logic: 2.0
+    router_integration: 0.5
+    testing: 2.0
+
+# ==============================================================================
+# Elaboration Status
+# ==============================================================================
+elaboration:
+  status: completed
+  verdict: CONDITIONAL PASS
+  non_blocking_items: 18
+  audit_checks_passed: 8
+  date: 2026-02-15
+  reviewer: pm-story-generation-leader

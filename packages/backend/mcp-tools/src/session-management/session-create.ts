@@ -11,8 +11,8 @@
 
 import { randomUUID } from 'crypto'
 import { logger } from '@repo/logger'
-import { db, contextSessions } from '@repo/db'
-import type { SelectContextSession } from '@repo/db'
+import { db } from '@repo/db'
+import { contextSessions, type SelectContextSession } from '@repo/database-schema'
 import { SessionCreateInputSchema, type SessionCreateInput } from './__types__/index.js'
 
 /**

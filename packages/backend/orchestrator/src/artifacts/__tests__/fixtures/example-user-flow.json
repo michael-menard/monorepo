@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.0",
+  "featureName": "LEGO Set Management",
+  "flows": [
+    {
+      "flowName": "Browse and View Sets",
+      "description": "User browses available LEGO sets and views details",
+      "steps": [
+        {
+          "stepName": "Load set catalog",
+          "state": "loading",
+          "capabilities": ["view"],
+          "description": "Initial data fetch showing spinner"
+        },
+        {
+          "stepName": "View empty catalog",
+          "state": "empty",
+          "capabilities": ["view"],
+          "description": "No sets available yet, show call-to-action to create"
+        },
+        {
+          "stepName": "View set details",
+          "state": "loading",
+          "capabilities": ["view", "download"],
+          "description": "User views set details and can download instructions"
+        }
+      ]
+    },
+    {
+      "flowName": "Create New Set",
+      "description": "User creates a new LEGO set with instructions",
+      "steps": [
+        {
+          "stepName": "Open create form",
+          "state": "empty",
+          "capabilities": ["create"],
+          "description": "User initiates set creation"
+        },
+        {
+          "stepName": "Validation error on submit",
+          "state": "validation_error",
+          "capabilities": ["create"],
+          "description": "Form validation fails, show inline errors"
+        },
+        {
+          "stepName": "Upload instructions file",
+          "state": "loading",
+          "capabilities": ["upload"],
+          "description": "User uploads PDF instructions"
+        },
+        {
+          "stepName": "Server error on save",
+          "state": "server_error",
+          "capabilities": ["create"],
+          "description": "Backend error, show retry option"
+        }
+      ]
+    },
+    {
+      "flowName": "Edit Existing Set",
+      "description": "User modifies an existing LEGO set",
+      "steps": [
+        {
+          "stepName": "Load set for editing",
+          "state": "loading",
+          "capabilities": ["view", "edit"],
+          "description": "Fetch set data for editing"
+        },
+        {
+          "stepName": "Update set details",
+          "state": "empty",
+          "capabilities": ["edit"],
+          "description": "User modifies set properties"
+        },
+        {
+          "stepName": "Replace instructions file",
+          "state": "loading",
+          "capabilities": ["replace"],
+          "description": "User replaces existing instructions PDF"
+        },
+        {
+          "stepName": "Permission denied",
+          "state": "permission_denied",
+          "capabilities": ["edit"],
+          "description": "User lacks edit permissions, show upgrade prompt"
+        }
+      ]
+    },
+    {
+      "flowName": "Delete Set",
+      "description": "User deletes a LEGO set",
+      "steps": [
+        {
+          "stepName": "Confirm deletion",
+          "state": "empty",
+          "capabilities": ["delete"],
+          "description": "User confirms set deletion"
+        },
+        {
+          "stepName": "Delete in progress",
+          "state": "loading",
+          "capabilities": ["delete"],
+          "description": "Deletion processing"
+        }
+      ]
+    }
+  ]
+}

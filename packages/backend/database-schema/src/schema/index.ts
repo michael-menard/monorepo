@@ -1050,6 +1050,48 @@ export {
   type SelectWorkflowAuditLog,
 } from './wint'
 
+// Re-export unified WINT schemas (WINT-1130)
+export {
+  worktreeStatusEnum,
+  worktrees,
+  worktreesRelations,
+  insertWorktreeSchema,
+  selectWorktreeSchema,
+  type InsertWorktree,
+  type SelectWorktree,
+} from './unified-wint'
+
+// Re-export WINT-0080 workflow metadata tables and Zod schemas
+export {
+  // Phases table (workflow stage definitions)
+  phases,
+  insertPhaseSchema,
+  selectPhaseSchema,
+  type InsertPhase,
+  type SelectPhase,
+
+  // Agents table
+  agents,
+  insertAgentSchema,
+  selectAgentSchema,
+  type InsertAgent,
+  type SelectAgent,
+
+  // Commands table
+  commands,
+  insertCommandSchema,
+  selectCommandSchema,
+  type InsertCommand,
+  type SelectCommand,
+
+  // Skills table
+  skills,
+  insertSkillSchema,
+  selectSkillSchema,
+  type InsertSkill,
+  type SelectSkill,
+} from './unified-wint'
+
 // Re-export KBAR schemas (KBAR-0010)
 export {
   // Schema namespace

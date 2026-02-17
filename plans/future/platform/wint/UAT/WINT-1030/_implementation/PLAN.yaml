@@ -1,0 +1,208 @@
+schema: 1
+story_id: "WINT-1030"
+timestamp: "2026-02-16T17:00:00Z"
+
+steps:
+  - id: 1
+    description: "Create Zod schemas for population artifacts (PopulationPlan, PopulationLog, VerificationReport)"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__types__/population.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Create directory scanning logic to discover all story files across epic directories"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Implement status inference logic (frontmatter priority > directory fallback)"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 4
+    description: "Implement enum mapping (hyphen to underscore conversion) for story_state"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 5
+    description: "Implement dry-run mode that generates population plan without database writes"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [2, 3, 4]
+    slice: packages
+
+  - id: 6
+    description: "Implement database population using StoryRepository.createStory() with batch operations"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [2, 3, 4]
+    slice: packages
+
+  - id: 7
+    description: "Implement fail-soft error handling with logging to migration-log.json"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [6]
+    slice: packages
+
+  - id: 8
+    description: "Implement verification mode that validates database population accuracy"
+    files:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    dependencies: [6]
+    slice: packages
+
+  - id: 9
+    description: "Create unit tests for status inference logic (frontmatter, directory, duplicate resolution)"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.test.ts"
+    dependencies: [3, 4]
+    slice: packages
+
+  - id: 10
+    description: "Create unit tests for enum mapping (all status values)"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.test.ts"
+    dependencies: [4]
+    slice: packages
+
+  - id: 11
+    description: "Create integration tests with test database (insert, verify, malformed YAML handling)"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.integration.test.ts"
+    dependencies: [6, 7, 8]
+    slice: packages
+
+  - id: 12
+    description: "Create test fixtures for various story scenarios (malformed, duplicates, missing fields)"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/"
+    dependencies: [9, 10, 11]
+    slice: packages
+
+  - id: 13
+    description: "Create CLI documentation (README.md) covering usage, inference rules, and troubleshooting"
+    files:
+      - "packages/backend/orchestrator/src/scripts/README-populate-story-status.md"
+    dependencies: [1, 2, 3, 4, 5, 6, 7, 8]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/scripts/__types__/population.ts"
+    action: create
+    reason: "Zod schemas for type-safe population artifacts (AC-1, AC-7, AC-8, AC-9)"
+
+  - path: "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    action: create
+    reason: "Main population script with discovery, inference, population, and verification (AC-1 through AC-9)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.test.ts"
+    action: create
+    reason: "Unit tests for status inference and enum mapping (AC-2, AC-3, AC-4)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.integration.test.ts"
+    action: create
+    reason: "Integration tests with real database (AC-5, AC-6)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/valid-story-backlog.md"
+    action: create
+    reason: "Test fixture for valid story in backlog directory"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/valid-story-frontmatter-status.md"
+    action: create
+    reason: "Test fixture for story with status in frontmatter"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/malformed-yaml.md"
+    action: create
+    reason: "Test fixture for malformed YAML error handling (AC-6)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/duplicate-story-locations.md"
+    action: create
+    reason: "Test fixture for duplicate resolution (AC-3)"
+
+  - path: "packages/backend/orchestrator/src/scripts/README-populate-story-status.md"
+    action: create
+    reason: "Documentation for population script usage and troubleshooting (AC-10)"
+
+commands_to_run:
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator -- populate-story-status.test.ts"
+    when: "after unit tests created"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator -- populate-story-status.integration.test.ts"
+    when: "after integration tests created"
+    required: true
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+  - command: "npx tsx packages/backend/orchestrator/src/scripts/populate-story-status.ts --dry-run"
+    when: "manual execution for verification"
+    required: false
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: directory scanning discovers all epics and stories"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: StoryFileAdapter extracts frontmatter metadata with ≥80% coverage"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: status inference priority (frontmatter > directory > duplicate resolution)"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: enum mapping converts all status values (hyphen → underscore)"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Integration test: inserts stories into test database using StoryRepository"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Integration test: malformed YAML handling continues processing with logged warnings"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Integration test: dry-run mode generates plan without database writes"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Integration test: verification mode validates database accuracy"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "File output: migration-log.json contains audit trail of all operations"
+    evidence_type: file
+
+  - ac_id: "AC-10"
+    planned_evidence: "File: README-populate-story-status.md with usage, inference rules, troubleshooting"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Reuse directory scanning pattern from migrate-flatten-stories.ts (WINT-1020)"
+  - "Reuse StoryFileAdapter for frontmatter reading (production-ready)"
+  - "Reuse StoryRepository for database operations (production-ready)"
+  - "Follow fail-soft error handling pattern (skip malformed, continue processing)"
+  - "Use Zod-first type definitions for all migration artifacts"
+  - "Batch database inserts for performance (50 stories per transaction)"
+  - "Integration tests must use real database (ADR-006)"
+  - "No E2E tests required (no frontend impact)"

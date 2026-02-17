@@ -1,0 +1,310 @@
+schema: 1
+story_id: WINT-0100
+created_at: '2026-02-16T20:45:00Z'
+
+# KNOWLEDGE CONTEXT - Implementation Context
+# Patterns, constraints, lessons, and reference materials
+
+patterns_to_follow:
+  wint_0110_session_management:
+    source: packages/backend/mcp-tools/src/session-management/
+    description: Proven MCP tools pattern for database operations
+    key_patterns:
+      - Directory structure: __types__/, __tests__/, tool files at root
+      - Zod validation at entry point with .parse() for fail-fast
+      - Drizzle ORM for type-safe database queries
+      - Resilient error handling: try/catch, log warnings, return null/empty
+      - Auto-generated types from drizzle-zod (SelectContextPack)
+      - Real PostgreSQL database in all tests
+      - Comprehensive JSDoc with usage examples
+    apply_to:
+      - All 4 context cache tools
+      - Test structure and setup
+      - Error handling strategy
+      
+  zod_first_validation:
+    source: CLAUDE.md requirement
+    description: ALWAYS use Zod schemas with z.infer<>, NEVER TypeScript interfaces
+    examples:
+      correct: |
+        const InputSchema = z.object({ ... })
+        type Input = z.infer<typeof InputSchema>
+      incorrect: |
+        interface Input { ... }
+    apply_to:
+      - __types__/index.ts validation schemas
+      - All input type definitions
+      
+  resilient_error_handling:
+    source: WINT-0110 lessons learned
+    description: Tools never throw errors to prevent workflow crashes
+    pattern: |
+      try {
+        const validated = InputSchema.parse(input)
+        const result = await db.query()
+        return result
+      } catch (error) {
+        logger.warn('Operation failed', { error, context })
+        return null // or empty array/object
+      }
+    apply_to:
+      - All 4 context cache tools
+      - Integration test error scenarios
+      
+  database_query_patterns:
+    source: Drizzle ORM v0.44.3 + PostgreSQL
+    patterns:
+      upsert:
+        description: INSERT with conflict resolution on composite key
+        code: |
+          await db.insert(contextPacks)
+            .values({ packType, packKey, content, expiresAt })
+            .onConflictDoUpdate({
+              target: [contextPacks.packType, contextPacks.packKey],
+              set: { content, expiresAt, updatedAt: sql`NOW()` }
+            })
+            
+      atomic_increment:
+        description: Concurrent-safe counter increment
+        code: |
+          await db.update(contextPacks)
+            .set({
+              hitCount: sql`${contextPacks.hitCount} + 1`,
+              lastHitAt: sql`NOW()`
+            })
+            .where(...)
+            
+      expiration_filter:
+        description: Filter out expired entries
+        code: |
+          await db.select()
+            .from(contextPacks)
+            .where(and(
+              eq(contextPacks.packType, packType),
+              gt(contextPacks.expiresAt, sql`NOW()`)
+            ))
+            
+      aggregates:
+        description: PostgreSQL FILTER syntax for conditional aggregation
+        code: |
+          const stats = await db.select({
+            totalPacks: sql<number>`COUNT(*) FILTER (WHERE expires_at > NOW())`,
+            hitCount: sql<number>`SUM(hit_count)`,
+            avgHitsPerPack: sql<number>`COALESCE(AVG(hit_count), 0)`,
+            expiredCount: sql<number>`COUNT(*) FILTER (WHERE expires_at <= NOW())`
+          }).from(contextPacks)
+    apply_to:
+      - context-cache-get.ts (atomic increment, expiration filter)
+      - context-cache-put.ts (upsert pattern)
+      - context-cache-invalidate.ts (conditional update/delete)
+      - context-cache-stats.ts (aggregate queries)
+
+constraints_from_claude_md:
+  no_barrel_files:
+    rule: Never create index.ts re-exports within feature directories
+    rationale: Direct imports improve tree-shaking and IDE navigation
+    violation_example: src/context-cache/index.ts exporting tools
+    correct_approach: Export directly from src/index.ts
+    
+  logger_usage:
+    rule: MUST use @repo/logger, NEVER console.log
+    rationale: Structured logging for production observability
+    import: import { logger } from '@repo/logger'
+    methods: logger.info(), logger.warn(), logger.error()
+    
+  zod_first_types:
+    rule: Use Zod schemas for all types, never TypeScript interfaces
+    rationale: Runtime validation + type inference + self-documenting constraints
+    pattern: |
+      const Schema = z.object({ ... })
+      type Type = z.infer<typeof Schema>
+    
+  testing:
+    framework: Vitest (NOT Jest)
+    database: Real PostgreSQL (NOT mocks or in-memory)
+    coverage_minimum: 80% line coverage
+    test_command: pnpm test packages/backend/mcp-tools/src/context-cache
+
+reference_files:
+  pattern_template:
+    - packages/backend/mcp-tools/src/session-management/__types__/index.ts
+    - packages/backend/mcp-tools/src/session-management/session-query.ts
+    - packages/backend/mcp-tools/src/session-management/__tests__/session-query.test.ts
+    
+  database_schema:
+    - packages/backend/database-schema/src/schema/wint.ts (contextPacks table)
+    - packages/backend/db/src/index.ts (exports)
+    
+  testing_setup:
+    - packages/backend/mcp-tools/src/session-management/__tests__/session-create.test.ts
+
+lessons_learned:
+  from_wint_0110:
+    - lesson: Resilient error handling prevents tool failures from crashing workflows
+      impact: Tools log warnings but never throw, return null/empty instead
+      apply_to: All 4 context cache tools
+      
+    - lesson: Zod validation at entry point catches invalid inputs early
+      impact: Input validation happens before database operations
+      apply_to: All tool implementations parse input first
+      
+    - lesson: Default safe behavior prevents accidental data loss
+      impact: hardDelete defaults to false, soft delete is default
+      apply_to: context-cache-invalidate tool
+      
+    - lesson: Auto-generated Zod schemas from drizzle-zod reduce duplication
+      impact: SelectContextPack type is auto-generated, no manual typing needed
+      apply_to: Return types for get and put tools
+      
+    - lesson: Real database tests catch schema mismatches early
+      impact: Tests use actual PostgreSQL, not mocks
+      apply_to: All 5 test files
+
+decisions_from_story:
+  default_ttl:
+    decision: Default TTL = 7 days (604800 seconds)
+    rationale: Balances context freshness vs storage efficiency
+    implementation: ttl parameter optional with 604800 default
+    
+  soft_delete_default:
+    decision: Soft delete by default (hardDelete defaults to false)
+    rationale: Preserves audit trail, allows recovery
+    implementation: Update expiresAt = NOW() - 1 for soft delete
+    
+  version_field_type:
+    decision: version is integer, not string
+    rationale: Matches database schema (integer column)
+    implementation: z.number().int().optional() in Zod schema
+    
+  content_validation:
+    decision: Use z.record(z.unknown()) for content field
+    rationale: Flexible input validation, database enforces JSONB structure
+    implementation: No per-packType content validation in MVP
+    
+  packkey_requires_packtype:
+    decision: packKey filter requires packType
+    rationale: Unique index on (packType, packKey) composite key
+    implementation: Validate packKey only used with packType
+
+database_schema_notes:
+  contextPacks_table:
+    schema: wint (PostgreSQL schema namespace)
+    protected: true (WINT-0010, DO NOT MODIFY)
+    
+    fields:
+      id: uuid (primary key, auto-generated)
+      packType: contextPackTypeEnum (enum, NOT free-form string)
+      packKey: text (NOT NULL)
+      content: jsonb (typed JSONB structure)
+      version: integer (default 1)
+      expiresAt: timestamp with timezone (nullable, TTL)
+      hitCount: integer (default 0)
+      lastHitAt: timestamp with timezone (nullable)
+      tokenCount: integer (nullable, future use)
+      createdAt: timestamp (auto, NOT NULL)
+      updatedAt: timestamp (auto, NOT NULL)
+      
+    indexes:
+      - UNIQUE (packType, packKey)
+      - INDEX (expiresAt)
+      - INDEX (lastHitAt)
+      - INDEX (packType)
+      
+    enum_values:
+      contextPackTypeEnum:
+        - codebase
+        - story
+        - feature
+        - epic
+        - architecture
+        - lessons_learned
+        - test_patterns
+        
+  important_constraints:
+    - packType MUST be one of enum values, not arbitrary string
+    - Unique constraint on (packType, packKey) enables upsert pattern
+    - expiresAt is nullable but should always be set by put tool
+    - hitCount and lastHitAt updated atomically by get tool
+
+implementation_sequence:
+  phase_1_schemas:
+    - Create Zod validation schemas in __types__/index.ts
+    - Ensure packType validation matches enum values
+    
+  phase_2_tests:
+    - Write all 19 tests across 5 files
+    - Set up database cleanup helpers
+    - Define test fixtures and helper functions
+    
+  phase_3_implementation:
+    - Implement tools in order: get, put, invalidate, stats
+    - Run tests after each tool to verify TDD approach
+    - Fix failing tests iteratively
+    
+  phase_4_verification:
+    - Run full test suite
+    - Verify coverage ≥80%
+    - Add JSDoc documentation
+    - Run build verification (TypeScript + ESLint)
+
+critical_reminders:
+  - DO NOT modify wint.contextPacks table schema (protected)
+  - DO NOT use console.log (use @repo/logger)
+  - DO NOT create barrel files (no context-cache/index.ts)
+  - DO NOT use TypeScript interfaces (Zod schemas only)
+  - DO NOT mock database in tests (use real PostgreSQL)
+  - MUST validate inputs with Zod .parse() at entry
+  - MUST handle errors gracefully (log, return null/empty)
+  - MUST achieve 80% test coverage minimum
+  - MUST use enum values for packType field
+
+testing_infrastructure:
+  database_setup:
+    description: Real PostgreSQL with WINT schema
+    cleanup_strategy: beforeEach/afterEach delete all contextPacks rows
+    connection: Reuse @repo/db connection pool
+    
+  test_helpers:
+    - createTestContextPack() - Insert test data
+    - cleanupDatabase() - Delete all test data
+    - waitForExpiration() - Sleep to test TTL
+    
+  test_execution:
+    unit_tests: pnpm test packages/backend/mcp-tools/src/context-cache/__tests__/<file>.test.ts
+    all_tests: pnpm test packages/backend/mcp-tools/src/context-cache
+    coverage: pnpm test:coverage packages/backend/mcp-tools/src/context-cache
+    watch_mode: pnpm test --watch
+
+e2e_testing_notes:
+  story_type: backend-only (touches_backend: true, touches_frontend: false)
+  e2e_status: exempt
+  rationale: No user-facing UI or API endpoints, database operations only
+  verification_method: Integration test covers full workflow (put → get → stats → invalidate)
+
+token_tracking:
+  requirement: Log tokens before completion signal
+  command: /token-log WINT-0100 dev-execute <input-tokens> <output-tokens>
+  timing: After EVIDENCE.yaml written, before emitting EXECUTION COMPLETE
+
+completion_criteria:
+  code_complete:
+    - 10 new files created
+    - 1 file modified (src/index.ts)
+    - All 19 tests passing
+    - Coverage ≥80%
+    
+  build_verification:
+    - TypeScript compilation passes
+    - ESLint passes on all new/modified files
+    - No type errors or lint violations
+    
+  documentation:
+    - JSDoc on all 4 tools
+    - Usage examples included
+    - Error handling documented
+    
+  evidence:
+    - EVIDENCE.yaml created
+    - AC-to-evidence mapping complete
+    - Test results documented
+    - Coverage report included

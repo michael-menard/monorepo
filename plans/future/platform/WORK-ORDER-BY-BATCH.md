@@ -25,7 +25,6 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Notes |
 |---|---|----------|-------|--------|-------|
-| [ ] | 1 | INFR-0010 | Postgres Artifact Schemas | ⏳ | Blocks INFR-0020, 0030 |
 
 ### Priority P2:
 
@@ -68,7 +67,7 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Blocks |
 |---|---|----------|-------|--------|--------------|--------|
-| [ ] | 31 | WINT-0050 | ML Pipeline Tables | ⏸️ | WINT-0010 (#4) | ML work |
+| [❌] | 31 | ~~WINT-0050~~ | ~~ML Pipeline Tables~~ | ❌ CANCELLED | WINT-0010 (#4) | Duplicate of WINT-0010 |
 
 ### Sub-batch 3C — Model Interface (Priority P2):
 
@@ -89,10 +88,6 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Priority |
 |---|---|----------|-------|--------|--------------|----------|
-| [ ] | 22 | INFR-0020 | Artifact Writer/Reader Service | ⏸️ | INFR-0010 (#1) | P1 |
-| [ ] | 23 | KBAR-0020 | Schema Tests & Validation | ⏳ | KBAR-0010 (#8) ✅ | P1 |
-| [ ] | 24 | MODL-0020 | Task Contracts & Model Selector | ⏸️ | MODL-0010 (#3) 🔍 | P1 |
-| [ ] | 24b | MODL-0050 | Add MiniMax Model Provider to LangGraph | ⏳ | MODL-0010 (#3) ✅ | P1 |
 
 ### E2E Gate:
 
@@ -108,8 +103,6 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Priority |
 |---|---|----------|-------|--------|--------------|----------|
-| [ ] | 25 | WINT-0200 | User Flows Schema | ⏸️ | WINT-0180 (#11) 🚧 | P2 |
-| [~] | 29 | INFR-0050 | Event SDK (Shared Telemetry Hooks) | 🚧 | INFR-0040 (#2) 🔍 | P3 |
 
 ### E2E Gate:
 
@@ -125,10 +118,6 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 33 | LNGG-0070 | Integration Test Suite ⚡ | ⏸️ | #15, #16, #17, #6 | Wait for all LNGG adapters |
-| [ ] | 34 | WINT-1090 | Update LangGraph Repos ⚡ | ⏸️ | WINT-1080 (#18) | Sequential after #33 |
-| [ ] | 35 | WINT-1100 | Create Shared TypeScript Types ⚡ 🎯 | ⏸️ | WINT-1080 (#18) | **MILESTONE - Blocks all nodes** |
-| [ ] | 36 | WINT-0090 | Story Management MCP Tools ⚡ | ⏸️ | WINT-0020 (#19) | Can be parallel |
 
 ### E2E Gate:
 
@@ -144,21 +133,14 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 37 | KBAR-0030 | Story Sync Functions | ⏸️ | KBAR-0020 (#23) | |
-| [ ] | 38 | WINT-1030 | Populate Story Status from Directories | ⏸️ | #19, #13 | |
-| [ ] | 39 | WINT-0100 | Context Cache MCP Tools | ⏳ | WINT-0030 (#26) | |
-| [~] | 40 | WINT-0110 | Session Management MCP Tools | 🚧 | WINT-0030 (#26) | |
-| [ ] | 41 | WINT-0130 | Graph Query MCP Tools | ⏸️ | WINT-0060 (#27) | |
-| [ ] | 42 | WINT-0080 | Seed Initial Workflow Data | ⏸️ | #20, #27 | |
-| [ ] | 43 | WINT-0170 | Add Doc-Sync Gate | ⏸️ | WINT-0160 (#21) | |
-| [ ] | 44 | WINT-1130 | Track Worktree-to-Story Mapping in DB | ⏸️ | WINT-0020 (#19) | |
+| [ ] | 43 | WINT-0170 | Add Doc-Sync Gate | ⏳ | WINT-0160 (#21) | |
+| [ ] | 44 | WINT-1130 | Track Worktree-to-Story Mapping in DB | ⏳ | WINT-0020 (#19) | |
 
 **Lower priority:**
 
 | ☑ | # | Story ID | Title | Status | Dependencies |
 |---|---|----------|-------|--------|--------------|
 | [ ] | 45 | WINT-0210 | Populate Role Pack Templates | ⏸️ | #11, #25 |
-| [ ] | 46 | MODL-0030 | Quality Evaluator | ⏸️ | MODL-0020 (#24) |
 
 ### E2E Gate:
 
@@ -174,12 +156,12 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Priority |
 |---|---|----------|-------|--------|--------------|----------|
-| [ ] | 47 | WINT-1110 | Migrate Existing LangGraph Data ⚡ | ⏸️ | WINT-1090 (#34) | P0 |
-| [ ] | 48 | WINT-1010 | Create Compatibility Shim Module ⚡ | ⏸️ | WINT-0090 (#36) | P0 |
-| [ ] | 49 | KBAR-0040 | Artifact Sync Functions | ⏸️ | KBAR-0030 (#37) | P1 |
+| [ ] | 47 | WINT-1110 | Migrate Existing LangGraph Data ⚡ | ⏳ | WINT-1090 (#34) | P0 |
+| [ ] | 48 | WINT-1010 | Create Compatibility Shim Module ⚡ | ⏳ | WINT-0090 (#36) | P0 |
+| [ ] | 49 | KBAR-0040 | Artifact Sync Functions | ⏳ | KBAR-0030 (#37) | P1 |
 | [ ] | 50 | WINT-1140 | Integrate Worktree into dev-implement-story | ⏸️ | WINT-1130 (#44) | P1 |
 | [ ] | 51 | WINT-1150 | Integrate Worktree Cleanup into Completion | ⏸️ | WINT-1130 (#44) | P1 |
-| [ ] | 52 | WINT-1070 | Deprecate stories.index.md | ⏸️ | WINT-1030 (#38) | P2 |
+| [ ] | 52 | WINT-1070 | Deprecate stories.index.md | ⏳ | WINT-1030 (#38) | P2 |
 | [ ] | 53 | WINT-1040 | Update story-status to Use DB | ⏸️ | #48, #38 | P2 |
 | [ ] | 54 | WINT-1050 | Update story-update to Use DB | ⏸️ | #48, #38 | P2 |
 | [ ] | 55 | WINT-1060 | Update story-move to Use DB | ⏸️ | #48, #38 | P2 |
@@ -199,7 +181,7 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 57 | WINT-9010 | Create Shared Business Logic Package ⚡ 🎯 | ⏸️ | WINT-1100 (#35) | **CRITICAL - Blocks all LangGraph nodes** |
+| [ ] | 57 | WINT-9010 | Create Shared Business Logic Package ⚡ 🎯 | ⏳ | WINT-1100 (#35) | **CRITICAL - Blocks all LangGraph nodes** |
 
 **Can do in parallel after dependencies:**
 
@@ -208,8 +190,8 @@ Stories grouped by dependencies showing what can be worked in parallel.
 | [ ] | 58 | KBAR-0060 | Sync Integration Tests | ⏸️ | KBAR-0050 (#56) | P1 |
 | [ ] | 59 | WINT-1160 | Add Parallel Work Conflict Prevention | ⏸️ | #50, #51 | P2 |
 | [ ] | 60 | WINT-1120 | Validate Foundation Phase | ⏸️ | #53-55, #47, #59, #52 | P2 |
-| [ ] | 61 | WINT-7020 | Create Agent Migration Plan | ⏸️ | WINT-7010 (#14) 🚧 | P3 |
-| [ ] | 62 | MODL-0040 | Model Leaderboards | ⏸️ | MODL-0030 (#46) | P3 |
+| [ ] | 61 | WINT-7020 | Create Agent Migration Plan | ⏳ | WINT-7010 (#14) 🚧 | P3 |
+| [ ] | 62 | MODL-0040 | Model Leaderboards | ⏳ | MODL-0030 (#46) | P3 |
 | [ ] | 63 | AUDT-0020 | 9 Audit Lens Nodes | ⏳ | AUDT-0010 (#9) ✅ | P3 |
 
 ### E2E Gate:
@@ -231,8 +213,8 @@ Stories grouped by dependencies showing what can be worked in parallel.
 | [ ] | 66 | WINT-4090 | Create evidence-judge Agent | ⏳ | None (can start anytime) | P1 |
 | [ ] | 67 | KBAR-0070 | story_get Tool | ⏸️ | KBAR-0060 (#58) | P2 |
 | [ ] | 68 | KBAR-0080 | story_list & story_update Tools | ⏸️ | KBAR-0070 (#67) | P2 |
-| [ ] | 69 | WINT-0190 | Create Patch Queue Pattern and Schema | ⏸️ | WINT-0180 (#11) | P3 |
-| [ ] | 70 | WINT-0240 | Configure Ollama Model Fleet | ⏸️ | WINT-0220 (#12) | P3 |
+| [ ] | 69 | WINT-0190 | Create Patch Queue Pattern and Schema | ⏳ | WINT-0180 (#11) | P3 |
+| [ ] | 70 | WINT-0240 | Configure Ollama Model Fleet | ⏳ | WINT-0220 (#12) | P3 |
 | [ ] | 71 | WINT-0250 | Define Escalation Triggers | ⏸️ | #12, #28 | P3 |
 
 ### E2E Gate:
@@ -264,7 +246,7 @@ Stories grouped by dependencies showing what can be worked in parallel.
 | ☑ | # | Story ID | Title | Status | Dependencies |
 |---|---|----------|-------|--------|--------------|
 | [ ] | 79 | AUDT-0030 | Audit Orchestration Nodes | ⏸️ | AUDT-0020 (#63) |
-| [ ] | 80 | TELE-0010 | Docker Telemetry Stack | ⏸️ | INFR-0040 (#2) |
+| [ ] | 80 | TELE-0010 | Docker Telemetry Stack | ⏳ | INFR-0040 (#2) |
 
 ### E2E Gate:
 
@@ -282,7 +264,7 @@ Stories grouped by dependencies showing what can be worked in parallel.
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 81 | WINT-2090 | Implement Session Context Management ⚡ | ⏸️ | WINT-0110 (#40) | Step 1 |
+| [ ] | 81 | WINT-2090 | Implement Session Context Management ⚡ | ⏳ | WINT-0110 (#40) | Step 1 |
 | [ ] | 82 | WINT-2100 | Create session-manager Agent ⚡ | ⏸️ | WINT-2090 (#81) | Step 2 |
 | [ ] | 83 | WINT-9090 | Create Context Cache LangGraph Nodes ⚡ | ⏸️ | #57, #82 | Step 3 |
 
@@ -343,13 +325,12 @@ Once story #94 (WINT-9140) is complete and validated, you can switch to working 
 ## Progress Tracking
 
 **Current Status Summary:**
-- ✅ UAT Verified: 28 stories (AUDT-0010, INFR-0030, INFR-0040, INFR-0041, INFR-0110, KBAR-0010, LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, MODL-0010, MODL-0011, WINT-0010, WINT-0020, WINT-0030, WINT-0040, WINT-0060, WINT-0070, WINT-0150, WINT-0160, WINT-0180, WINT-0220, WINT-0230, WINT-1020, WINT-1080, WINT-7010)
+- ✅ UAT Verified: 46 stories (AUDT-0010, INFR-0020, INFR-0030, INFR-0040, INFR-0041, INFR-0050, INFR-0110, INFR-0120, KBAR-0010, KBAR-0020, KBAR-0030, LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, LNGG-0070, MODL-0010, MODL-0011, MODL-0020, MODL-0030, MODL-0050, WINT-0010, WINT-0020, WINT-0030, WINT-0040, WINT-0060, WINT-0070, WINT-0080, WINT-0090, WINT-0100, WINT-0110, WINT-0130, WINT-0150, WINT-0160, WINT-0180, WINT-0200, WINT-0220, WINT-0230, WINT-1020, WINT-1030, WINT-1080, WINT-1090, WINT-1100, WINT-7010)
 - 🔍 Ready for QA: 0 stories
-- 🚧 In Progress: 3 stories (INFR-0050, INFR-0120, WINT-0110)
-- ⏳ Ready to Start: 1 stories (WINT-0100)
+- 🚧 In Progress: 0 stories
 - ⏸️ Blocked: remaining stories (waiting on dependencies)
 
-**Active Stories: 32 tracked**
+**Active Stories: 46 tracked**
 
 **Critical Path Tracking:**
 - [~] LNGG-0010 in progress → Unblocks Batch 2 (3 stories)
@@ -364,7 +345,7 @@ Once story #94 (WINT-9140) is complete and validated, you can switch to working 
 3. Complete QA on WINT-0150 → unblocks WINT-0160 (doc-sync Agent)
 4. Start KBAR-0020 (now unblocked by KBAR-0010 ✅)
 5. Start WINT-0230 (now unblocked by WINT-0220 ✅)
-6. Start INFR-0010 (last unstarted Batch 1 story)
+6. Start INFR-0120 (Review/QA Artifact Schemas - second part of INFR-0010 split, INFR-0110 complete ✅)
 
 ---
 
@@ -374,9 +355,7 @@ Once story #94 (WINT-9140) is complete and validated, you can switch to working 
 |-------|--------------|------------|-------|
 | Batch 1 | 14 stories | None | Start all P0 first |
 | Batch 4-5 | 4-7 stories | Various | Staggered starts |
-| Batch 6 | 2 stories | Sequential | WINT-1100 is critical |
 | Batch 7 | 8 stories | Table completions | Multiple parallel tracks |
-| Batch 8 | 4-6 stories | WINT-1100 | Some parallelism |
 | Batch 9 | 1 + 6 | WINT-9010 first | Then 6 parallel |
 | Batch 10 | 3-5 stories | WINT-9010 | Some ready immediately |
 | Batch 11 | 1-2 stories | Sequential chain | 7-story sequence |

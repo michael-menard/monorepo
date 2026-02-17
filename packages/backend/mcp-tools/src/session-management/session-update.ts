@@ -12,8 +12,8 @@
 
 import { eq, and, isNull, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { db, contextSessions } from '@repo/db'
-import type { SelectContextSession } from '@repo/db'
+import { db } from '@repo/db'
+import { contextSessions, type SelectContextSession, type InsertContextSession } from '@repo/database-schema'
 import { SessionUpdateInputSchema, type SessionUpdateInput } from './__types__/index.js'
 
 /**
@@ -51,9 +51,7 @@ export async function sessionUpdate(
     const [existingSession] = await db
       .select()
       .from(contextSessions)
-      .where(
-        and(eq(contextSessions.sessionId, parsed.sessionId), isNull(contextSessions.endedAt)),
-      )
+      .where(and(eq(contextSessions.sessionId, parsed.sessionId), isNull(contextSessions.endedAt)))
 
     if (!existingSession) {
       throw new Error(
@@ -64,18 +62,18 @@ export async function sessionUpdate(
     // Build update values based on mode
     if (parsed.mode === 'incremental') {
       // Incremental mode: Use SQL arithmetic for concurrent-safe updates (AC-2)
-      const updates: Record<string, any> = {
+      // Note: Using object with explicit type to allow SQL expressions for numeric fields
+      const updates = {
         updatedAt: new Date(),
-      }
-
-      if (parsed.inputTokens !== undefined) {
-        updates.inputTokens = sql`${contextSessions.inputTokens} + ${parsed.inputTokens}`
-      }
-      if (parsed.outputTokens !== undefined) {
-        updates.outputTokens = sql`${contextSessions.outputTokens} + ${parsed.outputTokens}`
-      }
-      if (parsed.cachedTokens !== undefined) {
-        updates.cachedTokens = sql`${contextSessions.cachedTokens} + ${parsed.cachedTokens}`
+        ...(parsed.inputTokens !== undefined && {
+          inputTokens: sql`${contextSessions.inputTokens} + ${parsed.inputTokens}`,
+        }),
+        ...(parsed.outputTokens !== undefined && {
+          outputTokens: sql`${contextSessions.outputTokens} + ${parsed.outputTokens}`,
+        }),
+        ...(parsed.cachedTokens !== undefined && {
+          cachedTokens: sql`${contextSessions.cachedTokens} + ${parsed.cachedTokens}`,
+        }),
       }
 
       const [updatedSession] = await db
@@ -87,7 +85,7 @@ export async function sessionUpdate(
       return updatedSession
     } else {
       // Absolute mode: Last-write-wins (AC-2)
-      const updates: Record<string, any> = {
+      const updates: Partial<InsertContextSession> & { updatedAt: Date } = {
         updatedAt: new Date(),
       }
 

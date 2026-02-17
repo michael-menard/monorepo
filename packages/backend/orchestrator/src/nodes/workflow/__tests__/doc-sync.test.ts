@@ -27,6 +27,11 @@ vi.mock('node:child_process', () => ({
 
 // Mock logger with full interface
 vi.mock('@repo/logger', () => ({
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  })),
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

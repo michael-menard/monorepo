@@ -4,60 +4,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 /* eslint-enable import/order */
 
 // Hoist mock functions
-const { mockQuery, mockOrderBy, mockWhere, mockFrom, mockSelect, mockWarn } = vi.hoisted(() => {
-  const mockSession1 = {
-    id: randomUUID(),
-    sessionId: randomUUID(),
-    agentName: 'dev-execute-leader',
-    storyId: 'WINT-0110',
-    phase: 'execute',
-    inputTokens: 100,
-    outputTokens: 50,
-    cachedTokens: 25,
-    startedAt: new Date('2026-02-15T12:00:00Z'),
-    endedAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }
-
-  const mockSession2 = {
-    id: randomUUID(),
-    sessionId: randomUUID(),
-    agentName: 'pm-story-seed',
-    storyId: 'WINT-0110',
-    phase: 'plan',
-    inputTokens: 200,
-    outputTokens: 100,
-    cachedTokens: 50,
-    startedAt: new Date('2026-02-15T11:00:00Z'),
-    endedAt: new Date('2026-02-15T11:30:00Z'),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }
-
-  const mockLimit = vi.fn().mockReturnThis()
-  const mockOffset = vi.fn().mockResolvedValue([mockSession1, mockSession2])
-  const mockOrderBy = vi.fn(() => ({ limit: mockLimit, offset: mockOffset }))
-  const mockWhere = vi.fn(() => ({ orderBy: mockOrderBy, limit: mockLimit, offset: mockOffset }))
-  const mockFrom = vi.fn(() => ({ where: mockWhere, orderBy: mockOrderBy }))
-  const mockSelect = vi.fn(() => ({ from: mockFrom }))
-  const mockQuery = { limit: mockLimit, offset: mockOffset }
-  const mockWarn = vi.fn()
-
-  // Update mockLimit to return the chain correctly
-  mockLimit.mockImplementation(() => ({
-    offset: mockOffset,
+const { mockLimit, mockOffset, mockOrderBy, mockWhere, mockFrom, mockSelect, mockWarn } =
+  vi.hoisted(() => ({
+    mockLimit: vi.fn(),
+    mockOffset: vi.fn(),
+    mockOrderBy: vi.fn(),
+    mockWhere: vi.fn(),
+    mockFrom: vi.fn(),
+    mockSelect: vi.fn(),
+    mockWarn: vi.fn(),
   }))
-
-  return {
-    mockQuery,
-    mockOrderBy,
-    mockWhere,
-    mockFrom,
-    mockSelect,
-    mockWarn,
-  }
-})
 
 vi.mock('@repo/db', () => ({
   db: {
@@ -119,14 +75,12 @@ describe('sessionQuery', () => {
       updatedAt: new Date(),
     }
 
-    const mockLimit = vi.fn().mockReturnThis()
-    const mockOffset = vi.fn().mockResolvedValue([mockSession1, mockSession2])
-    mockLimit.mockImplementation(() => ({ offset: mockOffset }))
-
-    const mockOrderBy = vi.fn(() => ({ limit: mockLimit }))
-    const mockWhere = vi.fn(() => ({ orderBy: mockOrderBy }))
-    const mockFrom = vi.fn(() => ({ where: mockWhere, orderBy: mockOrderBy }))
-
+    // Setup mock chain for query builder
+    mockOffset.mockResolvedValue([mockSession1, mockSession2])
+    mockLimit.mockReturnValue({ offset: mockOffset })
+    mockOrderBy.mockReturnValue({ limit: mockLimit })
+    mockWhere.mockReturnValue({ orderBy: mockOrderBy })
+    mockFrom.mockReturnValue({ where: mockWhere, orderBy: mockOrderBy })
     mockSelect.mockReturnValue({ from: mockFrom })
 
     mockWarn.mockClear()

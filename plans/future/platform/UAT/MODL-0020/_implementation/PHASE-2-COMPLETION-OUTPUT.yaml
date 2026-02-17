@@ -1,0 +1,159 @@
+---
+# QA-VERIFY Completion Leader Output
+# Story: MODL-0020 - Task Contracts & Model Selector
+# Phase: completion
+# Timestamp: 2026-02-16T09:00:00Z
+
+schema: lean-docs-1.0
+phase: completion
+feature_dir: /Users/michaelmenard/Development/monorepo/plans/future/platform
+story_id: MODL-0020
+story_title: Task Contracts & Model Selector
+
+# Verdict from QA-VERIFY Phase
+verdict: PASS
+verdict_source: QA-VERIFY.yaml (2026-02-16T08:41:00Z)
+
+# Status Updates
+status_updated: uat
+previous_status: in-qa
+status_updated_in:
+  - /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/MODL-0020.md
+  - /Users/michaelmenard/Development/monorepo/plans/future/platform/platform.stories.index.md
+
+moved_to: UAT (already positioned correctly)
+
+# Index Update
+index_updated: true
+index_file: /Users/michaelmenard/Development/monorepo/plans/future/platform/platform.stories.index.md
+index_changes:
+  - "Line 67: Status changed from **ready-to-work** to **uat**"
+  - "Line 67: Marking as started (x) in progress table"
+
+# Gate Decision Written
+gate_section_written: true
+gate_decision: PASS
+gate_location: /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/VERIFICATION.yaml
+
+gate_details:
+  decision: PASS
+  reason: "All 8 acceptance criteria verified and passing. 52 comprehensive tests (22 unit + 30 integration) achieve 97.5% coverage. Architecture fully compliant with ADRs, CLAUDE.md, and tier-based model selection strategy."
+  blocking_issues: []
+  verified_by: qa-verify-completion-leader
+  verified_at: '2026-02-16T08:41:00Z'
+
+# KB Findings Captured
+kb_findings_captured: true
+lessons_captured: 5
+lessons:
+  - title: "Task contract system provides fine-grained model selection without breaking changes"
+    category: pattern
+    tags: ["model-management", "tier-selection", "backward-compatibility"]
+
+  - title: "Escalation decision tree with clear precedence is maintainable with comprehensive matrix tests"
+    category: pattern
+    tags: ["model-management", "escalation-logic", "testing"]
+
+  - title: "Optional parameter pattern enables gradual migration from agent-based to task-based selection"
+    category: pattern
+    tags: ["migration", "backward-compatibility", "api-design"]
+
+  - title: "Zod partial schema with defaults provides ergonomic API with type safety"
+    category: pattern
+    tags: ["zod", "type-safety", "defaults"]
+
+  - title: "Comprehensive documentation (400+ lines) with examples and migration path improves DX"
+    category: pattern
+    tags: ["documentation", "developer-experience"]
+
+# Token Tracking
+tokens_logged: true
+token_entry:
+  timestamp: '2026-02-16T09:00'
+  phase: qa-verify-completion-leader
+  input_tokens: 8500
+  output_tokens: 3200
+  total_tokens: 11700
+  cumulative_tokens: 571576
+
+# Working Set Archive
+working_set_archived: false
+working_set_note: "No working-set.md created during MODL-0020 elaboration/execution. Story uses centralized context from dev phases."
+
+# Story Status in KB
+story_status_in_kb: updated
+story_status_details:
+  state: completed
+  phase: qa_verification
+  gate_verdict: PASS
+
+# Verification Summary
+test_results:
+  unit_tests: 22/22 PASS
+  integration_tests: 30/30 PASS
+  full_suite: 2662/2662 PASS
+  coverage: 97.5%
+
+acs_verified: 8/8
+architecture_compliance: PASS
+backward_compatibility: VERIFIED
+
+# Files Created During Completion Phase
+files_created:
+  - path: /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/VERIFICATION.yaml
+    type: gate-decision-document
+    lines: 80
+
+  - path: /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/COMPLETION-SUMMARY.md
+    type: phase-summary
+    lines: 280
+
+# Files Modified During Completion Phase
+files_modified:
+  - path: /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/MODL-0020.md
+    change: "Status updated from 'in-qa' to 'uat'"
+
+  - path: /Users/michaelmenard/Development/monorepo/plans/future/platform/platform.stories.index.md
+    change: "Line 67: MODL-0020 status updated to 'uat', marked as started"
+
+  - path: /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/TOKEN-LOG.md
+    change: "Added completion phase token entry (8,500 in / 3,200 out)"
+
+  - path: /Users/michaelmenard/Development/monorepo/plans/future/platform/UAT/MODL-0020/_implementation/CHECKPOINT.yaml
+    change: "Updated current_phase to 'completion', added completion timestamp and status notes"
+
+# Completion Status
+completion_status: SUCCESS
+signal: "QA PASS"
+signal_timestamp: '2026-02-16T09:00:00Z'
+
+# Dependencies Status
+dependencies_released:
+  - MODL-0030 (Quality Evaluator) - now unblocked
+  - MODL-0040 (Model Leaderboards) - now unblocked
+
+# Next Steps
+ready_for:
+  - Production deployment
+  - Integration with downstream stories
+  - Migration of existing code to task contracts
+  - Graduation to 'completed' status
+
+---
+## Summary
+
+Phase 2 Completion executed successfully for MODL-0020. All QA verification criteria met:
+
+✅ Status updated to UAT (story file + index)
+✅ Gate decision PASS written to VERIFICATION.yaml
+✅ 5 key lessons captured for KB reuse
+✅ Token log updated with completion phase (8,500 in / 3,200 out)
+✅ Checkpoint updated with completion phase tracking
+✅ Completion summary document created (280 lines)
+✅ Downstream blockers released (MODL-0030, MODL-0040)
+
+**Verdict:** PASS
+**Signal:** QA PASS
+**Story Status:** UAT (ready for deployment)
+
+Total project tokens: 571,576 (elaboration + execution + review + QA + completion)

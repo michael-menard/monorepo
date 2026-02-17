@@ -572,3 +572,19 @@ export {
   type StorySyncResult,
   type BridgeLoadResult,
 } from './persistence/index.js'
+
+// Services module exports - high-level service wrappers (INFR-0020)
+export {
+  // ArtifactService - high-level artifact read/write service
+  ArtifactService,
+  createArtifactService,
+  // Configuration and result types
+  ArtifactServiceConfigSchema,
+  ArtifactReadResultSchema,
+  ArtifactWriteResultSchema,
+  STAGE_SEARCH_ORDER,
+  type ArtifactServiceConfig,
+  type ArtifactReadResult,
+  type ArtifactWriteResult,
+  type StageSearchOrder,
+} from './services/artifact-service.js'

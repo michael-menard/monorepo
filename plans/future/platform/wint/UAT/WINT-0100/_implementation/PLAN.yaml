@@ -1,0 +1,349 @@
+schema: 1
+story_id: WINT-0100
+created_at: '2026-02-16T20:45:00Z'
+updated_at: '2026-02-16T20:45:00Z'
+
+# PHASE 1: PLANNING - IMPLEMENTATION PLAN
+# Story: Create Context Cache MCP Tools
+# Pattern: WINT-0110 (Session Management MCP Tools)
+
+implementation_approach: |
+  Test-Driven Development (TDD) approach following WINT-0110 pattern:
+  1. Create Zod validation schemas first (AC-5)
+  2. Write comprehensive test suites (AC-6)
+  3. Implement tools to make tests pass
+  4. Verify coverage ≥80%
+  5. Add JSDoc documentation (AC-7)
+  6. Update exports
+
+ordered_steps:
+  - step: 1
+    name: Create Zod Validation Schemas
+    description: |
+      Create __types__/index.ts with 4 input schemas and inferred types.
+      Note: packType must use enum values from contextPackTypeEnum, not free-form strings.
+    acceptance_criteria: AC-5
+    files_created:
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    dependencies: []
+    estimated_effort: 30min
+    
+  - step: 2
+    name: Create Test Files with Full Test Suites
+    description: |
+      Write all test cases BEFORE implementation (TDD approach).
+      5 test files: 4 unit test files + 1 integration test.
+      Total: 19 tests (9 happy path + 4 error cases + 6 edge cases).
+    acceptance_criteria: AC-6
+    files_created:
+      - packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-get.test.ts
+      - packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-put.test.ts
+      - packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-invalidate.test.ts
+      - packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-stats.test.ts
+      - packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts
+    dependencies: [1]
+    estimated_effort: 2h
+    
+  - step: 3
+    name: Implement context-cache-get Tool
+    description: |
+      Retrieve cached context by packType and packKey.
+      - Filter expired entries (expiresAt <= NOW())
+      - Atomic hitCount increment
+      - Update lastHitAt on success
+      - Return null on miss/error
+    acceptance_criteria: AC-1
+    files_created:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+    dependencies: [1, 2]
+    estimated_effort: 1.5h
+    test_command: pnpm test packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-get.test.ts
+    
+  - step: 4
+    name: Implement context-cache-put Tool
+    description: |
+      Create or update context pack with upsert pattern.
+      - Upsert on (packType, packKey) composite key
+      - Calculate expiresAt = NOW() + ttl (default 7 days)
+      - Reset hitCount on insert, preserve on update
+      - Support optional version
+    acceptance_criteria: AC-2
+    files_created:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+    dependencies: [1, 2]
+    estimated_effort: 1.5h
+    test_command: pnpm test packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-put.test.ts
+    
+  - step: 5
+    name: Implement context-cache-invalidate Tool
+    description: |
+      Mark context as expired or delete stale entries.
+      - Soft delete by default (update expiresAt = NOW() - 1)
+      - Hard delete optional (physical DELETE)
+      - Filter by packType, packKey, olderThan
+      - Return invalidatedCount
+    acceptance_criteria: AC-3
+    files_created:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-invalidate.ts
+    dependencies: [1, 2]
+    estimated_effort: 1.5h
+    test_command: pnpm test packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-invalidate.test.ts
+    
+  - step: 6
+    name: Implement context-cache-stats Tool
+    description: |
+      Query aggregate cache effectiveness metrics.
+      - COUNT active packs (expiresAt > NOW())
+      - SUM hitCount
+      - AVG hitCount (COALESCE to 0 if empty)
+      - COUNT expired packs
+      - Filter by packType and since date
+    acceptance_criteria: AC-4
+    files_created:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts
+    dependencies: [1, 2]
+    estimated_effort: 1.5h
+    test_command: pnpm test packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-stats.test.ts
+    
+  - step: 7
+    name: Update Package Exports
+    description: |
+      Export all 4 context cache tools from src/index.ts.
+      Follow NO BARREL FILES rule - direct exports only.
+    acceptance_criteria: All ACs
+    files_modified:
+      - packages/backend/mcp-tools/src/index.ts
+    dependencies: [3, 4, 5, 6]
+    estimated_effort: 15min
+    
+  - step: 8
+    name: Run Full Test Suite and Verify Coverage
+    description: |
+      Run all tests including integration test.
+      Verify ≥80% line coverage.
+      Fix any failing tests.
+    acceptance_criteria: AC-6
+    dependencies: [3, 4, 5, 6, 7]
+    estimated_effort: 1h
+    test_command: |
+      pnpm test packages/backend/mcp-tools/src/context-cache
+      pnpm test:coverage packages/backend/mcp-tools/src/context-cache
+    
+  - step: 9
+    name: Add JSDoc Documentation
+    description: |
+      Add comprehensive JSDoc comments to all 4 tools.
+      Include usage examples, parameter descriptions, return types.
+    acceptance_criteria: AC-7
+    files_modified:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+      - packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+      - packages/backend/mcp-tools/src/context-cache/context-cache-invalidate.ts
+      - packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts
+    dependencies: [8]
+    estimated_effort: 30min
+    
+  - step: 10
+    name: Build Verification
+    description: |
+      Verify TypeScript compilation and linting pass.
+      Fix any type errors or lint violations.
+    acceptance_criteria: All ACs
+    dependencies: [9]
+    estimated_effort: 30min
+    test_command: |
+      pnpm check-types --filter @repo/mcp-tools
+      pnpm lint packages/backend/mcp-tools/src/context-cache
+
+file_modification_map:
+  create:
+    - path: packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+      description: Zod validation schemas for all 4 tools
+      size_estimate: 80 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+      description: Retrieve context pack with hit tracking
+      size_estimate: 60 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+      description: Create/update context pack with upsert
+      size_estimate: 70 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/context-cache-invalidate.ts
+      description: Soft/hard delete context packs
+      size_estimate: 80 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/context-cache-stats.ts
+      description: Aggregate cache effectiveness metrics
+      size_estimate: 70 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-get.test.ts
+      description: Unit tests for get tool (4 tests)
+      size_estimate: 150 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-put.test.ts
+      description: Unit tests for put tool (6 tests)
+      size_estimate: 200 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-invalidate.test.ts
+      description: Unit tests for invalidate tool (5 tests)
+      size_estimate: 180 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-stats.test.ts
+      description: Unit tests for stats tool (5 tests)
+      size_estimate: 180 lines
+      
+    - path: packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts
+      description: Integration test for full workflow
+      size_estimate: 120 lines
+      
+  modify:
+    - path: packages/backend/mcp-tools/src/index.ts
+      description: Add exports for 4 context cache tools
+      change_type: add_exports
+      lines_added: 3
+
+test_strategy:
+  framework: Vitest
+  database: PostgreSQL (real database, not mocks)
+  coverage_target: 80%
+  
+  test_categories:
+    happy_path:
+      count: 9
+      examples:
+        - Cache hit with hitCount increment (get)
+        - Cache miss returns null (get)
+        - Expired pack not returned (get)
+        - New pack creation (put)
+        - Existing pack update (put)
+        - Upsert idempotence (put)
+        - Soft delete by packType (invalidate)
+        - Hard delete by packKey (invalidate)
+        - Overall stats aggregation (stats)
+        
+    error_cases:
+      count: 4
+      examples:
+        - Invalid input validation (empty strings, negative numbers)
+        - Database connection failures
+        - Not-found scenarios return null
+        - Error logging without throwing
+        
+    edge_cases:
+      count: 6
+      examples:
+        - Concurrent hit count increments remain atomic
+        - Large JSONB content (1000+ elements)
+        - Age-based invalidation (olderThan filter)
+        - Empty database aggregates return zeros
+        - TTL calculation accuracy
+        - Soft vs hard delete behavior
+        
+  integration_test:
+    description: Full workflow test
+    steps:
+      - put → create context pack
+      - get → retrieve and increment hits
+      - stats → verify metrics
+      - invalidate → soft delete
+      - get → returns null (expired)
+      - stats → verify expired count
+
+  test_execution:
+    unit_tests: pnpm test packages/backend/mcp-tools/src/context-cache
+    coverage: pnpm test:coverage packages/backend/mcp-tools/src/context-cache
+    watch_mode: pnpm test --watch packages/backend/mcp-tools/src/context-cache
+
+acceptance_validation_approach:
+  AC-1:
+    method: Unit tests verify get tool behavior
+    evidence: Tests pass for cache hit/miss, expiration filtering, hit tracking
+    
+  AC-2:
+    method: Unit tests verify put tool behavior
+    evidence: Tests pass for create/update, upsert, TTL calculation
+    
+  AC-3:
+    method: Unit tests verify invalidate tool behavior
+    evidence: Tests pass for soft/hard delete, filtering, count return
+    
+  AC-4:
+    method: Unit tests verify stats tool behavior
+    evidence: Tests pass for aggregation accuracy, filtering, empty state
+    
+  AC-5:
+    method: TypeScript compilation + Zod validation tests
+    evidence: Types infer correctly, validation rejects invalid input
+    
+  AC-6:
+    method: Coverage report + test execution
+    evidence: All 19 tests pass, coverage ≥80%
+    
+  AC-7:
+    method: JSDoc presence verification
+    evidence: All 4 tools have comprehensive JSDoc with examples
+
+risk_mitigation:
+  concurrent_access:
+    risk: Concurrent hit count increments could race
+    mitigation: Use SQL-level atomic increment (hitCount + 1)
+    test: Edge case test with concurrent get operations
+    
+  upsert_composite_key:
+    risk: Upsert with (packType, packKey) composite index
+    mitigation: Use Drizzle onConflictDoUpdate with both fields
+    test: Upsert idempotence test verifies update, not duplicate
+    
+  expired_pack_filtering:
+    risk: Expired packs incorrectly returned
+    mitigation: WHERE expiresAt > NOW() in all select queries
+    test: Expired pack test verifies null return
+    
+  aggregate_query_complexity:
+    risk: PostgreSQL FILTER syntax may not work in Drizzle
+    mitigation: Use sql template for raw SQL if needed
+    test: Stats test verifies aggregate accuracy
+
+dependencies:
+  internal_packages:
+    - "@repo/db": database connection, schema exports, SelectContextPack type
+    - "@repo/logger": structured logging (never console.log)
+    
+  external_packages:
+    - "drizzle-orm": type-safe queries, upsert, aggregates
+    - "zod": input validation, type inference
+    - "vitest": test framework
+    - "postgres": PostgreSQL client
+    
+  database:
+    - table: wint.contextPacks (protected schema, WINT-0010)
+    - operations: SELECT, INSERT (upsert), UPDATE, DELETE, aggregates
+    - indexes: (packType, packKey) unique, expiresAt, lastHitAt, packType
+
+constraints:
+  protected_schemas:
+    - wint.contextPacks table schema (WINT-0010)
+    - wint.contextSessions table schema (WINT-0010)
+    - DO NOT modify any database schema
+    
+  code_style:
+    - Zod-first types (no TypeScript interfaces)
+    - @repo/logger only (no console.log)
+    - No barrel files (direct imports)
+    - Functional components/exports
+    - Resilient error handling (log warnings, return null/empty)
+    
+  testing:
+    - Real PostgreSQL database (no mocks)
+    - Minimum 80% coverage
+    - Vitest framework
+    - Database cleanup before/after each test
+
+estimated_total_effort: 10-12 hours
+
+notes: |
+  Implementation follows proven WINT-0110 pattern with TDD approach.
+  All 4 tools follow identical error handling pattern: validate input, execute query, log errors, return null/empty on failure.
+  Database schema uses contextPackTypeEnum for packType field - validation schemas must match enum values.
+  Integration test covers full workflow to verify tool interactions.

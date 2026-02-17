@@ -54,6 +54,7 @@ export {
   useUploadInstructionFileMutation,
   useUploadPartsListFileMutation,
   useDeleteFileMutation,
+  useLazyGetFileDownloadUrlQuery,
 } from './rtk/instructions-api'
 
 // RTK Query Hooks - Uploads (BUGF-032)

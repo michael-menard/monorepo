@@ -14,11 +14,11 @@ function createMockDbClient(): DbClient & { mockRows: StoryRow[]; mockQueries: s
       mockQueries.push(text)
 
       // Return mock data based on query type
-      if (text.includes('SELECT') && text.includes('FROM stories')) {
+      if (text.includes('SELECT') && text.includes('FROM wint.stories')) {
         return { rows: mockRows as unknown as T[], rowCount: mockRows.length }
       }
 
-      if (text.includes('INSERT INTO stories')) {
+      if (text.includes('INSERT INTO wint.stories')) {
         const newRow: StoryRow = {
           id: 'uuid-' + (values?.[0] as string || 'WISH-001'), // UUID primary key
           story_id: values?.[0] as string || 'WISH-001', // Human-readable ID
@@ -41,11 +41,11 @@ function createMockDbClient(): DbClient & { mockRows: StoryRow[]; mockQueries: s
         return { rows: [newRow] as unknown as T[], rowCount: 1 }
       }
 
-      if (text.includes('UPDATE stories')) {
+      if (text.includes('UPDATE wint.stories')) {
         return { rows: [], rowCount: 1 }
       }
 
-      if (text.includes('INSERT INTO story_state_transitions')) {
+      if (text.includes('INSERT INTO wint.story_state_transitions')) {
         return { rows: [], rowCount: 1 }
       }
 
@@ -103,7 +103,7 @@ describe('StoryRepository', () => {
 
       expect(mockClient.query).toHaveBeenCalled()
       expect(mockClient.mockQueries[0]).toContain('SELECT')
-      expect(mockClient.mockQueries[0]).toContain('FROM stories')
+      expect(mockClient.mockQueries[0]).toContain('FROM wint.stories')
     })
   })
 
@@ -133,9 +133,9 @@ describe('StoryRepository', () => {
       const result = await repo.createStory(story, 'test-actor')
 
       expect(result.id).toBe('WISH-001')
-      expect(mockClient.mockQueries).toContainEqual(expect.stringContaining('INSERT INTO stories'))
+      expect(mockClient.mockQueries).toContainEqual(expect.stringContaining('INSERT INTO wint.stories'))
       expect(mockClient.mockQueries).toContainEqual(
-        expect.stringContaining('INSERT INTO story_state_transitions'),
+        expect.stringContaining('INSERT INTO wint.story_state_transitions'),
       )
     })
   })
@@ -170,9 +170,9 @@ describe('StoryRepository', () => {
 
       await repo.updateStoryState('WISH-001', 'backlog', 'test-actor', 'Ready for backlog')
 
-      expect(mockClient.mockQueries).toContainEqual(expect.stringContaining('UPDATE stories SET state'))
+      expect(mockClient.mockQueries).toContainEqual(expect.stringContaining('UPDATE wint.stories SET state'))
       expect(mockClient.mockQueries).toContainEqual(
-        expect.stringContaining('INSERT INTO story_state_transitions'),
+        expect.stringContaining('INSERT INTO wint.story_state_transitions'),
       )
     })
   })
@@ -181,7 +181,7 @@ describe('StoryRepository', () => {
     it('should update blocked_by field', async () => {
       await repo.setBlockedBy('WISH-002', 'WISH-001', 'test-actor')
 
-      expect(mockClient.mockQueries).toContainEqual(expect.stringContaining('UPDATE stories SET blocked_by'))
+      expect(mockClient.mockQueries).toContainEqual(expect.stringContaining('UPDATE wint.stories SET blocked_by'))
     })
 
     it('should clear blocked_by when null', async () => {

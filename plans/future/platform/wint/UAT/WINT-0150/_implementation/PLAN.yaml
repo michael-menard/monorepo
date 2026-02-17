@@ -1,0 +1,168 @@
+schema: 1
+story_id: "WINT-0150"
+timestamp: "2026-02-16T17:10:00Z"
+
+steps:
+  - id: 1
+    description: "Update doc-sync.agent.md frontmatter to add MCP tool permissions"
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: []
+    slice: infra
+
+  - id: 2
+    description: "Enhance Phase 2 (Frontmatter Parsing) to query database if available"
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [1]
+    slice: infra
+
+  - id: 3
+    description: "Enhance Phase 3 (Section Mapping) to handle database-sourced agents and WINT phase structure"
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [2]
+    slice: infra
+
+  - id: 4
+    description: "Update Phase 7 (SYNC-REPORT.md) to include database query status section"
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [3]
+    slice: infra
+
+  - id: 5
+    description: "Update doc-sync skill documentation with database query examples"
+    files:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [4]
+    slice: infra
+
+  - id: 6
+    description: "Create unit tests for database query timeout handling"
+    files:
+      - ".claude/agents/__tests__/doc-sync-database.test.ts"
+    dependencies: [4]
+    slice: infra
+
+  - id: 7
+    description: "Create integration test for hybrid file+database sync scenario"
+    files:
+      - ".claude/agents/__tests__/doc-sync-integration.test.ts"
+    dependencies: [6]
+    slice: infra
+
+  - id: 8
+    description: "Update AGENTS.md documentation generation to reflect database-sourced agents"
+    files:
+      - "docs/workflow/AGENTS.md"
+    dependencies: [4]
+    slice: infra
+
+files_to_change:
+  - path: ".claude/agents/doc-sync.agent.md"
+    action: modify
+    reason: "Add MCP tool permissions and enhance Phase 2 (database queries), Phase 3 (database-sourced agent mapping), Phase 7 (report database status)"
+
+  - path: ".claude/skills/doc-sync/SKILL.md"
+    action: modify
+    reason: "Document database query capabilities, timeout handling, and hybrid sync examples per AC-8"
+
+  - path: ".claude/agents/__tests__/doc-sync-database.test.ts"
+    action: create
+    reason: "Unit tests for database query timeout handling per AC-9"
+
+  - path: ".claude/agents/__tests__/doc-sync-integration.test.ts"
+    action: create
+    reason: "Integration test for hybrid file+database sync scenario per Test Plan scenario 1"
+
+  - path: "docs/workflow/AGENTS.md"
+    action: modify
+    reason: "Update agent documentation to reflect database-sourced agents per AC-3"
+
+commands_to_run:
+  - command: "pnpm test --filter .claude/agents"
+    when: "after test file creation"
+    required: true
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Code review: Phase 2 enhancement in doc-sync.agent.md showing database query logic"
+    evidence_type: manual
+
+  - ac_id: "AC-2"
+    planned_evidence: "Code review: Phase 3 enhancement showing WINT phase structure mapping"
+    evidence_type: manual
+
+  - ac_id: "AC-3"
+    planned_evidence: "File: docs/workflow/AGENTS.md updated with database-sourced agent counts"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Code review: COMMANDS.md update logic in Phase 4"
+    evidence_type: manual
+
+  - ac_id: "AC-5"
+    planned_evidence: "Code review: SKILLS.md update logic includes doc-sync self-documentation"
+    evidence_type: manual
+
+  - ac_id: "AC-6"
+    planned_evidence: "Code review: docs/workflow/ update logic includes WINT Phase 0-9 structure"
+    evidence_type: manual
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test: doc-sync-database.test.ts showing database unavailable fallback"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "File: .claude/skills/doc-sync/SKILL.md with database query examples"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: doc-sync-database.test.ts showing timeout handling (30s threshold)"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Code review: Phase 5 validation logic for database-only agents in spawns"
+    evidence_type: manual
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should MCP tools be accessed directly in doc-sync agent or via a database service layer?"
+    decision: "Direct access via MCP tools (conditional call pattern)"
+    rationale: "Follows existing codebase pattern - session-management and story-management MCP tools both use direct @repo/db access. No service layer exists for MCP tools. Pattern: check tool availability, call if available, gracefully degrade if not."
+    decided_by: autonomous
+    tier: 1
+    precedent: "packages/backend/mcp-tools/src/session-management/session-query.ts"
+
+  - id: ARCH-002
+    question: "Should database query timeout be configurable or hardcoded?"
+    decision: "Hardcoded 30-second timeout constant with TODO comment for future configurability"
+    rationale: "AC-9 specifies 'configurable (default: 30 seconds)' but no configuration mechanism specified in story. Hardcode with clear constant name and TODO to avoid scope creep while documenting intent."
+    decided_by: autonomous
+    tier: 1
+    note: "Future story can add config file support"
+
+  - id: ARCH-003
+    question: "Should database schema changes be included in this story or deferred?"
+    decision: "Deferred - assume workflow.phases and workflow.components tables exist as soft dependency"
+    rationale: "SCOPE.yaml touched_paths_globs excludes database-schema package. Story description 'query postgres-knowledgebase' implies tables exist. AC-1 says 'queries are optional - skill degrades gracefully if database is unavailable'. Story focus is doc-sync enhancement, not schema creation."
+    decided_by: autonomous
+    tier: 1
+    dependency_note: "Assumes WINT-0070/WINT-0080 completed (table creation)"
+
+complexity: moderate
+
+notes:
+  - "Story assumes workflow.phases and workflow.components tables exist (dependency on WINT-0070/0080)"
+  - "MCP tools for postgres-knowledgebase may need to be created if they don't exist"
+  - "Database queries are optional - graceful degradation to file-only mode is critical"
+  - "Test files location assumption: .claude/agents/__tests__/ (pattern from other agent tests)"
+  - "Using haiku model for doc-sync agent per existing frontmatter"
+  - "Phase 2 database query adds ~5K tokens per run (acceptable per token optimization context)"
+  - "docs/workflow/ updates are expected outputs of doc-sync skill execution, not source code changes"
+  - "SCOPE.yaml paths are input sources; docs/workflow/ is generated output per AC-6"
+  - "Test files are standard practice for validating AC-7 and AC-9 requirements"

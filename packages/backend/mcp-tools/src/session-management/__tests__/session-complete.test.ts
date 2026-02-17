@@ -5,57 +5,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Hoist mock functions
 const {
-  mockReturning,
-  mockSet,
-  mockUpdate,
+  mockSelectWhere,
   mockWhere,
   mockFrom,
   mockSelect,
-  mockSelectWhere,
+  mockReturning,
+  mockSet,
+  mockUpdate,
   mockWarn,
-} = vi.hoisted(() => {
-  const existingSession = {
-    id: randomUUID(),
-    sessionId: 'test-session-id',
-    agentName: 'test-agent',
-    storyId: 'WINT-0110',
-    phase: 'execute',
-    inputTokens: 100,
-    outputTokens: 50,
-    cachedTokens: 25,
-    startedAt: new Date('2026-02-15T10:00:00Z'),
-    endedAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }
-
-  const mockSelectWhere = vi.fn().mockResolvedValue([existingSession])
-  const mockWhere = vi.fn().mockReturnThis()
-  const mockFrom = vi.fn(() => ({ where: mockSelectWhere }))
-  const mockSelect = vi.fn(() => ({ from: mockFrom }))
-
-  const mockReturning = vi.fn().mockResolvedValue([
-    {
-      ...existingSession,
-      endedAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ])
-  const mockSet = vi.fn(() => ({ where: mockWhere, returning: mockReturning }))
-  const mockUpdate = vi.fn(() => ({ set: mockSet }))
-  const mockWarn = vi.fn()
-
-  return {
-    mockReturning,
-    mockSet,
-    mockUpdate,
-    mockWhere,
-    mockFrom,
-    mockSelect,
-    mockSelectWhere,
-    mockWarn,
-  }
-})
+} = vi.hoisted(() => ({
+  mockSelectWhere: vi.fn(),
+  mockWhere: vi.fn().mockReturnThis(),
+  mockFrom: vi.fn(),
+  mockSelect: vi.fn(),
+  mockReturning: vi.fn(),
+  mockSet: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockWarn: vi.fn(),
+}))
 
 vi.mock('@repo/db', () => ({
   db: {
@@ -225,25 +192,13 @@ describe('sessionComplete', () => {
   })
 
   it('should throw error if session already completed', async () => {
-    const completedSession = {
-      id: randomUUID(),
-      sessionId: 'completed-session',
-      agentName: 'test-agent',
-      storyId: 'WINT-0110',
-      phase: 'execute',
-      inputTokens: 100,
-      outputTokens: 50,
-      cachedTokens: 25,
-      startedAt: new Date('2026-02-15T10:00:00Z'),
-      endedAt: new Date('2026-02-15T11:00:00Z'), // Already completed
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    mockSelectWhere.mockResolvedValue([completedSession])
+    const sessionId = randomUUID()
+    // When session is completed, SELECT WHERE endedAt IS NULL returns empty array
+    mockSelectWhere.mockResolvedValue([])
 
     await expect(
       sessionComplete({
-        sessionId: 'completed-session',
+        sessionId,
       }),
     ).rejects.toThrow(/already completed/)
   })

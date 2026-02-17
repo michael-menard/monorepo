@@ -1,0 +1,58 @@
+---
+# Deferred Knowledge Base Writes
+# These writes should be retried when postgres-knowledgebase MCP server is available
+
+deferred_writes:
+  - type: story_insert
+    timestamp: "2026-02-16T00:00:00Z"
+    reason: "KB MCP tools not available during story generation"
+    data:
+      story_id: "WINT-0150"
+      feature: "wint"
+      title: "Create doc-sync Skill for Database-Driven Documentation Sync"
+      story_dir: "plans/future/platform/wint/WINT-0150"
+      story_file: "plans/future/platform/wint/WINT-0150/WINT-0150.md"
+      story_type: "feature"
+      points: 5
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+      phase: 0
+      epic: "wint"
+      depends_on: []
+      blocks: ["WINT-0160"]
+    sql: |
+      INSERT INTO stories (
+        story_id, feature, title, story_dir, story_file, story_type,
+        points, priority, state, touches_backend, touches_frontend,
+        touches_database, touches_infra
+      ) VALUES (
+        'WINT-0150',
+        'wint',
+        'Create doc-sync Skill for Database-Driven Documentation Sync',
+        'plans/future/platform/wint/WINT-0150',
+        'plans/future/platform/wint/WINT-0150/WINT-0150.md',
+        'feature',
+        5,
+        'medium',
+        'backlog',
+        false,
+        false,
+        true,
+        false
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra;

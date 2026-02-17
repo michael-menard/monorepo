@@ -1,0 +1,146 @@
+schema: 1
+story_id: "KBAR-0020"
+timestamp: "2026-02-15T21:30:00Z"
+
+steps:
+  - id: 1
+    description: "Add Zod insert schema validation tests for all 11 KBAR tables (AC-1)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Add Zod select schema validation tests for all 11 KBAR tables (AC-2)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Define explicit Zod schemas for JSONB metadata structures and add validation tests (AC-3)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Add enum constraint validation tests for all 6 KBAR enums (AC-4)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Add foreign key relationship tests and cascade behavior documentation (AC-5)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [4]
+    slice: packages
+
+  - id: 6
+    description: "Add index coverage verification and query pattern documentation (AC-6)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [5]
+    slice: packages
+
+  - id: 7
+    description: "Add edge case validation tests (max lengths, JSONB size, null handling, timestamps) (AC-7)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [6]
+    slice: packages
+
+  - id: 8
+    description: "Add Drizzle relations definition tests (AC-8)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [7]
+    slice: packages
+
+  - id: 9
+    description: "Add contract testing with Vitest snapshots for schema stability (AC-9)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [8]
+    slice: packages
+
+  - id: 10
+    description: "Verify test coverage >90% for kbar.ts schema file (AC-10)"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    dependencies: [9]
+    slice: packages
+
+  - id: 11
+    description: "Run all tests and ensure they pass"
+    files: []
+    dependencies: [10]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    action: modify
+    reason: "Extend existing basic schema tests with comprehensive validation coverage for all 10 ACs"
+
+commands_to_run:
+  - command: "pnpm test --filter @repo/database-schema kbar-schema.test.ts"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm test:coverage --filter @repo/database-schema -- kbar.ts"
+    when: "after all tests pass"
+    required: true
+  - command: "pnpm check-types --filter @repo/database-schema"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm lint --filter @repo/database-schema"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Vitest test output showing insert schema validation tests for all 11 tables (stories, storyStates, storyDependencies, artifacts, artifactVersions, artifactContentCache, syncEvents, syncConflicts, syncCheckpoints, indexMetadata, indexEntries)"
+    evidence_type: test
+  - ac_id: "AC-2"
+    planned_evidence: "Vitest test output showing select schema validation tests for all 11 tables with auto-generated fields"
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: "Inline Zod schemas for stories.metadata, storyStates.metadata, storyDependencies.metadata, artifacts.metadata, artifactContentCache.parsedContent + test output"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "Test output showing all 6 enums validated: kbar_story_phase (7 values), kbar_artifact_type (10 values), kbar_sync_status (5 values), kbar_dependency_type (4 values), kbar_story_priority (5 values), kbar_conflict_resolution (5 values)"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "Test assertions verifying foreign key references and cascade delete behavior for all relationships"
+    evidence_type: test
+  - ac_id: "AC-6"
+    planned_evidence: "Test file documentation of indexes and query patterns, assertions verifying index definitions"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "Test output showing edge cases handled: max lengths, large JSONB, unique constraint violations, null/empty/undefined, timestamps"
+    evidence_type: test
+  - ac_id: "AC-8"
+    planned_evidence: "Test assertions verifying Drizzle relations for one-to-many and one-to-one relationships"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "Vitest snapshot files for Zod schema structure + test output showing snapshots match"
+    evidence_type: test
+  - ac_id: "AC-10"
+    planned_evidence: "Coverage report showing >90% line coverage for packages/backend/database-schema/src/schema/kbar.ts"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "Following three-layer testing approach from WINT/Artifacts patterns"
+  - "JSONB schemas defined inline in test file (extract to shared package in KBAR-0030+ if needed for API validation)"
+  - "All tests are unit tests with no database connection required"
+  - "KBAR schema structure is protected - do not modify schema definitions"
+  - "Test data created inline (no factories needed for schema-only validation)"
+  - "Pattern references: WINT schema tests (structure), Artifacts schema tests (JSONB validation)"
+  - "Coverage target is >90% for kbar.ts specifically, exceeds global 45% minimum"
+  - "All 11 tables: stories, storyStates, storyDependencies, artifacts, artifactVersions, artifactContentCache, syncEvents, syncConflicts, syncCheckpoints, indexMetadata, indexEntries"
+  - "All 6 enums: kbar_story_phase, kbar_artifact_type, kbar_sync_status, kbar_dependency_type, kbar_story_priority, kbar_conflict_resolution"

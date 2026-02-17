@@ -1,0 +1,56 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-15T21:30:00Z"
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope: []
+    blockers_to_avoid:
+      - "Do not attempt integration tests with live database in schema validation story - defer to KBAR-0030+"
+      - "Do not modify KBAR schema structure - it's protected and from KBAR-0010"
+      - "Do not regenerate migrations - schema is stable and in UAT"
+    patterns_to_follow:
+      - "Three-layer schema validation: structure, Zod schemas, relationships"
+      - "Define inline Zod schemas for JSONB structures for validation testing"
+      - "Use safeParse for validation testing (expect success/failure)"
+      - "Use Vitest snapshot tests for schema contract stability"
+      - "Test data factories inline for schema-only tests (no database connection)"
+    patterns_to_avoid:
+      - "Do not create barrel files (no index.ts re-exports)"
+      - "Do not use console.log - use @repo/logger (though not needed in tests)"
+      - "Do not skip type errors - fix them"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT must never use mocking, but unit tests should use mocks"
+        applies_to: ["testing"]
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "E2E tests required for UI-facing ACs"
+        applies_to: ["testing", "frontend"]
+    constraints:
+      testing: "Unit tests (like schema validation) should use mocks/no database. Integration tests in KBAR-0030+ will use real database."
+      e2e: "Not applicable - schema validation is backend-only unit testing with no UI"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full story file"
+        typical_tokens: 10000
+        mitigation: "Only read Acceptance Criteria section"
+      - operation: "Reading entire schema file repeatedly"
+        typical_tokens: 3000
+        mitigation: "Read once, reference specific sections as needed"
+    recommended_patterns:
+      - "Use Grep to find specific table definitions before reading"
+      - "Read existing test files once to understand patterns, then implement"
+      - "Batch related test creation in single file modifications"
+
+  warnings:
+    - "KBAR-0010 is in UAT phase - schema may have final adjustments, coordinate if needed"
+    - "No prior KBAR testing lessons in KB - this is foundational work"
+    - "Ensure test coverage >90% for kbar.ts as specified in AC-10"

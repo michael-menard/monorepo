@@ -2,7 +2,7 @@
  * index.ts
  *
  * Provider factory for dynamic provider selection based on model prefix.
- * Routes to correct adapter: openrouter/*, ollama/*, anthropic/*
+ * Routes to correct adapter: openrouter/*, ollama/*, anthropic/*, minimax/*
  *
  * @module providers
  */
@@ -13,6 +13,7 @@ import { parseModelString } from './base.js'
 import { OllamaProvider } from './ollama.js'
 import { OpenRouterProvider } from './openrouter.js'
 import { AnthropicProvider } from './anthropic.js'
+import { MinimaxProvider } from './minimax.js'
 
 // NOTE: No barrel file re-exports per CLAUDE.md requirements.
 // Import types and utilities directly from source files:
@@ -20,6 +21,7 @@ import { AnthropicProvider } from './anthropic.js'
 // - ./ollama.ts for OllamaProvider, OllamaConfig, etc.
 // - ./openrouter.ts for OpenRouterProvider, OpenRouterConfig, etc.
 // - ./anthropic.ts for AnthropicProvider, AnthropicConfig, etc.
+// - ./minimax.ts for MinimaxProvider, MinimaxConfig, etc.
 
 // ============================================================================
 // Provider Factory
@@ -37,6 +39,7 @@ const providerRegistry = new Map<string, ILLMProvider>()
  * - `openrouter/*` → OpenRouterProvider
  * - `ollama/*` or `ollama:*` → OllamaProvider
  * - `anthropic/*` → AnthropicProvider
+ * - `minimax/*` → MinimaxProvider
  *
  * @param modelName - Full model name with provider prefix
  * @returns Provider adapter instance
@@ -59,7 +62,7 @@ export function getProviderForModel(modelName: string): ILLMProvider {
     const error = new Error(
       `Unsupported model format: "${modelName}". ` +
         `Expected format: <provider>/<model-name>. ` +
-        `Supported providers: openrouter, ollama, anthropic. ` +
+        `Supported providers: openrouter, ollama, anthropic, minimax. ` +
         `Example: "openrouter/claude-3-5-sonnet"`,
     )
     logger.error('Invalid model format', { modelName, error: error.message })
@@ -93,10 +96,15 @@ export function getProviderForModel(modelName: string): ILLMProvider {
       break
     }
 
+    case 'minimax': {
+      providerInstance = new MinimaxProvider()
+      break
+    }
+
     default: {
       const error = new Error(
         `Unsupported provider: "${provider}". ` +
-          `Supported providers: openrouter, ollama, anthropic. ` +
+          `Supported providers: openrouter, ollama, anthropic, minimax. ` +
           `Use format: <provider>/<model-name>`,
       )
       logger.error('Unsupported provider', { provider, modelName, error: error.message })

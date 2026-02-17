@@ -1,0 +1,234 @@
+schema: 1
+story_id: "KBAR-0030"
+timestamp: "2026-02-16T23:59:30Z"
+
+steps:
+  - id: 1
+    description: "Create kbar-sync package structure with package.json, tsconfig, vitest config"
+    files:
+      - "packages/backend/kbar-sync/package.json"
+      - "packages/backend/kbar-sync/tsconfig.json"
+      - "packages/backend/kbar-sync/vitest.config.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Define Zod schemas for all sync function inputs and outputs"
+    files:
+      - "packages/backend/kbar-sync/src/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Implement syncStoryToDatabase function (filesystem → database)"
+    files:
+      - "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Implement syncStoryFromDatabase function (database → filesystem)"
+    files:
+      - "packages/backend/kbar-sync/src/sync-story-from-database.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 5
+    description: "Implement detectSyncConflicts function (compare checksums/timestamps)"
+    files:
+      - "packages/backend/kbar-sync/src/detect-sync-conflicts.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 6
+    description: "Create package index.ts to export all sync functions"
+    files:
+      - "packages/backend/kbar-sync/src/index.ts"
+    dependencies: [3, 4, 5]
+    slice: packages
+
+  - id: 7
+    description: "Write unit tests for syncStoryToDatabase (mock filesystem and database)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/sync-story-to-database.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 8
+    description: "Write unit tests for syncStoryFromDatabase (mock filesystem and database)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/sync-story-from-database.test.ts"
+    dependencies: [4]
+    slice: packages
+
+  - id: 9
+    description: "Write unit tests for detectSyncConflicts (mock filesystem and database)"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/detect-sync-conflicts.test.ts"
+    dependencies: [5]
+    slice: packages
+
+  - id: 10
+    description: "Write integration tests using testcontainers with real PostgreSQL"
+    files:
+      - "packages/backend/kbar-sync/src/__tests__/integration.test.ts"
+    dependencies: [3, 4, 5]
+    slice: packages
+
+  - id: 11
+    description: "Run full test suite and verify >80% coverage"
+    files: []
+    dependencies: [7, 8, 9, 10]
+    slice: packages
+
+files_to_change:
+  - path: "packages/backend/kbar-sync/package.json"
+    action: create
+    reason: "New package definition with dependencies on @repo/database-schema, @repo/db, @repo/logger, drizzle-orm, yaml"
+
+  - path: "packages/backend/kbar-sync/tsconfig.json"
+    action: create
+    reason: "TypeScript configuration for the new package"
+
+  - path: "packages/backend/kbar-sync/vitest.config.ts"
+    action: create
+    reason: "Vitest configuration for unit and integration tests"
+
+  - path: "packages/backend/kbar-sync/src/__types__/index.ts"
+    action: create
+    reason: "Zod schemas for all sync function inputs/outputs (AC-5)"
+
+  - path: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    action: create
+    reason: "Core sync function: filesystem → database (AC-1)"
+
+  - path: "packages/backend/kbar-sync/src/sync-story-from-database.ts"
+    action: create
+    reason: "Core sync function: database → filesystem (AC-2)"
+
+  - path: "packages/backend/kbar-sync/src/detect-sync-conflicts.ts"
+    action: create
+    reason: "Conflict detection function (AC-3)"
+
+  - path: "packages/backend/kbar-sync/src/index.ts"
+    action: create
+    reason: "Package exports for sync functions"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/sync-story-to-database.test.ts"
+    action: create
+    reason: "Unit tests for syncStoryToDatabase (AC-8)"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/sync-story-from-database.test.ts"
+    action: create
+    reason: "Unit tests for syncStoryFromDatabase (AC-8)"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/detect-sync-conflicts.test.ts"
+    action: create
+    reason: "Unit tests for detectSyncConflicts (AC-8)"
+
+  - path: "packages/backend/kbar-sync/src/__tests__/integration.test.ts"
+    action: create
+    reason: "Integration tests with real PostgreSQL via testcontainers (AC-8)"
+
+  - path: "pnpm-workspace.yaml"
+    action: modify
+    reason: "Add new package to workspace (if not automatically detected)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after creating package.json"
+    required: true
+
+  - command: "pnpm build --filter @repo/kbar-sync"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/kbar-sync"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm lint --filter @repo/kbar-sync"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/kbar-sync"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: sync-story-to-database.test.ts - test successful sync, checksum computation, database insert/update, syncEvents creation"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: sync-story-from-database.test.ts - test successful sync from DB, YAML generation, atomic file write, syncEvents creation"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: detect-sync-conflicts.test.ts - test conflict detection when both filesystem and database changed, syncConflicts table logging"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: sync-story-to-database.test.ts - test checksum-based skip when no changes detected, idempotency verification"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "File: src/__types__/index.ts - Zod schemas defined for all inputs/outputs. Unit tests verify validation with invalid inputs."
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit tests: verify error handling for file not found, parse errors, DB errors. Check logger.error calls and graceful error results."
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests and integration tests: verify syncEvents records created with correct eventType, status, timing, and metadata"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Test coverage report: >80% coverage across all sync functions. Coverage report generated by Vitest."
+    evidence_type: command
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Conflict resolution strategy when both filesystem and database have changed since last sync?"
+    decision: "Log conflict to syncConflicts table and return conflict status. Require manual resolution (no automatic merge)."
+    rationale: "Safer approach for MVP. Automatic merge could cause data loss. Manual resolution ensures user review of conflicting changes."
+    decided_by: story_scope
+
+  - id: ARCH-002
+    question: "Which source should be considered source of truth for sync operations?"
+    decision: "Filesystem is source of truth. Database is treated as a cache/query layer."
+    rationale: "Story files in git are version controlled. Database can be rebuilt from filesystem. Aligns with KBAR design philosophy."
+    decided_by: story_scope
+
+  - id: ARCH-003
+    question: "Which checksum algorithm to use for change detection?"
+    decision: "SHA-256 via Node.js crypto.createHash('sha256')"
+    rationale: "Strong collision resistance, standard algorithm, matches KBAR-0010 schema design, built into Node.js (no external dependency)."
+    decided_by: story_scope
+
+  - id: ARCH-004
+    question: "Granularity of sync event tracking (per-file vs per-batch)?"
+    decision: "One syncEvent per story sync operation"
+    rationale: "Better audit trail for individual story changes. Batch operations deferred to KBAR-0040."
+    decided_by: story_scope
+
+  - id: ARCH-005
+    question: "Transaction isolation level for concurrent sync operations?"
+    decision: "Use Drizzle ORM transactions with default isolation (READ COMMITTED). Check checksums inside transaction before update."
+    rationale: "Prevents race conditions where two syncs modify same story simultaneously. Checksum verification inside transaction ensures data consistency."
+    decided_by: implementation_best_practice
+
+complexity: moderate
+
+notes:
+  - "New package @repo/kbar-sync created with dependencies on @repo/database-schema, @repo/db, @repo/logger"
+  - "Follow patterns from story-repository.ts for database operations"
+  - "Follow patterns from story-file-adapter.ts for YAML parsing"
+  - "Follow patterns from WINT-0090 MCP tools for Zod validation and error handling"
+  - "Use testcontainers for integration tests with real PostgreSQL"
+  - "All database operations wrapped in try-catch with graceful error handling"
+  - "Checksum-based skip optimization: if checksum matches, skip database update (idempotency)"
+  - "Atomic file writes: write to temp file first, then rename (prevents partial writes)"
+  - "Transaction handling critical for concurrent syncs - use Drizzle transaction API"
+  - "Target >80% test coverage per AC-8"

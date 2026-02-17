@@ -21,7 +21,7 @@ import type { AvailabilityCache } from '../config/llm-provider.js'
  */
 export const BaseProviderConfigSchema = z.object({
   /** Provider type */
-  provider: z.enum(['openrouter', 'ollama', 'anthropic']),
+  provider: z.enum(['openrouter', 'ollama', 'anthropic', 'minimax']),
 
   /** Model name (without provider prefix) */
   modelName: z.string().min(1),
@@ -104,7 +104,7 @@ export type { AvailabilityCache } from '../config/llm-provider.js'
  * Parsed model information schema.
  */
 export const ParsedModelSchema = z.object({
-  provider: z.enum(['openrouter', 'ollama', 'anthropic']),
+  provider: z.enum(['openrouter', 'ollama', 'anthropic', 'minimax']),
   modelName: z.string(),
   fullName: z.string(),
 })
@@ -133,12 +133,12 @@ export function parseModelString(modelString: string): ParsedModel | null {
   const [provider, ...modelParts] = modelString.split('/')
   const modelName = modelParts.join('/')
 
-  if (!modelName || !['openrouter', 'ollama', 'anthropic'].includes(provider)) {
+  if (!modelName || !['openrouter', 'ollama', 'anthropic', 'minimax'].includes(provider)) {
     return null
   }
 
   return {
-    provider: provider as 'openrouter' | 'ollama' | 'anthropic',
+    provider: provider as 'openrouter' | 'ollama' | 'anthropic' | 'minimax',
     modelName,
     fullName: modelString,
   }
@@ -155,7 +155,7 @@ export function parseModelString(modelString: string): ParsedModel | null {
 export function generateConfigHash(config: Record<string, unknown>): string {
   // Create a sanitized config without sensitive fields
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { apiKey, ...sanitizedConfig } = config
+  const { apiKey, groupId, ...sanitizedConfig } = config
 
   // Generate SHA-256 hash and take first 16 characters
   return createHash('sha256').update(JSON.stringify(sanitizedConfig)).digest('hex').substring(0, 16)

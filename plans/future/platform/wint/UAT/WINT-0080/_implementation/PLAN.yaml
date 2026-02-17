@@ -1,0 +1,624 @@
+---
+story_id: WINT-0080
+phase: plan
+artifact_type: PLAN
+created_at: "2026-02-16T19:00:00Z"
+version: 1.0
+
+# Implementation Plan for WINT-0080: Seed Initial Workflow Data
+# Detailed file-by-file breakdown with dependencies, validation, and testing strategy
+
+# Overview
+plan_summary: |
+  Create idempotent seed data scripts to populate 5 workflow metadata tables with ~200 total records.
+  Implement 5 specialized seeders, 3 parser utilities, and 1 CLI orchestrator.
+  All operations transactional, validated with Zod, and safe to rerun.
+
+estimated_duration: 12 hours
+estimated_files: 17 new files (9 implementation + 8 tests)
+estimated_tokens: 75000 total (50k implementation, 15k tests, 10k fixes)
+
+# File-by-File Breakdown
+files:
+  # ============================================================================
+  # Parsers (Foundation Layer)
+  # ============================================================================
+
+  - path: packages/backend/database-schema/src/seed/parsers/frontmatter-parser.ts
+    purpose: Generic YAML frontmatter parser for .agent.md and .md files
+    dependencies:
+      npm: [gray-matter]
+      internal: []
+    exports:
+      - name: parseFrontmatter
+        signature: "(filePath: string) => Promise<{ data: unknown; content: string } | null>"
+        description: Parses YAML frontmatter from markdown file, returns null on error
+      - name: validateFrontmatter
+        signature: "(data: unknown, schema: z.ZodSchema) => z.infer<schema> | null"
+        description: Validates frontmatter data against Zod schema, returns null on validation error
+    implementation_notes:
+      - Use gray-matter library for frontmatter extraction
+      - Try/catch per file with structured error logging
+      - Return null on parse errors (graceful degradation)
+      - Log warning with file path and error message on failure
+    validation:
+      - Unit tests with well-formed, malformed, and missing frontmatter files
+      - Edge cases: empty files, YAML syntax errors, non-existent files
+    estimated_lines: 80
+
+  - path: packages/backend/database-schema/src/seed/parsers/index-parser.ts
+    purpose: Parses stories.index.md to extract phase definitions
+    dependencies:
+      npm: []
+      internal: [frontmatter-parser]
+    exports:
+      - name: parseStoriesIndex
+        signature: "(indexPath: string) => Promise<PhaseData[]>"
+        description: Extracts 8 phase definitions from stories index markdown
+    implementation_notes:
+      - Read stories.index.md file
+      - Regex match on "## Phase N:" headers
+      - Extract phase name from header text
+      - Extract description from paragraph following header
+      - Validate exactly 8 phases found (0-7)
+      - Return array of { id, phaseName, description, phaseOrder }
+    validation:
+      - Unit test with actual stories.index.md
+      - Verify 8 phases extracted with correct names and orders
+      - Edge case: malformed headers, missing descriptions
+    estimated_lines: 100
+
+  - path: packages/backend/database-schema/src/seed/parsers/metadata-extractor.ts
+    purpose: Extracts metadata from agent/command/skill files
+    dependencies:
+      npm: [gray-matter, glob]
+      internal: [frontmatter-parser]
+    exports:
+      - name: extractAgentMetadata
+        signature: "(agentFiles: string[]) => Promise<AgentMetadata[]>"
+        description: Parses agent frontmatter and extracts required fields
+      - name: extractCommandMetadata
+        signature: "(commandFiles: string[]) => Promise<CommandMetadata[]>"
+        description: Parses command metadata from markdown files
+      - name: extractSkillMetadata
+        signature: "(skillDirs: string[]) => Promise<SkillMetadata[]>"
+        description: Extracts skill metadata from skill directories
+    implementation_notes:
+      - Use glob to discover files/directories
+      - Parse frontmatter with frontmatter-parser
+      - Extract fields with fallbacks (filename if name missing)
+      - Handle optional fields gracefully (null if missing)
+      - Log warnings for parsing failures but continue processing
+    validation:
+      - Unit tests with diverse frontmatter formats
+      - Test missing optional fields, malformed YAML, filename fallbacks
+    estimated_lines: 200
+
+  # ============================================================================
+  # Seeders (Data Layer)
+  # ============================================================================
+
+  - path: packages/backend/database-schema/src/seed/phase-seeder.ts
+    purpose: Seeds wint.phases table with 8 workflow phases
+    dependencies:
+      npm: [drizzle-orm, zod, "@repo/logger"]
+      internal: [parsers/index-parser]
+    exports:
+      - name: seedPhases
+        signature: "(tx: Transaction, indexPath: string) => Promise<SeedResult>"
+        description: Seeds phases table idempotently (DELETE + INSERT)
+    implementation_notes:
+      - Call parseStoriesIndex to extract phase data
+      - Validate each phase with insertPhaseSchema (Zod)
+      - Execute DELETE FROM wint.phases within transaction
+      - Execute bulk INSERT for all 8 phases
+      - Return success with row count and any warnings
+    idempotency_strategy: DELETE existing rows + INSERT new data
+    validation:
+      - Zod schema validation before insert
+      - Verify 8 rows inserted
+      - Integration test: run twice, verify same result
+    estimated_lines: 120
+
+  - path: packages/backend/database-schema/src/seed/capability-seeder.ts
+    purpose: Seeds wint.capabilities table with 7 CRUD capabilities
+    dependencies:
+      npm: [drizzle-orm, zod, "@repo/logger"]
+      internal: []
+    exports:
+      - name: seedCapabilities
+        signature: "(tx: Transaction) => Promise<SeedResult>"
+        description: Seeds capabilities table idempotently (DELETE + INSERT)
+    implementation_notes:
+      - Hardcoded list of 7 capabilities (create, read, edit, delete, upload, replace, download)
+      - Validate each capability with insertCapabilitySchema (Zod)
+      - Execute DELETE FROM wint.capabilities within transaction
+      - Execute bulk INSERT for all 7 capabilities
+      - Map to capability_name, capability_type, description, maturity_level
+    capabilities_data: |
+      [
+        { capability_name: "create", capability_type: "business", description: "Create new records", maturity_level: "stable" },
+        { capability_name: "read", capability_type: "business", description: "View existing records", maturity_level: "stable" },
+        { capability_name: "edit", capability_type: "business", description: "Modify existing records", maturity_level: "stable" },
+        { capability_name: "delete", capability_type: "business", description: "Remove existing records", maturity_level: "stable" },
+        { capability_name: "upload", capability_type: "technical", description: "Upload files or data", maturity_level: "stable" },
+        { capability_name: "replace", capability_type: "technical", description: "Replace existing data", maturity_level: "stable" },
+        { capability_name: "download", capability_type: "technical", description: "Download files or data", maturity_level: "stable" }
+      ]
+    idempotency_strategy: DELETE existing rows + INSERT new data
+    validation:
+      - Zod schema validation before insert
+      - Verify 7 rows inserted
+      - Integration test: run twice, verify same result
+    estimated_lines: 100
+
+  - path: packages/backend/database-schema/src/seed/agent-seeder.ts
+    purpose: Seeds wint.agents table with agent metadata from .agent.md files
+    dependencies:
+      npm: [drizzle-orm, zod, "@repo/logger", glob]
+      internal: [parsers/metadata-extractor]
+    exports:
+      - name: seedAgents
+        signature: "(tx: Transaction, agentsDir: string) => Promise<SeedResult>"
+        description: Seeds agents table idempotently (UPSERT by name)
+    implementation_notes:
+      - Use glob to find all .agent.md files in agentsDir
+      - Call extractAgentMetadata to parse frontmatter
+      - Validate each agent with insertAgentSchema (Zod)
+      - Execute UPSERT (INSERT ... ON CONFLICT (name) DO UPDATE SET ...)
+      - Map frontmatter fields to table columns (name, agent_type, permission_level, model, spawned_by, triggers, skills_used, metadata)
+      - Handle missing optional fields with nulls
+      - Log warnings for parse failures but continue
+    idempotency_strategy: UPSERT keyed by agent name
+    validation:
+      - Zod schema validation before insert
+      - Verify ~143 rows inserted (actual count may vary)
+      - Integration test: run twice, verify no duplicates
+    estimated_lines: 150
+
+  - path: packages/backend/database-schema/src/seed/command-seeder.ts
+    purpose: Seeds wint.commands table with command metadata
+    dependencies:
+      npm: [drizzle-orm, zod, "@repo/logger", glob]
+      internal: [parsers/metadata-extractor]
+    exports:
+      - name: seedCommands
+        signature: "(tx: Transaction, commandsDir: string) => Promise<SeedResult>"
+        description: Seeds commands table idempotently (UPSERT by name)
+    implementation_notes:
+      - Use glob to find all .md files in commandsDir
+      - Call extractCommandMetadata to parse files
+      - Validate each command with insertCommandSchema (Zod)
+      - Execute UPSERT (INSERT ... ON CONFLICT (name) DO UPDATE SET ...)
+      - Map metadata to table columns (name, description, triggers, metadata)
+    idempotency_strategy: UPSERT keyed by command name
+    validation:
+      - Zod schema validation before insert
+      - Verify ~33 rows inserted (actual count may vary)
+      - Integration test: run twice, verify no duplicates
+    estimated_lines: 130
+
+  - path: packages/backend/database-schema/src/seed/skill-seeder.ts
+    purpose: Seeds wint.skills table with skill metadata from skill directories
+    dependencies:
+      npm: [drizzle-orm, zod, "@repo/logger", glob]
+      internal: [parsers/metadata-extractor]
+    exports:
+      - name: seedSkills
+        signature: "(tx: Transaction, skillsDir: string) => Promise<SeedResult>"
+        description: Seeds skills table idempotently (UPSERT by name)
+    implementation_notes:
+      - Use glob to find all subdirectories in skillsDir
+      - Call extractSkillMetadata to parse skill metadata
+      - Validate each skill with insertSkillSchema (Zod)
+      - Execute UPSERT (INSERT ... ON CONFLICT (name) DO UPDATE SET ...)
+      - Map metadata to table columns (name, description, capabilities, metadata)
+    idempotency_strategy: UPSERT keyed by skill name
+    validation:
+      - Zod schema validation before insert
+      - Verify ~14 rows inserted (actual count may vary)
+      - Integration test: run twice, verify no duplicates
+    estimated_lines: 130
+
+  # ============================================================================
+  # CLI Orchestrator
+  # ============================================================================
+
+  - path: packages/backend/database-schema/src/seed/index.ts
+    purpose: CLI entry point, orchestrates seeding with transaction management
+    dependencies:
+      npm: [drizzle-orm, "@repo/db", "@repo/logger"]
+      internal: [phase-seeder, capability-seeder, agent-seeder, command-seeder, skill-seeder]
+    exports:
+      - name: main
+        signature: "() => Promise<void>"
+        description: Main CLI function
+    implementation_notes:
+      - Parse CLI arguments (--target=phases|capabilities|agents|commands|skills|all)
+      - Resolve paths to data sources (relative to monorepo root)
+      - Pre-flight checks (tables exist, data sources accessible)
+      - Execute seeding within single transaction
+      - Rollback on any error
+      - Log summary (rows inserted, warnings, duration)
+      - Exit with appropriate status code (0 success, 1 failure)
+    cli_arguments:
+      - flag: --target
+        values: [phases, capabilities, agents, commands, skills, all]
+        default: all
+        description: "Which seeder(s) to run"
+      - flag: --dry-run
+        type: boolean
+        default: false
+        description: "Validate data without inserting (future enhancement, optional for MVP)"
+    transaction_strategy: |
+      await db.transaction(async (tx) => {
+        if (target === 'all' || target === 'phases') {
+          await seedPhases(tx, storiesIndexPath)
+        }
+        if (target === 'all' || target === 'capabilities') {
+          await seedCapabilities(tx)
+        }
+        if (target === 'all' || target === 'agents') {
+          await seedAgents(tx, agentsDir)
+        }
+        if (target === 'all' || target === 'commands') {
+          await seedCommands(tx, commandsDir)
+        }
+        if (target === 'all' || target === 'skills') {
+          await seedSkills(tx, skillsDir)
+        }
+      })
+    validation:
+      - Integration test: full seed run against test database
+      - Verify all 5 tables populated
+      - Verify transaction rollback on error
+    estimated_lines: 200
+
+  # ============================================================================
+  # Test Infrastructure
+  # ============================================================================
+
+  - path: packages/backend/database-schema/src/seed/__tests__/frontmatter-parser.test.ts
+    purpose: Unit tests for frontmatter parser
+    test_cases:
+      - name: "parses well-formed frontmatter"
+        input: "test-agent.md (valid YAML)"
+        expectation: "Returns parsed data object"
+      - name: "handles malformed YAML"
+        input: "malformed-agent.md (invalid YAML)"
+        expectation: "Returns null, logs warning"
+      - name: "handles missing file"
+        input: "non-existent.md"
+        expectation: "Returns null, logs error"
+      - name: "handles empty file"
+        input: "empty.md (no content)"
+        expectation: "Returns null or empty data"
+    estimated_lines: 100
+
+  - path: packages/backend/database-schema/src/seed/__tests__/index-parser.test.ts
+    purpose: Unit tests for stories index parser
+    test_cases:
+      - name: "extracts 8 phases from real stories.index.md"
+        input: "plans/future/platform/wint/stories.index.md"
+        expectation: "Returns array of 8 phase objects with correct names/orders"
+      - name: "handles missing phase descriptions"
+        input: "Modified index with missing descriptions"
+        expectation: "Phase objects with null descriptions"
+    estimated_lines: 80
+
+  - path: packages/backend/database-schema/src/seed/__tests__/metadata-extractor.test.ts
+    purpose: Unit tests for metadata extraction
+    test_cases:
+      - name: "extracts agent metadata with all fields"
+        input: "test-agent.md (complete frontmatter)"
+        expectation: "AgentMetadata object with all fields populated"
+      - name: "extracts agent metadata with minimal fields"
+        input: "minimal-agent.md (only required fields)"
+        expectation: "AgentMetadata object with optional fields as null"
+      - name: "uses filename as fallback for missing name"
+        input: "agent file without 'name' field"
+        expectation: "name extracted from filename"
+    estimated_lines: 120
+
+  - path: packages/backend/database-schema/src/seed/__tests__/phase-seeder.test.ts
+    purpose: Unit tests for phase seeder
+    test_cases:
+      - name: "seeds 8 phases successfully"
+        setup: "Mock transaction, valid phase data"
+        expectation: "8 rows inserted, SeedResult success"
+      - name: "validates data with Zod schema"
+        setup: "Invalid phase data (missing required field)"
+        expectation: "Validation error, transaction rollback"
+    estimated_lines: 100
+
+  - path: packages/backend/database-schema/src/seed/__tests__/capability-seeder.test.ts
+    purpose: Unit tests for capability seeder
+    test_cases:
+      - name: "seeds 7 capabilities successfully"
+        setup: "Mock transaction"
+        expectation: "7 rows inserted, SeedResult success"
+    estimated_lines: 80
+
+  - path: packages/backend/database-schema/src/seed/__tests__/agent-seeder.test.ts
+    purpose: Unit tests for agent seeder
+    test_cases:
+      - name: "seeds agents from real .agent.md files"
+        setup: "Real agents directory"
+        expectation: "~143 rows inserted, SeedResult success with row count"
+      - name: "handles parse failures gracefully"
+        setup: "Directory with some malformed files"
+        expectation: "Partial insert, warnings logged, no transaction failure"
+    estimated_lines: 120
+
+  - path: packages/backend/database-schema/src/seed/__tests__/integration.test.ts
+    purpose: Integration test for full seeding cycle
+    test_cases:
+      - name: "full seed populates all 5 tables"
+        setup: "Test database, all data sources"
+        expectation: "All tables populated, correct row counts"
+      - name: "seeding is idempotent (run twice)"
+        setup: "Run seed twice in sequence"
+        expectation: "Same database state after both runs, no errors"
+      - name: "transaction rolls back on error"
+        setup: "Simulate validation error in one seeder"
+        expectation: "No partial data, all tables empty or unchanged"
+    estimated_lines: 150
+
+  # ============================================================================
+  # Test Fixtures
+  # ============================================================================
+
+  - path: packages/backend/database-schema/src/seed/__fixtures__/test-agent.md
+    purpose: Well-formed agent file for testing
+    content: |
+      ---
+      name: test-agent
+      type: worker
+      permission_level: read-write
+      model: sonnet
+      spawned_by: [orchestrator]
+      triggers: ["/test"]
+      skills_used: [commit, review]
+      mission: "Test agent for seeding"
+      ---
+      # Test Agent
+      This is a test agent file.
+    estimated_lines: 15
+
+  - path: packages/backend/database-schema/src/seed/__fixtures__/malformed-agent.md
+    purpose: Malformed YAML for error handling tests
+    content: |
+      ---
+      name: malformed-agent
+      type: worker
+      invalid_yaml: [unclosed array
+      ---
+      # Malformed Agent
+    estimated_lines: 10
+
+  - path: packages/backend/database-schema/src/seed/__fixtures__/minimal-agent.md
+    purpose: Minimal valid frontmatter for edge case testing
+    content: |
+      ---
+      type: worker
+      permission_level: docs-only
+      ---
+      # Minimal Agent
+      Name should be extracted from filename.
+    estimated_lines: 10
+
+# Implementation Steps
+implementation_steps:
+  - step: 1
+    name: "Setup: Dependencies and Directory Structure"
+    duration: 1 hour
+    tasks:
+      - Check if gray-matter already in dependencies (add if missing)
+      - Verify glob and tsx already present (confirmed in package.json)
+      - Create src/seed/ directory structure
+      - Create src/seed/parsers/ subdirectory
+      - Create src/seed/__tests__/ subdirectory
+      - Create src/seed/__fixtures__/ subdirectory
+    deliverables:
+      - Directory structure created
+      - package.json updated (if needed)
+
+  - step: 2
+    name: "Parsers: Implement Core Parsing Logic"
+    duration: 3 hours
+    tasks:
+      - Implement frontmatter-parser.ts with error handling
+      - Implement index-parser.ts with regex extraction
+      - Implement metadata-extractor.ts with glob discovery
+      - Write unit tests for all 3 parsers
+      - Create test fixtures (test-agent.md, malformed-agent.md, minimal-agent.md)
+    deliverables:
+      - 3 parser files implemented
+      - 3 test files with >80% coverage
+      - 3 fixture files created
+
+  - step: 3
+    name: "Seeders: Implement Idempotent Seeding Logic"
+    duration: 4 hours
+    tasks:
+      - Implement phase-seeder.ts with DELETE+INSERT strategy
+      - Implement capability-seeder.ts with hardcoded data
+      - Implement agent-seeder.ts with UPSERT strategy
+      - Implement command-seeder.ts with UPSERT strategy
+      - Implement skill-seeder.ts with UPSERT strategy
+      - Write unit tests for all 5 seeders
+    deliverables:
+      - 5 seeder files implemented
+      - 5 test files with >80% coverage
+      - All seeders validated with Zod schemas
+
+  - step: 4
+    name: "CLI: Orchestrator and Transaction Management"
+    duration: 2 hours
+    tasks:
+      - Implement index.ts with argument parsing
+      - Add transaction wrapper around all seeders
+      - Add pre-flight checks (tables exist, paths accessible)
+      - Add summary logging and error reporting
+      - Write integration test (full seed cycle)
+    deliverables:
+      - index.ts CLI orchestrator implemented
+      - integration.test.ts with 3 test cases
+      - Summary logging operational
+
+  - step: 5
+    name: "Package Scripts and Documentation"
+    duration: 1 hour
+    tasks:
+      - Add package.json scripts (seed:wint, seed:wint:phases, etc.)
+      - Add JSDoc comments to all exported functions
+      - Create README.md in src/seed/ directory (optional)
+      - Document idempotency guarantees
+    deliverables:
+      - 6 package scripts added to package.json
+      - JSDoc coverage 100%
+      - README.md created (optional)
+
+  - step: 6
+    name: "Testing and QA"
+    duration: 1 hour
+    tasks:
+      - Run all unit tests, verify >80% coverage
+      - Run integration test against test database
+      - Verify idempotency (run seed twice, compare state)
+      - Manual verification of seeded data
+      - Review parser warnings from first run
+    deliverables:
+      - All tests passing
+      - Coverage report >80%
+      - Idempotency verified
+      - Manual QA complete
+
+# Validation Strategy
+validation:
+  zod_validation:
+    - All data validated before insert using createInsertSchema from drizzle-zod
+    - Schemas imported from unified-wint.ts (insertPhaseSchema, insertAgentSchema, etc.)
+    - Validation errors logged with context (file path, field name, error message)
+    - Failed validation does NOT stop processing (log warning, continue)
+
+  transaction_safety:
+    - All seeding happens in single db.transaction() block
+    - On any error: transaction rolls back, no partial data
+    - On success: transaction commits, all changes atomic
+
+  idempotency_verification:
+    - Phase seeder: DELETE existing rows + INSERT new rows (deterministic)
+    - Capability seeder: DELETE existing rows + INSERT new rows (deterministic)
+    - Agent/Command/Skill seeders: UPSERT with ON CONFLICT (name) DO UPDATE SET
+    - Test: Run seed twice, verify same database state both times
+
+  data_integrity:
+    - Row counts match expected totals (8 phases, 7 capabilities, ~143 agents, ~33 commands, ~14 skills)
+    - No null values in required fields
+    - JSONB fields properly formatted
+    - Unique constraints respected (no duplicate names)
+
+# Testing Strategy
+testing:
+  unit_tests:
+    framework: vitest
+    coverage_target: 80%
+    test_files:
+      - frontmatter-parser.test.ts (4 test cases)
+      - index-parser.test.ts (2 test cases)
+      - metadata-extractor.test.ts (3 test cases)
+      - phase-seeder.test.ts (2 test cases)
+      - capability-seeder.test.ts (1 test case)
+      - agent-seeder.test.ts (2 test cases)
+      - command-seeder.test.ts (1 test case, optional)
+      - skill-seeder.test.ts (1 test case, optional)
+    mocking_strategy: |
+      - Mock db.transaction for unit tests
+      - Mock file system for parser tests (use fixtures)
+      - Real files for integration tests
+
+  integration_tests:
+    framework: vitest
+    test_file: integration.test.ts
+    test_cases:
+      - Full seed against test database
+      - Idempotency verification (run twice)
+      - Transaction rollback on error
+    database_setup: |
+      - Use TEST_DATABASE_URL environment variable
+      - Apply migrations before test
+      - Truncate tables after test
+
+  fixtures:
+    location: src/seed/__fixtures__/
+    files:
+      - test-agent.md (well-formed, all fields)
+      - malformed-agent.md (invalid YAML)
+      - minimal-agent.md (minimal valid frontmatter)
+      - test-command.md (optional)
+      - test-skill/ (optional)
+
+# Package Script Additions
+scripts:
+  seed:wint: "tsx src/seed/index.ts"
+  seed:wint:phases: "tsx src/seed/index.ts --target=phases"
+  seed:wint:capabilities: "tsx src/seed/index.ts --target=capabilities"
+  seed:wint:agents: "tsx src/seed/index.ts --target=agents"
+  seed:wint:commands: "tsx src/seed/index.ts --target=commands"
+  seed:wint:skills: "tsx src/seed/index.ts --target=skills"
+
+# Dependencies to Add
+dependencies:
+  runtime:
+    - gray-matter: "^4.0.3"  # Frontmatter parsing (NEEDS TO BE ADDED)
+  devDependencies:
+    - glob: "^10.3.10"  # Already present ✅
+    - tsx: "^4.20.1"    # Already present ✅
+    - vitest: "^3.0.5"  # Already present ✅
+
+# Success Criteria Checklist
+success_criteria:
+  - ✅ All 5 seeders implemented with Zod validation
+  - ✅ All 3 parsers implemented with error handling
+  - ✅ CLI orchestrator operational with --target flag support
+  - ✅ Idempotency verified (safe to rerun)
+  - ✅ Transaction safety verified (rollback on error)
+  - ✅ Unit test coverage >= 80%
+  - ✅ Integration tests pass against test DB
+  - ✅ All 6 package scripts executable via pnpm
+
+# Known Risks and Mitigations
+risks:
+  - risk: Frontmatter format variations across 143 agent files
+    likelihood: HIGH
+    mitigation: Robust parser with try/catch per file, log warnings, continue processing
+
+  - risk: Idempotency strategy may not match table constraints
+    likelihood: MEDIUM
+    mitigation: Verify unique constraints exist before implementation, test twice-run scenario
+
+  - risk: Transaction timeout with 205 bulk inserts
+    likelihood: LOW
+    mitigation: Monitor duration, add batching only if needed (not in MVP)
+
+  - risk: Missing dependencies (gray-matter not in package.json)
+    likelihood: MEDIUM
+    mitigation: Check and add dependency in Step 1 setup
+
+# Deferred/Out of Scope (Confirmed)
+deferred:
+  - Agent version history tracking (future: WINT-0087)
+  - Incremental seed updates/delta mode (future: WINT-0087)
+  - --dry-run flag (optional enhancement, not required for MVP)
+  - Performance benchmarking (future enhancement)
+  - Rollback/undo mechanism (future enhancement)
+
+# Next Phase: Implementation
+next_phase: implement
+expected_output: |
+  - 9 implementation files (3 parsers + 5 seeders + 1 CLI)
+  - 8 test files (7 unit + 1 integration)
+  - 3 fixture files (test data)
+  - 6 package scripts in package.json
+  - All acceptance criteria satisfied

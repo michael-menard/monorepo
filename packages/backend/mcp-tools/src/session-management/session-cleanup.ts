@@ -13,7 +13,8 @@
 
 import { and, isNotNull, lt, sql } from 'drizzle-orm'
 import { logger } from '@repo/logger'
-import { db, contextSessions } from '@repo/db'
+import { db } from '@repo/db'
+import { contextSessions } from '@repo/database-schema'
 import {
   SessionCleanupInputSchema,
   type SessionCleanupInput,

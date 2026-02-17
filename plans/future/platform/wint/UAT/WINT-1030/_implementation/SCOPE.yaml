@@ -1,0 +1,28 @@
+schema: 1
+story_id: "WINT-1030"
+timestamp: "2026-02-16T16:53:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/db/**"
+  - "packages/backend/orchestrator/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Create population script to initialize wint.stories database table with story status from frontmatter and directories"
+elaboration: "completed"

@@ -1,0 +1,202 @@
+schema: 1
+story_id: INFR-0120
+timestamp: "2026-02-15T20:35:00Z"
+
+steps:
+  - id: 1
+    description: "Define JSONB type schemas for evidence/review/qa-verify JSONB fields in artifacts.ts"
+    files:
+      - "packages/backend/database-schema/src/schema/artifacts.ts"
+    dependencies: []
+    slice: packages
+    rationale: "AC-1, AC-2, AC-3 require JSONB fields with type safety. Define Zod schemas for AcEvidence, TouchedFile, CommandRun, E2eTest, ReviewFinding, WorkerResult, RankedPatch, AcVerification, TestResult, QaIssue before table definitions."
+
+  - id: 2
+    description: "Create evidence_artifacts table in artifacts pgSchema"
+    files:
+      - "packages/backend/database-schema/src/schema/artifacts.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "AC-1: evidence_artifacts table with fields: id (UUID PK), story_id (FK to wint.stories), ac_evidence (JSONB), touched_files (JSONB), commands_run (JSONB), e2e_tests (JSONB), created_at, updated_at"
+
+  - id: 3
+    description: "Create review_artifacts table in artifacts pgSchema"
+    files:
+      - "packages/backend/database-schema/src/schema/artifacts.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "AC-2: review_artifacts table with fields: id (UUID PK), story_id (FK), findings (JSONB), worker_results (JSONB), ranked_patches (JSONB), created_at, updated_at"
+
+  - id: 4
+    description: "Create qa_verify_artifacts table in artifacts pgSchema"
+    files:
+      - "packages/backend/database-schema/src/schema/artifacts.ts"
+    dependencies: [1]
+    slice: packages
+    rationale: "AC-3: qa_verify_artifacts table with fields: id (UUID PK), story_id (FK), ac_verifications (JSONB), test_results (JSONB), qa_issues (JSONB), created_at, updated_at"
+
+  - id: 5
+    description: "Generate auto-generated Zod insert/select schemas using drizzle-zod for 3 review/QA artifact tables"
+    files:
+      - "packages/backend/database-schema/src/schema/artifacts.ts"
+    dependencies: [2, 3, 4]
+    slice: packages
+    rationale: "AC-5: Auto-generate Zod schemas using createInsertSchema and createSelectSchema for evidenceArtifacts, reviewArtifacts, qaVerifyArtifacts"
+
+  - id: 6
+    description: "Define Drizzle relations for 3 review/QA artifact tables"
+    files:
+      - "packages/backend/database-schema/src/schema/artifacts.ts"
+    dependencies: [2, 3, 4]
+    slice: packages
+    rationale: "AC-6: Define relations: story → artifacts (one-to-many, lazy), artifact → story (many-to-one, eager) for evidenceArtifacts, reviewArtifacts, qaVerifyArtifacts"
+
+  - id: 7
+    description: "Generate Drizzle migration file using db:generate command"
+    files:
+      - "packages/backend/database-schema/drizzle/0XXX_review_qa_artifacts.sql"
+    dependencies: [5, 6]
+    slice: packages
+    rationale: "AC-4: Run pnpm --filter @repo/database-schema db:generate to generate migration for 3 review/QA artifact tables"
+
+  - id: 8
+    description: "Write unit tests for evidence_artifacts table validation"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"
+    dependencies: [7]
+    slice: packages
+    rationale: "AC-7: Unit tests validating: insert valid evidence artifact, reject invalid artifact, JSONB field structure matches Zod schemas"
+
+  - id: 9
+    description: "Write unit tests for review_artifacts table validation"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"
+    dependencies: [7]
+    slice: packages
+    rationale: "AC-7: Unit tests validating: insert valid review artifact, reject invalid artifact, JSONB field structure matches Zod schemas"
+
+  - id: 10
+    description: "Write unit tests for qa_verify_artifacts table validation"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"
+    dependencies: [7]
+    slice: packages
+    rationale: "AC-7: Unit tests validating: insert valid qa-verify artifact, reject invalid artifact, JSONB field structure matches Zod schemas"
+
+  - id: 11
+    description: "Update _implementation/SCHEMA-REFERENCE.md to document evidence/review/qa-verify table designs"
+    files:
+      - "plans/future/platform/in-progress/INFR-0120/_implementation/SCHEMA-REFERENCE.md"
+    dependencies: [7]
+    slice: packages
+    rationale: "AC-8: Update existing SCHEMA-REFERENCE.md (created by INFR-0110) to include evidence_artifacts, review_artifacts, qa_verify_artifacts table designs"
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/artifacts.ts"
+    action: modify
+    reason: "Add JSONB type schemas (Step 1), evidence_artifacts table (Step 2), review_artifacts table (Step 3), qa_verify_artifacts table (Step 4), auto-generated Zod schemas (Step 5), Drizzle relations (Step 6)"
+
+  - path: "packages/backend/database-schema/drizzle/0XXX_review_qa_artifacts.sql"
+    action: create
+    reason: "Drizzle migration file generated by db:generate command (Step 7)"
+
+  - path: "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"
+    action: create
+    reason: "Unit tests for evidence_artifacts (Step 8), review_artifacts (Step 9), qa_verify_artifacts (Step 10) table validation"
+
+  - path: "plans/future/platform/in-progress/INFR-0120/_implementation/SCHEMA-REFERENCE.md"
+    action: modify
+    reason: "Update to document evidence/review/qa-verify table designs (Step 11)"
+
+commands_to_run:
+  - command: "pnpm --filter @repo/database-schema db:generate"
+    when: "after Step 6 completes (after table definitions and relations)"
+    required: true
+    rationale: "AC-4: Generate Drizzle migration for 3 review/QA artifact tables"
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+    rationale: "Ensure all packages compile successfully"
+
+  - command: "pnpm --filter @repo/database-schema test"
+    when: "after unit tests written (Steps 8-10)"
+    required: true
+    rationale: "Run unit tests to validate schema definitions per AC-7"
+
+  - command: "pnpm lint"
+    when: "after all code changes"
+    required: true
+    rationale: "Ensure code follows project style guidelines"
+
+  - command: "pnpm check-types"
+    when: "after all code changes"
+    required: true
+    rationale: "Ensure TypeScript type safety across all changes"
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Table definition: evidenceArtifacts in artifacts.ts + Unit test: insert valid evidence artifact"
+    evidence_type: test
+    files: ["packages/backend/database-schema/src/schema/artifacts.ts", "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"]
+
+  - ac_id: "AC-2"
+    planned_evidence: "Table definition: reviewArtifacts in artifacts.ts + Unit test: insert valid review artifact"
+    evidence_type: test
+    files: ["packages/backend/database-schema/src/schema/artifacts.ts", "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"]
+
+  - ac_id: "AC-3"
+    planned_evidence: "Table definition: qaVerifyArtifacts in artifacts.ts + Unit test: insert valid qa-verify artifact"
+    evidence_type: test
+    files: ["packages/backend/database-schema/src/schema/artifacts.ts", "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"]
+
+  - ac_id: "AC-4"
+    planned_evidence: "Command output: pnpm --filter @repo/database-schema db:generate + Migration file: drizzle/0XXX_review_qa_artifacts.sql"
+    evidence_type: command
+    files: ["packages/backend/database-schema/drizzle/0XXX_review_qa_artifacts.sql"]
+
+  - ac_id: "AC-5"
+    planned_evidence: "Code: createInsertSchema/createSelectSchema calls in artifacts.ts + Unit test: Zod schema validation"
+    evidence_type: test
+    files: ["packages/backend/database-schema/src/schema/artifacts.ts", "packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"]
+
+  - ac_id: "AC-6"
+    planned_evidence: "Code: storiesRelations update + evidenceArtifactsRelations + reviewArtifactsRelations + qaVerifyArtifactsRelations definitions"
+    evidence_type: file
+    files: ["packages/backend/database-schema/src/schema/artifacts.ts"]
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit tests: insert valid artifact, reject invalid artifact, JSONB field structure validation for all 3 tables"
+    evidence_type: test
+    files: ["packages/backend/database-schema/src/schema/__tests__/review-qa-artifacts-schema.test.ts"]
+
+  - ac_id: "AC-8"
+    planned_evidence: "Updated file: _implementation/SCHEMA-REFERENCE.md with evidence/review/qa-verify table documentation"
+    evidence_type: file
+    files: ["plans/future/platform/in-progress/INFR-0120/_implementation/SCHEMA-REFERENCE.md"]
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "INFR-0110 completed (artifacts pgSchema and artifact_type_enum exist) - no pgSchema or enum creation needed"
+  - "WINT-0010 completed (wint.stories table exists) - foreign key dependency satisfied"
+  - "Migration simpler than INFR-0110: ~150 lines (3 tables only), no pgSchema, no enum, no indexes"
+  - "Reuse INFR-0110 patterns: UUID PKs with defaultRandom(), timestamp with timezone, JSONB with .$type<T>(), ON DELETE CASCADE"
+  - "No new indexes - INFR-0110's idx_story_artifact composite index covers evidence/review/qa-verify queries"
+  - "SCHEMA-REFERENCE.md exists from INFR-0110 - update it instead of creating new doc"
+  - "Follow drizzle-zod pattern: createInsertSchema/createSelectSchema for runtime validation"
+  - "JSONB type schemas defined before table definitions for type safety"
+  - "Unit tests validate JSONB structure matches Zod schemas from packages/backend/orchestrator/src/artifacts/"
+
+warnings:
+  - category: schema-alignment
+    message: "Ensure JSONB type schemas match Evidence, Review, QaVerify Zod schemas from orchestrator artifacts"
+    mitigation: "AC-7 unit tests explicitly validate JSONB field structure matches orchestrator Zod schemas"
+    severity: medium
+
+token_optimization:
+  - "Read artifacts.ts only (not full wint.ts) for schema patterns - saves ~80% file read tokens"
+  - "No KB queries needed - KNOWLEDGE-CONTEXT.yaml provides all lessons from INFR-0110"
+  - "No ADR queries needed - all relevant ADRs captured in KNOWLEDGE-CONTEXT.yaml"

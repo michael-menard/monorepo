@@ -1,0 +1,218 @@
+schema: 1
+story: "KBAR-0030"
+story_title: "Story Sync Functions"
+gate: CONCERNS
+status_reason: "Multiple high-priority findings require attention: 3 high-severity security issues (path traversal, symlink vulnerabilities), 2 critical skipped tests blocking idempotency verification, N+1 query patterns affecting scalability. However, checks pass (16/18 tests) and core functionality is complete. Recommend addressing security and test gaps before production use."
+reviewer: "Claude Code"
+updated: "2026-02-17T00:32:00Z"
+
+# Waiver (not active)
+waiver:
+  active: false
+  reason: ""
+  approved_by: ""
+
+# Top priority issues requiring attention
+top_issues:
+  # Security - High Severity
+  - id: "SEC-001"
+    severity: high
+    finding: "Path Traversal Vulnerability - filePath and outputPath parameters accept any string without validating against directory traversal attacks (../, absolute paths escaping intended directories)"
+    suggested_action: "Add path.resolve() and path.relative() validation to verify paths stay within allowed directories. Reject paths containing '..' or symbolic links pointing outside boundaries"
+    file: "packages/backend/kbar-sync/src/__types__/index.ts"
+    line: "21, 53, 84"
+
+  - id: "SEC-002"
+    severity: high
+    finding: "Symlink Following Vulnerability - readFile() follows symlinks without restrictions, allowing access to sensitive files outside intended scope"
+    suggested_action: "Use fs.lstat() to detect symlinks, fs.realpath() to verify canonical path stays within allowed directory, or use O_NOFOLLOW flag"
+    file: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    line: "100"
+
+  - id: "SEC-003"
+    severity: high
+    finding: "Symlink Following on Write - rename() operation follows symlinks at target, could cause unintended file overwrites"
+    suggested_action: "Check if outputPath is symlink using fs.lstat() before writing. Reject operations if target is a symlink"
+    file: "packages/backend/kbar-sync/src/sync-story-from-database.ts"
+    line: "109"
+
+  # Test Coverage - High Severity
+  - id: "TEST-001"
+    severity: high
+    finding: "Critical skipped test for checksum-based idempotency (AC-4). Test cannot verify checksums match between runs without real SHA-256 computation"
+    suggested_action: "Refactor computeChecksum to accept injectable crypto function or move test to integration suite where real checksums work"
+    file: "packages/backend/kbar-sync/src/__tests__/sync-story-to-database.test.ts"
+    line: "109"
+
+  - id: "TEST-002"
+    severity: high
+    finding: "Skipped test in detectSyncConflicts for no-conflict scenario. Critical success path when checksums match not verified in unit tests"
+    suggested_action: "Implement with same crypto mocking solution as TEST-001"
+    file: "packages/backend/kbar-sync/src/__tests__/detect-sync-conflicts.test.ts"
+    line: "44"
+
+  # Performance - High Severity
+  - id: "PERF-001"
+    severity: high
+    finding: "N+1 query pattern: artifact table queried twice in transaction with identical filters (lines 122-128 then 185-191)"
+    suggested_action: "Store first artifact query result and reuse it. Eliminate duplicate query"
+    file: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    line: "122-128, 185-191"
+
+  - id: "PERF-002"
+    severity: high
+    finding: "Duplicate SELECT queries on kbarStories table when operations run sequentially, wasting database roundtrips"
+    suggested_action: "Return story data from sync operations to avoid re-fetching, or implement result caching within session scope"
+    file: "packages/backend/kbar-sync/src/detect-sync-conflicts.ts"
+    line: "122"
+
+  # Code Quality - High Severity
+  - id: "QUAL-001"
+    severity: high
+    finding: "Code duplication - computeChecksum function identically implemented in both sync-story-to-database.ts and detect-sync-conflicts.ts"
+    suggested_action: "Extract to shared utilities module (src/utils/checksum.ts)"
+    file: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    line: "29"
+
+  - id: "QUAL-002"
+    severity: high
+    finding: "Repeated error handling pattern for sync event updates across all three sync functions (~15 lines duplicated)"
+    suggested_action: "Extract to utility function: updateSyncEventOnFailure(syncEventId, errorMessage)"
+    file: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    line: "258-273"
+
+  - id: "QUAL-003"
+    severity: high
+    finding: "Repeated input validation pattern in all three sync functions with identical Zod validation structure"
+    suggested_action: "Create reusable validateInput<T>(input, schema) helper function"
+    file: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    line: "65-75"
+
+  - id: "QUAL-004"
+    severity: high
+    finding: "Inconsistent transaction typing: db.transaction() callback typed as 'any' instead of proper Drizzle type"
+    suggested_action: "Import and use proper Drizzle transaction type for type safety"
+    file: "packages/backend/kbar-sync/src/sync-story-to-database.ts"
+    line: "110"
+
+# NFR validation summary
+nfr_validation:
+  security:
+    status: FAIL
+    issue_count: 10
+    details: "3 high-severity vulnerabilities (path traversal, symlink attacks) and 7 medium/low issues. Package accepts file paths without validation"
+  performance:
+    status: CONCERNS
+    issue_count: 11
+    details: "2 high-severity N+1 query patterns, 4 medium-severity inefficiencies (missing indexes, excessive sync event writes). Scale risk at 100+ stories"
+  accessibility:
+    status: SKIPPED
+    issue_count: 0
+    details: "Backend-only package with no UI components"
+  reliability:
+    status: CONCERNS
+    issue_count: 12
+    details: "2 critical tests skipped (checksum idempotency), transaction error handling gaps, metadata validation bypassed with 'as any'"
+  tests:
+    status: PASS
+    details: "16/18 tests passing, 2 skipped due to crypto mocking complexity. 89% coverage achieved"
+  types:
+    status: PASS
+    details: "TypeScript compilation successful, no type errors"
+  lint:
+    status: SKIPPED
+    details: "Linting not run during review"
+
+# Risk summary
+risk_summary:
+  totals:
+    high: 11
+    medium: 28
+    low: 32
+  recommendations:
+    must_fix:
+      - "SEC-001: Add path validation to prevent directory traversal"
+      - "SEC-002: Prevent symlink following on file reads"
+      - "SEC-003: Prevent symlink following on file writes"
+      - "TEST-001: Fix skipped idempotency test (AC-4 verification)"
+      - "TEST-002: Fix skipped no-conflict test"
+      - "PERF-001: Eliminate N+1 artifact query pattern"
+      - "PERF-002: Eliminate duplicate story queries"
+      - "QUAL-001: Extract duplicated computeChecksum function"
+      - "QUAL-002: Extract duplicated sync event error handling"
+      - "QUAL-003: Extract duplicated input validation"
+      - "QUAL-004: Fix unsafe 'any' type in transaction callback"
+    should_fix:
+      - "PERF-003: Add composite index for (storyId, artifactType) lookups"
+      - "PERF-004: Reduce sync event update frequency"
+      - "SEC-006: Add YAML parser DoS protection (maxAliasCount limits)"
+      - "TEST-003: Add transaction error handling tests"
+      - "QUAL-005: Create constants for magic string event types"
+      - "QUAL-006: Add metadata validation schema"
+      - "DEBT-003: Replace 'as any' casts with proper metadata schema"
+      - "DEBT-007: Extract sync event management to shared helper"
+
+# Additional findings detail
+findings_summary:
+  requirements_traceability:
+    t_shirt_size: M
+    coverage_percentage: 89
+    ac_covered: 8
+    ac_total: 8
+    gaps: 2
+  code_quality:
+    t_shirt_size: M
+    complexity_score: 6
+    findings: 20
+  security:
+    t_shirt_size: L
+    risk_level: high
+    findings: 10
+  performance:
+    t_shirt_size: L
+    performance_risk: medium
+    findings: 11
+  accessibility:
+    t_shirt_size: XS
+    ui_complexity: none
+    findings: 0
+  test_coverage:
+    t_shirt_size: M
+    test_complexity: medium
+    findings: 10
+  technical_debt:
+    t_shirt_size: M
+    maintenance_burden: medium
+    findings: 18
+
+# T-shirt size synthesis
+t_shirt_sizing:
+  recommended_size: M
+  confidence: high
+  specialist_estimates:
+    requirements: M
+    code_quality: M
+    security: L
+    performance: L
+    accessibility: XS
+    test_coverage: M
+    technical_debt: M
+  size_distribution:
+    XS: 1
+    S: 0
+    M: 4
+    L: 2
+    XL: 0
+    XXL: 0
+  synthesis_rationale: |
+    Modal size is M (4/7 specialists). Security and Performance flagged as L due to:
+    - Security: Path traversal and symlink vulnerabilities create attack surface
+    - Performance: N+1 queries will impact scalability at 100+ stories
+
+    Despite L estimates in security and performance, overall recommendation is M because:
+    - This is a backend utility package for internal use (not user-facing)
+    - Security issues can be mitigated by path allowlisting at call sites
+    - Performance issues are real but not critical for infrequent sync operations
+    - Strong test coverage (89%) and well-structured code reduce risk
+
+    Recommended: M with mandatory security hardening before production use

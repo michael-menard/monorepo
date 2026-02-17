@@ -12,6 +12,10 @@ import { logger } from '@repo/logger'
 import type { ILLMProvider } from '../providers/base.js'
 import { getProviderForModel } from '../config/llm-provider.js'
 import { loadStrategy, type Strategy } from './strategy-loader.js'
+import type { TaskContract } from './__types__/task-contract.js'
+import { selectModelForTask } from './task-selector.js'
+import type { QualityEvaluation } from './__types__/quality-evaluation.js'
+import { evaluateQuality as evaluateQualityFn } from './quality-evaluator.js'
 
 // ============================================================================
 // Zod Schemas (CLAUDE.md compliant)
@@ -58,11 +62,13 @@ export type EscalationResult = z.infer<typeof EscalationResultSchema>
 
 /**
  * Agent selection context (optional overrides).
+ * Extended with optional TaskContract for task-based selection.
  */
 export const AgentSelectionContextSchema = z.object({
   complexity: z.enum(['low', 'medium', 'high']).optional(),
   taskType: z.string().optional(),
   budgetRemaining: z.number().nonnegative().optional(),
+  taskContract: z.custom<TaskContract>().optional(),
 })
 
 export type AgentSelectionContext = z.infer<typeof AgentSelectionContextSchema>
@@ -112,11 +118,37 @@ export class ModelRouter {
 
   /**
    * Select model for an agent invocation.
-   * Checks strategy tier assignments, falls back to legacy model assignments.
+   * Supports both agent-based selection (legacy) and task-based selection (via TaskContract).
+   *
+   * Migration path:
+   * - No context: Uses agent name → task type → tier mapping (legacy)
+   * - With context.taskContract: Uses task-based selection (new)
+   * - With context.complexity: Uses complexity escalation (existing)
    *
    * @param agentName - Agent name (e.g., 'story-fanout-pm')
-   * @param context - Optional context for escalation/override
+   * @param context - Optional context for escalation/override or TaskContract
    * @returns Tier selection with model and provider
+   *
+   * @example Legacy agent-based selection
+   * ```typescript
+   * const selection = await router.selectModelForAgent('dev-implement-story')
+   * // → Uses agent → tier mapping from strategy
+   * ```
+   *
+   * @example Task-based selection with contract
+   * ```typescript
+   * const selection = await router.selectModelForAgent('dev-implement-story', {
+   *   taskContract: {
+   *     taskType: 'simple_code_generation',
+   *     complexity: 'high',
+   *     qualityRequirement: 'critical',
+   *     requiresReasoning: false,
+   *     securitySensitive: false,
+   *     allowOllama: false,
+   *   },
+   * })
+   * // → Uses task contract → tier selection logic
+   * ```
    */
   async selectModelForAgent(
     agentName: string,
@@ -128,7 +160,17 @@ export class ModelRouter {
 
     logger.info('model_router', { event: 'model_selection_start', agent: agentName, context })
 
-    // Strategy-based selection (check task type mapping)
+    // NEW: Task-based selection (if contract provided)
+    if (context?.taskContract) {
+      logger.info('model_router', {
+        event: 'task_based_selection',
+        agent: agentName,
+        task_type: context.taskContract.taskType,
+      })
+      return selectModelForTask(context.taskContract)
+    }
+
+    // EXISTING: Strategy-based selection (check task type mapping)
     const taskType = context?.taskType || this.inferTaskTypeFromAgentName(agentName)
     const strategyTier = this.getTierForTaskType(taskType)
 
@@ -443,6 +485,44 @@ export class ModelRouter {
     // For MVP, return null to force strategy-based selection
     // In production, would dynamically import from model-assignments.ts
     return null
+  }
+
+  // ============================================================================
+  // Quality Evaluation (MODL-0030)
+  // ============================================================================
+
+  /**
+   * Evaluate the quality of a model output against a task contract.
+   *
+   * Wraps the synchronous evaluateQuality() function in an async interface
+   * for consistency with other ModelRouter async methods.
+   * This allows future replacement with an async LLM-as-judge strategy.
+   *
+   * @param contract - Task contract used for model selection
+   * @param tier - Selected tier string (e.g., 'tier-1')
+   * @param output - Model output to evaluate
+   * @returns Promise<QualityEvaluation> with scores and mismatch detection
+   *
+   * @example
+   * ```typescript
+   * const router = new ModelRouter()
+   * const contract = createTaskContract({ taskType: 'code_generation' })
+   * const evaluation = await router.evaluateQuality(contract, 'tier-1', outputString)
+   * console.log(evaluation.qualityScore)
+   * ```
+   */
+  async evaluateQuality(
+    contract: TaskContract,
+    tier: string,
+    output: string,
+  ): Promise<QualityEvaluation> {
+    logger.info('model_router', {
+      event: 'evaluate_quality_requested',
+      task_type: contract.taskType,
+      tier,
+    })
+
+    return evaluateQualityFn(contract, tier, output)
   }
 
   // ============================================================================

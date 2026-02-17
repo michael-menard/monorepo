@@ -1,12 +1,13 @@
 ---
 created: 2026-02-07
-updated: 2026-02-07
-version: 1.0.0
+updated: 2026-02-16
+version: 1.1.0
 type: worker
 name: doc-sync
 description: Automatically updates workflow documentation when agent/command files change
 model: haiku
 tools: [Read, Grep, Glob, Write, Edit, Bash]
+mcp_tools: [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-knowledgebase__query-workflow-components]
 ---
 
 # Agent: doc-sync
@@ -66,6 +67,8 @@ find .claude/agents/ .claude/commands/ -name '*.agent.md' -o -name '*.md' -mtime
 
 ### Phase 2: Frontmatter Parsing
 
+**Step 2.1: Parse file frontmatter**
+
 Extract YAML frontmatter from each changed file:
 
 ```bash
@@ -89,16 +92,67 @@ sed -n '/^---$/,/^---$/p' FILE.agent.md | sed '1d;$d'
 - `kb_tools` - Array of KB tools used
 - `mcp_tools` - Array of MCP tools used
 
+**Step 2.2: Query database (if available)**
+
+If postgres-knowledgebase MCP tools are available, query for agent/command/skill metadata:
+
+```javascript
+// Query workflow.phases for phase metadata
+const DB_QUERY_TIMEOUT_MS = 30000; // Configurable timeout (default: 30 seconds)
+
+try {
+  // Query workflow.components for agent/command/skill metadata
+  const components = await mcp__postgres_knowledgebase__query_workflow_components({
+    component_types: ['agent', 'command', 'skill'],
+    timeout: DB_QUERY_TIMEOUT_MS
+  });
+
+  // Query workflow.phases for phase status and completion
+  const phases = await mcp__postgres_knowledgebase__query_workflow_phases({
+    timeout: DB_QUERY_TIMEOUT_MS
+  });
+} catch (error) {
+  if (error.type === 'TIMEOUT') {
+    // Log timeout error and fall back to file-only mode
+    logger.warn('Database query timeout after 30s - falling back to file-only mode');
+  } else if (error.type === 'CONNECTION_FAILED') {
+    // Log connection failure and fall back to file-only mode
+    logger.warn('Database connection failed - falling back to file-only mode');
+  } else {
+    // Log other errors and fall back to file-only mode
+    logger.error('Database query error:', error.message);
+  }
+  // Continue with file-only mode (graceful degradation)
+}
+```
+
+**Step 2.3: Merge sources**
+
+If database data is available, merge with file frontmatter:
+- **Database overrides file** if both present for same component
+- **File-only** if database unavailable or query fails
+- **Database-only** for components not in files (future expansion)
+
+**Step 2.4: Log database status**
+
+Track database query status for SYNC-REPORT.md:
+- `database_queried: true/false`
+- `database_status: success | timeout | connection_failed | unavailable`
+- `database_components_count: N`
+
 **Error Handling:**
 - Invalid YAML: Skip file, add to manual_review_needed
 - Missing required fields: Warn but continue
 - Missing optional fields: Use defaults or omit
+- Database timeout/unavailable: Log warning, continue with file-only mode
 
 ---
 
 ### Phase 3: Section Mapping
 
-Map agent files to documentation sections based on naming pattern:
+Map agent files to documentation sections based on naming pattern and database metadata:
+
+**Standard Agent Patterns:**
 
 | Agent Pattern | File | Section |
 |---------------|------|---------|
@@ -111,7 +165,51 @@ Map agent files to documentation sections based on naming pattern:
 | `workflow-*.agent.md` | `docs/workflow/orchestration.md` | Cross-Cutting Concerns |
 | `*.md` (commands) | `docs/workflow/README.md` | Commands Overview |
 
-**For New Patterns:** If an agent doesn't match known patterns, add to `manual_review_needed` section of SYNC-REPORT.md.
+**WINT Phase Structure (Phase 0-9):**
+
+For agents in WINT workflow feature directory, map to extended phase structure:
+
+| WINT Phase | Phase Name | Documentation Section |
+|------------|------------|----------------------|
+| Phase 0 | Story Setup | `docs/workflow/phases.md` - WINT Phase 0 |
+| Phase 1 | Requirements Analysis | `docs/workflow/phases.md` - WINT Phase 1 |
+| Phase 2 | PM Story Generation | `docs/workflow/phases.md` - WINT Phase 2 |
+| Phase 3 | QA Elaboration | `docs/workflow/phases.md` - WINT Phase 3 |
+| Phase 4 | Dev Planning | `docs/workflow/phases.md` - WINT Phase 4 |
+| Phase 5 | Dev Execution | `docs/workflow/phases.md` - WINT Phase 5 |
+| Phase 6 | Dev Verification | `docs/workflow/phases.md` - WINT Phase 6 |
+| Phase 7 | QA Verification | `docs/workflow/phases.md` - WINT Phase 7 |
+| Phase 8 | UAT | `docs/workflow/phases.md` - WINT Phase 8 |
+| Phase 9 | Deployment | `docs/workflow/phases.md` - WINT Phase 9 |
+
+**Database-Sourced Agent Mapping:**
+
+If database query returns agents not found in files:
+1. Check `metadata.phase` field from `workflow.components` table
+2. Map to appropriate WINT phase section
+3. Flag in SYNC-REPORT.md if phase mapping is ambiguous
+
+**Hybrid Mapping Logic:**
+
+```javascript
+function mapAgentToSection(agent) {
+  // Check database metadata first
+  if (agent.source === 'database' && agent.metadata?.phase) {
+    return mapWINTPhase(agent.metadata.phase);
+  }
+
+  // Fall back to file naming pattern
+  if (agent.filename.startsWith('pm-')) return 'Phase 2: PM Story Generation';
+  if (agent.filename.startsWith('elab-')) return 'Phase 3: QA Elaboration';
+  if (agent.filename.startsWith('dev-')) return 'Phase 4: Dev Implementation';
+  // ... etc
+
+  // Unknown pattern - flag for manual review
+  return null;
+}
+```
+
+**For New Patterns:** If an agent doesn't match known patterns and has no database phase metadata, add to `manual_review_needed` section of SYNC-REPORT.md.
 
 ---
 
@@ -233,8 +331,34 @@ Create comprehensive sync report:
 ```markdown
 # Documentation Sync Report
 
-**Run Date:** 2026-02-07 14:30:00 MST
+**Run Date:** 2026-02-16 14:30:00 MST
 **Run Mode:** Full sync | Check only
+
+## Database Query Status
+
+**Status:** Success | Timeout | Connection Failed | Unavailable
+**Queried:** Yes | No
+**Components Retrieved:** 24
+**Phases Retrieved:** 10
+**Query Time:** 1.2s | Timeout (30s threshold exceeded) | N/A
+
+**Details:**
+- Successfully queried `workflow.components` table (24 components)
+- Successfully queried `workflow.phases` table (10 phases)
+- Database metadata merged with file frontmatter (database overrides on conflict)
+
+_OR (if timeout/failure):_
+
+**Details:**
+- Database query timeout after 30s - fell back to file-only mode
+- Timeout occurred during `workflow.components` query
+- All documentation generated from file frontmatter only
+
+_OR (if unavailable):_
+
+**Details:**
+- postgres-knowledgebase MCP tools not available
+- All documentation generated from file frontmatter only
 
 ## Files Changed
 

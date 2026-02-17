@@ -47,14 +47,14 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
-// NOTE: This import requires pgvector extension to be installed
-// Pre-migration check: SELECT * FROM pg_extension WHERE extname = 'pgvector';
+// NOTE: Vector column type requires pgvector extension to be installed in PostgreSQL
+// Pre-migration check: SELECT * FROM pg_extension WHERE extname = 'vector';
 // Installation: CREATE EXTENSION vector; (requires superuser or rds_superuser)
-import { vector } from 'pgvector/drizzle-orm'
+import { vector } from 'drizzle-orm/pg-core/columns/vector_extension/vector'
 
 // Define the 'wint' PostgreSQL schema namespace
 export const wintSchema = pgSchema('wint')
@@ -168,6 +168,22 @@ export const workflowStatusEnum = pgEnum('workflow_status', [
   'failed',
   'cancelled',
   'blocked',
+])
+
+/**
+ * Verdict Type Enum (from LangGraph workflow artifacts)
+ * Used by elaborations and verifications tables
+ */
+export const verdictTypeEnum = pgEnum('verdict_type', ['pass', 'fail', 'concerns', 'pending'])
+
+/**
+ * Worktree Status Enum (WINT-1130)
+ * Tracks lifecycle status of git worktrees
+ */
+export const worktreeStatusEnum = pgEnum('worktree_status', [
+  'active',
+  'merged',
+  'abandoned',
 ])
 
 // ============================================================================
@@ -580,9 +596,388 @@ export const cohesionRules = wintSchema.table(
 )
 
 // ============================================================================
-// NOTE: Remaining schema groups (Context Cache, Telemetry, ML Pipeline,
-// Workflow Tracking) are unchanged from WINT schema and not duplicated here
-// to stay within time-box constraint.
+// 6. WORKFLOW ARTIFACT SCHEMA (Extended from LangGraph, added to WINT)
+// ============================================================================
+// Tables for LangGraph workflow artifacts: elaborations, plans, verifications,
+// proofs, and token usage. These tables were originally in the LangGraph
+// 002_workflow_tables.sql migration and are now part of the unified schema.
+//
+// Added in: WINT-1090 (Phase 0)
+// ============================================================================
+
+/**
+ * Elaborations Table (from LangGraph, added to WINT)
+ *
+ * Stores LangGraph elaboration artifacts for stories.
+ * Each elaboration records the readiness assessment for a story.
+ *
+ * Schema from: packages/backend/orchestrator/src/db/workflow-repository.ts
+ */
+export const elaborations = wintSchema.table(
+  'elaborations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    date: timestamp('date', { withTimezone: false, mode: 'date' }),
+    verdict: verdictTypeEnum('verdict'),
+    content: jsonb('content'),
+    readinessScore: integer('readiness_score'), // 0-100 scale
+    gapsCount: integer('gaps_count'), // Number of gaps found
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('elaborations_story_id_idx').on(table.storyId),
+    createdAtIdx: index('elaborations_created_at_idx').on(table.createdAt),
+  }),
+)
+
+/**
+ * Implementation Plans Table (from LangGraph, added to WINT)
+ *
+ * Stores versioned implementation plans for stories.
+ * Each plan version tracks steps, files, complexity, and estimates.
+ *
+ * Schema from: packages/backend/orchestrator/src/db/workflow-repository.ts
+ */
+export const implementationPlans = wintSchema.table(
+  'implementation_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    content: jsonb('content'),
+    stepsCount: integer('steps_count'),
+    filesCount: integer('files_count'),
+    complexity: text('complexity'), // 'low', 'medium', 'high'
+    createdBy: text('created_by'),
+    estimatedFiles: integer('estimated_files'),
+    estimatedTokens: integer('estimated_tokens'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('implementation_plans_story_id_idx').on(table.storyId),
+    versionIdx: index('implementation_plans_version_idx').on(table.version),
+    createdAtIdx: index('implementation_plans_created_at_idx').on(table.createdAt),
+    // Unique constraint: one version per story
+    uniqueStoryVersion: uniqueIndex('implementation_plans_unique_story_version').on(
+      table.storyId,
+      table.version,
+    ),
+  }),
+)
+
+/**
+ * Verifications Table (from LangGraph, added to WINT)
+ *
+ * Stores QA verifications, reviews, and UAT results for stories.
+ * Each verification type has its own version sequence.
+ *
+ * Schema from: packages/backend/orchestrator/src/db/workflow-repository.ts
+ */
+export const verifications = wintSchema.table(
+  'verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    type: text('type').notNull(), // 'qa_verify', 'review', 'uat'
+    content: jsonb('content'),
+    verdict: text('verdict'), // 'PASS', 'FAIL', 'CONCERNS', 'PENDING'
+    issuesCount: integer('issues_count'),
+    createdBy: text('created_by'),
+    qaVerdict: verdictTypeEnum('qa_verdict'), // Enum version of verdict
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('verifications_story_id_idx').on(table.storyId),
+    typeIdx: index('verifications_type_idx').on(table.type),
+    versionIdx: index('verifications_version_idx').on(table.version),
+    createdAtIdx: index('verifications_created_at_idx').on(table.createdAt),
+    // Unique constraint: one version per story per type
+    uniqueStoryTypeVersion: uniqueIndex('verifications_unique_story_type_version').on(
+      table.storyId,
+      table.type,
+      table.version,
+    ),
+  }),
+)
+
+/**
+ * Proofs Table (from LangGraph, added to WINT)
+ *
+ * Stores proof/evidence records for stories.
+ * Each proof version tracks AC verification status.
+ *
+ * Schema from: packages/backend/orchestrator/src/db/workflow-repository.ts
+ */
+export const proofs = wintSchema.table(
+  'proofs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    content: jsonb('content'),
+    acsPassing: integer('acs_passing'), // Number of ACs passing
+    acsTotal: integer('acs_total'), // Total number of ACs
+    filesTouched: integer('files_touched'), // Number of files modified
+    createdBy: text('created_by'),
+    allAcsVerified: boolean('all_acs_verified'), // True if all ACs verified
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('proofs_story_id_idx').on(table.storyId),
+    versionIdx: index('proofs_version_idx').on(table.version),
+    createdAtIdx: index('proofs_created_at_idx').on(table.createdAt),
+    // Unique constraint: one version per story
+    uniqueStoryVersion: uniqueIndex('proofs_unique_story_version').on(table.storyId, table.version),
+  }),
+)
+
+/**
+ * Token Usage Table (from LangGraph, added to WINT)
+ *
+ * Tracks token consumption by phase for workflow analytics.
+ * Enables cost tracking and optimization analysis.
+ *
+ * Schema from: packages/backend/orchestrator/src/db/workflow-repository.ts
+ *
+ * Note: total_tokens is computed as tokens_input + tokens_output
+ * (may be implemented as generated column in migration)
+ */
+export const tokenUsage = wintSchema.table(
+  'token_usage',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    phase: text('phase').notNull(), // e.g., 'elaboration', 'plan', 'implement', 'qa'
+    tokensInput: integer('tokens_input').notNull(),
+    tokensOutput: integer('tokens_output').notNull(),
+    totalTokens: integer('total_tokens'), // May be generated column
+    model: text('model'),
+    agentName: text('agent_name'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('token_usage_story_id_idx').on(table.storyId),
+    phaseIdx: index('token_usage_phase_idx').on(table.phase),
+    createdAtIdx: index('token_usage_created_at_idx').on(table.createdAt),
+  }),
+)
+
+/**
+ * Worktrees Table (WINT-1130)
+ *
+ * Tracks git worktrees for database-driven parallel work coordination.
+ * Each worktree represents an active development branch tied to a story.
+ *
+ * Key Design Decisions:
+ * - FK with CASCADE: If story deleted, worktrees auto-delete (orphaned worktrees have no value)
+ * - Partial Unique Index: Prevents concurrent registration of multiple active worktrees for same story
+ * - JSONB Metadata: Flexible schema evolution for future fields (sessionId, prNumber, reason, etc.)
+ * - Timestamp Fields: Separate mergedAt/abandonedAt for lifecycle tracking
+ * - Default Status: New records default to 'active'
+ */
+export const worktrees = wintSchema.table(
+  'worktrees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    storyId: uuid('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    worktreePath: text('worktree_path').notNull(),
+    branchName: text('branch_name').notNull(),
+    status: worktreeStatusEnum('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    mergedAt: timestamp('merged_at', { withTimezone: true }),
+    abandonedAt: timestamp('abandoned_at', { withTimezone: true }),
+    metadata: jsonb('metadata').$type<{
+      sessionId?: string
+      prNumber?: number
+      reason?: string
+    }>().default({}),
+  },
+  table => ({
+    // Partial unique index: enforces one active worktree per story at DB level
+    uniqueActiveWorktree: uniqueIndex('unique_active_worktree')
+      .on(table.storyId, table.status)
+      .where(sql`${table.status} = 'active'`),
+    storyIdIdx: index('idx_worktrees_story_id').on(table.storyId),
+    statusIdx: index('idx_worktrees_status').on(table.status),
+  }),
+)
+
+// ============================================================================
+// 7. WORKFLOW METADATA SCHEMA (Added for WINT-0080)
+// ============================================================================
+// Tables for workflow phase definitions and agent/command/skill metadata.
+// These tables support the seed data requirements from WINT-0080 and enable
+// workflow tracking, agent registry, and command/skill inventories.
+//
+// Added in: WINT-0080 (Phase 0)
+// ============================================================================
+
+/**
+ * Workflow Phases Table (from WINT-0070, required by WINT-0080)
+ *
+ * Stores the 8 workflow phase definitions (Phase 0-7) from the WINT epic.
+ * This table is seeded once and remains relatively static.
+ *
+ * Schema resolves AC-12 (namespace clarity) and AC-13 (namespace consistency)
+ * by placing in wint schema namespace.
+ */
+export const phases = wintSchema.table(
+  'phases',
+  {
+    id: integer('id').primaryKey(), // Phase number 0-7
+    phaseName: text('phase_name').notNull().unique(),
+    description: text('description'),
+
+    // Metadata
+    phaseOrder: integer('phase_order').notNull(), // Explicit ordering (same as id typically)
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    phaseNameIdx: uniqueIndex('phases_phase_name_idx').on(table.phaseName),
+    phaseOrderIdx: index('phases_phase_order_idx').on(table.phaseOrder),
+  }),
+)
+
+/**
+ * Agents Table (from WINT-0080)
+ *
+ * Stores metadata for all workflow agents extracted from .agent.md files.
+ * This table supports agent registry, capability tracking, and workflow telemetry.
+ *
+ * Seeded by WINT-0080 seed scripts from .claude/agents/ *.agent.md files.
+ */
+export const agents = wintSchema.table(
+  'agents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Agent identification
+    name: text('name').notNull().unique(), // Agent file name (e.g., 'dev-implement-story')
+
+    // Agent classification
+    agentType: text('agent_type').notNull(), // 'worker', 'leader', 'orchestrator'
+    permissionLevel: text('permission_level').notNull(), // 'docs-only', 'read-only', 'read-write', 'admin'
+    model: text('model'), // 'haiku', 'sonnet', 'opus', null (if not specified)
+
+    // Relationships (denormalized arrays for flexibility)
+    spawnedBy: jsonb('spawned_by').$type<string[]>(), // Parent agent names
+    triggers: jsonb('triggers').$type<string[]>(), // Command/event triggers
+    skillsUsed: jsonb('skills_used').$type<string[]>(), // Skill names used by this agent
+
+    // Flexible metadata for frontmatter fields
+    metadata: jsonb('metadata').$type<{
+      mission?: string
+      scope?: string
+      signals?: string[]
+      autonomyLevel?: string
+      version?: string
+      [key: string]: unknown
+    }>(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    nameIdx: uniqueIndex('agents_name_idx').on(table.name),
+    agentTypeIdx: index('agents_agent_type_idx').on(table.agentType),
+    permissionLevelIdx: index('agents_permission_level_idx').on(table.permissionLevel),
+    modelIdx: index('agents_model_idx').on(table.model),
+  }),
+)
+
+/**
+ * Commands Table (from WINT-0080)
+ *
+ * Stores metadata for all workflow commands extracted from .claude/commands/ files.
+ * This table supports command registry and usage tracking.
+ *
+ * Seeded by WINT-0080 seed scripts from .claude/commands/ *.md files.
+ */
+export const commands = wintSchema.table(
+  'commands',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Command identification
+    name: text('name').notNull().unique(), // Command name (e.g., 'dev-implement-story')
+    description: text('description'),
+
+    // Triggers and patterns
+    triggers: jsonb('triggers').$type<string[]>(), // Array of trigger patterns
+
+    // Flexible metadata for command-specific fields
+    metadata: jsonb('metadata').$type<{
+      usage?: string
+      examples?: string[]
+      flags?: { name: string; description: string }[]
+      [key: string]: unknown
+    }>(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    nameIdx: uniqueIndex('commands_name_idx').on(table.name),
+  }),
+)
+
+/**
+ * Skills Table (from WINT-0080)
+ *
+ * Stores metadata for all workflow skills extracted from .claude/skills/ directories.
+ * This table supports skill registry and capability tracking.
+ *
+ * Seeded by WINT-0080 seed scripts from .claude/skills/ directories.
+ */
+export const skills = wintSchema.table(
+  'skills',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Skill identification
+    name: text('name').notNull().unique(), // Skill name (e.g., 'commit', 'review')
+    description: text('description'),
+
+    // Capabilities provided by this skill
+    capabilities: jsonb('capabilities').$type<string[]>(), // Array of capability names
+
+    // Flexible metadata for skill-specific fields
+    metadata: jsonb('metadata').$type<{
+      version?: string
+      agents?: string[] // Agents that use this skill
+      [key: string]: unknown
+    }>(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    nameIdx: uniqueIndex('skills_name_idx').on(table.name),
+  }),
+)
+
+// ============================================================================
+// NOTE: Remaining schema groups (Context Cache, Telemetry, ML Pipeline)
+// are unchanged from WINT schema and not duplicated here to stay within
+// time-box constraint.
 //
 // REFER TO: packages/backend/database-schema/src/schema/wint.ts for complete definitions
 //
@@ -606,6 +1001,14 @@ export const storiesRelations = relations(stories, ({ one, many }) => ({
   dependents: many(storyDependencies, { relationName: 'story_dependents' }),
   acceptanceCriteria: many(acceptanceCriteria),
   risks: many(storyRisks),
+  // Workflow artifact relations (from LangGraph)
+  elaborations: many(elaborations),
+  implementationPlans: many(implementationPlans),
+  verifications: many(verifications),
+  proofs: many(proofs),
+  tokenUsage: many(tokenUsage),
+  // Worktree tracking (WINT-1130)
+  worktrees: many(worktrees),
 }))
 
 export const storyStatesRelations = relations(storyStates, ({ one }) => ({
@@ -669,6 +1072,49 @@ export const featureRelationshipsRelations = relations(featureRelationships, ({ 
   }),
 }))
 
+// Workflow Artifact Relations (from LangGraph)
+export const elaborationsRelations = relations(elaborations, ({ one }) => ({
+  story: one(stories, {
+    fields: [elaborations.storyId],
+    references: [stories.id],
+  }),
+}))
+
+export const implementationPlansRelations = relations(implementationPlans, ({ one }) => ({
+  story: one(stories, {
+    fields: [implementationPlans.storyId],
+    references: [stories.id],
+  }),
+}))
+
+export const verificationsRelations = relations(verifications, ({ one }) => ({
+  story: one(stories, {
+    fields: [verifications.storyId],
+    references: [stories.id],
+  }),
+}))
+
+export const proofsRelations = relations(proofs, ({ one }) => ({
+  story: one(stories, {
+    fields: [proofs.storyId],
+    references: [stories.id],
+  }),
+}))
+
+export const tokenUsageRelations = relations(tokenUsage, ({ one }) => ({
+  story: one(stories, {
+    fields: [tokenUsage.storyId],
+    references: [stories.id],
+  }),
+}))
+
+export const worktreesRelations = relations(worktrees, ({ one }) => ({
+  story: one(stories, {
+    fields: [worktrees.storyId],
+    references: [stories.id],
+  }),
+}))
+
 // ============================================================================
 // ZOD SCHEMAS (Auto-generated via drizzle-zod)
 // ============================================================================
@@ -724,3 +1170,56 @@ export const insertCohesionRuleSchema = createInsertSchema(cohesionRules)
 export const selectCohesionRuleSchema = createSelectSchema(cohesionRules)
 export type InsertCohesionRule = z.infer<typeof insertCohesionRuleSchema>
 export type SelectCohesionRule = z.infer<typeof selectCohesionRuleSchema>
+
+// Workflow Artifact Zod Schemas (from LangGraph)
+export const insertElaborationSchema = createInsertSchema(elaborations)
+export const selectElaborationSchema = createSelectSchema(elaborations)
+export type InsertElaboration = z.infer<typeof insertElaborationSchema>
+export type SelectElaboration = z.infer<typeof selectElaborationSchema>
+
+export const insertImplementationPlanSchema = createInsertSchema(implementationPlans)
+export const selectImplementationPlanSchema = createSelectSchema(implementationPlans)
+export type InsertImplementationPlan = z.infer<typeof insertImplementationPlanSchema>
+export type SelectImplementationPlan = z.infer<typeof selectImplementationPlanSchema>
+
+export const insertVerificationSchema = createInsertSchema(verifications)
+export const selectVerificationSchema = createSelectSchema(verifications)
+export type InsertVerification = z.infer<typeof insertVerificationSchema>
+export type SelectVerification = z.infer<typeof selectVerificationSchema>
+
+export const insertProofSchema = createInsertSchema(proofs)
+export const selectProofSchema = createSelectSchema(proofs)
+export type InsertProof = z.infer<typeof insertProofSchema>
+export type SelectProof = z.infer<typeof selectProofSchema>
+
+export const insertTokenUsageSchema = createInsertSchema(tokenUsage)
+export const selectTokenUsageSchema = createSelectSchema(tokenUsage)
+export type InsertTokenUsage = z.infer<typeof insertTokenUsageSchema>
+export type SelectTokenUsage = z.infer<typeof selectTokenUsageSchema>
+
+// Workflow Metadata Zod Schemas (from WINT-0080)
+export const insertPhaseSchema = createInsertSchema(phases)
+export const selectPhaseSchema = createSelectSchema(phases)
+export type InsertPhase = z.infer<typeof insertPhaseSchema>
+export type SelectPhase = z.infer<typeof selectPhaseSchema>
+
+export const insertAgentSchema = createInsertSchema(agents)
+export const selectAgentSchema = createSelectSchema(agents)
+export type InsertAgent = z.infer<typeof insertAgentSchema>
+export type SelectAgent = z.infer<typeof selectAgentSchema>
+
+export const insertCommandSchema = createInsertSchema(commands)
+export const selectCommandSchema = createSelectSchema(commands)
+export type InsertCommand = z.infer<typeof insertCommandSchema>
+export type SelectCommand = z.infer<typeof selectCommandSchema>
+
+export const insertSkillSchema = createInsertSchema(skills)
+export const selectSkillSchema = createSelectSchema(skills)
+export type InsertSkill = z.infer<typeof insertSkillSchema>
+export type SelectSkill = z.infer<typeof selectSkillSchema>
+
+// Worktrees Zod Schemas (WINT-1130)
+export const insertWorktreeSchema = createInsertSchema(worktrees)
+export const selectWorktreeSchema = createSelectSchema(worktrees)
+export type InsertWorktree = z.infer<typeof insertWorktreeSchema>
+export type SelectWorktree = z.infer<typeof selectWorktreeSchema>

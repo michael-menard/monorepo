@@ -16,10 +16,13 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 1 |
+| uat | 6 |
+| in-qa | 1 |
+| ready-for-qa | 0 |
 | elaboration | 1 |
 | in-progress | 0 |
 | ready-to-work | 0 |
-| pending | 138 |
+| pending | 131 |
 
 ---
 
@@ -154,7 +157,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0080: Seed Initial Workflow Data
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0070, WINT-0060
 **Phase:** 0
 **Feature:** Seed workflow.phases with 8 phases (0-7), seed graph.capabilities with standard CRUD operations, seed current 115 agents, 28 commands, 13 skills
@@ -165,11 +168,14 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 **Risk Notes:** Agent metadata extraction may require parsing .agent.md files
 
+**QA Setup Complete:** 2026-02-16 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-16 - All 13 ACs verified, 385 tests passing, verdict: PASS
+
 ---
 
 ### WINT-0090: Create Story Management MCP Tools
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0020
 **Phase:** 0
 **Feature:** Add MCP tools to postgres-knowledgebase: story_get_status, story_update_status, story_get_by_status, story_get_by_feature
@@ -180,20 +186,27 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 **Risk Notes:** MCP tool API must align with existing knowledgebase tools
 
+**QA Result:** PASS — 144 unit + 6 integration tests (100% pass rate), 95% coverage, 0 TypeScript errors. Completed 2026-02-16.
+
 ---
 
 ### WINT-0100: Create Context Cache MCP Tools
 
-**Status:** pending
+**Status:** uat
+**QA Verdict:** PASS
+**Implementation Complete:** 2026-02-16
+**QA Complete:** 2026-02-16
 **Depends On:** WINT-0030
 **Phase:** 0
-**Feature:** Add MCP tools: workflow_get_project_context, workflow_get_agent_mission, workflow_get_domain_kb, workflow_get_library_cache
+**Feature:** Add MCP tools: context_cache_get, context_cache_put, context_cache_invalidate, context_cache_stats
 **Infrastructure:**
-- MCP server extension
+- Database operations (MCP server integration deferred)
 
 **Goal:** Enable agents to retrieve cached context from database
 
-**Risk Notes:** Cache invalidation strategy needs careful design
+**Story File:** `UAT/WINT-0100/WINT-0100.md`
+
+**QA Result:** PASS — 22/22 tests pass individually against live PostgreSQL, all 7 ACs verified, all 4 code review bugs resolved. Completed 2026-02-16.
 
 ---
 
@@ -235,7 +248,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0130: Create Graph Query MCP Tools
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0060
 **Phase:** 0
 **Feature:** Add MCP tools: graph_check_cohesion, graph_get_franken_features, graph_get_capability_coverage, graph_apply_rules
@@ -252,6 +265,22 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 - Security review checklist for Phase 0 completion
 
 **Risk Notes:** Complex graph queries may need optimization or caching
+
+---
+
+### WINT-0131: Add Feature-Capability Linkage to WINT Schema
+
+**Status:** pending
+**Depends On:** WINT-0060, WINT-0130
+**Phase:** 0
+**Feature:** Add featureId foreign key to capabilities table in the WINT graph schema (WINT-0060). Update graph_get_franken_features and graph_get_capability_coverage MCP tools to use feature-capability linkage. Create database migration, update schema definitions, and deliver fully functional implementations of the 2 tools that are currently limited due to missing schema column.
+**Infrastructure:**
+- packages/backend/database-schema (schema migration)
+- packages/backend/mcp-tools/src/graph-query (tool updates)
+
+**Goal:** Complete the WINT-0130 graph query implementation by fixing the schema gap that caused graph_get_franken_features and graph_get_capability_coverage to operate in limited mode
+
+**Risk Notes:** Schema migration must not break existing graph query functionality; featureId FK is a new column addition to capabilities table
 
 ---
 
@@ -561,7 +590,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1030: Populate Story Status from Directories
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-1020, WINT-0020
 **Phase:** 1
 **Feature:** Scan existing story directories, infer status from location (backlog/ready/UAT/done), populate core.stories table
@@ -571,6 +600,8 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 **Goal:** Initialize database with current story status
 
 **Risk Notes:** Edge cases like stories in wrong directories need handling
+
+**Development Started:** 2026-02-16T21:05:00Z - Setup phase complete, ready for implementation
 
 ---
 
@@ -661,7 +692,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1090: Update LangGraph Repositories for Unified Schema
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-1080
 **Phase:** 1
 **Feature:** Update story-repository.ts and workflow-repository.ts in packages/backend/orchestrator to use unified schema
@@ -720,7 +751,7 @@ Foundation phase - Story flattening, core tables, compatibility shim for directo
 
 ### WINT-1130: Track Worktree-to-Story Mapping in Database
 
-**Status:** pending
+**Status:** in-qa
 **Depends On:** WINT-0020
 **Phase:** 1
 **Feature:** Add worktree tracking table to core schema: story_id, worktree_path, branch_name, created_at, status (active/merged/abandoned). Create MCP tools: worktree_register, worktree_get_by_story, worktree_list_active, worktree_mark_complete.

@@ -1,0 +1,25 @@
+# Deferred Knowledge Base Writes
+# Story: WINT-1030
+# Reason: KB persistence attempted, storing for later retry if needed
+
+deferred_writes:
+  - timestamp: "2026-02-16"
+    table: wint.stories
+    operation: INSERT
+    data:
+      story_id: "WINT-1030"
+      feature: "wint"
+      title: "Populate Story Status from Directories"
+      story_dir: "plans/future/platform/wint/WINT-1030"
+      story_file: "plans/future/platform/wint/WINT-1030/WINT-1030.md"
+      story_type: "feature"
+      points: 3
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    reason: "MCP tool unavailable or KB not accessible, queued for later retry"
+    retry_count: 0
+    last_retry: null

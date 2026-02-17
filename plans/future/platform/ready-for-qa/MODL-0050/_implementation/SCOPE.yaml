@@ -1,0 +1,125 @@
+schema: 1
+story_id: "MODL-0050"
+timestamp: "2026-02-15T21:30:00Z"
+gen_mode: false
+title: "Add MiniMax Model Provider to LangGraph"
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_packages:
+  - "packages/backend/orchestrator"
+
+touched_paths_globs:
+  - "packages/backend/orchestrator/src/providers/**"
+  - "packages/backend/orchestrator/package.json"
+
+new_files:
+  - path: "packages/backend/orchestrator/src/providers/minimax.ts"
+    description: "MiniMax provider adapter extending BaseProvider"
+    estimated_lines: 150
+
+  - path: "packages/backend/orchestrator/src/providers/__types__/minimax.ts"
+    description: "Zod schemas for MiniMax configuration"
+    estimated_lines: 50
+
+  - path: "packages/backend/orchestrator/src/providers/__tests__/minimax.test.ts"
+    description: "Unit tests for MiniMax provider (no API key required)"
+    estimated_lines: 200
+
+  - path: "packages/backend/orchestrator/src/providers/__tests__/minimax.integration.test.ts"
+    description: "Integration tests for MiniMax provider (requires API key)"
+    estimated_lines: 100
+
+modified_files:
+  - path: "packages/backend/orchestrator/src/providers/index.ts"
+    description: "Add factory routing for minimax/* prefix"
+    estimated_lines_changed: 5
+
+  - path: "packages/backend/orchestrator/package.json"
+    description: "Add @langchain/community dependency"
+    estimated_lines_changed: 1
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true  # MiniMax API integration
+  security: false
+  performance: false
+
+protected_features:
+  - "BaseProvider abstract class (extend, not modify)"
+  - "ILLMProvider interface contract"
+  - "Existing provider adapters (OpenRouter, Ollama, Anthropic)"
+  - "Provider factory core routing logic"
+  - "Cache key generation utilities"
+
+summary: "Implement MiniMax provider adapter following established pattern from MODL-0010/MODL-0011. Extends BaseProvider to inherit caching and lifecycle. Integrates ChatMinimax from @langchain/community. Supports environment-based configuration with API key and Group ID. Provides availability checking with caching. Zod-first types pattern. Full test coverage with unit and integration tests."
+
+elaboration: "completed"
+
+implementation_strategy:
+  approach: "Extend BaseProvider template method pattern"
+  reference_implementations:
+    - "packages/backend/orchestrator/src/providers/anthropic.ts (template reference)"
+    - "packages/backend/orchestrator/src/providers/base.ts (BaseProvider abstract class)"
+
+  core_methods_to_implement:
+    - "parseModelName(): Extract model name after prefix"
+    - "loadConfig(): Load MINIMAX_API_KEY and MINIMAX_GROUP_ID from environment"
+    - "createModel(): Instantiate ChatMinimax with configuration"
+    - "checkAvailability(): Verify MiniMax API endpoint reachability"
+
+  test_execution_order:
+    - "Unit tests (no API key required)"
+    - "Integration tests (with API key, skipped in CI)"
+    - "Regression tests (verify existing providers unchanged)"
+
+expected_test_outcomes:
+  unit_tests:
+    - "Configuration schema validation passes for valid configs"
+    - "Configuration schema validation fails for missing API key/Group ID"
+    - "Model prefix parsing strips 'minimax/' correctly"
+    - "Cache key generation is consistent"
+    - "Factory routing recognizes 'minimax/' prefix"
+    - "Static cache clearing resets all caches"
+
+  integration_tests:
+    - "ChatMinimax instance created successfully with real credentials"
+    - "Availability check returns boolean (true if reachable)"
+    - "Model invocation succeeds with test prompt"
+    - "Cache hit/miss logged correctly via @repo/logger"
+    - "Invalid credentials throw authentication error"
+
+  regression_tests:
+    - "All existing OpenRouter tests pass"
+    - "All existing Ollama tests pass"
+    - "All existing Anthropic tests pass"
+    - "Full orchestrator test suite passes (2273+ tests)"
+
+critical_risks:
+  - id: "risk-1"
+    title: "MiniMax API Credentials Configuration"
+    mitigation: "Zod schema must validate both MINIMAX_API_KEY and MINIMAX_GROUP_ID"
+
+  - id: "risk-2"
+    title: "ChatMinimax Package Compatibility"
+    mitigation: "Verify @langchain/community version compatibility with @langchain/core 0.3.x"
+
+  - id: "risk-3"
+    title: "MiniMax API Endpoint URL"
+    mitigation: "Use endpoint URL from ChatMinimax source code as authoritative reference"
+
+success_metrics:
+  - "Factory routes minimax/* prefix to MinimaxProvider"
+  - "All 10 acceptance criteria verified with evidence"
+  - "Unit tests pass without API credentials"
+  - "Integration tests pass with real MiniMax account"
+  - "All existing orchestrator tests continue passing (2273+ tests)"

@@ -1,0 +1,90 @@
+schema: 1
+story_id: "MODL-0030"
+timestamp: "2026-02-16T21:00:00Z"
+domain: "backend/models"
+
+lessons:
+  - id: KC-001
+    source: "readiness-score.ts"
+    observation: >
+      The readiness-score.ts pattern uses a base score of 100 with named deduction/addition arrays,
+      constants exported as `as const`, and Zod schemas for every intermediate type. The ScoreBreakdown
+      includes baseScore, deductions[], additions[], totalDeductions, totalAdditions, and finalScore.
+      Quality evaluator should mirror this exact pattern for dimension scores.
+
+  - id: KC-002
+    source: "task-contract.ts"
+    observation: >
+      TaskContractSchema is a protected Zod schema with qualityRequirement enum
+      ('adequate' | 'good' | 'high' | 'critical'), complexity enum, securitySensitive flag,
+      allowOllama flag, and optional budgetTokens. Quality evaluator imports and consumes
+      this schema — never modifies it. The file exports both the schema and `z.infer<>` types.
+
+  - id: KC-003
+    source: "unified-interface.ts"
+    observation: >
+      ModelRouter class uses lazy initialization via `initialize()`. Methods import from
+      task-selector.ts using named imports. The class maintains backward compatibility via
+      optional parameters. Extending with `evaluateQuality()` follows the same async method
+      pattern used by `selectModel()`. Import of QualityEvaluation type must come from
+      models/__types__/quality-evaluation.ts.
+
+  - id: KC-004
+    source: "task-selector.ts"
+    observation: >
+      task-selector.ts uses `@repo/logger` with structured event-based logging:
+      `logger.info('event_name', { key: value })`. No console.log anywhere.
+      Named exports only, no barrel files. Direct imports from __types__ subdirectory.
+
+  - id: KC-005
+    source: "CLAUDE.md"
+    observation: >
+      All types must be Zod schemas with z.infer<>. No TypeScript interfaces allowed.
+      Use @repo/logger exclusively. No barrel files (no index.ts re-exports).
+      Named exports preferred. Minimum 45% global coverage (story requires 80% for scoring logic).
+
+adrs:
+  - id: ADR-001
+    decision: "Use code constants for quality thresholds (not YAML)"
+    rationale: >
+      Story AC-6 explicitly defers YAML configuration to a follow-up story. MVP uses
+      QUALITY_THRESHOLDS, TIER_QUALITY_EXPECTATIONS, and DEFAULT_DIMENSION_WEIGHTS as
+      TypeScript `as const` objects in quality-evaluator.ts. This avoids filesystem reads
+      and keeps the evaluator synchronous.
+    consequence: "evaluateQuality() is synchronous, not async. ModelRouter.evaluateQuality() wraps it in async."
+
+  - id: ADR-002
+    decision: "Dimension evaluators are named functions in quality-evaluator.ts, not a separate file"
+    rationale: >
+      Story scope lists quality-evaluator.ts as the single new implementation file. The
+      dimension evaluators (evaluateCorrectness, evaluateCompleteness, evaluateCoherence,
+      evaluateCompliance, evaluateCostEfficiency) are exported named functions from that
+      file, tested in separate test files per AC test file layout.
+    consequence: "Test files for dimension evaluators import from quality-evaluator.ts."
+
+  - id: ADR-003
+    decision: "QualityDimensionScoreSchema defined in __types__/quality-evaluation.ts"
+    rationale: >
+      Mirrors the readiness-score.ts pattern where schemas are co-located with their types.
+      The __types__ file exports all Zod schemas and inferred types. The evaluator file
+      imports from __types__.
+    consequence: "Both schema tests and evaluator tests import from __types__ file."
+
+constraints:
+  - "Use Zod schemas for all types - never TypeScript interfaces (CLAUDE.md)"
+  - "No barrel files - import directly from source files (CLAUDE.md)"
+  - "Use @repo/logger exclusively, never console.log (CLAUDE.md)"
+  - "Minimum 45% global test coverage; story requires 80% for scoring logic (CLAUDE.md + AC-7)"
+  - "Named exports preferred (CLAUDE.md)"
+  - "Do NOT modify TaskContractSchema - consume only (story Protected Features)"
+  - "Do NOT modify provider abstraction (story Protected Features)"
+  - "Quality evaluator must be backward compatible - evaluateQuality() is optional on ModelRouter"
+  - "evaluateQuality() core function is synchronous (uses code constants, no IO)"
+  - "ModelRouter.evaluateQuality() wraps in async for interface consistency"
+
+notes: >
+  All dependencies (MODL-0010, MODL-0020, WINT-0230, WINT-0220) are satisfied and verified
+  in the codebase. The readiness-score.ts pattern is the primary template for schema design
+  and scoring logic. No KB available - using CLAUDE.md defaults and direct code inspection.
+  Test fixtures from MODL-0020 at packages/backend/orchestrator/src/models/__tests__/fixtures/
+  should be reused if they exist; otherwise create mock contracts inline in test files.

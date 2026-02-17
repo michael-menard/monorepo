@@ -8,6 +8,7 @@ export default defineConfig({
       'scripts/__tests__/**/*.test.ts',
       'scripts/impact-analysis/__tests__/**/*.test.ts',
       'src/schema/__tests__/**/*.test.ts',
+      'src/seed/__tests__/**/*.test.ts',
     ],
     coverage: {
       provider: 'v8',

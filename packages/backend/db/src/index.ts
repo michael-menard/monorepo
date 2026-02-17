@@ -46,3 +46,15 @@ export {
   createGapFoundEvent,
   createFlowIssueEvent,
 } from './workflow-events/helpers'
+
+// INFR-0050: Export Telemetry SDK
+export { initTelemetrySdk, getSdkInstance, validateConfig, DEFAULT_SDK_CONFIG } from './telemetry-sdk'
+export type {
+  TelemetrySdkConfig,
+  TelemetrySdk,
+  StepTrackingOptions,
+  StateTrackingOptions,
+  BufferedEvent,
+  BufferState,
+} from './telemetry-sdk'
+export { insertWorkflowEventsBatch, chunkArray, BATCH_CHUNK_SIZE } from './telemetry-sdk'

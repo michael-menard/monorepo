@@ -1,0 +1,135 @@
+schema: 1
+story_id: "WINT-1030"
+timestamp: "2026-02-16T21:15:00Z"
+
+# NOTE: Implementation is partially complete.
+# The following files ALREADY EXIST (untracked):
+#   - packages/backend/orchestrator/src/scripts/populate-story-status.ts
+#   - packages/backend/orchestrator/src/scripts/__types__/population.ts
+#   - packages/backend/orchestrator/src/scripts/README-populate-story-status.md
+#
+# This plan focuses ONLY on what remains: writing tests and verifying quality gates.
+
+steps:
+  - id: 1
+    description: "Create test fixtures directory and fixture story files for unit tests"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/valid-story/WINT-9001.md"
+      - "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/missing-title/WINT-9002.md"
+      - "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/frontmatter-status/WINT-9003.md"
+      - "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/malformed/WINT-9004.md"
+    dependencies: []
+    slice: backend
+
+  - id: 2
+    description: "Write unit tests for populate-story-status.ts covering: status inference (frontmatter > directory > default), enum mapping, duplicate resolution, and error handling"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.test.ts"
+    dependencies: [1]
+    slice: backend
+
+  - id: 3
+    description: "Run type-check to verify TypeScript compilation passes"
+    files: []
+    dependencies: [2]
+    slice: backend
+
+  - id: 4
+    description: "Run lint to verify ESLint passes on new test file"
+    files: []
+    dependencies: [2]
+    slice: backend
+
+  - id: 5
+    description: "Run tests to verify all unit tests pass"
+    files: []
+    dependencies: [2]
+    slice: backend
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/valid-story/WINT-9001.md"
+    action: create
+    reason: "Test fixture - valid story with all required fields and no frontmatter status (tests directory inference)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/missing-title/WINT-9002.md"
+    action: create
+    reason: "Test fixture - story missing required title field (tests skip logic)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/frontmatter-status/WINT-9003.md"
+    action: create
+    reason: "Test fixture - story with explicit frontmatter status (tests frontmatter priority)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/__fixtures__/story-population/malformed/WINT-9004.md"
+    action: create
+    reason: "Test fixture - story with malformed YAML frontmatter (tests error handling)"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/populate-story-status.test.ts"
+    action: create
+    reason: "Unit tests covering all ACs: status inference, enum mapping, duplicate resolution, error handling, dry-run output shapes"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after writing test file"
+    required: true
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after writing test file"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after writing test file"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test: discoverStories scans directories and returns expected story locations; tested via fixture directory structure"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: readStoryMetadata extracts id, title, epic, priority, points, phase from fixture files"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests: inferStatus returns frontmatter status when present (AC3.1), directory status when no frontmatter (AC3.2), resolves duplicates by lifecycle rank (AC3.3)"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests: mapStatusToState converts 'ready-to-work' → 'ready_to_work', 'in-progress' → 'in_progress', etc. for all enum values"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test: insertStory calls db client with correct SQL and parameters; mocked database verifies correct field mapping"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test: malformed YAML fixture causes readStoryMetadata to return null; processing continues for remaining stories; skipped entry appears in output"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test: generatePopulationPlan returns PopulationPlan shape validated by PopulationPlanSchema.parse; no database calls made"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test: verifyPopulation executes expected SQL queries via mocked pool; VerificationReport shape validated by VerificationReportSchema.parse"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Unit test: executePopulation writes migration-log.json; PopulationLog shape validated by PopulationLogSchema.parse"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "File already exists: packages/backend/orchestrator/src/scripts/README-populate-story-status.md"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Implementation (populate-story-status.ts, __types__/population.ts, README) already exists - this plan covers tests only"
+  - "Unit tests will mock StoryFileAdapter and the pg Pool client to avoid real database/filesystem dependencies"
+  - "Test fixtures are minimal markdown files with YAML frontmatter to simulate story files"
+  - "No integration test file per story architecture doc (populate-story-status.integration.test.ts) - unit tests with mocks are sufficient and conservative"
+  - "The script uses named exports for individual functions (inferStatus, mapStatusToState, resolveDuplicates) which can be tested in isolation"
+  - "StoryStateSchema and LIFECYCLE_TO_STATE/LIFECYCLE_PRIORITY are exported from __types__/population.ts and can be tested directly"
+  - "autonomy_level is conservative - no integration tests against real DB, no execution of the script"

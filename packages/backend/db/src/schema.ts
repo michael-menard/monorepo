@@ -586,46 +586,6 @@ export const workflowEvents = telemetrySchema.table(
 // Artifacts Schema (INFR-0110)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Re-export artifacts schema for queryable artifact content storage
-export {
-  artifactsSchema,
-  artifactContentTypeEnum,
-  storyArtifactsContent,
-  checkpointArtifactsContent,
-  scopeArtifactsContent,
-  planArtifactsContent,
-  storyArtifactsContentRelations,
-  checkpointArtifactsContentRelations,
-  scopeArtifactsContentRelations,
-  planArtifactsContentRelations,
-  insertStoryArtifactContentSchema,
-  selectStoryArtifactContentSchema,
-  insertCheckpointArtifactContentSchema,
-  selectCheckpointArtifactContentSchema,
-  insertScopeArtifactContentSchema,
-  selectScopeArtifactContentSchema,
-  insertPlanArtifactContentSchema,
-  selectPlanArtifactContentSchema,
-  type AcceptanceCriterion,
-  type Risk,
-  type ScopeTouches,
-  type RiskFlags,
-  type PlanStep,
-  type FileChange,
-  type Command,
-  type AcceptanceCriteriaMap,
-  type InsertStoryArtifactContent,
-  type SelectStoryArtifactContent,
-  type InsertCheckpointArtifactContent,
-  type SelectCheckpointArtifactContent,
-  type InsertScopeArtifactContent,
-  type SelectScopeArtifactContent,
-  type InsertPlanArtifactContent,
-  type SelectPlanArtifactContent,
-  // WINT Context Sessions (WINT-0110)
-  contextSessions,
-  insertContextSessionSchema,
-  selectContextSessionSchema,
-  type InsertContextSession,
-  type SelectContextSession,
-} from '@repo/database-schema'
+// NOTE: Artifacts schema, context sessions, and context packs are now imported directly
+// from @repo/database-schema to avoid cyclic dependency. Import them directly:
+// import { artifactsSchema, contextSessions, contextPacks } from '@repo/database-schema'

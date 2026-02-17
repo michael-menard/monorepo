@@ -103,6 +103,28 @@ import { sessionCleanup } from '../session-cleanup'
 describe('Session Management Integration Tests (AC-7)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // Restore query builder chain after clearAllMocks
+    mockOffset.mockResolvedValue([])
+    mockLimit.mockReturnValue({ offset: mockOffset })
+    mockOrderBy.mockReturnValue({ limit: mockLimit })
+    mockWhere.mockReturnValue({ orderBy: mockOrderBy, returning: mockReturning })
+    mockFrom.mockReturnValue({ where: mockWhere, orderBy: mockOrderBy })
+    mockSelect.mockReturnValue({ from: mockFrom })
+
+    // Restore insert chain
+    mockReturning.mockResolvedValue([])
+    mockValues.mockReturnValue({ returning: mockReturning })
+    mockInsert.mockReturnValue({ values: mockValues })
+
+    // Restore update chain
+    mockSet.mockReturnValue({ where: mockWhere })
+    mockUpdate.mockReturnValue({ set: mockSet })
+
+    // Restore delete chain
+    mockDelete.mockReturnValue({ where: mockWhere })
+
+    mockWarn.mockClear()
   })
 
   describe('Full Session Lifecycle', () => {
@@ -429,8 +451,11 @@ describe('Session Management Integration Tests (AC-7)', () => {
       const cutoffDate = new Date()
       cutoffDate.setDate(cutoffDate.getDate() - 90)
 
-      // Mock DELETE query
-      const mockDeleteWhere = vi.fn().mockResolvedValue([{ id: '1' }, { id: '2' }, { id: '3' }])
+      // Mock DELETE query with returning chain
+      const mockDeleteReturning = vi
+        .fn()
+        .mockResolvedValue([{ id: '1' }, { id: '2' }, { id: '3' }])
+      const mockDeleteWhere = vi.fn().mockReturnValue({ returning: mockDeleteReturning })
       mockDelete.mockReturnValue({ where: mockDeleteWhere })
 
       const result = await sessionCleanup({
@@ -598,12 +623,17 @@ describe('Session Management Integration Tests (AC-7)', () => {
     it('should handle cleanup errors gracefully', async () => {
       mockWhere.mockRejectedValueOnce(new Error('Database error during cleanup'))
 
-      await expect(
-        sessionCleanup({
-          retentionDays: 90,
-          dryRun: true,
-        }),
-      ).rejects.toThrow()
+      const result = await sessionCleanup({
+        retentionDays: 90,
+        dryRun: true,
+      })
+
+      expect(result.deletedCount).toBe(0)
+      expect(result.dryRun).toBe(true)
+      expect(mockWarn).toHaveBeenCalledWith(
+        expect.stringContaining('[mcp-tools] Failed to cleanup sessions'),
+        expect.stringContaining('Database error during cleanup'),
+      )
     })
   })
 

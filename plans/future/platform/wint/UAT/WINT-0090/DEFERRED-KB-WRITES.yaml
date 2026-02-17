@@ -1,0 +1,60 @@
+---
+story_id: WINT-0090
+generated: "2026-02-15"
+reason: "KB MCP tools not available during story generation - manual write required"
+---
+
+# Deferred Knowledge Base Writes: WINT-0090
+
+## Story Metadata to Persist
+
+```sql
+INSERT INTO stories (
+  story_id,
+  feature,
+  title,
+  story_dir,
+  story_file,
+  story_type,
+  points,
+  priority,
+  state,
+  touches_backend,
+  touches_frontend,
+  touches_database,
+  touches_infra,
+  created_at,
+  updated_at
+) VALUES (
+  'WINT-0090',
+  'wint',
+  'Create Story Management MCP Tools',
+  'plans/future/platform/wint/backlog/WINT-0090',
+  'plans/future/platform/wint/backlog/WINT-0090/WINT-0090.md',
+  'infrastructure',
+  5,
+  'medium',
+  'backlog',
+  true,
+  false,
+  true,
+  true,
+  '2026-02-15T00:00:00Z',
+  '2026-02-15T00:00:00Z'
+)
+ON CONFLICT (story_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  story_file = EXCLUDED.story_file,
+  updated_at = EXCLUDED.updated_at;
+```
+
+## Retry Instructions
+
+When KB MCP tools become available:
+1. Execute SQL above via postgres-knowledgebase MCP server
+2. Verify story appears in `SELECT * FROM stories WHERE story_id = 'WINT-0090'`
+3. Delete this DEFERRED-KB-WRITES.yaml file
+
+## Fallback
+
+If MCP persistence continues to fail, story is still valid and searchable via filesystem (grep, glob).

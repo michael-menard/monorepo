@@ -1,0 +1,154 @@
+schema: 1
+story_id: WINT-0200
+timestamp: "2026-02-15T00:00:00.000Z"
+iteration: 0
+
+verdict: PASS
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+workers_skipped: []
+
+ranked_patches:
+  - priority: 1
+    file: packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+    issue: "User Flows Schema not exported from artifacts package index. Consumers must import directly from __types__ subdirectory, reducing discoverability."
+    severity: medium
+    auto_fixable: false
+    worker: reusability
+    recommendation: "Add UserFlows-related exports to artifacts/index.ts to match pattern used for other artifact schemas (CheckpointSchema, ScopeSchema, PlanSchema, etc.)"
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    findings: []
+    command: "pnpm eslint packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts packages/backend/orchestrator/src/artifacts/__tests__/user-flows.test.ts --format stylish"
+
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 0
+    findings: []
+    notes: "No frontend files (.tsx/.jsx) found in touched files. WINT-0200 contains only backend orchestrator files. Style compliance check not applicable."
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 5
+    confidence: high
+    findings: []
+    checks:
+      - hardcoded_secrets: PASS
+      - sql_injection: PASS
+      - command_injection: PASS
+      - xss: PASS
+      - auth_present: PASS
+      - input_validation: PASS
+      - sensitive_logging: PASS
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    findings: []
+    touched_files:
+      - packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/user-flows.test.ts
+    supporting_files:
+      - packages/backend/orchestrator/src/artifacts/README.md
+      - packages/backend/orchestrator/src/schemas/user-flows.schema.json
+      - packages/backend/orchestrator/src/artifacts/__tests__/fixtures/example-user-flow.json
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    packages_built: 55
+    findings: []
+    affected_packages:
+      - "@repo/orchestrator"
+    summary: "All 55 packages built successfully. No compilation errors."
+    build_time_ms: 39872
+
+  reusability:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 1
+    files_checked: 5
+    findings:
+      - severity: warning
+        file: packages/backend/orchestrator/src/artifacts/__types__/user-flows.ts
+        line: 1
+        message: "User Flows Schema not exported from artifacts package index. Consumers must import directly from __types__ subdirectory, reducing discoverability. Consider adding export to artifacts/index.ts for consistency with other artifact types."
+        rule: package-export-consistency
+        auto_fixable: false
+
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 0
+    findings: []
+    notes: "No .tsx files found in touched files. All touched files are non-React."
+
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 2
+    findings: []
+
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    files_checked: 0
+    findings: []
+    rationale: "No .tsx files found in touched files. Agent scope limited to frontend .tsx components only."
+
+total_errors: 0
+total_warnings: 1
+auto_fixable_count: 0
+
+summary:
+  all_workers_passed: true
+  blockers: 0
+  recommended_actions:
+    - "Resolve reusability warning by exporting UserFlows schemas from artifacts/index.ts for consistency"
+  code_quality: "All code quality checks passed. Architecture follows established patterns."
+
+tokens:
+  in: 28047
+  out: 2775
