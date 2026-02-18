@@ -258,6 +258,33 @@ export class StoryRepository {
   }
 
   /**
+   * Get all stories from the wint.stories table (bulk fetch for index generation)
+   *
+   * Returns raw StoryRow[] without mapping to StoryArtifact so the caller
+   * retains DB-native field names and underscore-formatted state values.
+   * Used by generate-stories-index.ts (WINT-1070).
+   */
+  async getAllStories(): Promise<StoryRow[]> {
+    try {
+      const result = await this.client.query<StoryRow>(
+        `SELECT
+          id, story_id, feature_id, type, state, title, goal, points, priority,
+          blocked_by, depends_on, follow_up_from, packages, surfaces,
+          non_goals, created_at, updated_at
+        FROM wint.stories
+        ORDER BY story_id ASC`,
+      )
+
+      return result.rows
+    } catch (error) {
+      logger.error('Failed to get all stories', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
+  /**
    * Get stories by feature name
    */
   async getStoriesByFeature(featureName: string): Promise<StoryArtifact[]> {
