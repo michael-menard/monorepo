@@ -21,8 +21,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | ready-for-qa | 1 |
 | ready-for-code-review | 0 |
 | failed-qa | 0 |
-| elaboration | 1 |
-| created | 1 |
+| elaboration | 2 |
+| created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
@@ -2247,16 +2247,20 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** pending
+**Status:** created
+**Story Generated:** 2026-02-18
+**Story File:** `wint/backlog/WINT-9020/WINT-9020.md`
 **Depends On:** WINT-9010, WINT-0160
 **Phase:** 9
-**Feature:** Port doc-sync agent logic to LangGraph node at nodes/sync/doc-sync.ts
+**Points:** 5
+**Priority:** P2
+**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Resolves path discrepancy (nodes/sync/ vs nodes/workflow/) in elaboration phase (AC-1).
 **Infrastructure:**
-- packages/backend/orchestrator/src/nodes/sync/
+- packages/backend/orchestrator/src/nodes/sync/ (new directory per index entry) or nodes/workflow/ (existing — AC-1 decides)
 
-**Goal:** Documentation sync works in both workflows
+**Goal:** Documentation sync works in both Claude Code and LangGraph workflows with identical outputs for the same inputs.
 
-**Risk Notes:** Must produce identical outputs
+**Risk Notes:** AC-1 (path resolution) must be resolved in elaboration before implementation begins. Current nodes/workflow/doc-sync.ts uses subprocess delegation — native TypeScript port is the correct implementation approach per SKILL.md contract. Split risk: 0.8 (13 ACs, path ambiguity). Estimated review cycles: 3.
 
 ---
 
