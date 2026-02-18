@@ -1,0 +1,29 @@
+schema: 1
+story_id: WINT-1070
+timestamp: '2026-02-18T05:02:44Z'
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - packages/backend/orchestrator/**
+  - apps/api/**
+  - plans/future/platform/wint/**
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: CLI script to generate stories.index.md from wint.stories database table with YAML fallback for missing fields
+elaboration: 'completed'
