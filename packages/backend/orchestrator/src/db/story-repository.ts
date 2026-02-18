@@ -285,6 +285,31 @@ export class StoryRepository {
   }
 
   /**
+   * Get all stories ordered by story_id ASC
+   * Returns raw StoryRow[] to preserve DB-native underscore state values
+   * for STATE_TO_DISPLAY_LABEL mapping in generate-stories-index.ts
+   */
+  async getAllStories(): Promise<StoryRow[]> {
+    try {
+      const result = await this.client.query<StoryRow>(
+        `SELECT
+          id, story_id, feature_id, type, state, title, goal, points, priority,
+          blocked_by, depends_on, follow_up_from, packages, surfaces,
+          non_goals, created_at, updated_at
+        FROM wint.stories
+        ORDER BY story_id ASC`,
+      )
+
+      return result.rows
+    } catch (error) {
+      logger.error('Failed to get all stories', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
+  /**
    * Get the next action for a story based on its current state
    */
   async getNextAction(storyId: string): Promise<string> {
