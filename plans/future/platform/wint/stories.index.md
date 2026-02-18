@@ -21,12 +21,12 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | ready-for-qa | 0 |
 | ready-for-code-review | 1 |
 | failed-qa | 0 |
-| elaboration | 0 |
-| created | 0 |
+| elaboration | 2 |
+| created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 3 |
-| pending | 124 |
+| ready-to-work | 5 |
+| pending | 120 |
 
 ---
 
@@ -365,7 +365,9 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0170: Add Doc-Sync Gate to Phase/Story Completion
 
-**Status:** pending
+**Status:** ready-to-work
+**Elaboration Complete:** 2026-02-17
+**Verdict:** PASS
 **Depends On:** WINT-0160
 **Phase:** 0
 **Feature:** Modify phase/story completion workflows to require doc-sync check before marking complete
@@ -375,6 +377,10 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Enforce documentation currency at all completion points
 
 **Risk Notes:** May slow down completion if doc-sync is slow
+
+**Story Generated:** 2026-02-17
+
+**Summary:** All 9 audit checks passed. One MVP-critical gap (gate re-run behavior) resolved by adding AC-8. All 7 non-blocking enhancements deferred to KB. Ready for implementation.
 
 ---
 
@@ -676,7 +682,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** pending
+**Status:** elaboration
+**Story File:** `wint/elaboration/WINT-1040/WINT-1040.md`
+**Story Generated:** 2026-02-17
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
@@ -690,47 +698,66 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** pending
-**Depends On:** WINT-1030
+**Status:** ready-to-work
+**Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
-**Feature:** Modify /story-update command to update core.stories table instead of moving directories
-**Infrastructure:**
+**Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
+**Points:** 2
+**Priority:** high
+**Feature:** Augment /story-update command with DB write via shimUpdateStoryStatus before YAML frontmatter update. DB becomes source of truth for story status. Frontmatter sync retained for Phase 1 backward compatibility.
+**Infrastructure:** Leverages existing postgres-knowledgebase MCP server (no new resources)
 
-**Goal:** Enable status updates via database
+**Goal:** Modify `.claude/commands/story-update.md` to call `shimUpdateStoryStatus` as primary status write before updating YAML frontmatter. Version bumped to v3.0.0 (major: DB integration is breaking behavioral change for agents).
 
-**Acceptance Criteria (Phase 0):**
-- Comprehensive compatibility shim test suite deliverables
-- Integration test requirements explicitly documented
-- Phase 0 test infrastructure setup (WINT-0120 prerequisite)
-- Agent logic compatibility validation checklist
+**Acceptance Criteria (Final):**
+- AC-1: Execute shimUpdateStoryStatus before YAML frontmatter update
+- AC-2: Document status → DB state mapping table (14 statuses, with skip decisions)
+- AC-3: Null return handling: WARNING emitted, FS fallback proceeds
+- AC-4: Result YAML includes `db_updated: true | false`
+- AC-5: Worktree cleanup (Step 2) executes BEFORE DB write
+- AC-6: Transition validation applies BEFORE DB write
+- AC-7: --no-index flag preserves DB write (only Step 4 affected)
+- AC-8: Version bumped to v3.0.0, updated date current
+- AC-9: Integration test scenarios documented (A-F)
+- AC-10: Non-mappable statuses handled with explicit decisions
 
-**Risk Notes:** Must handle concurrent updates correctly
+**Elaboration Verdict:** CONDITIONAL PASS (2026-02-17)
+- MVP gaps: 0
+- Low-severity findings: 3 (all non-blocking, KB-logged)
+- ACs added: 0
+- Subtasks: 4 (ST-1: read baseline, ST-2: build mapping table, ST-3: DB write step, ST-4: result YAML + version bump)
+
+**Risk Notes:** WINT-1070 (index deprecation) may land in-progress; non-blocking (index update retained). shimUpdateStoryStatus AC-2 constraint (no FS fallback on failure) must be observed.
+
+**Story Generated:** 2026-02-17
+**Elaboration Completed:** 2026-02-17
 
 ---
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** pending
+**Status:** ready-to-work
+**Story File:** `wint/ready-to-work/WINT-1060/WINT-1060.md`
+**Story Generated:** 2026-02-17
+**Elaboration Complete:** 2026-02-17
+**Verdict:** CONDITIONAL PASS
 **Depends On:** WINT-1030
 **Phase:** 1
-**Feature:** Modify /story-move command to update database status instead of moving directories
-**Infrastructure:**
+**Points:** 2
+**Priority:** P2
+**Feature:** Modify /story-move command to update database status instead of moving directories (DB-first locate + DB write before directory mv + backward compatible directory move preserved)
 
-**Goal:** Deprecate directory-based story movement
+**Goal:** Augment /story-move with shimUpdateStoryStatus DB write before directory mv, maintaining full backward compatibility for unmigrated agents by preserving the directory move step
 
-**Acceptance Criteria (Phase 0):**
-- Comprehensive compatibility shim test suite deliverables
-- Integration test requirements explicitly documented
-- Phase 0 test infrastructure setup (WINT-0120 prerequisite)
-- Agent logic compatibility validation checklist
+**Risk Notes:** Both DB write AND directory move execute on happy path (Phase 1). Step 2.5 DB write is skipped for unmapped stages (needs-code-review, failed-code-review, failed-qa, created, elaboration) and when --update-status is provided. WINT-7030 will remove directory-move step in Phase 7.
 
-**Risk Notes:** May still need to move directories for backward compatibility
+**Elaboration Notes:** All 9 audit checks passed. One MVP-critical gap (EC-2 path independence) resolved by adding AC-10. 10 non-blocking findings logged to KB. Ready for implementation.
 
 ---
 
 ### WINT-1070: Deprecate stories.index.md as Source of Truth
 
-**Status:** pending
+**Status:** elaboration
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
