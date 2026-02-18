@@ -1688,6 +1688,9 @@ importers:
       '@types/node':
         specifier: ^22.19.10
         version: 22.19.10
+      '@types/pg':
+        specifier: ^8.11.6
+        version: 8.16.0
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@22.19.10)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@22.19.10)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2))
