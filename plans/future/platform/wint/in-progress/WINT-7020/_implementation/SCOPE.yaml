@@ -1,0 +1,27 @@
+story_id: WINT-7020
+title: "Create Agent Migration Plan: Categorize Agents by Risk and Define Migration Batches"
+story_type: chore
+touches_backend: false
+touches_frontend: false
+touches_database: false
+touches_infra: false
+output_files:
+  - plans/future/platform/wint/in-progress/WINT-7020/_implementation/MIGRATION-PLAN.md
+  - plans/future/platform/wint/in-progress/WINT-7020/_implementation/BATCH-SCHEDULE.yaml
+input_artifacts:
+  - plans/future/platform/UAT/WINT-7010/AGENT-CATALOG.yaml
+  - plans/future/platform/UAT/WINT-7010/CROSS-REFERENCES.yaml
+  - plans/future/platform/UAT/WINT-7010/ORPHANED-AGENTS.yaml
+  - plans/future/platform/UAT/WINT-7010/AUDIT-SUMMARY.md
+  - plans/future/platform/UAT/WINT-7010/DIRECTORY-STRUCTURE.md
+  - plans/future/platform/UAT/WINT-7010/SPAWN-GRAPH.md
+  - plans/future/platform/UAT/WINT-7010/SHARED-DEPENDENCIES.yaml
+reference_files:
+  - .claude/commands/migrate-agents-v3.md
+  - .claude/commands/story-update.md
+  - .claude/commands/story-status.md
+  - packages/backend/mcp-tools/src/story-compatibility/
+no_modify_constraint:
+  - .claude/agents/**
+  - .claude/commands/**
+  - .claude/skills/**
