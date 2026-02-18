@@ -1,7 +1,7 @@
 {
-  "name": "@repo/mcp-tools",
+  "name": "@repo/workflow-logic",
   "version": "1.0.0",
-  "description": "MCP tools infrastructure for session management and workflow operations",
+  "description": "Shared workflow business logic: status transitions, directory mapping, story ID validation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,10 +9,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./session-management": {
-      "types": "./dist/session-management/index.d.ts",
-      "default": "./dist/session-management/index.js"
     }
   },
   "scripts": {
@@ -22,26 +18,24 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint --fix src/"
   },
   "dependencies": {
-    "@repo/database-schema": "workspace:*",
-    "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
-    "@repo/workflow-logic": "workspace:*",
-    "drizzle-orm": "^0.44.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "25.2.1",
+    "@vitest/coverage-v8": "^2.1.8",
     "typescript": "^5.8.0",
     "vitest": "^2.1.8"
   },
   "keywords": [
-    "mcp",
-    "tools",
-    "session-management",
     "workflow",
-    "langgraph"
+    "story",
+    "status",
+    "transitions",
+    "validation"
   ]
 }

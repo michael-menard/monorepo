@@ -1,7 +1,6 @@
-# Pre-commit: Lint changed files
-echo "🔍 Running linter..."
-
-pnpm lint
+# Pre-commit hook
+# NOTE: pnpm lint temporarily removed — root package.json has no lint script.
+# Re-enable when lint-staged or turbo lint is properly wired.
 
 # Check workflow sync (Claude ↔ LangGraph)
 # Only run if workflow-related files were changed
