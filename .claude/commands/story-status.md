@@ -1,7 +1,7 @@
 ---
 created: 2026-01-20
-updated: 2026-02-04
-version: 4.0.0
+updated: 2026-02-17
+version: 5.0.0
 type: utility
 ---
 
@@ -28,6 +28,41 @@ Check story status. Read-only utility command.
 | `STORY_ID` | No | Story identifier (e.g., WISH-001) |
 | `--depth` | No | Show in-depth epic view |
 | `--deps-order` | No | Show stories grouped by dependency tiers as a work list |
+
+---
+
+## Data Source
+
+### DB-First Routing (Feature + Story ID Mode Only)
+
+For **Feature + Story ID** mode, the database is the primary source of truth. The routing logic is:
+
+1. Call `story_get_status` MCP tool (wraps `shimGetStoryStatus`) with the normalized story ID
+2. If the DB returns a result: use it directly — derive display label from the DB State Display Labels table below
+3. If the DB returns null (DB unavailable, connection error, or story not yet migrated): fall back to directory scan (existing logic)
+4. If directory scan also finds nothing: display `Story not found: {STORY_ID}`
+
+**Migration window context**: During the Phase 1 migration window, some stories may not yet exist in the database. The directory fallback ensures these stories remain visible via filesystem state. The DB is authoritative for all stories that have been written to it.
+
+**Non-Goals (deferred)**:
+- Feature Only DB routing (e.g., `/story-status plans/future/wishlist` summary via DB) is deferred to WINT-1070. Feature-level queries still read `stories.index.md` directly.
+
+### DB State Display Labels
+
+When a DB result is returned, map the `state` field to a human-readable display label:
+
+| DB State (`state`) | Display Label |
+|--------------------|---------------|
+| `backlog` | backlog |
+| `ready_to_work` | ready-to-work |
+| `in_progress` | in-progress |
+| `ready_for_qa` | ready-for-qa |
+| `in_qa` | uat |
+| `done` | completed |
+| `blocked` | BLOCKED |
+| `cancelled` | superseded |
+
+**Note**: Directory-only states (`elaboration`, `needs-code-review`, `failed-code-review`, `failed-qa`, `created`) have no DB equivalent. These appear only via directory fallback during the migration window and are not in this table.
 
 ---
 
@@ -71,11 +106,21 @@ For output format, read: `.claude/agents/_reference/examples/story-status-output
 
 ### Feature + Story ID
 Show single story status:
-1. Normalize ID to uppercase
-2. Read `stories.index.md`
-3. Find `## <STORY_ID>:` section
-4. Extract Status, Feature, Depends On
-5. Locate directory
+1. Normalize STORY_ID to uppercase
+2. Call `story_get_status` MCP tool:
+   ```
+   result = story_get_status({ storyId: STORY_ID })
+   ```
+3. If result is non-null (DB hit):
+   - Derive display label from the DB State Display Labels table above
+   - Display single-story output (see Output Examples below)
+4. If result is null (DB miss or tool unavailable):
+   - Fall back to directory scan:
+     - Read `stories.index.md`
+     - Find `## <STORY_ID>:` section
+     - Extract Status, Feature, Depends On
+     - Locate directory
+5. If directory scan also finds nothing: display `Story not found: {STORY_ID}`
 
 ---
 
@@ -113,3 +158,12 @@ Check `_implementation/CHECKPOINT.md`:
 ## Output Examples
 
 See: `.claude/agents/_reference/examples/story-status-output.md`
+
+Single story output format:
+```
+Feature: plans/future/wishlist
+Story: WISH-001
+Status: in-progress
+Location: plans/future/wishlist/in-progress/WISH-001/
+Depends On: none
+```
