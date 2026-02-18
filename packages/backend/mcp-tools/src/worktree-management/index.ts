@@ -11,6 +11,14 @@ export { worktreeGetByStory } from './worktree-get-by-story.js'
 export { worktreeListActive } from './worktree-list-active.js'
 export { worktreeMarkComplete } from './worktree-mark-complete.js'
 
+// Re-export Zod schemas
+export {
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
+} from './__types__/index.js'
+
 // Re-export types for convenience
 export type {
   WorktreeRegisterInput,

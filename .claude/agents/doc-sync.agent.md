@@ -414,6 +414,14 @@ When invoked with `--check-only`:
 
 **Use Case:** Pre-commit hook validation
 
+**WINT-0170 Integration Note:**
+
+WINT-0170 will add doc-sync as a mandatory gate to phase and story completion. When integrated:
+- A `--check-only` run will be executed automatically before marking any phase or story as complete
+- Exit code `0` (docs in sync) allows the workflow to proceed and advance the story state
+- Exit code `1` (docs out of sync) blocks completion until documentation is synchronized
+- This exit code gate mechanism ensures documentation is always synchronized before a story advances to the next stage
+
 ---
 
 ## Pre-Commit Hook Integration

@@ -6,10 +6,10 @@
  */
 
 import { logger } from '@repo/logger'
-import { db } from '../client'
-import { workflowEvents } from '../schema'
-import type { WorkflowEventInput } from '../workflow-events'
-import { chunkArray } from './utils/batch-chunker'
+import { db } from '../client.js'
+import { workflowEvents } from '../schema.js'
+import type { WorkflowEventInput } from '../workflow-events.js'
+import { chunkArray } from './utils/batch-chunker.js'
 
 /**
  * Insert multiple workflow events in a single batch operation

@@ -186,24 +186,32 @@ Use only when manually marking a story as fully done after UAT acceptance.
 
 Story lifecycle statuses:
 
-| Status | Meaning | Set By |
-|--------|---------|--------|
-| `Draft` | Initial placeholder, not yet generated | Manual/Bootstrap |
-| `Pending` | Queued for generation | Manual |
-| `Created` | Story file generated, ready for elaboration | `/pm-story generate` |
-| `In Elaboration` | Elaboration in progress | `/elab-story` |
-| `Ready for Review` | Elaboration complete, awaiting approval | `elab-completion-leader` |
-| `Approved` | Approved, ready to implement | Manual |
-| `In Progress` | Development underway | `/dev-implement-story` |
-| `completed` / `Done` | Finished | `qa-verify-completion-leader` |
-| `Blocked` | Waiting on external dependency | Manual |
-| `superseded` | Replaced by split/followup stories | `/pm-story split` |
+| Status | Emoji | Meaning | Set By |
+|--------|-------|---------|--------|
+| `pending` | — | Initial state, not yet generated | Index bootstrap |
+| `backlog` | ⏸️ | Queued for generation | Manual |
+| `created` | 🆕 | Story file generated, awaiting elaboration | `/pm-story generate` |
+| `elaboration` | 📝 | Elaboration in progress | `/elab-story` |
+| `ready-to-work` | ⏳ | Elaboration passed, ready for dev | `elab-completion-leader` |
+| `in-progress` | 🚧 | Development underway | `/dev-implement-story` |
+| `needs-code-review` | 👀 | Implementation complete, awaiting code review | `/dev-implement-story` (Done) |
+| `failed-code-review` | 🔴 | Code review failed, needs rework | `/dev-code-review` (FAIL) |
+| `ready-for-qa` | 🔍 | Code reviewed, awaiting QA | `/dev-code-review` (PASS) |
+| `failed-qa` | ⚠️ | QA failed, needs rework | `qa-verify-completion-leader` (FAIL) |
+| `uat` | ✅ | QA passed, UAT verified | `qa-verify-completion-leader` (PASS) |
+| `completed` | ✅ | Manually signed off after UAT | Manual |
+| `BLOCKED` | — | Waiting on external dependency | Manual |
+| `superseded` | — | Replaced by split/followup stories | `/pm-story split` |
 
 ## Integration Points
 
 Called by:
-- `qa-verify-completion-leader` (on PASS: `--status=completed --clear-deps`)
-- `pm-story-generation-leader` (on generate: `--status=Created`)
+- `pm-story-generation-leader` (on generate: `--status=created`)
+- `elab-completion-leader` (on PASS: `--status=ready-to-work`)
+- `dev-implement-story` (Done: `--status=needs-code-review`)
+- `dev-code-review` (PASS: `--status=ready-for-qa`)
+- `dev-code-review` (FAIL: `--status=failed-code-review`)
+- `qa-verify-completion-leader` (PASS: `--status=uat --clear-deps`)
+- `qa-verify-completion-leader` (FAIL: `--status=failed-qa`)
 - `pm-story-split-leader` (original: `--status=superseded`)
 - `pm-story-followup-leader` (new story: `--add-dep=PARENT`)
-- `elab-completion-leader` (on PASS: `--status=Ready for Review`)

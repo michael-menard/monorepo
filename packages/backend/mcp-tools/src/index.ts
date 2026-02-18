@@ -39,6 +39,11 @@ export {
   worktreeGetByStory,
   worktreeListActive,
   worktreeMarkComplete,
+  // Zod schemas (needed by knowledge-base MCP server tool-schemas.ts)
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
 } from './worktree-management/index.js'
 export type {
   WorktreeRegisterInput,

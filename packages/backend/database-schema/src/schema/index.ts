@@ -14,11 +14,11 @@ import {
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 // Import and re-export Sets tables so Drizzle can discover them via schema entrypoint
-import { setImages, sets } from './sets'
+import { setImages, sets } from './sets.js'
 export { setImages, sets }
 
 // Re-export Telemetry tables (INFR-0040)
-export { telemetrySchema, workflowEventTypeEnum, workflowEvents } from './telemetry'
+export { telemetrySchema, workflowEventTypeEnum, workflowEvents } from './telemetry.js'
 
 // Re-export Artifacts tables (INFR-0110)
 // Note: Using 'artifactsContent' prefix to avoid conflicts with wint.storyArtifacts
@@ -78,16 +78,16 @@ export {
   type SelectScopeArtifact as SelectScopeArtifactContent,
   type InsertPlanArtifact as InsertPlanArtifactContent,
   type SelectPlanArtifact as SelectPlanArtifactContent,
-} from './artifacts'
+} from './artifacts.js'
 
 // Re-export Feature Flags tables (WISH-2009, WISH-2039)
-export { featureFlags, featureFlagUserOverrides, featureFlagSchedules } from './feature-flags'
+export { featureFlags, featureFlagUserOverrides, featureFlagSchedules } from './feature-flags.js'
 
 // Re-export Admin Audit Log table (Admin Panel)
-export { adminAuditLog } from './admin-audit-log'
+export { adminAuditLog } from './admin-audit-log.js'
 
 // Re-export User Quotas tables (Authorization & Tier System)
-export { userQuotas, userAddons, userQuotasRelations, userAddonsRelations } from './user-quotas'
+export { userQuotas, userAddons, userQuotasRelations, userAddonsRelations } from './user-quotas.js'
 
 // Re-export Inspiration Gallery tables (Epic 5)
 export {
@@ -103,7 +103,7 @@ export {
   albumParentsRelations,
   inspirationMocsRelations,
   albumMocsRelations,
-} from './inspiration'
+} from './inspiration.js'
 
 // Only define your Drizzle table here. Use Zod schemas/types in your handlers for type safety and validation.
 // Note: userId fields reference Cognito user IDs (sub claim from JWT) - no user table in PostgreSQL
@@ -1048,7 +1048,7 @@ export {
   type SelectWorkflowCheckpoint,
   type InsertWorkflowAuditLog,
   type SelectWorkflowAuditLog,
-} from './wint'
+} from './wint.js'
 
 // Re-export unified WINT schemas (WINT-1130)
 export {
@@ -1059,7 +1059,7 @@ export {
   selectWorktreeSchema,
   type InsertWorktree,
   type SelectWorktree,
-} from './unified-wint'
+} from './unified-wint.js'
 
 // Re-export WINT-0080 workflow metadata tables and Zod schemas
 export {
@@ -1090,7 +1090,7 @@ export {
   selectSkillSchema,
   type InsertSkill,
   type SelectSkill,
-} from './unified-wint'
+} from './unified-wint.js'
 
 // Re-export KBAR schemas (KBAR-0010)
 export {
@@ -1183,4 +1183,4 @@ export {
   type SelectIndexMetadata,
   type InsertIndexEntry,
   type SelectIndexEntry,
-} from './kbar'
+} from './kbar.js'

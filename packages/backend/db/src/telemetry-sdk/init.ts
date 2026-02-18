@@ -16,20 +16,20 @@ import type {
   StateTrackingOptions,
   BufferState,
   FlushTimerHandle,
-} from './__types__/index'
-import { validateConfig } from './config'
+} from './__types__/index.js'
+import { validateConfig } from './config.js'
 import {
   createBufferState,
   getEventsToFlush,
   markFlushComplete,
   hasEventsToFlush,
-} from './utils/buffer'
-import { startFlushTimer, stopFlushTimer } from './utils/flush-timer'
-import { insertWorkflowEventsBatch } from './batch-insert'
+} from './utils/buffer.js'
+import { startFlushTimer, stopFlushTimer } from './utils/flush-timer.js'
+import { insertWorkflowEventsBatch } from './batch-insert.js'
 import {
   withStepTracking as withStepTrackingImpl,
   withStateTracking as withStateTrackingImpl,
-} from './hooks'
+} from './hooks.js'
 
 /**
  * Singleton SDK instance

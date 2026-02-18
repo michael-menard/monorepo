@@ -25,22 +25,30 @@ Auto-discovers:
 """
 import os, re, time, datetime, sys, glob, argparse, json, subprocess
 
-# Priority order (higher = more advanced stage)
+# Priority order (higher = more advanced stage; gaps allow future insertions)
 STAGE_PRIORITY = {
     'pending': 0,
-    'elaboration': 1,
-    'ready-to-work': 2,
-    'in-progress': 3,
-    'ready-for-qa': 4,
-    'UAT': 5,
-    'completed': 5,
+    'created': 10,
+    'elaboration': 20,
+    'ready-to-work': 30,
+    'in-progress': 40,
+    'failed-code-review': 45,
+    'needs-code-review': 50,
+    'failed-qa': 55,
+    'ready-for-qa': 60,
+    'UAT': 70,
+    'completed': 70,
 }
 
 STAGE_TO_EMOJI = {
     'pending': '⏸️',
+    'created': '🆕',
     'elaboration': '📝',
     'ready-to-work': '⏳',
     'in-progress': '🚧',
+    'failed-code-review': '🔴',
+    'needs-code-review': '👀',
+    'failed-qa': '⚠️',
     'ready-for-qa': '🔍',
     'UAT': '✅',
     'completed': '✅',
@@ -48,9 +56,13 @@ STAGE_TO_EMOJI = {
 
 STAGE_TO_CHECK = {
     'pending': '[ ]',
+    'created': '[ ]',
     'elaboration': '[ ]',
     'ready-to-work': '[ ]',
     'in-progress': '[~]',
+    'failed-code-review': '[~]',
+    'needs-code-review': '[~]',
+    'failed-qa': '[~]',
     'ready-for-qa': '[x]',
     'UAT': '[x]',
     'completed': '[x]',
@@ -64,18 +76,35 @@ INDEX_STATUS_PATTERNS = {
     '**uat**': 'UAT',
     '**in-qa**': 'ready-for-qa',
     '**ready-for-qa**': 'ready-for-qa',
-    '**ready-for-code-review**': 'ready-for-qa',
     '**in-progress**': 'in-progress',
     '**ready-to-work**': 'ready-to-work',
     '**elaborated**': 'ready-to-work',
-    '**created**': 'ready-to-work',
     '**in-elaboration**': 'elaboration',
     '[In Elaboration]': 'elaboration',
+    '**created**': 'created',
+    '**needs-code-review**': 'needs-code-review',
+    '**needs-review**': 'needs-code-review',
+    '**ready-for-code-review**': 'needs-code-review',
+    '**failed-code-review**': 'failed-code-review',
+    '**failed-review**': 'failed-code-review',
+    '**code-review-failed**': 'failed-code-review',
+    '**failed-qa**': 'failed-qa',
+    '**needs-work**': 'failed-qa',
 }
 
-ALL_STATUS_EMOJIS = ['⏸️', '⏳', '🚧', '🔍', '✅', '📝']
+ALL_STATUS_EMOJIS = ['⏸️', '🆕', '📝', '⏳', '🚧', '🔴', '👀', '⚠️', '🔍', '✅']
 
-STAGE_DIRS = ['ready-to-work', 'in-progress', 'ready-for-qa', 'UAT']
+STAGE_DIRS = [
+    'created',
+    'elaboration',
+    'ready-to-work',
+    'in-progress',
+    'needs-code-review',
+    'failed-code-review',
+    'failed-qa',
+    'ready-for-qa',
+    'UAT',
+]
 
 
 def discover_files(epic_dir):
@@ -100,18 +129,37 @@ def discover_files(epic_dir):
     return index_file, work_order
 
 
+def collect_scan_dirs(epic_dir):
+    """Return epic_dir plus any immediate subdirectories that contain stage dirs (sub-epics).
+
+    This picks up sub-epic directories like wint/, langgraph-update/, etc. that have
+    their own UAT/, ready-for-qa/, in-progress/, ready-to-work/ stage directories.
+    """
+    dirs = [epic_dir]
+    try:
+        for entry in os.listdir(epic_dir):
+            sub = os.path.join(epic_dir, entry)
+            if os.path.isdir(sub) and not entry.startswith('.'):
+                if any(os.path.isdir(os.path.join(sub, stage)) for stage in STAGE_DIRS):
+                    dirs.append(sub)
+    except PermissionError:
+        pass
+    return dirs
+
+
 def scan_directories(epic_dir):
-    """Scan stage directories → {story_id: stage}."""
+    """Scan stage directories → {story_id: stage}, including sub-epic directories."""
     status_map = {}
-    for stage in STAGE_DIRS:
-        stage_path = os.path.join(epic_dir, stage)
-        if not os.path.isdir(stage_path):
-            continue
-        for entry in os.listdir(stage_path):
-            full = os.path.join(stage_path, entry)
-            if os.path.isdir(full) and STORY_RE.match(entry):
-                if entry not in status_map or STAGE_PRIORITY[stage] > STAGE_PRIORITY[status_map[entry]]:
-                    status_map[entry] = stage
+    for scan_dir in collect_scan_dirs(epic_dir):
+        for stage in STAGE_DIRS:
+            stage_path = os.path.join(scan_dir, stage)
+            if not os.path.isdir(stage_path):
+                continue
+            for entry in os.listdir(stage_path):
+                full = os.path.join(stage_path, entry)
+                if os.path.isdir(full) and STORY_RE.match(entry):
+                    if entry not in status_map or STAGE_PRIORITY[stage] > STAGE_PRIORITY[status_map[entry]]:
+                        status_map[entry] = stage
     return status_map
 
 
@@ -140,19 +188,24 @@ def scan_index_file(index_file):
 
 
 def scan_proof_files(epic_dir):
-    """Scan all stage directories for PROOF-*.md files → {story_id: 'completed'}."""
+    """Scan all stage directories for PROOF-*.md files → {story_id: 'completed'}.
+
+    Also scans sub-epic directories (e.g. wint/, langgraph-update/) that have
+    their own stage directories.
+    """
     status_map = {}
-    for stage in STAGE_DIRS:
-        stage_path = os.path.join(epic_dir, stage)
-        if not os.path.isdir(stage_path):
-            continue
-        for entry in os.listdir(stage_path):
-            story_dir = os.path.join(stage_path, entry)
-            if not os.path.isdir(story_dir) or not STORY_RE.match(entry):
+    for scan_dir in collect_scan_dirs(epic_dir):
+        for stage in STAGE_DIRS:
+            stage_path = os.path.join(scan_dir, stage)
+            if not os.path.isdir(stage_path):
                 continue
-            proof_files = glob.glob(os.path.join(story_dir, f'PROOF-{entry}.md'))
-            if proof_files:
-                status_map[entry] = 'completed'
+            for entry in os.listdir(stage_path):
+                story_dir = os.path.join(stage_path, entry)
+                if not os.path.isdir(story_dir) or not STORY_RE.match(entry):
+                    continue
+                proof_files = glob.glob(os.path.join(story_dir, f'PROOF-{entry}.md'))
+                if proof_files:
+                    status_map[entry] = 'completed'
     return status_map
 
 
@@ -188,8 +241,9 @@ def replace_checkbox(cell, new_check):
 
 
 STALE_NOTE_PHRASES = re.compile(
-    r'\*{0,2}(Ready for QA|Ready for Code Review|In Progress|In Elaboration|'
-    r'Ready to Start|Blocked|Completed|UAT verified|UAT|In QA)\*{0,2}'
+    r'\*{0,2}(Ready for QA|Ready for Code Review|Needs Code Review|'
+    r'Failed Code Review|Failed QA|Needs Work|In Progress|In Elaboration|'
+    r'Ready to Start|Blocked|Completed|UAT verified|UAT|In QA|Created)\*{0,2}'
     r'(\s*[-–—]\s*)?',
     re.IGNORECASE
 )
@@ -382,11 +436,16 @@ def update_progress_summary(work_order, status_map):
 
     uat = sorted(by_stage.get('UAT', []) + by_stage.get('completed', []))
     qa = sorted(by_stage.get('ready-for-qa', []))
+    failed_qa = sorted(by_stage.get('failed-qa', []))
+    needs_review = sorted(by_stage.get('needs-code-review', []))
+    failed_review = sorted(by_stage.get('failed-code-review', []))
     prog = sorted(by_stage.get('in-progress', []))
     ready = sorted(by_stage.get('ready-to-work', []))
     elab = sorted(by_stage.get('elaboration', []))
+    created = sorted(by_stage.get('created', []))
 
-    total_active = len(uat) + len(qa) + len(prog) + len(ready) + len(elab)
+    total_active = (len(uat) + len(qa) + len(failed_qa) + len(needs_review) +
+                    len(failed_review) + len(prog) + len(ready) + len(elab) + len(created))
 
     new_summary_lines = [
         "**Current Status Summary:**",
@@ -394,10 +453,18 @@ def update_progress_summary(work_order, status_map):
         f"- 🔍 Ready for QA: {len(qa)} stories ({', '.join(qa)})" if qa else "- 🔍 Ready for QA: 0 stories",
         f"- 🚧 In Progress: {len(prog)} stories ({', '.join(prog)})" if prog else "- 🚧 In Progress: 0 stories",
     ]
+    if failed_qa:
+        new_summary_lines.append(f"- ⚠️ Failed QA: {len(failed_qa)} stories ({', '.join(failed_qa)})")
+    if needs_review:
+        new_summary_lines.append(f"- 👀 Needs Code Review: {len(needs_review)} stories ({', '.join(needs_review)})")
+    if failed_review:
+        new_summary_lines.append(f"- 🔴 Failed Code Review: {len(failed_review)} stories ({', '.join(failed_review)})")
     if elab:
         new_summary_lines.append(f"- 📝 In Elaboration: {len(elab)} stories ({', '.join(elab)})")
     if ready:
         new_summary_lines.append(f"- ⏳ Ready to Start: {len(ready)} stories ({', '.join(ready)})")
+    if created:
+        new_summary_lines.append(f"- 🆕 Created: {len(created)} stories ({', '.join(created)})")
 
     new_summary_lines.append("- ⏸️ Blocked: remaining stories (waiting on dependencies)")
     new_summary_lines.append("")
@@ -682,8 +749,18 @@ def print_status_table(status_map, epic_name):
         by_stage.setdefault(stage, []).append(story)
 
     print(f"  {epic_name} Status:")
-    for stage_name, emoji in [('completed', '✅'), ('UAT', '✅'), ('ready-for-qa', '🔍'),
-                               ('in-progress', '🚧'), ('ready-to-work', '⏳'), ('elaboration', '📝')]:
+    for stage_name, emoji in [
+        ('completed', '✅'),
+        ('UAT', '✅'),
+        ('ready-for-qa', '🔍'),
+        ('failed-qa', '⚠️'),
+        ('needs-code-review', '👀'),
+        ('failed-code-review', '🔴'),
+        ('in-progress', '🚧'),
+        ('ready-to-work', '⏳'),
+        ('elaboration', '📝'),
+        ('created', '🆕'),
+    ]:
         stories = sorted(by_stage.get(stage_name, []))
         if stories:
             print(f"    {emoji} {stage_name}: {', '.join(stories)}")

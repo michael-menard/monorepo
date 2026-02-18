@@ -1,0 +1,28 @@
+schema: 1
+story_id: "WINT-0160"
+timestamp: "2026-02-17T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/agents/doc-sync.agent.md"
+  - ".claude/skills/doc-sync/SKILL.md"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Audit and harden doc-sync.agent.md v1.1.0 for production readiness; add LangGraph Porting Notes to SKILL.md and WINT-0170 integration note to agent"
+elaboration: "completed"

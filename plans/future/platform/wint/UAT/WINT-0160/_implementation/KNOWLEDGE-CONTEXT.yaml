@@ -1,0 +1,67 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-17T00:00:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WINT-0150"
+        lesson: "MCP tool name format uses mcp__ prefix with dashes for tool name (e.g., mcp__postgres-knowledgebase__query-workflow-phases). Names diverged from original architecture notes that used get- prefix. Verification against live server required."
+        category: blocker
+        applies_because: "AC-1 requires verifying exact MCP tool names in agent frontmatter — same risk applies here."
+      - story_id: "WINT-0080"
+        lesson: "postgres-knowledgebase MCP server may be in UAT but not yet promoted; treat live verification as optional with attestation fallback."
+        category: pattern
+        applies_because: "AC-1 tool verification may be blocked by WINT-0080 UAT status."
+      - story_id: "WINT-0070"
+        lesson: "workflow.phases and workflow.components tables are not yet live (WINT-0070 pending). Graceful degradation tests must operate in file-only mode."
+        category: blocker
+        applies_because: "AC-3 and AC-4 must test graceful degradation because WINT-0070 tables are not available."
+
+    blockers_to_avoid:
+      - "Do not attempt live database verification of AC-3/AC-4 — WINT-0070 tables not yet live"
+      - "Do not re-implement doc-sync.agent.md from scratch — reuse existing v1.1.0"
+      - "Do not port to LangGraph in this story — WINT-9020 handles that"
+
+    patterns_to_follow:
+      - "Modify doc artifacts surgically using Edit tool — preserve existing content"
+      - "AC-1 MCP tool name verification: if server unavailable, document attestation note in agent"
+      - "LangGraph Porting Notes section is specification prose only — no code"
+      - "Update SKILL.md version history entry for WINT-0150 changes"
+
+    patterns_to_avoid:
+      - "Reading the full codebase when only two specific doc files need modification"
+      - "Over-engineering the LangGraph interface contract — keep it as simple specification prose"
+
+  architecture_decisions:
+    active_count: 0
+    relevant_adrs: []
+    constraints:
+      api_paths: "N/A — no API endpoints touched"
+      infrastructure: "N/A — no infra touched"
+      storage: "N/A — no image/media touched"
+      auth: "N/A — no auth touched"
+      testing: "No Vitest tests required — story is doc-only chore. Evidence via file inspection and manual run attestation."
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full serverless.yml or large config files"
+        typical_tokens: 17500
+        mitigation: "N/A — not needed for this story"
+      - operation: "Reading full story file when only ACs needed"
+        typical_tokens: 5000
+        mitigation: "Already done — read ACs section only per plan spec"
+
+    recommended_patterns:
+      - "Read only the two target files: doc-sync.agent.md and SKILL.md"
+      - "Use Edit tool for surgical doc additions rather than Write (full file rewrite)"
+      - "Grep to locate exact insertion points before editing"
+
+  warnings:
+    - "WINT-0070 tables not live — AC-3/AC-4 graceful degradation can only be verified against current file-only behavior"
+    - "WINT-0080 UAT status unknown — AC-1 live server verification may not be possible; attestation fallback documented in story"
+    - "No ADRs are relevant to this doc-only story; all ADRs concern API/backend/frontend architecture"
+
+  tokens:
+    in: 1800
+    out: 600

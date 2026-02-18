@@ -1,0 +1,159 @@
+schema: 1
+story_id: "WINT-0160"
+timestamp: "2026-02-17T00:00:00Z"
+iteration: 2
+
+verdict: PASS
+
+tests_executed: false
+tests_executed_reason: "Story is doc-only chore (story_type: docs). No TypeScript, no Vitest tests, no build artifacts. Exempt from test execution per KNOWLEDGE-CONTEXT.yaml: 'No Vitest tests required — story is doc-only chore.'"
+
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage:
+  lines: null
+  branches: null
+coverage_meets_threshold: true
+coverage_threshold_reason: "No code files touched — doc-only story. Coverage threshold (45%) does not apply."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "No tests to evaluate — story is doc-only chore with no application code changes."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    disk_verified: true
+    notes: |
+      Frontmatter confirmed present on disk (lines 1-11 of doc-sync.agent.md):
+      mcp_tools: [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-knowledgebase__query-workflow-components]
+      Tool names match SKILL.md mcp_tools_available field. WINT-0080 MCP server not confirmed live;
+      attestation fallback per KNOWLEDGE-CONTEXT.yaml is acceptable.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    disk_verified: true
+    notes: |
+      All required WINT standard frontmatter fields confirmed on disk:
+      created, updated, version (1.1.0), type (worker), name, description, model (haiku), tools, mcp_tools.
+      Note: updated date on disk is 2026-02-16 (not 2026-02-17 as EVIDENCE.yaml stated) — immaterial,
+      field presence is the AC requirement, not the specific date value.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    disk_verified: false
+    notes: |
+      Verified by code inspection of Phase 2 Step 2.2 in doc-sync.agent.md (lines 103-126).
+      try/catch block confirmed wrapping all database queries.
+      TIMEOUT: logger.warn + fall back to file-only mode.
+      CONNECTION_FAILED: logger.warn + fall back to file-only mode.
+      Other errors: logger.error + fall back to file-only mode.
+      Comment "Continue with file-only mode (graceful degradation)" present.
+      WINT-0070 tables not live; live execution test not possible.
+      Accepted as CONDITIONAL PASS per ANALYSIS.md and KNOWLEDGE-CONTEXT.yaml warnings.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    disk_verified: true
+    notes: |
+      DISK-VERIFIED (iteration 2 fix confirmed): grep for '1\.1\.0' in SKILL.md returns:
+      "781: ### 1.1.0 - 2026-02-16"
+      Version history entry present at line 781 with all documented items:
+      database query integration, hybrid sync, graceful degradation, 30s timeout,
+      SYNC-REPORT fields, hybrid sync examples, extended frontmatter fields.
+      Previously FAIL in iteration 1 (content was absent). Fix confirmed on disk.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    disk_verified: true
+    notes: |
+      All four completion signals confirmed on disk at lines 486-489 of doc-sync.agent.md:
+      1. DOC-SYNC COMPLETE
+      2. DOC-SYNC COMPLETE (warnings)
+      3. DOC-SYNC CHECK FAILED
+      4. DOC-SYNC BLOCKED: {reason}
+      Signals match SKILL.md usage documentation.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    disk_verified: true
+    notes: |
+      DISK-VERIFIED (iteration 2 fix confirmed): grep for 'LangGraph Porting Notes' in SKILL.md returns:
+      "737: ## LangGraph Porting Notes"
+      All four subsections confirmed present on disk (lines 737-776):
+      1. Inputs (line 741) — table with --check-only and --force flags
+      2. 7-Phase Workflow Contract (line 748) — table mapping all 7 phases
+      3. Outputs (line 762) — SYNC-REPORT.md, modified doc files, exit codes
+      4. MCP Tools (line 770) — both tool names with purposes and WINT-0080 dependency note
+      Section placed before Version History; specification prose only, no code.
+      Previously FAIL in iteration 1 (entire section was absent). Fix confirmed on disk.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    disk_verified: true
+    notes: |
+      DISK-VERIFIED (iteration 2 fix confirmed): grep for 'WINT-0170' in doc-sync.agent.md returns
+      lines 417 and 419. Full integration note confirmed at lines 417-423:
+      - Line 417: "**WINT-0170 Integration Note:**"
+      - Lines 419-423: Mandatory gate description — check-only run before story completion,
+        exit code 0 allows proceed, exit code 1 blocks until documentation synchronized.
+      Previously FAIL in iteration 1 (note was entirely absent). Fix confirmed on disk.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    disk_verified: true
+    notes: |
+      stories.index.md shows WINT-0160 with Status: in-qa (line 339). EVIDENCE.yaml claimed
+      'in-progress' but actual status 'in-qa' is correct for current workflow position (QA verification).
+      Story file path wint/UAT/WINT-0160/WINT-0160.md confirmed. Story tracked and indexed correctly.
+
+architecture_compliant: true
+architecture_notes: "Doc-only chore story. No ADRs applicable. No API paths, infrastructure, storage, auth, or TypeScript code modified. Only markdown files modified."
+
+issues: []
+
+lessons_to_record:
+  - lesson: |
+      When QA iteration 1 fails due to EVIDENCE.yaml attestation without disk verification,
+      iteration 2 must directly grep each disputed AC on disk. This pattern (EVIDENCE claims pass,
+      disk reveals missing content) should trigger automatic disk grep for all file-type evidence
+      items in future QA runs. The iteration 2 fix-cycle approach worked correctly here.
+    category: pattern
+    tags: ["qa-verify", "evidence", "doc-sync", "attestation"]
+
+  - lesson: |
+      Doc-only stories with no Vitest tests should document test exemption explicitly in
+      QA-VERIFY.yaml with the rationale, not silently skip. This prevents QA confusion about
+      whether tests were forgotten or intentionally excluded.
+    category: pattern
+    tags: ["qa-verify", "docs-story", "test-coverage"]
+
+  - lesson: |
+      EVIDENCE.yaml attestations can diverge from disk reality in doc-only stories where the
+      leader executes changes without spawning a coder. QA verification by actual file inspection
+      (grep/read) is essential — evidence self-attestation alone is insufficient. The fix-cycle
+      iteration model successfully recovered from this class of failure.
+    category: anti_pattern
+    tags: ["doc-sync", "evidence", "attestation", "doc-only", "qa-verify"]
+
+gate:
+  decision: PASS
+  reason: "All 8 acceptance criteria verified as PASS. AC-4, AC-6, AC-7 confirmed fixed on disk (iteration 2). No issues blocking promotion."
+  blocking_issues: []
+
+tokens:
+  in: 7000
+  out: 1800

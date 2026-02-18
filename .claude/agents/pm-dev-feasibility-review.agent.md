@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
 updated: 2026-01-25
-version: 3.0.0
+version: 3.1.0
 type: worker
 permission_level: docs-only
 model: haiku
@@ -67,6 +67,28 @@ ONLY risks that block core user journey:
 # MVP Evidence Expectations
 - proof needed for core journey
 - critical CI/deploy checkpoints
+
+# Proposed Subtask Breakdown
+Decompose the story into small, sequential subtasks that can each be implemented as a targeted diff by a small-context LLM agent (~32K window).
+
+**Subtask design rules:**
+- Each subtask touches **1-3 files** max
+- Each subtask maps to **1-3 ACs**
+- Subtasks are ordered by dependency (later ones build on earlier ones)
+- Each subtask includes one canonical reference file (from STORY-SEED.md if available)
+- Each subtask has a concrete verification command
+- Sizing guide: 1-point story → 1-2 subtasks, 3-point → 3-5 subtasks, 5-point → 5-8 subtasks
+- If a subtask would need to touch >3 files, split it further
+
+**Format per subtask:**
+
+### ST-{N}: {Short goal description}
+- **Goal**: {One-sentence description of what this subtask produces}
+- **Files to read**: {Canonical reference + any prior subtask output files}
+- **Files to create/modify**: {1-3 file paths}
+- **ACs covered**: {AC-N, AC-M}
+- **Depends on**: {ST-X or "none"}
+- **Verification**: {Concrete command, e.g. `pnpm check-types --filter @repo/db`}
 
 ## Required Structure: FUTURE-RISKS.md
 

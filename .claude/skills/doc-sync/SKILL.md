@@ -734,7 +734,59 @@ The skill may update these documentation files:
 
 ---
 
+## LangGraph Porting Notes
+
+This section documents the specification contract for porting doc-sync to a LangGraph node. Tracking story: WINT-9020.
+
+### Inputs
+
+| Flag | Type | Description | Required | Default |
+|------|------|-------------|----------|---------|
+| `--check-only` | Flag | Dry-run mode — verify sync without modifying files. Exits with code 1 if out of sync, 0 if in sync. | No | false |
+| `--force` | Flag | Process all agent/command files regardless of git status. Bypasses git diff detection. | No | false |
+
+### 7-Phase Workflow Contract
+
+The doc-sync agent operates through seven sequential phases. Any LangGraph port must preserve this phase contract as the logical execution unit boundary.
+
+| Phase | Name | Description |
+|-------|------|-------------|
+| Phase 1 | File Discovery | Detect changed `.claude/agents/` and `.claude/commands/` files via git diff (primary) or timestamp fallback |
+| Phase 2 | Frontmatter Parsing | Extract and validate YAML frontmatter; query `postgres-knowledgebase` MCP tools if available; merge file and database sources |
+| Phase 3 | Section Mapping | Map agent files to documentation sections by filename pattern or database `metadata.phase` field |
+| Phase 4 | Documentation Updates | Update agent tables, model assignment tables, and commands overview in `docs/workflow/` |
+| Phase 5 | Mermaid Diagram Regeneration | Parse `spawns` frontmatter field and regenerate spawn-relationship diagrams |
+| Phase 6 | Changelog Entry Drafting | Determine version bump type (major/minor/patch) and draft a new changelog entry |
+| Phase 7 | SYNC-REPORT.md Generation | Write comprehensive sync report including database query status, sections updated, and manual review items |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `SYNC-REPORT.md` | Comprehensive sync report written to current directory or story artifacts directory. Includes: files changed, sections updated, diagrams regenerated, manual review items, changelog entry, database query status, and summary counts. |
+| Modified doc files | Any of `docs/workflow/phases.md`, `docs/workflow/README.md`, `docs/workflow/agent-system.md`, `docs/workflow/orchestration.md`, `docs/workflow/changelog.md` may be updated. |
+| Exit codes (check-only mode) | `0` = documentation is in sync. `1` = documentation is out of sync (see SYNC-REPORT.md for details). |
+
+### MCP Tools
+
+| Tool | Purpose |
+|------|---------|
+| `mcp__postgres-knowledgebase__query-workflow-components` | Query `workflow.components` table for agent/command/skill metadata to merge with file frontmatter. Requires WINT-0080 MCP server. |
+| `mcp__postgres-knowledgebase__query-workflow-phases` | Query `workflow.phases` table for phase status and completion data. Requires WINT-0080 MCP server. |
+
+---
+
 ## Version History
+
+### 1.1.0 - 2026-02-16
+
+- Database query integration via `postgres-knowledgebase` MCP tools (Phase 2, Steps 2.2-2.4)
+- Hybrid file+database sync with database-overrides-file merge strategy
+- Graceful degradation on timeout, connection failure, or database unavailability
+- 30-second configurable timeout with error categorization (TIMEOUT, CONNECTION_FAILED, other)
+- Database status tracking fields in SYNC-REPORT.md (`database_queried`, `database_status`, `database_components_count`, `database_phases_count`, `query_duration_ms`)
+- Hybrid sync examples added (Examples 5, 6, 7)
+- Extended frontmatter optional fields: `kb_tools`, `mcp_tools`
 
 ### 1.0.0 - 2026-02-07
 

@@ -36,5 +36,18 @@
   },
   "trust": {
     "allowSelfEdit": true
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "/(pm-story|dev-implement-story|qa-verify-story)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[CONTEXT WARNING] Long-running workflow command detected. If this is a new story or you are switching context, run /clear first to prevent prior session context from interfering. If you have already cleared, ignore this message.'"
+          }
+        ]
+      }
+    ]
   }
 }

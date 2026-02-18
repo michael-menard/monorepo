@@ -1,0 +1,142 @@
+schema: 1
+story_id: "WINT-1012"
+version: 1
+timestamp: "2026-02-17T13:01:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-6"
+    ac_text: "_diagnostics field (source + queried_at) is optional, off by default, opt-in via options.diagnostics = true in all four shim functions"
+    status: PASS
+    evidence_items:
+      - type: code
+        path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+        description: "ShimDataSourceSchema (db|directory|not_found), ShimDiagnosticsSchema (source + queried_at), ShimOptionsSchema extended with diagnostics?: boolean"
+      - type: code
+        path: "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+        description: "All four shim functions (shimGetStoryStatus, shimUpdateStoryStatus, shimGetStoriesByStatus, shimGetStoriesByFeature) include _diagnostics in return value when options.diagnostics = true; backward-compatible when false/unset"
+      - type: test
+        path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoryStatus.test.ts"
+        description: "Tests: diagnostics off by default, diagnostics:false explicit, DB-hit source=db, directory fallback source=directory, not-found returns null"
+      - type: test
+        path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimUpdateStoryStatus.test.ts"
+        description: "Tests: diagnostics off by default, write success source=db, write failure returns null"
+      - type: test
+        path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByStatus.test.ts"
+        description: "Tests: diagnostics off by default, DB result source=db, directory fallback source=directory, DB-only state (blocked/cancelled) source=not_found, no match source=not_found"
+      - type: test
+        path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByFeature.test.ts"
+        description: "Tests: diagnostics off by default, DB result source=db, epic prefix fallback source=directory, no match source=not_found"
+
+  - ac_id: "AC-9"
+    ac_text: "80%+ branch coverage on packages/backend/mcp-tools/src/story-compatibility/"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "vitest run --coverage --coverage.include='src/story-compatibility/**' story-compatibility"
+        result: "PASS"
+        description: |
+          Coverage results:
+          story-compatibility/index.ts: 98.91% Stmts, 98.33% Branch, 100% Funcs
+          All files: 92.37% Stmts, 96.77% Branch, 88.88% Funcs
+          Exceeds 80% branch coverage requirement
+      - type: test
+        path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/"
+        description: "57 total tests across 4 test files; 4 data paths (DB-hit, directory-fallback, not-found, invalid) covered for all four shim functions"
+
+touched_files:
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    action: modified
+    lines: 136
+    description: "Added ShimDataSourceSchema (z.enum(['db','directory','not_found'])), ShimDiagnosticsSchema (source + queried_at), extended ShimOptionsSchema with diagnostics?: boolean"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+    action: modified
+    lines: 320
+    description: "Extended all four shim functions to track data source and return _diagnostics field when options.diagnostics = true. Added buildDiagnostics() helper. Backward-compatible: default behavior unchanged."
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoryStatus.test.ts"
+    action: modified
+    lines: 258
+    description: "Extended with 4 diagnostics tests: off-by-default, diagnostics:false, DB-hit source=db, fallback source=directory, not-found returns null (total: 19 tests)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimUpdateStoryStatus.test.ts"
+    action: modified
+    lines: 175
+    description: "Extended with 4 diagnostics tests: off-by-default, write-success source=db, write-failure null, diagnostics:false (total: 9 tests)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByStatus.test.ts"
+    action: modified
+    lines: 310
+    description: "Extended with 6 diagnostics tests: off-by-default, DB source=db, fallback source=directory, blocked source=not_found, cancelled source=not_found, empty source=not_found, pagination+diagnostics (total: 15 tests)"
+
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__tests__/shimGetStoriesByFeature.test.ts"
+    action: modified
+    lines: 300
+    description: "Extended with 5 diagnostics tests: off-by-default, DB source=db, epic-prefix fallback source=directory, no-match source=not_found, diagnostics:false, pagination+diagnostics (total: 14 tests)"
+
+commands_run:
+  - command: "pnpm test --filter @repo/mcp-tools -- story-compatibility"
+    result: SUCCESS
+    output: "4 test files, 57 tests passed"
+    timestamp: "2026-02-17T13:00:47Z"
+
+  - command: "vitest run --coverage --coverage.include='src/story-compatibility/**' story-compatibility"
+    result: SUCCESS
+    output: "92.37% stmts, 96.77% branches, 88.88% funcs - exceeds 80% threshold"
+    timestamp: "2026-02-17T13:00:09Z"
+
+  - command: "tsc --noEmit (mcp-tools)"
+    result: SUCCESS
+    output: "No type errors"
+    timestamp: "2026-02-17T13:00:30Z"
+
+  - command: "eslint packages/backend/mcp-tools/src/story-compatibility/"
+    result: SUCCESS
+    output: "No errors or warnings after prettier auto-fix"
+    timestamp: "2026-02-17T13:00:40Z"
+
+  - command: "pnpm build --filter @repo/mcp-tools"
+    result: SUCCESS
+    output: "4 tasks successful, 2 cached"
+    timestamp: "2026-02-17T13:00:50Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 57, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "backend-only module with no HTTP endpoints; unit test coverage is the primary quality gate per AC-9. Story operates exclusively on internal TypeScript functions with no UI or API surface."
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: 92.37
+  branches: 96.77
+  functions: 88.88
+  statements: 92.37
+
+notable_decisions:
+  - "shimGetStoryStatus with diagnostics=true and not-found still returns null (cannot attach _diagnostics to null; null is the established API contract)"
+  - "shimUpdateStoryStatus with diagnostics=true and write failure still returns null (same contract as above)"
+  - "shimGetStoriesByStatus and shimGetStoriesByFeature with diagnostics=true return { stories, _diagnostics } wrapper object (array allows wrapper pattern)"
+  - "buildDiagnostics() helper centralizes timestamp and source assignment for all four shim functions"
+  - "Prettier auto-fixed 4 union type formatting issues in index.ts (long union types split to multi-line per project style)"
+
+known_deviations:
+  - "shimGetStoryStatus and shimUpdateStoryStatus return null (not a wrapped object) on not-found even with diagnostics=true. This deviates from the PLAN step-6 description of 'returns _diagnostics with source=not_found' because null cannot carry fields. The test confirms null is returned and documents this behavior. List functions (shimGetStoriesByStatus, shimGetStoriesByFeature) correctly return { stories: [], _diagnostics } wrapper on not-found."
+
+token_summary:
+  execute: { in: 45000, out: 18000 }

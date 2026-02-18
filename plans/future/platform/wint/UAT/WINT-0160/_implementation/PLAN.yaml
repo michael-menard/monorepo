@@ -1,0 +1,120 @@
+schema: 1
+story_id: "WINT-0160"
+timestamp: "2026-02-17T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "AC-1/AC-2: Audit doc-sync.agent.md frontmatter — verify MCP tool names and confirm all required WINT standard fields are present (created, updated, version, type, name, description, model, tools, mcp_tools). Document attestation note if server unavailable."
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "AC-5: Verify Completion Signals section in doc-sync.agent.md — confirm all four signals (DOC-SYNC COMPLETE, DOC-SYNC COMPLETE (warnings), DOC-SYNC CHECK FAILED, DOC-SYNC BLOCKED: {reason}) are present and match the SKILL.md."
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "AC-7: Add WINT-0170 integration note to doc-sync.agent.md Check-Only Mode section — explicitly state that WINT-0170 will add doc-sync as a gate to phase/story completion, and document exit code behavior (0 = in sync, 1 = out of sync blocks completion)."
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "AC-6: Add LangGraph Porting Notes section to SKILL.md — define canonical inputs (flags: --check-only, --force), the 7-phase workflow as logical execution contract, outputs (SYNC-REPORT.md + modified doc files), and MCP tools list for dependency mapping. Specification prose only, no code."
+    files:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [1]
+    slice: packages
+
+  - id: 5
+    description: "AC-4 (SKILL.md version history): Add version history entry 1.1.0 to SKILL.md documenting WINT-0150 enhancements (database query integration, hybrid sync examples, Steps 2.2-2.4 added)."
+    files:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [4]
+    slice: packages
+
+  - id: 6
+    description: "AC-3/AC-4: Verify graceful degradation behavior — inspect the existing agent Phase 2 error handling to confirm file-only mode path is complete. Since WINT-0070 tables are not live, verify by code inspection and attest behavior in story notes. This is read-only verification."
+    files:
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [3]
+    slice: packages
+
+  - id: 7
+    description: "AC-8: Update story index — WINT-0160 status change is handled by the workflow orchestrator, not this story's implementation. Verify stories.index.md reflects current in-progress status."
+    files:
+      - "plans/future/platform/wint/stories.index.md"
+    dependencies: [5, 6]
+    slice: packages
+
+files_to_change:
+  - path: ".claude/agents/doc-sync.agent.md"
+    action: modify
+    reason: "AC-1: Attestation note for MCP tool name verification if server unavailable; AC-7: WINT-0170 integration note in Check-Only Mode section. AC-2/AC-5 are read-only verification (no changes expected — fields already present)."
+
+  - path: ".claude/skills/doc-sync/SKILL.md"
+    action: modify
+    reason: "AC-6: Add LangGraph Porting Notes section; AC-4: Add version history entry 1.1.0 for WINT-0150 changes."
+
+commands_to_run:
+  - command: "pnpm check-types"
+    when: "after all doc changes (verify no type errors introduced in surrounding code)"
+    required: false
+    note: "Story is doc-only (no .ts files modified). Type check is a no-op but included for completeness."
+
+  - command: "grep -r 'doc-sync' .claude/agents/doc-sync.agent.md | head -20"
+    when: "after modifying agent file to verify changes landed correctly"
+    required: false
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File inspection of doc-sync.agent.md frontmatter mcp_tools field. If server unavailable: attestation note added to agent file documenting tool names as 'assumed correct' with WINT-0080 UAT dependency."
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "File inspection confirms all required fields present: created=2026-02-07, updated=2026-02-16, version=1.1.0, type=worker, name=doc-sync, description present, model=haiku, tools array, mcp_tools array."
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "Code inspection of Phase 2 Step 2.2 error handling in doc-sync.agent.md — confirms try/catch with graceful fallback to file-only mode when database unavailable. WINT-0070 tables not live so live test not possible; verification by inspection."
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Code inspection confirms file-only path is complete (Step 2.2 catch block continues with file-only mode). SYNC-REPORT.md template shows database_status: unavailable for MCP tools not available scenario."
+    evidence_type: file
+
+  - ac_id: "AC-5"
+    planned_evidence: "File inspection of Completion Signals section in doc-sync.agent.md confirms all four signals present and match SKILL.md."
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "New 'LangGraph Porting Notes' section added to SKILL.md with four subsections: inputs (flags), 7-phase workflow contract, outputs, MCP tools list."
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "WINT-0170 integration note added to Check-Only Mode section of doc-sync.agent.md, documenting exit code gate mechanism."
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "stories.index.md shows WINT-0160 in-progress status (managed by workflow, verify as-is)."
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "This is a doc-only chore story — no TypeScript code is modified. All steps are file inspection and markdown/YAML additions."
+  - "AC-1 live server verification: WINT-0080 is in UAT but not confirmed promoted. Attestation fallback is acceptable per story spec."
+  - "AC-3/AC-4 live run verification: WINT-0070 tables not live. Verification is by code inspection only — this is explicitly acknowledged in ANALYSIS.md as CONDITIONAL PASS."
+  - "Per ANALYSIS.md Issue #2: LangGraph Porting Notes section (AC-6) is the primary concrete gap — must be created."
+  - "Per ANALYSIS.md Issue #3: WINT-0170 mention in Check-Only Mode (AC-7) is required addition."
+  - "Per ANALYSIS.md Issue #4: SKILL.md version history entry for WINT-0150 changes is a low-severity gap (AC-4 version history fix)."
+  - "The agent frontmatter already has all required fields per AC-2 inspection of the existing file — likely read-only verification step."
+  - "No Vitest tests required — story is a chore touching only documentation artifacts."
+  - "SCOPE.yaml touched_paths_globs already correctly identifies .claude/agents/doc-sync.agent.md and .claude/skills/doc-sync/SKILL.md."

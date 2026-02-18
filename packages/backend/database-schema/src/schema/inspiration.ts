@@ -9,7 +9,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { mocInstructions } from './index'
+import { mocInstructions } from './index.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inspiration Gallery Schema (Epic 5)

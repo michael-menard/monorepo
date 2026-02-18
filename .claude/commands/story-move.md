@@ -21,13 +21,18 @@ Move a story directory to a different workflow stage within a feature directory.
 
 ## Valid Stages
 
-| Stage | Directory | Typical Status |
-|-------|-----------|----------------|
-| `backlog` | `{FEATURE_DIR}/backlog/` | `backlog` |
-| `elaboration` | `{FEATURE_DIR}/elaboration/` | `elaboration` |
-| `ready-to-work` | `{FEATURE_DIR}/ready-to-work/` | `ready-to-work` |
-| `in-progress` | `{FEATURE_DIR}/in-progress/` | `in-progress` |
-| `UAT` | `{FEATURE_DIR}/UAT/` | `uat` |
+| Stage | Directory | Emoji | Typical Status |
+|-------|-----------|-------|----------------|
+| `backlog` | `{FEATURE_DIR}/backlog/` | ⏸️ | `backlog` |
+| `created` | `{FEATURE_DIR}/created/` | 🆕 | `created` |
+| `elaboration` | `{FEATURE_DIR}/elaboration/` | 📝 | `elaboration` |
+| `ready-to-work` | `{FEATURE_DIR}/ready-to-work/` | ⏳ | `ready-to-work` |
+| `in-progress` | `{FEATURE_DIR}/in-progress/` | 🚧 | `in-progress` |
+| `needs-code-review` | `{FEATURE_DIR}/needs-code-review/` | 👀 | `needs-code-review` |
+| `failed-code-review` | `{FEATURE_DIR}/failed-code-review/` | 🔴 | `failed-code-review` |
+| `ready-for-qa` | `{FEATURE_DIR}/ready-for-qa/` | 🔍 | `ready-for-qa` |
+| `failed-qa` | `{FEATURE_DIR}/failed-qa/` | ⚠️ | `failed-qa` |
+| `UAT` | `{FEATURE_DIR}/UAT/` | ✅ | `uat` |
 
 ## Execution Steps
 
@@ -35,9 +40,14 @@ Move a story directory to a different workflow stage within a feature directory.
 
 Search all stage directories within `{FEATURE_DIR}` for `{STORY_ID}/`:
 - `{FEATURE_DIR}/backlog/{STORY_ID}/`
+- `{FEATURE_DIR}/created/{STORY_ID}/`
 - `{FEATURE_DIR}/elaboration/{STORY_ID}/`
 - `{FEATURE_DIR}/ready-to-work/{STORY_ID}/`
 - `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+- `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
+- `{FEATURE_DIR}/failed-code-review/{STORY_ID}/`
+- `{FEATURE_DIR}/failed-qa/{STORY_ID}/`
+- `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/`
 - `{FEATURE_DIR}/UAT/{STORY_ID}/`
 
 If not found: `MOVE FAILED: Story directory not found`
@@ -83,11 +93,11 @@ status_updated: true | false
 ## Stage Transition Flow
 
 ```
-backlog → elaboration → ready-to-work → in-progress → UAT
-                                            ↓
-                                      (needs-work)
-                                            ↓
-                                      in-progress (return)
+backlog → created → elaboration → ready-to-work → in-progress → needs-code-review → ready-for-qa → UAT
+                                                        ↓                                  ↓
+                                                failed-code-review              failed-qa
+                                                        ↓                                  ↓
+                                                  in-progress (return)         in-progress (return)
 ```
 
 ## Error Handling
@@ -116,8 +126,8 @@ backlog → elaboration → ready-to-work → in-progress → UAT
 # Move to UAT and update status
 /story-move plans/future/wishlist WISH-001 UAT --update-status
 
-# Return from UAT to in-progress (needs-work scenario)
-/story-move plans/future/wishlist WISH-001 in-progress --update-status
+# Move to failed-qa after QA verification failure
+/story-move plans/future/wishlist WISH-001 failed-qa --update-status
 ```
 
 ## Typical Workflow Integration
@@ -128,10 +138,24 @@ Setup leaders call this skill:
 # In dev-setup-leader:
 1. /story-move {FEATURE_DIR} {STORY_ID} in-progress --update-status
 
+# In dev-implement-story (Done):
+1. /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
+
+# In dev-code-review (PASS):
+1. /story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
+
+# In dev-code-review (FAIL):
+1. /story-move {FEATURE_DIR} {STORY_ID} failed-code-review --update-status
+
+# In dev-fix-story (after failed-code-review):
+1. /story-move {FEATURE_DIR} {STORY_ID} in-progress --update-status
+
 # In qa-verify-completion-leader (on PASS):
 1. /story-move {FEATURE_DIR} {STORY_ID} UAT --update-status
 
 # In qa-verify-completion-leader (on FAIL):
-1. /story-move {FEATURE_DIR} {STORY_ID} in-progress
-2. /story-update {FEATURE_DIR} {STORY_ID} needs-work
+1. /story-move {FEATURE_DIR} {STORY_ID} failed-qa --update-status
+
+# In dev-fix-story (after failed-qa):
+1. /story-move {FEATURE_DIR} {STORY_ID} in-progress --update-status
 ```

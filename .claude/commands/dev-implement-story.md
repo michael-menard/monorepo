@@ -25,6 +25,8 @@ shared:
 
 /dev-implement-story {FEATURE_DIR} {STORY_ID} [flags]
 
+> **Fresh context recommended.** Run `/clear` before this command when starting a new story or switching stories. Prior session context can cause agent confusion, stale artifact references, and incorrect phase detection.
+
 You are the **Orchestrator**. You spawn agents and manage the loop.
 Do NOT implement code. Do NOT review code. Do NOT fix code.
 
@@ -258,6 +260,13 @@ Skip the rest of Step 1.3 and continue to Step 2.
 
 **IF `--skip-worktree` NOT present:**
 
+**0. Derive branch name for this story**
+
+```
+story_branch = "story/{STORY_ID}"
+# e.g., WINT-1012 → story/WINT-1012
+```
+
 **1. Check CHECKPOINT.yaml for existing worktree_id**
 
 ```
@@ -276,24 +285,26 @@ db_record = worktree_get_by_story({ story_id: "{STORY_ID}" })
 
 **Case A: db_record is null (no registered worktree)**
 
-No active worktree exists for this story. Guide the user through creating one.
+No active worktree exists for this story. Create one automatically using the derived branch name.
 
 ```
-INFO: No worktree registered for {STORY_ID}. Initiating guided worktree creation.
+INFO: No worktree registered for {STORY_ID}. Creating worktree for branch {story_branch}.
 ```
 
-Invoke the guided creation step:
+Invoke the automated creation step (non-interactive — branch name and base branch are pre-supplied):
 ```
-/wt:new
+/wt:new {story_branch} main
 ```
 
-Note: `/wt:new` is an interactive skill. It will prompt the user for base branch and feature branch name interactively. The user must complete the prompts before continuing.
+Note: `/wt:new` accepts `[BRANCH_NAME] [BASE_BRANCH]` parameters and skips interactive prompts when they are provided. Capture the reported `path` from the output (e.g., `tree/{story_branch}`).
 
-After the user completes `/wt:new`:
-
-Call MCP tool to register the new worktree:
+After `/wt:new` completes, call MCP tool to register the new worktree:
 ```
-result = worktree_register({ story_id: "{STORY_ID}", ... })
+result = worktree_register({
+  story_id: "{STORY_ID}",
+  branch_name: "{story_branch}",
+  path: "tree/{story_branch}"
+})
 ```
 
 **If `worktree_register` returns null (registration failed):**
@@ -316,18 +327,18 @@ WARN: worktree_register returned null. Could not record worktree in database.
 
 **Case B: db_record is not null AND checkpoint_worktree_id matches db_record.worktree_id**
 
-A registered worktree exists and the checkpoint references the same worktree. Guide the user to switch to it.
+A registered worktree exists and the checkpoint references the same worktree. Switch to it automatically.
 
 ```
-INFO: Worktree {db_record.worktree_id} found. Switching to existing worktree for {STORY_ID}.
+INFO: Worktree {db_record.worktree_id} found for {STORY_ID} at {db_record.path}. Switching.
 ```
 
-Invoke the guided switch step:
+Invoke the switch step:
 ```
 /wt:switch
 ```
 
-Note: `/wt:switch` is an interactive skill. It will present a list of available worktrees for the user to select from, then provide a `cd` command. The user must complete the selection and navigate to the worktree before continuing.
+Note: `/wt:switch` presents a list of available worktrees and provides a `cd` command. The user must navigate to the worktree before continuing.
 
 After the user completes `/wt:switch`, continue to Step 2.
 
@@ -344,7 +355,7 @@ WARN: Worktree conflict detected for {STORY_ID}.
 
   Options:
   (a) Switch to existing worktree — recommended, guided /wt:switch step
-  (b) Create a new worktree — will register a new record, guided /wt:new step
+  (b) Create a new worktree — will auto-create branch {story_branch} and register a new record
   (c) Proceed without worktree — no isolation, worktree_id not updated in CHECKPOINT.yaml
 ```
 
@@ -362,11 +373,11 @@ After the user completes `/wt:switch`, continue to Step 2.
 
 **If option (b) selected:**
 ```
-INFO: Creating a new worktree.
-/wt:new
+INFO: Creating a new worktree for branch {story_branch}.
+/wt:new {story_branch} main
 ```
-After the user completes `/wt:new`:
-- Call `worktree_register({ story_id: "{STORY_ID}", ... })`
+After `/wt:new` completes:
+- Call `worktree_register({ story_id: "{STORY_ID}", branch_name: "{story_branch}", path: "tree/{story_branch}" })`
 - Handle null return as in Case A (warn + confirm).
 - If registration succeeds: write new `worktree_id` to CHECKPOINT.yaml.
 - Continue to Step 2.
@@ -431,19 +442,31 @@ If gate fails → BLOCKED, do not proceed.
 
 ### Clean Pass
 1. Update CHECKPOINT.yaml: `current_phase: done`, `e2e_gate: passed`
-2. Move story and update status:
+2. Commit and create PR:
    ```
-   /story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
+   /wt:commit-and-pr {STORY_ID} "{story_title}" {artifacts_path}/PROOF-{STORY_ID}.md {artifacts_path}/EVIDENCE.yaml
    ```
-3. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
+3. Parse output, write `pr_number` and `pr_url` to CHECKPOINT.yaml
+4. Move story to code review queue:
+   ```
+   /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
+   ```
+5. Report: `IMPLEMENTATION COMPLETE: {STORY_ID}`
+6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ### Forced Continue
 1. CHECKPOINT.yaml: `forced: true`, `warnings: [...]`
-2. Move story and update status:
+2. Commit and create PR:
    ```
-   /story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
+   /wt:commit-and-pr {STORY_ID} "{story_title}" {artifacts_path}/PROOF-{STORY_ID}.md {artifacts_path}/EVIDENCE.yaml
    ```
-3. Report with warnings
+3. Parse output, write `pr_number` and `pr_url` to CHECKPOINT.yaml
+4. Move story to code review queue:
+   ```
+   /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
+   ```
+5. Report with warnings
+6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ---
 

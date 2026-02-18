@@ -22,7 +22,7 @@ import {
   mocPartsLists,
   mocParts,
   workflowEvents,
-} from './schema'
+} from './schema.js'
 
 // =============================================================================
 // GALLERY SCHEMAS

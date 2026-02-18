@@ -28,10 +28,10 @@
  */
 
 // Core initialization
-export { initTelemetrySdk, getSdkInstance } from './init'
+export { initTelemetrySdk, getSdkInstance } from './init.js'
 
 // Configuration
-export { validateConfig, DEFAULT_SDK_CONFIG } from './config'
+export { validateConfig, DEFAULT_SDK_CONFIG } from './config.js'
 
 // Type exports
 export type {
@@ -41,8 +41,8 @@ export type {
   StateTrackingOptions,
   BufferedEvent,
   BufferState,
-} from './__types__/index'
+} from './__types__/index.js'
 
 // Utility exports (for advanced usage)
-export { insertWorkflowEventsBatch } from './batch-insert'
-export { chunkArray, BATCH_CHUNK_SIZE } from './utils/batch-chunker'
+export { insertWorkflowEventsBatch } from './batch-insert.js'
+export { chunkArray, BATCH_CHUNK_SIZE } from './utils/batch-chunker.js'

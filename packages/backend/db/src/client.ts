@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import * as schema from './schema'
+import * as schema from './schema.js'
 
 /**
  * Database Client for Lambda Functions
@@ -38,30 +38,41 @@ let _pool: Pool | null = null
  */
 export function getPool(): Pool {
   if (!_pool) {
+    const connectionString = process.env.DATABASE_URL
     const host = process.env.POSTGRES_HOST
     const port = parseInt(process.env.POSTGRES_PORT || '5432')
     const user = process.env.POSTGRES_USERNAME
     const password = process.env.POSTGRES_PASSWORD
     const database = process.env.POSTGRES_DATABASE
 
-    if (!host || !user || !password || !database) {
+    if (!connectionString && (!host || !user || !password || !database)) {
       throw new Error(
-        'Missing required database environment variables: POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_DATABASE',
+        'Missing required database environment variables: DATABASE_URL or (POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_DATABASE)',
       )
     }
 
-    _pool = new Pool({
-      host,
-      port,
-      user,
-      password,
-      database,
-      // Serverless-optimized connection pool settings
-      max: 1, // Single connection per Lambda (RDS Proxy handles pooling)
-      idleTimeoutMillis: 30000, // Close idle connections after 30s
-      connectionTimeoutMillis: 5000, // Fail fast on connection issues
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    })
+    _pool = new Pool(
+      connectionString
+        ? {
+            connectionString,
+            max: 1,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 5000,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+          }
+        : {
+            host,
+            port,
+            user,
+            password,
+            database,
+            // Serverless-optimized connection pool settings
+            max: 1, // Single connection per Lambda (RDS Proxy handles pooling)
+            idleTimeoutMillis: 30000, // Close idle connections after 30s
+            connectionTimeoutMillis: 5000, // Fail fast on connection issues
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+          },
+    )
 
     // Handle pool errors gracefully
     _pool.on('error', err => {

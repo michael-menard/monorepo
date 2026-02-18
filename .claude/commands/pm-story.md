@@ -8,6 +8,8 @@ agents: ["pm-story-seed-agent.agent.md", "pm-story-generation-leader.agent.md", 
 
 /pm-story <action> [args]
 
+> **Fresh context recommended.** Run `/clear` before this command when starting a new PM session or switching between features. Prior session context can cause stale story references and incorrect ID sequencing.
+
 Unified command for all PM story generation and transformation operations. Do NOT implement directly.
 
 ## Story ID Format: `{PREFIX}-XXYZ`
@@ -167,6 +169,19 @@ else:
     story_id = third argument (required for non-adhoc)
     index_path = find *.stories.index.md in feature_dir
 
+# Check for platform index (see Step 1b-map and Step 1c-platform)
+# If the feature directory contains platform.stories.index.md with story_prefix: PLATFORM,
+# route to platform-specific logic for "next" resolution
+if file exists "{feature_dir}/platform.stories.index.md" OR index_path contains "platform.stories.index.md":
+    platform_index_path = "{feature_dir}/platform.stories.index.md"
+    Read frontmatter of platform_index_path
+    if frontmatter.story_prefix == "PLATFORM":
+        is_platform = true
+        # For "next" resolution, use Step 1c-platform instead of Step 1c
+        # For explicit story IDs, resolve epic dir via Step 1b-map
+    else:
+        is_platform = false
+
 if action == "generate":
     if "--ad-hoc" in args → route to adhoc-leader
     else → route to generation-leader
@@ -189,6 +204,34 @@ index_path: plans/stories/WISH.stories.index.md
 → story_dir: plans/stories/WISH/ (story folder location)
 → Output for WISH-0100: plans/stories/WISH/WISH-0100/
 ```
+
+### Step 1b-map: Epic-to-Directory Mapping (Platform Index Only)
+
+When `is_platform == true`, use this static mapping to resolve a story's epic prefix to its feature directory and per-epic index:
+
+| Prefix | Epic Directory | Per-Epic Index |
+|--------|---------------|----------------|
+| WINT   | wint/ | wint/stories.index.md |
+| KBAR   | kb-artifact-migration/ | kb-artifact-migration/stories.index.md |
+| LNGG   | langgraph-update/ | langgraph-update/stories.index.md |
+| INFR   | infra-persistence/ | infra-persistence/stories.index.md |
+| MODL   | model-experimentation/ | model-experimentation/stories.index.md |
+| AUDT   | code-audit/ | code-audit/stories.index.md |
+| TELE   | telemetry/ | telemetry/stories.index.md |
+| LERN   | learning-loop/ | learning-loop/stories.index.md |
+| SDLC   | sdlc-agents/ | sdlc-agents/stories.index.md |
+| AUTO   | autonomous-dev/ | autonomous-dev/stories.index.md |
+| WKFL   | workflow-learning/ | workflow-learning/stories.index.md |
+| GATE   | (skip — not generatable) | N/A |
+
+**Prefix extraction:** Everything before the `-` digits in the story ID (e.g., `KBAR-0050` → `KBAR`).
+
+**Feature dir derivation:** `{platform_dir}/{epic_map[prefix]}`
+
+Example: Story `KBAR-0050` in platform dir `plans/future/platform/`:
+- prefix = `KBAR`
+- feature_dir = `plans/future/platform/kb-artifact-migration/`
+- epic_index_path = `plans/future/platform/kb-artifact-migration/stories.index.md`
 
 ### Step 1c: Find Next Available Story
 
@@ -232,6 +275,53 @@ Example from WISH.stories.index.md:
 - WISH-0400: Draft, no blockers → THIS IS NEXT
 ```
 
+### Step 1c-platform: Platform "Next" Picker (Platform Index Only)
+
+When `is_platform == true` and `story_id == "next"` or not provided, use this algorithm instead of Step 1c:
+
+**1. Parse wave tables:**
+Read `platform.stories.index.md` and parse all wave tables sequentially (Wave 1 through Wave 27). For each row, extract: `#`, `S`, `Story` (ID), `Title` (with inline bold statuses), `Depends On`, `Epic`, `Priority`.
+
+**2. Exclude a story if ANY of:**
+- Story ID starts with `GATE-`
+- Story ID is struck through (`~~STORY-ID~~`)
+- Title contains `**DUPLICATE**`
+- `S` column contains `x` (already started)
+- Title contains any bold status: `**completed**`, `**uat**`, `**ready-to-work**`, `**created**`, `**in-progress**`, `**ready-for-qa**`, `**ready-for-code-review**`, `**in-qa**`, `**elaboration**`, `**backlog**`, `**done**`, `**UAT**`
+
+**3. Check dependency satisfaction** for remaining candidates:
+- Parse `← STORY-ID` references from the Depends On column
+- Handle shorthand: `← WINT-0070, 0060` means `WINT-0070` and `WINT-0060` (inherit the prefix from the first full ID)
+- Handle range shorthand: `← WINT-9060–9100` means WINT-9060 through WINT-9100 (all IDs in range)
+- For each dependency, find it in the platform index and check its status
+- A dependency is **satisfied** only when its title contains `**completed**`, `**uat**`, `**UAT**`, or `**done**`
+- A story with `← none` or empty Depends On has no dependencies (always satisfied)
+- Story is **UNBLOCKED** only if ALL dependencies are satisfied
+
+**4. Sort** unblocked candidates by:
+1. Wave number (ascending) — Wave 1 before Wave 2, etc.
+2. Priority: `P0` > `P1` > `P2` > `P3` > no-priority
+3. Sequence `#` (ascending) as tiebreaker
+
+**5. Select first** candidate from the sorted list.
+
+**6. Resolve** feature_dir and epic_index_path via Step 1b-map.
+
+**7. Return:** `story_id`, `feature_dir`, `epic_index_path`, `platform_index_path`
+
+**If no candidates:** Report `PM BLOCKED: All stories in platform index are completed, in-progress, or blocked`
+
+```
+Example walkthrough:
+1. Parse Wave 1: INFR-0110 has x in S → skip. WINT-0010 has no x, no bold status → candidate.
+2. Check WINT-0010 deps: "WINT-0020–0070, AUTO-0010/0020, INFR-0110" — these are in Blocks column (outgoing), not Depends On. WINT-0010 has no ← deps → UNBLOCKED.
+3. WINT-0010 is first unblocked candidate in Wave 1 with no explicit priority → eligible.
+4. Parse Wave 2+: find earlier priority stories if any.
+5. Sort all candidates: Wave→Priority→Sequence.
+6. Pick first: e.g., WINT-0010.
+7. Map WINT → wint/ → feature_dir = plans/future/platform/wint/
+```
+
 ### Step 2: Story Seed Phase (Phase 0)
 
 Before spawning the main leader, run the Story Seed phase to ground the story in current reality.
@@ -267,6 +357,12 @@ if not baseline_path:
 # From index path, derive where story artifacts will be written
 # Example: plans/stories/WISH.stories.index.md → plans/stories/WISH/{STORY_ID}/
 output_dir = {INDEX_DIR}/{PREFIX}/{STORY_ID}/
+
+# Platform index override:
+# For platform-index-derived stories, output to the epic's backlog directory:
+# Example: KBAR-0050 → plans/future/platform/kb-artifact-migration/backlog/KBAR-0050/
+if is_platform:
+    output_dir = {platform_dir}/{epic_map[prefix]}/backlog/{STORY_ID}/
 ```
 
 **2c. Spawn Seed Agent**
@@ -318,10 +414,15 @@ Task tool:
 
     CONTEXT:
     Action: <action>
-    Index path: {INDEX_PATH}
-    Feature directory: {FEATURE_DIR}
-    Story ID: {STORY_ID}  # Already resolved from "next" if applicable
-    Seed path: {SEED_PATH}  # Path to story seed generated in Phase 0
+    Index path: {INDEX_PATH}           # Per-epic index (for /index-update)
+    Feature directory: {FEATURE_DIR}   # Epic's feature directory
+    Story ID: {STORY_ID}              # Already resolved from "next" if applicable
+    Seed path: {SEED_PATH}            # Path to story seed generated in Phase 0
+
+    # Platform-specific context (only when is_platform == true):
+    Platform index path: {PLATFORM_INDEX_PATH}  # or "N/A" if not platform
+    # Note: The orchestrator (pm-story.md) handles the platform index update
+    # in Step 5 after the leader returns. The leader only updates the per-epic index.
 
     IMPORTANT: Read the story seed at {SEED_PATH} before spawning workers.
     The seed contains:
@@ -341,7 +442,27 @@ Task tool:
 - `PM BLOCKED: <reason>` → report blocker to user
 - `PM FAILED: <reason>` → report failure
 
-### Step 5: Chain to Elaboration (if --elab flag)
+### Step 5: Update Platform Index (if is_platform)
+
+**IF `is_platform == true` AND response was `PM COMPLETE`:**
+
+After the leader completes successfully:
+
+1. The leader has already run `/index-update` against the per-epic index (existing behavior)
+2. Additionally, update `platform.stories.index.md`:
+   - Find the row containing the story ID in the Story column
+   - Set the `S` column to `x`
+   - Append ` **created**` to the Title column (after any existing text, before any `|`)
+
+```
+Example:
+BEFORE: | 57 | | KBAR-0050 | CLI Sync Commands | ← KBAR-0040 | KBAR | P2 |
+AFTER:  | 57 | x | KBAR-0050 | CLI Sync Commands **created** | ← KBAR-0040 | KBAR | P2 |
+```
+
+Use the Edit tool to make this update directly on `platform.stories.index.md`. This is a simple find-and-replace on the markdown row — do NOT delegate to `/index-update`.
+
+### Step 6: Chain to Elaboration (if --elab flag)
 
 **IF `--elab` flag was provided AND response was `PM COMPLETE`:**
 

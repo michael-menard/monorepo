@@ -37,6 +37,7 @@
     "db:studio": "drizzle-kit studio",
     "validate:env": "tsx src/scripts/validate-env.ts",
     "mcp:start": "node dist/mcp-server/index.js",
+    "kb:seed": "tsx src/scripts/kb-seed.ts",
     "kb:generate-config": "tsx scripts/generate-config.ts",
     "kb:validate-connection": "tsx scripts/validate-connection.ts",
     "kb:chunk": "tsx src/scripts/chunk-document.ts",
@@ -56,6 +57,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@repo/logger": "workspace:*",
+    "@repo/mcp-tools": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.44.0",
     "glob": "^10.3.10",

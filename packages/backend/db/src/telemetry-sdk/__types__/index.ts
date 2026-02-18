@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import type { WorkflowEventInput } from '../../workflow-events'
+import type { WorkflowEventInput } from '../../workflow-events.js'
 
 /**
  * AC-7: SDK Configuration Schema

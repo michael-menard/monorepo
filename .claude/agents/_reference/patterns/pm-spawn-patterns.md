@@ -100,6 +100,8 @@ Required sections in `{STORY_ID}.md`:
 13. Test Plan
 14. UI/UX Notes (if applicable)
 15. Reality Baseline
+16. Canonical References (from seed Phase 2.5)
+17. Subtasks (from dev-feasibility worker)
 
 ---
 

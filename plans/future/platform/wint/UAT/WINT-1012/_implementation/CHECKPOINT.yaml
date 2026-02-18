@@ -1,0 +1,16 @@
+schema: 1
+story_id: "WINT-1012"
+feature_dir: "wint"
+timestamp: "2026-02-17T13:01:00Z"
+
+current_phase: qa-verify
+last_successful_phase: proof
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+e2e_gate: exempt
+e2e_exempt_reason: "backend-only module with no HTTP endpoints; unit test coverage is the primary quality gate per AC-9"
+completed_at: "2026-02-17T13:45:00Z"

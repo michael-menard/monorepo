@@ -94,15 +94,19 @@ Check `_implementation/CHECKPOINT.md`:
 
 ### Swimlane Mapping
 
-| Directory | Column |
-|-----------|--------|
-| `backlog/` | BACKLOG |
-| `elaboration/` | ELABORATION |
-| `ready-to-work/` | READY |
-| `in-progress/` | IN-PROGRESS |
-| `ready-for-qa/` | READY-QA |
-| `UAT/` | IN-QA / DONE |
-| `completed/` | DONE |
+| Directory | Emoji | Column |
+|-----------|-------|--------|
+| `backlog/` | ⏸️ | BACKLOG |
+| `created/` | 🆕 | CREATED |
+| `elaboration/` | 📝 | ELABORATION |
+| `ready-to-work/` | ⏳ | READY |
+| `in-progress/` | 🚧 | IN-PROGRESS |
+| `needs-code-review/` | 👀 | CODE-REVIEW |
+| `failed-code-review/` | 🔴 | REVIEW-FAIL |
+| `ready-for-qa/` | 🔍 | READY-QA |
+| `failed-qa/` | ⚠️ | QA-FAIL |
+| `UAT/` | ✅ | DONE |
+| `completed/` | ✅ | DONE |
 
 ---
 

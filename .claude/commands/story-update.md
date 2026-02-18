@@ -22,25 +22,29 @@ Update a story's status in both frontmatter and index.
 ## Valid Status Values
 
 ```
-backlog → elaboration → ready-to-work → in-progress → ready-for-qa → uat → completed
-                                                   ↘ needs-work → (back to in-progress)
+backlog → created → elaboration → ready-to-work → in-progress → needs-code-review → ready-for-qa → uat → completed
+                                                        ↘ failed-code-review → in-progress
+                                                                                               ↘ failed-qa → in-progress
                    ↘ needs-split → (split via /pm-story split)
                    ↘ BLOCKED → (manual resolution)
 ```
 
-| Status | Meaning |
-|--------|---------|
-| `backlog` | Story generated, not yet elaborated |
-| `elaboration` | In elaboration phase |
-| `ready-to-work` | Elaboration passed, ready for dev |
-| `in-progress` | Dev actively working |
-| `ready-for-qa` | Code complete, awaiting QA |
-| `uat` | QA passed, in user acceptance |
-| `completed` | All phases complete |
-| `needs-work` | QA failed, returned to dev |
-| `needs-split` | Story too large, needs splitting |
-| `BLOCKED` | Cannot proceed, needs resolution |
-| `superseded` | Replaced by other stories |
+| Status | Emoji | Meaning | Set By |
+|--------|-------|---------|--------|
+| `backlog` | ⏸️ | Story queued, not yet created | Manual |
+| `created` | 🆕 | Story file generated, awaiting elaboration | `/pm-story generate` |
+| `elaboration` | 📝 | In elaboration phase | `/elab-story` |
+| `ready-to-work` | ⏳ | Elaboration passed, ready for dev | `elab-completion-leader` |
+| `in-progress` | 🚧 | Dev actively working | `/dev-implement-story` |
+| `needs-code-review` | 👀 | Implementation complete, awaiting code review | `/dev-implement-story` (Done) |
+| `failed-code-review` | 🔴 | Code review failed, needs rework | `/dev-code-review` (FAIL) |
+| `ready-for-qa` | 🔍 | Code reviewed and approved, awaiting QA | `/dev-code-review` (PASS) |
+| `failed-qa` | ⚠️ | QA failed, needs rework | `qa-verify-completion-leader` (FAIL) |
+| `uat` | ✅ | QA passed, UAT verified | `qa-verify-completion-leader` (PASS) |
+| `completed` | ✅ | All phases complete, manually signed off | Manual |
+| `needs-split` | — | Story too large, needs splitting | Manual |
+| `BLOCKED` | — | Cannot proceed, needs resolution | Manual |
+| `superseded` | — | Replaced by other stories | `/pm-story split` |
 
 ## Worktree Cleanup on Completed Transition (WINT-1150)
 
@@ -82,10 +86,15 @@ The MCP tools (`worktree_get_by_story`, `worktree_mark_complete`) are called by 
 
 Search within `{FEATURE_DIR}`:
 1. `{FEATURE_DIR}/backlog/{STORY_ID}/`
-2. `{FEATURE_DIR}/elaboration/{STORY_ID}/`
-3. `{FEATURE_DIR}/ready-to-work/{STORY_ID}/`
-4. `{FEATURE_DIR}/in-progress/{STORY_ID}/`
-5. `{FEATURE_DIR}/UAT/{STORY_ID}/`
+2. `{FEATURE_DIR}/created/{STORY_ID}/`
+3. `{FEATURE_DIR}/elaboration/{STORY_ID}/`
+4. `{FEATURE_DIR}/ready-to-work/{STORY_ID}/`
+5. `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+6. `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
+7. `{FEATURE_DIR}/failed-code-review/{STORY_ID}/`
+8. `{FEATURE_DIR}/failed-qa/{STORY_ID}/`
+9. `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/`
+10. `{FEATURE_DIR}/UAT/{STORY_ID}/`
 
 If not found: `UPDATE FAILED: Story not found`
 
@@ -128,13 +137,16 @@ worktree_cleanup: completed | deferred | skipped | not_found  # only when NEW_ST
 
 | Current Status | Valid Next Statuses |
 |----------------|---------------------|
-| `backlog` | `elaboration`, `BLOCKED` |
+| `backlog` | `created`, `elaboration`, `BLOCKED` |
+| `created` | `elaboration`, `BLOCKED` |
 | `elaboration` | `ready-to-work`, `needs-split`, `BLOCKED` |
 | `ready-to-work` | `in-progress`, `BLOCKED` |
-| `in-progress` | `ready-for-qa`, `BLOCKED` |
-| `ready-for-qa` | `uat`, `needs-work` |
+| `in-progress` | `needs-code-review`, `BLOCKED` |
+| `needs-code-review` | `ready-for-qa`, `failed-code-review` |
+| `failed-code-review` | `in-progress` |
+| `ready-for-qa` | `uat`, `failed-qa` |
+| `failed-qa` | `in-progress` |
 | `uat` | `completed` |
-| `needs-work` | `in-progress` |
 | `needs-split` | `superseded` (after split complete) |
 
 **Force transitions** with `--force` flag (not recommended).

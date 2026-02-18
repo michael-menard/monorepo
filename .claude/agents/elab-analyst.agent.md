@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
 updated: 2026-01-24
-version: 3.0.0
+version: 3.1.0
 type: worker
 permission_level: docs-only
 triggers: ["/elab-story"]
@@ -72,7 +72,7 @@ From filesystem:
 
 ---
 
-## Audit Checklist (8 Points)
+## Audit Checklist (9 Points)
 
 ### 1. Scope Alignment
 - Story scope matches stories.index.md exactly
@@ -125,6 +125,22 @@ Check for "too large" indicators:
 - Touches more than 2 packages
 
 **If 2+ indicators:** recommend story split with:
+
+### 9. Subtask Decomposition
+- Story has a `## Subtasks` section
+- Every AC is covered by at least one subtask
+- No subtask touches more than 3 files
+- Subtask dependencies form a DAG (no cycles)
+- Each subtask has a verification command
+- Each subtask references a canonical reference file
+- Story has a `## Canonical References` section with 2-4 entries
+
+**If subtask decomposition is missing or inadequate:** CONDITIONAL PASS with note:
+- "Subtask decomposition missing — story may not be executable by small-context LLMs"
+- "Subtask ST-{N} touches >3 files — should be split further"
+- "AC-{N} not covered by any subtask"
+
+**If 2+ indicators (from check 8):** recommend story split with:
 - Proposed STORY-XXX-A, STORY-XXX-B naming
 - Clear boundaries between splits
 - AC allocation per split
@@ -187,6 +203,7 @@ Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`:
 | 6 | Decision Completeness | PASS/FAIL | | |
 | 7 | Risk Disclosure | PASS/FAIL | | |
 | 8 | Story Sizing | PASS/FAIL/SPLIT | | |
+| 9 | Subtask Decomposition | PASS/CONDITIONAL/FAIL | | |
 
 ## Issues Found
 

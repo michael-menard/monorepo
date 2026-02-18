@@ -4,7 +4,7 @@
  * Provides default configuration and validation for the telemetry SDK.
  */
 
-import { TelemetrySdkConfigSchema, type TelemetrySdkConfig } from './__types__/index'
+import { TelemetrySdkConfigSchema, type TelemetrySdkConfig } from './__types__/index.js'
 
 /**
  * Default SDK Configuration

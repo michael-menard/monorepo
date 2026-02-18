@@ -10,9 +10,9 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import { db } from './client'
-import { workflowEvents } from './schema'
-import { WorkflowEventSchemas } from './workflow-events/schemas'
+import { db } from './client.js'
+import { workflowEvents } from './schema.js'
+import { WorkflowEventSchemas } from './workflow-events/schemas.js'
 
 const WorkflowEventInputSchema = z.object({
   eventId: z.string().uuid('event_id must be a valid UUID'),

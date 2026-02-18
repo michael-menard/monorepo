@@ -58,15 +58,18 @@ Example output formats for /story-status command.
 ```
 
 **Swimlane columns:**
-| Column | Source Directory | Statuses |
-|--------|------------------|----------|
-| BACKLOG | `backlog/` | pending, generated, deferred |
-| ELABORATION | `elaboration/` | in-elaboration |
-| READY | `ready-to-work/` | ready-to-work |
-| IN-PROGRESS | `in-progress/` | in-progress |
-| READY-QA | `ready-for-qa/` | ready-for-qa |
-| IN-QA | `UAT/` | in-qa |
-| DONE | `UAT/` or `completed/` | completed |
+| Column | Emoji | Source Directory | Status |
+|--------|-------|------------------|--------|
+| BACKLOG | ⏸️ | `backlog/` | `backlog` |
+| CREATED | 🆕 | `created/` | `created` |
+| ELAB | 📝 | `elaboration/` | `elaboration` |
+| READY | ⏳ | `ready-to-work/` | `ready-to-work` |
+| IN-PROGRESS | 🚧 | `in-progress/` | `in-progress` |
+| CODE-REVIEW | 👀 | `needs-code-review/` | `needs-code-review` |
+| REVIEW-FAIL | 🔴 | `failed-code-review/` | `failed-code-review` |
+| READY-QA | 🔍 | `ready-for-qa/` | `ready-for-qa` |
+| QA-FAIL | ⚠️ | `failed-qa/` | `failed-qa` |
+| DONE | ✅ | `UAT/` or `completed/` | `uat` / `completed` |
 
 **Rendering rules:**
 - Story ID + abbreviated title (first 10 chars)
@@ -78,16 +81,18 @@ Example output formats for /story-status command.
 
 ## Status Icons
 
-| Icon | Status |
-|------|--------|
-| ✅ | completed |
-| 🔍 | ready-for-qa / ready-for-code-review |
-| 🔨 | in-progress |
-| 🟢 | ready-to-work |
-| ⏳ | pending |
-| 🚫 | blocked |
-| ❌ | cancelled / superseded |
-| 📝 | in-elaboration / generated |
+| Icon | Status | Directory |
+|------|--------|-----------|
+| ✅ | `uat` / `completed` | `UAT/` |
+| 🔍 | `ready-for-qa` | `ready-for-qa/` |
+| ⚠️ | `failed-qa` | `failed-qa/` |
+| 👀 | `needs-code-review` | `needs-code-review/` |
+| 🔴 | `failed-code-review` | `failed-code-review/` |
+| 🚧 | `in-progress` | `in-progress/` |
+| ⏳ | `ready-to-work` | `ready-to-work/` |
+| 📝 | `elaboration` | `elaboration/` |
+| 🆕 | `created` | `created/` |
+| ⏸️ | `pending` / `backlog` | `backlog/` |
 
 ---
 

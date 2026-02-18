@@ -25,9 +25,13 @@ This slash command:
 The command will:
 1. **List all worktrees** - Show all active worktrees
 2. **Identify merged branches** - Find branches already merged to main/develop
-3. **Ask which to remove** - Interactive selection
-4. **Remove selected worktrees** - Safely delete worktrees
-5. **Prune worktree references** - Clean up git metadata
+3. **Close orphaned PRs** - For each worktree being removed:
+   - `gh pr list --head {branch} --state open --json number`
+   - If PR exists: `gh pr close {number} --comment "Story worktree cleaned up — closing stale PR"`
+   - If `gh` CLI is unavailable: skip with WARNING, continue cleanup
+4. **Ask which to remove** - Interactive selection
+5. **Remove selected worktrees** - Safely delete worktrees
+6. **Prune worktree references** - Clean up git metadata
 
 ## Benefits
 
@@ -42,3 +46,4 @@ The command will:
 - You can choose which ones to remove
 - Warns about unmerged branches
 - Prunes git metadata after cleanup
+- Closes any orphaned GitHub PRs associated with branches being removed (`gh` CLI optional — skipped with warning if unavailable)

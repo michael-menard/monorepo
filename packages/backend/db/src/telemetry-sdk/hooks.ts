@@ -12,10 +12,10 @@ import type {
   StateTrackingOptions,
   TelemetrySdkConfig,
   BufferState,
-} from './__types__/index'
-import { createStepCompletedEvent, createItemStateChangedEvent } from '../workflow-events/helpers'
-import { addEventToBuffer } from './utils/buffer'
-import { insertWorkflowEventsBatch } from './batch-insert'
+} from './__types__/index.js'
+import { createStepCompletedEvent, createItemStateChangedEvent } from '../workflow-events/helpers.js'
+import { addEventToBuffer } from './utils/buffer.js'
+import { insertWorkflowEventsBatch } from './batch-insert.js'
 
 /**
  * Extract correlation ID from active OpenTelemetry span

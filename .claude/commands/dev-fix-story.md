@@ -50,7 +50,13 @@ Task tool:
 Report: "{STORY_ID} fix blocked at Phase N: <reason>"
 
 ## Done
-Phase 3 complete → status is `ready-for-code-review`
+
+Phase 3 complete:
+1. Invoke: `/wt:commit-and-pr {STORY_ID} "{story_title}"`
+   - No PROOF_PATH/EVIDENCE_PATH — PR already exists, just pushing new commits
+2. Confirm `pr_action: updated`
+3. Status: `ready-for-code-review`
+
 **Next**: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ## Ref

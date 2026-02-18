@@ -8,6 +8,8 @@ agents: ["qa-verify-setup-leader.agent.md", "qa-verify-verification-leader.agent
 
 /qa-verify-story {FEATURE_DIR} {STORY_ID}
 
+> **Fresh context recommended.** Run `/clear` before this command when verifying a new story. Prior session context can cause phantom test results and incorrect gate decisions.
+
 Post-Implementation Verification orchestrator. Final quality gate before DONE. Do NOT implement directly.
 
 ## Usage
@@ -53,13 +55,14 @@ Report: "{STORY_ID} blocked at Phase N: <reason>"
 ## Done
 
 On `QA PASS`:
-- Story status: `uat`
-- Move story: `{FEATURE_DIR}/in-progress/{STORY_ID}` → `{FEATURE_DIR}/UAT/{STORY_ID}`
-- Index updated with completion
+- Story status: ✅ `uat`
+- Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/UAT/{STORY_ID}`
+- Index updated with `--status=uat --clear-deps`
 
 On `QA FAIL`:
-- Story status: `needs-work`
-- Story stays in: `{FEATURE_DIR}/in-progress/{STORY_ID}/`
+- Story status: ⚠️ `failed-qa`
+- Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/failed-qa/{STORY_ID}`
+- Index updated with `--status=failed-qa`
 
 **Next (on FAIL)**: `/dev-fix-story {FEATURE_DIR} {STORY_ID}`
 

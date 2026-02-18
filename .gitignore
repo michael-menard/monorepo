@@ -90,3 +90,6 @@ apps/api/lego-projects-api/uploads/**/*.jpg.envrc
 .build/
 tree/
 .github/environments/*.env
+
+# MCP config (contains secrets)
+.mcp.json

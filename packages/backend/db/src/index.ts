@@ -15,11 +15,11 @@
  * ```
  */
 
-export { db, getPool, closePool, testConnection } from './client'
-export * from './schema'
-export * from './generated-schemas'
-export { insertWorkflowEvent } from './workflow-events'
-export type { WorkflowEventInput } from './workflow-events'
+export { db, getPool, closePool, testConnection } from './client.js'
+export * from './schema.js'
+export * from './generated-schemas.js'
+export { insertWorkflowEvent } from './workflow-events.js'
+export type { WorkflowEventInput } from './workflow-events.js'
 
 // INFR-0041: Export workflow event schemas and helpers
 export {
@@ -29,7 +29,7 @@ export {
   StoryChangedPayloadSchema,
   GapFoundPayloadSchema,
   FlowIssuePayloadSchema,
-} from './workflow-events/schemas'
+} from './workflow-events/schemas.js'
 export type {
   ItemStateChangedPayload,
   StepCompletedPayload,
@@ -38,17 +38,17 @@ export type {
   FlowIssuePayload,
   EventTypePayloadMap,
   WorkflowEventType,
-} from './workflow-events/schemas'
+} from './workflow-events/schemas.js'
 export {
   createItemStateChangedEvent,
   createStepCompletedEvent,
   createStoryChangedEvent,
   createGapFoundEvent,
   createFlowIssueEvent,
-} from './workflow-events/helpers'
+} from './workflow-events/helpers.js'
 
 // INFR-0050: Export Telemetry SDK
-export { initTelemetrySdk, getSdkInstance, validateConfig, DEFAULT_SDK_CONFIG } from './telemetry-sdk'
+export { initTelemetrySdk, getSdkInstance, validateConfig, DEFAULT_SDK_CONFIG } from './telemetry-sdk/index.js'
 export type {
   TelemetrySdkConfig,
   TelemetrySdk,
@@ -56,5 +56,5 @@ export type {
   StateTrackingOptions,
   BufferedEvent,
   BufferState,
-} from './telemetry-sdk'
-export { insertWorkflowEventsBatch, chunkArray, BATCH_CHUNK_SIZE } from './telemetry-sdk'
+} from './telemetry-sdk/index.js'
+export { insertWorkflowEventsBatch, chunkArray, BATCH_CHUNK_SIZE } from './telemetry-sdk/index.js'

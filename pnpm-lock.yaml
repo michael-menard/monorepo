@@ -144,6 +144,9 @@ importers:
       '@repo/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      '@repo/mcp-tools':
+        specifier: workspace:*
+        version: link:../../../packages/backend/mcp-tools
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -1486,9 +1489,6 @@ importers:
 
   packages/backend/database-schema:
     dependencies:
-      '@repo/db':
-        specifier: workspace:*
-        version: link:../db
       '@repo/logger':
         specifier: workspace:*
         version: link:../../core/logger
@@ -1544,9 +1544,6 @@ importers:
 
   packages/backend/db:
     dependencies:
-      '@repo/database-schema':
-        specifier: workspace:*
-        version: link:../database-schema
       '@repo/logger':
         specifier: workspace:*
         version: link:../../core/logger
@@ -22036,7 +22033,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@24.10.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 3.2.4(@edge-runtime/vm@3.2.0)(@types/debug@4.1.12)(@types/node@25.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(canvas@3.2.1))(msw@2.12.10(@types/node@25.2.1)(typescript@5.8.3))(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/ui@3.2.4(vitest@4.0.18)':
     dependencies:

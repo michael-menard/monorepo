@@ -9,14 +9,14 @@
  */
 
 import { randomUUID } from 'crypto'
-import type { WorkflowEventInput } from '../workflow-events'
+import type { WorkflowEventInput } from '../workflow-events.js'
 import {
   ItemStateChangedPayloadSchema,
   StepCompletedPayloadSchema,
   StoryChangedPayloadSchema,
   GapFoundPayloadSchema,
   FlowIssuePayloadSchema,
-} from './schemas'
+} from './schemas.js'
 
 /**
  * Helper function parameters - common metadata fields across all event types

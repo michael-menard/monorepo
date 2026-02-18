@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
 updated: 2026-02-04
-version: 3.0.0
+version: 3.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story"]
@@ -41,7 +41,27 @@ From filesystem:
 ### Step 1: Validate Phase
 Read CHECKPOINT.yaml: `current_phase: plan` or `fix`, `blocked: false`
 
-### Step 2: Determine Workers
+### Step 2: Determine Execution Mode
+
+Read PLAN.yaml and check `schema` field:
+
+| PLAN schema | Execution mode | Description |
+|-------------|---------------|-------------|
+| `schema: 2` (subtask_source: story) | **Subtask iteration** | Each step is a separate agent invocation with minimal context |
+| `schema: 1` (no subtask_source) | **Slice coders** (legacy) | Workers determined by SCOPE.yaml surfaces |
+
+**Subtask iteration mode (schema: 2):**
+- Iterate through PLAN.yaml steps sequentially (respecting `dependencies`)
+- Each step spawns a **single coder agent** with only:
+  - The step's `description` (subtask goal)
+  - The step's `files` (files to create/modify — 1-3 max)
+  - The step's `files_to_read` (canonical reference + prior subtask outputs)
+  - The step's `verification` command
+  - Output file paths from completed prior steps (accumulated context)
+- This keeps each invocation small enough for ~32K context window LLMs
+- After each step completes, run its `verification` command before proceeding
+
+**Slice coder mode (schema: 1 — legacy fallback):**
 
 | touches.backend | touches.frontend | Workers |
 |-----------------|------------------|---------|
@@ -53,7 +73,49 @@ Read CHECKPOINT.yaml: `current_phase: plan` or `fix`, `blocked: false`
 ### Step 3: Initialize EVIDENCE.yaml
 For schema, read: `.claude/agents/_reference/schemas/evidence-yaml.md`
 
-### Step 4: Spawn Slice Coders
+### Step 4: Execute Plan Steps
+
+**Subtask iteration mode (schema: 2):**
+
+For each step in PLAN.yaml (in dependency order):
+
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "ST-{N}: {short description}"
+  prompt: |
+    Read: .claude/agents/_reference/patterns/spawn-patterns.md
+
+    SUBTASK CONTEXT:
+    Story ID: {STORY_ID}
+    Subtask: ST-{N} - {description}
+    Goal: {step.description}
+
+    FILES TO READ (for context/patterns):
+    {step.files_to_read joined by newlines}
+
+    FILES TO CREATE/MODIFY:
+    {step.files joined by newlines}
+
+    PRIOR SUBTASK OUTPUTS:
+    {accumulated list of files created/modified by completed steps}
+
+    VERIFICATION:
+    After implementation, run: {step.verification}
+
+    CONSTRAINTS:
+    - Touch ONLY the files listed above
+    - Follow patterns from the canonical reference files
+    - Do NOT read the full story file
+```
+
+After each step completes:
+1. Run `step.verification` command
+2. If verification fails, retry once with error context
+3. Record files created/modified for next step's context
+4. Update EVIDENCE.yaml with step results
+
+**Slice coder mode (schema: 1):**
 For spawn patterns, read: `.claude/agents/_reference/patterns/spawn-patterns.md`
 
 ### Step 5-6: Collect Results & Run Verification

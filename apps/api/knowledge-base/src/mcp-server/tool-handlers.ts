@@ -112,6 +112,18 @@ import {
   kb_archive_working_set,
   KbArchiveWorkingSetInputSchema,
 } from '../working-set/index.js'
+import {
+  worktreeRegister,
+  worktreeGetByStory,
+  worktreeListActive,
+  worktreeMarkComplete,
+} from '@repo/mcp-tools'
+import {
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
+} from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
 import { createMcpLogger } from './logger.js'
@@ -3852,6 +3864,161 @@ export async function handleKbGetChurnAnalysis(
   }
 }
 
+// ============================================================================
+// Worktree Management Tool Handlers (WINT-1130)
+// ============================================================================
+
+/**
+ * Handle worktree_register tool invocation.
+ */
+export async function handleWorktreeRegister(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('worktree_register tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.storyId,
+  })
+
+  try {
+    enforceAuthorization('worktree_register' as ToolName, context)
+    const validated = WorktreeRegisterInputSchema.parse(input)
+    const result = await worktreeRegister(validated)
+
+    logger.info('worktree_register succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.storyId,
+      created: result !== null,
+      query_time_ms: Date.now() - startTime,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('worktree_register failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle worktree_get_by_story tool invocation.
+ */
+export async function handleWorktreeGetByStory(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('worktree_get_by_story tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.storyId,
+  })
+
+  try {
+    enforceAuthorization('worktree_get_by_story' as ToolName, context)
+    const validated = WorktreeGetByStoryInputSchema.parse(input)
+    const result = await worktreeGetByStory(validated)
+
+    logger.info('worktree_get_by_story succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.storyId,
+      found: result !== null,
+      query_time_ms: Date.now() - startTime,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('worktree_get_by_story failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle worktree_list_active tool invocation.
+ */
+export async function handleWorktreeListActive(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  logger.info('worktree_list_active tool invoked', {
+    correlation_id: correlationId,
+  })
+
+  try {
+    enforceAuthorization('worktree_list_active' as ToolName, context)
+    const validated = WorktreeListActiveInputSchema.parse(input)
+    const result = await worktreeListActive(validated)
+
+    logger.info('worktree_list_active succeeded', {
+      correlation_id: correlationId,
+      count: result.length,
+      query_time_ms: Date.now() - startTime,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('worktree_list_active failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle worktree_mark_complete tool invocation.
+ */
+export async function handleWorktreeMarkComplete(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('worktree_mark_complete tool invoked', {
+    correlation_id: correlationId,
+    worktree_id: inputObj?.worktreeId,
+    status: inputObj?.status,
+  })
+
+  try {
+    enforceAuthorization('worktree_mark_complete' as ToolName, context)
+    const validated = WorktreeMarkCompleteInputSchema.parse(input)
+    const result = await worktreeMarkComplete(validated)
+
+    logger.info('worktree_mark_complete succeeded', {
+      correlation_id: correlationId,
+      worktree_id: validated.worktreeId,
+      status: validated.status,
+      success: result !== null,
+      query_time_ms: Date.now() - startTime,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('worktree_mark_complete failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -3929,6 +4096,11 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_get_token_summary: handleKbGetTokenSummary,
   kb_get_bottleneck_analysis: handleKbGetBottleneckAnalysis,
   kb_get_churn_analysis: handleKbGetChurnAnalysis,
+  // Worktree management tools (WINT-1130)
+  worktree_register: handleWorktreeRegister,
+  worktree_get_by_story: handleWorktreeGetByStory,
+  worktree_list_active: handleWorktreeListActive,
+  worktree_mark_complete: handleWorktreeMarkComplete,
 }
 
 /**

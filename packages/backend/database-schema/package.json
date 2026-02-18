@@ -3,29 +3,32 @@
   "version": "1.0.0",
   "description": "LEGO Platform Database Schema, Migrations, and Seeds",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./src/schema/index.ts",
-      "types": "./src/schema/index.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./schema": {
-      "import": "./src/schema/index.ts",
-      "types": "./src/schema/index.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./schema/sets": {
-      "import": "./src/schema/sets.ts",
-      "types": "./src/schema/sets.ts"
+      "import": "./dist/sets.js",
+      "types": "./dist/sets.d.ts"
     },
     "./schema/umami": {
-      "import": "./src/schema/umami.ts",
-      "types": "./src/schema/umami.ts"
+      "import": "./dist/umami.js",
+      "types": "./dist/umami.d.ts"
     },
     "./schema/wint": {
-      "import": "./src/schema/wint.ts",
-      "types": "./src/schema/wint.ts"
+      "import": "./dist/wint.js",
+      "types": "./dist/wint.d.ts"
     }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/seeds/index.ts",

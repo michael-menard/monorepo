@@ -41,6 +41,16 @@ import {
   type KbGetBottleneckAnalysisInput,
   type KbGetChurnAnalysisInput,
 } from '../crud-operations/analytics-operations.js'
+import {
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
+  type WorktreeRegisterInput,
+  type WorktreeGetByStoryInput,
+  type WorktreeListActiveInput,
+  type WorktreeMarkCompleteInput,
+} from '@repo/mcp-tools'
 // Re-export schemas and types for external use
 export {
   KbGetStoryInputSchema,
@@ -61,6 +71,19 @@ export type {
   KbGetTokenSummaryInput,
   KbGetBottleneckAnalysisInput,
   KbGetChurnAnalysisInput,
+}
+// Re-export worktree tool schemas (WINT-1130)
+export {
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
+}
+export type {
+  WorktreeRegisterInput,
+  WorktreeGetByStoryInput,
+  WorktreeListActiveInput,
+  WorktreeMarkCompleteInput,
 }
 
 // ============================================================================
@@ -2741,6 +2764,109 @@ Response:
   inputSchema: zodToMcpSchema(KbGetChurnAnalysisInputSchema),
 }
 
+// ============================================================================
+// Worktree Management Tool Definitions (WINT-1130)
+// ============================================================================
+
+/**
+ * worktree_register tool definition.
+ */
+export const worktreeRegisterToolDefinition: McpToolDefinition = {
+  name: 'worktree_register',
+  description: `Register a new git worktree for a story in the database.
+
+Creates a new worktree tracking record linking a story to its git worktree path and branch.
+Used by dev-implement-story (Step 1.3) to register worktree isolation for parallel development.
+
+Parameters:
+- storyId (required): Story ID — UUID or human-readable format (e.g., "WINT-9010")
+- worktreePath (required): Absolute filesystem path to the worktree directory
+- branchName (required): Git branch name for this worktree (e.g., "feature/wint-9010-shared-business-logic")
+
+Returns: Created worktree record with id, status='active', and timestamps — or null if registration failed
+
+Example:
+{
+  "storyId": "WINT-9010",
+  "worktreePath": "/Users/dev/monorepo/tree/feature/wint-9010-shared-business-logic",
+  "branchName": "feature/wint-9010-shared-business-logic"
+}`,
+  inputSchema: zodToMcpSchema(WorktreeRegisterInputSchema),
+}
+
+/**
+ * worktree_get_by_story tool definition.
+ */
+export const worktreeGetByStoryToolDefinition: McpToolDefinition = {
+  name: 'worktree_get_by_story',
+  description: `Get the active worktree record for a story.
+
+Retrieves the single active worktree associated with a story ID.
+Used by dev-implement-story (Step 1.3) to detect existing worktrees before creating new ones.
+
+Parameters:
+- storyId (required): Story ID — UUID or human-readable format (e.g., "WINT-9010")
+
+Returns: Active worktree record with path, branch, and metadata — or null if no active worktree found
+
+Example:
+{
+  "storyId": "WINT-9010"
+}`,
+  inputSchema: zodToMcpSchema(WorktreeGetByStoryInputSchema),
+}
+
+/**
+ * worktree_list_active tool definition.
+ */
+export const worktreeListActiveToolDefinition: McpToolDefinition = {
+  name: 'worktree_list_active',
+  description: `List all active worktrees with pagination.
+
+Returns all worktrees with status='active', ordered by creation time (newest first).
+Useful for /wt-status and conflict detection in WINT-1160.
+
+Parameters:
+- limit (optional): Maximum records to return (1–1000, default 50)
+- offset (optional): Records to skip for pagination (default 0)
+
+Returns: Array of active worktree records (may be empty)
+
+Example:
+{
+  "limit": 50,
+  "offset": 0
+}`,
+  inputSchema: zodToMcpSchema(WorktreeListActiveInputSchema),
+}
+
+/**
+ * worktree_mark_complete tool definition.
+ */
+export const worktreeMarkCompleteToolDefinition: McpToolDefinition = {
+  name: 'worktree_mark_complete',
+  description: `Mark a worktree as merged or abandoned.
+
+Updates the worktree status and sets the corresponding timestamp (mergedAt or abandonedAt).
+Optionally merges additional metadata (e.g., PR number, merge commit SHA).
+Used by wt-finish skill and story completion workflows (WINT-1150).
+
+Parameters:
+- worktreeId (required): UUID of the worktree record to update
+- status (required): New status — "merged" or "abandoned"
+- metadata (optional): Additional key-value metadata to merge with existing metadata
+
+Returns: { success: true } on success — or null if worktree not found
+
+Example (mark as merged with PR info):
+{
+  "worktreeId": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "merged",
+  "metadata": { "pr_number": 42, "merge_commit": "abc1234" }
+}`,
+  inputSchema: zodToMcpSchema(WorktreeMarkCompleteInputSchema),
+}
+
 /**
  * All MCP tool definitions.
  */
@@ -2809,6 +2935,11 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetTokenSummaryToolDefinition,
   kbGetBottleneckAnalysisToolDefinition,
   kbGetChurnAnalysisToolDefinition,
+  // Worktree management tools (WINT-1130)
+  worktreeRegisterToolDefinition,
+  worktreeGetByStoryToolDefinition,
+  worktreeListActiveToolDefinition,
+  worktreeMarkCompleteToolDefinition,
 ]
 
 /**

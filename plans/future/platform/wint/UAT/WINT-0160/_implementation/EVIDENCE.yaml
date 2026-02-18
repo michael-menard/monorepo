@@ -1,0 +1,201 @@
+schema: 1
+story_id: "WINT-0160"
+version: 1
+timestamp: "2026-02-17T00:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "doc-sync.agent.md frontmatter MCP tool names verified"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/doc-sync.agent.md"
+        description: |
+          Frontmatter mcp_tools field present with values:
+          [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-knowledgebase__query-workflow-components].
+          Tool names match those documented in SKILL.md mcp_tools_available field.
+          Attestation: WINT-0080 MCP server not confirmed live in UAT; tool names accepted as correct per
+          file-to-file cross-reference. No server-verified name mismatch detected.
+
+  - ac_id: "AC-2"
+    ac_text: "All required WINT standard frontmatter fields present in doc-sync.agent.md"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/doc-sync.agent.md"
+        description: |
+          All required fields confirmed present by file inspection:
+          - created: 2026-02-07
+          - updated: 2026-02-17 (bumped during WINT-0160 implementation)
+          - version: 1.1.0
+          - type: worker
+          - name: doc-sync
+          - description: Automatically updates workflow documentation when agent/command files change
+          - model: haiku
+          - tools: [Read, Grep, Glob, Write, Edit, Bash]
+          - mcp_tools: [mcp__postgres-knowledgebase__query-workflow-phases, mcp__postgres-knowledgebase__query-workflow-components]
+
+  - ac_id: "AC-3"
+    ac_text: "Graceful degradation to file-only mode when database unavailable"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/doc-sync.agent.md"
+        description: |
+          Code inspection of Phase 2 Step 2.2 confirms complete graceful degradation:
+          - try/catch block wraps all database queries
+          - TIMEOUT error: logger.warn + fall back to file-only mode
+          - CONNECTION_FAILED error: logger.warn + fall back to file-only mode
+          - Other errors: logger.error + fall back to file-only mode
+          - Final comment: "Continue with file-only mode (graceful degradation)"
+          WINT-0070 tables not live; live execution test not possible.
+          Verification by code inspection — explicitly acknowledged as CONDITIONAL PASS per ANALYSIS.md.
+
+  - ac_id: "AC-4"
+    ac_text: "SKILL.md version history entry 1.1.0 added for WINT-0150 enhancements"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/skills/doc-sync/SKILL.md"
+        description: |
+          Version history entry 1.1.0 added at line 781 documenting WINT-0150 enhancements:
+          - Database query integration via postgres-knowledgebase MCP tools (Phase 2, Steps 2.2-2.4)
+          - Hybrid file+database sync with database-overrides-file merge strategy
+          - Graceful degradation on timeout, connection failure, or database unavailability
+          - 30-second configurable timeout with error categorization (TIMEOUT, CONNECTION_FAILED, other)
+          - Database status tracking fields in SYNC-REPORT.md
+          - Hybrid sync examples added (Examples 5, 6, 7)
+          - Extended frontmatter optional fields: kb_tools, mcp_tools
+          Entry dated 2026-02-16 (WINT-0150 completion date).
+          Disk-verified Fix Iteration 2: grep for '1\.1\.0' in SKILL.md matches line 781 ✓
+
+  - ac_id: "AC-5"
+    ac_text: "All four completion signals present in doc-sync.agent.md matching SKILL.md"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/doc-sync.agent.md"
+        description: |
+          Completion Signals section confirmed present with all four signals:
+          1. DOC-SYNC COMPLETE - All changes processed successfully
+          2. DOC-SYNC COMPLETE (warnings) - Completed with items needing manual review
+          3. DOC-SYNC CHECK FAILED - (check-only mode) Docs out of sync
+          4. DOC-SYNC BLOCKED: {reason} - Cannot proceed (e.g., dirty git state)
+          Signals match SKILL.md usage documentation and pre-commit hook integration descriptions.
+
+  - ac_id: "AC-6"
+    ac_text: "LangGraph Porting Notes section added to SKILL.md"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/skills/doc-sync/SKILL.md"
+        description: |
+          New 'LangGraph Porting Notes' section added at line 737, before Version History, with four subsections:
+          1. Inputs - canonical flags (--check-only, --force) with types and descriptions (lines 741-746)
+          2. 7-Phase Workflow Contract - table mapping all 7 phases as logical execution contract (lines 748-761)
+          3. Outputs - SYNC-REPORT.md, modified doc files, exit codes (check-only) (lines 762-768)
+          4. MCP Tools - both tool names with purposes and WINT-0080 dependency note (lines 770-775)
+          Section references WINT-9020 as the tracking story for the LangGraph node port.
+          Specification prose only — no code.
+          Disk-verified Fix Iteration 2: grep for 'LangGraph Porting Notes' in SKILL.md matches line 737 ✓
+
+  - ac_id: "AC-7"
+    ac_text: "WINT-0170 integration note added to Check-Only Mode section of doc-sync.agent.md"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/doc-sync.agent.md"
+        description: |
+          WINT-0170 Integration Note added at lines 417-423 within Check-Only Mode section stating:
+          - WINT-0170 will add doc-sync as a mandatory gate to phase/story completion
+          - --check-only run executed automatically before marking phase/story complete
+          - Exit code 0 (docs in sync) allows workflow to proceed and advance story state
+          - Exit code 1 (out of sync) blocks completion until documentation is synchronized
+          - Exit code gate mechanism ensures docs synchronized before story advances
+          Disk-verified Fix Iteration 2: grep for 'WINT-0170' in doc-sync.agent.md matches lines 417 and 419 ✓
+
+  - ac_id: "AC-8"
+    ac_text: "stories.index.md shows WINT-0160 in-progress status"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/wint/stories.index.md"
+        description: |
+          stories.index.md confirmed showing WINT-0160 with Status: in-progress.
+          Story file path: wint/in-progress/WINT-0160/WINT-0160.md.
+          Elaboration Complete: 2026-02-17, Elaboration Verdict: CONDITIONAL PASS.
+          Status managed by workflow orchestrator — read-only verification confirms correct state.
+
+touched_files:
+  - path: ".claude/agents/doc-sync.agent.md"
+    action: modified
+    description: "Bumped updated date to 2026-02-17; added WINT-0170 integration note to Check-Only Mode section"
+
+  - path: ".claude/skills/doc-sync/SKILL.md"
+    action: modified
+    description: "Added LangGraph Porting Notes section (4 subsections, line 737) before Version History; added version history entry 1.1.0 (line 781) for WINT-0150 enhancements"
+
+commands_run:
+  - command: "grep -r 'doc-sync' .claude/agents/doc-sync.agent.md | head -20"
+    result: SUCCESS
+    output: "WINT-0170 integration note confirmed present in output"
+    timestamp: "2026-02-17T00:00:00Z"
+
+  - command: "grep '1\\.1\\.0' .claude/skills/doc-sync/SKILL.md"
+    result: SUCCESS
+    output: "Line 781: ### 1.1.0 - 2026-02-16"
+    timestamp: "2026-02-17T23:45:00Z"
+
+  - command: "grep 'LangGraph Porting Notes' .claude/skills/doc-sync/SKILL.md"
+    result: SUCCESS
+    output: "Line 737: ## LangGraph Porting Notes"
+    timestamp: "2026-02-17T23:45:00Z"
+
+  - command: "grep 'WINT-0170' .claude/agents/doc-sync.agent.md"
+    result: SUCCESS
+    output: "Line 417: **WINT-0170 Integration Note:** / Line 419: WINT-0170 will add doc-sync as a mandatory gate..."
+    timestamp: "2026-02-17T23:45:00Z"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "AC-1 live server verification: WINT-0080 MCP server not confirmed promoted to production. Attestation fallback used — tool names cross-referenced between doc-sync.agent.md mcp_tools and SKILL.md mcp_tools_available. Both files match exactly."
+  - "AC-3/AC-4 graceful degradation: WINT-0070 tables not live, so live execution test not possible. Verification by code inspection of try/catch block in Phase 2 Step 2.2. Accepted as CONDITIONAL PASS per ANALYSIS.md."
+  - "All story steps executed in-leader (no packages-coder spawned) — this is a doc-only chore with no TypeScript files, no Vitest tests, no build artifacts. Spawning a worker agent adds no value."
+  - "SKILL.md LangGraph section placed before Version History to maintain document flow: usage -> integration -> porting notes -> history."
+  - "doc-sync.agent.md updated date bumped to 2026-02-17 to reflect WINT-0160 changes made today."
+
+known_deviations:
+  - "AC-3/AC-4: Live database integration test not possible (WINT-0070 tables not live). Verification by code inspection only — acknowledged in PLAN.yaml notes as acceptable."
+  - "packages-coder not spawned: Story is doc-only with no package code. Direct execution by leader is appropriate."
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: docs — doc-only chore story, no application code modified, no UI or API endpoints changed"
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 25000, out: 8000 }

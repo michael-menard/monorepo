@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-17T23:00:00Z"
+updated_at: "2026-02-17T23:55:00Z"
 ---
 
 # WINT Stories Index
@@ -20,11 +20,13 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | in-qa | 0 |
 | ready-for-qa | 0 |
 | ready-for-code-review | 1 |
+| failed-qa | 0 |
 | elaboration | 0 |
+| created | 0 |
 | backlog | 0 |
-| in-progress | 1 |
-| ready-to-work | 2 |
-| pending | 126 |
+| in-progress | 0 |
+| ready-to-work | 3 |
+| pending | 124 |
 
 ---
 
@@ -332,18 +334,32 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ---
 
-### WINT-0160: Create doc-sync Agent
+### WINT-0160: Validate and Harden doc-sync Agent for Production Readiness
 
-**Status:** pending
+**Status:** uat
+**Story File:** `wint/UAT/WINT-0160/WINT-0160.md`
+**Code Review:** PASS (2026-02-17) — 0 errors, 1 warning (doc duplication, non-blocking)
+**Elaboration Complete:** 2026-02-17
+**Elaboration Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-17
+**Code Review Verdict:** PASS
+**QA Setup Complete:** 2026-02-17 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-17 - FAIL verdict: 3 ACs not met (AC-4, AC-6, AC-7)
+**Fix Iteration 2 Complete:** 2026-02-17 - All 3 ACs fixed and verified on disk (AC-4, AC-6, AC-7). Documentation phase complete. Status updated to ready-for-code-review
+**QA Setup Iteration 2 Complete:** 2026-02-17 - Story moved to UAT, status updated to in-qa, ready for verification phase
+**QA Verification Complete (Iteration 2):** 2026-02-17 - PASS verdict: All 8 ACs verified on disk, no failures. Story moves to UAT.
 **Depends On:** WINT-0150
 **Phase:** 0
-**Feature:** Create haiku-powered worker agent that implements doc-sync skill logic
+**Points:** 2
+**Priority:** P2
+**Feature:** Validate and harden the existing doc-sync.agent.md (v1.1.0) for production readiness. Verify MCP tool names match postgres-knowledgebase registrations, confirm frontmatter completeness against WINT standards, validate graceful degradation in file-only mode, add LangGraph porting interface contract section (required by WINT-9020), and document WINT-0170 integration point (check-only flag as gate mechanism).
 **Infrastructure:**
-- new agent file
+- .claude/agents/doc-sync.agent.md (audit + potential frontmatter corrections)
+- .claude/skills/doc-sync/SKILL.md (add LangGraph Porting Notes section)
 
-**Goal:** Execute documentation updates when triggered
+**Goal:** Confirm doc-sync agent is production-ready and is a viable porting target for WINT-9020
 
-**Risk Notes:** Must handle concurrent edits to docs gracefully
+**Risk Notes:** MCP tool name verification requires live postgres-knowledgebase server (WINT-0080 must be in UAT). doc-sync.agent.md already exists at v1.1.0 — story scope redefined from "create new agent" to "validate and harden existing agent". Two implementation gaps identified: AC-6 (LangGraph Porting Notes section) and AC-7 (WINT-0170 integration note) — both are specification tasks, not story spec gaps.
 
 ---
 
@@ -598,8 +614,8 @@ Create the four core shim functions (`shimGetStoryStatus`, `shimUpdateStoryStatu
 
 ### WINT-1012: Compatibility Shim Module — Observability and Quality
 
-**Status:** in-progress
-**Story File:** `wint/in-progress/WINT-1012/WINT-1012.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1012/WINT-1012.md`
 **Elaboration Complete:** 2026-02-16
 **Verdict:** PASS
 **Split From:** WINT-1010
@@ -2173,7 +2189,10 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** pending
+**Status:** ready-to-work
+**Story File:** `wint/ready-to-work/WINT-9010/WINT-9010.md`
+**Elaboration Complete:** 2026-02-17
+**Verdict:** CONDITIONAL PASS
 **Depends On:** WINT-1100
 **Phase:** 9
 **Feature:** Extract business logic from agents into shared TypeScript package that both Claude Code MCP tools and LangGraph nodes can use
@@ -2182,7 +2201,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 **Goal:** Single implementation, two execution paths
 
-**Risk Notes:** Must maintain clean separation from runtime concerns
+**Risk Notes:** Must maintain clean separation from runtime concerns. Type resolution (AC-12) and adapter scope (AC-13) are pre-implementation guards.
 
 ---
 

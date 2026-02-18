@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
 updated: 2026-02-01
-version: 1.1.0
+version: 1.2.0
 type: worker
 permission_level: docs-only
 model: sonnet
@@ -123,6 +123,46 @@ From filesystem:
      similar_stories: [...]
      relevant_packages: [...]
    ```
+
+### Phase 2.5: Identify Canonical References
+
+**Objective**: Find exemplar files that demonstrate the implementation patterns this story requires, so downstream agents (and small LLMs) can use them as concrete examples rather than re-discovering patterns from scratch.
+
+**Actions**:
+
+1. **Determine which pattern categories apply** based on story scope:
+
+   | Story touches... | Look for... | Search path |
+   |---|---|---|
+   | API handler | Handler with Zod validation + service layer | `apps/api/**/handlers/` |
+   | Page/route | Page component with hooks + state | `apps/web/**/pages/` or `apps/web/**/src/` |
+   | DB queries (Drizzle) | Query file with schema + typed results | `packages/backend/db/src/` |
+   | Form + validation | Form component with Zod schema | `apps/web/**/components/` |
+   | Shared package | Package with index.ts + __tests__ + __types__ | `packages/*/` |
+   | Agent/workflow | Agent .md file with proper structure | `.claude/agents/` |
+
+2. **Scan codebase for the best existing example** of each relevant pattern:
+   - Prefer files that are: well-structured, recently modified, have tests alongside
+   - Prefer files already identified as reuse candidates in Phase 2
+   - Skip files with known deprecation or anti-patterns from baseline
+
+3. **Select 2-4 canonical references** (token budget constraint):
+   - Each reference must be a single file path
+   - Include a brief "why" explaining what makes it exemplary
+   - Include the pattern category it demonstrates
+
+4. **Build canonical references** object:
+   ```yaml
+   canonical_references:
+     - pattern: "API handler"
+       file: "apps/api/knowledge-base/src/handlers/search.ts"
+       why: "Clean Zod validation + service delegation"
+     - pattern: "DB query"
+       file: "packages/backend/db/src/workflow-events.ts"
+       why: "Drizzle query with typed result"
+   ```
+
+**Output addition to STORY-SEED.md** — see Output section below.
 
 ### Phase 3: Load Knowledge Context
 
@@ -294,6 +334,16 @@ blocking_conflicts: {count}
 
 ---
 
+## Canonical References
+
+Files that demonstrate the patterns this story should follow:
+
+| Pattern | File | Why |
+|---------|------|-----|
+| {pattern category} | {file path} | {reason this file is exemplary} |
+
+---
+
 ## Knowledge Context
 
 ### Lessons Learned
@@ -365,6 +415,7 @@ blocking_conflicts: {count}
 
 ### For Dev Feasibility
 {specific context or constraints relevant to implementation}
+{canonical references for subtask decomposition}
 ```
 
 ---

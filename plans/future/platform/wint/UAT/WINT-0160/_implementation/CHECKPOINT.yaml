@@ -1,0 +1,35 @@
+schema: 1
+story_id: "WINT-0160"
+feature_dir: "wint"
+timestamp: "2026-02-17T00:00:00Z"
+
+worktree_branch: "feature/wint-0160-doc-sync-hardening"
+worktree_path: "tree/feature/wint-0160-doc-sync-hardening"
+
+current_phase: qa-verify
+last_successful_phase: qa-verify
+code_review_verdict: PASS
+code_review_completed_at: "2026-02-17T23:55:00Z"
+iteration: 2
+max_iterations: 3
+
+blocked: false
+blocked_reason: null
+
+forced: false
+warnings:
+  - "dev-setup-leader blocked on existing _implementation/ dir (elab artifacts). CHECKPOINT.yaml created by orchestrator."
+  - "AC-1: WINT-0080 MCP server not confirmed live; mcp_tools names verified by file cross-reference only (attestation fallback)."
+  - "AC-3/AC-4: WINT-0070 tables not live; graceful degradation verified by code inspection only (CONDITIONAL PASS per ANALYSIS.md)."
+
+qa_setup_started_at: "2026-02-17T18:30:00Z"
+qa_setup_complete: true
+qa_setup_completed_at: "2026-02-17T18:47:00Z"
+e2e_gate: exempt
+
+fix_started_at: "2026-02-17T23:40:00Z"
+fix_iteration: 2
+
+qa_verify_iteration_2_complete: true
+qa_verify_iteration_2_verdict: PASS
+qa_verify_iteration_2_completed_at: "2026-02-17T00:00:00Z"

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
 updated: 2026-02-07
-version: 4.2.0
+version: 4.3.0
 type: leader
 permission_level: orchestrator
 triggers: ["/pm-story generate"]
@@ -12,6 +12,9 @@ tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
   - kb_search
   - mcp__postgres-knowledgebase__query
+  - worktree_register
+skills_used:
+  - /wt:new
 ---
 
 # Agent: pm-story-generation-leader
@@ -62,6 +65,21 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 Check if story directory already exists. If collision:
 - Auto-resolved "next": skip to next eligible
 - Explicit ID: `PM FAILED: Story ID already exists`
+
+### Phase 0.6: Claim Story in Index (REQUIRED — FIRST WRITE)
+
+Immediately update the index to prevent parallel generation windows from picking up the same story.
+
+```bash
+/index-update {INDEX_PATH} {STORY_ID} --status=Created
+```
+
+This MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken and skip to the next eligible story.
+
+If story generation later fails (PM BLOCKED / PM FAILED), the status should be reverted:
+```bash
+/index-update {INDEX_PATH} {STORY_ID} --status=Pending
+```
 
 ### Phase 0.5a: Experiment Variant Assignment (WKFL-008)
 
@@ -165,6 +183,18 @@ Wait for workers with TaskOutput. Check for blockers in `_pm/BLOCKERS.md`.
 ### Phase 4: Synthesize Story
 Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 
+**Canonical References** (from seed Phase 2.5):
+- Read `## Canonical References` from STORY-SEED.md
+- Include as `## Canonical References` section in story file
+- These references flow into each subtask for dev agent context
+
+**Subtask Decomposition** (from dev-feasibility worker):
+- Read `# Proposed Subtask Breakdown` from DEV-FEASIBILITY.md
+- Include as `## Subtasks` section in story file
+- Cross-reference: every AC must be covered by at least one subtask
+- Cross-reference: each subtask's canonical reference should come from the seed's references
+- If dev-feasibility did not produce subtasks, log warning but do not block
+
 **Experiment Variant in Story Frontmatter** (WKFL-008):
 Include `experiment_variant` field in story.yaml frontmatter:
 
@@ -210,10 +240,23 @@ ON CONFLICT (story_id) DO UPDATE SET ...
 - If KB unavailable: Log warning, continue without KB write
 - Queue failed writes to `DEFERRED-KB-WRITES.yaml` in story dir for later retry
 
-### Phase 5: Update Index (REQUIRED)
+### Phase 5: Verify Index Status
+
+Index was already claimed in Phase 0.6. Verify the status is still `Created`. If story generation failed and was not caught earlier, revert:
 ```bash
-/index-update {INDEX_PATH} {STORY_ID} --status=Created
+/index-update {INDEX_PATH} {STORY_ID} --status=Pending
 ```
+
+**Platform index note:** When `platform_index_path` is provided in context (i.e., the story was auto-picked from the platform index), the **orchestrator** (pm-story.md Step 5) handles updating `platform.stories.index.md` after the leader returns `PM COMPLETE`. The leader does NOT need to update the platform index — only the per-epic index via `/index-update`.
+
+### Phase 5.5: Create Worktree (Pre-provision for Dev)
+
+Pre-create the worktree so it's ready when dev starts implementation.
+
+1. Derive branch: `story/{STORY_ID}`
+2. Invoke: `/wt:new story/{STORY_ID} main`
+3. Register: `worktree_register({ story_id: "{STORY_ID}", branch_name: "story/{STORY_ID}", path: "tree/story/{STORY_ID}" })`
+4. If registration fails: log WARNING, continue (non-blocking)
 
 ---
 
@@ -228,6 +271,10 @@ ON CONFLICT (story_id) DO UPDATE SET ...
 | Test plan present | Synthesized into story |
 | ACs verifiable | Every AC can be tested |
 | Experiment variant assigned | Field present in story frontmatter (WKFL-008) |
+| Canonical references present | Story includes `## Canonical References` from seed (SHOULD — non-blocking) |
+| Subtasks present | Story includes `## Subtasks` from dev-feasibility (SHOULD — non-blocking) |
+| AC-subtask coverage | Every AC is covered by at least one subtask (SHOULD — warn if gaps) |
+| Worktree pre-provisioned | Worktree created and registered for dev (SHOULD — non-blocking) |
 
 ---
 
@@ -264,7 +311,9 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 | First match wins | Story in ONE experiment only (WKFL-008) |
 | Graceful degradation | Workflow continues if experiments.yaml unavailable (WKFL-008) |
 | KB persistence | MUST write story to KB after synthesis (Phase 4.5) |
-| Update index | MUST call /index-update --status=Created |
+| Claim early | MUST call /index-update --status=Created in Phase 0.6 before workers |
+| Revert on failure | MUST revert index to Pending if generation fails |
 | Token log | MUST call before completion |
 | Parallel spawn | Single message for all workers |
 | Quality gates | Verify all before emitting story |
+| Worktree pre-provision | SHOULD create worktree in Phase 5.5 (failure does not block story generation) |

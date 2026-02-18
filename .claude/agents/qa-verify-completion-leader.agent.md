@@ -10,6 +10,7 @@ skills_used:
   - /story-update
   - /index-update
   - /token-log
+  - /wt:merge-pr
 kb_tools:
   - kb_add_lesson
   - kb_add_task
@@ -41,28 +42,29 @@ Read from `VERIFICATION.yaml`:
 
 ### If verdict is PASS:
 
-0. **Worktree Cleanup Check** (WINT-1150)
+0. **Merge PR and Clean Up Worktree**
 
-   Simple 3-step conditional — keep logic minimal for haiku budget.
+   **Step A: Read CHECKPOINT.yaml for `pr_number`**
+   ```
+   pr_number = read CHECKPOINT.yaml.pr_number (may be absent)
+   ```
 
-   **Step A: Look up worktree**
+   **Step B: Look up worktree**
    ```
    Call: worktree_get_by_story({storyId: STORY_ID})
    ```
 
-   **Step B: Branch on result**
-   - If `null` → skip silently, continue to Step 1 below (AC-2)
-   - If active worktree found → proceed to Step C
+   **Step C: Branch on result**
+   - If `null` → skip silently, continue to Step 1 below
 
-   **Step C: Invoke wt-finish and handle result**
+   **Step D: Invoke wt:merge-pr**
    ```
-   Invoke: /wt:finish {branchName} {worktreePath}
+   Invoke: /wt:merge-pr {STORY_ID} {pr_number}
    ```
-   - On success: call `worktree_mark_complete({worktreeId: record.id, status: 'merged'})` (AC-4)
-   - On any failure (any error or non-success): call `worktree_mark_complete({worktreeId: record.id, status: 'abandoned', metadata: {cleanup_deferred: true, reason: 'unknown'}})` (AC-12, AC-13)
-     + emit WARNING: `"WARNING: Worktree '{branchName}' at '{worktreePath}' was not cleaned up. Reason: unknown. Action: Run /wt:finish {STORY_ID} when ready."` (AC-7)
+   - On success: call `worktree_mark_complete({worktreeId: record.id, status: 'merged'})`
+   - On failure: call `worktree_mark_complete({worktreeId: record.id, status: 'abandoned', metadata: {cleanup_deferred: true, reason: 'merge_failed'}})` + emit WARNING
 
-   **Continue PASS flow regardless of outcome** (AC-11)
+   **Continue PASS flow regardless of outcome** (non-blocking)
 
 1. **Update status to uat** (use /story-update skill)
    ```
@@ -156,9 +158,9 @@ Read from `VERIFICATION.yaml`:
 
 ### If verdict is FAIL:
 
-1. **Update status to needs-work** (use /story-update skill)
+1. **Update status to failed-qa** (use /story-update skill)
    ```
-   /story-update {FEATURE_DIR} {STORY_ID} needs-work
+   /story-update {FEATURE_DIR} {STORY_ID} failed-qa
    ```
 
 2. **Write gate section to VERIFICATION.yaml**
@@ -171,14 +173,14 @@ Read from `VERIFICATION.yaml`:
        - "<issue 2>"
    ```
 
-3. **Move story back to in-progress** (use /story-move skill)
+3. **Move story to failed-qa directory** (use /story-move skill)
    ```
-   /story-move {FEATURE_DIR} {STORY_ID} in-progress
+   /story-move {FEATURE_DIR} {STORY_ID} failed-qa
    ```
 
 4. **Update Story Index** (use /index-update skill)
    ```
-   /index-update {FEATURE_DIR} {STORY_ID} --status=needs-work
+   /index-update {FEATURE_DIR} {STORY_ID} --status=failed-qa
    ```
 
 5. **Capture tasks for deferred issues** (KBMEM-015)
@@ -229,18 +231,19 @@ phase: completion
 feature_dir: {FEATURE_DIR}
 story_id: {STORY_ID}
 verdict: PASS | FAIL
-status_updated: uat | needs-work
-moved_to: {FEATURE_DIR}/UAT/{STORY_ID} | {FEATURE_DIR}/in-progress/{STORY_ID}
-index_updated: true | false  # only true on PASS
+status_updated: uat | failed-qa
+moved_to: {FEATURE_DIR}/UAT/{STORY_ID} | {FEATURE_DIR}/failed-qa/{STORY_ID}
+index_updated: true
 kb_findings_captured: true | false | skipped  # only on PASS, false if no notable findings
 tokens_logged: true
 worktree_cleanup: completed | deferred | skipped | not_found  # only on PASS
+pr_merged: true | false | skipped  # only on PASS
 ```
 
 ## Signals
 
 - `QA PASS` - Story verified, moved to UAT, index updated
-- `QA FAIL` - Story failed verification, moved back to in-progress
+- `QA FAIL` - Story failed verification, moved to failed-qa/
 - `COMPLETION BLOCKED: <reason>` - Cannot complete (e.g., file system error)
 
 ## Token Tracking

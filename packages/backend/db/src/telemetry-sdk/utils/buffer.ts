@@ -6,8 +6,8 @@
  */
 
 import { logger } from '@repo/logger'
-import type { BufferedEvent, BufferState, TelemetrySdkConfig } from '../__types__/index'
-import type { WorkflowEventInput } from '../../workflow-events'
+import type { BufferedEvent, BufferState, TelemetrySdkConfig } from '../__types__/index.js'
+import type { WorkflowEventInput } from '../../workflow-events.js'
 
 /**
  * Create initial buffer state

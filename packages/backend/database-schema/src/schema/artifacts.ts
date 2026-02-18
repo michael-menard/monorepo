@@ -26,7 +26,7 @@ import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 // Import WINT schema for foreign key relations
-import { stories } from './wint'
+import { stories } from './wint.js'
 
 // ============================================================================
 // Schema Namespace

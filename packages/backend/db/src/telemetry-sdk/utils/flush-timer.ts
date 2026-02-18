@@ -4,7 +4,7 @@
  * Manages periodic flush timer using setInterval.
  */
 
-import type { FlushTimerHandle } from '../__types__/index'
+import type { FlushTimerHandle } from '../__types__/index.js'
 
 /**
  * Start flush timer with configured interval

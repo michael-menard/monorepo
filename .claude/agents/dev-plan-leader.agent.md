@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
 updated: 2026-02-01
-version: 1.0.0
+version: 1.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story"]
@@ -78,20 +78,43 @@ Task tool:
 
 Wait for `KNOWLEDGE-CONTEXT COMPLETE` signal.
 
-### Step 3: Read Story ACs
+### Step 3: Read Story ACs, Subtasks, and Canonical References
 
-Read only the `## Acceptance Criteria` section from the story file.
+Read the following sections from the story file (DO NOT read the full story — token optimization):
 
-**DO NOT** read the full story - this is a token optimization.
+1. `## Acceptance Criteria` — AC list (numbered), mentioned files/components, non-goals
+2. `## Subtasks` — Pre-decomposed subtasks from story generation (if present)
+3. `## Canonical References` — Exemplar files for pattern guidance (if present)
 
-Extract:
-- AC list (numbered)
-- Any mentioned files/components
-- Non-goals (to avoid over-engineering)
+**Subtask-aware planning**: If the story contains a `## Subtasks` section, use it as the primary input for PLAN.yaml step generation. Each story subtask (ST-1, ST-2, etc.) maps **1:1** to a PLAN.yaml step. This ensures the execution phase can run each step as a separate, small-context agent invocation.
+
+If no subtasks are present, fall back to generating steps from ACs and SCOPE.yaml as before.
 
 ### Step 4: Generate PLAN.yaml
 
-Based on SCOPE.yaml, KNOWLEDGE-CONTEXT.yaml, and ACs, generate:
+Based on SCOPE.yaml, KNOWLEDGE-CONTEXT.yaml, ACs, and **subtasks** (if present), generate:
+
+**When subtasks are present** — map 1:1 from story subtasks:
+
+```yaml
+schema: 2
+story_id: "{STORY_ID}"
+timestamp: "{ISO timestamp}"
+subtask_source: story  # indicates steps derived from story subtasks
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"  # maps to story subtask
+    description: "Step description (from subtask goal)"
+    files: ["path/to/file.ts"]
+    files_to_read: ["canonical/reference.ts"]  # context files for agent
+    dependencies: []
+    slice: backend | frontend | packages
+    verification: "pnpm check-types --filter @repo/db"
+    acs_covered: ["AC-1", "AC-2"]
+```
+
+**When no subtasks present** — generate from ACs as before:
 
 ```yaml
 schema: 1
@@ -104,7 +127,11 @@ steps:
     files: ["path/to/file.ts"]
     dependencies: []
     slice: backend | frontend | packages
+```
 
+**Common sections (both modes)**:
+
+```yaml
 files_to_change:
   - path: "path/to/file.ts"
     action: create | modify | delete
@@ -139,6 +166,8 @@ Check:
 3. No architectural decisions are unresolved
 4. Steps have no circular dependencies
 5. Required commands are present (pnpm build, pnpm test at minimum)
+6. If subtask-sourced (schema: 2): each step has `subtask_id`, `files_to_read`, `verification`, and `acs_covered`
+7. If subtask-sourced: no step touches more than 3 files
 
 If validation fails, fix inline and note in warnings.
 

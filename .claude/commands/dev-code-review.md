@@ -33,12 +33,13 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 ## Phase 0 — Setup
 
 Validate (HARD STOP if fail):
-- Story has `status: ready-for-code-review`
-- `EVIDENCE.yaml` exists in `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`
+- Story has `status: needs-code-review`
+- Story directory exists at `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
+- `EVIDENCE.yaml` exists in `{FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/`
 
 Extract touched files from EVIDENCE.yaml:
 ```yaml
-# Read {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml
+# Read {FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/EVIDENCE.yaml
 touched_files = evidence.touched_files.map(f => f.path)
 ```
 
@@ -56,7 +57,7 @@ Check if `REVIEW.yaml` exists from a previous review cycle:
 workers_to_run = []
 carried_forward = {}
 
-review_path = f"{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml"
+review_path = f"{FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/REVIEW.yaml"
 
 if file_exists(review_path):
     prev = read_yaml(review_path)
@@ -127,7 +128,7 @@ Task tool:
     worker_outputs: <collected YAML from workers>
     carried_forward: <map of skipped workers>
 
-    Write REVIEW.yaml to {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml
+    Write REVIEW.yaml to {FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/REVIEW.yaml
 ```
 
 The aggregate leader will:
@@ -137,10 +138,21 @@ The aggregate leader will:
 
 ## Phase 3 — Finalize
 
-| Verdict | Status | Next |
-|---------|--------|------|
-| PASS | `ready-for-qa` | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
-| FAIL | `code-review-failed` | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| Verdict | Move To | Status | Next |
+|---------|---------|--------|------|
+| PASS | `ready-for-qa/` | 🔍 `ready-for-qa` | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
+| FAIL | `failed-code-review/` | 🔴 `failed-code-review` | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+
+On PASS:
+```
+/story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
+```
+
+On FAIL:
+```
+/story-move {FEATURE_DIR} {STORY_ID} failed-code-review --update-status
+/index-update {FEATURE_DIR} {STORY_ID} --status=failed-code-review
+```
 
 Token log: `/token-log {STORY_ID} code-review <in> <out>`
 
