@@ -1,0 +1,28 @@
+schema: 1
+story_id: WINT-1040
+timestamp: "2026-02-17T23:57:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+  docs: true
+
+touched_paths_globs:
+  - ".claude/commands/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Update /story-status command to use DB as primary source instead of directory structure for story lookup"
+elaboration: "completed"

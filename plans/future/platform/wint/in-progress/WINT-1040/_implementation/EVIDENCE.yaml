@@ -1,0 +1,115 @@
+schema: 1
+story_id: "WINT-1040"
+version: 1
+timestamp: "2026-02-17T00:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Feature + Story ID mode calls story_get_status MCP tool (shimGetStoryStatus) as the primary data source"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Feature + Story ID mode step 2 calls story_get_status({ storyId: STORY_ID }) MCP tool. Step 3 uses DB result if non-null; step 4 falls back to directory scan on null."
+
+  - ac_id: "AC-2"
+    ac_text: "Single story output format preserved (Feature / Story / Status / Location / Depends On — no fields added or removed)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Output Examples section at bottom of file shows the same 5-field format: Feature, Story, Status, Location, Depends On. References story-status-output.md Single Story Output section unchanged."
+
+  - ac_id: "AC-3"
+    ac_text: "DB state → display label mapping table covers all 8 DB state enum values"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Data Source > DB State Display Labels table covers all 8 states: backlog, ready_to_work, in_progress, ready_for_qa, in_qa, done, blocked, cancelled. SWIM_LANE_TO_STATE contributes 6; KNOWN_DB_ONLY_STATES (blocked, cancelled) adds 2."
+
+  - ac_id: "AC-4"
+    ac_text: "--depth and --deps-order modes unchanged; no DB calls added to those modes"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Feature + --depth and Feature + --deps-order modes still read stories.index.md as step 1. No story_get_status calls present in those mode descriptions."
+
+  - ac_id: "AC-5"
+    ac_text: "Non-Goals note present: Feature Only DB routing deferred to WINT-1070"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Data Source > Non-Goals (deferred) note at line 47-48: 'Feature Only DB routing (e.g., /story-status plans/future/wishlist summary via DB) is deferred to WINT-1070.'"
+
+  - ac_id: "AC-6"
+    ac_text: "Command remains read-only; no write operations (story_update_status not present)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Grep for 'story_update_status' returns 0 matches. Command header still reads 'Read-only utility command.' No write operations of any kind present."
+
+  - ac_id: "AC-7"
+    ac_text: "Story not found case documented in Feature + Story ID step sequence"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Feature + Story ID step 5: 'If directory scan also finds nothing: display Story not found: {STORY_ID}'. Also present in Data Source section step 4."
+
+  - ac_id: "AC-8"
+    ac_text: "Data Source section present covering: DB primary for Feature+Story ID, fallback conditions, migration window context"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/commands/story-status.md"
+        description: "Data Source section added at lines 34-66. Covers: (a) DB-first routing with story_get_status, (b) fallback on null result (DB unavailable or story not migrated), (c) 'Migration window context' paragraph explaining Phase 1 DB authority."
+
+touched_files:
+  - path: ".claude/commands/story-status.md"
+    action: modified
+    description: "Added Data Source section with DB-first routing explanation, DB state display labels table (8 states), updated Feature+Story ID mode to call story_get_status MCP tool with fallback, added Non-Goals note for WINT-1070 deferral, preserved --depth and --deps-order modes unchanged"
+
+commands_run:
+  - command: "echo 'No build required — docs-only story'"
+    result: SUCCESS
+    output: "No build required — docs-only story"
+    timestamp: "2026-02-17T00:00:00Z"
+  - command: "grep -c 'story_update_status' .claude/commands/story-status.md"
+    result: SUCCESS
+    output: "0 matches — no write operations present"
+    timestamp: "2026-02-17T00:00:00Z"
+  - command: "grep 'WINT-1070' .claude/commands/story-status.md"
+    result: SUCCESS
+    output: "Non-Goals note found at line 48"
+    timestamp: "2026-02-17T00:00:00Z"
+  - command: "grep 'Story not found' .claude/commands/story-status.md"
+    result: SUCCESS
+    output: "Found at lines 43 and 123"
+    timestamp: "2026-02-17T00:00:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: docs — docs-only story, no TypeScript, no API routes, no UI"
+  tests_written: false
+
+notable_decisions:
+  - "story_get_status MCP tool call pattern mirrors story-update.md worktree_get_by_story call pattern (result = tool({ storyId: STORY_ID }))"
+  - "All 8 DB state enum values in display label table: 6 from SWIM_LANE_TO_STATE + 2 from KNOWN_DB_ONLY_STATES (blocked, cancelled)"
+  - "Data Source section placed before Modes section so readers understand routing before reading mode details"
+  - "Non-Goals placed inside Data Source section (not as a top-level section) to co-locate deferral context with the routing explanation"
+
+known_deviations: []
+
+coverage: {}
+
+token_summary: {}

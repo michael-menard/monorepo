@@ -1,0 +1,51 @@
+schema: 1
+story_id: WINT-1040
+timestamp: "2026-02-17T23:58:00Z"
+generated_by: dev-plan-leader (inline, no worker — docs-only story with complete elaboration)
+
+lessons:
+  - id: L-WINT-1011-001
+    title: "shimGetStoryStatus returns null on both DB-miss and DB-error"
+    summary: "The shim does not distinguish between a DB connection failure and a DB record not found. Both cases trigger directory fallback. This is Phase 1 acceptable behavior per WINT-1011 DECISIONS.yaml."
+    recommendation: "Command spec should document 'DB unavailable OR returns no result' as a single fallback trigger."
+    tags: [wint, shim, fallback, mcp-tools]
+
+  - id: L-WINT-1011-002
+    title: "shimGetStoryStatus call signature: input.storyId (human-readable ID)"
+    summary: "shimGetStoryStatus accepts StoryGetStatusInput which has a storyId field (human-readable string like WINT-1011). No UUID required. The shim handles DB lookup by storyId directly."
+    recommendation: "Command spec step should pass storyId directly from argument normalization."
+    tags: [wint, shim, mcp-tools, api-contract]
+
+  - id: L-WINT-1030-001
+    title: "story_get_status MCP tool is the agent-callable wrapper around shimGetStoryStatus"
+    summary: "Agents call story_get_status({storyId: STORY_ID}) — this MCP tool delegates to shimGetStoryStatus internally. Commands do not call TypeScript functions directly; they invoke MCP tools."
+    recommendation: "Command spec must use MCP tool invocation syntax: story_get_status({storyId: STORY_ID})."
+    tags: [wint, mcp-tools, command-pattern]
+
+  - id: L-STORY-UPDATE-001
+    title: "story-update.md canonical pattern: command calls MCP tool inline in step sequence"
+    summary: "story-update.md calls worktree_get_by_story and worktree_mark_complete MCP tools directly within its Execution Steps section — not as TypeScript imports. This is the pattern for command specs that need to invoke shim/tool behavior."
+    recommendation: "story-status.md Feature+Story ID mode should mirror this: list MCP tool call as a numbered step with input/output handling inline."
+    tags: [wint, command-pattern, mcp-tools, docs-pattern]
+
+adrs:
+  - id: ADR-005
+    title: "UAT requires live PostgreSQL"
+    summary: "Integration and behavioral verification of DB-touching commands requires live PostgreSQL. Unit tests may mock the shim."
+    applies_to: [WINT-1040]
+
+  - id: ADR-WINT-1011-DB-FIRST
+    title: "DB is authoritative during migration window"
+    summary: "When DB and directory states diverge (migration window between WINT-1030 and WINT-1020/WINT-1070), DB is the authoritative source. The command spec must document this clearly."
+    applies_to: [WINT-1040]
+
+known_patterns:
+  - pattern: "Command spec documents MCP tool calls as numbered steps (not TypeScript)"
+    source: ".claude/commands/story-update.md"
+    confidence: high
+  - pattern: "SWIM_LANE_TO_STATE provides the canonical directory→state mapping; inverse mapping needed for state→display label"
+    source: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    confidence: high
+  - pattern: "story-status.md Single Story Output format: Feature / Story / Status / Location / Depends On (5 lines)"
+    source: ".claude/agents/_reference/examples/story-status-output.md"
+    confidence: high
