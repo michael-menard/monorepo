@@ -12,6 +12,8 @@
  * - shimUpdateStoryStatus: DB unavailable → return null + warn (NO filesystem write) [AC-2]
  * - All return types conform to existing WINT-0090 output schemas [AC-5]
  * - storiesRoot is injectable via ShimOptions [AC-12]
+ *
+ * WINT-9010: Uses isValidStoryId from @repo/workflow-logic (replaces STORY_ID_REGEX.test()).
  */
 
 import * as fs from 'fs'
@@ -19,6 +21,7 @@ import * as path from 'path'
 import { randomUUID } from 'crypto'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
+import { isValidStoryId } from '@repo/workflow-logic'
 import { storyGetStatus } from '../story-management/story-get-status.js'
 import { storyUpdateStatus } from '../story-management/story-update-status.js'
 import { storyGetByStatus } from '../story-management/story-get-by-status.js'
@@ -36,7 +39,6 @@ import type {
 import {
   SWIM_LANE_TO_STATE,
   SWIM_LANE_DIRS,
-  STORY_ID_REGEX,
   type ShimOptions,
   resolveStoriesRoot,
 } from './__types__/index.js'
@@ -69,7 +71,7 @@ type DirectoryStoryRecord = z.infer<typeof DirectoryStoryRecordSchema>
  * Returns an array of { storyId, state } objects.
  *
  * Only scans the known SWIM_LANE_DIRS; skips directories that do not exist.
- * Story IDs are matched against STORY_ID_REGEX.
+ * Story IDs are matched using isValidStoryId from @repo/workflow-logic.
  */
 function scanDirectories(storiesRoot: string): DirectoryStoryRecord[] {
   const results: DirectoryStoryRecord[] = []
@@ -88,7 +90,7 @@ function scanDirectories(storiesRoot: string): DirectoryStoryRecord[] {
 
     const state = SWIM_LANE_TO_STATE[laneDir]
     for (const entry of entries) {
-      if (STORY_ID_REGEX.test(entry)) {
+      if (isValidStoryId(entry)) {
         results.push({ storyId: entry, state })
       }
     }
