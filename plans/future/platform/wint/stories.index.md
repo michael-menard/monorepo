@@ -16,16 +16,16 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 13 |
+| uat | 16 |
 | in-qa | 0 |
-| ready-for-qa | 0 |
-| ready-for-code-review | 1 |
+| ready-for-qa | 1 |
+| ready-for-code-review | 0 |
 | failed-qa | 0 |
-| elaboration | 2 |
+| elaboration | 1 |
 | created | 1 |
 | backlog | 0 |
-| in-progress | 0 |
-| ready-to-work | 5 |
+| in-progress | 1 |
+| ready-to-work | 2 |
 | pending | 120 |
 
 ---
@@ -41,6 +41,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | WINT-4060 | Create scope-defender Agent | — |
 | WINT-4070 | Create evidence-judge Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
+| WINT-9020 | Create doc-sync LangGraph Node | — |
 
 ---
 
@@ -682,10 +683,11 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** elaboration
-**Story File:** `wint/elaboration/WINT-1040/WINT-1040.md`
-**Story Generated:** 2026-02-17
-**Depends On:** WINT-1030
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1040/WINT-1040.md`
+**Elaboration Complete:** 2026-02-17 - All 9 audit checks PASS, no MVP-critical gaps
+**QA Verification Complete:** 2026-02-18 - All 8 ACs verified PASS, verdict: PASS
+**Depends On:** none
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
 **Infrastructure:**
@@ -698,10 +700,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** ready-to-work
-**Depends On:** WINT-1030, WINT-1011
+**Status:** uat
+**Depends On:** none
 **Phase:** 1
-**Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
+**Story File:** `wint/UAT/WINT-1050/WINT-1050.md`
 **Points:** 2
 **Priority:** high
 **Feature:** Augment /story-update command with DB write via shimUpdateStoryStatus before YAML frontmatter update. DB becomes source of truth for story status. Frontmatter sync retained for Phase 1 backward compatibility.
@@ -736,12 +738,15 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-1060/WINT-1060.md`
+**Status:** completed
+**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
-**Verdict:** CONDITIONAL PASS
-**Depends On:** WINT-1030
+**Verdict:** PASS
+**Implementation Complete:** 2026-02-18
+**Code Review Verdict:** PASS (Iteration 2)
+**QA Setup Complete:** 2026-02-18 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, story status updated to uat, dependencies cleared
 **Phase:** 1
 **Points:** 2
 **Priority:** P2
@@ -757,7 +762,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1070: Deprecate stories.index.md as Source of Truth
 
-**Status:** elaboration
+**Status:** ready-to-work
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
@@ -841,7 +846,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160
+**Depends On:** WINT-1060, WINT-1070, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -928,7 +933,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
 **Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.
@@ -2216,10 +2221,14 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-9010/WINT-9010.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9010/WINT-9010.md`
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-17
+**Code Review Verdict:** PASS (Iteration 2)
+**QA Setup Complete:** 2026-02-17 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-18 - All 13 ACs verified PASS. 82 unit tests (100% coverage). Zero TypeScript/ESLint errors.
 **Depends On:** WINT-1100
 **Phase:** 9
 **Feature:** Extract business logic from agents into shared TypeScript package that both Claude Code MCP tools and LangGraph nodes can use
