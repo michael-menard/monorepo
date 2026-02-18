@@ -9,19 +9,14 @@
  */
 
 import { logger } from '@repo/logger'
-import { StoryStateSchema, type StoryState } from '../state/enums/story-state.js'
+import { type StoryState } from '../state/enums/story-state.js'
 import {
   StoryArtifactSchema,
   type StoryArtifact,
   type StoryType,
   type PriorityLevel,
 } from '../artifacts/story.js'
-import {
-  StoryRowSchema,
-  StateTransitionSchema,
-  type StoryRow,
-  type StateTransition,
-} from '../__types__/index.js'
+import { type StoryRow, type StateTransition } from '../__types__/index.js'
 
 // ============================================================================
 // Database Client Interface
@@ -172,11 +167,7 @@ export class StoryRepository {
   /**
    * Set story as blocked by another story
    */
-  async setBlockedBy(
-    storyId: string,
-    blockedBy: string | null,
-    actor: string,
-  ): Promise<void> {
+  async setBlockedBy(storyId: string, blockedBy: string | null, actor: string): Promise<void> {
     try {
       await this.client.query(
         `UPDATE wint.stories SET blocked_by = $1, updated_at = NOW() WHERE story_id = $2`,
