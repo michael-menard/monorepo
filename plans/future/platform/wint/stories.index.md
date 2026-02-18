@@ -18,8 +18,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | completed | 2 |
 | uat | 13 |
 | in-qa | 0 |
-| ready-for-qa | 0 |
-| ready-for-code-review | 1 |
+| ready-for-qa | 1 |
+| ready-for-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 2 |
 | created | 1 |
@@ -39,7 +39,6 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | WINT-0180 | Define Examples + Negative Examples Framework | — |
 | WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-4060 | Create scope-defender Agent | — |
-| WINT-4070 | Create evidence-judge Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
 
 ---
@@ -1426,8 +1425,8 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4090: Create evidence-judge Agent
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-4090/WINT-4090.md`
+**Status:** ready-for-qa
+**Story File:** `wint/ready-for-qa/WINT-4090/WINT-4090.md`
 **Elaboration Complete:** 2026-02-18
 **Verdict:** PASS
 **Depends On:** none
