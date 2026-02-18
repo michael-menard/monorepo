@@ -17,8 +17,11 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 |--------|-------|
 | completed | 0 |
 | generated | 0 |
+| created | 0 |
+| ready-to-work | 1 |
+| elaboration | 0 |
 | in-progress | 0 |
-| pending | 27 |
+| pending | 26 |
 
 ---
 
@@ -103,7 +106,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-005: CLI Sync Commands
 
-**Status:** pending
+**Status:** Ready to Work
+**Story ID:** KBAR-0050
 **Depends On:** KBAR-004
 **Phase:** 2
 
