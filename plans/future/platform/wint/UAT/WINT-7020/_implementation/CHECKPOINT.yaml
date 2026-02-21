@@ -1,0 +1,20 @@
+story_id: WINT-7020
+current_phase: qa-verification
+iteration: 1
+started_at: "2026-02-18T12:00:00Z"
+last_updated: "2026-02-20T00:00:00Z"
+phases_completed:
+  - setup
+  - planning
+  - executing
+  - proof
+  - review
+  - qa-setup
+  - qa-verification
+phases_remaining:
+  - qa-completion
+e2e_gate: exempt
+e2e_exemption_reason: "Documentation/planning story — no code changes, no runtime behavior"
+pr_number: 369
+pr_url: "https://github.com/michael-menard/monorepo/pull/369"
+notes: "Docs-only story producing MIGRATION-PLAN.md and BATCH-SCHEDULE.yaml"
