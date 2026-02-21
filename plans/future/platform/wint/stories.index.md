@@ -19,7 +19,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 13 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
-| ready-for-code-review | 1 |
+| ready-for-code-review | 0 |
+| failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 2 |
 | created | 2 |
@@ -756,7 +757,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1070: Deprecate stories.index.md as Source of Truth
 
-**Status:** needs-code-review
+**Status:** failed-code-review
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
