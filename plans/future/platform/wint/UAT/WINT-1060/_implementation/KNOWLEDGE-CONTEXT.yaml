@@ -1,0 +1,89 @@
+schema: 1
+story_id: WINT-1060
+timestamp: '2026-02-18T12:30:00Z'
+loaded: true
+
+lessons_learned:
+  count: 4
+  relevant_to_scope:
+    - story_id: WINT-1040
+      lesson: "Sibling /story-status command update followed identical pattern: DB-first read via shim, directory fallback, markdown-only deliverable. Single file touched."
+      category: reuse
+      applies_because: "WINT-1060 is same pattern for /story-move — read WINT-1040 execution approach for reference on how to structure Step 1 DB-first locate update."
+
+    - story_id: WINT-1050
+      lesson: "story-update.md v3.0.0 (WINT-1050) demonstrated adding a DB write step into an existing markdown command — shimUpdateStoryStatus call, null-check warning, db_updated return field. Direct pattern to follow."
+      category: reuse
+      applies_because: "story-move.md Step 2.5 follows same injection pattern as story-update.md Step 3. Read story-update.md v3.0.0 before writing story-move.md Step 2.5."
+
+    - story_id: WINT-1011
+      lesson: "shimUpdateStoryStatus returns null on DB unavailable — no filesystem fallback. Command must handle null return with a warning and must not abort the mv operation."
+      category: pattern
+      applies_because: "AC-3 fail-safe degradation is based on this shim contract. DB write returns null → log warning → proceed with directory mv."
+
+    - story_id: WINT-1060
+      lesson: "DECISIONS.yaml Gap-2 (EC-2 independence): shimGetStoryStatus returning null during locate does NOT suppress shimUpdateStoryStatus during write. Both are independent paths. AC-10 explicitly mandates prose in Step 2.5 stating this independence."
+      category: blocker
+      applies_because: "Without explicit Step 2.5 prose, an implementing agent may incorrectly short-circuit the DB write when locate returns null. This must be called out verbatim in the command update."
+
+  blockers_to_avoid:
+    - "Do NOT add an early-exit from Step 2.5 when shimGetStoryStatus returned null during locate — the write path is independent of the read path (AC-10)."
+    - "Do NOT introduce a new pnpm workspace package or TypeScript helper for this story — markdown-only deliverable per Non-Goals."
+    - "Do NOT modify packages/backend/mcp-tools/src/story-compatibility/ — shim API is frozen (No-Touch Zone)."
+    - "Do NOT hardcode swim-lane-to-state mapping in the command prose — reference SWIM_LANE_TO_STATE constant and document inline lookup table in Step 2.5 (AC-4)."
+
+  patterns_to_follow:
+    - "Use story-update.md v3.0.0 Step 3 (shimUpdateStoryStatus call block) as the verbatim template for Step 2.5 structure."
+    - "Bump command version in frontmatter from 2.0.0 to 2.1.0 when writing final file."
+    - "Document inline SWIM_LANE_TO_STATE lookup table (from __types__/index.ts) directly in Step 2.5 so executors don't need to look up the constant externally."
+    - "Preserve all existing signals (MOVE COMPLETE, MOVE FAILED, MOVE SKIPPED) verbatim — AC-8 prohibits changing the external contract."
+    - "db_updated field has 3 values: true | false | skipped. Document all 3 with their triggering conditions in Step 5 return YAML."
+
+  patterns_to_avoid:
+    - "Do not skip the db_updated: skipped case for --update-status flag — this is AC-7 and prevents double-write."
+    - "Do not add DB write before Step 2 Validate Move completes — ordering rationale requires validation before DB write."
+    - "Do not log an error for null return from shimUpdateStoryStatus — it is a warning only, and mv proceeds."
+
+architecture_decisions:
+  active_count: 1
+  relevant_adrs:
+    - id: ADR-005
+      title: "Testing Strategy - UAT Must Use Real Services"
+      status: active
+      constraint: "UAT must never use mocking. For this story: manual dry-run evidence of db_updated field in return YAML is the primary evidence type. No HTTP or unit test evidence needed for markdown-only changes."
+      applies_to: ["testing", "evidence"]
+  constraints:
+    testing: "No TypeScript added — no pnpm test or check-types required. Manual dry-run of /story-move command and verification of db_updated field in return YAML is the primary evidence. ADR-006 E2E tests do not apply (frontend_impacted: false)."
+
+token_optimization:
+  high_cost_operations:
+    - operation: "Reading full story-move.md at the start of each subtask"
+      typical_tokens: 2500
+      mitigation: "Read once at ST-1; pass updated content forward. Each subtask edits incrementally, avoiding redundant full re-reads."
+    - operation: "Reading full shim index.ts and __types__/index.ts again per subtask"
+      typical_tokens: 6000
+      mitigation: "These files are already read during planning. Execution agent should reference PLAN.yaml files_to_read per-step rather than re-reading all canonicals at each step."
+  recommended_patterns:
+    - "Read current story-move.md once, then make targeted edits for each subtask in sequence (ST-1 → ST-2 → ST-3)."
+    - "Use Edit tool for targeted replacements rather than writing the full file from scratch each step."
+    - "Verification for each subtask is a Read of the modified file — not a re-execution of the command."
+
+attack_vectors:
+  - "Executor adds early-return logic when shimGetStoryStatus returns null during locate, incorrectly suppressing the DB write (violates AC-10)."
+  - "Executor places Step 2.5 AFTER the directory mv (Step 3) rather than before — ordering rationale requires DB write before mv."
+  - "Executor forgets to document the done stage exclusion in Step 2.5 inline table (DECISIONS.yaml Gap-1 note)."
+  - "Executor uses hardcoded state strings (e.g., 'in_progress') instead of referencing SWIM_LANE_TO_STATE in the inline table (violates AC-4)."
+  - "Executor sets db_updated: false for the --update-status path instead of db_updated: skipped (violates AC-7)."
+
+do_not_repeat:
+  - "Do not forget to bump the frontmatter version to 2.1.0 — sibling commands WINT-1040/WINT-1050 both required version bumps and it was a common near-miss."
+  - "Do not omit the 'updated' date in the frontmatter — set to 2026-02-18 (today)."
+  - "Do not skip AC-10 prose in Step 2.5 — it was added specifically to prevent EC-2 interpreter ambiguity and must be present verbatim."
+
+warnings:
+  - "KB unavailable during elaboration (degraded mode) — no KB-sourced lessons; lessons synthesized from sibling story artifacts (WINT-1011, WINT-1040, WINT-1050 patterns)."
+  - "story-update.md is at v3.0.0 (includes WINT-1150 worktree cleanup hook) — do not copy the worktree section when using it as a pattern template; only copy the shimUpdateStoryStatus call block structure."
+
+tokens:
+  in: 18500
+  out: 850

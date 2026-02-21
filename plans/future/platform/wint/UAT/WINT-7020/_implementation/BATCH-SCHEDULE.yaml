@@ -1,0 +1,646 @@
+# BATCH-SCHEDULE.yaml — Phase 7 Agent Migration Schedule
+# Story: WINT-7020
+# Generated: 2026-02-18
+# Purpose: Machine-readable batch definitions for WINT-7030 through WINT-7090
+
+schema_version: 1
+generated_at: "2026-02-18T12:00:00Z"
+total_batches: 7
+total_estimated_points: 34
+
+batches:
+
+  - batch: 1
+    name: "Story Management Commands"
+    story_id: WINT-7030
+    description: "Verify already-migrated story-status, story-update, story-move commands"
+    estimated_points: 3
+    risk_tier: low
+    dependencies: []
+    files:
+      commands:
+        - path: .claude/commands/story-status.md
+          action: verify-only
+          migration_story: WINT-1040
+        - path: .claude/commands/story-update.md
+          action: verify-only
+          migration_story: WINT-1050
+        - path: .claude/commands/story-move.md
+          action: verify-only
+          migration_story: WINT-1060
+      shim:
+        - path: packages/backend/mcp-tools/src/story-compatibility/
+          action: verify-only
+          note: "Compatibility shim module — verify stability"
+    verification:
+      - "Run /story-status wint WINT-1060 — DB returns correct status"
+      - "Run /story-update wint WINT-TEST in-progress — DB write succeeds"
+      - "Run /story-move wint WINT-TEST ready-for-qa — DB + directory updated"
+      - "Shim diagnostics show source: db for all operations"
+      - "No plans/stories/ legacy paths in migrated commands"
+
+  - batch: 2
+    name: "Dev Workflow"
+    story_id: WINT-7040
+    description: "Migrate dev-implement-story and dev-fix-story command chains to DB-first"
+    estimated_points: 8
+    risk_tier: critical
+    dependencies:
+      - batch: 1
+        story_id: WINT-7030
+    files:
+      commands:
+        - path: .claude/commands/dev-implement-story.md
+          action: migrate
+          risk: critical
+        - path: .claude/commands/dev-fix-story.md
+          action: migrate
+          risk: critical
+      leaders:
+        - path: .claude/agents/dev-setup-leader.agent.md
+          action: migrate
+          risk: critical
+        - path: .claude/agents/dev-plan-leader.agent.md
+          action: migrate
+          risk: critical
+        - path: .claude/agents/dev-execute-leader.agent.md
+          action: migrate
+          risk: critical
+        - path: .claude/agents/dev-proof-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/dev-documentation-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/dev-verification-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/dev-implement-implementation-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/dev-implement-planning-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/dev-fix-fix-leader.agent.md
+          action: migrate
+          risk: high
+      workers:
+        - path: .claude/agents/dev-implement-backend-coder.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/dev-implement-frontend-coder.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/dev-implement-playwright.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/dev-implement-planner.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/dev-implement-proof-writer.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/dev-implement-plan-validator.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/dev-implement-contracts.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/dev-implement-verifier.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/dev-implement-learnings.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/commitment-gate-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/knowledge-context-loader.agent.md
+          action: migrate
+          risk: medium
+          note: "Shared across PM and Dev — migrate here, verify in Batch 5"
+    verification:
+      - "dev-implement-story Phase 0 creates CHECKPOINT.yaml via shim"
+      - "dev-setup-leader reads story from DB not directory scan"
+      - "dev-execute-leader writes EVIDENCE.yaml to correct path"
+      - "Spawn chain: dev-implement-story → dev-setup-leader → knowledge-context-loader"
+      - "Spawn chain: dev-execute-leader → dev-implement-backend-coder"
+      - "No hardcoded swim-lane directory paths in any agent file"
+      - "DB state check: story status transitions recorded"
+
+  - batch: 3
+    name: "Elab Workflow"
+    story_id: WINT-7050
+    description: "Migrate elab-story and elab-epic command chains to DB-first"
+    estimated_points: 5
+    risk_tier: high
+    dependencies:
+      - batch: 1
+        story_id: WINT-7030
+    files:
+      commands:
+        - path: .claude/commands/elab-story.md
+          action: migrate
+          risk: high
+        - path: .claude/commands/elab-epic.md
+          action: migrate
+          risk: medium
+      leaders:
+        - path: .claude/agents/elab-setup-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/elab-completion-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/elab-epic-setup-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/elab-epic-interactive-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/elab-epic-aggregation-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/elab-epic-reviews-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/elab-epic-updates-leader.agent.md
+          action: migrate
+          risk: low
+      workers:
+        - path: .claude/agents/elab-analyst.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/elab-autonomous-decider.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-delta-review-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-escape-hatch-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-phase-contract-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-epic-engineering.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-epic-platform.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-epic-product.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-epic-qa.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-epic-security.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/elab-epic-ux.agent.md
+          action: migrate
+          risk: low
+    verification:
+      - "elab-story setup reads story from DB not backlog/ directory"
+      - "elab-completion-leader moves story via shimMoveStory"
+      - "Spawn chain: elab-story → elab-setup-leader → elab-analyst"
+      - "Elab-epic commands read feature directory from DB metadata"
+      - "No hardcoded swim-lane paths in elab agent files"
+
+  - batch: 4
+    name: "QA & UAT Workflow"
+    story_id: WINT-7060
+    description: "Migrate qa-verify-story command chain to DB-first"
+    estimated_points: 5
+    risk_tier: high
+    dependencies:
+      - batch: 2
+        story_id: WINT-7040
+        reason: "QA workflow tests against dev workflow output"
+    files:
+      commands:
+        - path: .claude/commands/qa-verify-story.md
+          action: migrate
+          risk: high
+      leaders:
+        - path: .claude/agents/qa-verify-setup-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/qa-verify-completion-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/qa-verify-verification-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/uat-orchestrator.agent.md
+          action: migrate
+          risk: medium
+      workers:
+        - path: .claude/agents/uat-precondition-check.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-story-review.agent.md
+          action: migrate
+          risk: medium
+          note: "Shared with elab — migrate here, verify in Batch 3"
+    verification:
+      - "qa-verify-story setup reads from DB not ready-for-qa/ scan"
+      - "qa-verify-completion-leader moves story via shimMoveStory"
+      - "Spawn chain: qa-verify-story → qa-verify-setup-leader → qa-verify-verification-leader"
+      - "UAT orchestrator reads story state from DB"
+      - "QA verdicts recorded in stories DB table"
+
+  - batch: 5
+    name: "PM & Planning"
+    story_id: WINT-7070
+    description: "Migrate pm-story, pm-fix-story, pm-bootstrap, and pm-harness command chains"
+    estimated_points: 5
+    risk_tier: medium
+    dependencies:
+      - batch: 1
+        story_id: WINT-7030
+    files:
+      commands:
+        - path: .claude/commands/pm-story.md
+          action: migrate
+          risk: high
+        - path: .claude/commands/pm-fix-story.md
+          action: migrate
+          risk: medium
+        - path: .claude/commands/pm-bootstrap-workflow.md
+          action: migrate
+          risk: medium
+        - path: .claude/commands/pm-generate-story-000-harness.md
+          action: migrate
+          risk: low
+        - path: .claude/commands/pm-refine-story.md
+          action: migrate
+          risk: low
+      leaders:
+        - path: .claude/agents/pm.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/pm-story-generation-leader.agent.md
+          action: migrate
+          risk: high
+        - path: .claude/agents/pm-story-adhoc-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-story-followup-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-story-split-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-story-bug-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-story-fix-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-triage-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-bootstrap-analysis-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-bootstrap-generation-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-bootstrap-setup-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/pm-harness-generation-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/pm-harness-setup-leader.agent.md
+          action: migrate
+          risk: low
+      workers:
+        - path: .claude/agents/pm-story-seed-agent.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/pm-dev-feasibility-review.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/pm-draft-test-plan.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/pm-uiux-recommendations.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/pm-story-risk-predictor.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/gap-analytics-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/gap-hygiene-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/readiness-score-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/story-attack-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/story-fanout-pm.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/story-fanout-qa.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/story-fanout-ux.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/story-synthesize-agent.agent.md
+          action: migrate
+          risk: low
+    verification:
+      - "pm-story generate creates story in DB + backlog directory"
+      - "pm-story-generation-leader writes story via shim"
+      - "pm-story-seed-agent reads/writes story context from DB"
+      - "Spawn chain: pm-story → pm.agent → pm-story-generation-leader → pm-story-seed-agent"
+      - "pm-bootstrap-workflow creates feature directory and DB metadata"
+      - "No hardcoded backlog/ or elaboration/ paths in PM agents"
+
+  - batch: 6
+    name: "Review & Architecture"
+    story_id: WINT-7080
+    description: "Migrate dev-code-review, architect-review, and code-audit command chains"
+    estimated_points: 5
+    risk_tier: medium
+    dependencies:
+      - batch: 2
+        story_id: WINT-7040
+        reason: "Review workflow reads dev workflow output"
+    files:
+      commands:
+        - path: .claude/commands/dev-code-review.md
+          action: migrate
+          risk: medium
+        - path: .claude/commands/architect-review.md
+          action: migrate
+          risk: low
+        - path: .claude/commands/code-audit.md
+          action: migrate
+          risk: low
+      leaders:
+        - path: .claude/agents/review-aggregate-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/audit-aggregate-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/audit-debt-map-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-promote-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-trends-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-setup-leader.agent.md
+          action: migrate
+          risk: low
+      code_review_workers:
+        - path: .claude/agents/code-review-accessibility.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-build.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-lint.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-react.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-reusability.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-security.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-style-compliance.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-syntax.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-typecheck.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/code-review-typescript.agent.md
+          action: migrate
+          risk: low
+      audit_workers:
+        - path: .claude/agents/audit-accessibility.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-code-quality.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-devils-advocate.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-duplication.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-moderator.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-performance.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-react.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-security.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-test-coverage.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-typescript.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/audit-ui-ux.agent.md
+          action: migrate
+          risk: low
+      architect_agents:
+        - path: .claude/agents/architect-api-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-frontend-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-packages-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-types-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-aggregation-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-setup-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-hexagonal-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-route-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-service-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-barrel-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-component-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-import-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-boundary-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-circular-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-workspace-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-interface-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-schema-worker.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/architect-zod-worker.agent.md
+          action: migrate
+          risk: low
+    verification:
+      - "dev-code-review reads artifacts from DB-resolved path"
+      - "10 code-review workers access story context"
+      - "architect-review leaders read codebase (confirm no swim-lane dependency)"
+      - "code-audit scan executes against story context"
+      - "No hardcoded swim-lane paths in review/audit/architect agents"
+
+  - batch: 7
+    name: "Utility, Metrics & Orphan Cleanup"
+    story_id: WINT-7090
+    description: "Migrate remaining utility agents, metrics agents, and deprecate unused agents"
+    estimated_points: 3
+    risk_tier: low
+    dependencies:
+      - batch: 2
+        story_id: WINT-7040
+      - batch: 3
+        story_id: WINT-7050
+      - batch: 4
+        story_id: WINT-7060
+      - batch: 5
+        story_id: WINT-7070
+      - batch: 6
+        story_id: WINT-7080
+    files:
+      commands:
+        - path: .claude/commands/scrum-master.md
+          action: migrate
+          risk: medium
+        - path: .claude/commands/ui-ux-review.md
+          action: migrate
+          risk: low
+      leaders:
+        - path: .claude/agents/scrum-master-loop-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/scrum-master-setup-leader.agent.md
+          action: migrate
+          risk: medium
+        - path: .claude/agents/ui-ux-review-setup-leader.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/ui-ux-review-report-leader.agent.md
+          action: migrate
+          risk: low
+      workers:
+        - path: .claude/agents/ui-ux-review-reviewer.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/reality-intake-collector.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/reality-intake-setup.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/doc-sync.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/kb-writer.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/kb-compressor.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/confidence-calibrator.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/workflow-retro.agent.md
+          action: migrate
+          risk: low
+      metrics_workers:
+        - path: .claude/agents/ttdc-metrics-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/churn-index-metrics-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/leakage-metrics-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/pcar-metrics-agent.agent.md
+          action: migrate
+          risk: low
+        - path: .claude/agents/turn-count-metrics-agent.agent.md
+          action: migrate
+          risk: low
+      deprecations:
+        - path: .claude/agents/experiment-analyzer.agent.md
+          action: archive
+          reason: "Incomplete frontmatter, no observed usage"
+        - path: .claude/agents/heuristic-evolver.agent.md
+          action: archive
+          reason: "No workflow integration"
+        - path: .claude/agents/improvement-proposer.agent.md
+          action: archive
+          reason: "No workflow integration"
+        - path: .claude/agents/pattern-miner.agent.md
+          action: archive
+          reason: "No workflow integration"
+        - path: .claude/agents/quick-security.agent.md
+          action: archive
+          reason: "Redundant with code-review-security"
+        - path: .claude/agents/quick-test.agent.md
+          action: archive
+          reason: "Redundant with dev-implement-verifier"
+      reference_agents_no_action:
+        - path: .claude/agents/qa.agent.md
+          action: no-action
+          reason: "Reference documentation only, no swim-lane logic"
+        - path: .claude/agents/uiux.agent.md
+          action: no-action
+          reason: "Reference documentation only, no swim-lane logic"
+    verification:
+      - "scrum-master reads story state from DB"
+      - "ui-ux-review reads story from DB path"
+      - "Metrics agents receive story context from parent leaders"
+      - "doc-sync, kb-writer, kb-compressor have no swim-lane dependencies"
+      - "6 deprecated agents moved to _archive/"
+      - "Final grep: zero swim-lane refs outside _archive/ and _reference/"

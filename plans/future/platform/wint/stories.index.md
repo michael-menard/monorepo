@@ -16,16 +16,16 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 13 |
+| uat | 14 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
 | ready-for-code-review | 0 |
 | failed-qa | 0 |
-| elaboration | 2 |
+| elaboration | 1 |
 | created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 6 |
+| ready-to-work | 5 |
 | pending | 120 |
 
 ---
@@ -1906,8 +1906,11 @@ Migration phase - Update all 52 agents, sync docs, achieve zero directory refere
 
 ### WINT-7020: Create Agent Migration Plan
 
-**Status:** elaboration
+**Status:** uat
+**Story File:** `wint/UAT/WINT-7020/WINT-7020.md`
 **Elaboration Setup Complete:** 2026-02-18
+**Elaboration Complete:** 2026-02-18
+**Verdict:** PASS
 **Depends On:** WINT-7010
 **Phase:** 7
 **Feature:** Categorize 52 agents by risk, create migration order (5-10 per iteration)
@@ -1919,6 +1922,8 @@ Migration phase - Update all 52 agents, sync docs, achieve zero directory refere
 **Risk Notes:** High-risk agents need careful testing
 
 **Story Generated:** 2026-02-18
+
+**Summary:** All 10 ACs PASS. MIGRATION-PLAN.md and BATCH-SCHEDULE.yaml complete. Zero code changes, all documentation artifacts valid.
 
 ---
 
