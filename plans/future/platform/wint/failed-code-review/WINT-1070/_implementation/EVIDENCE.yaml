@@ -210,6 +210,12 @@ commands_run:
     output: "No ESLint errors in new files"
     timestamp: "2026-02-18T03:13:00Z"
 
+  - command: "eslint packages/backend/orchestrator/src/scripts/generate-stories-index.ts packages/backend/orchestrator/src/db/story-repository.ts"
+    result: SUCCESS
+    output: "No ESLint errors after fix iteration 2 patches"
+    timestamp: "2026-02-20T00:00:00Z"
+    note: "Fix iteration 2: removed duplicate getAllStories(), replaced as-any with Record<string, unknown>, imported writeFileAtomic from shared module, ran Prettier"
+
 endpoints_exercised: []
 
 test_summary:

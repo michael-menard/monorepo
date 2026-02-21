@@ -50,6 +50,7 @@ import { z } from 'zod'
 import { Pool } from 'pg'
 import { logger } from '@repo/logger'
 import { StoryFileAdapter } from '../adapters/story-file-adapter.js'
+import { writeFileAtomic } from '../adapters/utils/file-utils.js'
 import { StoryRepository } from '../db/story-repository.js'
 import type { StoryRow } from '../__types__/index.js'
 import {
@@ -243,7 +244,8 @@ export function computeReadyToStart(rows: StoryRow[]): StoryRow[] {
  */
 export function renderStorySection(section: StorySection): string {
   const dependsOn = section.depends_on.length > 0 ? section.depends_on.join(', ') : 'none'
-  const phase = section.phase !== null && section.phase !== undefined ? String(section.phase) : '—'
+  const phase =
+    section.phase !== null && section.phase !== undefined ? String(section.phase) : '—'
   const feature = section.feature ?? '—'
   const infrastructure = section.infrastructure ?? '—'
   const goal = section.goal ?? '—'
@@ -370,11 +372,12 @@ async function readYamlFallback(
 
   try {
     const story = await adapter.read(storyFilePath)
+    const storyData = story as Record<string, unknown>
     const data: Record<string, unknown> = {
-      phase: (story as any).phase ?? null,
-      feature: (story as any).feature ?? null,
-      infrastructure: (story as any).infrastructure ?? null,
-      risk_notes: (story as any).risk_notes ?? null,
+      phase: storyData['phase'] ?? null,
+      feature: storyData['feature'] ?? null,
+      infrastructure: storyData['infrastructure'] ?? null,
+      risk_notes: storyData['risk_notes'] ?? null,
     }
     cache.set(storyId, data)
     return {
@@ -521,7 +524,8 @@ async function generateIndexContent(
   parts.push('# WINT Stories Index')
   parts.push('')
   parts.push(
-    'All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Phase 1, Story 01, original).',
+    'All stories use `WINT-{phase}{story}{variant}` format ' +
+      '(e.g., `WINT-1010` for Phase 1, Story 01, original).',
   )
   parts.push('')
 
@@ -593,7 +597,9 @@ async function generateIndexContent(
  */
 function getPhaseDescription(phaseKey: string): string {
   const descriptions: Record<string, string> = {
-    '0': 'Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infrastructure (untracked, prerequisite for all other phases)',
+    '0':
+      'Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infrastructure' +
+      ' (untracked, prerequisite for all other phases)',
     '1': 'Foundation phase - Core platform infrastructure and developer experience',
     '2': 'Core Features phase - Primary platform capabilities',
     '3': 'Advanced Features phase - Enhanced platform capabilities',
@@ -662,20 +668,6 @@ function computeFieldSourceBreakdown(
 }
 
 // ============================================================================
-// Atomic File Write
-// ============================================================================
-
-/**
- * Atomically write content to a file using temp-file + rename pattern.
- * Prevents partial writes from corrupting the target file.
- */
-async function writeFileAtomic(targetPath: string, content: string): Promise<void> {
-  const tmpPath = `${targetPath}.tmp`
-  await fs.writeFile(tmpPath, content, 'utf-8')
-  await fs.rename(tmpPath, targetPath)
-}
-
-// ============================================================================
 // Verify Mode: Inline Line-by-Line Diff
 // ============================================================================
 
@@ -715,7 +707,9 @@ export function formatDiffSummary(
   const preview = diffLines.slice(0, 10)
   const lines = preview.map(
     d =>
-      `  Line ${d.lineNum}:\n    expected: ${d.expected.substring(0, 120)}\n    actual:   ${d.actual.substring(0, 120)}`,
+      `  Line ${d.lineNum}:\n` +
+        `    expected: ${d.expected.substring(0, 120)}\n` +
+        `    actual:   ${d.actual.substring(0, 120)}`,
   )
   const suffix =
     diffLines.length > 10 ? `\n  ... and ${diffLines.length - 10} more differences` : ''
