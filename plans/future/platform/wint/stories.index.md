@@ -16,13 +16,13 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 14 |
+| uat | 15 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
 | ready-for-code-review | 0 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
-| elaboration | 1 |
+| elaboration | 0 |
 | created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
@@ -404,7 +404,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-0180
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
@@ -699,7 +699,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** ready-to-work
+**Status:** created
 **Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
 **Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
@@ -737,11 +737,13 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-1060/WINT-1060.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-18
+**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS
 **Depends On:** WINT-1030
 **Phase:** 1
 **Points:** 2
@@ -2249,23 +2251,24 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** needs-code-review
+**Status:** ready-to-work
 **Story Generated:** 2026-02-18
-**Story File:** `wint/needs-code-review/WINT-9020/WINT-9020.md`
+**Story File:** `wint/ready-to-work/WINT-9020/WINT-9020.md`
+**Elaboration Complete:** 2026-02-20
+**Verdict:** PASS
 **Depends On:** WINT-9010, WINT-0160
 **Phase:** 9
 **Points:** 5
 **Priority:** P2
-**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Resolves path discrepancy (nodes/sync/ vs nodes/workflow/) in elaboration phase (AC-1).
+**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Creates new node at `nodes/sync/doc-sync.ts` per elaboration AC-19 specification.
 **Infrastructure:**
-- packages/backend/orchestrator/src/nodes/sync/ (new directory per index entry) or nodes/workflow/ (existing — AC-1 decides)
+- packages/backend/orchestrator/src/nodes/sync/ (new directory with doc-sync.ts)
 
 **Goal:** Documentation sync works in both Claude Code and LangGraph workflows with identical outputs for the same inputs.
 
-**Risk Notes:** AC-1 (path resolution) must be resolved in elaboration before implementation begins. Current nodes/workflow/doc-sync.ts uses subprocess delegation — native TypeScript port is the correct implementation approach per SKILL.md contract. Split risk: 0.8 (13 ACs, path ambiguity). Estimated review cycles: 3.
+**Risk Notes:** All 4 MVP-critical gaps resolved as new ACs (AC-18 through AC-21). 8 non-blocking enhancements queued to KB. No scope changes required. 6 subtasks with clear verification steps. Ready for implementation.
 
-**Story Generated:** 2026-02-20
-**Elaboration Setup:** 2026-02-20
+**Summary:** Elaboration complete. All 21 ACs specified (including AC-18 through AC-21 added by autonomous decider). 4 blocking gaps resolved: createNode with 120s timeout (AC-18), nodes/sync/index.ts registration (AC-19), EG-5 test fix (AC-20), Phase 4 safety net (AC-21).
 
 ---
 

@@ -119,7 +119,7 @@ All can start immediately. Ordered by downstream impact.
 | 53 | | WINT-1070 | Deprecate stories.index.md | ← WINT-1030 | WINT | P2 |
 | 54 | | WINT-1040 | Update story-status to Use DB | ← WINT-1010, 1030 | WINT | P2 |
 | 55 | | WINT-1050 | Update story-update to Use DB | ← WINT-1010, 1030 | WINT | P2 |
-| 56 | | WINT-1060 | Update story-move to Use DB | ← WINT-1010, 1030 | WINT | P2 |
+| 56 | x | WINT-1060 | Update story-move to Use DB **uat** | ← WINT-1010, 1030 | WINT | P2 |
 | 57 | | KBAR-0050 | CLI Sync Commands | ← KBAR-0040 | KBAR | P2 |
 | G8 | | GATE-08 | **E2E: Validate Pre-LangGraph Prep** | ← GATE-07, all Wave 4 | GATE | **HARD GATE** |
 
@@ -146,7 +146,7 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 65 | | WINT-9020 | Create doc-sync LangGraph Node ⚡ | ← WINT-9010, 0160 | WINT | **P0** |
+| 65 | x | WINT-9020 | Create doc-sync LangGraph Node ⚡ **created** | ← WINT-9010, 0160 | WINT | **P0** |
 | 66 | | WINT-4080 | Create scope-defender Agent (DA) | ← none | WINT | P1 |
 | 67 | | WINT-4090 | Create evidence-judge Agent | ← none | WINT | P1 |
 | 68 | | KBAR-0070 | story_get Tool | ← KBAR-0060 | KBAR | P2 |
