@@ -1,99 +1,82 @@
 #!/usr/bin/env npx tsx
 /**
- * Generate Stories Index Script
+ * Stories Index Generator Script
  *
- * Reads story state from the `wint.stories` database, supplements with YAML
- * frontmatter for fields not stored in the DB, and writes a DO NOT EDIT
- * generated version of `stories.index.md`.
+ * Generates the `stories.index.md` file from the `wint.stories` PostgreSQL database.
+ * Implements a DB-primary / YAML-fallback hybrid pipeline: core fields come from
+ * the database, while supplemental fields (phase, feature, infrastructure, risk_notes)
+ * fall back to the story's `.md` frontmatter when absent from the DB.
  *
  * ## CLI Usage
  *
  * ```bash
- * # Generate stories.index.md from database (writes file)
- * npx tsx generate-stories-index.ts --generate
- *
- * # Dry-run: output to stdout without overwriting stories.index.md
+ * # Preview generated content without writing to disk
  * npx tsx generate-stories-index.ts --dry-run
  *
- * # Verify: compare current stories.index.md with what would be generated
- * # Exits 0 if identical, 1 if drift detected
+ * # Generate and write stories.index.md (atomically)
+ * npx tsx generate-stories-index.ts --generate
+ *
+ * # Verify current stories.index.md matches what would be generated
+ * # Exits 0 if identical, 1 if there are differences
  * npx tsx generate-stories-index.ts --verify
  * ```
  *
  * ## Required Environment Variables
  *
- * - `POSTGRES_HOST` (default: localhost)
- * - `POSTGRES_PORT` (default: 5432)
- * - `POSTGRES_DATABASE` (default: postgres)
- * - `POSTGRES_USER` (default: postgres)
- * - `POSTGRES_PASSWORD` (default: postgres)
+ * - `POSTGRES_HOST`     — DB hostname (default: localhost)
+ * - `POSTGRES_PORT`     — DB port (default: 5432)
+ * - `POSTGRES_DATABASE` — DB name (default: postgres)
+ * - `POSTGRES_USER`     — DB user (default: postgres)
+ * - `POSTGRES_PASSWORD` — DB password (default: postgres)
  *
- * ## Data Strategy: DB-Primary, YAML-Fallback
+ * ## Data Strategy
  *
- * The `wint.stories` table is queried first and is the primary source of truth
- * for: `state`, `title`, `goal`, `depends_on`.
+ * - **DB-primary**: story_id, title, state, depends_on, goal come from `wint.stories`
+ * - **YAML-fallback**: phase, feature, infrastructure, risk_notes are read from the
+ *   story's `.md` frontmatter when the DB field is null/absent
+ * - **Computed**: ready_to_start and progress_summary are derived from DB data
  *
- * Fields not stored in `wint.stories` use YAML frontmatter as fallback:
- * - `phase` — for section grouping
- * - `risk_notes` — freeform risk description
- * - `feature` — long narrative feature description
- * - `infrastructure` — list of infrastructure components
+ * ## Performance
  *
- * YAML fallback is fail-soft: if StoryFileAdapter.read() throws, the story
- * is rendered with `—` for missing fields and a warning is logged.
- *
- * ## AC-13: STORY_STATE_ENUM
- *
- * Values confirmed from: SELECT unnest(enum_range(NULL::wint.story_state))
- * Source: apps/api/knowledge-base/src/db/migrations/002_workflow_tables.sql
+ * All stories are fetched in a single `SELECT * FROM wint.stories ORDER BY story_id ASC`.
+ * YAML files are read on-demand and cached in memory to avoid redundant I/O.
  *
  * Story: WINT-1070
  */
 
 import { promises as fs, existsSync } from 'node:fs'
 import path from 'node:path'
-import os from 'node:os'
 import { z } from 'zod'
 import { Pool } from 'pg'
 import { logger } from '@repo/logger'
 import { StoryFileAdapter } from '../adapters/story-file-adapter.js'
-import { ValidationError, StoryNotFoundError } from '../adapters/__types__/index.js'
-import { createStoryRepository } from '../db/story-repository.js'
-import { StoryRowSchema, type StoryRow } from '../__types__/index.js'
+import { writeFileAtomic } from '../adapters/utils/file-utils.js'
+import { StoryRepository } from '../db/story-repository.js'
+import type { StoryRow } from '../__types__/index.js'
 import {
-  STORY_STATE_ENUM,
   STATE_TO_DISPLAY_LABEL,
   FIELD_SOURCE_MAP,
   IndexFrontmatterSchema,
-  GenerationReportSchema,
   StorySectionSchema,
-  type IndexFrontmatter,
-  type StorySection,
-  type YamlFallbackData,
-  type GenerationReport,
+  SkippedStorySchema,
+  FieldSourceBreakdownSchema,
+  GenerationReportSchema,
   type StoryStateEnum,
+  type StorySection,
+  type SkippedStory,
+  type FieldSourceBreakdown,
+  type GenerationReport,
+  type IndexFrontmatter,
 } from './__types__/generation.js'
-
-// ============================================================================
-// AC-13: STORY_STATE_ENUM — authoritative DB enum values
-// Confirmed from: SELECT unnest(enum_range(NULL::wint.story_state))
-// Source: apps/api/knowledge-base/src/db/migrations/002_workflow_tables.sql
-// ============================================================================
-// Re-exported for documentation completeness; defined in generation.ts
-export { STORY_STATE_ENUM, STATE_TO_DISPLAY_LABEL, FIELD_SOURCE_MAP }
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const MONOREPO_ROOT = findMonorepoRoot()
-const WINT_INDEX_PATH = path.join(MONOREPO_ROOT, 'plans/future/platform/wint/stories.index.md')
-const WINT_STORIES_DIR = path.join(MONOREPO_ROOT, 'plans/future/platform/wint')
-
 /**
- * Find monorepo root by looking for pnpm-workspace.yaml
+ * Find monorepo root by walking up directory tree looking for pnpm-workspace.yaml.
  */
-export function findMonorepoRoot(): string {
+function findMonorepoRoot(): string {
   let current = process.cwd()
   while (current !== '/') {
     if (existsSync(path.join(current, 'pnpm-workspace.yaml'))) {
@@ -104,17 +87,28 @@ export function findMonorepoRoot(): string {
   throw new Error('Could not find monorepo root (pnpm-workspace.yaml not found)')
 }
 
+const MONOREPO_ROOT = findMonorepoRoot()
+const WINT_PLANS_DIR = path.join(MONOREPO_ROOT, 'plans/future/platform/wint')
+const STORIES_INDEX_PATH = path.join(WINT_PLANS_DIR, 'stories.index.md')
+const STORIES_INDEX_PREVIEW_PATH = path.join(WINT_PLANS_DIR, 'stories-index-preview.md')
+const GENERATION_REPORT_PATH = path.join(WINT_PLANS_DIR, 'generation-report.json')
+
 /**
- * Create database connection pool
+ * Phase ranges for grouping stories by phase number extracted from story ID.
+ * Phase is encoded in the story ID: WINT-{phase}{story}{variant}
+ * e.g., WINT-1070 → phase 1 (first digit of 4-digit suffix)
  */
-export function createDbPool(): Pool {
-  return new Pool({
-    host: process.env.POSTGRES_HOST || 'localhost',
-    port: parseInt(process.env.POSTGRES_PORT || '5432'),
-    database: process.env.POSTGRES_DATABASE || 'postgres',
-    user: process.env.POSTGRES_USER || 'postgres',
-    password: process.env.POSTGRES_PASSWORD || 'postgres',
-  })
+const PHASE_LABELS: Record<string, string> = {
+  '0': 'Phase 0: Bootstrap',
+  '1': 'Phase 1: Foundation',
+  '2': 'Phase 2: Core Features',
+  '3': 'Phase 3: Advanced Features',
+  '4': 'Phase 4: Agents',
+  '5': 'Phase 5: Monitoring',
+  '6': 'Phase 6: Scaling',
+  '7': 'Phase 7: Ops & Tooling',
+  '8': 'Phase 8: Advanced ML',
+  '9': 'Phase 9: Future',
 }
 
 // ============================================================================
@@ -126,6 +120,9 @@ const CliOptionsSchema = z.object({
 })
 type CliOptions = z.infer<typeof CliOptionsSchema>
 
+/**
+ * Parse CLI arguments into CliOptions.
+ */
 export function parseArgs(): CliOptions {
   const args = process.argv.slice(2)
   const mode = args.includes('--generate')
@@ -137,121 +134,149 @@ export function parseArgs(): CliOptions {
 }
 
 // ============================================================================
-// Pure Rendering Functions (AC-3, AC-4, AC-5, AC-6)
+// Database Connection
 // ============================================================================
 
 /**
- * Group stories by phase (from YAML fallback data), sorted by story ID.
- * Stories without a phase are placed in a special "unphased" group.
+ * Create a PostgreSQL connection pool.
+ */
+function createDbPool(): Pool {
+  return new Pool({
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: parseInt(process.env.POSTGRES_PORT || '5432'),
+    database: process.env.POSTGRES_DATABASE || 'postgres',
+    user: process.env.POSTGRES_USER || 'postgres',
+    password: process.env.POSTGRES_PASSWORD || 'postgres',
+  })
+}
+
+// ============================================================================
+// Pure Rendering Functions (exported for testing)
+// ============================================================================
+
+/**
+ * Extract the phase digit from a story ID.
+ * WINT-1070 → "1" (first digit of the 4-digit suffix)
+ * WINT-0010 → "0"
+ *
+ * Returns null if the story ID does not match the expected pattern.
+ */
+export function extractPhaseFromStoryId(storyId: string): string | null {
+  const match = storyId.match(/^[A-Z]+-(\d)\d{3}[A-Z]?$/)
+  return match ? match[1] : null
+}
+
+/**
+ * Group StorySection[] by phase (extracted from story_id).
+ * Stories with unrecognized phase are grouped under "unknown".
+ *
+ * Returns a Map<phaseKey, StorySection[]> ordered by phase key.
  */
 export function groupStoriesByPhase(sections: StorySection[]): Map<string, StorySection[]> {
   const groups = new Map<string, StorySection[]>()
 
   for (const section of sections) {
-    const phaseKey =
-      section.phase !== null && section.phase !== undefined ? String(section.phase) : 'unphased'
-
-    const existing = groups.get(phaseKey) || []
+    const phase = extractPhaseFromStoryId(section.story_id) ?? 'unknown'
+    const existing = groups.get(phase) ?? []
     existing.push(section)
-    groups.set(phaseKey, existing)
+    groups.set(phase, existing)
   }
 
-  // Sort within each phase by story_id ascending
-  for (const [, storiesInPhase] of groups) {
-    storiesInPhase.sort((a, b) => a.story_id.localeCompare(b.story_id))
-  }
-
-  // Sort the map by phase number (numeric phases first, then "unphased")
-  const sortedGroups = new Map<string, StorySection[]>()
-  const phaseKeys = Array.from(groups.keys()).sort((a, b) => {
-    if (a === 'unphased') return 1
-    if (b === 'unphased') return -1
-    const numA = parseFloat(a)
-    const numB = parseFloat(b)
-    if (!isNaN(numA) && !isNaN(numB)) return numA - numB
-    return a.localeCompare(b)
-  })
-
-  for (const key of phaseKeys) {
-    sortedGroups.set(key, groups.get(key)!)
-  }
-
-  return sortedGroups
+  // Sort by phase key
+  return new Map([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)))
 }
 
 /**
- * Compute progress summary: count of stories per state (AC-4)
- * All enum values are included even if count is 0.
+ * Compute the progress summary: count of stories per display label.
+ * Only includes states that have at least one story.
+ *
+ * Returns an array of [displayLabel, count] pairs ordered by count desc.
  */
-export function computeProgressSummary(stories: StoryRow[]): Record<StoryStateEnum, number> {
-  const counts: Record<string, number> = {}
+export function computeProgressSummary(rows: StoryRow[]): Array<{ label: string; count: number }> {
+  const counts = new Map<string, number>()
 
-  // Initialize all enum values to 0
-  for (const state of STORY_STATE_ENUM) {
-    counts[state] = 0
+  for (const row of rows) {
+    const label = STATE_TO_DISPLAY_LABEL[row.state as StoryStateEnum] ?? row.state
+    counts.set(label, (counts.get(label) ?? 0) + 1)
   }
 
-  for (const story of stories) {
-    const state = story.state as string
-    if (state in counts) {
-      counts[state]++
-    } else {
-      // Unknown state — still count it
-      counts[state] = (counts[state] || 0) + 1
-    }
-  }
-
-  return counts as Record<StoryStateEnum, number>
+  return [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
 }
 
 /**
- * Compute ready-to-start stories (AC-5):
- * Stories in 'ready-to-work' state where all depends_on entries are
- * in 'done' or 'uat' state. Partial dependency satisfaction does NOT trigger inclusion.
+ * Determine which stories are "ready to start":
+ * stories whose ALL depends_on are in 'done' or 'in_qa' (UAT) states,
+ * AND whose own state is 'ready_to_work'.
+ *
+ * Returns story_ids that are ready to start.
  */
-export function computeReadyToStart(stories: StoryRow[]): StoryRow[] {
-  // Build state map: story_id -> state
+export function computeReadyToStart(rows: StoryRow[]): StoryRow[] {
+  // DB stores underscore format (ready_to_work, in_qa, done)
+  // StoryRow.state is typed with hyphenated enum but actual DB values use underscores
+  const doneStates = new Set<string>(['done', 'in_qa'])
   const stateMap = new Map<string, string>()
-  for (const story of stories) {
-    stateMap.set(story.story_id, story.state as string)
+
+  for (const row of rows) {
+    stateMap.set(row.story_id, row.state as string)
   }
 
-  return stories.filter(story => {
-    // Must be in ready-to-work state
-    if ((story.state as string) !== 'ready-to-work') return false
-
-    // No dependencies → included (unblocked)
-    const deps = story.depends_on
-    if (!deps || deps.length === 0) return true
-
-    // ALL dependencies must be done or uat
+  return rows.filter(row => {
+    // Cast to string for comparison since DB uses underscore format
+    const rowState = row.state as string
+    if (rowState !== 'ready_to_work') return false
+    const deps = row.depends_on ?? []
+    if (deps.length === 0) return true
     return deps.every(depId => {
       const depState = stateMap.get(depId)
-      return depState === 'done' || depState === 'uat'
+      return depState !== undefined && doneStates.has(depState)
     })
   })
 }
 
 /**
- * Render the YAML frontmatter block (AC-3)
- * created_at is preserved from original file, updated_at reflects generation time.
+ * Render a single story section as a Markdown string.
+ * Missing optional fields render as "—".
+ *
+ * AC-6: All section headers rendered: Status, Depends On, Phase, Feature,
+ * Infrastructure, Goal, Risk Notes.
  */
-export function renderFrontmatter(meta: {
-  title: string
-  story_prefix: string
-  created_at: string
-  updated_at: string
-}): string {
-  const frontmatter: IndexFrontmatter = {
-    doc_type: 'stories_index',
-    title: meta.title,
-    status: 'generated',
-    story_prefix: meta.story_prefix,
-    created_at: meta.created_at,
-    updated_at: meta.updated_at,
-    generated_by: 'generate-stories-index.ts',
-  }
+export function renderStorySection(section: StorySection): string {
+  const dependsOn = section.depends_on.length > 0 ? section.depends_on.join(', ') : 'none'
+  const phase = section.phase !== null && section.phase !== undefined ? String(section.phase) : '—'
+  const feature = section.feature ?? '—'
+  const infrastructure = section.infrastructure ?? '—'
+  const goal = section.goal ?? '—'
+  const riskNotes = section.risk_notes ?? '—'
 
+  const lines: string[] = [
+    `### ${section.story_id}: ${section.title}`,
+    '',
+    `**Status:** ${section.status}`,
+    `**Depends On:** ${dependsOn}`,
+    `**Phase:** ${phase}`,
+    `**Feature:** ${feature}`,
+    '**Infrastructure:**',
+    `- ${infrastructure}`,
+    '',
+    `**Goal:** ${goal}`,
+    '',
+    `**Risk Notes:** ${riskNotes}`,
+    '',
+    '---',
+  ]
+
+  return lines.join('\n')
+}
+
+/**
+ * Render the YAML frontmatter block for the generated stories.index.md.
+ *
+ * AC-3: Generated frontmatter passes z.parse(IndexFrontmatterSchema).
+ * AC-10: generated_by field present; DO NOT EDIT warning follows closing ---.
+ */
+export function renderFrontmatter(frontmatter: IndexFrontmatter): string {
   // Validate before rendering
   IndexFrontmatterSchema.parse(frontmatter)
 
@@ -261,250 +286,135 @@ export function renderFrontmatter(meta: {
     `title: "${frontmatter.title}"`,
     `status: ${frontmatter.status}`,
     `story_prefix: "${frontmatter.story_prefix}"`,
-    `created_at: "${frontmatter.created_at}"`,
-    `updated_at: "${frontmatter.updated_at}"`,
-    `generated_by: ${frontmatter.generated_by}`,
+    `generated_at: "${frontmatter.generated_at}"`,
+    `generated_by: "${frontmatter.generated_by}"`,
+    `story_count: ${frontmatter.story_count}`,
     '---',
+    '<!-- DO NOT EDIT: This file is auto-generated by generate-stories-index.ts -->',
+    '<!-- Run `npx tsx generate-stories-index.ts --generate` to regenerate -->',
   ].join('\n')
 }
 
 /**
- * Render the Progress Summary table (AC-4)
- * Uses STATE_TO_DISPLAY_LABEL to convert DB enum values to display labels.
+ * Render the Progress Summary table as a Markdown string.
+ *
+ * AC-4: Table counts match DB state distribution.
  */
-export function renderProgressTable(summary: Record<string, number>): string {
-  const lines: string[] = ['## Progress Summary', '', '| Status | Count |', '|--------|-------|']
-
-  for (const state of STORY_STATE_ENUM) {
-    const label = STATE_TO_DISPLAY_LABEL[state] || state
-    const count = summary[state] ?? 0
-    lines.push(`| ${label} | ${count} |`)
-  }
-
-  return lines.join('\n')
+export function renderProgressTable(summary: Array<{ label: string; count: number }>): string {
+  const rows = summary.map(({ label, count }) => `| ${label} | ${count} |`).join('\n')
+  return ['## Progress Summary', '', '| Status | Count |', '|--------|-------|', rows].join('\n')
 }
 
 /**
- * Render the Ready to Start table (AC-5)
+ * Render the "Ready to Start" table as a Markdown string.
+ *
+ * AC-5: Only stories with all deps in done/in_qa and own state ready_to_work.
  */
-export function renderReadyToStartTable(
-  readyStories: StoryRow[],
-  sections: StorySection[],
-): string {
-  const sectionMap = new Map(sections.map(s => [s.story_id, s]))
+export function renderReadyToStartTable(readyRows: StoryRow[]): string {
+  if (readyRows.length === 0) {
+    return [
+      '## Ready to Start',
+      '',
+      'Stories with all dependencies satisfied (can be worked in parallel):',
+      '',
+      '_No stories are currently ready to start._',
+    ].join('\n')
+  }
 
-  const lines: string[] = [
+  const tableRows = readyRows.map(row => `| ${row.story_id} | ${row.title} | — |`).join('\n')
+
+  return [
     '## Ready to Start',
     '',
     'Stories with all dependencies satisfied (can be worked in parallel):',
     '',
     '| Story | Feature | Blocked By |',
     '|-------|---------|------------|',
-  ]
-
-  if (readyStories.length === 0) {
-    lines.push('| — | — | — |')
-  } else {
-    for (const story of readyStories) {
-      const section = sectionMap.get(story.story_id)
-      const feature = section?.feature || story.title || '—'
-      lines.push(`| ${story.story_id} | ${feature} | — |`)
-    }
-  }
-
-  return lines.join('\n')
-}
-
-/**
- * Render a single story section (AC-6)
- * Fields absent from both DB and YAML render as `—`.
- */
-export function renderStorySection(section: StorySection): string {
-  const displayState = STATE_TO_DISPLAY_LABEL[section.state as StoryStateEnum] || section.state
-  const dependsOnStr =
-    section.depends_on && section.depends_on.length > 0 ? section.depends_on.join(', ') : 'none'
-  const phaseStr =
-    section.phase !== null && section.phase !== undefined ? String(section.phase) : '—'
-  const featureStr = section.feature || '—'
-  const goalStr = section.goal || '—'
-  const riskNotesStr = section.risk_notes || '—'
-
-  const lines: string[] = [
-    `### ${section.story_id}: ${section.title}`,
-    '',
-    `**Status:** ${displayState}`,
-    `**Depends On:** ${dependsOnStr}`,
-    `**Phase:** ${phaseStr}`,
-    `**Feature:** ${featureStr}`,
-  ]
-
-  // Infrastructure (list or dash)
-  if (section.infrastructure && section.infrastructure.length > 0) {
-    lines.push('**Infrastructure:**')
-    for (const item of section.infrastructure) {
-      lines.push(`- ${item}`)
-    }
-  } else {
-    lines.push('**Infrastructure:** —')
-  }
-
-  lines.push('')
-  lines.push(`**Goal:** ${goalStr}`)
-  lines.push('')
-  lines.push(`**Risk Notes:** ${riskNotesStr}`)
-
-  return lines.join('\n')
+    tableRows,
+  ].join('\n')
 }
 
 // ============================================================================
-// Phase Header Generation
-// ============================================================================
-
-export const PHASE_DESCRIPTIONS: Record<string, string> = {
-  '0': 'Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infrastructure (untracked, prerequisite for all other phases)',
-}
-
-/**
- * Generate phase section header with optional description.
- * Used in renderFullIndex to label phase sections.
- */
-export function getPhaseHeader(phase: string): string {
-  if (phase === 'unphased') {
-    return '## Unphased Stories\n\nStories without a phase assignment.'
-  }
-  const desc = PHASE_DESCRIPTIONS[phase]
-  const header = `## Phase ${phase}:`
-  return desc ? `${header} ${desc}` : header
-}
-
-// ============================================================================
-// Full Index Rendering
+// YAML Fallback Reading
 // ============================================================================
 
 /**
- * Render the complete stories.index.md content from sections.
- * Implements AC-10: DO NOT EDIT warning immediately after frontmatter.
+ * Read YAML fallback fields (phase, feature, infrastructure, risk_notes) from a story file.
+ * Returns null for any field that cannot be read.
+ *
+ * Fail-soft: if the file cannot be read, returns all-null fallback.
  */
-export function renderFullIndex(
-  frontmatter: string,
-  progressTable: string,
-  readyToStartTable: string,
-  groupedSections: Map<string, StorySection[]>,
-  phaseDescriptions: Map<string, string>,
-): string {
-  const parts: string[] = []
+async function readYamlFallback(
+  storyId: string,
+  adapter: StoryFileAdapter,
+  cache: Map<string, Record<string, unknown>>,
+): Promise<{ phase: unknown; feature: unknown; infrastructure: unknown; risk_notes: unknown }> {
+  const empty = { phase: null, feature: null, infrastructure: null, risk_notes: null }
 
-  // Frontmatter
-  parts.push(frontmatter)
-  parts.push('')
-
-  // DO NOT EDIT warning (AC-10)
-  parts.push(
-    '<!-- DO NOT EDIT: This file is generated by generate-stories-index.ts. Manual edits will be overwritten. -->',
-  )
-  parts.push('')
-
-  // Title and intro
-  parts.push('# WINT Stories Index')
-  parts.push('')
-  parts.push(
-    'All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Phase 1, Story 01, original).',
-  )
-  parts.push('')
-
-  // Progress Summary
-  parts.push(progressTable)
-  parts.push('')
-  parts.push('---')
-  parts.push('')
-
-  // Ready to Start
-  parts.push(readyToStartTable)
-  parts.push('')
-  parts.push('---')
-  parts.push('')
-
-  // Phase sections
-  for (const [phase, stories] of groupedSections) {
-    const phaseDesc = phaseDescriptions.get(phase)
-    const phaseNum = phase === 'unphased' ? null : parseInt(phase, 10)
-    const phaseLabel = phaseNum !== null && !isNaN(phaseNum) ? phaseNum : phase
-
-    if (phase === 'unphased') {
-      parts.push('## Unphased Stories')
-      parts.push('')
-      parts.push('Stories without a phase assignment.')
-    } else {
-      const phaseHeader = `## Phase ${phaseLabel}:`
-      if (phaseDesc) {
-        parts.push(`${phaseHeader} ${phaseDesc}`)
-      } else {
-        parts.push(phaseHeader)
-      }
-    }
-    parts.push('')
-
-    for (const section of stories) {
-      parts.push(renderStorySection(section))
-      parts.push('')
-      parts.push('---')
-      parts.push('')
+  if (cache.has(storyId)) {
+    const cached = cache.get(storyId)!
+    return {
+      phase: cached['phase'] ?? null,
+      feature: cached['feature'] ?? null,
+      infrastructure: cached['infrastructure'] ?? null,
+      risk_notes: cached['risk_notes'] ?? null,
     }
   }
 
-  return parts.join('\n')
-}
-
-// ============================================================================
-// Atomic File Write
-// ============================================================================
-
-/**
- * Write content to a file atomically using temp file + rename pattern.
- * Prevents partial writes on large files (143+ stories).
- */
-export async function writeFileAtomic(filePath: string, content: string): Promise<void> {
-  const tmpPath = path.join(os.tmpdir(), `stories-index-${Date.now()}.tmp`)
+  // Search for story file in the wint plans directory
+  const storyFilePath = findStoryFilePath(storyId)
+  if (!storyFilePath) {
+    logger.warn('YAML fallback: story file not found', { storyId })
+    cache.set(storyId, {})
+    return empty
+  }
 
   try {
-    await fs.writeFile(tmpPath, content, 'utf8')
-    await fs.rename(tmpPath, filePath)
-  } catch (error) {
-    // Clean up temp file on error
-    try {
-      await fs.unlink(tmpPath)
-    } catch {
-      // Ignore cleanup errors
+    const story = await adapter.read(storyFilePath)
+    const storyData = story as Record<string, unknown>
+    const data: Record<string, unknown> = {
+      phase: storyData['phase'] ?? null,
+      feature: storyData['feature'] ?? null,
+      infrastructure: storyData['infrastructure'] ?? null,
+      risk_notes: storyData['risk_notes'] ?? null,
     }
-    throw error
+    cache.set(storyId, data)
+    return {
+      phase: data['phase'] ?? null,
+      feature: data['feature'] ?? null,
+      infrastructure: data['infrastructure'] ?? null,
+      risk_notes: data['risk_notes'] ?? null,
+    }
+  } catch (error) {
+    logger.warn('YAML fallback: failed to read story file', {
+      storyId,
+      storyFilePath,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    cache.set(storyId, {})
+    return empty
   }
 }
 
-// ============================================================================
-// YAML Fallback Resolution
-// ============================================================================
-
 /**
- * Resolve a story file path from the monorepo wint stories directory.
- * Searches lifecycle subdirectories and root.
+ * Search for a story file path by story ID under the wint plans directory.
+ * Looks in common locations without recursive scan for performance.
  */
-export function resolveStoryFilePath(storyId: string, storiesDir: string): string | null {
-  const lifecycleDirs = [
-    'in-progress',
-    'ready-to-work',
-    'ready-for-qa',
-    'UAT',
-    'backlog',
-    'elaboration',
-    'needs-code-review',
-    '',
+function findStoryFilePath(storyId: string): string | null {
+  // Common directory patterns post-WINT-1020 flatten
+  const candidates = [
+    path.join(WINT_PLANS_DIR, 'in-progress', storyId, `${storyId}.md`),
+    path.join(WINT_PLANS_DIR, 'ready-to-work', storyId, `${storyId}.md`),
+    path.join(WINT_PLANS_DIR, 'ready-for-qa', storyId, `${storyId}.md`),
+    path.join(WINT_PLANS_DIR, 'UAT', storyId, `${storyId}.md`),
+    path.join(WINT_PLANS_DIR, 'done', storyId, `${storyId}.md`),
+    path.join(WINT_PLANS_DIR, 'backlog', storyId, `${storyId}.md`),
+    path.join(WINT_PLANS_DIR, storyId, `${storyId}.md`),
+    // New flat structure (post WINT-1020)
+    path.join(WINT_PLANS_DIR, 'in-progress', storyId, `${storyId}.md`),
   ]
 
-  for (const subdir of lifecycleDirs) {
-    const candidate = subdir
-      ? path.join(storiesDir, subdir, storyId, `${storyId}.md`)
-      : path.join(storiesDir, storyId, `${storyId}.md`)
-
+  for (const candidate of candidates) {
     if (existsSync(candidate)) {
       return candidate
     }
@@ -513,453 +423,411 @@ export function resolveStoryFilePath(storyId: string, storiesDir: string): strin
   return null
 }
 
+// ============================================================================
+// Story Section Building (DB + YAML hybrid)
+// ============================================================================
+
 /**
- * Read YAML fallback data for a story.
- * Returns null if the story file cannot be found or parsed.
- * Fail-soft: logs warning and returns null on any error.
+ * Build a StorySection from a DB row with YAML fallback for supplemental fields.
  */
-export async function readYamlFallback(
-  storyId: string,
+async function buildStorySection(
+  row: StoryRow,
   adapter: StoryFileAdapter,
-  storiesDir: string,
-  cache: Map<string, YamlFallbackData | null>,
-): Promise<YamlFallbackData | null> {
-  // Check cache first (no double-reads)
-  if (cache.has(storyId)) {
-    return cache.get(storyId) ?? null
-  }
-
-  const filePath = resolveStoryFilePath(storyId, storiesDir)
-
-  if (!filePath) {
-    logger.warn('Story YAML file not found for YAML fallback', { storyId })
-    cache.set(storyId, null)
-    return null
-  }
-
+  yamlCache: Map<string, Record<string, unknown>>,
+  skipped: SkippedStory[],
+): Promise<StorySection | null> {
   try {
-    const story = await adapter.read(filePath)
+    const displayLabel = STATE_TO_DISPLAY_LABEL[row.state as StoryStateEnum] ?? row.state
 
-    const fallback: YamlFallbackData = {
-      phase: (story as any).phase ?? null,
-      risk_notes: (story as any).risk_notes ?? null,
-      feature: (story as any).feature ?? null,
-      infrastructure: (story as any).infrastructure ?? null,
-    }
+    // Fetch YAML fallback for supplemental fields
+    const yamlFallback = await readYamlFallback(row.story_id, adapter, yamlCache)
 
-    cache.set(storyId, fallback)
-    return fallback
+    const section = StorySectionSchema.parse({
+      story_id: row.story_id,
+      title: row.title,
+      status: displayLabel,
+      state: row.state,
+      depends_on: row.depends_on ?? [],
+      phase: yamlFallback.phase ?? null,
+      feature: typeof yamlFallback.feature === 'string' ? yamlFallback.feature : null,
+      infrastructure:
+        typeof yamlFallback.infrastructure === 'string' ? yamlFallback.infrastructure : null,
+      goal: row.goal ?? null,
+      risk_notes: typeof yamlFallback.risk_notes === 'string' ? yamlFallback.risk_notes : null,
+    })
+
+    return section
   } catch (error) {
-    if (error instanceof StoryNotFoundError || error instanceof ValidationError) {
-      logger.warn('Failed to read story YAML for fallback', {
-        storyId,
-        filePath,
-        error: (error as Error).message,
-      })
-    } else {
-      logger.warn('Unexpected error reading story YAML', {
-        storyId,
-        filePath,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
-    cache.set(storyId, null)
-    return null
-  }
-}
-
-// ============================================================================
-// Section Building
-// ============================================================================
-
-/**
- * Build a StorySection from a DB row and optional YAML fallback data.
- */
-export function buildStorySection(row: StoryRow, yaml: YamlFallbackData | null): StorySection {
-  const fieldSources: Record<string, 'db' | 'yaml_fallback' | 'computed' | 'missing'> = {
-    state: 'db',
-    title: 'db',
-    goal: row.goal ? 'db' : 'missing',
-    depends_on: 'db',
-    phase: yaml?.phase !== undefined && yaml?.phase !== null ? 'yaml_fallback' : 'missing',
-    risk_notes: yaml?.risk_notes ? 'yaml_fallback' : 'missing',
-    feature: yaml?.feature ? 'yaml_fallback' : 'missing',
-    infrastructure:
-      yaml?.infrastructure && yaml.infrastructure.length > 0 ? 'yaml_fallback' : 'missing',
-  }
-
-  return {
-    story_id: row.story_id,
-    title: row.title,
-    state: row.state as string,
-    depends_on: row.depends_on ?? null,
-    phase: yaml?.phase ?? null,
-    feature: yaml?.feature ?? null,
-    infrastructure: yaml?.infrastructure ?? null,
-    goal: row.goal ?? null,
-    risk_notes: yaml?.risk_notes ?? null,
-    field_sources: fieldSources,
-  }
-}
-
-// ============================================================================
-// Preserved created_at extraction
-// ============================================================================
-
-/**
- * Extract created_at from existing stories.index.md frontmatter.
- * Returns null if file doesn't exist or created_at is not found.
- */
-export async function extractCreatedAt(indexPath: string): Promise<string | null> {
-  try {
-    const content = await fs.readFile(indexPath, 'utf8')
-    const match = content.match(/^created_at:\s*"?([^"\n]+)"?/m)
-    if (match) {
-      return match[1].trim()
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-// ============================================================================
-// Verify Mode (AC-8)
-// ============================================================================
-
-/**
- * Compare two strings line by line and return a diff summary.
- * Uses inline implementation — no external 'diff' npm package.
- */
-export function compareLineByLine(
-  actual: string,
-  expected: string,
-): { identical: boolean; diffLines: string[]; addedCount: number; removedCount: number } {
-  const actualLines = actual.split('\n')
-  const expectedLines = expected.split('\n')
-
-  const diffLines: string[] = []
-  let addedCount = 0
-  let removedCount = 0
-
-  const maxLen = Math.max(actualLines.length, expectedLines.length)
-
-  for (let i = 0; i < maxLen; i++) {
-    const actualLine = actualLines[i]
-    const expectedLine = expectedLines[i]
-
-    if (actualLine === undefined) {
-      diffLines.push(`+ [line ${i + 1}] ${expectedLine}`)
-      addedCount++
-    } else if (expectedLine === undefined) {
-      diffLines.push(`- [line ${i + 1}] ${actualLine}`)
-      removedCount++
-    } else if (actualLine !== expectedLine) {
-      diffLines.push(`- [line ${i + 1}] ${actualLine}`)
-      diffLines.push(`+ [line ${i + 1}] ${expectedLine}`)
-      addedCount++
-      removedCount++
-    }
-  }
-
-  return {
-    identical: diffLines.length === 0,
-    diffLines,
-    addedCount,
-    removedCount,
-  }
-}
-
-// ============================================================================
-// Core Generation Pipeline
-// ============================================================================
-
-export const GenerationResultSchema = z.object({
-  content: z.string(),
-  sections: z.array(StorySectionSchema),
-  stories: z.array(StoryRowSchema),
-  report: GenerationReportSchema.omit({ output_path: true }),
-})
-
-export type GenerationResult = z.infer<typeof GenerationResultSchema>
-
-/**
- * Run the full generation pipeline: fetch from DB, YAML fallback, render.
- */
-export async function runGenerationPipeline(
-  pool: Pool,
-  adapter: StoryFileAdapter,
-  storiesDir: string,
-  createdAt: string,
-): Promise<GenerationResult> {
-  const startTime = Date.now()
-
-  // Fetch all stories from DB
-  const repo = createStoryRepository(pool)
-  const stories = await repo.getAllStories()
-
-  logger.info('Fetched stories from DB', { count: stories.length })
-
-  // Build sections with YAML fallback (AC-2)
-  const yamlCache = new Map<string, YamlFallbackData | null>()
-  const sections: StorySection[] = []
-  const skippedStories: GenerationReport['skipped_stories'] = []
-
-  let storiesWithYamlFallback = 0
-  let storiesDbOnly = 0
-
-  for (const row of stories) {
-    try {
-      const yaml = await readYamlFallback(row.story_id, adapter, storiesDir, yamlCache)
-
-      if (yaml !== null) {
-        storiesWithYamlFallback++
-      } else {
-        storiesDbOnly++
-      }
-
-      const section = buildStorySection(row, yaml)
-      sections.push(section)
-    } catch (error) {
-      logger.warn('Failed to build section for story', {
-        storyId: row.story_id,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      skippedStories.push({
+    const reason = error instanceof Error ? error.message : String(error)
+    logger.warn('Failed to build story section, skipping', { storyId: row.story_id, reason })
+    skipped.push(
+      SkippedStorySchema.parse({
         story_id: row.story_id,
-        reason: 'Failed to build section',
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
+        reason: 'Failed to build story section',
+        error: reason,
+      }),
+    )
+    return null
   }
+}
 
-  // Compute summaries
-  const progressSummary = computeProgressSummary(stories)
-  const readyToStart = computeReadyToStart(stories)
+// ============================================================================
+// Index Document Generation
+// ============================================================================
 
-  // Group by phase
-  const groupedSections = groupStoriesByPhase(sections)
+/**
+ * Generate the full stories.index.md content as a string.
+ */
+async function generateIndexContent(
+  rows: StoryRow[],
+  adapter: StoryFileAdapter,
+): Promise<{ content: string; report: GenerationReport; skipped: SkippedStory[] }> {
+  const startTime = Date.now()
+  const skipped: SkippedStory[] = []
+  const yamlCache = new Map<string, Record<string, unknown>>()
 
-  // Build phase descriptions from YAML
-  const phaseDescriptions = new Map<string, string>()
-  // Extract phase descriptions from sections (use first story's YAML if available)
-  // Default descriptions for known phases
-  phaseDescriptions.set(
-    '0',
-    'Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infrastructure (untracked, prerequisite for all other phases)',
+  // Build all story sections
+  const sectionResults = await Promise.all(
+    rows.map(row => buildStorySection(row, adapter, yamlCache, skipped)),
   )
+  const sections = sectionResults.filter((s): s is StorySection => s !== null)
 
-  // Render components
-  const updatedAt = new Date().toISOString()
-  const frontmatterStr = renderFrontmatter({
+  // Compute progress summary
+  const progressSummary = computeProgressSummary(rows)
+
+  // Compute ready-to-start stories
+  const readyRows = computeReadyToStart(rows)
+
+  // Group sections by phase
+  const phaseGroups = groupStoriesByPhase(sections)
+
+  // Build frontmatter
+  const frontmatter: IndexFrontmatter = IndexFrontmatterSchema.parse({
+    doc_type: 'stories_index',
     title: 'WINT Stories Index',
+    status: 'generated',
     story_prefix: 'WINT',
-    created_at: createdAt,
-    updated_at: updatedAt,
+    generated_at: new Date().toISOString(),
+    generated_by: 'generate-stories-index.ts',
+    story_count: sections.length,
   })
 
-  const progressTableStr = renderProgressTable(progressSummary)
-  const readyToStartTableStr = renderReadyToStartTable(readyToStart, sections)
-  const fullContent = renderFullIndex(
-    frontmatterStr,
-    progressTableStr,
-    readyToStartTableStr,
-    groupedSections,
-    phaseDescriptions,
+  // Render document parts
+  const parts: string[] = []
+
+  // Frontmatter block
+  parts.push(renderFrontmatter(frontmatter))
+  parts.push('')
+
+  // Document title
+  parts.push('# WINT Stories Index')
+  parts.push('')
+  parts.push(
+    'All stories use `WINT-{phase}{story}{variant}` format ' +
+      '(e.g., `WINT-1010` for Phase 1, Story 01, original).',
   )
+  parts.push('')
 
-  // Build report data
-  const storyCountByPhase: Record<string, number> = {}
-  for (const [phase, phaseStories] of groupedSections) {
-    storyCountByPhase[phase] = phaseStories.length
+  // Progress Summary
+  parts.push(renderProgressTable(progressSummary))
+  parts.push('')
+  parts.push('---')
+  parts.push('')
+
+  // Ready to Start
+  parts.push(renderReadyToStartTable(readyRows))
+  parts.push('')
+  parts.push('---')
+  parts.push('')
+
+  // Phase sections
+  for (const [phaseKey, phaseSections] of phaseGroups) {
+    const phaseLabel = PHASE_LABELS[phaseKey] ?? `Phase ${phaseKey}`
+    const phaseDescription = getPhaseDescription(phaseKey)
+
+    parts.push(`## ${phaseLabel}`)
+    parts.push('')
+    if (phaseDescription) {
+      parts.push(phaseDescription)
+      parts.push('')
+    }
+
+    for (const section of phaseSections) {
+      parts.push(renderStorySection(section))
+      parts.push('')
+    }
   }
 
-  const storyCountByStatus: Record<string, number> = {}
-  for (const [state, count] of Object.entries(progressSummary)) {
-    storyCountByStatus[state] = count
-  }
-
-  const fieldSourceBreakdown = {
-    db_fields: Object.keys(FIELD_SOURCE_MAP).filter(
-      k => FIELD_SOURCE_MAP[k as keyof typeof FIELD_SOURCE_MAP] === 'db',
-    ),
-    yaml_fallback_fields: Object.keys(FIELD_SOURCE_MAP).filter(
-      k => FIELD_SOURCE_MAP[k as keyof typeof FIELD_SOURCE_MAP] === 'yaml_fallback',
-    ),
-    computed_fields: Object.keys(FIELD_SOURCE_MAP).filter(
-      k => FIELD_SOURCE_MAP[k as keyof typeof FIELD_SOURCE_MAP] === 'computed',
-    ),
-    stories_with_yaml_fallback: storiesWithYamlFallback,
-    stories_db_only: storiesDbOnly,
-  }
-
+  const content = parts.join('\n')
   const durationMs = Date.now() - startTime
 
-  const reportData: Omit<GenerationReport, 'output_path'> = {
+  // Compute field source breakdown
+  const fieldSourceBreakdown = computeFieldSourceBreakdown(sections, yamlCache)
+
+  // Compute story count by phase
+  const storyCountByPhase: Record<string, number> = {}
+  for (const [phase, phaseSections] of phaseGroups) {
+    storyCountByPhase[phase] = phaseSections.length
+  }
+
+  // Compute story count by status
+  const storyCountByStatus: Record<string, number> = {}
+  for (const { label, count } of progressSummary) {
+    storyCountByStatus[label] = count
+  }
+
+  const reportData = GenerationReportSchema.parse({
     timestamp: new Date().toISOString(),
-    story_count: stories.length,
+    total_stories: sections.length,
     story_count_by_phase: storyCountByPhase,
     story_count_by_status: storyCountByStatus,
     field_source_breakdown: fieldSourceBreakdown,
-    skipped_stories: skippedStories,
+    skipped_stories: skipped,
     duration_ms: durationMs,
-  }
+    output_file: STORIES_INDEX_PATH,
+    mode: 'generate',
+  })
 
-  return {
-    content: fullContent,
-    sections,
-    stories,
-    report: reportData,
-  }
-}
-
-// ============================================================================
-// Main Operation Modes
-// ============================================================================
-
-/**
- * --generate mode: write stories.index.md and generation-report.json (AC-1, AC-7, AC-9)
- */
-export async function runGenerate(): Promise<void> {
-  logger.info('Running in --generate mode')
-
-  const pool = createDbPool()
-  const adapter = new StoryFileAdapter()
-
-  try {
-    // Preserve created_at from existing file (AC-3)
-    const existingCreatedAt = await extractCreatedAt(WINT_INDEX_PATH)
-    const createdAt = existingCreatedAt || new Date().toISOString()
-
-    const result = await runGenerationPipeline(pool, adapter, WINT_STORIES_DIR, createdAt)
-
-    // Atomic write (AC design requirement)
-    await writeFileAtomic(WINT_INDEX_PATH, result.content)
-    logger.info('Generated stories.index.md', { path: WINT_INDEX_PATH })
-
-    // Write generation report (AC-9)
-    const report: GenerationReport = {
-      ...result.report,
-      output_path: WINT_INDEX_PATH,
-    }
-
-    const validatedReport = GenerationReportSchema.parse(report)
-    const reportPath = path.join(process.cwd(), 'generation-report.json')
-    await fs.writeFile(reportPath, JSON.stringify(validatedReport, null, 2), 'utf8')
-    logger.info('Generation report written', { path: reportPath })
-  } finally {
-    await pool.end()
-  }
+  return { content, report: reportData, skipped }
 }
 
 /**
- * --dry-run mode: output generated content to stdout (AC-7)
- * Does NOT overwrite stories.index.md.
+ * Get a description for a phase key.
  */
-export async function runDryRun(): Promise<void> {
-  logger.info('Running in --dry-run mode')
-
-  const pool = createDbPool()
-  const adapter = new StoryFileAdapter()
-
-  try {
-    const existingCreatedAt = await extractCreatedAt(WINT_INDEX_PATH)
-    const createdAt = existingCreatedAt || new Date().toISOString()
-
-    const result = await runGenerationPipeline(pool, adapter, WINT_STORIES_DIR, createdAt)
-
-    // Output to stdout (dry-run: no file write)
-    process.stdout.write(result.content)
-    process.stdout.write('\n')
-
-    logger.info('Dry-run complete — no files written', {
-      storyCount: result.stories.length,
-    })
-  } finally {
-    await pool.end()
+function getPhaseDescription(phaseKey: string): string {
+  const descriptions: Record<string, string> = {
+    '0':
+      'Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infrastructure' +
+      ' (untracked, prerequisite for all other phases)',
+    '1': 'Foundation phase - Core platform infrastructure and developer experience',
+    '2': 'Core Features phase - Primary platform capabilities',
+    '3': 'Advanced Features phase - Enhanced platform capabilities',
+    '4': 'Agents phase - AI agent development and tooling',
+    '5': 'Monitoring phase - Observability and telemetry',
+    '6': 'Scaling phase - Performance and scale improvements',
+    '7': 'Ops & Tooling phase - Operational tooling and automation',
+    '8': 'Advanced ML phase - Machine learning integration',
+    '9': 'Future phase - Exploratory and experimental features',
   }
+  return descriptions[phaseKey] ?? ''
 }
 
 /**
- * --verify mode: compare current file with what would be generated (AC-8)
- * Exits 0 if identical, 1 if drift detected.
+ * Compute field source breakdown for the generation report.
  */
-export async function runVerify(): Promise<void> {
-  logger.info('Running in --verify mode')
+function computeFieldSourceBreakdown(
+  sections: StorySection[],
+  yamlCache: Map<string, Record<string, unknown>>,
+): FieldSourceBreakdown[] {
+  const yamlFields = ['phase', 'feature', 'infrastructure', 'risk_notes']
+  const breakdown: FieldSourceBreakdown[] = []
 
-  const pool = createDbPool()
-  const adapter = new StoryFileAdapter()
-
-  try {
-    // Read current file on disk
-    let currentContent: string
-    try {
-      currentContent = await fs.readFile(WINT_INDEX_PATH, 'utf8')
-    } catch (error) {
-      logger.error('Could not read stories.index.md for verify', {
-        path: WINT_INDEX_PATH,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      process.exit(1)
-      return
-    }
-
-    // Generate expected content
-    const existingCreatedAt = await extractCreatedAt(WINT_INDEX_PATH)
-    const createdAt = existingCreatedAt || new Date().toISOString()
-    const result = await runGenerationPipeline(pool, adapter, WINT_STORIES_DIR, createdAt)
-
-    // Line-by-line comparison (no external diff npm package — AC-8)
-    const diff = compareLineByLine(currentContent, result.content)
-
-    if (diff.identical) {
-      logger.info('Verify PASSED: stories.index.md matches generated output')
-      process.stdout.write('PASS: stories.index.md is up to date.\n')
-      process.exit(0)
-    } else {
-      logger.warn('Verify FAILED: stories.index.md has drifted', {
-        addedCount: diff.addedCount,
-        removedCount: diff.removedCount,
-      })
-
-      process.stdout.write('FAIL: stories.index.md has drifted from generated output.\n\n')
-      process.stdout.write(
-        `Lines changed: ${diff.addedCount} added, ${diff.removedCount} removed\n\n`,
+  for (const [field, source] of Object.entries(FIELD_SOURCE_MAP)) {
+    if (source === 'computed') {
+      breakdown.push(
+        FieldSourceBreakdownSchema.parse({
+          field,
+          source: 'computed',
+          count: sections.length,
+        }),
       )
-
-      // Print first 50 diff lines as summary
-      const preview = diff.diffLines.slice(0, 50)
-      for (const line of preview) {
-        process.stdout.write(`${line}\n`)
-      }
-
-      if (diff.diffLines.length > 50) {
-        process.stdout.write(`\n... and ${diff.diffLines.length - 50} more differences\n`)
-      }
-
-      process.exit(1)
+      continue
     }
-  } finally {
-    await pool.end()
+
+    if (source === 'db') {
+      breakdown.push(
+        FieldSourceBreakdownSchema.parse({
+          field,
+          source: 'db',
+          count: sections.length,
+        }),
+      )
+      continue
+    }
+
+    if (source === 'yaml_fallback' && yamlFields.includes(field)) {
+      let yamlCount = 0
+      for (const section of sections) {
+        const cached = yamlCache.get(section.story_id)
+        if (cached && cached[field] !== null && cached[field] !== undefined) {
+          yamlCount++
+        }
+      }
+      breakdown.push(
+        FieldSourceBreakdownSchema.parse({
+          field,
+          source: 'yaml_fallback',
+          count: yamlCount,
+        }),
+      )
+    }
+  }
+
+  return breakdown
+}
+
+// ============================================================================
+// Verify Mode: Inline Line-by-Line Diff
+// ============================================================================
+
+/**
+ * Compare two strings line-by-line and return a diff summary.
+ * Returns null if the strings are identical.
+ *
+ * AC-8: No diff package dependency — uses inline comparison.
+ */
+export function computeLineDiff(
+  expected: string,
+  actual: string,
+): { identical: boolean; diffLines: Array<{ lineNum: number; expected: string; actual: string }> } {
+  const expectedLines = expected.split('\n')
+  const actualLines = actual.split('\n')
+  const maxLen = Math.max(expectedLines.length, actualLines.length)
+  const diffLines: Array<{ lineNum: number; expected: string; actual: string }> = []
+
+  for (let i = 0; i < maxLen; i++) {
+    const exp = expectedLines[i] ?? '<missing>'
+    const act = actualLines[i] ?? '<missing>'
+    if (exp !== act) {
+      diffLines.push({ lineNum: i + 1, expected: exp, actual: act })
+    }
+  }
+
+  return { identical: diffLines.length === 0, diffLines }
+}
+
+/**
+ * Format a diff summary for display.
+ */
+export function formatDiffSummary(
+  diffLines: Array<{ lineNum: number; expected: string; actual: string }>,
+): string {
+  if (diffLines.length === 0) return 'No differences found.'
+  const preview = diffLines.slice(0, 10)
+  const lines = preview.map(
+    d =>
+      `  Line ${d.lineNum}:\n` +
+      `    expected: ${d.expected.substring(0, 120)}\n` +
+      `    actual:   ${d.actual.substring(0, 120)}`,
+  )
+  const suffix =
+    diffLines.length > 10 ? `\n  ... and ${diffLines.length - 10} more differences` : ''
+  return lines.join('\n') + suffix
+}
+
+// ============================================================================
+// Mode Handlers
+// ============================================================================
+
+/**
+ * Run --dry-run mode: generate index content and write to preview file (not stories.index.md).
+ */
+async function runDryRun(repo: StoryRepository, adapter: StoryFileAdapter): Promise<void> {
+  logger.info('Running in dry-run mode')
+
+  const rows = await repo.getAllStories()
+  logger.info('Fetched stories from DB', { count: rows.length })
+
+  const { content, skipped } = await generateIndexContent(rows, adapter)
+
+  // Write preview file instead of overwriting stories.index.md
+  await writeFileAtomic(STORIES_INDEX_PREVIEW_PATH, content)
+
+  logger.info('Dry-run complete', {
+    storiesProcessed: rows.length,
+    skipped: skipped.length,
+    previewFile: STORIES_INDEX_PREVIEW_PATH,
+  })
+
+  // Also output to stdout for CI/verification pipelines
+  logger.info('Generated content preview (first 2000 chars)', {
+    preview: content.substring(0, 2000),
+  })
+}
+
+/**
+ * Run --generate mode: generate index content and atomically write to stories.index.md.
+ * Also writes generation-report.json.
+ */
+async function runGenerate(repo: StoryRepository, adapter: StoryFileAdapter): Promise<void> {
+  logger.info('Running in generate mode')
+
+  const rows = await repo.getAllStories()
+  logger.info('Fetched stories from DB', { count: rows.length })
+
+  const { content, report, skipped } = await generateIndexContent(rows, adapter)
+
+  // Atomic write to stories.index.md
+  await writeFileAtomic(STORIES_INDEX_PATH, content)
+  logger.info('Wrote stories.index.md', { path: STORIES_INDEX_PATH })
+
+  // Write generation report
+  await writeFileAtomic(GENERATION_REPORT_PATH, JSON.stringify(report, null, 2))
+  logger.info('Wrote generation-report.json', { path: GENERATION_REPORT_PATH })
+
+  logger.info('Generation complete', {
+    storiesProcessed: rows.length,
+    skipped: skipped.length,
+    durationMs: report.duration_ms,
+  })
+}
+
+/**
+ * Run --verify mode: compare current stories.index.md to freshly generated content.
+ * Exits 0 if identical, 1 if different.
+ *
+ * AC-8: Uses inline line-by-line comparison, no external diff package.
+ */
+async function runVerify(repo: StoryRepository, adapter: StoryFileAdapter): Promise<void> {
+  logger.info('Running in verify mode')
+
+  // Read current stories.index.md
+  let currentContent: string
+  try {
+    currentContent = await fs.readFile(STORIES_INDEX_PATH, 'utf-8')
+  } catch {
+    logger.error('stories.index.md not found — run --generate first', {
+      path: STORIES_INDEX_PATH,
+    })
+    process.exit(1)
+  }
+
+  const rows = await repo.getAllStories()
+  const { content: freshContent } = await generateIndexContent(rows, adapter)
+
+  const { identical, diffLines } = computeLineDiff(freshContent, currentContent)
+
+  if (identical) {
+    logger.info('Verification PASSED: stories.index.md is up to date')
+    process.exit(0)
+  } else {
+    logger.error('Verification FAILED: stories.index.md is out of date', {
+      differences: diffLines.length,
+      diffSummary: formatDiffSummary(diffLines),
+    })
+    process.exit(1)
   }
 }
 
 // ============================================================================
-// Main
+// Main Entry Point
 // ============================================================================
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs()
+  logger.info('Stories index generator', { mode: options.mode })
 
-  logger.info('Generate stories index script', { mode: options.mode })
+  const pool = createDbPool()
+  const repo = new StoryRepository(pool)
+  const adapter = new StoryFileAdapter()
 
   try {
-    if (options.mode === 'generate') {
-      await runGenerate()
-    } else if (options.mode === 'dry-run') {
-      await runDryRun()
+    if (options.mode === 'dry-run') {
+      await runDryRun(repo, adapter)
+    } else if (options.mode === 'generate') {
+      await runGenerate(repo, adapter)
     } else if (options.mode === 'verify') {
-      await runVerify()
+      await runVerify(repo, adapter)
     }
 
     logger.info('Script complete', { mode: options.mode })
@@ -969,6 +837,8 @@ async function main() {
       error: error instanceof Error ? error.message : String(error),
     })
     process.exit(1)
+  } finally {
+    await pool.end()
   }
 }
 

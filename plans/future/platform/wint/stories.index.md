@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-18T10:45:00Z"
+updated_at: "2026-02-21T00:45:00Z"
 ---
 
 # WINT Stories Index
@@ -16,17 +16,19 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 16 |
+| uat | 17 |
 | in-qa | 0 |
-| ready-for-qa | 1 |
+| ready-for-qa | 2 |
+| needs-code-review | 0 |
 | ready-for-code-review | 0 |
+| failed-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 0 |
-| created | 3 |
+| created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 4 |
-| pending | 116 |
+| pending | 118 |
 
 ---
 
@@ -403,7 +405,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** uat
+**Status:** ready-for-qa
 **Depends On:** WINT-0180
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
@@ -439,7 +441,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
-**Depends On:** WINT-0180, WINT-0200
+**Depends On:** WINT-0180, WINT-0190, WINT-0200
 **Phase:** 0
 **Points:** 5
 **Priority:** P2
@@ -504,27 +506,25 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0240: Configure Ollama Model Fleet
 
-**Status:** in-progress
-**Story File:** `wint/in-progress/WINT-0240/WINT-0240.md`
-**Elaboration Complete:** 2026-02-20
-**Verdict:** CONDITIONAL PASS
-**Development Started:** 2026-02-20
+**Status:** pending
 **Depends On:** WINT-0220
 **Phase:** 0
-**Points:** 3
-**Priority:** P2
-**Feature:** Document and script Ollama model setup. Produce one-command setup script with memory-constrained `--lite` flag, standalone health check CLI, and comprehensive VRAM documentation aligned with WINT-0220 strategy.
+**Feature:** Document and script Ollama model setup. Pull recommended models:
+```bash
+ollama pull qwen2.5-coder:7b    # Fast, repair loops
+ollama pull qwen2.5-coder:32b   # Code generation
+ollama pull deepseek-coder:33b  # Alternative for code
+ollama pull deepseek-r1:14b     # Reasoning tasks
+```
+Create health check script. Document VRAM requirements per model. Create model switching based on available resources.
 **Infrastructure:**
 - scripts/setup-ollama-models.sh
-- scripts/check-ollama-health.sh
-- docs/tech-stack/ollama-model-fleet.md
-- packages/backend/orchestrator/setup-ollama.sh (deprecation notice)
+- Model VRAM documentation
+- Health check endpoint
 
-**Goal:** One-command setup of local model fleet with lite mode and health check
+**Goal:** One-command setup of local model fleet
 
-**Risk Notes:** Large models need significant VRAM (32B needs ~20GB). Elaboration complete. Blocked by WINT-0220 formal completion (file exists on disk, story still pending in index). Ready for implementation when WINT-0220 transitions to completed or uat.
-
-**Summary:** All 9 ACs specified, 4 subtasks decomposed, 0 MVP-critical gaps. Three low-severity findings (documentation-level) logged to KB (deferred). Story is immediately executable once WINT-0220 dependency is satisfied.
+**Risk Notes:** Large models need significant VRAM (32B needs ~20GB)
 
 ---
 
@@ -683,9 +683,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** elaboration
-**Story File:** `wint/elaboration/WINT-1040/WINT-1040.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1040/WINT-1040.md`
 **Story Generated:** 2026-02-17
+**QA Verified:** 2026-02-20
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
@@ -722,7 +723,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 - AC-9: Integration test scenarios documented (A-F)
 - AC-10: Non-mappable statuses handled with explicit decisions
 
-**Elaboration Verdict:** CONDITIONAL PASS (2026-02-17)
+**Elaboration Verdict:** CONDITIONAL PASS (2026-02-20)
 - MVP gaps: 0
 - Low-severity findings: 3 (all non-blocking, KB-logged)
 - ACs added: 0
@@ -731,17 +732,20 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Risk Notes:** WINT-1070 (index deprecation) may land in-progress; non-blocking (index update retained). shimUpdateStoryStatus AC-2 constraint (no FS fallback on failure) must be observed.
 
 **Story Generated:** 2026-02-17
-**Elaboration Completed:** 2026-02-17
+**Elaboration Completed:** 2026-02-20
+**Moved to Ready-to-Work:** 2026-02-20
 
 ---
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-1060/WINT-1060.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-18
+**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS
 **Depends On:** WINT-1030
 **Phase:** 1
 **Points:** 2
@@ -756,9 +760,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ---
 
-### WINT-1070: Deprecate stories.index.md as Source of Truth
+### WINT-1070: Generate stories.index.md from Database
 
-**Status:** elaboration
+**Status:** uat
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
@@ -842,7 +846,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160
+**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -929,7 +933,8 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** created
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1160/WINT-1160.md`
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
 **Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.
@@ -940,6 +945,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Goal:** Prevent two sessions from working on the same story simultaneously
 
 **Risk Notes:** "Take over" option must be explicit to avoid accidental work loss
+
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-21 - All 9 ACs verified, verdict: PASS
 
 ---
 
@@ -1086,11 +1094,9 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2090: Implement Session Context Management
 
-**Status:** uat
+**Status:** pending
 **Depends On:** WINT-0110
 **Phase:** 2
-**Points:** 1
-**Priority:** P2
 **Feature:** Create session-create, session-inherit skills for leader→worker context sharing
 **Infrastructure:**
 - new skills
@@ -1098,11 +1104,6 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 **Goal:** Enable stateful workflows with shared context
 
 **Risk Notes:** Session cleanup strategy needed
-
-**Story Generated:** 2026-02-20
-**Elaborated:** 2026-02-20
-**Code Review:** PASS (2026-02-20) — 0 errors, 0 warnings, all 10 workers PASS
-**QA Verification Complete:** 2026-02-20 - All 11 ACs verified PASS, verdict: PASS. Story moved to UAT.
 
 ---
 
@@ -2237,8 +2238,8 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-9010/WINT-9010.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9010/WINT-9010.md`
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
 **Depends On:** WINT-1100
@@ -2255,16 +2256,23 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** pending
-**Depends On:** WINT-9010, WINT-0160
+**Status:** uat
+**Story Generated:** 2026-02-18
+**Story File:** `wint/UAT/WINT-9020/WINT-9020.md`
+**Code Review:** PASS (2026-02-21) — 0 errors, 1 warning (pre-existing, unrelated)
+**Implementation Complete:** 2026-02-20
+**QA Verification Complete:** 2026-02-20 — All 13 ACs verified PASS, 42 tests passing with 86.14% coverage, architecture fully compliant. Verdict: PASS
+**Depends On:** none
 **Phase:** 9
-**Feature:** Port doc-sync agent logic to LangGraph node at nodes/sync/doc-sync.ts
+**Points:** 5
+**Priority:** P2
+**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Implemented at nodes/sync/doc-sync.ts (new directory per index entry), resolving AC-1 path discrepancy.
 **Infrastructure:**
-- packages/backend/orchestrator/src/nodes/sync/
+- packages/backend/orchestrator/src/nodes/sync/ (new directory per AC-1 decision)
 
-**Goal:** Documentation sync works in both workflows
+**Goal:** Documentation sync works in both Claude Code and LangGraph workflows with identical outputs for the same inputs.
 
-**Risk Notes:** Must produce identical outputs
+**Risk Notes:** AC-1 path resolution completed during implementation. Current nodes/workflow/doc-sync.ts subprocess delegation preserved as fallback. Native TypeScript port at nodes/sync/ matches SKILL.md 7-phase contract. All risks mitigated through implementation.
 
 ---
 

@@ -1,115 +1,23 @@
 /**
- * Unit Tests: generate-stories-index.ts
+ * Unit Tests for generate-stories-index.ts pure rendering functions
  *
- * Tests all pure functions for WINT-1070:
- * - computeProgressSummary: counts by state, all enum values included
- * - computeReadyToStart: only ready-to-work with all deps satisfied
- * - renderStorySection: YAML missing case renders —
- * - renderFrontmatter: created_at preserved, updated_at set
- * - renderProgressTable: all enum values present
- * - renderReadyToStartTable: correct table format
- * - groupStoriesByPhase: sorting, unphased stories
- * - compareLineByLine: inline diff implementation
+ * Tests all pure functions achieving ≥80% coverage:
+ * - computeProgressSummary
+ * - computeReadyToStart
+ * - renderStorySection
+ * - renderFrontmatter
+ * - renderProgressTable
+ * - renderReadyToStartTable
+ * - groupStoriesByPhase
+ * - extractPhaseFromStoryId
+ * - computeLineDiff
+ * - formatDiffSummary
  *
  * Story: WINT-1070
  */
 
-import { describe, it, expect, vi } from 'vitest'
-
-// ============================================================================
-// Module-level mocks (must be before imports)
-// ============================================================================
-
-vi.mock('@repo/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}))
-
-vi.mock('pg', () => ({
-  Pool: vi.fn().mockImplementation(() => ({
-    query: vi.fn(),
-    end: vi.fn().mockResolvedValue(undefined),
-  })),
-}))
-
-// Mock adapter dependencies to prevent resolution of gray-matter and js-yaml
-// in the worktree (packages only available in main monorepo node_modules)
-vi.mock('gray-matter', () => ({
-  default: vi.fn().mockImplementation((content: string) => ({
-    data: {},
-    content: content,
-  })),
-}))
-
-vi.mock('js-yaml', () => ({
-  default: {
-    dump: vi.fn().mockReturnValue(''),
-    load: vi.fn().mockReturnValue({}),
-  },
-  dump: vi.fn().mockReturnValue(''),
-  load: vi.fn().mockReturnValue({}),
-}))
-
-vi.mock('../../adapters/story-file-adapter.js', () => ({
-  StoryFileAdapter: vi.fn().mockImplementation(() => ({
-    read: vi.fn(),
-  })),
-}))
-
-vi.mock('../../adapters/__types__/index.js', () => ({
-  ValidationError: class ValidationError extends Error {
-    constructor(filePath: string, errors: any[]) {
-      super(`Validation error: ${filePath}`)
-    }
-  },
-  StoryNotFoundError: class StoryNotFoundError extends Error {
-    constructor(filePath: string) {
-      super(`Story not found: ${filePath}`)
-    }
-  },
-}))
-
-vi.mock('../../db/story-repository.js', () => ({
-  createStoryRepository: vi.fn().mockReturnValue({
-    getAllStories: vi.fn().mockResolvedValue([]),
-  }),
-}))
-
-// Mock __types__/index.js to prevent loading @repo/database-schema/schema/wint
-// which is a workspace package unavailable in the worktree test environment.
-// StoryRowSchema is imported as a value in generate-stories-index.ts (for GenerationResultSchema).
-vi.mock('../../__types__/index.js', async () => {
-  const { z } = await import('zod')
-  const StoryRowSchema = z.object({
-    id: z.string(),
-    story_id: z.string(),
-    feature_id: z.string().nullable(),
-    type: z.string(),
-    state: z.string(),
-    title: z.string(),
-    goal: z.string().nullable(),
-    points: z.number().nullable(),
-    priority: z.string().nullable(),
-    blocked_by: z.string().nullable(),
-    depends_on: z.array(z.string()).nullable(),
-    follow_up_from: z.string().nullable(),
-    packages: z.array(z.string()).nullable(),
-    surfaces: z.array(z.string()).nullable(),
-    non_goals: z.array(z.string()).nullable(),
-    created_at: z.date(),
-    updated_at: z.date(),
-  })
-  return { StoryRowSchema }
-})
-
-// ============================================================================
-// Imports after mocks
-// ============================================================================
-
+import { describe, it, expect } from 'vitest'
+import type { StoryRow } from '../../__types__/index.js'
 import {
   computeProgressSummary,
   computeReadyToStart,
@@ -118,718 +26,666 @@ import {
   renderProgressTable,
   renderReadyToStartTable,
   groupStoriesByPhase,
-  compareLineByLine,
-  buildStorySection,
-  extractCreatedAt,
-  findMonorepoRoot,
-  parseArgs,
+  extractPhaseFromStoryId,
+  computeLineDiff,
+  formatDiffSummary,
 } from '../generate-stories-index.js'
-
-import {
-  STORY_STATE_ENUM,
-  STATE_TO_DISPLAY_LABEL,
-  FIELD_SOURCE_MAP,
-  IndexFrontmatterSchema,
-} from '../__types__/generation.js'
-
-import type { StoryRow } from '../../__types__/index.js'
-import type { StorySection, YamlFallbackData } from '../__types__/generation.js'
+import type { StorySection, IndexFrontmatter } from '../__types__/generation.js'
 
 // ============================================================================
-// Helpers
+// Test Fixtures
 // ============================================================================
 
-function makeStoryRow(overrides: Partial<StoryRow> = {}): StoryRow {
+/**
+ * Create a minimal StoryRow for testing.
+ * DB uses underscore state values (ready_to_work, not ready-to-work).
+ */
+function makeStoryRow(overrides: { story_id: string; state: string } & Partial<StoryRow>): StoryRow {
   return {
-    id: 'uuid-001',
-    story_id: 'WINT-0010',
+    id: `uuid-${overrides.story_id}`,
+    story_id: overrides.story_id,
     feature_id: null,
     type: 'feature',
-    state: 'ready-to-work' as any,
-    title: 'Test Story',
-    goal: 'Test goal',
-    points: 3,
-    priority: 'p2',
+    state: overrides.state as any,
+    title: overrides.title ?? `Story ${overrides.story_id}`,
+    goal: overrides.goal ?? null,
+    points: null,
+    priority: null,
     blocked_by: null,
-    depends_on: null,
+    depends_on: overrides.depends_on ?? null,
     follow_up_from: null,
-    packages: [],
-    surfaces: [],
-    non_goals: [],
+    packages: null,
+    surfaces: null,
+    non_goals: null,
     created_at: new Date('2026-01-01'),
     updated_at: new Date('2026-01-01'),
     ...overrides,
-  }
+  } as StoryRow
 }
 
-function makeStorySection(overrides: Partial<StorySection> = {}): StorySection {
+function makeStorySection(overrides: { story_id: string } & Partial<StorySection>): StorySection {
   return {
-    story_id: 'WINT-0010',
-    title: 'Test Story',
-    state: 'ready-to-work',
-    depends_on: null,
-    phase: 0,
-    feature: 'Test feature description',
-    infrastructure: ['database'],
-    goal: 'Test goal',
-    risk_notes: 'Low risk',
-    field_sources: {
-      state: 'db',
-      title: 'db',
-      goal: 'db',
-      depends_on: 'db',
-      phase: 'yaml_fallback',
-      risk_notes: 'yaml_fallback',
-      feature: 'yaml_fallback',
-      infrastructure: 'yaml_fallback',
-    },
-    ...overrides,
+    story_id: overrides.story_id,
+    title: overrides.title ?? `Story ${overrides.story_id}`,
+    status: overrides.status ?? 'backlog',
+    state: (overrides.state ?? 'backlog') as any,
+    depends_on: overrides.depends_on ?? [],
+    phase: overrides.phase ?? null,
+    feature: overrides.feature ?? null,
+    infrastructure: overrides.infrastructure ?? null,
+    goal: overrides.goal ?? null,
+    risk_notes: overrides.risk_notes ?? null,
   }
 }
 
 // ============================================================================
-// STORY_STATE_ENUM (AC-13)
+// extractPhaseFromStoryId Tests
 // ============================================================================
 
-describe('STORY_STATE_ENUM', () => {
-  it('contains all expected enum values from wint.story_state', () => {
-    expect(STORY_STATE_ENUM).toContain('draft')
-    expect(STORY_STATE_ENUM).toContain('backlog')
-    expect(STORY_STATE_ENUM).toContain('ready-to-work')
-    expect(STORY_STATE_ENUM).toContain('in-progress')
-    expect(STORY_STATE_ENUM).toContain('ready-for-qa')
-    expect(STORY_STATE_ENUM).toContain('uat')
-    expect(STORY_STATE_ENUM).toContain('done')
-    expect(STORY_STATE_ENUM).toContain('cancelled')
-    expect(STORY_STATE_ENUM).toHaveLength(8)
+describe('extractPhaseFromStoryId', () => {
+  it('extracts phase 0 from WINT-0010', () => {
+    expect(extractPhaseFromStoryId('WINT-0010')).toBe('0')
   })
 
-  it('STATE_TO_DISPLAY_LABEL covers all enum values', () => {
-    for (const state of STORY_STATE_ENUM) {
-      expect(STATE_TO_DISPLAY_LABEL[state]).toBeDefined()
-    }
+  it('extracts phase 1 from WINT-1070', () => {
+    expect(extractPhaseFromStoryId('WINT-1070')).toBe('1')
   })
 
-  it('ready-to-work maps to ready-to-work display label', () => {
-    expect(STATE_TO_DISPLAY_LABEL['ready-to-work']).toBe('ready-to-work')
+  it('extracts phase 4 from WINT-4060', () => {
+    expect(extractPhaseFromStoryId('WINT-4060')).toBe('4')
   })
 
-  it('in-progress maps to in-progress display label', () => {
-    expect(STATE_TO_DISPLAY_LABEL['in-progress']).toBe('in-progress')
+  it('extracts phase 9 from WINT-9010', () => {
+    expect(extractPhaseFromStoryId('WINT-9010')).toBe('9')
+  })
+
+  it('returns null for malformed story IDs', () => {
+    expect(extractPhaseFromStoryId('INVALID')).toBeNull()
+    expect(extractPhaseFromStoryId('WINT-10')).toBeNull()
+    expect(extractPhaseFromStoryId('')).toBeNull()
+  })
+
+  it('handles variant suffix (e.g., WINT-1070A)', () => {
+    expect(extractPhaseFromStoryId('WINT-1070A')).toBe('1')
   })
 })
 
 // ============================================================================
-// FIELD_SOURCE_MAP (AC-2)
-// ============================================================================
-
-describe('FIELD_SOURCE_MAP', () => {
-  it('state, title, goal, depends_on are sourced from db', () => {
-    expect(FIELD_SOURCE_MAP.state).toBe('db')
-    expect(FIELD_SOURCE_MAP.title).toBe('db')
-    expect(FIELD_SOURCE_MAP.goal).toBe('db')
-    expect(FIELD_SOURCE_MAP.depends_on).toBe('db')
-  })
-
-  it('phase, risk_notes, feature, infrastructure are yaml_fallback', () => {
-    expect(FIELD_SOURCE_MAP.phase).toBe('yaml_fallback')
-    expect(FIELD_SOURCE_MAP.risk_notes).toBe('yaml_fallback')
-    expect(FIELD_SOURCE_MAP.feature).toBe('yaml_fallback')
-    expect(FIELD_SOURCE_MAP.infrastructure).toBe('yaml_fallback')
-  })
-
-  it('created_at and updated_at are computed', () => {
-    expect(FIELD_SOURCE_MAP.created_at).toBe('computed')
-    expect(FIELD_SOURCE_MAP.updated_at).toBe('computed')
-  })
-})
-
-// ============================================================================
-// computeProgressSummary (AC-4) - Critical: off-by-one risk
+// computeProgressSummary Tests
 // ============================================================================
 
 describe('computeProgressSummary', () => {
-  it('counts stories by state correctly', () => {
+  it('returns an empty array for empty input', () => {
+    const summary = computeProgressSummary([])
+    expect(Array.isArray(summary)).toBe(true)
+    expect(summary).toHaveLength(0)
+  })
+
+  it('counts stories by state label', () => {
     const stories = [
-      makeStoryRow({ story_id: 'WINT-0010', state: 'ready-to-work' as any }),
-      makeStoryRow({ story_id: 'WINT-0020', state: 'ready-to-work' as any }),
-      makeStoryRow({ story_id: 'WINT-0030', state: 'in-progress' as any }),
-      makeStoryRow({ story_id: 'WINT-0040', state: 'done' as any }),
+      makeStoryRow({ story_id: 'WINT-0010', state: 'ready_to_work' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'ready_to_work' }),
+      makeStoryRow({ story_id: 'WINT-0030', state: 'in_progress' }),
+      makeStoryRow({ story_id: 'WINT-0040', state: 'done' }),
     ]
 
     const summary = computeProgressSummary(stories)
 
-    expect(summary['ready-to-work']).toBe(2)
-    expect(summary['in-progress']).toBe(1)
-    expect(summary['done']).toBe(1)
-    expect(summary['backlog']).toBe(0)
+    // AC-4: STATE_TO_DISPLAY_LABEL mapping (ready_to_work → ready-to-work)
+    const readyToWork = summary.find(s => s.label === 'ready-to-work')
+    expect(readyToWork?.count).toBe(2)
+
+    const inProgress = summary.find(s => s.label === 'in-progress')
+    expect(inProgress?.count).toBe(1)
+
+    const done = summary.find(s => s.label === 'done')
+    expect(done?.count).toBe(1)
   })
 
-  it('initializes all STORY_STATE_ENUM values to 0', () => {
-    const summary = computeProgressSummary([])
-
-    for (const state of STORY_STATE_ENUM) {
-      expect(summary[state]).toBe(0)
-    }
-  })
-
-  it('handles empty stories array', () => {
-    const summary = computeProgressSummary([])
-    expect(Object.keys(summary).length).toBeGreaterThanOrEqual(STORY_STATE_ENUM.length)
-  })
-
-  it('all STORY_STATE_ENUM values are present in summary', () => {
-    const stories = [makeStoryRow({ state: 'backlog' as any })]
+  it('maps ready_to_work to ready-to-work display label (AC-4)', () => {
+    const stories = [makeStoryRow({ story_id: 'WINT-0010', state: 'ready_to_work' })]
     const summary = computeProgressSummary(stories)
-
-    for (const state of STORY_STATE_ENUM) {
-      expect(summary).toHaveProperty(state)
-    }
+    // AC-4: STATE_TO_DISPLAY_LABEL(ready_to_work) → ready-to-work
+    expect(summary.some(s => s.label === 'ready-to-work' && s.count === 1)).toBe(true)
+    expect(summary.some(s => s.label === 'ready_to_work')).toBe(false)
   })
 
-  it('ready-to-work display label maps correctly (AC-4)', () => {
-    const stories = [makeStoryRow({ state: 'ready-to-work' as any })]
+  it('maps in_progress to in-progress display label', () => {
+    const stories = [makeStoryRow({ story_id: 'WINT-0010', state: 'in_progress' })]
     const summary = computeProgressSummary(stories)
-    expect(summary['ready-to-work']).toBe(1)
+    expect(summary.some(s => s.label === 'in-progress' && s.count === 1)).toBe(true)
+  })
+
+  it('maps ready_for_qa to ready-for-qa display label', () => {
+    const stories = [makeStoryRow({ story_id: 'WINT-0010', state: 'ready_for_qa' })]
+    const summary = computeProgressSummary(stories)
+    expect(summary.some(s => s.label === 'ready-for-qa' && s.count === 1)).toBe(true)
+  })
+
+  it('maps in_qa to in-qa display label', () => {
+    const stories = [makeStoryRow({ story_id: 'WINT-0010', state: 'in_qa' })]
+    const summary = computeProgressSummary(stories)
+    expect(summary.some(s => s.label === 'in-qa' && s.count === 1)).toBe(true)
+  })
+
+  it('returns { label, count } objects', () => {
+    const stories = [makeStoryRow({ story_id: 'WINT-0010', state: 'done' })]
+    const summary = computeProgressSummary(stories)
+    expect(summary[0]).toHaveProperty('label')
+    expect(summary[0]).toHaveProperty('count')
+  })
+
+  it('sorts by count descending', () => {
+    const stories = [
+      makeStoryRow({ story_id: 'WINT-0010', state: 'done' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'done' }),
+      makeStoryRow({ story_id: 'WINT-0030', state: 'done' }),
+      makeStoryRow({ story_id: 'WINT-0040', state: 'backlog' }),
+    ]
+    const summary = computeProgressSummary(stories)
+    // done has 3, backlog has 1 → done should be first
+    expect(summary[0].count).toBeGreaterThanOrEqual(summary[1].count)
+  })
+
+  it('handles large number of stories (performance)', () => {
+    const stories = Array.from({ length: 143 }, (_, i) =>
+      makeStoryRow({ story_id: `WINT-${String(i).padStart(4, '0')}`, state: 'backlog' }),
+    )
+    const summary = computeProgressSummary(stories)
+    const backlog = summary.find(s => s.label === 'backlog')
+    expect(backlog?.count).toBe(143)
   })
 })
 
 // ============================================================================
-// computeReadyToStart (AC-5) - Critical: partial deps must NOT trigger inclusion
+// computeReadyToStart Tests (AC-5)
 // ============================================================================
 
 describe('computeReadyToStart', () => {
-  it('includes ready-to-work stories with no dependencies', () => {
-    const stories = [makeStoryRow({ state: 'ready-to-work' as any, depends_on: null })]
+  it('includes story with no deps in ready_to_work state', () => {
+    const stories = [
+      makeStoryRow({ story_id: 'WINT-0010', state: 'ready_to_work', depends_on: [] }),
+    ]
+
+    // AC-5: story with all deps in done/uat is included (no deps = included)
     const ready = computeReadyToStart(stories)
     expect(ready).toHaveLength(1)
     expect(ready[0].story_id).toBe('WINT-0010')
   })
 
-  it('includes stories with empty depends_on array', () => {
-    const stories = [makeStoryRow({ state: 'ready-to-work' as any, depends_on: [] })]
-    const ready = computeReadyToStart(stories)
-    expect(ready).toHaveLength(1)
-  })
-
-  it('includes stories where ALL deps are done', () => {
+  it('includes story with all deps in done state', () => {
     const stories = [
-      makeStoryRow({
-        story_id: 'WINT-0020',
-        state: 'ready-to-work' as any,
-        depends_on: ['WINT-0010'],
-      }),
-      makeStoryRow({ story_id: 'WINT-0010', state: 'done' as any }),
+      makeStoryRow({ story_id: 'WINT-0010', state: 'done' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'ready_to_work', depends_on: ['WINT-0010'] }),
     ]
+
+    // AC-5: story with all deps in done/uat is included
     const ready = computeReadyToStart(stories)
     expect(ready).toHaveLength(1)
     expect(ready[0].story_id).toBe('WINT-0020')
   })
 
-  it('includes stories where ALL deps are uat', () => {
+  it('includes story with all deps in in_qa (UAT) state', () => {
     const stories = [
-      makeStoryRow({
-        story_id: 'WINT-0020',
-        state: 'ready-to-work' as any,
-        depends_on: ['WINT-0010'],
-      }),
-      makeStoryRow({ story_id: 'WINT-0010', state: 'uat' as any }),
+      makeStoryRow({ story_id: 'WINT-0010', state: 'in_qa' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'ready_to_work', depends_on: ['WINT-0010'] }),
     ]
+
+    // AC-5: in_qa counts as satisfied (UAT)
     const ready = computeReadyToStart(stories)
     expect(ready).toHaveLength(1)
   })
 
-  it('excludes stories with any pending dependency (partial satisfaction)', () => {
+  it('excludes story with one pending dep (AC-5)', () => {
     const stories = [
+      makeStoryRow({ story_id: 'WINT-0010', state: 'in_progress' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'ready_to_work', depends_on: ['WINT-0010'] }),
+    ]
+
+    // AC-5: story with one pending dep is absent
+    const ready = computeReadyToStart(stories)
+    expect(ready).toHaveLength(0)
+  })
+
+  it('excludes story with mixed satisfied/pending deps (AC-5)', () => {
+    const stories = [
+      makeStoryRow({ story_id: 'WINT-0010', state: 'done' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'backlog' }),
       makeStoryRow({
         story_id: 'WINT-0030',
-        state: 'ready-to-work' as any,
+        state: 'ready_to_work',
         depends_on: ['WINT-0010', 'WINT-0020'],
       }),
-      makeStoryRow({ story_id: 'WINT-0010', state: 'done' as any }),
-      makeStoryRow({ story_id: 'WINT-0020', state: 'in-progress' as any }), // Not done!
     ]
+
+    // AC-5: partial satisfaction does not trigger inclusion
     const ready = computeReadyToStart(stories)
     expect(ready).toHaveLength(0)
   })
 
-  it('excludes stories in non-ready-to-work states', () => {
-    const stories = [makeStoryRow({ state: 'in-progress' as any })]
+  it('excludes stories not in ready_to_work state', () => {
+    const stories = [
+      makeStoryRow({ story_id: 'WINT-0010', state: 'in_progress' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'backlog' }),
+    ]
+
     const ready = computeReadyToStart(stories)
     expect(ready).toHaveLength(0)
   })
 
-  it('excludes backlog stories even with no dependencies', () => {
-    const stories = [makeStoryRow({ state: 'backlog' as any, depends_on: null })]
-    const ready = computeReadyToStart(stories)
-    expect(ready).toHaveLength(0)
-  })
-
-  it('handles stories with unknown dependency IDs (treat as unsatisfied)', () => {
+  it('handles dep not found in DB as unsatisfied', () => {
     const stories = [
       makeStoryRow({
-        story_id: 'WINT-0020',
-        state: 'ready-to-work' as any,
-        depends_on: ['WINT-UNKNOWN'],
+        story_id: 'WINT-0010',
+        state: 'ready_to_work',
+        depends_on: ['EXTERNAL-0010'], // Not in stories array
       }),
     ]
+
     const ready = computeReadyToStart(stories)
-    // WINT-UNKNOWN is not in the stories list, so its state is undefined → not satisfied
     expect(ready).toHaveLength(0)
   })
-})
 
-// ============================================================================
-// renderStorySection (AC-6)
-// ============================================================================
-
-describe('renderStorySection', () => {
-  it('renders a complete story section with all fields', () => {
-    const section = makeStorySection()
-    const rendered = renderStorySection(section)
-
-    expect(rendered).toContain('### WINT-0010: Test Story')
-    expect(rendered).toContain('**Status:** ready-to-work')
-    expect(rendered).toContain('**Depends On:** none')
-    expect(rendered).toContain('**Phase:** 0')
-    expect(rendered).toContain('**Feature:** Test feature description')
-    expect(rendered).toContain('**Goal:** Test goal')
-    expect(rendered).toContain('**Risk Notes:** Low risk')
-  })
-
-  it('renders — for missing feature (YAML not found)', () => {
-    const section = makeStorySection({ feature: null })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Feature:** —')
-  })
-
-  it('renders — for missing goal', () => {
-    const section = makeStorySection({ goal: null })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Goal:** —')
-  })
-
-  it('renders — for missing risk_notes', () => {
-    const section = makeStorySection({ risk_notes: null })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Risk Notes:** —')
-  })
-
-  it('renders — for missing phase', () => {
-    const section = makeStorySection({ phase: null })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Phase:** —')
-  })
-
-  it('renders — for null infrastructure', () => {
-    const section = makeStorySection({ infrastructure: null })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Infrastructure:** —')
-  })
-
-  it('renders infrastructure as bullet list when present', () => {
-    const section = makeStorySection({ infrastructure: ['postgres', 'lambda'] })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Infrastructure:**')
-    expect(rendered).toContain('- postgres')
-    expect(rendered).toContain('- lambda')
-  })
-
-  it('renders depends_on as comma-separated list', () => {
-    const section = makeStorySection({ depends_on: ['WINT-0010', 'WINT-0020'] })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Depends On:** WINT-0010, WINT-0020')
-  })
-
-  it('renders depends_on as none for empty array', () => {
-    const section = makeStorySection({ depends_on: [] })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Depends On:** none')
-  })
-
-  it('converts state to display label', () => {
-    const section = makeStorySection({ state: 'ready-to-work' })
-    const rendered = renderStorySection(section)
-    expect(rendered).toContain('**Status:** ready-to-work')
+  it('returns empty array for empty input', () => {
+    expect(computeReadyToStart([])).toHaveLength(0)
   })
 })
 
 // ============================================================================
-// renderFrontmatter (AC-3)
+// renderFrontmatter Tests (AC-3, AC-10)
 // ============================================================================
 
 describe('renderFrontmatter', () => {
-  it('generates valid YAML frontmatter with all required fields', () => {
-    const result = renderFrontmatter({
-      title: 'WINT Stories Index',
-      story_prefix: 'WINT',
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-02-01T00:00:00Z',
-    })
+  const validFrontmatter: IndexFrontmatter = {
+    doc_type: 'stories_index',
+    title: 'WINT Stories Index',
+    status: 'generated',
+    story_prefix: 'WINT',
+    generated_at: '2026-02-18T00:00:00Z',
+    generated_by: 'generate-stories-index.ts',
+    story_count: 143,
+  }
 
-    expect(result).toContain('---')
-    expect(result).toContain('doc_type: stories_index')
-    expect(result).toContain('status: generated')
-    expect(result).toContain('story_prefix: "WINT"')
-    expect(result).toContain('created_at: "2026-01-01T00:00:00Z"')
-    expect(result).toContain('updated_at: "2026-02-01T00:00:00Z"')
-    expect(result).toContain('generated_by: generate-stories-index.ts')
+  it('renders valid frontmatter with doc_type stories_index (AC-3)', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    expect(output).toContain('doc_type: stories_index')
   })
 
-  it('preserves provided created_at value', () => {
-    const originalCreatedAt = '2026-01-15T12:00:00Z'
-    const result = renderFrontmatter({
-      title: 'WINT Stories Index',
-      story_prefix: 'WINT',
-      created_at: originalCreatedAt,
-      updated_at: '2026-02-17T00:00:00Z',
-    })
-
-    expect(result).toContain(`created_at: "${originalCreatedAt}"`)
+  it('renders status: generated (AC-3)', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    expect(output).toContain('status: generated')
   })
 
-  it('generates frontmatter that validates against IndexFrontmatterSchema', () => {
-    const result = renderFrontmatter({
-      title: 'WINT Stories Index',
-      story_prefix: 'WINT',
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-02-01T00:00:00Z',
-    })
+  it('renders generated_by field (AC-10)', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    expect(output).toContain('generated_by: "generate-stories-index.ts"')
+  })
 
-    // Extract frontmatter fields manually and validate
-    const frontmatter = {
-      doc_type: 'stories_index',
-      title: 'WINT Stories Index',
-      status: 'generated',
-      story_prefix: 'WINT',
-      created_at: '2026-01-01T00:00:00Z',
-      updated_at: '2026-02-01T00:00:00Z',
-      generated_by: 'generate-stories-index.ts',
-    }
+  it('includes DO NOT EDIT warning after closing --- (AC-10)', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    // AC-10: DO NOT EDIT warning present immediately after closing ---
+    expect(output).toContain('DO NOT EDIT')
+    // Verify it appears AFTER the frontmatter closing ---
+    const closingDashIdx = output.lastIndexOf('---')
+    const doNotEditIdx = output.indexOf('DO NOT EDIT')
+    expect(doNotEditIdx).toBeGreaterThan(closingDashIdx)
+  })
 
-    expect(() => IndexFrontmatterSchema.parse(frontmatter)).not.toThrow()
+  it('starts with --- delimiter', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    expect(output.startsWith('---')).toBe(true)
+  })
+
+  it('contains the story count', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    expect(output).toContain('story_count: 143')
+  })
+
+  it('contains generated_at timestamp', () => {
+    const output = renderFrontmatter(validFrontmatter)
+    expect(output).toContain('generated_at: "2026-02-18T00:00:00Z"')
   })
 })
 
 // ============================================================================
-// renderProgressTable (AC-4)
+// renderProgressTable Tests (AC-4)
 // ============================================================================
 
 describe('renderProgressTable', () => {
-  it('renders table with all STORY_STATE_ENUM values', () => {
-    const summary: Record<string, number> = {}
-    for (const state of STORY_STATE_ENUM) {
-      summary[state] = 0
-    }
-
-    const result = renderProgressTable(summary)
-
-    expect(result).toContain('## Progress Summary')
-    expect(result).toContain('| Status | Count |')
-    expect(result).toContain('|--------|-------|')
-
-    for (const state of STORY_STATE_ENUM) {
-      expect(result).toContain(STATE_TO_DISPLAY_LABEL[state])
-    }
+  it('renders Progress Summary header', () => {
+    const output = renderProgressTable([{ label: 'ready-to-work', count: 3 }])
+    expect(output).toContain('## Progress Summary')
   })
 
-  it('shows correct counts', () => {
-    const summary: Record<string, number> = {}
-    for (const state of STORY_STATE_ENUM) {
-      summary[state] = 0
-    }
-    summary['ready-to-work'] = 5
-    summary['done'] = 10
-
-    const result = renderProgressTable(summary)
-
-    expect(result).toContain('| ready-to-work | 5 |')
-    expect(result).toContain('| done | 10 |')
+  it('renders table with correct counts', () => {
+    const output = renderProgressTable([
+      { label: 'ready-to-work', count: 3 },
+      { label: 'done', count: 10 },
+    ])
+    expect(output).toContain('| ready-to-work | 3 |')
+    expect(output).toContain('| done | 10 |')
   })
 
-  it('renders 0 for states with no stories', () => {
-    const summary: Record<string, number> = {}
-    for (const state of STORY_STATE_ENUM) {
-      summary[state] = 0
-    }
+  it('renders table header row', () => {
+    const output = renderProgressTable([])
+    expect(output).toContain('| Status | Count |')
+    expect(output).toContain('|--------|-------|')
+  })
 
-    const result = renderProgressTable(summary)
-    expect(result).toContain('| backlog | 0 |')
+  it('handles empty summary array', () => {
+    const output = renderProgressTable([])
+    expect(output).toContain('## Progress Summary')
+  })
+
+  it('renders all entries from array', () => {
+    const entries = [
+      { label: 'done', count: 5 },
+      { label: 'backlog', count: 3 },
+      { label: 'in-progress', count: 1 },
+    ]
+    const output = renderProgressTable(entries)
+    expect(output).toContain('| done | 5 |')
+    expect(output).toContain('| backlog | 3 |')
+    expect(output).toContain('| in-progress | 1 |')
   })
 })
 
 // ============================================================================
-// renderReadyToStartTable (AC-5)
+// renderReadyToStartTable Tests
 // ============================================================================
 
 describe('renderReadyToStartTable', () => {
-  it('renders table headers correctly', () => {
-    const result = renderReadyToStartTable([], [])
-
-    expect(result).toContain('## Ready to Start')
-    expect(result).toContain('| Story | Feature | Blocked By |')
-    expect(result).toContain('|-------|---------|------------|')
+  it('renders Ready to Start header', () => {
+    const output = renderReadyToStartTable([])
+    expect(output).toContain('## Ready to Start')
   })
 
-  it('renders empty table with dash row when no ready stories', () => {
-    const result = renderReadyToStartTable([], [])
-    expect(result).toContain('| — | — | — |')
+  it('renders message when no stories are ready', () => {
+    const output = renderReadyToStartTable([])
+    // Implementation renders "No stories are currently ready to start"
+    expect(output).toContain('No stories are currently ready to start')
   })
 
-  it('renders story rows for ready stories', () => {
-    const stories = [makeStoryRow({ story_id: 'WINT-0180', state: 'ready-to-work' as any })]
-    const sections = [makeStorySection({ story_id: 'WINT-0180', feature: 'Build indexer' })]
-
-    const result = renderReadyToStartTable(stories, sections)
-
-    expect(result).toContain('| WINT-0180 | Build indexer | — |')
+  it('renders table header columns when stories are ready', () => {
+    const story = makeStoryRow({ story_id: 'WINT-0010', state: 'ready_to_work', title: 'Build DB' })
+    const output = renderReadyToStartTable([story])
+    expect(output).toContain('| Story | Feature | Blocked By |')
   })
 
-  it('uses title when feature is null', () => {
+  it('renders story row with story_id and title', () => {
+    const story = makeStoryRow({
+      story_id: 'WINT-0010',
+      state: 'ready_to_work',
+      title: 'Build the thing',
+    })
+    const output = renderReadyToStartTable([story])
+    expect(output).toContain('| WINT-0010 |')
+    expect(output).toContain('Build the thing')
+  })
+
+  it('handles multiple ready stories', () => {
     const stories = [
-      makeStoryRow({ story_id: 'WINT-0180', title: 'Build indexer', state: 'ready-to-work' as any }),
+      makeStoryRow({ story_id: 'WINT-0010', state: 'ready_to_work', title: 'Story A' }),
+      makeStoryRow({ story_id: 'WINT-0020', state: 'ready_to_work', title: 'Story B' }),
     ]
-    const sections = [makeStorySection({ story_id: 'WINT-0180', feature: null })]
-
-    const result = renderReadyToStartTable(stories, sections)
-
-    expect(result).toContain('WINT-0180')
+    const output = renderReadyToStartTable(stories)
+    expect(output).toContain('WINT-0010')
+    expect(output).toContain('WINT-0020')
   })
 })
 
 // ============================================================================
-// groupStoriesByPhase
+// renderStorySection Tests (AC-6)
+// ============================================================================
+
+describe('renderStorySection', () => {
+  const fullSection = makeStorySection({
+    story_id: 'WINT-0010',
+    title: 'Create Core Database Schemas',
+    status: 'done',
+    state: 'done',
+    depends_on: ['WINT-0001'],
+    phase: 0,
+    feature: 'Create 6 database schemas',
+    infrastructure: 'postgres-knowledgebase database',
+    goal: 'Establish schema structure',
+    risk_notes: 'Must not break existing KB functionality',
+  })
+
+  it('renders story ID as h3 heading (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('### WINT-0010: Create Core Database Schemas')
+  })
+
+  it('renders Status header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Status:** done')
+  })
+
+  it('renders Depends On header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Depends On:** WINT-0001')
+  })
+
+  it('renders Phase header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Phase:** 0')
+  })
+
+  it('renders Feature header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Feature:** Create 6 database schemas')
+  })
+
+  it('renders Infrastructure header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Infrastructure:**')
+    expect(output).toContain('postgres-knowledgebase database')
+  })
+
+  it('renders Goal header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Goal:** Establish schema structure')
+  })
+
+  it('renders Risk Notes header (AC-6)', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('**Risk Notes:** Must not break existing KB functionality')
+  })
+
+  it('renders — for missing phase (AC-6)', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', phase: null })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Phase:** —')
+  })
+
+  it('renders — for missing feature (AC-6)', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', feature: null })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Feature:** —')
+  })
+
+  it('renders — for missing infrastructure (AC-6)', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', infrastructure: null })
+    const output = renderStorySection(section)
+    expect(output).toContain('- —')
+  })
+
+  it('renders — for missing goal (AC-6)', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', goal: null })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Goal:** —')
+  })
+
+  it('renders — for missing risk notes (AC-6)', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', risk_notes: null })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Risk Notes:** —')
+  })
+
+  it('renders "none" for empty depends_on', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', depends_on: [] })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Depends On:** none')
+  })
+
+  it('renders multiple dependencies comma-separated', () => {
+    const section = makeStorySection({
+      story_id: 'WINT-0010',
+      depends_on: ['WINT-0001', 'WINT-0002'],
+    })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Depends On:** WINT-0001, WINT-0002')
+  })
+
+  it('ends with --- separator', () => {
+    const output = renderStorySection(fullSection)
+    expect(output).toContain('---')
+  })
+
+  it('renders null phase as — (AC-6)', () => {
+    const section = makeStorySection({ story_id: 'WINT-0010', phase: undefined })
+    const output = renderStorySection(section)
+    expect(output).toContain('**Phase:** —')
+  })
+})
+
+// ============================================================================
+// groupStoriesByPhase Tests
 // ============================================================================
 
 describe('groupStoriesByPhase', () => {
-  it('groups stories by phase', () => {
+  it('groups sections by phase extracted from story ID', () => {
     const sections = [
-      makeStorySection({ story_id: 'WINT-0010', phase: 0 }),
-      makeStorySection({ story_id: 'WINT-1010', phase: 1 }),
-      makeStorySection({ story_id: 'WINT-0020', phase: 0 }),
+      makeStorySection({ story_id: 'WINT-0010' }), // phase 0
+      makeStorySection({ story_id: 'WINT-1010' }), // phase 1
+      makeStorySection({ story_id: 'WINT-1020' }), // phase 1
     ]
 
     const groups = groupStoriesByPhase(sections)
-
-    expect(groups.has('0')).toBe(true)
-    expect(groups.has('1')).toBe(true)
-    expect(groups.get('0')!).toHaveLength(2)
-    expect(groups.get('1')!).toHaveLength(1)
+    expect(groups.size).toBe(2)
+    expect(groups.get('0')).toHaveLength(1)
+    expect(groups.get('1')).toHaveLength(2)
   })
 
-  it('sorts stories within each phase by story_id ascending', () => {
+  it('groups sections without recognizable phase under unknown', () => {
     const sections = [
-      makeStorySection({ story_id: 'WINT-0030', phase: 0 }),
-      makeStorySection({ story_id: 'WINT-0010', phase: 0 }),
-      makeStorySection({ story_id: 'WINT-0020', phase: 0 }),
+      makeStorySection({ story_id: 'INVALID-STORY' }),
     ]
 
     const groups = groupStoriesByPhase(sections)
-    const phase0 = groups.get('0')!
-
-    expect(phase0[0].story_id).toBe('WINT-0010')
-    expect(phase0[1].story_id).toBe('WINT-0020')
-    expect(phase0[2].story_id).toBe('WINT-0030')
-  })
-
-  it('groups stories without phase into "unphased"', () => {
-    const sections = [makeStorySection({ story_id: 'WINT-0010', phase: null })]
-
-    const groups = groupStoriesByPhase(sections)
-
-    expect(groups.has('unphased')).toBe(true)
-    expect(groups.get('unphased')!).toHaveLength(1)
-  })
-
-  it('places numeric phases before unphased', () => {
-    const sections = [
-      makeStorySection({ story_id: 'WINT-9999', phase: null }),
-      makeStorySection({ story_id: 'WINT-0010', phase: 0 }),
-    ]
-
-    const groups = groupStoriesByPhase(sections)
-    const keys = Array.from(groups.keys())
-
-    expect(keys[0]).toBe('0')
-    expect(keys[keys.length - 1]).toBe('unphased')
-  })
-
-  it('sorts phases numerically (phase 2 before phase 10)', () => {
-    const sections = [
-      makeStorySection({ story_id: 'WINT-1000', phase: 10 }),
-      makeStorySection({ story_id: 'WINT-0200', phase: 2 }),
-    ]
-
-    const groups = groupStoriesByPhase(sections)
-    const keys = Array.from(groups.keys())
-
-    expect(keys[0]).toBe('2')
-    expect(keys[1]).toBe('10')
+    expect(groups.has('unknown')).toBe(true)
+    expect(groups.get('unknown')).toHaveLength(1)
   })
 
   it('handles empty sections array', () => {
     const groups = groupStoriesByPhase([])
     expect(groups.size).toBe(0)
   })
-})
 
-// ============================================================================
-// compareLineByLine (AC-8 — inline diff)
-// ============================================================================
-
-describe('compareLineByLine', () => {
-  it('returns identical=true for identical strings', () => {
-    const content = 'line 1\nline 2\nline 3'
-    const result = compareLineByLine(content, content)
-
-    expect(result.identical).toBe(true)
-    expect(result.diffLines).toHaveLength(0)
-    expect(result.addedCount).toBe(0)
-    expect(result.removedCount).toBe(0)
+  it('extracts correct phase from various story IDs', () => {
+    const sections = [
+      makeStorySection({ story_id: 'WINT-4060' }), // phase 4
+      makeStorySection({ story_id: 'WINT-4070' }), // phase 4
+      makeStorySection({ story_id: 'WINT-7010' }), // phase 7
+    ]
+    const groups = groupStoriesByPhase(sections)
+    expect(groups.get('4')).toHaveLength(2)
+    expect(groups.get('7')).toHaveLength(1)
   })
 
-  it('returns identical=false for different strings', () => {
-    const actual = 'line 1\nline 2\nline 3'
-    const expected = 'line 1\nline X\nline 3'
-
-    const result = compareLineByLine(actual, expected)
-
-    expect(result.identical).toBe(false)
-    expect(result.diffLines.length).toBeGreaterThan(0)
-  })
-
-  it('detects removed lines', () => {
-    const actual = 'line 1\nline 2\nline 3'
-    const expected = 'line 1\nline 3'
-
-    const result = compareLineByLine(actual, expected)
-
-    expect(result.identical).toBe(false)
-    expect(result.removedCount).toBeGreaterThan(0)
-  })
-
-  it('detects added lines', () => {
-    const actual = 'line 1\nline 3'
-    const expected = 'line 1\nline 2\nline 3'
-
-    const result = compareLineByLine(actual, expected)
-
-    expect(result.identical).toBe(false)
-    expect(result.addedCount).toBeGreaterThan(0)
-  })
-
-  it('handles empty strings', () => {
-    const result = compareLineByLine('', '')
-    expect(result.identical).toBe(true)
-  })
-
-  it('includes line number in diff output', () => {
-    const actual = 'line 1\nline X'
-    const expected = 'line 1\nline 2'
-
-    const result = compareLineByLine(actual, expected)
-
-    expect(result.diffLines.some(l => l.includes('[line 2]'))).toBe(true)
+  it('returns sorted map by phase key', () => {
+    const sections = [
+      makeStorySection({ story_id: 'WINT-9010' }), // phase 9
+      makeStorySection({ story_id: 'WINT-0010' }), // phase 0
+      makeStorySection({ story_id: 'WINT-1010' }), // phase 1
+    ]
+    const groups = groupStoriesByPhase(sections)
+    const keys = [...groups.keys()]
+    // Keys should be sorted: 0, 1, 9
+    expect(keys[0]).toBe('0')
+    expect(keys[1]).toBe('1')
+    expect(keys[2]).toBe('9')
   })
 })
 
 // ============================================================================
-// buildStorySection
+// computeLineDiff Tests (AC-8)
 // ============================================================================
 
-describe('buildStorySection', () => {
-  it('builds section from DB row with YAML fallback', () => {
-    const row = makeStoryRow()
-    const yaml: YamlFallbackData = {
-      phase: 0,
-      risk_notes: 'Some risk',
-      feature: 'Feature description',
-      infrastructure: ['postgres'],
-    }
-
-    const section = buildStorySection(row, yaml)
-
-    expect(section.story_id).toBe('WINT-0010')
-    expect(section.title).toBe('Test Story')
-    expect(section.state).toBe('ready-to-work')
-    expect(section.phase).toBe(0)
-    expect(section.risk_notes).toBe('Some risk')
-    expect(section.feature).toBe('Feature description')
-    expect(section.infrastructure).toEqual(['postgres'])
-    expect(section.goal).toBe('Test goal')
+describe('computeLineDiff', () => {
+  it('returns identical: true for identical strings', () => {
+    const { identical } = computeLineDiff('line1\nline2', 'line1\nline2')
+    // AC-8: exits 0 when files are identical
+    expect(identical).toBe(true)
   })
 
-  it('builds section with null yaml (DB-only)', () => {
-    const row = makeStoryRow()
-    const section = buildStorySection(row, null)
-
-    expect(section.phase).toBeNull()
-    expect(section.risk_notes).toBeNull()
-    expect(section.feature).toBeNull()
-    expect(section.infrastructure).toBeNull()
-    expect(section.field_sources.phase).toBe('missing')
-    expect(section.field_sources.state).toBe('db')
+  it('returns identical: false for different strings', () => {
+    const { identical } = computeLineDiff('line1\nline2', 'line1\nDIFFERENT')
+    // AC-8: exits 1 with diff summary when files differ
+    expect(identical).toBe(false)
   })
 
-  it('marks DB fields correctly in field_sources', () => {
-    const row = makeStoryRow()
-    const section = buildStorySection(row, null)
-
-    expect(section.field_sources.state).toBe('db')
-    expect(section.field_sources.title).toBe('db')
-    expect(section.field_sources.goal).toBe('db')
-    expect(section.field_sources.depends_on).toBe('db')
+  it('provides diffLines with lineNum, expected, actual', () => {
+    const { diffLines } = computeLineDiff('original\nline2', 'modified\nline2')
+    expect(diffLines.length).toBeGreaterThan(0)
+    expect(diffLines[0]).toHaveProperty('lineNum')
+    expect(diffLines[0]).toHaveProperty('expected')
+    expect(diffLines[0]).toHaveProperty('actual')
   })
 
-  it('marks yaml_fallback fields correctly when yaml provided', () => {
-    const row = makeStoryRow()
-    const yaml: YamlFallbackData = {
-      phase: 1,
-      risk_notes: 'risk',
-      feature: 'feat',
-      infrastructure: ['db'],
-    }
-    const section = buildStorySection(row, yaml)
+  it('reports correct line numbers for differences', () => {
+    const { diffLines } = computeLineDiff('line1\noriginal\nline3', 'line1\nmodified\nline3')
+    expect(diffLines[0].lineNum).toBe(2) // Second line differs
+  })
 
-    expect(section.field_sources.phase).toBe('yaml_fallback')
-    expect(section.field_sources.risk_notes).toBe('yaml_fallback')
-    expect(section.field_sources.feature).toBe('yaml_fallback')
-    expect(section.field_sources.infrastructure).toBe('yaml_fallback')
+  it('handles empty strings as identical', () => {
+    const { identical } = computeLineDiff('', '')
+    expect(identical).toBe(true)
+  })
+
+  it('detects difference when one string is longer', () => {
+    const { identical } = computeLineDiff('line1', 'line1\nextra')
+    expect(identical).toBe(false)
+  })
+
+  it('shows missing content as <missing>', () => {
+    const { diffLines } = computeLineDiff('line1\nline2', 'line1')
+    expect(diffLines.some(d => d.actual === '<missing>')).toBe(true)
   })
 })
 
 // ============================================================================
-// parseArgs
+// formatDiffSummary Tests
 // ============================================================================
 
-describe('parseArgs', () => {
-  const originalArgv = process.argv
-
-  afterEach(() => {
-    process.argv = originalArgv
+describe('formatDiffSummary', () => {
+  it('returns no-differences message for empty diffLines', () => {
+    const output = formatDiffSummary([])
+    expect(output).toContain('No differences')
   })
 
-  it('defaults to dry-run mode', () => {
-    process.argv = ['node', 'script.ts']
-    const opts = parseArgs()
-    expect(opts.mode).toBe('dry-run')
+  it('formats diff lines with line numbers', () => {
+    const diffLines = [{ lineNum: 5, expected: 'expected text', actual: 'actual text' }]
+    const output = formatDiffSummary(diffLines)
+    expect(output).toContain('Line 5')
   })
 
-  it('parses --generate flag', () => {
-    process.argv = ['node', 'script.ts', '--generate']
-    const opts = parseArgs()
-    expect(opts.mode).toBe('generate')
+  it('shows expected and actual values', () => {
+    const diffLines = [{ lineNum: 1, expected: 'foo', actual: 'bar' }]
+    const output = formatDiffSummary(diffLines)
+    expect(output).toContain('expected')
+    expect(output).toContain('actual')
   })
 
-  it('parses --verify flag', () => {
-    process.argv = ['node', 'script.ts', '--verify']
-    const opts = parseArgs()
-    expect(opts.mode).toBe('verify')
-  })
-
-  it('parses --dry-run flag explicitly', () => {
-    process.argv = ['node', 'script.ts', '--dry-run']
-    const opts = parseArgs()
-    expect(opts.mode).toBe('dry-run')
+  it('limits output to first 10 differences', () => {
+    const diffLines = Array.from({ length: 25 }, (_, i) => ({
+      lineNum: i + 1,
+      expected: `exp${i}`,
+      actual: `act${i}`,
+    }))
+    const output = formatDiffSummary(diffLines)
+    // Should mention remaining differences
+    expect(output).toContain('15 more differences')
   })
 })

@@ -1,0 +1,116 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-20T21:45:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "WINT-0110"
+        lesson: "sessionQuery does NOT accept sessionId as a filter field — SessionQueryInputSchema only accepts agentName, storyId, activeOnly, limit, offset. Workers must query with activeOnly+storyId then filter client-side for the matching UUID."
+        category: blocker
+        applies_because: "session-inherit skill must document the correct sessionQuery invocation. AC-11 was added specifically because of this gap."
+
+      - story_id: "WINT-0110"
+        lesson: "sessionComplete double-completion is a real Business Logic Error risk when multiple workers share a session. Documentation-only enforcement in the skill is the agreed mitigation until WINT-2100 adds a runtime guard."
+        category: blocker
+        applies_because: "session-inherit must include a prominent, visually distinct prohibition on workers calling sessionComplete (AC-10)."
+
+      - story_id: "general"
+        lesson: "Skills are markdown procedural documents — there is no runtime skill executor. Agents follow skill steps manually. Session IDs must be passed via system prompt injection, not file writes."
+        category: pattern
+        applies_because: "Both skills must be written as clear step-by-step instructions that agents can follow without tooling support."
+
+      - story_id: "general"
+        lesson: "sessionUpdate with mode: 'incremental' uses SQL arithmetic (+=) and is concurrency-safe. mode: 'absolute' must be explicitly forbidden for workers to prevent race conditions in parallel agent workflows."
+        category: pattern
+        applies_because: "session-inherit skill must document incremental mode and explicitly forbid absolute mode (AC-6)."
+
+    blockers_to_avoid:
+      - "Do NOT show sessionQuery({ sessionId: ... }) — sessionId is not a valid filter in SessionQueryInputSchema. This would cause a Zod validation error at runtime."
+      - "Do NOT allow workers to call sessionComplete — only the opening leader may close a session."
+      - "Do NOT gate workflow steps on session availability — session tracking is telemetry, not a core workflow gate. Always emit warning and proceed on null/error."
+
+    patterns_to_follow:
+      - "Skill frontmatter requires 'name' and 'description' fields (AC-1, AC-4 validated via grep)"
+      - "Structured output blocks use consistent indentation (2 spaces) — matches WORKTREE CREATED pattern from wt-new/SKILL.md"
+      - "SESSION CREATED output must be parseable by regex: /SESSION CREATED\\n\\s+session_id:\\s+([0-9a-f-]{36})/"
+      - "Graceful degradation: emit warning, do not throw. SESSION UNAVAILABLE message continues the workflow."
+      - "Session Lifecycle section uses 4-step contract: leader opens → workers inherit → leader closes → periodic cleanup (WINT-2100, retentionDays: 90)"
+
+    patterns_to_avoid:
+      - "Do not use TypeScript interfaces — Zod schemas only (CLAUDE.md requirement)"
+      - "Do not create barrel files"
+      - "Do not use console.log — use @repo/logger (not applicable to skills, but relevant to any future TypeScript wrapper)"
+      - "Do not write session IDs to CHECKPOINT.yaml or agent frontmatter — pass via system prompt injection only"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "All integration tests for these skills must use the live postgres-knowledgebase with the real wint.contextSessions table. No mocks permitted for UAT."
+        applies_to: ["testing", "session-management"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "This story is skills-only (markdown), no frontend. ADR-006 E2E requirement does not apply — SCOPE.yaml touches_frontend: false."
+        applies_to: ["testing"]
+
+    constraints:
+      api_paths: "Not applicable — no endpoints created by this story"
+      infrastructure: "Not applicable — no infrastructure changes"
+      storage: "Not applicable — no storage changes"
+      auth: "Not applicable — skills are markdown procedural documents"
+      testing: "UAT must use real postgres-knowledgebase. All integration tests (HT-1 through HT-4) require live DB. Docs checks (HT-5, EC-3, EG-4, EG-5) require only file reads."
+
+  session_tool_api_reference:
+    sessionCreate:
+      required_fields: [agentName]
+      optional_fields: [sessionId, storyId, phase, inputTokens, outputTokens, cachedTokens, startedAt]
+      returns: "Session record with UUID, or null on DB error"
+      note: "sessionId auto-generated as UUID if not provided"
+
+    sessionQuery:
+      valid_filter_fields: [agentName, storyId, activeOnly, limit, offset]
+      invalid_fields: ["sessionId — NOT a valid filter field, will cause Zod error"]
+      correct_pattern: "sessionQuery({ activeOnly: true, limit: 50, storyId: optionalKnownStoryId }) then filter returned array by sessionId client-side"
+      default_limit: 50
+      max_limit: 1000
+
+    sessionUpdate:
+      required_fields: [sessionId]
+      optional_fields: [mode, inputTokens, outputTokens, cachedTokens]
+      mode_options: ["incremental (default — SQL +=, concurrency-safe)", "absolute (overwrite — forbidden for workers)"]
+      worker_rule: "ALWAYS use mode: 'incremental'. mode: 'absolute' is forbidden for workers."
+
+    sessionComplete:
+      required_fields: [sessionId]
+      optional_fields: [endedAt, inputTokens, outputTokens, cachedTokens]
+      worker_rule: "NEVER called by workers. Only the leader that opened the session via session-create may call sessionComplete."
+
+    sessionCleanup:
+      default_dry_run: true
+      default_retention_days: 90
+      note: "Future — WINT-2100 (session-manager Agent). Referenced in Session Lifecycle documentation only."
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full serverless.yml"
+        typical_tokens: 17500
+        mitigation: "Not applicable to this story — no backend code changes"
+      - operation: "Reading full story file"
+        typical_tokens: 8000
+        mitigation: "Read only ACs section and canonical references (per agent instructions)"
+
+    recommended_patterns:
+      - "This is a markdown-only story. Each subtask touches at most 1 file (ST-3, ST-4, ST-5 modify a single file)."
+      - "ST-6 touches 2 files (both skill files) — still within the 3-file limit per step."
+      - "Each implementation step agent should read only the files_to_read listed in that step, not the full story."
+      - "Canonical references (wt-new/SKILL.md, doc-sync/SKILL.md) already loaded for planning — pass key excerpts via PLAN.yaml files_to_read rather than re-reading full files."
+
+  warnings:
+    - "WINT-0110 must be verified passing before skill authoring begins (ST-1 is the prerequisite step). If pnpm --filter @repo/mcp-tools test fails, block and raise."
+    - "sessionQuery pagination boundary edge case: if > 50 active sessions exist, the target session may not appear in the first page. Skill should note this as a known limitation."
+    - "Skills not listed in any SKILLS.md index until post-implementation doc-sync — non-blocking, logged for post-MVP."

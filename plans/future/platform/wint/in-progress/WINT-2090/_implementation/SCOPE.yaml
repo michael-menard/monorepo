@@ -1,0 +1,28 @@
+schema: 1
+story_id: "WINT-2090"
+timestamp: "2026-02-20T21:35:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/skills/session-create/**"
+  - ".claude/skills/session-inherit/**"
+
+risk_flags:
+  auth: true
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: false
+
+summary: "Create session-create and session-inherit skills to enable stateful leader-worker workflows with context caching"
+elaboration: "completed"

@@ -1,0 +1,4 @@
+creation_rules:
+  # Encrypt all .env files (excluding .env.example and .env.encrypted)
+  - path_regex: \.env(\.local|\.development|\.development\.local)?$
+    age: age1gux5a4d4r3fquzhcwglaxev3flg7ayf9nxtvq3m9fnmjssvyt3mqgdx48r

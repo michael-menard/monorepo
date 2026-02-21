@@ -1,0 +1,277 @@
+# Token Log - WINT-9020
+
+## Phase: dev-setup
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-18T00:00:00Z |
+| Phase Name | dev-setup |
+| Input Tokens | 4000 |
+| Output Tokens | 3000 |
+| Total Tokens | 7000 |
+| Model | haiku |
+| Status | COMPLETE |
+
+## Breakdown
+
+**Input Tokens (4000):**
+- Story frontmatter read (~800 tokens)
+- Story index lookup (~600 tokens)
+- Elaboration report read (~1200 tokens)
+- Precondition checks (~400 tokens)
+- Dependency verification (~600 tokens)
+- Agent spec analysis (~400 tokens)
+
+**Output Tokens (3000):**
+- CHECKPOINT.yaml (~200 tokens)
+- SCOPE.yaml (~300 tokens)
+- working-set.md (~1500 tokens)
+- Verification and logging (~1000 tokens)
+
+## Summary
+
+Setup phase completed successfully. All precondition checks passed:
+- Story status: ready-to-work
+- Dependencies: WINT-9010 (UAT), WINT-0160 (UAT) — both satisfied
+- No prior implementation (setup artifacts created fresh)
+- Story is executable for dev-implementation phase
+
+---
+
+## Phase: dev-planning
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-18 |
+| Phase Name | dev-planning |
+| Input Tokens | 42,000 |
+| Output Tokens | 6,200 |
+| Total Tokens | 48,200 |
+| Cumulative Tokens | 55,200 |
+| Model | sonnet |
+| Status | COMPLETE |
+
+## Breakdown
+
+**Input Tokens (42,000):**
+- Agent spec (dev-plan-leader.agent.md) (~2,000 tokens)
+- Story file WINT-9020.md (full read) (~5,500 tokens)
+- CHECKPOINT.yaml, SCOPE.yaml (~400 tokens)
+- ELAB-WINT-9020.md (~3,000 tokens)
+- nodes/workflow/doc-sync.ts (existing scaffold) (~3,000 tokens)
+- nodes/elaboration/delta-detect.ts (exemplar) (~8,000 tokens)
+- runner/node-factory.ts (~5,000 tokens)
+- runner/state-helpers.ts (~3,500 tokens)
+- nodes/index.ts (~3,000 tokens)
+- nodes/workflow/index.ts (~1,500 tokens)
+- .claude/skills/doc-sync/SKILL.md (~8,000 tokens)
+- packages/backend/workflow-logic/src/index.ts (~500 tokens)
+- nodes/workflow/__tests__/doc-sync.test.ts (~5,000 tokens)
+- _pm/TEST-PLAN.md (~3,500 tokens)
+- decision-handling.md (~2,500 tokens)
+
+**Output Tokens (6,200):**
+- KNOWLEDGE-CONTEXT.yaml (~2,500 tokens)
+- PLAN.yaml (~3,500 tokens)
+- CHECKPOINT.yaml update (~200 tokens)
+
+---
+
+## Phase: dev-implementation
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-18 |
+| Phase Name | dev-implementation |
+| Input Tokens | 45,000 |
+| Output Tokens | 52,000 |
+| Total Tokens | 97,000 |
+| Cumulative Tokens | 152,200 |
+| Model | sonnet |
+| Status | COMPLETE |
+
+## Summary
+
+Implementation phase completed successfully. All 13 acceptance criteria satisfied with full 7-phase native TypeScript port of doc-sync LangGraph node. 42 tests passing with 85.8% coverage on doc-sync.ts, zero TypeScript errors, zero ESLint errors.
+
+---
+
+## Phase: dev-proof
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-18 04:15 |
+| Phase Name | dev-proof |
+| Input Tokens | 8,000 |
+| Output Tokens | 6,000 |
+| Total Tokens | 14,000 |
+| Cumulative Tokens | 166,200 |
+| Model | haiku |
+| Status | COMPLETE |
+
+## Breakdown
+
+**Input Tokens (8,000):**
+- EVIDENCE.yaml (complete evidence bundle) (~3,500 tokens)
+- dev-proof-leader agent spec (~1,200 tokens)
+- CHECKPOINT.yaml verification (~800 tokens)
+- Story file context (~1,500 tokens)
+- Template processing (~1,000 tokens)
+
+**Output Tokens (6,000):**
+- PROOF-WINT-9020.md generated (~5,500 tokens)
+- CHECKPOINT.yaml update (~300 tokens)
+- Token log entry (~200 tokens)
+
+## Summary
+
+Proof phase completed. Transformation of EVIDENCE.yaml into human-readable PROOF-WINT-9020.md document. All 13 ACs documented with detailed evidence, test results, files changed, and implementation notes. Document includes token usage summary and completion verification.
+
+---
+
+## Phase: dev-verification
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-20 20:46 |
+| Phase Name | dev-verification |
+| Input Tokens | 45,000 |
+| Output Tokens | 8,000 |
+| Total Tokens | 53,000 |
+| Cumulative Tokens | 219,200 |
+| Model | haiku |
+| Status | COMPLETE |
+
+## Breakdown
+
+**Input Tokens (45,000):**
+- dev-verification-leader.agent.md (~2,500 tokens)
+- FIX-CONTEXT.yaml (~1,500 tokens)
+- SCOPE.yaml (~300 tokens)
+- Build output capture (~5,000 tokens)
+- Type check output (~3,000 tokens)
+- Lint verification (~2,000 tokens)
+- Test runs and output (58 tests) (~15,000 tokens)
+- PLAN.yaml analysis (~5,000 tokens)
+- REVIEW.yaml from code review (~3,000 tokens)
+- Previous TOKEN-LOG.md context (~2,200 tokens)
+
+**Output Tokens (8,000):**
+- VERIFICATION.md (~3,500 tokens)
+- FIX-VERIFICATION-SUMMARY.md (~1,200 tokens)
+- Token log entry (~500 tokens)
+- Verification reporting (~2,800 tokens)
+
+## Summary
+
+Fix verification phase completed successfully. Second iteration of code review fixes applied:
+- Removed unused imports and variables from test file
+- Corrected import ordering
+- Extracted utilities for reusability improvements
+
+All verification checks passed:
+- Build: PASS (tsc clean)
+- Type Check: PASS (no errors)
+- Lint: PASS (ESLint clean, no violations)
+- Tests: PASS (58/58 tests passing - 16 from workflow tests, 42 from sync tests)
+
+No E2E tests required (backend-only story). Story ready for next phase.
+
+---
+
+## Phase: dev-fix-documentation
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-20 20:46 |
+| Phase Name | dev-fix-documentation |
+| Input Tokens | 12,000 |
+| Output Tokens | 3,500 |
+| Total Tokens | 15,500 |
+| Cumulative Tokens | 234,700 |
+| Model | haiku |
+| Status | COMPLETE |
+
+## Breakdown
+
+**Input Tokens (12,000):**
+- dev-documentation-leader.agent.md agent spec (~2,000 tokens)
+- FIX-CONTEXT.yaml (issues fixed) (~1,500 tokens)
+- FIX-VERIFICATION-SUMMARY.md (verification results) (~1,000 tokens)
+- PROOF-WINT-9020.md (existing proof content) (~4,000 tokens)
+- dev-implement-proof-writer.agent.md (~1,500 tokens)
+- Story file context (~1,000 tokens)
+- Previous documentation artifacts (~1,000 tokens)
+
+**Output Tokens (3,500):**
+- PROOF-WINT-9020.md Fix Cycle section (~2,200 tokens)
+- Token log update (~800 tokens)
+- Verification reporting (~500 tokens)
+
+## Summary
+
+Fix mode documentation phase completed. Updated PROOF-WINT-9020.md with Fix Cycle section documenting all 9 code review issues fixed in iteration 2:
+- 7 lint issues (unused imports, import ordering)
+- 2 reusability issues (utility extraction)
+
+All verification checks passed (Types, Lint, Tests). No regressions detected in existing test suite. Story ready for code review.
+
+---
+
+## Phase: code-review
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-21 04:40 |
+| Phase Name | code-review |
+| Input Tokens | 95,000 |
+| Output Tokens | 12,000 |
+| Total Tokens | 107,000 |
+| Cumulative Tokens | 341,700 |
+| Model | haiku (workers) + opus (orchestrator) |
+| Status | COMPLETE |
+
+## Summary
+
+Code review iteration 5 completed with PASS verdict. Selective re-review: 4 workers re-run (lint, reusability, typecheck, build), 6 carried forward from previous PASS (style, syntax, security, react, typescript, accessibility). All 10 workers PASS with zero errors and zero warnings. Previous iteration 4 findings (34 lint errors, 2 reusability errors) fully resolved.
+
+---
+
+## Phase: qa-verify
+
+| Field | Value |
+|-------|-------|
+| Timestamp | 2026-02-20 21:45 |
+| Phase Name | qa-verify |
+| Input Tokens | 14,200 |
+| Output Tokens | 1,800 |
+| Total Tokens | 16,000 |
+| Cumulative Tokens | 357,700 |
+| Model | haiku |
+| Status | COMPLETE |
+
+## Breakdown
+
+**Input Tokens (14,200):**
+- qa-verify-completion-leader.agent.md (~2,000 tokens)
+- QA-VERIFY.yaml (full verdict) (~3,500 tokens)
+- CHECKPOINT.yaml (~200 tokens)
+- Acceptance criteria evidence review (~4,000 tokens)
+- Test results and coverage verification (~2,500 tokens)
+- Prior TOKEN-LOG.md context (~2,000 tokens)
+
+**Output Tokens (1,800):**
+- QA-VERIFY.yaml gate section (~300 tokens)
+- Story status update to uat (~200 tokens)
+- Index updates (~400 tokens)
+- Completion reporting (~900 tokens)
+
+## Summary
+
+QA verification phase completed with PASS verdict. All 13 acceptance criteria verified:
+- File structure confirmed (nodes/sync/doc-sync.ts, exports in nodes/index.ts)
+- 42 unit tests passing with 86.14% coverage
+- Zero TypeScript errors and zero ESLint errors
+- Architecture compliant with no blocking issues
+- Story moved to UAT status
+- Dependencies cleared from WINT-9060 (batch-coordinator)

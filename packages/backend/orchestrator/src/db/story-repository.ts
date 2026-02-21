@@ -9,19 +9,14 @@
  */
 
 import { logger } from '@repo/logger'
-import { StoryStateSchema, type StoryState } from '../state/enums/story-state.js'
+import { type StoryState } from '../state/enums/story-state.js'
 import {
   StoryArtifactSchema,
   type StoryArtifact,
   type StoryType,
   type PriorityLevel,
 } from '../artifacts/story.js'
-import {
-  StoryRowSchema,
-  StateTransitionSchema,
-  type StoryRow,
-  type StateTransition,
-} from '../__types__/index.js'
+import { type StoryRow, type StateTransition } from '../__types__/index.js'
 
 // ============================================================================
 // Database Client Interface
@@ -172,11 +167,7 @@ export class StoryRepository {
   /**
    * Set story as blocked by another story
    */
-  async setBlockedBy(
-    storyId: string,
-    blockedBy: string | null,
-    actor: string,
-  ): Promise<void> {
+  async setBlockedBy(storyId: string, blockedBy: string | null, actor: string): Promise<void> {
     try {
       await this.client.query(
         `UPDATE wint.stories SET blocked_by = $1, updated_at = NOW() WHERE story_id = $2`,
@@ -305,31 +296,6 @@ export class StoryRepository {
     } catch (error) {
       logger.error('Failed to get stories by feature', {
         featureName,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      throw error
-    }
-  }
-
-  /**
-   * Get all stories ordered by story_id ASC
-   * Returns raw StoryRow[] to preserve DB-native underscore state values
-   * for STATE_TO_DISPLAY_LABEL mapping in generate-stories-index.ts
-   */
-  async getAllStories(): Promise<StoryRow[]> {
-    try {
-      const result = await this.client.query<StoryRow>(
-        `SELECT
-          id, story_id, feature_id, type, state, title, goal, points, priority,
-          blocked_by, depends_on, follow_up_from, packages, surfaces,
-          non_goals, created_at, updated_at
-        FROM wint.stories
-        ORDER BY story_id ASC`,
-      )
-
-      return result.rows
-    } catch (error) {
-      logger.error('Failed to get all stories', {
         error: error instanceof Error ? error.message : String(error),
       })
       throw error

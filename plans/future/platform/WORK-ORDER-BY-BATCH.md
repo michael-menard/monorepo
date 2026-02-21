@@ -191,7 +191,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Priority |
 |---|---|----------|-------|--------|--------------|----------|
-| [ ] | 52 | WINT-1070 | Deprecate stories.index.md | ⏳ | WINT-1030 (#38) | P2 — **ready to start** |
+| [ ] | 52 | WINT-1070 | Deprecate stories.index.md | ❌ failed-code-review | WINT-1030 (#38) | P2 — **needs fix** |
 | [ ] | 53 | WINT-1040 | Update story-status to Use DB | ⏳ | WINT-1011 (#48a), WINT-1030 (#38) | P2 — **ready to start** |
 | [ ] | 54 | WINT-1050 | Update story-update to Use DB | ⏳ | WINT-1011 (#48a), WINT-1030 (#38) | P2 — **ready to start** |
 | [ ] | 55 | WINT-1060 | Update story-move to Use DB | ⏳ | WINT-1011 (#48a), WINT-1030 (#38) | P2 — **ready to start** |
@@ -238,7 +238,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Priority |
 |---|---|----------|-------|--------|--------------|----------|
-| [ ] | 64 | WINT-9020 | Create doc-sync LangGraph Node ⚡ | 🚧 | WINT-9010 (#57), WINT-0160 (#21) | P0 — ready-for-code-review |
+| [ ] | 64 | WINT-9020 | Create doc-sync LangGraph Node ⚡ | 🚧 | | WINT-9010 (#57), WINT-0160 (#21) | P0 |
 | [ ] | 65 | WINT-4080 | Create scope-defender Agent (DA) | ⏳ | None | P1 — **ready to start** |
 | [ ] | 66 | WINT-4090 | Create evidence-judge Agent | 🔧 | qa-verify | P1 |
 | [ ] | 67 | KBAR-0070 | story_get Tool | ⏸️ | KBAR-0060 (#58) | P2 |
@@ -360,10 +360,9 @@ Once story #94 (WINT-9140) is complete and validated, you can switch to working 
 - ✅ UAT Verified: 47 stories (AUDT-0010, INFR-0020, INFR-0030, INFR-0040, INFR-0041, INFR-0050, INFR-0110, INFR-0120, KBAR-0010, KBAR-0020, KBAR-0030, KBAR-0040, LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, LNGG-0070, MODL-0010, MODL-0011, MODL-0020, MODL-0030, MODL-0050, WINT-0010, WINT-0020, WINT-0030, WINT-0040, WINT-0060, WINT-0070, WINT-0080, WINT-0090, WINT-0100, WINT-0110, WINT-0130, WINT-0150, WINT-0160, WINT-0180, WINT-0200, WINT-0220, WINT-0230, WINT-1020, WINT-1030, WINT-1080, WINT-1090, WINT-1100, WINT-7010)
 - 🔍 Ready for QA: 0 stories
 - 🚧 In Progress: 0 stories
-- ⏳ Ready to Start: 3 stories (TELE-0010, WINT-0240, WINT-2090)
 - ⏸️ Blocked: remaining stories (waiting on dependencies)
 
-**Active Stories: 50 tracked**
+**Active Stories: 47 tracked**
 
 **Critical Path Tracking:**
 - [x] LNGG-0010 ✅ → Batch 2 unblocked (LNGG-0060 in 🔍 ready-for-qa)

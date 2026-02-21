@@ -1,0 +1,263 @@
+---
+deferred_at: "2026-02-20"
+reason: "KB (PostgreSQL) unavailable during story generation and elaboration"
+retry_when: "KB server available"
+---
+
+writes:
+  # --- Story record (from story generation phase) ---
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: "WINT-0240"
+      feature: "wint"
+      title: "Configure Ollama Model Fleet"
+      story_dir: "plans/future/platform/wint/backlog/WINT-0240"
+      story_file: "plans/future/platform/wint/backlog/WINT-0240/WINT-0240.md"
+      story_type: "chore"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: true
+
+  # --- KB finding entries (from elab-autonomous-decider phase) ---
+
+  # Low-severity finding #1 from ANALYSIS.md
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Edge Case: OLLAMA_ENABLE_FALLBACK Source Mismatch**
+        - OLLAMA_ENABLE_FALLBACK is defined in src/config/llm-provider.ts, not in OllamaConfigSchema
+        - AC-9 correctly includes it in the env var documentation set
+        - Implementer note: document with clarifying comment pointing to llm-provider.ts as source; default is `true`
+        - No AC change required — story provides sufficient guidance
+        - Future: consider promoting to OllamaConfigSchema during WINT-0230 (Unified Model Interface) elaboration
+        - Impact: Low | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "edge-case"
+        - "ollama"
+        - "env-vars"
+        - "technical-debt"
+
+  # Low-severity finding #2 from ANALYSIS.md
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Edge Case: llama3.2 Variant Discrepancy (8b vs 3b)**
+        - model-assignments.yaml uses llama3.2:8b for several agents
+        - WINT-0220-STRATEGY.yaml Tier 3 lists llama3.2:3b
+        - Recommended resolution: include llama3.2:8b (satisfies agent assignments); note it supersedes :3b strategy requirement
+        - Offer llama3.2:3b as lite-mode alternative in setup script
+        - Formal reconciliation deferred to a WINT-0220 revision
+        - Impact: Low | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "edge-case"
+        - "ollama"
+        - "model-fleet"
+        - "strategy-alignment"
+
+  # Low-severity finding #3 from ANALYSIS.md
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Edge Case: qwen2.5-coder:14b Has No Current Agent Consumer**
+        - qwen2.5-coder:14b appears in WINT-0220-STRATEGY.yaml Tier 2 but no agent in model-assignments.yaml references it
+        - Decision: include in fleet per AC-7 strategy alignment; add comment in script noting no current consumer
+        - Becomes valuable when WINT-0230 (Unified Model Interface) introduces a Tier 2 model router
+        - Impact: Low | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "edge-case"
+        - "ollama"
+        - "model-fleet"
+        - "future-work"
+
+  # FUTURE-OPPORTUNITIES.md Gap #3 — inference verification
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Observability: Health Check Does Not Verify Inference Capability**
+        - check-ollama-health.sh verifies model presence via `ollama list` but not inference capability
+        - On VRAM-constrained machines, a model may be downloaded but unrunnable
+        - Post-MVP: add optional --verify-inference flag that runs a minimal prompt per model (e.g., `echo "1+1=" | ollama run <model>`)
+        - Tracked in FUTURE-RISKS.md as FR-2
+        - Impact: Medium | Effort: Medium
+      additional_tags:
+        - "non-blocking"
+        - "observability"
+        - "future-work"
+        - "ollama"
+        - "health-check"
+
+  # FUTURE-OPPORTUNITIES.md Gap #5 — fleet reset script
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Future Work: Ollama Fleet Reset Script**
+        - No uninstall/fleet-reset script exists for testing setup idempotency
+        - Add scripts/reset-ollama-fleet.sh that runs `ollama rm` for each fleet model
+        - Useful for WINT-0270 (Benchmark Local Models) to ensure clean benchmark state
+        - See FUTURE-RISKS.md FR-5
+        - Impact: Low | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "future-work"
+        - "ollama"
+        - "testing"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #1 — auto-VRAM detection
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Enhancement: Auto-VRAM Detection for Fleet Tier Selection**
+        - Replace manual --lite flag with automatic VRAM detection
+        - NVIDIA/Linux: nvidia-smi | AMD: rocm-smi | macOS Apple Silicon: sysctl hw.memsize / system_profiler
+        - Auto-select Tier 2 or Tier 3 fleet based on available VRAM without requiring user to pass --lite
+        - Deferred to WINT-0250 (Escalation Triggers). See FUTURE-RISKS.md FR-4.
+        - Impact: High | Effort: Medium
+      additional_tags:
+        - "non-blocking"
+        - "ux-polish"
+        - "future-work"
+        - "ollama"
+        - "vram"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #2 — model version pinning
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Enhancement: Model Version Pinning via --pin-versions Flag**
+        - Allow specifying exact quantization tags (e.g., deepseek-coder-v2:16b-instruct-q4_K_M)
+        - Prevents silent behavior changes when Ollama updates a generic tag's underlying model
+        - Add --pin-versions flag to setup-ollama-models.sh
+        - Deferred to Q2 2026. See FUTURE-RISKS.md FR-1.
+        - Impact: Medium | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "future-work"
+        - "ollama"
+        - "model-fleet"
+        - "safety"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #3 — parallel pulls
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Performance: Parallel Model Pulls to Reduce Setup Time**
+        - Current serial pull loop takes 30-60+ minutes for the full fleet
+        - Implement background pulls using `ollama pull & ... wait` pattern
+        - Caution: may saturate network bandwidth; add --parallel flag with opt-in behavior
+        - Deferred post-MVP
+        - Impact: Medium | Effort: Medium
+      additional_tags:
+        - "non-blocking"
+        - "performance"
+        - "optimization"
+        - "ollama"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #4 — CI health check integration
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Integration: CI Health Check Precondition**
+        - Integrate check-ollama-health.sh as GitHub Actions / GitLab CI precondition
+        - Run before any workflow step that relies on local Ollama models
+        - Currently out of scope per WINT-0240 non-goals; deferred to post-WINT-0250
+        - See FUTURE-RISKS.md FR-3
+        - Impact: High | Effort: Medium
+      additional_tags:
+        - "non-blocking"
+        - "integration"
+        - "future-work"
+        - "ci-cd"
+        - "ollama"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #5 — model provenance tracking
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Observability: Model Provenance Tracking in VRAM Documentation**
+        - Add quantization level (Q4_K_M, Q5_K_M etc.), parameter count, and benchmark scores (HumanEval, MBPP) to VRAM table
+        - Makes model selection more data-driven
+        - Documentation follow-up — low priority, can be done independently of code changes
+        - Impact: Low | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "observability"
+        - "documentation"
+        - "ollama"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #6 — model update notifications
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Observability: Model Update Notification Script**
+        - Add check-ollama-updates.sh that compares local model manifest digest against Ollama registry
+        - Detects when newer versions of fleet models are available
+        - Useful for periodic maintenance workflows
+        - Impact: Low | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "observability"
+        - "monitoring"
+        - "ollama"
+        - "future-work"
+
+  # FUTURE-OPPORTUNITIES.md Enhancement #7 — WINT-0270 precondition note
+  - kb_write_request:
+      entry_type: finding
+      source_stage: elab
+      story_id: "WINT-0240"
+      category: "future-opportunities"
+      content: |
+        **[WINT-0240] Integration: check-ollama-health.sh as WINT-0270 Benchmark Precondition**
+        - WINT-0270 (Benchmark Local Models) depends on WINT-0240
+        - WINT-0270 elaboration should add AC requiring check-ollama-health.sh exit code 0 before any benchmark run
+        - This is a WINT-0270 elaboration concern, not a WINT-0240 gap
+        - High-value integration point that ensures benchmark validity
+        - Impact: High | Effort: Low
+      additional_tags:
+        - "non-blocking"
+        - "integration"
+        - "future-work"
+        - "wint-0270"
+        - "ollama"

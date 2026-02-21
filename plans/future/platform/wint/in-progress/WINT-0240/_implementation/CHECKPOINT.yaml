@@ -1,0 +1,18 @@
+schema: 1
+story_id: WINT-0240
+feature_dir: plans/future/platform/wint
+timestamp: '2026-02-20T21:47:00Z'
+
+current_phase: done
+last_successful_phase: review
+iteration: 1
+e2e_gate: exempt
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - "WINT-0220 dependency is still pending in index, but WINT-0220-STRATEGY.yaml exists on disk as working baseline. Proceeding with implementation per orchestrator decision."
+  - "shellcheck not installed on machine; bash -n used for syntax validation."
+gen_mode: false
+pr_number: 374
+pr_url: https://github.com/michael-menard/monorepo/pull/374

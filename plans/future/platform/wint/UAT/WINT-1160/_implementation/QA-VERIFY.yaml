@@ -1,6 +1,6 @@
 schema: 1
 story_id: WINT-1160
-timestamp: "2026-02-18T16:00:00Z"
+timestamp: '2026-02-20T23:45:00Z'
 
 verdict: PASS
 
@@ -10,89 +10,129 @@ test_results:
   integration: { pass: 0, fail: 0 }
   e2e: { pass: 0, fail: 0 }
   http: { pass: 0, fail: 0 }
-  grep: { pass: 11, fail: 0 }
-  notes: "CLI/markdown-only story. No TypeScript source files touched. Verification performed via grep spot-checks on all 3 touched files. All 11 grep evidence commands independently confirmed."
 
-coverage:
-  lines: null
-  branches: null
-  coverage_meets_threshold: true
-  notes: "Coverage threshold N/A — no TypeScript compilation. ADR-006 applies: CLI/markdown-only story exempt from code coverage requirements."
+test_notes: "Documentation-only story. No code changed. No build or test commands required or applicable."
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_notes: "Exempt — documentation-only story (story_type: docs). No source files modified; coverage threshold not applicable."
 
 test_quality:
   verdict: PASS
   anti_patterns: []
-  notes: "No code tests exist for this story (markdown-only). ADR-005 confirmed: integration scenarios (IT-1/IT-2/IT-3) documented with no-mocking requirement. ADR-006 confirmed: E2E exempt for CLI/infrastructure stories."
 
 acs_verified:
-  - ac_id: "AC-1"
+  - ac_id: AC-1
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
-    notes: "Confirmed Section 2 'Database-Tracked Worktrees' in SKILL.md at lines 46, 103, 117. worktree_list_active call documented at line 50. Tabular output format with storyId, branchName, worktreePath, createdAt/Registered, Status columns verified at lines 109-112."
+    notes: >
+      Confirmed in dev-implement-story.md Step 1.3 conflict prompt. Exactly 3 options
+      listed: (1) Switch, (2) Take over — PERMANENTLY ABANDON, (3) Abort. No other
+      numbering scheme present.
 
-  - ac_id: "AC-2"
+  - ac_id: AC-2
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
-    notes: "Null-Check Resilience section confirmed in SKILL.md lines 56-73. Warning text 'WARNING: DB worktree data unavailable (worktree_list_active MCP tool error). Showing git-level view only.' present at lines 64 and 124. Graceful return documented — git view preserved."
+    notes: >
+      CONFIRM TAKE-OVER block confirmed in dev-implement-story.md. Shows old worktree
+      storyId, branchName, worktreePath, createdAt. Requires user to type exactly
+      "abandon" (case-sensitive). Non-matching input re-presents options (1)/(2)/(3).
 
-  - ac_id: "AC-3"
+  - ac_id: AC-3
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
-    notes: "Disk-Check Mechanism section confirmed in SKILL.md lines 75-86. 'Use Bash tool: ls {worktreePath}' at line 80. [ORPHANED] flag on non-zero exit documented at lines 83, 111, 135. [CHECK-FAILED] fallback also documented (line 85)."
+    notes: >
+      worktree_mark_complete call confirmed: status 'abandoned', metadata includes
+      abandoned_reason: 'conflict_takeover' and taken_over_at: '<ISO_TIMESTAMP>'.
+      Call is step 1 of the ordered take-over sequence before /wt:new.
 
-  - ac_id: "AC-4"
+  - ac_id: AC-4
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
-    notes: "Cross-Reference Mechanism section confirmed in SKILL.md lines 87-96. db_paths/git_paths cross-reference logic documented. [UNTRACKED] detection for git worktrees NOT in db_paths confirmed at lines 87, 94, 96, 136, 138."
+    notes: >
+      Autonomy table confirmed: moderate and aggressive both show "ALWAYS prompt"
+      for option (2). CRITICAL statement is explicit: "Option (2) take-over is NEVER
+      auto-selected at any autonomy level." Override rule present.
 
-  - ac_id: "AC-5"
+  - ac_id: AC-5
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
-    notes: "Confirmed in dev-implement-story.md at line 316: 'CRITICAL — Option (b) take-over ALWAYS requires explicit user confirmation. This rule overrides all autonomy levels including aggressive. Never auto-select option (b).' Autonomy table at lines 311-314 confirms moderate and aggressive both show ALWAYS prompt for option (b)."
+    notes: >
+      Option (3) abort block confirmed with "Next steps:" section listing /wt:switch
+      for resuming existing worktree, and --skip-worktree for bypassing worktree
+      isolation. STOP instruction present.
 
-  - ac_id: "AC-6"
+  - ac_id: AC-6
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
-    notes: "Ordered sequence confirmed in dev-implement-story.md: 1) worktree_mark_complete({ status: 'abandoned' }) at line 336, 2) null-check with abort message 'Take-over aborted: failed to mark old worktree as abandoned' at line 337, 3) wt:new only if step 1 succeeded at line 338, 4) register and continue at line 339."
+    notes: >
+      wt-status SKILL.md Section 2 header confirmed as "Story Associations". Tabular
+      output shows columns: story_id, branch_name, worktree_path, age. Age calculated
+      from createdAt as 'Nd Nh' format. Example output present.
 
-  - ac_id: "AC-7"
+  - ac_id: AC-7
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
-    notes: "HTML comment block confirmed in dev-implement-story.md at lines 258-260: cross-references WINT-1130 (MCP tools), WINT-1140 (original AC-4 prompt UX), WINT-1160 (take-over hardening AC-5/AC-6). All three story IDs confirmed present."
+    notes: >
+      Graceful Degradation Summary table confirmed in wt-status SKILL.md. Empty array
+      → "No active story associations found." MCP error/null → "Story Associations
+      unavailable (MCP error). Git worktree list above is still accurate." Command
+      does NOT fail on MCP error.
 
-  - ac_id: "AC-8"
+  - ac_id: AC-8
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
-    notes: "Confirmed version: 2.0.0 at line 3 of wt-status SKILL.md frontmatter. Description updated to 'Show comprehensive status of git worktrees and database-tracked story worktrees, including orphaned and untracked detection.' — reflects DB-aware capabilities."
+    notes: >
+      Path Normalization section confirmed: trailing slash removal, absolute path
+      comparison. Cross-Reference Mechanism confirmed: DB records without git match
+      flagged '(orphaned)', git worktrees without DB match flagged '(untracked)'.
+      Full execution flow documented.
 
-  - ac_id: "AC-9"
+  - ac_id: AC-9
     status: PASS
     evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
-    notes: "Confirmed IT-1 (lines 165+), IT-2 (lines 180+), IT-3 (lines 191+) in TEST-PLAN.md. Each has Setup/Action/Expected/Evidence structure. IT-1: happy path with [ORPHANED] detection. IT-2: empty state. IT-3: error/degradation with git view preserved. No-mocking requirement (ADR-005) noted in IT descriptions."
+    notes: >
+      WARNING block in conflict prompt confirmed with all 4 fields: Story: {storyId},
+      Branch: {branchName}, Path: {worktreePath}, Registered: {createdAt}. Appears
+      before the options list.
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: >
+      Step 2 of take-over confirmed: null/error from worktree_mark_complete triggers
+      WARN block with [y] Proceed / [n] Abort choice. [n] Abort message includes
+      /wt:switch and --skip-worktree guidance. Not a silent ignore or automatic STOP.
 
 architecture_compliant: true
-architecture_notes: "ADR-005 (no mocking in integration scenarios) — documented in IT-1/IT-2/IT-3 test plan. ADR-006 (E2E exempt for CLI stories) — confirmed in EVIDENCE.yaml e2e_tests.status:exempt. Null-check resilience pattern (P-1) correctly applied per KNOWLEDGE-CONTEXT.yaml. Option (b) take-over ALWAYS-prompt consistent with Tier 4 destructive action protocol per decision-handling.md (P-2)."
+architecture_notes: >
+  Documentation-only story. No code changes. Both touched files (.claude/commands/dev-implement-story.md
+  and .claude/skills/wt-status/SKILL.md) follow established documentation patterns.
+  No ADR violations possible.
 
 issues: []
 
+gate:
+  decision: PASS
+  reason: "All 10 ACs verified. Documentation-only story with no code changes. Manual review of markdown content against acceptance criteria confirms complete specification coverage for conflict prevention hardening and status visibility enhancement."
+  blocking_issues: []
+
 lessons_to_record:
-  - lesson: "Markdown-only CLI stories with grep-based evidence can fully satisfy QA verification without code coverage. The grep evidence commands serve as the test corpus."
+  - lesson: >
+      For documentation-only stories that modify agent instruction files, manual review
+      of the markdown content against ACs is the correct verification method. No build,
+      test, or coverage checks apply, but QA should still spot-check every AC against
+      the actual file content rather than trusting EVIDENCE.yaml alone.
     category: pattern
-    tags: ["cli", "markdown-only", "qa-verify", "evidence"]
+    tags: ["docs", "qa", "documentation-only"]
 
-  - lesson: "worktree_list_active returns [] (empty array) on DB error, not null. The null-check in SKILL.md covers MCP tool call failure at the Claude Code level — a different failure mode than DB error. Both cases handled gracefully via separate code paths."
+  - lesson: >
+      The ordered take-over sequence (worktree_mark_complete → check result → /wt:new)
+      with a secondary 'abandon' confirmation and null-return guard is a reliable pattern
+      for destructive operations that must never be auto-selected by autonomy levels.
     category: pattern
-    tags: ["mcp-tools", "null-check", "worktree", "resilience"]
-
-  - lesson: "Option (b) take-over hardening is a Tier 4 (Destructive) action per decision-handling.md. The ALWAYS-prompt rule is NOT an override of autonomy tiers — it IS consistent with Tier 4 behavior. Cross-referencing decision-handling.md clarifies the protocol rationale."
-    category: pattern
-    tags: ["decision-handling", "autonomy", "take-over", "tier4"]
+    tags: ["worktree", "conflict-resolution", "autonomy", "ux"]
 
 tokens:
   in: 12000
   out: 2500
-
-gate:
-  decision: PASS
-  reason: "All 9 ACs verified PASS. CLI/markdown-only story with 11 grep evidence confirmations. Architecture compliant with ADR-005 and ADR-006. No blocking issues identified."
-  blocking_issues: []

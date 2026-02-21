@@ -1,0 +1,26 @@
+story_id: "WINT-4080"
+
+patterns_referenced:
+  - source: ".claude/agents/doc-sync.agent.md"
+    pattern: "Haiku worker agent structure with frontmatter, phases, completion signals"
+
+  - source: ".claude/agents/story-attack-agent.agent.md"
+    pattern: "Bounded adversarial analysis with hard cap (max 5 challenges), truncation behavior"
+
+  - source: "packages/backend/orchestrator/src/nodes/audit/devils-advocate.ts"
+    pattern: "Challenge decision taxonomy (confirm/downgrade/false_positive) adapted to (defer-to-backlog/reduce-scope/accept-as-mvp)"
+
+  - source: "packages/backend/orchestrator/src/nodes/audit/roundtable.ts"
+    pattern: "Downstream synthesis consuming challenge map — informs scope-challenges.json contract"
+
+  - source: ".claude/agents/_shared/FRONTMATTER.md"
+    pattern: "Required frontmatter fields and agent-specific optional fields"
+
+dependencies_checked:
+  - story_id: "WINT-0210"
+    status: "not-landed"
+    impact: "DA role pack not available — embedded constraints used with TODO marker"
+
+  - story_id: "WINT-4140"
+    status: "future"
+    impact: "Round Table Agent will consume scope-challenges.json — schema is provisional"
