@@ -16,13 +16,13 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 14 |
+| uat | 16 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
 | ready-for-code-review | 1 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
-| elaboration | 2 |
+| elaboration | 0 |
 | created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
@@ -404,7 +404,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-0180
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
@@ -682,9 +682,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** elaboration
-**Story File:** `wint/elaboration/WINT-1040/WINT-1040.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1040/WINT-1040.md`
 **Story Generated:** 2026-02-17
+**QA Verified:** 2026-02-20
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
@@ -698,7 +699,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** ready-to-work
+**Status:** created
 **Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
 **Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
@@ -736,11 +737,13 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-1060/WINT-1060.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-18
+**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS
 **Depends On:** WINT-1030
 **Phase:** 1
 **Points:** 2
