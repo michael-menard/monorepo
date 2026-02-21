@@ -3,8 +3,8 @@ story_id: WINT-1050
 feature_dir: plans/future/platform/wint
 timestamp: "2026-02-20T00:00:00Z"
 
-current_phase: setup
-last_successful_phase: null
+current_phase: plan
+last_successful_phase: setup
 iteration: 0
 max_iterations: 3
 blocked: false
