@@ -22,13 +22,15 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { exec as execCallback } from 'node:child_process'
 import { promisify } from 'node:util'
-import { load as yamlLoad, YAMLException } from 'js-yaml'
+import matter from 'gray-matter'
+import { YAMLException } from 'js-yaml'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { isValidStoryId } from '@repo/workflow-logic'
 import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphState } from '../../state/index.js'
 import { updateState } from '../../runner/state-helpers.js'
+import { escapeRegex } from '../../utils/string-utils.js'
 
 const exec = promisify(execCallback)
 
@@ -339,9 +341,19 @@ async function parseFrontmatter(
       const fullPath = path.join(workingDir, file.path)
       const content = await fs.readFile(fullPath, 'utf-8')
 
-      // Extract YAML between --- delimiters
-      const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/)
-      if (!frontmatterMatch) {
+      // Parse frontmatter using gray-matter (same approach as @repo/database-schema's parseFrontmatter)
+      let parsed: ReturnType<typeof matter>
+      try {
+        parsed = matter(content)
+      } catch (yamlErr) {
+        if (yamlErr instanceof YAMLException) {
+          manualReviewItems.push(`Invalid YAML in \`${file.path}\` — skipped: ${yamlErr.message}`)
+          continue
+        }
+        throw yamlErr
+      }
+
+      if (!parsed.data || Object.keys(parsed.data).length === 0) {
         parsedFiles.push({
           path: file.path,
           changeType: file.changeType,
@@ -351,17 +363,7 @@ async function parseFrontmatter(
         continue
       }
 
-      let fileMetadata: Record<string, unknown> = {}
-      try {
-        const parsed = yamlLoad(frontmatterMatch[1])
-        fileMetadata = (parsed as Record<string, unknown>) || {}
-      } catch (yamlErr) {
-        if (yamlErr instanceof YAMLException) {
-          manualReviewItems.push(`Invalid YAML in \`${file.path}\` — skipped: ${yamlErr.message}`)
-          continue
-        }
-        throw yamlErr
-      }
+      const fileMetadata: Record<string, unknown> = (parsed.data as Record<string, unknown>) || {}
 
       // Step 2.3: Merge DB data if available
       let mergedMetadata = fileMetadata
@@ -579,10 +581,6 @@ async function updateDocumentation(
   }
 
   return { sectionsUpdated, manualReviewItems: newReviewItems }
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function findTableEnd(content: string, tableStart: number): number {

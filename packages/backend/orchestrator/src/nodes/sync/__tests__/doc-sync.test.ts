@@ -9,7 +9,10 @@
  *   EG-1 to EG-6: Edge cases
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { exec } from 'node:child_process'
+import { readFile, writeFile, readdir, stat } from 'node:fs/promises'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { logger } from '@repo/logger'
 import type { GraphState } from '../../../state/index.js'
 import {
   createDocSyncNode,
@@ -51,11 +54,6 @@ vi.mock('@repo/logger', () => ({
 // ============================================================================
 // Import mocked modules
 // ============================================================================
-
-import { exec } from 'node:child_process'
-import { readFile, writeFile, readdir, stat } from 'node:fs/promises'
-import { logger } from '@repo/logger'
-import { promisify } from 'node:util'
 
 // The implementation uses promisify(exec) — we need to mock the underlying exec
 // The node-factory wraps our implementation, so we invoke the created node directly.
@@ -121,15 +119,6 @@ function mockGitDiffError() {
       callback(err, { stdout: '', stderr: '' })
     }
     return undefined as never
-  })
-}
-
-function mockFileRead(path: string, content: string) {
-  mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
-    if (String(p).includes(String(path).split('/').pop() ?? '')) {
-      return Promise.resolve(content as never)
-    }
-    return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
   })
 }
 
@@ -235,7 +224,7 @@ describe('HP-1: Full sync with one changed agent file', () => {
     mockGitDiff('.claude/agents/pm-story-generation-leader.agent.md\n')
 
     // Mock file reads
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story-generation-leader')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -281,7 +270,7 @@ describe('HP-2: Check-only mode — out-of-sync detected', () => {
   it('should detect out-of-sync without writing doc files', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -369,7 +358,7 @@ describe('HP-4: Force mode — all files processed', () => {
       return Promise.resolve([] as never)
     })
 
-    mockedReadFile.mockImplementation((_p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation(() => {
       return Promise.resolve(VALID_FRONTMATTER as never)
     })
 
@@ -401,7 +390,7 @@ describe('HP-5: Hybrid mode — DB available', () => {
   it('should set database_status=success when queryComponents returns 10 items', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -457,9 +446,7 @@ describe('EC-1: Git unavailable — timestamp fallback', () => {
       mtimeMs: Date.now() - 1000, // Modified 1 second ago
     } as never)
 
-    mockedReadFile.mockImplementation((_p: unknown, _enc: unknown) =>
-      Promise.resolve(VALID_FRONTMATTER as never),
-    )
+    mockedReadFile.mockImplementation(() => Promise.resolve(VALID_FRONTMATTER as never))
     mockedWriteFile.mockResolvedValue(undefined as never)
 
     const node = createDocSyncNode({
@@ -488,11 +475,9 @@ describe('EC-2: Malformed YAML — file skipped', () => {
   })
 
   it('should skip malformed YAML file and continue with valid files', async () => {
-    mockGitDiff(
-      '.claude/agents/pm-story.agent.md\n.claude/agents/qa-broken.agent.md\n',
-    )
+    mockGitDiff('.claude/agents/pm-story.agent.md\n.claude/agents/qa-broken.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -527,7 +512,7 @@ describe('EC-3: DB connection failed → file-only mode', () => {
   it('should set database_status=connection_failed and continue file-only', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       if (String(p).includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
       }
@@ -563,7 +548,7 @@ describe('EC-4: DB timeout → file-only fallback', () => {
   it('should set database_status=timeout and log warning', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       if (String(p).includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
       }
@@ -601,7 +586,7 @@ describe('EC-5: SYNC-REPORT.md write failure', () => {
   it('should return success=false with errors when report write fails', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       if (String(p).includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
       }
@@ -736,7 +721,7 @@ spawns:
 `
     mockGitDiff('.claude/agents/dev-implement-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('dev-implement-story.agent.md')) {
         return Promise.resolve(invalidSpawnsFrontmatter as never)
@@ -792,7 +777,7 @@ describe('EG-3: Agent file deleted', () => {
       return undefined as never
     })
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('phases.md')) {
         return Promise.resolve(
@@ -917,7 +902,7 @@ describe('EG-6: Deterministic output (AC-13)', () => {
     const setupMocks = () => {
       mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-      mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+      mockedReadFile.mockImplementation((p: unknown) => {
         const ps = String(p)
         if (ps.includes('pm-story.agent.md')) {
           return Promise.resolve(VALID_FRONTMATTER as never)
@@ -1033,7 +1018,7 @@ describe('Story ID validation path (AC-7)', () => {
     // Here we just verify the normal processing continues
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       if (String(p).includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
       }
@@ -1073,7 +1058,7 @@ type: leader
 # Content
 `
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-new-agent.agent.md')) {
         return Promise.resolve(frontmatterWithAddedType as never)
@@ -1103,7 +1088,7 @@ type: leader
   it('should handle section anchor not found in doc file', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -1144,7 +1129,7 @@ describe('Phase 4: Documentation update write paths', () => {
     // Agent file already exists in the table — modified path
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -1176,7 +1161,7 @@ describe('Phase 4: Documentation update write paths', () => {
   it('should handle file without frontmatter delimiters (no --- block)', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         // No frontmatter — no --- delimiters
@@ -1199,7 +1184,7 @@ describe('Phase 4: Documentation update write paths', () => {
   it('should handle error in updateDocumentation gracefully', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -1243,7 +1228,7 @@ describe('Phase 5: Mermaid diagram write path', () => {
   it('should write Mermaid diagram when spawns are valid', async () => {
     mockGitDiff('.claude/agents/dev-implement-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('dev-implement-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER_WITH_SPAWNS as never)
@@ -1273,15 +1258,13 @@ describe('Phase 5: Mermaid diagram write path', () => {
   it('should handle Mermaid error writing gracefully', async () => {
     mockGitDiff('.claude/agents/dev-implement-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('dev-implement-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER_WITH_SPAWNS as never)
       }
       if (ps.includes('phases.md')) {
-        return Promise.resolve(
-          '# Phases\n\n## Phase 4: Dev Implementation\n\ncontent\n' as never,
-        )
+        return Promise.resolve('# Phases\n\n## Phase 4: Dev Implementation\n\ncontent\n' as never)
       }
       if (ps.includes('changelog.md')) {
         return Promise.resolve('# Changelog\n\n## [1.0.0]\n\n- Initial\n' as never)
@@ -1315,7 +1298,7 @@ describe('Phase 6: Changelog drafting paths', () => {
   it('should handle missing changelog file (creates from scratch)', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -1338,7 +1321,7 @@ describe('Phase 6: Changelog drafting paths', () => {
   it('should handle writeFile error in changelog', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       const ps = String(p)
       if (ps.includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
@@ -1375,7 +1358,7 @@ describe('Phase 2: DB merge when matching entry found', () => {
   it('should merge DB data when component name matches agent name', async () => {
     mockGitDiff('.claude/agents/pm-story.agent.md\n')
 
-    mockedReadFile.mockImplementation((p: unknown, _enc: unknown) => {
+    mockedReadFile.mockImplementation((p: unknown) => {
       if (String(p).includes('pm-story.agent.md')) {
         return Promise.resolve(VALID_FRONTMATTER as never)
       }

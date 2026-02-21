@@ -1,0 +1,199 @@
+schema: 1
+story_id: WINT-9020
+timestamp: '2026-02-20T00:00:00.000Z'
+iteration: 3
+
+verdict: FAIL
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+workers_skipped: []
+
+ranked_patches:
+  - priority: 1
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'_enc' is defined but never used (appears 25 times)"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 2
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'_p' is defined but never used (appears 2 times)"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 3
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'afterEach' is defined but never used"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 4
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'promisify' is defined but never used"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 5
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'mockFileRead' is defined but never used"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 6
+    file: src/__tests__/doc-sync.test.ts
+    issue: "Import order violation - imports not properly sorted"
+    severity: medium
+    auto_fixable: true
+    worker: lint
+  - priority: 7
+    file: src/__tests__/doc-sync.test.ts
+    issue: "Missing empty line between import groups"
+    severity: medium
+    auto_fixable: true
+    worker: lint
+  - priority: 8
+    file: src/doc-sync.ts
+    issue: "Frontmatter parsing duplicates @repo/database-schema parseFrontmatter utility - extract to shared location"
+    severity: medium
+    auto_fixable: false
+    worker: reusability
+  - priority: 9
+    file: src/doc-sync.ts
+    issue: "escapeRegex() utility should be extracted to shared utils package"
+    severity: medium
+    auto_fixable: false
+    worker: reusability
+
+findings:
+  lint:
+    verdict: FAIL
+    skipped: false
+    errors: 34
+    warnings: 0
+    findings:
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'_enc' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'_p' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'afterEach' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'promisify' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'mockFileRead' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "Import order violation"
+        rule: 'import/order'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "Empty line required between import groups"
+        rule: 'import/order'
+        severity: error
+        auto_fixable: true
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  reusability:
+    verdict: FAIL
+    skipped: false
+    errors: 2
+    warnings: 3
+    findings:
+      - file: src/doc-sync.ts
+        line: 343
+        message: "Frontmatter parsing duplicates @repo/database-schema parseFrontmatter utility - extract to shared location"
+        severity: error
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        line: 584
+        message: "escapeRegex() utility should be extracted to shared utils package"
+        severity: error
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        message: "File discovery pattern similar to existing kbar-sync implementation - consider consolidating"
+        severity: warning
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        message: "Validation pattern duplication per DEBT-RU-002 - standardize approach across orchestrator"
+        severity: warning
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        message: "YAML parsing library consolidation candidate - ensure js-yaml version alignment with rest of codebase"
+        severity: warning
+        auto_fixable: false
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+total_errors: 36
+total_warnings: 3
+auto_fixable_count: 7
