@@ -1912,7 +1912,7 @@ Migration phase - Update all 52 agents, sync docs, achieve zero directory refere
 
 ### WINT-7020: Create Agent Migration Plan
 
-**Status:** elaboration
+**Status:** ready-for-qa
 **Elaboration Setup Complete:** 2026-02-18
 **Depends On:** WINT-7010
 **Phase:** 7
