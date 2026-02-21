@@ -1,0 +1,59 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-21T04:00:00Z"
+
+  lessons_learned:
+    count: 2
+    relevant_to_scope:
+      - story_id: "WINT-0180"
+        lesson: "examples-framework.md established canonical storage at .claude/prompts/role-packs/_specs/ — treat as available even if directory not yet on disk"
+        category: pattern
+        applies_because: "ST-3 creates files in this directory; must mkdir if absent"
+      - story_id: "WINT-1070"
+        lesson: "Verification commands must be run in worktree root with absolute paths to avoid cwd ambiguity across agent invocations"
+        category: pattern
+        applies_because: "AJV validation steps reference file paths; use absolute paths in verification commands"
+
+    blockers_to_avoid:
+      - "Assuming .claude/prompts/role-packs/_specs/ exists — create it if absent before writing files"
+      - "Assuming packages/backend/orchestrator/src/schemas/examples/ exists — create it if absent (ST-2)"
+      - "Writing example.json that exceeds 25 lines — AC-3 and AC-6 require 10-25 line count"
+      - "Including repair_loop in PatchStep required array — AC-2 explicitly requires it to be optional"
+
+    patterns_to_follow:
+      - "Follow user-flows.schema.json exactly for $schema, $id, title, description, type, $defs, required array"
+      - "Enum arrays in $defs follow same pattern as UserFlowCapability in user-flows.schema.json"
+      - "maxItems constraint on arrays follows flows/steps pattern from user-flows.schema.json"
+      - "All reusable sub-types go in $defs and are referenced via $ref"
+
+    patterns_to_avoid:
+      - "Adding TypeScript files, Zod schemas, or unit tests — explicitly non-goal"
+      - "Creating barrel files or index.ts exports"
+      - "Enforcing patch ordering in JSON Schema — document as convention only (JSON Schema cannot enforce sequence)"
+
+  architecture_decisions:
+    active_count: 0
+    relevant_adrs: []
+    constraints:
+      api_paths: "not applicable — no API or frontend work"
+      infrastructure: "not applicable — static artifact files only"
+      storage: "not applicable"
+      auth: "not applicable"
+      testing: "not applicable — no TypeScript code, no Vitest tests required"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full WINT-0210.md"
+        typical_tokens: 3000
+        mitigation: "Read only the AC-1 and AC-7 sections relevant to schema path and example format"
+    recommended_patterns:
+      - "Read user-flows.schema.json fully (small file, canonical reference)"
+      - "Each subtask step reads only the files it needs — no full-story re-reads"
+
+  warnings:
+    - "No KB query tool available; lessons synthesized from story artifacts and elaboration notes"
+    - "ST-3 references 'plans/future/platform/wint/backlog/WINT-0190/_pm/STORY-SEED.md' which may be stale path — use story ACs directly"
+
+  tokens:
+    in: 0
+    out: 0
