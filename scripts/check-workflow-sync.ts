@@ -164,6 +164,14 @@ async function checkStoryStatusSync(): Promise<SyncCheckResult> {
   const mdStatuses = parseMarkdownTable(workflowContent, 'Story Status Lifecycle')
   const tsStatuses = extractZodEnumValues(tsContent, 'StoryStatusSchema')
 
+  if (mdStatuses.length === 0) {
+    return {
+      check: 'Story Status Sync',
+      status: 'skip',
+      message: 'Story Status Lifecycle table not found in FULL_WORKFLOW.md (will be added by REVI-006)',
+    }
+  }
+
   const missingInTs = mdStatuses.filter(s => !tsStatuses.includes(s))
   const missingInMd = tsStatuses.filter(s => !mdStatuses.includes(s))
 

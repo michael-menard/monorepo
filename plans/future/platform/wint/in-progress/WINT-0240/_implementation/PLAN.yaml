@@ -1,0 +1,260 @@
+schema: 2
+story_id: WINT-0240
+timestamp: '2026-02-20T00:00:00Z'
+subtask_source: story
+
+# ==============================================================================
+# Steps (1:1 from story subtasks ST-1 through ST-4)
+# ==============================================================================
+
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >
+      Research and reconcile the canonical Ollama model list from WINT-0220-STRATEGY.yaml
+      and model-assignments.yaml. Produce the initial docs/tech-stack/ollama-model-fleet.md
+      with a VRAM table covering all models. Document the three reconciled discrepancies
+      per architectural decisions ARCH-001 through ARCH-003.
+    files:
+      - docs/tech-stack/ollama-model-fleet.md
+    files_to_read:
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+      - .claude/config/model-assignments.yaml
+      - packages/backend/orchestrator/setup-ollama.sh
+    dependencies: []
+    slice: infra
+    verification: "grep -c '|' /Users/michaelmenard/Development/monorepo/tree/story/WINT-0240/docs/tech-stack/ollama-model-fleet.md | awk '{if ($1 > 5) print \"PASS: \" $1 \" table rows\"; else print \"FAIL: only \" $1 \" rows\"}'"
+    acs_covered:
+      - AC-6
+      - AC-7
+
+  - id: 2
+    subtask_id: ST-2
+    description: >
+      Create scripts/setup-ollama-models.sh. The script must: (1) use #!/usr/bin/env bash
+      and set -e; (2) validate ollama is installed (command -v ollama) with macOS/Linux
+      install instructions; (3) validate server at ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}/api/tags
+      via curl; (4) define two model arrays — FULL_MODELS (includes deepseek-coder-v2:16b
+      as required + deepseek-coder-v2:33b as optional-heavy, codellama:13b, qwen2.5-coder:14b,
+      qwen2.5-coder:7b, llama3.2:8b) and LITE_MODELS (qwen2.5-coder:7b, llama3.2:8b);
+      (5) accept --lite and --help flags; (6) run post-install verification with ollama list
+      and exit 1 if any required model is missing; (7) print env var instructions including
+      OLLAMA_ENABLE_FALLBACK with caveat. Mark executable (chmod +x).
+    files:
+      - scripts/setup-ollama-models.sh
+    files_to_read:
+      - packages/backend/orchestrator/setup-ollama.sh
+      - docs/tech-stack/ollama-model-fleet.md
+    dependencies:
+      - 1
+    slice: infra
+    verification: "bash -n /Users/michaelmenard/Development/monorepo/tree/story/WINT-0240/scripts/setup-ollama-models.sh && bash /Users/michaelmenard/Development/monorepo/tree/story/WINT-0240/scripts/setup-ollama-models.sh --help"
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-9
+
+  - id: 3
+    subtask_id: ST-3
+    description: >
+      Create scripts/check-ollama-health.sh. The script must: (1) query
+      ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}/api/tags via curl (mirroring
+      OllamaProvider.checkAvailability() pattern); (2) check each required model
+      from model-assignments.yaml appears in ollama list output; (3) print a structured
+      report (model name | status: present/missing | pull command if missing) to stdout;
+      (4) exit 0 if all required models present and server reachable, exit 1 otherwise.
+      Required models are: qwen2.5-coder:7b, codellama:13b, deepseek-coder-v2:16b,
+      llama3.2:8b (and optionally deepseek-coder-v2:33b noted as optional).
+      Mark executable (chmod +x).
+    files:
+      - scripts/check-ollama-health.sh
+    files_to_read:
+      - packages/backend/orchestrator/src/providers/ollama.ts
+      - .claude/config/model-assignments.yaml
+      - scripts/setup-ollama-models.sh
+    dependencies:
+      - 2
+    slice: infra
+    verification: "bash -n /Users/michaelmenard/Development/monorepo/tree/story/WINT-0240/scripts/check-ollama-health.sh"
+    acs_covered:
+      - AC-5
+
+  - id: 4
+    subtask_id: ST-4
+    description: >
+      Finalize all artifacts: (1) Add deprecation notice to
+      packages/backend/orchestrator/setup-ollama.sh pointing to
+      scripts/setup-ollama-models.sh — no model pull logic duplication;
+      (2) Complete docs/tech-stack/ollama-model-fleet.md with Environment Variables
+      section (OLLAMA_BASE_URL, OLLAMA_TEMPERATURE, OLLAMA_TIMEOUT_MS,
+      OLLAMA_ENABLE_FALLBACK with caveat), Recommended Minimum section (Tier 3 fast
+      fleet hardware requirements), and WINT-0220-STRATEGY.yaml cross-reference.
+    files:
+      - packages/backend/orchestrator/setup-ollama.sh
+      - docs/tech-stack/ollama-model-fleet.md
+    files_to_read:
+      - packages/backend/orchestrator/setup-ollama.sh
+      - docs/tech-stack/ollama-model-fleet.md
+    dependencies:
+      - 3
+    slice: infra
+    verification: "grep -i 'deprecat' /Users/michaelmenard/Development/monorepo/tree/story/WINT-0240/packages/backend/orchestrator/setup-ollama.sh && grep 'Environment Variables' /Users/michaelmenard/Development/monorepo/tree/story/WINT-0240/docs/tech-stack/ollama-model-fleet.md"
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+
+# ==============================================================================
+# Files to Change
+# ==============================================================================
+
+files_to_change:
+  - path: docs/tech-stack/ollama-model-fleet.md
+    action: create
+    reason: "AC-6/AC-7: VRAM documentation table with model tiers, VRAM requirements, env vars section, recommended minimum hardware"
+
+  - path: scripts/setup-ollama-models.sh
+    action: create
+    reason: "AC-1/AC-2/AC-3/AC-4/AC-9: One-command fleet setup with --lite flag, post-install verification, env var help output"
+
+  - path: scripts/check-ollama-health.sh
+    action: create
+    reason: "AC-5: CLI health check querying /api/tags, structured report, exit 0/1"
+
+  - path: packages/backend/orchestrator/setup-ollama.sh
+    action: modify
+    reason: "AC-8: Add deprecation notice pointing to scripts/setup-ollama-models.sh"
+
+# ==============================================================================
+# Commands to Run
+# ==============================================================================
+
+commands_to_run:
+  - command: "bash -n scripts/setup-ollama-models.sh"
+    when: "after creating scripts/setup-ollama-models.sh"
+    required: true
+    note: "Bash syntax check (no execution)"
+
+  - command: "bash -n scripts/check-ollama-health.sh"
+    when: "after creating scripts/check-ollama-health.sh"
+    required: true
+    note: "Bash syntax check (no execution)"
+
+  - command: "shellcheck scripts/setup-ollama-models.sh"
+    when: "after bash -n passes for setup script"
+    required: false
+    note: "If shellcheck is available; warnings acceptable, errors must be fixed"
+
+  - command: "shellcheck scripts/check-ollama-health.sh"
+    when: "after bash -n passes for health check script"
+    required: false
+    note: "If shellcheck is available; warnings acceptable, errors must be fixed"
+
+  - command: "bash scripts/setup-ollama-models.sh --help"
+    when: "after creating scripts/setup-ollama-models.sh"
+    required: true
+    note: "Verify --help output includes --lite, all 4 env vars, and exits 0"
+
+  - command: "chmod +x scripts/setup-ollama-models.sh scripts/check-ollama-health.sh"
+    when: "after creating both scripts"
+    required: true
+
+e2e_gate: exempt
+e2e_gate_reason: "Infra/scripting story — no TypeScript, no pnpm build, no Playwright. UAT requires real Ollama instance per TEST-PLAN.md (ADR-005 compliance). Manual verification only."
+
+# ==============================================================================
+# Acceptance Criteria Map
+# ==============================================================================
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "scripts/setup-ollama-models.sh exists, is executable, has shebang, set -e, command -v ollama check with install instructions, curl /api/tags server check"
+    evidence_type: file
+
+  - ac_id: AC-2
+    planned_evidence: "Script pulls all required models (deepseek-coder-v2:16b, codellama:13b, qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b, deepseek-coder-v2:33b as optional). Model list comments reference WINT-0220-STRATEGY.yaml."
+    evidence_type: file
+
+  - ac_id: AC-3
+    planned_evidence: "--lite flag pulls only qwen2.5-coder:7b and llama3.2:8b (Tier 3 minimum). --help output documents --lite."
+    evidence_type: command
+
+  - ac_id: AC-4
+    planned_evidence: "Post-pull: ollama list parsed for each required model. Missing models reported with pull command. Exit 1 if any required model absent."
+    evidence_type: file
+
+  - ac_id: AC-5
+    planned_evidence: "scripts/check-ollama-health.sh exists, is executable, queries /api/tags, prints structured report, exits 0 (healthy) or 1 (missing/unreachable)"
+    evidence_type: file
+
+  - ac_id: AC-6
+    planned_evidence: "docs/tech-stack/ollama-model-fleet.md exists with table columns: Model Name, Tier, Ollama Registry Tag, VRAM Required, Use Cases, Notes. All models from model-assignments.yaml covered. Environment Variables and Recommended Minimum sections present."
+    evidence_type: file
+
+  - ac_id: AC-7
+    planned_evidence: "Script model list comments cite WINT-0220-STRATEGY.yaml. VRAM docs cross-reference tier assignments. Discrepancies (deepseek :33b vs :16b, llama3.2 :8b vs :3b) documented with rationale per ARCH-001/ARCH-002."
+    evidence_type: file
+
+  - ac_id: AC-8
+    planned_evidence: "packages/backend/orchestrator/setup-ollama.sh has deprecation notice at top pointing to scripts/setup-ollama-models.sh. No duplicated model pull logic."
+    evidence_type: file
+
+  - ac_id: AC-9
+    planned_evidence: "--help output lists OLLAMA_BASE_URL, OLLAMA_TEMPERATURE, OLLAMA_TIMEOUT_MS, OLLAMA_ENABLE_FALLBACK (with caveat). docs/tech-stack/ollama-model-fleet.md Environment Variables section lists same 4 vars with defaults from OllamaConfigSchema."
+    evidence_type: manual
+
+# ==============================================================================
+# Architectural Decisions (user-approved)
+# ==============================================================================
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "deepseek-coder-v2: model-assignments.yaml uses :33b (~20GB VRAM) but WINT-0220-STRATEGY.yaml Tier 2 primary uses :16b (~10GB VRAM). Which variant does the full fleet setup pull?"
+    decision: "Include both: deepseek-coder-v2:16b as required Tier 2 primary + deepseek-coder-v2:33b as optional heavy variant with VRAM warning. --lite skips both. Health check requires :16b, marks :33b as optional."
+    rationale: "Covers both use cases without breaking model-assignments.yaml agent expectations. Aligns with story Reality Baseline recommendation. Documents discrepancy with rationale per AC-7."
+    decided_by: user
+    options_considered:
+      - "A (chosen): Include both :16b required + :33b optional"
+      - "B: Strategy wins, :16b only"
+      - "C: Assignments win, :33b only (not recommended)"
+
+  - id: ARCH-002
+    question: "llama3.2 variant: model-assignments.yaml uses llama3.2:8b but WINT-0220-STRATEGY.yaml Tier 3 specifies llama3.2:3b. Which does the fleet pull?"
+    decision: "Use llama3.2:8b only (what agents actually reference in model-assignments.yaml). Document :3b as the lite-mode strategy alternative from WINT-0220 in the VRAM docs."
+    rationale: "model-assignments.yaml is the runtime truth — agents call :8b. :3b is the strategy doc's preferred lean variant for Tier 3 but no agent currently uses it. Document discrepancy per AC-7."
+    decided_by: user
+    options_considered:
+      - "A: Include both :8b and :3b"
+      - "B (chosen): :8b only, document :3b as strategy alternative"
+      - "C: :3b only (breaks agent assignments)"
+
+  - id: ARCH-003
+    question: "OLLAMA_ENABLE_FALLBACK is cited in AC-9 but does not appear in OllamaConfigSchema in ollama.ts. Should it be documented in --help and the VRAM docs?"
+    decision: "Include with caveat: document OLLAMA_ENABLE_FALLBACK in --help output and docs/tech-stack/ollama-model-fleet.md with note that it is a runtime orchestration env var, not part of OllamaConfigSchema."
+    rationale: "AC-9 explicitly requires all four env vars. Honest documentation with caveat is better than omission. Acknowledges the gap between the schema and the documented interface."
+    decided_by: user
+    options_considered:
+      - "A (chosen): Include with caveat noting it is not in OllamaConfigSchema"
+      - "B: Omit since it is not in OllamaConfigSchema"
+
+# ==============================================================================
+# Complexity and Notes
+# ==============================================================================
+
+complexity: simple
+
+notes:
+  - "This is a shell script + documentation story only. No TypeScript, no pnpm build or test required."
+  - "Full model list for setup script (full fleet): deepseek-coder-v2:16b (required), deepseek-coder-v2:33b (optional, ~20GB VRAM warning), codellama:13b, qwen2.5-coder:14b, qwen2.5-coder:7b, llama3.2:8b"
+  - "Lite model list (--lite flag): qwen2.5-coder:7b, llama3.2:8b (satisfies Tier 3 minimum per WINT-0220-STRATEGY.yaml integration.ollama_requirements)"
+  - "Health check required models: qwen2.5-coder:7b, codellama:13b, deepseek-coder-v2:16b, llama3.2:8b. deepseek-coder-v2:33b reported as optional."
+  - "All model comments in scripts must cite: # Source: packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml tier 2/3 (per Architecture Note 2 in story)"
+  - "Use ${OLLAMA_BASE_URL:-http://127.0.0.1:11434} pattern everywhere — never hardcode URL without fallback (Architecture Note 4)"
+  - "No eval() or dynamic YAML parsing in shell scripts — static arrays only (Architecture Note 3)"
+  - "Exit codes strictly POSIX: 0 = healthy/success, 1 = unhealthy/failure (Architecture Note 5)"
+  - "OLLAMA_ENABLE_FALLBACK default: not defined in OllamaConfigSchema — document as 'see orchestrator config' with no default stated"
+  - "shellcheck is optional (if not installed, bash -n is sufficient). Prefer shellcheck SC2006/SC2046 compliance where feasible."
+  - "Steps are linearly dependent: ST-1 → ST-2 → ST-3 → ST-4"

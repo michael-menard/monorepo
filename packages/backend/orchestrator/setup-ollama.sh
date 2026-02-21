@@ -1,5 +1,23 @@
 #!/bin/bash
 #
+# DEPRECATED: This script is superseded by scripts/setup-ollama-models.sh
+#
+# Please use the canonical setup script instead:
+#
+#   ./scripts/setup-ollama-models.sh           # Full fleet
+#   ./scripts/setup-ollama-models.sh --lite    # Tier 3 minimum only
+#   ./scripts/setup-ollama-models.sh --help    # Options and environment variables
+#
+# The canonical script provides:
+#   - --lite flag for Tier 3 minimum fleet (qwen2.5-coder:7b + llama3.2:8b)
+#   - Post-install verification (exit 1 if required models missing)
+#   - OLLAMA_BASE_URL env var support (no hardcoded URL)
+#   - Structured --help output documenting all 4 env vars
+#   - ARCH-001/ARCH-002 reconciliation of deepseek :16b/:33b and llama3.2 :8b/:3b
+#
+# This file is retained for reference only and will be removed in a future cleanup.
+# WINT-0240: Introduced scripts/setup-ollama-models.sh as canonical replacement.
+#
 # Setup script for Ollama models
 # Downloads all models specified in model-assignments.yaml
 #

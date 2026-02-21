@@ -1,0 +1,112 @@
+schema: 1
+story_id: "WINT-4090"
+version: 1
+timestamp: "2026-02-18T12:30:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Agent file created with valid frontmatter"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "head -10 .claude/agents/evidence-judge.agent.md"
+        result: "PASS — frontmatter contains: created: 2026-02-18, updated: 2026-02-18, version: 1.0.0, type: worker, name: evidence-judge, description (73 chars ≤ 80), model: haiku, tools: [Read, Grep, Glob, Write]"
+      - type: command
+        command: "echo -n 'Adversarial QA agent that challenges AC verdicts lacking verifiable proof' | wc -c"
+        result: "73 — under 80 char limit"
+
+  - ac_id: "AC-2"
+    ac_text: "Inputs defined with graceful degradation"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'evidence_yaml_path\\|story_id\\|story_file_path\\|qa_role_pack_path' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — 4 inputs documented: evidence_yaml_path (required), story_id (required), story_file_path (optional), qa_role_pack_path (optional)"
+      - type: command
+        command: "grep -c 'Graceful Degradation' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — Graceful Degradation section present with 3 scenarios: missing EVIDENCE.yaml (all-REJECT), missing optional inputs (reduced context + warnings), missing EVIDENCE.yaml AND no story_id (BLOCKED)"
+
+  - ac_id: "AC-3"
+    ac_text: "Execution phases defined"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'Phase [1-4]:' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — 4 phases defined: Phase 1 (Load Inputs), Phase 2 (Evaluate Evidence Strength per AC), Phase 3 (Apply Adversarial Challenge), Phase 4 (Produce Output). Each phase has Input/Output contract."
+
+  - ac_id: "AC-4"
+    ac_text: "Evidence strength evaluation rules defined"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'test\\|command\\|e2e\\|http' .claude/agents/evidence-judge.agent.md | head -1"
+        result: "PASS — Per-type criteria table covers all 4 types (test, command, e2e, http) with STRONG/WEAK columns. Subjective language blocklist (appears, seems, should, looks) documented. Binary decision rules: empty→REJECT, all-WEAK→CHALLENGE, any-STRONG→ACCEPT."
+
+  - ac_id: "AC-5"
+    ac_text: "ac-verdict.json schema defined and documented"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'story_id\\|generated_at\\|overall_verdict\\|ac_verdicts\\|ac_id\\|ac_text\\|verdict\\|evidence_evaluated\\|strong_evidence_count\\|weak_evidence_count\\|challenge_reason\\|proof_required\\|total_acs\\|accepted\\|challenged\\|rejected' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — All 16 required fields documented in schema with types, required flag, and descriptions. JSON example with mixed verdicts (ACCEPT, CHALLENGE, REJECT) included. Output path: {story_dir}/_implementation/ac-verdict.json"
+
+  - ac_id: "AC-6"
+    ac_text: "Completion signals defined"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'EVIDENCE-JUDGE COMPLETE\\|EVIDENCE-JUDGE COMPLETE WITH WARNINGS\\|EVIDENCE-JUDGE BLOCKED' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — 3 exact signals documented: EVIDENCE-JUDGE COMPLETE, EVIDENCE-JUDGE COMPLETE WITH WARNINGS: {N} warnings, EVIDENCE-JUDGE BLOCKED: {reason}. Note that FAIL verdict does NOT trigger BLOCKED is explicitly documented."
+
+  - ac_id: "AC-7"
+    ac_text: "LangGraph porting interface contract"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'LangGraph Porting Notes' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — LangGraph Porting Notes section present with: Input Contract (4 state fields), Execution Contract (4 phases), Output Contract (ac-verdict.json), Tool Requirements (file-based I/O only, no MCP tools in v1.0), Shared Business Logic relationship to WINT-9010 (3 portable functions named)"
+
+  - ac_id: "AC-8"
+    ac_text: "Non-goals documented"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -c 'does NOT' .claude/agents/evidence-judge.agent.md"
+        result: "PASS — Non-Goals section lists 6 explicit out-of-scope items: (1) no test re-execution, (2) no DB/MCP writes, (3) no qa-verify-verification-leader replacement, (4) no code quality/architecture evaluation, (5) no final QA gate decision, (6) no cohesion-sidecar/gatekeeper consumption"
+
+touched_files:
+  - path: ".claude/agents/evidence-judge.agent.md"
+    action: created
+    lines: 278
+    description: "Evidence-judge adversarial QA agent"
+
+commands_run:
+  - command: "wc -c description"
+    result: SUCCESS
+    output: "73 characters (under 80 limit)"
+    timestamp: "2026-02-18T12:25:00Z"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "Used scope-defender.agent.md as primary structural template (sister Phase 4 agent)"
+  - "Embedded QA constraints inline with TODO marker for WINT-0210 role pack injection"
+  - "Made proof_required field optional (not required) per story AC-5 spec"
+  - "Named 3 portable functions in LangGraph porting notes for WINT-9010 extraction"
+
+known_deviations: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: agent-docs — produces .agent.md file, no TypeScript code"
+  mode: "live"
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0

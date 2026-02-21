@@ -4,7 +4,8 @@
 
 | Status | Count |
 |--------|-------|
-| Pending | 4 |
+| Pending | 3 |
+| failed-code-review | 1 |
 | **Total** | **4** |
 
 ## Ready to Start (No Blockers)
@@ -102,7 +103,7 @@ Automatically assess model output quality. Four evaluation layers: schema compli
 
 ### MODL-004: Model Leaderboards
 
-**Status:** `pending`
+**Status:** `failed-code-review`
 **Priority:** P1
 **Dependencies:** MODL-003
 **Blocks:** None (but LERN and SDLC epics depend on MODL completion)

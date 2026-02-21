@@ -1,0 +1,141 @@
+schema: 1
+story_id: WINT-0240
+timestamp: "2026-02-20T18:00:00Z"
+iteration: 1
+verdict: FAIL
+
+findings:
+  - id: 1
+    file: "scripts/setup-ollama-models.sh"
+    line: 53
+    severity: high
+    category: correctness
+    description: "REQUIRED_MODELS array is missing qwen2.5-coder:14b, which is included in FULL_MODELS and verified against WINT-0220-STRATEGY.yaml as Tier 2 secondary. Post-install verification will not fail if this model is missing, creating inconsistency with the documented model list."
+    suggestion: "Add 'qwen2.5-coder:14b' to REQUIRED_MODELS array at line 56 (between qwen2.5-coder:7b and llama3.2:8b) to match the full fleet model list and ensure post-install verification catches missing models."
+    auto_fixable: true
+
+  - id: 2
+    file: "scripts/check-ollama-health.sh"
+    line: 45
+    severity: high
+    category: correctness
+    description: "REQUIRED_MODELS array does not include qwen2.5-coder:14b, creating inconsistency with setup-ollama-models.sh. The setup script pulls :14b as a required model (verified post-install), but the health check does not verify it. Per AC-7 (alignment with WINT-0220), :14b is a Tier 2 secondary model and should be verified."
+    suggestion: "Add 'qwen2.5-coder:14b' to REQUIRED_MODELS array at line 48 to maintain consistency with setup script and WINT-0220-STRATEGY.yaml tier definitions."
+    auto_fixable: true
+
+  - id: 3
+    file: "scripts/check-ollama-health.sh"
+    line: 30
+    severity: medium
+    category: docs
+    description: "Comment claims to check 'all models referenced in .claude/config/model-assignments.yaml' but REQUIRED_MODELS list does not match model-assignments.yaml exactly. The comment should clarify the reconciliation logic: models are drawn from both WINT-0220-STRATEGY.yaml AND model-assignments.yaml, and the health check verifies only those actually used by agents."
+    suggestion: "Update comment (lines 30-44) to explain: 'REQUIRED_MODELS represents the active Ollama models deployed to agents (from model-assignments.yaml) plus Tier 2 primary models from WINT-0220-STRATEGY.yaml. NOT all Tier 2 models are required (e.g., qwen2.5-coder:14b is in WINT-0220 but unused by agents).' Then decide whether :14b should be required (see finding #2)."
+    auto_fixable: true
+
+  - id: 4
+    file: "scripts/check-ollama-health.sh"
+    line: 80
+    severity: medium
+    category: correctness
+    description: "Grep pattern for model matching is a substring search ('grep -q \"${model}\"'), which works for current model names but could match partial names if model names are extended in future. For example, a hypothetical 'qwen2.5-coder:7b-draft' would match 'qwen2.5-coder:7b'."
+    suggestion: "Change line 80 from 'if echo \"${installed_list}\" | grep -q \"${model}\"; then' to 'if echo \"${installed_list}\" | grep -E \"\\b${model}(\\s|:)\" | grep -q \"${model}\"; then' to ensure word boundary matching. Alternatively, add anchoring for line-based matching since ollama list output is line-delimited."
+    auto_fixable: true
+
+  - id: 5
+    file: "docs/tech-stack/ollama-model-fleet.md"
+    line: 30
+    severity: medium
+    category: docs
+    description: "Documentation includes qwen2.5-coder:14b as a Required Tier 2 secondary model in the VRAM table, but this model is not used by any agent in model-assignments.yaml. This creates confusion about whether it should be present on a developer's machine."
+    suggestion: "Add a note to the qwen2.5-coder:14b row in the VRAM table: '**For full fleet compliance with WINT-0220-STRATEGY.yaml only.** Not currently used by any agent in model-assignments.yaml. Include in full fleet setup for strategy alignment; may be used by future agents. Omit from lite fleet.' This clarifies its status."
+    auto_fixable: true
+
+  - id: 6
+    file: "scripts/setup-ollama-models.sh"
+    line: 35
+    severity: low
+    category: docs
+    description: "Line 35 labels qwen2.5-coder:14b as 'Required Tier 2 secondary' but it is not verified in the post-install phase (not in REQUIRED_MODELS). The FULL_MODELS list includes it, but the verification step (lines 168-201) uses REQUIRED_MODELS, which omits it."
+    suggestion: "Either: (a) Add :14b to REQUIRED_MODELS to make it truly required (see finding #1), OR (b) Change the comment on line 35 to clarify: '# qwen2.5-coder:14b — Tier 2 secondary per WINT-0220; pulled with full fleet but not verified (not used by agents). Skip in lite mode.' This makes the design intent explicit."
+    auto_fixable: true
+
+summary:
+  total_findings: 6
+  critical: 0
+  high: 2
+  medium: 3
+  low: 1
+
+detailed_context: |
+  ## Root Cause Analysis
+
+  The core issue stems from a design decision about qwen2.5-coder:14b:
+
+  1. WINT-0220-STRATEGY.yaml lists qwen2.5-coder:14b as a Tier 2 secondary model
+  2. model-assignments.yaml does NOT assign :14b to any agent
+  3. The story accepts both documents as authoritative sources (AC-7)
+
+  This creates ambiguity: Should the setup script and health check require :14b?
+
+  **Current Implementation:**
+  - setup-ollama-models.sh FULL_MODELS: includes :14b ✓
+  - setup-ollama-models.sh REQUIRED_MODELS: omits :14b ✗
+  - check-ollama-health.sh REQUIRED_MODELS: omits :14b ✗
+  - docs/tech-stack/ollama-model-fleet.md: lists :14b as required ✗ (inconsistent)
+
+  **Impact:**
+  The setup script will pull :14b (complying with WINT-0220) but will NOT fail if :14b is missing post-install.
+  The health check will not report :14b as missing. This inconsistency could cause confusion during deployment.
+
+  ## Acceptance Criteria Assessment
+
+  - AC-1: PASS (script is executable, has proper error handling)
+  - AC-2: PASS (model list derived from WINT-0220, but verification is incomplete per finding #1)
+  - AC-3: PASS (--lite flag works correctly)
+  - AC-4: PARTIAL FAIL (post-install verification skips :14b)
+  - AC-5: PARTIAL FAIL (health check REQUIRED_MODELS incomplete)
+  - AC-6: PASS (VRAM documentation is comprehensive)
+  - AC-7: PARTIAL FAIL (inconsistency between setup and health check violates alignment principle)
+  - AC-8: PASS (old script superseded with deprecation notice)
+  - AC-9: PASS (all 4 env vars documented)
+
+  ## Recommended Fix Priority
+
+  1. **CRITICAL PATH**: Fix findings #1 and #2 (add :14b to REQUIRED_MODELS in both scripts) OR add clear documentation about why :14b is pulled but not verified. This must be resolved before story can be marked complete.
+  2. **FOLLOW-UP**: Improve grep pattern (finding #4) for robustness.
+  3. **DOCUMENTATION**: Update docs to clarify :14b status (findings #3, #5, #6).
+
+test_verification: |
+  To verify this review:
+
+  1. Run: grep "qwen2.5-coder:14b" scripts/setup-ollama-models.sh
+     - FULL_MODELS should include it ✓
+     - REQUIRED_MODELS should be updated to include it (finding #1)
+
+  2. Run: grep "qwen2.5-coder:14b" scripts/check-ollama-health.sh
+     - REQUIRED_MODELS should be updated to include it (finding #2)
+
+  3. Run: ./scripts/setup-ollama-models.sh --help | grep -i "qwen2.5-coder:14b"
+     - Should document :14b in the model list
+
+  4. Manual test: Remove qwen2.5-coder:14b from Ollama, run health check
+     - Currently: exits 0 (bug) — should exit 1 if :14b is required
+     - After fix: should exit 1 to indicate unhealthy state
+
+notes: |
+  - All shell script quality checks PASS (proper quoting, set -e, error handling, POSIX compliance)
+  - Documentation structure is excellent and well-organized
+  - The architectural decisions (ARCH-001, ARCH-002, ARCH-003) are well-documented
+  - Core issue is model list consistency, not fundamental script design
+  - This is fixable with minimal changes (2-3 lines per script)
+
+verdict_rationale: |
+  FAIL because AC-4 and AC-5 are not fully satisfied:
+  - AC-4 requires that "after pulling, script checks each required model is present"
+    but REQUIRED_MODELS omits qwen2.5-coder:14b
+  - AC-5 requires health check "verifies each model in model-assignments.yaml"
+    but health check omits :14b (which is in WINT-0220-STRATEGY.yaml)
+  - AC-7 requires alignment with WINT-0220; inconsistent required model lists violate this
+
+  The inconsistency between setup and health check model lists is a high-priority bug
+  that prevents confident deployment. Verdict changes to PASS once findings #1 and #2 are resolved.

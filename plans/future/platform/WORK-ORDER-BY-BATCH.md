@@ -220,7 +220,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 | [ ] | 58 | KBAR-0060 | Sync Integration Tests | ⏸️ | KBAR-0050 (#56) | P1 |
 | [ ] | 59 | WINT-1160 | Add Parallel Work Conflict Prevention | ⏳ | WINT-1130 (#44), WINT-1140 (#50) | P2 — **ready to start** |
 | [ ] | 60 | WINT-1120 | Validate Foundation Phase | ⏸️ | WINT-1040-1060 (#53-55), WINT-1070 (#52), WINT-1110 (#47), WINT-1160 (#59) | P2 |
-| [ ] | 61 | WINT-7020 | Create Agent Migration Plan | ⏳ | WINT-7010 (#15) ✅ | P3 — **ready to start** |
+| [ ] | 61 | WINT-7020 | Create Agent Migration Plan | 🔧 | qa-verify | WINT-7010 (#15) ✅ | P3 |
 | [ ] | 62 | MODL-0040 | Model Leaderboards | ⏳ | MODL-0030 (#46) ✅ | P3 — **ready to start** |
 | [ ] | 63 | AUDT-0020 | 9 Audit Lens Nodes | ⏳ | AUDT-0010 (#10) ✅ | P3 — **ready to start** |
 
@@ -240,7 +240,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 |---|---|----------|-------|--------|--------------|----------|
 | [ ] | 64 | WINT-9020 | Create doc-sync LangGraph Node ⚡ | ⏸️ | WINT-9010 (#57), WINT-0160 (#21) | P0 |
 | [ ] | 65 | WINT-4080 | Create scope-defender Agent (DA) | ⏳ | None | P1 — **ready to start** |
-| [ ] | 66 | WINT-4090 | Create evidence-judge Agent | ⏳ | None | P1 — **ready to start** |
+| [ ] | 66 | WINT-4090 | Create evidence-judge Agent | 🔧 | qa-verify | P1 |
 | [ ] | 67 | KBAR-0070 | story_get Tool | ⏸️ | KBAR-0060 (#58) | P2 |
 | [ ] | 68 | KBAR-0080 | story_list & story_update Tools | ⏸️ | KBAR-0070 (#67) | P2 |
 | [ ] | 69 | WINT-0190 | Create Patch Queue Pattern and Schema | ⏳ | WINT-0180 (#12) | P3 |
