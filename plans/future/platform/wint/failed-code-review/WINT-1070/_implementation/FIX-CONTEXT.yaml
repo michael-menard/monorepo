@@ -1,0 +1,72 @@
+schema: 1
+story_id: WINT-1070
+timestamp: '2026-02-20T22:56:00Z'
+failure_source: code-review-failed
+iteration: 2
+
+summary: |
+  Fix iteration 2 for WINT-1070. Address 4 critical/high severity issues preventing merge:
+  duplicate method definitions, production 'as any' type assertions, duplicated utility function,
+  and code formatting violations. All issues are auto-fixable.
+
+issues_to_fix:
+  - id: 1
+    file: packages/backend/orchestrator/src/db/story-repository.ts
+    lines: 258, 310
+    severity: critical
+    issue: "Duplicate getAllStories() method definition - compiler error TS2393"
+    auto_fixable: true
+    fix_type: removal
+    action: "Remove duplicate method at line 310, keep implementation at line 258"
+
+  - id: 2
+    file: packages/backend/orchestrator/src/scripts/generate-stories-index.ts
+    lines: "374-377"
+    severity: critical
+    issue: "Production 'as any' type assertions violate Zod-first requirement (CLAUDE.md constraint)"
+    auto_fixable: true
+    fix_type: refactor
+    action: "Replace with proper Zod schema validation for YAML frontmatter data"
+
+  - id: 3
+    file: packages/backend/orchestrator/src/scripts/generate-stories-index.ts
+    lines: "672"
+    severity: high
+    issue: "writeFileAtomic function duplicated locally instead of imported from shared module"
+    auto_fixable: true
+    fix_type: extraction
+    action: "Remove local implementation at line 672, import writeFileAtomic from shared utilities"
+
+  - id: 4
+    file: "packages/backend/orchestrator/src/db/story-repository.ts, packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+    severity: medium
+    issue: "4 line-width violations exceeding 100 character limit (Prettier rule)"
+    auto_fixable: true
+    fix_type: formatting
+    action: "Run Prettier formatter: pnpm format packages/backend/orchestrator/src/**/*.ts"
+
+focus_files:
+  - packages/backend/orchestrator/src/db/story-repository.ts
+  - packages/backend/orchestrator/src/scripts/generate-stories-index.ts
+
+fix_workflow:
+  1_duplicate_method: "Remove getAllStories() duplicate at line 310 in story-repository.ts"
+  2_type_assertions: "Replace 'as any' at lines 374-377 in generate-stories-index.ts with Zod validation"
+  3_extract_utility: "Import writeFileAtomic instead of duplicating at line 672"
+  4_format_code: "Run pnpm format to fix line-width violations"
+  5_verify: "Run pnpm typecheck && pnpm lint to confirm all issues resolved"
+
+constraints:
+  - "Zod-first types (CLAUDE.md): no 'as any' in production code"
+  - "Line width limit: 100 characters (Prettier)"
+  - "No code duplication: utilities must be imported, not duplicated"
+  - "Named exports preferred over barrel files"
+
+acceptance_criteria:
+  - "Zero TypeScript compilation errors (TS2393 resolved)"
+  - "Zero production 'as any' assertions in touched files"
+  - "All utilities imported, no local duplicates"
+  - "All lines under 100 character limit"
+  - "pnpm typecheck and pnpm lint pass with zero errors"
+
+estimated_effort: "15-20 minutes (mostly auto-fixable)"
