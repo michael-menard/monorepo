@@ -16,17 +16,17 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 15 |
+| uat | 16 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
 | ready-for-code-review | 0 |
 | failed-qa | 0 |
-| elaboration | 1 |
+| elaboration | 0 |
 | created | 3 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 4 |
-| pending | 117 |
+| pending | 116 |
 
 ---
 
@@ -504,25 +504,27 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0240: Configure Ollama Model Fleet
 
-**Status:** created
+**Status:** in-progress
+**Story File:** `wint/in-progress/WINT-0240/WINT-0240.md`
+**Elaboration Complete:** 2026-02-20
+**Verdict:** CONDITIONAL PASS
+**Development Started:** 2026-02-20
 **Depends On:** WINT-0220
 **Phase:** 0
-**Feature:** Document and script Ollama model setup. Pull recommended models:
-```bash
-ollama pull qwen2.5-coder:7b    # Fast, repair loops
-ollama pull qwen2.5-coder:32b   # Code generation
-ollama pull deepseek-coder:33b  # Alternative for code
-ollama pull deepseek-r1:14b     # Reasoning tasks
-```
-Create health check script. Document VRAM requirements per model. Create model switching based on available resources.
+**Points:** 3
+**Priority:** P2
+**Feature:** Document and script Ollama model setup. Produce one-command setup script with memory-constrained `--lite` flag, standalone health check CLI, and comprehensive VRAM documentation aligned with WINT-0220 strategy.
 **Infrastructure:**
 - scripts/setup-ollama-models.sh
-- Model VRAM documentation
-- Health check endpoint
+- scripts/check-ollama-health.sh
+- docs/tech-stack/ollama-model-fleet.md
+- packages/backend/orchestrator/setup-ollama.sh (deprecation notice)
 
-**Goal:** One-command setup of local model fleet
+**Goal:** One-command setup of local model fleet with lite mode and health check
 
-**Risk Notes:** Large models need significant VRAM (32B needs ~20GB)
+**Risk Notes:** Large models need significant VRAM (32B needs ~20GB). Elaboration complete. Blocked by WINT-0220 formal completion (file exists on disk, story still pending in index). Ready for implementation when WINT-0220 transitions to completed or uat.
+
+**Summary:** All 9 ACs specified, 4 subtasks decomposed, 0 MVP-critical gaps. Three low-severity findings (documentation-level) logged to KB (deferred). Story is immediately executable once WINT-0220 dependency is satisfied.
 
 ---
 
@@ -927,7 +929,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
 **Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.
@@ -1084,9 +1086,11 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2090: Implement Session Context Management
 
-**Status:** created
+**Status:** uat
 **Depends On:** WINT-0110
 **Phase:** 2
+**Points:** 1
+**Priority:** P2
 **Feature:** Create session-create, session-inherit skills for leader→worker context sharing
 **Infrastructure:**
 - new skills
@@ -1096,6 +1100,9 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 **Risk Notes:** Session cleanup strategy needed
 
 **Story Generated:** 2026-02-20
+**Elaborated:** 2026-02-20
+**Code Review:** PASS (2026-02-20) — 0 errors, 0 warnings, all 10 workers PASS
+**QA Verification Complete:** 2026-02-20 - All 11 ACs verified PASS, verdict: PASS. Story moved to UAT.
 
 ---
 
