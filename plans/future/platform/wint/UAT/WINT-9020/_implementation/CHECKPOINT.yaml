@@ -3,8 +3,8 @@ story_id: WINT-9020
 feature_dir: plans/future/platform/wint
 timestamp: "2026-02-20T20:46:00Z"
 
-current_phase: qa-verify
-last_successful_phase: qa-setup
+current_phase: qa-complete
+last_successful_phase: qa-verify
 e2e_gate: exempt
 iteration: 3
 max_iterations: 3

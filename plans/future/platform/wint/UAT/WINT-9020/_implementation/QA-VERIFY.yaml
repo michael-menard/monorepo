@@ -1,18 +1,27 @@
 schema: 1
 story_id: WINT-9020
-timestamp: "2026-02-20T21:41:00Z"
+timestamp: "2026-02-20T23:35:00Z"
 
 verdict: PASS
 
 tests_executed: true
 test_results:
-  unit: { pass: 42, fail: 0 }
+  unit: { pass: 3274, fail: 0 }
+  skipped: 18
+  doc_sync_specific: { pass: 42, fail: 0 }
   integration: { pass: 0, fail: 0 }
   e2e: { pass: 0, fail: 0 }
   http: { pass: 0, fail: 0 }
+  qa_run_note: >
+    Full @repo/orchestrator suite run: 132 test files (131 passed, 1 skipped).
+    3274 tests passed, 18 skipped (integration tests requiring API keys — expected).
+    doc-sync.test.ts: 42/42 passed. workflow/doc-sync.test.ts: 16/16 passed (unchanged).
 
 coverage: 86.14
 coverage_meets_threshold: true
+coverage_threshold_note: >
+  Statement coverage 86.14% on doc-sync.ts (above 80% story threshold and 45% CLAUDE.md threshold).
+  Branch coverage 79.9%. string-utils.ts 100%. global 45% threshold met across full suite.
 
 test_quality:
   verdict: PASS
@@ -151,3 +160,6 @@ gate:
   decision: PASS
   reason: "All 13 ACs verified, 42 tests pass with 86.14% coverage, architecture compliant"
   blocking_issues: []
+  verified_at: "2026-02-20T23:45:00Z"
+  completion_phase: qa_verification
+  signal_emitted: QA PASS
