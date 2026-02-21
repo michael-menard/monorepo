@@ -13,3 +13,6 @@ forced: false
 warnings: []
 gen_mode: false
 review_verdict: PASS
+pr_number: 377
+pr_url: https://github.com/michael-menard/monorepo/pull/377
+completed_at: "2026-02-21T00:00:00Z"
