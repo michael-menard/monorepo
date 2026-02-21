@@ -30,6 +30,11 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 | 2 | Aggregate | haiku | review-aggregate-leader | AGGREGATE COMPLETE |
 | 3 | Finalize | haiku | (self) | CODE-REVIEW COMPLETE |
 
+## Step 0.6: Claim Story in KB
+
+1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_review", phase: "code_review" })`
+2. **Guard:** If already `in_review`, STOP: "Story {STORY_ID} is already being reviewed by another agent."
+
 ## Phase 0 — Setup
 
 Validate (HARD STOP if fail):
@@ -186,3 +191,8 @@ ReviewSchema = {
 ## Ref
 
 `docs/dev-code-review-reference.md`
+
+## Abort / Error Recovery
+
+If interrupted after Step 0.6, release manually:
+`kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review" })`

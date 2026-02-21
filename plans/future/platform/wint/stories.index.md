@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-20T22:15:00Z"
+updated_at: "2026-02-21T00:45:00Z"
 ---
 
 # WINT Stories Index
@@ -16,17 +16,19 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 14 |
+| uat | 16 |
 | in-qa | 0 |
 | ready-for-qa | 2 |
+| needs-code-review | 0 |
 | ready-for-code-review | 0 |
+| failed-code-review | 0 |
 | failed-qa | 0 |
-| elaboration | 1 |
-| created | 1 |
+| elaboration | 0 |
+| created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
-| pending | 119 |
+| pending | 118 |
 
 ---
 
@@ -403,7 +405,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-0180
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
@@ -681,9 +683,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** elaboration
-**Story File:** `wint/elaboration/WINT-1040/WINT-1040.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1040/WINT-1040.md`
 **Story Generated:** 2026-02-17
+**QA Verified:** 2026-02-20
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
@@ -720,7 +723,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 - AC-9: Integration test scenarios documented (A-F)
 - AC-10: Non-mappable statuses handled with explicit decisions
 
-**Elaboration Verdict:** CONDITIONAL PASS (2026-02-17)
+**Elaboration Verdict:** CONDITIONAL PASS (2026-02-20)
 - MVP gaps: 0
 - Low-severity findings: 3 (all non-blocking, KB-logged)
 - ACs added: 0
@@ -729,17 +732,20 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Risk Notes:** WINT-1070 (index deprecation) may land in-progress; non-blocking (index update retained). shimUpdateStoryStatus AC-2 constraint (no FS fallback on failure) must be observed.
 
 **Story Generated:** 2026-02-17
-**Elaboration Completed:** 2026-02-17
+**Elaboration Completed:** 2026-02-20
+**Moved to Ready-to-Work:** 2026-02-20
 
 ---
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-1060/WINT-1060.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-18
+**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS
 **Depends On:** WINT-1030
 **Phase:** 1
 **Points:** 2
@@ -754,7 +760,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ---
 
-### WINT-1070: Deprecate stories.index.md as Source of Truth
+### WINT-1070: Generate stories.index.md from Database
 
 **Status:** uat
 **Depends On:** WINT-1030
@@ -840,7 +846,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160
+**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -927,8 +933,8 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** ready-for-qa
-**Story File:** `wint/ready-for-qa/WINT-1160/WINT-1160.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1160/WINT-1160.md`
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
 **Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.
@@ -939,6 +945,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Goal:** Prevent two sessions from working on the same story simultaneously
 
 **Risk Notes:** "Take over" option must be explicit to avoid accidental work loss
+
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-21 - All 9 ACs verified, verdict: PASS
 
 ---
 
@@ -2229,8 +2238,8 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-9010/WINT-9010.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9010/WINT-9010.md`
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
 **Depends On:** WINT-1100
@@ -2247,16 +2256,24 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** pending
+**Status:** ready-to-work
+**Story Generated:** 2026-02-18
+**Story File:** `wint/ready-to-work/WINT-9020/WINT-9020.md`
+**Elaboration Complete:** 2026-02-20
+**Verdict:** PASS
 **Depends On:** WINT-9010, WINT-0160
 **Phase:** 9
-**Feature:** Port doc-sync agent logic to LangGraph node at nodes/sync/doc-sync.ts
+**Points:** 5
+**Priority:** P2
+**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Creates new node at `nodes/sync/doc-sync.ts` per elaboration AC-19 specification.
 **Infrastructure:**
-- packages/backend/orchestrator/src/nodes/sync/
+- packages/backend/orchestrator/src/nodes/sync/ (new directory with doc-sync.ts)
 
-**Goal:** Documentation sync works in both workflows
+**Goal:** Documentation sync works in both Claude Code and LangGraph workflows with identical outputs for the same inputs.
 
-**Risk Notes:** Must produce identical outputs
+**Risk Notes:** All 4 MVP-critical gaps resolved as new ACs (AC-18 through AC-21). 8 non-blocking enhancements queued to KB. No scope changes required. 6 subtasks with clear verification steps. Ready for implementation.
+
+**Summary:** Elaboration complete. All 21 ACs specified (including AC-18 through AC-21 added by autonomous decider). 4 blocking gaps resolved: createNode with 120s timeout (AC-18), nodes/sync/index.ts registration (AC-19), EG-5 test fix (AC-20), Phase 4 safety net (AC-21).
 
 ---
 
