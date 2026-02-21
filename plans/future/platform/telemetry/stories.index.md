@@ -4,7 +4,8 @@
 
 | Status | Count |
 |--------|-------|
-| Pending | 4 |
+| Elaboration | 1 |
+| Pending | 3 |
 | **Total** | **4** |
 
 ## Ready to Start (Once INFRA complete)
@@ -13,9 +14,9 @@
 
 ---
 
-### TELE-001: Docker Telemetry Stack
+### TELE-0010: Docker Telemetry Stack — Validate and Complete Local Observability Foundation
 
-**Status:** `pending`
+**Status:** `elaboration`
 **Priority:** P0
 **Dependencies:** INFR-004 (events table exists)
 **Blocks:** TELE-002, TELE-003, TELE-004

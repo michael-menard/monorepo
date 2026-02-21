@@ -1,0 +1,166 @@
+schema: 1
+story_id: "WINT-9010"
+timestamp: "2026-02-17T22:10:00Z"
+
+verdict: FAIL
+
+tests_executed: true
+test_results:
+  unit: { pass: 0, fail: 4 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+test_execution_notes: |
+  Command `pnpm --filter @repo/workflow-logic test` exited with code 1.
+  Root cause: vitest.config.ts was NOT committed to the feature branch despite being
+  listed in EVIDENCE.yaml touched_files. Without its own vitest.config.ts, the package
+  falls back to the root vitest.config.ts which specifies `setupFiles: ['./__tests__/setup.ts']`.
+  That path resolves to /packages/backend/workflow-logic/__tests__/setup.ts which does not exist.
+  All 4 test suites fail to load with: "Cannot find module ... __tests__/setup.ts".
+
+  IMPORTANT: The 82 unit tests themselves are correct and pass when run with a proper
+  package-local vitest config (verified manually with a temporary config). The defect is
+  solely the missing vitest.config.ts in the commit.
+
+coverage: null
+coverage_meets_threshold: false
+coverage_notes: "Coverage could not be measured because the test suite failed to load due to missing vitest.config.ts"
+
+test_quality:
+  verdict: PASS
+  notes: "Test logic is sound — 82 tests covering all 17 status transitions, all 7 directory mappings, all adapter mappings, and validation edge cases. Tests import from vitest explicitly and do not rely on globals. No anti-patterns detected in test files themselves."
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "package.json verified: name @repo/workflow-logic, type: module, correct workspace structure. Dependency clean (zod, @repo/logger only)."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "getValidTransitions verified in src/transitions/index.ts. Accepts string, parses via WorkflowStoryStatusSchema.parse(), returns defensive copy of VALID_TRANSITIONS[parsed]. 21 test cases exist and are logically correct."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "getStatusFromDirectory verified in src/directory/index.ts. Maps 7 directories (backlog, elaboration, ready-to-work, in-progress, ready-for-qa, UAT, done). Returns null for unknowns via ?? null. 15 tests verified."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "isValidStoryId verified in src/validation/index.ts. Uses StoryIdSchema with regex /^[A-Z]{2,10}-\\d{3,4}$/ and Zod safeParse. 24 test cases exist."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Zod parse/safeParse at all entry points confirmed: getValidTransitions uses .parse(), toDbStoryStatus uses .parse() on input and output, isValidStoryId uses .safeParse(). getStatusFromDirectory uses direct record lookup (appropriate, no Zod parse needed for nullable lookup)."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "package.json dependencies verified: @repo/logger (workspace:*) and zod (^3.23.8) only. No MCP SDK, LangGraph, or AWS SDK present."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "mcp-tools package.json has @repo/workflow-logic: workspace:*. story-compatibility imports isValidStoryId. STORY_ID_REGEX retained with @deprecated annotation. Spot-check confirms story-compatibility/index.ts uses isValidStoryId(entry) in scanDirectories."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "orchestrator/package.json has @repo/workflow-logic: workspace:* confirmed in git commit diff."
+
+  - ac_id: "AC-9"
+    status: FAIL
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: |
+      AC-9 requires `pnpm --filter @repo/workflow-logic test:coverage` to pass with >=80%.
+      EVIDENCE.yaml claims 100% coverage but the test:coverage command cannot succeed because
+      the package is missing its vitest.config.ts. The `test:coverage` script calls
+      `vitest run --coverage` which also fails with the same setup.ts resolution error.
+      Root cause: vitest.config.ts not committed (listed in touched_files but absent from branch).
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "pnpm --filter @repo/workflow-logic type-check runs successfully with zero TypeScript errors (verified during QA). mcp-tools and orchestrator type-checks were confirmed as SUCCESS in EVIDENCE.yaml."
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[10]"
+    notes: "ESLint passed per EVIDENCE.yaml. No lint-related issues found in code review (REVIEW.yaml: lint verdict PASS, 0 errors, 0 warnings). Not re-verified by running ESLint (code review already confirmed)."
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[11]"
+    notes: "WorkflowStoryStatusSchema confirmed in src/__types__/index.ts with all 17 hyphenated values. Exported from src/index.ts. Values match KNOWLEDGE-CONTEXT.yaml source values from story-state-machine.ts."
+
+  - ac_id: "AC-13"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[12]"
+    notes: "toDbStoryStatus verified in src/adapter/index.ts. Uses Record<WorkflowStoryStatus, DbStoryStatus> for exhaustive TypeScript-enforced mapping. Exported from src/index.ts. 22 test cases exist and are logically correct."
+
+architecture_compliant: true
+architecture_notes: |
+  Package structure follows the mcp-tools backend library pattern (tsconfig extends root, NodeNext,
+  composite, type: module). Zod-first types throughout per CLAUDE.md. No barrel files (named exports
+  from index.ts). No console.log usage. All public functions accept string and parse via Zod.
+  Record<> lookup pattern for exhaustive TypeScript enforcement of toDbStoryStatus.
+
+issues:
+  - issue_id: "ISSUE-1"
+    severity: blocking
+    description: |
+      vitest.config.ts is missing from the committed branch. It is listed in EVIDENCE.yaml
+      touched_files (action: created) but was never committed. Running
+      `pnpm --filter @repo/workflow-logic test` exits with code 1 because vitest falls back
+      to the root vitest.config.ts, which specifies setupFiles: ['./__tests__/setup.ts'] pointing
+      to a path that does not exist in the workflow-logic package.
+    fix: |
+      Add vitest.config.ts to packages/backend/workflow-logic/ (matching the mcp-tools pattern):
+
+        import { defineConfig } from 'vitest/config'
+        export default defineConfig({
+          test: {
+            globals: true,
+            environment: 'node',
+            coverage: {
+              provider: 'v8',
+              reporter: ['text', 'json', 'html'],
+              include: ['src/**/*.ts'],
+              exclude: ['node_modules/', 'dist/', '**/*.test.ts', '**/__tests__/**', 'src/index.ts', 'vitest.config.ts'],
+              thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
+            },
+          },
+        })
+
+      Then commit the file and verify: pnpm --filter @repo/workflow-logic test (should show 82/82 pass).
+
+lessons_to_record:
+  - lesson: "EVIDENCE.yaml touched_files entries must be cross-referenced against the actual git commit diff. A file can appear in touched_files but not be committed. QA must run the test command and fail fast rather than trust evidence claims."
+    category: anti_pattern
+    tags: ["qa-process", "evidence-validation", "vitest", "missing-config"]
+
+  - lesson: "Backend library packages (e.g., @repo/workflow-logic) must include a package-local vitest.config.ts to prevent fallback to the root config. The root vitest.config.ts contains setupFiles targeting a path that only exists in frontend app contexts."
+    category: pattern
+    tags: ["vitest", "backend-library", "package-setup", "worktree"]
+
+  - lesson: "When verifying a new package, check that all tooling config files (vitest.config.ts, tsconfig.json) exist on the branch before declaring tests pass. The git commit diff is the authoritative source."
+    category: blocker
+    tags: ["qa-process", "new-package", "vitest-config"]
+
+tokens:
+  in: 18000
+  out: 3500
+
+gate:
+  decision: FAIL
+  reason: "AC-9 failed: vitest.config.ts missing from commit, test suite cannot execute"
+  blocking_issues:
+    - "vitest.config.ts not committed to packages/backend/workflow-logic/ despite being in EVIDENCE.yaml touched_files"
+    - "Test execution fails with exit code 1 due to missing setupFiles path"
+    - "Coverage measurement impossible until tests can execute"
+    - "AC-9 requirement for >=80% coverage cannot be verified"

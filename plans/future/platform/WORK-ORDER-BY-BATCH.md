@@ -151,7 +151,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 43 | WINT-0170 | Add Doc-Sync Gate | ⏳ | WINT-0160 (#21) | Blocked on WINT-0160 (🚧 in-progress) |
+| [x] | 43 | WINT-0170 | Add Doc-Sync Gate | ✅ | WINT-0160 (#21) | UAT verified |
 | [x] | 44 | WINT-1130 | Track Worktree-to-Story Mapping in DB | ✅ | WINT-0020 (#19) | Unblocks WINT-1140, WINT-1150, WINT-1160 |
 
 ### Priority P3 (Lower priority):
@@ -178,7 +178,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 |---|---|----------|-------|--------|--------------|----------|
 | [x] | 47 | WINT-1110 | Migrate Existing LangGraph Data ⚡ | ✅ | WINT-1090 (#35) | P0 |
 | [x] | 48a | WINT-1011 | Create Compatibility Shim Module — Core Functions ⚡ | ✅ | WINT-0090 (#36) | P0 — split from WINT-1010 |
-| [ ] | 48b | WINT-1012 | Compatibility Shim — Observability & Tests ⚡ | ⏳ | WINT-1011 (#48a) | P0 — split from WINT-1010; **ready-to-work** |
+| [x] | 48b | WINT-1012 | Compatibility Shim — Observability & Tests ⚡ | ✅ | WINT-1011 (#48a) | P0 — split from WINT-1010; UAT verified |
 
 ### Priority P1:
 
@@ -220,7 +220,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 | [ ] | 58 | KBAR-0060 | Sync Integration Tests | ⏸️ | KBAR-0050 (#56) | P1 |
 | [ ] | 59 | WINT-1160 | Add Parallel Work Conflict Prevention | ⏳ | WINT-1130 (#44), WINT-1140 (#50) | P2 — **ready to start** |
 | [ ] | 60 | WINT-1120 | Validate Foundation Phase | ⏸️ | WINT-1040-1060 (#53-55), WINT-1070 (#52), WINT-1110 (#47), WINT-1160 (#59) | P2 |
-| [ ] | 61 | WINT-7020 | Create Agent Migration Plan | 🔧 | qa-verify | WINT-7010 (#15) ✅ | P3 |
+| [x] | 61 | WINT-7020 | Create Agent Migration Plan | ✅ |  | WINT-7010 (#15) ✅ | P3 |
 | [ ] | 62 | MODL-0040 | Model Leaderboards | ⏳ | MODL-0030 (#46) ✅ | P3 — **ready to start** |
 | [ ] | 63 | AUDT-0020 | 9 Audit Lens Nodes | ⏳ | AUDT-0010 (#10) ✅ | P3 — **ready to start** |
 
@@ -238,12 +238,12 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Priority |
 |---|---|----------|-------|--------|--------------|----------|
-| [ ] | 64 | WINT-9020 | Create doc-sync LangGraph Node ⚡ | ⏸️ | WINT-9010 (#57), WINT-0160 (#21) | P0 |
+| [ ] | 64 | WINT-9020 | Create doc-sync LangGraph Node ⚡ | 🚧 | WINT-9010 (#57), WINT-0160 (#21) | P0 — ready-for-code-review |
 | [ ] | 65 | WINT-4080 | Create scope-defender Agent (DA) | ⏳ | None | P1 — **ready to start** |
 | [ ] | 66 | WINT-4090 | Create evidence-judge Agent | 🔧 | qa-verify | P1 |
 | [ ] | 67 | KBAR-0070 | story_get Tool | ⏸️ | KBAR-0060 (#58) | P2 |
 | [ ] | 68 | KBAR-0080 | story_list & story_update Tools | ⏸️ | KBAR-0070 (#67) | P2 |
-| [ ] | 69 | WINT-0190 | Create Patch Queue Pattern and Schema | ⏳ | WINT-0180 (#12) | P3 |
+| [ ] | 69 | WINT-0190 | Create Patch Queue Pattern and Schema | 🚧 | | WINT-0180 (#12) | P3 |
 | [ ] | 70 | WINT-0240 | Configure Ollama Model Fleet | ⏳ | WINT-0220 (#13) ✅ | P3 |
 | [ ] | 71 | WINT-0250 | Define Escalation Triggers | ⏳ | WINT-0220 (#13), WINT-0230 (#28) | P3 |
 
@@ -275,7 +275,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies |
 |---|---|----------|-------|--------|--------------|
-| [ ] | 79 | AUDT-0030 | Audit Orchestration Nodes | ⏸️ | AUDT-0020 (#63) |
+| [ ] | 79 | AUDT-0030 | Audit Orchestration Nodes | ⚪ | AUDT-0020 (#63) |
 | [ ] | 80 | TELE-0010 | Docker Telemetry Stack | ⏳ | INFR-0040 (#3) ✅ |
 
 ### E2E Gate:
@@ -294,9 +294,9 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 81 | WINT-2090 | Implement Session Context Management ⚡ | ⏳ | WINT-0110 (#40) ✅ | Step 1 |
-| [ ] | 82 | WINT-2100 | Create session-manager Agent ⚡ | ⏸️ | WINT-2090 (#81) | Step 2 |
-| [ ] | 83 | WINT-9090 | Create Context Cache LangGraph Nodes ⚡ | ⏸️ | WINT-9010 (#57), WINT-2100 (#82) | Step 3 |
+| [ ] | 81 | WINT-2090 | Implement Session Context Management ⚡ | ⏳ | WINT-0110 (#40) ✅ | Step 1 — in elaboration |
+| [ ] | 82 | WINT-2100 | Create session-manager Agent ⚡ | ⚪ | WINT-2090 (#81) | Step 2 — no story file |
+| [ ] | 83 | WINT-9090 | Create Context Cache LangGraph Nodes ⚡ | ⚪ | WINT-9010 (#57), WINT-2100 (#82) | Step 3 — no story file |
 
 ### Track B — KBAR Agent Updates (Sequential):
 
@@ -360,9 +360,10 @@ Once story #94 (WINT-9140) is complete and validated, you can switch to working 
 - ✅ UAT Verified: 47 stories (AUDT-0010, INFR-0020, INFR-0030, INFR-0040, INFR-0041, INFR-0050, INFR-0110, INFR-0120, KBAR-0010, KBAR-0020, KBAR-0030, KBAR-0040, LNGG-0010, LNGG-0020, LNGG-0030, LNGG-0040, LNGG-0050, LNGG-0060, LNGG-0070, MODL-0010, MODL-0011, MODL-0020, MODL-0030, MODL-0050, WINT-0010, WINT-0020, WINT-0030, WINT-0040, WINT-0060, WINT-0070, WINT-0080, WINT-0090, WINT-0100, WINT-0110, WINT-0130, WINT-0150, WINT-0160, WINT-0180, WINT-0200, WINT-0220, WINT-0230, WINT-1020, WINT-1030, WINT-1080, WINT-1090, WINT-1100, WINT-7010)
 - 🔍 Ready for QA: 0 stories
 - 🚧 In Progress: 0 stories
+- ⏳ Ready to Start: 3 stories (TELE-0010, WINT-0240, WINT-2090)
 - ⏸️ Blocked: remaining stories (waiting on dependencies)
 
-**Active Stories: 47 tracked**
+**Active Stories: 50 tracked**
 
 **Critical Path Tracking:**
 - [x] LNGG-0010 ✅ → Batch 2 unblocked (LNGG-0060 in 🔍 ready-for-qa)

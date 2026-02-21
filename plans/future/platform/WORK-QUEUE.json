@@ -1,0 +1,217 @@
+{
+  "generated_at": "2026-02-21T04:16:53.502Z",
+  "source": "WORK-ORDER-BY-BATCH.md",
+  "stale_after_seconds": 120,
+  "summary": {
+    "complete": 47,
+    "blocked": 25,
+    "working": 0,
+    "cancelled": 1,
+    "unblocked": 10
+  },
+  "working": [],
+  "queue": [
+    {
+      "story_id": "KBAR-0060",
+      "title": "Sync Integration Tests",
+      "batch": "Batch 9 — Shared Business Logic",
+      "priority": "P1",
+      "row": "58",
+      "status": "⏸️",
+      "feature_dir": "plans/future/platform/kb-artifact-migration",
+      "command": "/dev-implement-story plans/future/platform/kb-artifact-migration KBAR-0060",
+      "deps": [
+        {
+          "story_id": "KBAR-0050",
+          "row": "56",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "WINT-1120",
+      "title": "Validate Foundation Phase",
+      "batch": "Batch 9 — Shared Business Logic",
+      "priority": "P1",
+      "row": "60",
+      "status": "⏸️",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-1120",
+      "deps": [
+        {
+          "story_id": "WINT-1070",
+          "row": "52",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-1110",
+          "row": "47",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-1160",
+          "row": "59",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-1040",
+          "row": "53",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "MODL-0040",
+      "title": "Model Leaderboards",
+      "batch": "Batch 9 — Shared Business Logic",
+      "priority": "P1",
+      "row": "62",
+      "status": "⏳",
+      "feature_dir": "plans/future/platform/model-experimentation",
+      "command": "/dev-implement-story plans/future/platform/model-experimentation MODL-0040",
+      "deps": [
+        {
+          "story_id": "MODL-0030",
+          "row": "46",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "AUDT-0020",
+      "title": "9 Audit Lens Nodes",
+      "batch": "Batch 9 — Shared Business Logic",
+      "priority": "P1",
+      "row": "63",
+      "status": "⏳",
+      "feature_dir": "plans/future/platform/code-audit",
+      "command": "/dev-implement-story plans/future/platform/code-audit AUDT-0020",
+      "deps": [
+        {
+          "story_id": "AUDT-0010",
+          "row": "10",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "WINT-9020",
+      "title": "Create doc-sync LangGraph Node ⚡",
+      "batch": "Batch 10 — First LangGraph Nodes",
+      "priority": "P1",
+      "row": "64",
+      "status": "🚧",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-9020",
+      "deps": [
+        {
+          "story_id": "WINT-9010",
+          "row": "57",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-0160",
+          "row": "21",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "WINT-0190",
+      "title": "Create Patch Queue Pattern and Schema",
+      "batch": "Batch 10 — First LangGraph Nodes",
+      "priority": "P1",
+      "row": "69",
+      "status": "🚧",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-0190",
+      "deps": [
+        {
+          "story_id": "WINT-0180",
+          "row": "12",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "WINT-0240",
+      "title": "Configure Ollama Model Fleet",
+      "batch": "Batch 10 — First LangGraph Nodes",
+      "priority": "P1",
+      "row": "70",
+      "status": "⏳",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-0240",
+      "deps": [
+        {
+          "story_id": "WINT-0220",
+          "row": "13",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "WINT-0250",
+      "title": "Define Escalation Triggers",
+      "batch": "Batch 10 — First LangGraph Nodes",
+      "priority": "P1",
+      "row": "71",
+      "status": "⏳",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-0250",
+      "deps": [
+        {
+          "story_id": "WINT-0220",
+          "row": "13",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-0230",
+          "row": "28",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "TELE-0010",
+      "title": "Docker Telemetry Stack",
+      "batch": "Batch 11 — KBAR Tools",
+      "priority": "P1",
+      "row": "80",
+      "status": "⏳",
+      "feature_dir": "plans/future/platform/telemetry",
+      "command": "/dev-implement-story plans/future/platform/telemetry TELE-0010",
+      "deps": [
+        {
+          "story_id": "INFR-0040",
+          "row": "3",
+          "satisfied": true
+        }
+      ]
+    },
+    {
+      "story_id": "WINT-2090",
+      "title": "Implement Session Context Management ⚡",
+      "batch": "Batch 12 — Context & Session",
+      "priority": "P1",
+      "row": "81",
+      "status": "⏳",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-2090",
+      "deps": [
+        {
+          "story_id": "WINT-0110",
+          "row": "40",
+          "satisfied": true
+        }
+      ]
+    }
+  ],
+  "next_gate": {
+    "id": "GATE-01",
+    "title": "E2E: Validate Foundation",
+    "waiting_on": [
+      "WINT-0180"
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+schema: 1
+story_id: "WINT-1040"
+timestamp: "2026-02-18T10:00:00.000Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+tests_exempt: true
+tests_exempt_reason: "docs-only story — single .md file modified, no TypeScript, no API routes, no UI"
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_exempt_reason: "docs-only story — no code coverage applicable"
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "Verified: story-status.md lines 40, 110-112 show story_get_status MCP tool called in Feature+Story ID mode step 2 as primary data source. DB result used if non-null (step 3), fallback to directory scan on null (step 4)."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "Verified: Output Examples section (lines 162-169) preserves the 5-field format: Feature / Story / Status / Location / Depends On. No fields added or removed."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Verified: DB State Display Labels table (lines 54-63) covers all 8 DB state enum values: backlog, ready_to_work, in_progress, ready_for_qa, in_qa, done, blocked, cancelled."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "Verified: Feature+--depth (lines 77-85) and Feature+--deps-order (lines 87-105) modes read stories.index.md as step 1. No story_get_status calls present in those sections (grep confirmed 0 references outside Feature+Story ID mode)."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Verified: Non-Goals note found at line 48 — 'Feature Only DB routing ... is deferred to WINT-1070.' Co-located inside Data Source section."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Verified: grep -c 'story_update_status' returns 0 matches. Command header line 10 reads 'Read-only utility command.' No write operations present."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Verified: 'Story not found: {STORY_ID}' appears at lines 43 (Data Source section step 4) and 123 (Feature+Story ID mode step 5)."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Verified: Data Source section (lines 34-66) covers DB-first routing with story_get_status, fallback conditions (null = DB unavailable or not yet migrated), and migration window context paragraph explaining Phase 1 DB authority."
+
+architecture_compliant: true
+architecture_notes:
+  - "ADR-WINT-1011-DB-FIRST: DB is authoritative for migrated stories; directory fallback for null results — correctly documented."
+  - "ADR-005: docs-only story exempted from live PostgreSQL UAT requirement."
+  - "Command spec uses MCP tool invocation syntax (story_get_status({storyId: STORY_ID})) matching the canonical story-update.md pattern (L-STORY-UPDATE-001)."
+
+issues: []
+
+lessons_to_record:
+  - lesson: "shimGetStoryStatus returns null on both DB-miss and DB-error; command specs should document both as a single fallback trigger rather than distinguishing the cases."
+    category: pattern
+    tags: ["wint", "shim", "fallback", "mcp-tools", "command-pattern"]
+  - lesson: "story_get_status MCP tool call pattern (result = story_get_status({ storyId: STORY_ID })) is the established agent-callable wrapper around shimGetStoryStatus; mirrors worktree_get_by_story usage in story-update.md."
+    category: reuse
+    tags: ["wint", "mcp-tools", "command-pattern", "docs-pattern"]
+
+gate:
+  decision: PASS
+  reason: "All 8 ACs verified PASS, tests exempt (docs-only), architecture compliant, no blocking issues"
+  blocking_issues: []
+
+tokens:
+  in: 8500
+  out: 1200

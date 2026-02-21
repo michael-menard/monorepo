@@ -1,0 +1,122 @@
+schema: 2
+story_id: "WINT-0170"
+timestamp: "2026-02-17T21:15:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Add doc-sync gate Step 6.5 to elab-completion-leader.agent.md. Insert between Step 6 (Verify Final State) and the Completion Signal section. Update frontmatter: version 3.0.0 -> 3.0.1, updated date, add /doc-sync to skills_used. Gate prose must cover three branches (exit 0, exit 1, infra failure) and include AC-8 re-run behavior note."
+    files:
+      - ".claude/agents/elab-completion-leader.agent.md"
+    files_to_read:
+      - ".claude/agents/elab-completion-leader.agent.md"
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: []
+    slice: packages
+    verification: |
+      grep -n "doc-sync\|ELABORATION BLOCKED\|check-only" .claude/agents/elab-completion-leader.agent.md
+      grep "version:\|updated:\|/doc-sync" .claude/agents/elab-completion-leader.agent.md | head -10
+    acs_covered:
+      - "AC-1"
+      - "AC-4"
+      - "AC-5"
+      - "AC-6"
+      - "AC-8"
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Add doc-sync gate Step 7.5 to qa-verify-completion-leader.agent.md on the PASS path only. Insert between Step 7 (Update Story Status in KB) and Step 8 (Log tokens). FAIL path must not be modified. Update frontmatter: version 3.3.0 -> 3.3.1, updated date, add /doc-sync to skills_used. Gate prose modeled on Step 0 non-blocking pattern."
+    files:
+      - ".claude/agents/qa-verify-completion-leader.agent.md"
+    files_to_read:
+      - ".claude/agents/qa-verify-completion-leader.agent.md"
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies:
+      - 1
+    slice: packages
+    verification: |
+      grep -n "doc-sync\|COMPLETION BLOCKED\|check-only" .claude/agents/qa-verify-completion-leader.agent.md
+      grep "version:\|updated:\|/doc-sync" .claude/agents/qa-verify-completion-leader.agent.md | head -10
+    acs_covered:
+      - "AC-2"
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
+      - "AC-6"
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Static verification of both modified agent files. Confirm: gate step present in each, frontmatter correct (version, updated, /doc-sync in skills_used), FAIL path of qa-verify-completion-leader untouched, no other files modified, existing completion signals unchanged."
+    files: []
+    files_to_read:
+      - ".claude/agents/elab-completion-leader.agent.md"
+      - ".claude/agents/qa-verify-completion-leader.agent.md"
+    dependencies:
+      - 1
+      - 2
+    slice: packages
+    verification: |
+      git diff --name-only .claude/agents/
+    acs_covered:
+      - "AC-3"
+      - "AC-6"
+      - "AC-7"
+
+files_to_change:
+  - path: ".claude/agents/elab-completion-leader.agent.md"
+    action: modify
+    reason: "Insert Step 6.5 (Doc-Sync Gate) before Completion Signal section; update frontmatter per AC-1, AC-5, AC-6, AC-8"
+  - path: ".claude/agents/qa-verify-completion-leader.agent.md"
+    action: modify
+    reason: "Insert Step 7.5 (Doc-Sync Gate) on PASS path only before Step 8; update frontmatter per AC-2, AC-5, AC-6"
+
+commands_to_run:
+  - command: "grep -n 'doc-sync\\|ELABORATION BLOCKED\\|check-only' .claude/agents/elab-completion-leader.agent.md"
+    when: "after ST-1 edit"
+    required: true
+  - command: "grep -n 'doc-sync\\|COMPLETION BLOCKED\\|check-only' .claude/agents/qa-verify-completion-leader.agent.md"
+    when: "after ST-2 edit"
+    required: true
+  - command: "git diff --name-only .claude/agents/"
+    when: "after ST-3 verification"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Step 6.5 present in elab-completion-leader.agent.md with /doc-sync --check-only invocation, three-branch logic (exit 0/exit 1/infra failure), ELABORATION BLOCKED signal text, and /doc-sync in skills_used frontmatter"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "Step 7.5 present in qa-verify-completion-leader.agent.md PASS path with /doc-sync --check-only invocation, three-branch logic, COMPLETION BLOCKED signal text, and /doc-sync in skills_used frontmatter"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "FAIL path section of qa-verify-completion-leader.agent.md is byte-for-byte unchanged from current v3.3.0 — grep confirms no doc-sync/COMPLETION BLOCKED lines in FAIL path section"
+    evidence_type: file
+  - ac_id: "AC-4"
+    planned_evidence: "All original completion signal strings (ELABORATION COMPLETE: PASS, ELABORATION COMPLETE: CONDITIONAL PASS, ELABORATION COMPLETE: FAIL, ELABORATION COMPLETE: SPLIT REQUIRED, QA PASS, QA FAIL) remain present and unmodified in their respective sections; two new BLOCKED variants documented in gate step prose"
+    evidence_type: file
+  - ac_id: "AC-5"
+    planned_evidence: "Gate step is positioned after state update steps and immediately before completion signal in both agents: Step 6.5 follows Step 6 (Verify Final State) in elab-completion-leader; Step 7.5 follows Step 7 (Update Story Status in KB) in qa-verify-completion-leader"
+    evidence_type: file
+  - ac_id: "AC-6"
+    planned_evidence: "Both agents show updated: 2026-02-17, version: 3.0.1 (elab) and version: 3.3.1 (qa-verify), /doc-sync listed in skills_used array"
+    evidence_type: file
+  - ac_id: "AC-7"
+    planned_evidence: "WINT-0170 status in stories index reflects completion when story advances through workflow tooling (/index-update run by qa-verify-completion-leader at story completion)"
+    evidence_type: manual
+  - ac_id: "AC-8"
+    planned_evidence: "Step 6.5 prose in elab-completion-leader.agent.md explicitly states: story directory has already been moved (Steps 3-5 ran before the gate); operator instruction to run /doc-sync then re-run elab-completion-leader; Steps 3-5 are idempotent on re-run; this only applies to PASS/CONDITIONAL PASS path"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Zero TypeScript changes — no pnpm commands required. Verification is grep-based static inspection only."
+  - "ST-2 depends on ST-1 for prose consistency (gate step language must match between the two agents)."
+  - "Critical prose distinction: 'exit code 1' (blocking) vs 'invocation failure/infrastructure error' (non-blocking). Both gate steps must be unambiguous about this distinction."
+  - "Model for gate step prose: qa-verify-completion-leader Step 0 (wt:merge-pr non-blocking gate) — 'attempt, warn on failure, continue regardless'."
+  - "AC-8 is REQUIRED content in Step 6.5 of elab-completion-leader only (not qa-verify-completion-leader — its PASS path does not move directory)."
+  - "DOC-SYNC COMPLETE (warnings) from doc-sync (file-only fallback mode) = treat as exit 0 = non-blocking. Gate must only block on explicit exit code 1."
+  - "FAIL path of qa-verify-completion-leader is explicitly not touched (AC-3). ST-3 verification confirms this with git diff."

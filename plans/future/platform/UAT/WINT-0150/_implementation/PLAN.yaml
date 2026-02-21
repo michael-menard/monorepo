@@ -1,0 +1,85 @@
+schema: 1
+story_id: WINT-0150
+timestamp: 2026-02-14T21:30:00Z
+
+steps:
+  - id: 1
+    description: "Create .claude/skills/doc-sync directory"
+    files: []
+    dependencies: []
+    slice: documentation
+
+  - id: 2
+    description: "Assemble SKILL.md content from template and source files"
+    files:
+      - ".claude/skills/review/SKILL.md"
+      - ".claude/skills/qa-gate/SKILL.md"
+      - ".claude/commands/doc-sync.md"
+      - ".claude/agents/doc-sync.agent.md"
+    dependencies: [1]
+    slice: documentation
+
+  - id: 3
+    description: "Write .claude/skills/doc-sync/SKILL.md with complete content"
+    files:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [2]
+    slice: documentation
+
+  - id: 4
+    description: "Validate completeness against acceptance criteria"
+    files:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [3]
+    slice: documentation
+
+files_to_change:
+  - path: ".claude/skills/doc-sync/SKILL.md"
+    action: create
+    reason: "Main Skill definition file per AC-1"
+
+commands_to_run: []
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File exists with proper YAML frontmatter (name, description, mcp_tools_available)"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "Parameters section documents --check-only and --force flags with usage examples"
+    evidence_type: manual
+
+  - ac_id: "AC-3"
+    planned_evidence: "Execution Instructions section documents all 7 phases from agent file"
+    evidence_type: manual
+
+  - ac_id: "AC-4"
+    planned_evidence: "Examples section includes 4 usage scenarios from command spec"
+    evidence_type: manual
+
+  - ac_id: "AC-5"
+    planned_evidence: "Integration patterns section documents pre-commit hook and workflow integration"
+    evidence_type: manual
+
+  - ac_id: "AC-6"
+    planned_evidence: "Output section documents SYNC-REPORT.md structure and exit codes"
+    evidence_type: manual
+
+  - ac_id: "AC-7"
+    planned_evidence: "Troubleshooting section covers common issues from agent error handling"
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "This is a documentation-only task with no code changes"
+  - "All content already exists in command and agent files"
+  - "Primary work is organizing and formatting existing content into Skill pattern"
+  - "No tests required - Skills are documentation artifacts"
+  - "Validation is manual cross-reference against source files"
+  - "Execution phases extracted from doc-sync.agent.md lines 40-382"
+  - "Section mapping table extracted from doc-sync.agent.md Phase 3"
+  - "Examples extracted from doc-sync.md lines 172-227"
+  - "Troubleshooting scenarios extracted from doc-sync.md lines 230-259"

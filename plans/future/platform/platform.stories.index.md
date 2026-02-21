@@ -152,7 +152,7 @@ All can start immediately. Ordered by downstream impact.
 | 68 | | KBAR-0070 | story_get Tool | ← KBAR-0060 | KBAR | P2 |
 | 69 | | KBAR-0080 | story_list & story_update Tools | ← KBAR-0070 | KBAR | P2 |
 | 70 | | WINT-0190 | Create Patch Queue Pattern and Schema | ← WINT-0180 | WINT | P3 |
-| 71 | | WINT-0240 | Configure Ollama Model Fleet | ← WINT-0220 | WINT | P3 |
+| 71 | x | WINT-0240 | Configure Ollama Model Fleet **created** | ← WINT-0220 | WINT | P3 |
 | 72 | | WINT-0250 | Define Escalation Triggers | ← WINT-0220, 0230 | WINT | P3 |
 | G10 | | GATE-10 | **E2E: Validate First LangGraph Nodes** | ← GATE-09, all Wave 6 | GATE | **HARD GATE** |
 
@@ -172,7 +172,7 @@ All can start immediately. Ordered by downstream impact.
 | 78 | | KBAR-0140 | Artifact Summary Extraction ⚡ | ← KBAR-0120, KBAR-0130 | KBAR | **P0** |
 | 79 | | KBAR-0150 | Artifact Tools Integration Tests ⚡ | ← KBAR-0140 | KBAR | **P0** |
 | 80 | | AUDT-0030 | Audit Orchestration Nodes | ← AUDT-0020 | AUDT | P3 |
-| 81 | | TELE-0010 | Docker Telemetry Stack | ← INFR-0040 | TELE | P3 |
+| 81 | x | TELE-0010 | Docker Telemetry Stack **created** | ← INFR-0040 | TELE | P3 |
 | G11 | | GATE-11 | **E2E: Validate KBAR Tooling** | ← GATE-10, all Wave 7 | GATE | **HARD GATE** |
 
 ---
@@ -183,7 +183,7 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 82 | | WINT-2090 | Implement Session Context Management ⚡ | ← WINT-0110 | WINT | **P0** |
+| 82 | x | WINT-2090 | Implement Session Context Management ⚡ **created** | ← WINT-0110 | WINT | **P0** |
 | 83 | | WINT-2100 | Create session-manager Agent ⚡ | ← WINT-2090 | WINT | **P0** |
 | 84 | | WINT-9090 | Create Context Cache LangGraph Nodes ⚡ | ← WINT-9010, 2100 | WINT | **P0** |
 | 85 | | KBAR-0160 | Update Setup & Plan Leaders | ← KBAR-0150 | KBAR | P1 |

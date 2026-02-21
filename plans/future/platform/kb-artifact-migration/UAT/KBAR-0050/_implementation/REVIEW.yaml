@@ -1,0 +1,90 @@
+schema: 1
+story_id: 'KBAR-0050'
+timestamp: '2026-02-18T04:00:00Z'
+iteration: 2
+verdict: PASS
+
+workers_run:
+  - typecheck
+  - build
+workers_skipped:
+  - lint
+  - style
+  - syntax
+  - security
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+ranked_patches: []
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  style:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  syntax:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  security:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  reusability:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  react:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  typescript:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+  accessibility:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+total_errors: 0
+total_warnings: 0
+auto_fixable_count: 0
+
+tokens:
+  in: 15000
+  out: 800

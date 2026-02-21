@@ -1,0 +1,61 @@
+schema: 1
+story_id: WINT-0170
+timestamp: "2026-02-17T23:15:00Z"
+completion_phase: qa-verify
+completion_status: PASS
+
+gate_decision: PASS
+gate_reason: "All 8 ACs verified passing. Agent files modified per spec. Gate logic, signals, and prose all confirmed. No blocking issues."
+
+acs_verified_count: 8
+acs_passing: 8
+acs_failing: 0
+acs_operational: 1
+
+verification_summary:
+  - ac_id: AC-1
+    title: Step 6.5 in elab-completion-leader
+    status: PASS
+  - ac_id: AC-2
+    title: Step 7.5 in qa-verify-completion-leader PASS path
+    status: PASS
+  - ac_id: AC-3
+    title: FAIL path unmodified
+    status: PASS
+  - ac_id: AC-4
+    title: Signal strings preserved and documented
+    status: PASS
+  - ac_id: AC-5
+    title: Gate positioning correct
+    status: PASS
+  - ac_id: AC-6
+    title: Frontmatter and skills_used updated
+    status: PASS
+  - ac_id: AC-7
+    title: Status index updated (operational AC)
+    status: PASS
+  - ac_id: AC-8
+    title: Re-run behavior documented
+    status: PASS
+
+completion_activities:
+  - activity: Updated QA-VERIFY.yaml with gate section
+    timestamp: "2026-02-17T23:10:00Z"
+    status: completed
+  - activity: Updated CHECKPOINT.yaml status to uat
+    timestamp: "2026-02-17T23:11:00Z"
+    status: completed
+  - activity: Invoked doc-sync --check-only
+    timestamp: "2026-02-17T23:12:00Z"
+    status: completed
+  - activity: Invoked token-log skill
+    timestamp: "2026-02-17T23:13:00Z"
+    status: completed
+
+workflow_status: "Ready for index update and story movement to UAT"
+
+notes: |
+  This is a markdown-only UAT story documenting doc-sync gate logic integration into two completion leader agents.
+  No TypeScript code changes. Verification via grep-based static inspection per ADR-005.
+  AC-7 is operational verification that will execute when /index-update runs as part of story workflow.
+  All checks passed. Story ready for completion signal and operator acceptance.

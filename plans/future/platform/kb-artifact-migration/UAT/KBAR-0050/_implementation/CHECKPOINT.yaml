@@ -1,0 +1,34 @@
+schema: 1
+story_id: "KBAR-0050"
+feature_dir: "plans/future/platform/kb-artifact-migration"
+timestamp: "2026-02-18T03:40:00Z"
+
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+e2e_gate: exempt
+
+execution_summary:
+  steps_completed:
+    - ST-1: "cli-options.ts Zod schemas"
+    - ST-2: "sync-story.ts implementation"
+    - ST-3: "sync-story.ts extended (artifacts, conflicts, from-db)"
+    - ST-4: "sync-epic.ts implementation"
+    - ST-5: "sync-epic.ts extended (artifact-type + checkpoint)"
+    - ST-6: "package.json scripts registered"
+    - ST-7: "sync-story.test.ts unit tests (93.48% line coverage)"
+    - ST-8: "sync-epic.test.ts unit tests (90.28% line coverage)"
+    - ST-9: "sync-cli.integration.test.ts integration tests (3 tests pass)"
+  unit_tests: 139
+  integration_tests: 3
+  e2e_tests: 0
+  e2e_exempt: true
+  coverage_lines: 89.03
+
+pr_number: 367
+pr_url: "https://github.com/michael-menard/monorepo/pull/367"

@@ -1,0 +1,237 @@
+schema: 2
+story_id: "KBAR-0050"
+timestamp: "2026-02-18T03:10:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Define SyncStoryCLIOptionsSchema and SyncEpicCLIOptionsSchema as Zod schemas in the shared types file. Create scripts/__types__/cli-options.ts with all CLI flag types for both commands."
+    files:
+      - "packages/backend/kbar-sync/scripts/__types__/cli-options.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/cli/index.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/kbar-sync"
+    acs_covered: ["AC-8"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Implement scripts/sync-story.ts: flag parsing, Zod validation via SyncStoryCLIOptionsSchema.safeParse, path security checks (validateFilePath + validateNotSymlink), dry-run checksum comparison (computeChecksum + direct DB read), syncStoryToDatabase delegation, exit code management (0/1/2), and --help flag."
+    files:
+      - "packages/backend/kbar-sync/scripts/sync-story.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+      - "packages/backend/kbar-sync/src/index.ts"
+      - "packages/backend/kbar-sync/src/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/kbar-sync && pnpm --filter @repo/kbar-sync run sync:story -- --help"
+    acs_covered: ["AC-1", "AC-6", "AC-9", "AC-12"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Extend sync-story.ts to handle --artifacts flag (calls batchSyncArtifactsForStory or syncArtifactToDatabase with --artifact-file/--artifact-type), --check-conflicts flag (calls detectSyncConflicts and/or detectArtifactConflicts and exits 1 if conflict found), and --from-db flag. Fail-soft when --force is set."
+    files:
+      - "packages/backend/kbar-sync/scripts/sync-story.ts"
+    files_to_read:
+      - "packages/backend/kbar-sync/src/batch-sync-artifacts.ts"
+      - "packages/backend/kbar-sync/src/index.ts"
+    dependencies: [2]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/kbar-sync"
+    acs_covered: ["AC-2", "AC-3"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Implement scripts/sync-epic.ts: story directory discovery under --base-dir, optional --epic prefix filter, per-story syncStoryToDatabase loop (fail-soft), aggregate result printing (progress per story + final summary), dry-run single batch DB query for all story checksums (N+1 prevention), and --help flag."
+    files:
+      - "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+      - "packages/backend/kbar-sync/src/index.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/kbar-sync && pnpm --filter @repo/kbar-sync run sync:epic -- --help"
+    acs_covered: ["AC-4", "AC-6", "AC-9"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Extend sync-epic.ts to handle --artifact-type <type> (calls batchSyncByType) with --checkpoint <name> passthrough for resumable batch operations. Print artifact count progress and checkpoint name on completion."
+    files:
+      - "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    files_to_read:
+      - "packages/backend/kbar-sync/src/index.ts"
+    dependencies: [4]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/kbar-sync"
+    acs_covered: ["AC-5"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Add sync:story and sync:epic script entries to packages/backend/kbar-sync/package.json. Verify shebang (#!/usr/bin/env npx tsx) is present at top of both script files."
+    files:
+      - "packages/backend/kbar-sync/package.json"
+    files_to_read:
+      - "packages/backend/kbar-sync/package.json"
+    dependencies: [2, 4]
+    slice: packages
+    verification: "pnpm --filter @repo/kbar-sync run sync:story -- --help && pnpm --filter @repo/kbar-sync run sync:epic -- --help"
+    acs_covered: ["AC-7"]
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Write Vitest unit tests for sync-story.ts covering: all valid flag combinations, missing required flags (--story-id, --story-dir), dry-run zero-mutation assertion (spy that sync functions are NOT called), conflict detection path exits 1 without calling sync, path traversal rejection, DB connection failure exits 2, all exit codes exercised. Target >80% line coverage."
+    files:
+      - "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+    files_to_read:
+      - "packages/backend/kbar-sync/scripts/sync-story.ts"
+    dependencies: [3]
+    slice: packages
+    verification: "pnpm test --filter @repo/kbar-sync -- --coverage"
+    acs_covered: ["AC-10"]
+
+  - id: 8
+    subtask_id: "ST-8"
+    description: "Write Vitest unit tests for sync-epic.ts covering: story discovery, --epic prefix filter (excludes non-matching), batch fail-soft (one failure does not abort), dry-run single-query assertion, artifact-type + checkpoint passthrough. Target >80% line coverage."
+    files:
+      - "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+    files_to_read:
+      - "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    dependencies: [5]
+    slice: packages
+    verification: "pnpm test --filter @repo/kbar-sync -- --coverage"
+    acs_covered: ["AC-10"]
+
+  - id: 9
+    subtask_id: "ST-9"
+    description: "Write Vitest integration tests using @testcontainers/postgresql (real PostgreSQL) covering: dry-run zero-mutation assertion (kbar.stories row count unchanged after sync:story --dry-run), happy-path story sync write (kbar.stories row with correct checksum), and checkpoint resumption (kbar.syncCheckpoints row persisted and resumed)."
+    files:
+      - "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+    files_to_read:
+      - "packages/backend/kbar-sync/src/index.ts"
+      - "packages/backend/kbar-sync/scripts/sync-story.ts"
+      - "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    dependencies: [7, 8]
+    slice: packages
+    verification: "pnpm test --filter @repo/kbar-sync -- --reporter=verbose scripts/__tests__/integration/"
+    acs_covered: ["AC-11"]
+
+files_to_change:
+  - path: "packages/backend/kbar-sync/scripts/__types__/cli-options.ts"
+    action: create
+    reason: "Shared Zod schemas for CLI option parsing (SyncStoryCLIOptionsSchema, SyncEpicCLIOptionsSchema) — AC-8"
+
+  - path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+    action: create
+    reason: "sync:story CLI command implementation — AC-1, AC-2, AC-3, AC-6, AC-9, AC-12"
+
+  - path: "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    action: create
+    reason: "sync:epic CLI command implementation — AC-4, AC-5, AC-6, AC-9"
+
+  - path: "packages/backend/kbar-sync/package.json"
+    action: modify
+    reason: "Add sync:story and sync:epic script entries — AC-7"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+    action: create
+    reason: "Unit tests for sync-story.ts — AC-10 (>80% line coverage)"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+    action: create
+    reason: "Unit tests for sync-epic.ts — AC-10 (>80% line coverage)"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+    action: create
+    reason: "Integration tests with real PostgreSQL (testcontainers) — AC-11 (ADR-005 compliance)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/kbar-sync"
+    when: "after each step (ST-1 through ST-6)"
+    required: true
+
+  - command: "pnpm test --filter @repo/kbar-sync"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test --filter @repo/kbar-sync -- --coverage"
+    when: "after unit tests are written (ST-7, ST-8)"
+    required: true
+
+  - command: "pnpm lint --filter @repo/kbar-sync"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm --filter @repo/kbar-sync run sync:story -- --help"
+    when: "after ST-6 (script registration)"
+    required: true
+
+  - command: "pnpm --filter @repo/kbar-sync run sync:epic -- --help"
+    when: "after ST-6 (script registration)"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "sync-story.ts implements --story-id, --story-dir, --dry-run, --verbose, --force flags with Zod validation and exit code management"
+    evidence_type: command
+
+  - ac_id: "AC-2"
+    planned_evidence: "sync-story.ts --artifacts flag calls batchSyncArtifactsForStory; --artifact-file/--artifact-type calls syncArtifactToDatabase"
+    evidence_type: command
+
+  - ac_id: "AC-3"
+    planned_evidence: "sync-story.ts --check-conflicts flag calls detectSyncConflicts/detectArtifactConflicts; exits 1 with conflict details"
+    evidence_type: command
+
+  - ac_id: "AC-4"
+    planned_evidence: "sync-epic.ts implements --base-dir, --epic, --dry-run, --verbose, --force, --checkpoint flags with story discovery and aggregate results"
+    evidence_type: command
+
+  - ac_id: "AC-5"
+    planned_evidence: "sync-epic.ts --artifact-type flag calls batchSyncByType with --checkpoint passthrough"
+    evidence_type: command
+
+  - ac_id: "AC-6"
+    planned_evidence: "Dry-run uses CLI-layer checksum comparison (computeChecksum + direct DB read) with zero sync function calls; sync:epic --dry-run uses single batch query"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "package.json sync:story and sync:epic scripts registered; both --help exits 0"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "SyncStoryCLIOptionsSchema and SyncEpicCLIOptionsSchema in cli-options.ts; all types via z.infer<>; no as any casts"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    planned_evidence: "Errors to stderr; progress/summary to stdout; exit codes 0/1/2 verified in unit tests"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Unit tests: sync-story.test.ts and sync-epic.test.ts with >80% line coverage on respective scripts"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Integration test: sync-cli.integration.test.ts using testcontainers — dry-run zero-mutation, happy-path write, checkpoint resumption"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "sync-story.ts --dry-run path does NOT call syncStoryToDatabase; uses computeChecksum + direct DB query only"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "scripts/ directory does not yet exist in packages/backend/kbar-sync — created as part of ST-1"
+  - "KBAR-0040 implementation gate: confirm @repo/kbar-sync exports are stable before implementing ST-2+; batchSyncByType, detectArtifactConflicts, etc. must be exported from index.ts"
+  - "computeChecksum, validateFilePath, validateNotSymlink are all exported from packages/backend/kbar-sync/src/__types__/index.ts — import for dry-run and path security"
+  - "tsx is already in kbar-sync devDependencies — no new dependency required"
+  - "@testcontainers/postgresql is already in kbar-sync devDependencies — no new dependency for ST-9"
+  - "No existing integration tests in kbar-sync — ST-9 establishes the first testcontainers pattern for this package"
+  - "E2E tests skipped per ADR-006 skip condition: frontend_impacted: false, no UI-facing ACs"
+  - "Dry-run approach is Approach 2 (CLI-layer checksum comparison) — mandatory per AC-12; Approach 1 (pass dryRun to syncStoryToDatabase) is not viable"
+  - "sync:epic --dry-run must batch all story checksum lookups in a single DB query to prevent N+1 (lesson from KBAR-0040)"

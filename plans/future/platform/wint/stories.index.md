@@ -16,17 +16,17 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 14 |
+| uat | 15 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
 | ready-for-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 1 |
-| created | 1 |
+| created | 3 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
-| pending | 120 |
+| ready-to-work | 4 |
+| pending | 117 |
 
 ---
 
@@ -403,7 +403,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0180
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
@@ -439,7 +439,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
-**Depends On:** WINT-0180, WINT-0190, WINT-0200
+**Depends On:** WINT-0180, WINT-0200
 **Phase:** 0
 **Points:** 5
 **Priority:** P2
@@ -504,7 +504,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0240: Configure Ollama Model Fleet
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-0220
 **Phase:** 0
 **Feature:** Document and script Ollama model setup. Pull recommended models:
@@ -1084,7 +1084,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2090: Implement Session Context Management
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-0110
 **Phase:** 2
 **Feature:** Create session-create, session-inherit skills for leader→worker context sharing
@@ -1094,6 +1094,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 **Goal:** Enable stateful workflows with shared context
 
 **Risk Notes:** Session cleanup strategy needed
+
+**Story Generated:** 2026-02-20
 
 ---
 
