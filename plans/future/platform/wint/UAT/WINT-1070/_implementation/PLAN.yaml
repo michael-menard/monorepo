@@ -1,0 +1,183 @@
+schema: 2
+story_id: "WINT-1070"
+timestamp: "2026-02-18T05:15:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Add getAllStories() to StoryRepository returning StoryRow[]; define GenerationReport, IndexFrontmatter, and StorySection Zod schemas in __types__/generation.ts; run DB enum audit and define STORY_STATE_ENUM constant"
+    files:
+      - "packages/backend/orchestrator/src/db/story-repository.ts"
+      - "packages/backend/orchestrator/src/scripts/__types__/generation.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/db/story-repository.ts"
+      - "packages/backend/orchestrator/src/scripts/__types__/population.ts"
+      - "packages/backend/orchestrator/src/__types__/index.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered: ["AC-1", "AC-9", "AC-13"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Implement pure rendering functions (computeProgressSummary, computeReadyToStart, renderStorySection, renderFrontmatter, renderProgressTable, renderReadyToStartTable, groupStoriesByPhase) in generate-stories-index.ts; write unit tests achieving ≥80% coverage"
+    files:
+      - "packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+      - "packages/backend/orchestrator/src/scripts/__tests__/generate-stories-index.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/scripts/__types__/generation.ts"
+      - "plans/future/platform/wint/stories.index.md"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm test --filter packages/backend/orchestrator"
+    acs_covered: ["AC-3", "AC-4", "AC-5", "AC-6", "AC-10", "AC-11"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Implement CLI skeleton, DB connection via createDbPool/findMonorepoRoot, getAllStories() DB fetch, YAML fallback via StoryFileAdapter, hybrid rendering pipeline, atomic file write, and --dry-run/--generate modes"
+    files:
+      - "packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+      - "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    dependencies: [2]
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-7", "AC-12"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Implement --verify flag with inline line-by-line diff comparison (exit code 0/1 with diff summary); write generation-report.json after --generate runs validated against GenerationReportSchema"
+    files:
+      - "packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/scripts/__types__/generation.ts"
+    dependencies: [3]
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered: ["AC-8", "AC-9"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write integration tests (INT-1 through INT-5) against real DB fixture covering --generate, --dry-run, --verify modes and edge cases; add JSDoc block to script covering CLI usage, env vars, and data strategy"
+    files:
+      - "packages/backend/orchestrator/src/scripts/__tests__/generate-stories-index.integration.test.ts"
+      - "packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+    dependencies: [4]
+    slice: packages
+    verification: "pnpm test --filter packages/backend/orchestrator"
+    acs_covered: ["AC-11", "AC-12"]
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/db/story-repository.ts"
+    action: modify
+    reason: "Add getAllStories() method returning StoryRow[] for single-query fetch of all wint.stories records ordered by story_id ASC"
+
+  - path: "packages/backend/orchestrator/src/scripts/__types__/generation.ts"
+    action: create
+    reason: "New Zod-first type definitions: GenerationReportSchema, IndexFrontmatterSchema, StorySectionSchema, SkippedStorySchema, FieldSourceBreakdownSchema, STORY_STATE_ENUM, STATE_TO_DISPLAY_LABEL, FIELD_SOURCE_MAP constants"
+
+  - path: "packages/backend/orchestrator/src/scripts/generate-stories-index.ts"
+    action: create
+    reason: "Main CLI script implementing DB-primary/YAML-fallback generation pipeline with --dry-run, --generate, --verify modes; pure rendering functions; atomic file write; JSDoc documentation"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/generate-stories-index.test.ts"
+    action: create
+    reason: "Unit tests for all pure functions achieving ≥80% coverage; tests for computeProgressSummary, computeReadyToStart, renderStorySection, renderFrontmatter, renderProgressTable, renderReadyToStartTable, groupStoriesByPhase"
+
+  - path: "packages/backend/orchestrator/src/scripts/__tests__/generate-stories-index.integration.test.ts"
+    action: create
+    reason: "Integration tests INT-1 through INT-5 against real DB fixture covering all three CLI modes and critical edge cases"
+
+  - path: "plans/future/platform/wint/stories.index.md"
+    action: modify
+    reason: "Overwritten by --generate mode with DO NOT EDIT warning and generated_by frontmatter field; becomes machine-generated artifact"
+
+commands_to_run:
+  - command: "pnpm check-types --filter packages/backend/orchestrator"
+    when: "after ST-1 (adding getAllStories and generation.ts types)"
+    required: true
+
+  - command: "pnpm test --filter packages/backend/orchestrator"
+    when: "after ST-2 (unit tests) and after ST-5 (integration tests)"
+    required: true
+
+  - command: "pnpm lint --filter packages/backend/orchestrator"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm build --filter packages/backend/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Dry-run output shows all story IDs discovered in DB, grouped by phase in correct order; getAllStories() unit/integration test"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Generation report field_source_breakdown lists each field and its source (db, yaml_fallback, computed); FIELD_SOURCE_MAP constant present in script"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "Generated frontmatter passes z.parse(IndexFrontmatterSchema, frontmatter) without errors; unit test for renderFrontmatter validates doc_type, status: generated, generated_by fields"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Progress Summary table counts match SELECT state, COUNT(*) FROM wint.stories GROUP BY state; STATE_TO_DISPLAY_LABEL mapping verified in unit test (ready_to_work → ready-to-work)"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "computeReadyToStart unit test: story with all deps in done/uat is included; story with one pending dep is absent; partial satisfaction does not trigger inclusion"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Spot-check 5 stories: renderStorySection unit test verifies all section headers (Status, Depends On, Phase, Feature, Infrastructure, Goal, Risk Notes); missing fields render as —"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "INT-4 integration test: --dry-run run → stories.index.md file hash unchanged; stories-index-preview.md or stdout contains generated content"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "INT-3: --verify against manually-mutated file → exit code 1 with diff summary; INT-2: --verify after --generate → exit code 0; inline line-by-line comparison implementation (no diff package dependency)"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "generation-report.json written after --generate run; validates against GenerationReportSchema (timestamp, story_count_by_phase, story_count_by_status, field_source_breakdown, skipped_stories, duration_ms)"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "DO NOT EDIT warning present immediately after closing --- frontmatter delimiter in generated file; generated_by field in YAML frontmatter; verified by inspection and unit test"
+    evidence_type: file
+
+  - ac_id: "AC-11"
+    planned_evidence: "pnpm test passes; coverage report shows ≥80% for generate-stories-index.ts pure functions; INT-1 through INT-5 integration tests pass"
+    evidence_type: test
+
+  - ac_id: "AC-12"
+    planned_evidence: "JSDoc block at top of generate-stories-index.ts covers: CLI usage (--dry-run, --generate, --verify), required env vars (POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USER, POSTGRES_PASSWORD), DB-primary/YAML-fallback explanation"
+    evidence_type: file
+
+  - ac_id: "AC-13"
+    planned_evidence: "STORY_STATE_ENUM constant present at top of generate-stories-index.ts derived from live DB SELECT unnest(enum_range(NULL::wint.story_state)) query; Progress Summary table columns match confirmed enum values"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "diff npm package is NOT in packages/backend/orchestrator/package.json — AC-8 --verify mode must use inline line-by-line comparison. The story explicitly permits this: 'if not available, implement an inline line-by-line comparison'"
+  - "StoryRow[] is the correct return type for getAllStories() per ST-1 design decision — avoids rowToStoryArtifact() mapping overhead and retains underscore-format state values for STATE_TO_DISPLAY_LABEL"
+  - "AC-13 is a GATING constraint: STORY_STATE_ENUM constant must be defined from live DB enum query before any rendering code. The population.ts StoryStateSchema shows expected values: draft, backlog, ready_to_work, in_progress, ready_for_qa, in_qa, blocked, done, cancelled — but live DB may differ"
+  - "StoryFileAdapter exists at packages/backend/orchestrator/src/adapters/story-file-adapter.ts — confirmed. Import pattern: import { StoryFileAdapter } from '../adapters/story-file-adapter.js'"
+  - "No __tests__ directory exists yet under packages/backend/orchestrator/src/scripts/ — both test files are new creates"
+  - "stories.index.md uses display labels with hyphens (ready-to-work, in-progress, etc.) but population.ts shows DB uses underscores (ready_to_work, in_progress, in_qa) — STATE_TO_DISPLAY_LABEL mapping bridges these"
+  - "Atomic write pattern: write to temp file (.tmp extension) then fs.rename() to target path — same as StoryFileAdapter atomic write pattern"
+  - "YAML fallback cache: use Map<string, StoryArtifact> in memory during run to avoid re-reading same story file multiple times for phase, risk_notes, feature, infrastructure fields"
+  - "E2E tests skipped per ADR-006 skip condition: touches.frontend: false in SCOPE.yaml"
+  - "Performance requirement: 143+ stories must complete generation in ≤10 seconds"

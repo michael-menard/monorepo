@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-18T10:45:00Z"
+updated_at: "2026-02-20T22:15:00Z"
 ---
 
 # WINT Stories Index
@@ -756,7 +756,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1070: Deprecate stories.index.md as Source of Truth
 
-**Status:** elaboration
+**Status:** uat
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database

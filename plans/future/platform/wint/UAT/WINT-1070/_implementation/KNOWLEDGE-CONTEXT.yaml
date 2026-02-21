@@ -1,0 +1,99 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-18T05:15:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "WINT-1030"
+        lesson: "Script CLI pattern (createDbPool, findMonorepoRoot, parseArgs) is fully established in populate-story-status.ts — copy and adapt, do not rewrite from scratch"
+        category: reuse
+        applies_because: "generate-stories-index.ts is architecturally identical to populate-story-status.ts; same pool creation, same monorepo root detection, same CLI argument pattern"
+
+      - story_id: "WINT-1030"
+        lesson: "StoryRow[] is the correct return type for getAllStories() — NOT StoryArtifact[]. rowToStoryArtifact() mapping adds overhead and strips DB-native underscore field names needed by STATE_TO_DISPLAY_LABEL"
+        category: pattern
+        applies_because: "AC-4 requires state enum values in underscore format (ready_to_work) that STATE_TO_DISPLAY_LABEL converts. StoryArtifact uses hyphenated format (ready-to-work) which would require an additional reverse mapping step"
+
+      - story_id: "WINT-1030"
+        lesson: "StoryFileAdapter.read() expects a file path string to the story .md file. It returns StoryArtifact (legacy/v2 compatible schema). For YAML fallback fields (phase, risk_notes, feature, infrastructure), access via the raw frontmatter fields not the mapped StoryArtifact fields"
+        category: pattern
+        applies_because: "ST-1 through ST-3 use StoryFileAdapter for YAML fallback. The adapter reads story files; phase and risk_notes are frontmatter-only fields that must be accessed from the parsed frontmatter"
+
+      - story_id: "WINT-1030"
+        lesson: "Fail-soft error handling pattern: collect errors, log warnings, continue processing. Never throw on a single story failure — log and skip with reason tracked in skipped_stories array"
+        category: pattern
+        applies_because: "143+ stories to process; a single malformed or missing YAML file must not abort the entire generation run"
+
+    blockers_to_avoid:
+      - "Adding new npm dependencies without first checking package.json — diff package is NOT in orchestrator dependencies; use inline line-by-line comparison for --verify mode (AC-8)"
+      - "Using StoryArtifact[] return type for getAllStories() — use StoryRow[] to retain DB-native underscore state values"
+      - "Writing to stories.index.md directly during atomic write — write to temp file then fs.rename() to prevent partial writes (architecture note in story)"
+      - "Reading full stories.index.md (2400 lines) into memory for format inspection — read only the first 80 lines to understand format, then generate programmatically"
+      - "Running SELECT unnest(enum_range(NULL::wint.story_state)) skip — AC-13 makes this mandatory before writing ANY rendering code. STORY_STATE_ENUM constant must be defined first"
+
+    patterns_to_follow:
+      - "Use @repo/logger for all logging — never console.log (CLAUDE.md requirement)"
+      - "Zod-first types for all schemas: GenerationReportSchema, IndexFrontmatterSchema, StorySectionSchema (per CLAUDE.md and population.ts template)"
+      - "Atomic file write: write to .tmp file, then fs.rename() to target path"
+      - "Cache YAML reads in memory: if StoryFileAdapter.read() is called for a story, cache result to avoid re-reading same file"
+      - "Dry-run outputs to stdout or stories-index-preview.md, never overwrites stories.index.md"
+      - "FIELD_SOURCE_MAP constant at top of script documents DB vs YAML source for each field"
+
+    patterns_to_avoid:
+      - "Barrel files (index.ts re-exports) — import directly from source files per CLAUDE.md"
+      - "TypeScript interfaces — use Zod schemas with z.infer<> only"
+      - "Adding npm packages without confirming absence in package.json first"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Integration tests (INT-1 through INT-5) must use real DB fixture, not mocked DB. Unit tests for pure functions (computeProgressSummary, etc.) may use in-memory test data"
+        applies_to: ["testing", "scripts"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "SCOPE.yaml has touches.frontend: false — E2E tests are NOT required for this story (CLI script, no UI). Skip condition applies: frontend_impacted: false"
+        applies_to: ["testing"]
+
+    constraints:
+      api_paths: "Not applicable — this is a CLI script with no API Gateway routes or Lambda handlers"
+      infrastructure: "No new infrastructure required; script runs in packages/backend/orchestrator workspace context"
+      storage: "Not applicable — filesystem only (stories.index.md output)"
+      auth: "Not applicable — DB credentials via environment variables (POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USER, POSTGRES_PASSWORD)"
+      testing: "Unit tests for pure functions (≥80% coverage); integration tests against real DB fixture; E2E skipped (no frontend)"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full stories.index.md (2400+ lines)"
+        typical_tokens: 8000
+        mitigation: "Read only first 80 lines to understand format structure, then generate programmatically. The story already documents the format."
+
+      - operation: "Reading all 143+ story YAML files for YAML fallback"
+        typical_tokens: 50000
+        mitigation: "Cache reads in memory during run. Only read files when DB lacks the field (phase, risk_notes, feature, infrastructure). Fail-soft if file missing."
+
+      - operation: "Reading story-repository.ts + populate-story-status.ts in full for implementation"
+        typical_tokens: 4000
+        mitigation: "Already read during planning. Implementation agents should use files_to_read references from PLAN.yaml steps rather than re-discovering."
+
+    recommended_patterns:
+      - "Use files_to_read in PLAN.yaml steps so execution agents have targeted context without re-reading everything"
+      - "Grep before Read for any exploratory file discovery"
+      - "StoryRow type is already defined in packages/backend/orchestrator/src/__types__/index.ts — no need to redefine"
+      - "population.ts Zod schemas are the template — copy structure, adapt field names for generation.ts"
+
+  warnings:
+    - "diff npm package is NOT in orchestrator dependencies — AC-8 --verify mode must use inline line-by-line comparison, not the diff package"
+    - "AC-13 is a GATING item: STORY_STATE_ENUM must be defined from live DB query BEFORE any rendering code is written. Do not skip this step."
+    - "stories.index.md format uses display labels with hyphens (ready-to-work) but DB stores underscores (ready_to_work) — STATE_TO_DISPLAY_LABEL mapping is critical"
+    - "StoryFileAdapter is at packages/backend/orchestrator/src/adapters/story-file-adapter.ts — confirmed exists"
+    - "No __tests__ directory exists yet under scripts/ — integration test file will be new"
+
+  tokens:
+    in: 0
+    out: 0

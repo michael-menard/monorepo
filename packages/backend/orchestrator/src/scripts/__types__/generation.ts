@@ -1,129 +1,157 @@
 /**
  * Generation Artifact Schemas
  *
- * Zod-first type definitions for the generate-stories-index.ts script artifacts.
+ * Zod-first type definitions for stories index generation script artifacts.
  * Used for:
- * - Index frontmatter validation
- * - Story section rendering types
- * - Generation report output
+ * - Index file rendering
+ * - Generation reports
  * - Field source tracking
  *
  * Story: WINT-1070
- *
- * AC-13 DB Enum Audit:
- * Confirmed values from wint schema (002_workflow_tables.sql):
- *   SELECT unnest(enum_range(NULL::wint.story_state))
- *   → draft, backlog, ready-to-work, in-progress, ready-for-qa, uat, done, cancelled
- *
- * These match story-state.ts StoryStateSchema exactly.
  */
 
 import { z } from 'zod'
 
 // ============================================================================
-// AC-13: STORY_STATE_ENUM — Authoritative DB enum values
-// Source: SELECT unnest(enum_range(NULL::wint.story_state)) on live DB
-// Cross-referenced with: apps/api/knowledge-base/src/db/migrations/002_workflow_tables.sql
-// and packages/backend/orchestrator/src/state/enums/story-state.ts
+// Story State Enum (DB-native underscore format)
 // ============================================================================
 
+/**
+ * Valid story state enum values matching database enum wint.story_state.
+ * Uses underscore format as stored in DB (not hyphenated display format).
+ *
+ * AC-13: This constant must be defined from the live DB enum before any
+ * rendering code. Values confirmed from population.ts StoryStateSchema
+ * which reflects the actual DB wint.story_state enum.
+ */
 export const STORY_STATE_ENUM = [
   'draft',
   'backlog',
-  'ready-to-work',
-  'in-progress',
-  'ready-for-qa',
-  'uat',
+  'ready_to_work',
+  'in_progress',
+  'ready_for_qa',
+  'in_qa',
+  'blocked',
   'done',
   'cancelled',
 ] as const
 
 export type StoryStateEnum = (typeof STORY_STATE_ENUM)[number]
 
+/**
+ * Zod schema for DB-native story state values
+ */
+export const StoryStateEnumSchema = z.enum(STORY_STATE_ENUM)
+
 // ============================================================================
-// STATE_TO_DISPLAY_LABEL — Maps DB state values to human-readable display labels
-// Used in Progress Summary table (AC-4) and per-story Status field (AC-6)
+// Display Label Mapping
 // ============================================================================
 
+/**
+ * Maps DB underscore state values to display labels used in stories.index.md.
+ * Bridges the gap between DB storage (underscores) and display format (hyphens).
+ *
+ * AC-4: Progress Summary table columns match these display labels.
+ */
 export const STATE_TO_DISPLAY_LABEL: Record<StoryStateEnum, string> = {
   draft: 'draft',
   backlog: 'backlog',
-  'ready-to-work': 'ready-to-work',
-  'in-progress': 'in-progress',
-  'ready-for-qa': 'ready-for-qa',
-  uat: 'uat',
+  ready_to_work: 'ready-to-work',
+  in_progress: 'in-progress',
+  ready_for_qa: 'ready-for-qa',
+  in_qa: 'in-qa',
+  blocked: 'blocked',
   done: 'done',
   cancelled: 'cancelled',
 }
 
 // ============================================================================
-// FIELD_SOURCE_MAP — Documents which fields come from DB vs YAML fallback (AC-2)
+// Field Source Map
 // ============================================================================
 
-export const FIELD_SOURCE_MAP = {
-  state: 'db',
+/**
+ * Documents the data source for each field in the generated index.
+ * Used to populate field_source_breakdown in the generation report.
+ *
+ * AC-2: Generation report must list each field and its source.
+ */
+export const FIELD_SOURCE_MAP: Record<string, 'db' | 'yaml_fallback' | 'computed'> = {
+  story_id: 'db',
   title: 'db',
-  goal: 'db',
+  state: 'db',
   depends_on: 'db',
+  goal: 'db',
   phase: 'yaml_fallback',
-  risk_notes: 'yaml_fallback',
   feature: 'yaml_fallback',
   infrastructure: 'yaml_fallback',
-  updated_at: 'computed',
-  created_at: 'computed',
-} as const
-
-export type FieldSource = 'db' | 'yaml_fallback' | 'computed'
+  risk_notes: 'yaml_fallback',
+  ready_to_start: 'computed',
+  progress_summary: 'computed',
+}
 
 // ============================================================================
-// Index Frontmatter Schema (AC-3)
+// Index Frontmatter Schema
 // ============================================================================
 
+/**
+ * YAML frontmatter for the generated stories.index.md file.
+ * Validated before writing to ensure structural integrity.
+ *
+ * AC-3: Generated frontmatter passes z.parse(IndexFrontmatterSchema, frontmatter).
+ */
 export const IndexFrontmatterSchema = z.object({
+  /** Document type identifier */
   doc_type: z.literal('stories_index'),
+  /** Human-readable title */
   title: z.string(),
+  /** Status must be 'generated' for machine-generated files */
   status: z.literal('generated'),
+  /** Story prefix this index covers */
   story_prefix: z.string(),
-  /** Preserved from original file — never overwritten */
-  created_at: z.string(),
-  /** Set to timestamp of current generation run */
-  updated_at: z.string(),
-  generated_by: z.literal('generate-stories-index.ts'),
+  /** ISO timestamp of when the index was generated */
+  generated_at: z.string(),
+  /** Script that generated this file (AC-10) */
+  generated_by: z.string(),
+  /** Total story count */
+  story_count: z.number().int().min(0),
 })
 
 export type IndexFrontmatter = z.infer<typeof IndexFrontmatterSchema>
 
 // ============================================================================
-// YAML Fallback Data Schema
-// Fields from story YAML frontmatter not stored in wint.stories
+// Story Section Schema
 // ============================================================================
 
-export const YamlFallbackDataSchema = z.object({
-  phase: z.union([z.number(), z.string()]).nullable().optional(),
-  risk_notes: z.string().nullable().optional(),
-  feature: z.string().nullable().optional(),
-  infrastructure: z.array(z.string()).nullable().optional(),
-})
-
-export type YamlFallbackData = z.infer<typeof YamlFallbackDataSchema>
-
-// ============================================================================
-// Story Section Schema (AC-6)
-// Represents one rendered story section in stories.index.md
-// ============================================================================
-
+/**
+ * Data for rendering a single story section in the index.
+ * Combines DB data with YAML fallback fields.
+ *
+ * AC-6: All section headers rendered (Status, Depends On, Phase, Feature,
+ * Infrastructure, Goal, Risk Notes). Missing fields render as —.
+ */
 export const StorySectionSchema = z.object({
+  /** Story ID (e.g., "WINT-0010") */
   story_id: z.string(),
+  /** Story title */
   title: z.string(),
-  state: z.string(),
-  depends_on: z.array(z.string()).nullable(),
-  phase: z.union([z.number(), z.string()]).nullable(),
-  feature: z.string().nullable(),
-  infrastructure: z.array(z.string()).nullable(),
-  goal: z.string().nullable(),
-  risk_notes: z.string().nullable(),
-  /** Which fields used yaml_fallback vs db */
-  field_sources: z.record(z.string(), z.enum(['db', 'yaml_fallback', 'computed', 'missing'])),
+  /** Display label for state (hyphenated format) */
+  status: z.string(),
+  /** Raw DB state (underscore format) */
+  state: StoryStateEnumSchema,
+  /** Dependency story IDs */
+  depends_on: z.array(z.string()).default([]),
+  /** Phase number (from YAML fallback) */
+  phase: z.union([z.number(), z.string()]).nullable().default(null),
+  /** Feature description (from YAML fallback) */
+  feature: z.string().nullable().default(null),
+  /** Infrastructure details (from YAML fallback) */
+  infrastructure: z.string().nullable().default(null),
+  /** Story goal */
+  goal: z.string().nullable().default(null),
+  /** Risk notes (from YAML fallback) */
+  risk_notes: z.string().nullable().default(null),
+  /** Source tracking: which fields came from DB vs YAML */
+  field_sources: z.record(z.enum(['db', 'yaml_fallback', 'computed'])).optional(),
 })
 
 export type StorySection = z.infer<typeof StorySectionSchema>
@@ -132,55 +160,70 @@ export type StorySection = z.infer<typeof StorySectionSchema>
 // Skipped Story Schema
 // ============================================================================
 
-export const GenerationSkippedStorySchema = z.object({
+/**
+ * Tracks stories that could not be rendered (for generation report).
+ * AC-9: skipped_stories included in generation report.
+ */
+export const SkippedStorySchema = z.object({
+  /** Story ID or identifier */
   story_id: z.string(),
+  /** Reason for skipping */
   reason: z.string(),
+  /** Error details if applicable */
   error: z.string().optional(),
 })
 
-export type GenerationSkippedStory = z.infer<typeof GenerationSkippedStorySchema>
+export type SkippedStory = z.infer<typeof SkippedStorySchema>
 
 // ============================================================================
-// Field Source Breakdown Schema (AC-9)
+// Field Source Breakdown Schema
 // ============================================================================
 
+/**
+ * Breakdown of how many stories had each field sourced from DB vs YAML.
+ * AC-2: Included in generation report.
+ */
 export const FieldSourceBreakdownSchema = z.object({
-  /** Fields sourced directly from wint.stories DB */
-  db_fields: z.array(z.string()),
-  /** Fields sourced from YAML frontmatter fallback */
-  yaml_fallback_fields: z.array(z.string()),
-  /** Fields computed at generation time */
-  computed_fields: z.array(z.string()),
-  /** Stories that used yaml fallback (at least one field) */
-  stories_with_yaml_fallback: z.number(),
-  /** Stories with only DB data */
-  stories_db_only: z.number(),
+  /** Field name */
+  field: z.string(),
+  /** Data source */
+  source: z.enum(['db', 'yaml_fallback', 'computed']),
+  /** Number of stories where this field came from this source */
+  count: z.number().int().min(0),
 })
 
 export type FieldSourceBreakdown = z.infer<typeof FieldSourceBreakdownSchema>
 
 // ============================================================================
-// Generation Report Schema (AC-9)
-// Written to generation-report.json after --generate run
+// Generation Report Schema
 // ============================================================================
 
+/**
+ * Written to generation-report.json after --generate runs.
+ * Validates against this schema before writing.
+ *
+ * AC-9: timestamp, story_count_by_phase, story_count_by_status,
+ * field_source_breakdown, skipped_stories, duration_ms all required.
+ */
 export const GenerationReportSchema = z.object({
-  /** ISO timestamp of generation run */
+  /** ISO timestamp of generation */
   timestamp: z.string(),
   /** Total stories processed */
-  story_count: z.number(),
+  total_stories: z.number().int().min(0),
   /** Story count grouped by phase */
-  story_count_by_phase: z.record(z.string(), z.number()),
+  story_count_by_phase: z.record(z.string(), z.number().int().min(0)),
   /** Story count grouped by DB state */
-  story_count_by_status: z.record(z.string(), z.number()),
-  /** Field source breakdown */
-  field_source_breakdown: FieldSourceBreakdownSchema,
-  /** Stories skipped with reasons */
-  skipped_stories: z.array(GenerationSkippedStorySchema),
-  /** Duration of generation in milliseconds */
-  duration_ms: z.number(),
-  /** Path to generated file */
-  output_path: z.string(),
+  story_count_by_status: z.record(z.string(), z.number().int().min(0)),
+  /** Field source breakdown (AC-2) */
+  field_source_breakdown: z.array(FieldSourceBreakdownSchema),
+  /** Stories that could not be rendered */
+  skipped_stories: z.array(SkippedStorySchema),
+  /** Generation duration in milliseconds */
+  duration_ms: z.number().min(0),
+  /** Output file path */
+  output_file: z.string(),
+  /** Generation mode used */
+  mode: z.enum(['dry-run', 'generate']),
 })
 
 export type GenerationReport = z.infer<typeof GenerationReportSchema>
