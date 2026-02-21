@@ -1,0 +1,16 @@
+schema: 1
+story_id: WINT-1160
+feature_dir: plans/future/platform/wint
+worktree_root: /Users/michaelmenard/Development/monorepo/tree/story/WINT-1160
+timestamp: '2026-02-20T23:15:00Z'
+
+current_phase: done
+last_successful_phase: review
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+completed_at: '2026-02-20T23:15:00Z'
+e2e_gate: exempt

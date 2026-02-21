@@ -300,50 +300,73 @@ Skip the rest of Step 1.3 and continue to Step 2.
        Registered: {createdAt}
 
      Options:
-       (a) Switch to existing worktree at {worktreePath}
-       (b) Take over — mark old worktree as abandoned and create new worktree
-       (c) Abort — stop implementation
+       (1) Switch to existing worktree at {worktreePath}
+       (2) Take over — PERMANENTLY ABANDON old worktree and create new worktree
+       (3) Abort — stop implementation
      ```
 
      **Autonomy behavior for option selection:**
 
-     | Autonomy | Option (a) switch | Option (b) take-over | Option (c) abort |
+     | Autonomy | Option (1) switch | Option (2) take-over | Option (3) abort |
      |----------|-------------------|---------------------|-----------------|
      | conservative | Prompt required | Prompt required | Prompt required |
      | moderate | Auto-select | **ALWAYS prompt** | Prompt required |
      | aggressive | Auto-select | **ALWAYS prompt** | Prompt required |
 
-     **CRITICAL — Option (b) take-over ALWAYS requires explicit user confirmation.**
-     **This rule overrides all autonomy levels including aggressive. Never auto-select option (b).**
+     **CRITICAL — Option (2) take-over is NEVER auto-selected at any autonomy level.**
+     **This rule overrides all autonomy levels including aggressive. Never auto-select option (2).**
 
-     **If user selects option (a) — switch:**
+     <!-- Conflict resolution cross-reference:
+       - WINT-1130: MCP tools (worktree_get_by_story, worktree_mark_complete)
+       - WINT-1140: Original AC-4 specification (3-option prompt UX)
+       - WINT-1160: Take-over hardening (AC-2, AC-3, AC-4, AC-5, AC-10)
+     -->
+
+     **If user selects option (1) — switch:**
      - Run `/wt:switch` to navigate to the existing worktree
      - Continue to step 4
 
-     **If user selects option (b) — take-over (ordered sequence, WINT-1160 AC-6):**
+     **If user selects option (2) — take-over (ordered sequence, WINT-1160 AC-3):**
 
-     First, show confirmation prompt regardless of autonomy level:
+     First, show secondary confirmation prompt regardless of autonomy level:
      ```
-     WARNING: This will mark the following worktree as abandoned:
+     CONFIRM TAKE-OVER:
+     This will PERMANENTLY ABANDON the following worktree:
        Story: {storyId}
        Branch: {branchName}
        Path: {worktreePath}
        Registered: {createdAt}
-     This action cannot be undone. Type 'yes' to confirm take-over:
+
+     This action cannot be undone.
+     Type "abandon" to confirm take-over:
      ```
 
-     If user confirms (types 'yes'):
-     1. Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned' })`
-     2. Check result — if null or error: emit "Take-over aborted: failed to mark old worktree as abandoned" and STOP (do NOT proceed to step 3)
-     3. Only if step 1 succeeded: call `/wt:new story/{STORY_ID} main` to create new worktree
+     If user confirms (types exactly "abandon", case-sensitive):
+     1. Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned', metadata: { abandoned_reason: 'conflict_takeover', taken_over_at: '<ISO_TIMESTAMP>' } })`
+     2. Check result — if null or error (WINT-1160 AC-10):
+        ```
+        WARN: worktree_mark_complete returned null. Old worktree may not have been marked as abandoned.
+        [y] Proceed anyway — create new worktree without confirmed abandonment
+        [n] Abort — stop and investigate
+        ```
+        - If user selects [y]: log warning and continue to step 3
+        - If user selects [n]: STOP with message: "Take-over aborted. Use /wt:switch to resume the existing worktree, or re-run with --skip-worktree to bypass."
+     3. Only if step 1 succeeded or user chose to proceed: call `/wt:new story/{STORY_ID} main` to create new worktree
      4. Register new worktree, continue to step 4
 
-     If user cancels (does not confirm):
-     - Re-present options (a), (b), (c) OR show abort message
+     If user cancels (does not type "abandon"):
+     - Re-present options (1), (2), (3)
      - Do NOT call `worktree_mark_complete` or `/wt:new`
 
-     **If user selects option (c) — abort:**
-     - Emit: "Implementation aborted by user."
+     **If user selects option (3) — abort:**
+     - Emit:
+       ```
+       Implementation aborted by user.
+
+       Next steps:
+       - To resume with the existing worktree: run /wt:switch and then re-run this command.
+       - To skip worktree isolation entirely: re-run this command with --skip-worktree.
+       ```
      - STOP. Do not proceed to Phase 0.
 
 4. **Read CHECKPOINT.yaml** — Load `pr_number` and `pr_url` if present (set by pm-story via wt-new output).
