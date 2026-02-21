@@ -1,0 +1,81 @@
+schema: 1
+story_id: WINT-1050
+iteration: 1
+generated_at: "2026-02-20"
+
+verdict: PASS
+
+findings:
+  - id: F-001
+    severity: info
+    category: content
+    description: "Mapping table has exactly 14 rows as specified in AC-2. 8 mapped rows with correct DB state targets (backlog, ready_to_work, in_progress, ready_for_qa, in_qa, done, blocked, cancelled) and 6 unmapped rows with documented reasons (created, elaboration, needs-code-review, failed-code-review, failed-qa, needs-split)."
+    location: "story-update.md:109-124"
+    recommendation: "No action required. Complete and correct."
+
+  - id: F-002
+    severity: info
+    category: structure
+    description: "Step 3a (DB Write via shimUpdateStoryStatus) correctly inserted between Step 2 (Worktree Cleanup) and Step 3b (Update Frontmatter). Step numbering and execution order match AC-1 and AC-5 requirements."
+    location: "story-update.md:105-150"
+    recommendation: "No action required. Step structure is correct."
+
+  - id: F-003
+    severity: info
+    category: content
+    description: "WARNING format matches AC-3 specification exactly: 'WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with filesystem update only.' Correctly emitted when shimUpdateStoryStatus returns null."
+    location: "story-update.md:136"
+    recommendation: "No action required. Warning format is correct."
+
+  - id: F-004
+    severity: info
+    category: content
+    description: "Result YAML (Step 5) correctly includes db_updated field with only true/false values (never 'skipped'). Comment block documents both values: true for successful DB write, false for null return or unmapped status. AC-4 compliance verified."
+    location: "story-update.md:180-184"
+    recommendation: "No action required. Result YAML is correct."
+
+  - id: F-005
+    severity: info
+    category: metadata
+    description: "Frontmatter shows version 3.0.0 and updated date 2026-02-20. Version History section documents v3.0.0 as 'DB integration — breaking behavioral change' with full description. AC-8 compliance verified."
+    location: "story-update.md:4, 251"
+    recommendation: "No action required. Version and metadata are correct."
+
+  - id: F-006
+    severity: info
+    category: content
+    description: "Integration Test Scenarios section includes exactly 6 scenarios (A-F) with correct table format matching AC-9 specification. ADR-005 compliance note present for Scenarios A, B, and F requiring live postgres-knowledgebase MCP server."
+    location: "story-update.md:221-234"
+    recommendation: "No action required. Integration test scenarios are complete and correct."
+
+  - id: F-007
+    severity: info
+    category: pattern
+    description: "Step 3a follows the same structural pattern as story-move.md Step 2.5 with key differences correctly implemented: (1) story-update uses db_updated: false for unmapped statuses (not 'skipped'), (2) triggeredBy: 'story-update-command' identifies the caller correctly. Pattern compliance verified."
+    location: "story-update.md:109-146"
+    recommendation: "No action required. Pattern compliance is correct."
+
+  - id: F-008
+    severity: info
+    category: preservation
+    description: "Step 2 (Worktree Cleanup) content preserved unchanged from v2.1.0. Status Transition Rules table (lines 190-202) and Error Handling section (lines 206-214) are intact. No unintended modifications to existing functionality."
+    location: "story-update.md:101-103, 188-214"
+    recommendation: "No action required. Preservation of existing functionality is complete."
+
+  - id: F-009
+    severity: info
+    category: content
+    description: "shimUpdateStoryStatus call uses triggeredBy: 'story-update-command' as specified in AC-10. Call signature matches StoryUpdateStatusInput schema with storyId, newState, and triggeredBy parameters."
+    location: "story-update.md:129-133"
+    recommendation: "No action required. Function call signature is correct."
+
+  - id: F-010
+    severity: info
+    category: content
+    description: "All 10 ACs from WINT-1050.md marked as PASS in EVIDENCE.yaml. Docs-only story with no TypeScript files, build artifacts, or unit tests. UAT verification approach documented via manual command execution against live postgres-knowledgebase."
+    location: "EVIDENCE.yaml"
+    recommendation: "No action required. All acceptance criteria satisfied."
+
+ranked_patches: []
+
+summary: "WINT-1050 review complete. All content checks pass. Mapping table is complete and correct (14 rows: 8 mapped + 6 unmapped). Step structure correct (3a inserted, 3b renamed). Version bumped to 3.0.0 with date 2026-02-20. Integration test scenarios (A-F) present and aligned with AC-9. Pattern compliance verified against story-move.md sibling. Existing functionality preserved. db_updated field correctly uses true/false only (never 'skipped'). WARNING format matches specification. All 10 ACs pass per EVIDENCE.yaml."
