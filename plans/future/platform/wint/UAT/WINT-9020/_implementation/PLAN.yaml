@@ -1,0 +1,395 @@
+schema: 2
+story_id: "WINT-9020"
+timestamp: "2026-02-18T00:00:00Z"
+subtask_source: story
+
+# ============================================================================
+# Steps (1:1 mapping from story subtasks ST-1 through ST-8)
+# ============================================================================
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Resolve path and create directory scaffold — create nodes/sync/ directory with doc-sync.ts skeleton and index.ts, then update nodes/index.ts to include sync exports"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
+      - "packages/backend/orchestrator/src/nodes/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+      - "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/workflow/index.ts"
+      - "packages/backend/orchestrator/src/nodes/index.ts"
+    dependencies: []
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-1", "AC-9"]
+    notes: >
+      Create nodes/sync/ directory. doc-sync.ts skeleton should have the module-level
+      JSDoc comment, empty exports for docSyncNode and createDocSyncNode (stub implementations
+      that throw 'not implemented'). index.ts exports those two symbols. nodes/index.ts
+      gets a new '// Sync Nodes' section re-exporting from './sync/index.js'.
+      DO NOT modify nodes/workflow/doc-sync.ts or nodes/workflow/index.ts.
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Port Zod schemas and state interface — move/extend DocSyncConfigSchema, DocSyncResultSchema, GraphStateWithDocSync into nodes/sync/doc-sync.ts with database_status field and repoRoot addition"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+      - "packages/backend/orchestrator/src/runner/state-helpers.ts"
+      - "plans/future/platform/wint/in-progress/WINT-9020/ELAB-WINT-9020.md"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-3", "AC-4", "AC-8"]
+    notes: >
+      DocSyncConfigSchema additions: repoRoot z.string().optional() (git subprocess cwd),
+      dbQueryTimeoutMs z.number().default(30000).
+      DocSyncResultSchema additions: database_status z.enum(['success','timeout','connection_failed','unavailable']).optional().
+      DbQueryFn injectable type for testability:
+        type DbQueryComponents = (opts: { timeout: number }) => Promise<unknown[]>
+        type DbQueryPhases = (opts: { timeout: number }) => Promise<unknown[]>
+      Add these to DocSyncConfigSchema as optional fields:
+        queryComponents: z.function().optional()
+        queryPhases: z.function().optional()
+      GraphStateWithDocSync interface extends GraphState with docSync?: DocSyncResult.
+      All types use z.infer<> — no standalone TypeScript interfaces for data shapes.
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Implement Phase 1 (File Discovery) and Phase 2 (Frontmatter Parsing) — discoverChangedFiles() with git diff primary + timestamp fallback, and parseFrontmatter() with YAML extraction + optional DB merge"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+    dependencies: [2]
+    slice: backend
+    verification: "Unit test for Phase 1 with mocked git subprocess passes"
+    acs_covered: ["AC-2", "AC-6"]
+    notes: >
+      Phase 1 (discoverChangedFiles):
+        - Primary: exec('git diff HEAD --name-only --diff-filter=AMR .claude/') from repoRoot.
+          Filter output to .claude/agents/*.agent.md and .claude/commands/*.md.
+          Parse D/A/M prefix from git diff output for change type.
+        - force=true bypass: enumerate all files in .claude/agents/ and .claude/commands/
+          via fs.readdir() — no git diff.
+        - Fallback: if git exec throws, use fs.stat() on .claude/agents/ and .claude/commands/
+          to find files modified in last 24h. Log logger.warn('git unavailable, using timestamp fallback').
+        - Returns: Array<{ path: string; changeType: 'added'|'modified'|'deleted' }>
+      Phase 2 (parseFrontmatter):
+        - Read each file with fs.readFile(). Extract YAML between --- delimiters.
+        - Parse with yaml.load(). On YAMLException: add to manualReviewItems, skip file.
+        - DB query (Step 2.2): if config.queryComponents is provided, call with timeout.
+          Wrap in try/catch: TIMEOUT error → database_status='timeout', CONNECTION_FAILED → 'connection_failed',
+          undefined/unavailable → 'unavailable'. Store result in databaseStatus local var.
+        - Merge: if DB components available, merge with file frontmatter (DB overrides file).
+        - Returns: Array<{ path: string; changeType: string; frontmatter: Record<string,unknown>; source: 'file'|'hybrid' }>
+          plus databaseStatus: 'success'|'timeout'|'connection_failed'|'unavailable'
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Implement Phase 3 (Section Mapping) and Phase 4 (Documentation Updates) — mapAgentToSection() and updateDocumentation() with surgical table edits"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [3]
+    slice: backend
+    verification: "Unit test verifying pm-*.agent.md maps to phases.md Phase 2 section"
+    acs_covered: ["AC-2"]
+    notes: >
+      Phase 3 (mapAgentToSection):
+        - Static lookup table based on SKILL.md Phase 3 mapping:
+            pm-* → { docFile: 'docs/workflow/phases.md', section: 'Phase 2: PM Story Generation' }
+            elab-* → { docFile: 'docs/workflow/phases.md', section: 'Phase 3: QA Elaboration' }
+            dev-* → { docFile: 'docs/workflow/phases.md', section: 'Phase 4: Dev Implementation' }
+            code-review-* → { docFile: 'docs/workflow/phases.md', section: 'Phase 5: Code Review' }
+            qa-* → { docFile: 'docs/workflow/phases.md', section: 'Phase 6/7: QA Verification' }
+            architect-* → { docFile: 'docs/workflow/agent-system.md', section: 'Architecture Agents' }
+            workflow-* → { docFile: 'docs/workflow/orchestration.md', section: 'Cross-Cutting Concerns' }
+            commands/*.md → { docFile: 'docs/workflow/README.md', section: 'Commands Overview' }
+          Unknown patterns → add to manualReviewItems.
+        - Returns mapping per file.
+      Phase 4 (updateDocumentation):
+        - checkOnly guard: if checkOnly=true, skip all writes, just count what would change.
+        - For each file+section mapping, read the doc file.
+          Find the markdown table section using the section anchor string.
+          For 'added': append new row. For 'modified': update existing row.
+          For 'deleted': remove row or mark as deprecated.
+          If section anchor not found: add to manualReviewItems, increment manualReviewCount.
+        - Write updated content back to doc file (skip if checkOnly=true).
+        - Track sectionsUpdated count.
+        - Handle deleted files (changeType='deleted'): remove agent row from table.
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Implement Phase 5 (Mermaid Diagram Regeneration) and Phase 6 (Changelog Entry Drafting)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [4]
+    slice: backend
+    verification: "Unit tests for Mermaid generation and version bump logic pass"
+    acs_covered: ["AC-2"]
+    notes: >
+      Phase 5 (regenerateMermaidDiagram):
+        - For each parsed file with a 'spawns' array in frontmatter, generate Mermaid:
+            graph TD
+                agentName[agentName] --> spawn1[spawn1]
+                agentName --> spawn2[spawn2]
+        - Validate: starts with 'graph TD'/'flowchart'/'sequenceDiagram', brackets balanced,
+          --> arrows present (if spawns > 0).
+        - On validation failure: preserve existing diagram (do NOT write), add to manualReviewItems.
+        - On success: write diagram into the appropriate section of the doc file (checkOnly guard).
+        - Track diagramsRegenerated count.
+      Phase 6 (draftChangelog):
+        - Read docs/workflow/changelog.md. Parse current version from /## \[(\d+\.\d+\.\d+)\]/.
+        - Determine bump: if any deleted agents → major; if any added agents/commands → minor;
+          otherwise → patch (metadata changes).
+        - Increment version per bump type.
+        - Draft entry in SKILL.md format with [DRAFT] marker.
+        - Insert after changelog header (first line of the file or after YAML frontmatter if present).
+        - checkOnly guard: skip write if checkOnly=true.
+        - Track changelogDrafted boolean.
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Implement Phase 7 (SYNC-REPORT.md generation), wire all 7 phases into docSyncImpl(), and map 4 completion signals to return states"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [5]
+    slice: backend
+    verification: "Integration test with all mocks produces valid DocSyncResultSchema output"
+    acs_covered: ["AC-2", "AC-5", "AC-7"]
+    notes: >
+      Phase 7 (generateSyncReport):
+        - Assemble SYNC-REPORT.md content with all sections from SKILL.md Phase 7 spec.
+        - Must include the exact summary lines for regex parsing:
+            '- Total files changed: N'
+            '- Total sections updated: N'
+            '- Total diagrams regenerated: N'
+            '- Manual review items: N'
+        - Include Database Query Status section with databaseStatus, components count, phases count.
+        - Write to reportPath using fs.writeFile. On EACCES/write error: add to errors[], set success=false.
+      docSyncImpl() orchestration:
+        - Run phases 1-7 in sequence.
+        - Track: filesChanged, sectionsUpdated, diagramsRegenerated, manualReviewNeeded, errors[].
+        - Completion signal mapping (AC-5):
+            DOC-SYNC COMPLETE: success=true, manualReviewNeeded=0, errors=[]
+            DOC-SYNC COMPLETE (warnings): success=true, manualReviewNeeded>0
+            DOC-SYNC CHECK FAILED: success=false (checkOnly mode, out-of-sync)
+            DOC-SYNC BLOCKED: success=false, errors=[reason]
+        - No-changes path: filesChanged=0 → still success=true, skip phases 4-6.
+        - @repo/workflow-logic usage (AC-7): if Phase 1 filters files with story ID patterns,
+          use isValidStoryId(). If Phase 3 uses directory-based status, use getStatusFromDirectory().
+      docSyncNode = createToolNode('doc_sync', async (state) => docSyncImpl(state, {}))
+      createDocSyncNode(config) = createToolNode('doc_sync', async (state) => docSyncImpl(state, config))
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Write unit test suite with ≥80% coverage — all TEST-PLAN.md scenarios (HP-1 to HP-5, EC-1 to EC-5, EC-6, EG-1 to EG-6)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+    files_to_read:
+      - "plans/future/platform/wint/in-progress/WINT-9020/_pm/TEST-PLAN.md"
+      - "packages/backend/orchestrator/src/nodes/workflow/__tests__/doc-sync.test.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    dependencies: [6]
+    slice: backend
+    verification: "pnpm test --filter @repo/orchestrator -- --coverage (≥80% on nodes/sync/doc-sync.ts)"
+    acs_covered: ["AC-10", "AC-13"]
+    notes: >
+      Mock setup required:
+        - vi.mock('node:child_process', () => ({ exec: vi.fn() })) — for git diff (Phase 1)
+        - vi.mock('node:fs/promises', ...) — for readFile, writeFile, readdir, stat
+        - vi.mock('@repo/logger', ...) — standard logger mock (matches workflow/__tests__ pattern)
+        - DB queries: injected via config.queryComponents / config.queryPhases (no module mock needed)
+      Test scenarios:
+        HP-1: all 7 phases succeed with one changed agent file, DB unavailable (file-only)
+        HP-2: checkOnly=true, out-of-sync detected, no writes to doc files
+        HP-3: checkOnly=true, empty git diff → success=true, filesChanged=0
+        HP-4: force=true, all agent files processed (5+ files), filesChanged>=5
+        HP-5: DB available, queryComponents returns 10 items → database_status='success'
+        EC-1: git exec throws ENOENT → timestamp fallback, logger.warn called
+        EC-2: two files, one with malformed YAML → manualReviewNeeded>=1, success=true
+        EC-3: queryComponents throws ConnectionError → database_status='connection_failed', file-only
+        EC-4: queryComponents throws TimeoutError → database_status='timeout', logger.warn called
+        EC-5: writeFile for SYNC-REPORT.md throws EACCES → errors.length>0, success=false
+        EC-6: no files found (empty git + no timestamp files) → success=false, errors populated
+        EG-1: empty git diff, no force → success=true, all counts=0
+        EG-2: spawns with invalid chars → Mermaid validation fails, existing preserved, manualReviewNeeded>=1
+        EG-3: git diff returns 'D .claude/agents/obsolete.agent.md' → sectionsUpdated>=1
+        EG-4: 50 files via force mode → filesChanged=50, no crash
+        EG-5: checkOnly=true + force=true → no doc writes, success=false (some out-of-sync)
+        EG-6 (AC-13): same fixture input run twice → identical DocSyncResult (deep equality)
+      NOTE: The existing tests in nodes/workflow/__tests__/doc-sync.test.ts test the subprocess
+      node — they must NOT be modified (keep passing for the subprocess variant).
+
+  - id: 8
+    subtask_id: "ST-8"
+    description: "TypeScript and ESLint cleanup — zero type errors and zero lint errors across all new/changed files"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+      - "packages/backend/orchestrator/src/nodes/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+      - "packages/backend/orchestrator/src/nodes/index.ts"
+    dependencies: [7]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm lint --filter @repo/orchestrator"
+    acs_covered: ["AC-11", "AC-12"]
+    notes: >
+      Run pnpm check-types --filter @repo/orchestrator — fix all TypeScript errors.
+      Run pnpm lint --filter @repo/orchestrator — fix all ESLint errors on new/changed files only.
+      Common issues to pre-check:
+        - Import paths must use .js extension (ESM convention in this codebase)
+        - No console.log — use logger from @repo/logger
+        - Zod schema objects must not use TypeScript interfaces (use z.infer<>)
+        - No barrel file additions (direct source imports only)
+        - Trailing commas, single quotes, no semicolons per Prettier config
+
+# ============================================================================
+# Files to Change
+# ============================================================================
+files_to_change:
+  - path: "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    action: create
+    reason: "New native 7-phase doc-sync LangGraph node (ST-1 through ST-6)"
+
+  - path: "packages/backend/orchestrator/src/nodes/sync/index.ts"
+    action: create
+    reason: "Named exports for docSyncNode, createDocSyncNode, schemas, and types from sync domain (ST-1)"
+
+  - path: "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+    action: create
+    reason: "Unit test suite for native doc-sync node covering all 16 TEST-PLAN.md scenarios (ST-7)"
+
+  - path: "packages/backend/orchestrator/src/nodes/index.ts"
+    action: modify
+    reason: "Add '// Sync Nodes' section re-exporting from ./sync/index.js (ST-1)"
+
+# ============================================================================
+# Commands to Run
+# ============================================================================
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after ST-1, ST-2, and after ST-8"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator -- --coverage"
+    when: "after ST-7 and after ST-8"
+    required: true
+
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after ST-8"
+    required: true
+
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes (ST-8)"
+    required: true
+
+# ============================================================================
+# Acceptance Criteria Map
+# ============================================================================
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File created at nodes/sync/doc-sync.ts; nodes/workflow/doc-sync.ts unchanged; nodes/sync/index.ts exports node; commit shows ST-1 files"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "HP-1 test passes: all 7 phases execute for one changed agent file producing valid DocSyncResultSchema output"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "HP-2 test: checkOnly=true → no doc writes; HP-4 test: force=true bypasses git diff; DocSyncConfigSchema.parse validates both flags"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "DocSyncResultSchema.parse(state.docSync) succeeds in HP-1; all required fields present; database_status optional field included"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "EC-6 test: BLOCKED signal → success=false, errors populated; HP-2 test: CHECK FAILED → success=false; HP-1: COMPLETE → success=true, errors=[]"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "EC-3 test: queryComponents unavailable → database_status='connection_failed', success=true; EC-4 test: timeout → database_status='timeout'"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Source code imports isValidStoryId or getStatusFromDirectory from @repo/workflow-logic where story-aware logic is needed (code review)"
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "docSyncNode = createToolNode('doc_sync', ...) and createDocSyncNode uses createToolNode — visible in source code"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    planned_evidence: "nodes/sync/index.ts exports docSyncNode, createDocSyncNode; nodes/index.ts '// Sync Nodes' section re-exports from './sync/index.js'"
+    evidence_type: file
+
+  - ac_id: "AC-10"
+    planned_evidence: "pnpm test --filter @repo/orchestrator -- --coverage shows ≥80% coverage on nodes/sync/doc-sync.ts; all 16 test scenarios in nodes/sync/__tests__/doc-sync.test.ts"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "pnpm check-types --filter @repo/orchestrator exits 0 with zero errors"
+    evidence_type: command
+
+  - ac_id: "AC-12"
+    planned_evidence: "pnpm lint --filter @repo/orchestrator exits 0 on all new/changed files"
+    evidence_type: command
+
+  - ac_id: "AC-13"
+    planned_evidence: "EG-6 test: two runs with identical mocked inputs produce deep-equal DocSyncResult objects (filesChanged, sectionsUpdated, diagramsRegenerated, manualReviewNeeded all match)"
+    evidence_type: test
+
+# ============================================================================
+# Architectural Decisions
+# ============================================================================
+architectural_decisions:
+  - id: ARCH-001
+    question: "Path for native doc-sync node: nodes/sync/ vs nodes/workflow/?"
+    decision: "Create at nodes/sync/doc-sync.ts. Retain nodes/workflow/doc-sync.ts unchanged."
+    rationale: "ELAB auto-resolved. Story index entry specifies nodes/sync/. Coexistence with subprocess variant during Phase 9 parity work."
+    decided_by: elaboration-auto
+
+  - id: ARCH-002
+    question: "How to inject DB query functions for testability?"
+    decision: "Add optional queryComponents and queryPhases fields to DocSyncConfigSchema (z.function().optional()). Default implementation attempts real call; tests inject mocks."
+    rationale: "Avoids module-level vi.mock complexity for DB. Aligns with dependency injection pattern used elsewhere in orchestrator config objects."
+    decided_by: plan
+
+  - id: ARCH-003
+    question: "Should nodes/index.ts re-export the sync/ node (creating a name collision with workflow/ docSyncNode)?"
+    decision: "Yes, add sync/ exports under a new '// Sync Nodes' comment section. The workflow/ section already exports docSyncNode — graph code importing from nodes/index.ts may get the sync version after this change. Existing consumers that need the subprocess version must import directly from './workflow/index.js'."
+    rationale: "ST-1 specifies updating nodes/index.ts. The sync/ node is the primary going forward; workflow/ subprocess version is retained for backward compatibility but de-emphasized."
+    decided_by: plan
+
+# ============================================================================
+# Complexity Assessment
+# ============================================================================
+complexity: complex
+
+# ============================================================================
+# Notes
+# ============================================================================
+notes:
+  - "All file paths use .js extension in imports (ESM convention)."
+  - "Do NOT modify nodes/workflow/doc-sync.ts, nodes/workflow/index.ts, or existing tests in nodes/workflow/__tests__/."
+  - "The nodes/index.ts currently exports docSyncNode from ./workflow/index.js. After ST-1, it will also export from ./sync/index.js. Consumers must be aware of the dual export — the '// Sync Nodes' section export is the native port."
+  - "Phase 1 uses exec() (promisified) not spawn() — git diff output is buffered, not streamed."
+  - "DB injection via config.queryComponents/queryPhases is the testability pattern — avoids mocking MCP module internals."
+  - "AC-13 determinism: SYNC-REPORT.md timestamp will vary — test must compare structural counts only, not full string equality."
+  - "The 9 existing tests in nodes/workflow/__tests__/doc-sync.test.ts mock spawn and readFile. These remain valid for the subprocess node and must continue passing."
+  - "From ELAB: repoRoot defaults to workingDir — git subprocess cwd uses repoRoot, file operations use workingDir."
+  - "Flag precedence (ELAB gap-2): force governs file list, checkOnly governs write permission. Combined checkOnly+force: all files evaluated, none written."

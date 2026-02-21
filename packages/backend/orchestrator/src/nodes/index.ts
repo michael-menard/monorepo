@@ -244,3 +244,16 @@ export {
   type DocSyncResult,
   type GraphStateWithDocSync,
 } from './workflow/index.js'
+
+// Sync Nodes (Native TypeScript port — WINT-9020)
+// Note: These re-export the native doc-sync node from nodes/sync/.
+// The subprocess variant remains available at nodes/workflow/doc-sync.js.
+export {
+  docSyncNode as nativeDocSyncNode,
+  createDocSyncNode as createNativeDocSyncNode,
+  DocSyncConfigSchema as NativeDocSyncConfigSchema,
+  DocSyncResultSchema as NativeDocSyncResultSchema,
+  type DocSyncConfig as NativeDocSyncConfig,
+  type DocSyncResult as NativeDocSyncResult,
+  type GraphStateWithDocSync as GraphStateWithNativeDocSync,
+} from './sync/index.js'
