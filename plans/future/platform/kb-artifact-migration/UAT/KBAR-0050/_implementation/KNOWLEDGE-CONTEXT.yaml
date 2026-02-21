@@ -1,0 +1,101 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-18T03:05:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "KBAR-0040"
+        lesson: "N+1 query anti-pattern in batch operations — always batch DB reads into a single query for dry-run checks"
+        category: blocker
+        applies_because: "sync:epic --dry-run must fetch all story/artifact checksums in a single batch query; N+1 would break performance for large directories"
+
+      - story_id: "KBAR-0030"
+        lesson: "Path security validation is mandatory at the CLI layer — validateFilePath() and validateNotSymlink() are already exported from @repo/kbar-sync __types__"
+        category: reuse
+        applies_because: "CLI scripts must validate --story-dir, --base-dir, and --artifact-file for path traversal and symlinks before delegating to sync functions"
+
+      - story_id: "KBAR-0030"
+        lesson: "SyncStoryToDatabaseInputSchema does NOT accept dryRun or force parameters — dry-run must be implemented in the CLI layer via checksum comparison"
+        category: blocker
+        applies_because: "AC-12 mandates Approach 2 (CLI-layer checksum comparison); do not attempt to pass dryRun to syncStoryToDatabase"
+
+      - story_id: "KBAR-0040"
+        lesson: "computeChecksum() utility is exported from packages/backend/kbar-sync/src/__types__/index.ts — reuse it for dry-run CLI checksum computation"
+        category: reuse
+        applies_because: "Dry-run must use the same checksum algorithm as sync functions; import computeChecksum from @repo/kbar-sync to ensure consistency"
+
+    blockers_to_avoid:
+      - "Passing dryRun parameter to syncStoryToDatabase — the function signature does not support it (AC-12)"
+      - "N+1 DB queries in sync:epic --dry-run — must batch all checksum lookups in a single query"
+      - "Missing path traversal validation at CLI layer before delegating to sync functions"
+      - "Using TypeScript interfaces instead of Zod schemas — all CLI option types must use z.infer<>"
+
+    patterns_to_follow:
+      - "parse → validate → delegate → print: thin CLI layer with zero business logic"
+      - "Zod .safeParse() on all CLI inputs before any sync function call"
+      - "Fail-soft error handling in batch operations — one story failure does not abort the batch"
+      - "Separate stdout (progress/summary) from stderr (errors) per AC-9"
+      - "Exit code 0 = success/skip; 1 = failure/invalid input; 2 = dependency failure (DB/import)"
+      - "Shebang: #!/usr/bin/env npx tsx at top of each script file"
+      - "Import computeChecksum from @repo/kbar-sync for dry-run checksum computation"
+
+    patterns_to_avoid:
+      - "Creating barrel files (index.ts re-exports)"
+      - "TypeScript interfaces — use Zod schemas with z.infer<>"
+      - "console.log — use @repo/logger for structured traces; use process.stdout.write/console for human-readable CLI output"
+      - "as any casts in CLI scripts"
+      - "Business logic (Drizzle queries, filesystem scanning for stories) inside CLI scripts"
+
+  architecture_decisions:
+    active_count: 3
+    relevant_adrs:
+      - id: "ADR-001"
+        title: "API Endpoint Path Schema"
+        status: active
+        constraint: "Not directly applicable — KBAR-0050 creates no HTTP endpoints; CLI-only tool"
+        applies_to: ["api", "backend"]
+
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "Integration tests in AC-11 MUST use testcontainers (real PostgreSQL) — no mocks in UAT/integration tests. Unit tests may mock sync functions."
+        applies_to: ["testing", "backend", "packages"]
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "frontend_impacted: false in SCOPE.yaml — E2E tests explicitly skipped for this story (CLI-only, no UI)"
+        applies_to: ["testing"]
+
+    constraints:
+      api_paths: "Not applicable — no HTTP endpoints in KBAR-0050"
+      infrastructure: "No Lambda/APIGW changes — CLI scripts are developer tools only"
+      storage: "Not applicable"
+      auth: "Not applicable — CLI uses DB connection directly (no Cognito)"
+      testing: "Integration tests must use testcontainers (real PostgreSQL); unit tests mock @repo/kbar-sync functions; no MSW"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full kbar-sync src/ directory"
+        typical_tokens: 8000
+        mitigation: "Already read index.ts and __types__/index.ts — sufficient for understanding all exports and schemas"
+
+      - operation: "Reading all test files in kbar-sync"
+        typical_tokens: 5000
+        mitigation: "No existing test files found; start fresh with canonical patterns from populate-story-status.ts and cli/index.ts"
+
+    recommended_patterns:
+      - "Import computeChecksum, validateFilePath, validateNotSymlink directly from @repo/kbar-sync __types__"
+      - "Use tsx shebang (already in devDependencies) — no new dependency needed"
+      - "Grep before Read when exploring batch-sync-artifacts.ts or other large source files"
+      - "Read only the sections of files needed for each subtask"
+
+  warnings:
+    - "KBAR-0040 was in UAT as of baseline date (2026-02-13). Implementation gate requires KBAR-0040 merged to main before starting. Confirm @repo/kbar-sync exports are stable before ST-2 through ST-9."
+    - "No existing integration test pattern in kbar-sync — ST-9 will be first; use testcontainers setup from @testcontainers/postgresql (already in devDependencies)"
+    - "scripts/ directory does not yet exist in packages/backend/kbar-sync — must be created as part of ST-1"
+
+  tokens:
+    in: 3800
+    out: 850

@@ -1,0 +1,27 @@
+schema: 1
+story_id: WINT-0170
+timestamp: "2026-02-17T21:02:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/agents/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+
+summary: "Add doc-sync gate step to elab-completion-leader and qa-verify-completion-leader agents to block story advancement when workflow documentation is out of sync"
+elaboration: "completed"

@@ -1,0 +1,127 @@
+schema: 1
+story_id: "WINT-0170"
+timestamp: "2026-02-17T23:00:00Z"
+
+verdict: PASS
+
+tests_executed: false
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+tests_exempt: true
+tests_exempt_reason: "story_type: docs — zero TypeScript changes; agent .md file modification only. No Vitest/pnpm test suite applicable. Verification is grep-based static inspection per KNOWLEDGE-CONTEXT.yaml ADR-005 constraint."
+
+coverage: null
+coverage_meets_threshold: true
+coverage_note: "N/A — no TypeScript code. Threshold not applicable to markdown-only stories."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "No code tests exist to audit. Static inspection via grep confirms all gate logic branches, signal strings, and prose requirements are present. KNOWLEDGE-CONTEXT.yaml attack vectors reviewed: exit 0/1 distinction is unambiguous in both files; DOC-SYNC COMPLETE (warnings) treated as exit 0 explicitly stated."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification: |
+      Direct file inspection of .claude/agents/elab-completion-leader.agent.md confirmed:
+      - Step 6.5 'Doc-Sync Gate (PASS / CONDITIONAL PASS path only)' present at line 214
+      - '/doc-sync --check-only' invocation at line 223
+      - Three-branch logic: exit 0 = proceed (line 228), exit 1 = ELABORATION BLOCKED (line 229), invocation failure = WARNING + proceed (line 230)
+      - 'ELABORATION BLOCKED: docs out of sync — run /doc-sync to fix, then re-run' signal text confirmed
+      - '/doc-sync' in skills_used frontmatter at line 13
+    notes: "grep output: lines 13, 220, 223, 229, 230, 232, 256 all confirmed."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification: |
+      Direct file inspection of .claude/agents/qa-verify-completion-leader.agent.md confirmed:
+      - Step 7.5 'Doc-Sync Gate' at line 155, between Step 7 (line 146) and Step 8 (line 169) on PASS path
+      - '/doc-sync --check-only' invocation at line 160
+      - Three-branch logic: exit 0 = proceed to Step 8 (line 165), exit 1 = COMPLETION BLOCKED (line 166), invocation failure = WARNING + proceed (line 167)
+      - 'COMPLETION BLOCKED: docs out of sync — run /doc-sync to fix, then re-run' signal text confirmed
+      - '/doc-sync' in skills_used frontmatter at line 14
+    notes: "grep output: lines 14, 157, 160, 166, 167, 262 all confirmed."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification: |
+      FAIL path begins at line 174 ('### If verdict is FAIL:'). Ran awk NR>=174 piped to grep for 'doc-sync|check-only|Doc-Sync|7\.5' — zero matches returned. CONFIRMED: FAIL path is completely unmodified; QA FAIL emits at line 238 with no gate.
+    notes: "FAIL path clean. git diff confirms only two files changed in working tree."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification: |
+      elab-completion-leader.agent.md: All four original ELABORATION COMPLETE signals confirmed at lines 252-255 (PASS, CONDITIONAL PASS, FAIL, SPLIT REQUIRED). New ELABORATION BLOCKED variant documented in Step 6.5 at line 229 and in Completion Signal list at line 256.
+      qa-verify-completion-leader.agent.md: QA PASS at line 172 (Emit signal step) and line 260 (Signals section). QA FAIL at line 238 (Emit signal step) and line 261 (Signals section). Pre-existing COMPLETION BLOCKED at line 262 preserved. New COMPLETION BLOCKED variant documented in Step 7.5 at line 166.
+    notes: "All original signals byte-for-byte preserved. Two new BLOCKED variants added exactly as specified."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification: |
+      elab-completion-leader.agent.md ordering: Step 6 (Verify Final State) at line 207, Step 6.5 (Doc-Sync Gate) at line 214, Output section at line 241, Completion Signal at line 249. Correct: gate runs after all state updates, before signal.
+      qa-verify-completion-leader.agent.md ordering: Step 7 (Update Story Status in KB) at line 146, Step 7.5 (Doc-Sync Gate) at line 155, Step 8 (Log tokens) at line 169, FAIL path starts at line 174. Correct: gate is last PASS-path step before token log and signal.
+    notes: "Placement verified via grep line numbers in both files."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verification: |
+      elab-completion-leader.agent.md: updated: 2026-02-17, version: 3.0.1, /doc-sync in skills_used. Confirmed via direct file read (lines 3, 4, 13).
+      qa-verify-completion-leader.agent.md: updated: 2026-02-17, version: 3.3.1, /doc-sync in skills_used. Confirmed via direct file read (lines 3, 4, 14).
+    notes: "Both files match AC-6 requirements exactly."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verification: |
+      AC-7 requires WINT-0170 status in stories index to reflect completion when story advances through workflow tooling. This is an operational verification step that executes when qa-verify-completion-leader runs /index-update as part of this story's completion. The gate added by this story (Step 7.5) will itself be exercised at that moment. The EVIDENCE.yaml correctly marked this MISSING during dev-execute phase. QA verification accepts this as operational — it will be satisfied by the /index-update invocation that occurs when this QA-VERIFY.yaml is acted upon by qa-verify-completion-leader.
+    notes: "Operational AC. The implementation that enables AC-7 (the modified qa-verify-completion-leader itself) is in place and verified. No static check can satisfy this; story advancement through tooling is the verification event."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verification: |
+      Step 6.5 in elab-completion-leader.agent.md confirms all four required prose elements:
+      (1) Step header: 'PASS / CONDITIONAL PASS path only' at line 214 — PASS
+      (2) 'By the time this step runs, Steps 3-5 have already executed — the story directory has been moved' at line 218 — PASS
+      (3) 'Steps 3-5 are idempotent — /story-update, /story-move, and /index-update can safely run again' at line 235 — PASS
+      (4) '/story-move will handle this gracefully' at line 236 — PASS
+      Dedicated subsection 'Re-run behavior after ELABORATION BLOCKED (AC-8)' confirmed at line 232.
+    notes: "All four AC-8 prose requirements satisfied. qa-verify-completion-leader not affected (PASS path does not move directory)."
+
+architecture_compliant: true
+architecture_notes: |
+  ADR-005 (UAT must use real services): Story type is .md only — no mock vs real service distinction applies. Static grep verification is the appropriate and documented test strategy for markdown agent files. Compliant.
+  No API paths, infrastructure, storage, or auth ADRs apply to this story.
+  Gate logic correctly implements WINT-0160 exit code contract without re-implementing or modifying it.
+  Non-blocking infra-failure pattern matches canonical Step 0 model from qa-verify-completion-leader.
+
+issues: []
+
+lessons_to_record:
+  - lesson: "For markdown-only agent stories, AC verification via grep/file inspection is the complete and correct test strategy. EVIDENCE.yaml commands_run section is the test evidence record. No pnpm test invocation needed or applicable."
+    category: pattern
+    tags: ["qa-verify", "markdown-only", "agent-files", "wint"]
+  - lesson: "AC-7 'status index updated' is inherently operational for workflow tooling stories — it cannot be statically verified during dev-execute or qa-verify. Accept as operational AC; document in QA-VERIFY.yaml that it satisfies on story advancement."
+    category: pattern
+    tags: ["qa-verify", "operational-ac", "index-update", "wint"]
+  - lesson: "Three-branch gate logic (exit 0 / exit 1 / invocation failure) must distinguish all three branches unambiguously in prose. The WINT-0170 implementation is a clean reference for this pattern."
+    category: pattern
+    tags: ["doc-sync", "gate-pattern", "agent-design", "wint"]
+
+gate:
+  decision: PASS
+  reason: "All 8 ACs verified passing. Agent files modified per spec. Gate logic, signals, and prose all confirmed. No blocking issues."
+  blocking_issues: []
+
+tokens:
+  in: 8200
+  out: 1800

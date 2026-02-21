@@ -1,0 +1,16 @@
+predictions:
+  split_risk: 0.2
+  review_cycles: 1
+  token_estimate: 50000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-20T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+  notes: >
+    Heuristic adjustment applied: raw AC-count formula yielded 0.7 split_risk, but this
+    story produces 2 markdown files with no TypeScript code. The split risk is materially
+    lower for pure documentation stories. Adjusted to 0.2 (low). Token estimate is
+    also reduced from the 150K global default to 50K as documentation authoring
+    consumes far fewer tokens than code implementation. No similar completed stories
+    found in KB. WKFL-006 patterns unavailable (heuristics-only mode). Confidence: low.

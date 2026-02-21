@@ -1,7 +1,7 @@
 ---
 name: wt-status
 version: 2.0.0
-description: Show comprehensive status of git worktrees and database-tracked story worktrees, including orphaned and untracked detection.
+description: Show comprehensive status of git worktrees and database-tracked story associations, including orphaned and untracked detection.
 ---
 
 # /wt:status - Show Worktree Status
@@ -43,14 +43,14 @@ git status
 git log --oneline -5
 ```
 
-## Section 2: Database-Tracked Worktrees
+## Section 2: Story Associations
 
 ### How to Collect
 
 Call the `worktree_list_active` MCP tool:
 
 ```
-worktree_list_active({ limit: 50, offset: 0 })
+worktree_list_active({})
 ```
 
 ### Null-Check Resilience
@@ -58,85 +58,93 @@ worktree_list_active({ limit: 50, offset: 0 })
 The `worktree_list_active` call must handle null/error responses gracefully:
 
 ```
-result = worktree_list_active({ limit: 50, offset: 0 })
+result = worktree_list_active({})
 
 if result is null or tool call throws an error:
-  Print: "WARNING: DB worktree data unavailable (worktree_list_active MCP tool error). Showing git-level view only."
-  Return (show git section only, do NOT crash or exit with error)
+  Print: "Story Associations unavailable (MCP error). Git worktree list above is still accurate."
+  Return (show git section only, do NOT fail the whole command)
 
 if result is [] (empty array):
-  Print: "No active database-tracked worktrees."
+  Print: "No active story associations found."
 
 if result is [records...]:
-  → perform disk-check and cross-reference (see below)
+  → perform path cross-reference (see below)
   → render tabular output
 ```
 
-### Disk-Check Mechanism (ORPHANED Detection)
+### Path Normalization
 
-For each record returned by `worktree_list_active`, check whether the `worktreePath` exists on disk:
+Before comparing DB `worktreePath` values against git worktree paths:
+- Resolve trailing slashes (remove them)
+- Compare absolute paths (resolve relative paths against repo root)
 
-```
-Use Bash tool: ls {worktreePath}
-```
+### Cross-Reference Mechanism
 
-- If `ls {worktreePath}` exits with a **non-zero exit code** (path does not exist): flag the record with `[ORPHANED]`
-- If `ls {worktreePath}` exits with zero (path exists): no indicator
-- If `ls {worktreePath}` throws an unexpected error: flag with `[CHECK-FAILED]` and continue rendering remaining records
+After collecting both DB records and git worktree paths:
 
-### Cross-Reference Mechanism (UNTRACKED Detection)
+1. Collect the set of normalized `worktreePath` values from all DB records (`db_paths`)
+2. Collect the set of normalized git worktree paths from `git worktree list` (`git_paths`)
+3. For each DB record: check if `worktreePath` exists in `git_paths`
+   - If NOT in `git_paths`: the path no longer exists on disk — flag as `(orphaned)`
+4. For each git worktree path that is NOT in `db_paths`:
+   - Flag that git worktree as `(untracked)` in the story_id column
 
-After checking each DB record:
-
-1. Collect the set of `worktreePath` values from all DB records (`db_paths`)
-2. Collect the set of git worktree paths from `git worktree list` (`git_paths`)
-3. For each git worktree path that is NOT in `db_paths`:
-   - Flag that git worktree with `[UNTRACKED]` in the git worktrees section
-
-An `[UNTRACKED]` label means: a git worktree exists on disk but has no corresponding active DB record.
+An `(untracked)` label means: a git worktree exists on disk but has no corresponding active DB record (potential orphan from pre-WINT-1130 sessions or `--skip-worktree` runs).
 
 ### Output Format
 
-Section header:
+Section header (visually separated from git section):
 
 ```
---- Database-Tracked Worktrees ---
+--- Story Associations ---
 ```
 
 Tabular output (consistent column widths, no emoji):
 
 ```
-Story ID      Branch                    Path                          Registered              Status
-WINT-1140     story/WINT-1140           tree/story/WINT-1140          2026-02-17 10:00:00     (active)
-WINT-1130     story/WINT-1130           tree/story/WINT-1130          2026-02-16 08:00:00     [ORPHANED]
+story_id      branch_name               worktree_path                 age
+WINT-1140     story/WINT-1140           tree/story/WINT-1140          3d 2h
+WINT-1130     story/WINT-1130           tree/story/WINT-1130          5d 10h (orphaned)
+(untracked)   story/WINT-1050           tree/story/WINT-1050          —
 ```
+
+The `age` column is calculated from the `createdAt` timestamp relative to now. Display as `Nd Nh` (days and hours).
 
 Empty state:
 
 ```
---- Database-Tracked Worktrees ---
-No active database-tracked worktrees.
+--- Story Associations ---
+No active story associations found.
 ```
 
 Degraded state (MCP tool error):
 
 ```
-WARNING: DB worktree data unavailable (worktree_list_active MCP tool error). Showing git-level view only.
+Story Associations unavailable (MCP error). Git worktree list above is still accurate.
 ```
+
+### Graceful Degradation Summary
+
+| Condition | Behavior |
+|-----------|----------|
+| `worktree_list_active` returns `[]` | Show "No active story associations found." |
+| `worktree_list_active` returns error/null | Show "Story Associations unavailable (MCP error). Git worktree list above is still accurate." Do NOT fail the whole command. |
+| `git worktree list` returns empty | Show only DB records (no cross-reference possible) |
 
 ## Full Execution Flow
 
 ```
 1. Run git worktree commands → collect git_paths and worktree status
-2. Call worktree_list_active({ limit: 50, offset: 0 })
-   a. If null/error → show degradation warning, stop (git view already rendered)
-   b. If [] → print "No active database-tracked worktrees."
+2. Display git section
+3. Call worktree_list_active({})
+   a. If null/error → show degradation warning, stop
+   b. If [] → print "No active story associations found."
    c. If [records...]:
-      - For each record: ls {worktreePath} → tag [ORPHANED] if non-zero exit
-      - Cross-reference: for each git_path not in db_paths → tag [UNTRACKED]
-      - Render tabular DB section
-3. Display git section (with any [UNTRACKED] labels)
-4. Display DB-tracked worktrees section
+      - Normalize all paths (trailing slashes, absolute)
+      - Cross-reference: match DB worktreePath against git_paths
+      - Flag DB records with no git match as (orphaned)
+      - Flag git worktrees with no DB match as (untracked)
+      - Render tabular Story Associations section
 ```
 
 ## Benefits
