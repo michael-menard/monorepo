@@ -3,8 +3,9 @@ story_id: KBAR-0050
 feature_dir: kb-artifact-migration
 timestamp: "2026-02-20T23:22:00Z"
 
-current_phase: execute
-last_successful_phase: plan
+current_phase: done
+last_successful_phase: execute
+e2e_gate: exempt
 iteration: 1
 max_iterations: 3
 blocked: false
