@@ -708,8 +708,8 @@ export function formatDiffSummary(
   const lines = preview.map(
     d =>
       `  Line ${d.lineNum}:\n` +
-        `    expected: ${d.expected.substring(0, 120)}\n` +
-        `    actual:   ${d.actual.substring(0, 120)}`,
+      `    expected: ${d.expected.substring(0, 120)}\n` +
+      `    actual:   ${d.actual.substring(0, 120)}`,
   )
   const suffix =
     diffLines.length > 10 ? `\n  ... and ${diffLines.length - 10} more differences` : ''
