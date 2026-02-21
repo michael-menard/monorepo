@@ -14,3 +14,6 @@ warnings:
   - "Pre-existing TS2393 duplicate function errors in db/story-repository.ts (unrelated to WINT-9020)"
   - "Branch coverage 79.9% (just below 80% branch threshold; line/function/statement coverage all ≥80%)"
 gen_mode: false
+pr_number: 378
+pr_url: "https://github.com/michael-menard/monorepo/pull/378"
+completed_at: "2026-02-21T06:30:00Z"
