@@ -1,0 +1,66 @@
+schema: 1
+story_id: "WINT-1050"
+timestamp: "2026-02-17T00:00:00Z"
+
+touched_files:
+  - path: ".claude/commands/story-update.md"
+    action: modified
+    reason: "Primary deliverable — v2.1.0 → v3.0.0 with DB-first write via shimUpdateStoryStatus"
+
+acceptance_criteria:
+  - id: AC-1
+    status: pass
+    evidence: "Step 3 (line 128) calls shimUpdateStoryStatus before Step 3.5 (line 160) frontmatter update"
+
+  - id: AC-2
+    status: pass
+    evidence: "14-row mapping table at lines 53-68 covers all 14 status values with DB newState or explicit skip"
+
+  - id: AC-3
+    status: pass
+    evidence: "Lines 144-148: null return from shim triggers WARNING, sets db_updated=false, frontmatter update proceeds"
+
+  - id: AC-4
+    status: pass
+    evidence: "Line 187: db_updated field added to Step 5 result YAML"
+
+  - id: AC-5
+    status: pass
+    evidence: "Execution order: Step 2 (worktree cleanup) → Step 3 (DB write) → Step 3.5 (frontmatter)"
+
+  - id: AC-6
+    status: pass
+    evidence: "Line 130: prerequisite states transition validation MUST pass BEFORE Step 3"
+
+  - id: AC-7
+    status: pass
+    evidence: "Line 158: --no-index flag does NOT affect DB write step; only Step 4 is affected"
+
+  - id: AC-8
+    status: pass
+    evidence: "Line 4: version: 3.0.0"
+
+  - id: AC-9
+    status: pass
+    evidence: "Lines 222-252: 6 integration test scenarios (A-F) documented per AC-9 requirements"
+
+  - id: AC-10
+    status: pass
+    evidence: "Mapping table rows: created→skip, elaboration→skip, needs-code-review→skip, failed-code-review→skip, failed-qa→skip, needs-split→skip, BLOCKED→blocked, superseded→cancelled"
+
+e2e_tests:
+  status: exempt
+  mode: n/a
+  reason: "Docs-only story — single markdown file modified, no runtime code changes"
+  results:
+    passed: 0
+    failed: 0
+    skipped: 0
+
+unit_tests:
+  status: exempt
+  reason: "Docs-only story — no TypeScript code written or modified"
+
+build:
+  status: exempt
+  reason: "Docs-only story — no build artifacts affected"

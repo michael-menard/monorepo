@@ -1,0 +1,61 @@
+schema: 1
+story_id: KBAR-0060
+generated: 2026-02-20T00:00:00Z
+
+lessons:
+  - id: L-001
+    source: KBAR-0040
+    summary: "artifact-sync.integration.test.ts uses `CREATE TYPE IF NOT EXISTS` to avoid duplicate enum errors across test runs. Use this pattern in shared testcontainers helper."
+    applies_to: ST-1
+
+  - id: L-002
+    source: KBAR-0040
+    summary: "Set POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_DATABASE env vars from container after connecting. Scripts also require POSTGRES_USER (not POSTGRES_USERNAME)."
+    applies_to: ST-1
+
+  - id: L-003
+    source: KBAR-0050
+    summary: "Use `describe.skipIf(process.env.SKIP_TESTCONTAINERS === 'true')` as the skip guard in CLI integration tests. The older integration.integration.test.ts uses a different skip pattern — prefer the SKIP_TESTCONTAINERS env var pattern."
+    applies_to: ST-1
+
+  - id: L-004
+    source: KBAR-0030
+    summary: "integration.integration.test.ts schema is INCOMPLETE — missing sync_checkpoints, artifact_versions, and artifact_content_cache tables. Use artifact-sync.integration.test.ts (KBAR-0040) as the canonical schema source."
+    applies_to: ST-1
+
+  - id: L-005
+    source: KBAR-0040
+    summary: "N+1 prevention: `dryRunEpic` issues exactly ONE batch DB query for N stories. Instrument via `client.on('query', ...)` counter pattern. See AC-6 in story."
+    applies_to: ST-4
+
+  - id: L-006
+    source: KBAR-0050
+    summary: "CLI functions are imported directly (in-process): `import { dryRunStory } from '../../sync-story.js'`. Do NOT use subprocess invocation (execSync). Relative import path from scripts/__tests__/integration/ to scripts/ is '../'"
+    applies_to: ST-4
+
+  - id: L-007
+    source: KBAR-0040
+    summary: "beforeAll timeout must be 90000 (90s) for testcontainers startup. Smaller it() timeouts (30000ms) are fine for individual test cases."
+    applies_to: ST-1
+
+  - id: L-008
+    source: KBAR-0060-story
+    summary: "vitest.integration.config.ts currently only includes `scripts/**/*.integration.test.ts`. The new src/__tests__/sync-integration.integration.test.ts requires updating the include glob to also cover `src/**/*.integration.test.ts`."
+    applies_to: ST-1
+
+adrs:
+  - id: ADR-005
+    summary: "Integration tests must use real PostgreSQL (testcontainers). Zero mocks permitted in files covered by KBAR-0060."
+
+  - id: ADR-006
+    summary: "For backend-only stories with frontend_impacted: false, testcontainers integration tests fulfill the E2E requirement. No Playwright tests needed."
+
+canonical_files:
+  - path: "packages/backend/kbar-sync/src/__tests__/artifact-sync.integration.test.ts"
+    why: "Most complete testcontainers harness — all 6 enums with IF NOT EXISTS, all 7 tables including sync_checkpoints, artifact_versions, artifact_content_cache. Use for shared helper extraction."
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+    why: "KBAR-0050 AC-11 CLI integration test — SKIP_TESTCONTAINERS guard pattern, dryRunStory/dryRunEpic import pattern. Extend (do not replace) for KBAR-0060 AC-4, AC-5, AC-6."
+
+  - path: "packages/backend/kbar-sync/src/__tests__/integration.integration.test.ts"
+    why: "Story sync patterns (syncStoryToDatabase, detectSyncConflicts idempotency) — use as reference for AC-1, AC-3 test patterns only. Schema setup is incomplete — do NOT copy schema from here."

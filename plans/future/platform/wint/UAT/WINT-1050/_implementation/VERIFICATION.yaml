@@ -1,0 +1,95 @@
+schema: 1
+story_id: "WINT-1050"
+timestamp: "2026-02-18T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: false
+tests_executed_reason: "Docs-only story — single markdown file modified (.claude/commands/story-update.md), no TypeScript code or runtime artifacts. No test suite applicable."
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: null
+coverage_meets_threshold: true
+coverage_note: "Exempt — docs-only story. Coverage threshold (45%) applies to TypeScript code only."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: "No test code written or modified. Test quality check not applicable for docs-only story."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification: "Confirmed: story-update.md line 128 introduces '### 3. DB Write via shimUpdateStoryStatus (WINT-1050)' with explicit shimUpdateStoryStatus call. Step 3.5 (frontmatter) follows at line 160. DB write precedes frontmatter write as required."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification: "Confirmed: mapping table at lines 53-68 of story-update.md covers all 14 status values (backlog, created, elaboration, ready-to-work, in-progress, needs-code-review, failed-code-review, ready-for-qa, failed-qa, uat, completed, needs-split, BLOCKED, superseded). Each row specifies DB newState or explicit 'Skip' with note text. Note: story text says '13' but elaboration discovery log clarifies 14 values exist — the table correctly implements 14."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification: "Confirmed: lines 144-148 of story-update.md handle null return from shimUpdateStoryStatus with 'emit WARNING: DB write failed for {STORY_ID}. Falling back to filesystem-only update.' and db_updated = false. Step 3.5 frontmatter update is not gated on DB result — it always executes."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification: "Confirmed: line 187 of story-update.md Step 5 result YAML includes 'db_updated: true | false  # true if shimUpdateStoryStatus returned non-null; false if shim returned null, DB unavailable, or status has no DB mapping'."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification: "Confirmed: execution order in story-update.md is: Step 1 (locate) → Step 2 (worktree cleanup, line 124) → Step 3 (DB write, line 128) → Step 3.5 (frontmatter, line 160) → Step 4 (index) → Step 5 (result). This matches the required order."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verification: "Confirmed: line 130 of story-update.md states 'Prerequisite: Status transition validation (see Status Transition Rules below) MUST pass BEFORE this step. If the transition is invalid, return UPDATE FAILED without calling the shim.' Transition guard is explicitly before the DB call."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verification: "Confirmed: line 158 of story-update.md states 'Note: The --no-index flag does NOT affect this step. DB write always executes regardless of --no-index. Only Step 4 (Index Update) is affected by --no-index.' Explicit and unambiguous."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verification: "Confirmed: story-update.md frontmatter line 4 shows 'version: 3.0.0' and line 2 shows 'updated: 2026-02-17'. Version bump from v2.1.0 to v3.0.0 is present."
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    verification: "Confirmed: lines 222-252 of story-update.md document 6 integration test scenarios (A-F): A=DB write succeeds, B=DB unavailable/null return, C=invalid transition guard, D=uat→completed order verification, E=non-mappable status skip, F=BLOCKED→blocked mapping. All three AC-9 required scenarios (happy path, DB unavailable, invalid transition) plus 3 additional scenarios documented."
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    verification: "Confirmed: mapping table in story-update.md explicitly handles all non-mappable statuses: created (skip, note), elaboration (skip, note), needs-code-review (skip, note), failed-code-review (skip, note), failed-qa (skip, note), needs-split (skip, note), BLOCKED→blocked (DB write), superseded→cancelled (DB write). All AC-10 specified decisions are present with exact note text."
+
+architecture_compliant: true
+architecture_notes: "Docs-only story. Command spec follows DB-first write pattern per Architecture Notes in story. No ADR violations applicable. The spec correctly instructs: DB write first, null-return fallback, transition guard before DB call, --no-index does not affect DB write."
+
+issues: []
+
+gate:
+  decision: PASS
+  reason: "All 10 ACs verified. Docs-only story: single markdown file modified (.claude/commands/story-update.md). Spec correctly implements DB-first write pattern with shimUpdateStoryStatus, covers all 14 status values, handles null returns with fallback, and documents complete integration test scenarios."
+  blocking_issues: []
+
+lessons_to_record:
+  - lesson: "Docs-only stories with markdown command spec changes should be evaluated on spec correctness and completeness rather than test execution. Evidence references are to line numbers in the markdown file which serve as the primary artifact."
+    category: pattern
+    tags: ["docs-only", "command-spec", "qa-verify"]
+  - lesson: "When AC text says '13 status values' but implementation uses 14, trust the elaboration discovery notes and implementation over the AC text when the elaboration explicitly resolved this discrepancy."
+    category: pattern
+    tags: ["ac-count-mismatch", "elaboration-authority", "docs-only"]
+
+tokens:
+  in: 12000
+  out: 1500

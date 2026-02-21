@@ -1,0 +1,297 @@
+schema: 1
+story_id: "KBAR-0050"
+version: 1
+timestamp: "2026-02-18T03:30:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "sync:story --story-id <id> --story-dir <path> syncs story file to database; exits 0 on success, 1 on sync failure, 2 on DB connection failure"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+        description: "CLI command implements --story-id, --story-dir flags with Zod validation and syncStoryToDatabase delegation"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "Tests: exits 0 on success, exits 1 on sync failure, exits 2 on DB connection failure (9 tests in default/from-db sections)"
+      - type: command
+        command: "pnpm --filter @repo/kbar-sync run sync:story -- --help"
+        result: SUCCESS
+
+  - ac_id: "AC-2"
+    ac_text: "sync:story --artifacts syncs all artifacts via batchSyncArtifactsForStory; --artifact-file/--artifact-type syncs single artifact via syncArtifactToDatabase"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+        description: "Lines 427-508: --artifacts calls batchSyncArtifactsForStory; --artifact-file+--artifact-type calls syncArtifactToDatabase"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "5 tests for --artifacts mode (success/failure); 5 tests for --artifact-file/--artifact-type mode (success/failure/security/DB errors)"
+
+  - ac_id: "AC-3"
+    ac_text: "sync:story --check-conflicts calls detectSyncConflicts; exits 1 with conflict details unless --force; also detects artifact conflicts via detectArtifactConflicts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+        description: "Lines 334-388: --check-conflicts with conflict detection, --force override, artifact conflict sub-check"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "5 tests: no conflict (exit 0), conflict without force (exit 1), --force proceeds, artifact conflict (exit 1), detection failure (exit 1)"
+
+  - ac_id: "AC-4"
+    ac_text: "sync:epic --base-dir discovers all story directories (2 levels deep), syncs each via syncStoryToDatabase, continues on failures (fail-soft), prints per-story and final summary"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-epic.ts"
+        description: "discoverStoryDirs() searches 2 levels; main() loop with fail-soft error handling; SUMMARY line at end"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "5 tests for discoverStoryDirs (top-level, lifecycle dirs, filter, missing file, unreadable dir); 3 tests for fail-soft batch sync (failure continues, all succeed, no stories found)"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "DB connection failure in batch loop exits 2; non-connection error continues (fail-soft); skipped status counts"
+
+  - ac_id: "AC-5"
+    ac_text: "sync:epic --artifact-type <type> calls batchSyncByType with --checkpoint passthrough; prints artifact count and checkpoint name"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-epic.ts"
+        description: "Lines 357-401: --artifact-type calls batchSyncByType with artifactType and checkpointName; prints count and checkpoint"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "3 tests: batchSyncByType called with correct args+checkpoint; exits 1 on failures; exits 2 on DB connection error"
+
+  - ac_id: "AC-6"
+    ac_text: "Dry-run uses CLI-layer checksum comparison (computeChecksum + direct DB read) without calling syncStoryToDatabase; sync:epic --dry-run uses single batch query (N+1 prevention)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+        description: "dryRunStory() uses computeChecksum + queryDbChecksum(pg); syncStoryToDatabase is NOT called in dry-run path"
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-epic.ts"
+        description: "dryRunEpic() uses batchQueryDbChecksums() — single batch query via IN clause for all story IDs"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "dryRunStory() tests: syncStoryToDatabase not called (zero-mutation assertion, 3 tests)"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "dryRunEpic() N+1 prevention test: exactly ONE pool.query call for 3 stories; syncStoryToDatabase not called"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+        description: "Integration: dryRunEpic with 3 stories against real PostgreSQL — all result in dbChecksum null (not in DB), single query verified"
+
+  - ac_id: "AC-7"
+    ac_text: "package.json registers sync:story and sync:epic scripts; both --help exit 0 and print usage"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/package.json"
+        description: "scripts.sync:story = 'tsx scripts/sync-story.ts'; scripts.sync:epic = 'tsx scripts/sync-epic.ts'"
+      - type: command
+        command: "pnpm --filter @repo/kbar-sync run sync:story -- --help"
+        result: SUCCESS
+        output: "Prints sync:story help text with all flags; exits 0"
+      - type: command
+        command: "pnpm --filter @repo/kbar-sync run sync:epic -- --help"
+        result: SUCCESS
+        output: "Prints sync:epic help text with all flags; exits 0"
+
+  - ac_id: "AC-8"
+    ac_text: "All CLI option types use Zod schemas (SyncStoryCLIOptionsSchema, SyncEpicCLIOptionsSchema); no TypeScript interfaces; no as any casts in schema definitions"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/__types__/cli-options.ts"
+        description: "SyncStoryCLIOptionsSchema and SyncEpicCLIOptionsSchema defined with Zod; types via z.infer<>; no interfaces"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "Zod validation tests: exits 1 on missing --story-id, missing --story-dir, invalid --artifact-type"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "Zod validation tests: exits 1 on missing --base-dir, invalid --artifact-type"
+      - type: command
+        command: "pnpm --filter @repo/kbar-sync check-types"
+        result: SUCCESS
+
+  - ac_id: "AC-9"
+    ac_text: "Errors written to stderr; progress/summary written to stdout; exit codes 0/1/2 used as specified"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "Tests verify: ERROR messages on stderr; SUCCESS/progress on stdout; exit codes 0 (success), 1 (failure/conflict/validation), 2 (DB connection)"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "Tests verify: SUMMARY on stdout; DB errors on stderr; exit codes 0 (all success), 1 (partial failure), 2 (DB connection abort)"
+
+  - ac_id: "AC-10"
+    ac_text: "Unit tests achieve >80% line coverage on sync-story.ts and sync-epic.ts"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm test --filter @repo/kbar-sync -- --coverage"
+        result: SUCCESS
+        output: "sync-story.ts: 93.48% lines; sync-epic.ts: 90.28% lines; global: 89.03% lines; all 139 tests pass"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "63 unit tests covering parseArgs, --help, Zod validation, dryRunStory, --dry-run, --check-conflicts, default sync, --from-db, --artifacts, --artifact-file/--artifact-type, path traversal, failure paths"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+        description: "76 unit tests covering parseArgs, discoverStoryDirs, dryRunEpic, --help, Zod validation, --dry-run, fail-soft batch sync, --artifact-type mode, DB connection failure, skipped status, verbose output"
+
+  - ac_id: "AC-11"
+    ac_text: "Integration tests using @testcontainers/postgresql cover: dry-run zero-mutation, happy-path story sync write, dryRunEpic single batch query (N+1 prevention)"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+        description: "3 integration tests with real PostgreSQL (testcontainers): (1) dry-run zero-mutation - row count unchanged; (2) happy-path sync write - story row with correct checksum persisted; (3) dryRunEpic single batch query with real pg"
+      - type: command
+        command: "pnpm --filter @repo/kbar-sync test:integration"
+        result: SUCCESS
+        output: "3 tests pass; dry-run PASS; happy-path PASS; dryRunEpic PASS"
+
+  - ac_id: "AC-12"
+    ac_text: "sync:story --dry-run uses Approach 2 (computeChecksum + direct DB read); syncStoryToDatabase is NOT called during dry-run; zero-mutation guarantee enforced"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+        description: "dryRunStory() calls computeChecksum + queryDbChecksum(pg Pool); syncStoryToDatabase is never imported or called in dry-run code path"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+        description: "3 tests assert syncStoryToDatabase not called in dry-run (up-to-date, not-in-DB, checksum-differs cases)"
+      - type: test
+        path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+        description: "Integration: dry-run zero-mutation assertion — kbar.stories row count unchanged after dryRunStory() with real PostgreSQL"
+
+touched_files:
+  - path: "packages/backend/kbar-sync/scripts/__types__/cli-options.ts"
+    action: created
+    description: "Zod schemas SyncStoryCLIOptionsSchema and SyncEpicCLIOptionsSchema for CLI option type safety"
+
+  - path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+    action: created
+    description: "sync:story CLI command: flag parsing, Zod validation, path security, dry-run (Approach 2), story sync delegation, artifact sync, conflict detection, exit code management"
+
+  - path: "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    action: created
+    description: "sync:epic CLI command: story directory discovery (2 levels), fail-soft batch sync, N+1-prevention dry-run, --artifact-type cross-story sync with checkpoint"
+
+  - path: "packages/backend/kbar-sync/package.json"
+    action: modified
+    description: "Added sync:story and sync:epic script entries; added test:integration script"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+    action: created
+    description: "63 unit tests for sync-story.ts with vi.hoisted() pattern; 93.48% line coverage"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+    action: created
+    description: "76 unit tests for sync-epic.ts with vi.hoisted() pattern; 90.28% line coverage"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+    action: created
+    description: "3 integration tests with testcontainers (real PostgreSQL): dry-run zero-mutation, happy-path sync write, dryRunEpic N+1 prevention"
+
+  - path: "packages/backend/kbar-sync/vitest.config.ts"
+    action: modified
+    description: "Updated include/exclude patterns to cover scripts/**/*.test.ts; added coverage thresholds (lines: 80, functions: 80, branches: 70)"
+
+  - path: "packages/backend/kbar-sync/vitest.integration.config.ts"
+    action: created
+    description: "Separate Vitest config for CLI integration tests only (scripts/**/*.integration.test.ts); 90s timeout for testcontainers"
+
+commands_run:
+  - command: "pnpm --filter @repo/kbar-sync check-types"
+    result: SUCCESS
+    output: "TypeScript compilation passes — both main tsconfig.json and tsconfig.scripts.json"
+    timestamp: "2026-02-18T03:28:00Z"
+
+  - command: "pnpm --filter @repo/kbar-sync test -- --coverage"
+    result: SUCCESS
+    output: "139 tests pass; sync-story.ts 93.48% lines; sync-epic.ts 90.28% lines; global 89.03% lines"
+    timestamp: "2026-02-18T03:27:00Z"
+
+  - command: "pnpm --filter @repo/kbar-sync test:integration"
+    result: SUCCESS
+    output: "3 integration tests pass with real PostgreSQL (testcontainers)"
+    timestamp: "2026-02-18T03:27:00Z"
+
+  - command: "pnpm --filter @repo/kbar-sync run sync:story -- --help"
+    result: SUCCESS
+    output: "Prints help text; exits 0 without DB env vars"
+    timestamp: "2026-02-18T03:28:00Z"
+
+  - command: "pnpm --filter @repo/kbar-sync run sync:epic -- --help"
+    result: SUCCESS
+    output: "Prints help text; exits 0 without DB env vars"
+    timestamp: "2026-02-18T03:28:00Z"
+
+  - command: "pnpm build --filter @repo/kbar-sync"
+    result: SUCCESS
+    output: "Build successful; 5 tasks completed"
+    timestamp: "2026-02-18T03:28:00Z"
+
+  - command: "npx eslint packages/backend/kbar-sync/scripts/"
+    result: SUCCESS
+    output: "No ESLint errors after auto-fix (Prettier formatting + import order)"
+    timestamp: "2026-02-18T03:29:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 139
+    fail: 0
+  integration:
+    pass: 3
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+    exempt: true
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "frontend_impacted: false in SCOPE.yaml — CLI-only story; no UI components, no browser behavior. ADR-006 skip condition met."
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  lines: 89.03
+  branches: 79.79
+  functions: 100
+  scripts_only:
+    sync_story_lines: 93.48
+    sync_epic_lines: 90.28
+
+notable_decisions:
+  - "Dry-run Approach 2 (CLI-layer checksum comparison) implemented per AC-12 mandate — syncStoryToDatabase is never called in dry-run path"
+  - "Lazy dynamic imports (await import()) used in scripts to prevent @repo/db module-level initialization failure when running --help without DB env vars"
+  - "vi.hoisted() pattern used in unit tests to create shared mock instances before vi.mock() factory functions run (Vitest hoisting constraint)"
+  - "N+1 prevention in sync:epic --dry-run: single batch SQL IN query via batchQueryDbChecksums() instead of per-story queries"
+  - "Integration test files placed under plans/integration-test-tmp/ (within process.cwd()/plans/) to satisfy validateFilePath() security constraint"
+  - "Separate vitest.integration.config.ts created for CLI integration tests to avoid @repo/db module initialization failures from src integration tests in same Vitest process"
+
+known_deviations:
+  - "sync-story.ts lines 561-562 (import.meta.url entry point guard) are inherently untestable without running as a script; excluded from coverage count"
+  - "sync-epic.ts lines 512-513 (same import.meta.url guard) are inherently untestable"
+  - "_force variable removed from sync-epic.ts destructuring (was assigned but unused); --force flag is parsed but not yet consumed in batch loop (future enhancement)"
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 85000, out: 22000 }

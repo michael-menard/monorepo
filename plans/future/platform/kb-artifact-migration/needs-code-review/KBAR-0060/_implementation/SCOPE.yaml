@@ -1,0 +1,28 @@
+schema: 1
+story_id: KBAR-0060
+timestamp: 2026-02-20T00:00:00Z
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/kbar-sync/**"
+  - "packages/backend/orchestrator/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Comprehensive integration test suite for kbar-sync package with real PostgreSQL and YAML fixtures"
+elaboration: completed

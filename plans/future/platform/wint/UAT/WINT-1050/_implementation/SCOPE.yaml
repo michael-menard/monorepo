@@ -1,0 +1,45 @@
+schema: 1
+story_id: "WINT-1050"
+feature_dir: "plans/future/platform/wint"
+timestamp: "2026-02-17T00:00:00Z"
+
+story_type: docs-only
+permission_level: docs-only
+
+files_in_scope:
+  - path: ".claude/commands/story-update.md"
+    action: modify
+    reason: "Primary deliverable — augment with DB write step, mapping table, version bump to v3.0.0"
+
+files_read_only:
+  - path: "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+    reason: "shimUpdateStoryStatus signature reference"
+  - path: "packages/backend/mcp-tools/src/story-management/__types__/index.ts"
+    reason: "StoryUpdateStatusInputSchema.newState enum reference"
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    reason: "SWIM_LANE_TO_STATE mapping reference"
+
+e2e_exemption: true
+e2e_exemption_reason: "Docs-only story — no runtime code changes, no E2E tests applicable"
+
+acceptance_criteria:
+  - id: AC-1
+    summary: "shimUpdateStoryStatus called before YAML frontmatter update"
+  - id: AC-2
+    summary: "14-entry status → DB state mapping table documented"
+  - id: AC-3
+    summary: "Null return from shim → WARNING + filesystem fallback"
+  - id: AC-4
+    summary: "db_updated field in result YAML"
+  - id: AC-5
+    summary: "Worktree cleanup before DB write (uat→completed)"
+  - id: AC-6
+    summary: "Transition validation before DB write"
+  - id: AC-7
+    summary: "--no-index flag preserved, DB write always happens"
+  - id: AC-8
+    summary: "Version bump to v3.0.0"
+  - id: AC-9
+    summary: "Integration test scenarios documented"
+  - id: AC-10
+    summary: "Non-mappable statuses handled with explicit decisions"
