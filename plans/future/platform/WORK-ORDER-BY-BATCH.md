@@ -240,7 +240,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 |---|---|----------|-------|--------|--------------|----------|
 | [ ] | 64 | WINT-9020 | Create doc-sync LangGraph Node ⚡ | ⏸️ | WINT-9010 (#57), WINT-0160 (#21) | P0 |
 | [ ] | 65 | WINT-4080 | Create scope-defender Agent (DA) | ⏳ | None | P1 — **ready to start** |
-| [ ] | 66 | WINT-4090 | Create evidence-judge Agent | ⏳ | None | P1 — **ready to start** |
+| [ ] | 66 | WINT-4090 | Create evidence-judge Agent | 🔧 | qa-verify | P1 |
 | [ ] | 67 | KBAR-0070 | story_get Tool | ⏸️ | KBAR-0060 (#58) | P2 |
 | [ ] | 68 | KBAR-0080 | story_list & story_update Tools | ⏸️ | KBAR-0070 (#67) | P2 |
 | [ ] | 69 | WINT-0190 | Create Patch Queue Pattern and Schema | ⏳ | WINT-0180 (#12) | P3 |

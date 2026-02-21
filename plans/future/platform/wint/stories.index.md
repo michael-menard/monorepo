@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-17T23:55:00Z"
+updated_at: "2026-02-18T10:45:00Z"
 ---
 
 # WINT Stories Index
@@ -18,14 +18,14 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | completed | 2 |
 | uat | 13 |
 | in-qa | 0 |
-| ready-for-qa | 0 |
-| ready-for-code-review | 1 |
+| ready-for-qa | 1 |
+| ready-for-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 2 |
 | created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
+| ready-to-work | 6 |
 | pending | 120 |
 
 ---
@@ -39,7 +39,6 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | WINT-0180 | Define Examples + Negative Examples Framework | — |
 | WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-4060 | Create scope-defender Agent | — |
-| WINT-4070 | Create evidence-judge Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
 
 ---
@@ -1426,7 +1425,10 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4090: Create evidence-judge Agent
 
-**Status:** pending
+**Status:** ready-for-qa
+**Story File:** `wint/ready-for-qa/WINT-4090/WINT-4090.md`
+**Elaboration Complete:** 2026-02-18
+**Verdict:** PASS
 **Depends On:** none
 **Phase:** 4
 **Feature:** Create haiku-powered worker agent that requires proof for all acceptance criteria, no vibes-based approval
@@ -1436,6 +1438,8 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 **Goal:** Ensure rigorous QA standards
 
 **Risk Notes:** May slow down approvals
+
+**Summary:** All 9 audit checks passed. 0 MVP-critical gaps. 10 non-blocking findings logged to KB. Ready for implementation.
 
 ---
 
@@ -1902,7 +1906,8 @@ Migration phase - Update all 52 agents, sync docs, achieve zero directory refere
 
 ### WINT-7020: Create Agent Migration Plan
 
-**Status:** pending
+**Status:** elaboration
+**Elaboration Setup Complete:** 2026-02-18
 **Depends On:** WINT-7010
 **Phase:** 7
 **Feature:** Categorize 52 agents by risk, create migration order (5-10 per iteration)
@@ -1912,6 +1917,8 @@ Migration phase - Update all 52 agents, sync docs, achieve zero directory refere
 **Goal:** Systematic migration strategy
 
 **Risk Notes:** High-risk agents need careful testing
+
+**Story Generated:** 2026-02-18
 
 ---
 
