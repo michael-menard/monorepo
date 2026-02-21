@@ -1,5 +1,6 @@
 story_id: WINT-4090
-current_phase: done
+current_phase: qa-setup
+last_successful_phase: review
 iteration: 1
 pr_number: 368
 pr_url: "https://github.com/michael-menard/monorepo/pull/368"
@@ -11,3 +12,4 @@ phases_completed:
   - plan
   - execute
   - proof
+  - review
