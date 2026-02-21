@@ -1,0 +1,16 @@
+schema: 1
+story_id: WINT-1060
+feature_dir: plans/future/platform/wint
+timestamp: '2026-02-18T14:45:00Z'
+
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+e2e_gate: exempt
+pr_number: 362
+pr_url: https://github.com/michael-menard/monorepo/pull/362

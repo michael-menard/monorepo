@@ -1,0 +1,250 @@
+schema: 1
+story_id: "WINT-9010"
+timestamp: "2026-02-17T21:30:00Z"
+
+steps:
+  - id: 1
+    description: "Scaffold package infrastructure: package.json, tsconfig.json, vitest.config.ts, and src/index.ts for @repo/workflow-logic"
+    files:
+      - "packages/backend/workflow-logic/package.json"
+      - "packages/backend/workflow-logic/tsconfig.json"
+      - "packages/backend/workflow-logic/vitest.config.ts"
+      - "packages/backend/workflow-logic/src/index.ts"
+    dependencies: []
+    slice: packages
+
+  - id: 2
+    description: "Define WorkflowStoryStatus (17-value Zod schema) and DbStoryStatus (8-value snake_case Zod schema) in __types__ module"
+    files:
+      - "packages/backend/workflow-logic/src/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+
+  - id: 3
+    description: "Implement getValidTransitions, toDbStoryStatus, getStatusFromDirectory, and isValidStoryId functions in their respective modules"
+    files:
+      - "packages/backend/workflow-logic/src/transitions/index.ts"
+      - "packages/backend/workflow-logic/src/adapter/index.ts"
+      - "packages/backend/workflow-logic/src/directory/index.ts"
+      - "packages/backend/workflow-logic/src/validation/index.ts"
+    dependencies: [2]
+    slice: packages
+
+  - id: 4
+    description: "Wire public exports in src/index.ts (re-export all public symbols)"
+    files:
+      - "packages/backend/workflow-logic/src/index.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 5
+    description: "Write unit tests for all four functions with minimum 80% line coverage"
+    files:
+      - "packages/backend/workflow-logic/src/__tests__/getValidTransitions.test.ts"
+      - "packages/backend/workflow-logic/src/__tests__/toDbStoryStatus.test.ts"
+      - "packages/backend/workflow-logic/src/__tests__/getStatusFromDirectory.test.ts"
+      - "packages/backend/workflow-logic/src/__tests__/isValidStoryId.test.ts"
+    dependencies: [3]
+    slice: packages
+
+  - id: 6
+    description: "Add @repo/workflow-logic workspace dependency to mcp-tools and orchestrator; update story-compatibility to import getStatusFromDirectory and isValidStoryId from @repo/workflow-logic"
+    files:
+      - "packages/backend/mcp-tools/package.json"
+      - "packages/backend/orchestrator/package.json"
+      - "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    dependencies: [4]
+    slice: packages
+
+files_to_change:
+  # New package scaffold
+  - path: "packages/backend/workflow-logic/package.json"
+    action: create
+    reason: "New @repo/workflow-logic package declaration with pnpm workspace compatibility (AC-1, AC-6)"
+
+  - path: "packages/backend/workflow-logic/tsconfig.json"
+    action: create
+    reason: "TypeScript config mirroring mcp-tools pattern — extends root tsconfig, NodeNext module resolution (AC-10)"
+
+  - path: "packages/backend/workflow-logic/vitest.config.ts"
+    action: create
+    reason: "Vitest config with 80% coverage thresholds to enforce AC-9"
+
+  - path: "packages/backend/workflow-logic/src/index.ts"
+    action: create
+    reason: "Public exports entry point — re-exports all public functions and types (AC-1)"
+
+  # Types module
+  - path: "packages/backend/workflow-logic/src/__types__/index.ts"
+    action: create
+    reason: "WorkflowStoryStatusSchema (17-value hyphenated Zod enum) and DbStoryStatusSchema (8-value snake_case). These are the canonical type definitions (AC-12)"
+
+  # Business logic modules
+  - path: "packages/backend/workflow-logic/src/transitions/index.ts"
+    action: create
+    reason: "getValidTransitions(currentStatus) — returns allowed next WorkflowStoryStatus values (AC-2, AC-5)"
+
+  - path: "packages/backend/workflow-logic/src/adapter/index.ts"
+    action: create
+    reason: "toDbStoryStatus(status: WorkflowStoryStatus): DbStoryStatus — pure adapter bridging hyphenated model to snake_case DB model (AC-12, AC-13)"
+
+  - path: "packages/backend/workflow-logic/src/directory/index.ts"
+    action: create
+    reason: "getStatusFromDirectory(dirName) — maps swim-lane dir names to WorkflowStoryStatus (AC-3, AC-5)"
+
+  - path: "packages/backend/workflow-logic/src/validation/index.ts"
+    action: create
+    reason: "isValidStoryId(id) — validates {PREFIX}-{NNNN} format (AC-4, AC-5)"
+
+  # Test files
+  - path: "packages/backend/workflow-logic/src/__tests__/getValidTransitions.test.ts"
+    action: create
+    reason: "Unit tests for getValidTransitions covering all 17 statuses and transition edges (AC-9)"
+
+  - path: "packages/backend/workflow-logic/src/__tests__/toDbStoryStatus.test.ts"
+    action: create
+    reason: "Unit tests for toDbStoryStatus covering all mapping branches (AC-9)"
+
+  - path: "packages/backend/workflow-logic/src/__tests__/getStatusFromDirectory.test.ts"
+    action: create
+    reason: "Unit tests for getStatusFromDirectory — known dirs, unknown dirs, null return (AC-9)"
+
+  - path: "packages/backend/workflow-logic/src/__tests__/isValidStoryId.test.ts"
+    action: create
+    reason: "Unit tests for isValidStoryId — valid formats, invalid formats, edge cases (AC-9)"
+
+  # Dependency wiring
+  - path: "packages/backend/mcp-tools/package.json"
+    action: modify
+    reason: "Add @repo/workflow-logic as workspace:* dependency (AC-7)"
+
+  - path: "packages/backend/orchestrator/package.json"
+    action: modify
+    reason: "Add @repo/workflow-logic as workspace:* dependency (AC-8)"
+
+  # Integration in mcp-tools (AC-7: at least one function replaced by import)
+  - path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+    action: modify
+    reason: "Replace local STORY_ID_REGEX and SWIM_LANE_TO_STATE-derived getStatusFromDirectory with imports from @repo/workflow-logic (AC-7)"
+
+commands_to_run:
+  - command: "pnpm install"
+    when: "after modifying package.json files in step 6"
+    required: true
+
+  - command: "pnpm --filter @repo/workflow-logic build"
+    when: "after all code changes in the new package"
+    required: true
+
+  - command: "pnpm --filter @repo/workflow-logic test:coverage"
+    when: "after all tests written — must pass 80% threshold"
+    required: true
+
+  - command: "pnpm --filter @repo/mcp-tools type-check"
+    when: "after dependency wiring changes in mcp-tools"
+    required: true
+
+  - command: "pnpm --filter @repo/orchestrator type-check"
+    when: "after dependency wiring changes in orchestrator"
+    required: true
+
+  - command: "pnpm check-types:all"
+    when: "final validation — zero TypeScript errors across all three packages"
+    required: true
+
+  - command: "pnpm lint --filter @repo/workflow-logic"
+    when: "after all code written"
+    required: true
+
+  - command: "pnpm lint --filter @repo/mcp-tools"
+    when: "after mcp-tools changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "package.json with name: @repo/workflow-logic exists and pnpm install succeeds"
+    evidence_type: command
+
+  - ac_id: "AC-2"
+    planned_evidence: "Unit test: getValidTransitions.test.ts — exercises all 17 statuses, verifies return arrays match validTransitions record"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: getStatusFromDirectory.test.ts — verifies all 6 known directories return WorkflowStoryStatus, unknown dirs return null"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: isValidStoryId.test.ts — verifies WINT-9010, KBAR-0030 pass; UUID, empty string, malformed IDs fail"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Source review: all public functions parse inputs through Zod .parse() or .safeParse() at their entry points"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "package.json dependencies list only zod, typescript, @repo/logger — no MCP/LangGraph/AWS SDKs"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "mcp-tools/package.json has @repo/workflow-logic workspace:* dep; story-compatibility/__types__/index.ts imports isValidStoryId or getStatusFromDirectory from @repo/workflow-logic"
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "orchestrator/package.json has @repo/workflow-logic workspace:* dep"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    planned_evidence: "pnpm --filter @repo/workflow-logic test:coverage passes with >=80% lines, functions, branches, statements"
+    evidence_type: command
+
+  - ac_id: "AC-10"
+    planned_evidence: "pnpm check-types:all passes with zero errors across workflow-logic, mcp-tools, orchestrator"
+    evidence_type: command
+
+  - ac_id: "AC-11"
+    planned_evidence: "pnpm lint passes with zero errors on all new and modified files"
+    evidence_type: command
+
+  - ac_id: "AC-12"
+    planned_evidence: "WorkflowStoryStatusSchema in __types__/index.ts has all 17 hyphenated values matching story-state-machine.ts; exported from index.ts"
+    evidence_type: file
+
+  - ac_id: "AC-13"
+    planned_evidence: "toDbStoryStatus function exists in adapter/index.ts and is exported from package index.ts; unit test in toDbStoryStatus.test.ts covers all mappings"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should the new package use the same tsconfig pattern as mcp-tools (extends root, NodeNext resolution) or the orchestrator pattern (standalone, ES2022 target)?"
+    decision: "Use mcp-tools pattern — extends root tsconfig with NodeNext module resolution and composite: true. The orchestrator pattern is standalone due to its direct TS execution needs; workflow-logic is a library package, same category as mcp-tools."
+    rationale: "workflow-logic is a shared library (not a runnable script), so it mirrors the mcp-tools tsconfig pattern: extends root, NodeNext resolution, composite:true, declaration:true. This ensures consistent compile-time interop for both consumers (mcp-tools and orchestrator)."
+    decided_by: auto
+    tier: 1
+
+  - id: ARCH-002
+    question: "Should getStatusFromDirectory return WorkflowStoryStatus or a subset type? The SWIM_LANE_TO_STATE in mcp-tools maps only 6 directories to snake_case values — there is no 1:1 mapping for all 17 WorkflowStoryStatus values."
+    decision: "getStatusFromDirectory returns WorkflowStoryStatus | null. The mapping covers the 6 swim-lane directories only (backlog→pending, ready-to-work→ready-to-work, in-progress→in-progress, ready-for-qa→ready-for-qa, UAT→uat, done→completed). Unknown directories return null. The function replaces the SWIM_LANE_TO_STATE lookup in the shim — it does NOT need to cover all 17 statuses, only the directories that exist on disk."
+    rationale: "The current SWIM_LANE_TO_STATE in story-compatibility maps 6 directories to DB snake_case states. getStatusFromDirectory is the canonical hyphenated equivalent. Returning null for unknown dirs matches the existing behavior (no entry in SWIM_LANE_TO_STATE). The AC-3 description explicitly lists the 7 directories to map (backlog, elaboration, ready-to-work, in-progress, ready-for-qa, UAT, done) — elaboration maps to in-elaboration."
+    decided_by: auto
+    tier: 1
+
+  - id: ARCH-003
+    question: "For AC-7, which specific import(s) in story-compatibility/__types__/index.ts should be replaced by @repo/workflow-logic imports?"
+    decision: "Replace STORY_ID_REGEX with isValidStoryId from @repo/workflow-logic. SWIM_LANE_TO_STATE can remain local in story-compatibility (it is tightly coupled to the snake_case DB model used by the shim) — it does NOT duplicate getStatusFromDirectory which operates in the WorkflowStoryStatus domain. This satisfies 'at least one existing function' per AC-7 without over-migrating."
+    rationale: "STORY_ID_REGEX is a pure validation primitive with no DB coupling — isValidStoryId is its direct replacement. SWIM_LANE_TO_STATE is structurally different: it maps to snake_case DB values (not WorkflowStoryStatus), so it is NOT a duplicate of getStatusFromDirectory. Replacing STORY_ID_REGEX usage with isValidStoryId satisfies AC-7 cleanly. The mcp-tools team can replace SWIM_LANE_TO_STATE with getStatusFromDirectory + toDbStoryStatus in WINT-9020+ once the full migration path is validated."
+    decided_by: auto
+    tier: 1
+
+complexity: moderate
+
+notes:
+  - "No Subtasks section in story file — steps generated from ACs and SCOPE.yaml analysis."
+  - "The 17 WorkflowStoryStatus values come from story-state-machine.ts StoryStatusSchema — use these exact string literals."
+  - "The 8 DbStoryStatus values (snake_case) come from mcp-tools __types__/index.ts state enums: backlog, ready_to_work, in_progress, ready_for_qa, in_qa, blocked, done, cancelled."
+  - "toDbStoryStatus mapping: pending→backlog, generated→backlog, in-elaboration→backlog, needs-refinement→backlog, needs-split→backlog, ready-to-work→ready_to_work, in-progress→in_progress, ready-for-code-review→in_progress, code-review-failed→in_progress, ready-for-qa→ready_for_qa, in-qa→in_qa, needs-work→in_progress, uat→in_qa, completed→done, blocked→blocked, cancelled→cancelled, superseded→cancelled."
+  - "STORY_ID_REGEX in story-compatibility is /^[A-Z]{2,10}-\\d{3,4}$/ — the shared isValidStoryId must maintain the same pattern for backward compat. ELAB noted extending to \\d{3,5} is low-priority; keep at \\d{3,4} for this story."
+  - "Package must be ESM (type: module) to match mcp-tools and orchestrator."
+  - "vitest.config.ts should match mcp-tools pattern with 80% coverage thresholds across lines, functions, branches, statements."
+  - "pnpm install must be run after modifying package.json files — workspace symlinks are created at install time."
+  - "No barrel files per CLAUDE.md: index.ts re-exports named exports, not re-exporting star. But individual module index.ts files are acceptable since they ARE the module entry points."
+  - "logger import (@repo/logger) is permitted but not required if functions are pure — only add logger.debug/warn if there is meaningful runtime observability value."

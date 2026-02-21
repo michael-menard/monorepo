@@ -7,11 +7,18 @@
  *   Shim treats both as "not in DB → try directory fallback" (Phase 1 acceptable)
  * - storyGetByStatus/storyGetByFeature return [] on BOTH empty result AND DB-error
  *   Shim triggers directory fallback on empty [] for list queries (Phase 1 acceptable)
+ *
+ * WINT-9010: isValidStoryId imported from @repo/workflow-logic.
+ * STORY_ID_REGEX is kept for backward-compatible re-export only; prefer isValidStoryId.
  */
 
 import * as fs from 'fs'
 import * as path from 'path'
 import { z } from 'zod'
+import { isValidStoryId } from '@repo/workflow-logic'
+
+// Re-export isValidStoryId so callers that imported from this module still work
+export { isValidStoryId }
 
 /**
  * Swim-lane directory name → storyStateEnum mapping
@@ -46,6 +53,9 @@ export const SWIM_LANE_DIRS = Object.keys(SWIM_LANE_TO_STATE) as SwimLaneDir[]
 /**
  * Story ID regex for directory-based story discovery.
  * Matches human-readable story IDs like WINT-0090, KBAR-1234, TEST-9999.
+ *
+ * @deprecated Use isValidStoryId from @repo/workflow-logic instead.
+ *   STORY_ID_REGEX is kept for backward compatibility only.
  */
 export const STORY_ID_REGEX = /^[A-Z]{2,10}-\d{3,4}$/
 

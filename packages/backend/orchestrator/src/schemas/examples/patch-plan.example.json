@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "patches": [
+    { "patch_type": "types_schema", "description": "Add PatchPlan Zod schema", "max_files": 2, "max_diff_lines": 50,
+      "repair_loop": { "fix_only_referenced_errors": true, "max_iterations": 3, "rerun_command": "pnpm check-types" } },
+    { "patch_type": "api", "description": "Add POST /patch-plans endpoint", "max_files": 3, "max_diff_lines": 100, "verification_command": "pnpm build" },
+    { "patch_type": "ui", "description": "Add PatchPlanForm component", "max_files": 3, "max_diff_lines": 120 },
+    { "patch_type": "tests", "description": "Unit tests for patch plan validation", "max_files": 2, "max_diff_lines": 80, "verification_command": "pnpm test" },
+    { "patch_type": "cleanup", "description": "Remove deprecated patch utilities", "max_files": 2, "max_diff_lines": 30 }
+  ]
+}

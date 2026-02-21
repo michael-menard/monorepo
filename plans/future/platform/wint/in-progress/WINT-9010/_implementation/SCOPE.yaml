@@ -1,0 +1,30 @@
+schema: 1
+story_id: WINT-9010
+timestamp: '2026-02-17T21:10:00Z'
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - 'packages/backend/workflow-logic/**'
+  - 'packages/backend/mcp-tools/**'
+  - 'packages/backend/orchestrator/**'
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: Extract shared business logic (status transitions, directory mapping, ID validation) into @repo/workflow-logic package for use by both MCP tools and LangGraph nodes
+
+elaboration: 'completed'
