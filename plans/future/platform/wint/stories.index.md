@@ -19,14 +19,14 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 13 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
-| ready-for-code-review | 0 |
+| ready-for-code-review | 2 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 2 |
 | created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
+| ready-to-work | 4 |
 | pending | 118 |
 
 ---
