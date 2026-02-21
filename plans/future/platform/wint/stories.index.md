@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-20T22:15:00Z"
+updated_at: "2026-02-20T23:00:00Z"
 ---
 
 # WINT Stories Index
@@ -16,17 +16,17 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 14 |
+| uat | 13 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
-| ready-for-code-review | 0 |
+| ready-for-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 2 |
 | created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
-| pending | 119 |
+| pending | 118 |
 
 ---
 
@@ -756,7 +756,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1070: Deprecate stories.index.md as Source of Truth
 
-**Status:** uat
+**Status:** needs-code-review
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
@@ -2261,6 +2261,9 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 **Goal:** Documentation sync works in both Claude Code and LangGraph workflows with identical outputs for the same inputs.
 
 **Risk Notes:** AC-1 (path resolution) must be resolved in elaboration before implementation begins. Current nodes/workflow/doc-sync.ts uses subprocess delegation — native TypeScript port is the correct implementation approach per SKILL.md contract. Split risk: 0.8 (13 ACs, path ambiguity). Estimated review cycles: 3.
+
+**Story Generated:** 2026-02-20
+**Elaboration Setup:** 2026-02-20
 
 ---
 
