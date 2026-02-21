@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-21T00:45:00Z"
+updated_at: "2026-02-20T12:00:00Z"
 ---
 
 # WINT Stories Index
@@ -16,19 +16,19 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 17 |
+| uat | 18 |
 | in-qa | 0 |
 | ready-for-qa | 2 |
 | needs-code-review | 0 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
 | failed-qa | 0 |
-| elaboration | 0 |
-| created | 2 |
+| elaboration | 1 |
+| created | 3 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 4 |
-| pending | 118 |
+| ready-to-work | 3 |
+| pending | 116 |
 
 ---
 
@@ -387,7 +387,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0180: Define Examples + Negative Examples Framework
 
-**Status:** ready-to-work
+**Status:** created
 **Verdict:** CONDITIONAL PASS
 **Elaboration Complete:** 2026-02-14
 **Depends On:** none
@@ -528,9 +528,9 @@ Create health check script. Document VRAM requirements per model. Create model s
 
 ---
 
-### WINT-0250: Define Escalation Triggers
+### WINT-0250: Define Escalation Rules for Multi-Model Routing (Graduated Chain + Hard Bypass)
 
-**Status:** pending
+**Status:** elaboration
 **Depends On:** WINT-0220, WINT-0230
 **Phase:** 0
 **Feature:** Define when to escalate from cheaper to more expensive model:
@@ -700,10 +700,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** ready-to-work
+**Status:** uat
 **Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
-**Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
+**Story File:** `wint/UAT/WINT-1050/WINT-1050.md`
 **Points:** 2
 **Priority:** high
 **Feature:** Augment /story-update command with DB write via shimUpdateStoryStatus before YAML frontmatter update. DB becomes source of truth for story status. Frontmatter sync retained for Phase 1 backward compatibility.
@@ -723,17 +723,12 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 - AC-9: Integration test scenarios documented (A-F)
 - AC-10: Non-mappable statuses handled with explicit decisions
 
-**Elaboration Verdict:** CONDITIONAL PASS (2026-02-20)
-- MVP gaps: 0
-- Low-severity findings: 3 (all non-blocking, KB-logged)
-- ACs added: 0
-- Subtasks: 4 (ST-1: read baseline, ST-2: build mapping table, ST-3: DB write step, ST-4: result YAML + version bump)
-
 **Risk Notes:** WINT-1070 (index deprecation) may land in-progress; non-blocking (index update retained). shimUpdateStoryStatus AC-2 constraint (no FS fallback on failure) must be observed.
 
 **Story Generated:** 2026-02-17
 **Elaboration Completed:** 2026-02-20
-**Moved to Ready-to-Work:** 2026-02-20
+**Implementation Complete:** 2026-02-18
+**QA Verification Complete:** 2026-02-18 — All 10 ACs verified PASS, docs-only story, verdict: PASS
 
 ---
 
@@ -1109,7 +1104,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2100: Create session-manager Agent
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-2090
 **Phase:** 2
 **Feature:** Create haiku-powered worker agent that manages session lifecycle

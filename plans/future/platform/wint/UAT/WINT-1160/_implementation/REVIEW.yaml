@@ -1,6 +1,6 @@
 schema: 1
-story_id: "WINT-1160"
-timestamp: "2026-02-20T00:00:00.000Z"
+story_id: WINT-1160
+timestamp: "2026-02-21T06:10:00Z"
 iteration: 1
 
 verdict: PASS
@@ -28,8 +28,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    notes:
-      - "No code files found. Touched files are markdown documentation only (.md)"
 
   style:
     verdict: PASS
@@ -37,9 +35,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    notes:
-      - "Documentation-only story"
-      - "No code files (tsx, jsx, ts, js) found in touched files"
 
   syntax:
     verdict: PASS
@@ -47,8 +42,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    notes:
-      - "Documentation-only story. No code files (.ts, .tsx, .js, .jsx) found in touched files."
 
   security:
     verdict: PASS
@@ -56,8 +49,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    confidence: high
-    files_checked: 2
 
   typecheck:
     verdict: PASS
@@ -65,8 +56,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    notes:
-      - "No TypeScript files were modified. Documentation-only."
 
   build:
     verdict: PASS
@@ -74,11 +63,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    notes:
-      - "Pre-existing issue on main branch: @repo/database-schema build references missing tsconfig.build.json"
-      - "This file is staged in git but does not exist on disk"
-      - "NOT caused by WINT-1160 changes (documentation-only)"
-      - "Verified: same failure occurs on main branch with `pnpm build --filter=@repo/database-schema`"
 
   reusability:
     verdict: PASS
@@ -86,7 +70,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    files_checked: 2
 
   react:
     verdict: PASS
@@ -94,8 +77,6 @@ findings:
     errors: 0
     warnings: 0
     findings: []
-    notes:
-      - "No .tsx files touched"
 
   typescript:
     verdict: PASS
@@ -115,20 +96,6 @@ total_errors: 0
 total_warnings: 0
 auto_fixable_count: 0
 
-summary:
-  story_type: "Documentation-only (elaboration and planning artifacts)"
-  scope: "WINT-1160 - Parallel Work Conflict Prevention"
-  changes:
-    - type: "Documentation"
-      count: 2
-      details: "Elaboration and planning documents for story definition"
-  quality_gate: "PASS - all applicable workers passed"
-  notes:
-    - "This story contains no source code changes"
-    - "All code quality workers run successfully with clean results"
-    - "The @repo/database-schema build failure is pre-existing and unrelated to this story"
-    - "Story is ready for next phase of work (implementation or deployment)"
-
 tokens:
-  in: 0
-  out: 0
+  in: 85000
+  out: 12000

@@ -46,6 +46,29 @@ const STATUS_TO_COMMAND: Record<string, string> = {
   '⏸️': 'dev-implement-story',
 }
 
+// Pipeline priority — finish work before starting new work
+const STAGE_PRIORITY: Record<string, number> = {
+  'qa': 0,           // ready-for-qa → /qa-verify-story
+  'code-review': 1,  // needs-code-review → /dev-code-review
+  'implement': 2,    // ready-to-work / in-progress → /dev-implement-story
+  'elab': 3,         // elaboration → /elab-story
+}
+
+const STAGE_TO_COMMAND: Record<string, string> = {
+  'qa': 'qa-verify-story',
+  'code-review': 'dev-code-review',
+  'implement': 'dev-implement-story',
+  'elab': 'elab-story',
+}
+
+const STAGE_DIRS: { dir: string; stage: string }[] = [
+  { dir: 'ready-for-qa', stage: 'qa' },
+  { dir: 'needs-code-review', stage: 'code-review' },
+  { dir: 'ready-to-work', stage: 'implement' },
+  { dir: 'in-progress', stage: 'implement' },
+  { dir: 'elaboration', stage: 'elab' },
+]
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -63,6 +86,7 @@ interface QueueItem {
   priority: string
   row: string
   status: string
+  stage: 'qa' | 'code-review' | 'implement' | 'elab'
   feature_dir: string
   command: string
   deps: Dep[]
@@ -128,6 +152,50 @@ function buildUatSet(featureDir: string): Set<string> {
   }
 
   return uatStories
+}
+
+/**
+ * Scan filesystem stage directories to determine each story's pipeline stage.
+ * Priority order: qa > code-review > implement > elab.
+ * Stories already in UAT are excluded.
+ */
+function buildStageMap(
+  featureDir: string,
+  uatStories: Set<string>,
+): Map<string, { stage: string; feature_dir: string }> {
+  const stageMap = new Map<string, { stage: string; feature_dir: string }>()
+  const storyIdPattern = /^[A-Z]+-\d+$/
+
+  for (const { dir, stage } of STAGE_DIRS) {
+    const dirsToScan: { scanPath: string; featureBase: string }[] = []
+
+    // Top-level stage dir
+    const topDir = path.join(featureDir, dir)
+    if (fs.existsSync(topDir)) {
+      dirsToScan.push({ scanPath: topDir, featureBase: featureDir })
+    }
+
+    // Epic-level stage dirs
+    for (const epicDir of Object.values(EPIC_MAP)) {
+      const epicStageDir = path.join(featureDir, epicDir, dir)
+      if (fs.existsSync(epicStageDir)) {
+        dirsToScan.push({ scanPath: epicStageDir, featureBase: path.join(featureDir, epicDir) })
+      }
+    }
+
+    for (const { scanPath, featureBase } of dirsToScan) {
+      for (const entry of fs.readdirSync(scanPath)) {
+        if (!storyIdPattern.test(entry)) continue
+        if (uatStories.has(entry)) continue
+        // Only set if not already mapped (earlier = higher priority stage wins)
+        if (!stageMap.has(entry)) {
+          stageMap.set(entry, { stage, feature_dir: featureBase })
+        }
+      }
+    }
+  }
+
+  return stageMap
 }
 
 function isComplete(checkbox: string, status: string, allCols: string): boolean {
@@ -197,17 +265,31 @@ function resolveFeatureDir(featureDir: string, storyId: string): string {
   return path.join(featureDir, epicDir)
 }
 
-function resolveCommand(status: string, featureDir: string, storyId: string): string {
-  const trimmed = status.trim()
-  let cmd = 'dev-implement-story'
-  for (const [emoji, c] of Object.entries(STATUS_TO_COMMAND)) {
-    if (trimmed.includes(emoji)) {
-      cmd = c
-      break
+function resolveCommand(status: string, featureDir: string, storyId: string, stage?: string): string {
+  let cmd: string | undefined
+  // Stage-based command takes precedence when provided
+  if (stage && STAGE_TO_COMMAND[stage]) {
+    cmd = STAGE_TO_COMMAND[stage]
+  }
+  if (!cmd) {
+    const trimmed = status.trim()
+    cmd = 'dev-implement-story'
+    for (const [emoji, c] of Object.entries(STATUS_TO_COMMAND)) {
+      if (trimmed.includes(emoji)) {
+        cmd = c
+        break
+      }
     }
   }
   const dir = resolveFeatureDir(featureDir, storyId)
   return `/${cmd} ${dir} ${storyId}`
+}
+
+function resolveStageFromStatus(status: string): 'qa' | 'code-review' | 'implement' | 'elab' {
+  const trimmed = status.trim()
+  if (trimmed.includes('🔍')) return 'qa'
+  if (trimmed.includes('📝') || trimmed.includes('🆕')) return 'elab'
+  return 'implement'
 }
 
 // ---------------------------------------------------------------------------

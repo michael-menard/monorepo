@@ -1,0 +1,31 @@
+typecheck:
+  verdict: PASS
+  files_checked: 7
+  errors: 0
+  findings: []
+  command: pnpm type-check
+  tokens:
+    in: 2500
+    out: 200
+  details:
+    checked_files:
+      - packages/backend/orchestrator/src/model-selector/__types__/index.ts
+      - packages/backend/orchestrator/src/model-selector/leaderboard.ts
+      - packages/backend/orchestrator/src/model-selector/reports.ts
+      - packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+      - packages/backend/orchestrator/src/model-selector/__tests__/reports.test.ts
+      - packages/backend/orchestrator/src/model-selector/__tests__/integration.test.ts
+      - .claude/commands/model-leaderboard.md
+    preexisting_errors:
+      - file: src/db/story-repository.ts
+        line: 258
+        code: TS2393
+        severity: medium
+        message: Duplicate function implementation (getAllStories)
+      - file: src/db/story-repository.ts
+        line: 310
+        code: TS2393
+        severity: medium
+        message: Duplicate function implementation (getAllStories)
+    status: All MODL-0040 touched files pass type-check with no errors or warnings
+    note: Pre-existing errors in story-repository.ts are outside the touched file scope
