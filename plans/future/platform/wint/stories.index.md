@@ -16,9 +16,9 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 13 |
+| uat | 14 |
 | in-qa | 0 |
-| ready-for-qa | 2 |
+| ready-for-qa | 1 |
 | ready-for-code-review | 1 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
@@ -27,7 +27,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 4 |
-| pending | 118 |
+| pending | 117 |
 
 ---
 
@@ -2248,24 +2248,23 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** ready-for-qa
+**Status:** uat
 **Story Generated:** 2026-02-18
-**Story File:** `wint/ready-for-qa/WINT-9020/WINT-9020.md`
+**Story File:** `wint/UAT/WINT-9020/WINT-9020.md`
 **Code Review:** PASS (2026-02-21) — 0 errors, 1 warning (pre-existing, unrelated)
-**Depends On:** WINT-9010, WINT-0160
+**Implementation Complete:** 2026-02-20
+**QA Verification Complete:** 2026-02-20 — All 13 ACs verified PASS, 42 tests passing with 86.14% coverage, architecture fully compliant. Verdict: PASS
+**Depends On:** none
 **Phase:** 9
 **Points:** 5
 **Priority:** P2
-**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Resolves path discrepancy (nodes/sync/ vs nodes/workflow/) in elaboration phase (AC-1).
+**Feature:** Port doc-sync agent logic to LangGraph node — native TypeScript implementation of the 7-phase contract from SKILL.md (File Discovery, Frontmatter Parsing, Section Mapping, Documentation Updates, Mermaid Regeneration, Changelog Drafting, SYNC-REPORT.md Generation). Implemented at nodes/sync/doc-sync.ts (new directory per index entry), resolving AC-1 path discrepancy.
 **Infrastructure:**
-- packages/backend/orchestrator/src/nodes/sync/ (new directory per index entry) or nodes/workflow/ (existing — AC-1 decides)
+- packages/backend/orchestrator/src/nodes/sync/ (new directory per AC-1 decision)
 
 **Goal:** Documentation sync works in both Claude Code and LangGraph workflows with identical outputs for the same inputs.
 
-**Risk Notes:** AC-1 (path resolution) must be resolved in elaboration before implementation begins. Current nodes/workflow/doc-sync.ts uses subprocess delegation — native TypeScript port is the correct implementation approach per SKILL.md contract. Split risk: 0.8 (13 ACs, path ambiguity). Estimated review cycles: 3.
-
-**Story Generated:** 2026-02-20
-**Elaboration Setup:** 2026-02-20
+**Risk Notes:** AC-1 path resolution completed during implementation. Current nodes/workflow/doc-sync.ts subprocess delegation preserved as fallback. Native TypeScript port at nodes/sync/ matches SKILL.md 7-phase contract. All risks mitigated through implementation.
 
 ---
 
