@@ -1,0 +1,198 @@
+schema: 2
+story_id: "WINT-9020"
+timestamp: "2026-02-20T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Resolve Path and Create Directory Scaffold — create nodes/sync/ directory with index.ts and doc-sync.ts skeleton; update nodes/index.ts to include sync exports"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
+      - "packages/backend/orchestrator/src/nodes/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+      - "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/workflow/index.ts"
+    dependencies: []
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-1", "AC-9"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Port Zod Schemas and State Interface — move/extend DocSyncConfigSchema, DocSyncResultSchema (with database_status field), and GraphStateWithDocSync into nodes/sync/doc-sync.ts"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/workflow/doc-sync.ts"
+      - "packages/backend/orchestrator/src/runner/state-helpers.ts"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-3", "AC-4", "AC-8"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Implement Phase 1 (File Discovery via git diff + timestamp fallback) and Phase 2 (Frontmatter Parsing with YAML extraction + optional DB merge)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+    dependencies: [2]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-2", "AC-6"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Implement Phase 3 (Section Mapping — agent filename pattern to doc section) and Phase 4 (Documentation Updates — surgical table edits for added/modified/deleted agents)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [3]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-2"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Implement Phase 5 (Mermaid Diagram Regeneration — parse spawns frontmatter field, generate graph TD syntax, validate brackets and arrows) and Phase 6 (Changelog Entry Drafting — semver bump + [DRAFT] entry at top of changelog)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+    dependencies: [4]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-2"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Implement Phase 7 (SYNC-REPORT.md generation) and wire all 7 phases into docSyncImpl(); map 4 completion signals (DOC-SYNC COMPLETE, DOC-SYNC COMPLETE (warnings), DOC-SYNC CHECK FAILED, DOC-SYNC BLOCKED) to return states; import isValidStoryId from @repo/workflow-logic if needed"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    files_to_read:
+      - ".claude/skills/doc-sync/SKILL.md"
+      - "packages/backend/workflow-logic/src/index.ts"
+    dependencies: [5]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-2", "AC-5", "AC-7"]
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Write unit test suite (≥80% coverage) covering all TEST-PLAN.md scenarios: HP-1 to HP-5 (happy paths), EC-1 to EC-6 (error cases), EG-1 to EG-6 (edge cases)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+    files_to_read:
+      - "plans/future/platform/wint/in-progress/WINT-9020/_pm/TEST-PLAN.md"
+      - "packages/backend/orchestrator/src/nodes/workflow/__tests__/doc-sync.test.ts"
+    dependencies: [6]
+    slice: backend
+    verification: "pnpm test --filter @repo/orchestrator -- --coverage"
+    acs_covered: ["AC-10", "AC-13"]
+
+  - id: 8
+    subtask_id: "ST-8"
+    description: "TypeScript and ESLint cleanup — fix any remaining type errors or lint warnings across all new/changed files in nodes/sync/"
+    files:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
+      - "packages/backend/orchestrator/src/nodes/index.ts"
+      - "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+    files_to_read: []
+    dependencies: [7]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm lint --filter @repo/orchestrator"
+    acs_covered: ["AC-11", "AC-12"]
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+    action: create
+    reason: "Native 7-phase TypeScript implementation of doc-sync node (AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8)"
+  - path: "packages/backend/orchestrator/src/nodes/sync/index.ts"
+    action: create
+    reason: "Named exports for sync domain (AC-9)"
+  - path: "packages/backend/orchestrator/src/nodes/index.ts"
+    action: modify
+    reason: "Add sync domain exports under 'Sync Nodes' section (AC-9)"
+  - path: "packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts"
+    action: create
+    reason: "Unit test suite for native 7-phase node (AC-10, AC-13)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after each subtask"
+    required: true
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after ST-8"
+    required: true
+  - command: "pnpm test --filter @repo/orchestrator -- --coverage"
+    when: "after ST-7 and ST-8"
+    required: true
+  - command: "pnpm check-types --filter @repo/workflow-logic"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File created at nodes/sync/doc-sync.ts; AC-1 path decision documented (nodes/sync/ — auto-resolved in story QA Discovery Notes)"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "Implementation of all 7 phases in docSyncImpl(); confirmed by unit tests HP-1 (full 7-phase run)"
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: "DocSyncConfigSchema with checkOnly and force fields; HP-2 (check-only no writes), HP-4 (force mode)"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "DocSyncResultSchema with all required fields including database_status; DocSyncResultSchema.parse() assertion in HP-1"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "4 completion signal paths mapped in docSyncImpl(); tested via HP-2 (CHECK FAILED), EC-6 (BLOCKED), HP-1 (COMPLETE)"
+    evidence_type: test
+  - ac_id: "AC-6"
+    planned_evidence: "EC-3 (DB unavailable) and EC-4 (DB timeout) tests with distinct database_status assertions"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "import { isValidStoryId } from '@repo/workflow-logic' used in Phase 1 or Phase 3 if story-aware filtering is needed"
+    evidence_type: file
+  - ac_id: "AC-8"
+    planned_evidence: "docSyncNode and createDocSyncNode use createToolNode() factory from node-factory.ts"
+    evidence_type: file
+  - ac_id: "AC-9"
+    planned_evidence: "Named exports in nodes/sync/index.ts and nodes/index.ts with 'Sync Nodes' section"
+    evidence_type: file
+  - ac_id: "AC-10"
+    planned_evidence: "pnpm test --filter @repo/orchestrator -- --coverage reports ≥80% on nodes/sync/doc-sync.ts"
+    evidence_type: command
+  - ac_id: "AC-11"
+    planned_evidence: "pnpm check-types --filter @repo/orchestrator exits 0"
+    evidence_type: command
+  - ac_id: "AC-12"
+    planned_evidence: "pnpm lint --filter @repo/orchestrator exits 0 on all changed files"
+    evidence_type: command
+  - ac_id: "AC-13"
+    planned_evidence: "EG-6 deterministic fixture test: two identical runs produce same DocSyncResult counts"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "AC-1: Should the native port be at nodes/sync/doc-sync.ts or should it replace nodes/workflow/doc-sync.ts?"
+    decision: "Implement at nodes/sync/doc-sync.ts (new directory). Retain nodes/workflow/doc-sync.ts as subprocess fallback."
+    rationale: "Aligns with story index entry path specification. Keeps native port separate from subprocess variant during Phase 9 parity work. Auto-resolved in QA Discovery Notes and elaboration ANALYSIS.md."
+    decided_by: auto
+
+complexity: complex
+
+notes:
+  - "Implementation files (nodes/sync/doc-sync.ts, nodes/sync/index.ts, nodes/index.ts) may already exist in the worktree from the previous merged PR (feat(WINT-9020) commit 2f7182cc). The dev agent should verify current state before re-implementing."
+  - "If the implementation from commit 2f7182cc is already complete, the dev agent may primarily need to run verification commands and write missing tests."
+  - "The nodes/index.ts already contains Sync Nodes export block pointing to ./sync/index.js — verify this is correct."
+  - "The SKILL.md LangGraph Porting Notes section is the canonical spec for all 7 phases."
+  - "Phase 4 surgical edits risk: regex-based file editing can be fragile; use conservative patterns with explicit section anchors."
+  - "AC-13 (identical outputs) must use structural comparison, not string equality, as timestamps in reports will vary."
+  - "The test file must mock: node:child_process (exec for git), node:fs/promises (readFile, writeFile, readdir, stat), @repo/logger."
