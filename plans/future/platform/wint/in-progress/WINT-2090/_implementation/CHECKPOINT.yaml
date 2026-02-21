@@ -13,3 +13,5 @@ warnings: []
 gen_mode: false
 e2e_gate: exempt
 completed_at: "2026-02-20T22:10:00Z"
+pr_number: 373
+pr_url: "https://github.com/michael-menard/monorepo/pull/373"
