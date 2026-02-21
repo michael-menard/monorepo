@@ -14,10 +14,10 @@
  * MODL-0040: Model Leaderboard
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import * as os from 'os'
 import * as fs from 'fs/promises'
+import * as os from 'os'
 import * as path from 'path'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as yaml from 'yaml'
 import { recordRun, loadLeaderboard, saveLeaderboard } from '../leaderboard.js'
 import { generateSummaryReport } from '../reports.js'
@@ -40,7 +40,10 @@ vi.mock('@repo/logger', () => ({
 // ============================================================================
 
 function makeTmpPath(): string {
-  return path.join(os.tmpdir(), `leaderboard-integration-${Math.random().toString(36).substring(2, 8)}.yaml`)
+  return path.join(
+    os.tmpdir(),
+    `leaderboard-integration-${Math.random().toString(36).substring(2, 8)}.yaml`,
+  )
 }
 
 function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
@@ -72,7 +75,11 @@ describe('Integration: write → reload → update → reload cycle', () => {
   })
 
   afterEach(async () => {
-    try { await fs.unlink(tmpFile) } catch { /* ignore */ }
+    try {
+      await fs.unlink(tmpFile)
+    } catch {
+      /* ignore */
+    }
   })
 
   it('should persist run data across load cycles', async () => {
@@ -140,7 +147,11 @@ describe('Integration: sequential writes with multiple tasks', () => {
   })
 
   afterEach(async () => {
-    try { await fs.unlink(tmpFile) } catch { /* ignore */ }
+    try {
+      await fs.unlink(tmpFile)
+    } catch {
+      /* ignore */
+    }
   })
 
   it('should have both task entries after sequential writes', async () => {
@@ -194,7 +205,10 @@ describe('Integration: sequential writes with multiple tasks', () => {
 
 describe('Integration: atomic write leaves no .tmp files', () => {
   it('should leave no .tmp files after saveLeaderboard', async () => {
-    const dir = path.join(os.tmpdir(), `lb-atomic-test-${Math.random().toString(36).substring(2, 8)}`)
+    const dir = path.join(
+      os.tmpdir(),
+      `lb-atomic-test-${Math.random().toString(36).substring(2, 8)}`,
+    )
     await fs.mkdir(dir, { recursive: true })
     const filePath = path.join(dir, 'leaderboard.yaml')
 
@@ -213,7 +227,10 @@ describe('Integration: atomic write leaves no .tmp files', () => {
   })
 
   it('should leave no .tmp files after multiple sequential recordRun calls', async () => {
-    const dir = path.join(os.tmpdir(), `lb-atomic-multi-${Math.random().toString(36).substring(2, 8)}`)
+    const dir = path.join(
+      os.tmpdir(),
+      `lb-atomic-multi-${Math.random().toString(36).substring(2, 8)}`,
+    )
     await fs.mkdir(dir, { recursive: true })
     const filePath = path.join(dir, 'leaderboard.yaml')
 
@@ -242,7 +259,11 @@ describe('Integration: generateSummaryReport on loaded leaderboard', () => {
   })
 
   afterEach(async () => {
-    try { await fs.unlink(tmpFile) } catch { /* ignore */ }
+    try {
+      await fs.unlink(tmpFile)
+    } catch {
+      /* ignore */
+    }
   })
 
   it('should generate a valid report from a written and reloaded leaderboard', async () => {

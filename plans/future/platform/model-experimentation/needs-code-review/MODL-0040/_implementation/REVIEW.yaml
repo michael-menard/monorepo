@@ -1,0 +1,207 @@
+schema: 1
+story_id: MODL-0040
+timestamp: 2026-02-20T00:00:00.000Z
+iteration: 2
+
+verdict: FAIL
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+workers_skipped: []
+
+ranked_patches:
+  - priority: 1
+    file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+    issue: "`os` import should occur before import of `vitest`"
+    severity: high
+    auto_fixable: true
+    worker: lint
+    line: 14
+    rule: import/order
+
+  - priority: 2
+    file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+    issue: "`fs/promises` import should occur before import of `vitest`"
+    severity: high
+    auto_fixable: true
+    worker: lint
+    line: 15
+    rule: import/order
+
+  - priority: 3
+    file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+    issue: "`path` import should occur before import of `vitest`"
+    severity: high
+    auto_fixable: true
+    worker: lint
+    line: 16
+    rule: import/order
+
+  - priority: 4
+    file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+    issue: "There should be no empty line between import groups"
+    severity: high
+    auto_fixable: false
+    worker: lint
+    line: 27
+    rule: import/order
+
+  - priority: 5
+    file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+    issue: "`@repo/logger` import should occur before import of `../leaderboard.js`"
+    severity: high
+    auto_fixable: true
+    worker: lint
+    line: 39
+    rule: import/order
+
+  - priority: 6
+    file: packages/backend/orchestrator/src/model-selector/__tests__/integration.test.ts
+    issue: "`vitest` import should occur after import of `path`"
+    severity: high
+    auto_fixable: false
+    worker: lint
+    line: 17
+    rule: import/order
+
+findings:
+  lint:
+    verdict: FAIL
+    skipped: false
+    errors: 6
+    warnings: 0
+    findings:
+      - severity: error
+        file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+        line: 14
+        rule: import/order
+        message: "`os` import should occur before import of `vitest`"
+        auto_fixable: true
+
+      - severity: error
+        file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+        line: 15
+        rule: import/order
+        message: "`fs/promises` import should occur before import of `vitest`"
+        auto_fixable: true
+
+      - severity: error
+        file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+        line: 16
+        rule: import/order
+        message: "`path` import should occur before import of `vitest`"
+        auto_fixable: true
+
+      - severity: error
+        file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+        line: 27
+        rule: import/order
+        message: "There should be no empty line between import groups"
+        auto_fixable: false
+
+      - severity: error
+        file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+        line: 39
+        rule: import/order
+        message: "`@repo/logger` import should occur before import of `../leaderboard.js`"
+        auto_fixable: true
+
+      - severity: error
+        file: packages/backend/orchestrator/src/model-selector/__tests__/integration.test.ts
+        line: 17
+        rule: import/order
+        message: "`vitest` import should occur after import of `path`"
+        auto_fixable: false
+
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+    reason: "All files are backend — no frontend style review needed"
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  reusability:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+    note: "No React components in scope — backend only"
+
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 2
+    findings:
+      - severity: warning
+        file: packages/backend/orchestrator/src/model-selector/leaderboard.ts
+        line: 127
+        rule: justified-type-assertion
+        message: "Type assertion 'as NodeJS.ErrnoException' — justified for error.code check"
+        auto_fixable: false
+
+      - severity: warning
+        file: packages/backend/orchestrator/src/model-selector/__tests__/leaderboard.test.ts
+        line: 466
+        rule: test-type-assertion
+        message: "Type assertion 'as ReturnType<typeof vi.fn>' in test code"
+        auto_fixable: false
+
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+    note: "No UI components in scope — backend only"
+
+total_errors: 6
+total_warnings: 2
+auto_fixable_count: 4

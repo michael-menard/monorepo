@@ -160,6 +160,17 @@ commands_run:
     output: "No ESLint errors after auto-fix of 4 Prettier formatting issues in leaderboard.ts."
     timestamp: "2026-02-18T04:20:00Z"
 
+  - command: "pnpm eslint --no-ignore src/model-selector/__tests__/leaderboard.test.ts src/model-selector/__tests__/integration.test.ts"
+    result: SUCCESS
+    output: "0 errors, 0 warnings. Fixed 6 import/order violations and 14 prettier formatting issues in test files."
+    timestamp: "2026-02-20T00:00:00Z"
+
+  - command: "npx eslint packages/backend/orchestrator/src/model-selector/ --max-warnings 0"
+    result: SUCCESS
+    output: "0 errors, 0 warnings across all model-selector files (including test files with fixes)"
+    description: "Post-fix ESLint verification: 0 errors, 0 warnings after fixing 6 import/order violations in test files"
+    timestamp: "2026-02-20T01:00:00Z"
+
 endpoints_exercised: []
 
 test_summary:

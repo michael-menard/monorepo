@@ -10,11 +10,12 @@
  * MODL-0040: Model Leaderboard
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import * as os from 'os'
 import * as fs from 'fs/promises'
+import * as os from 'os'
 import * as path from 'path'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as yaml from 'yaml'
+import { logger } from '@repo/logger'
 import {
   computeValueScore,
   computeConvergence,
@@ -35,8 +36,6 @@ vi.mock('@repo/logger', () => ({
     debug: vi.fn(),
   },
 }))
-
-import { logger } from '@repo/logger'
 
 // ============================================================================
 // Helpers
@@ -78,7 +77,10 @@ function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
 }
 
 function makeTmpPath(): string {
-  return path.join(os.tmpdir(), `leaderboard-test-${Math.random().toString(36).substring(2, 8)}.yaml`)
+  return path.join(
+    os.tmpdir(),
+    `leaderboard-test-${Math.random().toString(36).substring(2, 8)}.yaml`,
+  )
 }
 
 // ============================================================================
@@ -122,20 +124,14 @@ describe('computeValueScore()', () => {
 
 describe('computeConvergence()', () => {
   it('should return exploring when fewer than 20 total runs', () => {
-    const entries = [
-      makeEntry({ runs_count: 10 }),
-      makeEntry({ model: 'other', runs_count: 9 }),
-    ]
+    const entries = [makeEntry({ runs_count: 10 }), makeEntry({ model: 'other', runs_count: 9 })]
     const result = computeConvergence(entries)
     expect(result.convergence_status).toBe('exploring')
     expect(result.convergence_confidence).toBe(0)
   })
 
   it('should return exploring at boundary: exactly 19 total runs', () => {
-    const entries = [
-      makeEntry({ runs_count: 10 }),
-      makeEntry({ model: 'other', runs_count: 9 }),
-    ]
+    const entries = [makeEntry({ runs_count: 10 }), makeEntry({ model: 'other', runs_count: 9 })]
     // Total = 19 < 20
     expect(computeConvergence(entries).convergence_status).toBe('exploring')
   })
@@ -318,7 +314,10 @@ describe('saveLeaderboard()', () => {
 
   it('should leave no .tmp files after successful write', async () => {
     // Use an isolated directory so we do not pick up tmp files from other tests
-    const isolatedDir = path.join(os.tmpdir(), `lb-no-tmp-${Math.random().toString(36).substring(2, 8)}`)
+    const isolatedDir = path.join(
+      os.tmpdir(),
+      `lb-no-tmp-${Math.random().toString(36).substring(2, 8)}`,
+    )
     await fs.mkdir(isolatedDir, { recursive: true })
     const filePath = path.join(isolatedDir, 'leaderboard.yaml')
     const leaderboard: Leaderboard = {
@@ -348,7 +347,10 @@ describe('saveLeaderboard()', () => {
     }
 
     await saveLeaderboard(filePath, leaderboard)
-    const exists = await fs.stat(filePath).then(() => true).catch(() => false)
+    const exists = await fs
+      .stat(filePath)
+      .then(() => true)
+      .catch(() => false)
     expect(exists).toBe(true)
 
     await fs.rm(dir, { recursive: true })
@@ -368,7 +370,11 @@ describe('recordRun()', () => {
   })
 
   afterEach(async () => {
-    try { await fs.unlink(tmpFile) } catch { /* ignore */ }
+    try {
+      await fs.unlink(tmpFile)
+    } catch {
+      /* ignore */
+    }
   })
 
   it('should create a new entry for a new (task_id, model) pair', async () => {
@@ -467,7 +473,7 @@ describe('recordRun()', () => {
       (c: unknown[]) => {
         const args = c as [string, { event?: string }]
         return args[1]?.event === 'quality_degradation_detected'
-      }
+      },
     ).length
 
     // Add another degrading run — should NOT fire again
@@ -477,7 +483,7 @@ describe('recordRun()', () => {
       (c: unknown[]) => {
         const args = c as [string, { event?: string }]
         return args[1]?.event === 'quality_degradation_detected'
-      }
+      },
     ).length
 
     expect(secondWarnCount).toBe(firstWarnCount) // No additional warnings
