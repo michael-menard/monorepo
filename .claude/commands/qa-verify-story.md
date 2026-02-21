@@ -30,6 +30,11 @@ Updates: `VERIFICATION.yaml` (qa_verify + gate sections)
 | 1 | `qa-verify-verification-leader.agent.md` | sonnet | VERIFICATION COMPLETE |
 | 2 | `qa-verify-completion-leader.agent.md` | haiku | QA PASS / QA FAIL |
 
+## Step 0.6: Claim Story in KB
+
+1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_qa", phase: "qa_verification" })`
+2. **Guard:** If already `in_qa`, STOP: "Story {STORY_ID} is already being QA'd by another agent."
+
 ## Execution
 
 For each phase:
@@ -69,3 +74,8 @@ On `QA FAIL`:
 ## Ref
 
 `.claude/docs/qa-verify-story-reference.md`
+
+## Abort / Error Recovery
+
+If interrupted after Step 0.6, release manually:
+`kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_qa" })`

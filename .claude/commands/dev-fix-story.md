@@ -25,6 +25,13 @@ Dev Fix Orchestrator. Spawn phase leaders sequentially. Do NOT implement directl
 | 2 | `dev-verification-leader.agent.md` | `fix` | haiku | `VERIFICATION COMPLETE` |
 | 3 | `dev-documentation-leader.agent.md` | `fix` | haiku | `DOCUMENTATION COMPLETE` |
 
+## Step 0.6: Claim Story in KB
+
+Update phase to signal active fix work:
+1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress", phase: "implementation" })`
+
+Note: Story is already `in_progress` from the code-review/QA failure path, so this is a phase update only. No guard needed.
+
 ## Execution
 
 For each phase:
@@ -55,7 +62,8 @@ Phase 3 complete:
 1. Invoke: `/wt:commit-and-pr {STORY_ID} "{story_title}"`
    - No PROOF_PATH/EVIDENCE_PATH — PR already exists, just pushing new commits
 2. Confirm `pr_action: updated`
-3. Status: `ready-for-code-review`
+3. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+4. Status: `ready-for-code-review`
 
 **Next**: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 

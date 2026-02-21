@@ -186,6 +186,15 @@ gen_mode = flags.gen || false
 skip_worktree = flags.skip_worktree || false
 ```
 
+### Step 1.1: Claim Story in KB
+
+**Immediately** claim the story to prevent other agents from picking it up:
+
+1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress", phase: "setup" })`
+2. **Guard:** If the call reveals the story is already `in_progress`, another agent likely claimed it. STOP with:
+   `"Story {STORY_ID} is already in_progress — another agent may be working on it. Use /wt:status to check."`
+   Unless `--force-continue` is set.
+
 ### Step 1.5: Generate Story (if --gen flag)
 
 **IF `--gen` flag is present:**
@@ -484,3 +493,8 @@ If gate fails → BLOCKED, do not proceed.
 - `.claude/agents/_shared/autonomy-tiers.md` - Tier definitions
 - `.claude/config/autonomy.yaml` - Autonomy configuration
 - `.claude/config/preferences.yaml` - Project preferences
+
+## Abort / Error Recovery
+
+If this command is interrupted after Step 1.1, the story stays `in_progress` in the KB (preventing other agents from picking it up). To release manually:
+`kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_to_work" })`
