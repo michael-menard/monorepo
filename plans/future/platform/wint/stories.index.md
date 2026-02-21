@@ -18,8 +18,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | completed | 2 |
 | uat | 13 |
 | in-qa | 0 |
-| ready-for-qa | 1 |
-| ready-for-code-review | 2 |
+| ready-for-qa | 2 |
+| ready-for-code-review | 1 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 2 |
@@ -2248,9 +2248,10 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Story Generated:** 2026-02-18
-**Story File:** `wint/needs-code-review/WINT-9020/WINT-9020.md`
+**Story File:** `wint/ready-for-qa/WINT-9020/WINT-9020.md`
+**Code Review:** PASS (2026-02-21) — 0 errors, 1 warning (pre-existing, unrelated)
 **Depends On:** WINT-9010, WINT-0160
 **Phase:** 9
 **Points:** 5
