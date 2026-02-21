@@ -26,7 +26,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
-| pending | 120 |
+| pending | 119 |
 
 ---
 
@@ -927,7 +927,8 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** pending
+**Status:** needs-code-review
+**Story File:** `wint/needs-code-review/WINT-1160/WINT-1160.md`
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
 **Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.

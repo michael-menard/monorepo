@@ -53,7 +53,7 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 | `--max-iterations=N` | 3 | Max review/fix loops |
 | `--force-continue` | false | Proceed with warnings |
 | `--autonomous=LEVEL` | conservative | Escalation level (see below) |
-| `--skip-worktree` | false | Skip worktree pre-flight (Step 1.3); proceed without worktree isolation |
+| `--skip-worktree` | false | Skip worktree verification (Step 1.3); proceed without worktree context |
 
 ### --gen Flag (Story Generation)
 
@@ -165,6 +165,16 @@ REVIEW/FIX LOOP (max 3 iterations)
 
 ## Execution
 
+### Step 0: Claim Work Order
+
+Read `.claude/agents/_shared/work-order-claim.md` for the full protocol.
+
+Find `{STORY_ID}` in `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` and update the row:
+- Set Status to `🔧`
+- Set Worker to the worktree name (e.g., `wint-1012`) or `main`
+
+If the file or story row doesn't exist, skip silently.
+
 ### Step 1: Initialize
 ```
 feature_dir = "{FEATURE_DIR}"
@@ -243,149 +253,106 @@ skip_worktree = flags.skip_worktree || false
 - Expect story to exist in `ready-to-work/` stage (standard flow)
 - Validate story exists with elab artifacts
 
-### Step 1.3: Worktree Pre-flight
+### Step 1.3: Verify Worktree Context
+
+<!-- Cross-reference: WINT-1130 (MCP tools: worktree_get_by_story, worktree_mark_complete),
+     WINT-1140 (original AC-4: 3-option conflict prompt UX),
+     WINT-1160 (take-over hardening: AC-5 always-prompt, AC-6 ordered sequence) -->
 
 **Flow position:**
 - Standard flow: Step 1 → Step 1.3 → Step 2
 - Gen flow: Step 1 → Step 1.5 → Step 1.3 → Step 2
 
+The story worktree and draft PR are created upstream by `/pm-story` (Step 1.7). This step verifies we're in the correct worktree context AND checks for parallel-work conflicts via the database.
+
 **IF `--skip-worktree` flag is present:**
 
 ```
-WARN: Worktree pre-flight skipped (--skip-worktree flag). Proceeding without worktree isolation.
-     worktree_id will NOT be written to CHECKPOINT.yaml.
+WARN: Worktree verification skipped (--skip-worktree flag). Proceeding without worktree isolation.
 ```
 
 Skip the rest of Step 1.3 and continue to Step 2.
 
 **IF `--skip-worktree` NOT present:**
 
-**0. Derive branch name for this story**
+1. **Check current directory** — Confirm the current working directory is inside `tree/story/{STORY_ID}`.
 
-```
-story_branch = "story/{STORY_ID}"
-# e.g., WINT-1012 → story/WINT-1012
-```
+2. **If not in worktree** — Locate and switch into it:
+   ```bash
+   cd tree/story/{STORY_ID}
+   ```
+   If the worktree directory doesn't exist, fall back to creating it:
+   ```
+   /wt:new story/{STORY_ID} main
+   ```
 
-**1. Check CHECKPOINT.yaml for existing worktree_id**
+3. **Check for parallel-work conflict** — Call `worktree_get_by_story({ storyId: "{STORY_ID}" })`.
 
-```
-checkpoint_worktree_id = read CHECKPOINT.yaml.worktree_id (may be null/absent)
-```
+   - If result is **null**: No active DB-tracked worktree. Continue to step 4.
+   - If result is a **record for the current session** (path matches current worktree): No conflict. Continue to step 4.
+   - If result is a **record for a different session**: Present the 3-option conflict prompt (WINT-1140 AC-4):
 
-**2. Query database for active worktree record**
+     ```
+     WARNING: Story {STORY_ID} has an active worktree from another session:
+       Story: {storyId}
+       Branch: {branchName}
+       Path: {worktreePath}
+       Registered: {createdAt}
 
-Call MCP tool: `worktree_get_by_story({ story_id: "{STORY_ID}" })`
+     Options:
+       (a) Switch to existing worktree at {worktreePath}
+       (b) Take over — mark old worktree as abandoned and create new worktree
+       (c) Abort — stop implementation
+     ```
 
-```
-db_record = worktree_get_by_story({ story_id: "{STORY_ID}" })
-```
+     **Autonomy behavior for option selection:**
 
-**3. Branch on result**
+     | Autonomy | Option (a) switch | Option (b) take-over | Option (c) abort |
+     |----------|-------------------|---------------------|-----------------|
+     | conservative | Prompt required | Prompt required | Prompt required |
+     | moderate | Auto-select | **ALWAYS prompt** | Prompt required |
+     | aggressive | Auto-select | **ALWAYS prompt** | Prompt required |
 
-**Case A: db_record is null (no registered worktree)**
+     **CRITICAL — Option (b) take-over ALWAYS requires explicit user confirmation.**
+     **This rule overrides all autonomy levels including aggressive. Never auto-select option (b).**
 
-No active worktree exists for this story. Create one automatically using the derived branch name.
+     **If user selects option (a) — switch:**
+     - Run `/wt:switch` to navigate to the existing worktree
+     - Continue to step 4
 
-```
-INFO: No worktree registered for {STORY_ID}. Creating worktree for branch {story_branch}.
-```
+     **If user selects option (b) — take-over (ordered sequence, WINT-1160 AC-6):**
 
-Invoke the automated creation step (non-interactive — branch name and base branch are pre-supplied):
-```
-/wt:new {story_branch} main
-```
+     First, show confirmation prompt regardless of autonomy level:
+     ```
+     WARNING: This will mark the following worktree as abandoned:
+       Story: {storyId}
+       Branch: {branchName}
+       Path: {worktreePath}
+       Registered: {createdAt}
+     This action cannot be undone. Type 'yes' to confirm take-over:
+     ```
 
-Note: `/wt:new` accepts `[BRANCH_NAME] [BASE_BRANCH]` parameters and skips interactive prompts when they are provided. Capture the reported `path` from the output (e.g., `tree/{story_branch}`).
+     If user confirms (types 'yes'):
+     1. Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned' })`
+     2. Check result — if null or error: emit "Take-over aborted: failed to mark old worktree as abandoned" and STOP (do NOT proceed to step 3)
+     3. Only if step 1 succeeded: call `/wt:new story/{STORY_ID} main` to create new worktree
+     4. Register new worktree, continue to step 4
 
-After `/wt:new` completes, call MCP tool to register the new worktree:
-```
-result = worktree_register({
-  story_id: "{STORY_ID}",
-  branch_name: "{story_branch}",
-  path: "tree/{story_branch}"
-})
-```
+     If user cancels (does not confirm):
+     - Re-present options (a), (b), (c) OR show abort message
+     - Do NOT call `worktree_mark_complete` or `/wt:new`
 
-**If `worktree_register` returns null (registration failed):**
-```
-WARN: worktree_register returned null. Could not record worktree in database.
-     Confirm before proceeding without worktree tracking:
-     [y] Proceed without worktree_id (no isolation tracking)
-     [n] Stop and investigate registration failure
-```
-- Wait for user confirmation.
-- If confirmed: continue without writing worktree_id to CHECKPOINT.yaml. Log warning.
-- If declined: STOP. Report: "Worktree registration failed. Use --skip-worktree to bypass."
+     **If user selects option (c) — abort:**
+     - Emit: "Implementation aborted by user."
+     - STOP. Do not proceed to Phase 0.
 
-**If `worktree_register` returns a valid record:**
-- Write `worktree_id: {uuid}` to CHECKPOINT.yaml.
-- Log: `worktree_id {uuid} registered and written to CHECKPOINT.yaml`
-- Continue to Step 2.
+4. **Read CHECKPOINT.yaml** — Load `pr_number` and `pr_url` if present (set by pm-story via wt-new output).
+   If `pr_number` is not in CHECKPOINT.yaml, discover it:
+   ```bash
+   gh pr list --head story/{STORY_ID} --state open --json number,url
+   ```
+   Write discovered `pr_number` and `pr_url` to CHECKPOINT.yaml.
 
----
-
-**Case B: db_record is not null AND checkpoint_worktree_id matches db_record.worktree_id**
-
-A registered worktree exists and the checkpoint references the same worktree. Switch to it automatically.
-
-```
-INFO: Worktree {db_record.worktree_id} found for {STORY_ID} at {db_record.path}. Switching.
-```
-
-Invoke the switch step:
-```
-/wt:switch
-```
-
-Note: `/wt:switch` presents a list of available worktrees and provides a `cd` command. The user must navigate to the worktree before continuing.
-
-After the user completes `/wt:switch`, continue to Step 2.
-
----
-
-**Case C: db_record is not null BUT checkpoint_worktree_id is absent or does not match db_record.worktree_id**
-
-A registered worktree exists but the checkpoint is stale or from a different context. Present a 3-option warning.
-
-```
-WARN: Worktree conflict detected for {STORY_ID}.
-  DB record worktree_id: {db_record.worktree_id}
-  CHECKPOINT.yaml worktree_id: {checkpoint_worktree_id or "absent"}
-
-  Options:
-  (a) Switch to existing worktree — recommended, guided /wt:switch step
-  (b) Create a new worktree — will auto-create branch {story_branch} and register a new record
-  (c) Proceed without worktree — no isolation, worktree_id not updated in CHECKPOINT.yaml
-```
-
-**Autonomy level branching for Case C:**
-
-- `conservative`: Present all 3 options to the user. Wait for selection.
-- `moderate` or `aggressive`: Auto-select option (a). Log: `Auto-selected option (a): switch to existing worktree (autonomy={autonomy_level})`. Skip 3-option prompt. Proceed directly to guided /wt:switch step.
-
-**If option (a) selected or auto-selected:**
-```
-INFO: Proceeding with guided worktree switch.
-/wt:switch
-```
-After the user completes `/wt:switch`, continue to Step 2.
-
-**If option (b) selected:**
-```
-INFO: Creating a new worktree for branch {story_branch}.
-/wt:new {story_branch} main
-```
-After `/wt:new` completes:
-- Call `worktree_register({ story_id: "{STORY_ID}", branch_name: "{story_branch}", path: "tree/{story_branch}" })`
-- Handle null return as in Case A (warn + confirm).
-- If registration succeeds: write new `worktree_id` to CHECKPOINT.yaml.
-- Continue to Step 2.
-
-**If option (c) selected:**
-```
-WARN: Proceeding without worktree isolation. CHECKPOINT.yaml worktree_id not updated.
-```
 Continue to Step 2.
 
 ---
@@ -412,6 +379,40 @@ Follow decision protocol in `.claude/agents/_shared/decision-handling.md`
 **Note**: When gen_mode is true, this story was generated via --gen flag and bypassed elaboration.
 Expect minimal story structure without elab artifacts (ANALYSIS.md, DECISIONS.yaml, etc.).
 ```
+
+## Incremental Commit Policy (Race-Safe)
+
+**Rule: Only leaders/orchestrators commit. Workers never commit.**
+
+Workers (sub-agents spawned in parallel) only write files and return results.
+After the leader collects ALL worker results for a phase, the leader performs
+a single commit+push:
+
+```bash
+git add -A
+git commit -m "feat({STORY_ID}): {brief description of completed phase}"
+git push
+```
+
+This prevents race conditions when parallel workers (e.g., backend + frontend
+coders in dev-execute-leader) write to the same worktree simultaneously.
+
+### Commit Points (leader responsibility)
+
+| After Phase | Commit Message |
+|-------------|---------------|
+| Phase 0 (setup) | `chore({STORY_ID}): setup artifacts` |
+| Phase 1 (plan) | `chore({STORY_ID}): implementation plan` |
+| Phase 2 (execute) | `feat({STORY_ID}): implementation` |
+| Phase 3 (proof) | `docs({STORY_ID}): proof artifacts` |
+| Review/Fix loop | `fix({STORY_ID}): review fixes iteration N` |
+
+### Why leaders only?
+
+- Workers run in parallel (backend + frontend coders, review specialists)
+- Parallel `git add -A && git commit && git push` causes race conditions
+- Leader waits for all workers → single atomic commit → push
+- Clean, linear commit history on the draft PR
 
 ### Step 4-8: Execute Phases
 For spawn patterns, read: `.claude/agents/_reference/patterns/dev-workflow-spawn.md`
@@ -442,11 +443,13 @@ If gate fails → BLOCKED, do not proceed.
 
 ### Clean Pass
 1. Update CHECKPOINT.yaml: `current_phase: done`, `e2e_gate: passed`
-2. Commit and create PR:
+2. **Release Work Order**: Update `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` — set Status to `🚧`, clear Worker column (see `_shared/work-order-claim.md`)
+3. Final commit+push (if uncommitted changes remain):
+   ```bash
+   git add -A
+   git commit -m "feat({STORY_ID}): implementation complete"
+   git push
    ```
-   /wt:commit-and-pr {STORY_ID} "{story_title}" {artifacts_path}/PROOF-{STORY_ID}.md {artifacts_path}/EVIDENCE.yaml
-   ```
-3. Parse output, write `pr_number` and `pr_url` to CHECKPOINT.yaml
 4. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
@@ -456,11 +459,13 @@ If gate fails → BLOCKED, do not proceed.
 
 ### Forced Continue
 1. CHECKPOINT.yaml: `forced: true`, `warnings: [...]`
-2. Commit and create PR:
+2. **Release Work Order**: Update `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` — set Status to `🚧`, clear Worker column (see `_shared/work-order-claim.md`)
+3. Final commit+push (if uncommitted changes remain):
+   ```bash
+   git add -A
+   git commit -m "feat({STORY_ID}): implementation complete (forced)"
+   git push
    ```
-   /wt:commit-and-pr {STORY_ID} "{story_title}" {artifacts_path}/PROOF-{STORY_ID}.md {artifacts_path}/EVIDENCE.yaml
-   ```
-3. Parse output, write `pr_number` and `pr_url` to CHECKPOINT.yaml
 4. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status

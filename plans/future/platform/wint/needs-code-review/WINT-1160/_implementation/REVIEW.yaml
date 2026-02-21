@@ -1,0 +1,240 @@
+schema: 1
+story_id: WINT-1160
+timestamp: "2026-02-18T14:15:00Z"
+iteration: 0
+verdict: PASS
+
+findings: []
+
+ranked_patches: []
+
+summary: "All 9 ACs verified PASS across modified files. wt-status skill enhanced to version 2.0.0 with DB-aware section, ORPHANED/UNTRACKED detection, and graceful degradation documented. dev-implement-story Step 1.3 hardened with explicit take-over confirmation override and ordered sequence documented. Integration test scenarios IT-1/IT-2/IT-3 specified with required Setup/Action/Expected/Evidence structure."
+
+detailed_verification:
+
+  AC_1_Status: PASS
+  AC_1_Evidence: |
+    File: .claude/skills/wt-status/SKILL.md
+    - Section 2 "Database-Tracked Worktrees" at line 46 documents worktree_list_active MCP tool call
+    - Output format specified at lines 106-112 with columns: Story ID, Branch, Path, Registered, Status
+    - Schema reference at lines 152-169 documents WorktreeRecord with storyId, branchName, worktreePath, createdAt fields
+    - Full execution flow at lines 127-140 shows the integrated call and display process
+
+  AC_2_Status: PASS
+  AC_2_Evidence: |
+    File: .claude/skills/wt-status/SKILL.md
+    - Null-Check Resilience section at lines 56-73 documents graceful degradation
+    - Line 64: "Print: 'WARNING: DB worktree data unavailable (worktree_list_active MCP tool error). Showing git-level view only.'"
+    - Line 65: "Return (show git section only, do NOT crash or exit with error)"
+    - Degraded state output format shown at lines 123-125
+    - Git view preservation confirmed in flow step 2a at line 132: "If null/error → show degradation warning, stop (git view already rendered)"
+
+  AC_3_Status: PASS
+  AC_3_Evidence: |
+    File: .claude/skills/wt-status/SKILL.md
+    - Disk-Check Mechanism section header at line 75: "(ORPHANED Detection)"
+    - Line 80: "Use Bash tool: ls {worktreePath}"
+    - Line 83: "If `ls {worktreePath}` exits with a **non-zero exit code** (path does not exist): flag the record with `[ORPHANED]`"
+    - Example output at line 111 shows [ORPHANED] indicator
+    - Flow documented at line 135: "For each record: ls {worktreePath} → tag [ORPHANED] if non-zero exit"
+    - Verification: grep -n "ORPHANED" returns matches at lines 75, 83, 111, 135, 136, 138, 149
+
+  AC_4_Status: PASS
+  AC_4_Evidence: |
+    File: .claude/skills/wt-status/SKILL.md
+    - Cross-Reference Mechanism section at line 87: "(UNTRACKED Detection)"
+    - Lines 91-94: Algorithm documented: collect db_paths and git_paths, then flag git worktrees not in db_paths
+    - Line 96: "An `[UNTRACKED]` label means: a git worktree exists on disk but has no corresponding active DB record."
+    - Example output implies [UNTRACKED] for git worktrees without DB record
+    - Flow documented at line 136: "Cross-reference: for each git_path not in db_paths → tag [UNTRACKED]"
+    - Verification: grep -n "UNTRACKED" returns matches at lines 87, 94, 96, 136, 150
+
+  AC_5_Status: PASS
+  AC_5_Evidence: |
+    File: .claude/commands/dev-implement-story.md
+    - CRITICAL statement at line 316: "Option (b) take-over ALWAYS requires explicit user confirmation."
+    - Line 317: "This rule overrides all autonomy levels including aggressive. Never auto-select option (b)."
+    - Autonomy table at lines 310-314 explicitly marks "(b) take-over" as "**ALWAYS prompt**" for both moderate and aggressive tiers
+    - Confirmation flow at lines 325-333 shows explicit prompt regardless of tier
+    - Verification: grep -n "ALWAYS requires explicit user confirmation" returns match at line 316
+
+  AC_6_Status: PASS
+  AC_6_Evidence: |
+    File: .claude/commands/dev-implement-story.md
+    - Ordered sequence documented at lines 323-339: "If user selects option (b) — take-over (ordered sequence, WINT-1160 AC-6):"
+    - Step 1 at line 336: "Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned' })`"
+    - Step 2 at line 337: "Check result — if null or error: emit 'Take-over aborted: failed to mark old worktree as abandoned' and STOP (do NOT proceed to step 3)"
+    - Step 3 at line 338: "Only if step 1 succeeded: call `/wt:new story/{STORY_ID} main` to create new worktree"
+    - Step 4 at line 339: "Register new worktree, continue to step 4"
+    - Cancellation path at lines 341-343: confirms no calls made if user cancels
+    - Verification: grep -n "Take-over aborted" returns match at line 337
+
+  AC_7_Status: PASS
+  AC_7_Evidence: |
+    File: .claude/commands/dev-implement-story.md
+    - HTML comment at lines 258-260 provides single reference block:
+      "<!-- Cross-reference: WINT-1130 (MCP tools: worktree_get_by_story, worktree_mark_complete),
+           WINT-1140 (original AC-4: 3-option conflict prompt UX),
+           WINT-1160 (take-over hardening: AC-5 always-prompt, AC-6 ordered sequence) -->"
+    - Additional inline references at line 293: "(WINT-1140 AC-4)"
+    - Reference at line 323: "(ordered sequence, WINT-1160 AC-6)"
+    - Verification: grep -n "WINT-1130\|WINT-1140\|WINT-1160" returns matches at lines 258, 259, 260, 293, 323
+
+  AC_8_Status: PASS
+  AC_8_Evidence: |
+    File: .claude/skills/wt-status/SKILL.md
+    - Frontmatter at line 3: "version: 2.0.0"
+    - Updated description at line 4: "Show comprehensive status of git worktrees and database-tracked story worktrees, including orphaned and untracked detection."
+    - Skill name at line 2 remains unchanged: "name: wt-status"
+    - Verification: grep -n "2.0.0" returns match at line 3
+
+  AC_9_Status: PASS
+  AC_9_Evidence: |
+    File: plans/future/platform/wint/in-progress/WINT-1160/_pm/TEST-PLAN.md
+    - IT-1 section header at line 165: "### IT-1: Happy Path — DB records render with [ORPHANED] detection"
+      Setup (lines 167-170), Action (line 171), Expected (lines 172-177), Evidence (line 178)
+    - IT-2 section header at line 180: "### IT-2: Empty State — No active DB-tracked worktrees"
+      Setup (line 182-183), Action (line 184), Expected (lines 185-189), Evidence (line 190)
+    - IT-3 section header at line 191: "### IT-3: Error/Degradation — MCP tool unavailable or returns error"
+      Setup (lines 193-194), Action (line 195), Expected (lines 196-201), Evidence (line 202)
+    - Verification: grep -n "IT-1\|IT-2\|IT-3" returns section headers at lines 165, 180, 191 and evidence mapping at lines 211-213
+
+consistency_checks:
+
+  indicator_consistency: PASS
+  note: |
+    [ORPHANED] indicator consistently used for DB-tracked worktrees with missing disk paths:
+    - wt-status SKILL.md: lines 83, 111, 135, 136
+    - TEST-PLAN.md: IT-1 setup and expected outcomes
+
+    [UNTRACKED] indicator consistently used for git worktrees without DB records:
+    - wt-status SKILL.md: lines 87, 94, 96, 136
+    - Step 1.3 does not mention [UNTRACKED] (correct scope — that's wt-status only)
+
+  schema_accuracy: PASS
+  note: |
+    WorktreeRecord schema in SKILL.md (lines 157-168) matches actual Zod definition from packages/backend/mcp-tools/src/worktree-management/__types__/index.ts:
+    - id: string (UUID) ✓
+    - storyId: string ✓
+    - worktreePath: string ✓
+    - branchName: string ✓
+    - status: WorktreeStatusSchema ('active'|'merged'|'abandoned') — SKILL.md shows 'active' only per worktree_list_active contract ✓
+    - createdAt: Date ✓
+    - updatedAt: Date ✓
+    - mergedAt: Date | null ✓
+    - abandonedAt: Date | null ✓
+    - metadata: Record<unknown> ✓
+
+    WorktreeMarkCompleteInputSchema in code accepts { worktreeId, status: 'merged'|'abandoned', metadata? } — matches SKILL.md usage at line 336 ✓
+
+  safety_rules: PASS
+  note: |
+    Option (b) take-over confirmation analysis:
+    - autonomous=conservative: All options require prompt (lines 312-314) ✓
+    - autonomous=moderate: (a) auto-select, (b) ALWAYS prompt, (c) prompt (lines 313-314) ✓
+    - autonomous=aggressive: (a) auto-select, (b) ALWAYS prompt, (c) prompt (lines 314) ✓
+    - CRITICAL statement at lines 316-317 overrides all tiers ✓
+    - Explicit confirmation prompt documented at lines 325-333 ✓
+    - Ordered sequence enforces worktree_mark_complete before wt:new (lines 336-338) ✓
+    - Failure abort at line 337 prevents orphaned wt:new calls ✓
+
+formatting_checks:
+
+  markdown_formatting: PASS
+  note: |
+    wt-status SKILL.md:
+    - Consistent markdown headers (##, ###, ####)
+    - Code blocks properly fenced with triple backticks
+    - No emoji (per CLAUDE.md style guidelines)
+    - Column alignment in output format example (lines 106-112) uses consistent spacing
+
+    dev-implement-story.md:
+    - Step 1.3 uses consistent formatting with existing steps
+    - Tables properly formatted with pipes and hyphens (lines 310-314)
+    - Code blocks properly formatted
+    - HTML comment style consistent with project conventions
+
+    TEST-PLAN.md:
+    - IT-1/IT-2/IT-3 sections follow consistent structure (Setup, Action, Expected, Evidence)
+    - Markdown formatting consistent with rest of document
+    - No emoji
+
+column_alignment: PASS
+  note: |
+    wt-status output format at lines 106-112 shows:
+    Story ID      Branch                    Path                          Registered              Status
+    WINT-1140     story/WINT-1140           tree/story/WINT-1140          2026-02-17 10:00:00     (active)
+    WINT-1130     story/WINT-1130           tree/story/WINT-1130          2026-02-16 08:00:00     [ORPHANED]
+
+    Columns are clearly separated and alignment is human-readable.
+
+cross_reference_validation:
+
+  WINT_1130_references: PASS
+  note: |
+    WINT-1130 provides:
+    - worktree_register MCP tool ✓
+    - worktree_get_by_story MCP tool ✓ (used in Step 1.3 at line 289)
+    - worktree_list_active MCP tool ✓ (used in wt-status SKILL.md at line 50)
+    - worktree_mark_complete MCP tool ✓ (used in Step 1.3 at line 336)
+
+    WINT-1160 correctly references WINT-1130 in cross-reference comment at line 258
+
+  WINT_1140_references: PASS
+  note: |
+    WINT-1140 provides:
+    - 3-option conflict prompt UX scaffold in Step 1.3 ✓
+    - Option (a) switch behavior ✓
+    - Option (c) abort behavior ✓
+    - AC-9 autonomy auto-selection for option (a) ✓
+
+    WINT-1160 does NOT re-specify the 3-option prompt itself but hardens option (b) behavior.
+    Cross-reference at line 259 correctly cites WINT-1140 AC-4.
+
+execution_flow_analysis:
+
+  wt_status_flow: PASS
+  note: |
+    Full execution flow documented at lines 127-140:
+    1. Run git worktree commands → collect git_paths and worktree status
+    2. Call worktree_list_active({ limit: 50, offset: 0 })
+       a. If null/error → show degradation warning, stop (git view already rendered)
+       b. If [] → print "No active database-tracked worktrees."
+       c. If [records...]:
+          - For each record: ls {worktreePath} → tag [ORPHANED] if non-zero exit
+          - Cross-reference: for each git_path not in db_paths → tag [UNTRACKED]
+          - Render tabular DB section
+    3. Display git section (with any [UNTRACKED] labels)
+    4. Display DB-tracked worktrees section
+
+    Flow is logically sound and matches AC requirements.
+
+  step_1_3_take_over_sequence: PASS
+  note: |
+    Ordered sequence at lines 335-339:
+    1. Call worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned' })
+    2. Check result — if null or error: abort with message, STOP
+    3. Only if step 1 succeeded: call /wt:new story/{STORY_ID} main
+    4. Register new worktree, continue to step 4
+
+    Sequence enforces atomicity: old record marked before new one created.
+    Failure on step 1 prevents orphaned /wt:new execution.
+
+acceptance_criteria_matrix:
+
+  AC_1: "PASS — wt-status queries worktree_list_active and displays DB section with required columns"
+  AC_2: "PASS — Graceful degradation documented with warning message and git view preserved"
+  AC_3: "PASS — [ORPHANED] detection documented with ls mechanism for disk-check"
+  AC_4: "PASS — [UNTRACKED] detection documented with cross-reference algorithm"
+  AC_5: "PASS — Option (b) take-over ALWAYS requires explicit confirmation at all autonomy levels"
+  AC_6: "PASS — Take-over sequence follows ordered: worktree_mark_complete → null-check → abort-or-wt:new"
+  AC_7: "PASS — Complete conflict flow documented in single reference block cross-referencing WINT-1130/1140/1160"
+  AC_8: "PASS — wt-status version updated to 2.0.0 with updated description"
+  AC_9: "PASS — Integration test scenarios IT-1/IT-2/IT-3 documented with Setup/Action/Expected/Evidence"
+
+conclusion: |
+  All 9 acceptance criteria verified PASS. Modified files are complete, consistent, and properly documented.
+  Schema accuracy confirmed against actual Zod definitions. Safety rules enforced for destructive operations.
+  Cross-references valid and bidirectional. Integration test scenarios provide complete coverage matrix.
+
+  WINT-1160 proof phase COMPLETE. Ready for QA verification.
