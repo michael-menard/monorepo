@@ -1,0 +1,101 @@
+schema: 1
+story_id: WINT-7020
+timestamp: "2026-02-20T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: "Documentation/planning story — no code changes. All test suites (unit, integration, e2e) are exempt per EVIDENCE.yaml."
+test_results:
+  unit: { pass: 0, fail: 0, exempt: true }
+  integration: { pass: 0, fail: 0, exempt: true }
+  e2e: { pass: 0, fail: 0, exempt: true }
+  http: { pass: 0, fail: 0, exempt: true }
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_note: "No code files modified. Coverage threshold (45%) is not applicable to documentation-only stories."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "No test files produced or modified. Documentation-only story."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-1"
+    notes: "MIGRATION-PLAN.md Section 1.3 explicitly lists all 7 WINT-7010 artifacts with their exact file paths and data extracted from each. Verified in MIGRATION-PLAN.md lines 29-39."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-2"
+    notes: "MIGRATION-PLAN.md Section 3 contains a risk-scored inventory in four subsections (3.2.1 Commands, 3.2.2 Leaders, 3.2.3 Workers, 3.2.4 Utility). Each entry includes all 6 required fields: file path, agent type, swim-lane ref count, spawn chain depth, risk tier, migration rationale."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-3"
+    notes: "MIGRATION-PLAN.md Section 2 explicitly lists story-status.md (WINT-1040), story-update.md (WINT-1050), and story-move.md (WINT-1060) as excluded. In BATCH-SCHEDULE.yaml Batch 1, all three appear with action: verify-only, not action: migrate. Verified via grep — no migrate action is assigned to these files."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-4"
+    notes: "MIGRATION-PLAN.md Section 4 classifies all 41 orphaned agents: 33 as include-in-migration (Section 4.1), 6 as deprecate-before-migrate (Section 4.2), 2 as archive-not-migrate (Section 4.3). Count confirmed: 33+6+2=41. Each entry includes rationale. Verified by table row count (41 total)."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-5"
+    notes: "MIGRATION-PLAN.md Section 5 defines exactly 7 batches (Batches 1-7). BATCH-SCHEDULE.yaml contains 7 batch entries (confirmed: total_batches: 7). Each batch specifies batch number, name, file list, estimated effort (points), and batch dependencies. Count is within the required [5, 7] range."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-6"
+    notes: "MIGRATION-PLAN.md Section 6 contains per-batch verification checklists for all 7 batches. Each checklist covers spawn chain smoke tests, command exercises, and DB state checks. BATCH-SCHEDULE.yaml also includes verification arrays per batch. Both artifact sources satisfy this AC."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-7"
+    notes: "MIGRATION-PLAN.md Section 7 documents a complete rollback procedure: Section 7.1 describes the automatic dual-mode shim fallback (source: db vs source: directory), Section 7.2 provides 4-step rollback instructions, Section 7.3 is a rollback verification checklist, and Section 7.4 defines when NOT to rollback. The shim directory fallback is explicitly referenced throughout."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-8"
+    notes: "MIGRATION-PLAN.md exists at plans/future/platform/wint/UAT/WINT-7020/_implementation/MIGRATION-PLAN.md. All required sections present: Section 1 (scope + input artifacts), Section 2 (excluded files), Section 3 (risk inventory), Section 5 (batch table), Section 6 (per-batch verification), Section 7 (rollback). File is 664 lines and complete."
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-9"
+    notes: "BATCH-SCHEDULE.yaml exists at plans/future/platform/wint/UAT/WINT-7020/_implementation/BATCH-SCHEDULE.yaml. File is 23,273 characters and 647 lines. YAML structure verified using Node.js file read: contains 7 batch entries, total_batches: 7. File parsed without errors. Machine-readable format with story_id, file lists, dependencies, and estimated_points per batch."
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria.AC-10"
+    notes: "Verified via git diff --name-only HEAD on the story worktree. Zero files under .claude/agents/, .claude/commands/, or .claude/skills/ appear in the diff. All changes are confined to plans/future/platform/wint/ story directories only."
+
+architecture_compliant: true
+architecture_notes: "Documentation-only story. No ADRs are triggered (no backend, frontend, database, or infrastructure changes). BATCH-SCHEDULE.yaml is valid YAML. MIGRATION-PLAN.md is a well-structured Markdown document. No code patterns to evaluate."
+
+issues: []
+
+lessons_to_record:
+  - lesson: "For documentation/planning stories that produce structured YAML artifacts (BATCH-SCHEDULE.yaml), YAML validity can be confirmed via Node.js file read as a fallback when PyYAML is unavailable."
+    category: pattern
+    tags: ["qa", "documentation-story", "yaml-validation"]
+
+  - lesson: "Risk-scored agent inventory with 6 required fields (file path, agent type, ref count, spawn depth, risk tier, rationale) is an effective pattern for migration planning documentation. The Section 3 structure with sub-tables by agent role (Commands, Leaders, Workers, Utility) provides good readability."
+    category: reuse
+    tags: ["migration", "documentation", "agent-catalog"]
+
+  - lesson: "Orphan agent classification (include-in-migration / deprecate-before-migrate / archive-not-migrate) with explicit rationale per agent is a clear and actionable approach for managing legacy agents during platform migrations."
+    category: pattern
+    tags: ["migration", "agent-lifecycle", "deprecation"]
+
+tokens:
+  in: 12000
+  out: 3000
+
+gate:
+  decision: PASS
+  reason: "All 10 ACs verified, documentation artifacts complete and valid, no code changes, architecture compliant"
+  blocking_issues: []
