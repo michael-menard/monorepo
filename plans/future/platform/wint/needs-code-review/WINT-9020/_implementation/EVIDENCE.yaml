@@ -157,11 +157,22 @@ acceptance_criteria:
     status: PASS
     evidence_type: command
     evidence: >
-      pnpm --filter @repo/orchestrator exec eslint src/nodes/sync/ src/nodes/index.ts
-      returns zero errors. All Prettier formatting issues auto-fixed.
-      no-useless-escape fixed in Mermaid validation regex.
-    command: "pnpm --filter @repo/orchestrator exec eslint src/nodes/sync/ src/nodes/index.ts"
-    result: "Exit 0, zero errors, zero warnings"
+      Fix iteration 3: all 9 ranked_patches resolved.
+      (1-7) Lint: already fixed in iteration 2 — unused imports (afterEach, promisify),
+      unused mockFileRead function, unused _enc/_p params removed, import ordering fixed.
+      (8) Reusability: replaced direct gray-matter call with shared parseAgentFrontmatter
+      utility from adapters/utils/yaml-parser.ts (eliminates duplication of frontmatter
+      parsing logic; YAMLException import from js-yaml and gray-matter import removed).
+      (9) Reusability: escapeRegex() already extracted to src/utils/string-utils.ts in
+      iteration 2, still correctly imported and used.
+      All 42 tests still pass. Zero ESLint errors. Zero TypeScript errors.
+    command: >
+      pnpm eslint --no-ignore
+      packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts
+      packages/backend/orchestrator/src/nodes/sync/doc-sync.ts
+      packages/backend/orchestrator/src/utils/string-utils.ts &&
+      pnpm --filter @repo/orchestrator type-check
+    result: "Exit 0, zero errors, zero warnings (fix iteration 3)"
 
   - ac_id: "AC-13"
     status: PASS
@@ -181,9 +192,13 @@ files_created:
   - packages/backend/orchestrator/src/nodes/sync/doc-sync.ts
   - packages/backend/orchestrator/src/nodes/sync/index.ts
   - packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts
+  - packages/backend/orchestrator/src/utils/string-utils.ts
+  - packages/backend/orchestrator/src/adapters/utils/yaml-parser.ts
 
 files_modified:
   - packages/backend/orchestrator/src/nodes/index.ts
+  - packages/backend/orchestrator/src/nodes/sync/doc-sync.ts (fix iteration 2: lint + reusability; fix iteration 3: replace gray-matter with parseAgentFrontmatter utility)
+  - packages/backend/orchestrator/src/nodes/sync/__tests__/doc-sync.test.ts (fix iteration 2: lint)
 
 # =============================================================================
 # Subtask Completion

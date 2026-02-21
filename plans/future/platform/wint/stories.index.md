@@ -2247,9 +2247,9 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** ready-for-code-review
+**Status:** needs-code-review
 **Story Generated:** 2026-02-18
-**Story File:** `wint/failed-code-review/WINT-9020/WINT-9020.md`
+**Story File:** `wint/needs-code-review/WINT-9020/WINT-9020.md`
 **Depends On:** WINT-9010, WINT-0160
 **Phase:** 9
 **Points:** 5

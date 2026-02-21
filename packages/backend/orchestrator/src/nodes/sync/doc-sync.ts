@@ -22,11 +22,10 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { exec as execCallback } from 'node:child_process'
 import { promisify } from 'node:util'
-import matter from 'gray-matter'
-import { YAMLException } from 'js-yaml'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { isValidStoryId } from '@repo/workflow-logic'
+import { parseFrontmatter as parseAgentFrontmatter } from '../../adapters/utils/yaml-parser.js'
 import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphState } from '../../state/index.js'
 import { updateState } from '../../runner/state-helpers.js'
@@ -341,19 +340,19 @@ async function parseFrontmatter(
       const fullPath = path.join(workingDir, file.path)
       const content = await fs.readFile(fullPath, 'utf-8')
 
-      // Parse frontmatter using gray-matter (same approach as @repo/database-schema's parseFrontmatter)
-      let parsed: ReturnType<typeof matter>
+      // Parse frontmatter using the shared parseAgentFrontmatter utility from yaml-parser
+      let parsedData: Record<string, unknown>
       try {
-        parsed = matter(content)
+        const parsed = parseAgentFrontmatter(content, fullPath)
+        parsedData = parsed.frontmatter
       } catch (yamlErr) {
-        if (yamlErr instanceof YAMLException) {
-          manualReviewItems.push(`Invalid YAML in \`${file.path}\` — skipped: ${yamlErr.message}`)
-          continue
-        }
-        throw yamlErr
+        manualReviewItems.push(
+          `Invalid YAML in \`${file.path}\` — skipped: ${yamlErr instanceof Error ? yamlErr.message : String(yamlErr)}`,
+        )
+        continue
       }
 
-      if (!parsed.data || Object.keys(parsed.data).length === 0) {
+      if (!parsedData || Object.keys(parsedData).length === 0) {
         parsedFiles.push({
           path: file.path,
           changeType: file.changeType,
@@ -363,7 +362,7 @@ async function parseFrontmatter(
         continue
       }
 
-      const fileMetadata: Record<string, unknown> = (parsed.data as Record<string, unknown>) || {}
+      const fileMetadata: Record<string, unknown> = parsedData
 
       // Step 2.3: Merge DB data if available
       let mergedMetadata = fileMetadata

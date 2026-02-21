@@ -1,40 +1,199 @@
 schema: 1
 story_id: WINT-9020
-iteration: 1
-verdict: PASS
-timestamp: "2026-02-18T04:30:00Z"
+timestamp: '2026-02-21T04:30:00.000Z'
+iteration: 4
 
-checks:
+verdict: FAIL
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+workers_skipped: []
+
+ranked_patches:
+  - priority: 1
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'_enc' is defined but never used (appears 25 times)"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 2
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'_p' is defined but never used (appears 2 times)"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 3
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'afterEach' is defined but never used"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 4
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'promisify' is defined but never used"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 5
+    file: src/__tests__/doc-sync.test.ts
+    issue: "'mockFileRead' is defined but never used"
+    severity: high
+    auto_fixable: true
+    worker: lint
+  - priority: 6
+    file: src/__tests__/doc-sync.test.ts
+    issue: "Import order violation - imports not properly sorted"
+    severity: medium
+    auto_fixable: true
+    worker: lint
+  - priority: 7
+    file: src/__tests__/doc-sync.test.ts
+    issue: "Missing empty line between import groups"
+    severity: medium
+    auto_fixable: true
+    worker: lint
+  - priority: 8
+    file: src/doc-sync.ts
+    issue: "Frontmatter parsing duplicates @repo/database-schema parseFrontmatter utility - extract to shared location"
+    severity: medium
+    auto_fixable: false
+    worker: reusability
+  - priority: 9
+    file: src/doc-sync.ts
+    issue: "escapeRegex() utility should be extracted to shared utils package"
+    severity: medium
+    auto_fixable: false
+    worker: reusability
+
+findings:
   lint:
-    status: pass
-    details: "ESLint run on src/nodes/sync/ and src/nodes/index.ts returned exit 0 with zero errors and zero warnings. All Prettier formatting rules pass."
-
+    verdict: FAIL
+    skipped: false
+    errors: 34
+    warnings: 0
+    findings:
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'_enc' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'_p' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'afterEach' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'promisify' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "'mockFileRead' is defined but never used"
+        rule: '@typescript-eslint/no-unused-vars'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "Import order violation"
+        rule: 'import/order'
+        severity: error
+        auto_fixable: true
+      - file: src/__tests__/doc-sync.test.ts
+        message: "Empty line required between import groups"
+        rule: 'import/order'
+        severity: error
+        auto_fixable: true
   style:
-    status: pass
-    details: "Code follows project conventions: no semicolons, single quotes, trailing commas, 100 char line width, 2 space indentation. Zod-first types used correctly with z.infer<> for exported types (DocSyncConfig, DocSyncResult). Internal interfaces (DiscoveredFile, ParsedFile, SectionMapping, etc.) are appropriate for internal-only types. Uses @repo/logger throughout (no console.log). Node factory pattern via createToolNode correctly applied. Proper use of aliased re-exports in nodes/index.ts to avoid collision with existing subprocess variant."
-
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
   syntax:
-    status: pass
-    details: "No obvious bugs, syntax errors, or missing error handling. File discovery handles both git diff (primary) and timestamp fallback correctly. Frontmatter parsing includes YAML validation with error handling for invalid YAML. Database query timeout detection discriminates between 'timeout', 'connection_failed', and 'unavailable' states. Command execution via exec() is safe — uses hardcoded git commands, no user input injection. Mermaid diagram validation includes bracket balance checking and valid diagram type verification. All phases include try-catch blocks with appropriate error logging."
-
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
   security:
-    status: pass
-    details: "No command injection vulnerabilities. exec() calls use hardcoded git diff commands ('git diff HEAD --name-only --diff-filter=AMR .claude/' and 'git diff HEAD --name-only --diff-filter=D .claude/') with no variable interpolation. Spawn names in Mermaid generation are validated for invalid characters before use. Input validation present for file paths, YAML content, and diagram strings. File I/O operations handle ENOENT gracefully and treat missing files as deleted."
-
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
   typecheck:
-    status: pass
-    details: "TypeScript compilation successful for all new files (src/nodes/sync/doc-sync.ts, src/nodes/sync/index.ts, src/nodes/sync/__tests__/doc-sync.test.ts, src/nodes/index.ts modification). Pre-existing TypeScript errors in src/__types__/index.ts (database-schema imports) are documented in EVIDENCE.yaml as pre-existing and unrelated to this story. No new type errors introduced by WINT-9020 changes."
-
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
   build:
-    status: pass
-    details: "All new files compile successfully. Tests import and execute without build errors. Module resolution via .js extensions correct for ESM. Zod schema validation at module load time succeeds. Graph state extension (GraphStateWithDocSync) correctly implements interface extension pattern used elsewhere in orchestrator."
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  reusability:
+    verdict: FAIL
+    skipped: false
+    errors: 2
+    warnings: 3
+    findings:
+      - file: src/doc-sync.ts
+        line: 343
+        message: "Frontmatter parsing duplicates @repo/database-schema parseFrontmatter utility - extract to shared location"
+        severity: error
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        line: 584
+        message: "escapeRegex() utility should be extracted to shared utils package"
+        severity: error
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        message: "File discovery pattern similar to existing kbar-sync implementation - consider consolidating"
+        severity: warning
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        message: "Validation pattern duplication per DEBT-RU-002 - standardize approach across orchestrator"
+        severity: warning
+        auto_fixable: false
+      - file: src/doc-sync.ts
+        message: "YAML parsing library consolidation candidate - ensure js-yaml version alignment with rest of codebase"
+        severity: warning
+        auto_fixable: false
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  typescript:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
 
-  tests:
-    status: pass
-    details: "42 tests passing in doc-sync.test.ts with 85.95% statement coverage on doc-sync.ts (exceeds 80% threshold). Test scenarios cover: schema validation (DocSyncConfigSchema, DocSyncResultSchema), happy path (HP-1 to HP-5), error cases (EC-1 to EC-6), and edge cases (EG-1 to EG-6). All mocking via vi.mock() for child_process, fs/promises, and @repo/logger. Tests verify all 7 phases execute in sequence, file discovery via git diff and timestamp fallback, database query timeout/connection failure handling, check-only mode, force mode, Mermaid validation, changelog drafting, and SYNC-REPORT.md generation."
-
-findings: []
-
-ranked_patches: []
-
-summary: "WINT-9020 implementation is production-ready. Code quality is high with comprehensive test coverage (85.95%), proper error handling across all 7 phases, security-hardened subprocess execution, and strict adherence to project style guidelines. No findings, no patches required. Ready for merge."
+total_errors: 36
+total_warnings: 3
+auto_fixable_count: 7
