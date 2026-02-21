@@ -760,7 +760,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1070: Deprecate stories.index.md as Source of Truth
 
-**Status:** failed-code-review
+**Status:** needs-code-review
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
