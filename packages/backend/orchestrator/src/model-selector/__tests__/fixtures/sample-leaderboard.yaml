@@ -1,0 +1,55 @@
+schema: 1
+story_id: MODL-0040
+updated_at: "2026-02-18T10:00:00.000Z"
+entries:
+  - task_id: code_generation_medium
+    model: anthropic/claude-sonnet-4.5
+    runs_count: 25
+    avg_quality: 82.4
+    avg_cost_usd: 0.0023
+    avg_latency_ms: 1200.0
+    value_score: 35826.09
+    recent_run_scores: [80, 82, 83, 84, 82]
+    convergence_status: converged
+    convergence_confidence: 0.95
+    quality_trend: stable
+    last_run_at: "2026-02-18T09:00:00.000Z"
+
+  - task_id: code_generation_medium
+    model: anthropic/claude-haiku-3.5
+    runs_count: 12
+    avg_quality: 70.1
+    avg_cost_usd: 0.0008
+    avg_latency_ms: 400.0
+    value_score: 87625.0
+    recent_run_scores: [70, 71, 70, 69, 70]
+    convergence_status: converged
+    convergence_confidence: 0.95
+    quality_trend: stable
+    last_run_at: "2026-02-18T08:00:00.000Z"
+
+  - task_id: security_analysis
+    model: anthropic/claude-opus-4-5
+    runs_count: 5
+    avg_quality: 91.0
+    avg_cost_usd: 0.015
+    avg_latency_ms: 3000.0
+    value_score: 6066.67
+    recent_run_scores: [90, 91, 92, 91, 91]
+    convergence_status: exploring
+    convergence_confidence: 0
+    quality_trend: stable
+    last_run_at: "2026-02-18T07:00:00.000Z"
+
+  - task_id: summarization
+    model: ollama/llama3.2
+    runs_count: 10
+    avg_quality: 65.0
+    avg_cost_usd: 0.0
+    avg_latency_ms: 800.0
+    value_score: 65.0
+    recent_run_scores: [70, 67, 65, 62, 61]
+    convergence_status: exploring
+    convergence_confidence: 0
+    quality_trend: degrading
+    last_run_at: "2026-02-18T06:00:00.000Z"
