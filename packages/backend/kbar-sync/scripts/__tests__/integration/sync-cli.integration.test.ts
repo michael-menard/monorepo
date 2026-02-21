@@ -12,12 +12,11 @@
  * Run with: pnpm test --filter @repo/kbar-sync -- --reporter=verbose scripts/__tests__/integration/
  */
 
+import { writeFile, mkdir, rm } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import pg from 'pg'
-import { writeFile, mkdir, rm } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
 
 // Skip if no testcontainers support (CI without Docker)
 const shouldSkip = process.env.SKIP_TESTCONTAINERS === 'true'
@@ -50,8 +49,10 @@ describe.skipIf(shouldSkip)('sync-story CLI Integration Tests (AC-11)', () => {
     await client.connect()
 
     // Set environment variables for pg Pool in scripts
+    // Per L-002: set both POSTGRES_USERNAME (for @repo/db) and POSTGRES_USER (for CLI scripts)
     process.env.POSTGRES_HOST = container.getHost()
     process.env.POSTGRES_PORT = container.getPort().toString()
+    process.env.POSTGRES_USERNAME = container.getUsername()
     process.env.POSTGRES_USER = container.getUsername()
     process.env.POSTGRES_PASSWORD = container.getPassword()
     process.env.POSTGRES_DATABASE = container.getDatabase()
@@ -59,13 +60,39 @@ describe.skipIf(shouldSkip)('sync-story CLI Integration Tests (AC-11)', () => {
     // Create KBAR schema and tables
     await client.query(`CREATE SCHEMA IF NOT EXISTS kbar`)
 
-    await client.query(`
-      CREATE TYPE IF NOT EXISTS kbar_story_phase AS ENUM ('setup', 'plan', 'execute', 'review', 'qa', 'done');
-      CREATE TYPE IF NOT EXISTS kbar_artifact_type AS ENUM ('story_file', 'elaboration', 'plan', 'scope', 'evidence', 'review', 'test_plan', 'decisions', 'checkpoint', 'knowledge_context');
-      CREATE TYPE IF NOT EXISTS kbar_sync_status AS ENUM ('pending', 'in_progress', 'completed', 'failed', 'conflict');
-      CREATE TYPE IF NOT EXISTS kbar_story_priority AS ENUM ('P0', 'P1', 'P2', 'P3', 'P4');
-      CREATE TYPE IF NOT EXISTS kbar_conflict_resolution AS ENUM ('filesystem_wins', 'database_wins', 'manual', 'merged', 'deferred');
-    `)
+    // Per L-001: CREATE TYPE IF NOT EXISTS requires PG 16.3+; use DO $$ BEGIN ... EXCEPTION pattern
+    const createEnum = (name: string, values: string[]) =>
+      client.query(
+        `DO $$ BEGIN CREATE TYPE ${name} AS ENUM (${values.map(v => `'${v}'`).join(', ')}); EXCEPTION WHEN duplicate_object THEN null; END $$;`,
+      )
+    await createEnum('kbar_story_phase', ['setup', 'plan', 'execute', 'review', 'qa', 'done'])
+    await createEnum('kbar_artifact_type', [
+      'story_file',
+      'elaboration',
+      'plan',
+      'scope',
+      'evidence',
+      'review',
+      'test_plan',
+      'decisions',
+      'checkpoint',
+      'knowledge_context',
+    ])
+    await createEnum('kbar_sync_status', [
+      'pending',
+      'in_progress',
+      'completed',
+      'failed',
+      'conflict',
+    ])
+    await createEnum('kbar_story_priority', ['P0', 'P1', 'P2', 'P3', 'P4'])
+    await createEnum('kbar_conflict_resolution', [
+      'filesystem_wins',
+      'database_wins',
+      'manual',
+      'merged',
+      'deferred',
+    ])
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS kbar.stories (
@@ -142,14 +169,17 @@ describe.skipIf(shouldSkip)('sync-story CLI Integration Tests (AC-11)', () => {
     `)
 
     // Create temp directory for test story files
-    testDir = join(tmpdir(), `kbar-cli-integration-${Date.now()}`)
+    // Per L-004: must be under cwd/plans to pass validateFilePath check
+    testDir = resolve(process.cwd(), 'plans', `kbar-cli-integration-${Date.now()}`)
     await mkdir(testDir, { recursive: true })
   }, 90000) // 90s timeout for container startup
 
   afterAll(async () => {
     await client?.end()
     await container?.stop()
-    await rm(testDir, { recursive: true, force: true })
+    if (testDir) {
+      await rm(testDir, { recursive: true, force: true })
+    }
   })
 
   // ===========================================================================
@@ -258,6 +288,7 @@ status: backlog
   // ===========================================================================
   it('dryRunEpic issues ONE batch query for multiple stories (N+1 prevention)', async () => {
     // Create multiple story directories
+    // Per L-004: must be under cwd/plans to pass validateFilePath check in dryRunEpic
     const epicDir = join(testDir, 'epic-batch-test')
     await mkdir(epicDir, { recursive: true })
 

@@ -1,0 +1,27 @@
+schema: 1
+story_id: KBAR-0050
+timestamp: "2026-02-20T23:22:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/kbar-sync/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Create CLI commands (sync:story and sync:epic) for syncing stories and artifacts to database"
+elaboration: "completed"

@@ -1,0 +1,205 @@
+schema: 1
+story_id: KBAR-0050
+generated_at: "2026-02-20T23:30:00Z"
+domain: backend/cli/kbar-sync
+scope: "CLI commands (sync:story and sync:epic) delegating to @repo/kbar-sync functions"
+
+# ============================================================================
+# Confirmed Patterns (from canonical reference files)
+# ============================================================================
+
+confirmed_patterns:
+  - id: CP-001
+    title: "Script entry point pattern"
+    source: "packages/backend/orchestrator/src/scripts/populate-story-status.ts"
+    details: |
+      - Shebang: #!/usr/bin/env npx tsx
+      - Zod-based CliOptionsSchema for arg parsing
+      - parseArgs() reads process.argv.slice(2) directly
+      - Fail-soft: errors caught per-item, collected, logged at end
+      - Stats aggregation object built incrementally
+      - process.exit(1) on failure, exit(0) on success
+      - Guard: `if (import.meta.url === 'file://${process.argv[1]}') { main() }`
+      - @repo/logger for structured trace output
+      - Plain console.log/console.error for human-readable progress (stdout/stderr)
+
+  - id: CP-002
+    title: "Zod CLI option schema pattern"
+    source: "apps/api/knowledge-base/src/cli/index.ts"
+    details: |
+      - Each command has its own Zod schema (e.g., CliAddNoteSchema, CliListTasksSchema)
+      - z.object() with explicit field types
+      - .default() for optional flags with default values
+      - z.boolean().default(false) for flag-style options
+      - .safeParse() used for validation; never .parse() in CLI scripts
+      - type = z.infer<typeof Schema> immediately after schema definition
+      - parseOptions() function parses --key value pairs from process.argv
+
+  - id: CP-003
+    title: "kbar-sync function call pattern and result handling"
+    source: "packages/backend/kbar-sync/src/batch-sync-artifacts.ts"
+    details: |
+      - Functions return typed result objects with success/error fields
+      - Per-item fault isolation: errors caught per item, processing continues
+      - Batch result aggregation: synced/skipped/failed counts
+      - All inputs validated with Zod schemas before function call
+      - syncStoryToDatabase({ storyId, filePath, triggeredBy }) - no dryRun param
+      - syncStoryToDatabaseInputSchema has no dryRun or force parameters (AC-12 confirmed)
+
+  - id: CP-004
+    title: "Dry-run implementation (Approach 2 - mandatory per AC-12)"
+    source: "KBAR-0050.md Architecture Notes"
+    details: |
+      - Do NOT call syncStoryToDatabase or any sync function during --dry-run
+      - CLI computes filesystem checksum via computeChecksum() from src/__types__/index.ts
+      - computeChecksum is NOT exported from src/index.ts (only from src/__types__/index.ts)
+      - In scripts, import: import { computeChecksum } from '../src/__types__/index.js'
+      - Query kbar.stories.checksum via @repo/db (read-only SELECT)
+      - Compare checksums and print "would sync" or "would skip"
+      - For sync:epic --dry-run: single batch SELECT for all stories (N+1 prevention)
+      - --force flag: CLI skips its pre-check; always calls syncStoryToDatabase (upsert)
+
+  - id: CP-005
+    title: "Path security validation"
+    source: "packages/backend/kbar-sync/src/__types__/index.ts"
+    details: |
+      - validateFilePath(filePath, baseDir) exported from src/__types__/index.ts
+      - Rejects paths with '..' components (path traversal)
+      - isSymbolicLink() check via lstat (also available in src/__types__)
+      - CLI layer must validate --story-dir, --base-dir, --artifact-file before delegating
+      - Path traversal → exit 1 with security error (AC-9)
+
+  - id: CP-006
+    title: "Integration test pattern with testcontainers"
+    source: "packages/backend/kbar-sync/src/__tests__/artifact-sync.integration.test.ts"
+    details: |
+      - PostgreSqlContainer('postgres:16-alpine') from @testcontainers/postgresql
+      - describe.skipIf(shouldSkip) with SKIP_TESTCONTAINERS env var
+      - beforeAll: start container, connect pg.Client, set env vars, create schema + tables
+      - afterAll: client.end(), container.stop(), rm(testDir)
+      - 90000ms timeout for container startup (beforeAll)
+      - 30000ms timeout per test
+      - testDir created in tmpdir() for test story files
+      - Integration test file already exists in worktree at:
+        packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts
+
+# ============================================================================
+# Package Facts
+# ============================================================================
+
+package_facts:
+  - id: PF-001
+    title: "package.json scripts already added"
+    detail: |
+      Both sync:story and sync:epic scripts are ALREADY present in package.json:
+        "sync:story": "tsx scripts/sync-story.ts"
+        "sync:epic": "tsx scripts/sync-epic.ts"
+      ST-6 (script registration) is effectively pre-done. Still needed: verify shebangs
+      in both scripts after creation.
+
+  - id: PF-002
+    title: "tsx already in devDependencies"
+    detail: "tsx@4.21.0 is already in devDependencies - no new dependency needed"
+
+  - id: PF-003
+    title: "testcontainers already in devDependencies"
+    detail: "@testcontainers/postgresql@^10.0.0 and testcontainers@^10.0.0 already present"
+
+  - id: PF-004
+    title: "computeChecksum import path for scripts"
+    detail: |
+      computeChecksum is exported from src/__types__/index.ts but NOT from src/index.ts.
+      CLI scripts in scripts/ must import as:
+        import { computeChecksum } from '../src/__types__/index.js'
+      (relative path with .js extension for ESM compatibility)
+
+  - id: PF-005
+    title: "Package type is ESM"
+    detail: |
+      package.json has "type": "module" - all imports must use .js extensions
+      even when referencing .ts source files (TSX resolves at runtime).
+
+  - id: PF-006
+    title: "integration test file already scaffolded in worktree"
+    detail: |
+      scripts/__tests__/integration/sync-cli.integration.test.ts already exists
+      with full test scaffolding (beforeAll container setup, 3 test cases for AC-11).
+      It imports dryRunStory from '../../sync-story.js' and dryRunEpic from '../../sync-epic.js'
+      which means these helper functions must be exported from the CLI scripts.
+
+# ============================================================================
+# Key Exports Available from @repo/kbar-sync
+# ============================================================================
+
+available_exports:
+  functions:
+    - syncStoryToDatabase  # Input: { storyId, filePath, triggeredBy }; no dryRun param
+    - syncStoryFromDatabase
+    - detectSyncConflicts
+    - syncArtifactToDatabase
+    - syncArtifactFromDatabase
+    - detectArtifactConflicts
+    - batchSyncArtifactsForStory
+    - batchSyncByType
+  schemas:
+    - SyncStoryToDatabaseInputSchema
+    - SyncStoryToDatabaseOutputSchema
+    - SyncStoryFromDatabaseInputSchema
+    - DetectSyncConflictsInputSchema
+    - DetectSyncConflictsOutputSchema
+    - NonStoryArtifactTypeSchema
+    - SyncArtifactToDatabaseInputSchema
+    - BatchSyncArtifactsInputSchema
+    - BatchSyncArtifactsOutputSchema
+    - BatchSyncByTypeInputSchema
+    - BatchSyncByTypeOutputSchema
+    - DetectArtifactConflictsInputSchema
+  internal_only_utilities:
+    - computeChecksum  # import from '../src/__types__/index.js' directly
+    - validateFilePath  # import from '../src/__types__/index.js' directly
+
+# ============================================================================
+# Lessons from Prior Stories
+# ============================================================================
+
+lessons:
+  - id: LS-001
+    title: "N+1 prevention for batch dry-run queries"
+    from_story: "KBAR-0040"
+    detail: |
+      Batch dry-run (sync:epic --dry-run) must use a single SELECT IN query
+      to fetch all story checksums at once. Avoid per-story round trips.
+      Pattern: SELECT story_id, checksum FROM kbar.stories WHERE story_id = ANY($1)
+
+  - id: LS-002
+    title: "ESM .js extensions required in imports"
+    from_story: "KBAR-0030, KBAR-0040"
+    detail: |
+      All internal imports in TypeScript ESM files must end in .js even if
+      the source file is .ts. TSX and tsc both resolve correctly.
+      Example: import { computeChecksum } from '../src/__types__/index.js'
+
+  - id: LS-003
+    title: "Fail-soft pattern for batch operations"
+    from_story: "KBAR-0040"
+    detail: |
+      Individual item failures must not abort the batch. Catch errors per-item,
+      push to errors array, continue processing, print summary at end, exit 1
+      if any failures. This is the established pattern in batchSyncArtifactsForStory.
+
+  - id: LS-004
+    title: "Exit code 2 for dependency failures"
+    from_story: "KBAR-0050 AC-9"
+    detail: |
+      DB connection failure and @repo/kbar-sync import failure → exit code 2.
+      Wrap main() DB connection in try/catch, catch connection errors specifically
+      and call process.exit(2) before the general process.exit(1).
+
+  - id: LS-005
+    title: "Exported helper functions required for testability"
+    from_story: "KBAR-0050 integration test scaffolding"
+    detail: |
+      The integration test file imports dryRunStory() from sync-story.ts and
+      dryRunEpic() from sync-epic.ts as named exports. These helper functions
+      must be exported (not just used internally in main()) to enable direct
+      testing without spawning a subprocess.

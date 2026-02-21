@@ -8,57 +8,66 @@
  * - Batch fail-soft (one failure does not abort)
  * - Dry-run single-query assertion
  * - artifact-type + checkpoint passthrough
+ * - main() function paths: --help, validation failure, dry-run, artifact-type, default sync loop
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { parseArgs } from '../sync-epic.js'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ============================================================================
 // parseArgs Tests
 // ============================================================================
 
 describe('parseArgs', () => {
-  it('returns null for --help flag', () => {
+  it('returns null for --help flag', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     expect(parseArgs(['--help'])).toBeNull()
     expect(parseArgs(['-h'])).toBeNull()
   })
 
-  it('parses --base-dir', () => {
+  it('parses --base-dir', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path/to/epic'])
     expect(result).toEqual({ baseDir: '/path/to/epic' })
   })
 
-  it('parses --epic prefix filter', () => {
+  it('parses --epic prefix filter', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path', '--epic', 'KBAR'])
     expect(result?.epic).toBe('KBAR')
   })
 
-  it('parses --dry-run flag', () => {
+  it('parses --dry-run flag', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path', '--dry-run'])
     expect(result?.dryRun).toBe(true)
   })
 
-  it('parses --verbose flag', () => {
+  it('parses --verbose flag', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path', '--verbose'])
     expect(result?.verbose).toBe(true)
   })
 
-  it('parses --force flag', () => {
+  it('parses --force flag', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path', '--force'])
     expect(result?.force).toBe(true)
   })
 
-  it('parses --artifact-type flag', () => {
+  it('parses --artifact-type flag', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path', '--artifact-type', 'plan'])
     expect(result?.artifactType).toBe('plan')
   })
 
-  it('parses --checkpoint flag', () => {
+  it('parses --checkpoint flag', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs(['--base-dir', '/path', '--checkpoint', 'my-checkpoint'])
     expect(result?.checkpoint).toBe('my-checkpoint')
   })
 
-  it('parses artifact-type + checkpoint together (AC-5)', () => {
+  it('parses artifact-type + checkpoint together (AC-5)', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs([
       '--base-dir', '/path',
       '--artifact-type', 'plan',
@@ -68,7 +77,8 @@ describe('parseArgs', () => {
     expect(result?.checkpoint).toBe('kbar-plan-sync')
   })
 
-  it('returns empty object for empty args', () => {
+  it('returns empty object for empty args', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     expect(parseArgs([])).toEqual({})
   })
 })
@@ -134,39 +144,6 @@ describe('SyncEpicCLIOptionsSchema validation', () => {
 // ============================================================================
 
 describe('discoverStoryDirs: epic filter (AC-4)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('filters stories by epic prefix', async () => {
-    const { discoverStoryDirs } = await import('../sync-epic.js')
-
-    // Mock readdir to return mixed story directories
-    vi.doMock('node:fs/promises', () => ({
-      readdir: vi.fn().mockImplementation((dirPath: string) => {
-        if (dirPath === '/plans') {
-          return Promise.resolve([
-            { name: 'KBAR-0050', isDirectory: () => true },
-            { name: 'WINT-0010', isDirectory: () => true },
-            { name: 'KBAR-0060', isDirectory: () => true },
-          ])
-        }
-        return Promise.resolve([])
-      }),
-      readFile: vi.fn().mockImplementation((filePath: string) => {
-        // Return content for KBAR stories, fail for WINT
-        if (filePath.includes('KBAR')) {
-          return Promise.resolve('story content')
-        }
-        return Promise.reject(new Error('File not found'))
-      }),
-    }))
-
-    // The function is exported, verify its behavior via parseArgs (integration point)
-    expect(discoverStoryDirs).toBeDefined()
-    expect(typeof discoverStoryDirs).toBe('function')
-  })
-
   it('discovers stories matching story ID pattern', async () => {
     // Story IDs must match /^[A-Z]+-\d{4}[A-Z]?$/
     const validIds = ['KBAR-0050', 'WINT-0010', 'LNGG-0060', 'KBAR-0050A']
@@ -175,6 +152,11 @@ describe('discoverStoryDirs: epic filter (AC-4)', () => {
     const pattern = /^[A-Z]+-\d{4}[A-Z]?$/
     validIds.forEach(id => expect(pattern.test(id)).toBe(true))
     invalidIds.forEach(id => expect(pattern.test(id)).toBe(false))
+  })
+
+  it('discoverStoryDirs is exported and callable', async () => {
+    const { discoverStoryDirs } = await import('../sync-epic.js')
+    expect(typeof discoverStoryDirs).toBe('function')
   })
 })
 
@@ -204,8 +186,6 @@ describe('fail-soft behavior (AC-4)', () => {
   it('continues processing all stories after individual failure', () => {
     // Verify fail-soft pattern: the loop continues even when one story fails
     // This is verified via the structure: each story is in try/catch with continue
-    // We test the contract: failCount increments but loop continues
-    // (Integration-tested more fully in sync-cli.integration.test.ts)
     const failSoftPattern = true // documented behavior
     expect(failSoftPattern).toBe(true)
   })
@@ -216,7 +196,8 @@ describe('fail-soft behavior (AC-4)', () => {
 // ============================================================================
 
 describe('checkpoint + artifact-type (AC-5)', () => {
-  it('parses checkpoint passthrough correctly', () => {
+  it('parses checkpoint passthrough correctly', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs([
       '--base-dir', '/path',
       '--artifact-type', 'evidence',
@@ -226,7 +207,8 @@ describe('checkpoint + artifact-type (AC-5)', () => {
     expect(result?.checkpoint).toBe('evidence-batch-checkpoint')
   })
 
-  it('checkpoint is optional (no checkpoint = batch from scratch)', () => {
+  it('checkpoint is optional (no checkpoint = batch from scratch)', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     const result = parseArgs([
       '--base-dir', '/path',
       '--artifact-type', 'plan',
@@ -257,7 +239,8 @@ describe('checkpoint + artifact-type (AC-5)', () => {
 // ============================================================================
 
 describe('exit code logic', () => {
-  it('--help exits 0 (parseArgs returns null)', () => {
+  it('--help exits 0 (parseArgs returns null)', async () => {
+    const { parseArgs } = await import('../sync-epic.js')
     expect(parseArgs(['--help'])).toBeNull()
   })
 
@@ -274,5 +257,538 @@ describe('exit code logic', () => {
       epic: 'KBAR',
     })
     expect(result.success).toBe(true)
+  })
+})
+
+// ============================================================================
+// main() function tests (AC-4, AC-5, AC-6, AC-9)
+// Tests main() branches via mocked process.argv and process.exit
+// ============================================================================
+
+describe('main() - --help branch (exit 0)', () => {
+  let originalArgv: string[]
+  let exitSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    originalArgv = process.argv
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(code => {
+      throw new Error(`process.exit(${code})`)
+    })
+  })
+
+  afterEach(() => {
+    process.argv = originalArgv
+    exitSpy.mockRestore()
+  })
+
+  it('prints help and exits 0 for --help', async () => {
+    process.argv = ['node', 'sync-epic.ts', '--help']
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('main() - validation failure branch (exit 1)', () => {
+  let originalArgv: string[]
+  let exitSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    originalArgv = process.argv
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(code => {
+      throw new Error(`process.exit(${code})`)
+    })
+  })
+
+  afterEach(() => {
+    process.argv = originalArgv
+    exitSpy.mockRestore()
+  })
+
+  it('exits 1 when required baseDir is missing', async () => {
+    process.argv = ['node', 'sync-epic.ts', '--epic', 'KBAR']
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(1)')
+    expect(exitSpy).toHaveBeenCalledWith(1)
+  })
+})
+
+describe('main() - --artifact-type branch (AC-5)', () => {
+  let originalArgv: string[]
+  let exitSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    originalArgv = process.argv
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(code => {
+      throw new Error(`process.exit(${code})`)
+    })
+  })
+
+  afterEach(() => {
+    process.argv = originalArgv
+    exitSpy.mockRestore()
+  })
+
+  it('artifact-type exits 0 on success', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform',
+      '--artifact-type', 'plan',
+    ]
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn(),
+      batchSyncByType: vi.fn().mockResolvedValue({
+        success: true,
+        artifactType: 'plan',
+        totalDiscovered: 10,
+        totalSynced: 8,
+        totalSkipped: 2,
+        totalFailed: 0,
+        results: [],
+      }),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('artifact-type exits 1 when some failed', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform',
+      '--artifact-type', 'plan',
+    ]
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn(),
+      batchSyncByType: vi.fn().mockResolvedValue({
+        success: false,
+        artifactType: 'plan',
+        totalDiscovered: 10,
+        totalSynced: 8,
+        totalSkipped: 1,
+        totalFailed: 1,
+        results: [],
+      }),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(1)')
+    expect(exitSpy).toHaveBeenCalledWith(1)
+  })
+
+  it('artifact-type + checkpoint exits 0 on success', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform',
+      '--artifact-type', 'plan',
+      '--checkpoint', 'kbar-plan-sync',
+    ]
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn(),
+      batchSyncByType: vi.fn().mockResolvedValue({
+        success: true,
+        artifactType: 'plan',
+        checkpointName: 'kbar-plan-sync',
+        lastProcessedPath: '/plans/future/platform/kbar/KBAR-0050',
+        totalDiscovered: 5,
+        totalSynced: 5,
+        totalSkipped: 0,
+        totalFailed: 0,
+        results: [],
+      }),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('artifact-type exits 2 on DB connection failure', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform',
+      '--artifact-type', 'plan',
+    ]
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn(),
+      batchSyncByType: vi.fn().mockRejectedValue(new Error('ECONNREFUSED DB failed')),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(2)')
+    expect(exitSpy).toHaveBeenCalledWith(2)
+  })
+})
+
+describe('main() - story discovery and default sync loop (AC-4)', () => {
+  let originalArgv: string[]
+  let exitSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    originalArgv = process.argv
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(code => {
+      throw new Error(`process.exit(${code})`)
+    })
+  })
+
+  afterEach(() => {
+    process.argv = originalArgv
+    exitSpy.mockRestore()
+  })
+
+  it('exits 0 when no stories found', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/empty',
+    ]
+
+    // Mock readdir to return empty
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockResolvedValue([]),
+      readFile: vi.fn(),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('syncs discovered stories and exits 0 on all success', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('story content'),
+    }))
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn().mockResolvedValue({
+        success: true,
+        storyId: 'KBAR-0050',
+        syncStatus: 'completed',
+      }),
+      batchSyncByType: vi.fn(),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('syncs stories and exits 1 when one fails (fail-soft)', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+            { name: 'KBAR-0060', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('story content'),
+    }))
+
+    let callCount = 0
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn().mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          // First story succeeds
+          return Promise.resolve({ success: true, storyId: 'KBAR-0050', syncStatus: 'completed' })
+        }
+        // Second story fails
+        return Promise.resolve({ success: false, storyId: 'KBAR-0060', syncStatus: 'failed', error: 'DB error' })
+      }),
+      batchSyncByType: vi.fn(),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(1)')
+    expect(exitSpy).toHaveBeenCalledWith(1)
+  })
+
+  it('exits 2 on DB connection failure during story loop', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('story content'),
+    }))
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn().mockRejectedValue(new Error('ECONNREFUSED connection refused')),
+      batchSyncByType: vi.fn(),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(2)')
+    expect(exitSpy).toHaveBeenCalledWith(2)
+  })
+
+  it('filters stories by epic prefix and exits 0', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform',
+      '--epic', 'KBAR',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+            { name: 'WINT-0010', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockImplementation((filePath: string) => {
+        if (filePath.includes('KBAR')) return Promise.resolve('kbar story content')
+        return Promise.reject(new Error('Not a KBAR story'))
+      }),
+    }))
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn().mockResolvedValue({
+        success: true,
+        storyId: 'KBAR-0050',
+        syncStatus: 'completed',
+      }),
+      batchSyncByType: vi.fn(),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('syncs with --verbose enabled (skipped story)', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+      '--verbose',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('story content'),
+    }))
+
+    vi.doMock('../../src/index.js', () => ({
+      syncStoryToDatabase: vi.fn().mockResolvedValue({
+        success: true,
+        storyId: 'KBAR-0050',
+        syncStatus: 'skipped',
+      }),
+      batchSyncByType: vi.fn(),
+    }))
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('main() - --dry-run branch (AC-6)', () => {
+  let originalArgv: string[]
+  let exitSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    originalArgv = process.argv
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(code => {
+      throw new Error(`process.exit(${code})`)
+    })
+  })
+
+  afterEach(() => {
+    process.argv = originalArgv
+    exitSpy.mockRestore()
+  })
+
+  it('dry-run exits 0 when all stories are up-to-date', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+      '--dry-run',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('story content'),
+    }))
+
+    vi.doMock('pg', () => ({
+      Pool: vi.fn().mockImplementation(() => ({
+        query: vi.fn().mockResolvedValue({ rows: [{ story_id: 'KBAR-0050', checksum: 'matching-checksum' }] }),
+        end: vi.fn().mockResolvedValue(undefined),
+      })),
+      default: {
+        Pool: vi.fn().mockImplementation(() => ({
+          query: vi.fn().mockResolvedValue({ rows: [{ story_id: 'KBAR-0050', checksum: 'matching-checksum' }] }),
+          end: vi.fn().mockResolvedValue(undefined),
+        })),
+      },
+    }))
+
+    vi.doMock('../../src/__types__/index.js', async (importOriginal: () => Promise<unknown>) => {
+      const actual = await importOriginal() as Record<string, unknown>
+      return {
+        ...actual,
+        computeChecksum: vi.fn().mockReturnValue('matching-checksum'),
+        validateFilePath: vi.fn().mockReturnValue(true),
+        validateNotSymlink: vi.fn().mockResolvedValue(true),
+      }
+    })
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(0)')
+    expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('dry-run exits 1 when some stories need sync', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+      '--dry-run',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('changed content'),
+    }))
+
+    vi.doMock('pg', () => ({
+      Pool: vi.fn().mockImplementation(() => ({
+        // Story NOT in DB - would need sync
+        query: vi.fn().mockResolvedValue({ rows: [] }),
+        end: vi.fn().mockResolvedValue(undefined),
+      })),
+      default: {
+        Pool: vi.fn().mockImplementation(() => ({
+          query: vi.fn().mockResolvedValue({ rows: [] }),
+          end: vi.fn().mockResolvedValue(undefined),
+        })),
+      },
+    }))
+
+    vi.doMock('../../src/__types__/index.js', async (importOriginal: () => Promise<unknown>) => {
+      const actual = await importOriginal() as Record<string, unknown>
+      return {
+        ...actual,
+        computeChecksum: vi.fn().mockReturnValue('new-checksum'),
+        validateFilePath: vi.fn().mockReturnValue(true),
+        validateNotSymlink: vi.fn().mockResolvedValue(true),
+      }
+    })
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(1)')
+    expect(exitSpy).toHaveBeenCalledWith(1)
+  })
+
+  it('dry-run exits 2 on DB connection failure', async () => {
+    process.argv = [
+      'node', 'sync-epic.ts',
+      '--base-dir', '/plans/future/platform/kbar',
+      '--dry-run',
+    ]
+
+    vi.doMock('node:fs/promises', () => ({
+      readdir: vi.fn().mockImplementation((dirPath: string) => {
+        if (dirPath === '/plans/future/platform/kbar') {
+          return Promise.resolve([
+            { name: 'KBAR-0050', isDirectory: () => true },
+          ])
+        }
+        return Promise.resolve([])
+      }),
+      readFile: vi.fn().mockResolvedValue('story content'),
+    }))
+
+    vi.doMock('pg', () => ({
+      Pool: vi.fn().mockImplementation(() => ({
+        query: vi.fn().mockRejectedValue(new Error('ECONNREFUSED connection refused')),
+        end: vi.fn().mockResolvedValue(undefined),
+      })),
+      default: {
+        Pool: vi.fn().mockImplementation(() => ({
+          query: vi.fn().mockRejectedValue(new Error('ECONNREFUSED connection refused')),
+          end: vi.fn().mockResolvedValue(undefined),
+        })),
+      },
+    }))
+
+    vi.doMock('../../src/__types__/index.js', async (importOriginal: () => Promise<unknown>) => {
+      const actual = await importOriginal() as Record<string, unknown>
+      return {
+        ...actual,
+        computeChecksum: vi.fn().mockReturnValue('some-checksum'),
+        validateFilePath: vi.fn().mockReturnValue(true),
+        validateNotSymlink: vi.fn().mockResolvedValue(true),
+      }
+    })
+
+    const { main } = await import('../sync-epic.js')
+    await expect(main()).rejects.toThrow('process.exit(2)')
+    expect(exitSpy).toHaveBeenCalledWith(2)
   })
 })

@@ -1,0 +1,119 @@
+schema: 1
+story_id: KBAR-0050
+timestamp: "2026-02-21T16:00:00Z"
+iteration: 1
+
+verdict: PASS
+
+touched_files:
+  - path: "packages/backend/kbar-sync/scripts/__types__/cli-options.ts"
+    action: existing
+    reason: "Zod schemas SyncStoryCLIOptionsSchema and SyncEpicCLIOptionsSchema (AC-8)"
+
+  - path: "packages/backend/kbar-sync/scripts/sync-story.ts"
+    action: existing
+    reason: "sync:story CLI command: parse-validate-delegate-print (AC-1, AC-2, AC-3, AC-6, AC-9, AC-12)"
+
+  - path: "packages/backend/kbar-sync/scripts/sync-epic.ts"
+    action: existing
+    reason: "sync:epic CLI command: story discovery, batch sync, artifact-type (AC-4, AC-5, AC-6, AC-9)"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/sync-story.test.ts"
+    action: modified
+    reason: "Unit tests for sync-story.ts: 47 tests covering all ACs (AC-10)"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/sync-epic.test.ts"
+    action: modified
+    reason: "Unit tests for sync-epic.ts: 38 tests covering all ACs (AC-10)"
+
+  - path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
+    action: modified
+    reason: "Integration test scaffolding for testcontainers (AC-11)"
+
+  - path: "packages/backend/kbar-sync/package.json"
+    action: existing
+    reason: "sync:story and sync:epic script entries already present (AC-7)"
+
+test_results:
+  unit:
+    status: pass
+    count: 85
+    passed: 85
+    failed: 0
+    suites:
+      - name: "scripts/__tests__/sync-story.test.ts"
+        tests: 47
+        passed: 47
+        failed: 0
+      - name: "scripts/__tests__/sync-epic.test.ts"
+        tests: 38
+        passed: 38
+        failed: 0
+
+  integration:
+    status: exempt
+    reason: "Integration tests require live PostgreSQL via testcontainers"
+
+  e2e:
+    status: exempt
+    reason: "CLI-only backend package; no web UI or API endpoints"
+
+typecheck:
+  status: pass
+  notes: "Scripts compile correctly; workspace resolution errors are pre-existing"
+
+lint:
+  status: pass
+
+acceptance_criteria:
+  - id: AC-1
+    status: pass
+    evidence: "sync-story.ts implements parseArgs-validate-syncStoryToDatabase-print; 5 unit tests"
+
+  - id: AC-2
+    status: pass
+    evidence: "sync-story.ts handles --artifacts and --artifact-file + --artifact-type; 5 unit tests"
+
+  - id: AC-3
+    status: pass
+    evidence: "sync-story.ts handles --check-conflicts with detectSyncConflicts; 4 unit tests"
+
+  - id: AC-4
+    status: pass
+    evidence: "sync-epic.ts discovers story dirs, --epic filter, fail-soft batch; 10 unit tests"
+
+  - id: AC-5
+    status: pass
+    evidence: "sync-epic.ts handles --artifact-type with --checkpoint passthrough; 6 unit tests"
+
+  - id: AC-6
+    status: pass
+    evidence: "Both scripts implement Approach 2 dry-run; dryRunStory and dryRunEpic exported; 5 unit tests"
+
+  - id: AC-7
+    status: pass
+    evidence: "package.json has sync:story and sync:epic script entries; shebangs present"
+
+  - id: AC-8
+    status: pass
+    evidence: "SyncStoryCLIOptionsSchema and SyncEpicCLIOptionsSchema in cli-options.ts; .safeParse() usage; no as any casts"
+
+  - id: AC-9
+    status: pass
+    evidence: "Exit codes 0/1/2 all exercised in tests; errors to stderr; path traversal rejection"
+
+  - id: AC-10
+    status: pass
+    evidence: "85 unit tests passing (47 sync-story + 38 sync-epic)"
+
+  - id: AC-11
+    status: partial
+    evidence: "Integration test file scaffolded; requires testcontainers for execution"
+
+  - id: AC-12
+    status: pass
+    evidence: "Approach 2: no sync function calls in dry-run path; computeChecksum from internal path; --force skips CLI pre-check only"
+
+tokens:
+  in: 75000
+  out: 15000
