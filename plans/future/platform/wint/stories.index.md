@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-21T00:45:00Z"
+updated_at: "2026-02-21T09:00:00Z"
 ---
 
 # WINT Stories Index
@@ -16,9 +16,9 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 17 |
-| in-qa | 0 |
-| ready-for-qa | 2 |
+| uat | 16 |
+| in-qa | 1 |
+| ready-for-qa | 1 |
 | needs-code-review | 0 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
@@ -762,7 +762,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1070: Generate stories.index.md from Database
 
-**Status:** uat
+**Status:** in-qa
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
