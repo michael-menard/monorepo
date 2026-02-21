@@ -1,0 +1,52 @@
+schema: 1
+story_id: WINT-1070
+generated_at: '2026-02-17T10:00:00Z'
+domain: backend/orchestrator
+
+lessons:
+  - id: L-001
+    source: WINT-1030
+    lesson: >
+      The populate-story-status.ts script is the direct implementation analog.
+      Reuse createDbPool(), findMonorepoRoot(), parseArgs() patterns exactly.
+      Fail-soft error handling (collect errors, log warnings, continue) is the
+      established pattern for this package.
+  - id: L-002
+    source: WINT-1030
+    lesson: >
+      StoryRepository.getStoriesByState() returns StoryArtifact[] via rowToStoryArtifact().
+      For this story, getAllStories() must return StoryRow[] directly (raw DB rows)
+      to avoid the mapping overhead and retain native field names for STATE_TO_DISPLAY_LABEL.
+  - id: L-003
+    source: WINT-1030
+    lesson: >
+      population.ts uses StoryStateSchema with underscore values (ready_to_work, in_progress etc).
+      story-state.ts uses hyphen values (ready-to-work, in-progress etc).
+      The wint.stories DB table uses the underscore format from population.ts.
+      AC-13 requires a live DB enum audit before writing any rendering code.
+  - id: L-004
+    source: codebase
+    lesson: >
+      No 'diff' npm package is available in the orchestrator workspace (package.json has no diff dep).
+      AC-8 explicitly states: if diff is absent, implement inline line-by-line comparison.
+      Do not add new npm dependencies.
+  - id: L-005
+    source: codebase
+    lesson: >
+      StoryFileAdapter.read() accepts a file path and returns story frontmatter data.
+      It throws StoryNotFoundError and ValidationError on failure — both must be caught
+      for fail-soft YAML fallback behavior.
+
+adrs: []
+
+notes:
+  - >
+    The stories.index.md format uses hyphenated status labels (ready-to-work, in-progress)
+    in the Progress Summary table and per-story Status fields.
+  - >
+    The stories.index.md created_at must be PRESERVED from the existing file — not overwritten.
+    Only updated_at should reflect the generation timestamp.
+  - >
+    StoryRow.depends_on is string[] | null from DB. The index renders [] and null both as dash (—).
+</content>
+</invoke>

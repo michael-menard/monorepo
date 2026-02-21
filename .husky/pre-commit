@@ -1,1 +1,11 @@
-# Pre-commit hook disabled
+# Pre-commit hook
+# NOTE: pnpm lint temporarily removed — root package.json has no lint script.
+# Re-enable when lint-staged or turbo lint is properly wired.
+
+# Check workflow sync (Claude ↔ LangGraph)
+# Only run if workflow-related files were changed
+WORKFLOW_FILES=$(git diff --cached --name-only | grep -E "(docs/FULL_WORKFLOW\.md|\.claude/commands/|\.claude/agents/|packages/backend/orchestrator/src/)" || true)
+if [ -n "$WORKFLOW_FILES" ]; then
+  echo "🔄 Checking workflow sync..."
+  npx tsx scripts/check-workflow-sync.ts || exit 1
+fi

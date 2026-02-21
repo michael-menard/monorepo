@@ -20,3 +20,11 @@
 - Input tokens: 4000
 - Output tokens: 2000
 - Total: 6000
+
+## dev-planning | 2026-02-17
+
+- Phase: dev-planning
+- Input tokens: 8,200
+- Output tokens: 3,100
+- Total: 11,300
+- Cumulative: 24,300

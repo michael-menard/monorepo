@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 2.0.0
+updated: 2026-02-18
+version: 2.1.0
 type: utility-skill
 permission_level: setup
 ---
@@ -38,6 +38,17 @@ Move a story directory to a different workflow stage within a feature directory.
 
 ### 1. Locate Story
 
+**DB-first lookup (WINT-1060)**: Before scanning the filesystem, attempt to find the story's current stage via the database:
+
+```
+result = shimGetStoryStatus({ storyId: STORY_ID })
+```
+
+- If `result` is non-null: the story is in the DB. Use `result.state` to determine the `FROM_STAGE` via reverse lookup from the `SWIM_LANE_TO_STATE` table in Step 2.5.
+- If `result` is null (DB miss or DB error): fall back to directory scan below.
+
+**Directory fallback** (when shimGetStoryStatus returns null):
+
 Search all stage directories within `{FEATURE_DIR}` for `{STORY_ID}/`:
 - `{FEATURE_DIR}/backlog/{STORY_ID}/`
 - `{FEATURE_DIR}/created/{STORY_ID}/`
@@ -50,7 +61,7 @@ Search all stage directories within `{FEATURE_DIR}` for `{STORY_ID}/`:
 - `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/`
 - `{FEATURE_DIR}/UAT/{STORY_ID}/`
 
-If not found: `MOVE FAILED: Story directory not found`
+If not found (neither DB nor directory): `MOVE FAILED: Story directory not found`
 
 ### 2. Validate Move
 
@@ -61,11 +72,56 @@ Check target doesn't already exist:
 
 If exists: `MOVE FAILED: Story already exists in {TO_STAGE}`
 
+### 2.5. DB Write via shimUpdateStoryStatus (WINT-1060)
+
+**Note on --update-status flag**: If the `--update-status` flag was provided, skip this step entirely — the DB write will be handled by `/story-update` in Step 4. Set `db_updated: skipped` and proceed directly to Step 3. This prevents double-writes to the database.
+
+**Independence from locate step (AC-10)**: If `shimGetStoryStatus` returned null during Step 1 (DB-miss or DB-error), still proceed with `shimUpdateStoryStatus` for mapped stages — the write path is independent of the read path. A DB read miss does not suppress the DB write attempt.
+
+Look up `TO_STAGE` in the inline `SWIM_LANE_TO_STATE` table (sourced from `packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts`):
+
+| Swim-lane directory (TO_STAGE) | DB newState |
+|-------------------------------|-------------|
+| `backlog` | `backlog` |
+| `ready-to-work` | `ready_to_work` |
+| `in-progress` | `in_progress` |
+| `ready-for-qa` | `ready_for_qa` |
+| `UAT` | `in_qa` |
+
+**Note**: `done` is in the `SWIM_LANE_TO_STATE` constant but is NOT a valid `TO_STAGE` target for `/story-move`.
+
+**If TO_STAGE is in the table above:**
+
+```
+result = shimUpdateStoryStatus({
+  storyId: STORY_ID,
+  newState: <mapped_state>,
+  triggeredBy: 'story-move',
+})
+
+if result is null:
+  log warning via @repo/logger: "DB write failed for {STORY_ID}. Proceeding with directory mv."
+  db_updated = false
+else:
+  db_updated = true
+```
+
+**If TO_STAGE is NOT in the table** (e.g., `created`, `elaboration`, `needs-code-review`, `failed-code-review`, `failed-qa`):
+
+```
+log warning: "No DB state for stage '{TO_STAGE}'. Skipping DB write."
+db_updated = skipped
+```
+
+Proceed with directory mv regardless of DB outcome — the move is never blocked by DB availability.
+
 ### 3. Execute Move
 
 ```bash
 mv {FEATURE_DIR}/{FROM_STAGE}/{STORY_ID} {FEATURE_DIR}/{TO_STAGE}/{STORY_ID}
 ```
+
+This step executes unconditionally regardless of DB outcome in Step 2.5 (AC-2).
 
 ### 4. Update Status (if --update-status)
 
@@ -76,7 +132,7 @@ If flag provided, also run:
 
 Where `STAGE_STATUS` is the typical status for that stage (see table above).
 
-This updates both the story frontmatter and the index in one atomic step.
+This updates both the story frontmatter and the index in one atomic step. The `/story-update` command handles its own DB write — no double-write occurs. `db_updated` is reported as `skipped` in the Step 5 return YAML when this delegation path is taken.
 
 ### 5. Return Result
 
@@ -88,6 +144,12 @@ to_stage: {TO_STAGE}
 from_path: {FEATURE_DIR}/{FROM_STAGE}/{STORY_ID}/
 to_path: {FEATURE_DIR}/{TO_STAGE}/{STORY_ID}/
 status_updated: true | false
+db_updated: true | false | skipped
+# db_updated values:
+#   true    - shimUpdateStoryStatus returned non-null (DB write succeeded)
+#   false   - shimUpdateStoryStatus returned null (DB unavailable); mv proceeded
+#   skipped - TO_STAGE has no DB state mapping (unmapped stage), OR --update-status
+#             flag was provided (DB write delegated to /story-update to avoid double-write)
 ```
 
 ## Stage Transition Flow

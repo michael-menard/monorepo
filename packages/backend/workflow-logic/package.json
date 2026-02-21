@@ -1,0 +1,41 @@
+{
+  "name": "@repo/workflow-logic",
+  "version": "1.0.0",
+  "description": "Shared workflow business logic: status transitions, directory mapping, story ID validation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint --fix src/"
+  },
+  "dependencies": {
+    "@repo/logger": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "25.2.1",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "workflow",
+    "story",
+    "status",
+    "transitions",
+    "validation"
+  ]
+}

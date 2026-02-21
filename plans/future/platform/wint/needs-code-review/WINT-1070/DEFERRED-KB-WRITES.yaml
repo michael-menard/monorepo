@@ -1,0 +1,171 @@
+deferred_at: "2026-02-17T00:00:00Z"
+reason: "KB stories table not available in current database (only public schema exists; wint schema not present)"
+writes:
+  - operation: upsert
+    table: stories
+    data:
+      story_id: WINT-1070
+      feature: wint
+      title: "Generate stories.index.md from Database"
+      story_dir: plans/future/platform/wint/backlog/WINT-1070
+      story_file: plans/future/platform/wint/backlog/WINT-1070/WINT-1070.md
+      story_type: feature
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+
+  # Non-blocking gaps (from FUTURE-OPPORTUNITIES.md) — logged by elab-autonomous-decider
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1070] Edge Case: Empty-phase behavior underspecified**
+      - Finding: If a phase has no stories, generated output behavior (omit section vs empty body) is not deterministic.
+      - Impact: Low | Effort: Low
+      - Recommendation: Post-MVP — define canonical rule (e.g., "omit empty phase sections") and add unit test asserting the rule.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1070] Edge Case: --verify exit code for missing file**
+      - Finding: --verify exit code behavior when stories.index.md does not exist on disk (first-run scenario) is unspecified.
+      - Impact: Low | Effort: Low
+      - Recommendation: Post-MVP — document and test the "file not found" path. Return exit code 1 with message "stories.index.md not found — run --generate first."
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - edge-case
+      - future-work
+    content: |
+      **[WINT-1070] Edge Case: generation-report.json output location non-deterministic**
+      - Finding: Report written to process.cwd() which varies by invocation location; non-deterministic in CI.
+      - Impact: Low | Effort: Low
+      - Recommendation: Post-MVP — add optional --report-path flag to specify fixed output location.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - ux-polish
+      - future-work
+    content: |
+      **[WINT-1070] UX Polish: No npm script registered for discoverability**
+      - Finding: Script invoked via "npx tsx generate-stories-index.ts" with no npm script entry in orchestrator package.json; discoverability depends on reading JSDoc or README.
+      - Impact: Low | Effort: Low
+      - Recommendation: Post-MVP — add "generate:stories-index": "tsx src/scripts/generate-stories-index.ts" to orchestrator package scripts.
+
+  # Enhancement opportunities (from FUTURE-OPPORTUNITIES.md) — logged by elab-autonomous-decider
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - integration
+      - future-work
+    content: |
+      **[WINT-1070] Enhancement: Automation hook — auto-regenerate after story_update_status MCP tool**
+      - Finding: Once generation script is stable, a post-update hook in the MCP tool could trigger --generate automatically, eliminating manual regeneration. WINT-1030-KB-012 flagged this.
+      - Impact: High | Effort: Medium
+      - Recommendation: Create follow-up story (WINT-1080 or similar) to wire story_update_status → generate-stories-index.ts --generate as a post-write side effect.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - integration
+      - future-work
+    content: |
+      **[WINT-1070] Enhancement: Multi-epic support via --epic flag**
+      - Finding: Same generation pattern applies to KBAR, LNGG, and other epics with their own stories.index.md files. A parameterized --epic flag would unlock this with minimal code.
+      - Impact: Medium | Effort: Low
+      - Recommendation: Defer to follow-up story after WINT-1070 UAT. Write core rendering functions without hardcoded "wint" schema to allow future parameterization.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - performance
+      - optimization
+    content: |
+      **[WINT-1070] Performance: DB schema enrichment to eliminate YAML fallback reads**
+      - Finding: Hybrid DB-primary/YAML-fallback requires reading 143+ YAML files per run; storing phase, risk_notes, feature_description, infrastructure in wint.stories would eliminate fallback reads.
+      - Impact: Medium | Effort: High
+      - Recommendation: Create follow-up story to add phase, risk_notes, feature_description, infrastructure columns to wint.stories with migration. WINT-1070 intentionally defers this.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - integration
+      - future-work
+    content: |
+      **[WINT-1070] Enhancement: CI gate integration via --verify mode**
+      - Finding: AC-8's --verify mode is designed as a CI gate mechanism. Could be wired into pre-commit hook or CI pipeline to fail if stories.index.md has manual edits that differ from DB-generated version.
+      - Impact: High | Effort: Low
+      - Recommendation: Post-MVP — add CI step running generate-stories-index.ts --verify; fail build on exit code 1 to enforce read-only generated artifact contract.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - observability
+      - future-work
+    content: |
+      **[WINT-1070] Enhancement: Semantic snapshot test for INT-1**
+      - Finding: INT-1 raw-text snapshot comparison is brittle to whitespace/ordering changes. Semantic comparison (parse markdown, compare counts and story sections field-by-field) would be more resilient.
+      - Impact: Medium | Effort: Medium
+      - Recommendation: Post-MVP — replace raw-text snapshot with structured comparison.
+
+  - operation: kb_write
+    entry_type: finding
+    source_stage: elab
+    story_id: WINT-1070
+    category: future-opportunities
+    additional_tags:
+      - non-blocking
+      - ux-polish
+      - future-work
+    content: |
+      **[WINT-1070] UX Polish: Progress bar/streaming output for large index generation**
+      - Finding: 143+ stories with YAML fallback reads could produce 10-30 seconds of silence; no progress indicator during manual runs.
+      - Impact: Low | Effort: Low
+      - Recommendation: Post-MVP — add optional --verbose flag (consistent with populate-story-status.ts) that logs each story as it is processed.
