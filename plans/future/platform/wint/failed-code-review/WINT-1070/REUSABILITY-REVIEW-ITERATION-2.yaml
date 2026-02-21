@@ -1,0 +1,48 @@
+reusability:
+  verdict: FAIL
+  files_checked: 5
+  errors: 1
+  warnings: 2
+  findings:
+    - severity: error
+      file: packages/backend/orchestrator/src/scripts/generate-stories-index.ts
+      line: 672
+      message: "Duplicated writeFileAtomic function — identical implementation exists in shared module packages/backend/orchestrator/src/adapters/utils/file-utils.ts lines 28-52. EVIDENCE.yaml (line 12-13) claims this was fixed in iteration 2 with import from shared module, but current code still has local implementation."
+      rule: no-code-duplication
+      auto_fixable: true
+      existing_package: "@repo/orchestrator/adapters/utils/file-utils"
+      existing_path: "packages/backend/orchestrator/src/adapters/utils/file-utils.ts"
+      recommendation: "Replace local writeFileAtomic (lines 672-676) with import: `import { writeFileAtomic } from '../adapters/utils/file-utils.js'` at line 52. Verify no other differences in implementation."
+
+    - severity: warning
+      file: packages/backend/orchestrator/src/scripts/generate-stories-index.ts
+      line: 390
+      message: "Error message extraction pattern repeated 3 times: lines 390, 459, 844 all use pattern 'error instanceof Error ? error.message : String(error)'. Should be extracted to reusable utility function."
+      rule: extract-duplicated-pattern
+      auto_fixable: true
+      related_locations:
+        - line: 459
+        - line: 844
+      recommendation: "Create shared utility function getErrorMessage(error: unknown): string in adapters/utils/ (e.g., error-utils.ts) and import across orchestrator. Also applicable to story-repository.ts which uses same pattern 11 times."
+
+    - severity: warning
+      file: packages/backend/orchestrator/src/scripts/__tests__/generate-stories-index.test.ts
+      line: 43
+      message: "Test fixture duplicated with integration tests. Both unit and integration test files define makeStoryRow() (line 43) with identical implementation. Integration test also defines DB_FIXTURE_STORIES (line 67) with full StoryRow objects that could be shared."
+      rule: test-fixture-duplication
+      auto_fixable: true
+      related_files:
+        - path: "packages/backend/orchestrator/src/scripts/__tests__/generate-stories-index.integration.test.ts"
+          description: "Lines 67-144 define DB_FIXTURE_STORIES; no makeStoryRow found in integration test"
+      recommendation: "Extract makeStoryRow() and DB_FIXTURE_STORIES to shared test fixtures file (e.g., __tests__/fixtures.ts) and import in both test files. Reduces duplication and ensures fixture consistency."
+
+  notes:
+    - "FIX ITERATION 2 CLAIM NOT VERIFIED: EVIDENCE.yaml lines 8-16 state 'Replaced local writeFileAtomic function (lines 466-481) in generate-stories-index.ts with import from shared module'. Current code at lines 672-676 still contains local implementation. Implementation differences: shared version (file-utils.ts) includes ensureDirectory() call, logger.debug(), and WriteError wrapping; local version is simpler. These ARE functionally equivalent for this use case but represent code duplication."
+    - "Error message extraction pattern NOT fixed: Previous review flagged 'Error message extraction pattern repeated 3 times'. This pattern remains unfixed in current iteration 2."
+    - "Test fixture duplication PARTIALLY fixed: makeStorySection() used only in unit tests (good). However makeStoryRow() defined in both unit test (line 43) and implicitly needed by integration tests which use raw StoryRow objects (lines 68-143). DB_FIXTURE_STORIES is integration-specific (good design)."
+    - "Story repository has 11 instances of error message extraction pattern (lines 69, 117, 161, 187, 219, 245, 272, 299, 324, 375, 486) — same pattern exists across codebase but not flagged in touched_files since file was only 'modified' with 25 lines. Should be addressed in separate refactor."
+    - "File paths verified as absolute paths in recommendations per agent instructions."
+
+  verdict_summary:
+    FAIL_REASON: "writeFileAtomic duplication not fixed as claimed in EVIDENCE.yaml iteration 2 summary. Previous reusability issue persists."
+    FIX_REQUIREMENTS: "Must resolve writeFileAtomic import before PR merge. Error extraction pattern and test fixture duplication are warnings (lower priority) but should be addressed in future iteration for code health."
