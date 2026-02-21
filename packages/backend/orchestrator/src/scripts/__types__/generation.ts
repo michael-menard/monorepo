@@ -23,6 +23,21 @@ import { z } from 'zod'
  * AC-13: This constant must be defined from the live DB enum before any
  * rendering code. Values confirmed from population.ts StoryStateSchema
  * which reflects the actual DB wint.story_state enum.
+ *
+ * ARCHITECTURAL NOTE: This enum intentionally duplicates (not reuses) the
+ * canonical StoryStateSchema from packages/backend/orchestrator/src/state/enums/story-state.ts.
+ * The two enums serve fundamentally different purposes and use incompatible formats:
+ *
+ *   - Canonical StoryStateSchema uses hyphenated format: 'ready-to-work', 'in-progress'
+ *     These match the filesystem directory names and human-readable display labels.
+ *
+ *   - STORY_STATE_ENUM here uses DB underscore format: 'ready_to_work', 'in_progress'
+ *     PostgreSQL enums cannot contain hyphens, so the DB schema uses underscores.
+ *
+ * Consolidation is not possible without changing either the DB schema (migration cost)
+ * or breaking the canonical naming convention used across the codebase. The explicit
+ * duplication here documents this format boundary and makes the DB-native representation
+ * first-class rather than an implicit coercion scattered throughout query code.
  */
 export const STORY_STATE_ENUM = [
   'draft',

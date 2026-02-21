@@ -244,8 +244,7 @@ export function computeReadyToStart(rows: StoryRow[]): StoryRow[] {
  */
 export function renderStorySection(section: StorySection): string {
   const dependsOn = section.depends_on.length > 0 ? section.depends_on.join(', ') : 'none'
-  const phase =
-    section.phase !== null && section.phase !== undefined ? String(section.phase) : '—'
+  const phase = section.phase !== null && section.phase !== undefined ? String(section.phase) : '—'
   const feature = section.feature ?? '—'
   const infrastructure = section.infrastructure ?? '—'
   const goal = section.goal ?? '—'
