@@ -1,0 +1,124 @@
+schema: 1
+story_id: "WINT-1040"
+timestamp: "2026-02-20T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+test_exemption:
+  reason: "docs-only story — no TypeScript, no API routes, no UI components. Only file changed is .claude/commands/story-status.md (a command spec document)."
+  aligned_with: "EVIDENCE.yaml e2e_tests.status: exempt"
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_notes: "No executable code — docs-only story. Coverage threshold not applicable."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >-
+      Verified in story-status.md lines 40 and 110-112. Data Source section step 1 reads
+      'Call story_get_status MCP tool (wraps shimGetStoryStatus)'; Feature+Story ID mode
+      step 2 shows the full call: result = story_get_status({ storyId: STORY_ID }).
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >-
+      Verified in story-status.md lines 162-169. Output Example shows exactly 5 fields:
+      Feature, Story, Status, Location, Depends On. No fields added or removed.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >-
+      Verified in story-status.md lines 54-63. DB State Display Labels table covers all
+      8 states: backlog, ready_to_work, in_progress, ready_for_qa, in_qa, done, blocked,
+      cancelled. All present and mapped to human-readable labels.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >-
+      Verified in story-status.md lines 77-105. Feature+--depth mode step 1 reads
+      stories.index.md; Feature+--deps-order mode step 1 reads stories.index.md.
+      No story_get_status calls present in either mode section. Grep confirmed 2 total
+      occurrences of story_get_status, both in DB-First Routing section and Feature+Story ID
+      mode only.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >-
+      Verified in story-status.md line 48. Non-Goals note reads: 'Feature Only DB routing
+      (e.g., /story-status plans/future/wishlist summary via DB) is deferred to WINT-1070.
+      Feature-level queries still read stories.index.md directly.'
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >-
+      Verified via grep: story_update_status returns 0 matches in story-status.md.
+      Command header at line 10 still reads 'Read-only utility command.' No write operations
+      of any kind present.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: >-
+      Verified in story-status.md lines 43 and 123. 'Story not found: {STORY_ID}' message
+      appears in both the Data Source section (step 4) and the Feature+Story ID mode steps
+      (step 5).
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: >-
+      Verified in story-status.md lines 34-66. Data Source section covers: (a) DB-first
+      routing with story_get_status call, (b) fallback conditions (null result = DB
+      unavailable or story not migrated), (c) Migration window context paragraph explaining
+      Phase 1 DB authority and directory fallback rationale.
+
+architecture_compliant: true
+architecture_notes: >-
+  ADR-005 (UAT requires live PostgreSQL) — not applicable since this is a docs-only story;
+  no DB code was written. ADR-WINT-1011-DB-FIRST — satisfied; command spec clearly documents
+  DB as authoritative with directory fallback. Story adheres to established command spec
+  pattern from story-update.md (MCP tool calls as numbered steps).
+
+issues: []
+
+lessons_to_record:
+  - lesson: >-
+      Docs-only stories updating command specs are efficiently verifiable via grep/read
+      without any test execution. The evidence pattern (grep commands as commands_run)
+      serves as the functional test suite for doc stories.
+    category: pattern
+    tags: ["docs", "qa-verify", "command-spec"]
+
+  - lesson: >-
+      The DB State Display Labels table (8 states) is the canonical mapping point between
+      shimGetStoryStatus return values and human-readable output. Future command specs
+      that consume DB state should reference this table from story-status.md.
+    category: reuse
+    tags: ["wint", "mcp-tools", "db-state", "display-labels"]
+
+tokens:
+  in: 8500
+  out: 1200
+
+gate:
+  decision: PASS
+  reason: "All 8 acceptance criteria verified, architecture compliant, docs-only story with no code coverage concerns"
+  blocking_issues: []

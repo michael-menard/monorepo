@@ -16,13 +16,13 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 13 |
+| uat | 14 |
 | in-qa | 0 |
 | ready-for-qa | 1 |
 | ready-for-code-review | 0 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
-| elaboration | 2 |
+| elaboration | 1 |
 | created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
@@ -682,9 +682,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** elaboration
-**Story File:** `wint/elaboration/WINT-1040/WINT-1040.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1040/WINT-1040.md`
 **Story Generated:** 2026-02-17
+**QA Verified:** 2026-02-20
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Modify /story-status command to query core.stories table instead of directory structure
