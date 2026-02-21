@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-20T23:00:00Z"
+updated_at: "2026-02-21T00:45:00Z"
 ---
 
 # WINT Stories Index
@@ -16,11 +16,12 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 15 |
+| uat | 16 |
 | in-qa | 0 |
-| ready-for-qa | 1 |
+| ready-for-qa | 2 |
+| needs-code-review | 0 |
 | ready-for-code-review | 0 |
-| failed-code-review | 1 |
+| failed-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 0 |
 | created | 2 |
@@ -404,7 +405,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Depends On:** WINT-0180
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
@@ -699,7 +700,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** created
+**Status:** ready-to-work
 **Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
 **Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
@@ -722,7 +723,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 - AC-9: Integration test scenarios documented (A-F)
 - AC-10: Non-mappable statuses handled with explicit decisions
 
-**Elaboration Verdict:** CONDITIONAL PASS (2026-02-17)
+**Elaboration Verdict:** CONDITIONAL PASS (2026-02-20)
 - MVP gaps: 0
 - Low-severity findings: 3 (all non-blocking, KB-logged)
 - ACs added: 0
@@ -731,7 +732,8 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Risk Notes:** WINT-1070 (index deprecation) may land in-progress; non-blocking (index update retained). shimUpdateStoryStatus AC-2 constraint (no FS fallback on failure) must be observed.
 
 **Story Generated:** 2026-02-17
-**Elaboration Completed:** 2026-02-17
+**Elaboration Completed:** 2026-02-20
+**Moved to Ready-to-Work:** 2026-02-20
 
 ---
 
@@ -758,9 +760,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ---
 
-### WINT-1070: Deprecate stories.index.md as Source of Truth
+### WINT-1070: Generate stories.index.md from Database
 
-**Status:** failed-code-review
+**Status:** uat
 **Depends On:** WINT-1030
 **Phase:** 1
 **Feature:** Change stories.index.md to generated/read-only, create generation script that reads from database
@@ -844,7 +846,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160
+**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -931,8 +933,8 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** needs-code-review
-**Story File:** `wint/needs-code-review/WINT-1160/WINT-1160.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1160/WINT-1160.md`
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
 **Feature:** Before starting work on a story, check database for active worktrees. If story has active worktree on different machine/session, show warning with options: (1) switch to that worktree, (2) take over (mark old as abandoned), (3) abort. Add /wt-status enhancement to show which stories have active worktrees.
@@ -943,6 +945,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Goal:** Prevent two sessions from working on the same story simultaneously
 
 **Risk Notes:** "Take over" option must be explicit to avoid accidental work loss
+
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
+**QA Verification Complete:** 2026-02-21 - All 9 ACs verified, verdict: PASS
 
 ---
 
@@ -2233,8 +2238,8 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-9010/WINT-9010.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9010/WINT-9010.md`
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
 **Depends On:** WINT-1100
