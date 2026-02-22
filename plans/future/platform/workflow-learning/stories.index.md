@@ -28,6 +28,14 @@ This is the master story index. Each epic maintains its own detailed story index
 | WKFL-006 | Cross-Story Pattern Mining | uat | WKFL-007, WKFL-009, WKFL-010 |
 | WKFL-008 | Workflow Experimentation Framework | uat | MODL |
 
+## Retro-Sourced Improvements (from 2026-02-22 batch retro)
+
+| ID | Component | Status | Priority | Depends On |
+|----|-----------|--------|----------|------------|
+| WKFL-017 | Token Estimation Calibration by Story Type | backlog | high | — |
+| WKFL-018 | Standardize Deferred KB Write Pattern + /kb-flush Skill | backlog | high | — |
+| WKFL-019 | Add story_type Field + Conditional Review Routing | backlog | medium | WKFL-017 |
+
 ## Ready to Start (No Cross-Epic Blockers)
 
 - **INFR-001**: Postgres Artifact Schemas — no dependencies
