@@ -3,8 +3,8 @@ story_id: "WINT-2100"
 feature_dir: "wint/"
 timestamp: "2026-02-21T18:03:00Z"
 
-current_phase: setup
-last_successful_phase: null
+current_phase: done
+last_successful_phase: proof
 
 iteration: 0
 max_iterations: 3
@@ -15,5 +15,8 @@ blocked_reason: null
 forced: false
 warnings: []
 
-completed_at: null
-e2e_gate: null
+completed_at: "2026-02-21T18:12:00Z"
+e2e_gate: exempt
+
+pr_number: 383
+pr_url: "https://github.com/michael-menard/monorepo/pull/383"
