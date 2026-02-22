@@ -1,0 +1,5 @@
+# Token Log - WKFL-006
+
+| Timestamp | Phase | Input | Output | Total | Cumulative |
+|-----------|-------|-------|--------|-------|------------|
+| 2026-02-22 00:00 | dev-planning | 28,400 | 4,200 | 32,600 | 32,600 |
