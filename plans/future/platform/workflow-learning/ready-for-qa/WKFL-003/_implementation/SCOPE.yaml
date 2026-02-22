@@ -1,0 +1,168 @@
+schema: 1
+story_id: "WKFL-003"
+feature_dir: "plans/future/platform/workflow-learning"
+timestamp: "2026-02-22T18:45:00Z"
+gen_mode: false
+
+# Story classification
+story_type: "agent-tooling"  # docs/config/agent files
+story_title: "Emergent Heuristic Discovery"
+story_status: "in-progress"
+estimated_points: 3
+
+# Implementation scope
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+  agent_tooling: true
+  config: true
+
+# Files involved
+touched_paths_globs:
+  - ".claude/agents/**"
+  - ".claude/schemas/**"
+  - ".claude/config/**"
+
+# Risk flags
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+  dependencies: true  # depends on WKFL-002, WKFL-004
+
+# Deliverables
+deliverables:
+  - ".claude/agents/heuristic-evolver.agent.md"
+  - ".claude/schemas/decision-outcome-schema.md"
+  - ".claude/config/HEURISTIC-PROPOSALS.yaml"
+
+# File status
+existing_files: true
+existing_files_note: "All deliverables already exist on main in commit 522a8c94. Story requires validation and documentation only."
+
+# Test requirements
+e2e_required: false
+e2e_required_note: "Agent-only story - no E2E tests applicable. Manual verification via KB queries and unit tests are the appropriate test approach."
+
+# Acceptance Criteria
+acceptance_criteria:
+  - id: "AC-1"
+    title: "Track decision outcomes"
+    description: "Track decision outcomes with fields: pattern, auto_accepted, user_outcome (confirmed/overridden), tier, story_id, decision_id, timestamp"
+    verification: "KB entries have all required fields and are queryable by pattern"
+    status: "pending"
+
+  - id: "AC-2"
+    title: "Compute success rates"
+    description: "Compute success rate per pattern (minimum 5 samples required)"
+    verification: "Only patterns with 5+ samples have computed success rates"
+    status: "pending"
+
+  - id: "AC-3"
+    title: "Propose promotions"
+    description: "Propose promotion when success rate > 95%"
+    verification: "HEURISTIC-PROPOSALS.yaml contains promotion entries with rationale"
+    status: "pending"
+
+  - id: "AC-4"
+    title: "Propose demotions"
+    description: "Propose demotion when success rate < 80%"
+    verification: "HEURISTIC-PROPOSALS.yaml contains demotion entries with rationale"
+    status: "pending"
+
+  - id: "AC-5"
+    title: "Non-destructive proposals"
+    description: "All changes are proposals, not auto-applied"
+    verification: ".claude/config/decision-classification.yaml unchanged after agent run"
+    status: "pending"
+
+# Summary
+summary: "Create system to track auto-accept success rates per decision pattern and propose tier promotions (>95% success) or demotions (<80% success) while maintaining human oversight."
+
+elaboration: "completed"
+
+# Key decisions from elaboration
+key_decisions:
+  - id: 1
+    title: "Tier System (1-5)"
+    decision: "Use full 1-5 tier system from autonomy-tiers.md"
+    rationale: "Clarifies tier numbering inconsistency found during audit"
+    details: |
+      Tier 1: Clarification (auto-accept candidates)
+      Tier 2: Preference (notify-only candidates)
+      Tier 3: Ambiguous Scope (require-approval)
+      Tier 4: Destructive/Irreversible (always escalate)
+      Tier 5: External Dependency (escalate based on risk)
+
+  - id: 2
+    title: "Promotion Logic"
+    decision: "Single-step tier changes toward higher autonomy"
+    rationale: "Safer, more gradual approach with intermediate calibration points"
+    details: |
+      If success_rate > 0.95 AND samples >= 5 AND current_tier > 1:
+        Propose: current_tier - 1 (move one tier toward Tier 1)
+      Safety: Cap promotions at Tier 2 initially; Tier 1 requires human override
+
+  - id: 3
+    title: "Demotion Logic"
+    decision: "Single-step or double-step tier changes toward lower autonomy"
+    rationale: "Proportionate response to performance degradation"
+    details: |
+      If success_rate < 0.80 AND samples >= 5 AND current_tier < 5:
+        Propose: current_tier + 1 (move one tier toward Tier 5)
+      If success_rate < 0.50 (severely underperforming):
+        Propose: current_tier + 2 (skip a tier for critical failures)
+
+# Dependencies
+dependencies:
+  blocking:
+    - "WKFL-002: Calibration data and initial decision tracking"
+    - "WKFL-004: User feedback on decisions"
+  blocked_by:
+    - "WKFL-010: Pattern evolution"
+
+# Elaboration audit results
+audit_results:
+  scope_alignment: "PASS"
+  internal_consistency: "PASS"
+  reuse_first: "PASS"
+  ports_adapters: "PASS"
+  local_testability: "CONDITIONAL (manual KB verification acceptable for agent-only)"
+  decision_completeness: "PASS"
+  risk_disclosure: "PASS"
+  story_sizing: "PASS"
+
+audit_issues_resolved: 2
+audit_clarifications:
+  - "Tier numbering system clarified (1-5)"
+  - "Promotion/demotion step logic clarified (single-step with safety bounds)"
+
+# Future opportunities (from elaboration KB entries, deferred)
+future_opportunities:
+  gap_1: "No confidence intervals on success rates"
+  gap_2: "Single minimum sample threshold (5) - consider domain-specific thresholds"
+  gap_3: "No decay/recency weighting - recent decisions may be more relevant"
+  gap_4: "Hard-coded thresholds (95%, 80%) - make configurable per tier"
+  gap_5: "No handling of pattern evolution - add pattern versioning"
+  gap_6: "Missing rollback mechanism for promoted patterns"
+  enh_1: "Interactive proposal review UI"
+  enh_2: "A/B test tier changes (requires WKFL-008)"
+  enh_3: "Pattern similarity clustering"
+  enh_4: "Success rate trending"
+  enh_5: "Auto-generate rationale improvements"
+  enh_6: "Integration with WKFL-008 experiments"
+  enh_7: "Pattern lifecycle tracking"
+  enh_8: "Multi-dimensional success metrics"
+
+future_opportunities_note: "14 entries deferred to KB (write access unavailable during elaboration)"
+
+# Test approach
+test_approach: "Unit tests for success rate calculation, integration tests for KB query/write, manual verification via KB queries"
