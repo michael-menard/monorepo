@@ -1,0 +1,142 @@
+schema: 1
+story_id: WKFL-006
+feature_dir: "plans/future/platform/workflow-learning"
+timestamp: "2026-02-22T00:00:00Z"
+gen_mode: false
+
+# Story classification
+story_type: "agent-tooling"  # agent files + schema files + command spec
+story_title: "Cross-Story Pattern Mining"
+story_status: "in-progress"
+estimated_points: 5
+
+# Implementation scope
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+  agent_tooling: true
+  config: true
+
+# Files involved
+touched_paths_globs:
+  - ".claude/agents/pattern-miner.agent.md"
+  - ".claude/schemas/patterns-schema.yaml"
+  - ".claude/schemas/agent-hints-schema.yaml"
+  - ".claude/commands/pattern-mine.md"
+  - ".claude/patterns/**"
+
+# Risk flags
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+  dependencies: true  # depends on WKFL-001
+
+# Deliverables
+deliverables:
+  - ".claude/agents/pattern-miner.agent.md"
+  - ".claude/schemas/patterns-schema.yaml"
+  - ".claude/schemas/agent-hints-schema.yaml"
+  - ".claude/commands/pattern-mine.md"
+
+# File status
+existing_files: true
+existing_files_note: |
+  pattern-miner.agent.md, patterns-schema.yaml, agent-hints-schema.yaml, and
+  pattern-mine.md all exist in the worktree. Story requires validation, test
+  fixtures, and integration test documentation.
+
+# Test requirements
+e2e_required: false
+e2e_required_note: |
+  Agent-only story - no E2E tests applicable. Manual verification via
+  /pattern-mine --days 30 --use-verifications command is the appropriate
+  test approach given 37 existing VERIFICATION.yaml files.
+
+# Acceptance Criteria
+acceptance_criteria:
+  - id: "AC-1"
+    title: "Minimum Story Threshold"
+    description: "Analyze minimum 10 stories per mining run"
+    verification: "Run with <10 stories logs warning and skips"
+    status: "pending"
+
+  - id: "AC-2"
+    title: "File/Path Pattern Detection"
+    description: "Identify file/path patterns that correlate with failures"
+    verification: "PATTERNS-{month}.yaml has file_patterns section populated"
+    status: "pending"
+
+  - id: "AC-3"
+    title: "AC Pattern Detection"
+    description: "Identify AC patterns that correlate with under-specification"
+    verification: "PATTERNS-{month}.yaml has ac_patterns section populated"
+    status: "pending"
+
+  - id: "AC-4"
+    title: "Clustering Similar Findings"
+    description: "Cluster similar findings (text similarity > 0.70 for MVP)"
+    verification: "Similar findings grouped in PATTERNS-{month}.yaml"
+    status: "pending"
+
+  - id: "AC-5"
+    title: "Agent Hint Output"
+    description: "Output actionable patterns for agent enhancement"
+    verification: "AGENT-HINTS.yaml exists with per-agent recommendations"
+    status: "pending"
+
+  - id: "AC-6"
+    title: "Anti-Pattern Documentation"
+    description: "ANTI-PATTERNS.md documents patterns to avoid"
+    verification: "File exists at .claude/patterns/ANTI-PATTERNS.md"
+    status: "pending"
+
+  - id: "AC-7"
+    title: "KB Integration"
+    description: "Significant patterns persisted to KB"
+    verification: "Patterns written via kb_add_lesson with category=pattern"
+    status: "pending"
+
+  - id: "AC-8"
+    title: "Dual-Mode Data Loading"
+    description: "Support OUTCOME.yaml primary and VERIFICATION.yaml fallback"
+    verification: "Warning logged when fallback used, output format identical"
+    status: "pending"
+
+# Summary
+summary: |
+  Create pattern mining system with pattern-miner agent, /pattern-mine command,
+  and PATTERNS/AGENT-HINTS/ANTI-PATTERNS output schemas. Core deliverables exist
+  in worktree; story validates them and adds test fixtures.
+
+elaboration: "completed"
+
+# Key decisions from elaboration
+key_decisions:
+  - id: 1
+    title: "Clustering Algorithm (MVP)"
+    decision: "Use text similarity (Levenshtein distance) with 0.70 threshold"
+    rationale: "No external embedding dependencies; calibrated to approximate 0.85 embedding threshold"
+
+  - id: 2
+    title: "Pattern Significance Thresholds"
+    decision: "3+ occurrences, 0.60+ correlation (configurable via CLI)"
+    rationale: "Reasonable defaults matching workflow-retro agent patterns"
+
+  - id: 3
+    title: "Weekly Cron Scope"
+    decision: "Manual /pattern-mine command only for MVP; cron documented but not implemented"
+    rationale: "Infrastructure not yet defined; manual command sufficient for validation"
+
+  - id: 4
+    title: "Data Source Fallback"
+    decision: "OUTCOME.yaml primary (0 files), VERIFICATION.yaml fallback (37 files)"
+    rationale: "OUTCOME.yaml generation not yet active; fallback enables MVP testing"

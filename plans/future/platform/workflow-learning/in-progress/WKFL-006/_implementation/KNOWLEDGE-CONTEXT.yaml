@@ -1,0 +1,141 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-22T00:00:00Z"
+
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: "WKFL-001"
+        lesson: "OUTCOME.yaml schema defined but generation not yet active (0 files available); VERIFICATION.yaml fallback required for MVP"
+        category: blocker
+        applies_because: "WKFL-006 pattern-miner depends on OUTCOME.yaml as primary data source; same constraint applies"
+
+      - story_id: "WKFL-003"
+        lesson: "Agent-only stories (markdown/YAML deliverables) require no build/lint/test commands; verification is manual command execution"
+        category: pattern
+        applies_because: "WKFL-006 is also agent-tooling story - same verification approach applies"
+
+      - story_id: "WKFL-005"
+        lesson: "Dual-mode data sources (primary + fallback) require explicit warning logging when fallback triggered"
+        category: pattern
+        applies_because: "pattern-miner agent must log warning when VERIFICATION.yaml fallback used"
+
+      - story_id: "WKFL-001"
+        lesson: "Pattern detection thresholds (3+ occurrences, 20%+ variance) established as cross-story baseline"
+        category: reuse
+        applies_because: "WKFL-006 reuses these thresholds; adapt to 0.60 correlation instead of variance"
+
+    blockers_to_avoid:
+      - "OUTCOME.yaml generation not yet active - must implement VERIFICATION.yaml fallback or agent will fail with 0 data files"
+      - "Embedding-based clustering requires external API dependency - use text similarity (Levenshtein) for MVP"
+      - "Reading all VERIFICATION.yaml files without batching: ~15k tokens, use batch reads of 10 at a time"
+      - "Implementing weekly cron automation in this story - explicitly out of scope, document only"
+
+    patterns_to_follow:
+      - "Define schemas FIRST before agent implementation begins (dependency ordering critical)"
+      - "Use Glob to locate OUTCOME.yaml and VERIFICATION.yaml files, then batch Read"
+      - "Extract only needed fields from each file (story_id, touched_files, code_review verdicts, AC text)"
+      - "Log warnings prominently when fallback data source used"
+      - "All three outputs (PATTERNS.yaml, AGENT-HINTS.yaml, ANTI-PATTERNS.md) generated per run"
+      - "KB integration only for high-severity patterns (not all patterns)"
+
+    patterns_to_avoid:
+      - "Implementing features that depend on unavailable data without fallback"
+      - "Over-engineering MVP solutions (embeddings can be deferred to WKFL-006-B)"
+      - "Reading full VERIFICATION.yaml content when only structured fields needed"
+      - "Creating barrel files or TypeScript interfaces (project-wide constraint)"
+
+  architecture_decisions:
+    active_count: 2
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy - UAT Must Use Real Services"
+        status: active
+        constraint: "UAT must use real services, not mocks"
+        applies_to: ["testing", "qa"]
+        note: "Not directly applicable - no API calls in pattern mining agent"
+
+      - id: "ADR-006"
+        title: "E2E Tests Required in Dev Phase"
+        status: active
+        constraint: "At least one happy-path E2E test per story during dev"
+        applies_to: ["testing", "dev"]
+        note: "Agent-only story - E2E exempt; manual /pattern-mine execution is equivalent verification"
+
+    constraints:
+      api_paths: "Not applicable - no API endpoints in this story"
+      infrastructure: "Not applicable - no infrastructure changes"
+      storage: "File system only - pattern outputs to .claude/patterns/"
+      auth: "Not applicable - no authentication work"
+      testing: "Manual command verification via /pattern-mine --use-verifications; no executable unit tests for agent markdown"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Read all VERIFICATION.yaml files at once"
+        typical_tokens: 15000
+        mitigation: "Read files in batches of 10; extract only needed fields (story_id, touched_files, verdicts)"
+
+      - operation: "Full codebase Glob/Explore for VERIFICATION.yaml locations"
+        typical_tokens: 5000
+        mitigation: "Use targeted glob: plans/**/_implementation/VERIFICATION.yaml"
+
+      - operation: "Reading full pattern-miner.agent.md + all schemas at once"
+        typical_tokens: 8000
+        mitigation: "Read agent ACs section only; schemas already known from SCOPE.yaml"
+
+    recommended_patterns:
+      - "Targeted file reads over full files - use offset/limit for large files"
+      - "Grep before Read to locate specific content"
+      - "Batch related file reads into single operation"
+      - "Skip reading serverless.yml - not applicable to this story"
+      - "Define schemas FIRST, then implement agent referencing them"
+
+  story_specific_context:
+    domain: "workflow-learning"
+    scope: "Create pattern-miner agent for cross-story analysis"
+    story_type: "agent-tooling"
+    e2e_exempt: true
+    e2e_exempt_reason: "Agent-only story: creates markdown agent, schema, and YAML files only"
+
+    data_sources:
+      primary: "OUTCOME.yaml (0 files currently - future)"
+      fallback: "VERIFICATION.yaml (37+ files - MVP use)"
+
+    deliverables_status:
+      pattern_miner_agent: "exists at .claude/agents/pattern-miner.agent.md"
+      patterns_schema: "exists at .claude/schemas/patterns-schema.yaml"
+      agent_hints_schema: "exists at .claude/schemas/agent-hints-schema.yaml"
+      pattern_mine_command: "exists at .claude/commands/pattern-mine.md"
+      patterns_outputs: "generated at runtime by agent - not pre-created"
+
+    dependencies:
+      completed:
+        - "WKFL-001: OUTCOME.yaml schema defined at .claude/schemas/outcome-schema.md"
+        - "WKFL-001: workflow-retro agent at .claude/agents/workflow-retro.agent.md"
+        - "KB tools: kb_search and kb_add_lesson available"
+      data_available:
+        - "37 VERIFICATION.yaml files across WISH and INST epics"
+      data_unavailable:
+        - "0 OUTCOME.yaml files (schema defined, generation not active)"
+
+    downstream_blockers:
+      - "WKFL-007: Risk Predictor needs PATTERNS.yaml as input"
+      - "WKFL-009: KB Compress uses patterns for clustering"
+      - "WKFL-010: Improvement Proposals consumes pattern output"
+
+    reuse_opportunities:
+      - "OUTCOME.yaml schema from WKFL-001 (.claude/schemas/outcome-schema.md)"
+      - "Pattern detection thresholds (3+ occurrences, 0.60+ correlation) - reused from workflow-retro"
+      - "WORKFLOW-RECOMMENDATIONS.md format for ANTI-PATTERNS.md structure"
+      - "workflow-retro agent pattern detection logic (adapt for cross-story)"
+
+  warnings:
+    - "OUTCOME.yaml data unavailable (0 files) - VERIFICATION.yaml fallback is CRITICAL for MVP"
+    - "Embedding-based clustering deferred for MVP - text similarity used instead"
+    - "Weekly cron automation out of scope - manual /pattern-mine command only"
+    - "Story blocks WKFL-007, WKFL-009, WKFL-010 - critical path dependency"
+    - "All core deliverables already exist in worktree - story validates and tests them"
+
+  tokens:
+    in: 5200
+    out: 850

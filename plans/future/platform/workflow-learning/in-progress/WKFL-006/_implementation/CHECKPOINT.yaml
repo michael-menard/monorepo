@@ -1,0 +1,28 @@
+schema: 1
+story_id: "WKFL-006"
+feature_dir: "plans/future/platform/workflow-learning"
+worktree: "tree/story/WKFL-006"
+branch: "story/WKFL-006"
+timestamp: "2026-02-22T00:00:00Z"
+
+current_phase: plan
+last_successful_phase: setup
+iteration: 1
+e2e_gate: exempt
+e2e_exempt_reason: "Agent-only story: creates markdown agent, schema, and YAML files only. No UI, API, or database changes."
+max_iterations: 3
+blocked: false
+blocked_reason: null
+forced: false
+
+# Context from elaboration
+elab_status: "PASS"
+elab_clarifications_resolved: 4
+elab_kb_entries_deferred: 14
+
+# Key decisions from elaboration
+key_decisions:
+  clustering_algorithm: "Text similarity (Levenshtein distance) with 0.70 threshold for MVP"
+  significance_thresholds: "3+ occurrences, 0.60+ correlation (configurable via CLI)"
+  cron_scope: "Manual /pattern-mine command only for MVP; cron documented for future"
+  data_source_fallback: "VERIFICATION.yaml fallback when OUTCOME.yaml unavailable (<10 files)"
