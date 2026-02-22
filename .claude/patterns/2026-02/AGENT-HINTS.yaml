@@ -1,0 +1,98 @@
+schema: 1
+generated_at: "2026-02-22T00:00:00Z"
+analysis_period:
+  start: "2026-01-23"
+  end: "2026-02-22"
+  days: 30
+stories_analyzed: 37
+
+# NOTE: This is a template/example file generated during WKFL-006 story delivery.
+# Run /pattern-mine --days 30 --use-verifications to regenerate with real mining data.
+
+agents:
+  - agent_name: dev-implement-implementation-leader
+    agent_role: leader
+
+    priority_hints:
+      - hint: "Verify VERIFICATION.yaml schema version >= 4 before proceeding with QA gate"
+        severity: high
+        pattern_source: "file_pattern_001"
+
+        trigger_conditions:
+          - "Entering QA verification phase"
+          - "Working on stories in plans/**/_implementation/"
+
+        evidence_count: 12
+
+        example:
+          story_id: "WINT-0250"
+          before: "Schema version mismatch caused QA gate rejection"
+          after: "Validated schema: 4 field before extracting verdicts"
+
+    file_hints:
+      - file_pattern: "plans/**/_implementation/VERIFICATION.yaml"
+        hint: "Ensure gate.decision field is present and explicitly set to PASS or FAIL"
+        severity: medium
+
+        common_issues:
+          - "Missing gate.decision field causes downstream parsing failures"
+          - "Inconsistent verdict casing (pass vs PASS)"
+
+        checklist:
+          - "Verify gate.decision: PASS or gate.decision: FAIL"
+          - "Verify all code_review verdicts use uppercase PASS/FAIL/WARN"
+
+        evidence_count: 8
+
+    anti_patterns:
+      - anti_pattern: "Writing VERIFICATION.yaml without all required section fields"
+        severity: medium
+
+        description: "Missing fields in VERIFICATION.yaml break pattern-miner data extraction"
+        alternative: "Use VERIFICATION.yaml template from .claude/schemas/; include all sections"
+
+        evidence_count: 5
+        examples:
+          - story_id: "WINT-9020"
+            issue: "Missing qa_verify.acs_verified[] caused AC pattern detection to skip story"
+
+    effectiveness_metrics:
+      stories_involved: 37
+      avg_review_cycles: 1.8
+      failure_rate: 0.19
+
+  - agent_name: dev-implement-planner
+    agent_role: planner
+
+    priority_hints:
+      - hint: "For agent-tooling stories, mark e2e_gate: exempt with explicit reason in CHECKPOINT.yaml"
+        severity: medium
+        pattern_source: "ac_pattern_001"
+
+        trigger_conditions:
+          - "Story type is agent-tooling (markdown/YAML only deliverables)"
+          - "No UI, API, or database changes present"
+
+        evidence_count: 7
+
+        example:
+          story_id: "WKFL-003"
+          before: "E2E gate required for agent-only story; blocked with no applicable tests"
+          after: "e2e_gate: exempt; e2e_exempt_reason documented"
+
+    file_hints: []
+    anti_patterns: []
+
+    effectiveness_metrics:
+      stories_involved: 15
+      avg_review_cycles: 1.5
+      failure_rate: 0.13
+
+metadata:
+  min_sample_size: 3
+  hint_threshold: 0.60
+  agents_analyzed: 2
+  hints_generated: 4
+  warnings:
+    - "OUTCOME.yaml unavailable - used VERIFICATION.yaml fallback"
+    - "This is a template file; run /pattern-mine to regenerate with current data"
