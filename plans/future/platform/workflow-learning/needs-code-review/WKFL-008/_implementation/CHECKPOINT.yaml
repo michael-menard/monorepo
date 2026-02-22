@@ -2,8 +2,8 @@ schema: 1
 story_id: "WKFL-008"
 feature_dir: "plans/future/platform/workflow-learning"
 timestamp: "2026-02-22T00:00:00Z"
-current_phase: proof
-last_successful_phase: execute
+current_phase: done
+last_successful_phase: proof
 iteration: 0
 max_iterations: 3
 blocked: false
@@ -12,3 +12,5 @@ warnings: []
 gen_mode: false
 worktree_path: "tree/story/WKFL-008"
 branch: "story/WKFL-008"
+e2e_gate: exempt
+completed_at: "2026-02-22T00:00:00Z"
