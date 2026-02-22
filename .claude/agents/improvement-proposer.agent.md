@@ -1,7 +1,7 @@
 ---
 created: 2026-02-07
-updated: 2026-02-07
-version: 1.0.0
+updated: 2026-02-22
+version: 2.0.0
 type: analyzer
 permission_level: read-write
 model: sonnet
@@ -14,8 +14,8 @@ kb_tools:
 
 ## Mission
 
-Aggregate learning system outputs (calibration, patterns, heuristics, experiments, retro) to generate prioritized workflow improvement proposals.
-Calculate ROI scores ((impact/effort) \* (10/9)), deduplicate across sources, track proposal lifecycle, and learn from acceptance patterns.
+Aggregate learning system outputs (calibration, patterns, heuristics, feedback, experiments) to generate prioritized workflow improvement proposals.
+Calculate ROI scores (impact_value * effort_inverse, range 1–9), deduplicate across sources, track proposal lifecycle, and learn from acceptance patterns.
 
 ## Inputs
 
@@ -33,6 +33,8 @@ From command invocation (via /improvement-proposals):
 
 - **Source**: Knowledge Base via kb_search
 - **Query**: `kb_search({ tags: ['calibration'], date_range: [start, end] })`
+- **YAML path pattern**: N/A (KB-only source)
+- **Cold-start behavior**: If no KB entries found with tag 'calibration' in date range, log "SKIP calibration: No KB entries with tag 'calibration' in date range" and continue with remaining sources
 - **Proposal triggers**:
   - Agent accuracy < 90% for high confidence → "Tighten threshold"
   - False positive rate > 20% → "Add pre-check step" or "Adjust confidence criteria"
@@ -41,7 +43,9 @@ From command invocation (via /improvement-proposals):
 ### 2. Pattern Mining (WKFL-006)
 
 - **Source**: `.claude/patterns/PATTERNS-{YYYY-MM}.yaml` files
-- **Glob**: `.claude/patterns/PATTERNS-*.yaml` (filter by date range)
+- **Glob**: `.claude/patterns/PATTERNS-*.yaml` (filter by date range using file modification time)
+- **YAML path pattern**: `.claude/patterns/PATTERNS-*.yaml`
+- **Cold-start behavior**: If no pattern files found in date range, log "SKIP patterns: No PATTERNS-*.yaml files found (run /pattern-mine to generate)" and continue with remaining sources
 - **Proposal triggers**:
   - File pattern correlation ≥ 0.70 with failures → "Add agent hint" or "Pre-check step"
   - AC pattern with failure_rate ≥ 0.40 → "Update AC template"
@@ -50,23 +54,32 @@ From command invocation (via /improvement-proposals):
 ### 3. Heuristic Proposals (WKFL-003)
 
 - **Source**: `.claude/config/HEURISTIC-PROPOSALS.yaml`
-- **Filter**: status: 'validated', tier: 'experiment' or 'production'
+- **YAML path pattern**: `.claude/config/HEURISTIC-PROPOSALS.yaml`
+- **Query**: Read file; filter by `status: 'validated'` and `tier: 'experiment'` or `tier: 'production'`
+- **Cold-start behavior**: If file not found, log "SKIP heuristics: .claude/config/HEURISTIC-PROPOSALS.yaml not found" and continue with remaining sources
 - **Proposal triggers**:
   - Validated heuristics ready for tier promotion
   - Production heuristics consistently triggering (promote to 'core')
 
-### 4. Workflow Retrospectives (WKFL-001)
+### 4. Workflow Feedback (WKFL-004)
 
-- **Source**: `.claude/retrospectives/WORKFLOW-RECOMMENDATIONS.md`
-- **Parse**: Extract recommendations from markdown
-- **Filter**: Within date range based on file modification time
+- **Source**: Knowledge Base via kb_search
+- **Query**: `kb_search({ tags: ['feedback'], date_range: [start, end] })`
+- **YAML path pattern**: N/A (KB-only source)
+- **Cold-start behavior**: If no KB entries found with tag 'feedback' in date range, log "SKIP feedback: No KB entries with tag 'feedback' in date range" and continue with remaining sources
 - **Proposal triggers**:
-  - Any recommendation not yet implemented
+  - Recurring false positives (same agent, ≥ 3 occurrences) → "Adjust agent threshold"
+  - Missing check patterns (requested ≥ 2 times) → "Add check to agent"
 
-### 5. (Future) Experiment Results (WKFL-008)
+### 5. Experiment Results (WKFL-008)
 
-- **Status**: Deferred to Phase 3
-- **Proposal triggers**: Winning experiments with statistical significance
+- **Source**: Knowledge Base via kb_search
+- **Query**: `kb_search({ tags: ['experiment', 'result'], date_range: [start, end] })`
+- **YAML path pattern**: `.claude/experiments/EXPERIMENT-*.yaml`
+- **Cold-start behavior**: If no experiment result entries found, log "SKIP experiments: No KB entries with tags ['experiment', 'result'] found (WKFL-008 may not have run yet)" and continue with remaining sources
+- **Proposal triggers**:
+  - Winning experiments with statistical significance → "Roll out experiment"
+  - Failed experiments still active → "Stop experiment"
 
 ## Pre-Flight Checks
 
@@ -83,7 +96,7 @@ From command invocation (via /improvement-proposals):
 
 3. **Minimum Data Threshold**:
    - Require at least 1 successful data source load
-   - If 0 sources succeed: "ERROR: No data sources available for analysis period"
+   - If 0 sources succeed: Emit "## No Proposals Available" section with message "No data sources returned results for the analysis period. Run prerequisite agents (WKFL-002, WKFL-003, WKFL-004, WKFL-006, WKFL-008) and retry."
 
 ## Execution Flow
 
@@ -100,23 +113,19 @@ const sources = await Promise.allSettled([
   loadCalibrationEntries(kb_search, start, end),
   loadPatternFiles(glob, start, end),
   loadHeuristicProposals(fs.readFile),
-  loadRetroRecommendations(fs.readFile),
+  loadFeedbackEntries(kb_search, start, end),
+  loadExperimentResults(kb_search, start, end),
 ])
 ```
+
+For each failed source, log the cold-start skip message defined in the Data Sources section above.
 
 Track success/failure per source:
 
 - `sources_used`: Array of successful source names
-- `sources_failed`: Array of failed source names with actionable errors
+- `sources_failed`: Array of failed source names with skip log messages
 
-Log warnings for failed sources:
-
-- "Calibration unavailable: No KB entries with tag 'calibration'"
-- "Patterns unavailable: Run /pattern-mine to generate PATTERNS-{month}.yaml"
-- "Heuristics unavailable: HEURISTIC-PROPOSALS.yaml not found"
-- "Retro unavailable: WORKFLOW-RECOMMENDATIONS.md not found"
-
-**Minimum viable threshold**: At least 1 source must succeed, otherwise fail.
+**Minimum viable threshold**: At least 1 source must succeed. If all 5 fail, emit "## No Proposals Available" section (see Pre-Flight Checks) and halt.
 
 ### Phase 3: Proposal Generation
 
@@ -148,22 +157,36 @@ For each data source, extract raw proposals:
   - Effort: low (config change)
   - Evidence: "Validated in {N} stories, {success_rate}% success"
 
-**Retro → Proposals**:
+**Feedback → Proposals**:
 
-- Parse markdown, extract recommendations
-- Each becomes a proposal with impact/effort inferred from text
+- For recurring false positives (≥ 3 occurrences):
+  - Title: "Adjust {agent_id} threshold for {pattern}"
+  - Impact: medium (reduce false positive noise)
+  - Effort: low (prompt update)
+  - Evidence: "{N} recurring false positive reports"
+
+**Experiments → Proposals**:
+
+- For winning experiments (statistical significance):
+  - Title: "Roll out {experiment_id} to all traffic"
+  - Impact: high (validated improvement)
+  - Effort: medium (config + monitoring)
+  - Evidence: "exp-{id} shows {metric_delta}, gate pass maintained"
 
 ### Phase 4: ROI Calculation
 
 For each proposal:
 
 1. **Assign numeric scores**:
-   - Impact: high=9, medium=5, low=2
-   - Effort: low=1, medium=3, high=9
+   - `impact_value`: high=3, medium=2, low=1
+   - `effort_inverse`: low=3, medium=2, high=1
 
 2. **Calculate ROI**:
-   - Formula: `(impact / effort) * (10/9)`
-   - Range: 2.2 (low/high) to 10.0 (high/low)
+   - Formula: `roi_score = impact_value * effort_inverse`
+   - Range: 1 (low impact, high effort) to 9 (high impact, low effort)
+   - Example: High impact + Low effort = 3 * 3 = 9
+   - Example: Medium impact + Medium effort = 2 * 2 = 4
+   - Example: Low impact + High effort = 1 * 1 = 1
 
 3. **Validate evidence**:
    - Sample count ≥ 3 (per `--min-samples` default)
@@ -189,10 +212,10 @@ For all proposal pairs:
 
 ### Phase 6: Prioritization & Sorting
 
-1. **Group by priority**:
-   - High: ROI ≥ 7.0
-   - Medium: ROI ≥ 5.0
-   - Low: ROI < 5.0
+1. **Group by priority** (using 1–9 ROI scale):
+   - High: ROI ≥ 7
+   - Medium: ROI ≥ 5 and < 7
+   - Low: ROI < 5
 
 2. **Sort within groups**:
    - Descending by ROI score
@@ -225,6 +248,41 @@ Calculate acceptance rates:
 - If high-effort acceptance rate < 40%: "High-effort proposals have {rate}% historical acceptance rate"
 - If source X acceptance rate < 30%: "{source} proposals have {rate}% acceptance rate (consider threshold adjustment)"
 
+**PROPOSAL-ACCEPTANCE-BASELINE.yaml** (after 3 completed runs):
+
+After each run (non-dry-run), increment the run counter stored in KB:
+
+```javascript
+const runHistory = await kb_search({ tags: ['improvement-proposer', 'run-log'], limit: 100 })
+const completedRuns = runHistory.length
+```
+
+When `completedRuns === 3` (i.e., after the third completed run), create `.claude/proposals/PROPOSAL-ACCEPTANCE-BASELINE.yaml`:
+
+```yaml
+schema: 1
+generated_at: "{ISO timestamp of 3rd run}"
+baseline_period_start: "{date of 1st run}"
+baseline_period_end: "{date of 3rd run}"
+total_proposed: {total proposals across 3 runs}
+accepted: {count of proposals with status:accepted}
+rejected: {count of proposals with status:rejected}
+acceptance_rate: {accepted / total_proposed, decimal 0–1}
+by_source:
+  calibration: { proposed: N, accepted: N, rate: 0.0 }
+  patterns:    { proposed: N, accepted: N, rate: 0.0 }
+  heuristics:  { proposed: N, accepted: N, rate: 0.0 }
+  feedback:    { proposed: N, accepted: N, rate: 0.0 }
+  experiments: { proposed: N, accepted: N, rate: 0.0 }
+by_effort:
+  low:    { proposed: N, accepted: N, rate: 0.0 }
+  medium: { proposed: N, accepted: N, rate: 0.0 }
+  high:   { proposed: N, accepted: N, rate: 0.0 }
+notes: "Baseline captured after 3 completed /improvement-proposals runs"
+```
+
+On all subsequent runs (run 4+), read this baseline to contextualize current acceptance data and note divergence from baseline.
+
 ### Phase 8: Output Generation
 
 Generate `IMPROVEMENT-PROPOSALS-{YYYY-MM-DD}.md`:
@@ -233,14 +291,14 @@ Generate `IMPROVEMENT-PROPOSALS-{YYYY-MM-DD}.md`:
 
 ```yaml
 ---
-schema: 1
+schema: 2
 generated_date: 2026-02-15T10:00:00Z
 data_period:
   start: 2026-01-16
   end: 2026-02-15
-sources_used: ['calibration', 'pattern', 'heuristic', 'retro']
+sources_used: ['calibration', 'pattern', 'heuristic', 'feedback', 'experiment']
 sources_failed: []
-roi_formula: '(impact / effort) * (10/9)'
+roi_formula: 'impact_value * effort_inverse (impact: high=3, medium=2, low=1; effort_inverse: low=3, medium=2, high=1; range: 1–9)'
 min_samples: 3
 deduplication_threshold: 0.85
 ---
@@ -259,13 +317,21 @@ Proposals output: 34
 
 ## ROI Calculation Formula
 
-ROI = (impact / effort) \* (10/9)
+ROI = impact_value * effort_inverse
 
-- Impact: high=9, medium=5, low=2
-- Effort: low=1, medium=3, high=9
-- Example: High impact + Low effort = (9/1) \* (10/9) = 10.0
+- impact_value: high=3, medium=2, low=1
+- effort_inverse: low=3, medium=2, high=1
+- Range: 1 (low/high) to 9 (high/low)
+- Example: High impact + Low effort = 3 * 3 = 9
 
-## High Priority (ROI ≥ 7.0)
+## Missing Data Sources
+
+> Sources skipped due to no data in analysis period:
+> - experiments: SKIP experiments: No KB entries with tags ['experiment', 'result'] found (WKFL-008 may not have run yet)
+
+(Omit this section if all sources succeeded)
+
+## High Priority (ROI ≥ 7)
 
 ### [P-001] Add lint pre-check to backend-coder
 
@@ -274,46 +340,88 @@ ROI = (impact / effort) \* (10/9)
 
 **Proposal:**
 Add step to dev-implement-backend-coder.agent.md:
-```
 
 Before committing, run: pnpm lint apps/api/
 If errors, fix before proceeding.
 
-```
-
-**Impact:** High (reduce 78% of lint failures)
-**Effort:** Low (single agent edit)
-**ROI Score:** 10.0/10
+**Impact:** High
+**Effort:** Low
+**ROI Score:** 9 (3 * 3)
 
 **Status:** proposed
 
 ---
 
-## Medium Priority (ROI ≥ 5.0)
+## Medium Priority (ROI ≥ 5 and < 7)
+
+### [P-002] Tighten security agent high-confidence threshold
+
+**Source:** Calibration (WKFL-002)
+**Evidence:** High confidence accuracy at 81% (should be 90%+) — 12 samples
+
+**Proposal:**
+Update code-review-security.agent.md high-confidence criteria.
+
+**Impact:** Medium
+**Effort:** Low
+**ROI Score:** 6 (2 * 3)
+
+**Status:** proposed
+
+---
+
+## Low Priority (ROI < 5)
 
 ...
 
-## Low Priority (ROI < 5.0)
+## Tracking Summary
 
-...
+| Week | Proposed | Accepted | Rejected | Implemented |
+|------|----------|----------|----------|-------------|
+| W1   | 5        | 3        | 1        | 2           |
+| W2   | 4        | 4        | 0        | 3           |
+| W3   | 6        | -        | -        | -           |
 
 ## Meta-Learning Summary
 
 **Acceptance Patterns** (last 90 days, 127 proposals):
 
-| Source | Proposed | Accepted | Rate |
-|--------|----------|----------|------|
-| calibration | 45 | 32 | 71% |
-| pattern | 38 | 30 | 79% |
-| heuristic | 28 | 25 | 89% |
-| retro | 16 | 10 | 63% |
+| Source      | Proposed | Accepted | Rate |
+|-------------|----------|----------|------|
+| calibration | 45       | 32       | 71%  |
+| pattern     | 38       | 30       | 79%  |
+| heuristic   | 28       | 25       | 89%  |
+| feedback    | 16       | 10       | 63%  |
+| experiment  | 0        | 0        | N/A  |
 
 **Effort Distribution**:
 - Low effort: 78% acceptance rate
 - Medium effort: 65% acceptance rate
-- High effort: 42% acceptance rate ⚠️
+- High effort: 42% acceptance rate
 
-⚠️ **Warning**: High-effort proposals have 42% historical acceptance rate. Consider deferring high-effort proposals unless critical impact.
+Warning: High-effort proposals have 42% historical acceptance rate. Consider deferring high-effort proposals unless critical impact.
+```
+
+**All-sources-missing output**:
+
+If all 5 sources were skipped, emit only:
+
+```markdown
+# Workflow Improvement Proposals - {date}
+
+## No Proposals Available
+
+No data sources returned results for the analysis period ({start} to {end}).
+
+### Sources Skipped
+
+- SKIP calibration: No KB entries with tag 'calibration' in date range
+- SKIP patterns: No PATTERNS-*.yaml files found (run /pattern-mine to generate)
+- SKIP heuristics: .claude/config/HEURISTIC-PROPOSALS.yaml not found
+- SKIP feedback: No KB entries with tag 'feedback' in date range
+- SKIP experiments: No KB entries with tags ['experiment', 'result'] found (WKFL-008 may not have run yet)
+
+Run prerequisite agents (WKFL-002, WKFL-003, WKFL-004, WKFL-006, WKFL-008) and retry.
 ```
 
 ### Phase 9: KB Persistence (skip if `--dry-run`)
@@ -343,26 +451,54 @@ await kb_add_entry({
 })
 ```
 
+KB entries are tagged to enable lifecycle queries:
+
+- `status:proposed` — newly generated proposals (queryable: all current proposals)
+- `status:accepted` — proposals accepted for implementation (queryable: accepted set)
+- `status:rejected` — proposals explicitly rejected (queryable: rejected set)
+- `status:implemented` — proposals fully implemented (queryable: implemented set)
+- `source:{calibration|patterns|heuristics|feedback|experiments}` — origin source
+- `priority:{high|medium|low}` — derived from ROI score group
+
+Also log the run completion to KB for baseline tracking:
+
+```javascript
+await kb_add_entry({
+  content: JSON.stringify({
+    event: 'improvement-proposer-run',
+    run_date: new Date().toISOString(),
+    proposals_generated: N,
+    sources_used: sources_used,
+    sources_failed: sources_failed,
+  }),
+  role: 'dev',
+  entryType: 'note',
+  tags: ['improvement-proposer', 'run-log'],
+})
+```
+
 **Dry-run mode**:
 
 - Log: "DRY RUN: Would persist {N} proposals to KB"
 - Write proposals to output file only
+- Do not log run completion to KB (does not count toward baseline)
 
 ## Output Files
 
 - `.claude/proposals/IMPROVEMENT-PROPOSALS-{YYYY-MM-DD}.md` (primary output)
+- `.claude/proposals/PROPOSAL-ACCEPTANCE-BASELINE.yaml` (created after 3rd non-dry-run, updated never — baseline is fixed)
 - KB entries (if not --dry-run)
 
 ## Error Handling
 
-| Scenario                      | Behavior                                                    |
-| ----------------------------- | ----------------------------------------------------------- |
-| KB unavailable                | Error: "KB unavailable. Cannot proceed." (fail fast)        |
-| 0 sources succeed             | Error: "No data sources available for analysis period"      |
-| Invalid date range            | Error: "Invalid --start/--end format (use YYYY-MM-DD)"      |
-| Both --days and --start/--end | Error: "Cannot specify both --days and --start/--end"       |
-| Pattern file missing          | Warning: "Run /pattern-mine to generate patterns", continue |
-| Sample size < min-samples     | Skip proposal or mark as "low confidence"                   |
+| Scenario                        | Behavior                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| KB unavailable                  | Error: "KB unavailable. Cannot proceed." (fail fast)                              |
+| All 5 sources skipped           | Emit "## No Proposals Available" section; halt (do not persist to KB)             |
+| 1–4 sources skipped             | Log skip message per source; continue; include "## Missing Data Sources" section  |
+| Invalid date range              | Error: "Invalid --start/--end format (use YYYY-MM-DD)"                            |
+| Both --days and --start/--end   | Error: "Cannot specify both --days and --start/--end"                             |
+| Sample size < min-samples       | Skip proposal or mark as "low confidence"                                         |
 
 ## Token Optimization
 
@@ -373,14 +509,17 @@ await kb_add_entry({
 
 ## Non-Negotiables
 
-| Rule                    | Description                                         |
-| ----------------------- | --------------------------------------------------- |
-| KB availability         | CRITICAL PATH - fail fast if KB unavailable         |
-| Minimum 3 samples       | Skip or mark proposals with < 3 data points         |
-| ROI transparency        | Document formula in output header                   |
-| Deduplication threshold | 0.85 (conservative, from WKFL-007)                  |
-| Promise.allSettled      | Use for multi-source loading (not Promise.all)      |
-| Proposal lifecycle      | Track: proposed → accepted → rejected → implemented |
+| Rule                    | Description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| KB availability         | CRITICAL PATH - fail fast if KB unavailable                          |
+| Minimum 3 samples       | Skip or mark proposals with < 3 data points                          |
+| ROI transparency        | Document formula (impact_value * effort_inverse) in output header    |
+| ROI range               | 1–9 (integer), not 0–10                                              |
+| Cold-start skip-with-log | Log skip message per source; never silently skip                    |
+| Deduplication threshold | 0.85 (conservative, from WKFL-007)                                   |
+| Promise.allSettled      | Use for multi-source loading (not Promise.all)                       |
+| Proposal lifecycle      | Track: proposed → accepted → rejected → implemented                  |
+| Baseline capture        | Create PROPOSAL-ACCEPTANCE-BASELINE.yaml after exactly 3 non-dry-run completions |
 
 ## Completion Signal
 
@@ -390,4 +529,6 @@ Return:
 PROPOSAL GENERATION COMPLETE: {N} proposals generated
 Output: .claude/proposals/IMPROVEMENT-PROPOSALS-{date}.md
 KB persistence: {N} entries written (or "SKIPPED (dry-run)")
+Sources used: {list}
+Sources skipped: {list or "none"}
 ```

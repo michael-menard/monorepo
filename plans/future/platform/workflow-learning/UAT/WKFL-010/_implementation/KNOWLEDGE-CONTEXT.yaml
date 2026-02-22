@@ -1,0 +1,77 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-22T10:45:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "WKFL-006"
+        lesson: "Pattern miner agent uses Promise.allSettled() for multi-source data loading so partial failures do not block the full pipeline"
+        category: pattern
+        applies_because: "Improvement proposer aggregates 5 data sources; same resilience pattern applies"
+
+      - story_id: "WKFL-002"
+        lesson: "Calibration agent writes KB entries with explicit tag taxonomy (category:calibration, stage:dev) enabling downstream queries to be deterministic"
+        category: pattern
+        applies_because: "Proposer queries calibration entries by KB tag; tag contract must match what WKFL-002 writes"
+
+      - story_id: "WKFL-009"
+        lesson: "Subtask decomposition deferred to SETUP phase per precedent; planning phase generates steps from ACs directly"
+        category: reuse
+        applies_because: "WKFL-010 elaboration explicitly cited WKFL-009 precedent for subtask deferral; plan step generation from ACs is correct approach"
+
+    blockers_to_avoid:
+      - "Mismatched ROI formula — story Technical Notes mandates impact_value * effort_inverse (range 1–9) but existing agent file uses (impact/effort)*(10/9) (range 2.2–10); must align to AC-7 contract"
+      - "Writing KB proposal entries without the required status tags (status:proposed, source:X, priority:Y) breaks AC-4 queryability"
+      - "Cold-start failure — if improvement-proposer.agent.md fails the entire command when any single source has no data, AC-8 is violated"
+
+    patterns_to_follow:
+      - "Use Promise.allSettled() for loading all data sources (established in WKFL-006 pattern-miner)"
+      - "Write YAML frontmatter in markdown output files for machine-readability (established in pattern-miner and calibration agents)"
+      - "Skip-with-log per source rather than fail-fast (established cold-start pattern across WKFL components)"
+      - "Persist KB entries with explicit tag taxonomy matching downstream query contracts"
+      - "Store output files under .claude/proposals/ (agent file already specifies this path)"
+
+    patterns_to_avoid:
+      - "Defining ROI formula that deviates from the AC-7 contract (impact_value * effort_inverse_value, range 1–9)"
+      - "Using Promise.all() for multi-source loading — if one fails, all fail"
+      - "Mixing --days and --start/--end date range parameters without validation guard"
+
+  architecture_decisions:
+    active_count: 1
+    relevant_adrs:
+      - id: "ADR-005"
+        title: "Testing Strategy — UAT Must Use Real Services"
+        status: active
+        constraint: "UAT tests must use real KB and real file system, not mocks; unit tests may mock KB"
+        applies_to: ["testing", "all"]
+
+    constraints:
+      api_paths: "Not applicable — no API endpoints in this story"
+      infrastructure: "Not applicable — agent file and command only"
+      storage: "Not applicable"
+      auth: "Not applicable"
+      testing: "UAT verification must query real KB entries; dry-run mode covers unit-level verification"
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full improvement-proposer.agent.md without grep pre-filter"
+        typical_tokens: 3000
+        mitigation: "Grep for specific sections (ROI formula, data sources, cold-start) before full read"
+      - operation: "Reading all WKFL story files for context"
+        typical_tokens: 15000
+        mitigation: "Read only AC and Technical Notes sections; skip context/risks"
+
+    recommended_patterns:
+      - "Grep before Read for targeted section extraction"
+      - "Read only ACs section from story files"
+      - "Use kb_search with specific tags rather than broad queries"
+
+  warnings:
+    - "Existing improvement-proposer.agent.md (created 2026-02-07) has a DIFFERENT ROI formula than AC-7 mandates — this is the primary gap to fix"
+    - "story.yaml already has all 5 dependencies (AC-9 is already satisfied — no change needed)"
+    - "PROPOSAL-ACCEPTANCE-BASELINE.yaml is a runtime artifact created after 3 runs, not a file to create during implementation — agent.md must document when/how it is created"
+
+  tokens:
+    in: 4200
+    out: 620

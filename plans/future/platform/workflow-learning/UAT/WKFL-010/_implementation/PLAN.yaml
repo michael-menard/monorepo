@@ -1,0 +1,105 @@
+schema: 1
+story_id: "WKFL-010"
+timestamp: "2026-02-22T10:46:00Z"
+
+steps:
+  - id: 1
+    description: "Align ROI formula in improvement-proposer.agent.md to AC-7 contract (impact_value * effort_inverse, range 1–9) and update numeric score mappings"
+    files:
+      - ".claude/agents/improvement-proposer.agent.md"
+    dependencies: []
+    slice: backend
+
+  - id: 2
+    description: "Add explicit data query contract per source in improvement-proposer.agent.md (KB tag queries + YAML path patterns for all 5 sources: calibration, patterns, heuristics, feedback, experiments)"
+    files:
+      - ".claude/agents/improvement-proposer.agent.md"
+    dependencies: [1]
+    slice: backend
+
+  - id: 3
+    description: "Add cold-start / skip-with-log behavior in improvement-proposer.agent.md for each source (AC-8): log skip message per source, continue with remaining, emit missing sources section in output, handle all-sources-missing edge case"
+    files:
+      - ".claude/agents/improvement-proposer.agent.md"
+    dependencies: [2]
+    slice: backend
+
+  - id: 4
+    description: "Ensure IMPROVEMENT-PROPOSALS-{date}.md output format includes Impact, Effort, and ROI Score fields for each proposal and a Tracking Summary table (AC-2, AC-3)"
+    files:
+      - ".claude/agents/improvement-proposer.agent.md"
+    dependencies: [3]
+    slice: backend
+
+  - id: 5
+    description: "Ensure KB proposal tracking entries include all required status tags (status:proposed, source:X, priority:Y) making them queryable by status (AC-4), and document PROPOSAL-ACCEPTANCE-BASELINE.yaml creation logic after 3 runs (AC-5)"
+    files:
+      - ".claude/agents/improvement-proposer.agent.md"
+    dependencies: [4]
+    slice: backend
+
+files_to_change:
+  - path: ".claude/agents/improvement-proposer.agent.md"
+    action: modify
+    reason: "Fix ROI formula to match AC-7 contract; add explicit data query contracts per AC-6; add cold-start skip-with-log behavior per AC-8; verify output format fields per AC-2/AC-3; verify KB tag taxonomy for AC-4; document baseline capture per AC-5"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm lint --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Agent file specifies kb_search queries and YAML file glob patterns for all 5 input sources (calibration, patterns, heuristics, feedback, experiments)"
+    evidence_type: file
+
+  - ac_id: "AC-2"
+    planned_evidence: "IMPROVEMENT-PROPOSALS-{date}.md output format in agent file contains Impact, Effort fields for each proposal entry"
+    evidence_type: file
+
+  - ac_id: "AC-3"
+    planned_evidence: "Agent file specifies proposals sorted by ROI score descending within priority groups (High >= 7, Medium >= 5, Low < 5 using 1–9 scale)"
+    evidence_type: file
+
+  - ac_id: "AC-4"
+    planned_evidence: "Agent file KB persistence section shows entries tagged with status:proposed, source:{source}, priority:{level} — queryable by status:proposed/accepted/rejected/implemented"
+    evidence_type: file
+
+  - ac_id: "AC-5"
+    planned_evidence: "Agent file documents PROPOSAL-ACCEPTANCE-BASELINE.yaml creation logic triggered after 3 completed /improvement-proposals runs, with fields: acceptance_rate, total_proposed, accepted, rejected"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "Agent file Data Sources section specifies exact KB tag queries (e.g., tags: ['calibration']) and YAML file path patterns (e.g., .claude/patterns/PATTERNS-*.yaml) for all 5 sources"
+    evidence_type: file
+
+  - ac_id: "AC-7"
+    planned_evidence: "Agent file ROI formula section shows: impact_value (high=3, medium=2, low=1), effort_inverse (low=3, medium=2, high=1), roi_score = impact_value * effort_inverse (range 1.0–9.0)"
+    evidence_type: file
+
+  - ac_id: "AC-8"
+    planned_evidence: "Agent file cold-start section shows skip-with-log per source, continue behavior, missing sources noted in output, all-sources-missing handled with No Proposals section"
+    evidence_type: file
+
+  - ac_id: "AC-9"
+    planned_evidence: "story.yaml dependencies field already contains WKFL-002, WKFL-003, WKFL-004, WKFL-006, WKFL-008 — no change required (verified in planning)"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "The existing improvement-proposer.agent.md (created 2026-02-07) already has substantial content but uses a different ROI formula than AC-7 mandates — Step 1 aligns this critical gap first"
+  - "AC-9 is already satisfied by story.yaml (all 5 dependencies present) — no file change needed for this AC"
+  - "PROPOSAL-ACCEPTANCE-BASELINE.yaml is a runtime artifact produced at the 3rd run, not a file to create during implementation — the agent.md must only document when/how it is created"
+  - "No orchestrator TypeScript changes required — all changes are confined to the agent markdown file"
+  - "No ADRs constrain this story directly (ADR-001 through ADR-006 apply to API, infra, auth, and testing patterns not relevant here)"
+  - "Cold-start behavior for WKFL-008 (experiments) is especially important as that dependency may not have run yet"
+  - "Per knowledge context: ROI formula mismatch is the primary blocker — existing agent uses (impact/effort)*(10/9) but AC-7 mandates impact_value * effort_inverse with integer mappings"
