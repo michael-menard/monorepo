@@ -5,13 +5,14 @@
 | Status | Count |
 |--------|-------|
 | Ready to Work | 1 |
-| Elaboration | 1 |
+| Ready for QA | 1 |
 | Pending | 1 |
 | **Total** | **3** |
 
 ## Ready to Start (No Blockers)
 
 - AUDT-001: Audit Graph + Artifact Schema (scaffolded, needs polish)
+- AUDT-0020: Polish and Complete Unit Test Coverage for All 9 Audit Lens Nodes (ready-for-qa)
 
 ---
 
@@ -48,10 +49,10 @@ Polish the scaffolded LangGraph StateGraph, Zod artifact schemas, and scan-scope
 
 ### AUDT-002: 9 Audit Lens Nodes
 
-**Status:** `elaboration`
+**Status:** `ready-for-qa`
 **Priority:** P0
 **Story ID:** AUDT-0020
-**Story File:** `elaboration/AUDT-0020/AUDT-0020.md`
+**Story File:** `ready-for-qa/AUDT-0020/AUDT-0020.md`
 **Dependencies:** AUDT-001
 **Blocks:** AUDT-003
 
