@@ -1,0 +1,176 @@
+schema: 1
+story_id: "WKFL-008"
+timestamp: "2026-02-22T01:00:00Z"
+iteration: 2
+
+verdict: PASS
+
+tests_executed: false
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+tests_exempt: true
+tests_exempt_reason: "story_type: docs — all changes are .claude/ agent/config/command/schema files, no TypeScript code"
+
+coverage: null
+coverage_meets_threshold: true
+coverage_exempt: true
+coverage_exempt_reason: "story_type: docs — all changes are .claude/ agent/config/command/schema files, no TypeScript"
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "No test suite applicable — docs-only story"
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >
+      Verified .claude/config/experiments.yaml directly. All required ExperimentSchema fields are
+      present in commented examples (id, description, status, created_at, traffic, eligibility,
+      metrics). Traffic values 0.2/0.3/0.25 all within 0.0-1.0 range. All eligibility criteria
+      types documented (all, ac_count_max, ac_count_min, complexity, domain). Metrics block includes
+      primary, secondary[], min_sample_size. Header comment "Schema: .claude/schemas/experiment-schema.md"
+      cross-references the schema file. Traffic Routing and Analysis sections documented in comments.
+      experiment-schema.md exists with full Zod schemas (ExperimentSchema, ExperimentsConfigSchema,
+      ExperimentRecommendationSchema, ExperimentReportSchema). Spot-check: ExperimentSchema.traffic
+      is z.number().min(0.0).max(1.0) — enforces 0.0-1.0 range.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >
+      Verified pm-story-generation-leader.agent.md Phase 0.5a directly (lines 84-178). isEligible()
+      function fully implemented with all filter types: all, ac_count_max, ac_count_min, complexity,
+      domain. Assignment algorithm: r = Math.random(); if r < experiment.traffic → set
+      experiment_variant = experiment.id + BREAK (first-match-wins). Default to "control" if no
+      experiment matches. experiment_variant written to story.yaml frontmatter in Phase 4 (with
+      inline YAML example). Quality gate "Experiment variant assigned" present. Non-negotiables
+      include "Experiment assignment: MUST assign variant in Phase 0.5a (WKFL-008)" and
+      "First match wins: Story in ONE experiment only (WKFL-008)". Cross-reference comment
+      confirmed present at Phase 0.5a Output section (line 177): "Cross-reference:
+      dev-documentation-leader.agent.md Step 5 reads this value from story.yaml and propagates
+      it to OUTCOME.yaml". Fix iteration 2 resolved ISSUE-2 cross-reference gap.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >
+      Verified dev-documentation-leader.agent.md Step 5 and outcome-schema.md directly.
+      experiment_variant field documented in OUTCOME.yaml structure as string|null. Propagation
+      rule: parse story.yaml frontmatter, copy exact value to OUTCOME.yaml. Missing field → write
+      null (never default to "control"). Backward Compatibility note confirmed: "Legacy stories
+      without experiment_variant field get null, not 'control'". Cross-reference comment confirmed
+      present after Backward Compatibility note (lines 203, 214): "Cross-reference:
+      pm-story-generation-leader.agent.md Phase 0.5a is the write side." outcome-schema.md:
+      experiment_variant: string | null field documented, Field Descriptions table documents all
+      three values (null/"exp-{id}"/"control"), Validation rule 6 documented, Changelog v1.1.0
+      entry present. Fix iteration 2 resolved ISSUE-2 cross-reference gap.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >
+      Verified experiment-analyzer.agent.md Step 4 directly (lines 68-81). Sample guard fully
+      implemented: checks n_treatment < min_required OR n_control < min_required where
+      min_required = experiment.metrics.min_sample_size (default 10). When triggered: sets
+      recommendation.action = "continue", confidence = "low", rationale = "Insufficient data:
+      {n_treatment} treatment, {n_control} control (need {min_required}+ each)", then skips to
+      Step 8. Step 4 is correctly structured and the skip instruction is clear.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >
+      Verified .claude/commands/experiment-report.md directly. Command parses EXPERIMENT_ID from
+      arguments, spawns experiment-analyzer agent via "Read: .claude/agents/experiment-analyzer.agent.md".
+      Output path confirmed: "plans/future/workflow-learning/experiments/EXPERIMENT-REPORT-{EXPERIMENT_ID}-{date}.yaml".
+      experiment-analyzer.agent.md Step 8 (Normal Path) includes recommendation block with
+      action (rollout|expand_traffic|stop|continue), rationale, confidence (high|medium|low).
+      ExperimentRecommendationSchema in experiment-schema.md validates these with Zod enums:
+      action: z.enum(['rollout', 'expand_traffic', 'stop', 'continue']),
+      rationale: z.string().min(20), confidence: z.enum(['high', 'medium', 'low']).
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >
+      Verified experiment-analyzer.agent.md Step 8 directly. Fix iteration 2 (ST-4-FIX) was
+      confirmed applied. Step 8 now contains two clearly separated conditional sections:
+      (1) "Insufficient Data Path" (lines 219-246): When n < min_sample_size, emits ONLY
+      schema/report_date/experiment/variants/analysis/recommendation — explicitly omits
+      primary_metric and secondary_metrics. Includes instruction "Do NOT include statistical
+      claims, p-values, means, or significance fields." sample_guard_triggered: true is in
+      the output. confidence: none documents the guard state.
+      (2) "Normal Path" (lines 248-306): Full statistical template with primary_metric,
+      secondary_metrics, p_value, difference, percent_change, confidence, significant.
+      Verification fixtures confirmed at fixtures/insufficient/README.md (8+8 sample fixture)
+      and fixtures/sufficient/README.md (12+15 sample fixture). VERIFICATION-FIXTURES.md
+      provides complete manual test guide with checklists for both paths. The ISSUE-1 from
+      iteration 1 is fully resolved.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: >
+      Verified pm-story-generation-leader.agent.md Phase 0.5a directly. Traffic routing hook
+      confirmed at story creation time: (1) isEligible() checks all filter types, (2)
+      Math.random() < experiment.traffic → assign treatment variant, (3) BREAK after first match
+      (first-match-wins), (4) experiment_variant written to story.yaml frontmatter in Phase 4
+      with inline YAML example. Graceful degradation: missing/malformed experiments.yaml →
+      default to "control" with warning logged. Non-negotiables enforce all three behaviors.
+      Cross-reference to dev-documentation-leader Step 5 present. Phase 4.5 comment confirmed:
+      "<!-- Cross-reference: dev-documentation-leader.agent.md Step 5 reads experiment_variant
+      from story.yaml frontmatter and propagates it into OUTCOME.yaml. Do not rename this field
+      without updating both files. -->"
+
+architecture_compliant: true
+
+issues: []
+
+gate:
+  decision: PASS
+  reason: "All 7 ACs verified, tests exempt (docs-only), architecture compliant"
+  blocking_issues: []
+
+lessons_to_record:
+  - lesson: >
+      Evidence files (EVIDENCE.yaml) must accurately reflect file modifications. When
+      change_description claims specific text was added to a file, QA verification will
+      spot-check and fail if the text is absent. Coder agents should verify their own writes
+      before marking steps PASS.
+    category: anti_pattern
+    tags: ["evidence-quality", "workflow-learning", "qa-process"]
+
+  - lesson: >
+      For multi-path agent instruction documents (sufficient vs insufficient data paths), Step
+      templates should use explicit conditional sections (e.g., "Insufficient Data Path:" /
+      "Normal Path:") rather than relying on agents to infer field omission from earlier skip
+      instructions. The sample guard in Step 4 alone is not sufficient to communicate the
+      Step 8 output shape — the separate conditional templates in Step 8 are required.
+    category: pattern
+    tags: ["experiment-analyzer", "agent-instructions", "workflow-learning"]
+
+  - lesson: >
+      Cross-reference comments between agent files (e.g., "This writes X; see Agent Y Step Z
+      for the read side") are low-cost maintainability improvements. When planned as part of a
+      story, they should be written at the same time as the core change and verified before
+      marking steps PASS — not deferred to a fix iteration.
+    category: pattern
+    tags: ["agent-instructions", "cross-references", "maintainability"]
+
+  - lesson: >
+      The Workflow Experimentation Framework (WKFL-008) pattern — experiments.yaml config +
+      pm-story-generation traffic routing + OUTCOME.yaml variant propagation + experiment-analyzer
+      statistical analysis — is a complete A/B testing pipeline for AI agents. The
+      experiment_variant propagation chain (write at story creation → read at documentation →
+      analyze at report time) is cleanly separated with no duplication across three agent files.
+    category: reuse
+    tags: ["experiment-framework", "a-b-testing", "workflow-learning", "wkfl-008"]
+
+tokens:
+  in: 14500
+  out: 2200
