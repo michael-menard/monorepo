@@ -1,0 +1,12 @@
+schema: 1
+story_id: WINT-0180
+current_phase: plan
+last_successful_phase: setup
+iteration: 0
+max_iterations: 3
+started_at: "2026-02-21T00:00:00Z"
+worktree_path: tree/story/WINT-0180
+branch: story/WINT-0180
+blocked: false
+forced: false
+e2e_gate: exempt

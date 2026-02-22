@@ -1,0 +1,33 @@
+schema: 1
+story_id: "WINT-0180"
+timestamp: "2026-02-21T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - ".claude/prompts/role-packs/FRAMEWORK.md"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: |
+  Documentation-only story. Creates .claude/prompts/role-packs/FRAMEWORK.md — a single
+  authoritative document defining how examples are structured in role packs. No code,
+  no tests, no API, no UI, no database changes.
+
+elaboration: completed
+e2e_gate: exempt
+e2e_exempt_reason: "story_type: chore — documentation only, no runtime code"
