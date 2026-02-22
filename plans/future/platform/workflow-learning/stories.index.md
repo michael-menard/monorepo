@@ -25,7 +25,7 @@ This is the master story index. Each epic maintains its own detailed story index
 | WKFL-003 | Emergent Heuristic Discovery | uat | WKFL-010 |
 | WKFL-004 | Human Feedback Capture | completed | MODL, LERN |
 | WKFL-005 | Doc Sync Agent | uat | SDLC |
-| WKFL-006 | Cross-Story Pattern Mining | needs-code-review | WKFL-007, WKFL-009, WKFL-010 |
+| WKFL-006 | Cross-Story Pattern Mining | ready-for-qa | WKFL-007, WKFL-009, WKFL-010 |
 
 ## Ready to Start (No Cross-Epic Blockers)
 
