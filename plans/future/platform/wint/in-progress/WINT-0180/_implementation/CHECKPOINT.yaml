@@ -1,6 +1,6 @@
 schema: 1
 story_id: WINT-0180
-current_phase: review
+current_phase: proof
 last_successful_phase: execute
 iteration: 0
 max_iterations: 3
