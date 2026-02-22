@@ -1,0 +1,205 @@
+schema: 1
+story_id: "WKFL-008"
+timestamp: "2026-02-22T00:00:00Z"
+subtask_source: story_notes  # derived from technical_notes decomposition; no formal subtasks section in story
+
+# IMPORTANT PLANNING NOTE:
+# Pre-implementation discovery revealed that most artifacts already exist:
+#   - .claude/config/experiments.yaml (stub with schema, no active experiments)
+#   - .claude/agents/experiment-analyzer.agent.md (full Welch t-test + min-sample guard)
+#   - .claude/commands/experiment-report.md (routes to experiment-analyzer)
+#   - .claude/agents/pm-story-generation-leader.agent.md (Phase 0.5a has full traffic routing)
+#   - .claude/agents/dev-documentation-leader.agent.md (Step 5 reads experiment_variant)
+#   - .claude/schemas/experiment-schema.md (full Zod schemas)
+#   - .claude/schemas/outcome-schema.md (experiment_variant field documented)
+# This story is completing and verifying this scaffolding, not building from scratch.
+# Steps are scoped to gaps and verification work identified during planning.
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Audit and finalize .claude/config/experiments.yaml schema against experiment-schema.md; verify all required fields are present in examples and comments align with schema"
+    files:
+      - ".claude/config/experiments.yaml"
+    files_to_read:
+      - ".claude/schemas/experiment-schema.md"
+    dependencies: []
+    slice: config
+    verification: "Manual review: experiments.yaml comments match ExperimentSchema Zod definition; all required fields (id, description, status, created_at, traffic, eligibility, metrics) are represented in example blocks"
+    acs_covered: ["AC-1"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Verify traffic routing hook in pm-story-generation-leader.agent.md (Phase 0.5a) satisfies AC-7: experiment eligibility check and variant assignment logic present and writes experiment_variant to story.yaml frontmatter; add inline cross-reference to dev-documentation-leader.agent.md if missing"
+    files:
+      - ".claude/agents/pm-story-generation-leader.agent.md"
+      - ".claude/agents/dev-documentation-leader.agent.md"
+    files_to_read:
+      - ".claude/agents/pm-story-generation-leader.agent.md"
+      - ".claude/agents/dev-documentation-leader.agent.md"
+    dependencies: [1]
+    slice: agents
+    verification: "Manual review: pm-story-generation-leader.agent.md Phase 0.5a contains eligibility check and Math.random() < traffic assignment; story YAML frontmatter section includes experiment_variant field; dev-documentation-leader.agent.md Step 5 reads experiment_variant from story.yaml"
+    acs_covered: ["AC-2", "AC-7"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Verify OUTCOME.yaml extension for experiment_variant field is complete in dev-documentation-leader.agent.md Step 5 and outcome-schema.md; ensure backward compatibility rule (null for legacy, never default to 'control') is documented in both places"
+    files:
+      - ".claude/agents/dev-documentation-leader.agent.md"
+      - ".claude/schemas/outcome-schema.md"
+    files_to_read:
+      - ".claude/agents/dev-documentation-leader.agent.md"
+      - ".claude/schemas/outcome-schema.md"
+    dependencies: [2]
+    slice: agents
+    verification: "Manual review: OUTCOME.yaml structure in dev-documentation-leader.agent.md includes experiment_variant field; outcome-schema.md documents the field with null/control/exp-{id} values; backward compatibility rule is explicit in both"
+    acs_covered: ["AC-3"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Verify experiment-analyzer.agent.md minimum sample guard (AC-6): confirm Step 4 emits action=continue with 'insufficient data' rationale when n_treatment < min_sample_size OR n_control < min_sample_size; confirm report omits statistical claims in this path"
+    files:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    files_to_read:
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [3]
+    slice: agents
+    verification: "Manual review: Step 4 of experiment-analyzer.agent.md sets recommendation.action=continue and rationale contains 'Insufficient data' text with n_treatment, n_control counts; Step 8 report is generated without primary_metric/secondary_metrics statistical fields when sample guard triggers"
+    acs_covered: ["AC-4", "AC-6"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Verify /experiment-report command and EXPERIMENT-REPORT.yaml output satisfy AC-5: command file routes to experiment-analyzer, output path is plans/future/workflow-learning/experiments/, recommendation field has action + rationale + confidence"
+    files:
+      - ".claude/commands/experiment-report.md"
+    files_to_read:
+      - ".claude/commands/experiment-report.md"
+      - ".claude/agents/experiment-analyzer.agent.md"
+    dependencies: [4]
+    slice: commands
+    verification: "Manual review: /experiment-report command routes to experiment-analyzer.agent.md; EXPERIMENT-REPORT.yaml structure in agent file includes recommendation.action, recommendation.rationale, recommendation.confidence"
+    acs_covered: ["AC-5"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Create verification fixture directory and fixture files for AC-6 end-to-end test: (a) fixture with 8 treatment + 8 control OUTCOME.yaml files (insufficient data path), (b) fixture with 12 treatment + 15 control OUTCOME.yaml files (sufficient data path); document manual test instructions in VERIFICATION-FIXTURES.md"
+    files:
+      - "plans/future/platform/workflow-learning/in-progress/WKFL-008/_implementation/fixtures/insufficient/README.md"
+      - "plans/future/platform/workflow-learning/in-progress/WKFL-008/_implementation/fixtures/sufficient/README.md"
+      - "plans/future/platform/workflow-learning/in-progress/WKFL-008/_implementation/VERIFICATION-FIXTURES.md"
+    files_to_read:
+      - ".claude/agents/experiment-analyzer.agent.md"
+      - ".claude/schemas/outcome-schema.md"
+    dependencies: [5]
+    slice: config
+    verification: "File existence: VERIFICATION-FIXTURES.md exists and documents steps to run /experiment-report against fixture data; insufficient fixture produces report with recommendation.action=continue and 'insufficient data' in rationale; sufficient fixture produces report with statistical fields populated"
+    acs_covered: ["AC-4", "AC-6"]
+
+files_to_change:
+  - path: ".claude/config/experiments.yaml"
+    action: modify
+    reason: "AC-1: Verify schema completeness and audit comment alignment with experiment-schema.md; update if gaps found"
+
+  - path: ".claude/agents/pm-story-generation-leader.agent.md"
+    action: modify
+    reason: "AC-7: Verify Phase 0.5a traffic routing hook is complete; add cross-reference comment to dev-documentation-leader.agent.md if missing"
+
+  - path: ".claude/agents/dev-documentation-leader.agent.md"
+    action: modify
+    reason: "AC-3, AC-7: Verify experiment_variant field in OUTCOME.yaml Step 5 and backward compatibility rule; add cross-reference to pm-story-generation-leader.agent.md if missing"
+
+  - path: ".claude/agents/experiment-analyzer.agent.md"
+    action: modify
+    reason: "AC-4, AC-6: Verify minimum sample guard logic and insufficient data output path; fix any gaps"
+
+  - path: ".claude/commands/experiment-report.md"
+    action: modify
+    reason: "AC-5: Verify command routing and output path specification"
+
+  - path: ".claude/schemas/outcome-schema.md"
+    action: modify
+    reason: "AC-3: Verify experiment_variant field documentation and backward compatibility note"
+
+  - path: "plans/future/platform/workflow-learning/in-progress/WKFL-008/_implementation/VERIFICATION-FIXTURES.md"
+    action: create
+    reason: "AC-6: Manual test instructions for end-to-end verification of insufficient and sufficient data paths"
+
+  - path: "plans/future/platform/workflow-learning/in-progress/WKFL-008/_implementation/fixtures/insufficient/README.md"
+    action: create
+    reason: "AC-6: Documents the 8-sample fixture setup for insufficient data path testing"
+
+  - path: "plans/future/platform/workflow-learning/in-progress/WKFL-008/_implementation/fixtures/sufficient/README.md"
+    action: create
+    reason: "AC-6: Documents the 12+ sample fixture setup for sufficient data path testing"
+
+commands_to_run:
+  - command: "ls .claude/config/experiments.yaml .claude/agents/experiment-analyzer.agent.md .claude/commands/experiment-report.md .claude/schemas/experiment-schema.md .claude/schemas/outcome-schema.md"
+    when: "before starting — verify all pre-existing artifacts are present"
+    required: true
+
+  - command: "grep -n 'experiment_variant' .claude/agents/pm-story-generation-leader.agent.md | head -20"
+    when: "during step 2 — verify AC-7 routing hook presence"
+    required: true
+
+  - command: "grep -n 'experiment_variant' .claude/agents/dev-documentation-leader.agent.md | head -20"
+    when: "during step 3 — verify OUTCOME.yaml experiment_variant integration"
+    required: true
+
+  - command: "grep -n 'insufficient\\|min_sample\\|n_treatment\\|n_control' .claude/agents/experiment-analyzer.agent.md | head -20"
+    when: "during step 4 — verify minimum sample guard is present"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Manual review of .claude/config/experiments.yaml: traffic field present in schema, examples show 0.0-1.0 range, comments reference experiment-schema.md"
+    evidence_type: manual
+
+  - ac_id: "AC-2"
+    planned_evidence: "Manual review of pm-story-generation-leader.agent.md Phase 0.5a: experiment_variant field written to story.yaml frontmatter in Phase 4 synthesis"
+    evidence_type: manual
+
+  - ac_id: "AC-3"
+    planned_evidence: "Manual review of dev-documentation-leader.agent.md Step 5 and outcome-schema.md: experiment_variant field present in OUTCOME.yaml structure with null/control/exp-{id} valid values"
+    evidence_type: manual
+
+  - ac_id: "AC-4"
+    planned_evidence: "Manual review of experiment-analyzer.agent.md Step 4: min_sample_size check against n_treatment and n_control before statistical claims; report only generated with statistical assertions when samples >= min_sample_size"
+    evidence_type: manual
+
+  - ac_id: "AC-5"
+    planned_evidence: "Manual review of experiment-analyzer.agent.md Step 8 and EXPERIMENT-REPORT.yaml structure: recommendation field with action (rollout|expand_traffic|stop|continue), rationale, and confidence present"
+    evidence_type: file
+
+  - ac_id: "AC-6"
+    planned_evidence: "VERIFICATION-FIXTURES.md documents end-to-end test; running /experiment-report against 8-sample fixture produces recommendation.action=continue with 'insufficient data' rationale and no statistical claims"
+    evidence_type: manual
+
+  - ac_id: "AC-7"
+    planned_evidence: "Manual review of pm-story-generation-leader.agent.md: Phase 0.5a contains eligibility check (isEligible function), Math.random() < traffic assignment, first-match-wins break, and experiment_variant written to story frontmatter"
+    evidence_type: manual
+
+architectural_decisions: []
+
+complexity: simple
+
+risks_noted:
+  - id: "R-1"
+    title: "Experiment interference (first-match ordering)"
+    mitigation_in_plan: "Step 2 verifies the break-after-first-match rule is documented and that experiments.yaml ordering is treated as priority ranking"
+
+  - id: "R-2"
+    title: "Statistical invalidity at N=10"
+    mitigation_in_plan: "Step 4 verifies AC-6 minimum sample guard; Step 6 creates fixture to test the insufficient data path end-to-end"
+
+  - id: "R-3"
+    title: "Silent variant tagging breakage if agent refactored"
+    mitigation_in_plan: "Step 2 pins integration point to pm-story-generation-leader.agent.md Phase 0.5a and adds cross-reference comments between it and dev-documentation-leader.agent.md"
+
+notes:
+  - "Pre-planning discovery: All 5 major artifacts already exist (experiments.yaml, experiment-analyzer.agent.md, experiment-report.md, pm-story-generation-leader Phase 0.5a, dev-documentation-leader Step 5). This story is verification + gap-fill + fixture creation."
+  - "AC-7 integration point clarification: The story.yaml says 'Traffic routing hook in dev-documentation-leader.agent.md at story creation time' but the actual routing assignment lives in pm-story-generation-leader.agent.md Phase 0.5a (which does the CREATE). dev-documentation-leader.agent.md handles the READ side (writing experiment_variant from story.yaml into OUTCOME.yaml). Both files are in scope and both are already implemented."
+  - "SCOPE.yaml lists dev-documentation-leader.agent.md as a touched path — the AC-7 work there is the read/propagation side (OUTCOME.yaml Step 5), not the write/assignment side. This is consistent with what is already present."
+  - "No TypeScript changes required — all work is .claude/ files only per SCOPE.yaml."
+  - "Verification for AC-6 is fixture-based (manual), not automated test, since there is no test runner for .claude/ agent files."
+  - "Complexity: simple — mostly audit/verify/document with targeted gap-filling. No architectural unknowns remain."

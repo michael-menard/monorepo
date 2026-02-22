@@ -216,6 +216,30 @@ if action in ["rollout", "expand_traffic"] AND confidence == "low":
 Write `EXPERIMENT-REPORT-{experiment_id}-{date}.yaml` to:
 `plans/future/workflow-learning/experiments/`
 
+**Insufficient Data Path** (triggered from Step 4 sample guard):
+When sample guard triggers, omit `primary_metric` and `secondary_metrics` from the report.
+Only `schema`, `report_date`, `experiment_id`, `sample_sizes`, and `recommendation` are emitted.
+Do NOT include statistical claims, p-values, means, or significance fields.
+
+Example insufficient-data report:
+```yaml
+schema: 1
+report_date: "{ISO timestamp}"
+experiment_id: "{experiment_id}"
+
+sample_sizes:
+  treatment: {n_treatment}
+  control: {n_control}
+  skipped: {n_skipped}
+
+recommendation:
+  action: "continue"
+  rationale: "Insufficient data: {n_treatment} treatment, {n_control} control (need {min_required}+ each)"
+  confidence: "low"
+```
+
+**Normal Path** (sufficient samples, statistical analysis complete):
+
 ```yaml
 schema: 1
 report_date: "{ISO timestamp}"

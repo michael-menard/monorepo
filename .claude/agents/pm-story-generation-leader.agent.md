@@ -174,6 +174,7 @@ function isEligible(story, eligibility) {
 **Output**:
 - `experiment_variant` variable set to experiment.id or "control"
 - This value will be included in story.yaml frontmatter in Phase 4
+- Cross-reference: dev-documentation-leader.agent.md Step 5 reads this value from story.yaml and propagates it to OUTCOME.yaml
 
 ### Phase 1-3: Spawn Workers (PARALLEL)
 Spawn all workers in SINGLE message. For patterns, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
