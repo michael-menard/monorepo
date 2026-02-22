@@ -474,7 +474,7 @@ try {
 
 ---
 
-## Completion Signals
+## Completion Signal
 
 - `PREDICTION COMPLETE` - predictions generated successfully
 - `PREDICTION DEGRADED: {reason}` - fallback predictions returned
