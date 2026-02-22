@@ -3,7 +3,7 @@ doc_type: story
 title: "WKFL-003: Emergent Heuristic Discovery"
 story_id: WKFL-003
 story_prefix: WKFL
-status: needs-code-review
+status: ready-for-qa
 phase: adaptation
 created_at: "2026-02-06T17:00:00-07:00"
 updated_at: "2026-02-22T00:00:00Z"
