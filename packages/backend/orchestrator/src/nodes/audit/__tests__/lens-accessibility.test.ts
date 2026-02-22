@@ -162,4 +162,32 @@ describe('lens-accessibility', () => {
     expect(result.findings.every(f => f.lens === 'a11y')).toBe(true)
     expect(result.findings.some(f => (f.lens as string) === 'accessibility')).toBe(false)
   })
+
+  it('empty state targetFiles → 0 findings (AC-10)', async () => {
+    const result = await run(makeState([]))
+    expect(result.total_findings).toBe(0)
+    expect(result.lens).toBe('a11y')
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+  })
+
+  it('by_severity counts match findings array', async () => {
+    const webDir = join(testDir, 'apps', 'web', 'main-app', 'src')
+    await mkdir(webDir, { recursive: true })
+    const filePath = await createFile(webDir, 'MultiIssues.tsx', [
+      'export function MultiIssues() {',
+      '  return <>',
+      '    <img src="photo.jpg" />',
+      '    <button><StarIcon /></button>',
+      '    <div onClick={handleClick}>click</div>',
+      '  </>',
+      '}',
+    ].join('\n'))
+    const result = await run(makeState([filePath]))
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
+  })
 })

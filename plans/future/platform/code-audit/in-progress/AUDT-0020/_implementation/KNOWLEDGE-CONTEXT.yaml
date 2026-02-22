@@ -1,0 +1,74 @@
+knowledge_context:
+  loaded: true
+  timestamp: "2026-02-21T00:00:00Z"
+
+  lessons_learned:
+    count: 3
+    relevant_to_scope:
+      - story_id: "AUDT-0010"
+        lesson: "lens-accessibility returns 'a11y' not 'accessibility' — schema enum value is 'a11y'; test assertions must use that string"
+        category: blocker
+        applies_because: "AC-14 requires explicit not.toBe('accessibility') assertions; getting this wrong fails schema parse"
+      - story_id: "AUDT-0010"
+        lesson: "lens-test-coverage non-existent path behavior is intentionally different — it may produce a finding (not 0 findings) because the lens checks for test file existence, not source file readability"
+        category: pattern
+        applies_because: "AC-9 for lens-test-coverage asserts only schema validity, not total_findings === 0"
+      - story_id: "AUDT-0010"
+        lesson: "Binary file content via readFile('utf-8') does not throw — garbled text is returned; regex patterns are unlikely to match binary noise so total_findings may be 0"
+        category: pattern
+        applies_because: "AC-11 security lens binary buffer test must verify no-throw and schema validity, not 0 findings"
+
+    blockers_to_avoid:
+      - "Using 'accessibility' instead of 'a11y' in lens field assertions — schema enum only contains 'a11y'"
+      - "Asserting total_findings === 0 for non-existent path in lens-test-coverage — the lens generates a finding for missing test coverage even when file doesn't exist"
+      - "Using conditional lens field assertions (if findings.length > 0) — harden to unconditional when findings ARE expected"
+
+    patterns_to_follow:
+      - "Copy makeState() and createFile() helpers verbatim from existing test files — identical across all 9"
+      - "Use lens-security.test.ts as gold standard template for each lens gap fill"
+      - "by_severity sum check: critical + high + medium + low === total_findings"
+      - "Empty targetFiles test: makeState([]) → total_findings === 0, lens field correct, schema valid"
+      - "Binary buffer test: writeFile(path, Buffer.from([0x89, 0x50, 0x4e, 0x47])) then readFile as utf-8"
+
+    patterns_to_avoid:
+      - "Conditional lens field guards in tests (if result.findings.length > 0) — when a positive fixture is used, findings ARE expected; assert unconditionally"
+      - "Creating new lens implementations or detection patterns — test-only story"
+      - "Modifying AuditFindingSchema or LensResultSchema — no schema changes in scope"
+
+  architecture_decisions:
+    active_count: 1
+    relevant_adrs:
+      - id: "TEST-PATTERN-001"
+        title: "Lens test gold standard: lens-security.test.ts"
+        status: active
+        constraint: "All 9 lens test files must satisfy: LensResultSchema.parse(), 3+ positive fixtures, 3+ negative fixtures, by_severity sum check, empty file, non-existent path, empty targetFiles array, lens field assertion"
+        applies_to: ["audit", "orchestrator", "backend"]
+
+    constraints:
+      api_paths: "N/A — no API endpoints in scope"
+      infrastructure: "N/A — no infrastructure changes in scope"
+      storage: "N/A — no storage changes in scope"
+      auth: "N/A — no auth changes in scope"
+      testing: "Vitest + Node fs/promises. tmpdir() + beforeEach/afterEach cleanup. No MSW. No Playwright."
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading all 9 lens implementation files in full"
+        typical_tokens: 9000
+        mitigation: "Only read lens-typescript.ts for calibrateSeverity() pattern; other lens implementations only if a test fails and a bug is suspected"
+      - operation: "Running full orchestrator test suite repeatedly during planning"
+        typical_tokens: 0
+        mitigation: "Do not run tests during planning phase — execution phase runs verification"
+
+    recommended_patterns:
+      - "Read only the Canonical Reference files listed in story (lens-security.test.ts, lens-typescript.ts, audit-findings.ts)"
+      - "Read each test file once to identify gaps; do not re-read implementations unless bug suspected"
+      - "Each ST step targets exactly 3 test files — minimal context per execution step"
+
+  warnings:
+    - "lens-test-coverage empty file AC-8: an empty .ts file with no test file will still produce a finding (lens checks test existence not content). The story workaround is makeState([]) for the empty targetFiles test."
+    - "lens-performance and lens-ui-ux have conditional lens field assertions (if result.findings.length > 0) — harden to unconditional using a known-positive fixture in the lens field test"
+
+  tokens:
+    in: 0
+    out: 0

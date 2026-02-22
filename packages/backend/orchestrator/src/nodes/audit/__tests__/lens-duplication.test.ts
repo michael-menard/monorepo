@@ -153,4 +153,27 @@ describe('lens-duplication', () => {
     expect(result.findings).toEqual([])
     expect(() => LensResultSchema.parse(result)).not.toThrow()
   })
+
+  it('empty state targetFiles → 0 findings', async () => {
+    const result = await run(makeState([]))
+    expect(result.total_findings).toBe(0)
+    expect(result.lens).toBe('duplication')
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+  })
+
+  it('by_severity counts match findings array', async () => {
+    const app1Dir = join(testDir, 'apps', 'web', 'main-app', 'src', 'hooks')
+    const app2Dir = join(testDir, 'apps', 'web', 'app-dashboard', 'src', 'hooks')
+    await mkdir(app1Dir, { recursive: true })
+    await mkdir(app2Dir, { recursive: true })
+    const file1 = await createFile(app1Dir, 'useLocalStorage.ts', 'export function useLocalStorage() {}')
+    const file2 = await createFile(app2Dir, 'useLocalStorage.ts', 'export function useLocalStorage() {}')
+    const result = await run(makeState([file1, file2]))
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
+  })
 })
