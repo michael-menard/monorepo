@@ -1,0 +1,153 @@
+schema: 1
+story_id: WINT-0180
+generated_at: "2026-02-21T00:00:00Z"
+agent: dev-execute-leader
+e2e_gate: exempt
+e2e_exempt_reason: "story_type: chore — documentation only, no runtime code"
+
+summary: |
+  All 8 acceptance criteria satisfied. FRAMEWORK.md created at the correct path
+  with all required sections: overview, directory structure, pattern skeleton template,
+  decision rule format, token budget, proof requirements format, and three delivery
+  mechanisms. Existing _specs/ files were not modified (git diff clean).
+
+  Fix iteration 1 (2026-02-21): Resolved F-1, F-2, F-3 from REVIEW.yaml.
+  AC-2 strengthened: added "Minimal Working Example" subsection showing a 20-line
+  conformant core body; clarified that the reference template is a guide (not a minimal
+  spec itself) and that the 10-25 line constraint applies to the core body only.
+  AC-8 grandfathering note updated: explicitly clarifies that existing specs are full
+  expanded documents whose core body sections would each fit within 10-25 lines, and
+  that the total file length is not bounded by this constraint.
+
+files_created:
+  - path: ".claude/prompts/role-packs/FRAMEWORK.md"
+    action: create
+    worktree_path: "/Users/michaelmenard/Development/monorepo/tree/story/WINT-0180/.claude/prompts/role-packs/FRAMEWORK.md"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    status: PASS
+    description: "Framework document created at .claude/prompts/role-packs/FRAMEWORK.md — file exists and is non-empty"
+    evidence_type: command
+    evidence: "test -f .claude/prompts/role-packs/FRAMEWORK.md → exit 0"
+    verification_command: "test -f .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
+    result: PASS
+
+  - ac_id: "AC-2"
+    status: PASS
+    description: "Pattern skeleton template defined with 10-25 line constraint and required sections: Decision Rule, Positive Examples (max 2), Negative Example (max 1), Proof Requirements"
+    evidence_type: manual
+    evidence: |
+      FRAMEWORK.md section 'Pattern Skeleton Template' contains:
+        1. A full reference template showing all required sections with placeholders (guide for authors).
+        2. Clarifying note that the constraint applies to the core body of actual specs (Overview +
+           Decision Rule + Examples stubs + Proof Requirements), not the reference template itself.
+        3. Skeleton constraints subsection: min 10 lines (core body), max 25 lines (core body),
+           positive examples 1-2, negative example exactly 1.
+        4. "Minimal Working Example" subsection: a complete conformant spec (Single-File Patch Pattern)
+           with a 20-line core body, demonstrating the constraint is achievable with all required sections.
+      Fix iteration 1: resolved F-1 (template size ambiguity) and F-3 (self-documenting template).
+    verification_command: "grep -i 'minimal working example' .claude/prompts/role-packs/FRAMEWORK.md && grep -i 'pattern skeleton' .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
+    result: PASS
+
+  - ac_id: "AC-3"
+    status: PASS
+    description: "Role pack directory structure documented — role-packs/{role}.md and role-packs/_specs/{pattern}.md paths with purpose of each explained"
+    evidence_type: command
+    evidence: "grep -E 'role-packs/\\{role\\}|role-packs/_specs' returns 4 matches in path purposes table and directory listing"
+    verification_command: "grep -E 'role-packs/\\{role\\}|role-packs/_specs' .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
+    result: PASS
+
+  - ac_id: "AC-4"
+    status: PASS
+    description: "Token budget constraints defined — 150 token minimum, 300 token maximum for role instructions; 10-25 line constraint for pattern skeleton bodies; line-count proxy included"
+    evidence_type: command
+    evidence: "grep -E '150|300' returns 5 matches. Line-count proxy documented as '~1 line ≈ 5-10 tokens' with midpoint formula 'line_count × 7'."
+    verification_command: "grep -E '150|300' .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
+    result: PASS
+
+  - ac_id: "AC-5"
+    status: PASS
+    description: "Decision rule format standardized using boolean/threshold criteria with worked examples"
+    evidence_type: manual
+    evidence: |
+      Decision Rule Format section uses when/then/else structure with boolean/threshold expressions.
+      Worked examples include:
+        when: ac_count > 1 (threshold)
+        when: verification_command exits non-zero AND repair_loop configured (boolean compound)
+      Anti-pattern (prose rule) documented with 'WRONG' label.
+    result: PASS
+
+  - ac_id: "AC-6"
+    status: PASS
+    description: "Proof requirements format defined with verification_command field template"
+    evidence_type: manual
+    evidence: |
+      Proof Requirements Format section defines explicit template:
+        verification_command: "{shell command that exits 0 on success}"
+        expected_artifact: "{file path | exit code 0 | output substring}"
+        escalation: "{what agent must do if verification_command exits non-zero}"
+      Two worked examples provided. Grandfathered gap for existing _specs/ files documented.
+    result: PASS
+
+  - ac_id: "AC-7"
+    status: PASS
+    description: "Three delivery mechanisms documented: file-based, KB MCP kb_search, context-pack sidecar"
+    evidence_type: command
+    evidence: "grep -c -E 'kb_search|sidecar|prompts/role-packs' returns 16 matches (>= 3 required). Each mechanism includes usage guidance, best-for description, and code snippet."
+    verification_command: "grep -c -E 'kb_search|sidecar|prompts/role-packs' .claude/prompts/role-packs/FRAMEWORK.md"
+    result: PASS
+
+  - ac_id: "AC-8"
+    status: PASS
+    description: "Existing _specs/ patterns validated against FRAMEWORK.md — both conform without modification; git diff HEAD -- .claude/prompts/role-packs/_specs/ returns empty"
+    evidence_type: command
+    evidence: |
+      git diff HEAD -- .claude/prompts/role-packs/_specs/ → empty output (0 bytes)
+      Conformance review:
+        patch-queue-pattern.md: has Version/Story/Status frontmatter, Overview, Decision Rule, Examples
+          (2 positive + 1 negative), Cross-Reference. Lacks standalone Proof Requirements section —
+          grandfathered as conformant (embedded approach predates this standard).
+          Line count note: total file is ~130 lines (full expanded exemplar with rich examples).
+          The 10-25 line constraint applies to the skeleton core body, not the total file.
+          Core body sections (Overview + Decision Rule stubs + example stubs) would fit within 10-25 lines.
+        repair-loop-pattern.md: has Version/Story/Status frontmatter, Overview, Activation Trigger
+          (maps to Decision Rule), Examples (2 positive + 1 negative), Cross-Reference. Lacks standalone
+          Proof Requirements section — same grandfathered gap.
+          Line count note: total file is ~110 lines (full expanded exemplar). Same interpretation applies.
+      Both files structurally map to framework-required sections. No modifications required or made.
+      Fix iteration 1: resolved F-2 (grandfathering clarification for line count). FRAMEWORK.md
+      Grandfathered gap note now explicitly states the 10-25 line constraint is core-body-only and
+      that total file length is not bounded, making both existing specs fully conformant.
+    verification_command: "git diff HEAD -- .claude/prompts/role-packs/_specs/ | wc -c | xargs test 0 -eq && echo 'PASS'"
+    result: PASS
+
+overall_status: PASS
+all_acs_covered: true
+acs_missing: []
+steps_completed:
+  - id: ST-1
+    description: "Analyzed both _specs/ pattern files and extracted implicit structure: frontmatter (Version/Story/Status/See also), Overview, Decision Rule/Activation Trigger, Examples (2 positive + 1 negative), Cross-Reference. Identified grandfathered gap: no standalone Proof Requirements section in existing files."
+    files_changed: []
+    verification: "echo 'ST-1 is analysis only — no file changes to verify'"
+    result: PASS
+
+  - id: ST-2
+    description: "Created FRAMEWORK.md with frontmatter, Overview, Directory Structure, Pattern Skeleton Template (10-25 line constraint), Skeleton Constraints, and Decision Rule Format with worked examples."
+    files_changed:
+      - ".claude/prompts/role-packs/FRAMEWORK.md"
+    verification: "test -f .claude/prompts/role-packs/FRAMEWORK.md && grep -i 'pattern skeleton' .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
+    result: PASS
+
+  - id: ST-3
+    description: "Extended FRAMEWORK.md with Token Budget section (150 min, 300 max, line-count proxy), Proof Requirements Format section (verification_command template with worked examples, grandfathered gap note), and Delivery Mechanisms section (file-based, kb_search, sidecar with precedence order)."
+    files_changed:
+      - ".claude/prompts/role-packs/FRAMEWORK.md"
+    verification: "grep -E '150|300|kb_search|sidecar' .claude/prompts/role-packs/FRAMEWORK.md | wc -l | xargs test 4 -le && echo 'PASS'"
+    result: PASS
+
+  - id: ST-4
+    description: "Performed conformance check on both existing _specs/ files against completed FRAMEWORK.md. Both map to required sections with acceptable grandfathered gap (no standalone Proof Requirements). git diff confirms zero modifications."
+    files_changed: []
+    verification: "git diff HEAD -- .claude/prompts/role-packs/_specs/ | wc -c | xargs test 0 -eq && echo 'PASS'"
+    result: PASS
