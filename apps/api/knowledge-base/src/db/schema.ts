@@ -18,6 +18,7 @@ import {
   timestamp,
   uuid,
   index,
+  uniqueIndex,
   customType,
   jsonb,
   boolean,
@@ -908,6 +909,147 @@ export const storyTokenUsage = pgTable(
   }),
 )
 
+/**
+ * Plans Table
+ *
+ * Stores architecture and feature plans from ~/.claude/plans/ as structured KB records.
+ * Each plan drives story generation and should be searchable during elaboration
+ * so agents can surface related design intent and constraints automatically.
+ *
+ * Plan types:
+ * - 'feature'   - New product capability
+ * - 'refactor'  - Code restructuring / cleanup
+ * - 'migration' - Data or schema migration
+ * - 'infra'     - Infrastructure / deployment
+ * - 'tooling'   - Developer tooling / workflow
+ * - 'workflow'  - Agent workflow improvements
+ * - 'audit'     - Codebase or test coverage audits
+ * - 'spike'     - Time-boxed investigation
+ *
+ * Status lifecycle: draft → active → implemented / superseded / archived
+ */
+export const plans = pgTable(
+  'plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Filename slug without extension (e.g., 'dapper-chasing-horizon') */
+    planSlug: text('plan_slug').notNull().unique(),
+
+    /** Title extracted from the first # heading */
+    title: text('title').notNull(),
+
+    /** First paragraph of the plan — used as a quick description */
+    summary: text('summary'),
+
+    /**
+     * Category of plan.
+     * Values: 'feature' | 'refactor' | 'migration' | 'infra' | 'tooling' | 'workflow' | 'audit' | 'spike'
+     */
+    planType: text('plan_type'),
+
+    /**
+     * Lifecycle status.
+     * Values: 'draft' | 'active' | 'implemented' | 'superseded' | 'archived'
+     */
+    status: text('status').notNull().default('active'),
+
+    /** Target feature directory relative to plans/future/platform/ (e.g., 'agent-dashboard') */
+    featureDir: text('feature_dir'),
+
+    /** Story ID prefix associated with this plan (e.g., 'DASH', 'WKFL') */
+    storyPrefix: text('story_prefix'),
+
+    /** Total number of stories mentioned or planned */
+    estimatedStories: integer('estimated_stories'),
+
+    /**
+     * Phase breakdown extracted from ## Phase N headings.
+     * Schema: [{number: number, name: string, description: string, storyIds: string[]}]
+     */
+    phases: jsonb('phases'),
+
+    /** Tags for filtering (inferred from content) */
+    tags: text('tags').array(),
+
+    /** Full raw markdown content of the plan */
+    rawContent: text('raw_content').notNull(),
+
+    /** Original source file path (e.g., '~/.claude/plans/dapper-chasing-horizon.md') */
+    sourceFile: text('source_file'),
+
+    /** SHA-256 prefix (16 hex chars) of raw_content for change detection */
+    contentHash: text('content_hash'),
+
+    /**
+     * Optional link to a knowledge_entries record for semantic vector search.
+     * When set, the plan summary is searchable via kb_search.
+     */
+    kbEntryId: uuid('kb_entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
+
+    /** When the plan was first imported from disk */
+    importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** When the record was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** When the record was last updated */
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** When the plan was archived */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+  },
+  table => ({
+    statusIdx: index('idx_plans_status').on(table.status),
+    planTypeIdx: index('idx_plans_plan_type').on(table.planType),
+    storyPrefixIdx: index('idx_plans_story_prefix').on(table.storyPrefix),
+    featureDirIdx: index('idx_plans_feature_dir').on(table.featureDir),
+    createdAtIdx: index('idx_plans_created_at').on(table.createdAt),
+  }),
+)
+
+/**
+ * Plan Story Links Table
+ *
+ * Many-to-many relationship between plans and stories.
+ * Populated automatically during import by scanning plan content for story ID patterns.
+ *
+ * Link types:
+ * - 'spawned_from' - Story was generated from this plan
+ * - 'prerequisite' - Story must complete before this plan can execute
+ * - 'related'      - Story is related but not directly spawned
+ * - 'mentioned'    - Story ID appears in the plan text
+ */
+export const planStoryLinks = pgTable(
+  'plan_story_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Plan slug (matches plans.plan_slug) */
+    planSlug: text('plan_slug').notNull(),
+
+    /** Story ID (e.g., 'WKFL-020', 'DASH-001') */
+    storyId: text('story_id').notNull(),
+
+    /**
+     * Nature of the relationship.
+     * Values: 'spawned_from' | 'prerequisite' | 'related' | 'mentioned'
+     */
+    linkType: text('link_type').notNull().default('mentioned'),
+
+    /** When the link was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planSlugIdx: index('idx_plan_story_links_plan_slug').on(table.planSlug),
+    storyIdIdx: index('idx_plan_story_links_story_id').on(table.storyId),
+    uniquePlanStoryIdx: uniqueIndex('idx_plan_story_links_unique').on(
+      table.planSlug,
+      table.storyId,
+    ),
+  }),
+)
+
 // Export table types for use in queries
 export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert
@@ -933,3 +1075,7 @@ export type StoryAuditLogEntry = typeof storyAuditLog.$inferSelect
 export type NewStoryAuditLogEntry = typeof storyAuditLog.$inferInsert
 export type StoryTokenUsage = typeof storyTokenUsage.$inferSelect
 export type NewStoryTokenUsage = typeof storyTokenUsage.$inferInsert
+export type Plan = typeof plans.$inferSelect
+export type NewPlan = typeof plans.$inferInsert
+export type PlanStoryLink = typeof planStoryLinks.$inferSelect
+export type NewPlanStoryLink = typeof planStoryLinks.$inferInsert
