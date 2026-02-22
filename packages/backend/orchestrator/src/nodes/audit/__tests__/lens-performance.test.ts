@@ -161,13 +161,39 @@ describe('lens-performance', () => {
     expect(() => LensResultSchema.parse(result)).not.toThrow()
   })
 
-  it('findings have lens === "performance"', async () => {
+  it('findings have lens === "performance" (unconditional — uses known positive fixture)', async () => {
     const apiDir = join(testDir, 'apps', 'api', 'src')
     await mkdir(apiDir, { recursive: true })
-    const filePath = await createFile(apiDir, 'sync.ts', 'const x = readFileSync("file")')
+    // readFileSync in backend — a known positive that always produces a finding
+    const filePath = await createFile(apiDir, 'sync.ts', [
+      'import { readFileSync } from "fs"',
+      'const data = readFileSync("/etc/config", "utf-8")',
+    ].join('\n'))
     const result = await run(makeState([filePath]))
-    if (result.findings.length > 0) {
-      expect(result.findings.every(f => f.lens === 'performance')).toBe(true)
-    }
+    expect(result.total_findings).toBeGreaterThan(0)
+    expect(result.findings.every(f => f.lens === 'performance')).toBe(true)
+  })
+
+  it('empty state targetFiles → 0 findings (AC-10)', async () => {
+    const result = await run(makeState([]))
+    expect(result.total_findings).toBe(0)
+    expect(result.lens).toBe('performance')
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+  })
+
+  it('by_severity counts match findings array', async () => {
+    const apiDir = join(testDir, 'apps', 'api', 'src')
+    await mkdir(apiDir, { recursive: true })
+    const filePath = await createFile(apiDir, 'multi.ts', [
+      'import { readFileSync } from "fs"',
+      'const data = readFileSync("/etc/config", "utf-8")',
+    ].join('\n'))
+    const result = await run(makeState([filePath]))
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
   })
 })

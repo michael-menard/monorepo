@@ -197,4 +197,19 @@ describe('lens-security', () => {
     const sumSeverity = result.by_severity.critical + result.by_severity.high + result.by_severity.medium + result.by_severity.low
     expect(sumSeverity).toBe(result.total_findings)
   })
+
+  it('binary file content (PNG magic bytes in .ts) → no throw, schema valid (AC-11)', async () => {
+    // PNG magic bytes written to a .ts file — readFile('utf-8') returns garbled text,
+    // regex patterns unlikely to match, so total_findings likely 0.
+    // The critical requirement is: no exception thrown, output validates against LensResultSchema.
+    // Huge file behavior note: files > several MB would produce same behavior (no patterns matched
+    // on binary/unreadable content). This test documents the binary/garbled input resilience.
+    const filePath = join(testDir, 'binary.ts')
+    await writeFile(filePath, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    const result = await run(makeState([filePath]))
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+    expect(result.lens).toBe('security')
+    // Binary content should not match security patterns — findings likely 0
+    expect(result.total_findings).toBeGreaterThanOrEqual(0)
+  })
 })

@@ -111,6 +111,17 @@ describe('lens-typescript', () => {
     expect(result.findings.every(f => f.severity !== 'high')).toBe(true)
   })
 
+  it('production src/ path (no __tests__ segment) → severity === "high" (AC-6)', async () => {
+    // AC-6: severity calibration — file placed directly in testDir (no __tests__/ or .test. in path)
+    // represents a production source file → as any should be severity high
+    const filePath = await createFile(testDir, 'asAny.ts', 'const x = getData() as any')
+    const result = await run(makeState([filePath]))
+    expect(result.total_findings).toBeGreaterThan(0)
+    expect(result.findings.some(f => f.severity === 'high')).toBe(true)
+    // Ensure no severity downgrade occurred for non-test path
+    expect(result.findings.some(f => f.title.includes('as any') && f.severity === 'high')).toBe(true)
+  })
+
   it('.json files produce 0 findings', async () => {
     const filePath = await createFile(testDir, 'config.json', '{"key": "value"}')
     const result = await run(makeState([filePath]))
@@ -160,5 +171,27 @@ describe('lens-typescript', () => {
     ].join('\n'))
     const result = await run(makeState([filePath]))
     expect(result.total_findings).toBe(0)
+  })
+
+  it('empty state targetFiles → 0 findings', async () => {
+    const result = await run(makeState([]))
+    expect(result.total_findings).toBe(0)
+    expect(result.lens).toBe('typescript')
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+  })
+
+  it('by_severity counts match findings array', async () => {
+    const filePath = await createFile(testDir, 'multi-issues.ts', [
+      'const x = getData() as any',
+      'export interface User { id: string }',
+      'enum Status { Active, Inactive }',
+    ].join('\n'))
+    const result = await run(makeState([filePath]))
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
   })
 })

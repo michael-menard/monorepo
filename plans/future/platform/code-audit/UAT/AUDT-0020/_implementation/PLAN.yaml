@@ -1,0 +1,166 @@
+schema: 2
+story_id: "AUDT-0020"
+timestamp: "2026-02-21T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Audit and fill gaps in lens-duplication, lens-react, lens-ui-ux test files — add by_severity sum checks, empty targetFiles tests, lens field consistency assertions, and harden conditional guards"
+    files:
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-duplication.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-react.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-ui-ux.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-security.test.ts"
+      - "packages/backend/orchestrator/src/artifacts/audit-findings.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm test --filter orchestrator -- lens-duplication lens-react lens-ui-ux"
+    acs_covered: ["AC-3", "AC-5", "AC-7", "AC-10"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Audit and fill gaps in lens-typescript, lens-accessibility, lens-performance test files — add by_severity sum checks, empty targetFiles tests, confirm severity calibration (production src/ path → high), and confirm AC-14 lens===a11y assertions"
+    files:
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-typescript.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-accessibility.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-performance.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-security.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/lens-typescript.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm test --filter orchestrator -- lens-typescript lens-accessibility lens-performance"
+    acs_covered: ["AC-5", "AC-6", "AC-7", "AC-10", "AC-14"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Audit and fill gaps in lens-code-quality, lens-test-coverage, lens-security test files — add by_severity and lens field checks to code-quality and test-coverage; verify security meets gold standard; add binary buffer test to security; document huge file limits"
+    files:
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-security.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-code-quality.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-test-coverage.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-security.test.ts"
+      - "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-test-coverage.test.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm test --filter orchestrator -- lens-security lens-code-quality lens-test-coverage"
+    acs_covered: ["AC-1", "AC-2", "AC-4", "AC-5", "AC-7", "AC-8", "AC-9", "AC-11"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Full test suite run and type check gate — run the complete orchestrator test suite and type checker to confirm all 9 lens suites pass together with no type regressions"
+    files: []
+    files_to_read: []
+    dependencies: [1, 2, 3]
+    slice: packages
+    verification: "pnpm test --filter orchestrator && pnpm check-types --filter orchestrator && pnpm build --filter orchestrator"
+    acs_covered: ["AC-12", "AC-13"]
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-duplication.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, empty targetFiles test, lens field assertion (AC-3, AC-5, AC-7, AC-10)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-react.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, empty targetFiles test, third explicit clean negative (AC-5, AC-7, AC-10)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-ui-ux.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, third explicit clean negative, harden conditional lens field guard to unconditional (AC-5, AC-7, AC-10)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-typescript.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, confirm severity calibration for src/ path → high, empty targetFiles test (AC-5, AC-6, AC-7, AC-10)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-accessibility.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, empty targetFiles test (AC-5, AC-7, AC-10, AC-14 already covered)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-performance.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, empty targetFiles test (makeState([])), harden conditional lens field guard (AC-5, AC-7, AC-10)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-security.test.ts"
+    action: modify
+    reason: "Add binary buffer test — write Buffer.from([0x89, 0x50, 0x4e, 0x47]) to .ts file, verify no throw and schema valid (AC-11)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-code-quality.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, lens field assertion, empty targetFiles test (AC-5, AC-7, AC-10)"
+  - path: "packages/backend/orchestrator/src/nodes/audit/__tests__/lens-test-coverage.test.ts"
+    action: modify
+    reason: "Add by_severity sum check, lens field assertion, document non-existent path behavior explicitly (AC-4, AC-5, AC-7, AC-9)"
+
+commands_to_run:
+  - command: "pnpm test --filter orchestrator -- lens-duplication lens-react lens-ui-ux"
+    when: "after ST-1 changes"
+    required: true
+  - command: "pnpm test --filter orchestrator -- lens-typescript lens-accessibility lens-performance"
+    when: "after ST-2 changes"
+    required: true
+  - command: "pnpm test --filter orchestrator -- lens-security lens-code-quality lens-test-coverage"
+    when: "after ST-3 changes"
+    required: true
+  - command: "pnpm test --filter orchestrator"
+    when: "after all code changes (ST-4)"
+    required: true
+  - command: "pnpm check-types --filter orchestrator"
+    when: "after all code changes (ST-4)"
+    required: true
+  - command: "pnpm build --filter orchestrator"
+    when: "after all code changes (ST-4)"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "All 9 test files already import LensResultSchema and call .parse(result) — verified by reading each file; ST-3 confirms no regressions"
+    evidence_type: test
+  - ac_id: "AC-2"
+    planned_evidence: "lens-security.test.ts already has 8 positive fixtures (apiKey, password, eval, child_process, dangerouslySetInnerHTML, CORS, SQL injection, sensitive console) and clean negative; ST-3 adds binary buffer test"
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: "lens-duplication.test.ts ST-1 gap fill: 3 positive (cross-app dup, useLocalStorage known hook, useAnnouncer), 3 negative (same-app, packages/ path, test files excluded)"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "lens-test-coverage.test.ts already has 3 positive (utils without test, handlers path high, auth path high, services path high) and 3 negative (with test file, index.ts, __types__/); ST-3 adds lens field assertion and documents non-existent path"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "All 9 lenses verified: ST-1 (duplication, react, ui-ux), ST-2 (typescript, accessibility, performance), ST-3 (code-quality, test-coverage, security) each confirm 3+ positive and 3+ negative fixtures"
+    evidence_type: test
+  - ac_id: "AC-6"
+    planned_evidence: "lens-typescript.test.ts ST-2: add test for src/ production path (asAny.ts without __tests__/ segment) → severity === 'high'; existing test-path test already verifies medium"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "by_severity sum check added in ST-1 (duplication, react, ui-ux), ST-2 (typescript, accessibility, performance), ST-3 (code-quality, test-coverage); security already has it"
+    evidence_type: test
+  - ac_id: "AC-8"
+    planned_evidence: "Empty file (0 bytes) test already present in all 9 test files — ST-3 verifies security lens; ST-1/ST-2 add for remaining where missing"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "Non-existent path tests already present in all 9 files; ST-3 documents lens-test-coverage behavior (schema valid but may have findings)"
+    evidence_type: test
+  - ac_id: "AC-10"
+    planned_evidence: "Empty targetFiles array test (makeState([])) added in ST-1 (duplication, react, ui-ux), ST-2 (accessibility, performance), ST-3 (code-quality); security and react already have it; typescript already has it"
+    evidence_type: test
+  - ac_id: "AC-11"
+    planned_evidence: "ST-3 adds binary buffer test to lens-security: writeFile with Buffer.from([0x89, 0x50, 0x4e, 0x47]), verify no throw and LensResultSchema.parse() does not throw; huge file behavior documented in test comment"
+    evidence_type: test
+  - ac_id: "AC-12"
+    planned_evidence: "ST-4: pnpm test --filter orchestrator passes all 9 lens suites green"
+    evidence_type: command
+  - ac_id: "AC-13"
+    planned_evidence: "ST-4: pnpm check-types --filter orchestrator passes with no new type errors"
+    evidence_type: command
+  - ac_id: "AC-14"
+    planned_evidence: "lens-accessibility.test.ts already has both lens === 'a11y' and not.toBe('accessibility') assertions in 2 tests; ST-2 verifies and adds empty targetFiles test with correct lens field"
+    evidence_type: test
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "All 9 lens test files already exist with substantial coverage — this is purely additive gap-filling"
+  - "Steps ST-1, ST-2, ST-3 are fully independent and can run in parallel during execution"
+  - "lens-test-coverage empty file behavior: a 0-byte .ts file still produces a finding (no test found). AC-8 for this lens uses makeState([]) — the test explicitly documents this workaround"
+  - "lens-performance and lens-ui-ux have conditional lens field assertions (if result.findings.length > 0) — ST-1/ST-2 harden these to unconditional by using a known positive-fixture file in the lens field test"
+  - "Binary buffer test: Buffer.from([0x89, 0x50, 0x4e, 0x47]) = PNG magic bytes written to a .ts file — readFile('utf-8') returns garbled text, regex patterns unlikely to match, so total_findings likely 0"
+  - "No lens implementations should be modified unless a test fails revealing a correctness bug"
+  - "lens-typescript severity calibration: the existing src/ path test (asAny.ts placed directly in testDir) already uses a non-test path — ST-2 adds an explicit assertion that severity === 'high' for the production path case"
