@@ -3,7 +3,7 @@ story_id: WINT-0250
 feature_dir: wint
 timestamp: '2026-02-21T18:30:00Z'
 
-current_phase: execute
+current_phase: proof
 last_successful_phase: execute
 iteration: 1
 max_iterations: 3
