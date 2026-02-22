@@ -3,8 +3,8 @@ story_id: AUDT-0020
 feature_dir: plans/future/platform/code-audit
 timestamp: "2026-02-21T18:05:00Z"
 
-current_phase: done
-last_successful_phase: review
+current_phase: qa-verify
+last_successful_phase: qa-setup
 iteration: 1
 max_iterations: 3
 blocked: false
