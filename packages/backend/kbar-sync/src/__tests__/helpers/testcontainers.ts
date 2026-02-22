@@ -16,6 +16,7 @@
 import { mkdir, rm } from 'node:fs/promises'
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import type pg from 'pg'
+import { z } from 'zod'
 
 // ============================================================================
 // Skip Guard (AC-8 / L-003)
@@ -28,13 +29,17 @@ import type pg from 'pg'
 export const SKIP_TESTCONTAINERS = process.env.SKIP_TESTCONTAINERS === 'true'
 
 // ============================================================================
-// Container Startup
+// Types
 // ============================================================================
 
-export interface TestContainerContext {
-  container: StartedPostgreSqlContainer
-  client: pg.Client
-}
+// Note: StartedPostgreSqlContainer and pg.Client are external class instances —
+// we use z.custom() to satisfy the Zod-first rule while preserving full type safety.
+export const TestContainerContextSchema = z.object({
+  container: z.custom<StartedPostgreSqlContainer>(),
+  client: z.custom<pg.Client>(),
+})
+
+export type TestContainerContext = z.infer<typeof TestContainerContextSchema>
 
 /**
  * Create an enum type safely, ignoring duplicate_object errors.

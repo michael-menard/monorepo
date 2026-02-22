@@ -1,0 +1,24 @@
+# Deferred KB Writes — WINT-0250
+# Generated: 2026-02-21
+# Reason: KB unavailable during story generation. Retry after KB is live.
+
+pending_writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: WINT-0250
+      feature: wint
+      title: "Define Escalation Rules for Multi-Model Routing (Graduated Chain + Hard Bypass)"
+      story_dir: plans/future/platform/wint/backlog/WINT-0250
+      story_file: plans/future/platform/wint/backlog/WINT-0250/WINT-0250.md
+      story_type: chore
+      points: 2
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      touches_config: true
+    retry_after: "WINT-0010"
+    notes: "Depends on core schema existing (WINT-0010) before stories table is available"

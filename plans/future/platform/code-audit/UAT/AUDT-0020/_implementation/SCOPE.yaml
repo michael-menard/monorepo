@@ -1,0 +1,28 @@
+schema: 1
+story_id: AUDT-0020
+timestamp: "2026-02-21T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/orchestrator/src/nodes/audit/**"
+  - "packages/backend/orchestrator/src/artifacts/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+summary: "Polish and complete unit test coverage for all 9 audit lens nodes to production standard with fixture validation and edge-case handling"
+elaboration: "completed"

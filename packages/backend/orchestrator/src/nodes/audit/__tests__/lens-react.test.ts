@@ -169,4 +169,29 @@ describe('lens-react', () => {
     const result = await run(makeState([filePath]))
     expect(result.findings.every(f => f.lens === 'react')).toBe(true)
   })
+
+  it('empty state targetFiles → 0 findings', async () => {
+    const result = await run(makeState([]))
+    expect(result.total_findings).toBe(0)
+    expect(result.lens).toBe('react')
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+  })
+
+  it('by_severity counts match findings array', async () => {
+    const filePath = await createFile(testDir, 'Multi.tsx', [
+      'export function Multi() {',
+      '  window.addEventListener("click", handler)',
+      '  const el = document.getElementById("x")',
+      '  const url = URL.createObjectURL(blob)',
+      '  return null',
+      '}',
+    ].join('\n'))
+    const result = await run(makeState([filePath]))
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
+  })
 })

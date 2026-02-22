@@ -1,0 +1,17 @@
+schema: 1
+story_id: KBAR-0060
+feature_dir: kb-artifact-migration
+timestamp: 2026-02-21T16:00:00Z
+
+current_phase: fix
+last_successful_phase: review
+e2e_gate: exempt
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+review_verdict: FAIL
+pr_number: 377
+pr_url: https://github.com/michael-menard/monorepo/pull/377

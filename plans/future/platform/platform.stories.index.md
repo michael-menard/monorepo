@@ -137,7 +137,7 @@ All can start immediately. Ordered by downstream impact.
 | 61 | | WINT-1120 | Validate Foundation Phase | ← WINT-1040, 1050, 1060, 1070, 1110, 1160 | WINT | P2 |
 | 62 | | WINT-7020 | Create Agent Migration Plan | ← WINT-7010 | WINT | P3 |
 | 63 | | MODL-0040 | Model Leaderboards | ← MODL-0030 | MODL | P3 |
-| 64 | | AUDT-0020 | 9 Audit Lens Nodes | ← AUDT-0010 | AUDT | P3 |
+| 64 | x | AUDT-0020 | 9 Audit Lens Nodes **created** | ← AUDT-0010 | AUDT | P3 |
 | G9 | | GATE-09 | **E2E: Validate Business Logic** | ← GATE-08, WINT-9010 | GATE | **HARD GATE** |
 
 ---
@@ -153,7 +153,7 @@ All can start immediately. Ordered by downstream impact.
 | 69 | | KBAR-0080 | story_list & story_update Tools | ← KBAR-0070 | KBAR | P2 |
 | 70 | | WINT-0190 | Create Patch Queue Pattern and Schema | ← WINT-0180 | WINT | P3 |
 | 71 | x | WINT-0240 | Configure Ollama Model Fleet **created** | ← WINT-0220 | WINT | P3 |
-| 72 | | WINT-0250 | Define Escalation Triggers | ← WINT-0220, 0230 | WINT | P3 |
+| 72 | x | WINT-0250 | Define Escalation Triggers **created** | ← WINT-0220, 0230 | WINT | P3 |
 | G10 | | GATE-10 | **E2E: Validate First LangGraph Nodes** | ← GATE-09, all Wave 6 | GATE | **HARD GATE** |
 
 ---
