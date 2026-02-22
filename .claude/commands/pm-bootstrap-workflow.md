@@ -118,9 +118,6 @@ On `GENERATION COMPLETE`:
 
 ### Files Created (all in {FEATURE_DIR}/)
 - stories.index.md
-- PLAN.meta.md
-- PLAN.exec.md
-- roadmap.md
 - _bootstrap/SUMMARY.yaml
 
 **Next**: `/elab-epic {PREFIX}` (recommended) or `/elab-story {PREFIX}-001`

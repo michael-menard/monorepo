@@ -31,9 +31,6 @@ All files are created inside `{FEATURE_DIR}/`:
 | File | Location | Template |
 |------|----------|----------|
 | Stories Index | `{FEATURE_DIR}/stories.index.md` | See reference doc |
-| Meta Plan | `{FEATURE_DIR}/PLAN.meta.md` | See reference doc |
-| Exec Plan | `{FEATURE_DIR}/PLAN.exec.md` | See reference doc |
-| Roadmap | `{FEATURE_DIR}/roadmap.md` | See reference doc |
 
 ## Directories to Create
 
@@ -66,52 +63,6 @@ Story numbering: Format is `PREFIX-{phase}{story}{variant}` (4 digits total).
 
 Examples: `PREFIX-1010` (Phase 1, Story 01), `PREFIX-1130` (Phase 1, Story 13), `PREFIX-1131` (split from 1130).
 
-### Step 2: Generate Meta Plan
-
-File: `{FEATURE_DIR}/PLAN.meta.md`
-
-Include:
-- YAML frontmatter (doc_type, title, status, story_prefix, timestamps)
-- Story Prefix section
-- Documentation Structure
-- Naming Rules (timestamps)
-- Principles (reuse-first, package boundaries)
-- Agent Log (empty, append-only)
-
-### Step 3: Generate Exec Plan
-
-File: `{FEATURE_DIR}/PLAN.exec.md`
-
-Include:
-- YAML frontmatter
-- Story Prefix with command examples
-- Artifact Rules
-- Artifact Naming Convention table
-- Token Budget Rule
-- Agent Log (empty)
-
-### Step 4: Generate Roadmap
-
-File: `{FEATURE_DIR}/roadmap.md`
-
-Include:
-- YAML frontmatter
-- Dependency Graph (Mermaid flowchart)
-- Completion Order (Mermaid gantt)
-- Critical Path
-- Parallel Opportunities table
-- Risk Indicators table
-- Swimlane View (by domain)
-- Quick Reference metrics
-- Update Log
-
-Mermaid styling:
-```
-classDef ready fill:#90EE90,stroke:#228B22
-classDef blocked fill:#FFE4B5,stroke:#FFA500
-classDef done fill:#87CEEB,stroke:#4682B4
-```
-
 ## Output Format
 
 Follow `.claude/agents/_shared/lean-docs.md`:
@@ -123,16 +74,6 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 
 All templates in `.claude/docs/pm-bootstrap-workflow-reference.md`.
 
-## Checkpoint Update
-
-Update `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md`:
-
-```yaml
-last_completed_phase: 2
-phase_2_signal: GENERATION COMPLETE
-resume_from: null  # Complete
-```
-
 ## Final Summary
 
 Write to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`:
@@ -142,13 +83,11 @@ schema: 2
 feature_dir: "{FEATURE_DIR}"
 prefix: "{PREFIX}"
 completed: "{TIMESTAMP}"
+phases_completed: [0, 1, 2]
 
 files_created:
   - path: "{FEATURE_DIR}/stories.index.md"
     stories: N
-  - path: "{FEATURE_DIR}/PLAN.meta.md"
-  - path: "{FEATURE_DIR}/PLAN.exec.md"
-  - path: "{FEATURE_DIR}/roadmap.md"
 
 metrics:
   total_stories: N
@@ -156,10 +95,6 @@ metrics:
   critical_path_length: N
   max_parallel: N
   phases: N
-
-roadmap_highlights:
-  critical_path: ["{PREFIX}-1010", "{PREFIX}-1030", "{PREFIX}-2010"]
-  parallel_groups: N
 
 next_step: "/elab-epic {PREFIX}"
 ```

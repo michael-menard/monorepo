@@ -31,8 +31,7 @@ Verify these exist before proceeding:
 | Check | Path | Required |
 |-------|------|----------|
 | Stories index | `{FEATURE_DIR}/stories.index.md` | Yes |
-| Plan meta | `{FEATURE_DIR}/PLAN.meta.md` | Yes |
-| Plan exec | `{FEATURE_DIR}/PLAN.exec.md` | Yes |
+| Bootstrap context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Steps
 
