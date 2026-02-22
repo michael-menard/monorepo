@@ -5,7 +5,8 @@
 | Status | Count |
 |--------|-------|
 | Ready to Work | 1 |
-| Pending | 2 |
+| Elaboration | 1 |
+| Pending | 1 |
 | **Total** | **3** |
 
 ## Ready to Start (No Blockers)
@@ -47,29 +48,37 @@ Polish the scaffolded LangGraph StateGraph, Zod artifact schemas, and scan-scope
 
 ### AUDT-002: 9 Audit Lens Nodes
 
-**Status:** `pending`
+**Status:** `elaboration`
 **Priority:** P0
+**Story ID:** AUDT-0020
+**Story File:** `elaboration/AUDT-0020/AUDT-0020.md`
 **Dependencies:** AUDT-001
 **Blocks:** AUDT-003
 
 **Description:**
-Polish the 9 scaffolded lens nodes. Add unit tests with fixtures, accuracy benchmarks, and edge case handling.
+Polish the 9 scaffolded lens nodes. Gap-fill existing unit tests to consistently meet: min 3 positive + 3 negative fixtures per lens, `LensResultSchema` compliance, `by_severity` sum checks, `lens` field assertions, and full edge-case coverage (empty file, empty array, non-existent path, binary file).
 
 **Scope:**
-- Test fixtures: known-positive files (contain pattern) + known-negative files (clean)
-- Severity calibration tests (production vs test file paths)
-- LensResult schema compliance for each lens
-- Edge cases: empty files, binary files, huge files
+- `by_severity` sum check across all 9 lens test files
+- Empty `targetFiles` array edge case across all 9 lenses
+- `lens` field consistency assertions across all 9 lenses
+- Binary file documented behavior test (security lens)
+- Severity calibration test (lens-typescript)
+- `lens === 'a11y'` assertion (lens-accessibility)
 
 **Existing Files:**
-- `nodes/audit/lens-security.ts` through `lens-code-quality.ts` (9 files)
+- `nodes/audit/__tests__/lens-*.test.ts` — 9 test files (all exist, need gap-filling)
+- `nodes/audit/lens-*.ts` — 9 implementations (all exist, modify only if test reveals a bug)
 
 **Acceptance Criteria:**
-- [ ] Each lens produces valid LensResult schema output
+- [ ] Each lens produces valid LensResult schema output (`LensResultSchema.parse()` no-throw)
 - [ ] Security lens catches hardcoded secrets, eval, injection patterns
 - [ ] Duplication lens detects cross-app duplicates
 - [ ] Test-coverage lens correctly identifies untested files
 - [ ] All 9 lenses have unit tests with fixtures (min 3 positive, 3 negative each)
+- [ ] `by_severity` sum check present in all 9 lens test files
+- [ ] Empty `targetFiles` array → 0 findings across all 9 lenses
+- [ ] `pnpm test --filter orchestrator` passes green
 
 ---
 
