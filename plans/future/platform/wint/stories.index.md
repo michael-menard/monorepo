@@ -16,8 +16,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 17 |
-| in-qa | 0 |
+| uat | 18 |
+| in-qa | 1 |
 | ready-for-qa | 2 |
 | needs-code-review | 0 |
 | ready-for-code-review | 0 |
@@ -28,7 +28,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 4 |
-| pending | 118 |
+| pending | 117 |
 
 ---
 
@@ -530,7 +530,7 @@ Create health check script. Document VRAM requirements per model. Create model s
 
 ### WINT-0250: Define Escalation Triggers
 
-**Status:** pending
+**Status:** in-qa
 **Depends On:** WINT-0220, WINT-0230
 **Phase:** 0
 **Feature:** Define when to escalate from cheaper to more expensive model:
