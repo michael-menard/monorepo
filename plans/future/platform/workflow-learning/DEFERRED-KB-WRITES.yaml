@@ -120,7 +120,8 @@ entries:
       - date:2026-02
       - source:workflow-retro
 
-status: pending
+status: flushed
+flushed_at: "2026-02-22T22:52:00Z"
 instructions: |
   To flush these entries to KB, run kb_add_lesson for each entry above using the fields:
   - title: from entry.title
