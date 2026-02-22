@@ -1,0 +1,172 @@
+schema: 1
+story_id: WINT-0180
+reviewer: review-leader
+generated_at: "2026-02-21T00:00:00Z"
+
+verdict: FAIL
+
+findings:
+  - id: F-1
+    ac_id: AC-2
+    severity: CRITICAL
+    title: "Skeleton template exceeds 10-25 line constraint"
+    description: |
+      The Pattern Skeleton Template in FRAMEWORK.md (lines 43-94) contains 50 lines
+      of content (excluding code fence markers), which violates the AC-2 maximum of 25 lines.
+
+      AC-2 requirement: "skeleton must be 10-25 lines max with required sections: Decision Rule,
+      Positive Examples (max 2), Negative Example (max 1), Proof Requirements"
+
+      Actual skeleton size: 50 lines (including frontmatter placeholder structure)
+
+      The template shows a complete worked example with all sections expanded, but the
+      constraint is that a real skeleton conforming to this template should be 10-25 lines.
+      The template itself must either:
+      (a) Be condensed to 10-25 lines showing minimal required structure, or
+      (b) Include a separate "Minimal Working Example" section showing a 10-25 line variant
+
+    evidence: |
+      Lines 43-94 of FRAMEWORK.md containing the skeleton template.
+      Manual count of non-fence-marker content: 50 lines
+
+      Affected AC: AC-2 (skeleton template definition requirement)
+
+  - id: F-2
+    ac_id: AC-8
+    severity: MEDIUM
+    title: "Existing specs do not conform to framework constraints"
+    description: |
+      AC-8 requires existing specs to conform to FRAMEWORK.md without modification.
+      However, both existing specs exceed the 10-25 line skeleton body constraint:
+
+      - patch-queue-pattern.md: ~130 lines total body (exceeds 25 line limit)
+      - repair-loop-pattern.md: ~110 lines total body (exceeds 25 line limit)
+
+      EVIDENCE.yaml claims AC-8 PASS with note "Lacks standalone Proof Requirements section —
+      grandfathered as conformant per PLAN.yaml notes" but does not address the line count violation.
+
+      The grandfathering explanation (FRAMEWORK.md lines 204-206) notes the missing
+      Proof Requirements section but ignores the skeleton size constraint. This is
+      inconsistent with AC-2's hard constraint.
+
+    evidence: |
+      patch-queue-pattern.md lines 1-138: ~130 lines (includes frontmatter, headers, examples, validation section)
+      repair-loop-pattern.md lines 1-114: ~110 lines (includes frontmatter, headers, protocol steps, examples)
+
+      AC-2 and Skeleton constraints section (lines 96-103) state:
+      "- Minimum: 10 lines (body only, excluding frontmatter lines and cross-reference)"
+      "- Maximum: 25 lines (body only)"
+
+      Both existing specs violate the 25-line maximum.
+
+  - id: F-3
+    ac_id: AC-2
+    severity: MEDIUM
+    title: "Ambiguity in skeleton line count interpretation"
+    description: |
+      AC-2 specifies skeleton should be 10-25 lines "with required sections: Decision Rule,
+      Positive Examples (max 2), Negative Example (max 1), Proof Requirements"
+
+      This creates tension: FRAMEWORK.md template section (lines 39-94) shows a complete
+      worked template with all required sections expanded, but at 50 lines it violates
+      its own constraint.
+
+      The constraint section (lines 96-103) clarifies "body only — frontmatter lines and
+      cross-reference excluded" but the template as presented does not demonstrate how
+      to achieve 10-25 lines while including all required sections.
+
+      A real minimal working example would help clarify this is achievable.
+
+    evidence: |
+      FRAMEWORK.md Pattern Skeleton Template section (lines 39-94): 50 lines
+      FRAMEWORK.md Skeleton constraints section (lines 96-103) specifies 10-25 line max
+
+      Contradiction: The template section violates its own documented constraints.
+
+ranked_patches:
+  - priority: 1
+    finding_id: F-1
+    ac_id: AC-2
+    title: "Reduce skeleton template to 10-25 lines or add minimal working example"
+    recommendation: |
+      Option A (Recommended): Reduce the skeleton template to show only the minimal required structure.
+      A 10-25 line skeleton would look like:
+
+      ```markdown
+      # {Pattern Name}
+      **Version**: 1.0.0
+      **Story**: {STORY_ID}
+      **Status**: Active
+
+      ## Decision Rule
+      when: {condition}
+      then: {action}
+      else: {fallback}
+
+      ## Examples
+      ### Positive: {label}
+      {example}
+
+      ### Negative: {label}
+      {counter-example}
+
+      ## Proof
+      verification_command: {cmd}
+      expected_artifact: {artifact}
+      ```
+
+      Option B: Keep the full template but add a "Minimal Working Example" subsection that
+      demonstrates how to achieve 10-25 lines while satisfying all required sections.
+
+    effort: "Low"
+    blocker: true
+
+  - priority: 2
+    finding_id: F-2
+    ac_id: AC-8
+    title: "Clarify grandfathering for existing specs line count violation"
+    recommendation: |
+      AC-8 and the Proof Requirements Format section (line 204) note that existing specs
+      lack a standalone Proof Requirements section and are grandfathered as conformant.
+
+      However, they also violate the skeleton line count constraint (10-25 lines max).
+
+      Either:
+      (a) Update AC-8 evidence to document that existing specs are larger due to complex
+          decision rules (patch-queue has layering constraints; repair-loop has protocol steps)
+          and this is explicitly allowed as a grandfathering exception, or
+      (b) Reclassify AC-8 as FAIL because line count constraint is not met.
+
+      Recommend option (a): Update FRAMEWORK.md to explicitly document that pattern specs
+      MAY exceed 25 lines if the decision rule requires detailed protocol explanation,
+      and note that patch-queue and repair-loop exemplars use this exception.
+
+    effort: "Low"
+    blocker: false
+
+  - priority: 3
+    finding_id: F-3
+    ac_id: AC-2
+    title: "Add annotated minimal working example to Pattern Skeleton Template section"
+    recommendation: |
+      Add a new subsection "Minimal Working Example" after the skeleton template that shows
+      a real pattern conforming to the 10-25 line constraint. For example, a very simple
+      pattern like "single-step patch" or "one-file change" that demonstrates the template
+      is achievable at minimum size.
+
+      This would resolve the ambiguity and provide concrete guidance for future pattern
+      authors on how to keep skeletons within bounds.
+
+    effort: "Medium"
+    blocker: false
+
+summary: |
+  FRAMEWORK.md is well-structured and contains all required sections per AC-1, AC-3, AC-4, AC-5, AC-6, AC-7.
+  Existing specs conform to the framework with an acceptable grandfathering note for missing Proof Requirements.
+
+  However, AC-2 has a critical failure: the Pattern Skeleton Template section itself violates the
+  10-25 line constraint it documents. This is a self-contradiction that must be resolved.
+
+  Additionally, AC-8 conformance needs clarification regarding line count constraints for existing specs.
+
+  RECOMMENDATION: Resolve F-1 (skeleton size) as blocker. Optionally address F-2 and F-3 for clarity.

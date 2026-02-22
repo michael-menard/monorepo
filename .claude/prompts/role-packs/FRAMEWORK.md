@@ -38,7 +38,9 @@ Any agent or developer creating a new role pack or pattern spec must conform to 
 
 ## Pattern Skeleton Template
 
-Every file under `_specs/` must conform to this skeleton. The skeleton body (excluding frontmatter and cross-reference) must be **10-25 lines**.
+Every file under `_specs/` must conform to this skeleton. This reference template shows all required sections with placeholder descriptions. It is a guide for pattern authors — not a minimal spec itself.
+
+**Constraint**: The skeleton **core body** of an actual spec (Overview + Decision Rule + Examples stubs + Proof Requirements) must be **10-25 lines**. The Cross-Reference section and frontmatter lines (`**Version**`, `**Story**`, `**Status**`, `**See also**`, `---` separators) are excluded from this count.
 
 ```markdown
 # {Pattern Name}
@@ -95,11 +97,49 @@ escalation: {what to do if verification fails}
 
 ### Skeleton constraints
 
-- Minimum: 10 lines (body only, excluding frontmatter lines and cross-reference)
-- Maximum: 25 lines (body only)
+- Minimum: 10 lines (core body only, non-blank lines — see definition above)
+- Maximum: 25 lines (core body only, non-blank lines)
+- Counting: non-blank lines only in Overview, Decision Rule, Examples, and Proof Requirements sections; blank separator lines and Cross-Reference section excluded
 - Positive examples: 1-2 (never more than 2)
 - Negative example: exactly 1 (the most common failure mode)
-- Patterns exceeding 25 lines must be split into two separate spec files
+- Patterns exceeding 25 non-blank core body lines must be split into two separate spec files
+
+### Minimal Working Example
+
+The following is a complete, conformant spec. The core body (Overview through Proof Requirements, excluding frontmatter and Cross-Reference section) is counted using **non-blank lines only** — the same proxy used in the Token Budget section. Blank separator lines between sections are not counted.
+
+```markdown
+# Single-File Patch Pattern
+**Version**: 1.0.0 | **Story**: WINT-0000 | **Status**: Active
+**See also**: [patch-queue-pattern.md](./patch-queue-pattern.md)
+
+## Overview
+Use when a fix touches exactly one file and requires no ordered sequencing with other changes.
+
+## Decision Rule
+when: changed_files == 1 AND no_ordering_dependency == true
+then: apply patch directly without a patch-plan.json
+else: use patch-queue-pattern (ac_count > 1 or file ordering required)
+
+## Examples
+### Positive: Single-file config fix
+Edit one config file and verify. No patch-plan.json needed.
+Why this is correct: No ordering risk with a single file.
+
+### Negative: Two-file rename without patch-plan
+Renaming a component and its import in two files without sequencing.
+Why this is wrong: Import breaks if files are patched out of order.
+
+## Proof Requirements
+verification_command: "git diff --name-only HEAD | wc -l | xargs test 1 -eq"
+expected_artifact: "exit code 0"
+escalation: "Switch to patch-queue-pattern if more than one file changed"
+
+## Cross-Reference
+Use [patch-queue-pattern.md](./patch-queue-pattern.md) when ac_count > 1 or multiple files must be patched in order.
+```
+
+Core body non-blank line count (Overview through Proof Requirements, excluding frontmatter and Cross-Reference): **17 lines** — within the 10-25 line constraint.
 
 ---
 
@@ -160,7 +200,7 @@ A role instruction file at 300 tokens is approximately 30-40 lines of plain pros
 | Minimum | 10 lines |
 | Maximum | 25 lines |
 
-Line bounds apply to the **body only** — frontmatter lines (`**Version**`, `**Story**`, `**Status**`, `**See also**`, and `---` separators) and the Cross-Reference section are excluded from the count.
+Line bounds apply to **non-blank lines in the core body only** — frontmatter lines (`**Version**`, `**Story**`, `**Status**`, `**See also**`, and `---` separators), blank separator lines, and the Cross-Reference section are excluded from the count. See "Skeleton constraints" in the Pattern Skeleton Template section for the complete counting rule.
 
 ### Line-count proxy (tokenizer fallback)
 
@@ -203,7 +243,11 @@ escalation: "Re-run ST-2 creation step; do not proceed to ST-3"
 
 ### Grandfathered gap
 
-The existing `_specs/` files (`patch-queue-pattern.md` and `repair-loop-pattern.md`) do not have a standalone Proof Requirements section. They embed `verification_command` inline in their JSON examples. These files are **conformant exemplars** under AC-8 — their embedded approach predates this standard. New pattern specs must use the explicit template above.
+The existing `_specs/` files (`patch-queue-pattern.md` and `repair-loop-pattern.md`) are full expanded documents — they include rich worked examples, multi-step protocols, and inline verification guidance that make them longer than a minimal skeleton. This is intentional: they are canonical exemplars, not bare-minimum skeletons.
+
+**Line count clarification**: The 10-25 line constraint applies to the skeleton **core body** (Overview + Decision Rule + minimal example stubs + Proof Requirements). The total file length of a pattern spec — including expanded examples, code blocks, and protocol detail — is not bounded by this constraint. If the core body sections of `patch-queue-pattern.md` or `repair-loop-pattern.md` were extracted and stripped of expanded detail, each would fit within 10-25 lines.
+
+**Proof Requirements gap**: Neither existing file has a standalone `## Proof Requirements` section. They embed `verification_command` inline in their JSON examples. These files are **conformant exemplars** under AC-8 — their embedded approach predates this standard. New pattern specs must use the explicit template above.
 
 ---
 

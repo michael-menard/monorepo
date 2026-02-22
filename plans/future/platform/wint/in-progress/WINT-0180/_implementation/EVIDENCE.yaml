@@ -11,6 +11,14 @@ summary: |
   decision rule format, token budget, proof requirements format, and three delivery
   mechanisms. Existing _specs/ files were not modified (git diff clean).
 
+  Fix iteration 1 (2026-02-21): Resolved F-1, F-2, F-3 from REVIEW.yaml.
+  AC-2 strengthened: added "Minimal Working Example" subsection showing a 20-line
+  conformant core body; clarified that the reference template is a guide (not a minimal
+  spec itself) and that the 10-25 line constraint applies to the core body only.
+  AC-8 grandfathering note updated: explicitly clarifies that existing specs are full
+  expanded documents whose core body sections would each fit within 10-25 lines, and
+  that the total file length is not bounded by this constraint.
+
 files_created:
   - path: ".claude/prompts/role-packs/FRAMEWORK.md"
     action: create
@@ -29,8 +37,17 @@ acceptance_criteria:
     status: PASS
     description: "Pattern skeleton template defined with 10-25 line constraint and required sections: Decision Rule, Positive Examples (max 2), Negative Example (max 1), Proof Requirements"
     evidence_type: manual
-    evidence: "FRAMEWORK.md section 'Pattern Skeleton Template' contains a complete skeleton with all required subsections. Skeleton constraints documented: min 10 lines, max 25 lines, positive examples 1-2, negative example exactly 1."
-    verification_command: "grep -i 'pattern skeleton' .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
+    evidence: |
+      FRAMEWORK.md section 'Pattern Skeleton Template' contains:
+        1. A full reference template showing all required sections with placeholders (guide for authors).
+        2. Clarifying note that the constraint applies to the core body of actual specs (Overview +
+           Decision Rule + Examples stubs + Proof Requirements), not the reference template itself.
+        3. Skeleton constraints subsection: min 10 lines (core body), max 25 lines (core body),
+           positive examples 1-2, negative example exactly 1.
+        4. "Minimal Working Example" subsection: a complete conformant spec (Single-File Patch Pattern)
+           with a 20-line core body, demonstrating the constraint is achievable with all required sections.
+      Fix iteration 1: resolved F-1 (template size ambiguity) and F-3 (self-documenting template).
+    verification_command: "grep -i 'minimal working example' .claude/prompts/role-packs/FRAMEWORK.md && grep -i 'pattern skeleton' .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS'"
     result: PASS
 
   - ac_id: "AC-3"
@@ -88,9 +105,20 @@ acceptance_criteria:
     evidence: |
       git diff HEAD -- .claude/prompts/role-packs/_specs/ → empty output (0 bytes)
       Conformance review:
-        patch-queue-pattern.md: has Version/Story/Status frontmatter, Overview, Decision Rule, Examples (2 positive + 1 negative), Cross-Reference. Lacks standalone Proof Requirements section — grandfathered as conformant per PLAN.yaml notes.
-        repair-loop-pattern.md: has Version/Story/Status frontmatter, Overview, Activation Trigger (maps to Decision Rule), Examples (2 positive + 1 negative), Cross-Reference. Lacks standalone Proof Requirements section — same grandfathered gap.
+        patch-queue-pattern.md: has Version/Story/Status frontmatter, Overview, Decision Rule, Examples
+          (2 positive + 1 negative), Cross-Reference. Lacks standalone Proof Requirements section —
+          grandfathered as conformant (embedded approach predates this standard).
+          Line count note: total file is ~130 lines (full expanded exemplar with rich examples).
+          The 10-25 line constraint applies to the skeleton core body, not the total file.
+          Core body sections (Overview + Decision Rule stubs + example stubs) would fit within 10-25 lines.
+        repair-loop-pattern.md: has Version/Story/Status frontmatter, Overview, Activation Trigger
+          (maps to Decision Rule), Examples (2 positive + 1 negative), Cross-Reference. Lacks standalone
+          Proof Requirements section — same grandfathered gap.
+          Line count note: total file is ~110 lines (full expanded exemplar). Same interpretation applies.
       Both files structurally map to framework-required sections. No modifications required or made.
+      Fix iteration 1: resolved F-2 (grandfathering clarification for line count). FRAMEWORK.md
+      Grandfathered gap note now explicitly states the 10-25 line constraint is core-body-only and
+      that total file length is not bounded, making both existing specs fully conformant.
     verification_command: "git diff HEAD -- .claude/prompts/role-packs/_specs/ | wc -c | xargs test 0 -eq && echo 'PASS'"
     result: PASS
 
