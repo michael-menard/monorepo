@@ -189,13 +189,13 @@ if (story_yaml.predictions) {
 }
 ```
 
-**Trigger accuracy tracking** (inline in pm-story-risk-predictor.agent.md):
+**Trigger accuracy tracking** (inline in risk-predictor.agent.md):
 ```
 Task tool:
   subagent_type: "general-purpose"
   description: "Track {STORY_ID} prediction accuracy"
   prompt: |
-    Read: .claude/agents/pm-story-risk-predictor.agent.md
+    Read: .claude/agents/risk-predictor.agent.md
     
     ACCURACY TRACKING MODE:
     Story ID: {STORY_ID}
