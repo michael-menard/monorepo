@@ -74,6 +74,7 @@ Move story: `backlog/{STORY_ID}` → `elaboration/{STORY_ID}`
 ```
 Task: sonnet, "Phase 1 Analysis {STORY_ID}"
 Read: .claude/agents/elab-analyst.agent.md
+Output: _implementation/ELAB.yaml (audit + gaps + opportunities + preliminary_verdict)
 Signal: ANALYSIS COMPLETE
 ```
 
@@ -88,16 +89,16 @@ Signal: AUTONOMOUS DECISIONS COMPLETE: <verdict>
 ```
 
 The autonomous decider will:
-1. Read `analysis` KB artifact for MVP-critical gaps and future opportunities
+1. Read `_implementation/ELAB.yaml` for gaps and opportunities
 2. Auto-add MVP gaps as new ACs to the story
-3. Spawn kb-writer for each non-blocking finding
-4. Write `elaboration` KB artifact with all choices made
+3. Spawn kb-writer for each non-blocking opportunity
+4. Update ELAB.yaml with decisions + verdict
 5. Return verdict for completion phase
 
 **IF interactive (default):**
 
-1. Read `analysis` artifact from KB
-2. Count gaps and enhancements
+1. Read `_implementation/ELAB.yaml`
+2. Count gaps and opportunities
 3. Ask: "Discuss [N] gaps and [M] enhancements? (yes/no)"
 4. For each finding, collect decision:
    - (1) Add as AC

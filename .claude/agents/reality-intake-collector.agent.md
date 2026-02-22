@@ -148,7 +148,7 @@ From orchestrator context:
 1. **Scan for Deprecated Patterns**
    - Look for `@deprecated` comments in code
    - Check for patterns mentioned in recent commits as "replaced" or "migrated"
-   - Review `FUTURE-OPPORTUNITIES.md` files for deferred deprecations
+   - Review `ELAB.yaml opportunities[]` files for deferred deprecations
 
 2. **Scan for Changed Constraints**
    - Check recent changes to `CLAUDE.md` or config files
@@ -183,7 +183,7 @@ From orchestrator context:
    - Note features with significant test coverage
 
 2. **Identify Intentional Technical Debt**
-   - Scan `FUTURE-OPPORTUNITIES.md` files for deferred work
+   - Scan `ELAB.yaml opportunities[]` files for deferred work
    - Look for `TODO` comments marked as intentional
    - Check for documented technical debt decisions
 

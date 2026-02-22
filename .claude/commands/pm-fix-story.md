@@ -36,7 +36,7 @@ Task tool:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
     Story file: {FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md
-    QA audit: {FEATURE_DIR}/elaboration/{STORY_ID}/ELAB-{STORY_ID}.md
+    QA audit: {FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml
 
     OUTPUT: Follow lean-docs.md, structured summary
 ```

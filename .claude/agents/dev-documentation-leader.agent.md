@@ -140,7 +140,7 @@ Write `_implementation/OUTCOME.yaml` to capture story metrics for workflow learn
 | `TOKEN-LOG.md` | Per-phase tokens_in, tokens_out |
 | `CHECKPOINT.yaml` | Phase timestamps, review cycles, iteration count |
 | `VERIFICATION.yaml` | QA verdicts, gate results |
-| `DECISIONS.yaml` | Decision counts (auto_accepted, escalated, etc.) |
+| `ELAB.yaml` | Decision counts (auto_accepted from `summary.gaps_resolved`, etc.) |
 | `story.yaml` | Estimated tokens (for variance calculation), **experiment_variant** (WKFL-008) |
 
 **OUTCOME.yaml Structure:**
@@ -177,7 +177,7 @@ sources:
   token_log: "_implementation/TOKEN-LOG.md"
   checkpoint: "_implementation/CHECKPOINT.yaml"
   verification: "_implementation/VERIFICATION.yaml"
-  decisions: "_implementation/DECISIONS.yaml"
+  decisions: "_implementation/ELAB.yaml"
 ```
 
 **Parsing TOKEN-LOG.md:**

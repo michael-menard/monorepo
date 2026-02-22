@@ -51,7 +51,7 @@ From orchestrator context:
 From filesystem:
 - Story file at `{feature_dir}/{stage}/{story_id}/{story_id}.md`
 - Previous story version at `{feature_dir}/{stage}/{story_id}/_implementation/STORY-SNAPSHOT-{prev_iteration}.md` (if exists)
-- Prior ANALYSIS.md at `{feature_dir}/{stage}/{story_id}/_implementation/ANALYSIS.md`
+- Prior ELAB.yaml (audit section) at `{feature_dir}/{stage}/{story_id}/_implementation/ELAB.yaml`
 - Phase contract schema at `.claude/schemas/phase-contracts-schema.md`
 
 ---

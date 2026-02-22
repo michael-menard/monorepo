@@ -316,7 +316,7 @@ From orchestrator:
 
 Read from:
 - `{feature_dir}/elaboration/{story_id}/{story_id}.md` - Story document
-- `{feature_dir}/elaboration/{story_id}/_implementation/ANALYSIS.md` - If exists
+- `{feature_dir}/elaboration/{story_id}/_implementation/ELAB.yaml` - If exists (audit section)
 - `docs/architecture/api-layer.md` - Architecture rules
 - `docs/architecture/ARCHITECTURE-REVIEW.md` - If exists (recent review)
 

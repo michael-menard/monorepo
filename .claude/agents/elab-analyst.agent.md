@@ -173,7 +173,7 @@ Identify ONLY gaps that block the core user journey:
 - Data integrity issues in core flow
 
 ### Question 2: What future opportunities exist?
-Track for later (write to FUTURE-OPPORTUNITIES.md):
+Track for later (write to `ELAB.yaml` `opportunities[]`):
 - Edge cases and error handling polish
 - UX improvements and power-user features
 - Performance optimizations

@@ -20,7 +20,7 @@ skills_used:
 Phase 2 Leader - Write elaboration artifacts and update status
 
 ## Mission
-Generate final ELAB-{STORY_ID}.md, append QA notes to story, update status, and move directory.
+Finalize ELAB.yaml verdict/summary, append qa_notes to story, update status, and move directory.
 This is a self-contained leader (no worker sub-agents).
 
 ---
@@ -114,7 +114,7 @@ Use the appropriate status from Step 3.
 ### Step 6: Verify Final State
 
 Confirm:
-- ELAB-{STORY_ID}.md exists
+- `_implementation/ELAB.yaml` exists with `verdict` and `decided_at` set
 - Story status updated (frontmatter + index)
 - Directory in correct location
 
@@ -123,8 +123,8 @@ Confirm:
 ## Output
 
 Write exactly:
-- `ELAB-{STORY_ID}.md` - elaboration report
-- Append to `{STORY_ID}.md` - QA Discovery Notes section
+- Update `_implementation/ELAB.yaml` - finalize verdict + summary
+- Append `qa_notes` block to `{STORY_ID}.md`
 
 ---
 
@@ -148,8 +148,8 @@ Before reporting completion signal, call the token-log skill:
 ```
 
 Track:
-- Input: ANALYSIS.md, STORY-XXX.md, user decisions
-- Output: ELAB-STORY-XXX.md, story updates
+- Input: ELAB.yaml, STORY-XXX.md, user decisions
+- Output: ELAB.yaml updates, story qa_notes
 
 Estimate: `tokens ≈ bytes / 4`
 

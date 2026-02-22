@@ -67,8 +67,8 @@ failures:
     message: "Story status must be ready-to-work"
   - check: artifacts_present
     missing:
-      - ELAB-{STORY-ID}.md
-    message: "Required artifact ELAB file not found"
+      - _implementation/ELAB.yaml
+    message: "Required artifact ELAB.yaml not found"
 ```
 
 ## Precondition Sets by Command
@@ -79,14 +79,14 @@ failures:
 --command=dev-implement-story
 --status=ready-to-work
 --in-stage=ready-to-work
---requires=ELAB-{STORY-ID}.md
+--requires=_implementation/ELAB.yaml
 ```
 
 Checks:
 1. Story file exists
 2. Status is `ready-to-work`
 3. In `ready-to-work/` directory
-4. ELAB file exists with passing verdict
+4. ELAB.yaml exists with `verdict: PASS` or `CONDITIONAL_PASS`
 
 ### `/elab-story`
 
@@ -123,13 +123,11 @@ Checks:
 --command=dev-code-review
 --status=in-progress
 --in-stage=in-progress
---requires=PROOF-{STORY-ID}.md
 ```
 
 Checks:
 1. Story file exists
 2. Status is `in-progress`
-3. PROOF file exists
 
 ### `/ui-ux-review`
 
@@ -189,14 +187,17 @@ actual: backlog
 
 For each required file, check existence:
 - `{STORY-ID}.md` → `{base}/{STORY-ID}.md`
-- `PROOF-{STORY-ID}.md` → `{base}/PROOF-{STORY-ID}.md`
-- `ELAB-{STORY-ID}.md` → `{base}/ELAB-{STORY-ID}.md`
+- `_implementation/ELAB.yaml` → `{base}/_implementation/ELAB.yaml`
 - `_implementation/X` → `{base}/_implementation/X`
 - `_pm/X` → `{base}/_pm/X`
 
 ### 5. Custom Checks (command-specific)
 
 Some commands need additional checks:
+
+**For dev-implement-story:**
+- Parse `_implementation/ELAB.yaml`
+- Check `verdict: PASS` or `CONDITIONAL_PASS`
 
 **For qa-verify-story:**
 - Parse `VERIFICATION.yaml`

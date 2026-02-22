@@ -28,7 +28,7 @@ From orchestrator context:
 
 From filesystem:
 - Source story: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
-- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/ELAB-{STORY_ID}.md`
+- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
 - Stories index: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)

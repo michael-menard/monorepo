@@ -337,8 +337,7 @@ const phase = artifact.content.current_phase
 | KNOWLEDGE-CONTEXT.yaml | `context` | `planning` | knowledge-context-loader |
 | EVIDENCE.yaml | `evidence` | `implementation` | dev-execute-leader |
 | REVIEW.yaml | `review` | `code_review` | review-aggregate-leader |
-| ANALYSIS.md + FUTURE-OPPORTUNITIES.md | `analysis` | `analysis` | elab-analyst |
-| DECISIONS.yaml | `elaboration` | `analysis` | elab-autonomous-decider |
+| ELAB.yaml (audit + gaps + opportunities + verdict) | `analysis` | `analysis` | elab-analyst |
 | QA-VERIFY.yaml / VERIFICATION.yaml | `verification` | `qa_verification` | qa-verify-verification-leader |
 | PROOF-{ID}.md | `proof` | `completion` | dev-implement-proof-writer |
 
