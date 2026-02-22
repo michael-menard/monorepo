@@ -57,7 +57,7 @@ graduated_chain:
   # conservative default — see WINT-0270 for empirical calibration.
   - from: Local
     trigger: failure_count
-    threshold: 2  # After 2 local failures, escalate to API-Cheap. Tune via WINT-0270 benchmarks.
+    threshold: 2  # After 2 local failures, escalate to API-Cheap. Tune down to 1 for fast-fail tasks, up to 3 for flaky tasks; recalibrate after WINT-0270 benchmark results.
     to: API-Cheap
 
   # Rule 2: API-Cheap → API-Mid on low confidence
@@ -67,7 +67,7 @@ graduated_chain:
   # data-driven cutoff based on observed confidence distributions.
   - from: API-Cheap
     trigger: confidence_below
-    threshold: 0.70  # Escalate when confidence < 0.70. Empirical value pending WINT-0270.
+    threshold: 0.70  # Escalate when confidence < 0.70. Set to 0.80 for high-stakes tasks, 0.60 for exploratory tasks; recalibrate after WINT-0270 benchmark results.
     to: API-Mid
 
   # Rule 3: API-Mid → API-High on failure or uncertainty
