@@ -43,9 +43,14 @@ From orchestrator context:
    - Include file, issue, auto_fixable flag, and source worker
 
 4. **Calculate summary stats**
-   - total_errors: sum of all worker errors
+   - total_errors: sum of all worker errors (in-scope only)
    - total_warnings: sum of all worker warnings
    - auto_fixable_count: count of auto-fixable findings
+
+5. **Calculate codebase health**
+   - `pre_existing_type_errors`: from `typecheck.pre_existing_outside_scope` (0 if absent)
+   - `pre_existing_build_failures`: from `build.pre_existing_failures` (0 if absent)
+   - `note`: human-readable summary, e.g. "12 type errors exist outside this story's scope"
 
 5. **Write Review Artifact to KB**
 
@@ -161,6 +166,11 @@ findings:
 total_errors: 1
 total_warnings: 2
 auto_fixable_count: 1
+
+codebase_health:
+  pre_existing_type_errors: 12       # errors in non-touched files from typecheck run
+  pre_existing_build_failures: 0     # build failures in non-touched files
+  note: "12 type errors exist outside this story's scope"
 
 tokens:
   in: 5000

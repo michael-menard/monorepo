@@ -27,17 +27,21 @@ From orchestrator context:
 
 1. Filter to `.ts`, `.tsx` files only
 2. Run: `pnpm check-types` (uses turbo with affected file detection)
-3. Parse tsc output for errors in touched files
-4. Categorize by severity
+3. Parse tsc output — partition errors into two groups:
+   - **in-scope**: errors in files that appear in `touched_files`
+   - **out-of-scope**: errors in all other files (pre-existing codebase issues)
+4. Categorize in-scope errors by severity
+5. Report the out-of-scope count (do NOT list individual out-of-scope errors — count only)
 
 ## Output Format
 Return YAML only (no prose):
 
 ```yaml
 typecheck:
-  verdict: PASS | FAIL
+  verdict: PASS | FAIL   # based on in-scope errors only
   files_checked: 5
-  errors: 0
+  errors: 0              # in-scope errors only
+  pre_existing_outside_scope: 12   # count of errors in non-touched files (codebase health signal)
   findings:
     - severity: error
       file: src/handlers/list.ts
@@ -58,9 +62,10 @@ typecheck:
 ## Rules
 - Run REAL commands, capture REAL output
 - Report ALL type errors in touched files — not just new ones, include pre-existing errors too
-- Ignore unrelated errors from other parts of codebase not in touched files
+- Count (but do not list) type errors in non-touched files — report as `pre_existing_outside_scope`
 - Do NOT fix code - only report
 - All type errors are blocking (new = `high`, pre-existing = `medium`)
+- `verdict` is based on in-scope errors only — out-of-scope errors do not change the verdict
 
 ## Completion Signal
 - `TYPECHECK PASS` - no errors

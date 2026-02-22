@@ -172,7 +172,28 @@ When backend-coder implements auth routes, security review finds 80% issues.
 Recommendation: Add security checklist to backend-coder for auth-related work.
 ```
 
-### 4. AC Success Rate Analysis
+### 4. Codebase Health Analysis
+
+Track pre-existing issues encountered across stories — these are failures the review workers
+detected OUTSIDE the story's scope. They represent codebase-wide technical debt, not story defects.
+
+Data source: `codebase_health` section in each story's review artifact (KB `review` artifact or REVIEW.yaml).
+
+| Metric | Source | Pattern Trigger |
+|--------|--------|-----------------|
+| `pre_existing_type_errors` | `review.codebase_health.pre_existing_type_errors` | Trending up across stories |
+| `pre_existing_build_failures` | `review.codebase_health.pre_existing_build_failures` | Any build failure in non-touched file |
+
+**Pattern Example:**
+```
+Stories WKFL-010, WKFL-011, WKFL-012 each encountered 40+ pre-existing type errors.
+The count is growing: 12 → 28 → 47.
+Recommendation: Allocate a dedicated debt-clearing story before the count becomes a blocker.
+```
+
+Note: If `codebase_health` is absent from a story's review data (older stories), skip this metric for that story.
+
+### 5. AC Success Rate Analysis
 
 Track which AC types pass/fail first try.
 
@@ -242,6 +263,10 @@ story_analysis:
     auto_accepted: {N}
     escalated: {N}
     escalation_rate: {percent}
+
+  codebase_health:              # from review artifact codebase_health section; null if not present
+    pre_existing_type_errors: {N}
+    pre_existing_build_failures: {N}
 
   pending_deferred_writes:      # populated if DEFERRED-KB-WRITE*.yaml found with status: pending
     - file: "_implementation/DEFERRED-KB-WRITES.yaml"
