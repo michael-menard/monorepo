@@ -51,13 +51,17 @@ findings:
     skipped: false
     errors: 0
     warnings: 0
-    findings: []
+    findings:
+      - severity: info
+        message: "docs-only story - no .ts/.tsx files touched"
   build:
-    verdict: PASS
+    verdict: EXEMPT
     skipped: false
     errors: 0
     warnings: 0
-    findings: []
+    findings:
+      - severity: info
+        message: "docs-only story - build skipped"
   reusability:
     verdict: PASS
     skipped: false
