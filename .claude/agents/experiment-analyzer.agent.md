@@ -216,6 +216,39 @@ if action in ["rollout", "expand_traffic"] AND confidence == "low":
 Write `EXPERIMENT-REPORT-{experiment_id}-{date}.yaml` to:
 `plans/future/workflow-learning/experiments/`
 
+### Insufficient Data Path
+
+When `n_treatment < min_sample_size OR n_control < min_sample_size` (triggered from Step 4 sample guard), omit all statistical fields and emit only the minimal report. Do NOT include `p_value`, `difference`, confidence intervals, or any statistical assertion fields.
+
+```yaml
+# EXPERIMENT-REPORT.yaml — Insufficient Data Path
+report_date: YYYY-MM-DD
+experiment: exp-{id}
+generated_at: ISO-timestamp
+
+variants:
+  control:
+    sample_size: 8   # below min_sample_size
+  treatment:
+    sample_size: 8   # below min_sample_size
+
+analysis:
+  primary_metric: {metric}
+  sample_guard_triggered: true
+  min_sample_size_required: 10
+
+recommendation:
+  action: continue
+  rationale: |
+    Insufficient data: control n=8, treatment n=8. Minimum required: 10 per variant.
+    No statistical claims can be made at this sample size.
+  confidence: none
+```
+
+### Normal Path
+
+When both variants have `>= min_sample_size` (sufficient samples, statistical analysis complete):
+
 ```yaml
 schema: 1
 report_date: "{ISO timestamp}"

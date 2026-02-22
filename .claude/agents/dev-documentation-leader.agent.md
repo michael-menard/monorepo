@@ -200,6 +200,8 @@ See: `.claude/schemas/outcome-schema.md` for full schema reference.
 
 **Experiment Variant Propagation** (WKFL-008):
 
+<!-- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes experiment_variant to story.yaml frontmatter during story generation. Do not rename this field without updating both files. -->
+
 Read `experiment_variant` from story.yaml frontmatter and include in OUTCOME.yaml:
 
 1. Parse story.yaml frontmatter to extract `experiment_variant` field
@@ -208,6 +210,8 @@ Read `experiment_variant` from story.yaml frontmatter and include in OUTCOME.yam
 4. Never default missing fields to `"control"` - use `null` for backward compatibility
 
 **Backward Compatibility**: Legacy stories without `experiment_variant` field get `null`, not `"control"`. Only explicit control assignment uses `"control"`.
+
+- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes `experiment_variant` to story.yaml frontmatter during story generation.
 
 
 ### Step 5.5: Trigger Prediction Accuracy Tracking (WKFL-007)
