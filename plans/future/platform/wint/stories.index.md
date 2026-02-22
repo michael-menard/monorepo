@@ -27,8 +27,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | created | 3 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 3 |
-| pending | 116 |
+| ready-to-work | 4 |
+| pending | 117 |
 
 ---
 
@@ -531,7 +531,7 @@ Create health check script. Document VRAM requirements per model. Create model s
 
 ### WINT-0250: Define Escalation Rules for Multi-Model Routing (Graduated Chain + Hard Bypass)
 
-**Status:** elaboration
+**Status:** uat
 **Depends On:** WINT-0220, WINT-0230
 **Phase:** 0
 **Feature:** Define when to escalate from cheaper to more expensive model:

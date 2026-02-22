@@ -1,0 +1,194 @@
+schema: 1
+story_id: WINT-0250
+version: 1
+timestamp: '2026-02-21T18:30:00Z'
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: >
+      Valid YAML file at .claude/config/escalation-rules.yaml with meta block containing
+      version, created (ISO 8601), owner_story: WINT-0250,
+      tier_definitions_source: .claude/config/model-strategy.yaml
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          File created with meta block: version: 1, created: '2026-02-21',
+          owner_story: WINT-0250, tier_definitions_source: .claude/config/model-strategy.yaml.
+          YAML validated via python3/pyyaml — exits 0 with no parse errors.
+      - type: command
+        command: "python3 -c \"import yaml; yaml.safe_load(open('.claude/config/escalation-rules.yaml'))\""
+        result: SUCCESS
+
+  - ac_id: AC-2
+    ac_text: >
+      graduated_chain with exactly 3 rules:
+      (1) from: Local, trigger: failure_count, threshold: 2, to: API-Cheap;
+      (2) from: API-Cheap, trigger: confidence_below, threshold: 0.70, to: API-Mid;
+      (3) from: API-Mid, trigger: failure_or_uncertainty, to: API-High
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          graduated_chain section contains exactly 3 rules. Validated:
+          Rule 1: {from: Local, trigger: failure_count, threshold: 2, to: API-Cheap};
+          Rule 2: {from: API-Cheap, trigger: confidence_below, threshold: 0.70, to: API-Mid};
+          Rule 3: {from: API-Mid, trigger: failure_or_uncertainty, to: API-High}.
+          Python parse confirmed 3 rules in list.
+
+  - ac_id: AC-3
+    ac_text: >
+      hard_bypass with exactly 2 rules:
+      (1) condition: task_decision_type, value: security_or_architecture, to: API-High;
+      (2) condition: task_label, value: critical, to: API-High
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          hard_bypass section contains exactly 2 rules. Validated:
+          Bypass 1: {condition: task_decision_type, value: security_or_architecture, to: API-High};
+          Bypass 2: {condition: task_label, value: critical, to: API-High}.
+          Python parse confirmed 2 rules in list.
+
+  - ac_id: AC-4
+    ac_text: >
+      escalation_log_schema with 8 fields: from_tier (string, req), to_tier (string, req),
+      task_type (string, req), reason (string, req), failure_count (int, opt),
+      confidence_score (float, opt), timestamp (ISO 8601, req), bypass_rule (boolean, req)
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          escalation_log_schema.fields contains exactly 8 entries.
+          Field names confirmed: [from_tier, to_tier, task_type, reason, failure_count,
+          confidence_score, timestamp, bypass_rule]. Types: from_tier/to_tier/task_type/reason
+          are string required; failure_count is integer optional; confidence_score is float optional;
+          timestamp is string (ISO 8601) required; bypass_rule is boolean required.
+          Python parse confirmed 8 fields.
+
+  - ac_id: AC-5
+    ac_text: >
+      Tier names use index defaults with TODO comment noting alignment required when
+      WINT-0220 (model-strategy.yaml) completes. model-strategy.yaml confirmed absent.
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          Tier names Local, API-Cheap, API-Mid, API-High used throughout — matching
+          index-documented defaults from WINT-0220 story. TODO comment on line 41-43:
+          "TODO(WINT-0220): When model-strategy.yaml lands (WINT-0220), update this
+          reference to point to the canonical tier definitions file."
+      - type: command
+        command: "ls /Users/michaelmenard/Development/monorepo/tree/story/WINT-0250/.claude/config/"
+        result: SUCCESS
+        output: >
+          model-strategy.yaml confirmed absent from directory listing.
+          Present files: autonomy.yaml, context7.yaml, decision-classification.yaml,
+          escalation-rules.yaml, experiments.yaml, HEURISTIC-PROPOSALS.yaml,
+          model-assignments.yaml, preferences.yaml
+
+  - ac_id: AC-6
+    ac_text: >
+      Inline comments on failure_count: 2 and confidence_threshold: 0.70 with rationale
+      and WINT-0270 benchmark calibration reference
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          Inline comment on threshold: 2 (line 60): "After 2 local failures, escalate to
+          API-Cheap. Tune via WINT-0270 benchmarks." Block comment above rule 1 (lines 54-57)
+          explains rationale. Inline comment on threshold: 0.70 (line 70): "Escalate when
+          confidence < 0.70. Empirical value pending WINT-0270." Block comment above rule 2
+          (lines 63-67) explains rationale and references WINT-0270 for data-driven cutoff.
+
+  - ac_id: AC-7
+    ac_text: >
+      .claude/config/ directory exists (already did), no other files modified,
+      only escalation-rules.yaml is new
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "ls /Users/michaelmenard/Development/monorepo/tree/story/WINT-0250/.claude/config/"
+        result: SUCCESS
+        output: >
+          Directory confirmed present. Contents: autonomy.yaml, context7.yaml,
+          decision-classification.yaml, escalation-rules.yaml, experiments.yaml,
+          HEURISTIC-PROPOSALS.yaml, model-assignments.yaml, preferences.yaml.
+          Only escalation-rules.yaml is new; all other files are pre-existing and unmodified.
+
+  - ac_id: AC-8
+    ac_text: >
+      Top-of-file README comment block covering: purpose, consumer (llm-router/WINT-0230),
+      how to tune thresholds, what to do when WINT-0270 benchmarks are available
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/config/escalation-rules.yaml
+        description: >
+          Lines 1-35 contain a README comment block with 4 sections:
+          (1) PURPOSE — describes declarative escalation logic for multi-model routing;
+          (2) CONSUMER — explicitly names "llm-router component (story WINT-0230)" and
+          explains when each rule class is evaluated;
+          (3) HOW TO TUNE THRESHOLDS — step-by-step guidance for failure_count,
+          confidence_below, hard_bypass additions, and tier name alignment;
+          (4) WINT-0270 BENCHMARK CALIBRATION — instructs replacing placeholder thresholds
+          with benchmark-derived values when WINT-0270 completes.
+
+touched_files:
+  - path: .claude/config/escalation-rules.yaml
+    action: created
+    lines: 153
+    description: >
+      Escalation rules configuration defining graduated chain (3 rules) and hard bypass
+      (2 rules) for multi-model routing, with escalation log schema (8 fields) and
+      top-of-file README comment block.
+
+commands_run:
+  - command: "ls /Users/michaelmenard/Development/monorepo/tree/story/WINT-0250/.claude/config/"
+    result: SUCCESS
+    output: "Confirmed directory exists; model-strategy.yaml absent; escalation-rules.yaml created"
+    timestamp: '2026-02-21T18:25:00Z'
+
+  - command: "/tmp/yamlenv/bin/python3 -c \"import yaml; yaml.safe_load(open('.claude/config/escalation-rules.yaml'))\""
+    result: SUCCESS
+    output: >
+      YAML valid. meta keys: [version, created, owner_story, tier_definitions_source].
+      graduated_chain rules: 3. hard_bypass rules: 2. escalation_log_schema fields: 8.
+    timestamp: '2026-02-21T18:27:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "config-only story — no frontend, no runtime code, SCOPE.yaml frontend_impacted: false"
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage:
+  lines: null
+  branches: null
+
+notable_decisions:
+  - "model-strategy.yaml (WINT-0220) not yet landed — tier names sourced from story index documentation defaults (Local, API-Cheap, API-Mid, API-High); TODO comment added for WINT-0220 follow-up"
+  - "YAML validated via pyyaml in venv (python3 yaml module not natively installed on this host); all 3 steps of PLAN.yaml executed directly by execute-leader (single config file, no sub-agent spawn needed)"
+  - "graduated_chain rule 1 uses from: Local (singular) to cover both Local-Small and Local-Large per PLAN.yaml notes and AC-2 spec"
+
+known_deviations:
+  - "python3 yaml module not available without venv; validation performed via /tmp/yamlenv venv — equivalent result to plan's verification command"
+
+token_summary:
+  execute: { in: 0, out: 0 }

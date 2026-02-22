@@ -1,0 +1,55 @@
+knowledge_context:
+  loaded: true
+  timestamp: '2026-02-21T18:05:00Z'
+
+  lessons_learned:
+    count: 0
+    relevant_to_scope:
+      []
+    blockers_to_avoid:
+      - "Do not modify any existing files in .claude/config/ — only create escalation-rules.yaml"
+      - "model-strategy.yaml (WINT-0220) does not yet exist; use index-documented tier names with TODO comment rather than reading the file"
+      - "This story is config-only YAML; no TypeScript, no pnpm commands, no database changes"
+    patterns_to_follow:
+      - "YAML comment conventions from existing .claude/config/ files (decision-classification.yaml, model-assignments.yaml)"
+      - "Structured event pattern from packages/backend/orchestrator/src/nodes/audit/devils-advocate.ts for escalation_log_schema field design"
+      - "Co-locate escalation-rules.yaml with model-assignments.yaml — same directory, same config convention"
+    patterns_to_avoid:
+      - "Do not create barrel files or TypeScript source files — YAML is the sole deliverable"
+      - "Do not attempt to wire the rules into llm-router — integration belongs to WINT-0230"
+      - "Do not define de-escalation rules — explicitly deferred to post-MVP"
+
+  architecture_decisions:
+    active_count: 6
+    relevant_adrs:
+      []
+    constraints:
+      api_paths: not_applicable
+      infrastructure: not_applicable
+      storage: not_applicable
+      auth: not_applicable
+      testing: >
+        ADR-005 does not apply — no TypeScript tests required for this config-only story.
+        Verification is YAML syntax validation only (python3 -c "import yaml; yaml.safe_load(...)").
+        ADR-006 does not apply — frontend_impacted: false in SCOPE.yaml.
+
+  token_optimization:
+    high_cost_operations:
+      - operation: "Reading full serverless.yml or large infra files"
+        typical_tokens: 17500
+        mitigation: "Not applicable to this story — no infra files needed"
+      - operation: "Reading full story documentation set"
+        typical_tokens: 10000
+        mitigation: "Read only the ACs section and Subtasks section from story file"
+    recommended_patterns:
+      - "Targeted file reads over full files"
+      - "Check .claude/config/ directory listing before creating — directory already exists in worktree"
+      - "Single file creation is the entire deliverable — no loops or iteration required"
+
+  warnings:
+    - "model-strategy.yaml (WINT-0220) does not exist — tier names must come from story index documentation, not from reading a file"
+    - "No past lessons learned found for config-only WINT-domain stories — no KB matches"
+
+  tokens:
+    in: 1200
+    out: 400
