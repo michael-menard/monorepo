@@ -210,6 +210,8 @@ experiment_variant: "exp-fast-track"  # or "control"
 ---
 ```
 
+<!-- Cross-reference: dev-documentation-leader.agent.md Step 5 reads experiment_variant from story.yaml frontmatter and propagates it into OUTCOME.yaml. Do not rename this field without updating both files. -->
+
 For required sections, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
 
 ### Phase 4.5: KB Persistence (REQUIRED)
