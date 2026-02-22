@@ -1302,14 +1302,21 @@ import {
   KbWriteArtifactInputSchema,
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
+  KbDeleteArtifactInputSchema,
 } from '../crud-operations/index.js'
 
 // Re-export artifact schemas
-export { KbWriteArtifactInputSchema, KbReadArtifactInputSchema, KbListArtifactsInputSchema }
+export {
+  KbWriteArtifactInputSchema,
+  KbReadArtifactInputSchema,
+  KbListArtifactsInputSchema,
+  KbDeleteArtifactInputSchema,
+}
 export type {
   KbWriteArtifactInput,
   KbReadArtifactInput,
   KbListArtifactsInput,
+  KbDeleteArtifactInput,
 } from '../crud-operations/index.js'
 
 /**
@@ -2426,6 +2433,31 @@ Example (list all checkpoints with content):
   inputSchema: zodToMcpSchema(KbListArtifactsInputSchema),
 }
 
+/**
+ * kb_delete_artifact tool definition.
+ *
+ * Delete a workflow artifact by its UUID.
+ */
+export const kbDeleteArtifactToolDefinition: McpToolDefinition = {
+  name: 'kb_delete_artifact',
+  description: `Delete a workflow artifact from the database by its UUID.
+
+Permanently removes the artifact record. Use with care — deletion is irreversible.
+Typically used for cleanup or to remove stale artifacts.
+
+Parameters:
+- artifact_id (required): UUID of the artifact to delete
+
+Returns: { deleted: boolean, artifact_id: string }
+- deleted: true if the artifact was found and removed, false if not found
+
+Example:
+{
+  "artifact_id": "550e8400-e29b-41d4-a716-446655440000"
+}`,
+  inputSchema: zodToMcpSchema(KbDeleteArtifactInputSchema),
+}
+
 // ============================================================================
 // Story Status Tools
 // ============================================================================
@@ -2932,6 +2964,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbWriteArtifactToolDefinition,
   kbReadArtifactToolDefinition,
   kbListArtifactsToolDefinition,
+  kbDeleteArtifactToolDefinition,
   // Story status tools
   kbGetStoryToolDefinition,
   kbListStoriesToolDefinition,

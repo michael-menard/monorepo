@@ -1,9 +1,11 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 1.0.0
+updated: 2026-02-22
+version: 2.0.0
 name: token-log
-description: Log token usage for a specific phase of story workflow. Called automatically by workflow commands after completing a phase. Appends to _implementation/TOKEN-LOG.md.
+description: Log token usage for a specific phase of story workflow. Called automatically by workflow commands after completing a phase. Writes to the storyTokenUsage table via kb_log_tokens MCP tool.
+kb_tools:
+  - kb_log_tokens
 ---
 
 # /token-log - Log Phase Token Usage
@@ -39,77 +41,36 @@ If tokens are not provided, prompt the user to estimate from `/cost` output.
 | `dev-fix` | `/dev-fix-story` |
 | `qa-verify` | `/qa-verify-story` |
 
-## Locate Story Directory
-
-The story can be in one of these directories:
-1. `plans/stories/backlog/STORY-XXX/`
-2. `plans/stories/elaboration/STORY-XXX/`
-3. `plans/stories/ready-to-work/STORY-XXX/`
-4. `plans/stories/in-progress/STORY-XXX/`
-5. `plans/stories/QA/STORY-XXX/`
-6. `plans/stories/UAT/STORY-XXX/`
-
-Search these directories in order to find the story.
-If not found, create it at `plans/stories/backlog/STORY-XXX/` (for initial phases).
-
-## Token Log File
-
-Target file: `<story-directory>/_implementation/TOKEN-LOG.md`
-
-If `_implementation/` directory doesn't exist, create it.
-If `TOKEN-LOG.md` doesn't exist, create it with the header.
-
-## Token Log Format
-
-```markdown
-# Token Log - STORY-XXX
-
-| Timestamp | Phase | Input | Output | Total | Cumulative |
-|-----------|-------|-------|--------|-------|------------|
-| 2026-01-24 10:30 | pm-generate | 15,000 | 5,000 | 20,000 | 20,000 |
-| 2026-01-24 11:00 | elaboration | 20,000 | 2,000 | 22,000 | 42,000 |
-```
-
 ## Task
 
-1. Locate the story directory (search all possible locations)
-2. Ensure `_implementation/` directory exists
-3. If TOKEN-LOG.md doesn't exist, create with header
-4. Read existing TOKEN-LOG.md to get current cumulative total
-5. Calculate:
-   - Total = input-tokens + output-tokens
-   - Cumulative = previous_cumulative + Total
-6. Append new row with:
-   - Timestamp: current date/time in `YYYY-MM-DD HH:MM` format
-   - Phase: the provided phase-name
-   - Input: formatted with commas (e.g., 15,000)
-   - Output: formatted with commas
-   - Total: formatted with commas
-   - Cumulative: formatted with commas
-7. Report success with summary
+1. Call `kb_log_tokens` MCP tool with the provided arguments:
 
-## Number Formatting
+```javascript
+kb_log_tokens({
+  story_id: "STORY-XXX",
+  phase: "phase-name",
+  input_tokens: {input-tokens},
+  output_tokens: {output-tokens}
+})
+```
 
-Always format token numbers with commas for readability:
-- 15000 → 15,000
-- 117000 → 117,000
+2. Report success with summary
 
 ## Output
 
-After logging, report:
+After logging, report the result from `kb_log_tokens`:
 
 ```
 Token logged for STORY-XXX:
   Phase: phase-name
   Input: XX,XXX | Output: XX,XXX | Total: XX,XXX
-  Cumulative: XXX,XXX
 ```
 
 ## Error Handling
 
-If story directory cannot be found in any location:
-- Report: "Story STORY-XXX not found in any status directory"
-- Suggest creating the story first
+If `kb_log_tokens` returns an error:
+- Report the error message
+- Suggest checking that the KB MCP server is running
 
 If phase-name is not in the standard list:
 - Allow it but warn: "Non-standard phase name: 'custom-name'"

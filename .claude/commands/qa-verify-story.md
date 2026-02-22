@@ -20,7 +20,7 @@ Post-Implementation Verification orchestrator. Final quality gate before DONE. D
 
 ## Output
 
-Updates: `VERIFICATION.yaml` (qa_verify + gate sections)
+Updates: `verification` KB artifact (verdict + gate sections)
 
 ## Phases
 

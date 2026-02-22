@@ -11,7 +11,7 @@ Usage: /dev-code-review {FEATURE_DIR} {STORY_ID}
 
 Code review orchestrator. Spawn workers - do NOT review code yourself.
 
-**Evidence-First**: Reads touched_files from EVIDENCE.yaml. Outputs REVIEW.yaml.
+**Evidence-First**: Reads touched_files from `evidence` KB artifact. Outputs `review` KB artifact.
 
 **Selective Re-Review**: On iteration 2+, only re-runs failed workers + typecheck + build. Passed workers are carried forward.
 
@@ -40,32 +40,32 @@ Code review orchestrator. Spawn workers - do NOT review code yourself.
 Validate (HARD STOP if fail):
 - Story has `status: needs-code-review`
 - Story directory exists at `{FEATURE_DIR}/needs-code-review/{STORY_ID}/`
-- `EVIDENCE.yaml` exists in `{FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/`
+- `evidence` artifact exists in KB: `kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })`
 
-Extract touched files from EVIDENCE.yaml:
-```yaml
-# Read {FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/EVIDENCE.yaml
-touched_files = evidence.touched_files.map(f => f.path)
+Extract touched files from evidence artifact:
+```javascript
+const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })
+const touched_files = evidence.content.touched_files.map(f => f.path)
 ```
 
 ## Phase 1 — Parallel Reviews
 
 **SELECTIVE RE-REVIEW OPTIMIZATION**
 
-Check if `REVIEW.yaml` exists from a previous review cycle:
+Check if `review` artifact exists in KB from a previous review cycle:
 - If NO previous review: Run all 10 workers
 - If previous review exists with FAIL verdict: Only re-run failed workers + typecheck + build
 
 ### Determine Workers to Run
 
-```python
-workers_to_run = []
-carried_forward = {}
+```javascript
+const workers_to_run = []
+const carried_forward = {}
 
-review_path = f"{FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/REVIEW.yaml"
+const prevReview = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "review" })
 
-if file_exists(review_path):
-    prev = read_yaml(review_path)
+if (prevReview !== null) {
+    const prev = prevReview.content
 
     # Always re-run these (fixes could break compilation)
     always_run = ["typecheck", "build"]
@@ -100,7 +100,7 @@ Task tool:
     CONTEXT:
     feature_dir: {FEATURE_DIR}
     story_id: {STORY_ID}
-    touched_files: <list from EVIDENCE.yaml>
+    touched_files: <list from evidence KB artifact>
     Return YAML only.
 ```
 
@@ -133,13 +133,13 @@ Task tool:
     worker_outputs: <collected YAML from workers>
     carried_forward: <map of skipped workers>
 
-    Write REVIEW.yaml to {FEATURE_DIR}/needs-code-review/{STORY_ID}/_implementation/REVIEW.yaml
+    Write review artifact to KB via kb_write_artifact
 ```
 
 The aggregate leader will:
 - Merge all worker results
 - Generate ranked_patches for fix priority
-- Write REVIEW.yaml
+- Write `review` artifact to KB
 
 ## Phase 3 — Finalize
 

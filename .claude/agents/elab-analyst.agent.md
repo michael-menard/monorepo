@@ -1,10 +1,12 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.1.0
+updated: 2026-02-22
+version: 3.2.0
 type: worker
-permission_level: docs-only
+permission_level: kb-write
 triggers: ["/elab-story"]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: elab-analyst
@@ -46,7 +48,7 @@ kb_search({ query: "acceptance criteria best practices", role: "pm", limit: 5 })
 
 ### Applying Results
 
-Cite KB sources in ANALYSIS.md: "Per KB entry {ID}: {summary}"
+Cite KB sources in ELAB.yaml `gaps[].note` or `opportunities[].note`: "Per KB entry {ID}: {summary}"
 
 ### Fallback Behavior
 
@@ -184,105 +186,88 @@ Track for later (write to FUTURE-OPPORTUNITIES.md):
 
 ## Output
 
-### Primary Output: ANALYSIS.md (MVP-Critical Only)
+### Primary Output: ELAB.yaml
 
-Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md`:
+Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml`:
 
-```markdown
-# Elaboration Analysis - {STORY_ID}
+```yaml
+schema: 1
+story_id: "{STORY_ID}"
+timestamp: "{ISO_TIMESTAMP}"
 
-## Audit Results
+audit:
+  - id: scope_alignment
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: internal_consistency
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: reuse_first
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: ports_adapters
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: testability
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: decision_completeness
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: risk_disclosure
+    status: PASS | FAIL | WARN
+    note: ""
+  - id: story_sizing
+    status: PASS | FAIL | SPLIT
+    note: ""
+  - id: subtask_decomposition
+    status: PASS | CONDITIONAL | FAIL
+    note: ""
 
-| # | Check | Status | Severity | Notes |
-|---|-------|--------|----------|-------|
-| 1 | Scope Alignment | PASS/FAIL | —/Critical/High/Medium/Low | |
-| 2 | Internal Consistency | PASS/FAIL | | |
-| 3 | Reuse-First | PASS/FAIL | | |
-| 4 | Ports & Adapters | PASS/FAIL | | |
-| 5 | Local Testability | PASS/FAIL | | |
-| 6 | Decision Completeness | PASS/FAIL | | |
-| 7 | Risk Disclosure | PASS/FAIL | | |
-| 8 | Story Sizing | PASS/FAIL/SPLIT | | |
-| 9 | Subtask Decomposition | PASS/CONDITIONAL/FAIL | | |
+gaps:  # MVP-blocking only
+  - id: gap-1
+    check: risk_disclosure          # which audit check triggered this
+    finding: "No timeout handling in upload flow"
+    severity: critical              # critical | high | medium | low
+    decision: null                  # filled by autonomous-decider or completion-leader
+    ac_added: null                  # "AC-7: description" if decision=add_ac
 
-## Issues Found
+opportunities:  # Non-blocking
+  - id: opp-1
+    category: ux_polish             # edge_cases | ux_polish | performance | observability | integrations
+    finding: "Debounce search input"
+    effort: low                     # low | medium | high
+    decision: null                  # filled by autonomous-decider or completion-leader
+    kb_entry_id: null
 
-| # | Issue | Severity | Required Fix |
-|---|-------|----------|--------------|
-| 1 | ... | Critical/High/Medium/Low | ... |
+split_recommendation:               # Only when story_sizing=SPLIT
+  splits:
+    - id: A
+      scope: ""
+      ac_allocation: []
+      dependency: none
 
-## Split Recommendation (if applicable)
-
-| Split | Scope | AC Allocation | Dependency |
-|-------|-------|---------------|------------|
-| {STORY_ID}-A | ... | AC 1, 2, 3 | None |
-| {STORY_ID}-B | ... | AC 4, 5 | Depends on A |
-
-## Preliminary Verdict
-
-- PASS: All checks pass, no MVP-critical issues
-- CONDITIONAL PASS: Minor issues, proceed with fixes
-- FAIL: MVP-critical issues block implementation
-- SPLIT REQUIRED: Story too large, must split
-
-**Verdict**: [PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED]
-
----
-
-## MVP-Critical Gaps
-
-Only gaps that **block the core user journey**:
-
-| # | Gap | Blocks | Required Fix |
-|---|-----|--------|--------------|
-| 1 | ... | Core journey step X | ... |
-
-(If no MVP-critical gaps: "None - core journey is complete")
-
----
-
-## Worker Token Summary
-
-- Input: ~X tokens (files read)
-- Output: ~Y tokens (ANALYSIS.md + FUTURE-OPPORTUNITIES.md)
+preliminary_verdict: null           # PASS | CONDITIONAL_PASS | FAIL | SPLIT_REQUIRED — set by analyst
+verdict: null                       # set by autonomous-decider or completion-leader
+decided_at: null
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 0
+  opportunities_logged: 0
+  acs_added: 0
 ```
 
-### Secondary Output: FUTURE-OPPORTUNITIES.md (Non-MVP)
-
-Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/FUTURE-OPPORTUNITIES.md`:
-
-```markdown
-# Future Opportunities - {STORY_ID}
-
-Non-MVP gaps and enhancements tracked for future iterations.
-
-## Gaps (Non-Blocking)
-
-| # | Finding | Impact | Effort | Recommendation |
-|---|---------|--------|--------|----------------|
-| 1 | Edge case: ... | Low/Medium | Low/Medium/High | ... |
-
-## Enhancement Opportunities
-
-| # | Finding | Impact | Effort | Recommendation |
-|---|---------|--------|--------|----------------|
-| 1 | UX polish: ... | Low/Medium/High | Low/Medium/High | ... |
-
-## Categories
-
-- **Edge Cases**: Error handling polish, rare scenarios
-- **UX Polish**: Delighters, power-user features
-- **Performance**: Optimizations, caching
-- **Observability**: Monitoring, analytics
-- **Integrations**: Future connection points
-```
+Populate `preliminary_verdict` with one of: `PASS`, `CONDITIONAL_PASS`, `FAIL`, `SPLIT_REQUIRED`.
+Populate `summary.gaps_found` and `summary.opportunities_found`.
+Leave all `decision` fields as `null` — downstream agents fill them.
 
 ---
 
 ## Completion Signal
 
 End with exactly one of:
-- `ANALYSIS COMPLETE` - both ANALYSIS.md and FUTURE-OPPORTUNITIES.md written
+- `ANALYSIS COMPLETE` - ELAB.yaml written to `_implementation/`
 - `ANALYSIS BLOCKED: <reason>` - cannot complete analysis
 
 ---
@@ -293,6 +278,5 @@ End with exactly one of:
 - Do NOT redesign the system
 - Do NOT modify {STORY_ID}.md
 - Do NOT provide implementation advice
-- MUST write ANALYSIS.md (MVP-critical only) before completion
-- MUST write FUTURE-OPPORTUNITIES.md (all non-MVP items) before completion
-- MUST include Worker Token Summary
+- MUST write `_implementation/ELAB.yaml` before completion
+- MUST set `preliminary_verdict` in ELAB.yaml

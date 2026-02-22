@@ -11,6 +11,8 @@ model: sonnet
 tools: [Read, Grep, Glob, Bash, Task, TaskOutput]
 kb_tools:
   - kb_update_story_status
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: dev-execute-leader
@@ -26,24 +28,33 @@ kb_tools:
 
 ## Inputs
 
-From filesystem:
-- `_implementation/PLAN.yaml` - Implementation plan
-- `_implementation/SCOPE.yaml` - What surfaces to touch
-- `_implementation/KNOWLEDGE-CONTEXT.yaml` - Lessons/ADRs
-- `_implementation/CHECKPOINT.yaml` - Current phase
+From Knowledge Base (read via `kb_read_artifact`):
+- `plan` artifact — Implementation plan
+- `scope` artifact — What surfaces to touch
+- `context` artifact — Lessons/ADRs
+- `checkpoint` artifact — Current phase
 
-**DO NOT READ**: Full story file, LESSONS-LEARNED.md, ADR-LOG.md (already in KNOWLEDGE-CONTEXT)
+```javascript
+const [plan, scope, context, checkpoint] = await Promise.all([
+  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "plan" }),
+  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "scope" }),
+  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "context" }),
+  kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" }),
+])
+```
+
+**DO NOT READ**: Full story file, LESSONS-LEARNED.md, ADR-LOG.md (already in context artifact)
 
 ---
 
 ## Execution Flow
 
 ### Step 1: Validate Phase
-Read CHECKPOINT.yaml: `current_phase: plan` or `fix`, `blocked: false`
+Use checkpoint artifact: `current_phase: plan` or `fix`, `blocked: false`
 
 ### Step 2: Determine Execution Mode
 
-Read PLAN.yaml and check `schema` field:
+Use plan artifact and check `content.schema` field:
 
 | PLAN schema | Execution mode | Description |
 |-------------|---------------|-------------|
@@ -146,14 +157,39 @@ Task tool:
     Signal: E2E COMPLETE or E2E FAILED: reason
 ```
 
-### Step 8-10: Map ACs to Evidence, Update CHECKPOINT, Write EVIDENCE.yaml
+### Step 8-10: Map ACs to Evidence, Update CHECKPOINT in KB, Write EVIDENCE Artifact
+
+After collecting all evidence, write to KB:
+
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "evidence",
+  phase: "implementation",
+  iteration: checkpoint.content.iteration,
+  content: { /* full EVIDENCE structure */ }
+})
+
+// Update checkpoint
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "checkpoint",
+  phase: "implementation",
+  iteration: checkpoint.content.iteration,
+  content: {
+    ...checkpoint.content,
+    current_phase: "execute",
+    last_successful_phase: "plan"
+  }
+})
+```
 
 ---
 
 ## Output
 
-- `_implementation/EVIDENCE.yaml` (main output)
-- `_implementation/CHECKPOINT.yaml` (updated)
+- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — main output
+- KB artifact: `checkpoint` (updated, phase: implementation)
 - Code files (created/modified by workers)
 
 ---
@@ -200,8 +236,8 @@ kb_update_story_status({
 
 | Rule | Description |
 |------|-------------|
-| Use PLAN.yaml | DO NOT read full story file |
-| Produce EVIDENCE.yaml | This is the critical output |
+| Use plan artifact from KB | DO NOT read full story file |
+| Produce evidence artifact in KB | This is the critical output |
 | Map every AC | Even if MISSING |
 | Run E2E tests | With LIVE resources, no MSW |
 | Passing E2E required | Stories CANNOT complete without |

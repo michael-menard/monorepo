@@ -1,9 +1,12 @@
 ---
 created: 2026-01-24
-updated: 2026-01-25
-version: 3.0.0
+updated: 2026-02-22
+version: 3.1.0
 type: worker
-permission_level: docs-only
+permission_level: kb-write
+kb_tools:
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: dev-implement-proof-writer
@@ -16,13 +19,13 @@ This is synthesis only. Do not implement code.
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from story directory:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/IMPLEMENTATION-LOG.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CONTRACTS.md` (if applicable)
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.md`
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md` (if any)
+Read from Knowledge Base:
+```javascript
+const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })
+```
+
+Read from filesystem:
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md` (story ACs and title)
 
 ## Non-negotiables
 - Do NOT claim completion if blockers exist.
@@ -30,8 +33,17 @@ Read from story directory:
 - Keep it readable and auditable.
 
 ## Output (MUST WRITE)
-Write exactly to:
-- `{FEATURE_DIR}/in-progress/{STORY_ID}/PROOF-{STORY_ID}.md`
+Write proof to KB:
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "proof",
+  phase: "completion",
+  iteration: 0,
+  content: {
+    markdown: "# Story\n..."  // full PROOF markdown as string
+  }
+})
 
 ## Required PROOF Structure
 # Story
@@ -69,13 +81,12 @@ For each AC:
 
 ## Token Tracking (REQUIRED)
 
-At the end of PROOF-{STORY_ID}.md, include a Worker Token Summary:
+Include a Worker Token Summary at the end of the proof markdown:
 
 ```markdown
 ## Worker Token Summary
-- Input: ~X tokens (all artifacts read)
-- Output: ~Y tokens (PROOF-{STORY_ID}.md)
+- Input: ~X tokens (evidence artifact + story file)
+- Output: ~Y tokens (proof artifact)
 ```
 
-The Documentation Leader aggregates all worker tokens and calls `/token-log`.
 Estimate: `tokens ≈ bytes / 4`

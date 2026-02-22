@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 1.1.0
+updated: 2026-02-22
+version: 1.2.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story"]
@@ -9,6 +9,9 @@ replaces: [dev-implement-planning-leader, dev-implement-planner, dev-implement-p
 schema: packages/backend/orchestrator/src/artifacts/plan.ts
 skills_used:
   - /token-log
+kb_tools:
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: dev-plan-leader
@@ -38,11 +41,12 @@ This is a single leader that replaces the previous planning-leader + planner + v
 
 From filesystem:
 - `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md` - Story file (ACs section only)
-- `_implementation/CHECKPOINT.yaml` - Current phase
-- `_implementation/SCOPE.yaml` - What surfaces are touched
 
-From Knowledge Context Loader (spawned worker):
-- `_implementation/KNOWLEDGE-CONTEXT.yaml` - Lessons + ADRs
+From Knowledge Base (read via `kb_read_artifact`):
+- `checkpoint` artifact — Current phase
+- `scope` artifact — What surfaces are touched
+- `context` artifact — Lessons + ADRs (written by knowledge-context-loader)
+- `elaboration` artifact — Autonomous decisions (if elab ran)
 
 ---
 
@@ -50,13 +54,20 @@ From Knowledge Context Loader (spawned worker):
 
 ### Step 1: Validate Phase
 
-Read CHECKPOINT.yaml and verify:
-- `current_phase: setup` (previous phase completed)
-- `blocked: false`
+Read checkpoint from KB and verify:
+```javascript
+const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+// Verify: checkpoint.content.current_phase === "setup" && !checkpoint.content.blocked
+```
 
 If not valid, signal `PLANNING BLOCKED: Invalid checkpoint state`
 
 ### Step 2: Load Knowledge Context
+
+Read scope from KB (needed to spawn context loader with correct domain):
+```javascript
+const scope = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "scope" })
+```
 
 Spawn knowledge-context-loader worker:
 
@@ -70,13 +81,23 @@ Task tool:
 
     CONTEXT:
     story_id: {STORY_ID}
-    story_domain: {domain from SCOPE.yaml}
-    story_scope: {summary from SCOPE.yaml}
+    story_domain: {domain from scope.content}
+    story_scope: {summary from scope.content}
     feature_dir: {FEATURE_DIR}
-    output_path: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/KNOWLEDGE-CONTEXT.yaml
 ```
 
-Wait for `KNOWLEDGE-CONTEXT COMPLETE` signal.
+Wait for `KNOWLEDGE-CONTEXT COMPLETE` signal. The loader writes a `context` artifact to KB.
+
+Then read context from KB:
+```javascript
+const context = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "context" })
+```
+
+If elab ran, also read elaboration decisions:
+```javascript
+const elaboration = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "elaboration" })
+// May be null if elab was skipped
+```
 
 ### Step 3: Read Story ACs, Subtasks, and Canonical References
 
@@ -92,7 +113,7 @@ If no subtasks are present, fall back to generating steps from ACs and SCOPE.yam
 
 ### Step 4: Generate PLAN.yaml
 
-Based on SCOPE.yaml, KNOWLEDGE-CONTEXT.yaml, ACs, and **subtasks** (if present), generate:
+Based on scope, context, ACs, and **subtasks** (if present), generate:
 
 **When subtasks are present** — map 1:1 from story subtasks:
 
@@ -198,24 +219,40 @@ architectural_decisions:
     decided_by: user
 ```
 
-### Step 7: Update CHECKPOINT.yaml
+### Step 7: Update Checkpoint in KB
 
-```yaml
-current_phase: plan
-last_successful_phase: setup
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "checkpoint",
+  phase: "planning",
+  iteration: checkpoint.content.iteration,
+  content: {
+    ...checkpoint.content,
+    current_phase: "plan",
+    last_successful_phase: "setup"
+  }
+})
 ```
 
-### Step 8: Write PLAN.yaml
+### Step 8: Write Plan Artifact to KB
 
-Write to: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN.yaml`
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "plan",
+  phase: "planning",
+  iteration: 0,
+  content: { /* full PLAN structure as defined above */ }
+})
 
 ---
 
 ## Output
 
-- `_implementation/PLAN.yaml`
-- `_implementation/KNOWLEDGE-CONTEXT.yaml` (from worker)
-- `_implementation/CHECKPOINT.yaml` (updated)
+- KB artifact: `plan` (story_id, phase: planning, iteration: 0)
+- KB artifact: `context` (written by knowledge-context-loader worker)
+- KB artifact: `checkpoint` (updated, phase: planning)
 
 ---
 

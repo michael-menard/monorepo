@@ -88,16 +88,15 @@ Signal: AUTONOMOUS DECISIONS COMPLETE: <verdict>
 ```
 
 The autonomous decider will:
-1. Parse ANALYSIS.md for MVP-critical gaps
-2. Parse FUTURE-OPPORTUNITIES.md for non-blocking items
-3. Auto-add MVP gaps as new ACs to the story
-4. Spawn kb-writer for each non-blocking finding
-5. Write DECISIONS.yaml with all choices made
-6. Return verdict for completion phase
+1. Read `analysis` KB artifact for MVP-critical gaps and future opportunities
+2. Auto-add MVP gaps as new ACs to the story
+3. Spawn kb-writer for each non-blocking finding
+4. Write `elaboration` KB artifact with all choices made
+5. Return verdict for completion phase
 
 **IF interactive (default):**
 
-1. Read `_implementation/ANALYSIS.md`
+1. Read `analysis` artifact from KB
 2. Count gaps and enhancements
 3. Ask: "Discuss [N] gaps and [M] enhancements? (yes/no)"
 4. For each finding, collect decision:
@@ -112,7 +111,7 @@ The autonomous decider will:
 ```
 Task: haiku, "Phase 2 Completion {STORY_ID}"
 Read: .claude/agents/elab-completion-leader.agent.md
-Include: verdict from DECISIONS.yaml, decisions from DECISIONS.yaml
+Include: verdict from elaboration KB artifact, decisions from elaboration KB artifact
 Signal: ELABORATION COMPLETE: <verdict>
 ```
 

@@ -1,11 +1,13 @@
 ---
 created: 2026-02-01
-updated: 2026-02-11
-version: 2.0.0
+updated: 2026-02-22
+version: 2.1.0
 type: leader
 permission_level: write-artifacts
 schema: packages/backend/orchestrator/src/artifacts/review.ts
 triggers: ["/dev-code-review"]
+kb_tools:
+  - kb_write_artifact
 ---
 
 # Agent: review-aggregate-leader
@@ -45,11 +47,23 @@ From orchestrator context:
    - total_warnings: sum of all worker warnings
    - auto_fixable_count: count of auto-fixable findings
 
-5. **Write REVIEW.yaml**
+5. **Write Review Artifact to KB**
 
 ## Output Format
 
-Write to `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml`:
+Write to KB via `kb_write_artifact`:
+
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "review",
+  phase: "code_review",
+  iteration: {iteration},
+  content: { /* REVIEW structure below */ }
+})
+```
+
+Full content structure:
 
 ```yaml
 schema: 1

@@ -79,9 +79,11 @@ import {
   kb_write_artifact,
   kb_read_artifact,
   kb_list_artifacts,
+  kb_delete_artifact,
   KbWriteArtifactInputSchema,
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
+  KbDeleteArtifactInputSchema,
 } from '../crud-operations/artifact-operations.js'
 import {
   kb_get_story,
@@ -3484,6 +3486,63 @@ export async function handleKbListArtifacts(
   }
 }
 
+/**
+ * Handle kb_delete_artifact tool invocation.
+ *
+ * Delete a workflow artifact by its UUID.
+ */
+export async function handleKbDeleteArtifact(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_delete_artifact tool invoked', {
+    correlation_id: correlationId,
+    artifact_id: inputObj?.artifact_id,
+  })
+
+  try {
+    // Authorization check
+    enforceAuthorization('kb_delete_artifact', context)
+
+    const validated = KbDeleteArtifactInputSchema.parse(input)
+
+    const deleted = await kb_delete_artifact(validated.artifact_id, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_delete_artifact succeeded', {
+      correlation_id: correlationId,
+      artifact_id: validated.artifact_id,
+      deleted,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ deleted, artifact_id: validated.artifact_id }, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_delete_artifact failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
 // ============================================================================
 // Story Status Handlers
 // ============================================================================
@@ -4085,6 +4144,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_write_artifact: handleKbWriteArtifact,
   kb_read_artifact: handleKbReadArtifact,
   kb_list_artifacts: handleKbListArtifacts,
+  kb_delete_artifact: handleKbDeleteArtifact,
   // Story status tools
   kb_get_story: handleKbGetStory,
   kb_list_stories: handleKbListStories,

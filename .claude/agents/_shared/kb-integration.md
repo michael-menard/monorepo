@@ -288,6 +288,97 @@ Before marking work complete, verify:
 
 ---
 
+---
+
+## Story Artifact Read/Write (MANDATORY STANDARD)
+
+All workflow artifacts — CHECKPOINT, SCOPE, PLAN, EVIDENCE, REVIEW, ANALYSIS, VERIFICATION, PROOF, etc. — MUST be written to and read from the Knowledge Base via `kb_write_artifact` and `kb_read_artifact`. **File-based artifacts in `_implementation/` directories are deprecated.** Do NOT create `_implementation/` directories or write artifact YAML/MD files.
+
+### Write Pattern
+
+```javascript
+// Write an artifact to KB (upsert by story_id + artifact_type + iteration)
+await kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "checkpoint",   // See types below
+  phase: "setup",                // See phases below
+  iteration: 0,                  // Fix iteration (default: 0)
+  content: {
+    // Full artifact content as JSONB
+    schema: 1,
+    story_id: "{STORY_ID}",
+    current_phase: "planning",
+    // ...
+  }
+})
+```
+
+### Read Pattern
+
+```javascript
+// Read the latest artifact of a given type for a story
+const artifact = await kb_read_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "checkpoint"
+})
+
+// Access content
+const phase = artifact.content.current_phase
+```
+
+### Artifact Type Reference
+
+| File (deprecated) | artifact_type | phase | Written By |
+|---|---|---|---|
+| CHECKPOINT.yaml | `checkpoint` | `setup` | dev-setup-leader |
+| SCOPE.yaml | `scope` | `setup` | dev-setup-leader |
+| FIX-CONTEXT.yaml | `fix_summary` | `implementation` | dev-setup-leader (fix mode) |
+| PLAN.yaml | `plan` | `planning` | dev-plan-leader |
+| KNOWLEDGE-CONTEXT.yaml | `context` | `planning` | knowledge-context-loader |
+| EVIDENCE.yaml | `evidence` | `implementation` | dev-execute-leader |
+| REVIEW.yaml | `review` | `code_review` | review-aggregate-leader |
+| ANALYSIS.md + FUTURE-OPPORTUNITIES.md | `analysis` | `analysis` | elab-analyst |
+| DECISIONS.yaml | `elaboration` | `analysis` | elab-autonomous-decider |
+| QA-VERIFY.yaml / VERIFICATION.yaml | `verification` | `qa_verification` | qa-verify-verification-leader |
+| PROOF-{ID}.md | `proof` | `completion` | dev-implement-proof-writer |
+
+Valid `phase` values: `setup`, `analysis`, `planning`, `implementation`, `code_review`, `qa_verification`, `completion`
+
+### working-set.md
+
+Use `kb_sync_working_set` (not file write) to update the story's working state:
+
+```javascript
+await kb_sync_working_set({
+  story_id: "{STORY_ID}",
+  content: "## Current State\n..."
+})
+```
+
+### Frontmatter Declaration
+
+Agents that read/write artifacts declare them in frontmatter:
+
+```yaml
+---
+kb_tools:
+  - kb_write_artifact    # Write story artifacts
+  - kb_read_artifact     # Read story artifacts
+  - kb_list_artifacts    # List artifacts for a story
+---
+```
+
+### Artifact Non-Negotiables
+
+| Rule | Enforcement |
+|------|-------------|
+| KB-only artifacts | NEVER write artifact files to `_implementation/` |
+| No `_implementation/` dirs | Do NOT create `_implementation/` directories |
+| Upsert safe | `kb_write_artifact` upserts — safe to call multiple times |
+| Read before downstream | Always read artifact from KB, never assume file exists |
+
+---
+
 ## Non-Negotiables
 
 | Rule | Enforcement |
@@ -296,3 +387,4 @@ Before marking work complete, verify:
 | Cite sources | MUST reference KB in decisions |
 | Capture lessons | Leaders MUST write blockers/solutions |
 | No silent skips | Log if KB unavailable or empty results |
+| KB-only artifacts | MUST use `kb_write_artifact` / `kb_read_artifact` for all workflow artifacts |
