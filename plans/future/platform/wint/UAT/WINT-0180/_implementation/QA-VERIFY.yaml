@@ -1,0 +1,98 @@
+schema: 1
+story_id: "WINT-0180"
+timestamp: "2026-02-21T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: false
+tests_not_executed_reason: "Documentation-only chore story — no TypeScript/JS files, no test suite exists. e2e_gate: exempt (story_type: chore)."
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_threshold_note: "Coverage threshold not applicable — documentation-only story with no executable code."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes: "No test code present. FRAMEWORK.md checked for prose anti-patterns (TODO, FIXME, HACK) — none found."
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    verification_run: "test -f .claude/prompts/role-packs/FRAMEWORK.md && echo 'PASS' → exit 0"
+    notes: "File exists and is 298 lines (non-empty)."
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    verification_run: "grep -i 'minimal working example' + grep -i 'pattern skeleton' → both found"
+    notes: "Pattern Skeleton Template section present. Skeleton constraints subsection defines 10-25 line core body constraint. Minimal Working Example shows 17-line conformant spec. Required sections (Decision Rule, Positive Examples, Negative Example, Proof Requirements) all present in template."
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    verification_run: "grep -E 'role-packs/\\{role\\}|role-packs/_specs' → 4 matches"
+    notes: "Directory structure documented with path purposes table. Both role-packs/{role}.md and role-packs/_specs/{pattern}.md paths present with purpose descriptions."
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    verification_run: "grep -E '150|300' → 5 matches"
+    notes: "Token Budget section defines 150 token minimum and 300 token maximum for role instruction files. Line-count proxy (~1 line ≈ 5-10 tokens, midpoint formula line_count × 7) documented. Pattern skeleton 10-25 line constraint also present."
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    verification_run: "grep -E 'when:.*ac_count|when:.*verification_command|WRONG' → all found"
+    notes: "Decision Rule Format section uses when/then/else structure. Two worked boolean/threshold examples present. WRONG anti-pattern (prose rule) labelled explicitly."
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    verification_run: "grep -E 'verification_command|expected_artifact|escalation' → template and worked examples found"
+    notes: "Proof Requirements Format section defines verification_command, expected_artifact, and escalation template. Two worked examples provided. Grandfathered gap note for existing _specs/ files present."
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    verification_run: "grep -c -E 'kb_search|sidecar|prompts/role-packs' → 16 matches (>= 3 required)"
+    notes: "Three delivery mechanisms documented: file-based injection, KB MCP kb_search, context-pack sidecar. Each includes usage guidance, best-for description, and code snippet. Mechanism precedence order defined."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    verification_run: "git diff HEAD -- .claude/prompts/role-packs/_specs/ | wc -c | xargs test 0 -eq → exit 0"
+    notes: "Zero bytes of diff against _specs/ — both patch-queue-pattern.md and repair-loop-pattern.md unmodified. Grandfathered conformance documented in FRAMEWORK.md. Fix iteration 1 resolved F-2 (line count clarification): 10-25 line constraint is core-body-only, not total file length."
+
+architecture_compliant: true
+architecture_notes: "No ADRs applicable (documentation-only story). KNOWLEDGE-CONTEXT.yaml confirms adrs_applicable: []. Markdown structure follows internal conventions from existing _specs/ pattern files."
+
+issues: []
+
+lessons_to_record:
+  - lesson: "For documentation-only chore stories, code review workers (lint, typecheck, build, react, typescript, accessibility) are all N/A. Only style, syntax, security, and reusability workers apply. This reduces review scope significantly."
+    category: pattern
+    tags: ["chore", "docs-only", "code-review"]
+
+  - lesson: "When a framework document must grandfather existing files, an explicit 'Grandfathered gap' subsection with precise scope wording (e.g., 'core body only, not total file length') is the correct approach. This prevents future conformance disputes without requiring retroactive edits."
+    category: pattern
+    tags: ["documentation", "framework", "conformance"]
+
+  - lesson: "Fix iteration on a documentation story may be needed to resolve template self-reference ambiguity (the reference template demonstrating all sections was initially counted toward the 10-25 line constraint it was describing). A 'Minimal Working Example' subsection solves this by showing a concrete conformant spec separately."
+    category: pattern
+    tags: ["documentation", "template-design", "ambiguity"]
+
+tokens:
+  in: 9500
+  out: 1800
+
+gate:
+  decision: PASS
+  reason: "All 8 ACs verified, documentation complete, framework properly structures role pack examples with token budgets, decision rules, proof requirements, and three delivery mechanisms. Existing _specs/ patterns validated as conformant without modification."
+  blocking_issues: []

@@ -18,7 +18,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | completed | 2 |
 | uat | 18 |
 | in-qa | 0 |
-| ready-for-qa | 2 |
+| ready-for-qa | 1 |
 | needs-code-review | 0 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
@@ -38,7 +38,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| WINT-0180 | Define Examples + Negative Examples Framework | — |
+| WINT-0210 | Populate Role Pack Templates | — |
 | WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-4060 | Create scope-defender Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
@@ -387,9 +387,10 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0180: Define Examples + Negative Examples Framework
 
-**Status:** ready-for-qa
-**Verdict:** CONDITIONAL PASS
+**Status:** uat
+**Verdict:** PASS
 **Elaboration Complete:** 2026-02-14
+**QA Verification Complete:** 2026-02-21
 **Depends On:** none
 **Phase:** 0
 **Feature:** Create framework for role packs with max 2 positive + 1 negative example per role. Define pattern skeleton format (10-25 lines), decision rule + proof requirements. Establish where examples live: prompts/role-packs/*, KB MCP, context-pack sidecar injection.

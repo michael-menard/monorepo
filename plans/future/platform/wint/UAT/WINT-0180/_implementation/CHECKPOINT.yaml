@@ -1,7 +1,7 @@
 schema: 1
 story_id: WINT-0180
-current_phase: done
-last_successful_phase: review
+current_phase: qa-verify-completion
+last_successful_phase: qa-verify
 iteration: 1
 max_iterations: 3
 started_at: "2026-02-21T00:00:00Z"
@@ -17,3 +17,5 @@ files_created:
 evidence_written: true
 review_verdict: PASS
 review_iterations: 2
+qa_verdict: PASS
+qa_iteration: 1
