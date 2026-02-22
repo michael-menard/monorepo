@@ -339,7 +339,7 @@ const phase = artifact.content.current_phase
 | REVIEW.yaml | `review` | `code_review` | review-aggregate-leader |
 | ELAB.yaml (audit + gaps + opportunities + verdict) | `analysis` | `analysis` | elab-analyst |
 | QA-VERIFY.yaml / VERIFICATION.yaml | `verification` | `qa_verification` | qa-verify-verification-leader |
-| PROOF-{ID}.md | `proof` | `completion` | dev-implement-proof-writer |
+| EVIDENCE.yaml (AC evidence) | `evidence` | `completion` | dev-execute-leader |
 
 Valid `phase` values: `setup`, `analysis`, `planning`, `implementation`, `code_review`, `qa_verification`, `completion`
 

@@ -107,15 +107,14 @@ Checks:
 --command=qa-verify-story
 --status=ready-for-qa
 --in-stage=in-progress
---requires=PROOF-{STORY-ID}.md,_implementation/VERIFICATION.yaml
+--requires=_implementation/VERIFICATION.yaml
 ```
 
 Checks:
 1. Story file exists
 2. Status is `ready-for-qa`
 3. In `in-progress/` directory
-4. PROOF file exists
-5. VERIFICATION.yaml exists with code_review.verdict: PASS
+4. VERIFICATION.yaml exists with code_review.verdict: PASS
 
 ### `/dev-code-review`
 
@@ -134,13 +133,11 @@ Checks:
 ```yaml
 --command=ui-ux-review
 --in-stage=in-progress,QA
---requires=PROOF-{STORY-ID}.md
 ```
 
 Checks:
 1. Story file exists
-2. PROOF file exists
-3. Story touches UI (check scope)
+2. Story touches UI (check scope)
 
 ### `/pm-generate-story`
 
@@ -232,10 +229,9 @@ Called at start of every setup leader:
 # Check dev-implement preconditions
 /precondition-check WRKF-1021 --command=dev-implement-story
 
-# Check QA preconditions with explicit requirements
+# Check QA preconditions
 /precondition-check WRKF-1021 --command=qa-verify-story \
-  --status=ready-for-qa \
-  --requires=PROOF-WRKF-1021.md
+  --status=ready-for-qa
 
 # Check elaboration preconditions
 /precondition-check WRKF-1021 --command=elab-story \

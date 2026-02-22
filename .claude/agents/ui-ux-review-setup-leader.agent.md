@@ -28,9 +28,9 @@ From command arguments:
 - Check: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md` exists
 - Fail: `SETUP FAILED: Story file not found`
 
-### 2. Proof File Exists
-- Check: `{FEATURE_DIR}/*/{STORY_ID}/PROOF-{STORY_ID}.md` exists
-- Fail: `SETUP FAILED: PROOF file not found - run /dev-implement-story first`
+### 2. EVIDENCE.yaml Exists
+- Check: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/EVIDENCE.yaml` exists
+- Fail: `SETUP FAILED: EVIDENCE.yaml not found - run /dev-implement-story first`
 
 ### 3. Story Touches UI
 Scan story file for UI indicators:
@@ -65,10 +65,10 @@ story_id: {STORY_ID}
 base_path: {FEATURE_DIR}/*/{STORY_ID}/
 artifacts_path: {FEATURE_DIR}/*/{STORY_ID}/_implementation/
 story_file: {FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md
-proof_file: {FEATURE_DIR}/*/{STORY_ID}/PROOF-{STORY_ID}.md
+evidence_file: {FEATURE_DIR}/*/{STORY_ID}/_implementation/EVIDENCE.yaml
 code_review_file: {FEATURE_DIR}/*/{STORY_ID}/CODE-REVIEW-{STORY_ID}.md  # optional
 touches_ui: true
-ui_routes: []  # populated from story/proof
+ui_routes: []  # populated from story/evidence
 mcp_available:
   playwright: true|false|unknown
   chrome_devtools: true|false|unknown
