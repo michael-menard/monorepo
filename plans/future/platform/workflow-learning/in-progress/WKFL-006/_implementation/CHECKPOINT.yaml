@@ -5,7 +5,7 @@ worktree: "tree/story/WKFL-006"
 branch: "story/WKFL-006"
 timestamp: "2026-02-22T00:00:00Z"
 
-current_phase: proof
+current_phase: review
 last_successful_phase: execute
 iteration: 1
 e2e_gate: exempt
