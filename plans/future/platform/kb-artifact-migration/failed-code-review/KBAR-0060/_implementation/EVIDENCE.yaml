@@ -76,9 +76,9 @@ acceptance_criteria:
 
 touched_files:
   - path: "packages/backend/kbar-sync/src/__tests__/helpers/testcontainers.ts"
-    action: created
-    lines: 264
-    description: "Shared testcontainers helper: SKIP_TESTCONTAINERS guard, startKbarTestContainer, applyKbarSchema (6 enums + 7 tables), createTempDir (under cwd/plans/), stopKbarTestContainer, removeTempDir"
+    action: modified
+    lines: 297
+    description: "Fix: replaced TypeScript interface TestContainerContext with Zod schema (TestContainerContextSchema + z.infer<>) per CLAUDE.md Zod-first-types rule. Added 'import { z } from zod'."
 
   - path: "packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts"
     action: created
@@ -92,8 +92,8 @@ touched_files:
 
   - path: "packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts"
     action: modified
-    lines: 302
-    description: "Fixed pre-existing KBAR-0050 issues: CREATE TYPE IF NOT EXISTS replaced with DO $$ BEGIN ... EXCEPTION pattern, added POSTGRES_USERNAME env var, testDir moved to cwd/plans/ for validateFilePath compatibility"
+    lines: 232
+    description: "Fix: eliminated duplicated testcontainer setup (startKbarTestContainer, applyKbarSchema, createEnumSql, createTempDir) — now imports from shared helper at src/__tests__/helpers/testcontainers.ts. beforeAll reduced from ~140 lines to 10 lines."
 
   - path: "packages/backend/kbar-sync/vitest.integration.config.ts"
     action: modified
@@ -105,6 +105,11 @@ commands_run:
     result: SUCCESS
     output: "No type errors"
     timestamp: "2026-02-20T22:50:00Z"
+
+  - command: "pnpm --filter @repo/kbar-sync check-types"
+    result: SUCCESS
+    output: "No type errors (post-fix: Zod schema + interface removal, shared helper import)"
+    timestamp: "2026-02-21T16:30:00Z"
 
   - command: "pnpm --filter @repo/kbar-sync build"
     result: SUCCESS
