@@ -1,0 +1,49 @@
+schema: 1
+story_id: WINT-0250
+timestamp: '2026-02-22T01:30:00Z'
+verdict: FAIL
+iteration: 1
+
+acceptance_criteria:
+  - ac_id: AC-1
+    verdict: PASS
+    evidence: "File exists at .claude/config/escalation-rules.yaml. YAML valid (ruby parser). Meta block has version:1, created:'2026-02-21', owner_story:WINT-0250, tier_definitions_source:.claude/config/model-strategy.yaml."
+
+  - ac_id: AC-2
+    verdict: PASS
+    evidence: "graduated_chain has exactly 3 rules. Rule 1: from:Local, trigger:failure_count, threshold:2, to:API-Cheap. Rule 2: from:API-Cheap, trigger:confidence_below, threshold:0.70, to:API-Mid. Rule 3: from:API-Mid, trigger:failure_or_uncertainty, to:API-High."
+
+  - ac_id: AC-3
+    verdict: PASS
+    evidence: "hard_bypass has exactly 2 rules. Bypass 1: condition:task_decision_type, value:security_or_architecture, to:API-High. Bypass 2: condition:task_label, value:critical, to:API-High."
+
+  - ac_id: AC-4
+    verdict: PASS
+    evidence: "escalation_log_schema.fields has 8 entries with correct names, types, and required markers: from_tier(string,req), to_tier(string,req), task_type(string,req), reason(string,req), failure_count(int,opt), confidence_score(float,opt), timestamp(string/ISO8601,req), bypass_rule(boolean,req)."
+
+  - ac_id: AC-5
+    verdict: PASS
+    evidence: "model-strategy.yaml absent. Tier names use seed defaults (Local, API-Cheap, API-Mid, API-High). TODO(WINT-0220) comment at lines 41-43."
+
+  - ac_id: AC-6
+    verdict: FAIL
+    evidence: |
+      Inline comments exist on lines 60 and 70 and reference WINT-0270, but are missing the concrete
+      tuning guidance values required by AC-6:
+      - Line 60 (threshold: 2): Missing "tune down to 1 for fast-fail tasks, up to 3 for flaky tasks"
+      - Line 70 (threshold: 0.70): Missing "set to 0.80 for high-stakes tasks, 0.60 for exploratory tasks"
+      Block comments above rules contain partial rationale but not the required numeric alternatives.
+    fix_guidance: |
+      Expand the inline comments on lines 60 and 70 to include the specific tuning values:
+      Line 60: Add "tune down to 1 for fast-fail tasks, up to 3 for flaky tasks; recalibrate after WINT-0270"
+      Line 70: Add "set to 0.80 for high-stakes tasks, 0.60 for exploratory tasks; recalibrate after WINT-0270"
+
+  - ac_id: AC-7
+    verdict: PASS
+    evidence: "git diff main...HEAD -- .claude/config/ shows only escalation-rules.yaml as new file. No other files modified."
+
+  - ac_id: AC-8
+    verdict: PASS
+    evidence: "Lines 1-35 cover all 4 topics: (1) PURPOSE, (2) CONSUMER (llm-router/WINT-0230), (3) HOW TO TUNE THRESHOLDS, (4) WINT-0270 BENCHMARK CALIBRATION."
+
+summary: "7/8 ACs pass. AC-6 fails due to missing concrete tuning guidance values in inline comments. Fix is minimal: expand two inline comments."

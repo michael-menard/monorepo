@@ -1,0 +1,23 @@
+story_id: WINT-0250
+updated: '2026-02-21'
+fix_iteration: 1
+
+touched_files:
+  - path: .claude/config/escalation-rules.yaml
+    worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/WINT-0250/.claude/config/escalation-rules.yaml
+    change: Updated inline comments on graduated_chain thresholds to include tuning guidance
+
+fixes_applied:
+  - issue: Line 60 comment lacked tuning guidance for failure_count threshold
+    fix: Added "Tune down to 1 for fast-fail tasks, up to 3 for flaky tasks; recalibrate after WINT-0270 benchmark results"
+    severity: high
+    source: QA-VERIFY.yaml / FIX-CONTEXT.yaml
+
+  - issue: Line 70 comment lacked tuning guidance for confidence_below threshold
+    fix: Added "Set to 0.80 for high-stakes tasks, 0.60 for exploratory tasks; recalibrate after WINT-0270 benchmark results"
+    severity: high
+    source: QA-VERIFY.yaml / FIX-CONTEXT.yaml
+
+commands_run:
+  - description: Verified edits applied correctly by re-reading modified lines 54-72
+    result: Both comments updated as required

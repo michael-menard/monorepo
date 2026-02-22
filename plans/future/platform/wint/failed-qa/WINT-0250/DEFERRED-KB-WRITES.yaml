@@ -1,0 +1,214 @@
+# Deferred KB Writes — WINT-0250
+# Generated: 2026-02-21
+# Updated: 2026-02-21 (elab-autonomous-decider added 9 future-opportunity entries)
+# Reason: KB unavailable during story generation and elaboration. Retry after KB is live.
+
+pending_writes:
+  # --- Story registration (from story generation phase) ---
+  - table: stories
+    operation: upsert
+    data:
+      story_id: WINT-0250
+      feature: wint
+      title: "Define Escalation Rules for Multi-Model Routing (Graduated Chain + Hard Bypass)"
+      story_dir: plans/future/platform/wint/backlog/WINT-0250
+      story_file: plans/future/platform/wint/backlog/WINT-0250/WINT-0250.md
+      story_type: chore
+      points: 2
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      touches_config: true
+    retry_after: "WINT-0010"
+    notes: "Depends on core schema existing (WINT-0010) before stories table is available"
+
+  # --- Non-blocking findings from elab-autonomous-decider (2026-02-21) ---
+
+  # Gap #1: Local tier sub-progression
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Edge Case: Local Tier Sub-Progression**
+      - **Finding**: `graduated_chain` rule `from: Local` groups Local-Small and Local-Large under
+        a single shared failure count. A task that fails twice on Local-Small but succeeds on
+        Local-Large would still escalate to API-Cheap instead of being retried at Local-Large first.
+      - **Impact**: Medium | **Effort**: Medium
+      - **Recommendation**: After WINT-0270 benchmark results are available, introduce a sub-tier
+        progression: Local-Small → Local-Large → API-Cheap, replacing the flat `from: Local` rule.
+        Schema addition to `graduated_chain`, backward-compatible via version bump.
+    additional_tags:
+      - "non-blocking"
+      - "edge-case"
+      - "future-work"
+      - "local-tier-progression"
+      - "wint-0270-dependency"
+
+  # Gap #2: task_label critical mechanism unspecified
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Edge Case: task_label Critical Mechanism Unspecified**
+      - **Finding**: `hard_bypass` rule `condition: task_label, value: critical` has no story in the
+        current phase defining how the `critical` label is applied to task metadata. If llm-router
+        (WINT-0230) has no tagging mechanism, the bypass rule is unreachable at runtime.
+      - **Impact**: Medium | **Effort**: Low
+      - **Recommendation**: WINT-0230 elaboration must explicitly define how task labels are set —
+        either as a field in the `llm.complete(...)` call options or derived from story metadata.
+        An inline comment in escalation-rules.yaml would clarify intent for implementers.
+    additional_tags:
+      - "non-blocking"
+      - "edge-case"
+      - "future-work"
+      - "task-label-mechanism"
+      - "wint-0230-dependency"
+
+  # Gap #3: Missing story_id / session_id in escalation_log_schema
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Observability: Missing story_id / session_id in escalation_log_schema**
+      - **Finding**: `escalation_log_schema` has no `session_id` or `story_id` field. WINT-0260
+        (cost tracking) needs to aggregate escalation events per story. Without a story-level
+        grouping key, cost attribution becomes approximate.
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: When WINT-0260 elaboration begins, evaluate adding `story_id`
+        (string, optional) and `session_id` (string, optional) to escalation_log_schema.
+        Non-breaking, backward-compatible additions.
+    additional_tags:
+      - "non-blocking"
+      - "observability"
+      - "monitoring"
+      - "cost-attribution"
+      - "wint-0260-dependency"
+
+  # Gap #4: No API-High fallback rule
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Edge Case: No API-High Fallback Rule Defined**
+      - **Finding**: No rule for `API-High → [anything]`. Current rules only define upward promotion.
+        If a hard bypass fires and API-High (Claude) itself returns low confidence or an error,
+        there is no defined fallback or retry behavior.
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Post-MVP de-escalation story (deferred per Non-goals) should address
+        API-High failure modes explicitly. In the interim, a YAML comment in `hard_bypass` noting
+        this gap clarifies intent for llm-router implementers.
+    additional_tags:
+      - "non-blocking"
+      - "edge-case"
+      - "future-work"
+      - "api-high-failure-modes"
+      - "de-escalation"
+
+  # Enhancement #1: Per-task-type threshold overrides
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Performance: Per-Task-Type Threshold Overrides**
+      - **Finding**: `failure_count: 2` threshold applies globally across all task types. Repair loops
+        and other flaky task types would benefit from per-task-type overrides (e.g., `failure_count: 3`
+        for `repair-loop` tasks). Current schema does not support this.
+      - **Impact**: Medium | **Effort**: Medium
+      - **Recommendation**: Add optional `per_task_type_overrides` subsection to `graduated_chain`
+        rules in a v1.1.0 revision. Additive, non-breaking. Defer until WINT-0270 benchmark data
+        confirms which task types need different thresholds.
+    additional_tags:
+      - "non-blocking"
+      - "performance"
+      - "optimization"
+      - "per-task-type-thresholds"
+      - "wint-0270-dependency"
+
+  # Enhancement #2: duration_ms field in escalation_log_schema
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Observability: Add duration_ms to escalation_log_schema**
+      - **Finding**: `escalation_log_schema` does not include a `duration_ms` field (time spent in
+        the failed tier before escalating). WINT-0260 cost analysis would benefit from latency
+        attribution to identify tiers that fail slowly.
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Add `duration_ms` (integer, optional) to escalation_log_schema in a
+        future revision. Non-breaking additive field. No impact on WINT-0250 scope.
+    additional_tags:
+      - "non-blocking"
+      - "observability"
+      - "monitoring"
+      - "latency-attribution"
+      - "wint-0260-dependency"
+
+  # Enhancement #3: Inline CHANGELOG section
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] UX Polish: Add Inline CHANGELOG to escalation-rules.yaml**
+      - **Finding**: The README comment block (AC-8) does not include a change history. Config files
+        that evolve over time benefit from an inline `# CHANGELOG` section for quick audit of
+        what changed between versions.
+      - **Impact**: Low | **Effort**: Low
+      - **Recommendation**: Add inline YAML comment `# CHANGELOG` section as a post-MVP polish item,
+        once thresholds have been tuned at least once after WINT-0270. Not needed for initial authoring.
+    additional_tags:
+      - "non-blocking"
+      - "ux-polish"
+      - "enhancement"
+      - "config-hygiene"
+
+  # Enhancement #4: Simulation mode for escalation rules
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] UX Polish: Simulation Mode for Escalation Rules**
+      - **Finding**: No dry-run mode indicator in graduated chain or hard bypass rules. llm-router
+        implementers have no way to set escalation rules to a simulation/test mode where escalations
+        are logged but not actually executed.
+      - **Impact**: Low | **Effort**: Medium
+      - **Recommendation**: Add optional `meta.mode` field (`production` / `simulation`) in a future
+        version. When set to `simulation`, llm-router logs escalation events without changing the
+        model used. Defer to WINT-0230 implementation phase.
+    additional_tags:
+      - "non-blocking"
+      - "ux-polish"
+      - "enhancement"
+      - "simulation-mode"
+      - "wint-0230-dependency"
+
+  # Enhancement #5: JSON Schema for automated validation
+  - entry_type: finding
+    source_stage: elab
+    story_id: "WINT-0250"
+    category: "future-opportunities"
+    content: |
+      **[WINT-0250] Integration: JSON Schema for escalation-rules.yaml Validation**
+      - **Finding**: No machine-readable schema (JSON Schema or YAML schema) validates
+        escalation-rules.yaml itself. Content audits (TC-2 through TC-5) are manual. As more
+        escalation configs are added, automated CI validation becomes important.
+      - **Impact**: Medium | **Effort**: Medium
+      - **Recommendation**: After WINT-0250 ships, create a companion
+        `schemas/escalation-rules.schema.json` and a lint step. Track as a separate story under
+        WINT Phase 0 tooling improvements. Non-blocking for WINT-0250 QA (documentation-only).
+    additional_tags:
+      - "non-blocking"
+      - "integration"
+      - "future-work"
+      - "json-schema-validation"
+      - "ci-tooling"

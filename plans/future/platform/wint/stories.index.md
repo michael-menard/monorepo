@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-20T12:00:00Z"
+updated_at: "2026-02-21T17:42:00Z"
 ---
 
 # WINT Stories Index
@@ -24,7 +24,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | failed-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 1 |
-| created | 3 |
+| created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 4 |
@@ -401,6 +401,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Reduce scope creep and rework by making "minimum viable" patterns explicit with canonical examples
 
 **Risk Notes:** Must keep examples small (token budget) while remaining useful
+
+**Summary:** All 9 audit checks passed. Zero MVP-critical gaps. Four low-severity findings deferred to implementation. 7 future opportunities logged to KB. Ready for implementation.
 
 ---
 
@@ -1105,7 +1107,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2100: Create session-manager Agent
 
-**Status:** created
+**Status:** ready-to-work
 **Depends On:** WINT-2090
 **Phase:** 2
 **Feature:** Create haiku-powered worker agent that manages session lifecycle
@@ -1115,6 +1117,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 **Goal:** Handle session creation, updates, cleanup
 
 **Risk Notes:** Must prevent session leaks
+
+**Elaboration:** PASS — 0 MVP-critical gaps, 9 non-blocking findings logged to KB, ready for implementation
 
 ---
 
@@ -2234,10 +2238,13 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** uat
-**Story File:** `wint/UAT/WINT-9010/WINT-9010.md`
+**Status:** in-qa
+**Story File:** `wint/UAT/WINT-9010-iteration-2/WINT-9010.md`
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-17
+**Code Review Verdict:** PASS
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
 **Depends On:** WINT-1100
 **Phase:** 9
 **Feature:** Extract business logic from agents into shared TypeScript package that both Claude Code MCP tools and LangGraph nodes can use
