@@ -7,16 +7,19 @@ agents: ["workflow-retro.agent.md"]
 story_id: WKFL-001
 ---
 
-/workflow-retro {STORY_ID} [--batch] [--scope=epic] [--days=N]
+/workflow-retro {STORY_ID} [--batch] [--scope=epic] [--days=N] [--force]
 
 Analyze completed story outcomes and generate workflow improvement proposals.
+
+**Idempotent by default**: stories with an existing `RETRO-{STORY_ID}.yaml` are skipped automatically. Use `--force` to re-analyze.
 
 ## Usage
 
 ```bash
 /workflow-retro WISH-2045                         # Single story retro
-/workflow-retro --batch                           # All completions last 30 days
+/workflow-retro --batch                           # All completions last 30 days (skips already-analyzed)
 /workflow-retro --batch --days=7                  # Completions last 7 days
+/workflow-retro --batch --force                   # Re-analyze all, overwrite existing RETROs
 /workflow-retro --scope=epic plans/future/wishlist  # All done stories in epic
 ```
 
@@ -29,6 +32,7 @@ Analyze completed story outcomes and generate workflow improvement proposals.
 | `--scope=epic` | No | Analyze all done stories in specified epic |
 | `--days=N` | No | Days to look back for batch mode (default: 30) |
 | `--feature-dir` | No | Feature directory path (auto-detected if possible) |
+| `--force` | No | Re-analyze stories that already have RETRO-*.yaml (overwrite) |
 
 *At least one of STORY_ID, --batch, or --scope is required.
 
@@ -43,12 +47,14 @@ Analyze completed story outcomes and generate workflow improvement proposals.
 ```
 
 Analyze one completed story:
-1. Locate story in `done/` directory
-2. Read OUTCOME.yaml, story.yaml; query KB for token data
-3. Calculate token variance, review cycles, phase metrics
-4. Generate RETRO-{STORY_ID}.yaml
-5. Query KB for related patterns
-6. Update WORKFLOW-RECOMMENDATIONS.md if significant patterns found
+1. Check if `_implementation/RETRO-WISH-2045.yaml` already exists — skip if present (unless --force)
+2. Locate story (check `done/`, `plans/_complete/` subdirs)
+3. Read OUTCOME.yaml if present; fallback to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml
+4. Calculate token variance, review cycles, phase metrics
+5. Scan `_implementation/` for pending DEFERRED-KB-WRITE*.yaml files — surface in output
+6. Generate RETRO-{STORY_ID}.yaml
+7. Query KB for related patterns
+8. Update WORKFLOW-RECOMMENDATIONS.md if significant patterns found
 
 ### Batch Mode
 
@@ -57,12 +63,14 @@ Analyze one completed story:
 ```
 
 Analyze all stories completed in time range:
-1. Scan all feature directories for `done/` stories
-2. Filter by completion date (from OUTCOME.yaml)
-3. Aggregate patterns across stories
-4. Detect cross-story correlations
-5. Log significant patterns to KB
-6. Generate comprehensive WORKFLOW-RECOMMENDATIONS.md
+1. Scan all feature directories for stories in `done/` and `plans/_complete/` stage subdirs
+2. **Skip stories where `RETRO-{STORY_ID}.yaml` already exists** (unless --force)
+3. For remaining stories, load metrics (OUTCOME.yaml preferred; fallback to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml)
+4. Scan each `_implementation/` for pending DEFERRED-KB-WRITE*.yaml files
+5. Aggregate patterns across stories
+6. Detect cross-story correlations
+7. Log significant patterns to KB
+8. Generate comprehensive WORKFLOW-RECOMMENDATIONS.md
 
 ### Epic Scope Mode
 
@@ -109,6 +117,7 @@ inputs:
   feature_dir: "{FEATURE_DIR}" | detected
   scope: single | batch | epic
   time_range: "{DAYS} days" | null
+  force: true | false   # whether to re-analyze stories with existing RETRO files
 ```
 
 ---
@@ -128,12 +137,13 @@ Patterns must meet these thresholds to be logged to KB:
 
 ## Prerequisites
 
-Story must be in `done/` directory with:
-- `_implementation/OUTCOME.yaml` - Required
-- `story.yaml` - Required
+Story must be located (in `done/` or `plans/_complete/` stage subdirs) with:
+- `story.yaml` — Required
+- `_implementation/OUTCOME.yaml` — Preferred; fallback if absent
+- `_implementation/CHECKPOINT.yaml` — Used as fallback data source
 - KB `storyTokenUsage` entries — queried automatically
 
-If OUTCOME.yaml is missing, the retro will skip that story with a warning.
+If neither OUTCOME.yaml nor CHECKPOINT.yaml is present, the story is skipped with a warning.
 
 ---
 
@@ -161,6 +171,10 @@ RETROSPECTIVE COMPLETE: 2 patterns detected, 0 KB entries created
 
 Output:
 ```
+Skipping WISH-2040 — RETRO already exists (use --force to re-analyze)
+Skipping WISH-2041 — RETRO already exists (use --force to re-analyze)
+Analyzing: WISH-2045, WISH-2046, WISH-2047
+
 RETROSPECTIVE COMPLETE: 5 patterns detected, 2 KB entries created
 
 High Priority Patterns:
@@ -172,6 +186,9 @@ High Priority Patterns:
 
 Medium Priority Patterns:
 3. Agent Correlation: backend-coder → security-review at 75%
+
+Pending deferred KB writes found (run /kb-flush to process):
+- WISH-2045/_implementation/DEFERRED-KB-WRITES.yaml: 3 entries (status: pending)
 
 WORKFLOW-RECOMMENDATIONS.md updated with proposals.
 ```

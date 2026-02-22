@@ -30,7 +30,7 @@ Retrospective agent that analyzes completed story outcomes, detects patterns, lo
 ## Mission
 
 Establish continuous workflow improvement by:
-1. Loading OUTCOME.yaml from completed stories
+1. Loading story metrics from completed stories (OUTCOME.yaml if present, fallback to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml)
 2. Comparing actual vs estimated metrics
 3. Detecting recurring patterns across stories
 4. Writing significant patterns to KB
@@ -89,14 +89,34 @@ kb_add_lesson({
 - `scope`: `single` | `batch` | `epic` (default: single)
 - `time_range`: Date range for batch analysis (default: last 30 days)
 - `min_sample_size`: Minimum stories for pattern detection (default: 3)
+- `--force`: Re-analyze stories that already have a RETRO-{STORY_ID}.yaml file
 
 ### From Filesystem
 
-For each story:
-- `{FEATURE_DIR}/done/{STORY_ID}/_implementation/OUTCOME.yaml`
-- `{FEATURE_DIR}/done/{STORY_ID}/story.yaml`
-- KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data
-- `{FEATURE_DIR}/done/{STORY_ID}/_implementation/VERIFICATION.yaml`
+Scan these paths for completed stories (search all subdirs):
+- `{FEATURE_DIR}/done/{STORY_ID}/`
+- `plans/_complete/*/{STORY_ID}/`   ← stories in UAT, ready-for-qa, done stages
+
+For each story, read in priority order:
+
+**Primary (use if present):**
+- `_implementation/OUTCOME.yaml` — aggregated metrics
+
+**Fallback (use when OUTCOME.yaml absent — these always exist):**
+- `_implementation/CHECKPOINT.yaml` — phase timing, iterations, status
+- `_implementation/TOKEN-LOG.md` — per-phase token counts (parse markdown table rows)
+- `_implementation/REVIEW.yaml` — code review findings, cycles, severity breakdown
+- `_implementation/EVIDENCE.yaml` — AC coverage, pass/fail per AC
+
+**Always read:**
+- `story.yaml` — estimated_tokens, ACs, story_type
+- KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data (preferred over TOKEN-LOG.md)
+
+**Pending KB entries (scan and surface):**
+- `_implementation/DEFERRED-KB-WRITE.yaml` — check `status: pending`
+- `_implementation/DEFERRED-KB-WRITES.yaml` — check `status: pending`
+
+Report any pending deferred write files found — they contain lessons that haven't reached KB yet.
 
 ---
 
@@ -166,12 +186,27 @@ Track which AC types pass/fail first try.
 
 ## Execution Flow
 
+### Phase 0: Deduplication Check (batch/epic mode only)
+
+Before analyzing any story:
+
+1. For each candidate story, check if `_implementation/RETRO-{STORY_ID}.yaml` already exists
+2. If the file exists AND `--force` was NOT passed: **skip that story** — it has already been analyzed
+3. Log skipped stories: `Skipping {STORY_ID} — RETRO already exists (use --force to re-analyze)`
+4. Continue with only the stories that have not yet been retro'd
+
+**This means `/workflow-retro --batch` is idempotent** — safe to run repeatedly without re-analyzing or re-writing KB entries.
+
 ### Phase 1: Data Collection
 
-1. Locate OUTCOME.yaml files for specified stories
-2. Parse phase metrics, totals, decisions
-3. Load story.yaml for context (estimated tokens, ACs)
+1. Locate stories (check both `{feature_dir}/done/` and `plans/_complete/` stage subdirs)
+2. For each story, load metrics using the priority order in the Inputs section:
+   - Preferred: `OUTCOME.yaml`
+   - Fallback: `CHECKPOINT.yaml` + `TOKEN-LOG.md` + `REVIEW.yaml` + `EVIDENCE.yaml`
+   - Note which source was used in the RETRO output (`data_source: outcome | fallback`)
+3. Load story.yaml for context (estimated_tokens, ACs, story_type)
 4. Query KB for existing patterns
+5. Scan `_implementation/` for pending `DEFERRED-KB-WRITE*.yaml` files — collect and report them
 
 ### Phase 2: Single-Story Analysis
 
@@ -180,6 +215,7 @@ For each story, calculate:
 ```yaml
 story_analysis:
   story_id: "{STORY_ID}"
+  data_source: outcome | fallback   # which artifacts were used
 
   token_metrics:
     estimated: {N}
@@ -206,6 +242,11 @@ story_analysis:
     auto_accepted: {N}
     escalated: {N}
     escalation_rate: {percent}
+
+  pending_deferred_writes:      # populated if DEFERRED-KB-WRITE*.yaml found with status: pending
+    - file: "_implementation/DEFERRED-KB-WRITES.yaml"
+      entry_count: {N}
+      status: pending
 ```
 
 ### Phase 3: Cross-Story Pattern Detection
@@ -325,9 +366,11 @@ Scope: {single | batch | epic}
 
 | File | Location | Description |
 |------|----------|-------------|
-| `RETRO-{STORY_ID}.yaml` | `{story_dir}/_implementation/` | Single-story analysis |
+| `RETRO-{STORY_ID}.yaml` | `{story_dir}/_implementation/` | Single-story analysis (presence = already analyzed) |
 | `WORKFLOW-RECOMMENDATIONS.md` | `{feature_dir}/` | Aggregate recommendations |
 | KB entries | Knowledge Base | Significant patterns |
+
+The `RETRO-{STORY_ID}.yaml` file serves dual purpose: it IS the output AND the dedup guard. Its presence means the story has been analyzed. To re-analyze, pass `--force`.
 
 ---
 
@@ -355,7 +398,10 @@ End with exactly one of:
 
 ## Non-Negotiables
 
-- MUST read OUTCOME.yaml before analysis
+- MUST check for existing `RETRO-{STORY_ID}.yaml` before analyzing a story — skip if present (unless --force)
+- MUST read OUTCOME.yaml if present; fall back to CHECKPOINT.yaml + TOKEN-LOG.md + REVIEW.yaml if absent
+- MUST record `data_source: outcome | fallback` in each story's RETRO output
+- MUST scan for pending `DEFERRED-KB-WRITE*.yaml` files and surface them in output
 - MUST query KB for existing patterns first
 - MUST apply significance thresholds before KB writes
 - MUST include evidence (story IDs) with patterns
