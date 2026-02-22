@@ -21,6 +21,8 @@ This is the master story index. Each epic maintains its own detailed story index
 | ID | Component | Status | Feeds Into |
 |----|-----------|--------|-----------|
 | WKFL-001 | Meta-Learning Loop (Retro Agent) | completed | LERN |
+| WKFL-002 | Confidence Calibration | uat | LERN |
+| WKFL-003 | Emergent Heuristic Discovery | needs-code-review | WKFL-010 |
 | WKFL-004 | Human Feedback Capture | completed | MODL, LERN |
 | WKFL-005 | Doc Sync Agent | uat | SDLC |
 
