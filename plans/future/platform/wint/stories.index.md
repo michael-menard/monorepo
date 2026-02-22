@@ -387,7 +387,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0180: Define Examples + Negative Examples Framework
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Verdict:** CONDITIONAL PASS
 **Elaboration Complete:** 2026-02-14
 **Depends On:** none
