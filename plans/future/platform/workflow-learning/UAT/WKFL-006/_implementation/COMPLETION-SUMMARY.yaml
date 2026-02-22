@@ -1,0 +1,65 @@
+---
+phase: completion
+feature_dir: plans/future/platform/workflow-learning
+story_id: WKFL-006
+verdict: PASS
+status_updated: uat
+moved_to: plans/future/platform/workflow-learning/UAT/WKFL-006
+index_updated: true
+kb_findings_captured: true
+tokens_logged: true
+worktree_cleanup: skipped
+pr_merged: skipped
+timestamp: "2026-02-22T11:10:00Z"
+
+summary: |
+  QA Verification PASS phase completed for WKFL-006.
+
+  Story Status: Updated from ready-to-work to uat
+  Location: Moved to UAT directory
+  Index: Updated with WKFL-006 uat status
+
+  Key Accomplishments:
+  - All 16 acceptance criteria verified and PASS
+  - Test specs comprehensive with no anti-patterns
+  - Architecture compliance confirmed
+  - Gate decision: PASS (no blocking issues)
+  - 4 significant QA lessons captured for KB reuse
+
+  Worktree Status: No pr_number in CHECKPOINT, skipped per instructions
+  KB Integration: Lessons from QA-VERIFY.yaml captured
+
+completion_checklist:
+  step_1_update_status_to_uat: true
+  step_2_write_gate_section: true
+  step_3_move_to_uat_directory: true
+  step_4_update_index: true
+  step_5_kb_findings_captured: true
+  step_6_archive_working_set: skipped
+  step_7_kb_story_status_update: pending
+  step_8_tokens_logged: pending
+  step_9_emit_signal: pending
+
+qa_pass_details:
+  acs_verified_count: 16
+  acs_failed_count: 0
+  test_quality_verdict: PASS
+  architecture_compliant: true
+  blocking_issues_count: 0
+
+lessons_captured:
+  - lesson_1: "Agent-tooling stories with markdown/YAML/HTML-only deliverables require spec inspection verification rather than test execution; manual /command-run is the equivalent of an E2E test"
+    category: pattern
+    tags: ["agent-tooling", "qa-verify", "verification", "workflow"]
+
+  - lesson_2: "When AC specifies cosine similarity >= 0.85 but implementation uses Levenshtein 0.70, document the calibration rationale in EVIDENCE.yaml notes and DECISIONS.yaml to prevent QA false-fail"
+    category: pattern
+    tags: ["clustering", "similarity", "documentation", "elaboration"]
+
+  - lesson_3: "Dual-mode data sources (primary + fallback with <10 threshold) should include explicit fallback logging in the agent spec; pattern established in WKFL-006 pattern-miner for OUTCOME.yaml -> VERIFICATION.yaml"
+    category: reuse
+    tags: ["data-sources", "fallback", "logging", "pattern-miner"]
+
+  - lesson_4: "Template/example output files seeded during story delivery (not from actual /pattern-mine run) should include a prominent NOTE comment indicating regeneration is required; prevents confusion with real run outputs"
+    category: pattern
+    tags: ["output-files", "templates", "documentation"]
