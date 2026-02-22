@@ -530,7 +530,7 @@ Create health check script. Document VRAM requirements per model. Create model s
 
 ### WINT-0250: Define Escalation Triggers
 
-**Status:** in-qa
+**Status:** uat
 **Depends On:** WINT-0220, WINT-0230
 **Phase:** 0
 **Feature:** Define when to escalate from cheaper to more expensive model:
