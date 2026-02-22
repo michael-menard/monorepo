@@ -57,13 +57,13 @@ Orchestrator commands (like `/dev-implement-story`) MUST track sub-agent totals:
 | 2: Backend | Backend Coder | 45,000 | 15,000 | 60,000 | 5m |
 | 2: Frontend | Frontend Coder | 40,000 | 12,000 | 52,000 | 4m |
 | 3: Verify | Verifier | 35,000 | 2,000 | 37,000 | 3m |
-| 4: Proof | Proof Writer | 50,000 | 4,000 | 54,000 | 2m |
-| **Total** | — | **225,000** | **37,500** | **262,500** | **17m** |
+| 4: Learnings | Learnings Worker | 30,000 | 2,000 | 32,000 | 1m |
+| **Total** | — | **205,000** | **35,500** | **240,500** | **16m** |
 ```
 
 ## Story-Level Aggregation
 
-The final PROOF-STORY-XXX.md MUST include aggregated token usage from all phases.
+Token data is stored in KB via `kb_log_tokens` after each phase. OUTCOME.yaml queries KB for the full story aggregate (no TOKEN-LOG.md file needed).
 
 ## High-Cost Operations Reference
 

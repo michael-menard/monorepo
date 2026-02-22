@@ -127,9 +127,7 @@ Read from story directory:
 - One `kb_add_lesson` call per distinct learning
 - KB handles tagging, formatting, and deduplication automatically
 
-**2. Update TOKEN-LOG.md with learnings phase tokens**
-
-**3. If high-cost operations identified (>10k tokens):**
+**2. If high-cost operations identified (>10k tokens):**
 - Include `high-cost-operation` in tags array
 - Include mitigation strategy in resolution field
 

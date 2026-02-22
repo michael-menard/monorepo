@@ -100,7 +100,7 @@ Write `_implementation/OUTCOME.yaml` to capture story metrics for workflow learn
 
 | Source | Extracts |
 |--------|----------|
-| `TOKEN-LOG.md` | Per-phase tokens_in, tokens_out |
+| KB `storyTokenUsage` | Per-phase tokens_in, tokens_out (via `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })`) |
 | `CHECKPOINT.yaml` | Phase timestamps, review cycles, iteration count |
 | `VERIFICATION.yaml` | QA verdicts, gate results |
 | `ELAB.yaml` | Decision counts (auto_accepted from `summary.gaps_resolved`, etc.) |
@@ -116,7 +116,7 @@ completed_at: "{ISO_TIMESTAMP}"
 experiment_variant: "{VARIANT}"  # From story.yaml frontmatter (WKFL-008)
 
 phases:
-  # Populate from TOKEN-LOG.md parsing
+  # Populate from KB storyTokenUsage query
   # Each phase: tokens_in, tokens_out, duration_ms, status/verdict
 
 totals:
@@ -137,24 +137,24 @@ predictions: null  # Placeholder for WKFL-002
 human_feedback: [] # Placeholder for WKFL-004
 
 sources:
-  token_log: "_implementation/TOKEN-LOG.md"
+  token_log: "kb:token_usage"
   checkpoint: "_implementation/CHECKPOINT.yaml"
   verification: "_implementation/VERIFICATION.yaml"
   decisions: "_implementation/ELAB.yaml"
 ```
 
-**Parsing TOKEN-LOG.md:**
+**Querying Token Data from KB:**
 
-Extract phase entries in format:
-```
-| {phase} | {timestamp} | {input} | {output} |
+```javascript
+const tokenEntries = await kb_search({ type: "token_usage", story_id: "{STORY_ID}" })
+// Returns array of { phase, input_tokens, output_tokens, timestamp }
 ```
 
 Map phase names to OUTCOME.yaml phases:
-- `pm-story` → `pm_story`
+- `pm-generate` → `pm_story`
 - `elaboration` → `elaboration`
 - `dev-setup` → `dev_setup`
-- `dev-plan` → `dev_plan`
+- `dev-planning` → `dev_plan`
 - `dev-implementation` → `dev_implementation`
 - `dev-documentation` → `dev_documentation`
 - `qa-verify` → `qa_verify`

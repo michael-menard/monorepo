@@ -1,6 +1,6 @@
 ---
 name: token-report
-description: Generate a summary report aggregating all logged token usage for a story. Reads TOKEN-LOG.md and produces TOKEN-SUMMARY.md with cost estimates and analysis.
+description: Generate a summary report aggregating all logged token usage for a story. Queries KB storyTokenUsage and produces TOKEN-SUMMARY.md with cost estimates and analysis.
 ---
 
 # /token-report - Generate Token Summary Report
@@ -29,13 +29,17 @@ Search these directories in order to find the story.
 
 ## Preconditions
 
-- TOKEN-LOG.md MUST exist at `<story-directory>/_implementation/TOKEN-LOG.md`
-- If not found: STOP and report "No token log found for STORY-XXX"
+- KB must have token entries for the story (logged via `/token-log`)
+- If no entries found: STOP and report "No token entries found in KB for STORY-XXX — run /token-log phases first"
 
 ## Task
 
-1. Read `<story-directory>/_implementation/TOKEN-LOG.md`
-2. Parse all rows from the token log table
+1. Query KB for token entries:
+   ```javascript
+   kb_search({ type: "token_usage", story_id: "STORY-XXX" })
+   // Returns array of { phase, input_tokens, output_tokens, timestamp }
+   ```
+2. Aggregate phase data
 3. Generate `<story-directory>/_implementation/TOKEN-SUMMARY.md`
 
 ## Token Summary Format
@@ -90,7 +94,7 @@ Phases exceeding 30,000 tokens:
 
 ## Raw Log
 
-(Copied from TOKEN-LOG.md for reference)
+(From KB storyTokenUsage)
 
 | Timestamp | Phase | Input | Output | Total | Cumulative |
 |-----------|-------|-------|--------|-------|------------|
@@ -158,10 +162,10 @@ File: plans/stories/<status>/STORY-XXX/_implementation/TOKEN-SUMMARY.md
 
 ## Error Handling
 
-If TOKEN-LOG.md is empty or has no data rows:
-- Report: "TOKEN-LOG.md exists but contains no data"
-- Suggest running `/token-log` first
+If KB returns no entries for the story:
+- Report: "No token entries found in KB for STORY-XXX"
+- Suggest running `/token-log` for each phase
 
-If TOKEN-LOG.md has malformed rows:
-- Report which rows couldn't be parsed
-- Continue with parseable rows
+If KB query fails:
+- Report the error message
+- Suggest checking that the KB MCP server is running

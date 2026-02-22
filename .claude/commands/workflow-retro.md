@@ -44,7 +44,7 @@ Analyze completed story outcomes and generate workflow improvement proposals.
 
 Analyze one completed story:
 1. Locate story in `done/` directory
-2. Read OUTCOME.yaml, story.yaml, TOKEN-LOG.md
+2. Read OUTCOME.yaml, story.yaml; query KB for token data
 3. Calculate token variance, review cycles, phase metrics
 4. Generate RETRO-{STORY_ID}.yaml
 5. Query KB for related patterns
@@ -131,7 +131,7 @@ Patterns must meet these thresholds to be logged to KB:
 Story must be in `done/` directory with:
 - `_implementation/OUTCOME.yaml` - Required
 - `story.yaml` - Required
-- `_implementation/TOKEN-LOG.md` - Optional but recommended
+- KB `storyTokenUsage` entries — queried automatically
 
 If OUTCOME.yaml is missing, the retro will skip that story with a warning.
 

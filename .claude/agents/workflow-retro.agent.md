@@ -95,7 +95,7 @@ kb_add_lesson({
 For each story:
 - `{FEATURE_DIR}/done/{STORY_ID}/_implementation/OUTCOME.yaml`
 - `{FEATURE_DIR}/done/{STORY_ID}/story.yaml`
-- `{FEATURE_DIR}/done/{STORY_ID}/_implementation/TOKEN-LOG.md`
+- KB: `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })` — per-phase token data
 - `{FEATURE_DIR}/done/{STORY_ID}/_implementation/VERIFICATION.yaml`
 
 ---
