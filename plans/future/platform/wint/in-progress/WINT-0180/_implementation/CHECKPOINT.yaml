@@ -1,7 +1,7 @@
 schema: 1
 story_id: WINT-0180
-current_phase: plan
-last_successful_phase: setup
+current_phase: execute
+last_successful_phase: plan
 iteration: 0
 max_iterations: 3
 started_at: "2026-02-21T00:00:00Z"

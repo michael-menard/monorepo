@@ -1,0 +1,107 @@
+schema: 1
+story_id: "WINT-0180"
+timestamp: "2026-02-21T00:00:00Z"
+generated_by: dev-plan-leader
+
+# Knowledge context derived from reading the existing _specs/ pattern files
+# and the story's canonical references section.
+
+prior_patterns:
+  - id: "KP-001"
+    source: ".claude/prompts/role-packs/_specs/patch-queue-pattern.md"
+    insight: |
+      Existing spec files use a consistent YAML-style frontmatter block at the top:
+        **Version**: 1.0.0
+        **Story**: {STORY_ID}
+        **Status**: Active
+        **See also**: [linked-file.md]
+      FRAMEWORK.md must adopt the same versioning convention for consistency.
+    applies_to: ["ST-2"]
+
+  - id: "KP-002"
+    source: ".claude/prompts/role-packs/_specs/patch-queue-pattern.md"
+    insight: |
+      The Decision Rule section uses prose with a bold trigger statement followed by
+      a structured list (layers, thresholds). The framework must standardize this
+      to boolean/threshold criteria (e.g., `when: layer_count > 1`) rather than
+      pure prose. The existing file uses prose — framework must document the
+      canonical machine-readable format for future specs.
+    applies_to: ["ST-2", "ST-4"]
+
+  - id: "KP-003"
+    source: ".claude/prompts/role-packs/_specs/patch-queue-pattern.md"
+    insight: |
+      Examples section structure: ### Positive Example N: {title}
+      Followed by a code block and a "Why this is correct:" explanation.
+      Negative examples use ### Negative Example: {title} with "Why this is wrong:" explanation.
+      Max pattern observed: 2 positive + 1 negative. FRAMEWORK.md must codify this cap.
+    applies_to: ["ST-2", "ST-3"]
+
+  - id: "KP-004"
+    source: ".claude/prompts/role-packs/_specs/patch-queue-pattern.md"
+    insight: |
+      verification_command is a field within the examples (JSON code blocks), not a
+      standalone section in the spec file. FRAMEWORK.md must define a proof requirements
+      section that elevates this to a first-class requirement with a template.
+    applies_to: ["ST-3"]
+
+  - id: "KP-005"
+    source: ".claude/prompts/role-packs/_specs/repair-loop-pattern.md"
+    insight: |
+      The repair-loop-pattern.md demonstrates an escalation structure (max_iterations
+      guardrail + escalation path). FRAMEWORK.md proof requirements should include
+      what happens when verification fails — the escalation path is part of proof.
+    applies_to: ["ST-3"]
+
+  - id: "KP-006"
+    source: "story WINT-0180 Architecture Notes"
+    insight: |
+      Three delivery mechanisms already defined in the story:
+      1. File injection — read {role}.md directly into agent context
+      2. KB MCP — kb_search({ tags: ['role-pack', '{role}'] })
+      3. Context-pack sidecar — injection point defined in WINT-2020 (not implemented here)
+      FRAMEWORK.md must document usage guidance for each, including precedence order.
+    applies_to: ["ST-3"]
+
+  - id: "KP-007"
+    source: "story WINT-0180 AC-4"
+    insight: |
+      Token budget constraints are explicit:
+      - Role instructions: 150 token minimum, 300 token maximum
+      - Pattern skeleton: 10-25 lines
+      Line-count proxy is acceptable as tokenizer fallback (approx 1 line ≈ 5-10 tokens).
+    applies_to: ["ST-3"]
+
+conformance_analysis:
+  patch_queue_pattern_conformance:
+    has_version_frontmatter: true
+    has_decision_rule: true
+    has_positive_examples: true
+    positive_example_count: 2
+    has_negative_example: true
+    negative_example_count: 1
+    has_proof_requirements: false  # verification_command embedded in examples, not a standalone section
+    has_cross_reference: true
+    notes: "No standalone Proof Requirements section — verification_command is embedded in example JSON"
+
+  repair_loop_pattern_conformance:
+    has_version_frontmatter: true
+    has_decision_rule: true  # via Activation Trigger section
+    has_positive_examples: true
+    positive_example_count: 2
+    has_negative_example: true
+    negative_example_count: 1
+    has_proof_requirements: false  # no standalone proof section
+    has_cross_reference: true
+    notes: "Activation Trigger serves as decision rule. No standalone Proof Requirements section."
+
+  framework_gap: |
+    Both existing specs lack a standalone Proof Requirements section with a verification_command
+    field template (AC-6). FRAMEWORK.md must introduce this section as a standard. The existing
+    specs conform to all other framework sections derived from their implicit structure.
+    AC-8 requires no modification to existing files — this gap is acceptable because the
+    framework governs FUTURE specs; existing specs are grandfathered as conformant exemplars.
+
+lessons_from_similar_stories: []
+
+adrs_applicable: []
