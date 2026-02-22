@@ -74,7 +74,7 @@ If exists: `MOVE FAILED: Story already exists in {TO_STAGE}`
 
 ### 2.5. DB Write via shimUpdateStoryStatus (WINT-1060)
 
-**Note on --update-status flag**: If the `--update-status` flag was provided, skip this step entirely — the DB write will be handled by `/story-update` in Step 4. Set `db_updated: skipped` and proceed directly to Step 3. This prevents double-writes to the database.
+**This step ALWAYS executes for mapped stages**, regardless of whether `--update-status` was provided. The `--update-status` flag only controls Step 4 (frontmatter + index update), not the DB write.
 
 **Independence from locate step (AC-10)**: If `shimGetStoryStatus` returned null during Step 1 (DB-miss or DB-error), still proceed with `shimUpdateStoryStatus` for mapped stages — the write path is independent of the read path. A DB read miss does not suppress the DB write attempt.
 
@@ -85,7 +85,10 @@ Look up `TO_STAGE` in the inline `SWIM_LANE_TO_STATE` table (sourced from `packa
 | `backlog` | `backlog` |
 | `ready-to-work` | `ready_to_work` |
 | `in-progress` | `in_progress` |
+| `needs-code-review` | `ready_for_review` |
+| `failed-code-review` | `failed_code_review` |
 | `ready-for-qa` | `ready_for_qa` |
+| `failed-qa` | `failed_qa` |
 | `UAT` | `in_qa` |
 
 **Note**: `done` is in the `SWIM_LANE_TO_STATE` constant but is NOT a valid `TO_STAGE` target for `/story-move`.
@@ -106,7 +109,7 @@ else:
   db_updated = true
 ```
 
-**If TO_STAGE is NOT in the table** (e.g., `created`, `elaboration`, `needs-code-review`, `failed-code-review`, `failed-qa`):
+**If TO_STAGE is NOT in the table** (e.g., `created`, `elaboration`):
 
 ```
 log warning: "No DB state for stage '{TO_STAGE}'. Skipping DB write."
@@ -148,8 +151,7 @@ db_updated: true | false | skipped
 # db_updated values:
 #   true    - shimUpdateStoryStatus returned non-null (DB write succeeded)
 #   false   - shimUpdateStoryStatus returned null (DB unavailable); mv proceeded
-#   skipped - TO_STAGE has no DB state mapping (unmapped stage), OR --update-status
-#             flag was provided (DB write delegated to /story-update to avoid double-write)
+#   skipped - TO_STAGE has no DB state mapping (unmapped stage)
 ```
 
 ## Stage Transition Flow

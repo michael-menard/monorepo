@@ -473,7 +473,8 @@ If gate fails → BLOCKED, do not proceed.
    git commit -m "feat({STORY_ID}): implementation complete"
    git push
    ```
-4. Move story to code review queue:
+4. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+5. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
@@ -489,7 +490,8 @@ If gate fails → BLOCKED, do not proceed.
    git commit -m "feat({STORY_ID}): implementation complete (forced)"
    git push
    ```
-4. Move story to code review queue:
+4. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+5. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```

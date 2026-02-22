@@ -18,8 +18,8 @@
  * - Optional values use sensible test defaults
  */
 const TEST_ENV = {
-  // Test database - uses different port to distinguish from development
-  DATABASE_URL: 'postgresql://test:test@localhost:5432/knowledge_base_test',
+  // Test database - uses the local knowledge-base-postgres container on port 5433
+  DATABASE_URL: 'postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase',
 
   // Mock OpenAI key - MSW mocks intercept actual API calls
   OPENAI_API_KEY: 'sk-test-mock-key-for-testing',
@@ -31,10 +31,10 @@ const TEST_ENV = {
 
   // KB_DB_* variables for backward compatibility tests
   KB_DB_HOST: 'localhost',
-  KB_DB_PORT: '5432',
-  KB_DB_NAME: 'knowledge_base_test',
-  KB_DB_USER: 'test',
-  KB_DB_PASSWORD: 'test',
+  KB_DB_PORT: '5433',
+  KB_DB_NAME: 'knowledgebase',
+  KB_DB_USER: 'kbuser',
+  KB_DB_PASSWORD: 'TestPassword123!',
   KB_DB_MAX_CONNECTIONS: '5',
   KB_DB_IDLE_TIMEOUT_MS: '5000',
   KB_DB_CONNECTION_TIMEOUT_MS: '3000',

@@ -7,15 +7,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { worktreeRegister } from '../worktree-register'
 
 // Hoist mock functions
-const { mockReturning, mockValues, mockInsert, mockWarn } = vi.hoisted(() => ({
+const { mockReturning, mockValues, mockInsert, mockSelectLimit, mockSelectFrom, mockSelectWhere, mockSelect, mockWarn } = vi.hoisted(() => ({
   mockReturning: vi.fn(),
   mockValues: vi.fn(),
   mockInsert: vi.fn(),
+  mockSelectLimit: vi.fn(),
+  mockSelectFrom: vi.fn(),
+  mockSelectWhere: vi.fn(),
+  mockSelect: vi.fn(),
   mockWarn: vi.fn(),
 }))
 
 vi.mock('@repo/db', () => ({
-  db: { insert: mockInsert },
+  db: {
+    insert: mockInsert,
+    select: mockSelect,
+  },
   worktrees: { id: 'id', storyId: 'story_id', worktreePath: 'worktree_path', branchName: 'branch_name' },
 }))
 
@@ -29,6 +36,11 @@ describe('worktreeRegister', () => {
     mockReturning.mockResolvedValue([])
     mockValues.mockReturnValue({ returning: mockReturning })
     mockInsert.mockReturnValue({ values: mockValues })
+    // Mock select chain for human-readable ID resolution
+    mockSelectLimit.mockResolvedValue([{ id: '00000000-0000-0000-0000-000000000001' }])
+    mockSelectWhere.mockReturnValue({ limit: mockSelectLimit })
+    mockSelectFrom.mockReturnValue({ where: mockSelectWhere })
+    mockSelect.mockReturnValue({ from: mockSelectFrom })
   })
 
   it('should register new worktree (AC-5)', async () => {

@@ -56,11 +56,14 @@ const DirectoryStoryRecordSchema = z.object({
     'backlog',
     'ready_to_work',
     'in_progress',
+    'ready_for_review',
     'ready_for_qa',
     'in_qa',
     'blocked',
     'done',
     'cancelled',
+    'failed_code_review',
+    'failed_qa',
   ]),
 })
 

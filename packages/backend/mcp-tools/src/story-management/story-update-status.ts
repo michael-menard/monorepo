@@ -20,6 +20,8 @@ import {
   type StoryUpdateStatusOutput,
 } from './__types__/index.js'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * Update story state with atomic state transition tracking
  *
@@ -46,11 +48,14 @@ export async function storyUpdateStatus(
     // Transaction for atomic update (AC-2, AC-3)
     const result = await db.transaction(async tx => {
       // 1. Get current story to capture fromState
-      const [currentStory] = await tx
-        .select()
-        .from(stories)
-        .where(or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId)))
-        .limit(1)
+      // Only include UUID comparison when the input is actually a UUID,
+      // otherwise Postgres throws a cast error on the uuid column.
+      const isUuid = UUID_REGEX.test(parsed.storyId)
+      const whereClause = isUuid
+        ? or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId))
+        : eq(stories.storyId, parsed.storyId)
+
+      const [currentStory] = await tx.select().from(stories).where(whereClause).limit(1)
 
       if (!currentStory) {
         logger.warn(`[mcp-tools] Story '${parsed.storyId}' not found for status update`)

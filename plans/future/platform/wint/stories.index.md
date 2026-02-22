@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-21T17:42:00Z"
+updated_at: "2026-02-22T20:00:00Z"
 ---
 
 # WINT Stories Index
@@ -16,9 +16,9 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 18 |
-| in-qa | 0 |
-| ready-for-qa | 1 |
+| uat | 20 |
+| in-qa | 1 |
+| ready-for-qa | 0 |
 | needs-code-review | 0 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
@@ -533,8 +533,11 @@ Create health check script. Document VRAM requirements per model. Create model s
 
 ### WINT-0250: Define Escalation Rules for Multi-Model Routing (Graduated Chain + Hard Bypass)
 
-**Status:** uat
-**Depends On:** WINT-0220, WINT-0230
+**Status:** in-qa
+**Elaboration Complete:** 2026-02-21
+**Verdict:** PASS
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
+**Depends On:** —
 **Phase:** 0
 **Feature:** Define when to escalate from cheaper to more expensive model:
 - Local fails 2x on same task → escalate to API-Cheap

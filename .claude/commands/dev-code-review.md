@@ -150,11 +150,13 @@ The aggregate leader will:
 
 On PASS:
 ```
+kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_qa", phase: "code_review" })
 /story-move {FEATURE_DIR} {STORY_ID} ready-for-qa --update-status
 ```
 
 On FAIL:
 ```
+kb_update_story_status({ story_id: "{STORY_ID}", state: "failed_code_review", phase: "code_review" })
 /story-move {FEATURE_DIR} {STORY_ID} failed-code-review --update-status
 /index-update {FEATURE_DIR} {STORY_ID} --status=failed-code-review
 ```

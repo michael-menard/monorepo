@@ -54,7 +54,7 @@ Use the `kb_list_stories` MCP tool to find stories NOT in terminal states (inclu
 ```
 kb_list_stories({
   epic: "platform",
-  states: ["ready_for_qa", "in_review", "ready_for_review", "in_progress", "ready", "backlog"]
+  states: ["ready_for_qa", "in_review", "ready_for_review", "in_progress", "ready", "backlog", "failed_code_review", "failed_qa"]
 })
 ```
 
@@ -71,7 +71,7 @@ For each story returned, use `kb_get_next_story` logic:
 | Rank | Category | DB States | Rationale |
 |------|----------|-----------|-----------|
 | 1 | Needs QA | `ready_for_qa` | Closest to done — unblock the pipeline |
-| 2 | Needs Fix | `in_review` (with review findings) | Code review flagged issues — fix before new work |
+| 2 | Needs Fix | `in_review` (with review findings), `failed_code_review`, `failed_qa` | Review/QA flagged issues — fix before new work |
 | 3 | Needs Code Review | `ready_for_review` | Dev complete, waiting on review |
 | 4 | Needs Dev | `ready`, `in_progress` | Elaborated and ready to implement |
 | 5 | Needs Elaboration | `backlog` (story file exists) | Story seed exists but not yet elaborated |
@@ -102,6 +102,8 @@ For each unblocked story, determine the command based on its `state` field:
 |-------|----------|-----------------|
 | `ready_for_qa` | Needs QA | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
 | `in_review` (findings) | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| `failed_code_review` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| `failed_qa` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
 | `ready_for_review` | Needs Code Review | `/dev-code-review {FEATURE_DIR} {STORY_ID}` |
 | `ready` | Needs Dev | `/dev-implement-story {FEATURE_DIR} {STORY_ID}` |
 | `backlog` (elaborated) | Needs Elaboration | `/elab-story {FEATURE_DIR} {STORY_ID}` |
