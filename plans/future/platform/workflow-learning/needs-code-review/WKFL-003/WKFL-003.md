@@ -3,10 +3,10 @@ doc_type: story
 title: "WKFL-003: Emergent Heuristic Discovery"
 story_id: WKFL-003
 story_prefix: WKFL
-status: elaboration
+status: needs-code-review
 phase: adaptation
 created_at: "2026-02-06T17:00:00-07:00"
-updated_at: "2026-02-07T18:11:00Z"
+updated_at: "2026-02-22T00:00:00Z"
 depends_on: [WKFL-002, WKFL-004]
 blocks: [WKFL-010]
 estimated_points: 3
