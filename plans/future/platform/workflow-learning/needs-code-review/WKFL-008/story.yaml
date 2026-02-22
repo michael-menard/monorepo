@@ -1,9 +1,10 @@
 id: WKFL-008
 title: "Workflow Experimentation Framework"
-status: ready-for-qa
+status: ready-for-code-review
 priority: P3
 phase: experimentation
 created_at: 2026-02-06T17:00:00-07:00
+updated_at: 2026-02-22T23:45:00Z
 
 epic: workflow-learning
 prefix: WKFL

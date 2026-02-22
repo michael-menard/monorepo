@@ -173,6 +173,60 @@ None. All 7 acceptance criteria implemented and verified as specified.
 
 ---
 
+---
+
+## Fix Cycle
+
+**Iteration**: 2 of 3
+**Triggered By**: Failed QA verification (2026-02-22)
+**Status**: PASS
+
+### Issues Fixed
+
+#### 1. experiment-analyzer.agent.md Step 8 - Insufficient Data Path (CRITICAL)
+
+**Issue**: Step 8 had a single unified YAML template that didn't distinguish sufficient vs insufficient data output shapes. When Step 4 sample guard triggers (insufficient data), the agent lacked a clear template omitting statistical fields.
+
+**Resolution**: Restructured Step 8 into two explicit conditional paths:
+- **Insufficient Data Path** (Step 4 → Step 8 early redirect): Template includes only `schema`, `report_date`, `experiment_id`, `sample_sizes`, `recommendation` (with `action: "continue"`, `confidence: "low"`)
+- **Normal Path** (Step 4 passes): Full statistical analysis with `primary_metric`, `secondary_metrics`, p-values, and confidence scoring
+
+**Verification**: FIX-VERIFICATION-SUMMARY.md confirms both paths have distinct YAML templates with explicit field omission rules for insufficient data case (AC-6 compliance).
+
+#### 2. pm-story-generation-leader.agent.md Phase 0.5a - Cross-Reference Comment (MEDIUM)
+
+**Issue**: Missing integration contract comment. EVIDENCE.yaml claimed the cross-reference was added but was absent from the actual file.
+
+**Resolution**: Added INTEGRATION NOTE at Phase 0.5a Output section explaining:
+> Cross-reference: dev-documentation-leader.agent.md Step 5 reads this value from story.yaml and propagates it to OUTCOME.yaml
+
+**Verification**: Located at line 177. Comment pins the bidirectional contract between write side (Phase 0.5a assigns experiment_variant) and read side (Step 5 propagates to OUTCOME.yaml).
+
+#### 3. dev-documentation-leader.agent.md Step 5 - Cross-Reference Comment (MEDIUM)
+
+**Issue**: Missing cross-reference comment in Step 5. EVIDENCE.yaml claimed it was present but was absent.
+
+**Resolution**: Added INTEGRATION NOTE after Backward Compatibility section explaining:
+> Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes experiment_variant to story.yaml frontmatter during story generation.
+
+**Verification**: Located at line 212. Comment provides bidirectional reference, clarifying the data flow contract for experiment_variant propagation.
+
+### Acceptance Criteria Coverage (Post-Fix)
+
+| AC | Description | Status | Fix Impact |
+|----|-------------|--------|-----------|
+| AC-6 | Insufficient vs sufficient data paths distinct | **FIXED** | Two explicit Step 8 sub-sections with separate YAML templates |
+| AC-7 | Integration point pinned in agent files | **FIXED** | Cross-references added to both write and read sides |
+
+All 7 ACs now pass. No regressions in earlier acceptance criteria.
+
+### Risk Mitigation
+
+- **R-2 (Statistical invalidity at low N)**: Distinct output templates prevent statistical claims when sample guard triggers
+- **R-3 (Silent variant tagging breakage)**: Bidirectional cross-reference comments document integration contract, preventing silent removal on refactor
+
+---
+
 ## Token Usage
 
 | Phase | Input | Output | Total |
