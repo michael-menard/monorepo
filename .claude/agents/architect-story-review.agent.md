@@ -294,7 +294,7 @@ Per `.claude/agents/_shared/cross-domain-protocol.md`:
 
 Before finalizing verdict:
 - `_implementation/REVIEW.yaml` (security concerns about patterns)
-- `_pm/DEV-FEASIBILITY.md` (feasibility concerns)
+- `pm_artifacts.dev_feasibility` in story.yaml (feasibility concerns)
 
 ### Correlate Findings
 

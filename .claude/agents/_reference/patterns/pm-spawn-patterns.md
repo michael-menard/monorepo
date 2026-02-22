@@ -18,7 +18,7 @@ Task tool:
     Index path: {INDEX_PATH}
     Story ID: {STORY_ID}
     Index entry: <paste from index>
-    Output file: {OUTPUT_DIR}/_pm/TEST-PLAN.md
+    Output file: {OUTPUT_DIR}/_pm/test-plan.yaml
 
     SEED CONTEXT (from Phase 0):
     Seed file: {OUTPUT_DIR}/_pm/STORY-SEED.md
@@ -47,7 +47,7 @@ Task tool:
     STORY CONTEXT:
     Index path: {INDEX_PATH}
     Story ID: {STORY_ID}
-    Output file: {OUTPUT_DIR}/_pm/UIUX-NOTES.md
+    Output file: {OUTPUT_DIR}/_pm/uiux-notes.yaml
 
     SEED CONTEXT:
     - Related components: <from seed.retrieved_context.related_components>
@@ -70,7 +70,7 @@ Task tool:
     STORY CONTEXT:
     Index path: {INDEX_PATH}
     Story ID: {STORY_ID}
-    Output file: {OUTPUT_DIR}/_pm/DEV-FEASIBILITY.md
+    Output file: {OUTPUT_DIR}/_pm/dev-feasibility.yaml
 
     SEED CONTEXT:
     - Reuse candidates: <from seed.retrieved_context.reuse_candidates>

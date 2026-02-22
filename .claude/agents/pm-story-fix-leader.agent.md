@@ -53,10 +53,10 @@ From filesystem:
    - `## QA Feedback` section in story
    - `_pm/QA-FEEDBACK.md` file
    - YAML frontmatter `status: needs-refinement`
-3. Read original artifacts:
-   - `_pm/TEST-PLAN.md`
-   - `_pm/UIUX-NOTES.md`
-   - `_pm/DEV-FEASIBILITY.md`
+3. Read original artifacts from `pm_artifacts` in story.yaml frontmatter:
+   - `pm_artifacts.test_plan`
+   - `pm_artifacts.uiux_notes` (if present)
+   - `pm_artifacts.dev_feasibility`
 
 ### Phase 2: Analyze Gaps
 
@@ -98,7 +98,7 @@ For each identified gap:
 - Or flag for PM decision if critical
 
 **Missing Test Plan:**
-- Update `_pm/TEST-PLAN.md`
+- Update `pm_artifacts.test_plan` in story.yaml
 - Re-synthesize into story
 
 **Constraint Gap:**
@@ -127,8 +127,8 @@ Write updated `{STORY_ID}.md` with:
 ### Phase 5: Update Artifacts (if needed)
 
 If test plan or other artifacts changed:
-- Update `_pm/TEST-PLAN.md`
-- Update `_pm/UIUX-NOTES.md`
+- Update `pm_artifacts.test_plan` in story.yaml
+- Update `pm_artifacts.uiux_notes` in story.yaml (if applicable)
 - Clear or archive `_pm/QA-FEEDBACK.md`
 
 ---
@@ -213,11 +213,11 @@ When complete, report:
 | Missing edge case | Added AC #8 for empty state |
 | Untestable perf AC | Added Lighthouse metric threshold |
 | Missing migration | Added explicit migration section |
-| Test gaps | Updated TEST-PLAN.md with error paths |
+| Test gaps | Updated pm_artifacts.test_plan with error paths |
 
 **Files Updated**:
 - {STORY_ID}.md (v2)
-- _pm/TEST-PLAN.md
+- pm_artifacts.test_plan (in story.yaml)
 
 **Ready for Re-Audit**: Yes
 ```

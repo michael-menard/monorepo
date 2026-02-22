@@ -39,69 +39,40 @@ A risk is **MVP-critical** ONLY if it **blocks the core user journey**:
 Everything else is a **Future Risk** - important but not MVP-blocking.
 
 ## Output (MUST WRITE)
-- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/DEV-FEASIBILITY.md` (MVP-critical only)
-- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/FUTURE-RISKS.md` (non-MVP concerns)
+Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/dev-feasibility.yaml`:
 
-## Required Structure: DEV-FEASIBILITY.md
-
-# Feasibility Summary
-- Feasible for MVP: yes/no
-- Confidence: high/medium/low
-- Why
-
-# Likely Change Surface (Core Only)
-- areas/packages for core journey
-- endpoints for core journey
-- critical deploy touchpoints
-
-# MVP-Critical Risks (Max 5)
-ONLY risks that block core user journey:
-- Risk
-- Why it blocks MVP
-- Required mitigation
-
-# Missing Requirements for MVP
-- only requirements that block core journey
-- concrete decision text PM must include
-
-# MVP Evidence Expectations
-- proof needed for core journey
-- critical CI/deploy checkpoints
-
-# Proposed Subtask Breakdown
-Decompose the story into small, sequential subtasks that can each be implemented as a targeted diff by a small-context LLM agent (~32K window).
+```yaml
+feasible: true | false
+confidence: high | medium | low
+rationale: "..."
+complexity: low | medium | high
+change_surface:
+  areas: []              # packages/areas for core journey
+  endpoints: []          # endpoints touched
+  deploy_touchpoints: [] # critical deploy steps
+risks:                   # MVP-blocking only, max 5
+  - finding: "S3 multipart upload requires 5MB minimum"
+    mitigation: "..."
+missing_requirements: [] # concrete text PM must add to block core journey
+evidence_expectations: [] # proof needed for core journey
+subtasks:
+  - id: ST-1
+    title: "Add upload endpoint"
+    goal: "..."
+    files_to_read: []
+    files_to_modify: []   # 1-3 file paths
+    acs: ["AC-1", "AC-2"]
+    depends_on: none      # ST-N or "none"
+    verification: "pnpm check-types --filter @repo/db"
+    estimated_tokens: 8000
+```
 
 **Subtask design rules:**
 - Each subtask touches **1-3 files** max
 - Each subtask maps to **1-3 ACs**
-- Subtasks are ordered by dependency (later ones build on earlier ones)
-- Each subtask includes one canonical reference file (from STORY-SEED.md if available)
-- Each subtask has a concrete verification command
-- Sizing guide: 1-point story → 1-2 subtasks, 3-point → 3-5 subtasks, 5-point → 5-8 subtasks
-- If a subtask would need to touch >3 files, split it further
+- Subtasks are ordered by dependency
+- Sizing: 1-point → 1-2 subtasks, 3-point → 3-5, 5-point → 5-8
 
-**Format per subtask:**
+Non-MVP risks and future scope are **omitted** — out of scope for this output.
 
-### ST-{N}: {Short goal description}
-- **Goal**: {One-sentence description of what this subtask produces}
-- **Files to read**: {Canonical reference + any prior subtask output files}
-- **Files to create/modify**: {1-3 file paths}
-- **ACs covered**: {AC-N, AC-M}
-- **Depends on**: {ST-X or "none"}
-- **Verification**: {Concrete command, e.g. `pnpm check-types --filter @repo/db`}
-
-## Required Structure: FUTURE-RISKS.md
-
-# Non-MVP Risks
-For each risk:
-- Risk
-- Impact (if not addressed post-MVP)
-- Recommended timeline
-
-# Scope Tightening Suggestions
-- clarifications for future iterations
-- OUT OF SCOPE candidates for later
-
-# Future Requirements
-- nice-to-have requirements
-- polish and edge case handling
+The leader reads this file and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.

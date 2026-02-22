@@ -120,11 +120,11 @@ Task tool:
 
 | Phase | Owner | Output |
 |-------|-------|--------|
-| 0. Setup | Leader | Directory structure, empty artifacts |
-| 1. Test Plan | Worker: Test Plan Writer | `_pm/TEST-PLAN.md` |
-| 2. UI/UX Notes | Worker: UI/UX Advisor | `_pm/UIUX-NOTES.md` |
-| 3. Dev Feasibility | Worker: Dev Feasibility | `_pm/DEV-FEASIBILITY.md` |
-| 4. Synthesize | Leader | `STORY-XXX.md` |
+| 0. Setup | Leader | Directory structure |
+| 1. Test Plan | Worker: Test Plan Writer | `_pm/test-plan.yaml` |
+| 2. UI/UX Notes | Worker: UI/UX Advisor | `_pm/uiux-notes.yaml` |
+| 3. Dev Feasibility | Worker: Dev Feasibility | `_pm/dev-feasibility.yaml` |
+| 4. Synthesize | Leader | `STORY-XXX.md` (with `pm_artifacts` embedded) |
 | 5. Update Index | Leader | Index status → `generated` |
 
 **Parallel execution:** Phases 1, 2, 3 can run in parallel.

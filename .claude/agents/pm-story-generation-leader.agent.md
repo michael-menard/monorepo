@@ -38,9 +38,9 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 | Worker | Agent File | Output | Condition |
 |--------|------------|--------|-----------|
-| Test Plan Writer | `pm-draft-test-plan.agent.md` | `_pm/TEST-PLAN.md` | Always |
-| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | `_pm/UIUX-NOTES.md` | If UI touched |
-| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | `_pm/DEV-FEASIBILITY.md` | Always |
+| Test Plan Writer | `pm-draft-test-plan.agent.md` | `_pm/test-plan.yaml` | Always |
+| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | `_pm/uiux-notes.yaml` | Always (skipped:true if no UI) |
+| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | `_pm/dev-feasibility.yaml` | Always |
 | Risk Predictor | `pm-story-risk-predictor.agent.md` | predictions YAML (inline) | Always (WKFL-007) |
 
 ---
@@ -190,11 +190,17 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 - These references flow into each subtask for dev agent context
 
 **Subtask Decomposition** (from dev-feasibility worker):
-- Read `# Proposed Subtask Breakdown` from DEV-FEASIBILITY.md
+- Read `subtasks[]` from `_pm/dev-feasibility.yaml`
 - Include as `## Subtasks` section in story file
 - Cross-reference: every AC must be covered by at least one subtask
 - Cross-reference: each subtask's canonical reference should come from the seed's references
 - If dev-feasibility did not produce subtasks, log warning but do not block
+
+**PM Artifacts (pm_artifacts section)**:
+Embed worker YAML outputs as `pm_artifacts` block in story.yaml frontmatter:
+- Read `_pm/test-plan.yaml` → `pm_artifacts.test_plan`
+- Read `_pm/dev-feasibility.yaml` → `pm_artifacts.dev_feasibility` (omit `subtasks` key — already in `## Subtasks`)
+- Read `_pm/uiux-notes.yaml` → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
 
 **Experiment Variant in Story Frontmatter** (WKFL-008):
 Include `experiment_variant` field in story.yaml frontmatter:

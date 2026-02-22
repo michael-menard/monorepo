@@ -32,52 +32,45 @@ Read from:
 - Tests must be locally runnable and evidence-based.
 
 ## Output (MUST WRITE)
-- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/TEST-PLAN.md`
+Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/test-plan.yaml`:
 
-## Required Structure
-# Scope Summary
-- endpoints touched
-- UI touched: yes/no
-- data/storage touched: yes/no
+```yaml
+strategy: unit+integration+e2e   # unit | integration | e2e | manual
+scope:
+  endpoints: []                  # list of endpoints touched
+  ui_touched: true | false
+  data_touched: true | false
+happy_path_tests:
+  - id: HP-1
+    title: "..."
+    setup: "..."
+    action: "..."
+    expected: "..."
+    evidence: "..."
+error_cases:
+  - id: EC-1
+    title: "..."
+    setup: "..."
+    action: "..."
+    expected: "..."
+    evidence: "..."
+edge_cases:
+  - id: ED-1
+    title: "..."
+    setup: "..."
+    action: "..."
+    expected: "..."
+    evidence: "..."
+tooling_evidence:
+  backend:
+    http_requests: []            # .http request descriptions
+    assertions: []               # fields/status codes to assert
+  frontend:                      # omit if ui_touched: false
+    playwright_runs: []
+    assertions: []
+manual_cases: []                 # { id, title, steps, expected } for manual-only scenarios
+fixture_definitions: []          # { name, type, description }
+risks: []                        # test fragility, ambiguity, missing prereqs
+```
 
-# Happy Path Tests
-- Test 1..N:
-  - Setup
-  - Action
-  - Expected outcome
-  - Evidence (what to capture: logs, response fields, UI state, etc.)
-
-# Error Cases
-- Auth/permission errors (if applicable)
-- Validation errors
-- Not-found / missing resource
-- Upstream failure (if any)
-For each:
-- Setup
-- Action
-- Expected
-- Evidence
-
-# Edge Cases (Reasonable)
-- boundary values
-- empty states
-- concurrency/double-submit
-- pagination limits / large payloads (if applicable)
-For each:
-- Setup
-- Action
-- Expected
-- Evidence
-
-# Required Tooling Evidence
-- Backend:
-  - required `.http` requests to run
-  - what fields/status codes must be asserted
-- Frontend (if UI touched):
-  - Playwright runs required
-  - what should be asserted
-  - required artifacts (video, trace if used)
-
-# Risks to Call Out
-- Any test fragility or missing prerequisites
-- Any ambiguity that blocks test design (write to BLOCKERS.md via PM if truly blocking)
+The leader reads this file and embeds it as `pm_artifacts.test_plan` in story.yaml.

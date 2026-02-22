@@ -26,7 +26,7 @@ Primary artifact: Updated `STORY-XXX.md`
 | File | Created By | Purpose |
 |------|------------|---------|
 | `STORY-XXX.md` (updated) | Leader | Fixed story with revision history |
-| `_pm/TEST-PLAN.md` (if needed) | Leader | Updated test plan |
+| `pm_artifacts.test_plan` in story.yaml (if needed) | Leader | Updated test plan |
 
 ## Signals
 
@@ -59,7 +59,7 @@ Estimated tokens:
 | Missing AC | "no AC for edge case X" | Add new AC |
 | Untestable AC | "cannot verify without Y" | Make locally verifiable |
 | Scope Creep | "exceeds index scope" | Move to Non-goals |
-| Missing Test Plan | "no error path tests" | Update TEST-PLAN.md |
+| Missing Test Plan | "no error path tests" | Update pm_artifacts.test_plan in story.yaml |
 | Constraint Gap | "migration not specified" | Add explicit constraints |
 
 ## Fix Patterns
