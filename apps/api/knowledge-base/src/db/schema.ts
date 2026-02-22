@@ -694,6 +694,7 @@ export const stories = pgTable(
   },
   table => ({
     featureIdx: index('idx_stories_feature').on(table.feature),
+    epicIdx: index('idx_stories_epic').on(table.epic),
     stateIdx: index('idx_stories_state').on(table.state),
     phaseIdx: index('idx_stories_phase').on(table.phase),
     createdAtIdx: index('idx_stories_created_at').on(table.createdAt),

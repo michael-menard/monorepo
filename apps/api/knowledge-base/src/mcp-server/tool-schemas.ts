@@ -2466,7 +2466,9 @@ Returns stories ordered by last update (newest first).
 
 Parameters:
 - feature (optional): Filter by feature prefix (e.g., 'wish')
-- state (optional): Filter by workflow state (backlog, ready, in_progress, etc.)
+- epic (optional): Filter by epic name (e.g., 'platform')
+- state (optional): Filter by a single workflow state (ignored when states[] is provided)
+- states (optional): Filter by multiple workflow states (takes precedence over state)
 - phase (optional): Filter by implementation phase (setup, implementation, etc.)
 - blocked (optional): Filter by blocked status (true/false)
 - priority (optional): Filter by priority (critical, high, medium, low)
@@ -2484,6 +2486,12 @@ Example (list stories in code review for "wish" feature):
 {
   "feature": "wish",
   "state": "in_review"
+}
+
+Example (list all actionable platform stories):
+{
+  "epic": "platform",
+  "states": ["ready_for_qa", "failed_qa", "failed_code_review", "in_review", "ready_for_review", "ready", "in_progress", "backlog"]
 }
 
 Example (list high priority stories):

@@ -35,8 +35,14 @@ export const KbListStoriesInputSchema = z.object({
   /** Filter by feature prefix (e.g., 'wish') */
   feature: z.string().optional(),
 
-  /** Filter by workflow state */
+  /** Filter by epic name (e.g., 'platform') */
+  epic: z.string().optional(),
+
+  /** Filter by workflow state (singular; ignored when states[] is provided) */
   state: StoryStateSchema.optional(),
+
+  /** Filter by multiple workflow states (takes precedence over singular state) */
+  states: z.array(StoryStateSchema).optional(),
 
   /** Filter by implementation phase */
   phase: StoryPhaseSchema.optional(),
@@ -175,7 +181,13 @@ export async function kb_list_stories(
   if (validated.feature) {
     conditions.push(eq(stories.feature, validated.feature))
   }
-  if (validated.state) {
+  if (validated.epic) {
+    conditions.push(eq(stories.epic, validated.epic))
+  }
+  // states[] takes precedence over singular state
+  if (validated.states?.length) {
+    conditions.push(inArray(stories.state, validated.states))
+  } else if (validated.state) {
     conditions.push(eq(stories.state, validated.state))
   }
   if (validated.phase) {

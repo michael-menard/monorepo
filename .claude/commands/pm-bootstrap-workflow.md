@@ -97,8 +97,13 @@ Provide recovery guidance based on error type.
 ## Done
 
 On `GENERATION COMPLETE`:
-1. Read `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`
-2. Report to user:
+1. Seed all generated stories into the KB database:
+   ```bash
+   pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
+   ```
+   (Scans `plans/future/` and upserts all story.yaml files found — idempotent, non-blocking if DB unavailable.)
+2. Read `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`
+3. Report to user:
 
 ```
 ## Bootstrap Complete: {PREFIX}

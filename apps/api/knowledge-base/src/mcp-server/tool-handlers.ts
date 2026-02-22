@@ -4148,6 +4148,9 @@ export async function handleToolCall(
     throw error
   }
 
+  // Track this tool in the call chain for downstream circular dependency detection
+  context?.tool_call_chain.push(toolName)
+
   const handler = toolHandlers[toolName]
 
   if (!handler) {

@@ -137,15 +137,47 @@ Signal: ELABORATION COMPLETE: <verdict>
 
 ---
 
-## On Success (PASS)
+## On PASS / CONDITIONAL PASS
 
-```bash
-mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
-```
+After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CONDITIONAL PASS`:
 
-Report:
-```
-ELABORATION COMPLETE: PASS
-Story: {STORY_ID} ready for implementation
-Next: /dev-implement-story {FEATURE_DIR} {STORY_ID}
-```
+1. Update DB state:
+   ```
+   kb_update_story_status({ story_id: "{STORY_ID}", state: "ready", phase: "planning" })
+   ```
+2. Move story directory:
+   ```bash
+   mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
+   ```
+3. Report:
+   ```
+   ELABORATION COMPLETE: PASS
+   Story: {STORY_ID} ready for implementation
+   Next: /dev-implement-story {FEATURE_DIR} {STORY_ID}
+   ```
+
+## On FAIL
+
+After Phase 2 returns `ELABORATION COMPLETE: FAIL`:
+
+1. Update DB state:
+   ```
+   kb_update_story_status({ story_id: "{STORY_ID}", state: "backlog", phase: "planning" })
+   ```
+2. Move story directory:
+   ```bash
+   mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/backlog/{STORY_ID}
+   ```
+3. Report:
+   ```
+   ELABORATION COMPLETE: FAIL
+   Story: {STORY_ID} returned to backlog — address gaps and re-run /elab-story
+   ```
+
+## On SPLIT REQUIRED
+
+No DB state change on the parent story — it will be superseded by split children. Spawn split workflow per existing behavior (recursive `/elab-story` for each split part).
+
+## Note on Phase 1 Directory Move
+
+The Phase 1 move (`backlog/ → elaboration/`) does **not** need a DB state change — `backlog` is the correct DB state during in-progress analysis.
