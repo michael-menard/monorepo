@@ -271,5 +271,5 @@ Before completion signal:
 ```
 
 Expected usage:
-- Input: ~2000 tokens (ANALYSIS.md + FUTURE-OPPORTUNITIES.md + story)
-- Output: ~1500 tokens (DECISIONS.yaml + AC additions + KB spawns)
+- Input: ~2000 tokens (ELAB.yaml + story)
+- Output: ~1500 tokens (ELAB.yaml updates + AC additions + KB spawns)
