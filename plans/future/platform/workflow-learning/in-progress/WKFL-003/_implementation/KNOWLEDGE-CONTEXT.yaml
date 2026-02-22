@@ -1,0 +1,132 @@
+schema: 1
+story_id: WKFL-003
+query_timestamp: "2026-02-22T00:00:00Z"
+autonomy_level: conservative
+
+story_title: "Emergent Heuristic Discovery"
+story_type: agent-tooling
+story_status: in-progress
+phase: planning
+estimated_points: 3
+
+relevant_patterns:
+  - id: agent-worker-pattern
+    description: >
+      Worker agents are markdown files under .claude/agents/ with YAML frontmatter
+      declaring model, tools, kb_tools, permission_level, and story_id. They follow
+      a phased execution flow and emit a typed completion signal.
+      heuristic-evolver.agent.md is a read-only worker (permission_level: read-only).
+    reference_files:
+      - ".claude/agents/heuristic-evolver.agent.md"
+      - ".claude/agents/_shared/autonomy-tiers.md"
+
+  - id: proposal-only-pattern
+    description: >
+      Agent outputs that touch configuration files use a proposals-only approach:
+      the agent writes a separate YAML proposal file rather than modifying the
+      source-of-truth config directly. Human review required before applying any
+      change. Enforced via Phase 6 git diff integrity check.
+    reference_files:
+      - ".claude/agents/heuristic-evolver.agent.md"
+      - ".claude/config/HEURISTIC-PROPOSALS.yaml"
+      - ".claude/config/decision-classification.yaml"
+
+  - id: kb-decision-outcome-pattern
+    description: >
+      Decision outcomes are logged to KB at end of each phase. Entry type is
+      decision_outcome with required fields: type, schema_version, story_id,
+      decision_id, pattern, timestamp, tier, category, auto_accepted, autonomy_level,
+      user_outcome. KB queries use kb_search with structured filters.
+    reference_files:
+      - ".claude/schemas/decision-outcome-schema.md"
+      - ".claude/agents/heuristic-evolver.agent.md"
+
+  - id: minimum-sample-gate-pattern
+    description: >
+      Statistical conclusions require minimum 5 samples per pattern before any
+      tier change is proposed. Patterns below threshold go to insufficient_samples
+      section and are not evaluated further.
+    reference_files:
+      - ".claude/agents/heuristic-evolver.agent.md"
+      - ".claude/config/HEURISTIC-PROPOSALS.yaml"
+
+related_stories:
+  - story_id: WKFL-002
+    relationship: depends_on
+    role: >
+      Provides calibration data and initial decision tracking. WKFL-002 defines
+      the mechanism by which decision_outcome entries are written to the KB.
+      heuristic-evolver reads this data.
+    status: must-be-completed-first
+
+  - story_id: WKFL-004
+    relationship: depends_on
+    role: >
+      Provides user feedback on decisions (confirm/override/modify). Captures the
+      user_outcome field that is the primary input to success rate calculation.
+    status: must-be-completed-first
+
+  - story_id: WKFL-010
+    relationship: blocks
+    role: >
+      Pattern evolution depends on the heuristic discovery foundation established
+      by WKFL-003. Cannot proceed until tier proposals are operational.
+    status: blocked-by-WKFL-003
+
+  - story_id: WKFL-006
+    relationship: related
+    role: >
+      Pattern mining identifies new decision patterns. WKFL-003 tunes existing
+      patterns; WKFL-006 discovers new ones. Independent but complementary.
+    status: independent
+
+key_files:
+  - path: ".claude/agents/heuristic-evolver.agent.md"
+    role: deliverable
+    status: exists_on_main
+    commit: "522a8c94"
+
+  - path: ".claude/schemas/decision-outcome-schema.md"
+    role: deliverable
+    status: exists_on_main
+    commit: "522a8c94"
+
+  - path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+    role: deliverable
+    status: exists_on_main
+    commit: "522a8c94"
+
+  - path: ".claude/config/decision-classification.yaml"
+    role: reference_input
+    status: exists_on_main
+    note: "Must NEVER be modified by the agent"
+
+  - path: ".claude/agents/_shared/autonomy-tiers.md"
+    role: reference_input
+    status: exists_on_main
+
+tier_system_reference:
+  source: ".claude/agents/_shared/autonomy-tiers.md"
+  promotion_thresholds:
+    promote_if_success_rate_above: 0.95
+    promotion_step: 1
+    promotion_cap: 2
+    tier_4_guard: true
+  demotion_thresholds:
+    demote_single_if_success_rate_below: 0.80
+    demote_double_if_success_rate_below: 0.50
+    demotion_floor: 5
+    tier_4_guard: true
+  minimum_sample_size: 5
+
+decision_classification_path: ".claude/config/decision-classification.yaml"
+autonomy_tiers_path: ".claude/agents/_shared/autonomy-tiers.md"
+proposals_output_path: ".claude/config/HEURISTIC-PROPOSALS.yaml"
+schema_path: ".claude/schemas/decision-outcome-schema.md"
+
+kb_integration:
+  write_tools: [kb_add_lesson]
+  read_tools: [kb_search, kb_query]
+  primary_query: "type:decision_outcome"
+  query_limit: 1000
+  entry_type: decision_outcome
