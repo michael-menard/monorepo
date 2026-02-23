@@ -1,0 +1,66 @@
+---
+# Deferred KB Writes for WKFL-002
+# These writes should be executed when KB is available
+# See: Phase 4.5 KB Persistence in pm-story-generation-leader.agent.md
+---
+
+deferred_writes:
+  - type: story_insert
+    story_id: WKFL-002
+    timestamp: 2026-02-06T23:45:00Z
+    reason: KB tools not available during story generation
+    retry_command: |
+      -- Insert WKFL-002 story into knowledge base
+      INSERT INTO stories (
+        story_id,
+        feature,
+        title,
+        story_dir,
+        story_file,
+        story_type,
+        points,
+        priority,
+        state,
+        touches_backend,
+        touches_frontend,
+        touches_database,
+        touches_infra
+      ) VALUES (
+        'WKFL-002',
+        'workflow-learning',
+        'Confidence Calibration',
+        'plans/future/workflow-learning/backlog/WKFL-002',
+        'plans/future/workflow-learning/backlog/WKFL-002/WKFL-002.md',
+        'feature',
+        8,
+        'high',
+        'backlog',
+        true,   -- KB schema changes, MCP tools
+        false,  -- No frontend
+        true,   -- KB database (knowledge_entries table)
+        false   -- No infra changes
+      )
+      ON CONFLICT (story_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        story_dir = EXCLUDED.story_dir,
+        story_file = EXCLUDED.story_file,
+        story_type = EXCLUDED.story_type,
+        points = EXCLUDED.points,
+        priority = EXCLUDED.priority,
+        state = EXCLUDED.state,
+        touches_backend = EXCLUDED.touches_backend,
+        touches_frontend = EXCLUDED.touches_frontend,
+        touches_database = EXCLUDED.touches_database,
+        touches_infra = EXCLUDED.touches_infra,
+        updated_at = CURRENT_TIMESTAMP;
+
+  - type: searchable_metadata
+    story_id: WKFL-002
+    timestamp: 2026-02-06T23:45:00Z
+    metadata:
+      tags: [analysis, calibration, kb-integration, meta-workflow]
+      keywords: [confidence, calibration, accuracy, threshold, agent, findings, verification]
+      surfaces: [backend, database]
+      components: [knowledge-base, agents, commands]
+      dependencies: [WKFL-001, WKFL-004]
+      blocks: [WKFL-003, WKFL-010]
