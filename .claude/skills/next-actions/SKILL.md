@@ -3,11 +3,13 @@ name: next-actions
 description: Query the KB database for the next unblocked stories and recommend commands. Falls back to WORK-ORDER-BY-BATCH.md if the DB has no stories.
 created: 2026-02-20
 updated: 2026-02-22
-version: 2.0.0
+version: 2.1.0
 type: utility
 ---
 
 # /next-actions — Find Next Actions from KB Database
+
+> **CRITICAL EXECUTION RULE: Do NOT spawn sub-agents (Task tool) for this skill. Call all MCP tools directly in the main conversation using the `mcp__knowledge-base__` prefix. Sub-agents do not have reliable access to the knowledge-base MCP server and will waste time exploring the filesystem instead of making tool calls.**
 
 ## Usage
 
@@ -64,10 +66,10 @@ Within each rank, sort by priority: `critical` > `high` > `medium` > `low`.
 
 ### Step 1 — Get Active Worktrees
 
-Before querying stories, call `worktree_list_active` to get all story IDs currently being actively worked:
+Call `mcp__knowledge-base__worktree_list_active` directly (no sub-agent):
 
 ```
-worktree_list_active({})
+mcp__knowledge-base__worktree_list_active({})
 → extract list of story_ids where status = 'active' → call these ACTIVE_IDS
 ```
 
@@ -75,10 +77,10 @@ If the tool is unavailable, set ACTIVE_IDS = [].
 
 ### Step 2 — Query the KB Database
 
-Use the `kb_list_stories` MCP tool to find stories NOT in terminal states:
+Call `mcp__knowledge-base__kb_list_stories` directly:
 
 ```
-kb_list_stories({
+mcp__knowledge-base__kb_list_stories({
   epic: "platform",
   states: ["ready_for_qa", "failed_qa", "failed_code_review", "in_review",
            "ready_for_review", "ready", "in_progress", "backlog"],
@@ -88,23 +90,23 @@ kb_list_stories({
 
 If the result contains **0 stories**, go to **Step 6 (Fallback)**.
 
-### Step 3 — Collect N Candidates via `kb_get_next_story`
+### Step 3 — Collect N Candidates via `mcp__knowledge-base__kb_get_next_story`
 
-Call `kb_get_next_story` up to N times, accumulating excluded IDs. Always pass ACTIVE_IDS to exclude stories currently being worked:
+Call `mcp__knowledge-base__kb_get_next_story` up to N times directly (no sub-agent), accumulating excluded IDs:
 
 ```
 # First call — exclude all active worktrees
-kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: ACTIVE_IDS })
+mcp__knowledge-base__kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: ACTIVE_IDS })
 → returns STORY_A
 
 # Second call — exclude active + first result
-kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: [...ACTIVE_IDS, "STORY_A"] })
+mcp__knowledge-base__kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: [...ACTIVE_IDS, "STORY_A"] })
 → returns STORY_B
 
 # ... repeat until N items or no more candidates
 ```
 
-Stop when `kb_get_next_story` returns `story: null` or you have N items.
+Stop when `mcp__knowledge-base__kb_get_next_story` returns `story: null` or you have N items.
 
 ### Step 4 — Re-sort by Priority Rank
 
@@ -230,5 +232,5 @@ Use `kb_list_stories` to inspect blocked stories.
 | Story has no feature prefix match | Use `plans/future/platform` as feature dir |
 | N > available unblocked stories | Return all available (less than N) |
 | MCP tools unavailable | Fall back to WORK-ORDER-BY-BATCH.md with warning |
-| `worktree_list_active` fails | Treat ACTIVE_IDS as empty, proceed without exclusion |
+| `mcp__knowledge-base__worktree_list_active` fails | Treat ACTIVE_IDS as empty, proceed without exclusion |
 | Story in `in_progress` with no active worktree | Treat as Needs Dev (rank 4) |

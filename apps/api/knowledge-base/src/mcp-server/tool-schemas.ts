@@ -206,11 +206,12 @@ function zodToMcpSchema(zodSchema: unknown): Record<string, unknown> {
     target: 'jsonSchema7',
   })
 
-  // Remove $schema property if present
+  // Remove $schema property if present, ensure type: "object" is always set
   if (typeof jsonSchema === 'object' && jsonSchema !== null) {
     const schemaObj = jsonSchema as Record<string, unknown>
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { $schema, ...rest } = schemaObj
+    if (!rest.type) rest.type = 'object'
     return rest
   }
 

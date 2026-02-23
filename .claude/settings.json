@@ -8,7 +8,8 @@
       "WebFetch(domain:*)",
       "Bash",
       "mcp__github__*",
-      "mcp__chrome-devtools__*"
+      "mcp__chrome-devtools__*",
+      "mcp__knowledge-base__*"
     ],
 
     "ask": [
