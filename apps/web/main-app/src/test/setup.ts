@@ -359,6 +359,21 @@ vi.mock('@repo/app-component-library', () => ({
   Skeleton: vi.fn(({ className, ...props }) =>
     React.createElement('div', { className, 'data-testid': 'skeleton', ...props }),
   ),
+  DashboardSkeleton: vi.fn(({ className, ...props }) =>
+    React.createElement('div', { className, 'data-testid': 'dashboard-skeleton', ...props }),
+  ),
+
+  // Empty states
+  EmptyState: vi.fn(({ title, description, className, ...props }) =>
+    React.createElement('div', { className, 'data-testid': 'empty-state', ...props }, title),
+  ),
+  EmptyDashboard: vi.fn(({ onAddClick, addLink, className, ...props }) =>
+    React.createElement(
+      'div',
+      { className, 'data-testid': 'empty-dashboard', ...props },
+      React.createElement('a', { href: addLink || '/instructions/new' }, 'Add Your First MOC'),
+    ),
+  ),
 
   // Tooltip
   Tooltip: vi.fn(({ children }) => children),
@@ -821,6 +836,19 @@ vi.mock('lucide-react', () => ({
     React.createElement('svg', { 'data-testid': 'key-square-icon', ...props }),
   ),
 }))
+
+// Mock Worker (needed by heic2any which is transitively imported by the upload module chain)
+global.Worker = class MockWorker {
+  constructor(_url: string | URL, _options?: WorkerOptions) {}
+  postMessage() {}
+  terminate() {}
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent() { return false }
+  onmessage = null
+  onmessageerror = null
+  onerror = null
+} as any
 
 // Global test utilities
 declare global {

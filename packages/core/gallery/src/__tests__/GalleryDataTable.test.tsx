@@ -7,6 +7,11 @@ import {
   type GalleryDataTableColumn,
 } from '../components/GalleryDataTable'
 
+vi.mock('@tanstack/react-router', () => ({
+  useSearch: vi.fn(() => ({})),
+  useNavigate: vi.fn(() => vi.fn()),
+}))
+
 interface WishlistItem {
   id: string
   title: string

@@ -156,7 +156,8 @@ describe('useGalleryKeyboard', () => {
       const onSelectAll = vi.fn()
       render(<TestComponent onSelectAll={onSelectAll} />)
 
-      fireEvent.keyDown(document, { key: 'a', ctrlKey: true })
+      const container = document.querySelector('[data-testid="container"]')!
+      fireEvent.keyDown(container, { key: 'a', ctrlKey: true })
 
       expect(onSelectAll).toHaveBeenCalledTimes(1)
     })
@@ -165,7 +166,8 @@ describe('useGalleryKeyboard', () => {
       const onSelectAll = vi.fn()
       render(<TestComponent onSelectAll={onSelectAll} />)
 
-      fireEvent.keyDown(document, { key: 'a', metaKey: true })
+      const container = document.querySelector('[data-testid="container"]')!
+      fireEvent.keyDown(container, { key: 'a', metaKey: true })
 
       expect(onSelectAll).toHaveBeenCalledTimes(1)
     })
@@ -175,7 +177,8 @@ describe('useGalleryKeyboard', () => {
       const onAddToAlbum = vi.fn()
       render(<TestComponent onSelectAll={onSelectAll} onAddToAlbum={onAddToAlbum} />)
 
-      fireEvent.keyDown(document, { key: 'a', ctrlKey: true })
+      const container = document.querySelector('[data-testid="container"]')!
+      fireEvent.keyDown(container, { key: 'a', ctrlKey: true })
 
       expect(onSelectAll).toHaveBeenCalledTimes(1)
       expect(onAddToAlbum).not.toHaveBeenCalled()

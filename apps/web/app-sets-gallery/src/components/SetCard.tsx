@@ -162,7 +162,7 @@ export function SetCard({ set, onClick, onEdit, onDelete, className }: SetGaller
       title={set.title}
       subtitle={subtitle}
       metadata={metadata}
-      actions={actions}
+      hoverOverlay={actions}
       onClick={onClick}
       className={className}
       data-testid={`set-card-${set.id}`}

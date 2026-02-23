@@ -3,6 +3,64 @@ import { cleanup } from '@testing-library/react'
 import { afterEach, beforeAll, afterAll } from 'vitest'
 import { server } from './mocks/server'
 
+// Fix 1: Mock Worker and URL.createObjectURL for HEIC library
+// The HEIC library calls `new Worker(URL.createObjectURL(blob))` at module load time.
+// Both must be available before any test file imports the upload package.
+URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+URL.revokeObjectURL = vi.fn()
+vi.stubGlobal(
+  'Worker',
+  class MockWorker {
+    postMessage() {}
+    addEventListener() {}
+    removeEventListener() {}
+    terminate() {}
+  },
+)
+
+// Fix 2: Mock DragEvent to include dataTransfer (jsdom does not populate it)
+const MockDataTransfer = class {
+  effectAllowed: string = 'uninitialized'
+  dropEffect: string = 'none'
+  private _data: Record<string, string> = {}
+  setData(format: string, data: string) {
+    this._data[format] = data
+  }
+  getData(format: string) {
+    return this._data[format] || ''
+  }
+  clearData(format?: string) {
+    if (format) delete this._data[format]
+    else this._data = {}
+  }
+  setDragImage() {}
+  get items() {
+    return []
+  }
+  get files() {
+    return []
+  }
+  get types(): string[] {
+    return Object.keys(this._data)
+  }
+}
+
+class MockDragEvent extends MouseEvent {
+  dataTransfer: InstanceType<typeof MockDataTransfer>
+  constructor(type: string, init?: DragEventInit & { dataTransfer?: InstanceType<typeof MockDataTransfer> }) {
+    super(type, init)
+    this.dataTransfer = init?.dataTransfer ?? new MockDataTransfer()
+  }
+}
+Object.defineProperty(window, 'DragEvent', {
+  writable: true,
+  value: MockDragEvent,
+})
+Object.defineProperty(window, 'DataTransfer', {
+  writable: true,
+  value: MockDataTransfer,
+})
+
 // Cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
   cleanup()

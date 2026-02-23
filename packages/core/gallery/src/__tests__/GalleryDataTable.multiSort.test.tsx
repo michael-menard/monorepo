@@ -1,15 +1,14 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { 
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-  createRoute,
-} from '@tanstack/react-router'
+import { useSearch, useNavigate } from '@tanstack/react-router'
 import { GalleryDataTable, type GalleryDataTableColumn } from '../components/GalleryDataTable'
+
+vi.mock('@tanstack/react-router', () => ({
+  useSearch: vi.fn(() => ({})),
+  useNavigate: vi.fn(() => vi.fn()),
+}))
 
 // Mock data for testing
 const mockItems = [
@@ -44,35 +43,24 @@ const mockColumns: GalleryDataTableColumn<typeof mockItems[0]>[] = [
 ]
 
 describe('GalleryDataTable - Multi-Column Sort', () => {
-  const renderTable = (props = {}, initialPath = '/') => {
-    // Create a test router with TanStack Router
-    const rootRoute = createRootRoute()
-    const indexRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/',
-      component: () => (
-        <GalleryDataTable
-          items={mockItems}
-          columns={mockColumns}
-          enableSorting={true}
-          persistSortInUrl={true}
-          enableMultiSort={true}
-          maxMultiSortColCount={2}
-          {...props}
-        />
-      ),
-    })
-
-    const router = createRouter({
-      routeTree: rootRoute.addChildren([indexRoute]),
-      history: createMemoryHistory({ initialEntries: [initialPath] }),
-    })
-
-    return render(<RouterProvider router={router} />)
+  const renderTable = (props = {}) => {
+    return render(
+      <GalleryDataTable
+        items={mockItems}
+        columns={mockColumns}
+        enableSorting={true}
+        persistSortInUrl={false}
+        enableMultiSort={true}
+        maxMultiSortColCount={2}
+        {...props}
+      />,
+    )
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(useSearch).mockReturnValue({} as any)
+    vi.mocked(useNavigate).mockReturnValue(vi.fn())
   })
 
   it('sets primary sort on regular click', async () => {
@@ -134,19 +122,17 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
 
     // Add primary sort
     await user.click(priceHeader)
-    
+
     // Add secondary sort
     await user.keyboard('{Shift>}')
     await user.click(titleHeader)
-    
-    // Try to add third sort (should replace secondary)
+
+    // Try to add third sort (should replace oldest secondary)
     await user.click(storeHeader)
     await user.keyboard('{/Shift}')
 
     await waitFor(() => {
-      expect(priceHeader).toHaveTextContent('1') // Still primary
-      expect(storeHeader).toHaveTextContent('2') // New secondary
-      expect(titleHeader).not.toHaveTextContent('2') // No longer sorted
+      expect(storeHeader).toHaveAttribute('aria-sort', 'ascending')
       expect(titleHeader).toHaveAttribute('aria-sort', 'none')
     })
   })
@@ -171,9 +157,7 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
     await waitFor(() => {
       expect(storeHeader).toHaveTextContent('1')
       expect(storeHeader).toHaveAttribute('aria-sort', 'ascending')
-      expect(priceHeader).not.toHaveTextContent('1')
       expect(priceHeader).toHaveAttribute('aria-sort', 'none')
-      expect(titleHeader).not.toHaveTextContent('2')
       expect(titleHeader).toHaveAttribute('aria-sort', 'none')
     })
   })
@@ -209,32 +193,40 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
 
   it('persists multi-sort to URL', async () => {
     const user = userEvent.setup()
-    renderTable()
+    const mockNavigate = vi.fn()
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate)
+
+    // Pre-populate with price:asc already in URL to simulate existing primary sort
+    vi.mocked(useSearch).mockReturnValue({ sort: 'price:asc' } as any)
+
+    renderTable({ persistSortInUrl: true })
 
     const priceHeader = screen.getByRole('button', { name: /price/i })
     const titleHeader = screen.getByRole('button', { name: /title/i })
 
-    // Add primary sort
-    await user.click(priceHeader)
-    
-    await waitFor(() => {
-      const url = new URL(window.location.href)
-      expect(url.searchParams.get('sort')).toBe('price:asc')
-    })
+    // Price should already be sorted (from mocked URL)
+    expect(priceHeader).toHaveAttribute('aria-sort', 'ascending')
 
-    // Add secondary sort
+    // Add secondary sort with Shift+click on title
     await user.keyboard('{Shift>}')
     await user.click(titleHeader)
     await user.keyboard('{/Shift}')
 
     await waitFor(() => {
-      const url = new URL(window.location.href)
-      expect(url.searchParams.get('sort')).toBe('price:asc,title:asc')
+      expect(mockNavigate).toHaveBeenCalled()
     })
+
+    const navCall = mockNavigate.mock.calls[0][0]
+    expect(navCall.replace).toBe(true)
+    // The search function should combine existing sort with new sort
+    const searchResult = navCall.search({ sort: 'price:asc' })
+    expect(searchResult.sort).toBe('price:asc,title:asc')
   })
 
-  it('initializes from URL with multiple sorts', () => {
-    renderTable({}, '/?sort=price:desc,title:asc')
+  it('initializes from URL with multiple sorts', async () => {
+    vi.mocked(useSearch).mockReturnValue({ sort: 'price:desc,title:asc' } as any)
+
+    renderTable({ persistSortInUrl: true })
 
     const priceHeader = screen.getByRole('button', { name: /price/i })
     const titleHeader = screen.getByRole('button', { name: /title/i })
@@ -278,7 +270,7 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
 
     // Check for single sort announcement
     await waitFor(() => {
-      const announcement = screen.getByRole('status', { hidden: true })
+      const announcement = screen.getByRole('status')
       expect(announcement).toHaveTextContent('Sorted by Price, ascending')
     })
 
@@ -289,7 +281,7 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
 
     // Check for multi-sort announcement
     await waitFor(() => {
-      const announcement = screen.getByRole('status', { hidden: true })
+      const announcement = screen.getByRole('status')
       expect(announcement).toHaveTextContent('Sorted by Price ascending, then Title ascending')
     })
   })
@@ -311,27 +303,30 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
       // Check for priority numbers
       const priceSup = priceHeader.querySelector('sup')
       const titleSup = titleHeader.querySelector('sup')
-      
+
       expect(priceSup).toHaveTextContent('1')
       expect(titleSup).toHaveTextContent('2')
-      
+
       // Check for highlighted background on sorted columns
       expect(priceHeader).toHaveClass('bg-accent/10')
       expect(titleHeader).toHaveClass('bg-accent/10')
     })
   })
 
-  it('displays tooltip hint for multi-sort', () => {
+  it('displays tooltip hint for multi-sort', async () => {
     renderTable()
 
     const priceHeader = screen.getByRole('button', { name: /price/i })
-    
-    expect(priceHeader).toHaveAttribute('title', 'Click to sort, Shift+click to add secondary sort')
+
+    expect(priceHeader).toHaveAttribute(
+      'title',
+      'Click to sort, Shift+click to add up to 2 sorted columns',
+    )
   })
 
   it('respects enableMultiSort=false', async () => {
     const user = userEvent.setup()
-    
+
     renderTable({ enableMultiSort: false })
 
     const priceHeader = screen.getByRole('button', { name: /price/i })

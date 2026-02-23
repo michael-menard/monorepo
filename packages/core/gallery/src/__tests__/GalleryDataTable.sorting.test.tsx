@@ -1,15 +1,14 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { 
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-  createRoute,
-} from '@tanstack/react-router'
+import { useSearch, useNavigate } from '@tanstack/react-router'
 import { GalleryDataTable, type GalleryDataTableColumn } from '../components/GalleryDataTable'
+
+vi.mock('@tanstack/react-router', () => ({
+  useSearch: vi.fn(() => ({})),
+  useNavigate: vi.fn(() => vi.fn()),
+}))
 
 // Mock data for testing
 const mockItems = [
@@ -44,33 +43,22 @@ const mockColumns: GalleryDataTableColumn<typeof mockItems[0]>[] = [
 ]
 
 describe('GalleryDataTable - Single Column Sort', () => {
-  const renderTable = (props: Partial<Parameters<typeof GalleryDataTable>[0]> = {}, initialPath = '/') => {
-    // Create a test router with TanStack Router
-    const rootRoute = createRootRoute()
-    const indexRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/',
-      component: () => (
-        <GalleryDataTable
-          items={mockItems}
-          columns={(props.columns as any) ?? mockColumns}
-          enableSorting={true}
-          persistSortInUrl={true}
-          {...props}
-        />
-      ),
-    })
-
-    const router = createRouter({
-      routeTree: rootRoute.addChildren([indexRoute]),
-      history: createMemoryHistory({ initialEntries: [initialPath] }),
-    })
-
-    return render(<RouterProvider router={router} />)
+  const renderTable = (props: Partial<Parameters<typeof GalleryDataTable>[0]> = {}) => {
+    return render(
+      <GalleryDataTable
+        items={mockItems}
+        columns={(props.columns as any) ?? mockColumns}
+        enableSorting={true}
+        persistSortInUrl={false}
+        {...props}
+      />,
+    )
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(useSearch).mockReturnValue({} as any)
+    vi.mocked(useNavigate).mockReturnValue(vi.fn())
   })
 
   it('cycles through sort states on header click', async () => {
@@ -85,7 +73,7 @@ describe('GalleryDataTable - Single Column Sort', () => {
 
     // First click: ascending
     await user.click(titleHeader)
-    
+
     // Wait for the button to update its aria attributes
     await waitFor(() => {
       const updatedHeader = screen.getByRole('button', { name: /title.*ascending/i })
@@ -142,41 +130,58 @@ describe('GalleryDataTable - Single Column Sort', () => {
 
   it('syncs sort state to URL', async () => {
     const user = userEvent.setup()
-    const { container } = renderTable()
+    const mockNavigate = vi.fn()
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate)
+
+    renderTable({ persistSortInUrl: true })
 
     const titleHeader = screen.getByRole('button', { name: /title/i })
 
-    // Sort ascending
+    // Sort ascending — navigate should be called with sort=title:asc
     await user.click(titleHeader)
     await waitFor(() => {
-      const url = new URL(window.location.href)
-      expect(url.searchParams.get('sort')).toBe('title:asc')
+      expect(mockNavigate).toHaveBeenCalled()
     })
 
-    // Sort descending
+    const ascCall = mockNavigate.mock.calls[0][0]
+    expect(ascCall.replace).toBe(true)
+    expect(ascCall.search({})).toMatchObject({ sort: 'title:asc' })
+
+    // Sort descending — navigate called with sort=title:desc
+    mockNavigate.mockClear()
+    vi.mocked(useSearch).mockReturnValue({ sort: 'title:asc' } as any)
     await user.click(titleHeader)
     await waitFor(() => {
-      const url = new URL(window.location.href)
-      expect(url.searchParams.get('sort')).toBe('title:desc')
+      expect(mockNavigate).toHaveBeenCalled()
+    })
+    expect(mockNavigate.mock.calls[0][0].search({ sort: 'title:asc' })).toMatchObject({
+      sort: 'title:desc',
     })
 
-    // Remove sort
+    // Remove sort — navigate called with no sort param
+    mockNavigate.mockClear()
+    vi.mocked(useSearch).mockReturnValue({ sort: 'title:desc' } as any)
     await user.click(titleHeader)
     await waitFor(() => {
-      const url = new URL(window.location.href)
-      expect(url.searchParams.has('sort')).toBe(false)
+      expect(mockNavigate).toHaveBeenCalled()
     })
+    const noSortResult = mockNavigate.mock.calls[0][0].search({ sort: 'title:desc' })
+    expect(noSortResult.sort).toBeUndefined()
   })
 
-  it('initializes from URL sort parameter', () => {
-    renderTable({}, '/?sort=price:desc')
+  it('initializes from URL sort parameter', async () => {
+    vi.mocked(useSearch).mockReturnValue({ sort: 'price:desc' } as any)
+
+    renderTable({ persistSortInUrl: true })
 
     const priceHeader = screen.getByRole('button', { name: /price/i })
     expect(priceHeader).toHaveAttribute('aria-sort', 'descending')
 
-    // Verify descending price order
+    // TanStack Table uses alphanumeric sort for strings.
+    // For price strings: '75.00' sorts higher than '50.00' (first numeric chunk 75 > 50)
+    // Descending: 100.00 (Charlie), 75.00 (Delta), 50.00 (Alpha)
     const rows = screen.getAllByRole('row')
-    expect(rows[1]).toHaveTextContent('100.00') // Charlie Set
+    expect(rows[1]).toHaveTextContent('100.00') // Charlie Set (highest numeric value)
     expect(rows[2]).toHaveTextContent('75.00') // Delta Set
     expect(rows[3]).toHaveTextContent('50.00') // Alpha Set
   })
@@ -227,7 +232,6 @@ describe('GalleryDataTable - Single Column Sort', () => {
   })
 
   it('applies hover state to sortable headers', async () => {
-    const user = userEvent.setup()
     renderTable()
 
     const titleHeader = screen.getByRole('button', { name: /title/i })
@@ -238,8 +242,6 @@ describe('GalleryDataTable - Single Column Sort', () => {
   })
 
   it('respects enableSorting prop on columns', async () => {
-    const user = userEvent.setup()
-
     const columnsWithDisabledSort: GalleryDataTableColumn<typeof mockItems[0]>[] = [
       {
         field: 'title',
@@ -267,14 +269,12 @@ describe('GalleryDataTable - Single Column Sort', () => {
     expect(priceButton).toBeNull() // But not as a button
   })
 
-  it('respects global enableSorting=false prop', () => {
+  it('respects global enableSorting=false prop', async () => {
     renderTable({ enableSorting: false })
 
     // No sortable headers should exist
     const buttons = screen.queryAllByRole('button')
-    const sortableHeaders = buttons.filter(btn =>
-      btn.hasAttribute('aria-sort'),
-    )
+    const sortableHeaders = buttons.filter(btn => btn.hasAttribute('aria-sort'))
     expect(sortableHeaders).toHaveLength(0)
   })
 
@@ -291,9 +291,9 @@ describe('GalleryDataTable - Single Column Sort', () => {
       expect(titleHeader).toHaveAttribute('aria-sort', 'ascending')
     })
 
-    // URL should not change
-    const url = new URL(window.location.href)
-    expect(url.searchParams.has('sort')).toBe(false)
+    // navigate should NOT have been called (internal state only)
+    const mockNavigate = vi.mocked(useNavigate)()
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('sorts numeric values correctly', async () => {
@@ -318,14 +318,22 @@ describe('GalleryDataTable - Single Column Sort', () => {
   it('maintains sort during data updates', async () => {
     const user = userEvent.setup()
 
-    const { rerender } = render(
-      <GalleryDataTable
-        items={mockItems}
-        columns={mockColumns}
-        enableSorting={true}
-        persistSortInUrl={false}
-      />,
-    )
+    let externalSetItems: React.Dispatch<React.SetStateAction<typeof mockItems>>
+
+    function ItemTable() {
+      const [items, setItems] = React.useState([...mockItems])
+      externalSetItems = setItems
+      return (
+        <GalleryDataTable
+          items={items}
+          columns={mockColumns}
+          enableSorting={true}
+          persistSortInUrl={false}
+        />
+      )
+    }
+
+    render(<ItemTable />)
 
     const titleHeader = screen.getByRole('button', { name: /title/i })
 
@@ -335,24 +343,17 @@ describe('GalleryDataTable - Single Column Sort', () => {
       expect(titleHeader).toHaveAttribute('aria-sort', 'ascending')
     })
 
-    // Add a new item and re-render
-    const newItems = [
-      ...mockItems,
-      { id: '6', title: 'Aardvark Set', price: '45.00', store: 'Target', priority: 3 },
-    ]
-
-    rerender(
-      <GalleryDataTable
-        items={newItems}
-        columns={mockColumns}
-        enableSorting={true}
-        persistSortInUrl={false}
-      />,
-    )
+    // Add a new item via state update
+    const newItem = { id: '6', title: 'Aardvark Set', price: '45.00', store: 'Target', priority: 3 }
+    act(() => {
+      externalSetItems!(prev => [...prev, newItem])
+    })
 
     // New item should appear first due to alphabetical sorting
-    const rows = screen.getAllByRole('row')
-    expect(rows[1]).toHaveTextContent('Aardvark Set')
-    expect(rows[2]).toHaveTextContent('Alpha Set')
+    await waitFor(() => {
+      const rows = screen.getAllByRole('row')
+      expect(rows[1]).toHaveTextContent('Aardvark Set')
+      expect(rows[2]).toHaveTextContent('Alpha Set')
+    })
   })
 })

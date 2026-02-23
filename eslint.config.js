@@ -35,6 +35,7 @@ export default [
         process: 'readonly',
         Buffer: 'readonly',
         global: 'readonly',
+        require: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
 
@@ -46,6 +47,8 @@ export default [
         history: 'readonly',
 
         // DOM Element types
+        Element: 'readonly',
+        MutationObserver: 'readonly',
         HTMLElement: 'readonly',
         HTMLDivElement: 'readonly',
         HTMLSpanElement: 'readonly',

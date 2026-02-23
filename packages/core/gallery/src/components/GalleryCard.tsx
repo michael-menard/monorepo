@@ -347,6 +347,7 @@ export const GalleryCard = ({
               'md:opacity-0 md:group-hover:opacity-100',
             )}
             data-testid={`${testId}-hover-overlay`}
+            onClick={e => e.stopPropagation()}
           >
             {hoverOverlay}
           </div>

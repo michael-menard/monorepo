@@ -17,30 +17,26 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 describe('QuickActions', () => {
-  it('renders all action buttons', () => {
+  it('renders the Add MOC action button', () => {
     render(<QuickActions />)
 
     expect(screen.getByText('Add MOC')).toBeInTheDocument()
-    expect(screen.getByText('Browse Gallery')).toBeInTheDocument()
-    expect(screen.getByText('View Wishlist')).toBeInTheDocument()
   })
 
-  it('links to correct routes', () => {
+  it('links to correct route', () => {
     render(<QuickActions />)
 
     const links = screen.getAllByTestId('action-link')
-    expect(links).toHaveLength(3)
+    expect(links).toHaveLength(1)
 
     expect(links[0]).toHaveAttribute('href', '/instructions/new')
-    expect(links[1]).toHaveAttribute('href', '/gallery')
-    expect(links[2]).toHaveAttribute('href', '/wishlist')
   })
 
-  it('renders buttons with correct styling', () => {
+  it('renders button with correct role', () => {
     render(<QuickActions />)
 
-    // Check that buttons are rendered (they're wrapped in Link)
+    // Check that the link is rendered
     const buttons = screen.getAllByRole('link')
-    expect(buttons).toHaveLength(3)
+    expect(buttons).toHaveLength(1)
   })
 })

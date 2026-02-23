@@ -24,7 +24,7 @@ import { uploadSessionHandlers, clearActiveSessions } from '../../../test/handle
 import { instructionsApi } from '@repo/api-client/rtk/instructions-api'
 
 // Mock the upload client to avoid XHR issues in tests
-vi.mock('@repo/upload-client', () => ({
+vi.mock('@repo/upload/client', () => ({
   uploadToPresignedUrl: vi.fn(),
   UploadError: class UploadError extends Error {
     constructor(
@@ -65,7 +65,7 @@ vi.mock('@repo/app-component-library', async () => {
   }
 })
 
-import { uploadToPresignedUrl, UploadError } from '@repo/upload-client'
+import { uploadToPresignedUrl, UploadError } from '@repo/upload/client'
 import { showSuccessToast, showErrorToast } from '@repo/app-component-library'
 
 // Direct upload handler for small files (matches actual API pattern)

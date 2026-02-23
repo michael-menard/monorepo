@@ -580,7 +580,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
 
       {/* Screen reader announcements for sorting */}
       {enableSorting ? (
-        <div className="sr-only" aria-live="polite" aria-atomic="true">
+        <div role="status" className="sr-only" aria-live="polite" aria-atomic="true">
           {sortAnnouncement}
         </div>
       ) : null}

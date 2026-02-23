@@ -27,7 +27,7 @@ describe('TagInput', () => {
 
   it('displays hint text', () => {
     render(<TagInput {...defaultProps} />)
-    expect(screen.getByText(/press enter or comma to add/i)).toBeInTheDocument()
+    expect(screen.getByText(/press enter or comma to add\. \d+ tags remaining/i)).toBeInTheDocument()
   })
 
   describe('Chip Creation', () => {
@@ -282,7 +282,7 @@ describe('TagInput', () => {
       render(<TagInput {...defaultProps} id="tags" />)
 
       const input = screen.getByRole('textbox')
-      expect(input).toHaveAttribute('aria-describedby', 'tags-hint')
+      expect(input.getAttribute('aria-describedby')).toContain('tags-hint')
     })
 
     it('has accessible remove buttons', () => {
