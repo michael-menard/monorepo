@@ -5,14 +5,35 @@ description: Run ESLint with --fix across the repo (or a scope), capture errors 
 
 # /lint-fix — Lint, Fix, and Capture
 
+## Who Should Call This
+
+**Dev agents only** — specifically:
+- `dev-implement-story` (via its verification phase)
+- `dev-fix-story` (via its fix and verification phases)
+- `dev-code-review` (via `code-review-lint.agent.md`)
+
+**Never call `pnpm lint`, `pnpm eslint`, or `pnpm turbo run lint` directly.** Always go through `/lint-fix` so fixes are attempted, results are captured in the KB, and suppressions are tracked as debt.
+
+## Gate Behavior (CRITICAL)
+
+After auto-fix and manual fix attempts, if **any errors remain**:
+
+```
+VERDICT: FAIL
+```
+
+- **In code review context**: the story receives a `LINT FAIL` verdict. The orchestrator (`dev-code-review`) MUST move the story to `failed-code-review` and invoke `/dev-fix-story`. The dev agent MUST properly fix the root cause — `eslint-disable` suppressions are NOT an acceptable fix.
+- **In implementation context**: the agent MUST fix all errors before committing. Do not suppress with `eslint-disable` unless a config-update candidate has been identified and documented in the KB.
+
+**`eslint-disable` comments added during a story = automatic FAIL in code review.**
+The suppression inventory (Phase 4) is diffed against the previous run to detect new suppressions introduced by the current story.
+
 ## Description
 
 Runs ESLint with auto-fix across the monorepo, then:
 1. Captures every error that could **not** be resolved automatically, grouped by rule
 2. Scans the codebase for `eslint-disable` comments — these are **suppressed violations, not fixes** — and tracks them as technical debt in the KB
 3. Stores the run summary, config candidates, and suppression inventory in the knowledge base for trend analysis
-
-This skill is the canonical way for agents to run lint. **Never call `pnpm lint` or `pnpm turbo run lint` directly** — always go through `/lint-fix` so the learning loop stays intact.
 
 ## Usage
 
@@ -359,10 +380,23 @@ Errors:   {N}   Warnings: {N}
   {file:line  rule-name  (reason not fixed)}
   {or "None — all errors resolved."}
 
+── New Suppressions Introduced (vs previous run) ───────
+  {file:line  rule-name  (eslint-disable added this story)}
+  {or "None"}
+
 ── KB Writes ───────────────────────────────────────────
   ✓ Lint run summary stored
   ✓ {N} config candidate(s) written/updated
   ✓ Suppression inventory updated ({N} total suppressions)
+
+── GATE VERDICT ────────────────────────────────────────
+  {If no errors and no new suppressions:}
+  ✅ LINT PASS — story may proceed
+
+  {If any errors remain OR new eslint-disable added:}
+  ❌ LINT FAIL — story must return to /dev-fix-story
+     Reason: {N errors remaining | N new suppressions added}
+     eslint-disable is NOT an acceptable fix. Fix the root cause.
 
 ═══════════════════════════════════════════════════════
 ```
