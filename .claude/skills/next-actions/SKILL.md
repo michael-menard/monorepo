@@ -51,7 +51,7 @@ Inflight work always appears before new work. Stories being actively worked by a
 
 | Rank | Category | States | Rationale |
 |------|----------|--------|-----------|
-| 1 | **Needs QA** | `ready_for_qa` | Closest to done — unblock the pipeline first |
+| 1 | **Needs QA** | `ready_for_qa`, `in_qa` | Closest to done — unblock the pipeline first |
 | 2 | **Needs Fix** | `failed_qa`, `failed_code_review`, `in_review` | Something was rejected — fix before starting new work |
 | 3 | **Needs Code Review** | `ready_for_review` | Dev complete, waiting on review |
 | 4 | **Needs Dev** | `ready`, `in_progress` (no active worktree) | Elaborated and ready to implement |
@@ -82,9 +82,10 @@ Call `mcp__knowledge-base__kb_list_stories` directly:
 ```
 mcp__knowledge-base__kb_list_stories({
   epic: "platform",
-  states: ["ready_for_qa", "failed_qa", "failed_code_review", "in_review",
-           "ready_for_review", "ready", "in_progress", "backlog"],
-  limit: 100
+  states: ["ready_for_qa", "in_qa", "failed_qa", "failed_code_review", "in_review",
+           "ready_for_review", "ready", "in_progress", "backlog",
+           "completed", "cancelled", "deferred"],
+  limit: N
 })
 ```
 
@@ -119,7 +120,7 @@ priority order: critical (1) > high (2) > medium (3) > low (4) > null (5)
 **Important:** `kb_get_next_story` only returns stories in `ready` or `backlog` state. Stories in other actionable states (`ready_for_qa`, `failed_qa`, `failed_code_review`, `in_review`, `ready_for_review`) must be pulled from the Step 2 `kb_list_stories` result and added to the candidates list before sorting.
 
 To build the full candidate set:
-1. From the `kb_list_stories` result, take all stories in inflight states: `ready_for_qa`, `failed_qa`, `failed_code_review`, `in_review`, `ready_for_review`
+1. From the `kb_list_stories` result, take all stories in inflight states: `ready_for_qa`, `in_qa`, `failed_qa`, `failed_code_review`, `in_review`, `ready_for_review`
 2. From `kb_get_next_story` calls, collect up to N stories in `ready` or `backlog` state
 3. Remove any ACTIVE_IDS from the combined list
 4. Sort the combined list by rank, then by priority within rank
@@ -132,6 +133,7 @@ For each story in the sorted list, determine the command based on its `state` fi
 | State | Category | Command Template |
 |-------|----------|-----------------|
 | `ready_for_qa` | Needs QA | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
+| `in_qa` | Needs QA | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
 | `in_review` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
 | `failed_code_review` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
 | `failed_qa` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |

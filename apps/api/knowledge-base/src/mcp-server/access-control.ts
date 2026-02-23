@@ -45,6 +45,7 @@ export const ToolNameSchema = z.enum([
   'kb_get_story',
   'kb_list_stories',
   'kb_update_story_status',
+  'kb_update_story',
   'kb_get_next_story',
   // Token logging tools
   'kb_log_tokens',
@@ -111,6 +112,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_get_story: new Set(['pm', 'dev', 'qa', 'all']),
   kb_list_stories: new Set(['pm', 'dev', 'qa', 'all']),
   kb_update_story_status: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_update_story: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_next_story: new Set(['pm', 'dev', 'qa', 'all']),
   // Token logging tools - available to all roles
   kb_log_tokens: new Set(['pm', 'dev', 'qa', 'all']),

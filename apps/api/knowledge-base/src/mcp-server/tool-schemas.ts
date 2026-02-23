@@ -23,6 +23,7 @@ import {
   KbGetStoryInputSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
+  KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
   type KbGetStoryInput,
   type KbListStoriesInput,
@@ -56,6 +57,7 @@ export {
   KbGetStoryInputSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
+  KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
   KbLogTokensInputSchema,
   KbGetTokenSummaryInputSchema,
@@ -2585,6 +2587,42 @@ Example (complete a story):
 }
 
 /**
+ * kb_update_story tool definition.
+ *
+ * Updates story metadata fields (epic, feature, title, priority, points).
+ */
+export const kbUpdateStoryToolDefinition: McpToolDefinition = {
+  name: 'kb_update_story',
+  description: `Update story metadata fields (epic, feature, title, priority, points).
+
+Use this to correct metadata like epic assignment without touching workflow state.
+
+Parameters:
+- story_id (required): Story ID to update (e.g., 'LNGG-0010')
+- epic (optional): New epic value (null to clear)
+- feature (optional): New feature value (null to clear)
+- title (optional): New title
+- priority (optional): New priority (null to clear)
+- points (optional): New story points (null to clear)
+
+Returns: Updated story object
+
+Example (reassign epic):
+{
+  "story_id": "LNGG-0010",
+  "epic": "LNGG"
+}
+
+Example (set multiple fields):
+{
+  "story_id": "KBAR-0060",
+  "epic": "KBAR",
+  "feature": "kb-artifact-migration"
+}`,
+  inputSchema: zodToMcpSchema(KbUpdateStoryInputSchema),
+}
+
+/**
  * kb_get_next_story tool definition.
  *
  * Finds the next available story to work on in an epic.
@@ -2970,6 +3008,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbGetStoryToolDefinition,
   kbListStoriesToolDefinition,
   kbUpdateStoryStatusToolDefinition,
+  kbUpdateStoryToolDefinition,
   kbGetNextStoryToolDefinition,
   // Token logging tools
   kbLogTokensToolDefinition,

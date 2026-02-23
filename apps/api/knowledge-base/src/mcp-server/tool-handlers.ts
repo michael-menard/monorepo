@@ -89,10 +89,12 @@ import {
   kb_get_story,
   kb_list_stories,
   kb_update_story_status,
+  kb_update_story,
   kb_get_next_story,
   KbGetStoryInputSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
+  KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
 } from '../crud-operations/story-crud-operations.js'
 import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-operations.js'
@@ -3684,6 +3686,52 @@ export async function handleKbUpdateStoryStatus(
 }
 
 /**
+ * Handle kb_update_story tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with updated story
+ */
+export async function handleKbUpdateStory(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_update_story tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    epic: inputObj?.epic,
+    feature: inputObj?.feature,
+  })
+
+  try {
+    enforceAuthorization('kb_update_story' as ToolName, context)
+    const validated = KbUpdateStoryInputSchema.parse(input)
+    const result = await kb_update_story({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_update_story succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      updated: result.updated,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_update_story failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Handle kb_get_next_story tool invocation.
  *
  * @param input - Raw input from MCP request
@@ -4149,6 +4197,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_get_story: handleKbGetStory,
   kb_list_stories: handleKbListStories,
   kb_update_story_status: handleKbUpdateStoryStatus,
+  kb_update_story: handleKbUpdateStory,
   kb_get_next_story: handleKbGetNextStory,
   // Token logging tools
   kb_log_tokens: handleKbLogTokens,
