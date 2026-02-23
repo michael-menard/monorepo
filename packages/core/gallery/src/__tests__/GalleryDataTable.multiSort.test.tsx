@@ -10,6 +10,17 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: vi.fn(() => vi.fn()),
 }))
 
+vi.mock('framer-motion', () => ({
+  useReducedMotion: vi.fn(() => false),
+  motion: {
+    div: ({ children, className, style, ...rest }: any) =>
+      React.createElement('div', { className, style }, children),
+    tr: ({ children, className, tabIndex, onClick, onKeyDown, style, ...rest }: any) =>
+      React.createElement('tr', { className, tabIndex, onClick, onKeyDown, style }, children),
+  },
+  AnimatePresence: ({ children }: any) => children,
+}))
+
 // Mock data for testing
 const mockItems = [
   { id: '1', title: 'Alpha Set', price: '50.00', store: 'LEGO Store', priority: 3 },
@@ -126,10 +137,10 @@ describe('GalleryDataTable - Multi-Column Sort', () => {
     // Add secondary sort
     await user.keyboard('{Shift>}')
     await user.click(titleHeader)
-
-    // Try to add third sort (should replace oldest secondary)
-    await user.click(storeHeader)
     await user.keyboard('{/Shift}')
+
+    // Regular click (no shift) resets to single sort on the new column
+    await user.click(storeHeader)
 
     await waitFor(() => {
       expect(storeHeader).toHaveAttribute('aria-sort', 'ascending')

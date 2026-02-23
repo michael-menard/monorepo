@@ -110,7 +110,7 @@ export interface GalleryDataTableProps<TItem extends Record<string, unknown>> {
 export function GalleryDataTable<TItem extends Record<string, unknown>>({
   items,
   columns,
-  filterableColumns = [],
+  filterableColumns,
   isLoading = false,
   onRowClick,
   hasMore = false,
@@ -135,6 +135,13 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
 }: GalleryDataTableProps<TItem>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFilter<TItem>[]>([])
   const shouldReduceMotion = useReducedMotion()
+
+  // Stabilize filterableColumns reference - default `= []` creates new array each render
+  // which would invalidate tanstackColumns memo and cause header DOM nodes to remount
+  const stableFilterableColumns = React.useMemo(
+    () => filterableColumns ?? [],
+    [filterableColumns],
+  )
 
   // Check if columns are legacy format or TanStack format
   const isLegacyColumns = (
@@ -212,7 +219,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
   }
 
   const getFilterableColumn = (field: keyof TItem) =>
-    filterableColumns.find(fc => fc.field === field)
+    stableFilterableColumns.find(fc => fc.field === field)
 
   // Handle drag end event for column reordering
   const handleDragEnd = (event: DragEndEvent) => {
@@ -329,7 +336,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
     )
   }, [
     columns,
-    filterableColumns,
+    stableFilterableColumns,
     columnFilters,
     enableSorting,
     enableMultiSort,

@@ -7,9 +7,22 @@ import {
   type GalleryDataTableColumn,
 } from '../components/GalleryDataTable'
 
+import React from 'react'
+
 vi.mock('@tanstack/react-router', () => ({
   useSearch: vi.fn(() => ({})),
   useNavigate: vi.fn(() => vi.fn()),
+}))
+
+vi.mock('framer-motion', () => ({
+  useReducedMotion: vi.fn(() => false),
+  motion: {
+    div: ({ children, className, style, ...rest }: any) =>
+      React.createElement('div', { className, style }, children),
+    tr: ({ children, className, tabIndex, onClick, onKeyDown, style, ...rest }: any) =>
+      React.createElement('tr', { className, tabIndex, onClick, onKeyDown, style }, children),
+  },
+  AnimatePresence: ({ children }: any) => children,
 }))
 
 interface WishlistItem {
