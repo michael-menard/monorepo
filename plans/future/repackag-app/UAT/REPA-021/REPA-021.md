@@ -1,14 +1,14 @@
 ---
 id: REPA-021
 title: "Standardize Card Skeletons and Empty States in Shared Library"
-status: ready-to-work
+status: uat
 priority: P2
 story_type: tech_debt
 points: 3
 epic: repackag-app
 experiment_variant: control
 created: 2026-02-10
-updated_at: "2026-02-10T21:15:30Z"
+updated_at: "2026-02-23T04:20:00Z"
 depends_on: []
 blocks: []
 surfaces:
