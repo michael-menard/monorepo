@@ -689,9 +689,9 @@ describe('Knowledge Base Infrastructure', () => {
 
         // Insert cache entry
         await client.query(`
-          INSERT INTO embedding_cache (content_hash, embedding)
-          VALUES ($1, $2::vector)
-          ON CONFLICT (content_hash) DO NOTHING
+          INSERT INTO embedding_cache (content_hash, model, embedding)
+          VALUES ($1, 'text-embedding-3-small', $2::vector)
+          ON CONFLICT (content_hash, model) DO NOTHING
         `, [testHash, JSON.stringify(embedding)])
 
         // Retrieve

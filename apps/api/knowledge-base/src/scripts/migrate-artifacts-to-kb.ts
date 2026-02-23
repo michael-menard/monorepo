@@ -98,21 +98,6 @@ const YAML_TYPE_MAP: Record<string, { type: ArtifactType; phase: KbWriteArtifact
     'elaboration.yaml': { type: 'elaboration', phase: 'analysis' },
   }
 
-// Stage directories to scan
-const STAGES = [
-  'backlog',
-  'elaboration',
-  'ready-to-work',
-  'in-progress',
-  'needs-code-review',
-  'failed-code-review',
-  'ready-for-qa',
-  'failed-qa',
-  'uat',
-  'UAT',
-  'completed',
-]
-
 // ============================================================================
 // Content Parsers
 // ============================================================================

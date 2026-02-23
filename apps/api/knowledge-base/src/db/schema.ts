@@ -561,7 +561,7 @@ export const taskAuditLog = pgTable(
     /** ID of the task that was modified */
     taskId: uuid('task_id')
       .notNull()
-      .references(() => tasks.id, { onDelete: 'set null' }),
+      .references(() => tasks.id, { onDelete: 'cascade' }),
 
     /** Type of operation: 'add' | 'update' | 'delete' */
     operation: text('operation').notNull(),

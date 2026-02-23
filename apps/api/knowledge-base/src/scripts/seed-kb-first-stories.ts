@@ -193,7 +193,7 @@ async function main() {
     }
 
     // Insert story (no story_dir, no story_file — KB-native)
-    const result = await pool!.query(
+    await pool!.query(
       `INSERT INTO stories (
         story_id, feature, epic, title, story_type, priority, state,
         touches_backend, touches_frontend, touches_database, touches_infra
