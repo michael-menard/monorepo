@@ -9,8 +9,7 @@ declare const spinnerVariants: (
     | undefined,
 ) => string
 export interface LoadingSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof spinnerVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof spinnerVariants> {
   text?: string
   showText?: boolean
 }
@@ -26,8 +25,7 @@ declare const pulseVariants: (
     | undefined,
 ) => string
 export interface PulseSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof pulseVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof pulseVariants> {
   count?: number
 }
 declare const PulseSpinner: React.ForwardRefExoticComponent<
@@ -42,8 +40,7 @@ declare const dotsVariants: (
     | undefined,
 ) => string
 export interface DotsSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof dotsVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof dotsVariants> {
   count?: number
 }
 declare const DotsSpinner: React.ForwardRefExoticComponent<

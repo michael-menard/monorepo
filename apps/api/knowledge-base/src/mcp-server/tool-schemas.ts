@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 /**
  * MCP Tool Schema Definitions
  *
@@ -11,6 +12,16 @@
 
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
+import {
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
+  type WorktreeRegisterInput,
+  type WorktreeGetByStoryInput,
+  type WorktreeListActiveInput,
+  type WorktreeMarkCompleteInput,
+} from '@repo/mcp-tools'
 import {
   KbAddInputSchema,
   KbGetInputSchema,
@@ -42,16 +53,6 @@ import {
   type KbGetBottleneckAnalysisInput,
   type KbGetChurnAnalysisInput,
 } from '../crud-operations/analytics-operations.js'
-import {
-  WorktreeRegisterInputSchema,
-  WorktreeGetByStoryInputSchema,
-  WorktreeListActiveInputSchema,
-  WorktreeMarkCompleteInputSchema,
-  type WorktreeRegisterInput,
-  type WorktreeGetByStoryInput,
-  type WorktreeListActiveInput,
-  type WorktreeMarkCompleteInput,
-} from '@repo/mcp-tools'
 // Re-export schemas and types for external use
 export {
   KbGetStoryInputSchema,
@@ -1257,12 +1258,19 @@ export type {
   KbListTasksInput,
 } from '../crud-operations/task-operations.js'
 
-// Import task triage and lifecycle schemas (KBMEM-018, 019, 020)
+// Import task triage, deferred writes, and artifact schemas from index (KBMEM-018, 019, 020, 022)
 import {
   KbTriageTasksInputSchema,
   KbPromoteTaskInputSchema,
   KbListPromotableTasksInputSchema,
   KbCleanupStaleTasksInputSchema,
+  KbQueueDeferredWriteInputSchema,
+  KbListDeferredWritesInputSchema,
+  KbProcessDeferredWritesInputSchema,
+  KbWriteArtifactInputSchema,
+  KbReadArtifactInputSchema,
+  KbListArtifactsInputSchema,
+  KbDeleteArtifactInputSchema,
 } from '../crud-operations/index.js'
 
 // Re-export task lifecycle schemas
@@ -1279,13 +1287,6 @@ export type {
   KbCleanupStaleTasksInput,
 } from '../crud-operations/index.js'
 
-// Import deferred writes schemas (KBMEM-022)
-import {
-  KbQueueDeferredWriteInputSchema,
-  KbListDeferredWritesInputSchema,
-  KbProcessDeferredWritesInputSchema,
-} from '../crud-operations/index.js'
-
 // Re-export deferred writes schemas
 export {
   KbQueueDeferredWriteInputSchema,
@@ -1298,14 +1299,6 @@ export type {
   KbProcessDeferredWritesInput,
   DeferredOperationType,
   DeferredWriteEntry,
-} from '../crud-operations/index.js'
-
-// Import artifact operations schemas (DB-first artifact storage)
-import {
-  KbWriteArtifactInputSchema,
-  KbReadArtifactInputSchema,
-  KbListArtifactsInputSchema,
-  KbDeleteArtifactInputSchema,
 } from '../crud-operations/index.js'
 
 // Re-export artifact schemas

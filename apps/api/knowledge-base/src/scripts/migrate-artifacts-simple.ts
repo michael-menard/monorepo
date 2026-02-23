@@ -187,7 +187,7 @@ function extractSummary(
         phase: content.phase,
       }
 
-    default:
+    default: {
       // Return first few keys as summary
       const keys = Object.keys(content).slice(0, 5)
       const summary: Record<string, unknown> = {}
@@ -198,6 +198,7 @@ function extractSummary(
         }
       }
       return summary
+    }
   }
 }
 

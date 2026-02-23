@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Story 3.1.9 + 3.1.10 + 3.1.16 + 3.1.19 + BUGF-032: Instructions New Page
  *
@@ -11,7 +12,7 @@ import { useCallback, useState, useRef, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Upload, FileText, Image as ImageIcon, List, Plus, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, AlertCircle, Loader2 } from 'lucide-react'
 import {
   Button,
   Card,
@@ -19,21 +20,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
-  Label,
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
   Alert,
   AlertDescription,
 } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
 import type { UploaderSession, FileCategory } from '@repo/upload/types'
-import {
-  UploaderSessionProvider,
-  useUploaderSessionContext,
-} from '@/components/Uploader/SessionProvider'
 import {
   UploaderList,
   ConflictModal,
@@ -42,9 +33,16 @@ import {
 } from '@repo/upload/components'
 import { useUploadManager, type FileWithUploadUrl } from '@repo/upload/hooks'
 import { finalizeSession, type FileValidationError } from '@repo/upload'
-import { MocInstructionFormSchema, type MocInstructionFormInput } from '@repo/api-client/schemas/instructions/form'
+import {
+  MocInstructionFormSchema,
+  type MocInstructionFormInput,
+} from '@repo/api-client/schemas/instructions/form'
 import { createEmptyMocForm, createEmptySetForm } from '@repo/api-client/schemas/instructions/utils'
 import { useGeneratePresignedUrlMutation } from '@repo/api-client'
+import {
+  UploaderSessionProvider,
+  useUploaderSessionContext,
+} from '@/components/Uploader/SessionProvider'
 
 const ROUTE = '/instructions/new'
 
@@ -71,10 +69,16 @@ function getApiErrorMessage(status?: number): string {
  */
 function InstructionsNewContent() {
   const navigate = useNavigate()
-  const { session, isDirty, wasRestored, updateSession, reset } = useUploaderSessionContext()
+  const {
+    session,
+    isDirty: _isDirty,
+    wasRestored,
+    updateSession,
+    reset,
+  } = useUploaderSessionContext()
 
   // Form state with Zod validation (Story 3.1.16)
-  const [formType, setFormType] = useState<'moc' | 'set'>('moc')
+  const [_formType, setFormType] = useState<'moc' | 'set'>('moc')
 
   const defaultMocValues = createEmptyMocForm()
   const defaultSetValues = createEmptySetForm()
@@ -86,7 +90,7 @@ function InstructionsNewContent() {
   })
 
   const {
-    register,
+    register: _register,
     formState: { errors, isValid },
     watch,
     reset: resetForm,
@@ -101,7 +105,7 @@ function InstructionsNewContent() {
   }, [formTitle, session.title, updateSession])
 
   // Handle type switch
-  const handleTypeChange = useCallback(
+  const _handleTypeChange = useCallback(
     (newType: 'moc' | 'set') => {
       setFormType(newType)
       const currentValues = form.getValues()
@@ -155,12 +159,12 @@ function InstructionsNewContent() {
   const finalizingRef = useRef(false) // Idempotent double-click protection (3.1.7)
 
   // File input refs
-  const instructionInputRef = useRef<HTMLInputElement>(null)
-  const partsListInputRef = useRef<HTMLInputElement>(null)
-  const thumbnailInputRef = useRef<HTMLInputElement>(null)
-  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const _instructionInputRef = useRef<HTMLInputElement>(null)
+  const _partsListInputRef = useRef<HTMLInputElement>(null)
+  const _thumbnailInputRef = useRef<HTMLInputElement>(null)
+  const _galleryInputRef = useRef<HTMLInputElement>(null)
 
-  const handleReset = useCallback(() => {
+  const _handleReset = useCallback(() => {
     reset()
     resetForm(defaultMocValues)
     setFormType('moc')
@@ -170,12 +174,12 @@ function InstructionsNewContent() {
     logger.info('User reset uploader session', { route: ROUTE })
   }, [reset, resetForm, uploadManager, defaultMocValues])
 
-  const handleCancel = useCallback(() => {
+  const _handleCancel = useCallback(() => {
     navigate({ to: '/dashboard' })
   }, [navigate])
 
   // BUGF-032: File selection with presigned URL API call
-  const handleFileSelect = useCallback(
+  const _handleFileSelect = useCallback(
     (category: FileCategory) => async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files
       if (!files || files.length === 0) return
@@ -395,7 +399,9 @@ function InstructionsNewContent() {
             error: err,
             status,
           })
-          setApiError(`Failed to refresh session for ${fileItem.name}: ${getApiErrorMessage(status)}`)
+          setApiError(
+            `Failed to refresh session for ${fileItem.name}: ${getApiErrorMessage(status)}`,
+          )
         }
       }
 
@@ -420,11 +426,11 @@ function InstructionsNewContent() {
     f => f.category === 'instruction' && f.status === 'success',
   )
   // Disable during rate limit countdown (Story 3.1.19)
-  const canFinalize =
+  const _canFinalize =
     hasInstruction && uploadManager.isComplete && isValid && rateLimitSeconds === 0
 
   // Disable file selection during API call (BUGF-032)
-  const isFileSelectionDisabled = uploadManager.isUploading || isGeneratingUrls
+  const _isFileSelectionDisabled = uploadManager.isUploading || isGeneratingUrls
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -541,7 +547,7 @@ function InstructionsNewContent() {
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             Upload Files
-            {isGeneratingUrls && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isGeneratingUrls ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           </CardTitle>
           <CardDescription>
             Add your instruction PDF (required), parts list, thumbnail, and gallery images.

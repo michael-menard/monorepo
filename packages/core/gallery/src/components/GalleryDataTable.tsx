@@ -138,10 +138,7 @@ export function GalleryDataTable<TItem extends Record<string, unknown>>({
 
   // Stabilize filterableColumns reference - default `= []` creates new array each render
   // which would invalidate tanstackColumns memo and cause header DOM nodes to remount
-  const stableFilterableColumns = React.useMemo(
-    () => filterableColumns ?? [],
-    [filterableColumns],
-  )
+  const stableFilterableColumns = React.useMemo(() => filterableColumns ?? [], [filterableColumns])
 
   // Check if columns are legacy format or TanStack format
   const isLegacyColumns = (

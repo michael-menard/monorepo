@@ -37,7 +37,7 @@ function getJWKS() {
     }
 
     const jwksUrl = new URL(
-      `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`
+      `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`,
     )
     jwks = createRemoteJWKSet(jwksUrl)
   }

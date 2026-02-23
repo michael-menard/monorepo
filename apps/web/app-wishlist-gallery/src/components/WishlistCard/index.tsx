@@ -15,10 +15,10 @@ import { GalleryCard } from '@repo/gallery'
 import { AppBadge, Button, CustomButton } from '@repo/app-component-library'
 import { Star, Puzzle, Trash2 } from 'lucide-react'
 import type { WishlistItem } from '@repo/api-client/schemas/wishlist'
+import { focusRingClasses } from '@repo/accessibility'
 import { BuildStatusToggle } from '../BuildStatusToggle'
 import { getBestImageUrl } from '../ResponsiveImage/index.js'
 import { generateItemAriaLabel } from '../../utils/a11y'
-import { focusRingClasses } from '@repo/accessibility'
 
 /**
  * Checkmark icon with circle - based on cool-checkmark.tsx design

@@ -171,7 +171,8 @@ async function main() {
   }
 
   for (const story of STORIES) {
-    const { depends_on, goal, ...fields } = story
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { depends_on, goal: _goal, ...fields } = story
 
     if (dryRun) {
       console.log(`  [DRY] ${fields.story_id}: ${fields.title}`)
@@ -182,10 +183,9 @@ async function main() {
     }
 
     // Check if already exists
-    const existing = await pool!.query(
-      'SELECT id FROM stories WHERE story_id = $1',
-      [fields.story_id],
-    )
+    const existing = await pool!.query('SELECT id FROM stories WHERE story_id = $1', [
+      fields.story_id,
+    ])
 
     if (existing.rows.length > 0) {
       console.log(`  [SKIP] ${fields.story_id}: Already exists`)

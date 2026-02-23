@@ -14,6 +14,12 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { sql } from 'drizzle-orm'
 import {
+  worktreeRegister,
+  worktreeGetByStory,
+  worktreeListActive,
+  worktreeMarkComplete,
+} from '@repo/mcp-tools'
+import {
   kb_add,
   kb_get,
   kb_update,
@@ -117,28 +123,10 @@ import {
   KbArchiveWorkingSetInputSchema,
 } from '../working-set/index.js'
 import {
-  worktreeRegister,
-  worktreeGetByStory,
-  worktreeListActive,
-  worktreeMarkComplete,
-} from '@repo/mcp-tools'
-import {
   WorktreeRegisterInputSchema,
   WorktreeGetByStoryInputSchema,
   WorktreeListActiveInputSchema,
   WorktreeMarkCompleteInputSchema,
-} from './tool-schemas.js'
-import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
-import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
-import { createMcpLogger } from './logger.js'
-import {
-  type ToolCallContext,
-  MAX_TOOL_CALL_DEPTH,
-  DEFAULT_TIMEOUTS,
-  EnvSchema,
-  MCP_SERVER_VERSION,
-} from './server.js'
-import {
   KbBulkImportInputSchema,
   KbRebuildEmbeddingsInputSchema,
   KbStatsInputSchema,
@@ -161,6 +149,16 @@ import {
   KbUpdateTaskInputSchema,
   KbListTasksInputSchema,
 } from './tool-schemas.js'
+import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
+import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
+import { createMcpLogger } from './logger.js'
+import {
+  type ToolCallContext,
+  MAX_TOOL_CALL_DEPTH,
+  DEFAULT_TIMEOUTS,
+  EnvSchema,
+  MCP_SERVER_VERSION,
+} from './server.js'
 // Bucket C task operations (KBMEM-005)
 // Bucket C task triage and lifecycle (KBMEM-018, 019, 020)
 // Deferred writes (KBMEM-022)

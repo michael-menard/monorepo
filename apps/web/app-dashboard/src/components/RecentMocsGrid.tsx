@@ -75,9 +75,7 @@ export function RecentMocsGrid({ mocs, isLoading }: RecentMocsGridProps) {
               className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4"
               aria-hidden="true"
             />
-            <p className="text-sm md:text-base text-muted-foreground">
-              No MOCs match your filters
-            </p>
+            <p className="text-sm md:text-base text-muted-foreground">No MOCs match your filters</p>
           </div>
         </CardContent>
       </Card>

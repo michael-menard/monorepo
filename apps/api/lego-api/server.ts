@@ -1,4 +1,5 @@
 import { resolve } from 'path'
+// eslint-disable-next-line import/order
 import { config as loadEnv } from 'dotenv'
 
 // Load env from root .env (must be before other imports that use env vars)
@@ -9,6 +10,7 @@ loadEnv({ path: resolve(rootDir, '.env') })
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
+// eslint-disable-next-line import/order
 import {
   initializeTracing,
   createTracingMiddleware,

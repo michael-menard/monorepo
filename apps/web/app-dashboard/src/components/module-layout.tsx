@@ -26,11 +26,7 @@ export type ModuleLayoutProps = z.infer<typeof ModuleLayoutPropsSchema>
  * Wraps module content with consistent layout and styling.
  */
 export function ModuleLayout({ children, className }: ModuleLayoutProps) {
-  return (
-    <div className={cn('min-h-full px-4 py-6 md:px-6 lg:px-8', className)}>
-      {children}
-    </div>
-  )
+  return <div className={cn('min-h-full px-4 py-6 md:px-6 lg:px-8', className)}>{children}</div>
 }
 
 export default ModuleLayout

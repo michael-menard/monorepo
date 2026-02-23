@@ -149,8 +149,19 @@ wishlist.get('/', async c => {
     return c.json({ error: 'Validation failed', details: query.error.flatten() }, 400)
   }
 
-  const { page, limit, search, store, tags, priority, priorityRange, priceRange, sort, order, status } =
-    query.data
+  const {
+    page,
+    limit,
+    search,
+    store,
+    tags,
+    priority,
+    priorityRange,
+    priceRange,
+    sort,
+    order,
+    status,
+  } = query.data
 
   // Parse comma-separated tags
   const tagList = tags

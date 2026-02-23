@@ -34,10 +34,10 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as yaml from 'yaml'
 import { config } from 'dotenv'
+import { Pool } from 'pg'
 import { getDbClient, closeDbClient, testConnection } from '../db/client.js'
 import { kb_write_artifact } from '../crud-operations/artifact-operations.js'
 import type { KbWriteArtifactInput } from '../crud-operations/artifact-operations.js'
-import { Pool } from 'pg'
 
 // Load .env from package root
 config({ path: path.resolve(process.cwd(), '.env') })
@@ -154,7 +154,7 @@ async function findArtifactsInStory(
   // Track ANALYSIS.md and FUTURE-OPPORTUNITIES.md for merging
   let analysisContent: Record<string, unknown> | null = null
   let futureOpportunitiesContent: Record<string, unknown> | null = null
-  let analysisIteration = 0
+  const analysisIteration = 0
 
   for (const file of files) {
     const filePath = path.join(implDir, file)
@@ -219,9 +219,7 @@ async function findArtifactsInStory(
   if (analysisContent || futureOpportunitiesContent) {
     const mergedContent: Record<string, unknown> = {
       ...(analysisContent ? { analysis: analysisContent } : {}),
-      ...(futureOpportunitiesContent
-        ? { future_opportunities: futureOpportunitiesContent }
-        : {}),
+      ...(futureOpportunitiesContent ? { future_opportunities: futureOpportunitiesContent } : {}),
     }
     candidates.push({
       storyId,

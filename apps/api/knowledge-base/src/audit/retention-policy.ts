@@ -116,6 +116,7 @@ export async function runRetentionCleanup(
   let totalDeleted = 0
   let batchNumber = 0
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     batchNumber++
 

@@ -4,9 +4,7 @@ import { z } from 'zod'
  * Result type for operations that can fail
  * Use this for service-layer returns to avoid exceptions
  */
-export type Result<T, E extends string = string> =
-  | { ok: true; data: T }
-  | { ok: false; error: E }
+export type Result<T, E extends string = string> = { ok: true; data: T } | { ok: false; error: E }
 
 /**
  * Helper to create success result
@@ -61,11 +59,7 @@ export type PaginatedResult<T> = {
 /**
  * Helper to create paginated result
  */
-export function paginate<T>(
-  items: T[],
-  total: number,
-  input: PaginationInput
-): PaginatedResult<T> {
+export function paginate<T>(items: T[], total: number, input: PaginationInput): PaginatedResult<T> {
   const totalPages = Math.ceil(total / input.limit)
   return {
     items,

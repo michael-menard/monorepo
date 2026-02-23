@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { z } from 'zod'
+import { EmptyDashboard } from '@repo/app-component-library/feedback/empty-states'
 import {
   StatsCards,
   QuickActions,
@@ -19,7 +20,6 @@ import {
   FilterBar,
   DashboardHeader,
 } from '../components'
-import { EmptyDashboard } from '@repo/app-component-library/feedback/empty-states'
 import {
   dashboardStats,
   buildStatus,

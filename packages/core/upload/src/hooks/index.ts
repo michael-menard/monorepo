@@ -26,7 +26,4 @@ export type {
 
 // Uploader session hook (REPA-003)
 export { useUploaderSession } from './useUploaderSession'
-export type {
-  UseUploaderSessionOptions,
-  UseUploaderSessionResult,
-} from './useUploaderSession'
+export type { UseUploaderSessionOptions, UseUploaderSessionResult } from './useUploaderSession'

@@ -87,7 +87,14 @@ function createPool(): Pool {
 // ============================================================================
 
 const PLAN_TYPE_KEYWORDS: Record<string, string[]> = {
-  feature: ['new feature', 'product feature', 'user-facing', 'ui component', 'gallery', 'dashboard'],
+  feature: [
+    'new feature',
+    'product feature',
+    'user-facing',
+    'ui component',
+    'gallery',
+    'dashboard',
+  ],
   refactor: ['refactor', 'restructur', 'clean up', 'rename', 'consolidat'],
   migration: ['migrat', 'import', 'move to', 'port to', 'convert'],
   infra: ['infrastructure', 'deployment', 'docker', 'aws', 'lambda', 'terraform', 'ci/cd'],
@@ -192,7 +199,7 @@ function extractPhases(content: string): Phase[] {
     const description = descMatch ? descMatch[1].trim() : ''
 
     // Extract story IDs mentioned in this section
-    const storyIds = [...new Set((section.match(/\b[A-Z]{2,10}-\d+\b/g) ?? []))]
+    const storyIds = [...new Set(section.match(/\b[A-Z]{2,10}-\d+\b/g) ?? [])]
 
     phases.push({ number, name, description, storyIds })
   }
@@ -248,10 +255,9 @@ async function importPlan(
   }
 
   // Check for existing record
-  const existing = await pool.query(
-    'SELECT id, content_hash FROM plans WHERE plan_slug = $1',
-    [planSlug],
-  )
+  const existing = await pool.query('SELECT id, content_hash FROM plans WHERE plan_slug = $1', [
+    planSlug,
+  ])
 
   if (existing.rows.length > 0) {
     if (existing.rows[0].content_hash === fields.contentHash) {

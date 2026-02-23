@@ -163,10 +163,12 @@ async function loadYamlFile<T>(filePath: string): Promise<T | null> {
 // Import Logic
 // ============================================================================
 
-function detectScope(
-  story: StoryYaml,
-  _storyDir: string,
-): { backend: boolean; frontend: boolean; database: boolean; infra: boolean } {
+function detectScope(story: StoryYaml): {
+  backend: boolean
+  frontend: boolean
+  database: boolean
+  infra: boolean
+} {
   const surfaces = story.scope?.surfaces || []
   const packages = story.scope?.packages || []
   const title = (story.title || '').toLowerCase()
@@ -317,7 +319,7 @@ async function importStory(
     }
 
     // Detect scope from content
-    const scope = detectScope(story, storyDir)
+    const scope = detectScope(story)
 
     // Compute file hash for change detection
     const storyYamlContent = await fs.readFile(path.join(storyDir, 'story.yaml'), 'utf-8')

@@ -5,7 +5,7 @@ import {
   CopyObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { ok, err, type Result } from '@repo/api-core'
+import { ok, err } from '@repo/api-core'
 import { logger } from '@repo/logger'
 import type { InspirationImageStorage } from '../ports/index.js'
 import { MAX_FILE_SIZE } from '../types.js'

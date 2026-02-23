@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod'
+import { FileValidationResultSchema, type FileValidationResult } from '@repo/upload/types'
 
 export const ThumbnailUploadPropsSchema = z.object({
   mocId: z.string().uuid(),
@@ -21,5 +22,4 @@ export const MIN_FILE_SIZE = 100 // 100 bytes
 export type AllowedFileType = (typeof ALLOWED_FILE_TYPES)[number]
 
 // TODO(REPA-005): Remove re-export when component migrates to @repo/upload
-import { FileValidationResultSchema, type FileValidationResult } from '@repo/upload/types'
 export { FileValidationResultSchema, type FileValidationResult }

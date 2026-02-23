@@ -100,7 +100,9 @@ export function PartsTable({ data, isLoading }: PartsTableProps) {
               <TableRow>
                 <TableHead className="text-xs md:text-sm min-w-[200px] pl-4">MOC Name</TableHead>
                 <TableHead className="text-xs md:text-sm min-w-[120px]">Theme</TableHead>
-                <TableHead className="text-xs md:text-sm text-right min-w-[100px] pr-4">Coverage</TableHead>
+                <TableHead className="text-xs md:text-sm text-right min-w-[100px] pr-4">
+                  Coverage
+                </TableHead>
                 <TableHead className="text-xs md:text-sm text-right hidden sm:table-cell min-w-[120px] pr-4">
                   Last Updated
                 </TableHead>

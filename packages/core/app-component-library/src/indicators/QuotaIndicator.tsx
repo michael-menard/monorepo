@@ -106,14 +106,14 @@ export function QuotaIndicator({
 
   return (
     <span className={cn('inline-flex items-center gap-1', statusColors[status], className)}>
-      {showLabel && !compact && <span className="font-medium">{label}:</span>}
+      {showLabel && !compact ? <span className="font-medium">{label}:</span> : null}
       <span className={compact ? 'text-sm' : ''}>
         {quota.current}
         {separator}
         {limitText}
         {unitSuffix}
       </span>
-      {showLabel && compact && <span className="text-xs text-muted-foreground">{label}</span>}
+      {showLabel && compact ? <span className="text-xs text-muted-foreground">{label}</span> : null}
     </span>
   )
 }
@@ -199,15 +199,15 @@ export function QuotaBar({
   if (quota.limit === null) {
     return (
       <div className={cn('flex flex-col gap-1', className)}>
-        {showLabel && <span className="text-sm font-medium text-foreground">{label}</span>}
+        {showLabel ? <span className="text-sm font-medium text-foreground">{label}</span> : null}
         <div className="flex items-center gap-2">
           <Progress value={0} className={cn('flex-1', sizeClasses[size])} />
-          {showText && (
+          {showText ? (
             <span className="text-sm text-muted-foreground whitespace-nowrap">
               {quota.current}
               {unitSuffix} used (unlimited)
             </span>
-          )}
+          ) : null}
         </div>
       </div>
     )
@@ -215,24 +215,27 @@ export function QuotaBar({
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      {showLabel && (
+      {showLabel ? (
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-foreground">{label}</span>
-          {showText && (
+          {showText ? (
             <span className={cn('text-sm whitespace-nowrap', textStatusColors[status])}>
               {quota.current} / {limitText}
               {unitSuffix}
             </span>
-          )}
+          ) : null}
         </div>
-      )}
-      {!showLabel && showText && (
+      ) : null}
+      {!showLabel && showText ? (
         <span className={cn('text-sm whitespace-nowrap', textStatusColors[status])}>
           {quota.current} / {limitText}
           {unitSuffix}
         </span>
-      )}
-      <Progress value={percentage} className={cn('w-full', sizeClasses[size], statusColors[status])} />
+      ) : null}
+      <Progress
+        value={percentage}
+        className={cn('w-full', sizeClasses[size], statusColors[status])}
+      />
     </div>
   )
 }
@@ -286,13 +289,7 @@ export function QuotaCard({ quotaType, quota, className }: QuotaCardProps) {
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border bg-card p-4 shadow-sm',
-        statusColors[status],
-        className,
-      )}
-    >
+    <div className={cn('rounded-lg border bg-card p-4 shadow-sm', statusColors[status], className)}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-card-foreground">{label}</span>
         {status === 'critical' && (

@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod'
+import { FileValidationResultSchema, type FileValidationResult } from '@repo/upload/types'
 
 export const InstructionsUploadPropsSchema = z.object({
   mocId: z.string().uuid(),
@@ -47,5 +48,4 @@ export const FileItemSchema = z.object({
 export type FileItem = z.infer<typeof FileItemSchema>
 
 // TODO(REPA-005): Remove re-export when component migrates to @repo/upload
-import { FileValidationResultSchema, type FileValidationResult } from '@repo/upload/types'
 export { FileValidationResultSchema, type FileValidationResult }
