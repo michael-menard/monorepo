@@ -35,13 +35,13 @@ This is a TypeScript monorepo (pnpm + Turborepo) for a LEGO MOC instructions pla
 ```bash
 pnpm dev                  # Start full dev environment
 pnpm build                # Build all packages
-pnpm lint                 # Lint changed files
 pnpm check-types          # Type check changed files
 pnpm test                 # Test changed files
-pnpm lint:all             # Lint everything
 pnpm check-types:all      # Type check everything
 pnpm test:all             # Test everything
 ```
+
+> **Linting:** Always use `/lint-fix` instead of `pnpm lint` directly. The skill runs lint with auto-fix, captures unfixable errors grouped by rule, and surfaces config improvement candidates. See `.claude/skills/lint-fix/SKILL.md`.
 
 ## Project Structure
 
