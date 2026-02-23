@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Story 3.1.9 + 3.1.10 + 3.1.16 + 3.1.19 + BUGF-032: Instructions New Page
  *

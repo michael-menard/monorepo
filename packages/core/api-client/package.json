@@ -147,8 +147,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix"
+    "lint": "eslint --fix src"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",

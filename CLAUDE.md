@@ -213,3 +213,4 @@ All code must pass before commit, and **all new additions must pass linting and 
 4. Don't skip type errors - fix them
 5. Don't hardcode colors - use Tailwind classes
 6. Don't use TypeScript interfaces - use Zod schemas with `z.infer<>`
+7. Prefix intentionally unused variables with `_` (e.g., `_unused`, `{ keep, _skip }`) — the linter is configured to ignore `_`-prefixed names, so this is preferred over `eslint-disable` comments

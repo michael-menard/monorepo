@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "lint": "eslint src",
+    "lint": "eslint --fix src",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
