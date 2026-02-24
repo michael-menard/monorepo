@@ -14,6 +14,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
 // Config
@@ -74,53 +75,58 @@ const STAGE_DIRS: { dir: string; stage: string }[] = [
 // Types
 // ---------------------------------------------------------------------------
 
-interface Dep {
-  story_id: string
-  row: string
-  satisfied: boolean
-}
+const DepSchema = z.object({
+  story_id: z.string(),
+  row: z.string(),
+  satisfied: z.boolean(),
+})
+type Dep = z.infer<typeof DepSchema>
 
-interface QueueItem {
-  story_id: string
-  title: string
-  batch: string
-  priority: string
-  row: string
-  status: string
-  stage: 'qa' | 'code-review' | 'implement' | 'elab'
-  feature_dir: string
-  command: string
-  deps: Dep[]
-}
+const QueueItemSchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  batch: z.string(),
+  priority: z.string(),
+  row: z.string(),
+  status: z.string(),
+  stage: z.enum(['qa', 'code-review', 'implement', 'elab']),
+  feature_dir: z.string(),
+  command: z.string(),
+  deps: z.array(DepSchema),
+})
+type QueueItem = z.infer<typeof QueueItemSchema>
 
-interface WorkingItem {
-  story_id: string
-  title: string
-  worker: string
-  row: string
-}
+const WorkingItemSchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  worker: z.string(),
+  row: z.string(),
+})
+type WorkingItem = z.infer<typeof WorkingItemSchema>
 
-interface GateInfo {
-  id: string
-  title: string
-  waiting_on: string[]
-}
+const GateInfoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  waiting_on: z.array(z.string()),
+})
+type GateInfo = z.infer<typeof GateInfoSchema>
 
-interface WorkQueue {
-  generated_at: string
-  source: string
-  stale_after_seconds: number
-  summary: {
-    complete: number
-    blocked: number
-    working: number
-    cancelled: number
-    unblocked: number
-  }
-  working: WorkingItem[]
-  queue: QueueItem[]
-  next_gate: GateInfo | null
-}
+const WorkQueueSchema = z.object({
+  generated_at: z.string(),
+  source: z.string(),
+  stale_after_seconds: z.number(),
+  summary: z.object({
+    complete: z.number(),
+    blocked: z.number(),
+    working: z.number(),
+    cancelled: z.number(),
+    unblocked: z.number(),
+  }),
+  working: z.array(WorkingItemSchema),
+  queue: z.array(QueueItemSchema),
+  next_gate: GateInfoSchema.nullable(),
+})
+type WorkQueue = z.infer<typeof WorkQueueSchema>
 
 // ---------------------------------------------------------------------------
 // Helpers
