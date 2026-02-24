@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-22T20:00:00Z"
+updated_at: "2026-02-24T01:03:00Z"
 ---
 
 # WINT Stories Index
@@ -19,7 +19,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 20 |
 | in-qa | 0 |
 | ready-for-qa | 0 |
-| needs-code-review | 0 |
+| needs-code-review | 1 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
 | failed-qa | 0 |
@@ -28,7 +28,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 4 |
-| pending | 117 |
+| pending | 116 |
 
 ---
 
@@ -130,7 +130,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0060: Create Graph Relational Tables
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0010
 **Phase:** 0
 **Feature:** Create capabilities, features, epics, feature_capabilities, and views (feature_cohesion, franken_features) in graph schema using relational approach (no AGE)
@@ -141,6 +141,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Enable graph-based cohesion checks using standard SQL
 
 **Risk Notes:** View performance needs monitoring as graph grows
+
+**QA Verification Complete:** 2026-02-23 — All 13 ACs verified PASS, 36/36 tests pass, 385/385 full suite passes, 100% coverage, 0 blocking issues. Minor documentation discrepancy (migration filename reference). Verdict: PASS
 
 ---
 
@@ -740,13 +742,15 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** uat
-**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
+**Status:** needs-code-review
+**Story File:** `wint/in-progress/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
 **Implementation Complete:** 2026-02-18
-**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS
+**QA Verification Complete (Iteration 1):** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS (overturned)
+**QA Verification Complete (Iteration 2):** 2026-02-24 - Independent re-verification: FAIL — 2 blocking issues: AC-7 guard clause absent (double-write), AC-5 AC text inaccurate
+**Fix Iteration 1 Complete:** 2026-02-24 - All 3 issues fixed (AC-7 guard clause added, AC-5 examples corrected, EVIDENCE.yaml count corrected). QA re-verify: PASS. Status advanced to needs-code-review.
 **Depends On:** WINT-1030
 **Phase:** 1
 **Points:** 2
@@ -847,7 +851,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1160
+**Depends On:** WINT-1040, WINT-1060, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -910,7 +914,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Story Generated:** 2026-02-16
 **Elaboration Complete:** 2026-02-16
 **Verdict:** PASS
-**QA Verified:** 2026-02-17
+**QA Verified:** 2026-02-24
 **Depends On:** WINT-1130
 **Phase:** 1
 **Points:** 3
@@ -928,7 +932,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 **Elaboration Notes:** Both MVP-critical gaps resolved via new ACs (AC-12, AC-13). All non-blocking findings logged to KB. Ready for implementation.
 
-**QA Notes:** All 13 acceptance criteria verified PASS. 21/21 tests pass. No blocking issues. Architecture compliant. Lessons captured to KB.
+**QA Result:** PASS — All 13 ACs verified, 305 tests pass (including 21 WINT-1150 cleanup-integration tests), architecture compliant. Minor deviations DEV-001 (/wt:merge-pr vs /wt-finish) and DEV-002 (reason string) — both non-blocking, spirit of ACs met. 3 lessons captured to KB. QA complete 2026-02-24.
 
 ---
 

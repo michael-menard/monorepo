@@ -74,7 +74,7 @@ If exists: `MOVE FAILED: Story already exists in {TO_STAGE}`
 
 ### 2.5. DB Write via shimUpdateStoryStatus (WINT-1060)
 
-**This step ALWAYS executes for mapped stages**, regardless of whether `--update-status` was provided. The `--update-status` flag only controls Step 4 (frontmatter + index update), not the DB write.
+**Guard clause (AC-7)**: If `--update-status` was provided, skip this step entirely — set `db_updated: skipped` and proceed to Step 3. The DB write will be handled by `/story-update` in Step 4 (no double-write).
 
 **Independence from locate step (AC-10)**: If `shimGetStoryStatus` returned null during Step 1 (DB-miss or DB-error), still proceed with `shimUpdateStoryStatus` for mapped stages — the write path is independent of the read path. A DB read miss does not suppress the DB write attempt.
 
@@ -151,7 +151,7 @@ db_updated: true | false | skipped
 # db_updated values:
 #   true    - shimUpdateStoryStatus returned non-null (DB write succeeded)
 #   false   - shimUpdateStoryStatus returned null (DB unavailable); mv proceeded
-#   skipped - TO_STAGE has no DB state mapping (unmapped stage)
+#   skipped - TO_STAGE has no DB state mapping (unmapped stage), OR --update-status was provided (DB write delegated to /story-update in Step 4)
 ```
 
 ## Stage Transition Flow
