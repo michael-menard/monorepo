@@ -1,16 +1,44 @@
 {
-  "generated_at": "2026-02-21T04:16:53.502Z",
+  "generated_at": "2026-02-24T04:29:49.429Z",
   "source": "WORK-ORDER-BY-BATCH.md",
   "stale_after_seconds": 120,
   "summary": {
-    "complete": 47,
-    "blocked": 25,
+    "complete": 48,
+    "blocked": 22,
     "working": 0,
     "cancelled": 1,
-    "unblocked": 10
+    "unblocked": 7
   },
   "working": [],
   "queue": [
+    {
+      "story_id": "WINT-0210",
+      "title": "Populate Role Pack Templates",
+      "batch": "Batch 7 — MCP Tools & Status",
+      "priority": "P3",
+      "row": "45",
+      "status": "⏸️",
+      "stage": "implement",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-0210",
+      "deps": [
+        {
+          "story_id": "WINT-0180",
+          "row": "12",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-0200",
+          "row": "25",
+          "satisfied": true
+        },
+        {
+          "story_id": "WINT-0190",
+          "row": "69",
+          "satisfied": true
+        }
+      ]
+    },
     {
       "story_id": "KBAR-0060",
       "title": "Sync Integration Tests",
@@ -18,6 +46,7 @@
       "priority": "P1",
       "row": "58",
       "status": "⏸️",
+      "stage": "implement",
       "feature_dir": "plans/future/platform/kb-artifact-migration",
       "command": "/dev-implement-story plans/future/platform/kb-artifact-migration KBAR-0060",
       "deps": [
@@ -35,6 +64,7 @@
       "priority": "P1",
       "row": "60",
       "status": "⏸️",
+      "stage": "implement",
       "feature_dir": "plans/future/platform/wint",
       "command": "/dev-implement-story plans/future/platform/wint WINT-1120",
       "deps": [
@@ -61,113 +91,19 @@
       ]
     },
     {
-      "story_id": "MODL-0040",
-      "title": "Model Leaderboards",
-      "batch": "Batch 9 — Shared Business Logic",
+      "story_id": "AUDT-0030",
+      "title": "Audit Orchestration Nodes",
+      "batch": "Batch 11 — KBAR Tools",
       "priority": "P1",
-      "row": "62",
-      "status": "⏳",
-      "feature_dir": "plans/future/platform/model-experimentation",
-      "command": "/dev-implement-story plans/future/platform/model-experimentation MODL-0040",
-      "deps": [
-        {
-          "story_id": "MODL-0030",
-          "row": "46",
-          "satisfied": true
-        }
-      ]
-    },
-    {
-      "story_id": "AUDT-0020",
-      "title": "9 Audit Lens Nodes",
-      "batch": "Batch 9 — Shared Business Logic",
-      "priority": "P1",
-      "row": "63",
-      "status": "⏳",
+      "row": "79",
+      "status": "⚪",
+      "stage": "implement",
       "feature_dir": "plans/future/platform/code-audit",
-      "command": "/dev-implement-story plans/future/platform/code-audit AUDT-0020",
+      "command": "/dev-implement-story plans/future/platform/code-audit AUDT-0030",
       "deps": [
         {
-          "story_id": "AUDT-0010",
-          "row": "10",
-          "satisfied": true
-        }
-      ]
-    },
-    {
-      "story_id": "WINT-9020",
-      "title": "Create doc-sync LangGraph Node ⚡",
-      "batch": "Batch 10 — First LangGraph Nodes",
-      "priority": "P1",
-      "row": "64",
-      "status": "🚧",
-      "feature_dir": "plans/future/platform/wint",
-      "command": "/dev-implement-story plans/future/platform/wint WINT-9020",
-      "deps": [
-        {
-          "story_id": "WINT-9010",
-          "row": "57",
-          "satisfied": true
-        },
-        {
-          "story_id": "WINT-0160",
-          "row": "21",
-          "satisfied": true
-        }
-      ]
-    },
-    {
-      "story_id": "WINT-0190",
-      "title": "Create Patch Queue Pattern and Schema",
-      "batch": "Batch 10 — First LangGraph Nodes",
-      "priority": "P1",
-      "row": "69",
-      "status": "🚧",
-      "feature_dir": "plans/future/platform/wint",
-      "command": "/dev-implement-story plans/future/platform/wint WINT-0190",
-      "deps": [
-        {
-          "story_id": "WINT-0180",
-          "row": "12",
-          "satisfied": true
-        }
-      ]
-    },
-    {
-      "story_id": "WINT-0240",
-      "title": "Configure Ollama Model Fleet",
-      "batch": "Batch 10 — First LangGraph Nodes",
-      "priority": "P1",
-      "row": "70",
-      "status": "⏳",
-      "feature_dir": "plans/future/platform/wint",
-      "command": "/dev-implement-story plans/future/platform/wint WINT-0240",
-      "deps": [
-        {
-          "story_id": "WINT-0220",
-          "row": "13",
-          "satisfied": true
-        }
-      ]
-    },
-    {
-      "story_id": "WINT-0250",
-      "title": "Define Escalation Triggers",
-      "batch": "Batch 10 — First LangGraph Nodes",
-      "priority": "P1",
-      "row": "71",
-      "status": "⏳",
-      "feature_dir": "plans/future/platform/wint",
-      "command": "/dev-implement-story plans/future/platform/wint WINT-0250",
-      "deps": [
-        {
-          "story_id": "WINT-0220",
-          "row": "13",
-          "satisfied": true
-        },
-        {
-          "story_id": "WINT-0230",
-          "row": "28",
+          "story_id": "AUDT-0020",
+          "row": "63",
           "satisfied": true
         }
       ]
@@ -179,8 +115,9 @@
       "priority": "P1",
       "row": "80",
       "status": "⏳",
+      "stage": "code-review",
       "feature_dir": "plans/future/platform/telemetry",
-      "command": "/dev-implement-story plans/future/platform/telemetry TELE-0010",
+      "command": "/dev-code-review plans/future/platform/telemetry TELE-0010",
       "deps": [
         {
           "story_id": "INFR-0040",
@@ -190,21 +127,34 @@
       ]
     },
     {
-      "story_id": "WINT-2090",
-      "title": "Implement Session Context Management ⚡",
+      "story_id": "WINT-2100",
+      "title": "Create session-manager Agent ⚡",
       "batch": "Batch 12 — Context & Session",
       "priority": "P1",
-      "row": "81",
-      "status": "⏳",
+      "row": "82",
+      "status": "⚪",
+      "stage": "implement",
       "feature_dir": "plans/future/platform/wint",
-      "command": "/dev-implement-story plans/future/platform/wint WINT-2090",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-2100",
       "deps": [
         {
-          "story_id": "WINT-0110",
-          "row": "40",
+          "story_id": "WINT-2090",
+          "row": "81",
           "satisfied": true
         }
       ]
+    },
+    {
+      "story_id": "WINT-9110",
+      "title": "Create Full Workflow LangGraph Graphs ⚡ 🎯",
+      "batch": "Batch 13 — LangGraph Operational!",
+      "priority": "P1",
+      "row": "91",
+      "status": "⏸️",
+      "stage": "implement",
+      "feature_dir": "plans/future/platform/wint",
+      "command": "/dev-implement-story plans/future/platform/wint WINT-9110",
+      "deps": []
     }
   ],
   "next_gate": {
