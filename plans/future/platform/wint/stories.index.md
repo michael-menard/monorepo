@@ -742,8 +742,8 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1060: Update story-move Command to Use DB
 
-**Status:** needs-code-review
-**Story File:** `wint/in-progress/WINT-1060/WINT-1060.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-1060/WINT-1060.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS

@@ -1,0 +1,120 @@
+schema: 1
+story_id: WINT-1060
+timestamp: '2026-02-18T15:00:00Z'
+
+verdict: PASS
+
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: "story_type: docs — markdown-only deliverable, no TypeScript code introduced. No pnpm packages touched. ADR-005 constraint: manual dry-run evidence is the primary evidence type for docs-only changes."
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_threshold_note: "Coverage threshold (45%) is not applicable — no TypeScript code added or modified."
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: "No test code produced; docs-only story. No anti-patterns applicable."
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: "Confirmed: Step 2.5 header at line 75 of story-move.md. shimUpdateStoryStatus call block at lines 96-107. mv bash block at line 121 (Step 3). Ordering correct — DB write precedes directory mv."
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: "Confirmed: Line 124 states 'This step executes unconditionally regardless of DB outcome in Step 2.5 (AC-2).' Line 116 states 'Proceed with directory mv regardless of DB outcome — the move is never blocked by DB availability.'"
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: "Confirmed: Lines 102-104 — null return branch logs warning via @repo/logger and sets db_updated = false. Execution then falls through to Step 3 mv. No abort on DB failure."
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: "Confirmed: Inline SWIM_LANE_TO_STATE table at lines 83-90 with source attribution to packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts. All 5 mapped stages present (backlog, ready-to-work, in-progress, ready-for-qa, UAT). No hardcoded state strings in logic prose."
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: "Confirmed: Lines 109-114 — unmapped-stage branch logs warning, sets db_updated = skipped. Execution continues to Step 3 mv. Unmapped examples listed (created, elaboration, needs-code-review, failed-code-review, failed-qa)."
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: "Confirmed: Lines 147-152 — db_updated: true | false | skipped in Step 5 return YAML block. All 3 trigger conditions documented inline in comments."
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: "Confirmed: Line 77 — --update-status guard clause at top of Step 2.5 sets db_updated: skipped and skips to Step 3. Line 135 — Step 4 clarifies no double-write, db_updated reported as skipped in return YAML when delegation path taken."
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: "Confirmed: Lines 177-180 — MOVE COMPLETE, MOVE SKIPPED: <reason>, MOVE FAILED: <reason> signals unchanged. Error Handling table fully preserved at lines 166-174. No new signals added."
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: "Confirmed: Lines 42-44 — DB-first lookup section calls shimGetStoryStatus before any directory scan. Lines 50-64 — directory fallback triggered only when shimGetStoryStatus returns null. MOVE FAILED only when neither DB nor directory finds the story."
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[9]"
+    notes: "Confirmed: Line 79 — verbatim independence prose: 'If shimGetStoryStatus returned null during Step 1 (DB-miss or DB-error), still proceed with shimUpdateStoryStatus for mapped stages — the write path is independent of the read path. A DB read miss does not suppress the DB write attempt.'"
+
+architecture_compliant: true
+architecture_notes:
+  - "ADR-005 (Testing Strategy - UAT Must Use Real Services): No mocking used. Manual dry-run evidence via EVIDENCE.yaml commands_run[] constitutes the primary evidence. Compliant."
+  - "No other ADRs applicable — no TypeScript code, no API endpoints, no frontend changes."
+
+attack_vectors_checked:
+  - vector: "Executor adds early-return on null shimGetStoryStatus result suppressing DB write (AC-10 violation)"
+    result: PASS
+    notes: "AC-10 independence prose is present at line 79 before the shim call block. No early-return on null locate result."
+  - vector: "Step 2.5 placed after directory mv (Step 3) rather than before"
+    result: PASS
+    notes: "Step 2.5 appears at line 75, Step 3 mv block at line 121. Ordering correct."
+  - vector: "db_updated: false for --update-status path instead of skipped (AC-7 violation)"
+    result: PASS
+    notes: "Line 77 explicitly sets db_updated: skipped for the --update-status path."
+  - vector: "Hardcoded state strings instead of SWIM_LANE_TO_STATE reference (AC-4 violation)"
+    result: PASS
+    notes: "All DB state values appear only inside the inline SWIM_LANE_TO_STATE table. Logic prose references mapped_state variable."
+  - vector: "done stage exclusion omitted from inline table"
+    result: PASS
+    notes: "Line 91: 'Note: done is in the SWIM_LANE_TO_STATE constant but is NOT a valid TO_STAGE target for /story-move.'"
+
+issues: []
+
+lessons_to_record:
+  - lesson: "For docs-only (markdown command) stories, EVIDENCE.yaml commands_run[] entries serving as manual dry-run read-verifications are sufficient QA evidence — no pnpm test execution required. This pattern is reused from WINT-1040 and WINT-1050."
+    category: pattern
+    tags: ["docs", "qa-verify", "markdown-command", "evidence-first"]
+
+  - lesson: "The attack_vectors field in KNOWLEDGE-CONTEXT.yaml is a high-value QA checklist for docs stories — each vector maps to a specific AC and can be verified by a targeted file read at a known line number."
+    category: pattern
+    tags: ["qa-verify", "knowledge-context", "attack-vectors"]
+
+  - lesson: "Guard-clause ordering in markdown command prose matters: the --update-status early-exit must appear before the independence note, which must appear before the shim call block. This mirrors the early-return pattern used in TypeScript and prevents ambiguity for executing agents."
+    category: pattern
+    tags: ["markdown-command", "docs", "ordering"]
+
+gate:
+  decision: PASS
+  reason: "All 10 ACs verified PASS, tests exempt (docs-only), architecture compliant, attack vectors passed. No issues blocking story completion."
+  blocking_issues: []
+
+tokens:
+  in: 12000
+  out: 1800
