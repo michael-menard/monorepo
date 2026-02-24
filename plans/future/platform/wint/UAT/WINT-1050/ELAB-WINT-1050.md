@@ -1,117 +1,91 @@
 # Elaboration Report - WINT-1050
 
-**Date**: 2026-02-17
+**Date**: 2026-02-20
 **Verdict**: CONDITIONAL PASS
 
 ## Summary
 
-WINT-1050 passed elaboration with zero MVP-critical gaps and three low-severity, non-blocking findings. The story is well-specified, fully decomposed into 4 subtasks with clear acceptance criteria, and ready for implementation. All findings have been logged to the knowledge base as documentation debt and future opportunities.
+Story augments `/story-update` command with DB integration via `shimUpdateStoryStatus` before YAML frontmatter write. All 10 ACs fully specified, 4 subtasks with clear decomposition, zero MVP-critical gaps. Three low-severity documentation inconsistencies identified and logged to KB (non-blocking for implementation).
 
 ## Audit Results
 
 | # | Check | Status | Severity | Notes |
 |---|-------|--------|----------|-------|
-| 1 | Scope Alignment | CONDITIONAL PASS | Low | stories.index.md entry has stale Phase 0 AC block (copy-paste artifact). Actual story scope is correct. |
-| 2 | Internal Consistency | PASS | — | Goals, Non-goals, ACs, and Architecture Notes are internally consistent. Execution order matches all ACs. |
-| 3 | Reuse-First | PASS | — | `shimUpdateStoryStatus`, `StoryUpdateStatusInputSchema`, and `SWIM_LANE_TO_STATE` explicitly reused. No one-off utilities. |
-| 4 | Ports & Adapters | PASS | — | Docs-only command spec — no transport layer concerns. |
-| 5 | Local Testability | PASS | — | AC-9 specifies 6 concrete integration test scenarios (Scenarios A-F). ADR-005 compliance noted. |
-| 6 | Decision Completeness | PASS | — | All AC-10 mapping decisions explicitly documented. WINT-1070 conflict tracked as non-blocking. |
-| 7 | Risk Disclosure | PASS | — | WINT-1070 race condition disclosed. shimUpdateStoryStatus AC-2 constraint surfaced. No hidden dependencies. |
-| 8 | Story Sizing | PASS | — | 1 file modified (`.claude/commands/story-update.md`), 4 subtasks, 2 points. 10 ACs are appropriate for the scope. |
-| 9 | Subtask Decomposition | PASS | — | 4 subtasks (ST-1 through ST-4) form a valid DAG with explicit ACs, file lists, verification steps, and dependencies. |
+| 1 | Scope Alignment | PASS | — | Story targets exactly one file (`.claude/commands/story-update.md`). stories.index.md entry matches story frontmatter scope, goals, and AC list exactly. |
+| 2 | Internal Consistency | PASS | — | Goals, Non-goals, Scope, ACs, and Subtasks are internally coherent. Architecture Notes and Reuse Plan are consistent with AC specifications. No contradictions found. |
+| 3 | Reuse-First | PASS | — | `shimUpdateStoryStatus` reused from `mcp-tools/src/index.ts` (WINT-1011). Inline mapping table pattern reused from WINT-1060 `story-move.md` Step 2.5. No new packages proposed. |
+| 4 | Ports & Adapters | PASS | — | Story is documentation-only (markdown command spec). No TypeScript source files. No business logic in route handlers applicable. Shim API (frozen, WINT-1011) is already compliant. |
+| 5 | Local Testability | PASS | — | `_pm/TEST-PLAN.md` is comprehensive: 16 test scenarios covering all 10 ACs. Concrete preconditions, actions, and evidence requirements. ADR-005 compliance noted. |
+| 6 | Decision Completeness | PASS | — | No blocking TBDs. All 14 status mapping decisions are explicit (8 mapped including 2 explicit decisions for BLOCKED/superseded, 6 unmapped with documented reasons). |
+| 7 | Risk Disclosure | PASS | — | Reality Baseline documents all dependency statuses. WINT-1070 interference risk noted. ADR-005 UAT constraint documented. shimUpdateStoryStatus AC-2 constraint explicitly cited. WINT-1160 concurrency deferral noted. |
+| 8 | Story Sizing | PASS | — | 1 file modified. 10 ACs. 4 subtasks. Documentation-only. Touches 0 packages (uses existing MCP server). 0 sizing indicators triggered. |
+| 9 | Subtask Decomposition | PASS | — | 4 subtasks with clear goal, files, ACs covered, dependency chain (ST-1 → ST-2 → ST-3 → ST-4), and verification commands. No cycle in DAG. Canonical References section present. |
 
 ## Issues & Required Fixes
 
 | # | Issue | Severity | Required Fix | Status |
 |---|-------|----------|--------------|--------|
-| 1 | stories.index.md WINT-1050 entry contains stale "Acceptance Criteria (Phase 0)" block — copy-paste artifact from WINT-1060. | Low | No fix required for implementation. Dev agent must ignore this block. STORY-SEED.md already warns against adding WINT-0120 as a blocker. | RESOLVED: KB-logged |
-| 2 | AC-2 text states "all 13 status values" but lists 14 values — off-by-one count error in AC text. Architecture Notes mapping table (authoritative) correctly has 14 rows. | Low | No implementation impact. Dev agent must build the 14-row mapping table. AC text correction is documentation polish for a future pass. | RESOLVED: KB-logged |
-| 3 | ST-3 description does not explicitly state that existing Step 3 ("Update Frontmatter") must be renamed to Step 3.5 before inserting new Step 3. | Low | No implementation impact. ST-3 verification explicitly checks step order. Architecture Notes are authoritative. Dev agent should rename Step 3 → Step 3.5 and insert new Step 3 above it. | RESOLVED: KB-logged |
+| 1 | Architecture Notes typo: '8 unmapped statuses' should be '6 unmapped statuses' | Low | KB-logged (non-blocking). The 6-bullet list and AC-10 language are authoritative. | Logged |
+| 2 | TEST-PLAN Test 8 incorrectly lists BLOCKED and superseded as unmapped statuses | Low | KB-logged (non-blocking). QA engineer must use Tests 9 and 10 for BLOCKED/superseded (mapped). ACs are correct. | Logged |
+| 3 | Mapping count discrepancy: AC-2 says '14 statuses', Architecture Notes says '8 mapped + 8 unmapped' but bullet list shows only 6 unmapped | Low | KB-logged (non-blocking). The 6-bullet unmapped list and AC-2/AC-10 language are authoritative. | Logged |
 
 ## Discovery Findings
 
 ### Gaps Identified
 
-| # | Finding | Decision | Notes |
-|---|---------|----------|-------|
-| 1 | stories.index.md stale Phase 0 AC block | KB-logged | No dev impact. Will be resolved when WINT-1070 regenerates index from DB. |
-| 2 | AC-2 off-by-one count (13 vs 14 statuses) | KB-logged | Dev agent must build 14-row mapping table per Architecture Notes. |
-| 3 | ST-3 rename operation not explicitly stated | KB-logged | Dev agent must rename Step 3 to Step 3.5; insert new Step 3 above it. |
+| # | Finding | Resolution | AC Added | Notes |
+|---|---------|-----------|----------|-------|
+| 1 | Architecture Notes typo on unmapped status count | KB-logged | No | Non-blocking documentation inconsistency. Implementer uses bullet list, not prose count. |
+| 2 | TEST-PLAN Test 8 mapping error for BLOCKED/superseded | KB-logged | No | Non-blocking test plan error. QA uses Tests 9 and 10 as authoritative for mapped statuses. |
+| 3 | Minor mapping count narrative discrepancy | KB-logged | No | Non-blocking. 'done' in SWIM_LANE_TO_STATE is DB target for 'completed' status, not command input. |
 
 ### Enhancement Opportunities
 
-| # | Finding | Decision | Category | Notes |
+| # | Finding | Category | Priority | Notes |
 |---|---------|----------|----------|-------|
-| 1 | --no-db / --skip-db flag missing | KB-logged | future-opportunities | Consider for Phase 7 v4.0.0 bump. |
-| 2 | db_error_detail field missing from result YAML | KB-logged | future-opportunities | Track in WINT-3070 (Telemetry) — telemetry layer is right place. |
-| 3 | No retry logic for transient DB failures | KB-logged | future-opportunities | Evaluate during Phase 3 telemetry work with frequency data. |
-| 4 | Result YAML lacks db_state field | KB-logged | future-opportunities | Consider adding db_state: <newState> in v3.1.0 bump. |
-| 5 | Integration test Scenario D has no runnable harness | KB-logged | future-opportunities | Create dedicated harness story in Phase 1 validation (WINT-1120). |
-| 6 | triggeredBy field hardcoded to 'story-update' | KB-logged | future-opportunities | Revisit when WINT-3070 lands for dynamic caller ID support. |
-| 7 | superseded status missing from transition rules | KB-logged | future-opportunities | Add "superseded → terminal" row in follow-up polish pass. |
+| 1 | Add db_updated: skipped as distinct third result value | Observability | Low | Deferred to WINT-7030 (Phase 7). Explicit deferral noted in Non-goals. |
+| 2 | Concurrent update conflict detection | Safety | Medium | Deferred to WINT-1160. Last-writer-wins with no warning is Phase 1 acceptable. |
+| 3 | --db-only flag for DB write without FS write | Operational | Low | Deferred to WINT-7030. Useful for reconciliation scripts but not MVP. |
+| 4 | Telemetry logging for shimUpdateStoryStatus calls | Observability | Low | Depends on WINT-3070. triggeredBy field provides actor identifier already. |
+| 5 | Validation script for transition/mapping table sync | Maintenance | Low | WINT-7010-style audit script could verify completeness. Not needed for this story's scope. |
+| 6 | Mapping/transition table consistency checker | Automation | Low | Could be added as lint rule. Deferred. |
+| 7 | Historic DB migration for command version tracking | Auditing | Low | Deferred to Phase 3+ telemetry. |
+| 8 | Per-status instrumentation for command latency | Observability | Low | Deferred to Phase 3 telemetry. |
 
 ### Follow-up Stories Suggested
 
-None required — all enhancements are tracked as future opportunities, not blocking this implementation.
+None — all enhancements deferred to planned phase stories (WINT-1160, WINT-3070, WINT-7010, WINT-7030).
 
 ### Items Marked Out-of-Scope
 
-- WINT-0120 as a prerequisite: Story-SEED.md explicitly excludes this. Do not add to depends_on.
-- Telemetry logging (WINT-3070): Outside this story's scope.
-- story-move.md updates (WINT-1060): Separate story.
-- story-status.md updates (WINT-1040): Separate story.
-- Index deprecation (WINT-1070): Separate story.
+None marked by autonomous decider. All explicitly deferred items in DECISIONS.yaml noted with clear future story assignment.
 
-### KB Entries Created (Autonomous Mode Only)
+### KB Entries Deferred (Autonomous Mode)
 
-7 KB entries created and deferred (postgres-knowledgebase not available in elaboration context):
-- `kb_entry_id: null` (retry queued) — Documentation debt: stale index entry
-- `kb_entry_id: null` (retry queued) — Documentation debt: AC-2 count error
-- `kb_entry_id: null` (retry queued) — Documentation debt: ST-3 clarity
-- `kb_entry_id: null` (retry queued) — Future opportunity: --no-db flag
-- `kb_entry_id: null` (retry queued) — Future opportunity: db_error_detail
-- `kb_entry_id: null` (retry queued) — Future opportunity: transient retry logic
-- `kb_entry_id: null` (retry queued) — Future opportunity: db_state field
+Due to postgres-knowledgebase unavailability during autonomous decision phase:
 
-All writes are non-blocking and documented in `/Users/michaelmenard/Development/monorepo/plans/future/platform/wint/elaboration/WINT-1050/DEFERRED-KB-WRITES.yaml` for retry during Phase 4.5 when postgres-knowledgebase is available.
+- KB-1: Architecture Notes typo — '8 unmapped statuses' should be '6 unmapped statuses'
+- KB-2: TEST-PLAN Test 8 mapping error — BLOCKED/superseded listed as unmapped, should be tested in Tests 9–10
+- KB-3: Minor mapping count discrepancy — 'done' in SWIM_LANE_TO_STATE is DB target state, not command status input
+- KB-4: Add db_updated: skipped as distinct result value (WINT-7030)
+- KB-5: Concurrent update conflict detection (WINT-1160)
+- KB-6: --db-only flag implementation (WINT-7030)
+- KB-7: Telemetry instrumentation for shimUpdateStoryStatus (WINT-3070)
+- KB-8: Validation script for transition/mapping table sync (WINT-7010-style audit)
 
 ## Proceed to Implementation?
 
-**YES** - Story may proceed. CONDITIONAL PASS verdict indicates:
-- All MVP-critical gaps resolved (0 found)
-- All blockers removed (0 active)
-- Low-severity documentation debt logged to KB
-- Dev agent has clear, unambiguous spec
-- Subtasks form valid execution DAG
-- No split required
-- Ready for dev team assignment
+**YES** — Story is ready for implementation with conditional pass. All 10 ACs fully specified. All dependency infrastructure verified (WINT-1011, WINT-1030, WINT-1060 as pattern reference). Three low-severity findings are documentation inconsistencies with no implementation risk.
+
+Implementer guidance:
+1. Use AC bullet lists as authoritative over Architecture Notes prose counts
+2. For Test 8 (unmapped statuses), verify against 6 unmapped: created, elaboration, needs-code-review, failed-code-review, failed-qa, needs-split
+3. Follow WINT-1060's Step 2.5 pattern exactly (inline mapping table, shimUpdateStoryStatus call, null → warning + FS-only, db_updated in result YAML)
+4. Subtask execution order: ST-1 (read baseline) → ST-2 (build mapping table) → ST-3 (insert DB write step) → ST-4 (update result YAML + version bump)
 
 ---
 
-## Elaboration Process Notes
-
-**Phase 1.5 Verdict (Pre-Completion)**: CONDITIONAL PASS
-- MVP-critical gaps: 0
-- Low-severity findings: 3 (all resolved via KB logging)
-- New ACs added: 0
-- Audit issues resolved: 1 (scope alignment via documented exception)
-
-**Analyst Notes**: All three findings are documentation debt with zero implementation impact. The story's Architecture Notes section is authoritative for step ordering and the 14-row mapping table. Dev agent has a clear, unambiguous spec and should proceed with confidence.
-
-**Autonomous Mode**: DECISIONS.yaml decisions applied. No interactive user input required. All findings processed via KB-write decisions. Non-blocking enhancements logged for future phases.
-
----
-
-## Elaboration Metadata
-
-| Field | Value |
-|-------|-------|
-| Story ID | WINT-1050 |
-| Elaboration Status | PASS (conditional) |
-| Elaboration Date | 2026-02-17 |
-| Analyst | elab-autonomous-analyst |
-| Decider | elab-autonomous-decider |
-| Completion Leader | elab-completion-leader |
-| Input Tokens (Analysis + Decisions) | ~1,200 |
-| Output Tokens (This Report) | ~1,500 |
+**Elaboration Completed**: 2026-02-20
+**Mode**: Autonomous
+**Verdict**: CONDITIONAL PASS
+**Status**: Ready to move to ready-to-work/

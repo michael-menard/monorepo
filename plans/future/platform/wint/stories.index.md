@@ -17,7 +17,7 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 |--------|-------|
 | completed | 2 |
 | uat | 20 |
-| in-qa | 1 |
+| in-qa | 0 |
 | ready-for-qa | 0 |
 | needs-code-review | 0 |
 | ready-for-code-review | 0 |
@@ -734,7 +734,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Story Generated:** 2026-02-17
 **Elaboration Completed:** 2026-02-20
 **Implementation Complete:** 2026-02-18
-**QA Verification Complete:** 2026-02-18 — All 10 ACs verified PASS, docs-only story, verdict: PASS
+**QA Verification Complete:** 2026-02-24 — All 10 ACs verified PASS, docs-only story, verdict: PASS
 
 ---
 

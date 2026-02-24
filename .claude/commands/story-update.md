@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-17
-version: 2.1.0
+updated: 2026-02-20
+version: 3.0.0
 type: utility-skill
 permission_level: docs-only
 ---
@@ -102,7 +102,54 @@ If not found: `UPDATE FAILED: Story not found`
 
 Perform cleanup check per "Worktree Cleanup on Completed Transition" section above.
 
-### 3. Update Frontmatter
+### 3a. DB Write via shimUpdateStoryStatus
+
+Look up `NEW_STATUS` in the inline mapping table (sourced from `packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts` and explicit decisions for DB-only states):
+
+| Command status | DB newState | Action |
+|----------------|-------------|--------|
+| `backlog` | `backlog` | call shimUpdateStoryStatus |
+| `ready-to-work` | `ready_to_work` | call shimUpdateStoryStatus |
+| `in-progress` | `in_progress` | call shimUpdateStoryStatus |
+| `ready-for-qa` | `ready_for_qa` | call shimUpdateStoryStatus |
+| `uat` | `in_qa` | call shimUpdateStoryStatus |
+| `completed` | `done` | call shimUpdateStoryStatus |
+| `BLOCKED` | `blocked` | call shimUpdateStoryStatus |
+| `superseded` | `cancelled` | call shimUpdateStoryStatus |
+| `created` | skip | no DB state mapping (pre-tracking phase) |
+| `elaboration` | skip | no DB state mapping (pre-tracking phase) |
+| `needs-code-review` | skip | no DB state mapping (transient review state) |
+| `failed-code-review` | skip | no DB state mapping (transient review state) |
+| `failed-qa` | skip | no DB state mapping (transient QA state) |
+| `needs-split` | skip | no DB state mapping (administrative state) |
+
+**If NEW_STATUS is in the mapped rows (has a DB newState):**
+
+```
+result = shimUpdateStoryStatus({
+  storyId: STORY_ID,
+  newState: <mapped_state>,
+  triggeredBy: 'story-update-command',
+})
+
+if result is null:
+  emit WARNING: "WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with filesystem update only."
+  db_updated = false
+else:
+  db_updated = true
+```
+
+**If NEW_STATUS is NOT in the mapped rows (skip action):**
+
+```
+db_updated = false  # no call made
+```
+
+**Notes:**
+- The DB write is never blocking — Step 3b (frontmatter update) proceeds regardless of DB outcome.
+- The `--no-index` flag does NOT suppress this step. Step 3a always executes for mapped statuses.
+
+### 3b. Update Frontmatter
 
 In `{STORY_ID}.md`:
 
@@ -130,6 +177,11 @@ old_status: <previous>
 new_status: <NEW_STATUS>
 file_updated: {FEATURE_DIR}/<stage>/{STORY_ID}/{STORY_ID}.md
 index_updated: true | false | skipped
+db_updated: true | false
+# db_updated values:
+#   true  - shimUpdateStoryStatus returned non-null (DB write succeeded)
+#   false - shimUpdateStoryStatus returned null (DB unavailable) OR NEW_STATUS
+#           was unmapped (no DB write attempted)
 worktree_cleanup: completed | deferred | skipped | not_found  # only when NEW_STATUS == 'completed'
 ```
 
@@ -166,6 +218,21 @@ worktree_cleanup: completed | deferred | skipped | not_found  # only when NEW_ST
 - `UPDATE COMPLETE` - Status updated successfully
 - `UPDATE FAILED: <reason>` - Could not update
 
+## Integration Test Scenarios
+
+These scenarios require manual execution against a live `postgres-knowledgebase` MCP server.
+
+> **ADR-005 compliance note**: Scenarios A, B, and F require a live `postgres-knowledgebase` MCP server with a real `core.stories` record for the test story. These cannot be verified with filesystem-only tooling.
+
+| Scenario | Name | Precondition | Action | Expected Outcome |
+|----------|------|--------------|--------|-----------------|
+| **A** | Mapped status, DB available | Story exists in DB; `postgres-knowledgebase` reachable | `/story-update {FEATURE_DIR} {STORY_ID} in-progress` | `shimUpdateStoryStatus` called with `newState: in_progress`; returns non-null; `db_updated: true`; frontmatter updated to `in-progress` |
+| **B** | DB unavailable, mapped status | Story exists in DB; `postgres-knowledgebase` unreachable (simulated) | `/story-update {FEATURE_DIR} {STORY_ID} in-progress` | `shimUpdateStoryStatus` called; returns null; WARNING emitted: `"WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with filesystem update only."`; `db_updated: false`; frontmatter still updated |
+| **C** | New story not yet in DB | Story directory exists on filesystem but no DB record; mapped status | `/story-update {FEATURE_DIR} {STORY_ID} ready-to-work` | `shimUpdateStoryStatus` called; returns null (story not found in DB); WARNING emitted; `db_updated: false`; frontmatter updated |
+| **D** | Unmapped status | Story in any state | `/story-update {FEATURE_DIR} {STORY_ID} needs-code-review` | No `shimUpdateStoryStatus` call made; `db_updated: false`; frontmatter updated to `needs-code-review` |
+| **E** | Invalid transition | Story currently in `backlog` | `/story-update {FEATURE_DIR} {STORY_ID} uat` | `UPDATE FAILED: Cannot transition from backlog to uat`; no DB write; no file changes |
+| **F** | `--no-index` with mapped status, DB available | Story exists in DB; `postgres-knowledgebase` reachable | `/story-update {FEATURE_DIR} {STORY_ID} ready-for-qa --no-index` | `shimUpdateStoryStatus` called with `newState: ready_for_qa`; returns non-null; `db_updated: true`; frontmatter updated; `stories.index.md` NOT updated |
+
 ## Example Usage
 
 ```bash
@@ -178,3 +245,9 @@ worktree_cleanup: completed | deferred | skipped | not_found  # only when NEW_ST
 # Frontmatter only (skip index)
 /story-update plans/future/wishlist WISH-001 ready-for-qa --no-index
 ```
+
+## Version History
+
+- **v3.0.0** (2026-02-20): DB integration — breaking behavioral change. Adds Step 3a (DB write via `shimUpdateStoryStatus`) between worktree cleanup and frontmatter update. Agents consuming command output now receive `db_updated` field in result YAML. Execution order is now: locate → worktree cleanup → DB write → frontmatter → index → result. Introduced by WINT-1050.
+- **v2.1.0** (2026-02-17): Worktree cleanup on completed transition (WINT-1150).
+- **v2.0.0** (2026-01-24): Initial multi-step execution spec.
