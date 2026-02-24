@@ -177,18 +177,12 @@ export function createA11yConfig(overrides: Partial<A11yConfig> = {}): A11yConfi
       ...defaultA11yConfig.performance,
       ...overrides.performance,
     },
-    ruleExceptions: [
-      ...defaultA11yConfig.ruleExceptions,
-      ...(overrides.ruleExceptions ?? []),
-    ],
+    ruleExceptions: [...defaultA11yConfig.ruleExceptions, ...(overrides.ruleExceptions ?? [])],
     ignoredSelectors: [
       ...defaultA11yConfig.ignoredSelectors,
       ...(overrides.ignoredSelectors ?? []),
     ],
-    additionalRules: [
-      ...defaultA11yConfig.additionalRules,
-      ...(overrides.additionalRules ?? []),
-    ],
+    additionalRules: [...defaultA11yConfig.additionalRules, ...(overrides.additionalRules ?? [])],
   })
 }
 

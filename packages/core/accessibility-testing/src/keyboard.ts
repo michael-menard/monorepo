@@ -128,7 +128,7 @@ export function getActiveElement(): Element | null {
  */
 export async function pressTab(
   user: ReturnType<typeof userEvent.setup>,
-  options: { shift?: boolean } = {}
+  options: { shift?: boolean } = {},
 ): Promise<Element | null> {
   if (options.shift) {
     await user.keyboard('{Shift>}{Tab}{/Shift}')
@@ -176,7 +176,7 @@ export async function pressEscape(user: ReturnType<typeof userEvent.setup>): Pro
  */
 export async function pressArrow(
   user: ReturnType<typeof userEvent.setup>,
-  direction: 'up' | 'down' | 'left' | 'right'
+  direction: 'up' | 'down' | 'left' | 'right',
 ): Promise<void> {
   const keyMap = {
     up: '{ArrowUp}',
@@ -221,7 +221,7 @@ export async function pressEnd(user: ReturnType<typeof userEvent.setup>): Promis
 export async function tabThrough(
   user: ReturnType<typeof userEvent.setup>,
   count: number,
-  options: { shift?: boolean; stopOnElement?: (el: Element) => boolean } = {}
+  options: { shift?: boolean; stopOnElement?: (el: Element) => boolean } = {},
 ): Promise<KeyboardNavigationResult> {
   const startElement = getActiveElement()
   const focusSequence: Element[] = []
@@ -261,7 +261,7 @@ export async function tabThrough(
  */
 export async function testFocusTrap(
   user: ReturnType<typeof userEvent.setup>,
-  container: Element
+  container: Element,
 ): Promise<FocusTrapResult> {
   const focusableElements = getFocusableElements(container)
   const focusOrder: Element[] = []
@@ -321,7 +321,7 @@ export async function testRovingTabindex(
   options: {
     orientation?: 'horizontal' | 'vertical'
     wrap?: boolean
-  } = {}
+  } = {},
 ): Promise<{
   valid: boolean
   singleTabStop: boolean
@@ -396,7 +396,9 @@ export function assertHasFocus(element: Element, message?: string): void {
       ? `${activeElement.tagName.toLowerCase()}${activeElement.id ? `#${activeElement.id}` : ''}`
       : 'null'
     const expectedDesc = `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}`
-    throw new Error(message ?? `Expected ${expectedDesc} to have focus, but ${activeDesc} has focus`)
+    throw new Error(
+      message ?? `Expected ${expectedDesc} to have focus, but ${activeDesc} has focus`,
+    )
   }
 }
 
@@ -425,7 +427,7 @@ export function assertFocusWithin(container: Element, message?: string): void {
  */
 export async function waitForFocus(
   selector: string,
-  options: { timeout?: number; container?: Element } = {}
+  options: { timeout?: number; container?: Element } = {},
 ): Promise<Element> {
   const { timeout = 1000, container = document.body } = options
   const startTime = Date.now()
@@ -462,7 +464,7 @@ export async function testModalFocus(
   user: ReturnType<typeof userEvent.setup>,
   modalContainer: Element,
   triggerElement: Element,
-  closeAction: () => void | Promise<void>
+  closeAction: () => void | Promise<void>,
 ): Promise<{
   initialFocus: boolean
   focusTrap: boolean
@@ -504,7 +506,7 @@ export async function testModalFocus(
  */
 export async function pressShortcut(
   user: ReturnType<typeof userEvent.setup>,
-  shortcut: string
+  shortcut: string,
 ): Promise<void> {
   const parts = shortcut.split('+').map(p => p.trim().toLowerCase())
   const modifiers: string[] = []
@@ -577,9 +579,10 @@ export async function testKeyboardAccessibility(container: Element): Promise<{
   for (const element of interactive) {
     const tabindex = element.getAttribute('tabindex')
     const isNativelyFocusable = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(
-      element.tagName
+      element.tagName,
     )
-    const isDisabled = element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true'
+    const isDisabled =
+      element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true'
 
     // Skip disabled elements
     if (isDisabled) continue

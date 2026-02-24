@@ -26,7 +26,7 @@ Orchestrates Verifier and Playwright workers based on scope.
 | Mode | Source | Workers | Output |
 |------|--------|---------|--------|
 | `implement` | `/dev-implement-story` | Verifier + Playwright (if frontend or backend) | Full VERIFICATION-SUMMARY.md |
-| `fix` | `/dev-fix-story` | Verifier + Playwright (if frontend or backend) | Compact FIX-VERIFICATION-SUMMARY.md |
+| `fix` | `/dev-fix-story` | Verifier + Playwright (if frontend or backend) | CHECKPOINT.yaml fix_cycles entry |
 
 **IMPORTANT:** The `mode` parameter MUST be provided in the orchestrator prompt.
 
@@ -213,28 +213,31 @@ Task tool:
 
 Use TaskOutput to wait for each background worker to complete.
 
-### Step 4: Write Compact Summary
+### Step 4: Append to CHECKPOINT.yaml fix_cycles
 
-Create `FIX-VERIFICATION-SUMMARY.md` (max 20 lines):
+Read `_implementation/CHECKPOINT.yaml` and append to `fix_cycles` array:
 
-```markdown
-# Fix Verification - {STORY_ID}
-
-| Check | Result |
-|-------|--------|
-| Types | PASS/FAIL |
-| Lint | PASS/FAIL |
-| Tests | PASS/FAIL |
-| E2E UI | PASS/FAIL/SKIPPED |
-| E2E API | PASS/FAIL/SKIPPED |
-
-## Overall: PASS / FAIL
+```yaml
+fix_cycles:
+  - iteration: N                   # increment from last entry, or 1 if first
+    triggered_by: code_review      # code_review | qa
+    started_at: "{ISO_TIMESTAMP}"  # from AGENT-CONTEXT.md or current time
+    completed_at: "{ISO_TIMESTAMP}"
+    issues_fixed:
+      - file: "src/..."
+        line: N
+        issue: "..."
+        severity: high
+    verification_result: PASS      # PASS | FAIL
 ```
+
+Populate `issues_fixed` from `_implementation/FIX-CONTEXT.yaml` if it exists.
+Set `verification_result` to `PASS` if all checks passed, `FAIL` otherwise.
 
 ### Output (fix mode)
 
 - `_implementation/VERIFICATION.md` (from Verifier + Playwright)
-- `_implementation/FIX-VERIFICATION-SUMMARY.md` (created by leader)
+- `_implementation/CHECKPOINT.yaml` (fix_cycles entry appended)
 
 ---
 
@@ -276,5 +279,6 @@ Before reporting completion signal, call the token-log skill:
 - Do NOT skip any verification step
 - Do NOT retry failures (report them)
 - ALWAYS spawn parallel workers in a SINGLE message (implement mode)
-- ALWAYS create summary file (appropriate to mode)
+- implement mode: ALWAYS create VERIFICATION-SUMMARY.md
+- fix mode: ALWAYS append fix_cycles entry to CHECKPOINT.yaml
 - ALWAYS report specific failure details

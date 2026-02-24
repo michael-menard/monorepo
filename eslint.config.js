@@ -35,6 +35,7 @@ export default [
         process: 'readonly',
         Buffer: 'readonly',
         global: 'readonly',
+        require: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
 
@@ -46,6 +47,8 @@ export default [
         history: 'readonly',
 
         // DOM Element types
+        Element: 'readonly',
+        MutationObserver: 'readonly',
         HTMLElement: 'readonly',
         HTMLDivElement: 'readonly',
         HTMLSpanElement: 'readonly',
@@ -155,12 +158,20 @@ export default [
       'prettier/prettier': 'error',
 
       // TypeScript rules
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^_',
+          argsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/no-explicit-any': 'off',
 
       // General JavaScript rules
       'no-unused-vars': 'off', // Handled by TypeScript
-      'no-console': 'warn',
+      'no-console': 'error',
       'prefer-const': 'error',
       'no-eval': 'error',
       'no-implied-eval': 'error',
@@ -268,6 +279,7 @@ export default [
       // Node.js specific rules
       'no-console': 'off', // Console is fine in Node.js
       '@typescript-eslint/no-var-requires': 'off', // CommonJS requires are OK
+      'no-constant-condition': ['error', { checkLoops: false }], // allow while(true) with break
     },
   },
 

@@ -1,6 +1,5 @@
-import { eq, and, or, ilike, sql, inArray, notInArray, isNull, desc, asc } from 'drizzle-orm'
+import { eq, and, or, ilike, sql, inArray, notInArray, desc, asc } from 'drizzle-orm'
 import type { PgDatabase } from 'drizzle-orm/pg-core'
-import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
 import { ok, err } from '@repo/api-core'
 import { logger } from '@repo/logger'
 import type {
@@ -10,15 +9,7 @@ import type {
   AlbumParentRepository,
   MocLinkRepository,
 } from '../ports/index.js'
-import type {
-  Inspiration,
-  Album,
-  AlbumWithMetadata,
-  UpdateInspirationInput,
-  UpdateAlbumInput,
-  InspirationError,
-  AlbumError,
-} from '../types.js'
+import type { Inspiration, AlbumWithMetadata } from '../types.js'
 
 // Type for the schema with inspiration tables
 type InspirationSchema = {

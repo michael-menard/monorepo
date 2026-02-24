@@ -18,8 +18,9 @@ export type ToggleGroupProps = ToggleGroupRootProps & {
   size?: 'default' | 'icon'
 }
 
-export interface ToggleGroupItemProps
-  extends React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item> {
+export interface ToggleGroupItemProps extends React.ComponentPropsWithoutRef<
+  typeof ToggleGroupPrimitive.Item
+> {
   variant?: 'default' | 'outline'
   size?: 'default' | 'icon'
 }

@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { redirect, createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router'
-import { EmptyDashboard } from '@repo/app-component-library/feedback/empty-states'
+import { EmptyDashboard } from '@repo/app-component-library'
 
 // Mock the redirect function to capture redirect params
 const mockRedirect = vi.fn((opts: any) => {

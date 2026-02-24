@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import { GalleryDataTable, type GalleryDataTableColumn } from '../components/GalleryDataTable'
 import { GalleryDataTableSkeleton } from '../components/GalleryDataTableSkeleton'
+
+vi.mock('@tanstack/react-router', () => ({
+  useSearch: vi.fn(() => ({})),
+  useNavigate: vi.fn(() => vi.fn()),
+}))
 
 interface WishlistItem {
   id: string

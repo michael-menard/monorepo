@@ -147,8 +147,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix"
+    "lint": "eslint --fix src"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
@@ -160,6 +159,7 @@
     "@types/node": "^22.19.1",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.17.0",
+    "msw": "2.12.10",
     "typescript": "^5.7.2",
     "vite": "^6.3.5",
     "vite-plugin-dts": "^4.3.0",

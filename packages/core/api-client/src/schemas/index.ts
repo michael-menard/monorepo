@@ -277,6 +277,9 @@ export {
   type MocStats,
   type GetMocDetailResponse,
   type UploadThumbnailResponse,
+  type CreateUploadSessionRequest,
+  type CreateUploadSessionResponse,
+  type CompleteUploadSessionResponse,
 } from './instructions'
 
 // Upload schemas (BUGF-032)

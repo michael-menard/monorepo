@@ -2,12 +2,14 @@
 name: next-actions
 description: Query the KB database for the next unblocked stories and recommend commands. Falls back to WORK-ORDER-BY-BATCH.md if the DB has no stories.
 created: 2026-02-20
-updated: 2026-02-20
-version: 1.0.0
+updated: 2026-02-22
+version: 2.1.0
 type: utility
 ---
 
 # /next-actions — Find Next Actions from KB Database
+
+> **CRITICAL EXECUTION RULE: Do NOT spawn sub-agents (Task tool) for this skill. Call all MCP tools directly in the main conversation using the `mcp__knowledge-base__` prefix. Sub-agents do not have reliable access to the knowledge-base MCP server and will waste time exploring the filesystem instead of making tool calls.**
 
 ## Usage
 
@@ -33,7 +35,7 @@ type: utility
 
 Queries the **KB database** (single source of truth) for stories that need action, resolves dependencies at query time, and maps each story's state to the appropriate workflow command.
 
-**No more directory scanning, no more JSON queue files, no more stale caches.**
+Inflight work always appears before new work. Stories being actively worked by an agent (active worktree in DB) are **excluded entirely**.
 
 ---
 
@@ -45,52 +47,102 @@ Queries the **KB database** (single source of truth) for stories that need actio
 
 ---
 
+## Priority Order (non-negotiable)
+
+| Rank | Category | States | Rationale |
+|------|----------|--------|-----------|
+| 1 | **Needs QA** | `ready_for_qa`, `in_qa` | Closest to done — unblock the pipeline first |
+| 2 | **Needs Fix** | `failed_qa`, `failed_code_review`, `in_review` | Something was rejected — fix before starting new work |
+| 3 | **Needs Code Review** | `ready_for_review` | Dev complete, waiting on review |
+| 4 | **Needs Dev** | `ready`, `in_progress` (no active worktree) | Elaborated and ready to implement |
+| 5 | **Needs Elaboration** | `backlog` (story file exists) | Story seed exists, not yet elaborated |
+| 6 | **Needs Story Creation** | `backlog` (no story file) | Only a seed — story not yet generated |
+
+Within each rank, sort by priority: `critical` > `high` > `medium` > `low`.
+
+---
+
 ## Execution Steps
 
-### Step 1 — Query the KB Database
+### Step 1 — Get Active Worktrees
 
-Use the `kb_list_stories` MCP tool to find stories NOT in terminal states:
+Call `mcp__knowledge-base__worktree_list_active` directly (no sub-agent):
 
 ```
-kb_list_stories({
+mcp__knowledge-base__worktree_list_active({})
+→ extract list of story_ids where status = 'active' → call these ACTIVE_IDS
+```
+
+If the tool is unavailable, set ACTIVE_IDS = [].
+
+### Step 2 — Query the KB Database
+
+Call `mcp__knowledge-base__kb_list_stories` directly:
+
+```
+mcp__knowledge-base__kb_list_stories({
   epic: "platform",
-  states: ["backlog", "ready", "ready_for_review", "ready_for_qa"]
+  states: ["ready_for_qa", "in_qa", "failed_qa", "failed_code_review", "in_review",
+           "ready_for_review", "ready", "in_progress", "backlog",
+           "completed", "cancelled", "deferred"],
+  limit: N
 })
 ```
 
-If the result contains **0 stories**, go to **Step 4 (Fallback)**.
+If the result contains **0 stories**, go to **Step 6 (Fallback)**.
 
-### Step 2 — Resolve Dependencies (Query-Time)
+### Step 3 — Collect N Candidates via `mcp__knowledge-base__kb_get_next_story`
 
-For each story returned, use `kb_get_next_story` logic:
-- A dependency is satisfied if the target story's state is `completed`, regardless of the `satisfied` flag in `story_dependencies`
-- Filter out stories that have unsatisfied, non-completed dependencies
-- Sort remaining stories by priority: `critical` > `high` > `medium` > `low`
-
-Alternatively, call `kb_get_next_story` up to N times with `exclude_story_ids` accumulating previously returned IDs to get the top N unblocked stories:
+Call `mcp__knowledge-base__kb_get_next_story` up to N times directly (no sub-agent), accumulating excluded IDs:
 
 ```
-# First call
-kb_get_next_story({ epic: "platform", include_backlog: true })
-# → returns WINT-1040
+# First call — exclude all active worktrees
+mcp__knowledge-base__kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: ACTIVE_IDS })
+→ returns STORY_A
 
-# Second call
-kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: ["WINT-1040"] })
-# → returns WINT-1160
+# Second call — exclude active + first result
+mcp__knowledge-base__kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: [...ACTIVE_IDS, "STORY_A"] })
+→ returns STORY_B
 
 # ... repeat until N items or no more candidates
 ```
 
-### Step 3 — Map State to Command
+Stop when `mcp__knowledge-base__kb_get_next_story` returns `story: null` or you have N items.
 
-For each unblocked story, determine the command based on its `state` field:
+### Step 4 — Re-sort by Priority Rank
 
-| State | Command Template |
-|-------|-----------------|
-| `backlog` | `/pm-story generate {FEATURE_DIR} {STORY_ID}` |
-| `ready` | `/dev-implement-story {FEATURE_DIR} {STORY_ID}` |
-| `ready_for_review` | `/dev-code-review {FEATURE_DIR} {STORY_ID}` |
-| `ready_for_qa` | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
+After collecting candidates, re-sort by the rank table above (QA > Fix > Review > Dev > Elaboration > Creation), then by story priority within each rank:
+
+```
+priority order: critical (1) > high (2) > medium (3) > low (4) > null (5)
+```
+
+**Important:** `kb_get_next_story` only returns stories in `ready` or `backlog` state. Stories in other actionable states (`ready_for_qa`, `failed_qa`, `failed_code_review`, `in_review`, `ready_for_review`) must be pulled from the Step 2 `kb_list_stories` result and added to the candidates list before sorting.
+
+To build the full candidate set:
+1. From the `kb_list_stories` result, take all stories in inflight states: `ready_for_qa`, `in_qa`, `failed_qa`, `failed_code_review`, `in_review`, `ready_for_review`
+2. From `kb_get_next_story` calls, collect up to N stories in `ready` or `backlog` state
+3. Remove any ACTIVE_IDS from the combined list
+4. Sort the combined list by rank, then by priority within rank
+5. Take the top N
+
+### Step 5 — Map State to Command
+
+For each story in the sorted list, determine the command based on its `state` field:
+
+| State | Category | Command Template |
+|-------|----------|-----------------|
+| `ready_for_qa` | Needs QA | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
+| `in_qa` | Needs QA | `/qa-verify-story {FEATURE_DIR} {STORY_ID}` |
+| `in_review` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| `failed_code_review` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| `failed_qa` | Needs Fix | `/dev-fix-story {FEATURE_DIR} {STORY_ID}` |
+| `ready_for_review` | Needs Code Review | `/dev-code-review {FEATURE_DIR} {STORY_ID}` |
+| `ready` or `in_progress` | Needs Dev | `/dev-implement-story {FEATURE_DIR} {STORY_ID}` |
+| `backlog` (elaborated) | Needs Elaboration | `/elab-story {FEATURE_DIR} {STORY_ID}` |
+| `backlog` (no story) | Needs Story Creation | `/pm-story generate {FEATURE_DIR} {STORY_ID}` |
+
+**Distinguishing elaborated vs. not:** A `backlog` story is "elaborated" if its `story_dir` exists on disk and contains a `story.yaml` file. If the directory or file doesn't exist, it needs story creation.
 
 **Feature directory derivation** from story ID prefix:
 
@@ -108,11 +160,11 @@ For each unblocked story, determine the command based on its `state` field:
 | `AUTO` | `plans/future/platform/autonomous-dev` |
 | `WKFL` | `plans/future/platform/workflow-learning` |
 
-If the prefix is not found, use `plans/future/platform` as the feature directory.
+If the story record has a `story_dir` field, use that to derive the feature directory (strip the story ID segment). If the prefix is not found in the table above, use `plans/future/platform` as the feature directory.
 
-### Step 4 — Fallback (DB Empty)
+### Step 6 — Fallback (DB Empty)
 
-If Step 1 returned 0 stories, the database likely needs seeding.
+If Step 2 returned 0 stories, the database likely needs seeding.
 
 1. Read `plans/future/platform/WORK-ORDER-BY-BATCH.md` directly
 2. Parse the markdown tables to find unblocked stories (same logic as the old `refresh-work-queue.ts`)
@@ -131,32 +183,36 @@ When parsing the markdown fallback:
 - Stories with `🔧` are being worked — skip them
 - For remaining stories, check if all `(#NN)` dependency references point to completed rows
 - Use the same state-to-command mapping, inferring state from status emoji:
-  - `⚪` → `backlog`
-  - `⏳` → `ready`
-  - `🚧` → `in_progress`
-  - `🔍` → `ready_for_qa`
-  - `📝` / `🆕` → `backlog`
+  - `🔍` → `ready_for_qa` (Needs QA)
+  - `⏸️` → `in_review` (Needs Fix — review findings exist)
+  - `📋` → `ready_for_review` (Needs Code Review)
+  - `🚧` → `in_progress` (Needs Dev)
+  - `⏳` → `ready` (Needs Dev)
+  - `📝` / `🆕` → `backlog` (Needs Elaboration or Story Creation)
+  - `⚪` → `backlog` (Needs Elaboration or Story Creation)
+- Apply the same stage-first sorting (QA > Fix > Review > Dev > Elaboration > Creation)
 
-### Step 5 — Output
+### Step 7 — Output
 
-Format the results as a table:
+Format the results as a table. Inflight work appears first (per the rank order):
 
 ```
 Next actions (N items):
 
-| # | Story | State | Priority | Command |
-|---|-------|-------|----------|---------|
-| 1 | WINT-1040 — Update story-status to Use DB | ready | high | `/dev-implement-story plans/future/platform/wint WINT-1040` |
-| 2 | WINT-1160 — Add Parallel Work Conflict Prevention | ready | medium | `/dev-implement-story plans/future/platform/wint WINT-1160` |
-| 3 | WINT-7020 — Create Agent Migration Plan | backlog | low | `/pm-story generate plans/future/platform/wint WINT-7020` |
+| # | Category          | Story                              | Priority | Command |
+|---|-------------------|------------------------------------|----------|---------|
+| 1 | Needs QA          | WKFL-002 — Story title             | high     | /qa-verify-story plans/future/platform/workflow-learning WKFL-002 |
+| 2 | Needs Fix         | WINT-0030 — Story title            | high     | /dev-fix-story plans/future/platform/wint WINT-0030 |
+| 3 | Needs Code Review | WKFL-007 — Story title             | medium   | /dev-code-review plans/future/platform/workflow-learning WKFL-007 |
+| 4 | Needs Dev         | WKFL-010 — Story title             | medium   | /dev-implement-story plans/future/platform/workflow-learning WKFL-010 |
+| 5 | Needs Elaboration | WKFL-008 — Story title             | low      | /elab-story plans/future/platform/workflow-learning WKFL-008 |
 ```
 
-After the main table, query for in-flight stories:
-```
-kb_list_stories({ epic: "platform", states: ["in_progress", "in_review", "in_qa"] })
-```
+If stories were excluded due to active worktrees, note them **below** the table:
 
-If count > 0, append: "({count} stories currently claimed by active agents — not shown)"
+```
+Excluded (active worktree): WKFL-006, WINT-0100
+```
 
 If no unblocked stories exist:
 
@@ -178,3 +234,5 @@ Use `kb_list_stories` to inspect blocked stories.
 | Story has no feature prefix match | Use `plans/future/platform` as feature dir |
 | N > available unblocked stories | Return all available (less than N) |
 | MCP tools unavailable | Fall back to WORK-ORDER-BY-BATCH.md with warning |
+| `mcp__knowledge-base__worktree_list_active` fails | Treat ACTIVE_IDS as empty, proceed without exclusion |
+| Story in `in_progress` with no active worktree | Treat as Needs Dev (rank 4) |

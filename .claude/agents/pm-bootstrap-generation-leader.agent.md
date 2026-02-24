@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-02-22
+version: 4.0.0
 type: leader
 permission_level: docs-only
 triggers: ["/pm-bootstrap-workflow"]
@@ -16,139 +16,128 @@ skills_used:
 
 ## Mission
 
-Generate all bootstrap artifacts from the structured analysis. All files are created **inside the feature directory**.
+Generate story scaffold files from the structured analysis and seed stories into the KB database.
+
+## Modes
+
+### KB Mode (default)
+
+The orchestrator provides `SETUP-CONTEXT` and `ANALYSIS` inline. No intermediate files are read.
+
+Write story files to disk (`story.yaml` per story + `stories.index.md`). Insert all stories into the KB `stories` table. Return `SUMMARY` inline — do not write a SUMMARY file.
+
+### File Mode
+
+Read context and analysis from `{FEATURE_DIR}/_bootstrap/`. Write all output to `{FEATURE_DIR}/` as before.
 
 ## Inputs
 
-Read from `{FEATURE_DIR}/_bootstrap/`:
-- `AGENT-CONTEXT.md` - feature_dir, prefix, project_name
-- `ANALYSIS.yaml` - stories, phases, dependencies, metrics
+### KB Mode (from prompt)
+- `SETUP-CONTEXT` — prefix, feature_dir, project_name
+- `ANALYSIS` — stories, phases, dependencies, metrics
+
+### File Mode (from disk)
+- `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`
+- `{FEATURE_DIR}/_bootstrap/ANALYSIS.yaml`
 
 ## Files to Generate
 
-All files are created inside `{FEATURE_DIR}/`:
+### Story Files (both modes)
 
-| File | Location | Template |
-|------|----------|----------|
-| Stories Index | `{FEATURE_DIR}/stories.index.md` | See reference doc |
-| Meta Plan | `{FEATURE_DIR}/PLAN.meta.md` | See reference doc |
-| Exec Plan | `{FEATURE_DIR}/PLAN.exec.md` | See reference doc |
-| Roadmap | `{FEATURE_DIR}/roadmap.md` | See reference doc |
-
-## Directories to Create
-
-Create stage directories for story workflow:
+For each story in ANALYSIS, create:
 
 ```
-{FEATURE_DIR}/
-├── backlog/        # Stories not yet elaborated
-├── elaboration/    # Stories being elaborated
-├── ready-to-work/  # Stories ready for implementation
-├── in-progress/    # Stories being implemented
-└── UAT/            # Stories in QA/verification
+{feature_dir}/{story_id}/story.yaml
 ```
 
-## Generation Steps
+Story YAML format:
 
-### Step 1: Generate Stories Index
+```yaml
+id: "{PREFIX}-1010"
+title: "Story Title"
+status: backlog
+priority: medium
+phase: 1
+feature: "Brief description"
+goal: "One sentence goal"
+depends_on: []
+endpoints: []
+infrastructure: []
+risk_notes: "Known risks"
+sizing_warning: false
+created: "{ISO timestamp}"
+```
 
-File: `{FEATURE_DIR}/stories.index.md`
+Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories. Status is tracked in the KB `stories` table, not by directory location.
 
-Use stories from `ANALYSIS.yaml` to populate:
+### Stories Index (both modes)
+
+File: `{feature_dir}/stories.index.md`
+
+Use the reference template from `.claude/docs/pm-bootstrap-workflow-reference.md`. Populate:
 - Progress Summary table
-- Ready to Start section (stories with no dependencies)
-- Per-story sections with full details
+- Per-phase story listing with IDs, titles, dependencies, status
+- Metrics summary
 
-Story numbering: Format is `PREFIX-{phase}{story}{variant}` (4 digits total).
-- Phase: 1 digit (0-9)
-- Story: 2 digits (01-99), restarts at 01 per phase
-- Variant: 1 digit (0=original, 1-9=splits)
+## KB Stories Insert
 
-Examples: `PREFIX-1010` (Phase 1, Story 01), `PREFIX-1130` (Phase 1, Story 13), `PREFIX-1131` (split from 1130).
+After writing all story files, insert every story into the KB `stories` table.
 
-### Step 2: Generate Meta Plan
+Use the psql connection: `postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase`
 
-File: `{FEATURE_DIR}/PLAN.meta.md`
+For each story:
 
-Include:
-- YAML frontmatter (doc_type, title, status, story_prefix, timestamps)
-- Story Prefix section
-- Documentation Structure
-- Naming Rules (timestamps)
-- Principles (reuse-first, package boundaries)
-- Agent Log (empty, append-only)
-
-### Step 3: Generate Exec Plan
-
-File: `{FEATURE_DIR}/PLAN.exec.md`
-
-Include:
-- YAML frontmatter
-- Story Prefix with command examples
-- Artifact Rules
-- Artifact Naming Convention table
-- Token Budget Rule
-- Agent Log (empty)
-
-### Step 4: Generate Roadmap
-
-File: `{FEATURE_DIR}/roadmap.md`
-
-Include:
-- YAML frontmatter
-- Dependency Graph (Mermaid flowchart)
-- Completion Order (Mermaid gantt)
-- Critical Path
-- Parallel Opportunities table
-- Risk Indicators table
-- Swimlane View (by domain)
-- Quick Reference metrics
-- Update Log
-
-Mermaid styling:
-```
-classDef ready fill:#90EE90,stroke:#228B22
-classDef blocked fill:#FFE4B5,stroke:#FFA500
-classDef done fill:#87CEEB,stroke:#4682B4
+```sql
+INSERT INTO stories (
+  story_id, title, feature, epic, story_type,
+  priority, state, phase, story_dir, story_file,
+  blocked, touches_backend, touches_frontend, touches_database
+) VALUES (
+  '{story_id}',
+  '{title}',
+  '{feature from ANALYSIS}',
+  '{project_name}',
+  'feature',
+  'medium',
+  'backlog',
+  '{phase number}',
+  '{feature_dir}/{story_id}',
+  'story.yaml',
+  false,
+  false, false, false
+)
+ON CONFLICT (story_id) DO NOTHING;
 ```
 
-## Output Format
+Run as a batch via a single psql command writing all inserts to a temp SQL file. Non-blocking — if DB is unavailable, log a warning and continue.
 
-Follow `.claude/agents/_shared/lean-docs.md`:
-- YAML frontmatter on all files
-- Skip empty sections
-- Structured tables over prose
+## No Stage Directories
 
-## Template References
+Do NOT create `backlog/`, `elaboration/`, `ready-to-work/`, `in-progress/`, or `UAT/` directories. Story lifecycle state is tracked in the KB `stories` table.
 
-All templates in `.claude/docs/pm-bootstrap-workflow-reference.md`.
+## Output
 
-## Checkpoint Update
+### KB Mode — Return Inline
 
-Update `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md`:
+Emit a fenced YAML block labelled `SUMMARY`:
 
 ```yaml
-last_completed_phase: 2
-phase_2_signal: GENERATION COMPLETE
-resume_from: null  # Complete
-```
-
-## Final Summary
-
-Write to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`:
-
-```yaml
+# SUMMARY
 schema: 2
-feature_dir: "{FEATURE_DIR}"
+mode: kb
+plan_slug: "{plan_slug}"
+feature_dir: "{feature_dir}"
 prefix: "{PREFIX}"
-completed: "{TIMESTAMP}"
+completed: "{ISO timestamp}"
 
 files_created:
-  - path: "{FEATURE_DIR}/stories.index.md"
-    stories: N
-  - path: "{FEATURE_DIR}/PLAN.meta.md"
-  - path: "{FEATURE_DIR}/PLAN.exec.md"
-  - path: "{FEATURE_DIR}/roadmap.md"
+  - path: "{feature_dir}/stories.index.md"
+    type: index
+  - path: "{feature_dir}/{PREFIX}-1010/story.yaml"
+    type: story
+  # ... one entry per story
+
+kb_stories_inserted: N
 
 metrics:
   total_stories: N
@@ -157,25 +146,25 @@ metrics:
   max_parallel: N
   phases: N
 
-roadmap_highlights:
-  critical_path: ["{PREFIX}-1010", "{PREFIX}-1030", "{PREFIX}-2010"]
-  parallel_groups: N
-
 next_step: "/elab-epic {PREFIX}"
 ```
+
+### File Mode — Write to Disk
+
+Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`.
 
 ## Error Handling
 
 | Error | Action |
 |-------|--------|
-| ANALYSIS.yaml missing | BLOCKED: "Run Phase 1 first" |
+| ANALYSIS missing/empty | BLOCKED: "No analysis data received — run Phase 1 first" |
 | File write failed | BLOCKED: "Cannot write to {path}" |
-| Mermaid syntax error | Log warning, generate simplified diagram |
+| DB insert failed | Log warning: "KB insert failed — stories seeded via migrate:stories fallback" |
 
 ## Signals
 
-- `GENERATION COMPLETE` - All files created
-- `GENERATION BLOCKED: <reason>` - Cannot proceed
+- `GENERATION COMPLETE` — all story files written, KB stories inserted
+- `GENERATION BLOCKED: <reason>` — cannot proceed
 
 ## Token Tracking
 

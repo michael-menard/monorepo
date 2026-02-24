@@ -34,9 +34,9 @@ Generate these files:
 
 | File | Purpose |
 |------|---------|
-| `{PREFIX}-000-HARNESS.md` | Main harness story |
-| `_pm/TEST-PLAN.md` | How to verify the harness |
-| `_pm/DEV-FEASIBILITY.md` | Technical notes (trivial for harness) |
+| `{PREFIX}-000-HARNESS.md` | Main harness story (with `pm_artifacts` embedded) |
+| `_pm/test-plan.yaml` | How to verify the harness |
+| `_pm/dev-feasibility.yaml` | Technical notes (trivial for harness) |
 | `_pm/BLOCKERS.md` | Empty unless issues found |
 
 ## Harness Story Template
@@ -140,43 +140,51 @@ PM Generate → Elab → Dev → Code Review → QA Verify → QA Gate → Merge
    - Fill in PREFIX and DATE values
    - Write to `{PREFIX}-000-HARNESS.md`
 
-3. **Generate TEST-PLAN.md**
-   ```markdown
-   # Test Plan: {PREFIX}-000 Harness
-
-   ## Verification Strategy
-   - Execute each phase and verify artifacts created
-   - Run pnpm build/lint/test at each checkpoint
-   - Validate templates are usable for future stories
-
-   ## Test Cases
-   | Phase | Verification |
-   |-------|--------------|
-   | PM | Story file exists with all sections |
-   | Elab | ELAB file has PASS verdict |
-   | Dev | PROOF file exists with evidence |
-   | Review | CODE-REVIEW file exists |
-   | QA | QA-VERIFY file exists |
-   | Gate | QA-GATE.yaml decision is PASS |
+3. **Generate `_pm/test-plan.yaml`**
+   ```yaml
+   strategy: manual
+   scope:
+     endpoints: []
+     ui_touched: false
+     data_touched: false
+   happy_path_tests:
+     - id: HP-1
+       title: "Full lifecycle completes"
+       setup: "Story in backlog state"
+       action: "Execute PM → Elab → Dev → Review → QA → Gate"
+       expected: "All phases produce required artifacts"
+       evidence: "Artifact list matches Required Artifacts table"
+   tooling_evidence:
+     backend:
+       http_requests: []
+       assertions: ["All phase artifacts exist", "QA-GATE.yaml verdict: PASS"]
+   risks:
+     - "Phase ordering must be strictly sequential"
    ```
 
-4. **Generate DEV-FEASIBILITY.md**
-   ```markdown
-   # Dev Feasibility: {PREFIX}-000 Harness
-
-   ## Risk Assessment
-   **Risk Level:** Trivial
-
-   ## Technical Notes
-   - No code changes affect runtime behavior
-   - Only workflow validation
-   - All tooling already exists
-
-   ## Dependencies
-   None - foundational story
-
-   ## Blockers
-   None identified
+4. **Generate `_pm/dev-feasibility.yaml`**
+   ```yaml
+   feasible: true
+   confidence: high
+   rationale: "Trivial harness — no runtime changes"
+   complexity: low
+   change_surface:
+     areas: ["workflow process"]
+     endpoints: []
+     deploy_touchpoints: []
+   risks: []
+   missing_requirements: []
+   evidence_expectations: ["All lifecycle artifacts created"]
+   subtasks:
+     - id: ST-1
+       title: "Execute full story lifecycle"
+       goal: "Run all phases and produce artifacts"
+       files_to_read: ["{PREFIX}-000-HARNESS.md"]
+       files_to_modify: []
+       acs: ["AC1", "AC2", "AC3", "AC4"]
+       depends_on: none
+       verification: "Check all phase artifacts exist"
+       estimated_tokens: 5000
    ```
 
 5. **Generate BLOCKERS.md**
@@ -199,10 +207,10 @@ story_id: {PREFIX}-000
 files_created:
   - path: {FEATURE_DIR}/backlog/{PREFIX}-000/{PREFIX}-000-HARNESS.md
     lines: ~400
-  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/TEST-PLAN.md
-    lines: ~30
-  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/DEV-FEASIBILITY.md
+  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/test-plan.yaml
     lines: ~25
+  - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/dev-feasibility.yaml
+    lines: ~30
   - path: {FEATURE_DIR}/backlog/{PREFIX}-000/_pm/BLOCKERS.md
     lines: ~5
 next_step: "/elab-story {FEATURE_DIR} {PREFIX}-000"

@@ -192,7 +192,7 @@ export const handlers = [
 
   // GET /api/v2/instructions/mocs - List MOC instructions with pagination
   http.get('*/api/v2/instructions/mocs', async ({ request }) => {
-    console.log('[MSW] Intercepted instructions request:', request.url)
+    // MSW intercept: request.url logged in dev tools
     const url = new URL(request.url)
     const search = url.searchParams.get('search') || undefined
     const theme = url.searchParams.get('theme') || undefined

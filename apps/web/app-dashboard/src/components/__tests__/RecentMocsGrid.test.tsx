@@ -72,10 +72,10 @@ describe('RecentMocsGrid', () => {
     expect(screen.getByText('Recent MOCs')).toBeInTheDocument()
   })
 
-  it('renders nothing when mocs array is empty', () => {
-    const { container } = render(<RecentMocsGrid mocs={[]} />)
+  it('renders empty state when mocs array is empty', () => {
+    render(<RecentMocsGrid mocs={[]} />)
 
-    expect(container.firstChild).toBeNull()
+    expect(screen.getByText('No MOCs match your filters')).toBeInTheDocument()
   })
 
   it('displays relative dates', () => {

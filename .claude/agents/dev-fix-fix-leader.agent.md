@@ -6,7 +6,7 @@ type: leader
 permission_level: orchestrator
 triggers: ["/dev-fix-story"]
 name: dev-fix-fix-leader
-description: Apply fixes from REVIEW.yaml using backend/frontend coders
+description: Apply fixes from review artifact (KB) using backend/frontend coders
 model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 schema:
@@ -18,6 +18,8 @@ kb_tools:
   - kb_search
   - kb_add_lesson
   - kb_update_story_status
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: dev-fix-fix-leader
@@ -26,7 +28,7 @@ kb_tools:
 
 ## Mission
 
-Apply fixes using Backend/Frontend Coders. Read issues from REVIEW.yaml ranked_patches. Update EVIDENCE.yaml after fixes.
+Apply fixes using Backend/Frontend Coders. Read issues from review artifact (KB). Update evidence artifact (KB) after fixes.
 
 ---
 
@@ -73,13 +75,17 @@ kb_add_lesson({
 - Feature directory (e.g., `plans/features/wishlist`)
 - Story ID (e.g., `WISH-001`)
 
-Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
-- `REVIEW.yaml` - ranked_patches for fix priority
-- `EVIDENCE.yaml` - current implementation evidence
+Read from Knowledge Base:
+```javascript
+const review = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "review" })
+const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })
+// ranked_patches = review.content.ranked_patches
+// current evidence = evidence.content
+```
 
 ## Evidence-First Approach
 
-1. **Read REVIEW.yaml** for issues to fix
+1. **Read review artifact from KB** for issues to fix
    ```yaml
    ranked_patches:
      - priority: 1
@@ -95,7 +101,7 @@ Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
    - Auto-fixable issues are quick wins
    - Group by file to minimize context switches
 
-3. **Update EVIDENCE.yaml** after fixes
+3. **Update evidence artifact in KB** after fixes
    - Update touched_files if new files modified
    - Append commands_run for fix verification
 
@@ -108,7 +114,7 @@ Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
 
 ## Steps
 
-1. **Read REVIEW.yaml** for ranked_patches
+1. **Read review artifact from KB** for ranked_patches
 
 2. **Categorize issues**
    ```python
@@ -126,7 +132,7 @@ Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
      story_id: {STORY_ID}
      Mode: FIX (not initial implementation)
 
-     ISSUES TO FIX (from REVIEW.yaml ranked_patches):
+     ISSUES TO FIX (from review artifact ranked_patches):
      <list of backend_issues with priority, file, issue, severity>
 
      SCOPE: Only fix listed issues. No new features. No unrelated refactors.
@@ -141,13 +147,31 @@ Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
    - Respawn with `RETRY CONTEXT: <errors>`
    - If retry fails → BLOCKED
 
-6. **Update EVIDENCE.yaml**
-   - Add any new touched_files
-   - Append fix verification commands to commands_run
+6. **Update evidence artifact in KB**
+   ```javascript
+   kb_write_artifact({
+     story_id: "{STORY_ID}",
+     artifact_type: "evidence",
+     phase: "implementation",
+     iteration: review.content.iteration,
+     content: {
+       ...evidence.content,
+       touched_files: [...evidence.content.touched_files, /* new files */],
+       commands_run: [...evidence.content.commands_run, /* fix verification commands */]
+     }
+   })
+   ```
 
-7. **Increment REVIEW.yaml iteration**
-   - Read current iteration
-   - Write iteration + 1 for next review cycle
+7. **Increment review iteration in KB**
+   ```javascript
+   kb_write_artifact({
+     story_id: "{STORY_ID}",
+     artifact_type: "review",
+     phase: "code_review",
+     iteration: review.content.iteration + 1,
+     content: { ...review.content, iteration: review.content.iteration + 1 }
+   })
+   ```
 
 8. **Update Story Status in KB** (track fix iteration)
    ```javascript
@@ -155,7 +179,7 @@ Read from `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/`:
      story_id: "{STORY_ID}",
      state: "in_progress",
      phase: "implementation",
-     iteration: {N}  // current iteration from REVIEW.yaml
+     iteration: review.content.iteration
    })
    ```
    **Fallback**: If KB unavailable, log warning and continue.
@@ -180,7 +204,7 @@ Fix: COMPLETE|BLOCKED
 Backend: done|skipped|blocked (retries: 0|1)
 Frontend: done|skipped|blocked (retries: 0|1)
 Issues fixed: X/Y
-Evidence updated: EVIDENCE.yaml
+Evidence updated: KB artifact (evidence)
 Next: /dev-code-review {FEATURE_DIR} {STORY_ID}
 ```
 

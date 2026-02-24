@@ -142,7 +142,7 @@ describe('InstructionsUpload', () => {
     it('should accept valid PDF files', async () => {
       render(<InstructionsUpload mocId={mockMocId} />)
 
-      const file = new File(['PDF content'], 'instructions.pdf', {
+      const file = new File(['x'.repeat(100)], 'instructions.pdf', {
         type: 'application/pdf',
       })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
@@ -159,8 +159,8 @@ describe('InstructionsUpload', () => {
       render(<InstructionsUpload mocId={mockMocId} />)
 
       const files = [
-        new File(['PDF 1'], 'file1.pdf', { type: 'application/pdf' }),
-        new File(['PDF 2'], 'file2.pdf', { type: 'application/pdf' }),
+        new File(['x'.repeat(100)], 'file1.pdf', { type: 'application/pdf' }),
+        new File(['x'.repeat(100)], 'file2.pdf', { type: 'application/pdf' }),
       ]
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
@@ -179,7 +179,7 @@ describe('InstructionsUpload', () => {
     it('should display file metadata (AC9-12)', async () => {
       render(<InstructionsUpload mocId={mockMocId} />)
 
-      const file = new File(['PDF content'], 'test.pdf', { type: 'application/pdf' })
+      const file = new File(['x'.repeat(100)], 'test.pdf', { type: 'application/pdf' })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
       simulateFileSelection(input, [file])
@@ -194,7 +194,7 @@ describe('InstructionsUpload', () => {
       const user = userEvent.setup()
       render(<InstructionsUpload mocId={mockMocId} />)
 
-      const file = new File(['PDF content'], 'test.pdf', { type: 'application/pdf' })
+      const file = new File(['x'.repeat(100)], 'test.pdf', { type: 'application/pdf' })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
       simulateFileSelection(input, [file])
@@ -225,8 +225,8 @@ describe('InstructionsUpload', () => {
       render(<InstructionsUpload mocId={mockMocId} />)
 
       const files = [
-        new File(['PDF 1'], 'file1.pdf', { type: 'application/pdf' }),
-        new File(['PDF 2'], 'file2.pdf', { type: 'application/pdf' }),
+        new File(['x'.repeat(100)], 'file1.pdf', { type: 'application/pdf' }),
+        new File(['x'.repeat(100)], 'file2.pdf', { type: 'application/pdf' }),
       ]
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
@@ -252,15 +252,15 @@ describe('InstructionsUpload', () => {
   describe('Upload Flow', () => {
     it('should upload files sequentially (AC14)', async () => {
       const user = userEvent.setup()
-      mockUploadMutation.mockResolvedValue({
+      mockUploadMutation.mockReturnValue({
         unwrap: () => Promise.resolve({ id: 'file-id', fileUrl: 'https://example.com/file.pdf' }),
       })
 
       render(<InstructionsUpload mocId={mockMocId} onSuccess={mockOnSuccess} />)
 
       const files = [
-        new File(['PDF 1'], 'file1.pdf', { type: 'application/pdf' }),
-        new File(['PDF 2'], 'file2.pdf', { type: 'application/pdf' }),
+        new File(['x'.repeat(100)], 'file1.pdf', { type: 'application/pdf' }),
+        new File(['x'.repeat(100)], 'file2.pdf', { type: 'application/pdf' }),
       ]
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
@@ -296,7 +296,7 @@ describe('InstructionsUpload', () => {
 
       render(<InstructionsUpload mocId={mockMocId} />)
 
-      const file = new File(['PDF content'], 'test.pdf', { type: 'application/pdf' })
+      const file = new File(['x'.repeat(100)], 'test.pdf', { type: 'application/pdf' })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
       simulateFileSelection(input, [file])
@@ -309,7 +309,7 @@ describe('InstructionsUpload', () => {
       await user.click(uploadButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/uploading/i)).toBeInTheDocument()
+        expect(screen.getAllByText(/uploading/i).length).toBeGreaterThan(0)
       })
 
       // Resolve upload
@@ -318,13 +318,13 @@ describe('InstructionsUpload', () => {
 
     it('should call onSuccess callback after successful upload', async () => {
       const user = userEvent.setup()
-      mockUploadMutation.mockResolvedValue({
+      mockUploadMutation.mockReturnValue({
         unwrap: () => Promise.resolve({ id: 'file-id', fileUrl: 'https://example.com/file.pdf' }),
       })
 
       render(<InstructionsUpload mocId={mockMocId} onSuccess={mockOnSuccess} />)
 
-      const file = new File(['PDF content'], 'test.pdf', { type: 'application/pdf' })
+      const file = new File(['x'.repeat(100)], 'test.pdf', { type: 'application/pdf' })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
       simulateFileSelection(input, [file])
@@ -347,13 +347,13 @@ describe('InstructionsUpload', () => {
     it('should show error toast on upload failure (AC20)', async () => {
       const user = userEvent.setup()
       const errorMessage = 'Upload failed'
-      mockUploadMutation.mockRejectedValue({
-        data: { message: errorMessage },
+      mockUploadMutation.mockReturnValue({
+        unwrap: () => Promise.reject({ data: { message: errorMessage } }),
       })
 
       render(<InstructionsUpload mocId={mockMocId} />)
 
-      const file = new File(['PDF content'], 'test.pdf', { type: 'application/pdf' })
+      const file = new File(['x'.repeat(100)], 'test.pdf', { type: 'application/pdf' })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
       simulateFileSelection(input, [file])
@@ -374,13 +374,13 @@ describe('InstructionsUpload', () => {
 
     it('should mark failed files in the queue', async () => {
       const user = userEvent.setup()
-      mockUploadMutation.mockRejectedValue({
-        data: { message: 'Upload failed' },
+      mockUploadMutation.mockReturnValue({
+        unwrap: () => Promise.reject({ data: { message: 'Upload failed' } }),
       })
 
       render(<InstructionsUpload mocId={mockMocId} />)
 
-      const file = new File(['PDF content'], 'test.pdf', { type: 'application/pdf' })
+      const file = new File(['x'.repeat(100)], 'test.pdf', { type: 'application/pdf' })
       const input = screen.getByLabelText(/upload instruction pdf files/i) as HTMLInputElement
 
       simulateFileSelection(input, [file])

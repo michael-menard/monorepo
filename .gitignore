@@ -74,6 +74,7 @@ node_modules/
 .env*
 # Allow encrypted env files to be committed
 !.env*.encrypted
+!.env.example
 
 # build outputs
 dist/

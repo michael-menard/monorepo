@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "lint": "eslint src/",
+    "lint": "eslint --fix src/",
     "test": "vitest run",
     "test:watch": "vitest"
   },

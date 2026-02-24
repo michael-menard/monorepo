@@ -1,7 +1,16 @@
 import { z } from 'zod'
+import {
+  QuotaTypeSchema,
+  QuotaInfoSchema,
+  QUOTA_DISPLAY_NAMES,
+  type QuotaType,
+  type QuotaInfo,
+} from '@repo/api-client'
 import { cn } from '../_lib/utils'
 import { Progress } from '../_primitives/progress'
-import { type QuotaType, type QuotaInfo, QUOTA_DISPLAY_NAMES } from '@repo/api-client'
+
+export { QuotaTypeSchema, QuotaInfoSchema, QUOTA_DISPLAY_NAMES }
+export type { QuotaType, QuotaInfo }
 
 /**
  * Units for each quota type
@@ -36,34 +45,14 @@ function getQuotaStatus(percentage: number): 'normal' | 'warning' | 'critical' {
 // QuotaIndicator Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface QuotaIndicatorProps {
-  /**
-   * The type of quota to display
-   */
-  quotaType: QuotaType
-
-  /**
-   * The quota information
-   */
-  quota: QuotaInfo
-
-  /**
-   * Whether to show the quota type label
-   * @default true
-   */
-  showLabel?: boolean
-
-  /**
-   * Use compact display mode
-   * @default false
-   */
-  compact?: boolean
-
-  /**
-   * Additional CSS classes
-   */
-  className?: string
-}
+export const QuotaIndicatorPropsSchema = z.object({
+  quotaType: z.custom<QuotaType>(val => QuotaTypeSchema.safeParse(val).success),
+  quota: z.custom<QuotaInfo>(val => QuotaInfoSchema.safeParse(val).success),
+  showLabel: z.boolean().optional(),
+  compact: z.boolean().optional(),
+  className: z.string().optional(),
+})
+export type QuotaIndicatorProps = z.infer<typeof QuotaIndicatorPropsSchema>
 
 /**
  * QuotaIndicator Component
@@ -117,14 +106,14 @@ export function QuotaIndicator({
 
   return (
     <span className={cn('inline-flex items-center gap-1', statusColors[status], className)}>
-      {showLabel && !compact && <span className="font-medium">{label}:</span>}
+      {showLabel && !compact ? <span className="font-medium">{label}:</span> : null}
       <span className={compact ? 'text-sm' : ''}>
         {quota.current}
         {separator}
         {limitText}
         {unitSuffix}
       </span>
-      {showLabel && compact && <span className="text-xs text-muted-foreground">{label}</span>}
+      {showLabel && compact ? <span className="text-xs text-muted-foreground">{label}</span> : null}
     </span>
   )
 }
@@ -133,40 +122,15 @@ export function QuotaIndicator({
 // QuotaBar Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface QuotaBarProps {
-  /**
-   * The type of quota to display
-   */
-  quotaType: QuotaType
-
-  /**
-   * The quota information
-   */
-  quota: QuotaInfo
-
-  /**
-   * Whether to show the quota type label
-   * @default true
-   */
-  showLabel?: boolean
-
-  /**
-   * Whether to show the usage text (e.g., "3 / 5")
-   * @default true
-   */
-  showText?: boolean
-
-  /**
-   * Size of the progress bar
-   * @default 'md'
-   */
-  size?: 'sm' | 'md' | 'lg'
-
-  /**
-   * Additional CSS classes
-   */
-  className?: string
-}
+export const QuotaBarPropsSchema = z.object({
+  quotaType: z.custom<QuotaType>(val => QuotaTypeSchema.safeParse(val).success),
+  quota: z.custom<QuotaInfo>(val => QuotaInfoSchema.safeParse(val).success),
+  showLabel: z.boolean().optional(),
+  showText: z.boolean().optional(),
+  size: z.enum(['sm', 'md', 'lg']).optional(),
+  className: z.string().optional(),
+})
+export type QuotaBarProps = z.infer<typeof QuotaBarPropsSchema>
 
 /**
  * QuotaBar Component
@@ -235,15 +199,15 @@ export function QuotaBar({
   if (quota.limit === null) {
     return (
       <div className={cn('flex flex-col gap-1', className)}>
-        {showLabel && <span className="text-sm font-medium text-foreground">{label}</span>}
+        {showLabel ? <span className="text-sm font-medium text-foreground">{label}</span> : null}
         <div className="flex items-center gap-2">
           <Progress value={0} className={cn('flex-1', sizeClasses[size])} />
-          {showText && (
+          {showText ? (
             <span className="text-sm text-muted-foreground whitespace-nowrap">
               {quota.current}
               {unitSuffix} used (unlimited)
             </span>
-          )}
+          ) : null}
         </div>
       </div>
     )
@@ -251,24 +215,27 @@ export function QuotaBar({
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      {showLabel && (
+      {showLabel ? (
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-foreground">{label}</span>
-          {showText && (
+          {showText ? (
             <span className={cn('text-sm whitespace-nowrap', textStatusColors[status])}>
               {quota.current} / {limitText}
               {unitSuffix}
             </span>
-          )}
+          ) : null}
         </div>
-      )}
-      {!showLabel && showText && (
+      ) : null}
+      {!showLabel && showText ? (
         <span className={cn('text-sm whitespace-nowrap', textStatusColors[status])}>
           {quota.current} / {limitText}
           {unitSuffix}
         </span>
-      )}
-      <Progress value={percentage} className={cn('w-full', sizeClasses[size], statusColors[status])} />
+      ) : null}
+      <Progress
+        value={percentage}
+        className={cn('w-full', sizeClasses[size], statusColors[status])}
+      />
     </div>
   )
 }
@@ -277,22 +244,12 @@ export function QuotaBar({
 // QuotaCard Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface QuotaCardProps {
-  /**
-   * The type of quota to display
-   */
-  quotaType: QuotaType
-
-  /**
-   * The quota information
-   */
-  quota: QuotaInfo
-
-  /**
-   * Additional CSS classes
-   */
-  className?: string
-}
+export const QuotaCardPropsSchema = z.object({
+  quotaType: z.custom<QuotaType>(val => QuotaTypeSchema.safeParse(val).success),
+  quota: z.custom<QuotaInfo>(val => QuotaInfoSchema.safeParse(val).success),
+  className: z.string().optional(),
+})
+export type QuotaCardProps = z.infer<typeof QuotaCardPropsSchema>
 
 /**
  * QuotaCard Component
@@ -332,13 +289,7 @@ export function QuotaCard({ quotaType, quota, className }: QuotaCardProps) {
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border bg-card p-4 shadow-sm',
-        statusColors[status],
-        className,
-      )}
-    >
+    <div className={cn('rounded-lg border bg-card p-4 shadow-sm', statusColors[status], className)}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-card-foreground">{label}</span>
         {status === 'critical' && (

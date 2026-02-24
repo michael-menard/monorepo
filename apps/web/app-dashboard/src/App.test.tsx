@@ -3,34 +3,29 @@ import { render, screen } from '@testing-library/react'
 import { App } from './App'
 
 vi.mock('@repo/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  },
-  createLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  }),
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+  createLogger: vi.fn().mockReturnValue({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }),
+}))
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
 }))
 
 describe('App Dashboard Module', () => {
   it('renders the page heading', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: /App Dashboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Dashboard/i })).toBeInTheDocument()
   })
 
-  it('displays the welcome message', () => {
+  it('displays the collection subtitle', () => {
     render(<App />)
-    expect(screen.getByText(/Welcome to the App Dashboard module/i)).toBeInTheDocument()
+    expect(screen.getByText(/Your LEGO MOC collection at a glance/i)).toBeInTheDocument()
   })
 
-  it('shows the Getting Started card', () => {
+  it('shows the quick actions', () => {
     render(<App />)
-    expect(screen.getByText(/Getting Started/i)).toBeInTheDocument()
-    expect(screen.getByText(/Customize this module to build your feature/i)).toBeInTheDocument()
+    expect(screen.getByText(/Add MOC/i)).toBeInTheDocument()
   })
 })

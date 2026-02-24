@@ -72,7 +72,7 @@ const customItems: CustomItem[] = [
 ]
 
 describe('GalleryDataTable - Composable Columns', () => {
-  const renderTable = <T extends Record<string, unknown>>(
+  const renderTable = async <T extends Record<string, unknown>>(
     items: T[],
     columns: ColumnDef<T>[],
     props = {}
@@ -95,13 +95,14 @@ describe('GalleryDataTable - Composable Columns', () => {
       history: createMemoryHistory({ initialEntries: ['/'] }),
     })
 
+    await router.load()
     return render(<RouterProvider router={router} />)
   }
 
   describe('TanStack ColumnDef Support', () => {
-    it('renders with TanStack column definitions', () => {
+    it('renders with TanStack column definitions', async () => {
       const columnHelper = createGalleryColumns<TestItem>()
-      
+
       const columns = [
         columnHelper.accessor('name', {
           header: 'Name',
@@ -118,7 +119,7 @@ describe('GalleryDataTable - Composable Columns', () => {
         }),
       ]
 
-      renderTable(testItems, columns)
+      await renderTable(testItems, columns)
 
       // Check headers
       expect(screen.getByText('Name')).toBeInTheDocument()
@@ -131,9 +132,9 @@ describe('GalleryDataTable - Composable Columns', () => {
       expect(screen.getByText('active')).toBeInTheDocument()
     })
 
-    it('supports custom cell renderers', () => {
+    it('supports custom cell renderers', async () => {
       const columnHelper = createGalleryColumns<TestItem>()
-      
+
       const columns = [
         columnHelper.accessor('status', {
           header: 'Status',
@@ -145,19 +146,19 @@ describe('GalleryDataTable - Composable Columns', () => {
         }),
       ]
 
-      renderTable(testItems, columns)
+      await renderTable(testItems, columns)
 
       const statusBadge = screen.getByTestId('status-1')
       expect(statusBadge).toHaveClass('badge')
       expect(statusBadge).toHaveTextContent('active')
     })
 
-    it('maintains type safety between items and columns', () => {
+    it('maintains type safety between items and columns', async () => {
       const columnHelper = createGalleryColumns<CustomItem>()
-      
+
       const columns: ColumnDef<CustomItem>[] = [
         columnHelper.accessor('title', { header: 'Title' }),
-        columnHelper.accessor('value', { 
+        columnHelper.accessor('value', {
           header: 'Value',
           cell: (info) => info.getValue() ?? '-',
         }),
@@ -165,7 +166,7 @@ describe('GalleryDataTable - Composable Columns', () => {
         columnHelper.accessor('priority', { header: 'Priority' }),
       ]
 
-      renderTable(customItems, columns)
+      await renderTable(customItems, columns)
 
       expect(screen.getByText('Alpha')).toBeInTheDocument()
       expect(screen.getByText('Beta')).toBeInTheDocument()
@@ -340,7 +341,7 @@ describe('GalleryDataTable - Composable Columns', () => {
         }),
       ]
 
-      renderTable(testItems, columns, { enableSorting: true })
+      await renderTable(testItems, columns, { enableSorting: true })
 
       const nameHeader = screen.getByRole('button', { name: /name/i })
       
@@ -364,7 +365,7 @@ describe('GalleryDataTable - Composable Columns', () => {
         columnHelper.accessor('value', { header: 'Value' }),
       ]
 
-      renderTable(customItems, columns, { onRowClick })
+      await renderTable(customItems, columns, { onRowClick })
 
       const rows = screen.getAllByRole('row')
       await user.click(rows[1]) // Click first data row
@@ -374,7 +375,7 @@ describe('GalleryDataTable - Composable Columns', () => {
   })
 
   describe('Legacy Column Support', () => {
-    it('still supports legacy GalleryDataTableColumn format', () => {
+    it('still supports legacy GalleryDataTableColumn format', async () => {
       const legacyColumns = [
         {
           field: 'name' as keyof TestItem,
@@ -394,7 +395,7 @@ describe('GalleryDataTable - Composable Columns', () => {
         },
       ]
 
-      renderTable(testItems, legacyColumns as any)
+      await renderTable(testItems, legacyColumns as any)
 
       // Check headers
       expect(screen.getByText('Name')).toBeInTheDocument()
@@ -407,7 +408,7 @@ describe('GalleryDataTable - Composable Columns', () => {
   })
 
   describe('Mixed Column Types', () => {
-    it('renders table with various column helper types', () => {
+    it('renders table with various column helper types', async () => {
       const columns = [
         createTextColumn<TestItem>('name', 'Name'),
         createNumberColumn<TestItem>('price', 'Price', (v) => `$${v.toFixed(2)}`),
@@ -425,7 +426,7 @@ describe('GalleryDataTable - Composable Columns', () => {
         }),
       ]
 
-      renderTable(testItems, columns)
+      await renderTable(testItems, columns)
 
       // Verify all column types render
       expect(screen.getByText('Name')).toBeInTheDocument()

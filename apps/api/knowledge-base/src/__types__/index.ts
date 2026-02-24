@@ -788,6 +788,8 @@ export const StoryStateSchema = z.enum([
   'completed',
   'cancelled',
   'deferred',
+  'failed_code_review',
+  'failed_qa',
 ])
 export type StoryState = z.infer<typeof StoryStateSchema>
 

@@ -67,8 +67,8 @@ failures:
     message: "Story status must be ready-to-work"
   - check: artifacts_present
     missing:
-      - ELAB-{STORY-ID}.md
-    message: "Required artifact ELAB file not found"
+      - _implementation/ELAB.yaml
+    message: "Required artifact ELAB.yaml not found"
 ```
 
 ## Precondition Sets by Command
@@ -79,14 +79,14 @@ failures:
 --command=dev-implement-story
 --status=ready-to-work
 --in-stage=ready-to-work
---requires=ELAB-{STORY-ID}.md
+--requires=_implementation/ELAB.yaml
 ```
 
 Checks:
 1. Story file exists
 2. Status is `ready-to-work`
 3. In `ready-to-work/` directory
-4. ELAB file exists with passing verdict
+4. ELAB.yaml exists with `verdict: PASS` or `CONDITIONAL_PASS`
 
 ### `/elab-story`
 
@@ -107,15 +107,14 @@ Checks:
 --command=qa-verify-story
 --status=ready-for-qa
 --in-stage=in-progress
---requires=PROOF-{STORY-ID}.md,_implementation/VERIFICATION.yaml
+--requires=_implementation/VERIFICATION.yaml
 ```
 
 Checks:
 1. Story file exists
 2. Status is `ready-for-qa`
 3. In `in-progress/` directory
-4. PROOF file exists
-5. VERIFICATION.yaml exists with code_review.verdict: PASS
+4. VERIFICATION.yaml exists with code_review.verdict: PASS
 
 ### `/dev-code-review`
 
@@ -123,26 +122,22 @@ Checks:
 --command=dev-code-review
 --status=in-progress
 --in-stage=in-progress
---requires=PROOF-{STORY-ID}.md
 ```
 
 Checks:
 1. Story file exists
 2. Status is `in-progress`
-3. PROOF file exists
 
 ### `/ui-ux-review`
 
 ```yaml
 --command=ui-ux-review
 --in-stage=in-progress,QA
---requires=PROOF-{STORY-ID}.md
 ```
 
 Checks:
 1. Story file exists
-2. PROOF file exists
-3. Story touches UI (check scope)
+2. Story touches UI (check scope)
 
 ### `/pm-generate-story`
 
@@ -189,14 +184,17 @@ actual: backlog
 
 For each required file, check existence:
 - `{STORY-ID}.md` → `{base}/{STORY-ID}.md`
-- `PROOF-{STORY-ID}.md` → `{base}/PROOF-{STORY-ID}.md`
-- `ELAB-{STORY-ID}.md` → `{base}/ELAB-{STORY-ID}.md`
+- `_implementation/ELAB.yaml` → `{base}/_implementation/ELAB.yaml`
 - `_implementation/X` → `{base}/_implementation/X`
 - `_pm/X` → `{base}/_pm/X`
 
 ### 5. Custom Checks (command-specific)
 
 Some commands need additional checks:
+
+**For dev-implement-story:**
+- Parse `_implementation/ELAB.yaml`
+- Check `verdict: PASS` or `CONDITIONAL_PASS`
 
 **For qa-verify-story:**
 - Parse `VERIFICATION.yaml`
@@ -231,10 +229,9 @@ Called at start of every setup leader:
 # Check dev-implement preconditions
 /precondition-check WRKF-1021 --command=dev-implement-story
 
-# Check QA preconditions with explicit requirements
+# Check QA preconditions
 /precondition-check WRKF-1021 --command=qa-verify-story \
-  --status=ready-for-qa \
-  --requires=PROOF-WRKF-1021.md
+  --status=ready-for-qa
 
 # Check elaboration preconditions
 /precondition-check WRKF-1021 --command=elab-story \

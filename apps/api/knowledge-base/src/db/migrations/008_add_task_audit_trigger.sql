@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS task_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- ID of the task being audited
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE SET NULL,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
 
   -- Type of operation: 'add' | 'update'
   operation TEXT NOT NULL,

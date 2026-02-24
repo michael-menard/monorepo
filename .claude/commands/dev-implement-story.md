@@ -11,13 +11,13 @@ agents:
   - knowledge-context-loader.agent.md
   - code-review-*.agent.md
   - dev-fix-fix-leader.agent.md
-artifacts:
-  - CHECKPOINT.yaml
-  - SCOPE.yaml
-  - PLAN.yaml
-  - KNOWLEDGE-CONTEXT.yaml
-  - EVIDENCE.yaml
-  - REVIEW.yaml
+kb_artifacts:
+  - checkpoint (phase: setup)
+  - scope (phase: setup)
+  - plan (phase: planning)
+  - context (phase: planning)
+  - evidence (phase: implementation)
+  - review (phase: code_review)
 shared:
   - _shared/decision-handling.md
   - _shared/autonomy-tiers.md
@@ -30,7 +30,7 @@ shared:
 You are the **Orchestrator**. You spawn agents and manage the loop.
 Do NOT implement code. Do NOT review code. Do NOT fix code.
 
-**Evidence-First**: EVIDENCE.yaml is single source of truth.
+**Evidence-First**: `evidence` KB artifact is single source of truth.
 **E2E Required**: Stories CANNOT complete without passing E2E tests (live mode).
 
 ## Usage
@@ -60,7 +60,7 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 When `--gen` is specified, the command will:
 
 1. **Generate minimal story structure** - Creates basic `story.yaml` with provided context
-2. **Skip elab phase** - Bypasses story elaboration and elab artifacts (ANALYSIS.md, DECISIONS.yaml, etc.)
+2. **Skip elab phase** - Bypasses story elaboration and elab KB artifacts (analysis, elaboration)
 3. **Move directly to implementation** - Starts Phase 0 (dev-setup-leader) immediately
 
 **Story Structure Generated:**
@@ -138,26 +138,26 @@ ORCHESTRATOR (you)
     │
     ▼
 Phase 0: dev-setup-leader (haiku)
-    → Writes: CHECKPOINT.yaml, SCOPE.yaml
+    → KB: checkpoint, scope artifacts
     │
     ▼
 Phase 1: dev-plan-leader (sonnet)
-    → Writes: PLAN.yaml, KNOWLEDGE-CONTEXT.yaml
+    → KB: plan, context artifacts
     │
     ▼
 Phase 2: dev-execute-leader (sonnet)
     → Steps: Unit → Build → E2E (LIVE mode)
-    → Writes: EVIDENCE.yaml ← SOURCE OF TRUTH
+    → KB: evidence artifact ← SOURCE OF TRUTH
     │
     ▼
 Phase 3: dev-proof-leader (haiku)
-    → Reads: EVIDENCE.yaml ONLY
-    → Writes: PROOF-{STORY_ID}.md
+    → Reads: evidence artifact (KB) ONLY
+    → KB: proof artifact
     │
     ▼
 REVIEW/FIX LOOP (max 3 iterations)
     → Review workers (haiku, parallel)
-    → REVIEW.yaml
+    → KB: review artifact
     → PASS → Exit | FAIL → Fix Agent → Loop
 ```
 
@@ -179,21 +179,13 @@ If the file or story row doesn't exist, skip silently.
 ```
 feature_dir = "{FEATURE_DIR}"
 story_id = "{STORY_ID}"
-artifacts_path = f"{feature_dir}/in-progress/{story_id}/_implementation/"
+story_path = f"{feature_dir}/in-progress/{story_id}/"
+# Note: artifacts stored in KB — no _implementation/ directory needed
 autonomy_level = flags.autonomous || "conservative"
 batch_mode = false  # true only when called from /workflow-batch
 gen_mode = flags.gen || false
 skip_worktree = flags.skip_worktree || false
 ```
-
-### Step 1.1: Claim Story in KB
-
-**Immediately** claim the story to prevent other agents from picking it up:
-
-1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress", phase: "setup" })`
-2. **Guard:** If the call reveals the story is already `in_progress`, another agent likely claimed it. STOP with:
-   `"Story {STORY_ID} is already in_progress — another agent may be working on it. Use /wt:status to check."`
-   Unless `--force-continue` is set.
 
 ### Step 1.5: Generate Story (if --gen flag)
 
@@ -309,67 +301,101 @@ Skip the rest of Step 1.3 and continue to Step 2.
        Registered: {createdAt}
 
      Options:
-       (a) Switch to existing worktree at {worktreePath}
-       (b) Take over — mark old worktree as abandoned and create new worktree
-       (c) Abort — stop implementation
+       (1) Switch to existing worktree at {worktreePath}
+       (2) Take over — PERMANENTLY ABANDON old worktree and create new worktree
+       (3) Abort — stop implementation
      ```
 
      **Autonomy behavior for option selection:**
 
-     | Autonomy | Option (a) switch | Option (b) take-over | Option (c) abort |
+     | Autonomy | Option (1) switch | Option (2) take-over | Option (3) abort |
      |----------|-------------------|---------------------|-----------------|
      | conservative | Prompt required | Prompt required | Prompt required |
      | moderate | Auto-select | **ALWAYS prompt** | Prompt required |
      | aggressive | Auto-select | **ALWAYS prompt** | Prompt required |
 
-     **CRITICAL — Option (b) take-over ALWAYS requires explicit user confirmation.**
-     **This rule overrides all autonomy levels including aggressive. Never auto-select option (b).**
+     **CRITICAL — Option (2) take-over is NEVER auto-selected at any autonomy level.**
+     **This rule overrides all autonomy levels including aggressive. Never auto-select option (2).**
 
-     **If user selects option (a) — switch:**
+     <!-- Conflict resolution cross-reference:
+       - WINT-1130: MCP tools (worktree_get_by_story, worktree_mark_complete)
+       - WINT-1140: Original AC-4 specification (3-option prompt UX)
+       - WINT-1160: Take-over hardening (AC-2, AC-3, AC-4, AC-5, AC-10)
+     -->
+
+     **If user selects option (1) — switch:**
      - Run `/wt:switch` to navigate to the existing worktree
      - Continue to step 4
 
-     **If user selects option (b) — take-over (ordered sequence, WINT-1160 AC-6):**
+     **If user selects option (2) — take-over (ordered sequence, WINT-1160 AC-3):**
 
-     First, show confirmation prompt regardless of autonomy level:
+     First, show secondary confirmation prompt regardless of autonomy level:
      ```
-     WARNING: This will mark the following worktree as abandoned:
+     CONFIRM TAKE-OVER:
+     This will PERMANENTLY ABANDON the following worktree:
        Story: {storyId}
        Branch: {branchName}
        Path: {worktreePath}
        Registered: {createdAt}
-     This action cannot be undone. Type 'yes' to confirm take-over:
+
+     This action cannot be undone.
+     Type "abandon" to confirm take-over:
      ```
 
-     If user confirms (types 'yes'):
-     1. Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned' })`
-     2. Check result — if null or error: emit "Take-over aborted: failed to mark old worktree as abandoned" and STOP (do NOT proceed to step 3)
-     3. Only if step 1 succeeded: call `/wt:new story/{STORY_ID} main` to create new worktree
+     If user confirms (types exactly "abandon", case-sensitive):
+     1. Call `worktree_mark_complete({ worktreeId: <old_worktree_id>, status: 'abandoned', metadata: { abandoned_reason: 'conflict_takeover', taken_over_at: '<ISO_TIMESTAMP>' } })`
+     2. Check result — if null or error (WINT-1160 AC-10):
+        ```
+        WARN: worktree_mark_complete returned null. Old worktree may not have been marked as abandoned.
+        [y] Proceed anyway — create new worktree without confirmed abandonment
+        [n] Abort — stop and investigate
+        ```
+        - If user selects [y]: log warning and continue to step 3
+        - If user selects [n]: STOP with message: "Take-over aborted. Use /wt:switch to resume the existing worktree, or re-run with --skip-worktree to bypass."
+     3. Only if step 1 succeeded or user chose to proceed: call `/wt:new story/{STORY_ID} main` to create new worktree
      4. Register new worktree, continue to step 4
 
-     If user cancels (does not confirm):
-     - Re-present options (a), (b), (c) OR show abort message
+     If user cancels (does not type "abandon"):
+     - Re-present options (1), (2), (3)
      - Do NOT call `worktree_mark_complete` or `/wt:new`
 
-     **If user selects option (c) — abort:**
-     - Emit: "Implementation aborted by user."
+     **If user selects option (3) — abort:**
+     - Emit:
+       ```
+       Implementation aborted by user.
+
+       Next steps:
+       - To resume with the existing worktree: run /wt:switch and then re-run this command.
+       - To skip worktree isolation entirely: re-run this command with --skip-worktree.
+       ```
      - STOP. Do not proceed to Phase 0.
 
-4. **Read CHECKPOINT.yaml** — Load `pr_number` and `pr_url` if present (set by pm-story via wt-new output).
-   If `pr_number` is not in CHECKPOINT.yaml, discover it:
+4. **Read checkpoint from KB** — Load `pr_number` and `pr_url` if present.
+   ```javascript
+   const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+   ```
+   If `pr_number` is not in checkpoint, discover it:
    ```bash
    gh pr list --head story/{STORY_ID} --state open --json number,url
    ```
-   Write discovered `pr_number` and `pr_url` to CHECKPOINT.yaml.
+   Write discovered `pr_number` and `pr_url` to checkpoint artifact in KB:
+   ```javascript
+   kb_write_artifact({ story_id, artifact_type: "checkpoint", phase: "setup", iteration: 0,
+     content: { ...checkpoint.content, pr_number, pr_url } })
+   ```
 
 Continue to Step 2.
 
 ---
 
 ### Step 2: Detect Phase
-Read CHECKPOINT.yaml → determine current_phase and iteration.
+Read checkpoint artifact from KB → determine current_phase and iteration.
 
-**IF `--gen` mode AND no CHECKPOINT.yaml exists:**
+```javascript
+const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+```
+
+**IF `--gen` mode AND checkpoint artifact is null:**
 - Treat as fresh implementation, proceed to Phase 0
 
 ### Step 3: Pass Context to Agents
@@ -386,7 +412,7 @@ gen_mode: {gen_mode}
 Follow decision protocol in `.claude/agents/_shared/decision-handling.md`
 
 **Note**: When gen_mode is true, this story was generated via --gen flag and bypassed elaboration.
-Expect minimal story structure without elab artifacts (ANALYSIS.md, DECISIONS.yaml, etc.).
+Expect minimal story structure without elab artifacts (analysis, elaboration KB artifacts).
 ```
 
 ## Incremental Commit Policy (Race-Safe)
@@ -410,10 +436,10 @@ coders in dev-execute-leader) write to the same worktree simultaneously.
 
 | After Phase | Commit Message |
 |-------------|---------------|
-| Phase 0 (setup) | `chore({STORY_ID}): setup artifacts` |
-| Phase 1 (plan) | `chore({STORY_ID}): implementation plan` |
+| Phase 0 (setup) | `chore({STORY_ID}): setup complete (artifacts in KB)` |
+| Phase 1 (plan) | `chore({STORY_ID}): implementation plan (artifacts in KB)` |
 | Phase 2 (execute) | `feat({STORY_ID}): implementation` |
-| Phase 3 (proof) | `docs({STORY_ID}): proof artifacts` |
+| Phase 3 (proof) | `docs({STORY_ID}): proof complete (artifact in KB)` |
 | Review/Fix loop | `fix({STORY_ID}): review fixes iteration N` |
 
 ### Why leaders only?
@@ -451,7 +477,7 @@ If gate fails → BLOCKED, do not proceed.
 ## Done
 
 ### Clean Pass
-1. Update CHECKPOINT.yaml: `current_phase: done`, `e2e_gate: passed`
+1. Update checkpoint artifact in KB: `current_phase: done`, `e2e_gate: passed`
 2. **Release Work Order**: Update `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` — set Status to `🚧`, clear Worker column (see `_shared/work-order-claim.md`)
 3. Final commit+push (if uncommitted changes remain):
    ```bash
@@ -459,7 +485,8 @@ If gate fails → BLOCKED, do not proceed.
    git commit -m "feat({STORY_ID}): implementation complete"
    git push
    ```
-4. Move story to code review queue:
+4. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+5. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
@@ -467,7 +494,7 @@ If gate fails → BLOCKED, do not proceed.
 6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ### Forced Continue
-1. CHECKPOINT.yaml: `forced: true`, `warnings: [...]`
+1. Update checkpoint artifact in KB: `forced: true`, `warnings: [...]`
 2. **Release Work Order**: Update `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` — set Status to `🚧`, clear Worker column (see `_shared/work-order-claim.md`)
 3. Final commit+push (if uncommitted changes remain):
    ```bash
@@ -475,7 +502,8 @@ If gate fails → BLOCKED, do not proceed.
    git commit -m "feat({STORY_ID}): implementation complete (forced)"
    git push
    ```
-4. Move story to code review queue:
+4. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+5. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
@@ -493,8 +521,3 @@ If gate fails → BLOCKED, do not proceed.
 - `.claude/agents/_shared/autonomy-tiers.md` - Tier definitions
 - `.claude/config/autonomy.yaml` - Autonomy configuration
 - `.claude/config/preferences.yaml` - Project preferences
-
-## Abort / Error Recovery
-
-If this command is interrupted after Step 1.1, the story stays `in_progress` in the KB (preventing other agents from picking it up). To release manually:
-`kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_to_work" })`

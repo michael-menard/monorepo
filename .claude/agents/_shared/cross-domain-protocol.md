@@ -44,7 +44,7 @@ sibling_output_locations:
   architecture: "{story_dir}/_implementation/ARCHITECT-NOTES.md"
   uiux: "{story_dir}/_implementation/UI-UX-FINDINGS.yaml"
   qa: "{story_dir}/_implementation/VERIFICATION.yaml"
-  dev_feasibility: "{story_dir}/_pm/DEV-FEASIBILITY.md"
+  dev_feasibility: "{story_dir}/pm_artifacts.dev_feasibility"  # embedded in story.yaml frontmatter
 
   # For epic-level reviews
   epic_reviews: "{epic_dir}/_epic-elab/REVIEW-{PERSPECTIVE}.yaml"

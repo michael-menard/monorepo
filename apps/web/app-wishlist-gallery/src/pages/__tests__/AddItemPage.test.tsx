@@ -19,6 +19,12 @@ vi.mock('@repo/logger', () => ({
     warn: vi.fn(),
     debug: vi.fn(),
   },
+  createLogger: vi.fn().mockReturnValue({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  }),
 }))
 
 // Mock navigate

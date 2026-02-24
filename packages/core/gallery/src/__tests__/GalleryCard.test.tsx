@@ -47,11 +47,11 @@ describe('GalleryCard', () => {
       render(
         <GalleryCard
           {...defaultProps}
-          actions={<button data-testid="action-button">Action</button>}
+          hoverOverlay={<button data-testid="action-button">Action</button>}
         />,
       )
 
-      expect(screen.getByTestId('gallery-card-actions')).toBeInTheDocument()
+      expect(screen.getByTestId('gallery-card-hover-overlay')).toBeInTheDocument()
       expect(screen.getByTestId('action-button')).toBeInTheDocument()
     })
 
@@ -167,7 +167,7 @@ describe('GalleryCard', () => {
         <GalleryCard
           {...defaultProps}
           onClick={handleClick}
-          actions={<button onClick={handleAction}>Action</button>}
+          hoverOverlay={<button onClick={handleAction}>Action</button>}
         />,
       )
 
@@ -180,13 +180,13 @@ describe('GalleryCard', () => {
 
   describe('selected state', () => {
     it('has aria-selected="true" when selected', () => {
-      render(<GalleryCard {...defaultProps} selected onClick={() => {}} />)
+      render(<GalleryCard {...defaultProps} selectable selected onClick={() => {}} />)
 
       expect(screen.getByTestId('gallery-card')).toHaveAttribute('aria-selected', 'true')
     })
 
     it('has aria-selected="false" when not selected', () => {
-      render(<GalleryCard {...defaultProps} selected={false} onClick={() => {}} />)
+      render(<GalleryCard {...defaultProps} selectable selected={false} onClick={() => {}} />)
 
       expect(screen.getByTestId('gallery-card')).toHaveAttribute('aria-selected', 'false')
     })

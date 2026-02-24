@@ -2,7 +2,7 @@
  * Story CRUD Operations
  *
  * MCP operations for managing story status and workflow state.
- * Provides kb_get_story, kb_list_stories, and kb_update_story_status tools.
+ * Provides kb_get_story, kb_list_stories, kb_update_story_status, and kb_update_story tools.
  *
  * @see Implementation plan for story status tracking
  */
@@ -35,8 +35,14 @@ export const KbListStoriesInputSchema = z.object({
   /** Filter by feature prefix (e.g., 'wish') */
   feature: z.string().optional(),
 
-  /** Filter by workflow state */
+  /** Filter by epic name (e.g., 'platform') */
+  epic: z.string().optional(),
+
+  /** Filter by workflow state (singular; ignored when states[] is provided) */
   state: StoryStateSchema.optional(),
+
+  /** Filter by multiple workflow states (takes precedence over singular state) */
+  states: z.array(StoryStateSchema).optional(),
 
   /** Filter by implementation phase */
   phase: StoryPhaseSchema.optional(),
@@ -86,6 +92,33 @@ export const KbUpdateStoryStatusInputSchema = z.object({
 })
 
 export type KbUpdateStoryStatusInput = z.infer<typeof KbUpdateStoryStatusInputSchema>
+
+/**
+ * Input schema for kb_update_story tool.
+ *
+ * Updates story metadata fields (epic, feature, title, priority, points).
+ */
+export const KbUpdateStoryInputSchema = z.object({
+  /** Story ID to update (e.g., 'LNGG-0010') */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** New epic value */
+  epic: z.string().optional().nullable(),
+
+  /** New feature value */
+  feature: z.string().optional().nullable(),
+
+  /** New title */
+  title: z.string().optional(),
+
+  /** New priority */
+  priority: StoryPrioritySchema.optional().nullable(),
+
+  /** New story points */
+  points: z.number().int().min(0).optional().nullable(),
+})
+
+export type KbUpdateStoryInput = z.infer<typeof KbUpdateStoryInputSchema>
 
 /**
  * Input schema for kb_get_next_story tool.
@@ -175,7 +208,13 @@ export async function kb_list_stories(
   if (validated.feature) {
     conditions.push(eq(stories.feature, validated.feature))
   }
-  if (validated.state) {
+  if (validated.epic) {
+    conditions.push(eq(stories.epic, validated.epic))
+  }
+  // states[] takes precedence over singular state
+  if (validated.states?.length) {
+    conditions.push(inArray(stories.state, validated.states))
+  } else if (validated.state) {
     conditions.push(eq(stories.state, validated.state))
   }
   if (validated.phase) {
@@ -453,5 +492,77 @@ export async function kb_get_next_story(
     candidates_count: candidates.length,
     blocked_by_dependencies: blockedByDependencies,
     message: `All ${candidates.length} candidate stories are blocked by unresolved dependencies`,
+  }
+}
+
+/**
+ * Update story metadata fields (epic, feature, title, priority, points).
+ *
+ * Use this to correct metadata like epic assignment without touching workflow state.
+ *
+ * @param deps - Database dependencies
+ * @param input - Fields to update
+ * @returns Updated story or null if not found
+ */
+export async function kb_update_story(
+  deps: StoryCrudDeps,
+  input: KbUpdateStoryInput,
+): Promise<{
+  story: typeof stories.$inferSelect | null
+  updated: boolean
+  message: string
+}> {
+  const validated = KbUpdateStoryInputSchema.parse(input)
+
+  const existing = await deps.db
+    .select()
+    .from(stories)
+    .where(eq(stories.storyId, validated.story_id))
+    .limit(1)
+
+  if (existing.length === 0) {
+    return {
+      story: null,
+      updated: false,
+      message: `Story ${validated.story_id} not found`,
+    }
+  }
+
+  const updates: Partial<typeof stories.$inferInsert> = {
+    updatedAt: new Date(),
+  }
+
+  if (validated.epic !== undefined) {
+    updates.epic = validated.epic
+  }
+
+  if (validated.feature !== undefined) {
+    updates.feature = validated.feature
+  }
+
+  if (validated.title !== undefined) {
+    updates.title = validated.title
+  }
+
+  if (validated.priority !== undefined) {
+    updates.priority = validated.priority
+  }
+
+  if (validated.points !== undefined) {
+    updates.points = validated.points
+  }
+
+  const result = await deps.db
+    .update(stories)
+    .set(updates)
+    .where(eq(stories.storyId, validated.story_id))
+    .returning()
+
+  const story = result[0] ?? null
+
+  return {
+    story,
+    updated: true,
+    message: `Updated story ${validated.story_id}`,
   }
 }

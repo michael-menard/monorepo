@@ -11,7 +11,15 @@ import { useCallback, useState, useRef, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Upload, FileText, Image as ImageIcon, List, Plus, AlertCircle, Loader2 } from 'lucide-react'
+import {
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  List,
+  Plus,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react'
 import {
   Button,
   Card,
@@ -110,8 +118,7 @@ function InstructionsNewContent() {
   )
 
   // Presigned URL API (BUGF-032)
-  const [generatePresignedUrl, { isLoading: isGeneratingUrls }] =
-    useGeneratePresignedUrlMutation()
+  const [generatePresignedUrl, { isLoading: isGeneratingUrls }] = useGeneratePresignedUrlMutation()
   const [apiError, setApiError] = useState<string | null>(null)
 
   // Upload manager
@@ -389,21 +396,17 @@ function InstructionsNewContent() {
           isRefreshing={isRefreshingSession}
         />
 
-        {apiError && (
+        {apiError ? (
           <Alert variant="destructive" role="alert" aria-live="polite">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               <span>{apiError}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setApiError(null)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setApiError(null)}>
                 Dismiss
               </Button>
             </AlertDescription>
           </Alert>
-        )}
+        ) : null}
       </div>
 
       {/* Error Summary (Story 3.1.16) */}
@@ -466,7 +469,7 @@ function InstructionsNewContent() {
           </CardTitle>
           <CardDescription className="flex items-center gap-2">
             Add your instruction PDF (required), parts list, thumbnail, and gallery images.
-            {isGeneratingUrls && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isGeneratingUrls ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

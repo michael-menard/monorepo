@@ -71,7 +71,7 @@ export const TagInput = ({
       <span id={instructionsId} className="sr-only">
         Press Enter or comma to add tag. Press Backspace with empty input to remove last tag.
       </span>
-      
+
       <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-background">
         {value.length > 0 && (
           <ul role="list" className="contents">

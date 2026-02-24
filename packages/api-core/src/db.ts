@@ -58,7 +58,7 @@ export function getDb(): NodePgDatabase<Record<string, never>> {
  */
 export function createDb<TSchema extends Record<string, unknown>>(
   schema: TSchema,
-  config?: Partial<PoolConfig>
+  config?: Partial<PoolConfig>,
 ): NodePgDatabase<TSchema> {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) {

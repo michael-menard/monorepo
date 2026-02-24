@@ -104,10 +104,7 @@ export function ActivityFeed({ activities, isLoading }: ActivityFeedProps) {
 
         {activities.length > 5 && (
           <div className="mt-4 pt-3 border-t border-border">
-            <Link
-              to="/activity"
-              className="text-sm text-primary hover:underline font-medium"
-            >
+            <Link to="/activity" className="text-sm text-primary hover:underline font-medium">
               View all activity
             </Link>
           </div>

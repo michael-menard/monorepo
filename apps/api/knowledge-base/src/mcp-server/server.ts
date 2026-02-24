@@ -245,7 +245,7 @@ export function createMcpServer(deps: ToolHandlerDeps, agentRole?: AgentRole): M
     // Create tool call context for tracing and circular dependency detection
     const context: ToolCallContext = {
       correlation_id: correlationId,
-      tool_call_chain: [toolName],
+      tool_call_chain: [],
       start_time: startTime,
       agent_role: role,
     }

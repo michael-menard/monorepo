@@ -27,7 +27,7 @@ export {
   createEmptySession,
   fileToMetadata,
   migrateSession,
-  
+
   // Upload types (excluding UploadErrorCode/Schema which come from client)
   FileCategorySchema,
   type FileCategory,
@@ -44,14 +44,14 @@ export {
   getErrorMessage,
   createFileId,
   createFileItem,
-  
+
   // Slug utilities
   SlugSchema,
   type Slug,
   slugify,
   slugWithSuffix,
   findAvailableSlug,
-  
+
   // Edit MOC types
   LEGO_THEMES,
   type LegoTheme,

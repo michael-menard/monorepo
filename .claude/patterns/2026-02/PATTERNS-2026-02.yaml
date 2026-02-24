@@ -1,0 +1,168 @@
+schema: 2
+generated_at: "2026-02-22T00:00:00Z"
+analysis_period:
+  start: "2026-01-23"
+  end: "2026-02-22"
+  days: 30
+stories_analyzed: 37
+data_sources: [verification]
+
+# NOTE: This is a template/example file generated during WKFL-006 story delivery.
+# Run /pattern-mine --days 30 --use-verifications to regenerate with real mining data.
+
+file_patterns:
+  - pattern: "plans/**/_implementation/VERIFICATION.yaml"
+    occurrences: 12
+    stories:
+      - "WINT-0250"
+      - "WINT-9020"
+      - "WISH-001"
+      - "WISH-003"
+      - "KBAR-0060"
+
+    cluster_label: "file_pattern_001"
+    similarity_score: 1.0
+
+    confidence: 0.40
+
+    trend: null  # no trend data (--trend not specified)
+
+    correlation_metrics:
+      lint_failures: 0
+      typecheck_failures: 0
+      security_issues: 0
+      build_failures: 8
+      correlation_score: 0.67
+
+    severity: medium
+
+    recommendation: "Use VERIFICATION.yaml template from .claude/schemas/; validate required fields (gate.decision, qa_verify.acs_verified, schema version >= 4) before committing"
+
+    evidence:
+      - story_id: "WINT-0250"
+        failure_type: build
+        description: "Missing gate.decision field caused QA gate rejection"
+      - story_id: "WINT-9020"
+        failure_type: build
+        description: "Schema version 3 below minimum required 4"
+
+ac_patterns:
+  - vague_phrase: "properly"
+    occurrences: 8
+    stories:
+      - "WISH-002"
+      - "WISH-005"
+      - "WINT-0250"
+      - "KBAR-0060"
+
+    cluster_label: "ac_pattern_001"
+    similarity_score: 1.0
+
+    confidence: null  # occurrences < 5 when this was first detected
+
+    trend: null
+
+    impact_metrics:
+      review_cycles_avg: 2.6
+      failure_rate: 0.50
+
+    severity: medium
+
+    improved_phrasing: "Replace 'properly' with specific, measurable criteria (e.g., 'validated with Zod schema', 'authenticated via JWT', 'returns 422 on invalid input')"
+
+    evidence:
+      - story_id: "WISH-002"
+        ac_id: "AC-3"
+        original_text: "Request must be properly validated"
+        failure_type: "Vague - no test criteria defined"
+      - story_id: "WINT-0250"
+        ac_id: "AC-7"
+        original_text: "Agent properly handles errors during execution"
+        failure_type: "Ambiguous - reviewers disagreed on success criteria"
+
+  - vague_phrase: "correctly"
+    occurrences: 6
+    stories:
+      - "WISH-005"
+      - "KBAR-0060"
+      - "WISH-009"
+
+    cluster_label: "ac_pattern_002"
+    similarity_score: 1.0
+
+    confidence: null
+
+    trend: null
+
+    impact_metrics:
+      review_cycles_avg: 2.5
+      failure_rate: 0.42
+
+    severity: medium
+
+    improved_phrasing: "Replace 'correctly' with observable outcomes (e.g., 'returns HTTP 200 with {field: value}', 'renders element with role=button')"
+
+    evidence:
+      - story_id: "WISH-005"
+        ac_id: "AC-1"
+        original_text: "Webhook correctly processed"
+        failure_type: "No observable success state defined"
+
+agent_correlations:
+  - correlation_type: phase_to_phase
+    primary_agent: "dev-implement-planner"
+    secondary_agent: "dev-implement-verifier"
+
+    occurrences: 7
+    stories:
+      - "WISH-003"
+      - "WINT-0250"
+      - "WISH-007"
+
+    cluster_label: "agent_corr_001"
+    similarity_score: 1.0
+
+    confidence: 0.50
+
+    trend: null
+
+    correlation_score: 0.71
+    severity: medium
+    description: "When planner underestimates token budget, verifier phase requires extra iterations (token overrun > 25% correlates with additional review cycles)"
+    recommendation: "Apply 1.3x multiplier to token estimates for integration stories (touching both frontend and backend)"
+
+    evidence:
+      - story_id: "WISH-003"
+        observation: "Planned 15k tokens, used 22k (47% overrun); 2 extra verify cycles required"
+      - story_id: "WINT-0250"
+        observation: "Planned 60k tokens, used 78k (30% overrun)"
+
+deduplicated_from_previous:
+  previous_period: null
+  method: levenshtein
+  threshold: 0.70
+  file_patterns: []
+  ac_patterns: []
+  agent_correlations: []
+
+trend_summary: null  # --trend not specified for this run
+
+metadata:
+  min_sample_size: 3
+  min_correlation: 0.60
+  clustering_threshold: 0.70
+  clustering_method: levenshtein
+  flags:
+    use_verifications: true
+    all_epics: false
+    trend: false
+  warnings:
+    - "OUTCOME.yaml unavailable - used VERIFICATION.yaml fallback (0 OUTCOME.yaml files found)"
+    - "This is a template file; run /pattern-mine to regenerate with current data"
+  data_quality:
+    outcome_files: 0
+    verification_files: 37
+    fallback_mode: true
+  processing:
+    stories_skipped: 0
+    skip_reasons: []

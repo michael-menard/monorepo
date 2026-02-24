@@ -17,7 +17,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { randomUUID } from 'crypto'
 import { db } from '@repo/db'
 import { stories, worktrees } from '@repo/database-schema'
-import { eq } from 'drizzle-orm'
+import { eq, like } from 'drizzle-orm'
 import {
   worktreeRegister,
   worktreeGetByStory,
@@ -30,6 +30,10 @@ describe('Worktree Management Integration Tests', () => {
   let testStoryUuid: string
 
   beforeAll(async () => {
+    // Clean up stale test data from previous failed runs
+    await db.delete(stories).where(like(stories.storyId, 'TEST%'))
+    await db.delete(stories).where(like(stories.storyId, 'TST%'))
+
     // Create test story fixture
     testStoryId = 'TEST-9999'
     testStoryUuid = randomUUID()
@@ -38,13 +42,15 @@ describe('Worktree Management Integration Tests', () => {
       id: testStoryUuid,
       storyId: testStoryId,
       title: 'Integration Test Story for Worktrees',
+      storyType: 'feature',
       state: 'in_progress',
     })
   })
 
   afterAll(async () => {
-    // Cascade deletes worktrees automatically
-    await db.delete(stories).where(eq(stories.id, testStoryUuid))
+    // Clean up all test stories (cascade deletes worktrees automatically)
+    await db.delete(stories).where(like(stories.storyId, 'TEST%'))
+    await db.delete(stories).where(like(stories.storyId, 'TST%'))
   })
 
   it('should complete full lifecycle: register → query → list → mark complete (AC-10)', async () => {
@@ -87,9 +93,11 @@ describe('Worktree Management Integration Tests', () => {
     expect(afterMerge).toBeNull() // Only returns active worktrees
 
     // Step 7: Verify database state directly
-    const dbWorktree = await db.query.worktrees.findFirst({
-      where: eq(worktrees.id, registered!.id),
-    })
+    const [dbWorktree] = await db
+      .select()
+      .from(worktrees)
+      .where(eq(worktrees.id, registered!.id))
+      .limit(1)
     expect(dbWorktree?.status).toBe('merged')
     expect(dbWorktree?.mergedAt).not.toBeNull()
     expect(dbWorktree?.metadata).toMatchObject({
@@ -103,13 +111,14 @@ describe('Worktree Management Integration Tests', () => {
 
   it('should enforce FK cascade: delete story deletes worktrees (AC-12)', async () => {
     // Create temporary story
-    const tempStoryId = 'TEST-TEMP-001'
+    const tempStoryId = 'TSTFK-0001'
     const tempStoryUuid = randomUUID()
 
     await db.insert(stories).values({
       id: tempStoryUuid,
       storyId: tempStoryId,
-      title: 'Temporary Story for FK Test',
+      title: 'FK Test Story',
+      storyType: 'feature',
       state: 'in_progress',
     })
 
@@ -123,18 +132,22 @@ describe('Worktree Management Integration Tests', () => {
     expect(registered).not.toBeNull()
 
     // Verify worktree exists
-    const beforeDelete = await db.query.worktrees.findFirst({
-      where: eq(worktrees.id, registered!.id),
-    })
+    const [beforeDelete] = await db
+      .select()
+      .from(worktrees)
+      .where(eq(worktrees.id, registered!.id))
+      .limit(1)
     expect(beforeDelete).toBeDefined()
 
     // Delete story (should cascade to worktrees)
     await db.delete(stories).where(eq(stories.id, tempStoryUuid))
 
     // Verify worktree was deleted via cascade
-    const afterDelete = await db.query.worktrees.findFirst({
-      where: eq(worktrees.id, registered!.id),
-    })
+    const [afterDelete] = await db
+      .select()
+      .from(worktrees)
+      .where(eq(worktrees.id, registered!.id))
+      .limit(1)
     expect(afterDelete).toBeUndefined()
   })
 
@@ -200,7 +213,7 @@ describe('Worktree Management Integration Tests', () => {
     const worktreeIds: string[] = []
 
     for (let i = 0; i < 5; i++) {
-      const tempStoryId = `TEST-PAGE-${i + 1}`
+      const tempStoryId = `TSTPG-000${i + 1}`
       const tempStoryUuid = randomUUID()
       tempStoryIds.push(tempStoryUuid)
 
@@ -208,6 +221,7 @@ describe('Worktree Management Integration Tests', () => {
         id: tempStoryUuid,
         storyId: tempStoryId,
         title: `Pagination Test Story ${i + 1}`,
+        storyType: 'feature',
         state: 'in_progress',
       })
 

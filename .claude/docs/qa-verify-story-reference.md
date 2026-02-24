@@ -124,7 +124,7 @@ Each leader estimates tokens. Completion leader calls:
 |-------|----------|----------------|
 | Story exists | `plans/stories/in-progress/{story_id}/` | Directory exists |
 | Status | Story frontmatter | `status: ready-for-qa` |
-| PROOF file | `PROOF-{story_id}.md` | File exists |
+| Evidence | `_implementation/EVIDENCE.yaml` | File exists |
 | Code review | `VERIFICATION.yaml` | `code_review.verdict: PASS` |
 
 ## Verification Checklist Summary
@@ -152,7 +152,7 @@ Each leader estimates tokens. Completion leader calls:
 | Issue | Check |
 |-------|-------|
 | Story not found | Verify `status: ready-for-qa` and location |
-| PROOF missing | Run `/dev-implement-story` to completion |
+| EVIDENCE.yaml missing | Run `/dev-implement-story` to completion |
 | Code review missing | Run `/dev-code-review` first |
 | .http tests fail | Verify dev server is running |
 | Playwright fails | Check browser dependencies |

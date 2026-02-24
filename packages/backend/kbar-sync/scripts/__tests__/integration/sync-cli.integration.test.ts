@@ -12,144 +12,40 @@
  * Run with: pnpm test --filter @repo/kbar-sync -- --reporter=verbose scripts/__tests__/integration/
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
-import pg from 'pg'
-import { writeFile, mkdir, rm } from 'node:fs/promises'
+import { writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { tmpdir } from 'node:os'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import type pg from 'pg'
+import {
+  SKIP_TESTCONTAINERS,
+  startKbarTestContainer,
+  stopKbarTestContainer,
+  createTempDir,
+  removeTempDir,
+} from '../../../src/__tests__/helpers/testcontainers.js'
 
-// Skip if no testcontainers support (CI without Docker)
-const shouldSkip = process.env.SKIP_TESTCONTAINERS === 'true'
-if (shouldSkip) {
-  console.log('Skipping CLI integration tests - SKIP_TESTCONTAINERS=true')
-}
-
-describe.skipIf(shouldSkip)('sync-story CLI Integration Tests (AC-11)', () => {
+describe.skipIf(SKIP_TESTCONTAINERS)('sync-story CLI Integration Tests (AC-11)', () => {
   let container: StartedPostgreSqlContainer
   let client: pg.Client
   let testDir: string
 
   beforeAll(async () => {
-    // Start PostgreSQL container
-    container = await new PostgreSqlContainer('postgres:16-alpine')
-      .withDatabase('kbar_cli_test')
-      .withUsername('test')
-      .withPassword('test')
-      .start()
-
-    // Create database client
-    client = new pg.Client({
-      host: container.getHost(),
-      port: container.getPort(),
-      database: container.getDatabase(),
-      user: container.getUsername(),
-      password: container.getPassword(),
-    })
-
-    await client.connect()
-
-    // Set environment variables for pg Pool in scripts
-    process.env.POSTGRES_HOST = container.getHost()
-    process.env.POSTGRES_PORT = container.getPort().toString()
-    process.env.POSTGRES_USER = container.getUsername()
-    process.env.POSTGRES_PASSWORD = container.getPassword()
-    process.env.POSTGRES_DATABASE = container.getDatabase()
-
-    // Create KBAR schema and tables
-    await client.query(`CREATE SCHEMA IF NOT EXISTS kbar`)
-
-    await client.query(`
-      CREATE TYPE IF NOT EXISTS kbar_story_phase AS ENUM ('setup', 'plan', 'execute', 'review', 'qa', 'done');
-      CREATE TYPE IF NOT EXISTS kbar_artifact_type AS ENUM ('story_file', 'elaboration', 'plan', 'scope', 'evidence', 'review', 'test_plan', 'decisions', 'checkpoint', 'knowledge_context');
-      CREATE TYPE IF NOT EXISTS kbar_sync_status AS ENUM ('pending', 'in_progress', 'completed', 'failed', 'conflict');
-      CREATE TYPE IF NOT EXISTS kbar_story_priority AS ENUM ('P0', 'P1', 'P2', 'P3', 'P4');
-      CREATE TYPE IF NOT EXISTS kbar_conflict_resolution AS ENUM ('filesystem_wins', 'database_wins', 'manual', 'merged', 'deferred');
-    `)
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS kbar.stories (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        story_id TEXT NOT NULL UNIQUE,
-        epic TEXT NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        story_type TEXT NOT NULL,
-        priority kbar_story_priority NOT NULL DEFAULT 'P2',
-        complexity TEXT,
-        story_points INTEGER,
-        current_phase kbar_story_phase NOT NULL DEFAULT 'setup',
-        status TEXT NOT NULL DEFAULT 'backlog',
-        metadata JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS kbar.artifacts (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        story_id UUID NOT NULL REFERENCES kbar.stories(id) ON DELETE CASCADE,
-        artifact_type kbar_artifact_type NOT NULL,
-        file_path TEXT NOT NULL,
-        checksum TEXT NOT NULL,
-        last_synced_at TIMESTAMPTZ,
-        sync_status kbar_sync_status NOT NULL DEFAULT 'pending',
-        metadata JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS kbar.sync_events (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        event_type TEXT NOT NULL,
-        status kbar_sync_status NOT NULL DEFAULT 'pending',
-        story_id TEXT,
-        artifact_id UUID REFERENCES kbar.artifacts(id) ON DELETE SET NULL,
-        files_scanned INTEGER NOT NULL DEFAULT 0,
-        files_changed INTEGER NOT NULL DEFAULT 0,
-        conflicts_detected INTEGER NOT NULL DEFAULT 0,
-        started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        completed_at TIMESTAMPTZ,
-        duration_ms INTEGER,
-        error_message TEXT,
-        metadata JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS kbar.sync_conflicts (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        sync_event_id UUID NOT NULL REFERENCES kbar.sync_events(id) ON DELETE CASCADE,
-        artifact_id UUID NOT NULL REFERENCES kbar.artifacts(id) ON DELETE CASCADE,
-        conflict_type TEXT NOT NULL,
-        filesystem_checksum TEXT NOT NULL,
-        database_checksum TEXT NOT NULL,
-        resolution kbar_conflict_resolution,
-        resolved_at TIMESTAMPTZ,
-        resolved_by TEXT,
-        metadata JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS kbar.sync_checkpoints (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        checkpoint_name TEXT NOT NULL UNIQUE,
-        last_processed_path TEXT,
-        total_processed INTEGER NOT NULL DEFAULT 0,
-        metadata JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `)
+    // Start PostgreSQL container with full KBAR schema applied via shared helper
+    const ctx = await startKbarTestContainer('kbar_cli_test')
+    container = ctx.container
+    client = ctx.client
 
     // Create temp directory for test story files
-    testDir = join(tmpdir(), `kbar-cli-integration-${Date.now()}`)
-    await mkdir(testDir, { recursive: true })
+    // Per L-004: must be under cwd/plans to pass validateFilePath check
+    testDir = await createTempDir('kbar-cli-integration')
   }, 90000) // 90s timeout for container startup
 
   afterAll(async () => {
-    await client?.end()
-    await container?.stop()
-    await rm(testDir, { recursive: true, force: true })
+    await stopKbarTestContainer({ container, client })
+    if (testDir) {
+      await removeTempDir(testDir)
+    }
   })
 
   // ===========================================================================
@@ -258,6 +154,7 @@ status: backlog
   // ===========================================================================
   it('dryRunEpic issues ONE batch query for multiple stories (N+1 prevention)', async () => {
     // Create multiple story directories
+    // Per L-004: must be under cwd/plans to pass validateFilePath check in dryRunEpic
     const epicDir = join(testDir, 'epic-batch-test')
     await mkdir(epicDir, { recursive: true })
 

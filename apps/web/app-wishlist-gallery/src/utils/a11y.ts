@@ -212,4 +212,3 @@ export function generateDragAnnouncement(
       return ''
   }
 }
-

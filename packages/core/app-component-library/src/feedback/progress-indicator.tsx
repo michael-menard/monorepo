@@ -41,8 +41,7 @@ const progressBarVariants = cva('h-full transition-all duration-300 ease-in-out'
 })
 
 export interface ProgressIndicatorProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof progressVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof progressVariants> {
   value?: number
   max?: number
   showLabel?: boolean
@@ -121,8 +120,7 @@ ProgressIndicator.displayName = 'ProgressIndicator'
 
 // Circular progress indicator
 export interface CircularProgressProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof progressBarVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof progressBarVariants> {
   value?: number
   max?: number
   size?: 'sm' | 'default' | 'lg' | 'xl'

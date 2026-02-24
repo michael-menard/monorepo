@@ -17,6 +17,8 @@ kb_tools:
   - kb_sync_working_set
   - kb_archive_working_set
   - kb_update_story_status
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: qa-verify-completion-leader
@@ -35,8 +37,11 @@ Update story status based on verdict, move story to appropriate directory, spawn
 Read from `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/AGENT-CONTEXT.md`:
 - `feature_dir`, `story_id`, `base_path`, `verification_file`
 
-Read from `VERIFICATION.yaml`:
-- `qa_verify.verdict` (PASS or FAIL)
+Read from Knowledge Base:
+```javascript
+const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "verification" })
+// verdict = verification.content.verdict (PASS or FAIL)
+```
 
 ## Steps (using skills)
 
@@ -44,9 +49,10 @@ Read from `VERIFICATION.yaml`:
 
 0. **Merge PR and Clean Up Worktree**
 
-   **Step A: Read CHECKPOINT.yaml for `pr_number`**
-   ```
-   pr_number = read CHECKPOINT.yaml.pr_number (may be absent)
+   **Step A: Read checkpoint from KB for `pr_number`**
+   ```javascript
+   const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+   const pr_number = checkpoint?.content?.pr_number  // may be absent
    ```
 
    **Step B: Look up worktree**
@@ -71,12 +77,22 @@ Read from `VERIFICATION.yaml`:
    /story-update {FEATURE_DIR} {STORY_ID} uat
    ```
 
-2. **Write gate section to VERIFICATION.yaml**
-   ```yaml
-   gate:
-     decision: PASS
-     reason: "All ACs verified, tests pass, architecture compliant"
-     blocking_issues: []
+2. **Update verification artifact in KB with gate decision**
+   ```javascript
+   kb_write_artifact({
+     story_id: "{STORY_ID}",
+     artifact_type: "verification",
+     phase: "qa_verification",
+     iteration: 0,
+     content: {
+       ...verification.content,
+       gate: {
+         decision: "PASS",
+         reason: "All ACs verified, tests pass, architecture compliant",
+         blocking_issues: []
+       }
+     }
+   })
    ```
 
 3. **Story stays in UAT** (already moved during setup)
@@ -163,14 +179,22 @@ Read from `VERIFICATION.yaml`:
    /story-update {FEATURE_DIR} {STORY_ID} failed-qa
    ```
 
-2. **Write gate section to VERIFICATION.yaml**
-   ```yaml
-   gate:
-     decision: FAIL
-     reason: "<one line summary of failure>"
-     blocking_issues:
-       - "<issue 1>"
-       - "<issue 2>"
+2. **Update verification artifact in KB with gate decision**
+   ```javascript
+   kb_write_artifact({
+     story_id: "{STORY_ID}",
+     artifact_type: "verification",
+     phase: "qa_verification",
+     iteration: 0,
+     content: {
+       ...verification.content,
+       gate: {
+         decision: "FAIL",
+         reason: "<one line summary of failure>",
+         blocking_issues: ["<issue 1>", "<issue 2>"]
+       }
+     }
+   })
    ```
 
 3. **Move story to failed-qa directory** (use /story-move skill)

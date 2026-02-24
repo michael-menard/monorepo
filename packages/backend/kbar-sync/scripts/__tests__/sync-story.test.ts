@@ -278,7 +278,7 @@ describe('exit code logic', () => {
 
 describe('path security', () => {
   it('rejects path traversal via validateFilePath', async () => {
-    const { validateFilePath } = await import('../../src/__types__/index.js')
+    const { validateFilePath } = await vi.importActual<typeof import('../../src/__types__/index.js')>('../../src/__types__/index.js')
 
     expect(() => {
       validateFilePath(

@@ -106,7 +106,6 @@ paths:
   base: plans/stories/in-progress/WRKF-1021/
   story_file: plans/stories/in-progress/WRKF-1021/WRKF-1021.md
   artifacts: plans/stories/in-progress/WRKF-1021/_implementation/
-  proof_file: plans/stories/in-progress/WRKF-1021/PROOF-WRKF-1021.md
 
 status:
   current_phase: setup
@@ -124,7 +123,7 @@ paths:
   base: plans/stories/elaboration/WRKF-1021/
   story_file: plans/stories/elaboration/WRKF-1021/WRKF-1021.md
   artifacts: plans/stories/elaboration/WRKF-1021/_implementation/
-  elab_file: plans/stories/elaboration/WRKF-1021/ELAB-WRKF-1021.md
+  elab_yaml: plans/stories/elaboration/WRKF-1021/_implementation/ELAB.yaml
 
 status:
   current_phase: setup
@@ -142,7 +141,6 @@ paths:
   base: plans/stories/QA/WRKF-1021/
   story_file: plans/stories/QA/WRKF-1021/WRKF-1021.md
   artifacts: plans/stories/QA/WRKF-1021/_implementation/
-  proof_file: plans/stories/QA/WRKF-1021/PROOF-WRKF-1021.md
   verification_file: plans/stories/QA/WRKF-1021/_implementation/VERIFICATION.yaml
 
 status:

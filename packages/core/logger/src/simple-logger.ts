@@ -32,9 +32,13 @@ class SimpleLogger {
 
     // Create Pino logger instance
     // Note: pino-pretty removed - it uses worker threads which are incompatible with Lambda
-    this.pinoLogger = pino({
-      level: this.getPinoLevel(this.config.level),
-    })
+    // Write to stderr (fd 2) to avoid corrupting stdio-based protocols like MCP
+    this.pinoLogger = pino(
+      {
+        level: this.getPinoLevel(this.config.level),
+      },
+      pino.destination(2),
+    )
   }
 
   private shouldLog(level: LogLevel): boolean {

@@ -22,7 +22,7 @@ import {
   useCompleteUploadSessionMutation,
   type CompleteUploadSessionResponse,
 } from '@repo/api-client'
-import { uploadToPresignedUrl, UploadError } from '@repo/upload-client'
+import { uploadToPresignedUrl, UploadError } from '@repo/upload/client'
 import { z } from 'zod'
 
 /**

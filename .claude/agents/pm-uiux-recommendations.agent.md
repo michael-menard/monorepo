@@ -32,44 +32,24 @@ Read from:
 - Provide accessibility requirements as concrete checks, not “be accessible”.
 
 ## Output (MUST WRITE)
-- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/UIUX-NOTES.md` (MVP-critical only)
-- `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/FUTURE-UIUX.md` (polish and enhancements)
+If the story does **not** touch UI: write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/uiux-notes.yaml` with `skipped: true` and stop.
 
-## Required Structure: UIUX-NOTES.md (MVP-Critical)
+Otherwise write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/uiux-notes.yaml`:
 
-# Verdict
-- PASS / PASS-WITH-NOTES / SKIPPED
-- (FAIL only if core journey cannot work)
+```yaml
+skipped: false
+verdict: PASS | PASS-WITH-NOTES   # FAIL only if core journey cannot work
+component_patterns:
+  - "Use FileDropzone from @repo/app-component-library"  # names only
+accessibility:
+  - "aria-label on all icon buttons"  # MVP-blocking only
+design_system_rules:
+  - "token-only colors (hard gate)"
+  - "_primitives import required"
+playwright_evidence:
+  - "Core journey step description"  # steps to demonstrate in Playwright
+```
 
-# MVP Component Architecture
-- Components required for core journey (names only)
-- Reuse targets in packages/** for core flow
-- shadcn primitives for core UI
+MVP-critical only — polish and enhancements are out of scope.
 
-# MVP Accessibility (Blocking Only)
-- Requirements that prevent core journey usage
-- Basic keyboard navigation for core flow
-- Critical screen reader requirements
-
-# MVP Design System Rules
-- token-only colors (hard gate)
-- `_primitives` import requirement
-
-# MVP Playwright Evidence
-- Core journey demonstration steps
-
-## Required Structure: FUTURE-UIUX.md (Polish)
-
-# UX Polish Opportunities
-- Delighter ideas
-- Edge case handling
-- Animation/transition suggestions
-
-# Accessibility Enhancements
-- Beyond-basic a11y improvements
-- WCAG AAA considerations
-
-# UI Improvements
-- Visual polish
-- Responsive refinements
-- Design system extensions
+The leader reads this file and embeds it as `pm_artifacts.uiux_notes` in story.yaml (omitted entirely if `skipped: true`).

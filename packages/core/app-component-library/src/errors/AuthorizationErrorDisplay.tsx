@@ -1,5 +1,3 @@
-import { cn } from '../_lib/utils'
-import { Button } from '../_primitives/button'
 import {
   parseAuthorizationError,
   getAuthorizationErrorTitle,
@@ -7,6 +5,8 @@ import {
   getAuthorizationErrorAction,
   type ParsedAuthorizationError,
 } from '@repo/api-client/utils/authorization-errors'
+import { cn } from '../_lib/utils'
+import { Button } from '../_primitives/button'
 
 /**
  * AuthorizationErrorDisplay Component
@@ -189,9 +189,7 @@ export function AuthorizationErrorDisplay({
       <div className="mb-4">{getIcon()}</div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600 mb-6 max-w-md">{description}</p>
-      {action.type !== 'none' && (
-        <Button onClick={handleAction}>{action.text}</Button>
-      )}
+      {action.type !== 'none' && <Button onClick={handleAction}>{action.text}</Button>}
     </div>
   )
 }

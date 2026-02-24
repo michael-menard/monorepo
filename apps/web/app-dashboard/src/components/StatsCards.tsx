@@ -20,7 +20,9 @@ export interface DashboardStatsCardsProps {
 /**
  * Type guard to check if stats has buildProgress
  */
-function hasProgress(stats: DashboardStats | DashboardStatsExtended): stats is DashboardStatsExtended {
+function hasProgress(
+  stats: DashboardStats | DashboardStatsExtended,
+): stats is DashboardStatsExtended {
   return 'buildProgress' in stats
 }
 
@@ -28,7 +30,12 @@ function hasProgress(stats: DashboardStats | DashboardStatsExtended): stats is D
  * Dashboard-specific stats cards with LEGO branding
  * Uses the generic StatsCards component from @repo/app-component-library
  */
-export function StatsCards({ stats, isLoading = false, error = null, className }: DashboardStatsCardsProps) {
+export function StatsCards({
+  stats,
+  isLoading = false,
+  error = null,
+  className,
+}: DashboardStatsCardsProps) {
   const items: StatItem[] = [
     {
       icon: Blocks,

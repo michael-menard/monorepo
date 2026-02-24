@@ -106,10 +106,12 @@ function DefaultUpgradePrompt({
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </div>
-      <h3 className="text-lg font-semibold text-foreground mb-2">{featureName} is a {requiredTierName} Feature</h3>
+      <h3 className="text-lg font-semibold text-foreground mb-2">
+        {featureName} is a {requiredTierName} Feature
+      </h3>
       <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-        Upgrade from {currentTierName} to {requiredTierName} to unlock {featureName.toLowerCase()} and
-        more premium features.
+        Upgrade from {currentTierName} to {requiredTierName} to unlock {featureName.toLowerCase()}{' '}
+        and more premium features.
       </p>
       <button className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
         View Upgrade Options
@@ -196,7 +198,11 @@ export function FeatureGate({
   if (showUpgradePrompt) {
     const requiredTier = FEATURE_REQUIRED_TIER[feature]
     return (
-      <DefaultUpgradePrompt feature={feature} requiredTier={requiredTier} currentTier={currentTier} />
+      <DefaultUpgradePrompt
+        feature={feature}
+        requiredTier={requiredTier}
+        currentTier={currentTier}
+      />
     )
   }
 
@@ -234,5 +240,11 @@ export function withFeatureGate<P extends object>(
 }
 
 // Re-export constants and schemas for backward compatibility (WINT-0010 iteration 2)
-export { FeatureSchema, TierSchema, FEATURE_REQUIRED_TIER, TIER_DISPLAY_NAMES, FEATURE_DISPLAY_NAMES }
+export {
+  FeatureSchema,
+  TierSchema,
+  FEATURE_REQUIRED_TIER,
+  TIER_DISPLAY_NAMES,
+  FEATURE_DISPLAY_NAMES,
+}
 export type { Feature, Tier }

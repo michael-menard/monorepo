@@ -119,7 +119,7 @@ export function DeleteConfirmModal({
             onClick={handleConfirm}
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            data-testid="delete-confirm-button"
+            data-testid="delete-confirm-delete"
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
           </AppAlertDialogAction>

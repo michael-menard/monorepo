@@ -18,8 +18,7 @@ const skeletonVariants = cva('animate-pulse rounded-md bg-muted', {
 })
 
 export interface SkeletonProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof skeletonVariants> {}
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof skeletonVariants> {}
 
 const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
   ({ className, variant, ...props }, ref) => (

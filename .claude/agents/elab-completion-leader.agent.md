@@ -20,7 +20,7 @@ skills_used:
 Phase 2 Leader - Write elaboration artifacts and update status
 
 ## Mission
-Generate final ELAB-{STORY_ID}.md, append QA notes to story, update status, and move directory.
+Finalize ELAB.yaml verdict/summary, append qa_notes to story, update status, and move directory.
 This is a self-contained leader (no worker sub-agents).
 
 ---
@@ -36,140 +36,48 @@ From orchestrator context:
 
 From filesystem:
 - `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story file
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ANALYSIS.md` - audit/discovery results
-- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/DECISIONS.yaml` - (autonomous mode only)
+- `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` - full elaboration record (audit, gaps, opportunities, verdict)
 
 ### Decision Source
 
-**Interactive mode**: Decisions come from orchestrator context (user input)
+**Interactive mode**: Decisions come from orchestrator context (user input); write them into ELAB.yaml.
 
-**Autonomous mode**: Read decisions from `_implementation/DECISIONS.yaml`:
-```yaml
-decisions:
-  gaps:
-    - id: 1
-      finding: "..."
-      decision: "Add as AC" | "KB-logged"
-      notes: "..."
-  enhancements:
-    - id: 1
-      finding: "..."
-      decision: "KB-logged"
-      notes: "..."
-  follow_ups: []  # Always empty in autonomous mode
-  out_of_scope: []  # Always empty in autonomous mode
-```
+**Autonomous mode**: Read decisions from `_implementation/ELAB.yaml` `gaps[].decision` and `opportunities[].decision` fields (already populated by elab-autonomous-decider).
 
 ---
 
 ## Actions (Sequential)
 
-### Step 1: Generate ELAB-{STORY_ID}.md
+### Step 1: Finalize ELAB.yaml
 
-Write to `{FEATURE_DIR}/elaboration/{STORY_ID}/ELAB-{STORY_ID}.md`:
+Update `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` with final verdict:
 
-```markdown
-# Elaboration Report - {STORY_ID}
-
-**Date**: [YYYY-MM-DD]
-**Verdict**: [PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED]
-
-## Summary
-
-[1-2 sentence summary of elaboration outcome]
-
-## Audit Results
-
-[Copy from ANALYSIS.md]
-
-## Issues & Required Fixes
-
-| # | Issue | Severity | Required Fix | Status |
-|---|-------|----------|--------------|--------|
-[From ANALYSIS.md]
-
-## Split Recommendation (if SPLIT REQUIRED)
-
-[From ANALYSIS.md if applicable]
-
-## Discovery Findings
-
-### Gaps Identified
-
-| # | Finding | Decision | Notes |
-|---|---------|----------|-------|
-[From interactive discussion, DECISIONS.yaml, or "Not Reviewed"]
-
-### Enhancement Opportunities
-
-| # | Finding | Decision | Notes |
-|---|---------|----------|-------|
-[From interactive discussion, DECISIONS.yaml, or "Not Reviewed"]
-
-### Follow-up Stories Suggested
-
-- [ ] [From user decisions - empty in autonomous mode]
-
-### Items Marked Out-of-Scope
-
-- [Item]: [User justification - empty in autonomous mode]
-
-### KB Entries Created (Autonomous Mode Only)
-
-If autonomous mode, list KB entries:
-- `{kb_entry_id}`: {finding summary}
-- ...
-
-## Proceed to Implementation?
-
-[YES - story may proceed | NO - blocked, requires PM fixes | NO - requires split]
+```yaml
+verdict: PASS | CONDITIONAL_PASS | FAIL | SPLIT_REQUIRED
+decided_at: "{ISO_TIMESTAMP}"
+summary:
+  gaps_found: N
+  gaps_resolved: N       # gaps with decision != null
+  opportunities_found: N
+  opportunities_logged: N  # opportunities with kb_entry_id != null
+  acs_added: N
 ```
 
-### Step 2: Append QA Discovery Notes to Story
+**Interactive mode**: Also fill in `gaps[].decision` and `opportunities[].decision` from user choices.
+**Autonomous mode**: These are already set by elab-autonomous-decider; only write `verdict`, `decided_at`, `summary`.
 
-If any findings were reviewed, append to {STORY_ID}.md:
+### Step 2: Append QA Notes to Story
 
-**Interactive mode:**
-```markdown
-## QA Discovery Notes (for PM Review)
+Append `qa_notes` block to `{STORY_ID}.md` frontmatter (or as a YAML block at end of file):
 
-_Added by QA Elaboration on [date]_
-
-### Gaps Identified
-| # | Finding | User Decision | Notes |
-|---|---------|---------------|-------|
-
-### Enhancement Opportunities
-| # | Finding | User Decision | Notes |
-|---|---------|---------------|-------|
-
-### Follow-up Stories Suggested
-- [ ] [description]
-
-### Items Marked Out-of-Scope
-- [Item]: [Justification]
-```
-
-**Autonomous mode:**
-```markdown
-## QA Discovery Notes (Auto-Generated)
-
-_Added by Autonomous Elaboration on [date]_
-
-### MVP Gaps Resolved
-| # | Finding | Resolution | AC Added |
-|---|---------|------------|----------|
-| 1 | [gap] | Add as AC | AC 9 |
-
-### Non-Blocking Items (Logged to KB)
-| # | Finding | Category | KB Entry |
-|---|---------|----------|----------|
-| 1 | [finding] | edge-case | {kb_entry_id} |
-
-### Summary
-- ACs added: N
-- KB entries created: M
-- Mode: autonomous
+```yaml
+qa_notes:
+  verdict: PASS | CONDITIONAL_PASS | FAIL | SPLIT_REQUIRED
+  decided_at: "{ISO_TIMESTAMP}"
+  mode: interactive | autonomous
+  acs_added: N
+  gaps_resolved: N
+  opportunities_logged: N
 ```
 
 ### Step 3: Update Story Status (use /story-update skill)
@@ -206,7 +114,7 @@ Use the appropriate status from Step 3.
 ### Step 6: Verify Final State
 
 Confirm:
-- ELAB-{STORY_ID}.md exists
+- `_implementation/ELAB.yaml` exists with `verdict` and `decided_at` set
 - Story status updated (frontmatter + index)
 - Directory in correct location
 
@@ -215,8 +123,8 @@ Confirm:
 ## Output
 
 Write exactly:
-- `ELAB-{STORY_ID}.md` - elaboration report
-- Append to `{STORY_ID}.md` - QA Discovery Notes section
+- Update `_implementation/ELAB.yaml` - finalize verdict + summary
+- Append `qa_notes` block to `{STORY_ID}.md`
 
 ---
 
@@ -240,8 +148,8 @@ Before reporting completion signal, call the token-log skill:
 ```
 
 Track:
-- Input: ANALYSIS.md, STORY-XXX.md, user decisions
-- Output: ELAB-STORY-XXX.md, story updates
+- Input: ELAB.yaml, STORY-XXX.md, user decisions
+- Output: ELAB.yaml updates, story qa_notes
 
 Estimate: `tokens ≈ bytes / 4`
 

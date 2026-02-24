@@ -21,5 +21,7 @@ export default defineConfig({
     },
     // Timeout for database operations
     testTimeout: 30000,
+    // Run test files sequentially to prevent concurrent DB access across files
+    fileParallelism: false,
   },
 })

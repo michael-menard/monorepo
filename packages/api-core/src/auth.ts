@@ -17,7 +17,7 @@ function getVerifier() {
 
     if (!userPoolId || !clientId) {
       throw new Error(
-        'COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID environment variables are required'
+        'COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID environment variables are required',
       )
     }
 

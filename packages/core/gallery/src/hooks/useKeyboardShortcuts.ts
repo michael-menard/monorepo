@@ -157,7 +157,15 @@ export function useKeyboardShortcuts(
       // Case-insensitive match for letter keys
       const shortcutKey = s.key.length === 1 ? s.key.toLowerCase() : s.key
       const eventKey = normalizedKey.length === 1 ? normalizedKey.toLowerCase() : normalizedKey
-      return shortcutKey === eventKey && !s.disabled
+      if (shortcutKey !== eventKey || s.disabled) {
+        return false
+      }
+      // Single-letter shortcuts should not fire when modifier keys are held
+      // (e.g., Ctrl+A should not trigger 'a' shortcut)
+      if (s.key.length === 1 && (event.ctrlKey || event.metaKey || event.altKey)) {
+        return false
+      }
+      return true
     })
 
     if (shortcut) {

@@ -1,13 +1,16 @@
 ---
 created: 2026-01-24
-updated: 2026-02-01
-version: 4.0.0
+updated: 2026-02-22
+version: 4.1.0
 type: leader
 permission_level: test-run
 triggers: ["/qa-verify-story"]
 skills_used:
   - /token-log
 schema: packages/backend/orchestrator/src/artifacts/qa-verify.ts
+kb_tools:
+  - kb_read_artifact
+  - kb_write_artifact
 ---
 
 # Agent: qa-verify-verification-leader
@@ -24,28 +27,32 @@ Verify story implementation using evidence-first approach. Read EVIDENCE.yaml as
 
 ## Inputs (Priority Order)
 
-**1. PRIMARY - Read First:**
-- `_implementation/EVIDENCE.yaml` - Single source of truth
+**1. PRIMARY - Read First (from KB):**
+```javascript
+const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "evidence" })
+```
 
-**2. SECONDARY - Read if needed:**
-- `_implementation/KNOWLEDGE-CONTEXT.yaml` - Attack vectors, edge cases
-- `_implementation/REVIEW.yaml` - Code review results
+**2. SECONDARY - Read if needed (from KB):**
+```javascript
+const context = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "context" })
+const review = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "review" })
+```
 
 **3. ONLY IF AC IS MISSING:**
 - Story file - To understand what AC requires
 - Code files - To verify evidence exists
 
 **DO NOT READ** unless absolutely necessary:
-- Full PROOF file (EVIDENCE.yaml has the data)
+- Full PROOF artifact (evidence artifact has the data)
 - BACKEND-LOG.md / FRONTEND-LOG.md (deprecated)
 
 ---
 
 ## Evidence-First Verification Flow
 
-### Step 1: Read EVIDENCE.yaml
+### Step 1: Read Evidence from KB
 
-Load the evidence bundle. Extract:
+Load the evidence bundle from `evidence.content`. Extract:
 - `acceptance_criteria[]` - AC status and evidence items
 - `touched_files[]` - Files that were changed
 - `commands_run[]` - Build/test results
@@ -92,7 +99,7 @@ test_results:
 
 ### Step 4: Check Test Quality
 
-Read KNOWLEDGE-CONTEXT.yaml for:
+Read from `context.content` (KB artifact) for:
 - `attack_vectors` - Edge cases to verify coverage
 - `do_not_repeat` - Anti-patterns to check against
 - `patterns_to_avoid` - Things that should NOT be in tests
@@ -115,7 +122,7 @@ coverage_meets_threshold: true  # >= 45% per CLAUDE.md
 
 ### Step 6: Check Architecture Compliance
 
-Using ADRs from KNOWLEDGE-CONTEXT.yaml:
+Using ADRs from `context.content.architecture_decisions` (KB artifact):
 
 - ADR-001: API paths follow schema
 - ADR-002: Infrastructure patterns
@@ -145,7 +152,16 @@ current_phase: qa-verify
 last_successful_phase: qa-setup
 ```
 
-### Step 9: Write QA-VERIFY.yaml
+### Step 9: Write Verification Artifact to KB
+
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "verification",
+  phase: "qa_verification",
+  iteration: 0,
+  content: { /* QA-VERIFY structure below */ }
+})
 
 ---
 
@@ -229,7 +245,7 @@ Before emitting signal:
 
 ## Non-Negotiables
 
-- **READ EVIDENCE.yaml FIRST** - Primary source of truth
+- **READ evidence artifact from KB FIRST** - Primary source of truth
 - Only read story file if AC is MISSING in evidence
 - MUST run tests (not just trust evidence)
 - MUST check test quality
@@ -245,8 +261,8 @@ Before emitting signal:
 | Read | Before | After |
 |------|--------|-------|
 | Story file | Always (~7k) | Only if AC MISSING |
-| PROOF file | Always (~4k) | Never |
-| EVIDENCE.yaml | N/A | Always (~2k) |
+| PROOF artifact | Always (~4k) | Never |
+| evidence artifact (KB) | N/A | Always (~2k) |
 | Code files | All touched | Only for edge cases |
 
 **Estimated savings: ~15k tokens per QA run**

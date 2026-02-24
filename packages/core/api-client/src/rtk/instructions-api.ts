@@ -341,10 +341,7 @@ export function createInstructionsApi(config?: InstructionsApiConfig) {
        *
        * Story INST-1008: Upload thumbnail mutation
        */
-      uploadThumbnail: builder.mutation<
-        UploadThumbnailResponse,
-        { mocId: string; file: File }
-      >({
+      uploadThumbnail: builder.mutation<UploadThumbnailResponse, { mocId: string; file: File }>({
         query: ({ mocId, file }) => {
           logger.debug('Uploading thumbnail', undefined, {
             mocId,

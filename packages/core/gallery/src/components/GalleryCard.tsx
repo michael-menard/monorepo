@@ -346,7 +346,10 @@ export const GalleryCard = ({
               'transition-opacity duration-200',
               'md:opacity-0 md:group-hover:opacity-100',
             )}
+            role="presentation"
             data-testid={`${testId}-hover-overlay`}
+            onClick={e => e.stopPropagation()}
+            onKeyDown={e => e.stopPropagation()}
           >
             {hoverOverlay}
           </div>

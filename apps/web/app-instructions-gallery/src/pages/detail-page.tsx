@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from '@repo/app-component-library'
 import { GalleryGrid, GalleryLightbox, useLightbox, type LightboxImage } from '@repo/gallery'
+import { logger } from '@repo/logger'
 import type { Instruction } from '../__types__'
 import { ThumbnailUpload } from '../components/ThumbnailUpload'
 import { FileDownloadButton } from '../components/FileDownloadButton'
@@ -199,7 +200,7 @@ export function DetailPage({
   const handleThumbnailSuccess = useCallback((thumbnailUrl: string) => {
     // RTK Query will automatically invalidate and refetch
     // The UI will update when the cache is invalidated
-    console.info('Thumbnail uploaded successfully:', thumbnailUrl)
+    logger.info('Thumbnail uploaded successfully', { thumbnailUrl })
   }, [])
 
   // Loading state

@@ -41,6 +41,14 @@ CREATE TABLE IF NOT EXISTS audit_log (
     timestamp TIMESTAMP DEFAULT now() NOT NULL
 );
 
+-- Create IVFFlat index for approximate nearest neighbor vector search
+-- Configuration: lists=100 is optimal for datasets up to ~10k entries
+-- vector_cosine_ops: cosine similarity (normalized dot product)
+CREATE INDEX IF NOT EXISTS knowledge_entries_embedding_idx
+ON knowledge_entries
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS knowledge_entries_role_idx ON knowledge_entries(role);
 CREATE INDEX IF NOT EXISTS knowledge_entries_entry_type_idx ON knowledge_entries(entry_type);
