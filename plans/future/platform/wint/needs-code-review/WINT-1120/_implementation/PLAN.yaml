@@ -1,0 +1,145 @@
+schema: 2
+story_id: "WINT-1120"
+timestamp: "2026-02-23T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Setup, Dependency Gate, and Environment Validation — confirm all five dependency stories are at uat or completed, verify postgres-knowledgebase accessible on port 5433, confirm core.stories and core.worktrees tables populated, identify one story ID present on disk but absent from core.stories for DB-miss scenarios, and confirm the unified physical table identity"
+    files:
+      - "packages/backend/mcp-tools/src/__tests__/integration/wint-1120-foundation-validation.test.ts"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/story-management/story-get-status.ts"
+      - "packages/backend/mcp-tools/src/worktree-management/index.ts"
+      - "packages/backend/mcp-tools/src/worktree-management/__tests__/integration.test.ts"
+    dependencies: []
+    slice: backend
+    verification: "pnpm check-types --filter @repo/mcp-tools"
+    acs_covered: []
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Write integration test file covering AC-1 (CRUD), AC-2 (shim DB-hit), AC-3 (shim DB-miss), AC-4 (shim update DB-only write), AC-8 (LangGraph parity read), AC-9 (LangGraph parity write), AC-10 (worktree register roundtrip) — following the canonical pattern from worktree-management/__tests__/integration.test.ts with real postgres-knowledgebase (port 5433, no mocks)"
+    files:
+      - "packages/backend/mcp-tools/src/__tests__/integration/wint-1120-foundation-validation.test.ts"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/worktree-management/__tests__/integration.test.ts"
+      - "packages/backend/mcp-tools/src/story-compatibility/__tests__/integration/shim.integration.test.ts"
+      - "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+      - "packages/backend/orchestrator/src/db/story-repository.ts"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm test --filter @repo/mcp-tools -- --reporter=verbose wint-1120-foundation-validation"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-8", "AC-9", "AC-10"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Command verification — manually verify /story-status (AC-5), /story-update (AC-6), /story-move (AC-7) against live DB with before/after state capture. Record DB query output and db_updated: true evidence directly in EVIDENCE.yaml entries. Story reverted post-test for AC-7."
+    files:
+      - "plans/future/platform/wint/in-progress/WINT-1120/_implementation/EVIDENCE.yaml"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/story-management/story-update-status.ts"
+      - "packages/backend/mcp-tools/src/story-management/story-get-status.ts"
+    dependencies: [2]
+    slice: backend
+    verification: "cat plans/future/platform/wint/in-progress/WINT-1120/_implementation/EVIDENCE.yaml"
+    acs_covered: ["AC-5", "AC-6", "AC-7"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Worktree conflict detection and cleanup verification (AC-11, AC-12), then compile full EVIDENCE.yaml (AC-13) with all 14 AC entries plus DB query results. File fix stories for any failures and record blocker story IDs in EVIDENCE.yaml (AC-14)."
+    files:
+      - "plans/future/platform/wint/in-progress/WINT-1120/_implementation/EVIDENCE.yaml"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/worktree-management/__tests__/integration.test.ts"
+      - "packages/backend/mcp-tools/src/worktree-management/worktree-mark-complete.ts"
+    dependencies: [3]
+    slice: backend
+    verification: "cat plans/future/platform/wint/in-progress/WINT-1120/_implementation/EVIDENCE.yaml"
+    acs_covered: ["AC-11", "AC-12", "AC-13", "AC-14"]
+
+files_to_change:
+  - path: "packages/backend/mcp-tools/src/__tests__/integration/wint-1120-foundation-validation.test.ts"
+    action: create
+    reason: "One integration test file covering all programmatically testable ACs (AC-1 through AC-4, AC-8 through AC-10) — spike story, test-only output"
+  - path: "plans/future/platform/wint/in-progress/WINT-1120/_implementation/EVIDENCE.yaml"
+    action: create
+    reason: "Proof artifact documenting pass/fail for all AC-1 through AC-14 with specific DB query results as evidence"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/mcp-tools"
+    when: "after writing integration test file"
+    required: true
+  - command: "pnpm test --filter @repo/mcp-tools -- --reporter=verbose wint-1120-foundation-validation"
+    when: "after writing integration test file"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Integration test: wint-1120-foundation-validation.test.ts — four storyGetStatus, storyUpdateStatus, storyGetByStatus, storyGetByFeature calls against real WINT story IDs execute without error"
+    evidence_type: test
+  - ac_id: "AC-2"
+    planned_evidence: "Integration test: shimGetStoryStatus for UUID of DB-present story returns result with no directory scan (shim implementation returns DB result directly)"
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: "Integration test: shimGetStoryStatus for a story absent from DB but present in temp directory returns result with state derived from directory swim lane"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "Integration test: shimUpdateStoryStatus for a story absent from DB returns null; no filesystem side effects observed"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "Manual verification documented in EVIDENCE.yaml: /story-status output for a known WINT story matches DB state column"
+    evidence_type: manual
+  - ac_id: "AC-6"
+    planned_evidence: "Manual verification documented in EVIDENCE.yaml: /story-update result YAML shows db_updated: true; DB updated_at timestamp advanced"
+    evidence_type: manual
+  - ac_id: "AC-7"
+    planned_evidence: "Manual verification documented in EVIDENCE.yaml: /story-move DB state updated before directory mv; story reverted post-test"
+    evidence_type: manual
+  - ac_id: "AC-8"
+    planned_evidence: "Integration test: StoryRepository.getStory() and storyGetStatus() return matching storyId, state, title fields for same story ID"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "Integration test: StoryRepository.updateStoryState() write is immediately visible via storyGetStatus() read for same story ID"
+    evidence_type: test
+  - ac_id: "AC-10"
+    planned_evidence: "Integration test: worktreeRegister() followed immediately by worktreeGetByStory() returns record with correct story_id, branch_name, and status: active"
+    evidence_type: test
+  - ac_id: "AC-11"
+    planned_evidence: "Manual verification documented in EVIDENCE.yaml: dev-implement-story shows three-option dialog when active worktree already exists for a story; no duplicate worktree record created"
+    evidence_type: manual
+  - ac_id: "AC-12"
+    planned_evidence: "Integration test (or manual): worktreeMarkComplete() updates DB record to merged or abandoned; confirmed via direct DB query"
+    evidence_type: test
+  - ac_id: "AC-13"
+    planned_evidence: "EVIDENCE.yaml file containing all 14 AC entries with pass/fail verdict and specific DB query results as proof"
+    evidence_type: file
+  - ac_id: "AC-14"
+    planned_evidence: "EVIDENCE.yaml blockers section populated (fix story IDs if any ACs fail) or empty (if all pass); WINT-1120 verdict recorded as PASS or CONDITIONAL PASS"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "StoryRepository (LangGraph) uses wint.stories via raw pg client; MCP tools use core.stories via Drizzle. Are these the same physical table?"
+    decision: "Verify in ST-1 via information_schema.tables query. The story already documents the expected result as a single row (wint or core schema per WINT-1080 outcome). If schemas differ, AC-8 and AC-9 will be marked FAIL and a fix story filed. No code change is within scope — this is proof-only."
+    rationale: "The story explicitly states this is a parity check, not a repair. If the tables differ, the finding triggers a fix story (AC-14). Planning does not need to resolve this upfront."
+    decided_by: agent
+  - id: ARCH-002
+    question: "AC-11 (conflict detection three-option dialog) requires dev-implement-story command invocation — this is a command-level behavior, not a function-level behavior. How to verify?"
+    decision: "AC-11 is verified manually by invoking the dev-implement-story command against a story that already has an active worktree record in DB, then observing the dialog output. Evidence is captured in EVIDENCE.yaml as a manual verification entry. The integration test covers the DB-level worktree registration (AC-10) which is the foundation for conflict detection."
+    rationale: "The conflict detection logic fires at the command orchestration layer, not the MCP tool layer. Testing it programmatically would require an agent harness outside the scope of this spike. Manual verification is sufficient per ADR-006 exemption (frontend_impacted: false) and the story's explicit delineation of manual vs automated ACs."
+    decided_by: agent
+
+complexity: moderate
+
+notes:
+  - "This is a spike story — scope is PROOF only. No production code changes are permitted. Any bugs found trigger fix story filing (AC-14), not inline repair."
+  - "ADR-005 prohibits DB mocking — all integration tests use real postgres-knowledgebase on port 5433."
+  - "ADR-006 exemption applies — no Playwright E2E tests required (frontend_impacted: false)."
+  - "StoryRepository (orchestrator) uses raw pg client querying wint.stories; MCP tools use Drizzle querying core.stories — confirm physical table identity in ST-1 before AC-8/AC-9."
+  - "The shim integration test pattern from story-compatibility/__tests__/integration/shim.integration.test.ts already demonstrates the DB-hit and DB-miss scenarios. WINT-1120 test extends this with cross-system parity checks and worktree roundtrip."
+  - "The StoryIdSchema in mcp-tools enforces /^[A-Z]{2,10}-\\d{3,4}$/ — use TEST-8001 pattern (not TEST-99999) for test story IDs to avoid Zod validation failures."
+  - "worktreeGetByStory only returns active worktrees (status: active). After worktreeMarkComplete, the record returns null from worktreeGetByStory — verify DB directly for AC-12 proof."
+  - "Steps ST-3 and ST-4 write to EVIDENCE.yaml only (no production code). The integration test file is the only new code artifact."
+  - "Implementation gate per story: all five dependencies (WINT-1040, WINT-1050, WINT-1060, WINT-1070, WINT-1160) must be at uat or completed before ST-2 begins."
