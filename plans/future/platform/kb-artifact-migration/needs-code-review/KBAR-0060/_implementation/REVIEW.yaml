@@ -1,0 +1,199 @@
+schema: 1
+story_id: KBAR-0060
+timestamp: '2026-02-23T22:00:00.000Z'
+iteration: 3
+
+verdict: FAIL
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - react
+  - typescript
+  - accessibility
+
+workers_skipped:
+  - reusability
+
+ranked_patches:
+  - priority: 1
+    file: .claude/scripts/refresh-work-queue.ts
+    issue: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+    severity: high
+    auto_fixable: false
+    worker: typescript
+  - priority: 2
+    file: .claude/scripts/refresh-work-queue.ts
+    issue: "Interface 'Dep' violates Zod-first types requirement"
+    severity: high
+    auto_fixable: false
+    worker: typecheck
+  - priority: 3
+    file: .claude/scripts/refresh-work-queue.ts
+    issue: "Interface 'QueueItem' violates Zod-first types requirement"
+    severity: high
+    auto_fixable: false
+    worker: typecheck
+  - priority: 4
+    file: .claude/scripts/refresh-work-queue.ts
+    issue: "Interface 'WorkingItem' violates Zod-first types requirement"
+    severity: high
+    auto_fixable: false
+    worker: typecheck
+  - priority: 5
+    file: .claude/scripts/refresh-work-queue.ts
+    issue: "Interface 'GateInfo' violates Zod-first types requirement"
+    severity: high
+    auto_fixable: false
+    worker: typecheck
+  - priority: 6
+    file: .claude/scripts/refresh-work-queue.ts
+    issue: "Interface 'WorkQueue' violates Zod-first types requirement"
+    severity: high
+    auto_fixable: false
+    worker: typecheck
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typecheck:
+    verdict: FAIL
+    skipped: false
+    errors: 5
+    warnings: 0
+    findings:
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 77
+        message: "Interface 'Dep' violates Zod-first types requirement"
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 83
+        message: "Interface 'QueueItem' violates Zod-first types requirement"
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 96
+        message: "Interface 'WorkingItem' violates Zod-first types requirement"
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 103
+        message: "Interface 'GateInfo' violates Zod-first types requirement"
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 109
+        message: "Interface 'WorkQueue' violates Zod-first types requirement"
+        severity: error
+        auto_fixable: false
+
+  build:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  reusability:
+    verdict: PASS
+    skipped: true
+    errors: 0
+    warnings: 0
+    findings: []
+
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typescript:
+    verdict: FAIL
+    skipped: false
+    errors: 6
+    warnings: 0
+    findings:
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 25
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        rule: zod-first-types
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 77
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        rule: zod-first-types
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 83
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        rule: zod-first-types
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 96
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        rule: zod-first-types
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 103
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        rule: zod-first-types
+        severity: error
+        auto_fixable: false
+      - file: .claude/scripts/refresh-work-queue.ts
+        line: 109
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        rule: zod-first-types
+        severity: error
+        auto_fixable: false
+
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+total_errors: 11
+total_warnings: 0
+auto_fixable_count: 0
+
+codebase_health:
+  pre_existing_type_errors: 9
+  pre_existing_build_failures: 0
+  note: "9 type errors exist outside this story's scope"
