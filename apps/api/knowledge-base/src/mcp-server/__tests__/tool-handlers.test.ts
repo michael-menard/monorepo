@@ -29,6 +29,11 @@ const { mockKbAdd, mockKbGet, mockKbUpdate, mockKbDelete, mockKbList } = vi.hois
   mockKbList: vi.fn(),
 }))
 
+// Hoisted mocks for story CRUD operations (KBAR-0070)
+const { mockKbGetStory } = vi.hoisted(() => ({
+  mockKbGetStory: vi.fn(),
+}))
+
 // Mock the logger
 vi.mock('../logger.js', () => ({
   createMcpLogger: () => ({
@@ -52,12 +57,23 @@ vi.mock('../../crud-operations/index.js', async importOriginal => {
   }
 })
 
+// Mock story CRUD operations (KBAR-0070)
+vi.mock('../../crud-operations/story-crud-operations.js', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../crud-operations/story-crud-operations.js')>()
+  return {
+    ...actual,
+    kb_get_story: mockKbGetStory,
+  }
+})
+
 import {
   handleKbAdd,
   handleKbGet,
   handleKbUpdate,
   handleKbDelete,
   handleKbList,
+  handleKbGetStory,
   handleToolCall,
   type ToolHandlerDeps,
 } from '../tool-handlers.js'
@@ -340,6 +356,217 @@ describe('Tool Handlers', () => {
       const error = JSON.parse(result.content[0].text)
       expect(error.code).toBe('INTERNAL_ERROR')
       expect(error.message).toContain('Unknown tool')
+    })
+  })
+
+  // ============================================================================
+  // handleKbGetStory tests (KBAR-0070)
+  // ============================================================================
+
+  describe('handleKbGetStory', () => {
+    const mockStory = {
+      id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      storyId: 'TEST-001',
+      title: 'Test Story',
+      feature: 'test',
+      epic: 'platform',
+      storyType: 'feature',
+      state: 'in_progress',
+      phase: 'implementation',
+      blocked: false,
+      blockedReason: null,
+      blockedByStory: null,
+      priority: 'medium',
+      points: 3,
+      iteration: 0,
+      touchesBackend: true,
+      touchesFrontend: false,
+      touchesDatabase: false,
+      touchesInfra: false,
+      storyDir: null,
+      storyFile: 'story.yaml',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      startedAt: null,
+      completedAt: null,
+      fileSyncedAt: null,
+      fileHash: null,
+    }
+
+    const mockArtifacts = [
+      {
+        id: 'artifact-1-uuid',
+        storyId: 'TEST-001',
+        artifactType: 'checkpoint',
+        artifactName: 'CHECKPOINT.yaml',
+        kbEntryId: null,
+        filePath: null,
+        phase: 'implementation',
+        iteration: 0,
+        summary: null,
+        content: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'artifact-2-uuid',
+        storyId: 'TEST-001',
+        artifactType: 'plan',
+        artifactName: 'PLAN.yaml',
+        kbEntryId: null,
+        filePath: null,
+        phase: 'implementation',
+        iteration: 0,
+        summary: null,
+        content: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]
+
+    const mockDependencies = [
+      {
+        id: 'dep-1-uuid',
+        storyId: 'TEST-001',
+        targetStoryId: 'TEST-002',
+        dependencyType: 'depends_on',
+        satisfied: false,
+        createdAt: new Date(),
+      },
+    ]
+
+    it('should return story without artifacts or dependencies when no flags provided (backward-compat)', async () => {
+      mockKbGetStory.mockResolvedValue({
+        story: mockStory,
+        message: 'Found story TEST-001',
+      })
+
+      const result = await handleKbGetStory({ story_id: 'TEST-001' }, mockDeps)
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(parsed.story.storyId).toBe('TEST-001')
+      expect(parsed.message).toBe('Found story TEST-001')
+      // Artifacts and dependencies keys should not be present in backward-compat mode
+      expect(parsed.artifacts).toBeUndefined()
+      expect(parsed.dependencies).toBeUndefined()
+    })
+
+    it('should return story with artifacts when include_artifacts:true and artifacts exist', async () => {
+      mockKbGetStory.mockResolvedValue({
+        story: mockStory,
+        artifacts: mockArtifacts,
+        message: 'Found story TEST-001',
+      })
+
+      const result = await handleKbGetStory(
+        { story_id: 'TEST-001', include_artifacts: true },
+        mockDeps,
+      )
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(parsed.story.storyId).toBe('TEST-001')
+      expect(Array.isArray(parsed.artifacts)).toBe(true)
+      expect(parsed.artifacts).toHaveLength(2)
+      expect(parsed.artifacts[0].artifactType).toBe('checkpoint')
+    })
+
+    it('should return empty artifacts array when include_artifacts:true but no artifacts exist', async () => {
+      mockKbGetStory.mockResolvedValue({
+        story: mockStory,
+        artifacts: [],
+        message: 'Found story TEST-001',
+      })
+
+      const result = await handleKbGetStory(
+        { story_id: 'TEST-001', include_artifacts: true },
+        mockDeps,
+      )
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(Array.isArray(parsed.artifacts)).toBe(true)
+      expect(parsed.artifacts).toHaveLength(0)
+    })
+
+    it('should return story with dependencies when include_dependencies:true and dependencies exist', async () => {
+      mockKbGetStory.mockResolvedValue({
+        story: mockStory,
+        dependencies: mockDependencies,
+        message: 'Found story TEST-001',
+      })
+
+      const result = await handleKbGetStory(
+        { story_id: 'TEST-001', include_dependencies: true },
+        mockDeps,
+      )
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(Array.isArray(parsed.dependencies)).toBe(true)
+      expect(parsed.dependencies).toHaveLength(1)
+      expect(parsed.dependencies[0].storyId).toBe('TEST-001')
+      expect(parsed.dependencies[0].targetStoryId).toBe('TEST-002')
+    })
+
+    it('should return empty dependencies array when include_dependencies:true but no dependencies exist', async () => {
+      mockKbGetStory.mockResolvedValue({
+        story: mockStory,
+        dependencies: [],
+        message: 'Found story TEST-001',
+      })
+
+      const result = await handleKbGetStory(
+        { story_id: 'TEST-001', include_dependencies: true },
+        mockDeps,
+      )
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(Array.isArray(parsed.dependencies)).toBe(true)
+      expect(parsed.dependencies).toHaveLength(0)
+    })
+
+    it('should return null story and empty arrays when story not found (both flags true)', async () => {
+      mockKbGetStory.mockResolvedValue({
+        story: null,
+        artifacts: [],
+        dependencies: [],
+        message: 'Story NONEXISTENT-999 not found',
+      })
+
+      const result = await handleKbGetStory(
+        { story_id: 'NONEXISTENT-999', include_artifacts: true, include_dependencies: true },
+        mockDeps,
+      )
+
+      expect(result.isError).toBeUndefined()
+      const parsed = JSON.parse(result.content[0].text)
+      expect(parsed.story).toBeNull()
+      expect(Array.isArray(parsed.artifacts)).toBe(true)
+      expect(parsed.artifacts).toHaveLength(0)
+      expect(Array.isArray(parsed.dependencies)).toBe(true)
+      expect(parsed.dependencies).toHaveLength(0)
+      expect(parsed.message).toBe('Story NONEXISTENT-999 not found')
+      // Verify service was only called once (single service call)
+      expect(mockKbGetStory).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return validation error for empty story_id', async () => {
+      const result = await handleKbGetStory({ story_id: '' }, mockDeps)
+
+      expect(result.isError).toBe(true)
+      const error = JSON.parse(result.content[0].text)
+      expect(error.code).toBe('VALIDATION_ERROR')
+    })
+
+    it('should propagate service errors as MCP error results', async () => {
+      mockKbGetStory.mockRejectedValue(new Error('Database connection failed'))
+
+      const result = await handleKbGetStory({ story_id: 'TEST-001' }, mockDeps)
+
+      expect(result.isError).toBe(true)
     })
   })
 })

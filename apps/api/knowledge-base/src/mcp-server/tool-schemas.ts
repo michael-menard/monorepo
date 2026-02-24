@@ -32,11 +32,13 @@ import {
 import { SearchInputSchema, GetRelatedInputSchema } from '../search/index.js'
 import {
   KbGetStoryInputSchema,
+  KbGetStoryResultSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
   KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
   type KbGetStoryInput,
+  type KbGetStoryResult,
   type KbListStoriesInput,
   type KbUpdateStoryStatusInput,
   type KbGetNextStoryInput,
@@ -56,6 +58,7 @@ import {
 // Re-export schemas and types for external use
 export {
   KbGetStoryInputSchema,
+  KbGetStoryResultSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
   KbUpdateStoryInputSchema,
@@ -67,6 +70,7 @@ export {
 }
 export type {
   KbGetStoryInput,
+  KbGetStoryResult,
   KbListStoriesInput,
   KbUpdateStoryStatusInput,
   KbGetNextStoryInput,
@@ -2465,18 +2469,31 @@ Example:
  */
 export const kbGetStoryToolDefinition: McpToolDefinition = {
   name: 'kb_get_story',
-  description: `Get a story by its ID.
+  description: `Get a story by its ID, with optional eager loading of artifacts and dependencies.
 
 Returns the full story record including workflow state, phase, and blocking status.
+Optionally includes related artifacts and/or dependency edges in a single call.
 
 Parameters:
 - story_id (required): Story ID to retrieve (e.g., 'WISH-2045')
+- include_artifacts (optional, default false): When true, eagerly loads all story artifact records
+  from story_artifacts table (type, name, phase, iteration, summary). Does not include artifact content JSONB.
+- include_dependencies (optional, default false): When true, eagerly loads all direct (1-hop) dependency
+  edges from story_dependencies table — both outbound (storyId=X) and inbound (targetStoryId=X).
 
-Returns: Story object or null if not found
+Returns: Story object or null if not found. When story is null, artifacts and dependencies are empty arrays.
+When flags are false (default), keys are absent — backward-compatible with pre-KBAR-0070 callers.
 
-Example:
+Example (basic lookup):
 {
   "story_id": "WISH-2045"
+}
+
+Example (full context in one call):
+{
+  "story_id": "WISH-2045",
+  "include_artifacts": true,
+  "include_dependencies": true
 }`,
   inputSchema: zodToMcpSchema(KbGetStoryInputSchema),
 }
