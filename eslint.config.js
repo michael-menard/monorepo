@@ -255,7 +255,12 @@ export default [
 
   // Node.js/Backend specific configuration
   {
-    files: ['apps/api/**/*.{js,ts}', 'packages/tools/**/*.{js,ts}', 'scripts/**/*.{js,ts}'],
+    files: [
+      'apps/api/**/*.{js,ts}',
+      'packages/tools/**/*.{js,ts}',
+      'scripts/**/*.{js,ts}',
+      '.claude/scripts/**/*.{js,ts}',
+    ],
     languageOptions: {
       globals: {
         // Node.js globals

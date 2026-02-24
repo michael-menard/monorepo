@@ -17,11 +17,11 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 |--------|-------|
 | completed | 0 |
 | generated | 0 |
-| created | 0 |
+| created | 1 |
 | ready-to-work | 1 |
 | elaboration | 0 |
 | in-progress | 0 |
-| pending | 26 |
+| pending | 25 |
 
 ---
 
@@ -141,7 +141,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-007: story_get Tool
 
-**Status:** pending
+**Status:** Created
+**Story ID:** KBAR-0070
 **Depends On:** KBAR-006
 **Phase:** 3
 
@@ -158,7 +159,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-008: story_list & story_update Tools
 
-**Status:** pending
+**Status:** Created
+**Story ID:** KBAR-0080
 **Depends On:** KBAR-007
 **Phase:** 3
 
