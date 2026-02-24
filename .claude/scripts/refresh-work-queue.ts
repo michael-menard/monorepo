@@ -47,18 +47,19 @@ const STATUS_TO_COMMAND: Record<string, string> = {
 }
 
 // Pipeline priority — finish work before starting new work
-const STAGE_PRIORITY: Record<string, number> = {
-  'qa': 0,           // ready-for-qa → /qa-verify-story
-  'code-review': 1,  // needs-code-review → /dev-code-review
-  'implement': 2,    // ready-to-work / in-progress → /dev-implement-story
-  'elab': 3,         // elaboration → /elab-story
+// (reserved for future queue-sort logic)
+const _STAGE_PRIORITY: Record<string, number> = {
+  qa: 0, // ready-for-qa → /qa-verify-story
+  'code-review': 1, // needs-code-review → /dev-code-review
+  implement: 2, // ready-to-work / in-progress → /dev-implement-story
+  elab: 3, // elaboration → /elab-story
 }
 
 const STAGE_TO_COMMAND: Record<string, string> = {
-  'qa': 'qa-verify-story',
+  qa: 'qa-verify-story',
   'code-review': 'dev-code-review',
-  'implement': 'dev-implement-story',
-  'elab': 'elab-story',
+  implement: 'dev-implement-story',
+  elab: 'elab-story',
 }
 
 const STAGE_DIRS: { dir: string; stage: string }[] = [
@@ -250,7 +251,9 @@ function extractDepRefs(
     const sid = bm[1]
     if (seen.has(sid)) continue // already captured with a (#NN) ref
     const row = storyIdToRow.get(sid) || ''
-    const inlineSatisfied = depText.includes(`${sid}`) && depText.slice(bm.index).match(new RegExp(`${sid.replace('-', '\\-')}[^,|]*✅`)) !== null
+    const inlineSatisfied =
+      depText.includes(`${sid}`) &&
+      depText.slice(bm.index).match(new RegExp(`${sid.replace('-', '\\-')}[^,|]*✅`)) !== null
     refs.push({ storyId: sid, row, inlineSatisfied })
     seen.add(sid)
   }
@@ -265,7 +268,12 @@ function resolveFeatureDir(featureDir: string, storyId: string): string {
   return path.join(featureDir, epicDir)
 }
 
-function resolveCommand(status: string, featureDir: string, storyId: string, stage?: string): string {
+function resolveCommand(
+  status: string,
+  featureDir: string,
+  storyId: string,
+  stage?: string,
+): string {
   let cmd: string | undefined
   // Stage-based command takes precedence when provided
   if (stage && STAGE_TO_COMMAND[stage]) {
@@ -304,8 +312,14 @@ function parseWorkOrder(featureDir: string): WorkQueue {
   // Filesystem ground truth: stories in UAT/ directories have passed QA
   const uatStories = buildUatSet(featureDir)
 
+  // Filesystem stage map: determines each story's pipeline stage from directory location
+  const stageMap = buildStageMap(featureDir, uatStories)
+
   // Pass 1: build row→info map and completion/cancelled sets
-  const rowMap = new Map<string, { storyId: string; checkbox: string; status: string; allCols: string }>()
+  const rowMap = new Map<
+    string,
+    { storyId: string; checkbox: string; status: string; allCols: string }
+  >()
   const storyIdToRow = new Map<string, string>()
   const completedRows = new Set<string>()
   const cancelledRows = new Set<string>()
@@ -333,7 +347,10 @@ function parseWorkOrder(featureDir: string): WorkQueue {
     if (!line.startsWith('|')) continue
 
     // Split columns
-    const cols = line.split('|').map(c => c.trim()).filter(c => c !== '')
+    const cols = line
+      .split('|')
+      .map(c => c.trim())
+      .filter(c => c !== '')
     if (cols.length < 5) continue
 
     // Skip header/separator rows
@@ -402,7 +419,10 @@ function parseWorkOrder(featureDir: string): WorkQueue {
 
     if (!line.startsWith('|')) continue
 
-    const cols = line.split('|').map(c => c.trim()).filter(c => c !== '')
+    const cols = line
+      .split('|')
+      .map(c => c.trim())
+      .filter(c => c !== '')
     if (cols.length < 5) continue
     if (cols[0] === '☑' || cols[0].match(/^-+$/)) continue
 
@@ -503,6 +523,9 @@ function parseWorkOrder(featureDir: string): WorkQueue {
 
     // This story is unblocked — add to queue if we haven't hit max
     if (queue.length < MAX_QUEUE_SIZE) {
+      const stageInfo = stageMap.get(storyId)
+      const stage = (stageInfo?.stage ?? resolveStageFromStatus(status)) as QueueItem['stage']
+      const storyFeatureDir = stageInfo?.feature_dir ?? resolveFeatureDir(featureDir, storyId)
       queue.push({
         story_id: storyId,
         title,
@@ -510,8 +533,9 @@ function parseWorkOrder(featureDir: string): WorkQueue {
         priority: currentPriority || 'P1',
         row: rowNum,
         status: status.trim(),
-        feature_dir: resolveFeatureDir(featureDir, storyId),
-        command: resolveCommand(status, featureDir, storyId),
+        stage,
+        feature_dir: storyFeatureDir,
+        command: resolveCommand(status, featureDir, storyId, stage),
         deps,
       })
     }
@@ -544,7 +568,9 @@ function main() {
   const featureDir = args.find(a => !a.startsWith('--'))
 
   if (!featureDir) {
-    console.error('Usage: pnpm exec tsx .claude/scripts/refresh-work-queue.ts <feature-dir> [--force]')
+    console.error(
+      'Usage: pnpm exec tsx .claude/scripts/refresh-work-queue.ts <feature-dir> [--force]',
+    )
     process.exit(1)
   }
 
@@ -557,7 +583,9 @@ function main() {
       const generatedAt = new Date(existing.generated_at).getTime()
       const ageSeconds = (Date.now() - generatedAt) / 1000
       if (ageSeconds < STALE_AFTER_SECONDS) {
-        console.log(`WORK-QUEUE.json is fresh (${Math.round(ageSeconds)}s old). Use --force to override.`)
+        console.log(
+          `WORK-QUEUE.json is fresh (${Math.round(ageSeconds)}s old). Use --force to override.`,
+        )
         process.exit(0)
       }
     } catch {
@@ -575,7 +603,9 @@ function main() {
   const queue = parseWorkOrder(featureDir)
   fs.writeFileSync(queuePath, JSON.stringify(queue, null, 2) + '\n')
 
-  console.log(`WORK-QUEUE.json written: ${queue.queue.length} unblocked, ${queue.summary.complete} complete, ${queue.summary.blocked} blocked, ${queue.summary.working} working`)
+  console.log(
+    `WORK-QUEUE.json written: ${queue.queue.length} unblocked, ${queue.summary.complete} complete, ${queue.summary.blocked} blocked, ${queue.summary.working} working`,
+  )
 }
 
 main()
