@@ -17,13 +17,13 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 |--------|-------|
 | completed | 2 |
 | uat | 15 |
-| in-qa | 0 |
-| ready-for-qa | 1 |
+| in-qa | 1 |
+| ready-for-qa | 0 |
 | ready-for-code-review | 0 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 0 |
-| created | 2 |
+| created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
 | ready-to-work | 5 |
@@ -699,10 +699,10 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** created
+**Status:** in-qa
 **Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
-**Story File:** `wint/ready-to-work/WINT-1050/WINT-1050.md`
+**Story File:** `wint/UAT/WINT-1050/WINT-1050.md`
 **Points:** 2
 **Priority:** high
 **Feature:** Augment /story-update command with DB write via shimUpdateStoryStatus before YAML frontmatter update. DB becomes source of truth for story status. Frontmatter sync retained for Phase 1 backward compatibility.
@@ -732,6 +732,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 **Story Generated:** 2026-02-17
 **Elaboration Completed:** 2026-02-17
+**QA Setup Complete:** 2026-02-23 - Moved to UAT, story status updated to in-qa
 
 ---
 
