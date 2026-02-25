@@ -44,6 +44,7 @@ import {
   type KbUpdateStoryInput,
   type KbGetNextStoryInput,
 } from '../crud-operations/story-crud-operations.js'
+import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
 import {
   KbLogTokensInputSchema,
   type KbLogTokensInput,
@@ -196,6 +197,34 @@ export type KbHealthInput = z.infer<typeof KbHealthInputSchema>
 /**
  * MCP Tool definition interface.
  */
+
+// ============================================================================
+// Artifact Search Input Schema (KBAR-0130)
+// ============================================================================
+
+/**
+ * Input schema for artifact_search tool.
+ *
+ * Searches for artifacts indexed in knowledgeEntries via kb_add by composing
+ * tags from story_id, artifact_type, and phase.
+ *
+ * @see KBAR-0130 for artifact search requirements
+ */
+export const ArtifactSearchInputSchema = z.object({
+  /** Story ID to scope the search (e.g., 'KBAR-0130') */
+  story_id: z.string().min(1).optional(),
+
+  /** Artifact type to filter (e.g., 'checkpoint', 'plan', 'evidence') */
+  artifact_type: ArtifactTypeSchema.optional(),
+
+  /** Implementation phase to filter (e.g., 'implementation', 'planning') */
+  phase: StoryPhaseSchema.optional(),
+
+  /** Maximum number of results (1-50, default 10) */
+  limit: z.number().int().min(1).max(50).optional().default(10),
+})
+export type ArtifactSearchInput = z.infer<typeof ArtifactSearchInputSchema>
+
 export interface McpToolDefinition {
   name: string
   description: string
@@ -3027,6 +3056,60 @@ Example:
 /**
  * All MCP tool definitions.
  */
+
+/**
+ * artifact_search tool definition.
+ *
+ * Searches for artifacts indexed in knowledgeEntries via kb_add by composing
+ * tags from story_id, artifact_type, and phase.
+ *
+ * Note: artifact_search only finds artifacts that were indexed in knowledgeEntries
+ * via kb_add (not storyArtifacts table). Use kb_read_artifact for direct artifact
+ * lookup by story_id + artifact_type.
+ *
+ * @see KBAR-0130 for artifact search requirements
+ */
+export const artifactSearchToolDefinition: McpToolDefinition = {
+  name: 'artifact_search',
+  description: `Search for artifacts indexed in the knowledge base.
+
+artifact_search finds artifacts that were indexed via kb_add into the knowledgeEntries
+table using artifact-specific tags. This is different from kb_read_artifact, which
+reads directly from the storyArtifacts table.
+
+Use this tool to discover artifacts by story, type, or phase when you don't know the
+exact artifact ID. Use kb_read_artifact for direct lookup when you know the story_id
+and artifact_type.
+
+Parameters:
+- story_id (optional): Story ID to scope the search (e.g., 'KBAR-0130')
+- artifact_type (optional): Artifact type filter ('checkpoint', 'scope', 'plan', 'evidence', etc.)
+- phase (optional): Implementation phase filter ('setup', 'analysis', 'planning', 'implementation', etc.)
+- limit (optional): Maximum number of results (1-50, default 10)
+
+Returns: Object with results array and metadata (total, fallback_mode, correlation_id)
+
+Empty results are not an error — the artifact may not have been indexed via kb_add.
+
+Example (search by story):
+{
+  "story_id": "KBAR-0130"
+}
+
+Example (search by type and phase):
+{
+  "artifact_type": "checkpoint",
+  "phase": "implementation"
+}
+
+Example (search by story and type):
+{
+  "story_id": "KBAR-0130",
+  "artifact_type": "plan"
+}`,
+  inputSchema: zodToMcpSchema(ArtifactSearchInputSchema),
+}
+
 export const toolDefinitions: McpToolDefinition[] = [
   kbAddToolDefinition,
   kbGetToolDefinition,
@@ -3102,6 +3185,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   // Plan tools (SKCR - KB-native story creation)
   kbGetPlanToolDefinition,
   kbListPlansToolDefinition,
+  // Artifact search tool (KBAR-0130)
+  artifactSearchToolDefinition,
 ]
 
 /**
