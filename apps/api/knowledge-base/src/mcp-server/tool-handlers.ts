@@ -154,6 +154,8 @@ import {
   KbGetTaskInputSchema,
   KbUpdateTaskInputSchema,
   KbListTasksInputSchema,
+  // Artifact search tool (KBAR-0130)
+  ArtifactSearchInputSchema,
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
@@ -1025,6 +1027,170 @@ export async function handleKbGetRelated(
     return errorToToolResult(error)
   }
 }
+
+// ============================================================================
+// Artifact Search Tool Handler (KBAR-0130)
+// ============================================================================
+
+/**
+ * Handle artifact_search tool invocation.
+ *
+ * Searches for artifacts indexed in knowledgeEntries via kb_add by composing
+ * tags from story_id, artifact_type, and phase.
+ *
+ * Note: artifact_search only finds artifacts indexed in knowledgeEntries via kb_add
+ * (not storyArtifacts). Use kb_read_artifact for direct lookup by story_id + artifact_type.
+ *
+ * Tag composition: ['artifact', story_id, artifact_type, phase].filter(Boolean) (all lowercase)
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database and embedding client dependencies
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with search results and metadata
+ */
+export async function handleArtifactSearch(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+  const timeoutConfig = getTimeoutConfig()
+
+  // Log invocation
+  const inputObj = (input ?? {}) as Record<string, unknown>
+  logger.info('artifact_search tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    artifact_type: inputObj?.artifact_type,
+    phase: inputObj?.phase,
+    limit: inputObj?.limit,
+  })
+
+  try {
+    // Authorization check - FIRST operation
+    enforceAuthorization('artifact_search', context)
+    // Validate input with Zod schema
+    const validationStart = Date.now()
+    const validated = ArtifactSearchInputSchema.parse(input)
+    const protocolOverheadMs = Date.now() - validationStart
+
+    // Compose tags for artifact search
+    // All tag segments are lowercase for consistent matching
+    const tags = ['artifact', validated.story_id, validated.artifact_type, validated.phase].filter(
+      Boolean,
+    ) as string[]
+
+    logger.info('artifact_search composed tags', {
+      correlation_id: correlationId,
+      tags,
+    })
+
+    // Execute search with timeout, delegating to kb_search
+    const domainLogicStart = Date.now()
+    const result = await withTimeout(
+      () =>
+        kb_search(
+          {
+            query: ['artifact', validated.story_id, validated.artifact_type, validated.phase]
+              .filter(Boolean)
+              .join(' '),
+            tags,
+            limit: validated.limit ?? 10,
+            min_confidence: 0.0,
+          },
+          deps,
+        ),
+      timeoutConfig.kb_search_timeout_ms,
+      'artifact_search',
+    )
+    const domainLogicTimeMs = Date.now() - domainLogicStart
+
+    const totalTimeMs = Date.now() - startTime
+
+    // Log slow query at warn level if threshold exceeded
+    if (totalTimeMs > timeoutConfig.log_slow_queries_ms) {
+      logger.warn('artifact_search slow query detected', {
+        correlation_id: correlationId,
+        total_time_ms: totalTimeMs,
+        threshold_ms: timeoutConfig.log_slow_queries_ms,
+        tags,
+      })
+    }
+
+    // Log fallback mode at warn level
+    if (result.metadata.fallback_mode) {
+      logger.warn('artifact_search using fallback mode (OpenAI API unavailable)', {
+        correlation_id: correlationId,
+        tags,
+      })
+    }
+
+    // Log success with performance metrics
+    logger.info('artifact_search succeeded', {
+      correlation_id: correlationId,
+      result_count: result.results.length,
+      fallback_mode: result.metadata.fallback_mode,
+      total_time_ms: totalTimeMs,
+      protocol_overhead_ms: protocolOverheadMs,
+      domain_logic_time_ms: domainLogicTimeMs,
+    })
+
+    // Build response with metadata including correlation_id
+    // Propagate fallback_mode for observability
+    const response = {
+      results: result.results,
+      metadata: {
+        ...result.metadata,
+        correlation_id: correlationId,
+      },
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    // Handle timeout error
+    if (error instanceof ToolTimeoutError) {
+      logger.warn('artifact_search timeout', {
+        correlation_id: correlationId,
+        timeout_ms: error.timeoutMs,
+        elapsed_ms: queryTimeMs,
+      })
+
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              code: 'TIMEOUT',
+              message: `Tool execution exceeded ${error.timeoutMs / 1000}s timeout`,
+              correlation_id: correlationId,
+            }),
+          },
+        ],
+      }
+    }
+
+    // Log failure
+    logger.error('artifact_search failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
 
 // ============================================================================
 // Admin Tool Handlers (KNOW-0053)
@@ -4304,6 +4470,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // Plan tools (SKCR - KB-native story creation)
   kb_get_plan: handleKbGetPlan,
   kb_list_plans: handleKbListPlans,
+  // Artifact search tool (KBAR-0130)
+  artifact_search: handleArtifactSearch,
 }
 
 /**
