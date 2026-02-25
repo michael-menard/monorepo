@@ -1360,6 +1360,7 @@ import {
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
   KbDeleteArtifactInputSchema,
+  ArtifactWriteInputSchema,
 } from '../crud-operations/index.js'
 
 // Re-export task lifecycle schemas
@@ -1396,12 +1397,15 @@ export {
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
   KbDeleteArtifactInputSchema,
+  ArtifactWriteInputSchema,
 }
 export type {
   KbWriteArtifactInput,
   KbReadArtifactInput,
   KbListArtifactsInput,
   KbDeleteArtifactInput,
+  ArtifactWriteInput,
+  ArtifactWriteResult,
 } from '../crud-operations/index.js'
 
 /**
@@ -2550,6 +2554,85 @@ Example:
 }
 
 // ============================================================================
+// Dual-Write Artifact Tool (KBAR-0110)
+// ============================================================================
+
+/**
+ * artifact_write tool definition.
+ *
+ * Write a workflow artifact to the filesystem (YAML) and optionally to the KB database.
+ * KB write failure does NOT block the file write.
+ */
+export const artifactWriteToolDefinition: McpToolDefinition = {
+  name: 'artifact_write',
+  description: `Write a workflow artifact to the filesystem as YAML and optionally index it in the KB.
+
+The filesystem write is the primary operation and must succeed. The KB write is best-effort:
+if it fails, the error is captured in the response but does not cause the tool to fail.
+
+Supported artifact types:
+- checkpoint: Phase completion checkpoint (CHECKPOINT.yaml)
+- scope: Story scope definition (SCOPE.yaml)
+- plan: Implementation plan (PLAN.yaml)
+- evidence: Implementation evidence (EVIDENCE.yaml)
+- verification: QA verification results (VERIFICATION.yaml)
+- analysis: Code analysis results (ANALYSIS.yaml)
+- context: Agent context (AGENT-CONTEXT.yaml)
+- fix_summary: Fix cycle summary (FIX-SUMMARY.yaml)
+- proof: Implementation proof (PROOF.yaml)
+- elaboration: Story elaboration (ELABORATION.yaml)
+- review: Code review results (REVIEW.yaml)
+- qa_gate: QA gate decision (QA-GATE.yaml)
+- completion_report: Story completion report (COMPLETION-REPORT.yaml)
+
+Path formula:
+- {story_dir}/_implementation/{ARTIFACT_FILENAME}.yaml
+- For iteration > 0: {story_dir}/_implementation/{ARTIFACT_FILENAME}.iter{N}.yaml
+
+Parameters:
+- story_id (required): Story ID (e.g., 'KBAR-0110')
+- artifact_type (required): Type of artifact
+- content (required): Artifact content as JSON object (serialized to YAML)
+- story_dir (required): Absolute path to story root directory
+- phase (optional): Implementation phase
+- iteration (optional): Fix cycle iteration number (default: 0)
+- write_to_kb (optional): Also write to KB database (default: true)
+
+Returns:
+{
+  file_written: true,
+  file_path: /absolute/path/to/_implementation/CHECKPOINT.yaml,
+  kb_written: true,
+  kb_artifact_id: uuid-or-null,
+  kb_error: null
+}
+
+Example (write checkpoint):
+{
+  story_id: KBAR-0110,
+  artifact_type: checkpoint,
+  story_dir: /path/to/plans/future/platform/.../in-progress/KBAR-0110,
+  phase: setup,
+  content: {
+    current_phase: plan,
+    blocked: false,
+    iteration: 0
+  }
+}
+
+Example (write evidence, KB write disabled):
+{
+  story_id: KBAR-0110,
+  artifact_type: evidence,
+  story_dir: /path/to/story/dir,
+  phase: implementation,
+  content: { tests_passed: true },
+  write_to_kb: false
+}`,
+  inputSchema: zodToMcpSchema(ArtifactWriteInputSchema),
+}
+
+// ============================================================================
 // Story Status Tools
 // ============================================================================
 
@@ -3352,6 +3435,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbAuditByEntryToolDefinition,
   kbAuditQueryToolDefinition,
   kbAuditRetentionToolDefinition,
+  // Dual-write artifact tool (KBAR-0110)
+  artifactWriteToolDefinition,
   // Artifact tools (DB-first artifact storage)
   kbWriteArtifactToolDefinition,
   kbReadArtifactToolDefinition,
