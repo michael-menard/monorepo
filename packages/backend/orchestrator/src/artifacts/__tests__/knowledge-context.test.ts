@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { createKnowledgeContext, KnowledgeContextSchema } from '../knowledge-context'
+
 // Mock @repo/logger — required because getPatternDiscoveryFromKB (imported below) uses it
 vi.mock('@repo/logger', () => ({
   logger: {
@@ -9,8 +11,6 @@ vi.mock('@repo/logger', () => ({
     debug: vi.fn(),
   },
 }))
-
-import { createKnowledgeContext, KnowledgeContextSchema } from '../knowledge-context'
 
 describe('KnowledgeContextSchema', () => {
   describe('schema validation', () => {
@@ -327,9 +327,7 @@ describe('getPatternDiscoveryFromKB', () => {
   // These tests verify the three paths: provided+results, provided+empty, not provided
 
   it('HP-4: returns pattern discovery results when artifactSearchFn is provided and returns results', async () => {
-    const { getPatternDiscoveryFromKB } = await import(
-      '../../nodes/reality/load-knowledge-context'
-    )
+    const { getPatternDiscoveryFromKB } = await import('../../nodes/reality/load-knowledge-context')
 
     const mockArtifactSearchFn = vi.fn().mockResolvedValue({
       results: [
@@ -370,9 +368,7 @@ describe('getPatternDiscoveryFromKB', () => {
   })
 
   it('HP-5: returns empty array with warning when artifactSearchFn is provided but returns no results', async () => {
-    const { getPatternDiscoveryFromKB } = await import(
-      '../../nodes/reality/load-knowledge-context'
-    )
+    const { getPatternDiscoveryFromKB } = await import('../../nodes/reality/load-knowledge-context')
 
     const mockArtifactSearchFn = vi.fn().mockResolvedValue({
       results: [],
@@ -395,9 +391,7 @@ describe('getPatternDiscoveryFromKB', () => {
   })
 
   it('ED-1: returns empty array with warning when artifactSearchFn throws', async () => {
-    const { getPatternDiscoveryFromKB } = await import(
-      '../../nodes/reality/load-knowledge-context'
-    )
+    const { getPatternDiscoveryFromKB } = await import('../../nodes/reality/load-knowledge-context')
 
     const mockArtifactSearchFn = vi.fn().mockRejectedValue(new Error('artifact_search unavailable'))
 
