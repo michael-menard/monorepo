@@ -23,8 +23,8 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | ready-to-work | 4 |
 | elaboration | 0 |
 | in-progress | 0 |
-| needs-code-review | 2 |
-| ready-for-qa | 0 |
+| needs-code-review | 1 |
+| ready-for-qa | 1 |
 | pending | 19 |
 
 ---
@@ -166,7 +166,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-008: story_list & story_update Tools
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Story ID:** KBAR-0080
 **Depends On:** KBAR-007
 **Phase:** 3
