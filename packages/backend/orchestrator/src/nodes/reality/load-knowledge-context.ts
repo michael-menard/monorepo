@@ -16,9 +16,9 @@ import * as path from 'path'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { createToolNode } from '../../runner/node-factory.js'
-import type { GraphStateWithContext } from './retrieve-context.js'
 import { PatternDiscoveryResultSchema } from '../../artifacts/knowledge-context.js'
 import type { PatternDiscoveryResult } from '../../artifacts/knowledge-context.js'
+import type { GraphStateWithContext } from './retrieve-context.js'
 
 // Optional KB types - imported dynamically to avoid hard dependency
 type KbSearchDeps = {
@@ -550,7 +550,10 @@ export async function getLessonsFromKB(
 export async function getPatternDiscoveryFromKB(
   storyDomain: string | undefined,
   storyScope: string | undefined,
-  artifactSearchFn: (input: ArtifactSearchInput, deps: KbSearchDeps) => Promise<ArtifactSearchResult>,
+  artifactSearchFn: (
+    input: ArtifactSearchInput,
+    deps: KbSearchDeps,
+  ) => Promise<ArtifactSearchResult>,
   kbDeps: KbSearchDeps,
   warnings: string[],
 ): Promise<PatternDiscoveryResult[]> {
@@ -738,7 +741,11 @@ export async function loadKnowledgeContext(
     // Get pattern discovery - try artifact_search, graceful fallback to []
     let patternDiscovery: PatternDiscoveryResult[] = []
 
-    if (fullConfig.kbDeps?.artifactSearchFn && fullConfig.kbDeps?.db && fullConfig.kbDeps?.embeddingClient) {
+    if (
+      fullConfig.kbDeps?.artifactSearchFn &&
+      fullConfig.kbDeps?.db &&
+      fullConfig.kbDeps?.embeddingClient
+    ) {
       patternDiscovery = await getPatternDiscoveryFromKB(
         fullConfig.storyDomain,
         fullConfig.storyScope,

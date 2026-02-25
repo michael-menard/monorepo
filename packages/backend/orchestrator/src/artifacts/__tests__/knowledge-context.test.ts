@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-
 import { createKnowledgeContext, KnowledgeContextSchema } from '../knowledge-context'
 
 // Mock @repo/logger — required because getPatternDiscoveryFromKB (imported below) uses it
