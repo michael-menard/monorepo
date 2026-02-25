@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { stories, storyArtifacts, storyDependencies } from '../db/schema.js'
+import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
 import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__types__/index.js'
 
 // ============================================================================
@@ -77,6 +77,14 @@ export const KbListStoriesInputSchema = z.object({
 
   /** Filter by priority */
   priority: StoryPrioritySchema.optional(),
+
+  /** Filter stories linked to plans with this tag (e.g., 'elaboration', 'lego-ui') */
+  plan_tag: z.string().optional(),
+
+  /** Filter stories linked to plans with this status (e.g., 'in-progress', 'draft') */
+  plan_status: z
+    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .optional(),
 
   /** Maximum results (1-100, default 20) */
   limit: z.number().int().min(1).max(100).optional().default(20),
@@ -163,6 +171,14 @@ export const KbGetNextStoryInputSchema = z.object({
 
   /** Include stories in 'backlog' state (default: false, only 'ready' stories) */
   include_backlog: z.boolean().optional().default(false),
+
+  /** Filter stories linked to plans with this tag (e.g., 'elaboration', 'lego-ui') */
+  plan_tag: z.string().optional(),
+
+  /** Filter stories linked to plans with this status (e.g., 'in-progress', 'draft') */
+  plan_status: z
+    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .optional(),
 })
 
 export type KbGetNextStoryInput = z.infer<typeof KbGetNextStoryInputSchema>
@@ -282,6 +298,25 @@ export async function kb_list_stories(
   }
   if (validated.priority) {
     conditions.push(eq(stories.priority, validated.priority))
+  }
+
+  // Filter by plan tag or plan status via plan_story_links join
+  if (validated.plan_tag || validated.plan_status) {
+    const planConditions: SQL<unknown>[] = []
+    if (validated.plan_tag) {
+      planConditions.push(sql`${validated.plan_tag} = ANY(${plans.tags})`)
+    }
+    if (validated.plan_status) {
+      planConditions.push(eq(plans.status, validated.plan_status))
+    }
+    conditions.push(
+      sql`${stories.storyId} IN (
+        SELECT ${planStoryLinks.storyId}
+        FROM ${planStoryLinks}
+        JOIN ${plans} ON ${plans.planSlug} = ${planStoryLinks.planSlug}
+        WHERE ${and(...planConditions)}
+      )`,
+    )
   }
 
   if (conditions.length === 1) {
@@ -467,6 +502,25 @@ export async function kb_get_next_story(
 
   if (validated.exclude_story_ids && validated.exclude_story_ids.length > 0) {
     conditions.push(notInArray(stories.storyId, validated.exclude_story_ids))
+  }
+
+  // Filter by plan tag or plan status via plan_story_links join
+  if (validated.plan_tag || validated.plan_status) {
+    const planConditions: SQL<unknown>[] = []
+    if (validated.plan_tag) {
+      planConditions.push(sql`${validated.plan_tag} = ANY(${plans.tags})`)
+    }
+    if (validated.plan_status) {
+      planConditions.push(eq(plans.status, validated.plan_status))
+    }
+    conditions.push(
+      sql`${stories.storyId} IN (
+        SELECT ${planStoryLinks.storyId}
+        FROM ${planStoryLinks}
+        JOIN ${plans} ON ${plans.planSlug} = ${planStoryLinks.planSlug}
+        WHERE ${and(...planConditions)}
+      )`,
+    )
   }
 
   const whereCondition = and(...conditions)

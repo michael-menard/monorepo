@@ -52,8 +52,11 @@ import {
 import {
   KbGetPlanInputSchema,
   KbListPlansInputSchema,
+  KbUpdatePlanInputSchema,
+  KbUpsertPlanInputSchema,
   type KbGetPlanInput,
   type KbListPlansInput,
+  type KbUpsertPlanInput,
 } from '../crud-operations/plan-operations.js'
 import {
   KbGetTokenSummaryInputSchema,
@@ -102,8 +105,8 @@ export type {
   WorktreeMarkCompleteInput,
 }
 // Re-export plan tool schemas (SKCR)
-export { KbGetPlanInputSchema, KbListPlansInputSchema }
-export type { KbGetPlanInput, KbListPlansInput }
+export { KbGetPlanInputSchema, KbListPlansInputSchema, KbUpdatePlanInputSchema, KbUpsertPlanInputSchema }
+export type { KbGetPlanInput, KbListPlansInput, KbUpsertPlanInput }
 
 // ============================================================================
 // Admin Tool Input Schemas (KNOW-0053)
@@ -2591,6 +2594,8 @@ Parameters:
 - phase (optional): Filter by implementation phase (setup, implementation, etc.)
 - blocked (optional): Filter by blocked status (true/false)
 - priority (optional): Filter by priority (critical, high, medium, low)
+- plan_tag (optional): Filter stories linked to plans with this tag (e.g., 'elaboration', 'lego-ui', 'testing')
+- plan_status (optional): Filter stories linked to plans with this status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
 - limit (optional): Maximum results (1-100, default 20)
 - offset (optional): Offset for pagination (default 0)
 
@@ -2616,6 +2621,17 @@ Example (list all actionable platform stories):
 Example (list high priority stories):
 {
   "priority": "high"
+}
+
+Example (list stories for plans that improve elaboration):
+{
+  "plan_tag": "elaboration"
+}
+
+Example (list stories from in-progress plans targeting the UI):
+{
+  "plan_tag": "lego-ui",
+  "plan_status": "in-progress"
 }`,
   inputSchema: zodToMcpSchema(KbListStoriesInputSchema),
 }
@@ -2728,6 +2744,8 @@ Parameters:
 - feature (optional): Filter by feature prefix (e.g., 'wish')
 - exclude_story_ids (optional): Story IDs to exclude (e.g., already assigned)
 - include_backlog (optional): Include stories in 'backlog' state (default: false)
+- plan_tag (optional): Filter stories linked to plans with this tag (e.g., 'elaboration', 'lego-ui', 'testing')
+- plan_status (optional): Filter stories linked to plans with this status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
 
 Returns:
 - story: The next available story or null
@@ -2751,6 +2769,13 @@ Example (include backlog stories):
 {
   "epic": "wishlist-gallery",
   "include_backlog": true
+}
+
+Example (next story from plans focused on testing):
+{
+  "epic": "platform",
+  "include_backlog": true,
+  "plan_tag": "testing"
 }`,
   inputSchema: zodToMcpSchema(KbGetNextStoryInputSchema),
 }
@@ -3070,9 +3095,10 @@ export const kbListPlansToolDefinition: McpToolDefinition = {
 By default omits raw_content to reduce response size. Use include_content: true to get full plan text.
 
 Parameters:
-- status (optional): Filter by status ('draft', 'active', 'implemented', 'superseded', 'archived')
+- status (optional): Filter by status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
 - plan_type (optional): Filter by type ('feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike')
 - story_prefix (optional): Filter by story prefix (e.g., 'SKCR')
+- priority (optional): Filter by priority ('P1', 'P2', 'P3', 'P4', 'P5')
 - limit (optional): Max results 1-100, default 20
 - offset (optional): Pagination offset, default 0
 - include_content (optional): Include raw_content in response, default false
@@ -3081,10 +3107,88 @@ Returns: Array of plan objects with total count
 
 Example:
 {
-  "status": "active",
+  "status": "in-progress",
   "plan_type": "workflow"
+}
+
+Example (list P1 priority plans):
+{
+  "priority": "P1"
 }`,
   inputSchema: zodToMcpSchema(KbListPlansInputSchema),
+}
+
+/**
+ * kb_upsert_plan tool definition.
+ *
+ * Inserts or updates a plan record in the plans table.
+ */
+export const kbUpsertPlanToolDefinition: McpToolDefinition = {
+  name: 'kb_upsert_plan',
+  description: `Insert or update a plan record in the KB plans table.
+
+Upserts based on plan_slug — creates a new record if the slug doesn't exist, or updates the existing record.
+
+Parameters:
+- plan_slug (required): Unique slug from the plan filename (e.g., 'autonomous-pipeline')
+- title (required): Plan title from the first # heading
+- raw_content (required): Full markdown content of the plan file
+- summary (optional): First paragraph / short description
+- plan_type (optional): 'feature' | 'refactor' | 'migration' | 'infra' | 'tooling' | 'workflow' | 'audit' | 'spike'
+- status (optional): 'draft' | 'accepted' | 'stories-created' | 'in-progress' | 'implemented' | 'superseded' | 'archived' (default: 'draft')
+- feature_dir (optional): Target feature directory relative to repo root
+- story_prefix (optional): Story ID prefix (e.g., 'APIP')
+- estimated_stories (optional): Total number of planned stories
+- tags (optional): Array of categorization tags
+- source_file (optional): Original source file path
+
+Returns: The upserted plan record and whether it was created or updated.`,
+  inputSchema: zodToMcpSchema(KbUpsertPlanInputSchema),
+}
+
+/**
+ * kb_update_plan tool definition.
+ *
+ * Lightweight update for plan metadata fields.
+ */
+export const kbUpdatePlanToolDefinition: McpToolDefinition = {
+  name: 'kb_update_plan',
+  description: `Update a plan's metadata fields (priority, status, tags, etc.).
+
+Lightweight update — only touches the fields you provide. No need to supply raw_content.
+
+Parameters:
+- plan_slug (required): Plan slug to update (e.g., 'autonomous-pipeline')
+- priority (optional): New priority ('P1', 'P2', 'P3', 'P4', 'P5')
+- status (optional): New status ('draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived')
+- tags (optional): New tags array (replaces existing tags)
+- title (optional): New title
+- plan_type (optional): New plan type
+- feature_dir (optional): New feature directory (null to clear)
+- story_prefix (optional): New story prefix (null to clear)
+- estimated_stories (optional): New estimated stories count (null to clear)
+
+Returns: Updated plan object
+
+Example (set priority):
+{
+  "plan_slug": "autonomous-pipeline",
+  "priority": "P1"
+}
+
+Example (update priority and status):
+{
+  "plan_slug": "kb-native-story-creation",
+  "priority": "P2",
+  "status": "implemented"
+}
+
+Example (update tags):
+{
+  "plan_slug": "agent-monitor-dashboard",
+  "tags": ["dashboard", "monitoring", "ui", "lego-ui"]
+}`,
+  inputSchema: zodToMcpSchema(KbUpdatePlanInputSchema),
 }
 
 /**
@@ -3224,6 +3328,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   // Plan tools (SKCR - KB-native story creation)
   kbGetPlanToolDefinition,
   kbListPlansToolDefinition,
+  kbUpdatePlanToolDefinition,
+  kbUpsertPlanToolDefinition,
   // Artifact search tool (KBAR-0130)
   artifactSearchToolDefinition,
 ]

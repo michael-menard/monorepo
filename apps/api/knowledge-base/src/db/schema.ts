@@ -926,7 +926,7 @@ export const storyTokenUsage = pgTable(
  * - 'audit'     - Codebase or test coverage audits
  * - 'spike'     - Time-boxed investigation
  *
- * Status lifecycle: draft → active → implemented / superseded / archived
+ * Status lifecycle: draft → accepted → stories-created → in-progress → implemented / superseded / archived
  */
 export const plans = pgTable(
   'plans',
@@ -950,9 +950,9 @@ export const plans = pgTable(
 
     /**
      * Lifecycle status.
-     * Values: 'draft' | 'active' | 'implemented' | 'superseded' | 'archived'
+     * Values: 'draft' | 'accepted' | 'stories-created' | 'in-progress' | 'implemented' | 'superseded' | 'archived'
      */
-    status: text('status').notNull().default('active'),
+    status: text('status').notNull().default('draft'),
 
     /** Target feature directory relative to plans/future/platform/ (e.g., 'agent-dashboard') */
     featureDir: text('feature_dir'),
@@ -968,6 +968,13 @@ export const plans = pgTable(
      * Schema: [{number: number, name: string, description: string, storyIds: string[]}]
      */
     phases: jsonb('phases'),
+
+    /**
+     * Priority level. P1 is highest, P5 is lowest. Multiple plans can share the same priority.
+     * Values: 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
+     * Default: 'P3'
+     */
+    priority: text('priority').default('P3'),
 
     /** Tags for filtering (inferred from content) */
     tags: text('tags').array(),

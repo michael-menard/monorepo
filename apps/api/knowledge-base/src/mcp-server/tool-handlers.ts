@@ -107,8 +107,12 @@ import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-
 import {
   kb_get_plan,
   kb_list_plans,
+  kb_update_plan,
+  kb_upsert_plan,
   KbGetPlanInputSchema,
   KbListPlansInputSchema,
+  KbUpdatePlanInputSchema,
+  KbUpsertPlanInputSchema,
 } from '../crud-operations/plan-operations.js'
 import {
   kb_get_token_summary,
@@ -4388,6 +4392,84 @@ export async function handleKbListPlans(
 }
 
 /**
+ * Handle kb_upsert_plan tool invocation.
+ */
+export async function handleKbUpsertPlan(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_upsert_plan tool invoked', {
+    correlation_id: correlationId,
+    plan_slug: inputObj?.plan_slug,
+  })
+
+  try {
+    enforceAuthorization('kb_upsert_plan' as ToolName, context)
+    const validated = KbUpsertPlanInputSchema.parse(input)
+    const result = await kb_upsert_plan({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_upsert_plan succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      created: result.created,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_upsert_plan failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_update_plan tool invocation.
+ */
+export async function handleKbUpdatePlan(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_update_plan tool invoked', {
+    correlation_id: correlationId,
+    plan_slug: inputObj?.plan_slug,
+  })
+
+  try {
+    enforceAuthorization('kb_update_plan' as ToolName, context)
+    const validated = KbUpdatePlanInputSchema.parse(input)
+    const result = await kb_update_plan({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_update_plan succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      updated: result.updated,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_update_plan failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Tool handler type with context support.
  */
 type ToolHandler = (
@@ -4474,6 +4556,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // Plan tools (SKCR - KB-native story creation)
   kb_get_plan: handleKbGetPlan,
   kb_list_plans: handleKbListPlans,
+  kb_update_plan: handleKbUpdatePlan,
+  kb_upsert_plan: handleKbUpsertPlan,
   // Artifact search tool (KBAR-0130)
   artifact_search: handleArtifactSearch,
 }

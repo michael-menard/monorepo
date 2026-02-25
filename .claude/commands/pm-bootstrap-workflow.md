@@ -191,7 +191,15 @@ On `GENERATION COMPLETE`:
    ```
    (Idempotent, non-blocking if DB unavailable.)
 
-3. Report to user.
+3. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
+   ```
+   mcp__knowledge-base__kb_update_plan({
+     plan_slug: "{plan_slug}",
+     status: "stories-created"
+   })
+   ```
+
+4. Report to user.
 
 ### File Mode (legacy)
 1. Seed stories:

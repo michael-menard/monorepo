@@ -2,8 +2,8 @@
 name: next-actions
 description: Query the KB database for the next unblocked stories and recommend commands. Falls back to WORK-ORDER-BY-BATCH.md if the DB has no stories.
 created: 2026-02-20
-updated: 2026-02-22
-version: 2.1.0
+updated: 2026-02-25
+version: 2.2.0
 type: utility
 ---
 
@@ -14,7 +14,7 @@ type: utility
 ## Usage
 
 ```
-/next-actions [N]
+/next-actions [N] [--tag=TAG] [--plan-status=STATUS]
 ```
 
 **Examples:**
@@ -27,6 +27,18 @@ type: utility
 
 # Show the next 10 actionable items
 /next-actions 10
+
+# Show next actions for plans that improve testing
+/next-actions --tag=testing
+
+# Show next actions for lego-ui plans only
+/next-actions --tag=lego-ui
+
+# Show next actions from in-progress plans
+/next-actions --plan-status=in-progress
+
+# Combine: next 3 elaboration items from in-progress plans
+/next-actions 3 --tag=elaboration --plan-status=in-progress
 ```
 
 ---
@@ -44,6 +56,8 @@ Inflight work always appears before new work. Stories being actively worked by a
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `N` | No | Number of items to return (default: 5) |
+| `--tag=TAG` | No | Filter to stories linked to plans with this tag (e.g., `testing`, `lego-ui`, `elaboration`, `development`, `agent-tooling`) |
+| `--plan-status=STATUS` | No | Filter to stories linked to plans with this status (`draft`, `accepted`, `stories-created`, `in-progress`, `implemented`, `superseded`, `archived`) |
 
 ---
 
@@ -77,7 +91,7 @@ If the tool is unavailable, set ACTIVE_IDS = [].
 
 ### Step 2 — Query the KB Database
 
-Call `mcp__knowledge-base__kb_list_stories` directly:
+Call `mcp__knowledge-base__kb_list_stories` directly. If `--tag` or `--plan-status` were provided, pass them as `plan_tag` and `plan_status`:
 
 ```
 mcp__knowledge-base__kb_list_stories({
@@ -85,7 +99,9 @@ mcp__knowledge-base__kb_list_stories({
   states: ["ready_for_qa", "in_qa", "failed_qa", "failed_code_review", "in_review",
            "ready_for_review", "ready", "in_progress", "backlog",
            "completed", "cancelled", "deferred"],
-  limit: N
+  limit: N,
+  ...(TAG ? { plan_tag: TAG } : {}),
+  ...(PLAN_STATUS ? { plan_status: PLAN_STATUS } : {})
 })
 ```
 
@@ -93,15 +109,23 @@ If the result contains **0 stories**, go to **Step 6 (Fallback)**.
 
 ### Step 3 — Collect N Candidates via `mcp__knowledge-base__kb_get_next_story`
 
-Call `mcp__knowledge-base__kb_get_next_story` up to N times directly (no sub-agent), accumulating excluded IDs:
+Call `mcp__knowledge-base__kb_get_next_story` up to N times directly (no sub-agent), accumulating excluded IDs. Pass `plan_tag` and `plan_status` if provided:
 
 ```
 # First call — exclude all active worktrees
-mcp__knowledge-base__kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: ACTIVE_IDS })
+mcp__knowledge-base__kb_get_next_story({
+  epic: "platform", include_backlog: true, exclude_story_ids: ACTIVE_IDS,
+  ...(TAG ? { plan_tag: TAG } : {}),
+  ...(PLAN_STATUS ? { plan_status: PLAN_STATUS } : {})
+})
 → returns STORY_A
 
 # Second call — exclude active + first result
-mcp__knowledge-base__kb_get_next_story({ epic: "platform", include_backlog: true, exclude_story_ids: [...ACTIVE_IDS, "STORY_A"] })
+mcp__knowledge-base__kb_get_next_story({
+  epic: "platform", include_backlog: true, exclude_story_ids: [...ACTIVE_IDS, "STORY_A"],
+  ...(TAG ? { plan_tag: TAG } : {}),
+  ...(PLAN_STATUS ? { plan_status: PLAN_STATUS } : {})
+})
 → returns STORY_B
 
 # ... repeat until N items or no more candidates
@@ -194,10 +218,11 @@ When parsing the markdown fallback:
 
 ### Step 7 — Output
 
-Format the results as a table. Inflight work appears first (per the rank order):
+Format the results as a table. If filters were applied, show them in the header. Inflight work appears first (per the rank order):
 
 ```
 Next actions (N items):
+Filters: tag=testing, plan-status=in-progress    ← only if filters were used
 
 | # | Category          | Story                              | Priority | Command |
 |---|-------------------|------------------------------------|----------|---------|
