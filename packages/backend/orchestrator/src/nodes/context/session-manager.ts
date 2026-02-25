@@ -26,61 +26,41 @@ import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphState } from '../../state/index.js'
 import type { GraphStateWithContext } from '../reality/retrieve-context.js'
 import type { SelectContextSession } from '@repo/database-schema'
+import {
+  SessionCreateInputSchema,
+  SessionUpdateInputSchema,
+  SessionCompleteInputSchema,
+  SessionCleanupInputSchema,
+  SessionCleanupResultSchema,
+  type SessionCreateInput,
+  type SessionUpdateInput,
+  type SessionCompleteInput,
+  type SessionCleanupInput,
+  type SessionCleanupResult,
+} from '@repo/mcp-tools/session-management/__types__'
 
 // ============================================================================
-// Input Schemas (matching mcp-tools session-management/__types__/index.ts — AC-14)
+// Input Schemas — re-exported from @repo/mcp-tools (AC-14: no duplication)
 // ============================================================================
 
-export const SessionManagerCreateInputSchema = z.object({
-  sessionId: z.string().uuid().optional(),
-  agentName: z.string().min(1),
-  storyId: z.string().nullable().optional(),
-  phase: z.string().nullable().optional(),
-  inputTokens: z.number().int().min(0).optional().default(0),
-  outputTokens: z.number().int().min(0).optional().default(0),
-  cachedTokens: z.number().int().min(0).optional().default(0),
-  startedAt: z.date().optional(),
-})
+export const SessionManagerCreateInputSchema = SessionCreateInputSchema
+export type SessionManagerCreateInput = SessionCreateInput
 
-export type SessionManagerCreateInput = z.infer<typeof SessionManagerCreateInputSchema>
+export const SessionManagerUpdateInputSchema = SessionUpdateInputSchema
+export type SessionManagerUpdateInput = SessionUpdateInput
 
-export const SessionManagerUpdateInputSchema = z.object({
-  sessionId: z.string().uuid(),
-  mode: z.enum(['incremental', 'absolute']).default('incremental'),
-  inputTokens: z.number().int().min(0).optional(),
-  outputTokens: z.number().int().min(0).optional(),
-  cachedTokens: z.number().int().min(0).optional(),
-})
+export const SessionManagerCompleteInputSchema = SessionCompleteInputSchema
+export type SessionManagerCompleteInput = SessionCompleteInput
 
-export type SessionManagerUpdateInput = z.infer<typeof SessionManagerUpdateInputSchema>
-
-export const SessionManagerCompleteInputSchema = z.object({
-  sessionId: z.string().uuid(),
-  endedAt: z.date().optional(),
-  inputTokens: z.number().int().min(0).optional(),
-  outputTokens: z.number().int().min(0).optional(),
-  cachedTokens: z.number().int().min(0).optional(),
-})
-
-export type SessionManagerCompleteInput = z.infer<typeof SessionManagerCompleteInputSchema>
-
-export const SessionManagerCleanupInputSchema = z.object({
-  retentionDays: z.number().int().min(1).default(90),
-  dryRun: z.boolean().default(true),
-})
-
-export type SessionManagerCleanupInput = z.infer<typeof SessionManagerCleanupInputSchema>
+export const SessionManagerCleanupInputSchema = SessionCleanupInputSchema
+export type SessionManagerCleanupInput = SessionCleanupInput
 
 // ============================================================================
 // Injectable DB function types (AC-10)
 // ============================================================================
 
-export const SessionCleanupResultSchema = z.object({
-  deletedCount: z.number().int().min(0),
-  dryRun: z.boolean(),
-  cutoffDate: z.date(),
-})
-export type SessionCleanupResult = z.infer<typeof SessionCleanupResultSchema>
+export { SessionCleanupResultSchema }
+export type { SessionCleanupResult }
 
 /**
  * Injectable DB function for session create.
@@ -182,11 +162,11 @@ export const GraphStateWithSessionSchema = z.object({
   /** Update mode: 'incremental' (default) or 'absolute' */
   sessionUpdateMode: z.enum(['incremental', 'absolute']).optional(),
   /** Input tokens delta (update) or final value (complete) */
-  sessionInputTokensDelta: z.number().int().optional(),
+  sessionInputTokensDelta: z.number().int().min(0).optional(),
   /** Output tokens delta (update) or final value (complete) */
-  sessionOutputTokensDelta: z.number().int().optional(),
+  sessionOutputTokensDelta: z.number().int().min(0).optional(),
   /** Cached tokens delta (update) or final value (complete) */
-  sessionCachedTokensDelta: z.number().int().optional(),
+  sessionCachedTokensDelta: z.number().int().min(0).optional(),
   /** End time for complete operation */
   sessionEndedAt: z.date().optional(),
 
@@ -200,7 +180,8 @@ export const GraphStateWithSessionSchema = z.object({
   sessionManagerResult: SessionManagerResultSchema.nullable().optional(),
 })
 
-export type GraphStateWithSession = GraphStateWithContext & z.infer<typeof GraphStateWithSessionSchema>
+export type GraphStateWithSession = z.infer<typeof GraphStateWithSessionSchema> &
+  GraphStateWithContext
 
 // ============================================================================
 // Default DB functions (dynamically loaded at runtime)
@@ -223,7 +204,9 @@ async function defaultSessionUpdate(
 async function defaultSessionComplete(
   input: SessionManagerCompleteInput,
 ): Promise<SelectContextSession | null> {
-  const { sessionComplete } = await import('@repo/mcp-tools/session-management/session-complete.js')
+  const { sessionComplete } = await import(
+    '@repo/mcp-tools/session-management/session-complete.js'
+  )
   return sessionComplete(input)
 }
 
