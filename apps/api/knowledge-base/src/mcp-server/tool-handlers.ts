@@ -105,6 +105,12 @@ import {
 } from '../crud-operations/story-crud-operations.js'
 import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-operations.js'
 import {
+  kb_get_plan,
+  kb_list_plans,
+  KbGetPlanInputSchema,
+  KbListPlansInputSchema,
+} from '../crud-operations/plan-operations.js'
+import {
   kb_get_token_summary,
   kb_get_bottleneck_analysis,
   kb_get_churn_analysis,
@@ -4124,6 +4130,89 @@ export async function handleWorktreeMarkComplete(
   }
 }
 
+// ============================================================================
+// Plan Tool Handlers (SKCR - KB-native story creation)
+// ============================================================================
+
+/**
+ * Handle kb_get_plan tool invocation.
+ */
+export async function handleKbGetPlan(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_plan tool invoked', {
+    correlation_id: correlationId,
+    plan_slug: inputObj?.plan_slug,
+  })
+
+  try {
+    enforceAuthorization('kb_get_plan' as ToolName, context)
+    const validated = KbGetPlanInputSchema.parse(input)
+    const result = await kb_get_plan({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_plan succeeded', {
+      correlation_id: correlationId,
+      plan_slug: validated.plan_slug,
+      found: result.plan !== null,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_plan failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_list_plans tool invocation.
+ */
+export async function handleKbListPlans(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_list_plans tool invoked', {
+    correlation_id: correlationId,
+    status: inputObj?.status,
+    plan_type: inputObj?.plan_type,
+  })
+
+  try {
+    enforceAuthorization('kb_list_plans' as ToolName, context)
+    const validated = KbListPlansInputSchema.parse(input)
+    const result = await kb_list_plans({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_list_plans succeeded', {
+      correlation_id: correlationId,
+      count: result.plans.length,
+      total: result.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_list_plans failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
 /**
  * Tool handler type with context support.
  */
@@ -4208,6 +4297,9 @@ export const toolHandlers: Record<string, ToolHandler> = {
   worktree_get_by_story: handleWorktreeGetByStory,
   worktree_list_active: handleWorktreeListActive,
   worktree_mark_complete: handleWorktreeMarkComplete,
+  // Plan tools (SKCR - KB-native story creation)
+  kb_get_plan: handleKbGetPlan,
+  kb_list_plans: handleKbListPlans,
 }
 
 /**

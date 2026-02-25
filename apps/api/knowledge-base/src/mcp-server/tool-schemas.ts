@@ -39,12 +39,19 @@ import {
   type KbGetStoryInput,
   type KbListStoriesInput,
   type KbUpdateStoryStatusInput,
+  type KbUpdateStoryInput,
   type KbGetNextStoryInput,
 } from '../crud-operations/story-crud-operations.js'
 import {
   KbLogTokensInputSchema,
   type KbLogTokensInput,
 } from '../crud-operations/token-operations.js'
+import {
+  KbGetPlanInputSchema,
+  KbListPlansInputSchema,
+  type KbGetPlanInput,
+  type KbListPlansInput,
+} from '../crud-operations/plan-operations.js'
 import {
   KbGetTokenSummaryInputSchema,
   KbGetBottleneckAnalysisInputSchema,
@@ -69,6 +76,7 @@ export type {
   KbGetStoryInput,
   KbListStoriesInput,
   KbUpdateStoryStatusInput,
+  KbUpdateStoryInput,
   KbGetNextStoryInput,
   KbLogTokensInput,
   KbGetTokenSummaryInput,
@@ -88,6 +96,9 @@ export type {
   WorktreeListActiveInput,
   WorktreeMarkCompleteInput,
 }
+// Re-export plan tool schemas (SKCR)
+export { KbGetPlanInputSchema, KbListPlansInputSchema }
+export type { KbGetPlanInput, KbListPlansInput }
 
 // ============================================================================
 // Admin Tool Input Schemas (KNOW-0053)
@@ -2939,6 +2950,63 @@ Example (mark as merged with PR info):
   inputSchema: zodToMcpSchema(WorktreeMarkCompleteInputSchema),
 }
 
+// ============================================================================
+// Plan Tools (SKCR - KB-native story creation)
+// ============================================================================
+
+/**
+ * kb_get_plan tool definition.
+ *
+ * Retrieves a plan by its slug, including full raw_content.
+ */
+export const kbGetPlanToolDefinition: McpToolDefinition = {
+  name: 'kb_get_plan',
+  description: `Get a plan by its slug.
+
+Returns the full plan record including raw_content, phases, story_prefix, and feature_dir.
+Used by /pm-bootstrap-workflow to fetch plan content for story generation.
+
+Parameters:
+- plan_slug (required): Plan slug to retrieve (e.g., 'kb-native-story-creation')
+
+Returns: Plan object or null if not found
+
+Example:
+{
+  "plan_slug": "kb-native-story-creation"
+}`,
+  inputSchema: zodToMcpSchema(KbGetPlanInputSchema),
+}
+
+/**
+ * kb_list_plans tool definition.
+ *
+ * Lists plans with optional filters.
+ */
+export const kbListPlansToolDefinition: McpToolDefinition = {
+  name: 'kb_list_plans',
+  description: `List plans with optional filters.
+
+By default omits raw_content to reduce response size. Use include_content: true to get full plan text.
+
+Parameters:
+- status (optional): Filter by status ('draft', 'active', 'implemented', 'superseded', 'archived')
+- plan_type (optional): Filter by type ('feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike')
+- story_prefix (optional): Filter by story prefix (e.g., 'SKCR')
+- limit (optional): Max results 1-100, default 20
+- offset (optional): Pagination offset, default 0
+- include_content (optional): Include raw_content in response, default false
+
+Returns: Array of plan objects with total count
+
+Example:
+{
+  "status": "active",
+  "plan_type": "workflow"
+}`,
+  inputSchema: zodToMcpSchema(KbListPlansInputSchema),
+}
+
 /**
  * All MCP tool definitions.
  */
@@ -3014,6 +3082,9 @@ export const toolDefinitions: McpToolDefinition[] = [
   worktreeGetByStoryToolDefinition,
   worktreeListActiveToolDefinition,
   worktreeMarkCompleteToolDefinition,
+  // Plan tools (SKCR - KB-native story creation)
+  kbGetPlanToolDefinition,
+  kbListPlansToolDefinition,
 ]
 
 /**

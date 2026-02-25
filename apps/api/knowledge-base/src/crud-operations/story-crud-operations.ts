@@ -289,6 +289,23 @@ export async function kb_update_story_status(
     }
   }
 
+  // Terminal-state guard: prevent transitions OUT of terminal states
+  // Same-state transitions are always allowed (idempotent)
+  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred', 'failed_code_review', 'failed_qa']
+  const currentState = existing[0].state
+  if (
+    validated.state !== undefined &&
+    currentState !== null &&
+    TERMINAL_STATES.includes(currentState) &&
+    validated.state !== currentState
+  ) {
+    return {
+      story: existing[0],
+      updated: false,
+      message: `Cannot transition story ${validated.story_id} from terminal state '${currentState}' to '${validated.state}'`,
+    }
+  }
+
   // Build update object
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),

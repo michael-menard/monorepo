@@ -1,9 +1,12 @@
 ---
 created: 2026-01-20
-updated: 2026-02-22
-version: 4.0.0
+updated: 2026-02-24
+version: 5.0.0
 type: orchestrator
 agents: ["pm-bootstrap-setup-leader.agent.md", "pm-bootstrap-analysis-leader.agent.md", "pm-bootstrap-generation-leader.agent.md"]
+kb_tools:
+  - kb_get_plan
+  - kb_list_plans
 ---
 
 /pm-bootstrap-workflow {plan_slug | --file {FEATURE_DIR}}
@@ -38,22 +41,23 @@ Legacy mode. Reads `PLAN.md` or `PRD.md` from the given directory. Agents write 
 
 ### KB Mode
 
-Query the plans table:
+Fetch the plan from the KB using the `kb_get_plan` MCP tool:
 
-```sql
-SELECT plan_slug, title, summary, raw_content, plan_type, feature_dir, story_prefix
-FROM plans
-WHERE plan_slug = '{plan_slug}'
+```
+kb_get_plan({ plan_slug: "{plan_slug}" })
 ```
 
-If no row found → BLOCKED: "No plan found with slug '{plan_slug}'. Run /list-plans to see available plans."
+**If result.plan is null** → BLOCKED: "No plan found with slug '{plan_slug}'. Use `kb_list_plans({ status: 'active' })` to see available plans."
 
-Extract:
-- `plan_content` = `raw_content`
-- `feature_dir` = `--feature-dir` arg OR `feature_dir` column (if set) OR `plans/future/platform/{plan_slug}`
-- `prefix` = `--prefix` arg OR `story_prefix` column (if set) OR derived from plan_slug
+**Extract from result.plan:**
+- `plan_content` = `rawContent`
+- `feature_dir` = `--feature-dir` arg OR `featureDir` column (if set) OR `plans/future/platform/{plan_slug}`
+- `prefix` = `--prefix` arg OR `storyPrefix` column (if set) OR derived from plan_slug
+- `plan_title` = `title`
+- `plan_summary` = `summary`
+- `plan_phases` = `phases` (pre-parsed phase breakdown, if available)
 
-Prefix derivation from plan_slug:
+Prefix derivation from plan_slug (only when no `--prefix` and no `storyPrefix` in DB):
 1. Split on hyphens → words
 2. Remove common filler words: `the`, `a`, `an`, `to`, `for`, `from`, `and`, `or`, `with`, `add`, `fix`, `update`, `plan`
 3. Take first letter of each remaining word, uppercase
@@ -62,11 +66,10 @@ Prefix derivation from plan_slug:
 
 Examples:
 - `agent-monitor-dashboard` → `[agent, monitor, dashboard]` → `AMD` + pad → `AGMD`
-- `kb-first-agent-command-migration` → `[kb, first, agent, command, migration]` → `KFAC`
+- `kb-native-story-creation` → `[kb, native, story, creation]` → `KNSC`
 - `worktree-first-draft-pr-lifecycle` → `[worktree, first, draft, pr, lifecycle]` → `WFDP`
-- `monorepo-health-audit-fix-plan` → `[monorepo, health, audit]` (fix/plan filtered) → `MHA` + pad → `MHEA` (pad from monorepo)
 
-### File Mode
+### File Mode (legacy)
 
 Read `PLAN.md` or `PRD.md` from `{FEATURE_DIR}`. Set `plan_content` from file contents.
 
@@ -180,19 +183,9 @@ If `--dry-run` flag:
 On `GENERATION COMPLETE`:
 
 ### KB Mode
-1. Update the plan record with derived metadata:
-   ```sql
-   UPDATE plans
-   SET feature_dir = '{feature_dir}',
-       story_prefix = '{prefix}',
-       estimated_stories = {total_stories},
-       status = 'active',
-       updated_at = NOW()
-   WHERE plan_slug = '{plan_slug}'
-   ```
-   Execute via psql or the KB db client.
+1. Stories are already in the KB (Phase 2 generation leader inserts them via `kb_create_story` or `migrate:stories`).
 
-2. Seed all generated stories into the KB database:
+2. Seed stories into KB if the generation leader wrote story.yaml files but didn't insert directly:
    ```bash
    pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
    ```
@@ -200,7 +193,7 @@ On `GENERATION COMPLETE`:
 
 3. Report to user.
 
-### File Mode
+### File Mode (legacy)
 1. Seed stories:
    ```bash
    pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null

@@ -58,6 +58,9 @@ export const ToolNameSchema = z.enum([
   'worktree_get_by_story',
   'worktree_list_active',
   'worktree_mark_complete',
+  // Plan tools (SKCR - KB-native story creation)
+  'kb_get_plan',
+  'kb_list_plans',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -125,6 +128,9 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   worktree_get_by_story: new Set(['pm', 'dev', 'qa', 'all']),
   worktree_list_active: new Set(['pm', 'dev', 'qa', 'all']),
   worktree_mark_complete: new Set(['pm', 'dev', 'qa', 'all']),
+  // Plan tools (SKCR) - available to all roles
+  kb_get_plan: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_list_plans: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**
