@@ -2,8 +2,8 @@ schema: 1
 story_id: KBAR-0090
 feature_dir: plans/future/platform/kb-artifact-migration
 timestamp: "2026-02-24T20:40:00Z"
-current_phase: execute
-last_successful_phase: plan
+current_phase: proof
+last_successful_phase: execute
 iteration: 0
 max_iterations: 3
 blocked: false
