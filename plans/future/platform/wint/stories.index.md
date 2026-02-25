@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-24T12:00:00Z"
+updated_at: "2026-02-25T16:46:00Z"
 ---
 
 # WINT Stories Index
@@ -16,10 +16,10 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 20 |
+| uat | 21 |
 | in-qa | 0 |
 | ready-for-qa | 0 |
-| needs-code-review | 1 |
+| needs-code-review | 0 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
 | failed-qa | 0 |
@@ -2378,7 +2378,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9090: Create Context Cache LangGraph Nodes
 
-**Status:** needs-code-review
+**Status:** uat
 **Depends On:** WINT-9010, WINT-2100
 **Phase:** 9
 **Feature:** Port context-warmer, session-manager to LangGraph nodes
@@ -2409,7 +2409,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 ### WINT-9110: Create Full Workflow LangGraph Graphs
 
 **Status:** pending
-**Depends On:** WINT-9060, WINT-9070, WINT-9080, WINT-9090, WINT-9100
+**Depends On:** WINT-9060, WINT-9070, WINT-9080, WINT-9100
 **Phase:** 9
 **Feature:** Create complete LangGraph graphs for: bootstrap, elab-epic, elab-story, dev-implement, qa-verify, backlog-review
 **Infrastructure:**
