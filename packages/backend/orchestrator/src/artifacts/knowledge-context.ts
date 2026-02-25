@@ -34,6 +34,28 @@ export const HighCostOperationSchema = z.object({
 
 export type HighCostOperation = z.infer<typeof HighCostOperationSchema>
 
+/**
+ * PatternDiscoveryResultSchema — one result from artifact_search.
+ *
+ * Distinct from lessons_learned: lessons_learned entries come from kb_search over
+ * entries tagged "lesson-learned" (manually curated). PatternDiscoveryResult entries
+ * come from artifact_search over indexed artifact embeddings (semantic similarity).
+ */
+export const PatternDiscoveryResultSchema = z.object({
+  /** Story ID the artifact belongs to (e.g. "KBAR-0130") */
+  story_id: z.string(),
+  /** Artifact type returned by artifact_search (e.g. "evidence", "plan") */
+  artifact_type: z.string(),
+  /** Brief summary of what the artifact contains */
+  content_summary: z.string(),
+  /** Relevance score from artifact_search (0.0–1.0) */
+  relevance_score: z.number().min(0).max(1),
+  /** Phase the artifact was produced in (e.g. "implementation", "planning") */
+  phase: z.string().optional(),
+})
+
+export type PatternDiscoveryResult = z.infer<typeof PatternDiscoveryResultSchema>
+
 export const KnowledgeContextSchema = z.object({
   schema: z.literal(1),
   story_id: z.string(),
@@ -47,6 +69,15 @@ export const KnowledgeContextSchema = z.object({
     patterns_to_follow: z.array(z.string()).default([]),
     patterns_to_avoid: z.array(z.string()).default([]),
   }),
+
+  /**
+   * pattern_discovery — results from artifact_search (Phase 1.5).
+   *
+   * These are semantically similar artifacts from past stories, found via embedding
+   * similarity rather than explicit tags. Distinct from lessons_learned which uses
+   * kb_search over manually tagged "lesson-learned" entries.
+   */
+  pattern_discovery: z.array(PatternDiscoveryResultSchema).default([]),
 
   architecture_decisions: z.object({
     active_count: z.number().int().min(0),
@@ -103,6 +134,7 @@ export function createKnowledgeContext(storyId: string): KnowledgeContext {
       patterns_to_follow: [],
       patterns_to_avoid: [],
     },
+    pattern_discovery: [],
     architecture_decisions: {
       active_count: 0,
       relevant_adrs: [],

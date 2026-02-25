@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
-updated: 2026-02-22
-version: 2.1.0
+updated: 2026-02-25
+version: 3.0.0
 type: worker
 permission_level: kb-write
 model: haiku
@@ -10,6 +10,7 @@ schema: packages/backend/orchestrator/src/artifacts/knowledge-context.ts
 kb_tools:
   - kb_search
   - kb_write_artifact
+  - artifact_search
 ---
 
 # Agent: knowledge-context-loader
@@ -30,6 +31,7 @@ Retrieve and surface critical knowledge that should inform the current story:
 1. **Lessons Learned** - Past failures, blockers, and patterns to avoid
 2. **Architecture Decision Records (ADRs)** - Active constraints and patterns to follow
 3. **Token Optimization Patterns** - Cost-saving patterns for implementation
+4. **Pattern Discovery** - `artifact_search` with domain-scoped queries → `pattern_discovery` section (new)
 
 This context prevents repeating past mistakes and ensures architectural consistency.
 
@@ -46,6 +48,7 @@ From orchestrator context:
 From filesystem:
 - `plans/stories/ADR-LOG.md` - Architecture Decision Records
 - Knowledge Base via `kb_search` - Lessons learned
+- Knowledge Base via `artifact_search` - Past implementation artifacts
 
 ---
 
@@ -89,6 +92,26 @@ From filesystem:
    - Patterns that caused rework
    - Time sinks to avoid
    - Successful patterns to reuse
+
+### Phase 1.5: Pattern Discovery (Semantic Artifact Search)
+
+**Purpose**: Surface relevant past implementation artifacts from the Knowledge Base using semantic similarity. Unlike Phase 1 (lesson-learned entries written intentionally by story authors), these results are actual implementation content indexed automatically via `artifact_write`/`kb_add` from past stories.
+
+**Constraint**: Queries MUST be domain-scoped. Generic queries like `{ query: "patterns" }` are forbidden. Always use `{story_domain}` and `{story_scope}` as query terms.
+
+**Graceful fallback**: If `artifact_search` is unavailable or returns no results, continue with `pattern_discovery: []` and add a warning to the `warnings` array. Do not block on this phase.
+
+Query 1 — Past implementations (evidence artifacts):
+<tool_use>
+{"tool": "artifact_search", "input": {"query": "{story_domain} {story_scope} implementation", "artifact_type": "evidence", "limit": 5}}
+</tool_use>
+
+Query 2 — Past planning artifacts:
+<tool_use>
+{"tool": "artifact_search", "input": {"query": "{story_domain} {story_scope} plan solution", "artifact_type": "plan", "limit": 5}}
+</tool_use>
+
+Collect all results into `pattern_discovery`. If either query throws or returns empty, push to `warnings` and continue.
 
 ### Phase 2: Load Architecture Decisions
 
@@ -188,6 +211,16 @@ knowledge_context:
     recommended_patterns:
       - "{pattern}"
 
+  # pattern_discovery: artifact-based results from artifact_search (actual implementation
+  # content indexed automatically via artifact_write/kb_add from past stories). Distinct
+  # from lessons_learned (authored summaries written intentionally by story authors).
+  pattern_discovery:
+    - story_id: "{STORY-XXX}"
+      artifact_type: "evidence | plan"
+      content_summary: "{brief summary of relevant content}"
+      relevance_score: 0.0-1.0
+      phase: "{implementation | planning | ...}"
+
   warnings:
     - "{any warnings about missing context}"
 ```
@@ -236,6 +269,17 @@ knowledge_context:
       - "Targeted file reads over full files"
       - "Grep before Read"
 
+  # pattern_discovery contains artifact-based results from artifact_search — actual
+  # implementation content from past stories indexed via artifact_write/kb_add.
+  # This is DISTINCT from lessons_learned, which are authored summaries written
+  # intentionally by story authors.
+  pattern_discovery:
+    - story_id: "KBAR-0130"
+      artifact_type: "evidence"
+      content_summary: "MCP tool handler implementation for kb_write_artifact"
+      relevance_score: 0.87
+      phase: "implementation"
+
   warnings: []
 
   tokens:
@@ -262,6 +306,9 @@ End with exactly one of:
 - **MUST map lessons and ADRs to story scope** (don't dump everything)
 - **MUST surface blockers prominently** (these prevent story success)
 - **MUST include token optimization** for implementation planning
+- **MUST run artifact_search** with domain-scoped queries for pattern discovery
+- **DO NOT use generic artifact_search queries** — always scope to `{story_domain}` and `{story_scope}`
+- **DO NOT block on artifact_search failures** — graceful fallback to `pattern_discovery: []`
 - **DO NOT modify source code files** - KB write only
 - **DO NOT skip ADR-001** - API schema applies to almost all stories
 
@@ -277,7 +324,9 @@ kb_write_artifact({
   artifact_type: "context",
   phase: "planning",
   iteration: 0,
-  content: { /* full knowledge_context structure as defined above */ }
+  content: {
+    /* full knowledge_context structure as defined above, including pattern_discovery */
+  }
 })
 ```
 
