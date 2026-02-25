@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-17
-version: 3.3.0
+updated: 2026-02-25
+version: 3.4.0
 type: leader
 permission_level: orchestrator
 triggers: ["/qa-verify-story"]
@@ -18,7 +18,7 @@ kb_tools:
   - kb_archive_working_set
   - kb_update_story_status
   - kb_read_artifact
-  - kb_write_artifact
+  - artifact_write
 ---
 
 # Agent: qa-verify-completion-leader
@@ -79,11 +79,12 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
 
 2. **Update verification artifact in KB with gate decision**
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "verification",
      phase: "qa_verification",
      iteration: 0,
+     file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
      content: {
        ...verification.content,
        gate: {
@@ -94,6 +95,8 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
      }
    })
    ```
+
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The QA PASS flow continues — do not block or roll back the verdict.
 
 3. **Story stays in UAT** (already moved during setup)
 
@@ -181,11 +184,12 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
 
 2. **Update verification artifact in KB with gate decision**
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "verification",
      phase: "qa_verification",
      iteration: 0,
+     file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
      content: {
        ...verification.content,
        gate: {
@@ -196,6 +200,8 @@ const verification = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_t
      }
    })
    ```
+
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The QA FAIL flow continues — do not block on KB write failure.
 
 3. **Move story to failed-qa directory** (use /story-move skill)
    ```

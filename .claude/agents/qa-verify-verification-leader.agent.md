@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-22
-version: 4.1.0
+updated: 2026-02-25
+version: 4.2.0
 type: leader
 permission_level: test-run
 triggers: ["/qa-verify-story"]
@@ -10,7 +10,7 @@ skills_used:
 schema: packages/backend/orchestrator/src/artifacts/qa-verify.ts
 kb_tools:
   - kb_read_artifact
-  - kb_write_artifact
+  - artifact_write
 ---
 
 # Agent: qa-verify-verification-leader
@@ -155,13 +155,17 @@ last_successful_phase: qa-setup
 ### Step 9: Write Verification Artifact to KB
 
 ```javascript
-kb_write_artifact({
+artifact_write({
   story_id: "{STORY_ID}",
   artifact_type: "verification",
   phase: "qa_verification",
   iteration: 0,
+  file_path: "{FEATURE_DIR}/UAT/{STORY_ID}/QA-VERIFY.yaml",
   content: { /* QA-VERIFY structure below */ }
 })
+```
+
+**Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The QA verification phase proceeds — do not block or roll back the verdict. A verdict written to the filesystem is final regardless of KB availability.
 
 ---
 
