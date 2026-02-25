@@ -8,10 +8,10 @@
  */
 
 import { z } from 'zod'
-import { eq, and, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
+import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { stories, storyDependencies } from '../db/schema.js'
+import { stories, storyArtifacts, storyDependencies } from '../db/schema.js'
 import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__types__/index.js'
 
 // ============================================================================
@@ -24,9 +24,34 @@ import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__ty
 export const KbGetStoryInputSchema = z.object({
   /** Story ID to retrieve (e.g., 'WISH-2045') */
   story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** When true, eagerly loads story artifacts from story_artifacts table (default: false) */
+  include_artifacts: z.boolean().optional().default(false),
+
+  /** When true, eagerly loads dependency edges (inbound + outbound) from story_dependencies table (default: false) */
+  include_dependencies: z.boolean().optional().default(false),
 })
 
 export type KbGetStoryInput = z.infer<typeof KbGetStoryInputSchema>
+
+/**
+ * Result schema for kb_get_story tool.
+ *
+ * Optional keys artifacts and dependencies are present only when the corresponding
+ * include_* flag is true. When flag is false, the key is absent (not an empty array).
+ * When flag is true and no records exist, the key is an empty array.
+ *
+ * Exception: when story is null (not found), both arrays are always present and empty
+ * regardless of flags.
+ */
+export const KbGetStoryResultSchema = z.object({
+  story: z.custom<typeof stories.$inferSelect>().nullable(),
+  artifacts: z.array(z.custom<typeof storyArtifacts.$inferSelect>()).optional(),
+  dependencies: z.array(z.custom<typeof storyDependencies.$inferSelect>()).optional(),
+  message: z.string(),
+})
+
+export type KbGetStoryResult = z.infer<typeof KbGetStoryResultSchema>
 
 /**
  * Input schema for kb_list_stories tool.
@@ -164,10 +189,7 @@ export interface StoryCrudDeps {
 export async function kb_get_story(
   deps: StoryCrudDeps,
   input: KbGetStoryInput,
-): Promise<{
-  story: typeof stories.$inferSelect | null
-  message: string
-}> {
+): Promise<KbGetStoryResult> {
   const validated = KbGetStoryInputSchema.parse(input)
 
   const result = await deps.db
@@ -178,9 +200,44 @@ export async function kb_get_story(
 
   const story = result[0] ?? null
 
+  // Short-circuit guard: when story not found, return empty arrays without secondary queries
+  if (!story) {
+    return {
+      story: null,
+      artifacts: [],
+      dependencies: [],
+      message: `Story ${validated.story_id} not found`,
+    }
+  }
+
+  // Conditionally fetch artifacts (single SELECT, not N+1)
+  let artifacts: (typeof storyArtifacts.$inferSelect)[] | undefined
+  if (validated.include_artifacts) {
+    artifacts = await deps.db
+      .select()
+      .from(storyArtifacts)
+      .where(eq(storyArtifacts.storyId, validated.story_id))
+  }
+
+  // Conditionally fetch dependencies — bidirectional (outbound storyId=X OR inbound targetStoryId=X)
+  let dependencies: (typeof storyDependencies.$inferSelect)[] | undefined
+  if (validated.include_dependencies) {
+    dependencies = await deps.db
+      .select()
+      .from(storyDependencies)
+      .where(
+        or(
+          eq(storyDependencies.storyId, validated.story_id),
+          eq(storyDependencies.targetStoryId, validated.story_id),
+        ),
+      )
+  }
+
   return {
     story,
-    message: story ? `Found story ${validated.story_id}` : `Story ${validated.story_id} not found`,
+    ...(artifacts !== undefined ? { artifacts } : {}),
+    ...(dependencies !== undefined ? { dependencies } : {}),
+    message: `Found story ${validated.story_id}`,
   }
 }
 
