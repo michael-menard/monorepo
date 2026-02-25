@@ -1,0 +1,199 @@
+schema: 2
+story_id: "WINT-9090"
+timestamp: "2026-02-24T22:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Create nodes/context/ directory structure and index.ts re-export stub"
+    files:
+      - "packages/backend/orchestrator/src/nodes/context/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/sync/index.ts"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered:
+      - "AC-3"
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Implement context-warmer.ts node with cache read + write (contextCacheGet + contextCachePut logic)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/context/context-warmer.ts"
+      - "packages/backend/orchestrator/src/nodes/context/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/orchestrator/src/nodes/persistence/load-from-db.ts"
+      - "packages/backend/mcp-tools/src/context-cache/context-cache-get.ts"
+      - "packages/backend/mcp-tools/src/context-cache/context-cache-put.ts"
+      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+    dependencies:
+      - 1
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered:
+      - "AC-1"
+      - "AC-4"
+      - "AC-5"
+      - "AC-8"
+      - "AC-9"
+      - "AC-10"
+      - "AC-11"
+      - "AC-14"
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Implement cache invalidation in context-warmer.ts (contextCacheInvalidate logic)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/context/context-warmer.ts"
+    files_to_read:
+      - "packages/backend/mcp-tools/src/context-cache/context-cache-invalidate.ts"
+      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+    dependencies:
+      - 2
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered:
+      - "AC-13"
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Implement session-manager.ts node with create, update, complete, cleanup operations"
+    files:
+      - "packages/backend/orchestrator/src/nodes/context/session-manager.ts"
+      - "packages/backend/orchestrator/src/nodes/context/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/orchestrator/src/nodes/reality/load-knowledge-context.ts"
+      - "packages/backend/mcp-tools/src/session-management/session-create.ts"
+      - "packages/backend/mcp-tools/src/session-management/session-update.ts"
+      - "packages/backend/mcp-tools/src/session-management/session-complete.ts"
+      - "packages/backend/mcp-tools/src/session-management/session-cleanup.ts"
+      - "packages/backend/mcp-tools/src/session-management/__types__/index.ts"
+    dependencies:
+      - 1
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered:
+      - "AC-2"
+      - "AC-6"
+      - "AC-7"
+      - "AC-8"
+      - "AC-9"
+      - "AC-10"
+      - "AC-11"
+      - "AC-14"
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write unit tests for context-warmer.ts and session-manager.ts (injectable mock DB)"
+    files:
+      - "packages/backend/orchestrator/src/nodes/context/__tests__/context-warmer.test.ts"
+      - "packages/backend/orchestrator/src/nodes/context/__tests__/session-manager.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts"
+      - "packages/backend/mcp-tools/src/session-management/__tests__/integration.test.ts"
+    dependencies:
+      - 3
+      - 4
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage"
+    acs_covered:
+      - "AC-12"
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/nodes/context/index.ts"
+    action: create
+    reason: "New module re-export index for nodes/context/ — consistent with nodes/sync/index.ts and nodes/reality/ conventions"
+  - path: "packages/backend/orchestrator/src/nodes/context/context-warmer.ts"
+    action: create
+    reason: "New LangGraph node porting contextCacheGet, contextCachePut, contextCacheInvalidate MCP tool behavior (AC-1, AC-4, AC-5, AC-13)"
+  - path: "packages/backend/orchestrator/src/nodes/context/session-manager.ts"
+    action: create
+    reason: "New LangGraph node porting sessionCreate, sessionUpdate, sessionComplete, sessionCleanup MCP tool behavior (AC-2, AC-6, AC-7)"
+  - path: "packages/backend/orchestrator/src/nodes/context/__tests__/context-warmer.test.ts"
+    action: create
+    reason: "Unit tests for context-warmer node — injectable mock DB, >= 80% coverage (AC-12)"
+  - path: "packages/backend/orchestrator/src/nodes/context/__tests__/session-manager.test.ts"
+    action: create
+    reason: "Unit tests for session-manager node — injectable mock DB, >= 80% coverage (AC-12)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after each implementation step"
+    required: true
+  - command: "pnpm test --filter @repo/orchestrator src/nodes/context/__tests__/ -- --coverage"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File exists: context-warmer.ts with contextWarmerNode default export and createContextWarmerNode factory"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "File exists: session-manager.ts with sessionManagerNode default export and createSessionManagerNode factory"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "File exists: nodes/context/index.ts exporting both nodes — matches nodes/sync/index.ts re-export pattern"
+    evidence_type: file
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test HP-1: contextWarmerNode cache hit — contextCacheHit=true, contextPackContent populated"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "Unit test HP-2: contextWarmerNode cache miss — new row inserted in contextPacks"
+    evidence_type: test
+  - ac_id: "AC-6"
+    planned_evidence: "Unit test HP-3: sessionManagerNode create — sessionId UUID in state, contextSessions row inserted"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "Unit test HP-4, HP-5: sessionManagerNode update/complete — token counts updated, lifecycle_status transitions"
+    evidence_type: test
+  - ac_id: "AC-8"
+    planned_evidence: "Code review: both nodes use createToolNode() from runner/node-factory.ts"
+    evidence_type: file
+  - ac_id: "AC-9"
+    planned_evidence: "Code review: GraphStateWithContextCache and GraphStateWithSession interfaces extending GraphStateWithContext"
+    evidence_type: file
+  - ac_id: "AC-10"
+    planned_evidence: "Unit test HP-8: factory functions accept mockDb and use it; no hard-wired db import at module scope"
+    evidence_type: test
+  - ac_id: "AC-11"
+    planned_evidence: "Unit tests EC-1, EC-2: DB failure returns null state fields, never throws, logger.error called"
+    evidence_type: test
+  - ac_id: "AC-12"
+    planned_evidence: "pnpm test --filter @repo/orchestrator -- --coverage shows >= 80% for nodes/context/ files"
+    evidence_type: command
+  - ac_id: "AC-13"
+    planned_evidence: "Code review: invalidation operation mode in createContextWarmerNode or companion utility"
+    evidence_type: file
+  - ac_id: "AC-14"
+    planned_evidence: "Code review: imports from packages/backend/mcp-tools/src/context-cache/__types__/ and session-management/__types__/ — no local re-definition"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should contextWarmerNode support all three operations (get, put, invalidate) via an operation dispatch pattern in state, or should invalidation be a separate exported companion function?"
+    decision: "Implement all three operations as a state-dispatched operation mode (operation: 'get' | 'put' | 'invalidate') within createContextWarmerNode — consistent with how sessionManagerNode dispatches create/update/complete/cleanup via state.sessionOperation"
+    rationale: "The story's session-manager node already uses this dispatch pattern (operation field in state) and the story's AC-13 says 'accessible via the context-warmer node or a companion utility'. Using the same dispatch pattern across both nodes maximizes consistency and reduces API surface."
+    decided_by: planner
+
+complexity: moderate
+
+notes:
+  - "WINT-9010 (@repo/workflow-logic) is in UAT — implementation gate SATISFIED. workflow-logic is NOT required for this story (nodes use @repo/db directly, per MCP tool patterns)"
+  - "WINT-2100 source ambiguity: session-management MCP tools exist in packages/backend/mcp-tools/src/session-management/ — confirmed as behavioral source of truth"
+  - "No new packages added — all dependencies already in @repo/orchestrator package"
+  - "nodes/context/ directory does NOT yet exist — ST-1 creates it"
+  - "Import pattern: Zod schemas from mcp-tools __types__/ must be imported not duplicated (AC-14). The db type is imported from @repo/db but the db instance itself is injectable via factory config"
+  - "GraphStateWithContext (from retrieve-context.ts) is the extension base per story's architecture notes — context-warmer extends it to GraphStateWithContextCache, session-manager to GraphStateWithSession"
+  - "Cache TTL note: use explicit future timestamps in tests, not relative offsets (story risk)"
+  - "Session update throws on not-found/already-completed (MCP source behavior). The LangGraph node must wrap this in the graceful degradation try/catch, returning null sessionId state instead of propagating the throw"
+  - "Concurrent write tests should be grouped serially in vitest (story edge-case risk ED-1)"

@@ -1,0 +1,143 @@
+schema: 1
+story_id: "KBAR-0170"
+version: 1
+timestamp: "2026-02-25T13:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "dev-execute-leader.agent.md EVIDENCE write (Step 8) uses artifact_write tool call with artifact_type: evidence, phase: implementation, iteration: checkpoint.content.iteration, and file_path set to canonical _implementation/EVIDENCE.yaml path"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-execute-leader.agent.md"
+        description: "Step 8 now calls artifact_write({ story_id, artifact_type: 'evidence', phase: 'implementation', iteration: checkpoint.content.iteration, file_path: '{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml', content: {...} })"
+
+  - ac_id: "AC-2"
+    ac_text: "dev-execute-leader.agent.md CHECKPOINT update (Step 9) uses artifact_write tool call with artifact_type: checkpoint, phase: implementation, and updated content including current_phase: execute, last_successful_phase: plan"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-execute-leader.agent.md"
+        description: "Step 9 now calls artifact_write({ story_id, artifact_type: 'checkpoint', phase: 'implementation', iteration: checkpoint.content.iteration, file_path: '{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml', content: { ...checkpoint.content, current_phase: 'execute', last_successful_phase: 'plan' } })"
+
+  - ac_id: "AC-3"
+    ac_text: "dev-execute-leader.agent.md frontmatter kb_tools section is updated to replace kb_write_artifact with artifact_write for write operations"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-execute-leader.agent.md"
+        description: "Frontmatter kb_tools now lists: kb_update_story_status, kb_read_artifact, artifact_write — kb_write_artifact removed"
+
+  - ac_id: "AC-4"
+    ac_text: "dev-execute-leader.agent.md documents graceful KB write failure behavior: if KB write fails, artifact_write returns file_written: true and kb_write_warning — execute phase proceeds, not blocks"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-execute-leader.agent.md"
+        description: "Both Step 8 and Step 9 document graceful failure: 'If KB write fails, artifact_write returns file_written: true with a kb_write_warning. Execute phase proceeds without blocking.'"
+
+  - ac_id: "AC-5"
+    ac_text: "kb_read_artifact calls in dev-execute-leader (Steps 1-2 — plan, scope, context, checkpoint reads) are unchanged — only the write side is migrated"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-execute-leader.agent.md"
+        description: "Inputs section and Steps 1-2 kb_read_artifact calls are identical to pre-migration. Four kb_read_artifact calls for plan, scope, context, checkpoint reads are unchanged."
+
+  - ac_id: "AC-6"
+    ac_text: "For dev-implement-backend-coder and dev-implement-frontend-coder: non-negotiables updated to document that direct Write tool calls for BACKEND-LOG.md and FRONTEND-LOG.md remain unchanged (Option b — no migration to artifact_write)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-implement-backend-coder.agent.md"
+        description: "Non-negotiables now include: 'BACKEND-LOG.md MUST be written via direct Write tool calls... Do NOT use artifact_write for log files — high-frequency log writes (5-10 per story) must not incur KB round-trip overhead. This is an explicit scope decision from KBAR-0170 (AC-6, Option b).'"
+      - type: file
+        path: ".claude/agents/dev-implement-frontend-coder.agent.md"
+        description: "Non-negotiables now include: 'FRONTEND-LOG.md MUST be written via direct Write tool calls... Do NOT use artifact_write for log files — high-frequency log writes (5-10 per story) must not incur KB round-trip overhead. This is an explicit scope decision from KBAR-0170 (AC-6, Option b).'"
+
+  - ac_id: "AC-7"
+    ac_text: "Coder agents frontmatter kb_tools are NOT updated (consistent with AC-6 Option b — artifact_write is not adopted for log writes)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: ".claude/agents/dev-implement-backend-coder.agent.md"
+        description: "Frontmatter kb_tools still lists only kb_search — no artifact_write added"
+      - type: file
+        path: ".claude/agents/dev-implement-frontend-coder.agent.md"
+        description: "Frontmatter kb_tools still lists only kb_search — no artifact_write added"
+
+  - ac_id: "AC-8"
+    ac_text: "No kb_write_artifact write calls remain in any of the three target agent files after migration"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep 'kb_write_artifact' .claude/agents/dev-execute-leader.agent.md .claude/agents/dev-implement-backend-coder.agent.md .claude/agents/dev-implement-frontend-coder.agent.md"
+        result: "PASS — returns no matches. All three files clean."
+
+touched_files:
+  - path: ".claude/agents/dev-execute-leader.agent.md"
+    action: modified
+    description: "Replaced kb_write_artifact write calls in Steps 8-10 with artifact_write using explicit file_path; updated frontmatter kb_tools (kb_write_artifact -> artifact_write); documented graceful KB failure semantics; updated Output section and Non-Negotiables"
+
+  - path: ".claude/agents/dev-implement-backend-coder.agent.md"
+    action: modified
+    description: "Added AC-6 scope decision documentation to Non-negotiables: BACKEND-LOG.md must use direct Write tool calls, not artifact_write, with explicit rationale (KBAR-0170 AC-6, Option b)"
+
+  - path: ".claude/agents/dev-implement-frontend-coder.agent.md"
+    action: modified
+    description: "Added AC-6 scope decision documentation to Non-negotiables: FRONTEND-LOG.md must use direct Write tool calls, not artifact_write, with explicit rationale (KBAR-0170 AC-6, Option b)"
+
+commands_run:
+  - command: "grep 'kb_write_artifact' .claude/agents/dev-execute-leader.agent.md && echo 'FAIL' || echo 'PASS: no kb_write_artifact write calls'"
+    result: SUCCESS
+    output: "PASS: no kb_write_artifact write calls remain"
+    timestamp: "2026-02-25T13:00:00Z"
+
+  - command: "grep 'artifact_write' .claude/agents/dev-execute-leader.agent.md"
+    result: SUCCESS
+    output: "artifact_write present in frontmatter, Step 8, Step 9, Output section, Non-Negotiables"
+    timestamp: "2026-02-25T13:00:00Z"
+
+  - command: "grep 'KBAR-0170' .claude/agents/dev-implement-backend-coder.agent.md .claude/agents/dev-implement-frontend-coder.agent.md"
+    result: SUCCESS
+    output: "KBAR-0170 reference found in both coder agent non-negotiables sections"
+    timestamp: "2026-02-25T13:00:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: docs"
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage: {}
+
+notable_decisions:
+  - "AC-6 Option b: BACKEND-LOG and FRONTEND-LOG remain as direct Write tool calls — no artifact_write migration. Performance risk from KB round-trip overhead on 5-10 writes per story is unacceptable."
+  - "Follows KBAR-0160 migration pattern exactly: explicit file_path, graceful failure documented, frontmatter kb_tools updated"
+  - "kb_read_artifact calls in Steps 1-2 are explicitly preserved unchanged — only the write side is migrated"
+  - "ST-4 (human review + canary validation) requires KBAR-0110 and KBAR-0160 to be merged before canary run can be executed"
+
+known_deviations:
+  - "Canary validation (MC-3) cannot be performed until KBAR-0110 and KBAR-0160 dependency chain is fully merged. This is a documented prerequisite in the story."
+
+token_summary:
+  setup: { in: 0, out: 0 }
+  plan: { in: 0, out: 0 }
+  execute: { in: 45000, out: 8000 }

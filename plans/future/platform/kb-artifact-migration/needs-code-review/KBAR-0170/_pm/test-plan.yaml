@@ -1,0 +1,132 @@
+strategy: manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+happy_path_tests:
+  - id: HP-1
+    title: "dev-execute-leader EVIDENCE write uses artifact_write with explicit file_path"
+    setup: "KBAR-0170 changes merged; artifact_write tool available (KBAR-0110 landed); KBAR-0160 landed; test story directory exists at {FEATURE_DIR}/in-progress/{STORY_ID}/"
+    action: "Run /dev-implement-story for a canary story; observe dev-execute-leader Step 8 EVIDENCE write"
+    expected: "artifact_write called with artifact_type: 'evidence', phase: 'implementation', iteration: checkpoint.content.iteration, file_path pointing to _implementation/EVIDENCE.yaml; file appears on filesystem"
+    evidence: "Verify _implementation/EVIDENCE.yaml exists at expected path after execute phase completes; diff agent file shows artifact_write replacing kb_write_artifact"
+  - id: HP-2
+    title: "dev-execute-leader CHECKPOINT update uses artifact_write with correct content"
+    setup: "Same as HP-1"
+    action: "Observe dev-execute-leader Step 9 CHECKPOINT update"
+    expected: "artifact_write called with artifact_type: 'checkpoint', phase: 'implementation', content including current_phase: 'execute', last_successful_phase: 'plan'; file_path pointing to _implementation/CHECKPOINT.yaml"
+    evidence: "Verify _implementation/CHECKPOINT.yaml updated on filesystem after execute phase; content contains current_phase: execute"
+  - id: HP-3
+    title: "KB read path still works after EVIDENCE migration"
+    setup: "HP-1 completed (EVIDENCE artifact written via artifact_write dual-write)"
+    action: "Invoke kb_read_artifact for the written EVIDENCE artifact"
+    expected: "Artifact is retrievable from KB (dual-write: file AND KB indexed)"
+    evidence: "kb_read_artifact returns artifact content matching the written file; KB leg of dual-write succeeded"
+  - id: HP-4
+    title: "KB read inputs in dev-execute-leader (Steps 1-2) remain unchanged"
+    setup: "KBAR-0170 agent diff"
+    action: "Inspect dev-execute-leader.agent.md Steps 1-2 for kb_read_artifact calls"
+    expected: "All kb_read_artifact calls in Steps 1-2 (plan, scope, context, checkpoint reads) are identical to pre-migration; no changes to read path"
+    evidence: "Git diff shows no modifications to Steps 1-2 in dev-execute-leader"
+  - id: HP-5
+    title: "dev-implement-backend-coder non-negotiables document AC-6 scope decision"
+    setup: "KBAR-0170 changes merged"
+    action: "Inspect dev-implement-backend-coder.agent.md non-negotiables section"
+    expected: "Non-negotiables document one of: (a) BACKEND-LOG uses artifact_write with skip_kb:true, or (b) direct Write calls confirmed as intended — no migration needed. Decision is explicit."
+    evidence: "Non-negotiables section in backend-coder agent file contains clear statement of scope decision"
+  - id: HP-6
+    title: "dev-implement-frontend-coder non-negotiables document AC-6 scope decision"
+    setup: "Same as HP-5"
+    action: "Inspect dev-implement-frontend-coder.agent.md non-negotiables section"
+    expected: "Non-negotiables document the same scope decision as HP-5 (consistent approach for both coder agents)"
+    evidence: "Non-negotiables section in frontend-coder agent file contains clear statement of scope decision"
+error_cases:
+  - id: EC-1
+    title: "KB write failure during EVIDENCE artifact_write does not block execute phase"
+    setup: "Simulate KB unavailability; file system available"
+    action: "Run dev-execute-leader; trigger EVIDENCE write via artifact_write; KB write leg fails"
+    expected: "file_written: true returned; kb_write_warning logged; execute phase proceeds without blocking; _implementation/EVIDENCE.yaml still written to filesystem"
+    evidence: "Execute phase completes; EVIDENCE.yaml present on filesystem; warning (not error) in output; no execute phase halt"
+  - id: EC-2
+    title: "KB write failure during CHECKPOINT update does not block execute phase"
+    setup: "Simulate KB unavailability; file system available"
+    action: "Run dev-execute-leader; trigger CHECKPOINT update via artifact_write; KB write leg fails"
+    expected: "file_written: true returned; kb_write_warning logged; execute phase proceeds. _implementation/CHECKPOINT.yaml still written."
+    evidence: "Execute phase completes; CHECKPOINT.yaml present on filesystem; warning (not error) in output"
+  - id: EC-3
+    title: "No kb_write_artifact calls remain in dev-execute-leader after migration"
+    setup: "KBAR-0170 changes merged"
+    action: "Search dev-execute-leader.agent.md for kb_write_artifact string"
+    expected: "Zero occurrences of kb_write_artifact write calls (or any found are explicitly justified with comments)"
+    evidence: "grep 'kb_write_artifact' .claude/agents/dev-execute-leader.agent.md returns no write call blocks"
+  - id: EC-4
+    title: "No kb_write_artifact calls in backend-coder or frontend-coder (pre-existing condition confirmed)"
+    setup: "Inspect all three agent files"
+    action: "Search backend-coder.agent.md and frontend-coder.agent.md for kb_write_artifact"
+    expected: "Zero occurrences in both files (consistent with pre-migration state — these agents never used kb_write_artifact)"
+    evidence: "grep returns no results; AC-8 satisfied trivially for coder agents"
+edge_cases:
+  - id: ED-1
+    title: "dev-execute-leader fix mode CHECKPOINT update uses artifact_write with incremented iteration"
+    setup: "KBAR-0170 changes merged; prior CHECKPOINT exists (iteration 0)"
+    action: "Trigger dev-execute-leader in fix/retry mode (Step 9 for fix mode)"
+    expected: "artifact_write called with updated checkpoint content; iteration reflects current checkpoint iteration value"
+    evidence: "Updated _implementation/CHECKPOINT.yaml on filesystem; KB also updated if available"
+  - id: ED-2
+    title: "dev-execute-leader frontmatter kb_tools lists artifact_write after migration"
+    setup: "KBAR-0170 changes merged"
+    action: "Inspect frontmatter of dev-execute-leader.agent.md"
+    expected: "kb_tools section includes artifact_write; kb_write_artifact removed or replaced. kb_read_artifact and kb_update_story_status remain unchanged."
+    evidence: "Agent frontmatter diff shows kb_tools updated to include artifact_write"
+  - id: ED-3
+    title: "Coder agent frontmatter unchanged if AC-6 path (b) chosen"
+    setup: "KBAR-0170 changes merged; AC-6 resolved as option (b) — no log migration"
+    action: "Inspect frontmatter of backend-coder and frontend-coder"
+    expected: "kb_tools in both coder agents remains unchanged (only kb_search listed); artifact_write NOT added since direct Write calls remain"
+    evidence: "Git diff shows no frontmatter changes in coder agent files"
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "artifact_write called with correct schema: { story_id, artifact_type:'evidence', phase:'implementation', iteration, file_path, content }"
+      - "Response includes file_written: true for successful writes"
+      - "Response includes kb_write_warning (not error) when KB unavailable"
+      - "File _implementation/EVIDENCE.yaml exists at canonical path after execute phase"
+      - "File _implementation/CHECKPOINT.yaml exists at canonical path after execute phase"
+  frontend: null
+manual_cases:
+  - id: MC-1
+    title: "Full agent diff review: dev-execute-leader.agent.md"
+    steps:
+      - "Checkout KBAR-0170 branch"
+      - "Run: git diff main -- .claude/agents/dev-execute-leader.agent.md"
+      - "Verify Step 8 shows artifact_write replacing kb_write_artifact for EVIDENCE"
+      - "Verify Step 9 shows artifact_write replacing kb_write_artifact for CHECKPOINT"
+      - "Verify frontmatter kb_tools shows artifact_write added/replacing kb_write_artifact"
+      - "Verify Steps 1-2 kb_read_artifact calls are UNCHANGED"
+      - "Verify graceful failure documentation is present (file_written:true, kb_write_warning, execute proceeds)"
+    expected: "All 6 verification points pass; no unexpected changes outside steps 8-10 and frontmatter"
+  - id: MC-2
+    title: "Full agent diff review: dev-implement-backend-coder.agent.md and dev-implement-frontend-coder.agent.md"
+    steps:
+      - "Run: git diff main -- .claude/agents/dev-implement-backend-coder.agent.md"
+      - "Run: git diff main -- .claude/agents/dev-implement-frontend-coder.agent.md"
+      - "For path (b): verify only non-negotiables section updated with scope decision statement; no other changes"
+      - "For path (a): verify artifact_write call added with skip_kb:true; frontmatter kb_tools updated; non-negotiables updated"
+    expected: "Changes are minimal and match the AC-6 decision documented in non-negotiables"
+  - id: MC-3
+    title: "Canary story validation — full implementation workflow"
+    steps:
+      - "Ensure KBAR-0110, KBAR-0160, KBAR-0170 all merged"
+      - "Start a new test story implementation via /dev-implement-story"
+      - "Observe dev-execute-leader output after implementation completes"
+      - "Verify _implementation/EVIDENCE.yaml file exists"
+      - "Verify _implementation/CHECKPOINT.yaml file exists"
+      - "Verify both files are readable via kb_read_artifact (KB dual-write succeeded)"
+    expected: "Files on filesystem; KB-readable; no blocking errors from KB write failures"
+fixture_definitions: []
+risks:
+  - "Cannot be validated with automated tests — agent markdown changes are human-reviewed only"
+  - "Canary validation requires full dependency chain (KBAR-0110 + KBAR-0160) to be merged first"
+  - "KB unavailability simulation is observational — cannot be automated in unit tests"
+  - "If AC-6 path (a) chosen, performance regression risk for BACKEND-LOG/FRONTEND-LOG must be observed during canary (not measurable without baseline)"

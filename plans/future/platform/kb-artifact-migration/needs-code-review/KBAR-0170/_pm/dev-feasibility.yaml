@@ -1,0 +1,94 @@
+feasible: true
+confidence: high
+rationale: >
+  KBAR-0170 is documentation-only: it modifies three agent markdown files (.agent.md).
+  No TypeScript changes are required. The artifact_write tool (KBAR-0110, now in UAT)
+  provides a stable contract. The sibling migration story KBAR-0160 established the
+  exact pattern to follow. The critical scope decision for AC-6 is resolved as Option (b):
+  backend-coder and frontend-coder do NOT use kb_write_artifact, so no migration is
+  required for those agents' log writes. BACKEND-LOG and FRONTEND-LOG remain as direct
+  Write tool calls — this avoids performance risk on high-frequency writes. Scope is
+  concentrated on dev-execute-leader's two kb_write_artifact calls in Steps 8-10.
+complexity: low
+ac6_decision: >
+  Option (b): Direct Write tool calls for BACKEND-LOG and FRONTEND-LOG remain unchanged.
+  Rationale: (1) backend-coder and frontend-coder do not use kb_write_artifact — they
+  never did. (2) Logs are high-frequency writes (5-10 per story); artifact_write adds
+  KB round-trip overhead even with skip_kb:true. (3) The KBAR index risk note explicitly
+  flags "BACKEND-LOG and FRONTEND-LOG are high-frequency writes; performance critical."
+  (4) If KB indexing of logs is desired in future, it belongs in a separate story with
+  dedicated performance analysis. Consequence: AC-7 resolves as "no changes to coder
+  agent frontmatter"; AC-8 is trivially satisfied for coder agents (no kb_write_artifact
+  existed to remove).
+change_surface:
+  areas:
+    - ".claude/agents/dev-execute-leader.agent.md"
+    - ".claude/agents/dev-implement-backend-coder.agent.md (non-negotiables doc update only)"
+    - ".claude/agents/dev-implement-frontend-coder.agent.md (non-negotiables doc update only)"
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "dev-execute-leader is invoked for every story's implementation phase — regressions have maximum blast radius"
+    mitigation: "Changes are documentation-only (agent markdown). No TypeScript code changes. Human review + canary story validation required before merging. KBAR-0160 established the pattern; follow it exactly."
+  - finding: "Backward compatibility: stories in-progress with artifacts written by old kb_write_artifact must still be readable via kb_read_artifact"
+    mitigation: "Only the write side is migrated. Read path (kb_read_artifact in Steps 1-2) is explicitly preserved. artifact_write dual-writes to both file and KB, maintaining KB-readability."
+  - finding: "KBAR-0160 dependency must be merged before KBAR-0170 implementation starts"
+    mitigation: "Declared as hard dependency in index (Depends On: KBAR-016). Blocker is documented; no coding begins until KBAR-0160 lands."
+missing_requirements: []
+evidence_expectations:
+  - "Git diff of dev-execute-leader.agent.md showing artifact_write replacing kb_write_artifact in Steps 8-10"
+  - "Git diff showing frontmatter kb_tools updated in dev-execute-leader"
+  - "Git diff showing non-negotiables documentation added to backend-coder and frontend-coder (AC-6 decision)"
+  - "Canary story run after merge: _implementation/EVIDENCE.yaml exists on filesystem"
+  - "Canary story run after merge: _implementation/CHECKPOINT.yaml exists on filesystem (updated by execute phase)"
+subtasks:
+  - id: ST-1
+    title: "Verify artifact_write schema and inspect current agent files"
+    goal: "Confirm artifact_write input/output contract from KBAR-0110 UAT; inspect all three agent files to document exact change targets; produce scope decision for AC-6"
+    files_to_read:
+      - "plans/future/platform/kb-artifact-migration/UAT/KBAR-0110/KBAR-0110.md"
+      - ".claude/agents/dev-execute-leader.agent.md"
+      - ".claude/agents/dev-implement-backend-coder.agent.md"
+      - ".claude/agents/dev-implement-frontend-coder.agent.md"
+      - "plans/future/platform/kb-artifact-migration/ready-to-work/KBAR-0160/KBAR-0160.md"
+    files_to_modify: []
+    acs: ["AC-5", "AC-6"]
+    depends_on: none
+    verification: "No code to verify — document scope decision in subtask notes"
+    estimated_tokens: 6000
+  - id: ST-2
+    title: "Update dev-execute-leader.agent.md — migrate EVIDENCE and CHECKPOINT writes"
+    goal: "Replace kb_write_artifact calls in Steps 8-10 with artifact_write using explicit file_path; update frontmatter kb_tools; document graceful KB failure semantics"
+    files_to_read:
+      - ".claude/agents/dev-execute-leader.agent.md"
+    files_to_modify:
+      - ".claude/agents/dev-execute-leader.agent.md"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-8"]
+    depends_on: ST-1
+    verification: "grep 'kb_write_artifact' .claude/agents/dev-execute-leader.agent.md returns no write call blocks; grep 'artifact_write' returns two call blocks for EVIDENCE and CHECKPOINT"
+    estimated_tokens: 5000
+  - id: ST-3
+    title: "Update backend-coder and frontend-coder with AC-6 scope decision documentation"
+    goal: "Add non-negotiables documentation in both coder agents confirming that direct Write tool calls for BACKEND-LOG/FRONTEND-LOG remain unchanged (Option b); no functional changes required"
+    files_to_read:
+      - ".claude/agents/dev-implement-backend-coder.agent.md"
+      - ".claude/agents/dev-implement-frontend-coder.agent.md"
+    files_to_modify:
+      - ".claude/agents/dev-implement-backend-coder.agent.md"
+      - ".claude/agents/dev-implement-frontend-coder.agent.md"
+    acs: ["AC-6", "AC-7", "AC-8"]
+    depends_on: ST-1
+    verification: "Diff shows only non-negotiables section updated; no frontmatter changes (AC-7: no artifact_write adoption); no kb_write_artifact existed to remove (AC-8 trivially satisfied)"
+    estimated_tokens: 4000
+  - id: ST-4
+    title: "Human review and canary validation"
+    goal: "Human review of all three agent file diffs against ACs; functional canary story validation after KBAR-0170 merged (requires KBAR-0110 and KBAR-0160 merged)"
+    files_to_read:
+      - ".claude/agents/dev-execute-leader.agent.md"
+      - ".claude/agents/dev-implement-backend-coder.agent.md"
+      - ".claude/agents/dev-implement-frontend-coder.agent.md"
+    files_to_modify: []
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+    depends_on: ST-3
+    verification: "_implementation/EVIDENCE.yaml and _implementation/CHECKPOINT.yaml exist on filesystem after canary story execute phase; both readable via kb_read_artifact"
+    estimated_tokens: 3000

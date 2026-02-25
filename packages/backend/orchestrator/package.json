@@ -33,6 +33,7 @@
     "@langchain/openai": "0.3.17",
     "@repo/database-schema": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/mcp-tools": "workspace:*",
     "@repo/workflow-logic": "workspace:*",
     "gray-matter": "^4.0.3",
     "inquirer": "^9.2.0",
