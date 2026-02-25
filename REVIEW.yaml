@@ -1,0 +1,110 @@
+schema: 1
+story_id: KBAR-0090
+verdict: PASS
+iteration: 1
+reviewed_at: "2026-02-24T21:00:00Z"
+reviewer: code-review-orchestrator
+
+summary: >
+  All 10 acceptance criteria verified against the actual test files.
+  story-tools.test.ts correctly covers AC-1 through AC-8 with 9 focused tests.
+  mcp-integration.test.ts correctly updated to 53 tools with kb_update_story in the
+  expected names list (AC-9). TypeScript and full test suite pass confirmed via evidence
+  (AC-10).
+
+acceptance_criteria:
+  - ac_id: AC-1
+    verdict: PASS
+    notes: >
+      Test 'should return null story with zero candidates when queue is empty' at line 92
+      mocks { story: null, candidates_count: 0, blocked_by_dependencies: [] } and asserts
+      parsed.story is null and candidates_count is 0. Correct.
+
+  - ac_id: AC-2
+    verdict: PASS
+    notes: >
+      Test 'should return null story with blocked_by_dependencies list when all are blocked'
+      at line 114 mocks 3 blocked entries and asserts blocked_by_dependencies.length === 3
+      and story is null. Correct.
+
+  - ac_id: AC-3
+    verdict: PASS
+    notes: >
+      Test 'should return the first unblocked story when one is available' at line 141
+      mocks story fixture with storyId: 'KBAR-0090' and asserts parsed.story.storyId ===
+      'KBAR-0090'. Priority ordering is implicitly covered by the mock — the handler
+      delegates ordering to the DB layer, so forwarding the call and asserting the returned
+      story is the correct unit-test approach. Correct.
+
+  - ac_id: AC-4
+    verdict: PASS
+    notes: >
+      Two tests at lines 166 and 189. First test calls with include_backlog: true and
+      asserts callArgs[1] matches { include_backlog: true }. Second test omits include_backlog
+      and asserts callArgs[1] matches { include_backlog: false } (default). Both forwarding
+      cases covered. Correct.
+
+  - ac_id: AC-5
+    verdict: PASS
+    notes: >
+      Test 'should forward exclude_story_ids array to crud operation' at line 211 calls with
+      exclude_story_ids: ['KBAR-0080', 'KBAR-0070'] and asserts callArgs[1] matches the array.
+      Correct.
+
+  - ac_id: AC-6
+    verdict: PASS
+    notes: >
+      Test 'should forward feature filter to crud operation and return correct result' at line
+      235 calls with feature: 'kb-artifact-migration' and asserts callArgs[1] matches
+      { feature: 'kb-artifact-migration' }. Correct.
+
+  - ac_id: AC-7
+    verdict: PASS
+    notes: >
+      Test 'should reject invalid role and not call crud operation' at line 263 creates
+      context with agent_role: 'unknown' as AgentRole (invalid role not in
+      [all, dev, qa, pm]) and asserts result.isError === true and mockKbGetNextStory not
+      called. AuthorizationError path correctly exercised. Correct.
+
+  - ac_id: AC-8
+    verdict: PASS
+    notes: >
+      Test 'should return isError true with Zod error message when epic is missing' at line
+      283 calls handleKbGetNextStory with {} (empty input) and asserts result.isError === true
+      and content[0].text is truthy. Zod validation error path exercised. Correct.
+
+  - ac_id: AC-9
+    verdict: PASS
+    notes: >
+      mcp-integration.test.ts line 72 asserts toHaveLength(53). The expected names array
+      at lines 73-145 includes 'kb_update_story' between 'kb_update_story_status' and
+      'kb_get_next_story'. Describe label updated to reflect 53 tools. Both hygiene fixes
+      confirmed present. Correct.
+
+  - ac_id: AC-10
+    verdict: PASS
+    notes: >
+      EVIDENCE.yaml records: pnpm --filter @repo/knowledge-base exec tsc --noEmit exits 0
+      (no TypeScript errors). pnpm test --filter @repo/knowledge-base passes with 45 test
+      files, 1086 tests (exit 0). Both commands run with timestamps. Correct.
+
+findings: []
+
+code_quality_notes:
+  - >
+    vi.hoisted + vi.mock pattern correctly used. ESM .js extension included in mock path
+    ('../../crud-operations/story-crud-operations.js'). This matches the codebase pattern
+    and the requirement noted in the story architecture section.
+  - >
+    makeStoryFixture helper is well-structured with sensible defaults and override support,
+    reducing fixture duplication across tests.
+  - >
+    The mock variable is named mockKbGetNextStory but replaces the export kb_get_next_story
+    (snake_case). This is correct — the hoisted variable name is internal to the test and
+    the vi.mock return object correctly maps the export name to the mock function.
+  - >
+    Story test plan EC-3 (DB throws unexpected error) does not correspond to a numbered AC
+    and is not required by the review checklist. Its absence does not block PASS. Future
+    work could add this coverage.
+  - >
+    No production code was modified. Story correctly scoped to test-only changes.
