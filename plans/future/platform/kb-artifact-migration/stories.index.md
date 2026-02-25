@@ -186,7 +186,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Status:** uat
 **Story ID:** KBAR-0090
-**Depends On:** KBAR-008
+**Depends On:** none
 **Phase:** 3
 
 **Feature:** Write unit tests for handleKbGetNextStory (already-implemented tool) and fix mcp-integration.test.ts hygiene (tool count 52→53, add kb_update_story to names list)
