@@ -1,8 +1,8 @@
 ---
 title: "Unified Development Flow"
-version: "3.1.0"
+version: "3.2.0"
 created_at: "2026-01-22T10:00:00-07:00"
-updated_at: "2026-02-07T12:00:00-07:00"
+updated_at: "2026-02-25T12:00:00-07:00"
 status: active
 tags:
   - workflow
@@ -38,7 +38,7 @@ This document describes the end-to-end workflow for developing features in the L
 
 | Phase | Command | Purpose |
 |-------|---------|---------|
-| 1a | `/pm-bootstrap-workflow` | Create epic planning artifacts (one-time) |
+| 1a | `/pm-bootstrap-workflow {plan_slug}` | Ingest plan, create story artifacts (one-time) |
 | 1b | `/pm-generate-story-000-harness` | Validate workflow with harness story (one-time) |
 | 1c | `/pm-refine-story` | Vet and prioritize feature ideas (ongoing) |
 | 2 | `/pm-story generate` | Generate story specification |
@@ -108,7 +108,7 @@ stateDiagram-v2
 flowchart TB
     subgraph Setup["EPIC SETUP (one-time)"]
         direction LR
-        A["/pm-bootstrap-workflow"] --> B["/pm-generate-story-000-harness"]
+        A["/pm-bootstrap-workflow<br/>(plan ingestion)"] --> B["/pm-generate-story-000-harness"]
     end
 
     subgraph Lifecycle["STORY LIFECYCLE (per story)"]
@@ -252,8 +252,11 @@ Reusable templates are available in `plans/stories/WRKF-000/_templates/`:
 ## Quick Reference
 
 ```
-/pm-bootstrap-workflow - provide raw plan, project name, PREFIX
-    ↓ creates: {PREFIX}.stories.index.md, {PREFIX}.plan.meta.md, {PREFIX}.plan.exec.md
+/pm-bootstrap-workflow {plan_slug} - ingest plan from KB, generate story artifacts
+    ↓ resolves: plan content from KB plans table (or --file for legacy mode)
+    ↓ derives: prefix from plan_slug (or --prefix override)
+    ↓ creates: {feature_dir}/stories.index.md, {feature_dir}/{PREFIX}-*/story.yaml
+    ↓ inserts: stories into KB stories table
 
 /pm-generate-story-000-harness - run ONCE after bootstrap
     ↓ creates: {PREFIX}-000-HARNESS.md, _templates/*.md

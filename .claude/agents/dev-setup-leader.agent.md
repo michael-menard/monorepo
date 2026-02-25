@@ -292,7 +292,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
 | Check | How | Fail Action |
 |-------|-----|-------------|
 | Story exists | File at story location | STOP: "Story not found" |
-| Status is failure state | `code-review-failed` or `needs-work` | STOP: "Invalid status: <status>" |
+| Status is failure state | `code-review-failed`, `needs-work`, or `failed-qa` | STOP: "Invalid status: <status>" |
 | REVIEW.yaml or QA-VERIFY.yaml exists | Failure report present | STOP: "Failure report not found" |
 
 ### Actions (Sequential)
@@ -307,6 +307,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
 2. **Read failure report from KB**
    - If `code-review-failed`: `kb_read_artifact({ story_id, artifact_type: "review" })`, extract `ranked_patches`
    - If `needs-work`: `kb_read_artifact({ story_id, artifact_type: "verification" })`, extract `issues`
+   - If `failed-qa`: `kb_read_artifact({ story_id, artifact_type: "verification" })`, extract `issues`
 
 3. **Update Checkpoint (dual-write: file + KB)**
 

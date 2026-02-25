@@ -23,79 +23,166 @@ This document details each phase of the Unified Development Flow.
 
 Bootstrap consists of two steps that run once per epic/project:
 
-### Step 1a: Bootstrap Workflow
+### Step 1a: Bootstrap Workflow (Plan Ingestion)
 
-**Command:** `/pm-bootstrap-workflow`
+**Command:** `/pm-bootstrap-workflow {plan_slug | --file {FEATURE_DIR}}`
 **When:** Once per epic/project, before any stories are generated
+**Version:** 5.0.0
+
+The bootstrap workflow ingests a plan and produces structured story artifacts. It supports two input modes:
+
+#### Input Modes
+
+**KB Mode (default, recommended):** Provide a `plan_slug` that exists in the KB `plans` table. The orchestrator fetches plan content from the database — no files are read from disk.
+
+**File Mode (legacy):** Use `--file {FEATURE_DIR}` to read a `PLAN.md` or `PRD.md` from a local directory. Agents write intermediate artifacts to `{FEATURE_DIR}/_bootstrap/`.
+
+#### Usage
+
+```bash
+# KB mode — plan slug lookup (primary)
+/pm-bootstrap-workflow agent-monitor-dashboard
+
+# KB mode with overrides
+/pm-bootstrap-workflow agent-monitor-dashboard --prefix AGMD
+/pm-bootstrap-workflow agent-monitor-dashboard --feature-dir plans/future/platform/agent-dashboard
+
+# Dry run — phases 0-1 only, no file generation
+/pm-bootstrap-workflow agent-monitor-dashboard --dry-run
+
+# File mode (legacy)
+/pm-bootstrap-workflow --file plans/future/wishlist
+```
+
+#### Plan Resolution (KB Mode)
+
+The orchestrator calls `kb_get_plan({ plan_slug })` to fetch the plan. From the result it extracts:
+
+| Field | Source | Fallback |
+|-------|--------|----------|
+| `plan_content` | `rawContent` column | — (required) |
+| `feature_dir` | `--feature-dir` arg | `featureDir` column | `plans/future/platform/{plan_slug}` |
+| `prefix` | `--prefix` arg | `storyPrefix` column | derived from plan_slug |
+| `plan_title` | `title` column | — |
+| `plan_summary` | `summary` column | — |
+
+**Prefix auto-derivation** (when no `--prefix` and no `storyPrefix` in DB):
+1. Split plan_slug on hyphens into words
+2. Remove filler words: `the`, `a`, `an`, `to`, `for`, `from`, `and`, `or`, `with`, `add`, `fix`, `update`, `plan`
+3. Take first letter of each remaining word, uppercase
+4. Take first 4 characters (pad from first word if fewer than 4)
+
+Examples: `agent-monitor-dashboard` → `AGMD`, `kb-native-story-creation` → `KNSC`
 
 #### Agents & Sub-Agents
 
 ```
 /pm-bootstrap-workflow
     │
+    ├─→ Pre-Phase: Resolve plan content (KB lookup or file read)
+    │
     ├─→ Phase 0: pm-bootstrap-setup-leader.agent.md (haiku)
-    │       └─→ Validates inputs, creates AGENT-CONTEXT.md
+    │       └─→ Validates inputs, returns SETUP-CONTEXT (inline YAML)
     │
     ├─→ Phase 1: pm-bootstrap-analysis-leader.agent.md (sonnet)
-    │       └─→ Analyzes plan, creates ANALYSIS.yaml
+    │       └─→ Extracts stories, dependencies, risks → returns ANALYSIS (inline YAML)
     │
     └─→ Phase 2: pm-bootstrap-generation-leader.agent.md (haiku)
-            └─→ Generates all artifact files
+            └─→ Writes story files to disk, inserts into KB → returns SUMMARY (inline YAML)
 ```
 
-| Phase | Agent | Output |
-|-------|-------|--------|
-| 0 | `pm-bootstrap-setup-leader.agent.md` | `AGENT-CONTEXT.md`, `CHECKPOINT.md` |
-| 1 | `pm-bootstrap-analysis-leader.agent.md` | `ANALYSIS.yaml` |
-| 2 | `pm-bootstrap-generation-leader.agent.md` | All artifact files |
+| Phase | Agent | Model | Output (KB mode) | Output (File mode) |
+|-------|-------|-------|-------------------|-------------------|
+| 0 | `pm-bootstrap-setup-leader.agent.md` | haiku | `SETUP-CONTEXT` inline YAML | `_bootstrap/AGENT-CONTEXT.md`, `_bootstrap/CHECKPOINT.md` |
+| 1 | `pm-bootstrap-analysis-leader.agent.md` | sonnet | `ANALYSIS` inline YAML | `_bootstrap/ANALYSIS.yaml` |
+| 2 | `pm-bootstrap-generation-leader.agent.md` | haiku | `SUMMARY` inline YAML + story files on disk | `_bootstrap/SUMMARY.yaml` + story files on disk |
 
-#### How to Use
+**Context passing (KB mode):** Phases communicate through the orchestrator. Each phase returns its output as an inline YAML block, which the orchestrator captures and passes to the next phase. No intermediate files are written.
 
-1. Run `/pm-bootstrap-workflow`
-2. Provide required inputs:
-   - **Raw Plan/PRD** - The unstructured plan, migration outline, or feature description
-   - **Project Name** - Short identifier (e.g., "vercel-migration", "auth-refactor")
-   - **Story Prefix** - Prefix for story IDs (e.g., "STORY", "WRKF", "AUTH")
-3. Claude analyzes the plan and generates planning artifacts
+**Context passing (File mode):** Agents read/write intermediate artifacts from `{FEATURE_DIR}/_bootstrap/`.
 
-#### Features
+#### Phase Details
 
-- `--dry-run` - Run analysis only, don't generate files
-- Checkpoint & resume on interruption
+**Phase 0 — Setup** validates:
+1. Plan content is non-empty and >100 chars
+2. Prefix is 2-6 uppercase alphanumeric characters
+3. Feature directory path format is valid
+4. No collision: `{feature_dir}/stories.index.md` must not already exist
 
-### Files Created
+**Phase 1 — Analysis** extracts:
+1. Overall goal (1-sentence end state)
+2. Major phases (typically 2-5)
+3. Stories with structured data: id, title, feature, phase, dependencies, endpoints, infrastructure, goal, risk notes, sizing warnings
+4. Dependency graph between stories
+5. Cross-cutting risks
+6. Oversized story flags (3+ indicators)
+
+**Story ID numbering:** `{PREFIX}-{phase}{story}0` (e.g., `AGMD-1010` = phase 1, story 01; `AGMD-2030` = phase 2, story 03)
+
+**Phase 2 — Generation** creates:
+1. `{feature_dir}/stories.index.md` — master story index
+2. `{feature_dir}/{story_id}/story.yaml` — per-story YAML metadata
+3. Inserts stories into KB `stories` table (for status tracking)
+
+#### Files Created
+
+**KB Mode (current standard):**
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `AGENT-CONTEXT.md` | `plans/{PREFIX}.bootstrap/` | Bootstrap context |
-| `CHECKPOINT.md` | `plans/{PREFIX}.bootstrap/` | Resume state |
-| `ANALYSIS.yaml` | `plans/{PREFIX}.bootstrap/` | Structured story data |
-| `{PREFIX}.stories.index.md` | `plans/stories/` | Master story index with all stories, statuses, dependencies |
-| `{PREFIX}.plan.meta.md` | `plans/` | Documentation structure, principles, package boundary rules |
-| `{PREFIX}.plan.exec.md` | `plans/` | Artifact rules, naming conventions, reuse gates |
-| `{PREFIX}.roadmap.md` | `plans/` | Visual dependency graphs with Mermaid |
-| `LESSONS-LEARNED.md` | `plans/stories/` | Empty template for accumulating learnings across stories |
-| `TOKEN-BUDGET-TEMPLATE.md` | `plans/stories/` | Template for token tracking per story |
+| `stories.index.md` | `{feature_dir}/` | Master story index with progress, dependencies, metrics |
+| `story.yaml` | `{feature_dir}/{PREFIX}-XXXX/` | Per-story metadata (id, title, status, phase, deps, etc.) |
 
-### Example
+**File Mode (legacy) — additional intermediate artifacts:**
 
-For a Vercel migration project with prefix `STORY`, Bootstrap creates:
-- `plans/stories/STORY.stories.index.md`
-- `plans/STORY.plan.meta.md`
-- `plans/STORY.plan.exec.md`
+| File | Location | Purpose |
+|------|----------|---------|
+| `AGENT-CONTEXT.md` | `{feature_dir}/_bootstrap/` | Bootstrap context |
+| `CHECKPOINT.md` | `{feature_dir}/_bootstrap/` | Resume state |
+| `ANALYSIS.yaml` | `{feature_dir}/_bootstrap/` | Structured story data |
+| `SUMMARY.yaml` | `{feature_dir}/_bootstrap/` | Generation metrics and file list |
 
-### Story Index Structure
+**Note:** In KB mode, story status is tracked in the KB `stories` table, not by directory location. Stage directories (`backlog/`, `elaboration/`, etc.) are not created during bootstrap.
 
-The `{PREFIX}.stories.index.md` file contains:
+#### Directory Structure
+
+```
+{feature_dir}/
+├── _bootstrap/                    # Intermediate artifacts (file mode only)
+│   ├── AGENT-CONTEXT.md
+│   ├── CHECKPOINT.md
+│   ├── ANALYSIS.yaml
+│   └── SUMMARY.yaml
+├── stories.index.md              # Master story listing
+├── {PREFIX}-1010/                # Story 1, Phase 1
+│   └── story.yaml
+├── {PREFIX}-1020/                # Story 2, Phase 1
+│   └── story.yaml
+├── {PREFIX}-2010/                # Story 1, Phase 2
+│   └── story.yaml
+└── ...
+```
+
+#### Story Index Structure
+
+The `stories.index.md` file contains:
 - Progress summary (counts by status)
-- Ready-to-start list (stories with no blockers)
-- Per-story entries with:
-  - Status (see lifecycle in README)
-  - Dependencies
-  - Feature description
-  - Endpoints (if applicable)
-  - Infrastructure requirements
-  - Risk notes
+- Per-phase story listing with IDs, titles, dependencies, status
+- Metrics summary (total stories, ready-to-start, critical path)
+
+#### Completion
+
+On successful generation, the orchestrator:
+1. Seeds stories into KB if not already inserted: `pnpm --filter @repo/knowledge-base run migrate:stories`
+2. Reports summary with story count, phases, and critical path metrics
+3. Recommends next step: `/elab-epic {PREFIX}` or `/elab-story {PREFIX}-1010`
+
+#### Features
+
+- `--dry-run` — Run phases 0-1 only (setup + analysis), report story count without generating files
+- Checkpoint & resume on interruption (file mode)
+- Inline context passing eliminates intermediate file I/O (KB mode)
+- Automatic prefix derivation from plan slug
 
 ---
 
