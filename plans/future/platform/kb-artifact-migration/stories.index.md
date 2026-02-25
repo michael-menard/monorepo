@@ -16,15 +16,15 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 4 |
+| uat | 5 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 1 |
-| ready-to-work | 4 |
+| ready-to-work | 3 |
 | elaboration | 0 |
 | in-progress | 0 |
-| needs-code-review | 2 |
-| ready-for-qa | 0 |
+| needs-code-review | 0 |
+| ready-for-qa | 1 |
 | pending | 19 |
 
 ---
@@ -220,7 +220,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-011: artifact_write Tool
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Story ID:** KBAR-0110
 **Depends On:** KBAR-010
 **Phase:** 4
@@ -239,7 +239,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-012: artifact_read Tool
 
-**Status:** Ready to Work
+**Status:** uat
 **Story ID:** KBAR-0120
 **Depends On:** KBAR-011
 **Phase:** 4
@@ -257,7 +257,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-013: artifact_search Tool
 
-**Status:** ready-to-work
+**Status:** ready-for-qa
 **Story ID:** KBAR-0130
 **Depends On:** KBAR-011
 **Phase:** 4
