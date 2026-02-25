@@ -1,0 +1,20 @@
+# CHECKPOINT: MODL-0020 Task Contracts & Model Selector
+# Phase: proof | Iteration: 0
+# Status: proof generated, ready for review
+
+schema: 1
+story_id: MODL-0020
+feature_dir: plans/future/platform
+timestamp: "2026-02-23T20:45:30Z"
+current_phase: proof
+last_successful_phase: execute
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - "Implementation code existed prior to KB artifact creation (catch-up mode)"
+  - "All tests passing: 52/52 (task-contract-validation: 22, task-selector: 30)"
+  - "TypeScript type check: clean (no errors)"
+  - "E2E gate exempt: pure backend utility, no HTTP endpoints or UI surfaces"
+gen_mode: false

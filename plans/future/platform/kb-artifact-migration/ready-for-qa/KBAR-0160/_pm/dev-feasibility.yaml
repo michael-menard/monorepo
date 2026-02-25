@@ -1,0 +1,71 @@
+feasible: true
+confidence: high
+rationale: "KBAR-0160 is a documentation-only migration: two agent markdown files are updated to replace kb_write_artifact call blocks with artifact_write call blocks. No TypeScript is touched. The change surface is minimal and the pattern is clear. The primary constraint is a hard dependency gate: implementation cannot begin until KBAR-0150 (Artifact Tools Integration Tests) is complete, which means KBAR-0110 (artifact_write tool) is implemented, tested, and merged. Once that gate clears, the actual agent markdown changes are low-risk and straightforward."
+complexity: low
+change_surface:
+  areas:
+    - ".claude/agents/dev-setup-leader.agent.md"
+    - ".claude/agents/dev-plan-leader.agent.md"
+  endpoints: []
+  deploy_touchpoints:
+    - "artifact_write MCP tool must be registered and available in the KB MCP server (delivered by KBAR-0110)"
+risks:
+  - finding: "Dependency gate: artifact_write tool must be implemented and merged (KBAR-0110 through KBAR-0150) before KBAR-0160 can be implemented. Attempting early implementation will produce agent files that call a non-existent tool."
+    mitigation: "Block KBAR-0160 elaboration and implementation until KBAR-0150 is in UAT or completed. The story status should remain 'ready-to-work' (not 'in-progress') until the dependency chain is clear."
+  - finding: "artifact_write input schema may differ from assumed shape. The seed assumes: { story_id, artifact_type, content, file_path, skip_kb?, phase?, iteration? }. If KBAR-0110 landed with different field names, ACs must be updated."
+    mitigation: "ST-1 explicitly reads the landed KBAR-0110 implementation to verify the exact input schema before writing any agent call documentation. This is the first subtask."
+  - finding: "File path convention: whether agents should pass explicit file_path or rely on canonical path computation in artifact_write must be resolved. Undefined behavior at implementation time if not clarified."
+    mitigation: "Option A (explicit file_path) is recommended per seed conflict analysis. Agents pass file_path: '{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/{ARTIFACT_TYPE}.yaml' explicitly. This makes agent behavior transparent and avoids dependence on artifact_write internal defaults."
+missing_requirements: []
+evidence_expectations:
+  - "Both agent files reviewed: kb_write_artifact calls replaced with artifact_write calls (manual diff)"
+  - "Both agent frontmatter kb_tools lists updated"
+  - "dev-setup-leader non-negotiable section updated (directory constraint removed or revised)"
+  - "Canary story run: _implementation/CHECKPOINT.yaml, _implementation/SCOPE.yaml, _implementation/PLAN.yaml present on filesystem after setup+plan phases"
+  - "kb_read_artifact calls unchanged in both agents (manual diff confirms no read-side modifications)"
+subtasks:
+  - id: ST-1
+    title: "Read KBAR-0110 final implementation to verify artifact_write input schema"
+    goal: "Confirm the exact artifact_write tool signature (field names, required vs optional, file_path behavior) from the landed KBAR-0110 before writing any agent call documentation"
+    files_to_read:
+      - "plans/future/platform/kb-artifact-migration/in-progress/KBAR-0110/KBAR-0110.md"
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    files_to_modify: []
+    acs: []
+    depends_on: "none"
+    verification: "Read-only step; document confirmed schema in implementation notes"
+    estimated_tokens: 5000
+  - id: ST-2
+    title: "Update dev-setup-leader.agent.md — migrate write calls to artifact_write"
+    goal: "Replace kb_write_artifact calls (CHECKPOINT write step 4, SCOPE write step 5, fix-mode CHECKPOINT update step 3) with artifact_write calls using confirmed schema from ST-1. Update frontmatter kb_tools. Update non-negotiable section. Document KB failure semantics."
+    files_to_read:
+      - ".claude/agents/dev-setup-leader.agent.md"
+    files_to_modify:
+      - ".claude/agents/dev-setup-leader.agent.md"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-6", "AC-7", "AC-8"]
+    depends_on: "ST-1"
+    verification: "Manual review: diff before/after confirms all kb_write_artifact write calls replaced; frontmatter updated; non-negotiables updated; kb_read_artifact calls untouched"
+    estimated_tokens: 8000
+  - id: ST-3
+    title: "Update dev-plan-leader.agent.md — migrate write calls to artifact_write"
+    goal: "Replace kb_write_artifact calls (CHECKPOINT update step 7, PLAN write step 8) with artifact_write calls using confirmed schema from ST-1. Update frontmatter kb_tools. Document KB failure semantics."
+    files_to_read:
+      - ".claude/agents/dev-plan-leader.agent.md"
+    files_to_modify:
+      - ".claude/agents/dev-plan-leader.agent.md"
+    acs: ["AC-4", "AC-5", "AC-6", "AC-8"]
+    depends_on: "ST-1"
+    verification: "Manual review: diff before/after confirms all kb_write_artifact write calls replaced; frontmatter updated; kb_read_artifact calls untouched"
+    estimated_tokens: 7000
+  - id: ST-4
+    title: "Human review and canary story validation"
+    goal: "Review both agent file diffs against all 9 ACs. Run a canary story through the full dev-implement-story workflow. Verify _implementation/CHECKPOINT.yaml, _implementation/SCOPE.yaml, and _implementation/PLAN.yaml appear on the filesystem and are retrievable via kb_read_artifact."
+    files_to_read:
+      - ".claude/agents/dev-setup-leader.agent.md"
+      - ".claude/agents/dev-plan-leader.agent.md"
+    files_to_modify: []
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8", "AC-9"]
+    depends_on: "ST-2, ST-3"
+    verification: "All 9 ACs confirmed; canary story produces expected _implementation/ artifacts on filesystem"
+    estimated_tokens: 6000

@@ -1,0 +1,124 @@
+schema: 1
+story_id: WINT-0190
+timestamp: "2026-02-23T00:00:00Z"
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+  schema_validation: { pass: 8, fail: 0 }
+
+# Note: This story is story_type=chore, touches_docs=true only.
+# No TypeScript runtime code. No unit/integration/e2e tests are expected or required.
+# Validation was performed via AJV 8.17.1 (JSON Schema draft 2020-12) directly against
+# the schema and example artifacts. 8 schema enforcement tests run and passed.
+
+coverage: ~
+coverage_meets_threshold: true
+# Coverage N/A: no executable code introduced. Story is pure JSON Schema + Markdown artifacts.
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >
+      patch-plan.schema.json exists at packages/backend/orchestrator/src/schemas/patch-plan.schema.json.
+      $schema: https://json-schema.org/draft/2020-12/schema confirmed.
+      $id: https://lego-moc-platform.com/schemas/patch-plan.schema.json confirmed.
+      schema_version with pattern constraint confirmed. patches array with maxItems: 10 confirmed.
+      PatchStep in $defs with patch_type enum (types_schema/api/ui/tests/cleanup), max_files maximum:10,
+      max_diff_lines maximum:300 confirmed. AJV 8.17.1 compilation: PASS.
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >
+      RepairLoop defined in $defs with fix_only_referenced_errors boolean, max_iterations integer
+      (minimum:1, maximum:5), rerun_command string — all required fields confirmed.
+      PatchStep required array is [patch_type, description, max_files, max_diff_lines] —
+      repair_loop is absent from required (optional). AJV enforcement test confirmed:
+      document without repair_loop validates successfully (TEST 3: PASS).
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >
+      patch-plan.example.json exists at packages/backend/orchestrator/src/schemas/examples/patch-plan.example.json.
+      11 lines (within 10-25 constraint — wc -l confirmed). Demonstrates types_schema → api → ui → tests → cleanup
+      ordering with all 5 patch types. First step includes repair_loop with fix_only_referenced_errors:true,
+      max_iterations:3. AJV validation against schema: PASS (TEST 2: PASS).
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >
+      patch-queue-pattern.md exists at .claude/prompts/role-packs/_specs/patch-queue-pattern.md.
+      Decision rule present: ">1 layer or >1 concern" triggers Patch Queue pattern.
+      2 positive examples confirmed (correctly ordered 3-step plan; repair loop scoped to referenced errors).
+      1 negative example confirmed (mega-patch exceeding limits and mixing layers).
+      Default limits documented with rationale: max_files=10 (one feature surface),
+      max_diff_lines=300 (reviewable in one sitting). Cross-reference to repair-loop-pattern.md confirmed.
+      AJV validation steps documented (npx ajv validate command with schema and data paths).
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >
+      repair-loop-pattern.md exists at .claude/prompts/role-packs/_specs/repair-loop-pattern.md.
+      Activation trigger documented: activates when verification_command fails (non-zero exit).
+      fix_only_referenced_errors constraint: agent may only fix lines/files cited in error output.
+      Minimal changes requirement: smallest change that resolves cited error.
+      Rerun until green sequence with max_iterations guardrail (stop and escalate after max_iterations).
+      2 positive examples + 1 negative example confirmed. Cross-reference to patch-queue-pattern.md confirmed.
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >
+      Schema path confirmed as packages/backend/orchestrator/src/schemas/patch-plan.schema.json —
+      matches WINT-0210 reference exactly. Example is 11 lines (10-25 constraint satisfied).
+      All 5 patch types demonstrated in canonical order: types_schema → api → ui → tests → cleanup.
+      AJV validation steps documented in patch-queue-pattern.md with exact npx ajv validate command
+      including schema path and data path.
+
+architecture_compliant: true
+# No ADR violations. Story is documentation/schema only with no runtime code.
+# Follows user-flows.schema.json structural pattern ($schema, $id, title, description,
+# type:object, $defs, required array, maxItems constraints) — confirmed by inspection.
+# No backend/frontend/infra touches per story metadata (touches_docs: true only).
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      AJV npx CLI may not be resolvable in pnpm monorepo environments; using the AJV package
+      directly via node_modules/.pnpm/ajv@8.17.1 is a valid and equivalent approach for
+      JSON Schema draft 2020-12 validation in this repo.
+    category: blocker
+    tags: ["ajv", "json-schema", "pnpm", "validation"]
+
+  - lesson: >
+      Pure documentation/schema stories (story_type=chore, touches_docs=true only) require schema
+      validation tests rather than unit test coverage. The 45% coverage threshold is inapplicable;
+      quality gate is schema enforcement correctness verified via AJV.
+    category: pattern
+    tags: ["qa", "schema", "documentation", "coverage"]
+
+  - lesson: >
+      JSON Schema draft 2020-12 cannot enforce array element ordering — ordering conventions must
+      be documented and enforced at runtime (WINT-3010 scope). This is an expected limitation
+      that should be called out explicitly in schema documentation.
+    category: pattern
+    tags: ["json-schema", "ordering", "design-decision"]
+
+tokens:
+  in: 9800
+  out: 1200

@@ -1,0 +1,52 @@
+schema: 1
+story_id: WKFL-006
+title: Cross-Story Pattern Mining
+qa_phase: verification-complete
+generated_at: 2026-02-23T17:30:00Z
+verdict: PASS
+
+evidence_summary:
+  total_acceptance_criteria: 16
+  passing_criteria: 16
+  failing_criteria: 0
+  version: schema 1
+  source: PROOF-WKFL-006.md
+  ac_details:
+    - AC-1: "Minimum 10 stories per run enforcement" - PASS
+    - AC-2: "File/path pattern detection with correlation metrics" - PASS
+    - AC-3: "AC pattern detection for under-specification" - PASS
+    - AC-4: "Clustering with Levenshtein similarity >= 0.70" - PASS
+    - AC-5: "AGENT-HINTS.yaml auto-injection (idempotent)" - PASS
+    - AC-6: "ANTI-PATTERNS.md human-readable documentation" - PASS
+    - AC-7: "/pattern-mine --days N parameter support (default 30)" - PASS
+    - AC-8: "Outputs to .claude/patterns/YYYY-MM/ directory" - PASS
+    - AC-9: "Technical risks documented (7 risks identified)" - PASS
+    - AC-10: "Full subtask decomposition (S1-S5, A1-A6, O1-O5, P1-P2)" - PASS
+    - AC-11: "--all-epics flag for cross-epic pattern mining" - PASS
+    - AC-12: "--trend flag for trend analysis" - PASS
+    - AC-13: "index.html dashboard with visualization" - PASS
+    - AC-14: "Pattern confidence scoring (0.0-1.0)" - PASS
+    - AC-15: "AGENT-HINTS injection idempotent" - PASS
+    - AC-16: "Cross-period deduplication" - PASS
+
+review_status:
+  verdict: PASS
+  iteration: 2
+  source: KB artifact - artifact_type: "review", phase: "code_review"
+
+deliverables:
+  - pattern-miner.agent.md (sonnet model agent)
+  - /pattern-mine command specification
+  - PATTERNS-{month}.yaml schema and sample
+  - ANTI-PATTERNS.md documentation
+  - AGENT-HINTS.yaml specification
+  - Integration tests for pattern detection
+  - Dashboard HTML generation
+
+qa_verification_sources:
+  evidence_kb: "artifact_type: evidence, phase: implementation"
+  review_kb: "artifact_type: review, iteration: 2, phase: code_review"
+  verification_kb: "artifact_type: verification, phase: qa_verification"
+  proof_file: "/Users/michaelmenard/Development/monorepo/plans/future/platform/workflow-learning/UAT/WKFL-006/PROOF-WKFL-006.md"
+
+next_phase: qa-verification

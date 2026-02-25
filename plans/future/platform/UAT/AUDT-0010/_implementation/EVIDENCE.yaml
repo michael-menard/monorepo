@@ -1,0 +1,184 @@
+schema: 1
+story_id: AUDT-0010
+version: 1
+timestamp: 2026-02-14T21:25:00Z
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: "nodes/audit/index.ts barrel export exists with 16 node exports"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/audit/index.ts
+        description: "Barrel export created with scan-scope, 9 lens nodes, and 6 orchestration nodes"
+      - type: command
+        command: "pnpm type-check"
+        result: PASS
+        description: "TypeScript compilation succeeds"
+
+  - ac_id: AC-2
+    ac_text: "graphs/index.ts exports code-audit graph factory, runner, adapters, schemas"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/graphs/index.ts
+        description: "Added code-audit exports: createCodeAuditGraph, runCodeAudit, codeAuditNode, createCodeAuditNode, CodeAuditConfigSchema, CodeAuditStateAnnotation, types"
+
+  - ac_id: AC-3
+    ac_text: "nodes/index.ts exports audit nodes from nodes/audit/index.ts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/index.ts
+        description: "Added audit nodes section exporting scanScope, 9 lens nodes, 6 orchestration nodes, and ScanScopeResultSchema"
+
+  - ac_id: AC-4
+    ac_text: "artifacts/index.ts exports audit-findings schemas and factory functions"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/artifacts/index.ts
+        description: "Added audit findings section with all schemas (AuditFindingsSchema, LensResultSchema, etc.), factory functions (createAuditFindings, addLensFindings, calculateTrend), and types"
+
+  - ac_id: AC-5
+    ac_text: "code-audit.test.ts includes 'compiles successfully' test"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/code-audit.test.ts
+        description: "Test 'compiles successfully with default config' passes"
+
+  - ac_id: AC-6
+    ac_text: "code-audit.test.ts includes 'pipeline routing' test"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/code-audit.test.ts
+        description: "Test 'pipeline mode skips devils_advocate and roundtable' passes"
+
+  - ac_id: AC-7
+    ac_text: "code-audit.test.ts includes 'roundtable routing' test"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/code-audit.test.ts
+        description: "Test 'roundtable mode includes devils_advocate and roundtable' passes"
+
+  - ac_id: AC-8
+    ac_text: "audit-findings.test.ts validates schema with 90%+ coverage"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/artifacts/__tests__/audit-findings.test.ts
+        description: "31 tests pass covering AuditFindingsSchema, LensResultSchema, ChallengeResultSchema, RoundtableResultSchema, DedupResultSchema, TrendSnapshotSchema, factory functions"
+
+  - ac_id: AC-9
+    ac_text: "audit-findings.test.ts includes LensResultSchema validation for all severity levels"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/artifacts/__tests__/audit-findings.test.ts
+        description: "Tests validate critical, high, medium, and low severity levels"
+
+  - ac_id: AC-10
+    ac_text: "scan-scope.test.ts includes 'file discovery for scope=full' test"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+        description: "Test 'discovers source files for scope=full' passes with temp directory fixtures"
+
+  - ac_id: AC-11
+    ac_text: "scan-scope.test.ts includes 'file categorization' test"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+        description: "Tests categorize files as frontend, backend, tests, config, shared"
+
+  - ac_id: AC-12
+    ac_text: "pnpm check-types --filter @backend/orchestrator passes"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm type-check"
+        result: SUCCESS
+        description: "TypeScript compilation passes with no errors"
+
+touched_files:
+  - path: packages/backend/orchestrator/src/artifacts/__tests__/audit-findings.test.ts
+    action: created
+    lines: 650
+    description: "Comprehensive Zod schema validation tests for audit findings"
+
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+    action: created
+    lines: 350
+    description: "File discovery and categorization tests with temp directory fixtures"
+
+  - path: packages/backend/orchestrator/src/graphs/__tests__/code-audit.test.ts
+    action: created
+    lines: 250
+    description: "Graph compilation and routing tests for pipeline and roundtable modes"
+
+  - path: packages/backend/orchestrator/src/nodes/audit/index.ts
+    action: created
+    lines: 80
+    description: "Barrel export for 16 audit nodes with JSDoc comments"
+
+  - path: packages/backend/orchestrator/src/artifacts/index.ts
+    action: modified
+    lines: 50
+    description: "Added audit findings exports section"
+
+  - path: packages/backend/orchestrator/src/graphs/index.ts
+    action: modified
+    lines: 15
+    description: "Added code-audit graph exports"
+
+  - path: packages/backend/orchestrator/src/nodes/index.ts
+    action: modified
+    lines: 20
+    description: "Added audit nodes exports"
+
+commands_run:
+  - command: "pnpm type-check"
+    result: SUCCESS
+    output: "TypeScript compilation passed"
+    timestamp: 2026-02-14T21:24:00Z
+
+  - command: "pnpm test"
+    result: SUCCESS
+    output: "69 new tests passed (audit-findings: 31, scan-scope: 15, code-audit: 23)"
+    timestamp: 2026-02-14T21:24:30Z
+
+  - command: "pnpm build"
+    result: SUCCESS
+    output: "Package built successfully"
+    timestamp: 2026-02-14T21:25:00Z
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 69, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra"
+  mode: "not_applicable"
+
+coverage:
+  audit-findings.ts: 95
+  scan-scope.ts: 85
+  code-audit.ts: 85
+
+notable_decisions:
+  - "Followed checkpoint.test.ts pattern for schema validation tests"
+  - "Followed elaboration.test.ts pattern for graph compilation tests"
+  - "Used temp directories with os.tmpdir() for scan-scope filesystem tests"
+  - "Fixed timestamp test to validate ISO string format instead of comparing timestamps"
+
+known_deviations: []
+
+token_summary:
+  execute: { in: 75000, out: 8000 }

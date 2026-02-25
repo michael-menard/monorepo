@@ -1,0 +1,116 @@
+schema: 1
+story_id: AUDT-0010
+timestamp: 2026-02-14T22:00:00Z
+
+lessons:
+  - id: AUDT-0010-L001
+    title: "LangGraph test pattern - test compiled graph not dynamic imports"
+    context: "code-audit.ts uses dynamic imports in createLensParallelNode"
+    recommendation: "Test graph.compile() succeeds and routing logic, not individual lens loading"
+    source: "elaboration.test.ts, metrics.test.ts patterns"
+    tags: [testing, langgraph, audit]
+
+  - id: AUDT-0010-L002
+    title: "Filesystem test isolation - use temp directories"
+    context: "scan-scope walks filesystem to discover files"
+    recommendation: "Use os.tmpdir() with fixture files, cleanup in afterEach"
+    source: "Testing best practices"
+    tags: [testing, filesystem, audit]
+
+  - id: AUDT-0010-L003
+    title: "Schema test coverage - fixtures for valid/invalid/edge cases"
+    context: "AuditFindingsSchema and LensResultSchema need comprehensive validation"
+    recommendation: "Follow checkpoint.test.ts pattern - valid fixture, invalid (missing fields), edge cases (empty arrays, boundary values)"
+    source: "checkpoint.test.ts pattern"
+    tags: [testing, zod, audit]
+
+  - id: AUDT-0010-L004
+    title: "Conditional routing requires explicit test coverage for both paths"
+    context: "code-audit.ts has pipeline and roundtable modes with different routing"
+    recommendation: "Test both mode='pipeline' and mode='roundtable' to verify devils_advocate/roundtable nodes are skipped/included"
+    source: "code-audit.ts routing logic"
+    tags: [testing, langgraph, routing, audit]
+
+adrs:
+  - id: ADR-ORCH-001
+    title: "Export pattern - JSDoc headers and grouped exports"
+    decision: "All index.ts files have JSDoc header explaining module purpose, exports grouped by feature"
+    rationale: "Consistency with existing graphs/index.ts, nodes/index.ts, artifacts/index.ts"
+    consequences: "New audit exports must follow same pattern"
+    tags: [architecture, exports, audit]
+
+  - id: ADR-ORCH-002
+    title: "Zod-first types - no TypeScript interfaces"
+    decision: "All types use Zod schemas with z.infer<> - never TypeScript interfaces"
+    rationale: "Runtime validation + automatic type inference + self-documenting constraints"
+    consequences: "audit-findings.ts already follows this pattern, tests must validate schemas"
+    tags: [architecture, typescript, zod, audit]
+
+  - id: ADR-ORCH-003
+    title: "Named exports preferred - no default exports"
+    decision: "Use named exports for all functions, types, schemas"
+    rationale: "Consistency with orchestrator package patterns"
+    consequences: "nodes/audit/index.ts must use named exports only"
+    tags: [architecture, exports, audit]
+
+high_cost_operations:
+  - operation: "Dynamic import testing"
+    cost_ms: 500
+    why: "Each lens module import adds overhead in test runs"
+    mitigation: "Test compiled graph instead of individual lens loading"
+
+  - operation: "Filesystem walking in scan-scope"
+    cost_ms: 1000
+    why: "Recursive directory walk on large codebases"
+    mitigation: "Use small fixture directories in tests, not full monorepo"
+
+domain_patterns:
+  - pattern: "LangGraph graph structure"
+    example: "StateGraph -> addNode -> addEdge -> addConditionalEdges -> compile"
+    where: "code-audit.ts lines 272-307"
+
+  - pattern: "Zod schema factory functions"
+    example: "createAuditFindings(mode, scope, target, lenses)"
+    where: "audit-findings.ts lines 349-375"
+
+  - pattern: "Test fixtures with all required fields"
+    example: "checkpoint.test.ts lines 41-56 - minimal valid checkpoint"
+    where: "artifacts/__tests__/checkpoint.test.ts"
+
+  - pattern: "File categorization by path patterns"
+    example: "apps/web/** → frontend, packages/backend/** → backend"
+    where: "scan-scope.ts lines 67-76"
+
+codebase_constraints:
+  - constraint: "Minimum test coverage: 45% global"
+    where: "CLAUDE.md quality gates"
+    why: "Existing orchestrator package standard"
+
+  - constraint: "No barrel files - import directly from source"
+    where: "CLAUDE.md critical import rules"
+    why: "Avoid re-export overhead"
+
+  - constraint: "Use @repo/logger not console.log"
+    where: "CLAUDE.md logging rules"
+    why: "Centralized logging infrastructure"
+
+  - constraint: "Vitest for all tests"
+    where: "CLAUDE.md testing framework"
+    why: "Project standard test runner"
+
+scope_alignment:
+  - story_expects: "Register audit exports in index files"
+    reality_provides: "Existing export patterns in graphs/index.ts, nodes/index.ts, artifacts/index.ts"
+    gap: "No audit exports yet - need to add following existing patterns"
+
+  - story_expects: "Integration tests for graph compilation and routing"
+    reality_provides: "Test patterns in elaboration.test.ts, metrics.test.ts"
+    gap: "No code-audit.test.ts yet - follow existing graph test patterns"
+
+  - story_expects: "Zod schema validation tests with fixtures"
+    reality_provides: "Test patterns in checkpoint.test.ts"
+    gap: "No audit-findings.test.ts yet - follow checkpoint.test.ts structure"
+
+  - story_expects: "scan-scope file discovery and categorization tests"
+    reality_provides: "scan-scope.ts implementation exists"
+    gap: "No scan-scope.test.ts yet - need to add with temp directory fixtures"

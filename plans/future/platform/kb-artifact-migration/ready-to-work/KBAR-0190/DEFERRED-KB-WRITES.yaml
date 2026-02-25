@@ -1,0 +1,22 @@
+deferred_at: "2026-02-25"
+reason: "KB (PostgreSQL) unavailable during story generation — direct pg connection failed"
+retry_when: "KB service available"
+
+pending_writes:
+  - type: stories_table_insert
+    table: stories
+    operation: INSERT_ON_CONFLICT_UPDATE
+    data:
+      story_id: "KBAR-0190"
+      feature: "kb-artifact-migration"
+      title: "Migrate qa-verify-* and dev-fix-fix-leader Agents to Use artifact_write for Dual-Write Artifact Persistence"
+      story_dir: "plans/future/platform/kb-artifact-migration/backlog/KBAR-0190"
+      story_file: "plans/future/platform/kb-artifact-migration/backlog/KBAR-0190/KBAR-0190.md"
+      story_type: "tech_debt"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

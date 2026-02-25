@@ -1,0 +1,203 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "kb_write_artifact routes correctly and returns parseable ArtifactResponse"
+    setup: "Mock kb_write_artifact CRUD function to resolve with a valid ArtifactResponse fixture (id, story_id, artifact_type, iteration, content, created_at, updated_at)"
+    action: "Call handleToolCall('kb_write_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint', content: { status: 'test' } }, mockDeps)"
+    expected: "result.isError is undefined; JSON.parse(result.content[0].text) has story_id: 'KBAR-0150' and artifact_type: 'checkpoint'"
+    evidence: "Vitest assertion: expect(result.isError).toBeUndefined(); expect(parsed.story_id).toBe('KBAR-0150')"
+
+  - id: HP-2
+    title: "kb_read_artifact returns artifact on cache hit"
+    setup: "Mock kb_read_artifact CRUD function to resolve with a valid ArtifactResponse fixture for story_id: 'KBAR-0150', artifact_type: 'checkpoint'"
+    action: "Call handleToolCall('kb_read_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint' }, mockDeps)"
+    expected: "result.isError is undefined; JSON.parse(result.content[0].text) is not null and has story_id: 'KBAR-0150'"
+    evidence: "Vitest assertion: expect(result.isError).toBeUndefined(); expect(parsed).not.toBeNull()"
+
+  - id: HP-3
+    title: "kb_read_artifact returns literal string 'null' on cache miss"
+    setup: "Mock kb_read_artifact CRUD function to resolve with null"
+    action: "Call handleToolCall('kb_read_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint' }, mockDeps)"
+    expected: "result.isError is undefined; result.content[0].text === 'null' (literal string, not JSON null)"
+    evidence: "Vitest assertion: expect(result.isError).toBeUndefined(); expect(result.content[0].text).toBe('null')"
+
+  - id: HP-4
+    title: "kb_list_artifacts returns structured list with total count"
+    setup: "Mock kb_list_artifacts CRUD function to resolve with [createMockArtifactListItem(), createMockArtifactListItem()]"
+    action: "Call handleToolCall('kb_list_artifacts', { story_id: 'KBAR-0150' }, mockDeps)"
+    expected: "result.isError is undefined; parsed has artifacts array with 2 items and total: 2"
+    evidence: "Vitest assertion: expect(parsed.artifacts).toHaveLength(2); expect(parsed.total).toBe(2)"
+
+  - id: HP-5
+    title: "kb_list_artifacts returns empty list when no artifacts found"
+    setup: "Mock kb_list_artifacts CRUD function to resolve with []"
+    action: "Call handleToolCall('kb_list_artifacts', { story_id: 'KBAR-0150' }, mockDeps)"
+    expected: "result.isError is undefined; parsed is { artifacts: [], total: 0 }"
+    evidence: "Vitest assertion: expect(parsed.artifacts).toHaveLength(0); expect(parsed.total).toBe(0)"
+
+  - id: HP-6
+    title: "kb_delete_artifact returns { deleted: true, artifact_id } on successful deletion (PM role)"
+    setup: "Mock kb_delete_artifact CRUD function to resolve with true; use PM context { agent_role: 'pm' }"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: generateTestUuid() }, mockDeps, pmContext)"
+    expected: "result.isError is undefined; parsed.deleted === true; parsed.artifact_id matches the UUID passed"
+    evidence: "Vitest assertion: expect(parsed.deleted).toBe(true); expect(parsed.artifact_id).toBe(testUuid)"
+
+  - id: HP-7
+    title: "kb_delete_artifact returns { deleted: false, artifact_id } when artifact not found (PM role)"
+    setup: "Mock kb_delete_artifact CRUD function to resolve with false; use PM context"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: generateTestUuid() }, mockDeps, pmContext)"
+    expected: "result.isError is undefined; parsed.deleted === false"
+    evidence: "Vitest assertion: expect(parsed.deleted).toBe(false)"
+
+error_cases:
+  - id: EC-1
+    title: "kb_write_artifact returns VALIDATION_ERROR on empty story_id"
+    setup: "No mock needed — Zod validation fires before CRUD is called"
+    action: "Call handleToolCall('kb_write_artifact', { story_id: '', artifact_type: 'checkpoint', content: {} }, mockDeps)"
+    expected: "result.isError === true; JSON.parse(result.content[0].text).code === 'VALIDATION_ERROR'"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(parsed.code).toBe('VALIDATION_ERROR')"
+
+  - id: EC-2
+    title: "kb_read_artifact returns VALIDATION_ERROR on missing story_id"
+    setup: "No mock needed — Zod validation fires before CRUD is called"
+    action: "Call handleToolCall('kb_read_artifact', { artifact_type: 'checkpoint' }, mockDeps)"
+    expected: "result.isError === true; code === 'VALIDATION_ERROR'"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(parsed.code).toBe('VALIDATION_ERROR')"
+
+  - id: EC-3
+    title: "kb_list_artifacts returns VALIDATION_ERROR on missing story_id"
+    setup: "No mock needed — Zod validation fires before CRUD is called"
+    action: "Call handleToolCall('kb_list_artifacts', {}, mockDeps)"
+    expected: "result.isError === true; code === 'VALIDATION_ERROR'"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(parsed.code).toBe('VALIDATION_ERROR')"
+
+  - id: EC-4
+    title: "kb_delete_artifact returns VALIDATION_ERROR on non-UUID artifact_id (PM role)"
+    setup: "Use PM context; no mock needed"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: 'not-a-uuid' }, mockDeps, pmContext)"
+    expected: "result.isError === true; code === 'VALIDATION_ERROR'"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(parsed.code).toBe('VALIDATION_ERROR')"
+
+  - id: EC-5
+    title: "kb_write_artifact sanitizes DB error — no credentials in error message"
+    setup: "Mock kb_write_artifact CRUD to reject with new MockDatabaseError('Connection failed: password=secret123 host=db')"
+    action: "Call handleToolCall('kb_write_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint', content: {} }, mockDeps)"
+    expected: "result.isError === true; result.content[0].text does NOT contain 'password' or 'secret123'"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(result.content[0].text).not.toContain('password')"
+
+  - id: EC-6
+    title: "kb_read_artifact sanitizes DB error — no credentials in error message"
+    setup: "Mock kb_read_artifact CRUD to reject with new MockDatabaseError('connection error: password=dbpass')"
+    action: "Call handleToolCall('kb_read_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint' }, mockDeps)"
+    expected: "result.isError === true; error message does not expose DB credentials"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(result.content[0].text).not.toContain('password')"
+
+  - id: EC-7
+    title: "kb_list_artifacts sanitizes DB error — no credentials in error message"
+    setup: "Mock kb_list_artifacts CRUD to reject with new MockDatabaseError('auth failed: password=hunter2')"
+    action: "Call handleToolCall('kb_list_artifacts', { story_id: 'KBAR-0150' }, mockDeps)"
+    expected: "result.isError === true; error message does not expose DB credentials"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(result.content[0].text).not.toContain('password')"
+
+  - id: EC-8
+    title: "kb_delete_artifact sanitizes DB error for PM role"
+    setup: "Mock kb_delete_artifact CRUD to reject with new MockDatabaseError('db error: password=adminpass'); use PM context"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: generateTestUuid() }, mockDeps, pmContext)"
+    expected: "result.isError === true; error message does not expose DB credentials"
+    evidence: "Vitest assertion: expect(result.isError).toBe(true); expect(result.content[0].text).not.toContain('password')"
+
+edge_cases:
+  - id: ED-1
+    title: "kb_list_artifacts filters by artifact_type when provided"
+    setup: "Mock kb_list_artifacts to resolve with one checkpoint item; call with artifact_type filter"
+    action: "Call handleToolCall('kb_list_artifacts', { story_id: 'KBAR-0150', artifact_type: 'checkpoint' }, mockDeps)"
+    expected: "result.isError is undefined; CRUD mock was called with artifact_type: 'checkpoint'"
+    evidence: "Vitest assertion: expect(mockKbListArtifacts).toHaveBeenCalledWith(expect.objectContaining({ artifact_type: 'checkpoint' }), expect.any(Object))"
+
+  - id: ED-2
+    title: "kb_delete_artifact FORBIDDEN — dev role cannot call admin tool"
+    setup: "Mock kb_delete_artifact CRUD; use dev context { agent_role: 'dev' }"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: generateTestUuid() }, mockDeps, devContext)"
+    expected: "result.isError === true; parsed.code === 'FORBIDDEN'; mockKbDeleteArtifact was NOT called"
+    evidence: "Vitest assertion: expect(parsed.code).toBe('FORBIDDEN'); expect(mockKbDeleteArtifact).not.toHaveBeenCalled()"
+
+  - id: ED-3
+    title: "kb_delete_artifact FORBIDDEN — qa role cannot call admin tool"
+    setup: "Mock kb_delete_artifact CRUD; use qa context { agent_role: 'qa' }"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: generateTestUuid() }, mockDeps, qaContext)"
+    expected: "result.isError === true; parsed.code === 'FORBIDDEN'; mockKbDeleteArtifact was NOT called"
+    evidence: "Vitest assertion: expect(parsed.code).toBe('FORBIDDEN'); expect(mockKbDeleteArtifact).not.toHaveBeenCalled()"
+
+  - id: ED-4
+    title: "kb_delete_artifact FORBIDDEN — all role cannot call admin tool"
+    setup: "Mock kb_delete_artifact CRUD; use all context { agent_role: 'all' }"
+    action: "Call handleToolCall('kb_delete_artifact', { artifact_id: generateTestUuid() }, mockDeps, allContext)"
+    expected: "result.isError === true; parsed.code === 'FORBIDDEN'; mockKbDeleteArtifact was NOT called"
+    evidence: "Vitest assertion: expect(parsed.code).toBe('FORBIDDEN'); expect(mockKbDeleteArtifact).not.toHaveBeenCalled()"
+
+  - id: ED-5
+    title: "kb_write_artifact accessible by dev role (no FORBIDDEN)"
+    setup: "Mock kb_write_artifact to resolve; use dev context { agent_role: 'dev' }"
+    action: "Call handleToolCall('kb_write_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint', content: {} }, mockDeps, devContext)"
+    expected: "result.isError is undefined; CRUD mock was called"
+    evidence: "Vitest assertion: expect(result.isError).toBeUndefined(); expect(mockKbWriteArtifact).toHaveBeenCalled()"
+
+  - id: ED-6
+    title: "kb_read_artifact accessible by qa role (no FORBIDDEN)"
+    setup: "Mock kb_read_artifact to resolve; use qa context { agent_role: 'qa' }"
+    action: "Call handleToolCall('kb_read_artifact', { story_id: 'KBAR-0150', artifact_type: 'checkpoint' }, mockDeps, qaContext)"
+    expected: "result.isError is undefined; CRUD mock was called"
+    evidence: "Vitest assertion: expect(result.isError).toBeUndefined(); expect(mockKbReadArtifact).toHaveBeenCalled()"
+
+  - id: ED-7
+    title: "kb_list_artifacts accessible by all role (no FORBIDDEN)"
+    setup: "Mock kb_list_artifacts to resolve with []; use all context { agent_role: 'all' }"
+    action: "Call handleToolCall('kb_list_artifacts', { story_id: 'KBAR-0150' }, mockDeps, allContext)"
+    expected: "result.isError is undefined; CRUD mock was called"
+    evidence: "Vitest assertion: expect(result.isError).toBeUndefined(); expect(mockKbListArtifacts).toHaveBeenCalled()"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "result.isError is undefined for all happy-path tests"
+      - "result.isError === true for all error/validation/authorization tests"
+      - "JSON.parse(result.content[0].text) parses without error for all responses"
+      - "mockKbDeleteArtifact.not.toHaveBeenCalled() when authorization fails"
+      - "Error messages do not contain 'password', stack traces, or raw DB credentials"
+
+manual_cases: []
+
+fixture_definitions:
+  - name: createMockArtifact
+    type: function
+    description: "Returns ArtifactResponse fixture — copy from artifact-tools.test.ts lines 69-85. Accepts Partial<ArtifactResponse> overrides."
+  - name: createMockArtifactListItem
+    type: function
+    description: "Returns ArtifactListItem fixture — copy from artifact-tools.test.ts lines 87-100. Accepts Partial<ArtifactListItem> overrides."
+  - name: mockDeps
+    type: ToolHandlerDeps
+    description: "Standard deps object with mockDb and mockEmbeddingClient from createMockEmbeddingClient()"
+  - name: pmContext
+    type: ToolCallContext
+    description: "{ correlation_id: 'test', tool_call_chain: [], start_time: Date.now(), agent_role: 'pm' }"
+  - name: devContext
+    type: ToolCallContext
+    description: "{ correlation_id: 'test', tool_call_chain: [], start_time: Date.now(), agent_role: 'dev' }"
+  - name: qaContext
+    type: ToolCallContext
+    description: "{ correlation_id: 'test', tool_call_chain: [], start_time: Date.now(), agent_role: 'qa' }"
+  - name: allContext
+    type: ToolCallContext
+    description: "{ correlation_id: 'test', tool_call_chain: [], start_time: Date.now(), agent_role: 'all' }"
+
+risks:
+  - "Tool count in mcp-integration.test.ts must be re-verified at implementation time — KBAR-0150 adds no new tools but prior stories (KBAR-0130, KBAR-0140) may have incremented the count"
+  - "The vi.mock ESM hoisting pattern requires strict import ordering (vi.mock declarations before handleToolCall import) — fragile if not followed from the story-tools-integration.test.ts template"
+  - "KBAR-0130 and KBAR-0140 must be merged before implementation starts to avoid merge conflicts on mcp-integration.test.ts tool count"
+  - "kb_read_artifact returning null must produce literal string 'null', not JSON null — this is a specific behavior that differs from standard error handling and must be explicitly asserted"

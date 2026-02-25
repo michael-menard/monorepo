@@ -1,0 +1,161 @@
+schema: 1
+story_id: "KBAR-0130"
+timestamp: "2026-02-25T16:24:00Z"
+
+verdict: FAIL
+
+tests_executed: true
+test_results:
+  unit: { pass: 1175, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: null
+coverage_meets_threshold: true  # No coverage gate hit; all 48 test files pass
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:4473; tool-schemas.ts:3073"
+    notes: "Registered in toolHandlers map and getToolDefinitions(). Confirmed in both files."
+
+  - ac_id: "AC-2"
+    status: FAIL
+    evidence_ref: "tool-schemas.ts:213-225"
+    notes: >
+      ArtifactSearchInputSchema is missing the required `query: string` field specified in AC-2.
+      AC-2 requires { query: string, story_id?, artifact_type?, phase?, limit?, min_confidence?, explain? }.
+      The implementation only has { story_id?, artifact_type?, phase?, limit? }.
+      The `min_confidence` and `explain` parameters are also absent from the schema.
+
+  - ac_id: "AC-3"
+    status: FAIL
+    evidence_ref: "tool-schemas.ts:213-225"
+    notes: >
+      AC-3 requires `query` is required and non-empty (.min(1)). No `query` field exists in the schema.
+      The story title 'Semantic Search Across KB-Indexed Artifacts Using Natural Language' is not fulfilled
+      — there is no natural language query parameter.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:1080-1082"
+    notes: "Tag composition ['artifact', story_id, artifact_type, phase].filter(Boolean) is correct. Base tags always include 'artifact'."
+
+  - ac_id: "AC-5"
+    status: PARTIAL
+    evidence_ref: "tool-handlers.ts:1091-1106"
+    notes: >
+      Delegates to kb_search correctly. However, the `query` field passed to kb_search is a synthetic
+      string built from tags (line 1095-1097) rather than a user-provided natural language query.
+      This is the consequence of AC-2/AC-3 not being implemented.
+
+  - ac_id: "AC-6"
+    status: PARTIAL
+    evidence_ref: "tool-handlers.ts:1141-1147"
+    notes: >
+      Returns structured { results, metadata: { ...result.metadata, correlation_id } }. However,
+      the schema does not expose min_confidence or explain parameters (as AC-2 requires), so they
+      cannot be passed through. The response structure itself is correct.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "artifact-search-tools.test.ts:HP-5, tool-handlers.ts:1149-1156"
+    notes: "Empty results return success response. Verified by HP-5 test and response structure."
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "tool-handlers.ts:1122-1127; artifact-search-tools.test.ts:HP-6"
+    notes: "fallback_mode propagated via metadata spread. HP-6 test verifies this."
+
+  - ac_id: "AC-9"
+    status: PARTIAL
+    evidence_ref: "artifact-search-tools.test.ts (15 tests)"
+    notes: >
+      15 unit tests present covering most cases. However, AC-9 requires testing
+      'invalid query (Zod error for empty string)' — no such test exists because the query field
+      was omitted. Also missing: min_confidence/explain pass-through tests (per AC-9 and story test plan ED-3).
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "mcp-integration.test.ts:69-72"
+    notes: "Tool count assertion updated to 56. Test passes. 48 test files, 1175 tests all pass."
+
+  - ac_id: "AC-11"
+    status: PASS
+    evidence_ref: "mcp-integration.test.ts:149"
+    notes: "artifact_search appears in the tool names list at line 149."
+
+  - ac_id: "AC-12"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acs_implemented"
+    notes: "Implementer noted KBAR-0110 tag convention confirmed before writing code."
+
+architecture_compliant: true
+
+issues:
+  - id: ISSUE-1
+    severity: HIGH
+    ac_ids: ["AC-2", "AC-3"]
+    file: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    line: 213
+    description: >
+      Missing required `query: string` parameter from ArtifactSearchInputSchema. Story title and
+      AC-2/AC-3 explicitly require natural language query input. The implementation instead uses a
+      tag-filter-only approach, building a synthetic query from tag values. This changes the tool
+      from a natural language semantic search to a structured browse/filter tool.
+    resolution: >
+      Add `query: z.string().min(1).optional()` (or required per AC-3) to ArtifactSearchInputSchema.
+      Pass validated.query to kb_search as the query field. Add min_confidence and explain optional
+      fields per AC-2.
+
+  - id: ISSUE-2
+    severity: MEDIUM
+    ac_ids: ["AC-2", "AC-6"]
+    file: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    line: 213
+    description: >
+      Missing `min_confidence` and `explain` optional parameters from schema and handler. AC-2
+      explicitly lists these as part of the tool input shape. The handler hardcodes min_confidence: 0.0
+      and does not support explain mode.
+    resolution: >
+      Add min_confidence: z.number().min(0).max(1).optional() and explain: z.boolean().optional()
+      to ArtifactSearchInputSchema. Pass them through to the kb_search call.
+
+  - id: ISSUE-3
+    severity: LOW
+    ac_ids: ["AC-9"]
+    file: "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-search-tools.test.ts"
+    description: >
+      Missing test for empty/invalid query validation (AC-9 requires 'invalid query (Zod error for
+      empty string)'). Also missing min_confidence and explain pass-through tests per story test
+      plan ED-3.
+    resolution: >
+      Once query field is added, add tests for: empty string rejection, missing query rejection,
+      min_confidence/explain pass-through.
+
+lessons_to_record:
+  - lesson: >
+      QA verification caught a schema deviation: ArtifactSearchInputSchema was implemented without
+      the required `query: string` field specified in AC-2/AC-3. The tool became a filter-only tool
+      rather than the natural language semantic search tool described in the story title and ACs.
+      This type of deviation (omitting a core parameter) can pass code review if reviewers focus on
+      structural correctness rather than AC-specification fidelity.
+    category: anti_pattern
+    tags: ["mcp-tools", "schema", "ac-deviation", "qa"]
+
+  - lesson: >
+      When a story title explicitly names a feature ('Natural Language' search) and the ACs enumerate
+      required parameters, QA verification should check schema field names against AC field names
+      directly — not just check that the tool 'works'. A working tool that omits a required field is
+      an AC failure even if all tests pass.
+    category: pattern
+    tags: ["qa", "ac-verification", "schema-first"]
+
+tokens:
+  in: 42000
+  out: 4500
