@@ -6,6 +6,7 @@
  *
  * Knowledge Base Integration:
  * - Queries KB for domain-specific lessons via kb_search
+ * - Queries KB for pattern discovery via artifact_search
  * - Falls back to hardcoded defaults if KB unavailable
  * - Workflow is NOT blocked by KB failures
  */
@@ -16,6 +17,8 @@ import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphStateWithContext } from './retrieve-context.js'
+import { PatternDiscoveryResultSchema } from '../../artifacts/knowledge-context.js'
+import type { PatternDiscoveryResult } from '../../artifacts/knowledge-context.js'
 
 // Optional KB types - imported dynamically to avoid hard dependency
 type KbSearchDeps = {
@@ -41,6 +44,31 @@ type KbSearchResult = {
   metadata: {
     total: number
     fallback_mode: boolean
+  }
+}
+
+type ArtifactSearchInput = {
+  query: string
+  story_id?: string
+  artifact_type?: string
+  phase?: string
+  limit?: number
+  min_confidence?: number
+  explain?: boolean
+}
+
+type ArtifactSearchResult = {
+  results: Array<{
+    story_id?: string
+    artifact_type?: string
+    content_summary?: string
+    relevance_score?: number
+    phase?: string
+    [key: string]: unknown
+  }>
+  metadata?: {
+    total?: number
+    [key: string]: unknown
   }
 }
 
@@ -115,6 +143,14 @@ export const KnowledgeContextSchema = z.object({
   lessonsLearned: LessonsLearnedSchema,
   architectureDecisions: ArchitectureDecisionsSchema,
   tokenOptimization: TokenOptimizationSchema,
+  /**
+   * patternDiscovery — results from artifact_search (Phase 1.5).
+   *
+   * Distinct from lessonsLearned: lessonsLearned entries come from kb_search over entries
+   * tagged "lesson-learned" (manually curated). patternDiscovery entries come from
+   * artifact_search over indexed artifact embeddings (semantic similarity).
+   */
+  patternDiscovery: z.array(PatternDiscoveryResultSchema).default([]),
   warnings: z.array(z.string()),
 })
 export type KnowledgeContext = z.infer<typeof KnowledgeContextSchema>
@@ -131,6 +167,12 @@ export const KnowledgeContextConfigSchema = z.object({
       db: z.unknown(),
       embeddingClient: z.unknown(),
       kbSearchFn: z.function().args(z.unknown(), z.unknown()).returns(z.promise(z.unknown())),
+      /** Optional artifact_search function for pattern discovery (Phase 1.5) */
+      artifactSearchFn: z
+        .function()
+        .args(z.unknown(), z.unknown())
+        .returns(z.promise(z.unknown()))
+        .optional(),
     })
     .optional(),
 })
@@ -491,6 +533,95 @@ export async function getLessonsFromKB(
   }
 }
 
+/**
+ * Query Knowledge Base for pattern discovery via artifact_search.
+ *
+ * Performs two artifact_search calls (evidence + plan artifact types) using
+ * domain-scoped queries. Returns an array of PatternDiscoveryResult on success,
+ * or an empty array with a warning on failure (graceful fallback — never blocks).
+ *
+ * @param storyDomain - Domain/area of the story (e.g., "wishlist", "api")
+ * @param storyScope - Brief description of what the story involves
+ * @param artifactSearchFn - The artifact_search function
+ * @param kbDeps - KB dependencies (db, embeddingClient)
+ * @param warnings - Mutable warnings array to append fallback warnings to
+ * @returns Array of PatternDiscoveryResult (empty on failure or no results)
+ */
+export async function getPatternDiscoveryFromKB(
+  storyDomain: string | undefined,
+  storyScope: string | undefined,
+  artifactSearchFn: (input: ArtifactSearchInput, deps: KbSearchDeps) => Promise<ArtifactSearchResult>,
+  kbDeps: KbSearchDeps,
+  warnings: string[],
+): Promise<PatternDiscoveryResult[]> {
+  const queryBase = [storyDomain, storyScope].filter(Boolean).join(' ')
+  const query = queryBase || 'implementation'
+
+  try {
+    // Query 1: Evidence artifacts from similar stories
+    const evidenceResults = await artifactSearchFn(
+      {
+        query: `${query} implementation evidence`,
+        artifact_type: 'evidence',
+        limit: 5,
+      },
+      kbDeps,
+    )
+
+    // Query 2: Plan artifacts from similar stories
+    const planResults = await artifactSearchFn(
+      {
+        query: `${query} implementation plan`,
+        artifact_type: 'plan',
+        limit: 5,
+      },
+      kbDeps,
+    )
+
+    const allResults: PatternDiscoveryResult[] = []
+
+    for (const result of [...(evidenceResults.results ?? []), ...(planResults.results ?? [])]) {
+      const parsed = PatternDiscoveryResultSchema.safeParse({
+        story_id: result.story_id ?? 'UNKNOWN',
+        artifact_type: result.artifact_type ?? 'unknown',
+        content_summary: result.content_summary ?? '',
+        relevance_score: result.relevance_score ?? 0,
+        phase: result.phase,
+      })
+
+      if (parsed.success) {
+        allResults.push(parsed.data)
+      }
+    }
+
+    logger.info('Loaded pattern discovery from Knowledge Base', {
+      domain: storyDomain,
+      scope: storyScope,
+      evidenceCount: evidenceResults.results?.length ?? 0,
+      planCount: planResults.results?.length ?? 0,
+      totalParsed: allResults.length,
+    })
+
+    if (allResults.length === 0) {
+      warnings.push(
+        `artifact_search returned no results for "${query}" — pattern_discovery set to []`,
+      )
+    }
+
+    return allResults
+  } catch (error) {
+    logger.warn('Failed to load pattern discovery from KB, using empty array', {
+      error: error instanceof Error ? error.message : String(error),
+      domain: storyDomain,
+      scope: storyScope,
+    })
+    warnings.push(
+      `artifact_search unavailable or failed for "${query}" — pattern_discovery set to []`,
+    )
+    return []
+  }
+}
+
 // ============================================================================
 // Lessons Learned Fallback Defaults
 // ============================================================================
@@ -604,6 +735,25 @@ export async function loadKnowledgeContext(
       lessonsLearned = getDefaultLessonsLearned(fullConfig.storyDomain)
     }
 
+    // Get pattern discovery - try artifact_search, graceful fallback to []
+    let patternDiscovery: PatternDiscoveryResult[] = []
+
+    if (fullConfig.kbDeps?.artifactSearchFn && fullConfig.kbDeps?.db && fullConfig.kbDeps?.embeddingClient) {
+      patternDiscovery = await getPatternDiscoveryFromKB(
+        fullConfig.storyDomain,
+        fullConfig.storyScope,
+        fullConfig.kbDeps.artifactSearchFn as (
+          input: ArtifactSearchInput,
+          deps: KbSearchDeps,
+        ) => Promise<ArtifactSearchResult>,
+        {
+          db: fullConfig.kbDeps.db,
+          embeddingClient: fullConfig.kbDeps.embeddingClient,
+        },
+        warnings,
+      )
+    }
+
     // Get token optimization context
     const tokenOptimization: TokenOptimization = {
       highCostOperations: getHighCostOperations(),
@@ -620,6 +770,7 @@ export async function loadKnowledgeContext(
         constraints,
       },
       tokenOptimization,
+      patternDiscovery,
       warnings,
     }
 

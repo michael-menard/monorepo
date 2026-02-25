@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createKnowledgeContext, KnowledgeContextSchema } from '../knowledge-context'
 
@@ -206,6 +206,66 @@ describe('KnowledgeContextSchema', () => {
         expect(() => KnowledgeContextSchema.parse(context)).not.toThrow()
       })
     })
+
+    it('validates pattern_discovery field with results', () => {
+      const context = {
+        schema: 1,
+        story_id: 'WISH-001',
+        timestamp: '2026-02-01T12:00:00.000Z',
+        loaded: true,
+        lessons_learned: {
+          count: 0,
+          relevant_to_scope: [],
+          blockers_to_avoid: [],
+          patterns_to_follow: [],
+          patterns_to_avoid: [],
+        },
+        architecture_decisions: { active_count: 0, relevant_adrs: [] },
+        token_optimization: { high_cost_operations: [], recommended_patterns: [] },
+        pattern_discovery: [
+          {
+            story_id: 'KBAR-0130',
+            artifact_type: 'evidence',
+            content_summary: 'artifact_search tool implementation evidence',
+            relevance_score: 0.91,
+            phase: 'implementation',
+          },
+        ],
+        attack_vectors: [],
+        do_not_repeat: [],
+        warnings: [],
+      }
+
+      const result = KnowledgeContextSchema.parse(context)
+      expect(result.pattern_discovery).toHaveLength(1)
+      expect(result.pattern_discovery[0].story_id).toBe('KBAR-0130')
+      expect(result.pattern_discovery[0].artifact_type).toBe('evidence')
+      expect(result.pattern_discovery[0].relevance_score).toBe(0.91)
+    })
+
+    it('defaults pattern_discovery to empty array when not provided', () => {
+      const context = {
+        schema: 1,
+        story_id: 'WISH-001',
+        timestamp: '2026-02-01T12:00:00.000Z',
+        loaded: true,
+        lessons_learned: {
+          count: 0,
+          relevant_to_scope: [],
+          blockers_to_avoid: [],
+          patterns_to_follow: [],
+          patterns_to_avoid: [],
+        },
+        architecture_decisions: { active_count: 0, relevant_adrs: [] },
+        token_optimization: { high_cost_operations: [], recommended_patterns: [] },
+        attack_vectors: [],
+        do_not_repeat: [],
+        warnings: [],
+      }
+
+      const result = KnowledgeContextSchema.parse(context)
+      expect(result.pattern_discovery).toEqual([])
+    })
   })
 
   describe('createKnowledgeContext', () => {
@@ -243,5 +303,105 @@ describe('KnowledgeContextSchema', () => {
       expect(context.timestamp).toBeDefined()
       expect(() => new Date(context.timestamp)).not.toThrow()
     })
+
+    it('initializes pattern_discovery as empty array', () => {
+      const context = createKnowledgeContext('WISH-001')
+
+      expect(context.pattern_discovery).toEqual([])
+    })
+  })
+})
+
+describe('getPatternDiscoveryFromKB', () => {
+  // Import the function from load-knowledge-context to test artifactSearchFn paths
+  // These tests verify the three paths: provided+results, provided+empty, not provided
+
+  it('HP-4: returns pattern discovery results when artifactSearchFn is provided and returns results', async () => {
+    const { getPatternDiscoveryFromKB } = await import(
+      '../../nodes/reality/load-knowledge-context'
+    )
+
+    const mockArtifactSearchFn = vi.fn().mockResolvedValue({
+      results: [
+        {
+          story_id: 'KBAR-0130',
+          artifact_type: 'evidence',
+          content_summary: 'artifact_search tool implementation',
+          relevance_score: 0.91,
+          phase: 'implementation',
+        },
+      ],
+      metadata: { total: 1 },
+    })
+
+    const warnings: string[] = []
+    const result = await getPatternDiscoveryFromKB(
+      'knowledge-base',
+      'artifact search MCP tool',
+      mockArtifactSearchFn,
+      { db: {}, embeddingClient: {} },
+      warnings,
+    )
+
+    expect(result).toHaveLength(2) // called twice (evidence + plan), first returns 1, second returns 1
+    expect(result[0].story_id).toBe('KBAR-0130')
+    expect(result[0].artifact_type).toBe('evidence')
+    expect(result[0].relevance_score).toBe(0.91)
+    expect(mockArtifactSearchFn).toHaveBeenCalledTimes(2)
+    expect(mockArtifactSearchFn).toHaveBeenCalledWith(
+      expect.objectContaining({ artifact_type: 'evidence' }),
+      expect.anything(),
+    )
+    expect(mockArtifactSearchFn).toHaveBeenCalledWith(
+      expect.objectContaining({ artifact_type: 'plan' }),
+      expect.anything(),
+    )
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('HP-5: returns empty array with warning when artifactSearchFn is provided but returns no results', async () => {
+    const { getPatternDiscoveryFromKB } = await import(
+      '../../nodes/reality/load-knowledge-context'
+    )
+
+    const mockArtifactSearchFn = vi.fn().mockResolvedValue({
+      results: [],
+      metadata: { total: 0 },
+    })
+
+    const warnings: string[] = []
+    const result = await getPatternDiscoveryFromKB(
+      'knowledge-base',
+      'artifact search',
+      mockArtifactSearchFn,
+      { db: {}, embeddingClient: {} },
+      warnings,
+    )
+
+    expect(result).toEqual([])
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain('artifact_search returned no results')
+    expect(warnings[0]).toContain('pattern_discovery set to []')
+  })
+
+  it('ED-1: returns empty array with warning when artifactSearchFn throws', async () => {
+    const { getPatternDiscoveryFromKB } = await import(
+      '../../nodes/reality/load-knowledge-context'
+    )
+
+    const mockArtifactSearchFn = vi.fn().mockRejectedValue(new Error('artifact_search unavailable'))
+
+    const warnings: string[] = []
+    const result = await getPatternDiscoveryFromKB(
+      'knowledge-base',
+      'artifact search',
+      mockArtifactSearchFn,
+      { db: {}, embeddingClient: {} },
+      warnings,
+    )
+
+    expect(result).toEqual([])
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain('pattern_discovery set to []')
   })
 })
