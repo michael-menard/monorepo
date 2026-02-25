@@ -1,0 +1,176 @@
+schema: 2
+story_id: "APIP-5007"
+timestamp: "2026-02-25T23:58:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Spike — Run @langchain/langgraph-checkpoint-postgres and document checkpoint table schema. Determine exactly which tables LangGraph's PostgreSQL checkpointer creates, in which schema namespace, and whether delegation is safe."
+    files:
+      - "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/spike-langgraph-checkpoint.md"
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/wint.ts"
+      - "apps/api/knowledge-base/src/db/migrations/013_add_plans_tables.sql"
+    dependencies: []
+    slice: backend
+    verification: "File exists with table list and schema namespace confirmed"
+    acs_covered: ["AC-2"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Write ADR-002 — Migration tooling decision (Drizzle Kit vs. sequential SQL) + LangGraph checkpoint table ownership decision, citing KB migration 014 anti-pattern and Docker Compose local-only constraint."
+    files:
+      - "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/014_consolidate_orphaned_002_objects.sql"
+      - "packages/backend/database-schema/drizzle.config.ts"
+      - "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/spike-langgraph-checkpoint.md"
+    dependencies: [1]
+    slice: backend
+    verification: "ADR file exists with explicit Decision section for tooling choice and LangGraph checkpoint delegation"
+    acs_covered: ["AC-1", "AC-2"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Write baseline DDL — apip schema namespace + schema_migrations version tracking table. Follow KB migration 013 pattern: header comment, CREATE SCHEMA IF NOT EXISTS, CREATE TABLE IF NOT EXISTS, BEGIN/COMMIT transaction wrapping."
+    files:
+      - "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/013_add_plans_tables.sql"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+      - "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+    dependencies: [2]
+    slice: backend
+    verification: "SQL file exists; psql -f 001_apip_schema_baseline.sql runs without errors on fresh DB; SELECT table_name FROM information_schema.tables WHERE table_schema = 'apip' returns schema_migrations"
+    acs_covered: ["AC-3", "AC-7"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Document thread ID convention ({story_id}:{stage}:{attempt_number}) for APIP-0020 implementers and write rollback procedure doc covering additive, destructive, and enum change categories."
+    files:
+      - "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md"
+      - "plans/future/platform/autonomous-pipeline/docs/migration-rollback-procedures.md"
+    files_to_read:
+      - "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+    dependencies: [2]
+    slice: backend
+    verification: "Both docs exist; rollback doc has sections for additive/destructive/enum; destructive states downtime required; enum states irreversible without full data migration"
+    acs_covered: ["AC-4", "AC-5"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write local development runbook for Docker Compose migration workflow (infra/compose.lego-app.yaml), including LangGraph checkpoint initialization startup sequence: Aurora up -> APIP migration applied -> LangGraph starts."
+    files:
+      - "plans/future/platform/autonomous-pipeline/docs/local-migration-runbook.md"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+      - "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md"
+      - "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+    dependencies: [3, 4]
+    slice: backend
+    verification: "Runbook documents explicit startup sequence: (1) Aurora up, (2) APIP migration applied, (3) LangGraph starts; health check dependency documented"
+    acs_covered: ["AC-6"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Consult APIP-5001 scope and produce gap analysis confirming migration strategy is sufficient for APIP-5001 test database fixtures, or documenting gaps with owner."
+    files:
+      - "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/APIP-5001-gap-analysis.md"
+    files_to_read:
+      - "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+      - "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/APIP-5007.md"
+    dependencies: [3]
+    slice: backend
+    verification: "Gap analysis exists; explicitly states whether APIP-5001 can build test fixtures against schema from ST-3; any gaps documented with owner"
+    acs_covered: ["AC-8"]
+
+files_to_change:
+  - path: "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/spike-langgraph-checkpoint.md"
+    action: create
+    reason: "ST-1 spike artifact documenting LangGraph checkpoint table schema and delegation decision (AC-2)"
+  - path: "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+    action: create
+    reason: "ST-2 ADR covering migration tooling choice and LangGraph checkpoint ownership (AC-1, AC-2)"
+  - path: "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+    action: create
+    reason: "ST-3 baseline DDL for apip schema namespace + schema_migrations tracking table (AC-3, AC-7)"
+  - path: "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md"
+    action: create
+    reason: "ST-4 thread ID convention doc for APIP-0020 implementers (AC-4)"
+  - path: "plans/future/platform/autonomous-pipeline/docs/migration-rollback-procedures.md"
+    action: create
+    reason: "ST-4 rollback procedures covering additive, destructive, and enum categories (AC-5)"
+  - path: "plans/future/platform/autonomous-pipeline/docs/local-migration-runbook.md"
+    action: create
+    reason: "ST-5 Docker Compose migration runbook with LangGraph startup sequence (AC-6)"
+  - path: "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/APIP-5001-gap-analysis.md"
+    action: create
+    reason: "ST-6 APIP-5001 consultation and gap analysis (AC-8)"
+
+commands_to_run:
+  - command: "psql -h localhost -p 5432 -U postgres -d monorepo -f apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+    when: "after ST-3 DDL is written — manual verification step"
+    required: false
+  - command: "psql -h localhost -p 5432 -U postgres -d monorepo -c \"SELECT table_name FROM information_schema.tables WHERE table_schema = 'apip'\""
+    when: "after migration applied — verify schema_migrations table exists"
+    required: false
+  - command: "psql -h localhost -p 5432 -U postgres -d monorepo -f apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+    when: "second run — verify idempotency (no errors on re-application)"
+    required: false
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "ADR-002 file exists with explicit migration tooling decision section citing: (a) Docker Compose local-only constraint, (b) KB migration 014 cleanup as cautionary example, (c) established KB sequential SQL pattern"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "ADR-002 LangGraph checkpoint ownership section listing tables created by @langchain/langgraph-checkpoint-postgres; spike-langgraph-checkpoint.md documents schema namespace and delegation decision"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "001_apip_schema_baseline.sql creates apip pgSchema namespace + schema_migrations table; follows KB 013 idempotency pattern (CREATE SCHEMA IF NOT EXISTS, CREATE TABLE IF NOT EXISTS)"
+    evidence_type: file
+  - ac_id: "AC-4"
+    planned_evidence: "thread-id-convention.md documents {story_id}:{stage}:{attempt_number} format per ARCHITECTURE-REVIEW.md Section 2.2; authoritative reference for APIP-0020"
+    evidence_type: file
+  - ac_id: "AC-5"
+    planned_evidence: "migration-rollback-procedures.md has three sections: additive (DROP IF EXISTS), destructive (downtime required + backup step + no auto-rollback), enum (irreversible + full data migration required)"
+    evidence_type: file
+  - ac_id: "AC-6"
+    planned_evidence: "local-migration-runbook.md documents startup sequence order, LangGraph checkpoint initialization, and health check dependencies; references infra/compose.lego-app.yaml"
+    evidence_type: file
+  - ac_id: "AC-7"
+    planned_evidence: "001_apip_schema_baseline.sql uses BEGIN/COMMIT wrapping, CREATE TABLE IF NOT EXISTS idempotency guards, DO $$ IF NOT EXISTS $$ for constraints, header comment block matching KB pattern"
+    evidence_type: file
+  - ac_id: "AC-8"
+    planned_evidence: "APIP-5001-gap-analysis.md explicitly states whether 001_apip_schema_baseline.sql satisfies APIP-5001 test fixture requirements; any gaps documented with owner"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Where should the APIP pipeline SQL migration files live? apps/api/autonomous-pipeline/migrations/ or a new packages/backend/pipeline-schema/ directory?"
+    decision: "apps/api/autonomous-pipeline/migrations/"
+    rationale: "The APIP pipeline runs on a dedicated local Docker Compose server (ADR-001 Decision 4), not AWS Lambda. Placing migrations alongside the pipeline app code in apps/api/autonomous-pipeline/ is consistent with the KB pattern (apps/api/knowledge-base/src/db/migrations/). No shared package infrastructure is needed — this is a local-only server schema. The ADR-002 will confirm this path."
+    decided_by: auto
+    autonomy_tier: 1
+  - id: ARCH-002
+    question: "Should APIP-5007 attempt to actually run @langchain/langgraph-checkpoint-postgres to observe checkpoint tables (requires installing the package), or document the known table list from LangGraph documentation?"
+    decision: "Document known table list from LangGraph source/documentation plus package.json inspection; do not attempt live package execution in ST-1"
+    rationale: "ST-1 is a documentation spike, not a runtime test. The story's Architecture Notes already identifies the expected tables (checkpoints, checkpoint_blobs, checkpoint_writes, checkpoint_migrations). The spike output should verify these against LangGraph source/npm package contents without requiring a live database. Live execution testing belongs to HP-3 in the test plan. This avoids npm install side-effects in the planning artifact phase."
+    decided_by: auto
+    autonomy_tier: 1
+
+complexity: moderate
+
+notes:
+  - "This is a docs + DDL story — no runtime code changes. All steps produce markdown or SQL files."
+  - "E2E gate is exempt per story metadata (infra/docs story, no HTTP API or frontend)."
+  - "ST-1 (spike) is the critical unblocking step — all other steps depend on ADR-002 (ST-2) which depends on spike findings."
+  - "ST-3 and ST-4 can execute in parallel after ST-2 completes."
+  - "ST-5 and ST-6 can execute in parallel after their respective dependencies complete."
+  - "The apip pgSchema namespace is confirmed by Architecture Notes — no conflict with wint, public, umami schemas."
+  - "Sequential SQL pattern (KB migration 013 template) is the recommended tooling choice per Architecture Notes."
+  - "LangGraph checkpoint table delegation is the recommended approach — let LangGraph own its tables via built-in migration."
+  - "Migration directory path apps/api/autonomous-pipeline/migrations/ is recommended; ADR-002 confirms final path."
+  - "ELAB gaps: stale story.yaml Alembic metadata reference (non-blocking) and stale APIP-0010 dependency (non-blocking)."
+  - "KB 014 anti-pattern (14 orphaned tables from Drizzle/sequential SQL mixing) must be cited explicitly in ADR-002 per AC-1."
+  - "Docker Compose postgres service is on port 5432; KB pgvector instance is on port 5433 — runbook must emphasize correct target."
