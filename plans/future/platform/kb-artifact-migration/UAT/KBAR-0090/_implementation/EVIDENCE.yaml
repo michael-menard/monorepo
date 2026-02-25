@@ -1,0 +1,205 @@
+schema: 1
+story_id: "KBAR-0090"
+version: 1
+timestamp: "2026-02-24T20:40:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "When no stories match the epic filter, kb_get_next_story returns story: null with candidates_count: 0"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should return null story with zero candidates when queue is empty'.
+          Mock returns { story: null, candidates_count: 0, blocked_by_dependencies: [], message: '...' };
+          asserts parsed.story is null and candidates_count is 0.
+
+  - ac_id: "AC-2"
+    ac_text: "When all candidates are blocked by dependencies, kb_get_next_story returns story: null with non-empty blocked_by_dependencies"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should return null story with blocked_by_dependencies list when all are blocked'.
+          Mock returns { story: null, candidates_count: 3, blocked_by_dependencies: ['KBAR-0080 (blocked by: KBAR-0070)', ...], ... };
+          asserts blocked_by_dependencies.length is 3.
+
+  - ac_id: "AC-3"
+    ac_text: "When an unblocked story exists, kb_get_next_story returns the first eligible story"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should return the first unblocked story when one is available'.
+          Mock returns story fixture with storyId: 'KBAR-0090';
+          asserts parsed.story.storyId === 'KBAR-0090'.
+
+  - ac_id: "AC-4"
+    ac_text: "include_backlog parameter is forwarded to the underlying CRUD operation"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Two tests: (a) include_backlog: true forwarded — checks callArgs[1] matches { include_backlog: true };
+          (b) omitting include_backlog — checks callArgs[1] matches { include_backlog: false } (default).
+
+  - ac_id: "AC-5"
+    ac_text: "exclude_story_ids parameter is forwarded to the underlying CRUD operation"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should forward exclude_story_ids array to crud operation'.
+          Calls with exclude_story_ids: ['KBAR-0080', 'KBAR-0070'];
+          asserts callArgs[1] matches { exclude_story_ids: ['KBAR-0080', 'KBAR-0070'] }.
+
+  - ac_id: "AC-6"
+    ac_text: "feature filter parameter is forwarded to the underlying CRUD operation"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should forward feature filter to crud operation and return correct result'.
+          Calls with feature: 'kb-artifact-migration';
+          asserts callArgs[1] matches { feature: 'kb-artifact-migration' }.
+
+  - ac_id: "AC-7"
+    ac_text: "Authorization is enforced — invalid roles are rejected and the CRUD operation is not called"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should reject invalid role and not call crud operation'.
+          Creates context with agent_role: 'unknown' as AgentRole;
+          asserts result.isError === true and mockKbGetNextStory not called.
+
+  - ac_id: "AC-8"
+    ac_text: "Missing required epic field produces a Zod validation error response"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+        description: >
+          Test: 'should return isError true with Zod error message when epic is missing'.
+          Calls handleKbGetNextStory with empty input {};
+          asserts result.isError === true and content[0].text is truthy.
+
+  - ac_id: "AC-9"
+    ac_text: "mcp-integration.test.ts tool count assertion updated to 53 and kb_update_story present in expected names"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+        description: >
+          toHaveLength(53) replaces toHaveLength(52);
+          'kb_update_story' added to expected names array between 'kb_update_story_status' and 'kb_get_next_story'.
+          All 28 mcp-integration tests pass.
+
+  - ac_id: "AC-10"
+    ac_text: "No TypeScript errors and all tests pass for @repo/knowledge-base"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm --filter @repo/knowledge-base exec tsc --noEmit"
+        result: SUCCESS
+        output: "Exit 0 — no TypeScript errors"
+      - type: command
+        command: "pnpm test --filter @repo/knowledge-base"
+        result: SUCCESS
+        output: "45 test files, 1086 tests passed"
+
+touched_files:
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    action: created
+    lines: 229
+    description: >
+      New unit test file for handleKbGetNextStory covering AC-1 through AC-8.
+      Uses vi.hoisted + vi.mock pattern, mocks story-crud-operations.js with .js extension.
+      9 tests covering all acceptance criteria.
+
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    action: modified
+    lines: 571
+    description: >
+      Hygiene fix: updated tool count assertion from 52 to 53 and added kb_update_story
+      to the expected tool names array. Describe label updated to reflect 53 tools.
+
+commands_run:
+  - command: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose story-tools"
+    result: SUCCESS
+    output: "9 tests passed"
+    timestamp: "2026-02-24T20:39:21Z"
+
+  - command: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose mcp-integration"
+    result: SUCCESS
+    output: "28 tests passed"
+    timestamp: "2026-02-24T20:39:37Z"
+
+  - command: "pnpm --filter @repo/knowledge-base exec tsc --noEmit"
+    result: SUCCESS
+    output: "Exit 0 — no type errors"
+    timestamp: "2026-02-24T20:39:50Z"
+
+  - command: "pnpm test --filter @repo/knowledge-base"
+    result: SUCCESS
+    output: "45 test files, 1086 tests passed in 38s"
+    timestamp: "2026-02-24T20:40:30Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 1086, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: >
+    story_type: tech_debt — pure test-file story with no UI surface, no HTTP endpoints,
+    and no Playwright-testable behavior. Story test plan specifies strategy: unit,
+    ui_touched: false, endpoints: []. Playwright E2E tests would require a running
+    MCP stdio server, which is out of scope for this hygiene story.
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage: {}
+
+notable_decisions:
+  - >
+    Mocked story-crud-operations.js (with .js extension) directly rather than through
+    crud-operations/index.js to avoid accidentally mocking other crud operations
+    and to follow the ESM module mock requirement noted in the plan.
+  - >
+    AC-7 tested by casting 'unknown' string as AgentRole type — enforceAuthorization
+    uses AgentRoleSchema.safeParse internally which rejects any string not in
+    ['pm', 'dev', 'qa', 'all'], returning FORBIDDEN error.
+  - >
+    E2E tests marked exempt: this is a pure test-file story with no UI, no HTTP
+    endpoints, and no browser-testable surface.
+
+known_deviations:
+  - >
+    SCOPE.yaml lists touched_paths_globs as packages/backend/mcp-tools/** and
+    packages/backend/orchestrator/** but actual files modified are in
+    apps/api/knowledge-base/src/mcp-server/__tests__/. This mismatch was noted in
+    PLAN.yaml notes and is acceptable — scope globs were set before elaboration.
+
+token_summary:
+  execute: { in: 45000, out: 8000 }

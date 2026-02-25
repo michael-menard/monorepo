@@ -1,0 +1,25 @@
+deferred_at: "2026-02-23T00:00:00Z"
+reason: "KB MCP tools not available during story generation (standard deferred write pattern)"
+writes:
+  - type: stories_table
+    operation: upsert
+    data:
+      story_id: "KBAR-0080"
+      feature: "kb-artifact-migration"
+      title: "story_list & story_update Tools — Validate, Complete Integration Tests, and Add State Transition Guard"
+      story_dir: "plans/future/platform/kb-artifact-migration/backlog/KBAR-0080"
+      story_file: "plans/future/platform/kb-artifact-migration/backlog/KBAR-0080/KBAR-0080.md"
+      story_type: "feature"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+  - type: worktree_register
+    operation: insert
+    data:
+      story_id: "KBAR-0080"
+      branch_name: "story/KBAR-0080"
+      path: "tree/story/KBAR-0080"

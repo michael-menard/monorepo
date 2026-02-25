@@ -149,7 +149,7 @@ All can start immediately. Ordered by downstream impact.
 | 65 | x | WINT-9020 | Create doc-sync LangGraph Node ⚡ **created** | ← WINT-9010, 0160 | WINT | **P0** |
 | 66 | | WINT-4080 | Create scope-defender Agent (DA) | ← none | WINT | P1 |
 | 67 | | WINT-4090 | Create evidence-judge Agent | ← none | WINT | P1 |
-| 68 | | KBAR-0070 | story_get Tool | ← KBAR-0060 | KBAR | P2 |
+| 68 | x | KBAR-0070 | story_get Tool **completed** | ← KBAR-0060 | KBAR | P2 |
 | 69 | | KBAR-0080 | story_list & story_update Tools | ← KBAR-0070 | KBAR | P2 |
 | 70 | | WINT-0190 | Create Patch Queue Pattern and Schema | ← WINT-0180 | WINT | P3 |
 | 71 | x | WINT-0240 | Configure Ollama Model Fleet **created** | ← WINT-0220 | WINT | P3 |
