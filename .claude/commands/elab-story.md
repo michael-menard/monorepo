@@ -1,7 +1,7 @@
 ---
 created: 2026-01-20
-updated: 2026-02-06
-version: 5.0.0
+updated: 2026-02-25
+version: 5.1.0
 type: orchestrator
 agents: ["elab-setup-leader.agent.md", "elab-analyst.agent.md", "elab-autonomous-decider.agent.md", "elab-completion-leader.agent.md"]
 ---
@@ -145,6 +145,7 @@ After Phase 2 returns `ELABORATION COMPLETE: PASS` or `ELABORATION COMPLETE: CON
    ```
    kb_update_story_status({ story_id: "{STORY_ID}", state: "ready", phase: "planning" })
    ```
+   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with filesystem move only.` and continue.
 2. Move story directory:
    ```bash
    mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/ready-to-work/{STORY_ID}
@@ -164,6 +165,7 @@ After Phase 2 returns `ELABORATION COMPLETE: FAIL`:
    ```
    kb_update_story_status({ story_id: "{STORY_ID}", state: "backlog", phase: "planning" })
    ```
+   If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with filesystem move only.` and continue.
 2. Move story directory:
    ```bash
    mv {FEATURE_DIR}/elaboration/{STORY_ID} {FEATURE_DIR}/backlog/{STORY_ID}

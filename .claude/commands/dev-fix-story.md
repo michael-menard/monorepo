@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 2.0.0
+updated: 2026-02-25
+version: 2.1.0
 type: orchestrator
 agents: ["dev-setup-leader.agent.md", "dev-fix-fix-leader.agent.md", "dev-verification-leader.agent.md", "dev-documentation-leader.agent.md"]
 ---
@@ -29,8 +29,11 @@ Dev Fix Orchestrator. Spawn phase leaders sequentially. Do NOT implement directl
 
 Update phase to signal active fix work:
 1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress", phase: "implementation" })`
+2. **Guard:** If already `in_progress`, STOP: "Story {STORY_ID} is already being fixed by another agent."
+3. If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with fix work only.` and continue.
 
-Note: Story is already `in_progress` from the code-review/QA failure path, so this is a phase update only. No guard needed.
+**Abort / Error Recovery:** If interrupted after Step 0.6, release manually:
+`kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review" })`
 
 ## Execution
 

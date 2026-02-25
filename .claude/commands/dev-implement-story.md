@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-06
-version: 8.1.0
+updated: 2026-02-25
+version: 8.2.0
 agents:
   - dev-setup-leader.agent.md
   - dev-plan-leader.agent.md
@@ -174,6 +174,15 @@ Find `{STORY_ID}` in `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` and update the row:
 - Set Worker to the worktree name (e.g., `wint-1012`) or `main`
 
 If the file or story row doesn't exist, skip silently.
+
+### Step 0.6: Claim Story in KB
+
+1. Call `kb_update_story_status({ story_id: "{STORY_ID}", state: "in_progress", phase: "implementation" })`
+2. **Guard:** If already `in_progress`, STOP: "Story {STORY_ID} is already being implemented by another agent."
+3. If `kb_update_story_status` returns null or throws, emit `WARNING: DB state update failed for {STORY_ID} — proceeding with implementation only.` and continue.
+
+**Abort / Error Recovery:** If interrupted after Step 0.6, release manually:
+`kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review" })`
 
 ### Step 1: Initialize
 ```
