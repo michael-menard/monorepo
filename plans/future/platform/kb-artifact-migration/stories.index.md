@@ -21,9 +21,9 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | created | 1 |
 | ready-to-work | 1 |
 | elaboration | 0 |
-| in-progress | 1 |
+| in-progress | 0 |
 | needs-code-review | 1 |
-| ready-for-qa | 1 |
+| ready-for-qa | 2 |
 | pending | 23 |
 
 ---
@@ -164,7 +164,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-008: story_list & story_update Tools
 
-**Status:** In Progress
+**Status:** needs-code-review
 **Story ID:** KBAR-0080
 **Depends On:** KBAR-007
 **Phase:** 3
@@ -182,7 +182,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-009: kb_get_next_story Unit Tests and Integration Test Hygiene
 
-**Status:** Needs Code Review
+**Status:** Ready for QA
 **Story ID:** KBAR-0090
 **Depends On:** KBAR-008
 **Phase:** 3
