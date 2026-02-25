@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-06
-version: 5.1.0
+updated: 2026-02-25
+version: 5.2.0
 type: leader
 permission_level: setup
 triggers: ["/dev-implement-story", "/dev-fix-story"]
@@ -12,7 +12,7 @@ tools: [Read, Grep, Glob, Bash]
 kb_tools:
   - kb_search
   - kb_update_story_status
-  - kb_write_artifact
+  - artifact_write
   - kb_read_artifact
   - kb_sync_working_set
 consolidates: [dev-implement-setup-leader, dev-fix-setup-leader]
@@ -153,14 +153,15 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
 
 **Both modes:**
 
-4. **Write Checkpoint Artifact to KB**
+4. **Write Checkpoint Artifact (dual-write: file + KB)**
 
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "checkpoint",
      phase: "setup",
      iteration: 0,
+     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
      content: {
        schema: 1,
        story_id: "{STORY_ID}",
@@ -178,16 +179,19 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    })
    ```
 
-5. **Write Scope Artifact to KB**
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Setup proceeds without blocking — do not stop on KB write failure.
+
+5. **Write Scope Artifact (dual-write: file + KB)**
 
    Analyze story frontmatter keywords to determine scope:
 
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "scope",
      phase: "setup",
      iteration: 0,
+     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.yaml",
      content: {
        schema: 1,
        story_id: "{STORY_ID}",
@@ -221,6 +225,8 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
      }
    })
    ```
+
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Setup proceeds without blocking — do not stop on KB write failure.
 
 6. **Sync Working Set to KB** (KBMEM-009)
 
@@ -271,8 +277,10 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    ```
 
 ### Output (implement mode)
-- KB artifact: `checkpoint` (story_id, phase: setup, iteration: 0)
-- KB artifact: `scope` (story_id, phase: setup, iteration: 0)
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml`
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/SCOPE.yaml`
+- KB artifact: `checkpoint` (story_id, phase: setup, iteration: 0) — written via `artifact_write`
+- KB artifact: `scope` (story_id, phase: setup, iteration: 0) — written via `artifact_write`
 - KB working set: synced via `kb_sync_working_set`
 
 ---
@@ -300,14 +308,15 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    - If `code-review-failed`: `kb_read_artifact({ story_id, artifact_type: "review" })`, extract `ranked_patches`
    - If `needs-work`: `kb_read_artifact({ story_id, artifact_type: "verification" })`, extract `issues`
 
-3. **Update Checkpoint in KB**
+3. **Update Checkpoint (dual-write: file + KB)**
 
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "checkpoint",
      phase: "setup",
      iteration: {previous + 1},
+     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
      content: {
        ...checkpoint.content,
        current_phase: "fix",
@@ -316,6 +325,8 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
      }
    })
    ```
+
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Setup proceeds without blocking — do not stop on KB write failure.
 
 4. **Write Fix Summary Artifact to KB**
 
@@ -365,6 +376,7 @@ Skip steps 1-3. Story is already in `in-progress/` with status set by orchestrat
    ```
 
 ### Output (fix mode)
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
 - KB artifact: `checkpoint` (updated, phase: setup, iteration: N)
 - KB artifact: `fix_summary` (phase: setup, iteration: N)
 
@@ -395,8 +407,7 @@ Estimate: `tokens ≈ bytes / 4`
 - **READ ONLY STORY FRONTMATTER** - Do not read full story file
 - MUST call `/token-log` before reporting completion signal
 - MUST validate `mode` parameter is provided
-- MUST write artifacts to KB via `kb_write_artifact` (not to files)
-- Do NOT create `_implementation/` directories
+- MUST write artifacts via `artifact_write` (not direct file writes or `kb_write_artifact`)
 - Do NOT spawn sub-agents (this is a self-contained leader)
 - Do NOT skip precondition checks
 - Do NOT proceed if any check fails
