@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T20:15:00Z"
+updated_at: "2026-02-25T20:35:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,15 +16,15 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 12 |
+| uat | 14 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 1 |
 | ready-to-work | 0 |
 | elaboration | 0 |
-| in-progress | 1 |
+| in-progress | 0 |
 | needs-code-review | 1 |
-| ready-for-qa | 2 |
+| ready-for-qa | 1 |
 | pending | 16 |
 
 ---
@@ -293,7 +293,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-015: Artifact Tools Integration Tests
 
-**Status:** ready-for-qa
+**Status:** uat
 **Story ID:** KBAR-0150
 **Depends On:** KBAR-014
 **Phase:** 4
@@ -313,7 +313,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Status:** uat
 **Story ID:** KBAR-0160
-**Depends On:** KBAR-015
+**Depends On:** —
 **Phase:** 5
 
 **Feature:** Update dev-setup-leader and dev-plan-leader to use artifact_write for CHECKPOINT, SCOPE, PLAN
