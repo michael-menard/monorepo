@@ -290,7 +290,13 @@ export async function kb_update_story_status(
   }
 
   // Terminal-state guard: reject state transitions out of terminal states
-  const TERMINAL_STATES = ['completed', 'cancelled', 'deferred', 'failed_code_review', 'failed_qa'] as const
+  const TERMINAL_STATES = [
+    'completed',
+    'cancelled',
+    'deferred',
+    'failed_code_review',
+    'failed_qa',
+  ] as const
   const currentState = existing[0].state
   const isTerminal = (TERMINAL_STATES as readonly string[]).includes(currentState ?? '')
   const isStateChange = validated.state !== undefined && validated.state !== currentState
