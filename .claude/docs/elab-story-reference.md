@@ -9,13 +9,13 @@
     │       └─→ Move story to elaboration/
     │
     ├─→ Phase 1: Analyst (sonnet)
-    │       └─→ ANALYSIS.md (audit + discovery)
+    │       └─→ _implementation/ELAB.yaml (audit + gaps + opportunities)
     │
     ├─→ Interactive Discussion (orchestrator)
     │       └─→ Present findings, collect user decisions
     │
     ├─→ Phase 2: Completion Leader (haiku)
-    │       └─→ ELAB-STORY-XXX.md, status update, directory move
+    │       └─→ Finalize ELAB.yaml verdict, append qa_notes to story, status update, directory move
     │
     ├─→ Phase 3: Follow-up Creation (sonnet workers, parallel)
     │       └─→ Ask user, spawn worker per follow-up
@@ -36,15 +36,14 @@ All agents follow `.claude/agents/_shared/lean-docs.md`:
 - Skip empty sections
 - Structured data
 
-Primary artifacts: `ANALYSIS.md`, `ELAB-STORY-XXX.md`
+Primary artifact: `_implementation/ELAB.yaml`
 
 ## Artifacts
 
 | File | Created By | Purpose |
 |------|------------|---------|
-| `_implementation/ANALYSIS.md` | Analyst | Audit results, discovery findings |
-| `ELAB-STORY-XXX.md` | Completion Leader | Final elaboration report |
-| `STORY-XXX.md` (updated) | Completion Leader | QA Discovery Notes appended |
+| `_implementation/ELAB.yaml` | Analyst → Decider → Completion Leader | Full elaboration lifecycle (audit, gaps, opportunities, verdict) |
+| `STORY-XXX.md` (updated) | Completion Leader | `qa_notes` block appended |
 
 ## Signals
 
@@ -176,6 +175,6 @@ When follow-ups are created:
 |-------|-------|
 | Story not found | Check `backlog/` or `elaboration/` directories |
 | Analysis incomplete | Re-run Phase 1, check agent file syntax |
-| Wrong verdict | Review ANALYSIS.md findings, check severity counts |
+| Wrong verdict | Review ELAB.yaml audit[] and gaps[], check severity counts |
 | Status not updated | Verify STORY-XXX.md frontmatter write succeeded |
 | Directory not moved | Check filesystem permissions |

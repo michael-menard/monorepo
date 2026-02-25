@@ -25,8 +25,7 @@ const spinnerVariants = cva('inline-block', {
 })
 
 export interface LoadingSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof spinnerVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof spinnerVariants> {
   text?: string
   showText?: boolean
 }
@@ -108,8 +107,7 @@ const pulseVariants = cva('inline-block rounded-full', {
 })
 
 export interface PulseSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof pulseVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof pulseVariants> {
   count?: number
 }
 
@@ -162,8 +160,7 @@ const dotsVariants = cva('inline-block rounded-full', {
 })
 
 export interface DotsSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof dotsVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof dotsVariants> {
   count?: number
 }
 

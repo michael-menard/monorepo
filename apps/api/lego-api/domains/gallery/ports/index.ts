@@ -1,5 +1,5 @@
 import type { Result, PaginatedResult, PaginationInput } from '@repo/api-core'
-import type { GalleryImage, GalleryAlbum, CreateImageInput, UpdateImageInput } from '../types.js'
+import type { GalleryImage, GalleryAlbum, UpdateImageInput } from '../types.js'
 
 /**
  * Gallery Domain Ports

@@ -1,5 +1,0 @@
-TASK: Implement memory leak fixes for BUGF-018
-FEATURE_DIR: plans/future/bug-fix
-STORY_ID: BUGF-018
-AUTONOMY_LEVEL: conservative
-BATCH_MODE: false

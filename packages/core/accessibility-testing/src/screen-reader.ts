@@ -644,21 +644,19 @@ export function findDuplicateIds(container: Element): Map<string, Element[]> {
 export function assertAnnounces(
   element: Element,
   expectedText: string,
-  options: { exact?: boolean } = {}
+  options: { exact?: boolean } = {},
 ): void {
   const { exact = false } = options
   const actualText = getAccessibleName(element)
 
   if (exact) {
     if (actualText !== expectedText) {
-      throw new Error(
-        `Expected element to announce "${expectedText}" but got "${actualText}"`
-      )
+      throw new Error(`Expected element to announce "${expectedText}" but got "${actualText}"`)
     }
   } else {
     if (!actualText.toLowerCase().includes(expectedText.toLowerCase())) {
       throw new Error(
-        `Expected element to announce text containing "${expectedText}" but got "${actualText}"`
+        `Expected element to announce text containing "${expectedText}" but got "${actualText}"`,
       )
     }
   }
@@ -670,10 +668,7 @@ export function assertAnnounces(
  * @param element - Live region element
  * @param expectedPoliteness - Expected politeness level
  */
-export function assertLiveRegion(
-  element: Element,
-  expectedPoliteness: AriaLive = 'polite'
-): void {
+export function assertLiveRegion(element: Element, expectedPoliteness: AriaLive = 'polite'): void {
   const ariaLive = element.getAttribute('aria-live')
   const role = element.getAttribute('role')
 
@@ -685,7 +680,7 @@ export function assertLiveRegion(
 
   if (actualPoliteness !== expectedPoliteness) {
     throw new Error(
-      `Expected live region with politeness "${expectedPoliteness}" but got "${actualPoliteness}"`
+      `Expected live region with politeness "${expectedPoliteness}" but got "${actualPoliteness}"`,
     )
   }
 }
@@ -711,7 +706,6 @@ export function createMockScreenReader() {
     getAnnouncements: () => collector.getAnnouncements(),
     getLastAnnouncement: () => collector.getLatest()?.text,
     clear: () => collector.clear(),
-    hasAnnounced: (text: string) =>
-      collector.getAnnouncements().some(a => a.text.includes(text)),
+    hasAnnounced: (text: string) => collector.getAnnouncements().some(a => a.text.includes(text)),
   }
 }

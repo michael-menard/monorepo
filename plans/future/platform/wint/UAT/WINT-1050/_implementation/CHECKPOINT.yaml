@@ -1,19 +1,14 @@
 schema: 1
-story_id: "WINT-1050"
-feature_dir: "plans/future/platform/wint"
-timestamp: "2026-02-18T00:00:00Z"
+story_id: WINT-1050
+feature_dir: plans/future/platform/wint
+timestamp: "2026-02-20T00:00:00Z"
 
-current_phase: complete
-last_successful_phase: qa-verify
-
+current_phase: qa-verify
+last_successful_phase: qa-setup
+e2e_gate: exempt
 iteration: 0
 max_iterations: 3
-
 blocked: false
-blocked_reason: null
-
 forced: false
 warnings: []
-
-qa_started_at: "2026-02-18T00:00:00Z"
-e2e_gate: exempt
+gen_mode: false

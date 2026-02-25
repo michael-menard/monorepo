@@ -156,7 +156,7 @@ describe('lens-test-coverage', () => {
     expect(result.total_findings).toBe(0)
   })
 
-  it('empty file (0 bytes) → total_findings: 0, LensResultSchema valid', async () => {
+  it('empty file (0 bytes) → total_findings: 0, LensResultSchema valid (AC-10 via makeState([]))', async () => {
     const srcDir = join(testDir, 'packages', 'backend', 'src', 'utils')
     await mkdir(srcDir, { recursive: true })
     // Empty .ts files: scanFile will call isSourceFile → true, but content is empty
@@ -178,5 +178,30 @@ describe('lens-test-coverage', () => {
     // Let's verify the schema is valid regardless
     expect(() => LensResultSchema.parse(result)).not.toThrow()
     expect(result.lens).toBe('test-coverage')
+  })
+
+  it('findings have lens === "test-coverage"', async () => {
+    const handlersDir = join(testDir, 'apps', 'api', 'src', 'handlers')
+    await mkdir(handlersDir, { recursive: true })
+    const srcFile = await createFile(handlersDir, 'createOrder.ts', 'export function createOrder() {}')
+    const result = await run(makeState([srcFile]))
+    expect(result.total_findings).toBeGreaterThan(0)
+    expect(result.findings.every(f => f.lens === 'test-coverage')).toBe(true)
+  })
+
+  it('by_severity counts match findings array', async () => {
+    const handlersDir = join(testDir, 'apps', 'api', 'src', 'handlers')
+    const utilsDir = join(testDir, 'packages', 'backend', 'src', 'utils')
+    await mkdir(handlersDir, { recursive: true })
+    await mkdir(utilsDir, { recursive: true })
+    const file1 = await createFile(handlersDir, 'createUser.ts', 'export function createUser() {}')
+    const file2 = await createFile(utilsDir, 'formatDate.ts', 'export function formatDate() {}')
+    const result = await run(makeState([file1, file2]))
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
   })
 })

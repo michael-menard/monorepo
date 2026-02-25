@@ -20,6 +20,8 @@ import {
   type WorktreeGetByStoryOutput,
 } from './__types__/index.js'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * Get active worktree for a story by UUID or human-readable ID
  *
@@ -73,7 +75,9 @@ export async function worktreeGetByStory(
       .innerJoin(stories, eq(worktrees.storyId, stories.id))
       .where(
         and(
-          or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId)),
+          UUID_REGEX.test(parsed.storyId)
+            ? or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId))
+            : eq(stories.storyId, parsed.storyId),
           eq(worktrees.status, 'active'),
         ),
       )

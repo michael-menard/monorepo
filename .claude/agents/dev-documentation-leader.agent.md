@@ -28,8 +28,8 @@ Orchestrates Proof Writer and optionally Learnings workers.
 
 | Mode | Source | Workers | Output |
 |------|--------|---------|--------|
-| `implement` | `/dev-implement-story` | Proof Writer + Learnings | New PROOF, update LESSONS-LEARNED, TOKEN-SUMMARY |
-| `fix` | `/dev-fix-story` | Proof Writer only | Update existing PROOF with Fix Cycle section |
+| `implement` | `/dev-implement-story` | Learnings | KB learnings, OUTCOME.yaml, TOKEN-SUMMARY |
+| `fix` | `/dev-fix-story` | — | CHECKPOINT.yaml fix_cycles updated, status updated |
 
 **IMPORTANT:** The `mode` parameter MUST be provided in the orchestrator prompt.
 
@@ -39,8 +39,7 @@ Orchestrates Proof Writer and optionally Learnings workers.
 
 | Worker | Agent File | Output | Condition |
 |--------|------------|--------|-----------|
-| Proof Writer | `dev-implement-proof-writer.agent.md` | `PROOF-{STORY_ID}.md` | Always |
-| Learnings | `dev-implement-learnings.agent.md` | Appends to `LESSONS-LEARNED.md` | `mode=implement` only |
+| Learnings | `dev-implement-learnings.agent.md` | KB entries (lessons) | `mode=implement` only |
 
 ---
 
@@ -61,42 +60,7 @@ From filesystem:
 
 ## Mode: implement
 
-### Step 1: Spawn Proof Writer
-
-```
-Task tool:
-  subagent_type: "general-purpose"
-  description: "Write {STORY_ID} proof document"
-  prompt: |
-    <contents of dev-implement-proof-writer.agent.md>
-
-    ---
-    STORY CONTEXT:
-    Feature directory: {FEATURE_DIR}
-    Story ID: {STORY_ID}
-    Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Artifact directory: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
-    Output file: {FEATURE_DIR}/in-progress/{STORY_ID}/PROOF-{STORY_ID}.md
-
-    Read ALL artifacts from _implementation/:
-    - SCOPE.md
-    - IMPLEMENTATION-PLAN.md
-    - PLAN-VALIDATION.md
-    - BACKEND-LOG.md (if exists)
-    - FRONTEND-LOG.md (if exists)
-    - CONTRACTS.md (if exists)
-    - VERIFICATION.md
-    - VERIFICATION-SUMMARY.md
-```
-
-Wait for completion.
-
-### Step 2: Verify Proof Created
-
-Check that `PROOF-{STORY_ID}.md` exists.
-- If missing → return `DOCUMENTATION FAILED: Proof not created`
-
-### Step 3: Spawn Learnings Worker
+### Step 1: Spawn Learnings Worker
 
 ```
 Task tool:
@@ -110,14 +74,13 @@ Task tool:
     Feature directory: {FEATURE_DIR}
     Story ID: {STORY_ID}
     Story file: {FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md
-    Proof file: {FEATURE_DIR}/in-progress/{STORY_ID}/PROOF-{STORY_ID}.md
+    Evidence file: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml
     Artifact directory: {FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/
-    Output file: {FEATURE_DIR}/LESSONS-LEARNED.md (append)
 ```
 
 Wait for `LEARNINGS CAPTURED` signal.
 
-### Step 4: Token Logging and Reporting
+### Step 3: Token Logging and Reporting
 
 1. Call token-log for this phase:
    ```
@@ -129,7 +92,7 @@ Wait for `LEARNINGS CAPTURED` signal.
    /token-report {STORY_ID}
    ```
 
-### Step 5: Generate OUTCOME.yaml (Meta-Learning Foundation)
+### Step 4: Generate OUTCOME.yaml (Meta-Learning Foundation)
 
 Write `_implementation/OUTCOME.yaml` to capture story metrics for workflow learning.
 
@@ -137,10 +100,10 @@ Write `_implementation/OUTCOME.yaml` to capture story metrics for workflow learn
 
 | Source | Extracts |
 |--------|----------|
-| `TOKEN-LOG.md` | Per-phase tokens_in, tokens_out |
+| KB `storyTokenUsage` | Per-phase tokens_in, tokens_out (via `kb_search({ type: "token_usage", story_id: "{STORY_ID}" })`) |
 | `CHECKPOINT.yaml` | Phase timestamps, review cycles, iteration count |
 | `VERIFICATION.yaml` | QA verdicts, gate results |
-| `DECISIONS.yaml` | Decision counts (auto_accepted, escalated, etc.) |
+| `ELAB.yaml` | Decision counts (auto_accepted from `summary.gaps_resolved`, etc.) |
 | `story.yaml` | Estimated tokens (for variance calculation), **experiment_variant** (WKFL-008) |
 
 **OUTCOME.yaml Structure:**
@@ -153,7 +116,7 @@ completed_at: "{ISO_TIMESTAMP}"
 experiment_variant: "{VARIANT}"  # From story.yaml frontmatter (WKFL-008)
 
 phases:
-  # Populate from TOKEN-LOG.md parsing
+  # Populate from KB storyTokenUsage query
   # Each phase: tokens_in, tokens_out, duration_ms, status/verdict
 
 totals:
@@ -174,24 +137,24 @@ predictions: null  # Placeholder for WKFL-002
 human_feedback: [] # Placeholder for WKFL-004
 
 sources:
-  token_log: "_implementation/TOKEN-LOG.md"
+  token_log: "kb:token_usage"
   checkpoint: "_implementation/CHECKPOINT.yaml"
   verification: "_implementation/VERIFICATION.yaml"
-  decisions: "_implementation/DECISIONS.yaml"
+  decisions: "_implementation/ELAB.yaml"
 ```
 
-**Parsing TOKEN-LOG.md:**
+**Querying Token Data from KB:**
 
-Extract phase entries in format:
-```
-| {phase} | {timestamp} | {input} | {output} |
+```javascript
+const tokenEntries = await kb_search({ type: "token_usage", story_id: "{STORY_ID}" })
+// Returns array of { phase, input_tokens, output_tokens, timestamp }
 ```
 
 Map phase names to OUTCOME.yaml phases:
-- `pm-story` → `pm_story`
+- `pm-generate` → `pm_story`
 - `elaboration` → `elaboration`
 - `dev-setup` → `dev_setup`
-- `dev-plan` → `dev_plan`
+- `dev-planning` → `dev_plan`
 - `dev-implementation` → `dev_implementation`
 - `dev-documentation` → `dev_documentation`
 - `qa-verify` → `qa_verify`
@@ -199,6 +162,8 @@ Map phase names to OUTCOME.yaml phases:
 See: `.claude/schemas/outcome-schema.md` for full schema reference.
 
 **Experiment Variant Propagation** (WKFL-008):
+
+<!-- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes experiment_variant to story.yaml frontmatter during story generation. Do not rename this field without updating both files. -->
 
 Read `experiment_variant` from story.yaml frontmatter and include in OUTCOME.yaml:
 
@@ -209,8 +174,10 @@ Read `experiment_variant` from story.yaml frontmatter and include in OUTCOME.yam
 
 **Backward Compatibility**: Legacy stories without `experiment_variant` field get `null`, not `"control"`. Only explicit control assignment uses `"control"`.
 
+- Cross-reference: pm-story-generation-leader.agent.md Phase 0.5a is the write side — it assigns and writes `experiment_variant` to story.yaml frontmatter during story generation.
 
-### Step 5.5: Trigger Prediction Accuracy Tracking (WKFL-007)
+
+### Step 4.5: Trigger Prediction Accuracy Tracking (WKFL-007)
 
 If story has predictions section in YAML frontmatter, trigger accuracy tracking.
 
@@ -267,8 +234,7 @@ This updates the index entry and Progress Summary counts.
 
 ### Output (implement mode)
 
-- `PROOF-{STORY_ID}.md` - created
-- `LESSONS-LEARNED.md` - appended
+- KB learnings entries created
 - `TOKEN-SUMMARY.md` - created
 - `OUTCOME.yaml` - created (for workflow learning / meta-learning loop)
 - Story/index status updated
@@ -280,37 +246,28 @@ This updates the index entry and Progress Summary counts.
 ### Step 1: Read Context
 
 Read `_implementation/AGENT-CONTEXT.md` for story paths.
+Read `_implementation/CHECKPOINT.yaml` to identify iteration number for fix_cycles entry.
 
-### Step 2: Spawn Proof Writer (Update Mode)
+### Step 2: Update CHECKPOINT.yaml fix_cycles
 
-```
-Task tool:
-  subagent_type: "general-purpose"
-  description: "Update {STORY_ID} proof with fix cycle"
-  prompt: |
-    <contents of dev-implement-proof-writer.agent.md>
+Append to `_implementation/CHECKPOINT.yaml` `fix_cycles` array:
 
-    ---
-    STORY CONTEXT:
-    Feature directory: {FEATURE_DIR}
-    Story ID: {STORY_ID}
-    Mode: UPDATE existing proof (not create new)
-    Read: _implementation/FIX-CONTEXT.md, _implementation/FIX-VERIFICATION-SUMMARY.md
-    Output: PROOF-{STORY_ID}.md
-
-    Add "## Fix Cycle" section with:
-    - Issues fixed (from FIX-CONTEXT.md checklist)
-    - Verification results (from FIX-VERIFICATION-SUMMARY.md)
+```yaml
+fix_cycles:
+  - iteration: N
+    triggered_by: code_review    # code_review | qa
+    completed_at: "{ISO_TIMESTAMP}"
+    issues_fixed:
+      - file: "src/..."
+        line: N
+        issue: "..."
+        severity: high
+    verification_result: PASS    # PASS | FAIL
 ```
 
-Wait for completion.
+Read issue details from `_implementation/FIX-CONTEXT.yaml`.
 
-### Step 3: Verify Proof Updated
-
-Check that `PROOF-{STORY_ID}.md` contains Fix Cycle section.
-- If missing → return `DOCUMENTATION FAILED: Proof not updated`
-
-### Step 4: Token Logging
+### Step 3: Token Logging
 
 Call token-log for this phase:
 ```
@@ -319,13 +276,13 @@ Call token-log for this phase:
 
 Note: No full token report for fix cycles (already generated during initial implementation).
 
-### Step 5: Update Story Status (use /story-update skill)
+### Step 4: Update Story Status (use /story-update skill)
 
 ```
 /story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
 ```
 
-### Step 6: Update Story Index (use /index-update skill)
+### Step 5: Update Story Index (use /index-update skill)
 
 ```
 /index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
@@ -333,7 +290,7 @@ Note: No full token report for fix cycles (already generated during initial impl
 
 ### Output (fix mode)
 
-- `PROOF-{STORY_ID}.md` - updated with Fix Cycle section
+- `_implementation/CHECKPOINT.yaml` - updated with fix_cycles entry
 - Story status updated (via /story-update and /index-update)
 
 ---
@@ -355,10 +312,13 @@ End with exactly one of:
 **Mode**: implement / fix
 **Status**: COMPLETE / FAILED
 
-**Artifacts**:
-- PROOF-{STORY_ID}.md: created / updated
-- LESSONS-LEARNED.md: updated (implement only)
-- TOKEN-SUMMARY.md: created (implement only)
+**Artifacts** (implement):
+- KB learnings: created
+- TOKEN-SUMMARY.md: created
+- OUTCOME.yaml: created
+
+**Artifacts** (fix):
+- CHECKPOINT.yaml: fix_cycles updated
 
 **Status Updates**:
 - Story frontmatter: ready-for-code-review (via /story-update)
@@ -386,11 +346,10 @@ Before reporting completion signal:
 
 - MUST call `/token-log` before reporting completion signal
 - MUST validate `mode` parameter is provided
-- MUST generate OUTCOME.yaml in implement mode (Step 5)
+- MUST generate OUTCOME.yaml in implement mode (Step 4)
 - Do NOT skip any step
 - Do NOT modify story content (only status in frontmatter)
-- Do NOT create proof yourself (delegate to Proof Writer)
 - ALWAYS report next step: `/dev-code-review STORY-XXX`
 - implement mode: MUST call `/token-report` for full summary
 - implement mode: MUST generate OUTCOME.yaml for workflow learning
-- fix mode: MUST add Fix Cycle section to existing proof
+- fix mode: MUST update CHECKPOINT.yaml fix_cycles array

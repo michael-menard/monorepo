@@ -1,0 +1,153 @@
+# ==============================================================================
+# escalation-rules.yaml
+# ==============================================================================
+#
+# PURPOSE:
+#   Declarative configuration for multi-model routing escalation logic.
+#   Defines when and how the LLM router should escalate from a cheaper/local
+#   model to a more capable (and more expensive) model tier. Two rule classes:
+#   graduated chain (triggered by observable failure signals) and hard bypass
+#   (triggered by task classification before any attempt).
+#
+# CONSUMER:
+#   The llm-router component (story WINT-0230) reads this file at startup and
+#   evaluates rules in order for every task routing decision. Graduated chain
+#   rules are evaluated after task execution; hard bypass rules are evaluated
+#   before execution. Hard bypass takes precedence over graduated chain.
+#
+# HOW TO TUNE THRESHOLDS:
+#   - failure_count threshold (graduated_chain rule 1): increase to allow more
+#     local retries before escalating; decrease to escalate sooner. Default 2
+#     means "fail twice then try API-Cheap".
+#   - confidence_below threshold (graduated_chain rule 2): lower values mean
+#     the model must be more uncertain before escalating; higher values escalate
+#     more aggressively. Default 0.70 means "escalate if confidence < 70%".
+#   - To add a new hard bypass condition, append to the hard_bypass list.
+#   - All tier names must match tier_definitions_source values exactly.
+#
+# WINT-0270 BENCHMARK CALIBRATION:
+#   When WINT-0270 (escalation threshold benchmarking) completes, replace the
+#   placeholder threshold values below with benchmark-derived values. The
+#   WINT-0270 benchmarks will provide empirical failure_count and confidence
+#   cutoffs based on real task distribution data. After updating thresholds,
+#   increment meta.version and update meta.created to the new date.
+#
+# ==============================================================================
+
+meta:
+  version: 1
+  created: '2026-02-21'
+  owner_story: WINT-0250
+  # TODO(WINT-0220): When model-strategy.yaml lands (WINT-0220), update this
+  # reference to point to the canonical tier definitions file. Currently using
+  # index-documented default tier names (Local, API-Cheap, API-Mid, API-High).
+  tier_definitions_source: .claude/config/model-strategy.yaml
+
+# ------------------------------------------------------------------------------
+# Graduated Chain Rules
+#
+# Applied sequentially after task execution. When a task's outcome matches
+# a trigger condition, the router re-routes to the specified `to` tier.
+# Rules are evaluated top-to-bottom; first match wins.
+# ------------------------------------------------------------------------------
+graduated_chain:
+  # Rule 1: Local → API-Cheap on repeated failure
+  # "Local" covers both Local-Small and Local-Large tiers. Use failure_count: 2
+  # (i.e., after 2 consecutive failures, escalate). Threshold set to 2 as a
+  # conservative default — see WINT-0270 for empirical calibration.
+  - from: Local
+    trigger: failure_count
+    threshold: 2  # After 2 local failures, escalate to API-Cheap. Tune down to 1 for fast-fail tasks, up to 3 for flaky tasks; recalibrate after WINT-0270 benchmark results.
+    to: API-Cheap
+
+  # Rule 2: API-Cheap → API-Mid on low confidence
+  # confidence_below compares the model's self-reported confidence score against
+  # this threshold. 0.70 means "escalate if the model is less than 70% confident."
+  # This threshold is intentionally conservative; WINT-0270 will provide a
+  # data-driven cutoff based on observed confidence distributions.
+  - from: API-Cheap
+    trigger: confidence_below
+    threshold: 0.70  # Escalate when confidence < 0.70. Set to 0.80 for high-stakes tasks, 0.60 for exploratory tasks; recalibrate after WINT-0270 benchmark results.
+    to: API-Mid
+
+  # Rule 3: API-Mid → API-High on failure or uncertainty
+  # Terminal escalation — API-High is the ceiling tier. Triggered by either
+  # task failure OR an uncertainty signal from API-Mid (e.g., "I'm not sure"
+  # phrasing, explicit uncertainty markers, or low confidence at this tier).
+  - from: API-Mid
+    trigger: failure_or_uncertainty
+    to: API-High
+
+# ------------------------------------------------------------------------------
+# Hard Bypass Rules
+#
+# Applied before task execution (pre-flight). If the task matches any of these
+# conditions, it is routed directly to `to` regardless of current tier.
+# This prevents wasting local/cheap model capacity on tasks that require
+# high-capability reasoning by design.
+# ------------------------------------------------------------------------------
+hard_bypass:
+  # Bypass 1: Architecture and security decisions always go to API-High.
+  # These task types carry irreversibility risk and require the strongest
+  # available reasoning. No local or cheap-API attempt is made.
+  - condition: task_decision_type
+    value: security_or_architecture
+    to: API-High
+
+  # Bypass 2: Tasks explicitly labelled "critical" go directly to API-High.
+  # The "critical" label is set by the calling agent or task metadata to signal
+  # that correctness is non-negotiable and retries would be too costly.
+  - condition: task_label
+    value: critical
+    to: API-High
+
+# ------------------------------------------------------------------------------
+# Escalation Log Schema
+#
+# Defines the shape of each record written to the escalation log by the
+# llm-router. All required fields must be present; optional fields are omitted
+# when not applicable (e.g., failure_count is null for confidence-based
+# escalations; confidence_score is null for failure-count-based escalations).
+# ------------------------------------------------------------------------------
+escalation_log_schema:
+  fields:
+    - name: from_tier
+      type: string
+      required: true
+      description: Tier name the task was running on before escalation
+
+    - name: to_tier
+      type: string
+      required: true
+      description: Tier name the task is being escalated to
+
+    - name: task_type
+      type: string
+      required: true
+      description: Classification of the task (e.g., code_generation, analysis, security_review)
+
+    - name: reason
+      type: string
+      required: true
+      description: Human-readable explanation of why escalation was triggered
+
+    - name: failure_count
+      type: integer
+      required: false
+      description: Number of consecutive failures that triggered escalation (null if not applicable)
+
+    - name: confidence_score
+      type: float
+      required: false
+      description: Model-reported confidence score that triggered escalation (null if not applicable)
+
+    - name: timestamp
+      type: string
+      format: ISO 8601
+      required: true
+      description: UTC datetime when the escalation decision was made (e.g., 2026-02-21T18:05:00Z)
+
+    - name: bypass_rule
+      type: boolean
+      required: true
+      description: True if escalation was triggered by a hard_bypass rule; false if by graduated_chain

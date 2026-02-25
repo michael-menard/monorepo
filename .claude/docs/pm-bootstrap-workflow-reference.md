@@ -164,7 +164,7 @@ tags:
 All stories in this project use the **{PREFIX}** prefix.
 - Story IDs: `{PREFIX}-{phase}{story}{variant}` (e.g., `{PREFIX}-1010`, `{PREFIX}-2030`)
 - Story folders: `plans/stories/{PREFIX}-XXXX/`
-- Artifact files: `ELAB-{PREFIX}-1010.md`, `PROOF-{PREFIX}-2030.md`, etc.
+- Artifact files: `_implementation/ELAB.yaml`, `_implementation/EVIDENCE.yaml`, etc.
 
 ## Documentation Structure
 
@@ -249,8 +249,8 @@ All stories use the **{PREFIX}** prefix. Commands use the full prefixed ID:
 | Artifact | Filename |
 |----------|----------|
 | Story file | `{PREFIX}-XXXX.md` |
-| Elaboration | `ELAB-{PREFIX}-XXXX.md` |
-| Proof | `PROOF-{PREFIX}-XXXX.md` |
+| Elaboration | `_implementation/ELAB.yaml` |
+| Evidence | `_implementation/EVIDENCE.yaml` |
 | Code Review | `CODE-REVIEW-{PREFIX}-XXXX.md` |
 | QA Verify | `QA-VERIFY-{PREFIX}-XXXX.md` |
 | QA Gate | `QA-GATE-{PREFIX}-XXXX.yaml` |

@@ -49,9 +49,10 @@ export function AppToggleGroup({
 
   // Default variant to 'surface' if not provided
   const effectiveVariant = variant ?? 'surface'
-  
-  // Map our custom variant to primitive variants  
-  const primitiveVariant: 'default' | 'outline' = effectiveVariant === 'default' ? 'default' : 'outline'
+
+  // Map our custom variant to primitive variants
+  const primitiveVariant: 'default' | 'outline' =
+    effectiveVariant === 'default' ? 'default' : 'outline'
   const composedClassName = cn(groupStyles[effectiveVariant], className)
 
   return (
@@ -68,18 +69,11 @@ export function AppToggleGroup({
   )
 }
 
-export function AppToggleGroupItem({
-  className,
-  children,
-  ...props
-}: AppToggleGroupItemProps) {
+export function AppToggleGroupItem({ className, children, ...props }: AppToggleGroupItemProps) {
   const { size } = React.useContext(AppToggleGroupContext)
 
   return (
-    <ToggleGroupItem
-      className={cn(sizeStyles[size], className)}
-      {...props}
-    >
+    <ToggleGroupItem className={cn(sizeStyles[size], className)} {...props}>
       {children}
     </ToggleGroupItem>
   )

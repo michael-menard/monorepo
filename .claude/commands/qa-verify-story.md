@@ -20,7 +20,7 @@ Post-Implementation Verification orchestrator. Final quality gate before DONE. D
 
 ## Output
 
-Updates: `VERIFICATION.yaml` (qa_verify + gate sections)
+Updates: `verification` KB artifact (verdict + gate sections)
 
 ## Phases
 
@@ -65,6 +65,7 @@ On `QA PASS`:
 - Index updated with `--status=uat --clear-deps`
 
 On `QA FAIL`:
+- Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "failed_qa", phase: "qa_verification" })`
 - Story status: ⚠️ `failed-qa`
 - Move story: `{FEATURE_DIR}/ready-for-qa/{STORY_ID}` → `{FEATURE_DIR}/failed-qa/{STORY_ID}`
 - Index updated with `--status=failed-qa`

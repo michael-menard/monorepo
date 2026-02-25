@@ -1,12 +1,15 @@
 ---
 created: 2026-02-01
-updated: 2026-02-01
-version: 2.0.0
+updated: 2026-02-22
+version: 2.1.0
 type: worker
-permission_level: read-only
+permission_level: kb-write
 model: haiku
 spawned_by: [pm-story-generation-leader, pm-story-adhoc-leader, pm-story-seed-agent, dev-setup-leader, dev-plan-leader]
 schema: packages/backend/orchestrator/src/artifacts/knowledge-context.ts
+kb_tools:
+  - kb_search
+  - kb_write_artifact
 ---
 
 # Agent: knowledge-context-loader
@@ -17,7 +20,7 @@ schema: packages/backend/orchestrator/src/artifacts/knowledge-context.ts
 
 Worker agent responsible for loading relevant lessons learned and architecture decisions before story creation, elaboration, or implementation begins.
 
-**IMPORTANT**: This agent now WRITES `KNOWLEDGE-CONTEXT.yaml` to the story's `_implementation/` directory for persistence across phases.
+**IMPORTANT**: This agent WRITES the `context` artifact to the Knowledge Base via `kb_write_artifact` for persistence across phases.
 
 ---
 
@@ -35,6 +38,7 @@ This context prevents repeating past mistakes and ensures architectural consiste
 ## Inputs
 
 From orchestrator context:
+- `story_id`: Story identifier (e.g., "WISH-001")
 - `story_domain`: Domain/feature area (e.g., "wishlist", "gallery", "auth")
 - `story_scope`: Brief description of what the story involves
 - `feature_dir`: Feature directory path (for locating ADR-LOG.md)
@@ -258,26 +262,26 @@ End with exactly one of:
 - **MUST map lessons and ADRs to story scope** (don't dump everything)
 - **MUST surface blockers prominently** (these prevent story success)
 - **MUST include token optimization** for implementation planning
-- **DO NOT modify any files** - read-only operation
+- **DO NOT modify source code files** - KB write only
 - **DO NOT skip ADR-001** - API schema applies to almost all stories
 
 ---
 
-## File Output
+## KB Output
 
-When called with `feature_dir` and `story_id`, write the knowledge context to:
+When called with `story_id`, write the knowledge context to the Knowledge Base:
 
+```javascript
+kb_write_artifact({
+  story_id: "{STORY_ID}",
+  artifact_type: "context",
+  phase: "planning",
+  iteration: 0,
+  content: { /* full knowledge_context structure as defined above */ }
+})
 ```
-{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/KNOWLEDGE-CONTEXT.yaml
-```
 
-Or for elaboration:
-
-```
-{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/KNOWLEDGE-CONTEXT.yaml
-```
-
-This persists the knowledge context so downstream phases (execute, review, qa) can read it without re-querying the KB.
+This persists the knowledge context so downstream phases (execute, review, qa) can read it via `kb_read_artifact({ story_id, artifact_type: "context" })` without re-querying the KB.
 
 **Schema Reference**: `packages/backend/orchestrator/src/artifacts/knowledge-context.ts`
 

@@ -51,9 +51,8 @@ All agents follow `.claude/agents/_shared/lean-docs.md`:
 | `CONTRACTS.md` | Contracts | `_implementation/` | API contracts, .http evidence |
 | `VERIFICATION.md` | Verifier + Playwright | `_implementation/` | Build/test/E2E results |
 | `VERIFICATION-SUMMARY.md` | Verification Leader | `_implementation/` | Aggregated verification |
-| `TOKEN-LOG.md` | Leaders | `_implementation/` | Per-phase token tracking |
+| KB `storyTokenUsage` | Leaders (via /token-log) | KB | Per-phase token tracking |
 | `TOKEN-SUMMARY.md` | Documentation Leader | `_implementation/` | Aggregated token usage |
-| `PROOF-STORY-XXX.md` | Proof Writer | Story root | Final proof document |
 | `BLOCKERS.md` | Any worker | `_implementation/` | Blocker details (if any) |
 | `CHECKPOINT.md` | Orchestrator | `_implementation/` | Resume state (if interrupted) |
 

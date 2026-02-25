@@ -16,8 +16,7 @@ declare const progressBarVariants: (
     | undefined,
 ) => string
 export interface ProgressIndicatorProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof progressVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof progressVariants> {
   value?: number
   max?: number
   showLabel?: boolean
@@ -29,8 +28,7 @@ declare const ProgressIndicator: React.ForwardRefExoticComponent<
   ProgressIndicatorProps & React.RefAttributes<HTMLDivElement>
 >
 export interface CircularProgressProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof progressBarVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof progressBarVariants> {
   value?: number
   max?: number
   size?: 'sm' | 'default' | 'lg' | 'xl'

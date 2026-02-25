@@ -22,6 +22,20 @@ import {
 import { computeContentHash } from '../cache-manager.js'
 
 describe('Batch Processor - Unit Tests (No Database Required)', () => {
+  const isDbAvailable = !!process.env.KB_DB_PASSWORD
+
+  beforeEach(async () => {
+    if (isDbAvailable) {
+      await clearEmbeddingCache()
+    }
+  })
+
+  afterAll(async () => {
+    if (isDbAvailable) {
+      await closeTestPool()
+    }
+  })
+
   describe('AC3: Batch Embedding Generation', () => {
     it('should process batch and preserve input order', async () => {
       const texts = ['alpha', 'beta', 'gamma', 'delta']
@@ -332,7 +346,7 @@ describe('Batch Processor - Integration Tests (Database Required)', () => {
     it('should handle all cache hits', async () => {
       const texts = ['text-a', 'text-b', 'text-c']
       const model = 'text-embedding-3-small'
-      const embeddings = texts.map((_, i) => generateMockEmbedding(0.1 * (i + 1)))
+      const embeddings = texts.map((_, i) => generateMockEmbedding((i + 1) / 10))
 
       // Pre-populate all entries
       for (let i = 0; i < texts.length; i++) {

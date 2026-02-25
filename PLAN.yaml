@@ -1,0 +1,192 @@
+schema: 2
+story_id: "KBAR-0090"
+timestamp: "2026-02-25T03:30:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: >
+      Verify KBAR-0080 landing state: check whether story-tools.test.ts exists;
+      confirm actual toolDefinitions array length by reading tool-schemas.ts;
+      confirm mcp-integration.test.ts current state of count assertion and names list.
+      This is a read-only discovery step — no files are modified.
+    files: []
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    dependencies: []
+    slice: backend
+    verification: "# Read-only step — no verification command required"
+    acs_covered: []
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: >
+      Write unit tests for handleKbGetNextStory covering AC-1 through AC-8:
+      no candidates (AC-1), all blocked (AC-2), first unblocked wins (AC-3),
+      include_backlog forwarding (AC-4), exclude_story_ids forwarding (AC-5),
+      feature filter forwarding (AC-6), authorization enforcement (AC-7),
+      and Zod validation error for missing epic (AC-8).
+      Create story-tools.test.ts if it does not exist; extend it if KBAR-0080
+      already created it. Use vi.hoisted + vi.mock pattern from tool-handlers.test.ts.
+      Mock story-crud-operations.js (ESM .js extension required). Mock logger.js.
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/tool-handlers.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/search-tools.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+      - "apps/api/knowledge-base/src/mcp-server/access-control.ts"
+      - "apps/api/knowledge-base/src/mcp-server/server.ts"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose story-tools"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: >
+      Fix mcp-integration.test.ts hygiene:
+      (a) Update tool count assertion from 52 to the actual count confirmed in ST-1
+          (expected: 53 as of 2026-02-23, but must re-verify).
+      (b) Add kb_update_story to the expected names array in the correct position
+          (after kb_update_story_status, before kb_get_next_story).
+      Update the describe label to reflect the new count.
+    files:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose mcp-integration"
+    acs_covered: ["AC-9"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: >
+      Final verification pass: run full type check and all tests for @repo/knowledge-base.
+      Confirm no TypeScript errors and all tests green. This is the AC-10 evidence gate.
+    files: []
+    files_to_read: []
+    dependencies: [2, 3]
+    slice: backend
+    verification: "pnpm check-types --filter @repo/knowledge-base && pnpm test --filter @repo/knowledge-base"
+    acs_covered: ["AC-10"]
+
+files_to_change:
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    action: create
+    reason: >
+      No unit tests exist for handleKbGetNextStory. KBAR-0080 was in elaboration
+      at story creation time; file was not yet present. Create with full coverage
+      for AC-1 through AC-8.
+  - path: "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    action: modify
+    reason: >
+      Tool count assertion says 52 but actual toolDefinitions.length is 53.
+      kb_update_story is present in tool-schemas.ts but missing from the expected
+      names list. Both are hygiene fixes (AC-9).
+
+commands_to_run:
+  - command: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose story-tools"
+    when: "after ST-2 (story-tools.test.ts written)"
+    required: true
+  - command: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose mcp-integration"
+    when: "after ST-3 (mcp-integration.test.ts fixed)"
+    required: true
+  - command: "pnpm check-types --filter @repo/knowledge-base"
+    when: "after all code changes"
+    required: true
+  - command: "pnpm test --filter @repo/knowledge-base"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: >
+      Unit test in story-tools.test.ts: mock kb_get_next_story returns
+      { story: null, candidates_count: 0, blocked_by_dependencies: [], message: '...' };
+      assert result.content[0].text parsed JSON matches shape.
+    evidence_type: test
+  - ac_id: "AC-2"
+    planned_evidence: >
+      Unit test: mock returns { story: null, candidates_count: 3,
+      blocked_by_dependencies: ['KBAR-0080 (blocked by: KBAR-0070)'], message: '...' };
+      assert blocked_by_dependencies.length > 0.
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: >
+      Unit test: mock returns { story: { storyId: 'KBAR-0090', ... }, candidates_count: 1,
+      blocked_by_dependencies: [], message: '...' }; assert story.storyId === 'KBAR-0090'.
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: >
+      Two unit tests: (a) call with include_backlog: true, assert mock called;
+      (b) call without include_backlog, assert mock called. Both assert correct result forwarding.
+      vi.fn() call args inspection confirms the parameter is forwarded.
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: >
+      Unit test: call with exclude_story_ids: ['KBAR-0080', 'KBAR-0070'];
+      assert mock was called and result is returned correctly.
+    evidence_type: test
+  - ac_id: "AC-6"
+    planned_evidence: >
+      Unit test: call with feature: 'kb-artifact-migration';
+      assert mock was called and result is returned correctly.
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: >
+      Unit test: create context with agent_role cast to invalid role ('unknown' as AgentRole);
+      assert result.isError === true and mock DB function not called.
+    evidence_type: test
+  - ac_id: "AC-8"
+    planned_evidence: >
+      Unit test: call handleKbGetNextStory with empty input {};
+      assert result.isError === true and content contains Zod error message.
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: >
+      mcp-integration.test.ts updated: toHaveLength(53) assertion and
+      kb_update_story present in expected names array. Test passes.
+    evidence_type: test
+  - ac_id: "AC-10"
+    planned_evidence: >
+      pnpm check-types --filter @repo/knowledge-base exits 0;
+      pnpm test --filter @repo/knowledge-base exits 0 with all tests green.
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - >
+    story-tools.test.ts does NOT exist (KBAR-0080 had not landed at planning time).
+    Must create the file from scratch using vi.hoisted + vi.mock pattern from tool-handlers.test.ts.
+  - >
+    ESM mock path MUST use .js extension:
+    vi.mock('../../crud-operations/story-crud-operations.js', ...)
+  - >
+    kb_get_next_story allows ALL 4 valid roles (pm/dev/qa/all). To test AC-7 (auth failure),
+    cast an invalid string as AgentRole: { agent_role: 'unknown' as AgentRole, ... }
+  - >
+    Confirmed actual toolDefinitions count = 53 (49 kb_ tools + 4 worktree_ tools).
+    mcp-integration.test.ts currently asserts 52 and is missing kb_update_story.
+  - >
+    Mock return shape for kb_get_next_story must match the TypeScript return type:
+    { story: typeof stories.$inferSelect | null, candidates_count: number,
+      blocked_by_dependencies: string[], message: string }
+    Minimal story fixture needs: { storyId, title, epic, state, priority, createdAt, ... }
+  - >
+    SCOPE.yaml lists touched_paths_globs as packages/backend/mcp-tools/** and
+    packages/backend/orchestrator/** but the actual files are in
+    apps/api/knowledge-base/src/mcp-server/__tests__/. This is acceptable —
+    the scope glob was set at setup time before elaboration confirmed the exact path.
+    The plan correctly targets the apps/api path.
+  - >
+    Do NOT modify tool-schemas.ts, tool-handlers.ts, or access-control.ts per story Non-Goals.

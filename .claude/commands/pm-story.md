@@ -442,6 +442,20 @@ Task tool:
 - `PM BLOCKED: <reason>` → report blocker to user
 - `PM FAILED: <reason>` → report failure
 
+### Step 4.5: Seed Story into KB Database
+
+**IF response was `PM COMPLETE`:**
+
+Run the migration script to insert the new story into the KB database:
+
+```bash
+pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
+```
+
+This is idempotent — inserts new stories, updates changed ones, skips unchanged. The story will be recorded with `state = "backlog"`, making it immediately visible to `/next-actions`.
+
+If the command fails (DB unavailable, env not configured), log a warning and continue — this is non-blocking.
+
 ### Step 5: Update Platform Index (if is_platform)
 
 **IF `is_platform == true` AND response was `PM COMPLETE`:**

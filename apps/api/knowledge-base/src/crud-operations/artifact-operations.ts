@@ -133,6 +133,13 @@ export const KbListArtifactsInputSchema = z.object({
 
 export type KbListArtifactsInput = z.infer<typeof KbListArtifactsInputSchema>
 
+export const KbDeleteArtifactInputSchema = z.object({
+  /** UUID of the artifact to delete */
+  artifact_id: z.string().uuid('artifact_id must be a valid UUID'),
+})
+
+export type KbDeleteArtifactInput = z.infer<typeof KbDeleteArtifactInputSchema>
+
 // ============================================================================
 // Dependencies
 // ============================================================================

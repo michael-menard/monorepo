@@ -113,8 +113,8 @@ function buildDatabaseUrlFromKbVars(env: NodeJS.ProcessEnv): string | undefined 
  * ```
  */
 export function validateEnv(env: NodeJS.ProcessEnv = process.env): Env {
-  // Build DATABASE_URL from KB_DB_* vars if not directly set
-  const databaseUrl = env.DATABASE_URL ?? buildDatabaseUrlFromKbVars(env)
+  // Resolution order: DATABASE_URL → KB_DATABASE_URL → built from KB_DB_* vars
+  const databaseUrl = env.DATABASE_URL ?? env.KB_DATABASE_URL ?? buildDatabaseUrlFromKbVars(env)
 
   const envToValidate = {
     DATABASE_URL: databaseUrl ?? '',

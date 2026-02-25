@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { useToast } from '@repo/app-component-library'
 import { logger } from '@repo/logger'
+import { isTokenExpired } from '@repo/auth-utils/jwt'
 import { useAppSelector } from '@/store/hooks'
 import { selectAuth } from '@/store/slices/authSlice'
-import { isTokenExpired } from '@repo/auth-utils/jwt'
 import { useAuth } from '@/services/auth/AuthProvider'
 
 /**

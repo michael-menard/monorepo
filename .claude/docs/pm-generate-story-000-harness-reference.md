@@ -14,8 +14,8 @@
     │
     └─→ Phase 1: pm-harness-generation-leader.agent.md (haiku)
             ├─→ Generate {PREFIX}-000-HARNESS.md
-            ├─→ Generate _pm/TEST-PLAN.md
-            ├─→ Generate _pm/DEV-FEASIBILITY.md
+            ├─→ Generate _pm/test-plan.yaml
+            ├─→ Generate _pm/dev-feasibility.yaml
             └─→ Generate _pm/BLOCKERS.md
 ```
 
@@ -32,8 +32,8 @@ All agents follow `.claude/agents/_shared/lean-docs.md`:
 |------|------------|---------|
 | `AGENT-CONTEXT.md` | setup-leader | Context for all phases |
 | `{PREFIX}-000-HARNESS.md` | generation-leader | Main harness story |
-| `_pm/TEST-PLAN.md` | generation-leader | Verification approach |
-| `_pm/DEV-FEASIBILITY.md` | generation-leader | Technical notes |
+| `_pm/test-plan.yaml` | generation-leader | Verification approach |
+| `_pm/dev-feasibility.yaml` | generation-leader | Technical notes |
 | `_pm/BLOCKERS.md` | generation-leader | Known blockers |
 
 ## Signals

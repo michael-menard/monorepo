@@ -11,13 +11,13 @@ agents:
   - knowledge-context-loader.agent.md
   - code-review-*.agent.md
   - dev-fix-fix-leader.agent.md
-artifacts:
-  - CHECKPOINT.yaml
-  - SCOPE.yaml
-  - PLAN.yaml
-  - KNOWLEDGE-CONTEXT.yaml
-  - EVIDENCE.yaml
-  - REVIEW.yaml
+kb_artifacts:
+  - checkpoint (phase: setup)
+  - scope (phase: setup)
+  - plan (phase: planning)
+  - context (phase: planning)
+  - evidence (phase: implementation)
+  - review (phase: code_review)
 shared:
   - _shared/decision-handling.md
   - _shared/autonomy-tiers.md
@@ -30,7 +30,7 @@ shared:
 You are the **Orchestrator**. You spawn agents and manage the loop.
 Do NOT implement code. Do NOT review code. Do NOT fix code.
 
-**Evidence-First**: EVIDENCE.yaml is single source of truth.
+**Evidence-First**: `evidence` KB artifact is single source of truth.
 **E2E Required**: Stories CANNOT complete without passing E2E tests (live mode).
 
 ## Usage
@@ -60,7 +60,7 @@ Do NOT implement code. Do NOT review code. Do NOT fix code.
 When `--gen` is specified, the command will:
 
 1. **Generate minimal story structure** - Creates basic `story.yaml` with provided context
-2. **Skip elab phase** - Bypasses story elaboration and elab artifacts (ANALYSIS.md, DECISIONS.yaml, etc.)
+2. **Skip elab phase** - Bypasses story elaboration and elab KB artifacts (analysis, elaboration)
 3. **Move directly to implementation** - Starts Phase 0 (dev-setup-leader) immediately
 
 **Story Structure Generated:**
@@ -138,26 +138,26 @@ ORCHESTRATOR (you)
     │
     ▼
 Phase 0: dev-setup-leader (haiku)
-    → Writes: CHECKPOINT.yaml, SCOPE.yaml
+    → KB: checkpoint, scope artifacts
     │
     ▼
 Phase 1: dev-plan-leader (sonnet)
-    → Writes: PLAN.yaml, KNOWLEDGE-CONTEXT.yaml
+    → KB: plan, context artifacts
     │
     ▼
 Phase 2: dev-execute-leader (sonnet)
     → Steps: Unit → Build → E2E (LIVE mode)
-    → Writes: EVIDENCE.yaml ← SOURCE OF TRUTH
+    → KB: evidence artifact ← SOURCE OF TRUTH
     │
     ▼
 Phase 3: dev-proof-leader (haiku)
-    → Reads: EVIDENCE.yaml ONLY
-    → Writes: PROOF-{STORY_ID}.md
+    → Reads: evidence artifact (KB) ONLY
+    → KB: proof artifact
     │
     ▼
 REVIEW/FIX LOOP (max 3 iterations)
     → Review workers (haiku, parallel)
-    → REVIEW.yaml
+    → KB: review artifact
     → PASS → Exit | FAIL → Fix Agent → Loop
 ```
 
@@ -179,7 +179,8 @@ If the file or story row doesn't exist, skip silently.
 ```
 feature_dir = "{FEATURE_DIR}"
 story_id = "{STORY_ID}"
-artifacts_path = f"{feature_dir}/in-progress/{story_id}/_implementation/"
+story_path = f"{feature_dir}/in-progress/{story_id}/"
+# Note: artifacts stored in KB — no _implementation/ directory needed
 autonomy_level = flags.autonomous || "conservative"
 batch_mode = false  # true only when called from /workflow-batch
 gen_mode = flags.gen || false
@@ -369,21 +370,32 @@ Skip the rest of Step 1.3 and continue to Step 2.
        ```
      - STOP. Do not proceed to Phase 0.
 
-4. **Read CHECKPOINT.yaml** — Load `pr_number` and `pr_url` if present (set by pm-story via wt-new output).
-   If `pr_number` is not in CHECKPOINT.yaml, discover it:
+4. **Read checkpoint from KB** — Load `pr_number` and `pr_url` if present.
+   ```javascript
+   const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+   ```
+   If `pr_number` is not in checkpoint, discover it:
    ```bash
    gh pr list --head story/{STORY_ID} --state open --json number,url
    ```
-   Write discovered `pr_number` and `pr_url` to CHECKPOINT.yaml.
+   Write discovered `pr_number` and `pr_url` to checkpoint artifact in KB:
+   ```javascript
+   kb_write_artifact({ story_id, artifact_type: "checkpoint", phase: "setup", iteration: 0,
+     content: { ...checkpoint.content, pr_number, pr_url } })
+   ```
 
 Continue to Step 2.
 
 ---
 
 ### Step 2: Detect Phase
-Read CHECKPOINT.yaml → determine current_phase and iteration.
+Read checkpoint artifact from KB → determine current_phase and iteration.
 
-**IF `--gen` mode AND no CHECKPOINT.yaml exists:**
+```javascript
+const checkpoint = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "checkpoint" })
+```
+
+**IF `--gen` mode AND checkpoint artifact is null:**
 - Treat as fresh implementation, proceed to Phase 0
 
 ### Step 3: Pass Context to Agents
@@ -400,7 +412,7 @@ gen_mode: {gen_mode}
 Follow decision protocol in `.claude/agents/_shared/decision-handling.md`
 
 **Note**: When gen_mode is true, this story was generated via --gen flag and bypassed elaboration.
-Expect minimal story structure without elab artifacts (ANALYSIS.md, DECISIONS.yaml, etc.).
+Expect minimal story structure without elab artifacts (analysis, elaboration KB artifacts).
 ```
 
 ## Incremental Commit Policy (Race-Safe)
@@ -424,10 +436,10 @@ coders in dev-execute-leader) write to the same worktree simultaneously.
 
 | After Phase | Commit Message |
 |-------------|---------------|
-| Phase 0 (setup) | `chore({STORY_ID}): setup artifacts` |
-| Phase 1 (plan) | `chore({STORY_ID}): implementation plan` |
+| Phase 0 (setup) | `chore({STORY_ID}): setup complete (artifacts in KB)` |
+| Phase 1 (plan) | `chore({STORY_ID}): implementation plan (artifacts in KB)` |
 | Phase 2 (execute) | `feat({STORY_ID}): implementation` |
-| Phase 3 (proof) | `docs({STORY_ID}): proof artifacts` |
+| Phase 3 (proof) | `docs({STORY_ID}): proof complete (artifact in KB)` |
 | Review/Fix loop | `fix({STORY_ID}): review fixes iteration N` |
 
 ### Why leaders only?
@@ -465,7 +477,7 @@ If gate fails → BLOCKED, do not proceed.
 ## Done
 
 ### Clean Pass
-1. Update CHECKPOINT.yaml: `current_phase: done`, `e2e_gate: passed`
+1. Update checkpoint artifact in KB: `current_phase: done`, `e2e_gate: passed`
 2. **Release Work Order**: Update `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` — set Status to `🚧`, clear Worker column (see `_shared/work-order-claim.md`)
 3. Final commit+push (if uncommitted changes remain):
    ```bash
@@ -473,7 +485,8 @@ If gate fails → BLOCKED, do not proceed.
    git commit -m "feat({STORY_ID}): implementation complete"
    git push
    ```
-4. Move story to code review queue:
+4. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+5. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```
@@ -481,7 +494,7 @@ If gate fails → BLOCKED, do not proceed.
 6. State next command: `/dev-code-review {FEATURE_DIR} {STORY_ID}`
 
 ### Forced Continue
-1. CHECKPOINT.yaml: `forced: true`, `warnings: [...]`
+1. Update checkpoint artifact in KB: `forced: true`, `warnings: [...]`
 2. **Release Work Order**: Update `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` — set Status to `🚧`, clear Worker column (see `_shared/work-order-claim.md`)
 3. Final commit+push (if uncommitted changes remain):
    ```bash
@@ -489,7 +502,8 @@ If gate fails → BLOCKED, do not proceed.
    git commit -m "feat({STORY_ID}): implementation complete (forced)"
    git push
    ```
-4. Move story to code review queue:
+4. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
+5. Move story to code review queue:
    ```
    /story-move {FEATURE_DIR} {STORY_ID} needs-code-review --update-status
    ```

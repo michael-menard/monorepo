@@ -26,14 +26,14 @@ From orchestrator context:
 
 From filesystem:
 - Story file: `{FEATURE_DIR}/*/{STORY_ID}/{STORY_ID}.md`
-- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/ELAB-{STORY_ID}.md`
+- Elaboration: `{FEATURE_DIR}/*/{STORY_ID}/_implementation/ELAB.yaml`
 - Stories index: `{FEATURE_DIR}/stories.index.md`
 
 ## Preconditions (Hard Stop)
 
-1. `ELAB-{STORY_ID}.md` exists with verdict: **SPLIT REQUIRED**
+1. `_implementation/ELAB.yaml` exists with `preliminary_verdict: SPLIT_REQUIRED`
 2. `{STORY_ID}.md` has `status: needs-split` in frontmatter
-3. `ELAB-{STORY_ID}.md` contains "Proposed Split Structure" section with:
+3. `_implementation/ELAB.yaml` `split_recommendation` section contains:
    - Named splits ({STORY_ID}-A, {STORY_ID}-B, etc.)
    - AC allocation per split
    - Recommended dependency order
@@ -44,8 +44,8 @@ If preconditions fail → `PM BLOCKED: <missing precondition>`
 
 ### Phase 1: Parse Split Recommendations
 
-1. Read `ELAB-{STORY_ID}.md`
-2. Extract from "Proposed Split Structure":
+1. Read `_implementation/ELAB.yaml`
+2. Extract from `split_recommendation.splits[]`:
    - Number of splits recommended
    - Scope summary per split
    - AC allocation (which ACs belong to which split)
@@ -160,7 +160,7 @@ If validation fails → `PM BLOCKED: <validation issue>`
 
 2. This removes:
    - `{STORY_ID}.md` (the original story file)
-   - `ELAB-{STORY_ID}.md` (the elaboration that triggered the split)
+   - `_implementation/ELAB.yaml` (the elaboration that triggered the split)
    - `_pm/` subdirectory and all contents
    - Any `_implementation/` artifacts if they exist
 

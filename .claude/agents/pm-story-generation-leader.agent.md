@@ -38,9 +38,9 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 | Worker | Agent File | Output | Condition |
 |--------|------------|--------|-----------|
-| Test Plan Writer | `pm-draft-test-plan.agent.md` | `_pm/TEST-PLAN.md` | Always |
-| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | `_pm/UIUX-NOTES.md` | If UI touched |
-| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | `_pm/DEV-FEASIBILITY.md` | Always |
+| Test Plan Writer | `pm-draft-test-plan.agent.md` | `_pm/test-plan.yaml` | Always |
+| UI/UX Advisor | `pm-uiux-recommendations.agent.md` | `_pm/uiux-notes.yaml` | Always (skipped:true if no UI) |
+| Dev Feasibility | `pm-dev-feasibility-review.agent.md` | `_pm/dev-feasibility.yaml` | Always |
 | Risk Predictor | `pm-story-risk-predictor.agent.md` | predictions YAML (inline) | Always (WKFL-007) |
 
 ---
@@ -174,6 +174,7 @@ function isEligible(story, eligibility) {
 **Output**:
 - `experiment_variant` variable set to experiment.id or "control"
 - This value will be included in story.yaml frontmatter in Phase 4
+- Cross-reference: dev-documentation-leader.agent.md Step 5 reads this value from story.yaml and propagates it to OUTCOME.yaml
 
 ### Phase 1-3: Spawn Workers (PARALLEL)
 Spawn all workers in SINGLE message. For patterns, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
@@ -189,11 +190,17 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 - These references flow into each subtask for dev agent context
 
 **Subtask Decomposition** (from dev-feasibility worker):
-- Read `# Proposed Subtask Breakdown` from DEV-FEASIBILITY.md
+- Read `subtasks[]` from `_pm/dev-feasibility.yaml`
 - Include as `## Subtasks` section in story file
 - Cross-reference: every AC must be covered by at least one subtask
 - Cross-reference: each subtask's canonical reference should come from the seed's references
 - If dev-feasibility did not produce subtasks, log warning but do not block
+
+**PM Artifacts (pm_artifacts section)**:
+Embed worker YAML outputs as `pm_artifacts` block in story.yaml frontmatter:
+- Read `_pm/test-plan.yaml` → `pm_artifacts.test_plan`
+- Read `_pm/dev-feasibility.yaml` → `pm_artifacts.dev_feasibility` (omit `subtasks` key — already in `## Subtasks`)
+- Read `_pm/uiux-notes.yaml` → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
 
 **Experiment Variant in Story Frontmatter** (WKFL-008):
 Include `experiment_variant` field in story.yaml frontmatter:
@@ -208,6 +215,8 @@ experiment_variant: "exp-fast-track"  # or "control"
 ...
 ---
 ```
+
+<!-- Cross-reference: dev-documentation-leader.agent.md Step 5 reads experiment_variant from story.yaml frontmatter and propagates it into OUTCOME.yaml. Do not rename this field without updating both files. -->
 
 For required sections, read: `.claude/agents/_reference/patterns/pm-spawn-patterns.md`
 

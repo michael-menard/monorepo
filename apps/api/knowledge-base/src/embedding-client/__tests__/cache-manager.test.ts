@@ -29,6 +29,20 @@ import {
 } from './setup.js'
 
 describe('Cache Manager', () => {
+  const isDbAvailable = !!process.env.KB_DB_PASSWORD
+
+  beforeEach(async () => {
+    if (isDbAvailable) {
+      await clearEmbeddingCache()
+    }
+  })
+
+  afterAll(async () => {
+    if (isDbAvailable) {
+      await closeTestPool()
+    }
+  })
+
   describe('Unit Tests (No Database Required)', () => {
     describe('AC8: Text Preprocessing and Validation', () => {
       it('should trim leading and trailing whitespace', () => {
@@ -347,20 +361,4 @@ describe('Cache Manager', () => {
     })
   })
 })
-
-describe('Cache Manager - Integration Tests (Database Required)', () => {
-  const isDbAvailable = !!process.env.KB_DB_PASSWORD
-
-  beforeEach(async () => {
-    if (isDbAvailable) {
-      await clearEmbeddingCache()
-    }
-  })
-
-  afterAll(async () => {
-    if (isDbAvailable) {
-      await closeTestPool()
-    }
-  })
-
-  describe.skipIf(!isDbAvailable)('Cache Operations', () => {
+})

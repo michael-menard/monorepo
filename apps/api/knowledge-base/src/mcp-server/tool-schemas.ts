@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 /**
  * MCP Tool Schema Definitions
  *
@@ -12,6 +13,16 @@
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
+  WorktreeRegisterInputSchema,
+  WorktreeGetByStoryInputSchema,
+  WorktreeListActiveInputSchema,
+  WorktreeMarkCompleteInputSchema,
+  type WorktreeRegisterInput,
+  type WorktreeGetByStoryInput,
+  type WorktreeListActiveInput,
+  type WorktreeMarkCompleteInput,
+} from '@repo/mcp-tools'
+import {
   KbAddInputSchema,
   KbGetInputSchema,
   KbUpdateInputSchema,
@@ -21,10 +32,13 @@ import {
 import { SearchInputSchema, GetRelatedInputSchema } from '../search/index.js'
 import {
   KbGetStoryInputSchema,
+  KbGetStoryResultSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
+  KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
   type KbGetStoryInput,
+  type KbGetStoryResult,
   type KbListStoriesInput,
   type KbUpdateStoryStatusInput,
   type KbGetNextStoryInput,
@@ -41,21 +55,13 @@ import {
   type KbGetBottleneckAnalysisInput,
   type KbGetChurnAnalysisInput,
 } from '../crud-operations/analytics-operations.js'
-import {
-  WorktreeRegisterInputSchema,
-  WorktreeGetByStoryInputSchema,
-  WorktreeListActiveInputSchema,
-  WorktreeMarkCompleteInputSchema,
-  type WorktreeRegisterInput,
-  type WorktreeGetByStoryInput,
-  type WorktreeListActiveInput,
-  type WorktreeMarkCompleteInput,
-} from '@repo/mcp-tools'
 // Re-export schemas and types for external use
 export {
   KbGetStoryInputSchema,
+  KbGetStoryResultSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
+  KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
   KbLogTokensInputSchema,
   KbGetTokenSummaryInputSchema,
@@ -64,6 +70,7 @@ export {
 }
 export type {
   KbGetStoryInput,
+  KbGetStoryResult,
   KbListStoriesInput,
   KbUpdateStoryStatusInput,
   KbGetNextStoryInput,
@@ -206,11 +213,12 @@ function zodToMcpSchema(zodSchema: unknown): Record<string, unknown> {
     target: 'jsonSchema7',
   })
 
-  // Remove $schema property if present
+  // Remove $schema property if present, ensure type: "object" is always set
   if (typeof jsonSchema === 'object' && jsonSchema !== null) {
     const schemaObj = jsonSchema as Record<string, unknown>
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { $schema, ...rest } = schemaObj
+    if (!rest.type) rest.type = 'object'
     return rest
   }
 
@@ -1254,12 +1262,19 @@ export type {
   KbListTasksInput,
 } from '../crud-operations/task-operations.js'
 
-// Import task triage and lifecycle schemas (KBMEM-018, 019, 020)
+// Import task triage, deferred writes, and artifact schemas from index (KBMEM-018, 019, 020, 022)
 import {
   KbTriageTasksInputSchema,
   KbPromoteTaskInputSchema,
   KbListPromotableTasksInputSchema,
   KbCleanupStaleTasksInputSchema,
+  KbQueueDeferredWriteInputSchema,
+  KbListDeferredWritesInputSchema,
+  KbProcessDeferredWritesInputSchema,
+  KbWriteArtifactInputSchema,
+  KbReadArtifactInputSchema,
+  KbListArtifactsInputSchema,
+  KbDeleteArtifactInputSchema,
 } from '../crud-operations/index.js'
 
 // Re-export task lifecycle schemas
@@ -1276,13 +1291,6 @@ export type {
   KbCleanupStaleTasksInput,
 } from '../crud-operations/index.js'
 
-// Import deferred writes schemas (KBMEM-022)
-import {
-  KbQueueDeferredWriteInputSchema,
-  KbListDeferredWritesInputSchema,
-  KbProcessDeferredWritesInputSchema,
-} from '../crud-operations/index.js'
-
 // Re-export deferred writes schemas
 export {
   KbQueueDeferredWriteInputSchema,
@@ -1297,19 +1305,18 @@ export type {
   DeferredWriteEntry,
 } from '../crud-operations/index.js'
 
-// Import artifact operations schemas (DB-first artifact storage)
-import {
+// Re-export artifact schemas
+export {
   KbWriteArtifactInputSchema,
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
-} from '../crud-operations/index.js'
-
-// Re-export artifact schemas
-export { KbWriteArtifactInputSchema, KbReadArtifactInputSchema, KbListArtifactsInputSchema }
+  KbDeleteArtifactInputSchema,
+}
 export type {
   KbWriteArtifactInput,
   KbReadArtifactInput,
   KbListArtifactsInput,
+  KbDeleteArtifactInput,
 } from '../crud-operations/index.js'
 
 /**
@@ -2426,6 +2433,31 @@ Example (list all checkpoints with content):
   inputSchema: zodToMcpSchema(KbListArtifactsInputSchema),
 }
 
+/**
+ * kb_delete_artifact tool definition.
+ *
+ * Delete a workflow artifact by its UUID.
+ */
+export const kbDeleteArtifactToolDefinition: McpToolDefinition = {
+  name: 'kb_delete_artifact',
+  description: `Delete a workflow artifact from the database by its UUID.
+
+Permanently removes the artifact record. Use with care — deletion is irreversible.
+Typically used for cleanup or to remove stale artifacts.
+
+Parameters:
+- artifact_id (required): UUID of the artifact to delete
+
+Returns: { deleted: boolean, artifact_id: string }
+- deleted: true if the artifact was found and removed, false if not found
+
+Example:
+{
+  "artifact_id": "550e8400-e29b-41d4-a716-446655440000"
+}`,
+  inputSchema: zodToMcpSchema(KbDeleteArtifactInputSchema),
+}
+
 // ============================================================================
 // Story Status Tools
 // ============================================================================
@@ -2437,18 +2469,31 @@ Example (list all checkpoints with content):
  */
 export const kbGetStoryToolDefinition: McpToolDefinition = {
   name: 'kb_get_story',
-  description: `Get a story by its ID.
+  description: `Get a story by its ID, with optional eager loading of artifacts and dependencies.
 
 Returns the full story record including workflow state, phase, and blocking status.
+Optionally includes related artifacts and/or dependency edges in a single call.
 
 Parameters:
 - story_id (required): Story ID to retrieve (e.g., 'WISH-2045')
+- include_artifacts (optional, default false): When true, eagerly loads all story artifact records
+  from story_artifacts table (type, name, phase, iteration, summary). Does not include artifact content JSONB.
+- include_dependencies (optional, default false): When true, eagerly loads all direct (1-hop) dependency
+  edges from story_dependencies table — both outbound (storyId=X) and inbound (targetStoryId=X).
 
-Returns: Story object or null if not found
+Returns: Story object or null if not found. When story is null, artifacts and dependencies are empty arrays.
+When flags are false (default), keys are absent — backward-compatible with pre-KBAR-0070 callers.
 
-Example:
+Example (basic lookup):
 {
   "story_id": "WISH-2045"
+}
+
+Example (full context in one call):
+{
+  "story_id": "WISH-2045",
+  "include_artifacts": true,
+  "include_dependencies": true
 }`,
   inputSchema: zodToMcpSchema(KbGetStoryInputSchema),
 }
@@ -2466,7 +2511,9 @@ Returns stories ordered by last update (newest first).
 
 Parameters:
 - feature (optional): Filter by feature prefix (e.g., 'wish')
-- state (optional): Filter by workflow state (backlog, ready, in_progress, etc.)
+- epic (optional): Filter by epic name (e.g., 'platform')
+- state (optional): Filter by a single workflow state (ignored when states[] is provided)
+- states (optional): Filter by multiple workflow states (takes precedence over state)
 - phase (optional): Filter by implementation phase (setup, implementation, etc.)
 - blocked (optional): Filter by blocked status (true/false)
 - priority (optional): Filter by priority (critical, high, medium, low)
@@ -2484,6 +2531,12 @@ Example (list stories in code review for "wish" feature):
 {
   "feature": "wish",
   "state": "in_review"
+}
+
+Example (list all actionable platform stories):
+{
+  "epic": "platform",
+  "states": ["ready_for_qa", "failed_qa", "failed_code_review", "in_review", "ready_for_review", "ready", "in_progress", "backlog"]
 }
 
 Example (list high priority stories):
@@ -2541,6 +2594,42 @@ Example (complete a story):
   "state": "completed"
 }`,
   inputSchema: zodToMcpSchema(KbUpdateStoryStatusInputSchema),
+}
+
+/**
+ * kb_update_story tool definition.
+ *
+ * Updates story metadata fields (epic, feature, title, priority, points).
+ */
+export const kbUpdateStoryToolDefinition: McpToolDefinition = {
+  name: 'kb_update_story',
+  description: `Update story metadata fields (epic, feature, title, priority, points).
+
+Use this to correct metadata like epic assignment without touching workflow state.
+
+Parameters:
+- story_id (required): Story ID to update (e.g., 'LNGG-0010')
+- epic (optional): New epic value (null to clear)
+- feature (optional): New feature value (null to clear)
+- title (optional): New title
+- priority (optional): New priority (null to clear)
+- points (optional): New story points (null to clear)
+
+Returns: Updated story object
+
+Example (reassign epic):
+{
+  "story_id": "LNGG-0010",
+  "epic": "LNGG"
+}
+
+Example (set multiple fields):
+{
+  "story_id": "KBAR-0060",
+  "epic": "KBAR",
+  "feature": "kb-artifact-migration"
+}`,
+  inputSchema: zodToMcpSchema(KbUpdateStoryInputSchema),
 }
 
 /**
@@ -2924,10 +3013,12 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbWriteArtifactToolDefinition,
   kbReadArtifactToolDefinition,
   kbListArtifactsToolDefinition,
+  kbDeleteArtifactToolDefinition,
   // Story status tools
   kbGetStoryToolDefinition,
   kbListStoriesToolDefinition,
   kbUpdateStoryStatusToolDefinition,
+  kbUpdateStoryToolDefinition,
   kbGetNextStoryToolDefinition,
   // Token logging tools
   kbLogTokensToolDefinition,

@@ -28,11 +28,20 @@ export default defineConfig(({ mode }) => {
           'hooks/index': path.resolve(__dirname, 'src/hooks/index.ts'),
           'image/index': path.resolve(__dirname, 'src/image/index.ts'),
           'image/presets/index': path.resolve(__dirname, 'src/image/presets/index.ts'),
-          'image/presets/__types__/index': path.resolve(__dirname, 'src/image/presets/__types__/index.ts'),
+          'image/presets/__types__/index': path.resolve(
+            __dirname,
+            'src/image/presets/__types__/index.ts',
+          ),
           'image/compression/index': path.resolve(__dirname, 'src/image/compression/index.ts'),
-          'image/compression/__types__/index': path.resolve(__dirname, 'src/image/compression/__types__/index.ts'),
+          'image/compression/__types__/index': path.resolve(
+            __dirname,
+            'src/image/compression/__types__/index.ts',
+          ),
           'image/heic/index': path.resolve(__dirname, 'src/image/heic/index.ts'),
-          'image/heic/__types__/index': path.resolve(__dirname, 'src/image/heic/__types__/index.ts'),
+          'image/heic/__types__/index': path.resolve(
+            __dirname,
+            'src/image/heic/__types__/index.ts',
+          ),
           'components/index': path.resolve(__dirname, 'src/components/index.ts'),
           'types/index': path.resolve(__dirname, 'src/types/index.ts'),
         },

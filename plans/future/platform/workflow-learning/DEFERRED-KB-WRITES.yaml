@@ -1,0 +1,132 @@
+schema_version: 1
+generated_at: "2026-02-22T00:00:00Z"
+source: workflow-retro
+retro_scope: batch
+stories_analyzed:
+  - WKFL-001
+  - WKFL-002
+  - WKFL-003
+  - WKFL-004
+  - WKFL-005
+  - WKFL-006
+  - WKFL-007
+  - WKFL-008
+  - WKFL-009
+  - WKFL-010
+
+reason: "kb_add_lesson MCP tools unavailable during retro run. Patterns documented here for batch write when tools available."
+
+entries:
+  - id: deferred-001
+    title: "Pattern: Code stories exceed token estimates by 4-8x"
+    story_id: WKFL-001
+    category: pattern
+    what_happened: |
+      Stories WKFL-004, WKFL-007, and WKFL-010 all exceeded token budgets by 148-834%.
+      WKFL-004 (Human Feedback Capture): 30,000 estimated → ~280,234 actual (+834%).
+      WKFL-007 (Story Risk Predictor): 45,000 estimated → 111,638 actual (+148%).
+      WKFL-010 (Improvement Proposal Generator): 55,000 estimated → ~156,300 actual (+184%).
+      Common factor: All three stories delivered executable TypeScript code (schemas, agents with
+      TypeScript tests, CLI commands). Elaboration phases alone frequently exceeded the full
+      story estimates before implementation even began.
+    recommendation: |
+      Apply story-type-specific token multipliers:
+      - Infrastructure/documentation-only stories: estimates accurate, no adjustment needed
+      - Stories with agents + schemas + CLI commands: multiply estimate by 4-6x
+      - Stories with complex algorithms (multi-phase, statistical): multiply estimate by 8x
+      Update .claude/docs/token-estimation.md with per-story-type guidance.
+    tags:
+      - retro
+      - pattern
+      - token-budget
+      - calibration
+      - date:2026-02
+      - source:workflow-retro
+
+  - id: deferred-002
+    title: "Pattern: KB and Task tools frequently unavailable — deferred write pattern is de facto standard"
+    story_id: WKFL-001
+    category: pattern
+    what_happened: |
+      In 4 of 9 stories analyzed (WKFL-002, WKFL-003, WKFL-008, WKFL-010), both KB persistence
+      tools and the Task spawning tool were unavailable. Each story independently discovered the
+      deferred write fallback (DEFERRED-KB-WRITES.yaml) and the sequential worker execution pattern.
+      This represents 44% of stories experiencing tool availability issues. The pattern is recurring
+      and predictable.
+    recommendation: |
+      1. Make DEFERRED-KB-WRITES.yaml the documented first-class pattern, not a fallback
+      2. Add a Phase 0 tool availability check in all leader agents
+      3. Create a DEFERRED-KB-WRITES.yaml schema template in .claude/schemas/
+      4. Implement a batch processor that reads DEFERRED-KB-WRITES.yaml files at session start
+         and flushes pending writes when tools become available
+    tags:
+      - retro
+      - pattern
+      - tool-availability
+      - infrastructure
+      - kb-tools
+      - date:2026-02
+      - source:workflow-retro
+
+  - id: deferred-003
+    title: "Pattern: Review phase waived for documentation-only stories"
+    story_id: WKFL-001
+    category: pattern
+    what_happened: |
+      In 3 of 9 stories (WKFL-001, WKFL-006, WKFL-008), the standard code review was waived or
+      produced only info-level findings because the stories delivered only agent/schema/markdown
+      files with no executable TypeScript code. WKFL-001: review waived (infrastructure story,
+      markdown only). WKFL-006: review waived (documentation/schema files only). WKFL-008: review
+      produced 3 info findings, no blocking issues (agent/config files).
+      The standard review pipeline is designed for TypeScript code; it provides minimal value for
+      documentation-only stories while consuming significant tokens.
+    recommendation: |
+      1. Add story_type field to story.yaml: code | documentation | schema | mixed
+      2. For 'documentation' and 'schema' type stories, substitute documentation quality check
+         (formatting, schema validity, cross-reference verification) for code review
+      3. Update review leaders to branch on story_type
+      4. Estimated savings: 20,000-40,000 tokens per documentation-only story
+    tags:
+      - retro
+      - pattern
+      - review-waiver
+      - documentation
+      - efficiency
+      - date:2026-02
+      - source:workflow-retro
+
+  - id: deferred-004
+    title: "Pattern: TOKEN-LOG.md coverage inconsistent across stories — prevents reliable cross-story comparison"
+    story_id: WKFL-001
+    category: pattern
+    what_happened: |
+      Across all 9 stories analyzed, TOKEN-LOG.md files captured different phase subsets:
+      WKFL-001 (elab+QA only), WKFL-002 (PM only), WKFL-003 (PM validation only),
+      WKFL-004 (elab+impl+QA — most complete), WKFL-005 (QA only), WKFL-006 (elab+planning),
+      WKFL-007 (elab+QA, missing impl), WKFL-008 (PM only), WKFL-009 (elab-setup only),
+      WKFL-010 (PM+impl+proof — nearly complete). This inconsistency makes accurate variance
+      calculations impossible for many stories.
+    recommendation: |
+      1. Mandate that every phase leader appends to a single TOKEN-LOG.md in _implementation/ at phase completion
+      2. Standardize log row format: | timestamp | phase | agent | input | output | total | cumulative |
+      3. Add cumulative_tokens field to CHECKPOINT.yaml schema
+      4. Wire token aggregation into dev-documentation-leader OUTCOME.yaml step
+    tags:
+      - retro
+      - pattern
+      - token-log
+      - observability
+      - data-quality
+      - date:2026-02
+      - source:workflow-retro
+
+status: flushed
+flushed_at: "2026-02-22T22:52:00Z"
+instructions: |
+  To flush these entries to KB, run kb_add_lesson for each entry above using the fields:
+  - title: from entry.title
+  - story_id: from entry.story_id
+  - category: from entry.category
+  - what_happened: from entry.what_happened
+  - recommendation: from entry.recommendation
+  - tags: from entry.tags

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun run --hot server.ts",
     "start": "bun run server.ts",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint --fix . --ext .ts",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

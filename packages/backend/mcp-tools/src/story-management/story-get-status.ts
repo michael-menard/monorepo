@@ -19,6 +19,8 @@ import {
   type StoryGetStatusOutput,
 } from './__types__/index.js'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * Get current status of a story by UUID or human-readable ID
  *
@@ -44,12 +46,15 @@ export async function storyGetStatus(input: StoryGetStatusInput): Promise<StoryG
   const parsed = StoryGetStatusInputSchema.parse(input)
 
   try {
-    // Query by UUID or human-readable storyId using OR clause (AC-1)
-    const [story] = await db
-      .select()
-      .from(stories)
-      .where(or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId)))
-      .limit(1)
+    // Query by UUID or human-readable storyId (AC-1)
+    // Only include UUID comparison when the input is actually a UUID,
+    // otherwise Postgres throws a cast error on the uuid column.
+    const isUuid = UUID_REGEX.test(parsed.storyId)
+    const whereClause = isUuid
+      ? or(eq(stories.id, parsed.storyId), eq(stories.storyId, parsed.storyId))
+      : eq(stories.storyId, parsed.storyId)
+
+    const [story] = await db.select().from(stories).where(whereClause).limit(1)
 
     if (!story) {
       return null

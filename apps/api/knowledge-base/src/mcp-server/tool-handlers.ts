@@ -14,6 +14,12 @@ import * as path from 'path'
 import { fileURLToPath } from 'url'
 import { sql } from 'drizzle-orm'
 import {
+  worktreeRegister,
+  worktreeGetByStory,
+  worktreeListActive,
+  worktreeMarkComplete,
+} from '@repo/mcp-tools'
+import {
   kb_add,
   kb_get,
   kb_update,
@@ -79,18 +85,22 @@ import {
   kb_write_artifact,
   kb_read_artifact,
   kb_list_artifacts,
+  kb_delete_artifact,
   KbWriteArtifactInputSchema,
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
+  KbDeleteArtifactInputSchema,
 } from '../crud-operations/artifact-operations.js'
 import {
   kb_get_story,
   kb_list_stories,
   kb_update_story_status,
+  kb_update_story,
   kb_get_next_story,
   KbGetStoryInputSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
+  KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
 } from '../crud-operations/story-crud-operations.js'
 import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-operations.js'
@@ -113,28 +123,10 @@ import {
   KbArchiveWorkingSetInputSchema,
 } from '../working-set/index.js'
 import {
-  worktreeRegister,
-  worktreeGetByStory,
-  worktreeListActive,
-  worktreeMarkComplete,
-} from '@repo/mcp-tools'
-import {
   WorktreeRegisterInputSchema,
   WorktreeGetByStoryInputSchema,
   WorktreeListActiveInputSchema,
   WorktreeMarkCompleteInputSchema,
-} from './tool-schemas.js'
-import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
-import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
-import { createMcpLogger } from './logger.js'
-import {
-  type ToolCallContext,
-  MAX_TOOL_CALL_DEPTH,
-  DEFAULT_TIMEOUTS,
-  EnvSchema,
-  MCP_SERVER_VERSION,
-} from './server.js'
-import {
   KbBulkImportInputSchema,
   KbRebuildEmbeddingsInputSchema,
   KbStatsInputSchema,
@@ -157,6 +149,16 @@ import {
   KbUpdateTaskInputSchema,
   KbListTasksInputSchema,
 } from './tool-schemas.js'
+import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
+import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
+import { createMcpLogger } from './logger.js'
+import {
+  type ToolCallContext,
+  MAX_TOOL_CALL_DEPTH,
+  DEFAULT_TIMEOUTS,
+  EnvSchema,
+  MCP_SERVER_VERSION,
+} from './server.js'
 // Bucket C task operations (KBMEM-005)
 // Bucket C task triage and lifecycle (KBMEM-018, 019, 020)
 // Deferred writes (KBMEM-022)
@@ -3484,6 +3486,63 @@ export async function handleKbListArtifacts(
   }
 }
 
+/**
+ * Handle kb_delete_artifact tool invocation.
+ *
+ * Delete a workflow artifact by its UUID.
+ */
+export async function handleKbDeleteArtifact(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_delete_artifact tool invoked', {
+    correlation_id: correlationId,
+    artifact_id: inputObj?.artifact_id,
+  })
+
+  try {
+    // Authorization check
+    enforceAuthorization('kb_delete_artifact', context)
+
+    const validated = KbDeleteArtifactInputSchema.parse(input)
+
+    const deleted = await kb_delete_artifact(validated.artifact_id, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('kb_delete_artifact succeeded', {
+      correlation_id: correlationId,
+      artifact_id: validated.artifact_id,
+      deleted,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ deleted, artifact_id: validated.artifact_id }, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('kb_delete_artifact failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
 // ============================================================================
 // Story Status Handlers
 // ============================================================================
@@ -3508,6 +3567,8 @@ export async function handleKbGetStory(
   logger.info('kb_get_story tool invoked', {
     correlation_id: correlationId,
     story_id: inputObj?.story_id,
+    include_artifacts: inputObj?.include_artifacts,
+    include_dependencies: inputObj?.include_dependencies,
   })
 
   try {
@@ -3520,6 +3581,8 @@ export async function handleKbGetStory(
       correlation_id: correlationId,
       story_id: validated.story_id,
       found: result.story !== null,
+      include_artifacts: validated.include_artifacts,
+      include_dependencies: validated.include_dependencies,
       query_time_ms: queryTimeMs,
     })
 
@@ -3620,6 +3683,52 @@ export async function handleKbUpdateStoryStatus(
     }
   } catch (error) {
     logger.error('kb_update_story_status failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
+ * Handle kb_update_story tool invocation.
+ *
+ * @param input - Raw input from MCP request
+ * @param deps - Database dependency
+ * @param context - Tool call context with correlation ID
+ * @returns MCP tool result with updated story
+ */
+export async function handleKbUpdateStory(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_update_story tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    epic: inputObj?.epic,
+    feature: inputObj?.feature,
+  })
+
+  try {
+    enforceAuthorization('kb_update_story' as ToolName, context)
+    const validated = KbUpdateStoryInputSchema.parse(input)
+    const result = await kb_update_story({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_update_story succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      updated: result.updated,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_update_story failed', { correlation_id: correlationId, error })
     return errorToToolResult(error)
   }
 }
@@ -4085,10 +4194,12 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_write_artifact: handleKbWriteArtifact,
   kb_read_artifact: handleKbReadArtifact,
   kb_list_artifacts: handleKbListArtifacts,
+  kb_delete_artifact: handleKbDeleteArtifact,
   // Story status tools
   kb_get_story: handleKbGetStory,
   kb_list_stories: handleKbListStories,
   kb_update_story_status: handleKbUpdateStoryStatus,
+  kb_update_story: handleKbUpdateStory,
   kb_get_next_story: handleKbGetNextStory,
   // Token logging tools
   kb_log_tokens: handleKbLogTokens,
@@ -4147,6 +4258,9 @@ export async function handleToolCall(
     }
     throw error
   }
+
+  // Track this tool in the call chain for downstream circular dependency detection
+  context?.tool_call_chain.push(toolName)
 
   const handler = toolHandlers[toolName]
 

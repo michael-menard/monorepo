@@ -55,6 +55,9 @@ export {
   useUploadPartsListFileMutation,
   useDeleteFileMutation,
   useLazyGetFileDownloadUrlQuery,
+  // INST-1105: Presigned upload session hooks
+  useCreateUploadSessionMutation,
+  useCompleteUploadSessionMutation,
 } from './rtk/instructions-api'
 
 // RTK Query Hooks - Uploads (BUGF-032)

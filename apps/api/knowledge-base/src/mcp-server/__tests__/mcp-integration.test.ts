@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 47 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics)', () => {
+    it('should return all 53 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics + worktree)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(47)
+      expect(tools).toHaveLength(53)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -124,10 +124,12 @@ describe('MCP Server Integration', () => {
         'kb_write_artifact',
         'kb_read_artifact',
         'kb_list_artifacts',
+        'kb_delete_artifact',
         // Story status tools
         'kb_get_story',
         'kb_list_stories',
         'kb_update_story_status',
+        'kb_update_story',
         'kb_get_next_story',
         // Token logging tools
         'kb_log_tokens',
@@ -135,6 +137,11 @@ describe('MCP Server Integration', () => {
         'kb_get_token_summary',
         'kb_get_bottleneck_analysis',
         'kb_get_churn_analysis',
+        // Worktree management tools (WINT-1130)
+        'worktree_register',
+        'worktree_get_by_story',
+        'worktree_list_active',
+        'worktree_mark_complete',
       ])
     })
 

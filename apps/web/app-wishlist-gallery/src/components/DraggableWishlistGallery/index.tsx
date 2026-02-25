@@ -28,7 +28,7 @@ import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortab
 import { toast } from 'sonner'
 import { CheckCircle, Undo2, Loader2 } from 'lucide-react'
 import { Button } from '@repo/app-component-library'
-import { GalleryGrid } from '@repo/gallery'
+import { GalleryGrid, useKeyboardShortcuts, useRovingTabIndex } from '@repo/gallery'
 import { z } from 'zod'
 import { WishlistItemSchema, type WishlistItem } from '@repo/api-client/schemas/wishlist'
 import {
@@ -36,11 +36,9 @@ import {
   wishlistGalleryApi,
 } from '@repo/api-client/rtk/wishlist-gallery-api'
 import { useDispatch } from 'react-redux'
+import { useAnnouncer } from '@repo/accessibility'
 import { SortableWishlistCard } from '../SortableWishlistCard'
 import { WishlistDragPreview } from '../WishlistDragPreview'
-import { useKeyboardShortcuts } from '@repo/gallery'
-import { useAnnouncer } from '@repo/accessibility'
-import { useRovingTabIndex } from '@repo/gallery'
 
 /**
  * DraggableWishlistGallery props schema (data-only)

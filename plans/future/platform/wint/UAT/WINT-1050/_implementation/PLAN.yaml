@@ -1,44 +1,209 @@
 schema: 1
-story_id: "WINT-1050"
-timestamp: "2026-02-17T00:00:00Z"
+story_id: WINT-1050
+generated_at: "2026-02-20"
 
-summary: "Update story-update.md v2.1.0 → v3.0.0 with DB-first write via shimUpdateStoryStatus"
+approach: >
+  Docs-only modification of a single markdown file (.claude/commands/story-update.md).
+  The approach is to follow the WINT-1060 story-move.md pattern exactly: insert a new
+  Step 3a between the existing Step 2 (worktree cleanup) and Step 3 (frontmatter update,
+  renumbered to Step 3b). Step 3a includes an inline 14-row mapping table, a
+  shimUpdateStoryStatus call block, null-return warning+continue handling, and a
+  db_updated flag. The existing Step 5 result YAML is extended with db_updated. A new
+  "Integration Test Scenarios" section (6 scenarios A-F) is appended. The command
+  frontmatter is bumped to v3.0.0 with date 2026-02-20. No TypeScript files are touched.
 
 steps:
   - id: 1
-    name: "Version bump and frontmatter update"
-    description: "Bump version to 3.0.0, update date"
-    files: [".claude/commands/story-update.md"]
+    description: >
+      Read the current story-update.md (v2.1.0) to establish a precise baseline: note the
+      exact location of Step 3 (Update Frontmatter), the result YAML block in Step 5, the
+      version frontmatter fields, and any trailing sections. This ensures the insert is
+      positioned correctly and no existing content is accidentally dropped.
+    files:
+      - path: ".claude/commands/story-update.md"
+        action: read
+    verification: >
+      Confirm the file version is 2.1.0, Step 3 header reads "### 3. Update Frontmatter",
+      Step 5 result YAML does NOT contain db_updated, and the "## Status Transition Rules"
+      section and "## Error Handling" section are present and intact.
 
   - id: 2
-    name: "Add Status → DB State Mapping Table"
-    description: "Add 14-row mapping table after Valid Status Values section"
-    files: [".claude/commands/story-update.md"]
+    description: >
+      Build the complete 14-row status-to-DB-state mapping table as a standalone artifact
+      (in-memory / scratch). Derive the 8 mapped rows from SWIM_LANE_TO_STATE plus the 2
+      explicit decisions (BLOCKED → blocked, superseded → cancelled). Document the 6 skip
+      rows (created, elaboration, needs-code-review, failed-code-review, failed-qa,
+      needs-split) with explicit reason text. Verify total = 14 rows. This table will be
+      embedded verbatim inside Step 3a in Step 3 below.
+
+      Authoritative source: packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts
+      SWIM_LANE_TO_STATE maps: backlog→backlog, ready-to-work→ready_to_work,
+      in-progress→in_progress, ready-for-qa→ready_for_qa, UAT→in_qa, done→done.
+      Note: 'done' in SWIM_LANE_TO_STATE corresponds to the command status 'completed'
+      (done is the DB target, completed is the command input). This distinction must be
+      reflected in the table: row is "completed → done", not "done → done".
+
+      Explicit decisions (not in SWIM_LANE_TO_STATE):
+      - BLOCKED → blocked (DB-only state, no swim-lane directory)
+      - superseded → cancelled (DB-only state, no swim-lane directory)
+    files:
+      - path: "packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts"
+        action: read
+    verification: >
+      The constructed table has exactly 14 rows. 8 rows have a DB state value. 6 rows
+      have "skip" with a non-empty reason. No status from the command's Valid Status Values
+      table is absent.
 
   - id: 3
-    name: "Insert Step 3 (DB Write) and rename old Step 3 to Step 3.5"
-    description: |
-      Rename existing Step 3 (Update Frontmatter) to Step 3.5.
-      Insert new Step 3 (DB Write via shimUpdateStoryStatus) with:
-      - Mapping lookup
-      - shimUpdateStoryStatus call
-      - Null return → WARNING + db_updated=false
-      - Non-mappable status → NOTE + skip
-    files: [".claude/commands/story-update.md"]
+    description: >
+      Modify .claude/commands/story-update.md to insert Step 3a and rename Step 3 to Step 3b.
+
+      Exact changes:
+      1. Update frontmatter: version 2.1.0 → 3.0.0, updated 2026-02-17 → 2026-02-20.
+      2. Insert "### 3a. DB Write via shimUpdateStoryStatus" section between "### 2. Worktree
+         Cleanup" and "### 3. Update Frontmatter". The new section must contain:
+         a. The 14-row inline mapping table (from Step 2 above) with columns:
+            Command status | DB newState | Action
+         b. The conditional shimUpdateStoryStatus call block (modelled on story-move.md Step 2.5):
+            - If NEW_STATUS is in the mapped rows: call shimUpdateStoryStatus with
+              storyId=STORY_ID, newState=<mapped_state>, triggeredBy='story-update-command'
+            - If result is null: emit WARNING message per AC-3 exact format, set db_updated=false
+            - If result is non-null: set db_updated=true
+            - If NEW_STATUS is NOT in the mapped rows (skip action): set db_updated=false, no call
+         c. A note that the DB write is never blocking — Step 3b (frontmatter) proceeds regardless.
+         d. A note that --no-index flag does NOT suppress this step.
+      3. Rename existing "### 3. Update Frontmatter" → "### 3b. Update Frontmatter".
+      4. Update execution sequence summary (if present in the file) to show the new order.
+
+      AC-3 WARNING exact format:
+        WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with
+        filesystem update only.
+
+      shimUpdateStoryStatus call shape (from StoryUpdateStatusInput schema):
+        shimUpdateStoryStatus({
+          storyId: STORY_ID,
+          newState: <mapped_state>,
+          triggeredBy: 'story-update-command',
+        })
+
+      Follow the story-move.md Step 2.5 formatting style exactly.
+    files:
+      - path: ".claude/commands/story-update.md"
+        action: modify
+    verification: >
+      After edit: grep for "### 3a." finds the new DB write step. grep for "### 3b." finds
+      the renamed frontmatter step. grep for "version: 3.0.0" and "updated: 2026-02-20"
+      both pass. The mapping table has 14 rows. The WARNING format matches AC-3 exactly.
+      The existing Step 2 content is unchanged. The existing Step 4 and Step 5 headers
+      still read "### 4." and "### 5." (no renumbering needed beyond 3→3b).
 
   - id: 4
-    name: "Update Step 5 result YAML"
-    description: "Add db_updated: true | false field to result YAML"
-    files: [".claude/commands/story-update.md"]
+    description: >
+      Extend the Step 5 result YAML block in .claude/commands/story-update.md to include
+      the db_updated field. The field must appear after index_updated and before
+      worktree_cleanup (or at the end if worktree_cleanup is last). Add inline comments
+      documenting the two values:
+        db_updated: true | false
+        # true  - shimUpdateStoryStatus returned non-null (DB write succeeded)
+        # false - shimUpdateStoryStatus returned null (DB unavailable) OR NEW_STATUS
+        #         was unmapped (no DB write attempted)
+    files:
+      - path: ".claude/commands/story-update.md"
+        action: modify
+    verification: >
+      The Step 5 YAML block contains "db_updated: true | false" with comment lines.
+      The existing fields (feature_dir, story, old_status, new_status, file_updated,
+      index_updated, worktree_cleanup) are all still present and unmodified.
 
   - id: 5
-    name: "Add Integration Test Scenarios section"
-    description: "Document AC-9 scenarios (A through F) in the command spec"
-    files: [".claude/commands/story-update.md"]
+    description: >
+      Append an "Integration Test Scenarios" section to .claude/commands/story-update.md
+      (after the "## Error Handling" or "## Signal" section, following the story's AC-9
+      requirement). The section must contain exactly 6 scenarios labelled A through F:
+        A: Story exists in DB, mapped status, DB write succeeds → db_updated: true, frontmatter updated
+        B: Story exists in DB, DB unavailable (shimUpdateStoryStatus returns null) → WARNING emitted,
+           db_updated: false, frontmatter updated
+        C: Story not in DB (new story, not yet populated), mapped status, shimUpdateStoryStatus
+           returns null → WARNING emitted, db_updated: false, frontmatter updated
+        D: Unmapped status (e.g., needs-code-review) → DB write skipped, db_updated: false,
+           frontmatter updated
+        E: Invalid transition (e.g., backlog → uat) → UPDATE FAILED, no DB write, no file changes
+        F: --no-index flag with mapped status, DB available → db_updated: true, frontmatter updated,
+           index NOT updated
 
-execution_order: [1, 2, 3, 4, 5]
+      Format each scenario consistently with the story-move.md pattern (table or bulleted list).
+      Add a note referencing ADR-005 compliance for scenarios A, B, F (require live
+      postgres-knowledgebase with real core.stories record).
+    files:
+      - path: ".claude/commands/story-update.md"
+        action: modify
+    verification: >
+      grep for "Integration Test Scenarios" finds the new section. The section contains
+      exactly 6 scenario entries (A, B, C, D, E, F). ADR-005 note is present.
 
-knowledge_context:
-  shim_signature: "shimUpdateStoryStatus(input: StoryUpdateStatusInput, options?: ShimOptions): Promise<StoryUpdateStatusOutput>"
-  db_states: ["backlog", "ready_to_work", "in_progress", "ready_for_qa", "in_qa", "blocked", "done", "cancelled"]
-  shim_location: "packages/backend/mcp-tools/src/story-compatibility/index.ts"
+  - id: 6
+    description: >
+      Add a version history comment or note to .claude/commands/story-update.md documenting
+      that v3.0.0 introduces DB integration as a major behavioral change. This satisfies AC-8's
+      requirement to note the major version bump reason.
+
+      Placement: in the frontmatter comment block, or as a "## Version History" section at the
+      bottom of the file, or as a comment immediately after the frontmatter — whichever style
+      the existing file uses or that best matches the story-move.md pattern.
+    files:
+      - path: ".claude/commands/story-update.md"
+        action: modify
+    verification: >
+      The file contains text noting "v3.0.0" and "DB integration" (or equivalent phrasing
+      describing the breaking behavioral change). The frontmatter shows version: 3.0.0 and
+      updated: 2026-02-20.
+
+risks:
+  - description: >
+      Accidental modification of existing Step 2 (worktree cleanup) content or Status
+      Transition Rules table during the insert operation.
+    mitigation: >
+      Read the file first (Step 1) to establish exact line boundaries. Make surgical inserts
+      only between Step 2 and Step 3. Verify Step 2 content is unchanged in the diff.
+
+  - description: >
+      Mapping table count error — including 'done' as a command status input rather than
+      a DB target state, leading to 15 rows or a mislabelled row.
+    mitigation: >
+      The table row is "completed → done" (command status → DB state). The word "done" does
+      not appear as a command status input. Verify: 14 rows total, 8 with DB states, 6 with
+      skip+reason. Cross-check against AC-2 bullet list which is authoritative.
+
+  - description: >
+      Incorrect WARNING message format for null return from shimUpdateStoryStatus, causing
+      AC-3 to fail during UAT verification.
+    mitigation: >
+      Copy the exact AC-3 format verbatim:
+      "WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with
+      filesystem update only." Do not paraphrase.
+
+  - description: >
+      Step numbering confusion — the existing Step 4 and Step 5 headers must NOT be renumbered
+      (only Step 3 becomes Step 3b; Steps 4 and 5 stay as "### 4." and "### 5.").
+    mitigation: >
+      After edit, verify Step 4 header still reads "### 4. Update Index" and Step 5 header
+      still reads "### 5. Return Result". Only the old Step 3 is renamed to 3b.
+
+  - description: >
+      The story-move.md Step 2.5 uses db_updated: skipped as a third value; story-update
+      must NOT use skipped (only true or false) per the explicit Non-goal.
+    mitigation: >
+      Explicitly use false for both null-return AND unmapped-status cases. The result YAML
+      comment documents this: false covers both "DB unavailable" and "no DB write attempted".
+      Never write "skipped" in the db_updated field for this command.
+
+e2e_strategy:
+  applicable: false
+  reason: >
+    This is a docs-only story — the sole deliverable is a markdown command spec file
+    (.claude/commands/story-update.md). There is no TypeScript source code, no UI component,
+    no API endpoint, and no database migration introduced by this story. Playwright E2E tests
+    are not applicable. UAT verification is performed manually by an agent reading and
+    executing the updated command spec against a live postgres-knowledgebase MCP server
+    (ADR-005 compliance), as documented in the Integration Test Scenarios section (AC-9).
+  test_scenarios: []

@@ -8,7 +8,7 @@
  * Used by main-app and API for consistent type definitions.
  */
 
-console.warn('[DEPRECATED] @repo/upload-types is deprecated. Import from @repo/upload/types instead.')
+// @deprecated This package is deprecated. Import from @repo/upload/types instead.
 
 // Session types
 export {

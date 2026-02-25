@@ -48,8 +48,9 @@ describe('SDK Initialization', () => {
 
   it('INIT-002: should start flush timer on initialization', async () => {
     const { startFlushTimer } = await import('../utils/flush-timer')
+    const { initTelemetrySdk: initSdk } = await import('../init')
 
-    initTelemetrySdk({ source: 'test-orchestrator' })
+    initSdk({ source: 'test-orchestrator' })
 
     expect(startFlushTimer).toHaveBeenCalledWith(5000, expect.any(Function))
   })

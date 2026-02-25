@@ -201,7 +201,7 @@ function parseStoryMarkdown(
   const goal = goalMatch ? goalMatch[1].trim() : ''
 
   // Parse non-goals
-  const nonGoalsMatch = content.match(/## Non-goals\n\n([\s\S]*?)(?=\n##|\n---|\Z)/)
+  const nonGoalsMatch = content.match(/## Non-goals\n\n([\s\S]*?)(?=\n##|\n---|$)/)
   const nonGoals: string[] = []
   if (nonGoalsMatch) {
     const lines = nonGoalsMatch[1].split('\n')
@@ -212,7 +212,7 @@ function parseStoryMarkdown(
   }
 
   // Parse acceptance criteria
-  const acsMatch = content.match(/## Acceptance Criteria\n\n([\s\S]*?)(?=\n##|\n---|\Z)/)
+  const acsMatch = content.match(/## Acceptance Criteria\n\n([\s\S]*?)(?=\n##|\n---|$)/)
   const acs: StoryYaml['acs'] = []
   if (acsMatch) {
     const acRegex = /- \[[ x]\] (AC\s*\d+):\s*(.+)/gi
@@ -227,7 +227,7 @@ function parseStoryMarkdown(
   }
 
   // Parse risks
-  const risksMatch = content.match(/## Risk Notes\n\n([\s\S]*?)(?=\n##|\n---|\Z)/)
+  const risksMatch = content.match(/## Risk Notes\n\n([\s\S]*?)(?=\n##|\n---|$)/)
   const risks: StoryYaml['risks'] = []
   if (risksMatch) {
     const riskRegex = /\*\*Risk \d+:\s*([^*]+)\*\*\n[^*]*\*\*Mitigation\*\*:\s*([^\n]+)/gi
@@ -241,7 +241,7 @@ function parseStoryMarkdown(
   }
 
   // Parse scope - look for packages
-  const packagesMatch = content.match(/### Packages Affected\n\n([\s\S]*?)(?=\n##|\n###|\n---|\Z)/)
+  const packagesMatch = content.match(/### Packages Affected\n\n([\s\S]*?)(?=\n##|\n###|\n---|$)/)
   const packages: string[] = []
   if (packagesMatch) {
     const lines = packagesMatch[1].split('\n')
@@ -360,7 +360,7 @@ function parseElaborationMarkdown(content: string, storyId: string): Elaboration
   // Parse follow-ups
   const followUps: ElaborationYaml['follow_ups'] = []
   const followUpMatch = content.match(
-    /### Follow-up Stories Suggested\n\n([\s\S]*?)(?=\n##|\n###|\Z)/,
+    /### Follow-up Stories Suggested\n\n([\s\S]*?)(?=\n##|\n###|$)/,
   )
   if (followUpMatch) {
     const lines = followUpMatch[1].split('\n')
@@ -395,7 +395,7 @@ function parseElaborationMarkdown(content: string, storyId: string): Elaboration
 function parsePlanMarkdown(content: string, storyId: string): PlanYaml {
   // Parse chunks
   const chunks: PlanYaml['chunks'] = []
-  const chunkRegex = /### Chunk (\d+):\s*([^\n]+)\n\n([\s\S]*?)(?=\n### Chunk|\n## |\Z)/gi
+  const chunkRegex = /### Chunk (\d+):\s*([^\n]+)\n\n([\s\S]*?)(?=\n### Chunk|\n## |$)/gi
   let match
   while ((match = chunkRegex.exec(content)) !== null) {
     const chunkId = parseInt(match[1])
@@ -423,7 +423,7 @@ function parsePlanMarkdown(content: string, storyId: string): PlanYaml {
 
   // Parse reuse
   const reuse: string[] = []
-  const reuseMatch = content.match(/### Existing Tools\n\n([\s\S]*?)(?=\n##|\n###|\Z)/)
+  const reuseMatch = content.match(/### Existing Tools\n\n([\s\S]*?)(?=\n##|\n###|$)/)
   if (reuseMatch) {
     const lines = reuseMatch[1].split('\n')
     for (const line of lines) {
@@ -480,7 +480,7 @@ function parseVerificationYaml(content: string, storyId: string): VerificationYa
 
 function parseProofMarkdown(content: string, storyId: string): ProofYaml {
   // Parse summary
-  const summaryMatch = content.match(/## Implementation Summary\n\n([\s\S]*?)(?=\n##|\Z)/)
+  const summaryMatch = content.match(/## Implementation Summary\n\n([\s\S]*?)(?=\n##|$)/)
   const summary: string[] = []
   if (summaryMatch) {
     const lines = summaryMatch[1].split('\n')
@@ -494,7 +494,7 @@ function parseProofMarkdown(content: string, storyId: string): ProofYaml {
 
   // Parse deliverables
   const deliverables: ProofYaml['deliverables'] = []
-  const filesMatch = content.match(/## Files Changed\n\n([\s\S]*?)(?=\n##|\Z)/)
+  const filesMatch = content.match(/## Files Changed\n\n([\s\S]*?)(?=\n##|$)/)
   if (filesMatch) {
     const pathRegex = /`([^`]+\.(ts|tsx|js|jsx|yml|yaml|md|json))`/g
     let match
@@ -514,7 +514,7 @@ function parseProofMarkdown(content: string, storyId: string): ProofYaml {
 
   // Parse limitations
   const limitations: string[] = []
-  const limitMatch = content.match(/## Known Limitations\n\n([\s\S]*?)(?=\n##|\Z)/)
+  const limitMatch = content.match(/## Known Limitations\n\n([\s\S]*?)(?=\n##|$)/)
   if (limitMatch) {
     const lines = limitMatch[1].split('\n')
     for (const line of lines) {
@@ -584,7 +584,7 @@ function parseAgentContext(
 
   // Parse implementation files
   const implementation: string[] = []
-  const implMatch = content.match(/### Primary Deliverables\n\n([\s\S]*?)(?=\n##|\n###|\Z)/)
+  const implMatch = content.match(/### Primary Deliverables\n\n([\s\S]*?)(?=\n##|\n###|$)/)
   if (implMatch) {
     const pathRegex = /`([^`]+)`/g
     let match
@@ -597,7 +597,7 @@ function parseAgentContext(
 
   // Parse notes
   const notes: string[] = []
-  const notesMatch = content.match(/## Notes\n\n([\s\S]*?)(?=\n##|\Z)/)
+  const notesMatch = content.match(/## Notes\n\n([\s\S]*?)(?=\n##|$)/)
   if (notesMatch) {
     const lines = notesMatch[1].split('\n')
     for (const line of lines) {

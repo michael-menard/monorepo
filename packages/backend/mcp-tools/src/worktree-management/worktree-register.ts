@@ -10,14 +10,17 @@
  * - Auto-generated UUID for worktree ID
  */
 
+import { eq } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { worktrees } from '@repo/database-schema'
+import { worktrees, stories } from '@repo/database-schema'
 import {
   WorktreeRegisterInputSchema,
   type WorktreeRegisterInput,
   type WorktreeRegisterOutput,
 } from './__types__/index.js'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * Register a new worktree in the database
@@ -69,10 +72,25 @@ export async function worktreeRegister(
   const parsed = WorktreeRegisterInputSchema.parse(input)
 
   try {
+    // Resolve human-readable storyId to UUID (FK column requires UUID)
+    let storyUuid = parsed.storyId
+    if (!UUID_REGEX.test(parsed.storyId)) {
+      const [story] = await db
+        .select({ id: stories.id })
+        .from(stories)
+        .where(eq(stories.storyId, parsed.storyId))
+        .limit(1)
+      if (!story) {
+        logger.warn(`[mcp-tools] Story '${parsed.storyId}' not found for worktree registration`)
+        return null
+      }
+      storyUuid = story.id
+    }
+
     const [worktree] = await db
       .insert(worktrees)
       .values({
-        storyId: parsed.storyId,
+        storyId: storyUuid,
         worktreePath: parsed.worktreePath,
         branchName: parsed.branchName,
         status: 'active',
@@ -81,7 +99,7 @@ export async function worktreeRegister(
 
     return {
       id: worktree.id,
-      storyId: worktree.storyId,
+      storyId: parsed.storyId,
       worktreePath: worktree.worktreePath,
       branchName: worktree.branchName,
       status: 'active',

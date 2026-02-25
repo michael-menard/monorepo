@@ -87,13 +87,10 @@ if (existing.results.some(r => r.relevance_score > 0.85)) {
 - Story ID (e.g., `WISH-001`)
 
 Read from story directory:
-- `{FEATURE_DIR}/UAT/{STORY_ID}/{STORY_ID}.md`
-- `{FEATURE_DIR}/UAT/{STORY_ID}/PROOF-{STORY_ID}.md`
-- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/IMPLEMENTATION-PLAN.md`
-- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/BACKEND-LOG.md` (if exists)
-- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/FRONTEND-LOG.md` (if exists)
-- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/BLOCKERS.md` (if exists)
-- `{FEATURE_DIR}/UAT/{STORY_ID}/_implementation/VERIFICATION.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/{STORY_ID}.md`
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml` — AC coverage, files changed, commands run
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/BLOCKERS.md` (if exists)
+- `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/VERIFICATION.yaml`
 
 ## Analysis Questions
 
@@ -130,9 +127,7 @@ Read from story directory:
 - One `kb_add_lesson` call per distinct learning
 - KB handles tagging, formatting, and deduplication automatically
 
-**2. Update TOKEN-LOG.md with learnings phase tokens**
-
-**3. If high-cost operations identified (>10k tokens):**
+**2. If high-cost operations identified (>10k tokens):**
 - Include `high-cost-operation` in tags array
 - Include mitigation strategy in resolution field
 

@@ -8,9 +8,9 @@
       "WebFetch(domain:*)",
       "Bash",
       "mcp__github__*",
-      "mcp__chrome-devtools__*"
+      "mcp__chrome-devtools__*",
+      "mcp__knowledge-base__*"
     ],
-
     "ask": [
       "Bash(git reset --hard:*)",
       "Bash(git push --force:*)",
@@ -24,7 +24,6 @@
       "Bash(sst remove:*)",
       "Bash(aws :*)"
     ],
-
     "deny": [
       "Write(./node_modules/**)",
       "Edit(./node_modules/**)",

@@ -18,9 +18,9 @@ import { z } from 'zod'
 import { Button, showSuccessToast, cn } from '@repo/app-component-library'
 import { useAddWishlistItemMutation } from '@repo/api-client/rtk/wishlist-gallery-api'
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
+import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 import { WishlistForm } from '../components/WishlistForm'
 import { ResumeDraftBanner } from '../components/ResumeDraftBanner'
-import { useLocalStorage } from '@repo/hooks/useLocalStorage'
 import {
   updateDraftField,
   clearDraft,

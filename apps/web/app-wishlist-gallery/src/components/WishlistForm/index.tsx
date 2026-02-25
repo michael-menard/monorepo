@@ -29,17 +29,13 @@ import {
   cn,
 } from '@repo/app-component-library'
 import type { CreateWishlistItem } from '@repo/api-client/schemas/wishlist'
-import { TagInput } from '../TagInput'
-import { useS3Upload, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '../../hooks/useS3Upload'
 import { useLocalStorage } from '@repo/hooks/useLocalStorage'
-import { useBackgroundCompression } from '../../hooks/useBackgroundCompression'
 import { formatFileSize } from '@repo/upload/image/compression'
-import {
-  COMPRESSION_PRESETS,
-  getPresetByName,
-  isValidPresetName,
-} from '@repo/upload/image/presets'
+import { COMPRESSION_PRESETS, getPresetByName, isValidPresetName } from '@repo/upload/image/presets'
 import type { CompressionPresetName } from '@repo/upload/image/presets/__types__'
+import { useBackgroundCompression } from '../../hooks/useBackgroundCompression'
+import { useS3Upload, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '../../hooks/useS3Upload'
+import { TagInput } from '../TagInput'
 
 /**
  * localStorage key for compression preset preference

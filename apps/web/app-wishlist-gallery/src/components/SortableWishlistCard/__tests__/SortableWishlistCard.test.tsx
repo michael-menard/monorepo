@@ -228,7 +228,7 @@ describe('SortableWishlistCard', () => {
         </DndWrapper>,
       )
 
-      const instructions = screen.getByText(/Press Space to start dragging/i)
+      const instructions = screen.getByText(/Drag to reorder/i)
       expect(instructions).toBeInTheDocument()
       expect(instructions).toHaveClass('sr-only')
     })

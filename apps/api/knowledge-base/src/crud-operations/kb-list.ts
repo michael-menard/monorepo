@@ -100,10 +100,10 @@ export async function kb_list(input?: KbListInput, deps?: KbListDeps): Promise<K
   }
 
   if (tags !== undefined && tags.length > 0) {
-    // JSONB ?| operator: checks if JSONB array contains any of the specified values
-    // Returns true if there's any overlap between the JSONB array and text array
+    // TEXT[] && operator: array overlap, returns true if arrays share any elements
+    // Returns true if there's any overlap between the tags array and filter tags array
     conditions.push(
-      sql`${knowledgeEntries.tags} ?| ARRAY[${sql.join(
+      sql`${knowledgeEntries.tags} && ARRAY[${sql.join(
         tags.map(tag => sql`${tag}`),
         sql`, `,
       )}]::text[]`,

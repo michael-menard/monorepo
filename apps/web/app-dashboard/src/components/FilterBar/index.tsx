@@ -42,7 +42,7 @@ export function FilterBar({
           className="pl-9 pr-9 h-10 w-full"
           aria-label="Search MOCs"
         />
-        {searchQuery && (
+        {searchQuery ? (
           <Button
             variant="ghost"
             size="sm"
@@ -52,7 +52,7 @@ export function FilterBar({
           >
             <X className="h-4 w-4" />
           </Button>
-        )}
+        ) : null}
       </div>
 
       {/* Theme Filter */}

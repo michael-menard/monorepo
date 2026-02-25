@@ -1,4 +1,4 @@
-import { uploadToS3, deleteFromS3, ok, err } from '@repo/api-core'
+import { uploadToS3, deleteFromS3, ok } from '@repo/api-core'
 import type { Result } from '@repo/api-core'
 import type { ImageStorage } from '../ports/index.js'
 

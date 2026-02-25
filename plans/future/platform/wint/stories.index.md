@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-20T12:00:00Z"
+updated_at: "2026-02-24T01:03:00Z"
 ---
 
 # WINT Stories Index
@@ -16,18 +16,18 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 2 |
-| uat | 18 |
+| uat | 20 |
 | in-qa | 0 |
-| ready-for-qa | 2 |
-| needs-code-review | 0 |
+| ready-for-qa | 0 |
+| needs-code-review | 1 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
 | failed-qa | 0 |
 | elaboration | 1 |
-| created | 3 |
+| created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 3 |
+| ready-to-work | 4 |
 | pending | 116 |
 
 ---
@@ -38,7 +38,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| WINT-0180 | Define Examples + Negative Examples Framework | — |
+| WINT-0210 | Populate Role Pack Templates | — |
 | WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-4060 | Create scope-defender Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
@@ -130,7 +130,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0060: Create Graph Relational Tables
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0010
 **Phase:** 0
 **Feature:** Create capabilities, features, epics, feature_capabilities, and views (feature_cohesion, franken_features) in graph schema using relational approach (no AGE)
@@ -141,6 +141,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Enable graph-based cohesion checks using standard SQL
 
 **Risk Notes:** View performance needs monitoring as graph grows
+
+**QA Verification Complete:** 2026-02-23 — All 13 ACs verified PASS, 36/36 tests pass, 385/385 full suite passes, 100% coverage, 0 blocking issues. Minor documentation discrepancy (migration filename reference). Verdict: PASS
 
 ---
 
@@ -387,9 +389,10 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0180: Define Examples + Negative Examples Framework
 
-**Status:** created
-**Verdict:** CONDITIONAL PASS
+**Status:** uat
+**Verdict:** PASS
 **Elaboration Complete:** 2026-02-14
+**QA Verification Complete:** 2026-02-21
 **Depends On:** none
 **Phase:** 0
 **Feature:** Create framework for role packs with max 2 positive + 1 negative example per role. Define pattern skeleton format (10-25 lines), decision rule + proof requirements. Establish where examples live: prompts/role-packs/*, KB MCP, context-pack sidecar injection.
@@ -400,6 +403,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Reduce scope creep and rework by making "minimum viable" patterns explicit with canonical examples
 
 **Risk Notes:** Must keep examples small (token budget) while remaining useful
+
+**Summary:** All 9 audit checks passed. Zero MVP-critical gaps. Four low-severity findings deferred to implementation. 7 future opportunities logged to KB. Ready for implementation.
 
 ---
 
@@ -530,8 +535,11 @@ Create health check script. Document VRAM requirements per model. Create model s
 
 ### WINT-0250: Define Escalation Rules for Multi-Model Routing (Graduated Chain + Hard Bypass)
 
-**Status:** elaboration
-**Depends On:** WINT-0220, WINT-0230
+**Status:** in-qa
+**Elaboration Complete:** 2026-02-21
+**Verdict:** PASS
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
+**Depends On:** —
 **Phase:** 0
 **Feature:** Define when to escalate from cheaper to more expensive model:
 - Local fails 2x on same task → escalate to API-Cheap
@@ -728,7 +736,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Story Generated:** 2026-02-17
 **Elaboration Completed:** 2026-02-20
 **Implementation Complete:** 2026-02-18
-**QA Verification Complete:** 2026-02-18 — All 10 ACs verified PASS, docs-only story, verdict: PASS
+**QA Verification Complete:** 2026-02-24 — All 10 ACs verified PASS, docs-only story, verdict: PASS
 
 ---
 
@@ -740,7 +748,9 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
 **Implementation Complete:** 2026-02-18
-**QA Verification Complete:** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS
+**QA Verification Complete (Iteration 1):** 2026-02-18 - All 10 ACs verified PASS, verdict: PASS (overturned)
+**QA Verification Complete (Iteration 2):** 2026-02-24 - Independent re-verification: FAIL — 2 blocking issues: AC-7 guard clause absent (double-write), AC-5 AC text inaccurate
+**Fix Iteration 1 Complete:** 2026-02-24 - All 3 issues fixed (AC-7 guard clause added, AC-5 examples corrected, EVIDENCE.yaml count corrected). QA re-verify: PASS. Status advanced to needs-code-review.
 **Depends On:** WINT-1030
 **Phase:** 1
 **Points:** 2
@@ -841,7 +851,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 ### WINT-1120: Validate Foundation Phase
 
 **Status:** pending
-**Depends On:** WINT-1040, WINT-1050, WINT-1060, WINT-1160
+**Depends On:** WINT-1040, WINT-1060, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
 **Infrastructure:**
@@ -904,7 +914,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 **Story Generated:** 2026-02-16
 **Elaboration Complete:** 2026-02-16
 **Verdict:** PASS
-**QA Verified:** 2026-02-17
+**QA Verified:** 2026-02-24
 **Depends On:** WINT-1130
 **Phase:** 1
 **Points:** 3
@@ -922,7 +932,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 **Elaboration Notes:** Both MVP-critical gaps resolved via new ACs (AC-12, AC-13). All non-blocking findings logged to KB. Ready for implementation.
 
-**QA Notes:** All 13 acceptance criteria verified PASS. 21/21 tests pass. No blocking issues. Architecture compliant. Lessons captured to KB.
+**QA Result:** PASS — All 13 ACs verified, 305 tests pass (including 21 WINT-1150 cleanup-integration tests), architecture compliant. Minor deviations DEV-001 (/wt:merge-pr vs /wt-finish) and DEV-002 (reason string) — both non-blocking, spirit of ACs met. 3 lessons captured to KB. QA complete 2026-02-24.
 
 ---
 
@@ -1104,7 +1114,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2100: Create session-manager Agent
 
-**Status:** created
+**Status:** ready-to-work
 **Depends On:** WINT-2090
 **Phase:** 2
 **Feature:** Create haiku-powered worker agent that manages session lifecycle
@@ -1114,6 +1124,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 **Goal:** Handle session creation, updates, cleanup
 
 **Risk Notes:** Must prevent session leaks
+
+**Elaboration:** PASS — 0 MVP-critical gaps, 9 non-blocking findings logged to KB, ready for implementation
 
 ---
 
@@ -2233,10 +2245,13 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9010: Create Shared Business Logic Package
 
-**Status:** uat
-**Story File:** `wint/UAT/WINT-9010/WINT-9010.md`
+**Status:** in-qa
+**Story File:** `wint/UAT/WINT-9010-iteration-2/WINT-9010.md`
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
+**Implementation Complete:** 2026-02-17
+**Code Review Verdict:** PASS
+**QA Setup Complete:** 2026-02-21 - Moved to UAT, story status updated to in-qa
 **Depends On:** WINT-1100
 **Phase:** 9
 **Feature:** Extract business logic from agents into shared TypeScript package that both Claude Code MCP tools and LangGraph nodes can use

@@ -8,8 +8,7 @@ declare const skeletonVariants: (
     | undefined,
 ) => string
 export interface SkeletonProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof skeletonVariants> {}
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof skeletonVariants> {}
 declare const Skeleton: React.ForwardRefExoticComponent<
   SkeletonProps & React.RefAttributes<HTMLDivElement>
 >

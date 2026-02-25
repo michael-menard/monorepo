@@ -16,8 +16,8 @@ All stories in this epic use the `REPA-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 8 |
-| uat | 4 |
-| ready-for-qa | 2 |
+| uat | 5 |
+| ready-for-qa | 1 |
 | ready-to-work | 5 |
 | in-elaboration | 0 |
 | backlog | 0 |
@@ -381,14 +381,15 @@ AC-7 only (SessionProvider migration with auth injection pattern, tests for both
 
 ## REPA-021: Standardize Card Skeletons
 
-**Status:** ready-for-qa
+**Status:** uat
 **Depends On:** none
 **Feature:** Consolidate skeleton loading components. Move DashboardSkeleton and EmptyDashboard from main-app to @repo/app-component-library. Delete duplicates from app-dashboard. Create generic EmptyState component.
 **Goal:** Single skeleton/empty state components in shared library.
 **Risk Notes:** —
-**Story File:** plans/future/repackag-app/ready-for-qa/REPA-021/REPA-021.md
+**Story File:** plans/future/repackag-app/UAT/REPA-021/REPA-021.md
 **Elaborated:** 2026-02-10
 **Implemented:** 2026-02-11
+**QA Verified:** 2026-02-23
 **Verdict:** PASS
 
 ---

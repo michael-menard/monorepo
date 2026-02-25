@@ -30,12 +30,12 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | Blocks | Epic |
 |---|---|-------|-------|--------|------|
-| 1 | x | INFR-0110 | Core Workflow Artifact Schemas (Story, Checkpoint, Scope, Plan) **completed** | INFR-0120, INFR-0020 | INFR |
+| 1 | x | INFR-0110 | Core Workflow Artifact Schemas (Story, Checkpoint, Scope, Plan) **uat** | INFR-0120, INFR-0020 | INFR |
 | 2 | x | INFR-0120 | Review/QA Artifact Schemas (Evidence, Review, QA-Verify) **uat** | INFR-0020 | INFR |
-| 3 | | INFR-0040 | Workflow Events Table + Ingestion **in-qa** | INFR-0050, TELE-0010 | INFR |
+| 3 | x | INFR-0040 | Workflow Events Table + Ingestion **uat** | INFR-0050, TELE-0010 | INFR |
 | 4 | x | MODL-0010 | Provider Adapters (OpenRouter/Ollama/Anthropic) **completed** | MODL-0020 | MODL |
 | 5 | | WINT-0010 | Create Core Database Schemas (6 schemas) ⚡ | WINT-0020–0070, AUTO-0010/0020, INFR-0110 | WINT |
-| 6 | x | LNGG-0010 | Story File Adapter — YAML Read/Write ⚡ **completed** | LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070 | LNGG |
+| 6 | x | LNGG-0010 | Story File Adapter — YAML Read/Write ⚡ **uat** | LNGG-0020, LNGG-0040, LNGG-0060, LNGG-0070 | LNGG |
 | 7 | x | LNGG-0030 | Decision Callback System **completed** | LNGG-0070 | LNGG |
 | 8 | x | LNGG-0050 | KB Writing Adapter **uat** | LNGG-0070 | LNGG |
 | 9 | x | KBAR-0010 | Database Schema Migrations **uat** | KBAR-0020 | KBAR |
@@ -55,9 +55,9 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 15 | x | LNGG-0020 | Index Management Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
-| 16 | x | LNGG-0040 | Stage Movement Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
-| 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **uat** | ← LNGG-0010 | LNGG | **P0** |
+| 15 | x | LNGG-0020 | Index Management Adapter ⚡ **uat** | ← LNGG-0010 ✓ | LNGG | **P0** |
+| 16 | x | LNGG-0040 | Stage Movement Adapter ⚡ **uat** | ← LNGG-0010 ✓ | LNGG | **P0** |
+| 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **in-qa** | ← LNGG-0010 ✓ | LNGG | **P0** |
 | 18 | x | WINT-1080 | Reconcile WINT Schema with LangGraph ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 19 | x | WINT-0020 | Create Story Management Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 20 | x | WINT-0070 | Create Workflow Tracking Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
@@ -70,15 +70,15 @@ All can start immediately. Ordered by downstream impact.
 | 26 | x | WINT-0030 | Create Context Cache Tables **UAT** | ← WINT-0010 | WINT | P2 |
 | 27 | x | WINT-0060 | Create Graph Relational Tables **uat** | ← WINT-0010 | WINT | P2 |
 | 28 | x | WINT-0230 | Create Unified Model Interface **uat** | ← WINT-0220 | WINT | P2 |
-| 29 | x | INFR-0041 | Workflow Event SDK - Typed Schemas & Validation **completed** | ← INFR-0040 | INFR | P1 |
-| 30 | x | INFR-0050 | Event SDK (Shared Telemetry Hooks) **completed** | ← INFR-0040, INFR-0041 | INFR | P3 |
+| 29 | x | INFR-0041 | Workflow Event SDK - Typed Schemas & Validation **uat** | ← INFR-0040 | INFR | P1 |
+| 30 | x | INFR-0050 | Event SDK (Shared Telemetry Hooks) **completed** | ← none | INFR | P3 |
 | 31 | x | WINT-0040 | Create Telemetry Tables **ready-to-work** | ← WINT-0010 | WINT | P3 |
 | 32 | | ~~WINT-0050~~ | ~~Create ML Pipeline Tables~~ **DUPLICATE** (completed in WINT-0010 AC-005) | ← WINT-0010 | WINT | ~~P3~~ |
-| 34 | x | INFR-0030 | MinIO/S3 Docker Setup + Client Adapter **uat** | ← INFR-0110, INFR-0120 | INFR | P3 |
+| 34 | x | INFR-0030 | MinIO/S3 Docker Setup + Client Adapter **uat** | ← INFR-0110 ✓, INFR-0120 ✓ | INFR | P3 |
 | G2 | | GATE-02 | **E2E: Validate LNGG Adapters** | ← GATE-01, LNGG-0020/0040/0060 | GATE | **HARD GATE** |
 | G3 | | GATE-03 | **E2E: Validate Schema & Services** | ← GATE-02, all schema stories | GATE | **HARD GATE** |
 | G4 | | GATE-04 | **E2E: Validate Agents & Services** | ← GATE-03, WINT-0160, KBAR-0020 | GATE | **HARD GATE** |
-| G5 | | GATE-05 | **E2E: Validate User Flows & Infra** | ← GATE-04, WINT-0200, INFR-0050 | GATE | **HARD GATE** |
+| G5 | | GATE-05 | **E2E: Validate User Flows & Infra** | ← GATE-04, WINT-0200 | GATE | **HARD GATE** |
 
 ---
 
@@ -88,11 +88,11 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 34 | x | LNGG-0070 | Integration Test Suite ⚡ **uat** | ← LNGG-0010, 0020, 0030 | LNGG | **P0** |
+| 34 | x | LNGG-0070 | Integration Test Suite ⚡ **uat** | ← LNGG-0010 ✓, 0020, 0030 | LNGG | **P0** |
 | 35 | x | WINT-1090 | Update LangGraph Repos for Unified Schema ⚡ **uat** | ← WINT-1080 | WINT | **P0** |
 | 36 | x | WINT-1100 | Create Shared TypeScript Types ⚡ 🎯 **completed** | ← WINT-1080 | WINT | **P0** |
 | 37 | x | WINT-0090 | Create Story Management MCP Tools ⚡ **uat** | ← WINT-0020 | WINT | **P0** |
-| 38 | x | KBAR-0030 | Story Sync Functions **ready-for-code-review** | ← KBAR-0020 | KBAR | P1 |
+| 38 | x | KBAR-0030 | Story Sync Functions **done** | ← KBAR-0020 | KBAR | P1 |
 | 39 | x | WINT-1030 | Populate Story Status from Directories **uat** | ← WINT-1020, 0020 | WINT | P1 |
 | 40 | x | WINT-0100 | Create Context Cache MCP Tools **uat** | none | WINT | P2 |
 | 41 | x | WINT-0110 | Create Session Management MCP Tools **completed** | none | WINT | P2 |
@@ -172,7 +172,7 @@ All can start immediately. Ordered by downstream impact.
 | 78 | | KBAR-0140 | Artifact Summary Extraction ⚡ | ← KBAR-0120, KBAR-0130 | KBAR | **P0** |
 | 79 | | KBAR-0150 | Artifact Tools Integration Tests ⚡ | ← KBAR-0140 | KBAR | **P0** |
 | 80 | | AUDT-0030 | Audit Orchestration Nodes | ← AUDT-0020 | AUDT | P3 |
-| 81 | x | TELE-0010 | Docker Telemetry Stack **created** | ← INFR-0040 | TELE | P3 |
+| 81 | x | TELE-0010 | Docker Telemetry Stack **created** | ← none | TELE | P3 |
 | G11 | | GATE-11 | **E2E: Validate KBAR Tooling** | ← GATE-10, all Wave 7 | GATE | **HARD GATE** |
 
 ---
@@ -402,8 +402,8 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic |
 |---|---|-------|-------|---------------|------|
-| 199 | | INFR-0060 | Instrument Orchestrator + Retention | ← INFR-0050 | INFR |
-| 200 | | TELE-0020 | Prometheus Metrics Mapping | ← TELE-0010, INFR-0050 | TELE |
+| 199 | | INFR-0060 | Instrument Orchestrator + Retention | ← none | INFR |
+| 200 | | TELE-0020 | Prometheus Metrics Mapping | ← TELE-0010 | TELE |
 | 201 | | TELE-0030 | Dashboards-as-Code | ← TELE-0020 | TELE |
 | 202 | | TELE-0040 | Alerting Rules | ← TELE-0030 | TELE |
 | 203 | | WINT-0260 | Create Model Cost Tracking | ← WINT-0230, 0040 | WINT |

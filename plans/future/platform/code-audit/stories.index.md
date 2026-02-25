@@ -5,7 +5,7 @@
 | Status | Count |
 |--------|-------|
 | Ready to Work | 1 |
-| Elaboration | 1 |
+| UAT | 1 |
 | Pending | 1 |
 | **Total** | **3** |
 
@@ -48,10 +48,10 @@ Polish the scaffolded LangGraph StateGraph, Zod artifact schemas, and scan-scope
 
 ### AUDT-002: 9 Audit Lens Nodes
 
-**Status:** `elaboration`
+**Status:** `uat`
 **Priority:** P0
 **Story ID:** AUDT-0020
-**Story File:** `elaboration/AUDT-0020/AUDT-0020.md`
+**Story File:** `UAT/AUDT-0020/AUDT-0020.md`
 **Dependencies:** AUDT-001
 **Blocks:** AUDT-003
 

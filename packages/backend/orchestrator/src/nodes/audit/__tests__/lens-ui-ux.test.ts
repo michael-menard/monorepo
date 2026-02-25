@@ -143,17 +143,41 @@ describe('lens-ui-ux', () => {
     expect(() => LensResultSchema.parse(result)).not.toThrow()
   })
 
-  it('findings have lens === "ui-ux"', async () => {
+  it('findings have lens === "ui-ux" (unconditional — uses known positive fixture)', async () => {
+    const webDir = join(testDir, 'apps', 'web', 'main-app', 'src')
+    await mkdir(webDir, { recursive: true })
+    // Use inline style — a known positive that will always produce a finding
+    const filePath = await createFile(webDir, 'HasFinding.tsx', [
+      'export function HasFinding() {',
+      '  return <div style={{ color: "red" }}>x</div>',
+      '}',
+    ].join('\n'))
+    const result = await run(makeState([filePath]))
+    expect(result.total_findings).toBeGreaterThan(0)
+    expect(result.findings.every(f => f.lens === 'ui-ux')).toBe(true)
+  })
+
+  it('empty state targetFiles → 0 findings', async () => {
+    const result = await run(makeState([]))
+    expect(result.total_findings).toBe(0)
+    expect(result.lens).toBe('ui-ux')
+    expect(() => LensResultSchema.parse(result)).not.toThrow()
+  })
+
+  it('by_severity counts match findings array', async () => {
     const webDir = join(testDir, 'apps', 'web', 'main-app', 'src')
     await mkdir(webDir, { recursive: true })
     const filePath = await createFile(webDir, 'Multi.tsx', [
       'export function Multi() {',
-      '  return <div style={{ color: "red", background: "blue" }}>x</div>',
+      '  return <div style={{ color: "red" }} className="text-[#ff0000]">x</div>',
       '}',
     ].join('\n'))
     const result = await run(makeState([filePath]))
-    if (result.findings.length > 0) {
-      expect(result.findings.every(f => f.lens === 'ui-ux')).toBe(true)
-    }
+    const sumSeverity =
+      result.by_severity.critical +
+      result.by_severity.high +
+      result.by_severity.medium +
+      result.by_severity.low
+    expect(sumSeverity).toBe(result.total_findings)
   })
 })

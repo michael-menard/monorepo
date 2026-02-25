@@ -58,7 +58,7 @@ function CollectionPageContent() {
     setItemToDelete(item)
   }, [])
 
-    // Got It handler (for moving back to wishlist if needed)
+  // Got It handler (for moving back to wishlist if needed)
   const handleGotIt = useCallback((item: WishlistItem) => {
     setItemForGotIt(item)
   }, [])
@@ -99,7 +99,7 @@ function CollectionPageContent() {
           description="Items you mark as purchased will appear here"
           action={{
             label: 'Browse your wishlist',
-            onClick: () => window.location.href = '/wishlist',
+            onClick: () => (window.location.href = '/wishlist'),
           }}
         />
       </div>
@@ -123,7 +123,7 @@ function CollectionPageContent() {
       <DeleteConfirmModal
         isOpen={!!itemToDelete}
         item={itemToDelete}
-        onConfirm={async (item) => {
+        onConfirm={async item => {
           try {
             await removeFromWishlist(item.id).unwrap()
             toast.success('Item removed from collection')

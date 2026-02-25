@@ -35,13 +35,13 @@ This is a TypeScript monorepo (pnpm + Turborepo) for a LEGO MOC instructions pla
 ```bash
 pnpm dev                  # Start full dev environment
 pnpm build                # Build all packages
-pnpm lint                 # Lint changed files
 pnpm check-types          # Type check changed files
 pnpm test                 # Test changed files
-pnpm lint:all             # Lint everything
 pnpm check-types:all      # Type check everything
 pnpm test:all             # Test everything
 ```
+
+> **Linting:** Always use `/lint-fix` instead of `pnpm lint` directly. The skill runs lint with auto-fix, captures unfixable errors grouped by rule, and surfaces config improvement candidates. See `.claude/skills/lint-fix/SKILL.md`.
 
 ## Project Structure
 
@@ -213,3 +213,4 @@ All code must pass before commit, and **all new additions must pass linting and 
 4. Don't skip type errors - fix them
 5. Don't hardcode colors - use Tailwind classes
 6. Don't use TypeScript interfaces - use Zod schemas with `z.infer<>`
+7. Prefix intentionally unused variables with `_` (e.g., `_unused`, `{ keep, _skip }`) — the linter is configured to ignore `_`-prefixed names, so this is preferred over `eslint-disable` comments

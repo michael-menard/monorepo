@@ -24,13 +24,10 @@ From orchestrator prompt:
 - `FEATURE_DIR`: Feature directory path (e.g., `plans/future/wishlist`)
 
 Required artifacts (all inside `{FEATURE_DIR}/`):
-| Artifact | Location |
-|----------|----------|
-| Stories Index | `{FEATURE_DIR}/stories.index.md` |
-| Meta Plan | `{FEATURE_DIR}/PLAN.meta.md` |
-| Exec Plan | `{FEATURE_DIR}/PLAN.exec.md` |
-| Roadmap | `{FEATURE_DIR}/roadmap.md` |
-| Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` |
+| Artifact | Location | Required |
+|----------|----------|----------|
+| Stories Index | `{FEATURE_DIR}/stories.index.md` | Yes |
+| Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Derive Prefix
 
@@ -69,9 +66,6 @@ story_count: N
 timestamp: <ISO timestamp>
 artifacts:
   index: found | missing
-  meta: found | missing
-  exec: found | missing
-  roadmap: found | missing
 ```
 
 ## CHECKPOINT.md Format

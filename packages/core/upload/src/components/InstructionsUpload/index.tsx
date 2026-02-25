@@ -168,6 +168,7 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
     setIsUploading(true)
 
     const pendingFiles = fileQueue.filter(f => f.status === 'pending')
+    let uploadSuccessCount = 0
 
     for (const fileItem of pendingFiles) {
       // Mark as uploading
@@ -192,6 +193,7 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
         )
 
         showSuccessToast(`${fileItem.file.name} uploaded successfully`)
+        uploadSuccessCount++
       } catch (error: any) {
         // Mark as error (AC20)
         const errorMessage =
@@ -210,8 +212,7 @@ export function InstructionsUpload({ mocId, onSuccess }: InstructionsUploadProps
     setIsUploading(false)
 
     // Call success callback if at least one file succeeded
-    const hasSuccess = fileQueue.some(f => f.status === 'success')
-    if (hasSuccess && onSuccess) {
+    if (uploadSuccessCount > 0 && onSuccess) {
       onSuccess()
     }
   }, [fileQueue, mocId, uploadInstructionFile, onSuccess])

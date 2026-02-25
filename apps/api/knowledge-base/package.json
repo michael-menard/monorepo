@@ -42,7 +42,8 @@
     "kb:validate-connection": "tsx scripts/validate-connection.ts",
     "kb:chunk": "tsx src/scripts/chunk-document.ts",
     "kb:migrate-docs": "tsx src/scripts/migrate-docs-to-kb.ts",
-    "migrate:plans": "tsx scripts/migrate-plans.ts"
+    "migrate:plans": "tsx scripts/migrate-plans.ts",
+    "migrate:stories": "tsx src/scripts/migrate-stories-simple.ts"
   },
   "keywords": [
     "knowledge-base",

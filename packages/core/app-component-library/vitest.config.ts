@@ -14,6 +14,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/__tests__/setup.ts'],
+    env: {
+      VITE_SERVERLESS_API_BASE_URL: 'http://localhost:3000',
+    },
     include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['node_modules/', 'dist/'],
     coverage: {

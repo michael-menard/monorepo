@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { usePresignedUpload } from '../usePresignedUpload'
 import * as apiClient from '@repo/api-client'
-import * as uploadClient from '@repo/upload-client'
+import * as uploadClient from '@repo/upload/client'
 
 // Mock API client
 vi.mock('@repo/api-client', () => ({
@@ -23,7 +23,7 @@ vi.mock('@repo/api-client', () => ({
 }))
 
 // Mock upload client
-vi.mock('@repo/upload-client', () => ({
+vi.mock('@repo/upload/client', () => ({
   uploadToPresignedUrl: vi.fn(),
   UploadError: class UploadError extends Error {
     httpStatus: number

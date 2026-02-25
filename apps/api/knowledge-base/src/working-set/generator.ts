@@ -126,7 +126,8 @@ export function mergeConstraints(constraints: Constraint[], limit = 5): Constrai
   const sorted = withEffectivePriority.sort((a, b) => b.effectivePriority - a.effectivePriority)
 
   // Return top N
-  return sorted.slice(0, limit).map(({ effectivePriority, ...rest }) => rest)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  return sorted.slice(0, limit).map(({ effectivePriority: _effectivePriority, ...rest }) => rest)
 }
 
 // ============================================================================

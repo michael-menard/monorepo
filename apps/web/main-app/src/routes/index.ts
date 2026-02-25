@@ -1,4 +1,5 @@
 import { createRouter, createRootRoute, createRoute, redirect } from '@tanstack/react-router'
+import { RouteGuards } from '@repo/auth-utils/guards'
 import { OTPVerificationPage } from '../pages/auth/OTPVerificationPage'
 import { EmailVerificationPage } from '../pages/auth/EmailVerificationPage'
 import { NewPasswordPage } from '../pages/auth/NewPasswordPage'
@@ -11,9 +12,16 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { UnauthorizedPage } from './pages/UnauthorizedPage'
 import { LoadingPage } from './pages/LoadingPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { WishlistModule } from './modules/WishlistModule'
+import { DashboardModule } from './modules/DashboardModule'
+import { InspirationModule } from './modules/InspirationModule'
+import { InstructionsModule } from './modules/InstructionsModule'
+import { InstructionsCreateModule } from './modules/InstructionsCreateModule'
+import { InstructionsDetail } from './modules/InstructionsDetailModule'
+import { SetsGalleryModule } from './modules/SetsGalleryModule'
+import { AdminModule } from './admin/AdminModule'
 import { RootLayout } from '@/components/Layout/RootLayout'
 import { RouteErrorComponent } from '@/components/ErrorBoundary/ErrorBoundary'
-import { RouteGuards } from '@repo/auth-utils/guards'
 import type { AuthState } from '@/store/slices/authSlice'
 
 // Route context type
@@ -81,16 +89,6 @@ const newPasswordRoute = createRoute({
   path: '/auth/new-password',
   component: NewPasswordPage,
 })
-
-// Import modules directly - they handle their own lazy loading via React.lazy
-import { WishlistModule } from './modules/WishlistModule'
-import { DashboardModule } from './modules/DashboardModule'
-import { InspirationModule } from './modules/InspirationModule'
-import { InstructionsModule } from './modules/InstructionsModule'
-import { InstructionsCreateModule } from './modules/InstructionsCreateModule'
-import { InstructionsDetail } from './modules/InstructionsDetailModule'
-import { SetsGalleryModule } from './modules/SetsGalleryModule'
-import { AdminModule } from './admin/AdminModule'
 
 const wishlistRoute = createRoute({
   getParentRoute: () => rootRoute,

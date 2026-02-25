@@ -9,10 +9,9 @@
  */
 
 import { axe } from 'vitest-axe'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const matchers = require('vitest-axe/matchers')
 import { expect } from 'vitest'
 import { defaultA11yConfig, toAxeRunOptions, type A11yConfig } from './config'
+const matchers = require('vitest-axe/matchers')
 
 // Extend Vitest matchers with axe-core assertions
 expect.extend(matchers)
@@ -128,7 +127,7 @@ function countBySeverity(violations: SimplifiedViolation[]): Record<ViolationSev
       acc[v.severity]++
       return acc
     },
-    { minor: 0, moderate: 0, serious: 0, critical: 0 }
+    { minor: 0, moderate: 0, serious: 0, critical: 0 },
   )
 }
 
@@ -154,13 +153,13 @@ function countBySeverity(violations: SimplifiedViolation[]): Record<ViolationSev
  */
 export async function checkAccessibility(
   container: Element,
-  config: Partial<A11yConfig> = {}
+  config: Partial<A11yConfig> = {},
 ): Promise<A11yCheckResult> {
   const mergedConfig: A11yConfig = { ...defaultA11yConfig, ...config }
   const runOptions = toAxeRunOptions(mergedConfig)
 
   const startTime = performance.now()
-  const results = await axe(container, runOptions as Record<string, unknown>) as AxeResults
+  const results = (await axe(container, runOptions as Record<string, unknown>)) as AxeResults
   const endTime = performance.now()
   const scanTime = endTime - startTime
 
@@ -207,7 +206,7 @@ export async function checkAccessibility(
  */
 export async function assertNoViolations(
   container: Element,
-  config: Partial<A11yConfig> = {}
+  config: Partial<A11yConfig> = {},
 ): Promise<void> {
   const result = await checkAccessibility(container, config)
 
@@ -217,12 +216,12 @@ export async function assertNoViolations(
         v =>
           `  - [${v.severity.toUpperCase()}] ${v.ruleId}: ${v.description}\n` +
           `    Affected: ${v.selectors.join(', ')}\n` +
-          `    Help: ${v.helpUrl}`
+          `    Help: ${v.helpUrl}`,
       )
       .join('\n\n')
 
     throw new Error(
-      `Accessibility violations found (${result.totalViolations}):\n\n${violationDetails}`
+      `Accessibility violations found (${result.totalViolations}):\n\n${violationDetails}`,
     )
   }
 }
@@ -246,7 +245,7 @@ export async function assertNoViolations(
 export async function assertViolationsExist(
   container: Element,
   expectedRuleIds: string[],
-  config: Partial<A11yConfig> = {}
+  config: Partial<A11yConfig> = {},
 ): Promise<void> {
   const result = await checkAccessibility(container, config)
   const foundRuleIds = result.violations.map(v => v.ruleId)
@@ -256,7 +255,7 @@ export async function assertViolationsExist(
   if (missingRules.length > 0) {
     throw new Error(
       `Expected violations not found: ${missingRules.join(', ')}\n` +
-        `Found violations: ${foundRuleIds.join(', ') || 'none'}`
+        `Found violations: ${foundRuleIds.join(', ') || 'none'}`,
     )
   }
 }
@@ -293,7 +292,7 @@ export async function checkColorContrast(container: Element): Promise<Simplified
  */
 export function filterBySeverity(
   violations: SimplifiedViolation[],
-  minSeverity: ViolationSeverity
+  minSeverity: ViolationSeverity,
 ): SimplifiedViolation[] {
   const severityOrder: ViolationSeverity[] = ['minor', 'moderate', 'serious', 'critical']
   const minIndex = severityOrder.indexOf(minSeverity)
@@ -320,7 +319,7 @@ export function formatViolations(violations: SimplifiedViolation[]): string {
       acc[v.severity].push(v)
       return acc
     },
-    {} as Record<string, SimplifiedViolation[]>
+    {} as Record<string, SimplifiedViolation[]>,
   )
 
   return Object.entries(grouped)
@@ -363,7 +362,7 @@ export function createA11yChecker(baseConfig: Partial<A11yConfig> = {}) {
     assertViolationsExist: (
       container: Element,
       expectedRuleIds: string[],
-      overrides: Partial<A11yConfig> = {}
+      overrides: Partial<A11yConfig> = {},
     ) => assertViolationsExist(container, expectedRuleIds, { ...baseConfig, ...overrides }),
 
     checkColorContrast: (container: Element) => checkColorContrast(container),

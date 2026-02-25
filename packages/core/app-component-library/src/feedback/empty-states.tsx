@@ -53,9 +53,7 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         <div className="mb-12">
           {action.href ? (
             <Button asChild size="lg">
-              <Link to={action.href}>
-                {action.label}
-              </Link>
+              <Link to={action.href}>{action.label}</Link>
             </Button>
           ) : (
             <Button size="lg" onClick={action.onClick}>

@@ -1,0 +1,347 @@
+schema: 1
+story_id: WINT-1060
+timestamp: '2026-02-23T00:00:00Z'
+verifier: qa-verify-verification-leader
+iteration: 1
+
+verdict: FAIL
+
+# ─── Evidence Source ────────────────────────────────────────────────────────────
+evidence_source: filesystem
+evidence_note: >
+  KB artifacts (evidence, context, checkpoint) were all null. Verified directly
+  from EVIDENCE.yaml at _implementation/EVIDENCE.yaml and canonical source files.
+  Pre-existing QA-VERIFY.yaml exists but was written by the implementation phase
+  agent — this document is the independent QA-verify pass.
+
+# ─── Test Execution ──────────────────────────────────────────────────────────────
+tests_executed: false
+tests_exempt: true
+tests_exempt_reason: >
+  story_type: docs — markdown-only deliverable (.claude/commands/story-move.md).
+  No TypeScript code was introduced or modified. No pnpm packages touched.
+  Coverage threshold (45%) is not applicable.
+test_results:
+  unit: { pass: 0, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: ~
+coverage_meets_threshold: true
+coverage_threshold_note: "Coverage threshold not applicable — docs-only story."
+
+# ─── AC Verification ─────────────────────────────────────────────────────────────
+acs_verified:
+
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: "story-move.md line 75 (Step 2.5 header), lines 99-110 (shimUpdateStoryStatus call block), line 127 (Step 3 mv block)"
+    notes: >
+      Confirmed: Step 2.5 header appears at line 75. The shimUpdateStoryStatus call
+      block is at lines 99-110. Step 3's mv bash block is at line 127. DB write
+      precedes the directory mv — ordering is correct per AC-1.
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: "story-move.md line 127"
+    notes: >
+      Confirmed: Line 127 states 'This step executes unconditionally regardless of DB
+      outcome in Step 2.5 (AC-2).' Line 119 states 'Proceed with directory mv
+      regardless of DB outcome — the move is never blocked by DB availability.'
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: "story-move.md lines 105-107"
+    notes: >
+      Confirmed: Null-return branch logs warning via @repo/logger ('DB write failed
+      for {STORY_ID}. Proceeding with directory mv.') and sets db_updated = false.
+      Execution continues to Step 3 mv. No abort on DB failure.
+
+  - ac_id: AC-4
+    status: FAIL
+    evidence_ref: "story-move.md lines 83-93; __types__/index.ts lines 30-40"
+    notes: >
+      PARTIAL FAIL — SCOPE DEVIATION FROM AC TEXT:
+
+      AC-4 states: "The TO_STAGE → DB state conversion uses SWIM_LANE_TO_STATE from
+      packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts — no
+      hardcoded state mapping in the command. The mapping is documented inline in the
+      command as a lookup table."
+
+      The inline table IS present (pass for no-hardcoding requirement). However the
+      inline table in story-move.md (lines 83-93) contains 8 entries (all stages
+      except done and unmapped-only stages). The EVIDENCE.yaml claimed "5 mapped
+      stages" but the actual implementation has 8. The 8-entry table CORRECTLY matches
+      the canonical __types__/index.ts SWIM_LANE_TO_STATE constant (minus done which
+      is appropriately noted as excluded). No hardcoded state strings exist.
+
+      VERDICT: The no-hardcoding requirement passes. The '5 entries' claim in
+      EVIDENCE.yaml and prior QA-VERIFY.yaml is factually wrong (8 entries exist)
+      but the implementation is correct relative to the canonical source. MARKING FAIL
+      because the EVIDENCE.yaml discrepancy indicates the prior verifier did not
+      actually count the table entries — this undermines evidence integrity. The
+      implementation itself is acceptable.
+
+      Actual table entries in story-move.md:
+        backlog → backlog
+        ready-to-work → ready_to_work
+        in-progress → in_progress
+        needs-code-review → ready_for_review
+        failed-code-review → failed_code_review
+        ready-for-qa → ready_for_qa
+        failed-qa → failed_qa
+        UAT → in_qa
+
+  - ac_id: AC-5
+    status: FAIL
+    evidence_ref: "story-move.md lines 83-93, 112; WINT-1060.md AC-5 definition"
+    notes: >
+      DIRECT AC VIOLATION:
+
+      AC-5 states: "If TO_STAGE does not have a SWIM_LANE_TO_STATE entry (e.g.,
+      needs-code-review, failed-code-review, failed-qa, created, elaboration), the DB
+      write step is skipped with a logged warning, and the directory mv proceeds
+      normally."
+
+      The AC explicitly names needs-code-review, failed-code-review, and failed-qa
+      as examples of unmapped stages that should SKIP the DB write.
+
+      However, the actual story-move.md SWIM_LANE_TO_STATE inline table (lines 83-93)
+      INCLUDES these three stages with DB state mappings:
+        needs-code-review → ready_for_review
+        failed-code-review → failed_code_review
+        failed-qa → failed_qa
+
+      So when TO_STAGE is needs-code-review, failed-code-review, or failed-qa, the
+      implementation will ATTEMPT a DB write (not skip it). The unmapped-stage branch
+      at line 112 only covers created and elaboration.
+
+      NOTE: The implementation is technically MORE correct than AC-5 specifies —
+      these stages DO exist in the canonical SWIM_LANE_TO_STATE constant. The story's
+      AC-5 examples appear to have been written before the canonical constant was
+      confirmed. The implementation follows the canonical source (__types__/index.ts)
+      which is the right behavior. However this is an AC violation and must be flagged.
+
+      RESOLUTION OPTIONS:
+        a) Update AC-5 to remove needs-code-review, failed-code-review, failed-qa
+           from the "unmapped" examples — these stages ARE mapped in the canonical
+           constant. This would be an AC correction (not an implementation fix).
+        b) Change implementation to skip DB write for those stages (makes it worse).
+      Option (a) is recommended, but that requires story update, not code change.
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: "story-move.md lines 150-155"
+    notes: >
+      Confirmed: Step 5 return YAML includes 'db_updated: true | false | skipped'
+      with inline comments documenting all 3 trigger conditions:
+        true = shimUpdateStoryStatus returned non-null (DB write succeeded)
+        false = shimUpdateStoryStatus returned null (DB unavailable); mv proceeded
+        skipped = TO_STAGE has no DB state mapping (unmapped stage)
+      All 3 values documented. AC-6 PASS.
+
+  - ac_id: AC-7
+    status: FAIL
+    evidence_ref: "story-move.md line 77; WINT-1060.md AC-7 definition"
+    notes: >
+      DIRECT AC VIOLATION — CONTRADICTORY PROSE:
+
+      AC-7 states: "When --update-status is provided, Step 2.5 DB write is skipped
+      (to avoid double-write; WINT-1050's /story-update handles the DB write for
+      that path), and db_updated: skipped is reported."
+
+      EVIDENCE.yaml for AC-7 claimed: "Step 2.5 opens with: 'If the --update-status
+      flag was provided, skip this step entirely — the DB write will be handled by
+      /story-update in Step 4.'"
+
+      The PRE-EXISTING QA-VERIFY.yaml (line 59) confirmed: "Line 77 — --update-status
+      guard clause at top of Step 2.5 sets db_updated: skipped and skips to Step 3."
+
+      ACTUAL content at line 77 of story-move.md:
+      "**This step ALWAYS executes for mapped stages**, regardless of whether
+      --update-status was provided. The --update-status flag only controls Step 4
+      (frontmatter + index update), not the DB write."
+
+      This is the OPPOSITE of what AC-7 requires. The prior EVIDENCE.yaml and
+      QA-VERIFY.yaml both described a guard clause that does NOT exist. The
+      implementation performs a DB write even when --update-status is provided,
+      causing the double-write scenario that AC-7 explicitly prohibits.
+
+      Step 4 (line 138) acknowledges "no double-write occurs" and "db_updated is
+      reported as skipped" — but Step 2.5 (line 77) says it ALWAYS executes,
+      making Step 4's claim internally inconsistent with Step 2.5.
+
+      This is a genuine AC violation that the prior verification agent missed by
+      misreading line 77 as a guard clause when it is actually the opposite.
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: "story-move.md lines 170-183"
+    notes: >
+      Confirmed: MOVE COMPLETE, MOVE SKIPPED: <reason>, MOVE FAILED: <reason>
+      signals are present and unchanged. Error Handling table is fully preserved
+      (lines 170-177). No new signals added. All existing error conditions retained.
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: "story-move.md lines 41-64"
+    notes: >
+      Confirmed: Step 1 starts with 'DB-first lookup (WINT-1060)' section at line 41.
+      shimGetStoryStatus is called first (line 44). Non-null result uses DB state
+      (line 47). Null result triggers directory fallback (line 50). MOVE FAILED only
+      when neither DB nor directory finds the story (line 64). AC-9 PASS.
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: "story-move.md line 79"
+    notes: >
+      Confirmed: Independence prose present at line 79: 'If shimGetStoryStatus
+      returned null during Step 1 (DB-miss or DB-error), still proceed with
+      shimUpdateStoryStatus for mapped stages — the write path is independent of the
+      read path. A DB read miss does not suppress the DB write attempt.' This is the
+      verbatim AC-10 requirement. PASS.
+
+# ─── Test Quality ────────────────────────────────────────────────────────────────
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  note: "No test code produced — docs-only story. No anti-patterns applicable."
+
+# ─── Architecture Compliance ─────────────────────────────────────────────────────
+architecture_compliant: true
+architecture_notes:
+  - "No TypeScript code introduced — no ADR violations possible for code structure."
+  - "Canonical source (__types__/index.ts) correctly referenced in inline table attribution."
+  - "@repo/logger used for warnings per CLAUDE.md requirement (no console.log)."
+  - "No new packages, no barrel files, no interface types — all N/A for docs story."
+
+# ─── Attack Vectors ───────────────────────────────────────────────────────────────
+attack_vectors_checked:
+  - vector: "AC-10 violation: executor adds early-return on null shimGetStoryStatus suppressing DB write"
+    result: PASS
+    notes: "Independence prose present at line 79 before shim call block."
+
+  - vector: "Step 2.5 positioned after directory mv (Step 3) instead of before"
+    result: PASS
+    notes: "Step 2.5 at line 75, Step 3 mv at line 127. Ordering correct."
+
+  - vector: "--update-status guard missing from Step 2.5 causing double-write (AC-7 violation)"
+    result: FAIL
+    notes: >
+      CONFIRMED VIOLATION: Line 77 explicitly states the step ALWAYS executes
+      regardless of --update-status. The required guard clause is absent. This
+      directly causes the double-write scenario AC-7 prohibits.
+
+  - vector: "Hardcoded state strings instead of SWIM_LANE_TO_STATE table reference (AC-4 violation)"
+    result: PASS
+    notes: "All DB state values appear only in the inline lookup table. Logic prose uses mapped_state variable."
+
+  - vector: "done stage included in inline table as a valid TO_STAGE target"
+    result: PASS
+    notes: "Line 94 explicitly notes done is excluded as a valid TO_STAGE for /story-move."
+
+  - vector: "needs-code-review/failed-code-review/failed-qa treated as mapped when AC-5 calls them unmapped"
+    result: FAIL
+    notes: >
+      CONFIRMED AC-5 DEVIATION: These three stages are in the inline table and will
+      trigger DB writes. AC-5 listed them as examples of unmapped stages. Implementation
+      matches canonical __types__/index.ts but contradicts AC-5 text.
+
+# ─── Issues ───────────────────────────────────────────────────────────────────────
+issues:
+  - issue_id: ISSUE-1
+    ac: AC-7
+    severity: HIGH
+    description: >
+      Step 2.5 at line 77 states the DB write ALWAYS executes regardless of
+      --update-status. The required guard clause that skips Step 2.5 when
+      --update-status is provided is absent. This causes a double-write: both
+      Step 2.5 (shimUpdateStoryStatus) and /story-update (via Step 4 delegation)
+      would write to the DB. AC-7 explicitly requires the guard clause and
+      db_updated: skipped behavior for this path. Step 4 (line 138) contradicts
+      Step 2.5 by claiming no double-write — the command is internally inconsistent.
+    fix_required: >
+      Add a guard clause at the top of Step 2.5 (before the independence prose):
+      "If --update-status was provided, skip this step entirely — set db_updated:
+      skipped and proceed to Step 3. The DB write will be handled by /story-update
+      in Step 4 (no double-write)." Remove the "ALWAYS executes" statement at line 77.
+
+  - issue_id: ISSUE-2
+    ac: AC-5
+    severity: MEDIUM
+    description: >
+      AC-5 lists needs-code-review, failed-code-review, and failed-qa as examples
+      of stages that should skip the DB write. The implementation includes all three
+      in the SWIM_LANE_TO_STATE inline table and will attempt DB writes for them.
+      The implementation is correct relative to the canonical __types__/index.ts
+      constant (which does map these stages), but it violates AC-5 as written.
+    fix_required: >
+      AC CORRECTION (not implementation fix): Update AC-5 in WINT-1060.md to remove
+      needs-code-review, failed-code-review, and failed-qa from the "unmapped" examples.
+      These stages ARE mapped in the canonical SWIM_LANE_TO_STATE constant. The correct
+      unmapped stages are: created, elaboration. Story file update required.
+
+  - issue_id: ISSUE-3
+    ac: AC-4
+    severity: LOW
+    description: >
+      EVIDENCE.yaml and prior QA-VERIFY.yaml both claimed the inline table has "5 mapped
+      stages." The actual table has 8 entries. The '5 entries' claim is factually wrong
+      and indicates the prior verifier did not read the implementation file accurately.
+      The implementation is correct; the evidence documentation is inaccurate.
+    fix_required: >
+      Update EVIDENCE.yaml notes for AC-4 to reflect the correct 8-entry table count.
+      No code change required.
+
+# ─── Gate Decision ────────────────────────────────────────────────────────────────
+gate:
+  decision: FAIL
+  reason: >
+    AC-7 (HIGH severity): The --update-status guard clause required to prevent
+    double-write is absent from Step 2.5. Line 77 explicitly states the opposite
+    of what AC-7 requires. This is a functional correctness issue in the command's
+    prose that executing agents will follow.
+
+    AC-5 (MEDIUM severity): The implementation maps needs-code-review,
+    failed-code-review, and failed-qa to DB states, but AC-5 lists them as
+    examples of unmapped stages that should skip the DB write. The AC text must
+    be corrected or the implementation must be changed.
+
+    2 issues require resolution before UAT PASS can be granted.
+  blocking_issues:
+    - ISSUE-1  # AC-7: missing --update-status guard clause (HIGH)
+    - ISSUE-2  # AC-5: unmapped-stage examples contradict implementation (MEDIUM)
+
+# ─── Lessons to Record ────────────────────────────────────────────────────────────
+lessons_to_record:
+  - lesson: >
+      For docs-only stories, evidence claims about line numbers and table entry counts
+      must be verified against the actual file. The prior QA pass misread line 77 of
+      story-move.md — "This step ALWAYS executes" was mistakenly described as a guard
+      clause. Independent verification must read the primary artifact, not just trust
+      EVIDENCE.yaml descriptions.
+    category: qa-process
+    tags: ["qa-verify", "docs", "evidence-first", "independent-verification"]
+
+  - lesson: >
+      AC-5 examples for unmapped stages in WINT-1060 were written before the canonical
+      SWIM_LANE_TO_STATE constant was confirmed. When writing ACs, unmapped-stage
+      examples should be derived directly from the canonical __types__ source — not
+      from assumptions. This caused an AC-vs-implementation divergence that required
+      story AC correction rather than implementation fix.
+    category: specification
+    tags: ["ac-quality", "swim-lane", "canonical-source", "wint"]
+
+  - lesson: >
+      Internal contradictions within a command file are a category of defect unique
+      to docs stories. Step 2.5 (line 77) said ALWAYS executes while Step 4 (line 138)
+      said no double-write occurs. These contradictions will confuse executing agents.
+      QA for docs stories must check for prose consistency across all steps, not just
+      check individual ACs in isolation.
+    category: qa-process
+    tags: ["docs", "markdown-command", "internal-consistency", "qa-verify"]
+
+tokens:
+  in: 18000
+  out: 3500

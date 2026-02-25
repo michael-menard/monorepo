@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 3.0.0
+updated: 2026-02-22
+version: 4.0.0
 type: leader
 permission_level: setup
 triggers: ["/pm-bootstrap-workflow"]
@@ -16,73 +16,82 @@ skills_used:
 
 ## Mission
 
-Validate feature directory and create bootstrap context for subsequent phases.
+Validate the plan input and produce bootstrap context for subsequent phases.
 
-## Input: Feature Directory
+## Modes
 
-The orchestrator provides a **feature directory path**. This directory:
-- Must exist and contain `PLAN.md` or `PRD.md`
-- Its **name** determines the story prefix
+### KB Mode (default)
 
-### Prefix Derivation
+The orchestrator provides:
+- `plan_slug` — identifier in the `plans` table
+- `plan_content` — full raw markdown of the plan (passed inline, no file read)
+- `feature_dir` — resolved target directory for story files
+- `prefix` — resolved story prefix
 
-Directory name → UPPERCASE prefix (first 4 chars, no hyphens):
+**No file IO for intermediate artifacts.** Return `SETUP-CONTEXT` as a YAML block inline.
 
-| Directory Name | Derived Prefix |
-|----------------|----------------|
-| `wishlist` | `WISH` |
-| `auth` | `AUTH` |
-| `cognito-scopes` | `COGN` |
-| `mcp-learning-server` | `MCPL` |
-| `sets` | `SETS` |
+### File Mode
 
-Algorithm:
-1. Take directory basename
-2. Remove hyphens and underscores
-3. Take first 4 characters
-4. Convert to UPPERCASE
-
-## Validation Rules
-
-| Input | Rule | Error |
-|-------|------|-------|
-| Feature dir | Must exist | "Directory not found: {path}" |
-| Plan file | `PLAN.md` or `PRD.md` must exist | "No PLAN.md or PRD.md in {dir}" |
-| Plan content | Non-empty, >100 chars | "Plan file is empty or too short" |
-| Dir name | Alphanumeric + hyphens | "Invalid directory name" |
+The orchestrator provides `feature_dir`. Read `PLAN.md` or `PRD.md` from disk. Write `AGENT-CONTEXT.md` and `CHECKPOINT.md` to `{FEATURE_DIR}/_bootstrap/` (legacy behavior).
 
 ## Steps
 
-1. **Check for existing context** - Read `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md` if exists
-2. **Validate feature directory** - Ensure it exists and contains a plan
-3. **Derive prefix** - Extract prefix from directory name
-4. **Check for collision** - Verify `stories.index.md` doesn't already exist in dir
-5. **Create bootstrap dir** - Create `{FEATURE_DIR}/_bootstrap/` if needed
-6. **Write context file** - Write `AGENT-CONTEXT.md` with validated data
-7. **Write checkpoint** - Write `CHECKPOINT.md` with phase 0 complete
+### KB Mode Steps
 
-## Output Format
+1. **Validate plan_content** — must be non-empty and >100 chars. If not: BLOCKED: "Plan content is empty or too short"
+2. **Validate prefix** — must be 2–6 uppercase alphanumeric chars
+3. **Validate feature_dir** — must be a valid path string (does not need to exist yet)
+4. **Check for collision** — if `{feature_dir}/stories.index.md` already exists on disk: BLOCKED: "stories.index.md already exists in {feature_dir} — bootstrap already run"
+5. **Extract raw plan summary** — first 500 chars of plan_content
+6. **Return SETUP-CONTEXT inline**
 
-### AGENT-CONTEXT.md
+### File Mode Steps
 
-Write to `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`:
+1. **Check for existing context** — Read `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md` if exists
+2. **Validate feature directory** — must exist and contain `PLAN.md` or `PRD.md`
+3. **Derive prefix** — from directory name (remove hyphens, first 4 chars, uppercase)
+4. **Check for collision** — verify `stories.index.md` doesn't already exist
+5. **Create bootstrap dir** — create `{FEATURE_DIR}/_bootstrap/` if needed
+6. **Write AGENT-CONTEXT.md** — see format below
+7. **Write CHECKPOINT.md** — see format below
+
+## Output
+
+### KB Mode — Return Inline
+
+Emit a fenced YAML block with label `SETUP-CONTEXT`:
+
+```yaml
+# SETUP-CONTEXT
+schema: 2
+mode: kb
+plan_slug: "{plan_slug}"
+feature_dir: "{feature_dir}"
+prefix: "{PREFIX}"
+project_name: "{last segment of feature_dir}"
+created: "{ISO timestamp}"
+raw_plan_summary: |
+  {First 500 chars of plan_content}
+```
+
+### File Mode — Write to Disk
+
+**AGENT-CONTEXT.md** at `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`:
 
 ```yaml
 schema: 2
+mode: file
 command: pm-bootstrap-workflow
 feature_dir: "{FEATURE_DIR}"
 prefix: "{PREFIX}"
 project_name: "{DIRECTORY_NAME}"
 created: "{TIMESTAMP}"
-
-raw_plan_file: "{FEATURE_DIR}/PLAN.md"  # or PRD.md
+raw_plan_file: "{FEATURE_DIR}/PLAN.md"
 raw_plan_summary: |
-  {First 500 chars of raw plan...}
+  {First 500 chars of raw plan}
 ```
 
-### CHECKPOINT.md
-
-Write to `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md`:
+**CHECKPOINT.md** at `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md`:
 
 ```yaml
 schema: 2
@@ -98,15 +107,15 @@ timestamp: "{TIMESTAMP}"
 
 | Error | Action |
 |-------|--------|
-| Directory not found | BLOCKED: "Directory not found: {path}" |
-| No plan file | BLOCKED: "No PLAN.md or PRD.md in {dir}" |
-| Stories index exists | BLOCKED: "stories.index.md already exists in {dir}" |
-| Bootstrap dir not writable | BLOCKED: "Cannot write to {dir}/_bootstrap/" |
+| Plan content empty | BLOCKED: "Plan content is empty or too short" |
+| stories.index.md exists | BLOCKED: "stories.index.md already exists in {feature_dir}" |
+| Directory not found (file mode) | BLOCKED: "Directory not found: {path}" |
+| No plan file (file mode) | BLOCKED: "No PLAN.md or PRD.md in {dir}" |
 
 ## Signals
 
-- `SETUP COMPLETE` - All inputs valid, context created
-- `SETUP BLOCKED: <reason>` - Cannot proceed, needs user action
+- `SETUP COMPLETE` — context ready, safe for Phase 1
+- `SETUP BLOCKED: <reason>` — cannot proceed, needs user action
 
 ## Token Tracking
 

@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-05T06:30:00Z"
+updated_at: "2026-02-23T23:00:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,12 +16,13 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 0 |
+| uat | 1 |
 | generated | 0 |
-| created | 0 |
-| ready-to-work | 1 |
-| elaboration | 0 |
-| in-progress | 0 |
-| pending | 26 |
+| created | 1 |
+| ready-to-work | 2 |
+| elaboration | 1 |
+| in-progress | 1 |
+| pending | 23 |
 
 ---
 
@@ -32,6 +33,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | Story | Title | Blocked By |
 |-------|-------|------------|
 | KBAR-001 | Database Schema Migrations | — |
+| KBAR-007 | story_get Tool | — |
 
 ---
 
@@ -124,7 +126,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-006: Sync Integration Tests
 
-**Status:** pending
+**Status:** uat
+**Story ID:** KBAR-0060
 **Depends On:** KBAR-005
 **Phase:** 2
 
@@ -141,7 +144,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-007: story_get Tool
 
-**Status:** pending
+**Status:** In Progress
+**Story ID:** KBAR-0070
 **Depends On:** KBAR-006
 **Phase:** 3
 
@@ -158,7 +162,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-008: story_list & story_update Tools
 
-**Status:** pending
+**Status:** In Progress
+**Story ID:** KBAR-0080
 **Depends On:** KBAR-007
 **Phase:** 3
 
@@ -175,7 +180,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-009: story_ready_to_start Tool
 
-**Status:** pending
+**Status:** Created
+**Story ID:** KBAR-0090
 **Depends On:** KBAR-008
 **Phase:** 3
 
