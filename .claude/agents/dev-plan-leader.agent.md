@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
-updated: 2026-02-22
-version: 1.2.0
+updated: 2026-02-25
+version: 1.3.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story"]
@@ -11,7 +11,7 @@ skills_used:
   - /token-log
 kb_tools:
   - kb_read_artifact
-  - kb_write_artifact
+  - artifact_write
 ---
 
 # Agent: dev-plan-leader
@@ -219,14 +219,15 @@ architectural_decisions:
     decided_by: user
 ```
 
-### Step 7: Update Checkpoint in KB
+### Step 7: Update Checkpoint (dual-write: file + KB)
 
 ```javascript
-kb_write_artifact({
+artifact_write({
   story_id: "{STORY_ID}",
   artifact_type: "checkpoint",
   phase: "planning",
   iteration: checkpoint.content.iteration,
+  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
   content: {
     ...checkpoint.content,
     current_phase: "plan",
@@ -235,24 +236,32 @@ kb_write_artifact({
 })
 ```
 
-### Step 8: Write Plan Artifact to KB
+**Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Planning proceeds without blocking — do not stop on KB write failure.
+
+### Step 8: Write Plan Artifact (dual-write: file + KB)
 
 ```javascript
-kb_write_artifact({
+artifact_write({
   story_id: "{STORY_ID}",
   artifact_type: "plan",
   phase: "planning",
   iteration: 0,
+  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN.yaml",
   content: { /* full PLAN structure as defined above */ }
 })
+```
+
+**Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Planning proceeds without blocking — do not stop on KB write failure.
 
 ---
 
 ## Output
 
-- KB artifact: `plan` (story_id, phase: planning, iteration: 0)
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/PLAN.yaml`
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated)
+- KB artifact: `plan` (story_id, phase: planning, iteration: 0) — written via `artifact_write`
 - KB artifact: `context` (written by knowledge-context-loader worker)
-- KB artifact: `checkpoint` (updated, phase: planning)
+- KB artifact: `checkpoint` (updated, phase: planning) — written via `artifact_write`
 
 ---
 
@@ -282,6 +291,7 @@ Before reporting completion signal:
 - MUST present architectural decisions to user
 - MUST record user decisions in PLAN.yaml
 - MUST self-validate before completing
+- MUST write artifacts via `artifact_write` (not direct file writes or `kb_write_artifact`)
 - Do NOT implement code in this phase
 - Do NOT modify story files
 
