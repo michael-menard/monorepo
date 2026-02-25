@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T23:00:00Z"
+updated_at: "2026-02-25T17:35:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,15 +16,15 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 7 |
+| uat | 12 |
 | failed-qa | 0 |
 | generated | 0 |
-| created | 3 |
-| ready-to-work | 2 |
+| created | 2 |
+| ready-to-work | 0 |
 | elaboration | 0 |
-| in-progress | 0 |
-| needs-code-review | 3 |
-| ready-for-qa | 0 |
+| in-progress | 1 |
+| needs-code-review | 1 |
+| ready-for-qa | 1 |
 | pending | 16 |
 
 ---
@@ -36,8 +36,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | Story | Title | Blocked By |
 |-------|-------|------------|
 | KBAR-001 | Database Schema Migrations | — |
-| KBAR-007 | story_get Tool | — |
-| KBAR-010 | Story Tools Integration Tests | — |
+| KBAR-019 | Update QA & Fix Agents | — |
+| KBAR-022 | Agent Migration Testing | — |
 
 ---
 
@@ -277,7 +277,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-014: Artifact Summary Extraction
 
 **Status:** pending
-**Depends On:** KBAR-012, KBAR-013
+**Depends On:** KBAR-012
 **Phase:** 4
 
 **Feature:** Implement summary extraction for each artifact type (plan, evidence, review, etc.)
@@ -311,7 +311,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-016: Update Setup & Plan Leaders
 
-**Status:** needs-code-review
+**Status:** uat
 **Story ID:** KBAR-0160
 **Depends On:** KBAR-015
 **Phase:** 5
@@ -329,9 +329,9 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-017: Update Execute & Worker Agents
 
-**Status:** needs-code-review
+**Status:** uat
 **Story ID:** KBAR-0170
-**Depends On:** KBAR-016
+**Depends On:** —
 **Phase:** 5
 
 **Feature:** Update dev-execute-leader, backend-coder, frontend-coder to use artifact_write for EVIDENCE, logs
@@ -347,7 +347,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-018: Update Code Review Agents
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Story ID:** KBAR-0180
 **Depends On:** KBAR-016
 **Phase:** 5
@@ -365,8 +365,9 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-019: Update QA & Fix Agents
 
-**Status:** pending
-**Depends On:** KBAR-017, KBAR-018
+**Status:** needs-code-review
+**Story ID:** KBAR-0190
+**Depends On:** none
 **Phase:** 5
 
 **Feature:** Update qa-verify-*.agent.md and dev-fix-fix-leader to use artifact_write
@@ -382,7 +383,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-020: Update Knowledge Context Loader
 
-**Status:** ready-to-work
+**Status:** needs-code-review
 **Story ID:** KBAR-0200
 **Depends On:** KBAR-019
 **Phase:** 5
@@ -400,8 +401,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-021: Update Orchestrator Commands
 
-**Status:** ready-to-work
 **Story ID:** KBAR-0210
+**Status:** uat
 **Depends On:** KBAR-020
 **Phase:** 5
 
@@ -419,7 +420,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-022: Agent Migration Testing
 
 **Status:** pending
-**Depends On:** KBAR-021
+**Depends On:** none
 **Phase:** 5
 
 **Feature:** End-to-end test of full story workflow using updated agents
