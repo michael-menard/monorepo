@@ -1,0 +1,16 @@
+schema: 1
+story_id: "APIP-5007"
+timestamp: "2026-02-25T23:58:00Z"
+current_phase: "plan"
+last_successful_phase: "setup"
+blocked: false
+blocked_reason: null
+forced: false
+pr_url: null
+pr_number: null
+e2e_gate: null
+warnings: []
+iteration: 0
+max_iterations: 3
+feature_dir: "plans/future/platform/autonomous-pipeline"
+completed_at: null
