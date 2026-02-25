@@ -191,19 +191,24 @@ All can start immediately. Ordered by downstream impact.
 | 87 | x | KBAR-0180 | Update Code Review Agents **created** | ← KBAR-0160 | KBAR | P1 |
 | 88 | x | KBAR-0190 | Update QA & Fix Agents **created** | ← KBAR-0170, KBAR-0180 | KBAR | P2 |
 | 89 | x | KBAR-0200 | Update Knowledge Context Loader **in-progress** | ← KBAR-0190 | KBAR | P2 |
-| 90 | x | KBAR-0210 | Update Orchestrator Commands **needs-code-review** | ← KBAR-0200 | KBAR | P2 |
+| 90 | x | KBAR-0210 | Update Orchestrator Commands **ready-for-qa** | ← KBAR-0200 | KBAR | P2 |
 | 91 | | KBAR-0220 | Agent Migration Testing | ← KBAR-0210 | KBAR | P2 |
 | G12 | | GATE-12 | **E2E: Validate Context & Session** | ← GATE-11, all Wave 8 | GATE | **HARD GATE** |
 
 ---
 
-## Wave 9 — LangGraph Operational! (6 stories)
+## Wave 9 — LangGraph Operational! (9 stories)
 
 🎉 **FINAL PUSH:** LangGraph becomes operational!
 
+⚡ **NEW:** WINT-9105/9106/9107 address error handling, retry, and checkpoint gaps — prerequisites for WINT-9110.
+
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 92 | | WINT-9110 | Create Full Workflow LangGraph Graphs ⚡ 🎯 | ← WINT-9060–9100 | WINT | **P0** |
+| 92a | | WINT-9105 | Define LangGraph Error Handling & Retry Strategy ⚡ | ← WINT-9010 | WINT | **P0** |
+| 92b | | WINT-9106 | Implement LangGraph Checkpointer & State Recovery ⚡ | ← WINT-9105, WINT-0070 | WINT | **P0** |
+| 92c | | WINT-9107 | Implement Node-Level Retry & Circuit Breaker Middleware ⚡ | ← WINT-9105, WINT-9010 | WINT | **P0** |
+| 92 | | WINT-9110 | Create Full Workflow LangGraph Graphs ⚡ 🎯 | ← WINT-9060–9100, 9106, 9107 | WINT | **P0** |
 | 93 | | WINT-9120 | Create Workflow Parity Test Suite ⚡ | ← WINT-9110 | WINT | **P0** |
 | 94 | | WINT-9130 | Document Migration Path ⚡ | ← WINT-9120 | WINT | **P0** |
 | 95 | | WINT-9140 | Validate LangGraph Parity Phase ⚡ 🎉 | ← WINT-9120, 9130 | WINT | **P0** |

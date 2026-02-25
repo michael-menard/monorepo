@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T17:11:00Z"
+updated_at: "2026-02-25T18:00:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,15 +16,15 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 10 |
+| uat | 11 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 2 |
 | ready-to-work | 1 |
 | elaboration | 0 |
 | in-progress | 1 |
-| needs-code-review | 2 |
-| ready-for-qa | 0 |
+| needs-code-review | 0 |
+| ready-for-qa | 1 |
 | pending | 16 |
 
 ---
@@ -36,6 +36,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | Story | Title | Blocked By |
 |-------|-------|------------|
 | KBAR-001 | Database Schema Migrations | — |
+| KBAR-019 | Update QA & Fix Agents | — |
 
 ---
 
@@ -345,7 +346,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-018: Update Code Review Agents
 
-**Status:** needs-code-review
+**Status:** uat
 **Story ID:** KBAR-0180
 **Depends On:** none
 **Phase:** 5
@@ -364,7 +365,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-019: Update QA & Fix Agents
 
 **Status:** pending
-**Depends On:** KBAR-018
+**Depends On:** none
 **Phase:** 5
 
 **Feature:** Update qa-verify-*.agent.md and dev-fix-fix-leader to use artifact_write
@@ -380,7 +381,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-020: Update Knowledge Context Loader
 
-**Status:** in-progress
+**Status:** needs-code-review
 **Story ID:** KBAR-0200
 **Depends On:** KBAR-019
 **Phase:** 5
@@ -399,7 +400,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-021: Update Orchestrator Commands
 
 **Story ID:** KBAR-0210
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Depends On:** KBAR-020
 **Phase:** 5
 
