@@ -1,0 +1,80 @@
+# LangGraph Server Infrastructure
+#
+# Usage:
+#   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d          # Start all services
+#   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d langgraph-server  # Start server only
+#   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml down           # Stop all services
+#   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml down -v        # Stop and remove volumes
+#
+# Services:
+#   LangGraph API:      http://localhost:8123
+#   LangGraph Studio:   http://localhost:8124
+#
+# Reserved ports (DO NOT USE):
+#   5432 - PostgreSQL (monorepo primary)
+#   5433 - PostgreSQL (monorepo test)
+#   6379 - Redis
+#   9090 - Prometheus
+#   3003 - Grafana
+#   4317 - OTel gRPC
+#   4318 - OTel HTTP
+#   9000 - MinIO S3 API
+#   9001 - MinIO Console
+#
+# Checkpoint DB: Aurora PostgreSQL (target via env vars below).
+# Uses an isolated pg.Pool — NOT @repo/db — to avoid connection contention.
+#
+# NOTE: The placeholder image (python:3.11-slim) will be replaced by the
+# actual LangGraph Platform image built in APIP-0030.
+
+services:
+  langgraph-server:
+    image: python:3.11-slim
+    container_name: langgraph-server
+    # TODO(APIP-0030): Replace with the actual LangGraph Platform image, e.g.:
+    #   image: langchain/langgraph-api:latest
+    # or the custom image produced by the APIP-0030 build pipeline.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "LangGraph server placeholder — replace image in APIP-0030" && sleep infinity
+    ports:
+      - '8123:8123'   # LangGraph REST API
+      - '8124:8124'   # LangGraph Studio UI
+    volumes:
+      - langgraph_data:/app/data
+    environment:
+      # Checkpoint DB — isolated pool, NOT @repo/db
+      # Targeting Aurora PostgreSQL; fill in actual values at deploy time.
+      LANGGRAPH_CHECKPOINT_DB_HOST: '${LANGGRAPH_CHECKPOINT_DB_HOST:-REPLACE_ME}'
+      LANGGRAPH_CHECKPOINT_DB_PORT: '${LANGGRAPH_CHECKPOINT_DB_PORT:-5432}'
+      LANGGRAPH_CHECKPOINT_DB_NAME: '${LANGGRAPH_CHECKPOINT_DB_NAME:-langgraph_checkpoints}'
+      LANGGRAPH_CHECKPOINT_DB_USER: '${LANGGRAPH_CHECKPOINT_DB_USER:-REPLACE_ME}'
+      LANGGRAPH_CHECKPOINT_DB_PASSWORD: '${LANGGRAPH_CHECKPOINT_DB_PASSWORD:-REPLACE_ME}'
+      LANGGRAPH_CHECKPOINT_DB_POOL_MAX: '3'
+      # LangGraph server runtime config
+      LANGGRAPH_API_PORT: '8123'
+      LANGGRAPH_STUDIO_PORT: '8124'
+      # Graph store / persistence directory inside the container
+      LANGGRAPH_DATA_DIR: '/app/data'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:8123/ok || exit 1']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    restart: unless-stopped
+
+volumes:
+  langgraph_data:
