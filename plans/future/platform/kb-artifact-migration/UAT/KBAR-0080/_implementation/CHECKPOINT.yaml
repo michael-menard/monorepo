@@ -1,0 +1,42 @@
+current_phase: qa-setup
+last_successful_phase: review
+timestamp: "2026-02-25T03:55:00Z"
+
+qa_setup_completion:
+  preconditions_verified:
+    story_exists: true
+    status_ready_for_qa: true
+    evidence_file_exists: true
+    review_file_exists: true
+    review_verdict_pass: true
+
+  story_movement:
+    from: "plans/future/platform/kb-artifact-migration/ready-for-qa/KBAR-0080"
+    to: "plans/future/platform/kb-artifact-migration/UAT/KBAR-0080"
+    moved_at: "2026-02-25T03:55:00Z"
+
+  status_updated:
+    old_status: "ready-for-qa"
+    new_status: "in-qa"
+    updated_at: "2026-02-25T03:55:00Z"
+
+verification_sources:
+  evidence_file: "plans/future/platform/kb-artifact-migration/UAT/KBAR-0080/_implementation/EVIDENCE.yaml"
+  review_file: "plans/future/platform/kb-artifact-migration/UAT/KBAR-0080/_implementation/REVIEW.yaml"
+
+evidence_summary:
+  version: 1
+  ac_total: 10
+  ac_passing: 10
+  ac_missing: 0
+  test_status: COMPLETE
+
+review_summary:
+  version: 1
+  verdict: PASS
+  iteration: 3
+  all_issues_resolved: true
+  ready_for_qa: true
+
+next_phase: qa-verify-execute
+phase_entry_signal: SETUP COMPLETE
