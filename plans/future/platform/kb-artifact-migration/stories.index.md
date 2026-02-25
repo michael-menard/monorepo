@@ -37,6 +37,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 |-------|-------|------------|
 | KBAR-001 | Database Schema Migrations | — |
 | KBAR-019 | Update QA & Fix Agents | — |
+| KBAR-022 | Agent Migration Testing | — |
 
 ---
 
