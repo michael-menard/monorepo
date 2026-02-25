@@ -66,7 +66,7 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 53 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics + worktree)', () => {
+    it('should return all 53 tool definitions', () => {
       const tools = getToolDefinitions()
 
       expect(tools).toHaveLength(53)

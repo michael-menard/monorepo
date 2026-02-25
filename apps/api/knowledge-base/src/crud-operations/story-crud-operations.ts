@@ -304,7 +304,9 @@ export async function kb_update_story_status(
     return {
       story: null,
       updated: false,
-      message: `Story ${validated.story_id} is in terminal state '${currentState}' and cannot be transitioned to '${validated.state}'`,
+      message:
+        `Story ${validated.story_id} is in terminal state '${currentState}'` +
+        ` and cannot be transitioned to '${validated.state}'`,
     }
   }
 

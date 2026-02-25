@@ -111,7 +111,11 @@ describe('Story Tool Handlers', () => {
     })
 
     it('should pass feature filter to CRUD layer', async () => {
-      mockKbListStories.mockResolvedValue({ stories: [], total: 0, message: 'Found 0 stories (0 total)' })
+      mockKbListStories.mockResolvedValue({
+        stories: [],
+        total: 0,
+        message: 'Found 0 stories (0 total)',
+      })
 
       await handleKbListStories({ feature: 'kb-artifact-migration' }, mockDeps)
 
@@ -122,7 +126,11 @@ describe('Story Tool Handlers', () => {
     })
 
     it('should pass state filter to CRUD layer', async () => {
-      mockKbListStories.mockResolvedValue({ stories: [], total: 0, message: 'Found 0 stories (0 total)' })
+      mockKbListStories.mockResolvedValue({
+        stories: [],
+        total: 0,
+        message: 'Found 0 stories (0 total)',
+      })
 
       await handleKbListStories({ state: 'in_progress' }, mockDeps)
 
@@ -133,7 +141,11 @@ describe('Story Tool Handlers', () => {
     })
 
     it('should pass limit and offset for pagination', async () => {
-      mockKbListStories.mockResolvedValue({ stories: [], total: 0, message: 'Found 0 stories (0 total)' })
+      mockKbListStories.mockResolvedValue({
+        stories: [],
+        total: 0,
+        message: 'Found 0 stories (0 total)',
+      })
 
       await handleKbListStories({ limit: 5, offset: 10 }, mockDeps)
 
@@ -144,7 +156,11 @@ describe('Story Tool Handlers', () => {
     })
 
     it('should return empty stories array when no matches', async () => {
-      mockKbListStories.mockResolvedValue({ stories: [], total: 0, message: 'Found 0 stories (0 total)' })
+      mockKbListStories.mockResolvedValue({
+        stories: [],
+        total: 0,
+        message: 'Found 0 stories (0 total)',
+      })
 
       const result = await handleKbListStories({ state: 'completed' }, mockDeps)
 
@@ -155,7 +171,11 @@ describe('Story Tool Handlers', () => {
     })
 
     it('should enforce authorization', async () => {
-      mockKbListStories.mockResolvedValue({ stories: [], total: 0, message: 'Found 0 stories (0 total)' })
+      mockKbListStories.mockResolvedValue({
+        stories: [],
+        total: 0,
+        message: 'Found 0 stories (0 total)',
+      })
 
       // No context means 'all' role — kb_list_stories is not admin-only, should succeed
       const result = await handleKbListStories({}, mockDeps)
@@ -210,7 +230,11 @@ describe('Story Tool Handlers', () => {
     })
 
     it('should clear blockedReason and blockedByStory when blocked:false', async () => {
-      const updatedStory = createMockStory({ blocked: false, blockedReason: null, blockedByStory: null })
+      const updatedStory = createMockStory({
+        blocked: false,
+        blockedReason: null,
+        blockedByStory: null,
+      })
       mockKbUpdateStoryStatus.mockResolvedValue({
         story: updatedStory,
         updated: true,
@@ -252,7 +276,9 @@ describe('Story Tool Handlers', () => {
       mockKbUpdateStoryStatus.mockResolvedValue({
         story: null,
         updated: false,
-        message: "Story KBAR-0080 is in terminal state 'completed' and cannot be transitioned to 'in_progress'",
+        message:
+          "Story KBAR-0080 is in terminal state 'completed'" +
+          " and cannot be transitioned to 'in_progress'",
       })
 
       const result = await handleKbUpdateStoryStatus(
