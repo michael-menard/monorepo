@@ -1,0 +1,153 @@
+schema: 1
+story_id: "APIP-5007"
+version: 1
+timestamp: "2026-02-25T16:46:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "ADR documenting migration tooling selection and rationale exists"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+        description: "ADR-002 documents Decision 1 (sequential SQL scripts for pipeline tables) and Decision 2 (delegate LangGraph checkpoint tables to library). Cites ADR-001 Decision 4, KB migration 014 anti-pattern, and KB sequential SQL pattern as comparator."
+
+  - ac_id: "AC-2"
+    ac_text: "LangGraph checkpoint table ownership is documented and tables are not in pipeline migration scripts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/spike-langgraph-checkpoint.md"
+        description: "Spike documents the four LangGraph checkpoint tables (checkpoints, checkpoint_blobs, checkpoint_writes, checkpoint_migrations), confirms public schema default, and recommends delegation via setup()."
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+        description: "ADR-002 Decision 2 formally records delegation. Pipeline migration script 001_apip_schema_baseline.sql contains no LangGraph table DDL."
+
+  - ac_id: "AC-3"
+    ac_text: "apip schema created via DDL migration script using CREATE SCHEMA IF NOT EXISTS"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+        description: "Contains CREATE SCHEMA IF NOT EXISTS apip wrapped in BEGIN/COMMIT transaction. Follows pattern from apps/api/knowledge-base/src/db/migrations/013_add_plans_tables.sql."
+
+  - ac_id: "AC-4"
+    ac_text: "Thread ID convention documented with format and examples"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md"
+        description: "Documents format {story_id}:{stage}:{attempt_number}, canonical stage names (elab/impl/review/qa/merge), usage examples, query patterns, and constraints."
+
+  - ac_id: "AC-5"
+    ac_text: "Rollback procedures documented for each migration category"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/docs/migration-rollback-procedures.md"
+        description: "Documents three rollback categories: Category 1 Additive (safe, DROP the created object), Category 2 Destructive (requires downtime, backup restore), Category 3 Enum/Type (irreversible, backup restore). Includes LangGraph tables non-rollback-able section."
+
+  - ac_id: "AC-6"
+    ac_text: "Local migration runbook for Docker Compose startup sequence documented"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/docs/local-migration-runbook.md"
+        description: "Documents 4-step startup sequence: (1) docker compose up postgres, (2) run pipeline migrations, (3) LangGraph setup(), (4) pipeline ready. Includes health checks at each stage referencing infra/compose.lego-app.yaml health check config."
+
+  - ac_id: "AC-7"
+    ac_text: "schema_migrations tracking table created in DDL migration script"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+        description: "Contains CREATE TABLE IF NOT EXISTS apip.schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()). Self-inserts '001_apip_schema_baseline.sql' ON CONFLICT DO NOTHING for idempotency."
+
+  - ac_id: "AC-8"
+    ac_text: "APIP-5001 gap analysis documenting fixture requirements exists"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/APIP-5001-gap-analysis.md"
+        description: "Documents what APIP-5007 provides vs. what APIP-5001 still needs: testcontainer setup, migration test harness, checkpoint fixture data, schema validation utilities, work queue seeding, and APIP-0010 dependency."
+
+touched_files:
+  - path: "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/spike-langgraph-checkpoint.md"
+    action: created
+    lines: 89
+    description: "Spike documenting LangGraph checkpoint table names, schema namespace, setup() behavior, and delegation recommendation"
+
+  - path: "plans/future/platform/autonomous-pipeline/ADRs/ADR-002-migration-tooling.md"
+    action: created
+    lines: 140
+    description: "ADR-002: Migration tooling selection (sequential SQL scripts) and LangGraph checkpoint table ownership delegation"
+
+  - path: "apps/api/autonomous-pipeline/migrations/001_apip_schema_baseline.sql"
+    action: created
+    lines: 50
+    description: "Baseline DDL: CREATE SCHEMA IF NOT EXISTS apip, schema_migrations tracking table"
+
+  - path: "plans/future/platform/autonomous-pipeline/docs/thread-id-convention.md"
+    action: created
+    lines: 100
+    description: "Thread ID convention: {story_id}:{stage}:{attempt_number} format, stage names, examples, query patterns"
+
+  - path: "plans/future/platform/autonomous-pipeline/docs/migration-rollback-procedures.md"
+    action: created
+    lines: 130
+    description: "Rollback procedures for three migration categories: additive, destructive, enum/type modifications"
+
+  - path: "plans/future/platform/autonomous-pipeline/docs/local-migration-runbook.md"
+    action: created
+    lines: 165
+    description: "Docker Compose local migration runbook: startup sequence, health checks, troubleshooting"
+
+  - path: "plans/future/platform/autonomous-pipeline/in-progress/APIP-5007/_pm/APIP-5001-gap-analysis.md"
+    action: created
+    lines: 110
+    description: "APIP-5001 gap analysis: fixture requirements, identified gaps, recommended story updates"
+
+commands_run:
+  - command: "ls -la (file verification)"
+    result: SUCCESS
+    output: "All 7 deliverable files present and non-empty"
+    timestamp: "2026-02-25T16:46:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0, exempt: true }
+  e2e: { pass: 0, fail: 0, exempt: true }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "Documentation and DDL artifact story — no runtime code, no HTTP API, no frontend"
+  mode: "n/a"
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+  exempt_reason: "No runtime code to measure coverage on"
+
+notable_decisions:
+  - "Sequential SQL scripts pattern (matching KB API) chosen over Drizzle Kit — pipeline tables have no Drizzle ORM schema files, coupling DDL to Drizzle would be misleading"
+  - "LangGraph checkpoint tables fully delegated to library setup() — prevents 014-style orphaned object accumulation"
+  - "apip schema namespace isolates pipeline DDL from public schema (LangGraph) and main app tables"
+  - "Thread ID format {story_id}:{stage}:{attempt_number} chosen for human readability and log correlation"
+  - "Rollback categorized into three tiers (additive/destructive/enum) to give operators a clear risk profile before executing rollbacks"
+
+known_deviations:
+  - "No migration runner script implemented in this story — APIP-5007 scope is documentation + DDL only. Runner script is a dependency for APIP-5001."
+
+token_summary:
+  execute: { in: 12000, out: 8000 }
