@@ -24,7 +24,7 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | elaboration | 0 |
 | in-progress | 1 |
 | needs-code-review | 0 |
-| ready-for-qa | 1 |
+| ready-for-qa | 2 |
 | pending | 16 |
 
 ---
