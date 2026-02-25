@@ -1,0 +1,24 @@
+---
+deferred_at: "2026-02-24"
+reason: "KB database unavailable at story generation time (DATABASE_URL not set)"
+retry_after: "next available KB connection"
+---
+
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: KBAR-0120
+      feature: kb-artifact-migration
+      title: "Unit Tests for Artifact MCP Tool Handlers"
+      story_dir: plans/future/platform/kb-artifact-migration/backlog/KBAR-0120
+      story_file: KBAR-0120.md
+      story_type: chore
+      points: 2
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

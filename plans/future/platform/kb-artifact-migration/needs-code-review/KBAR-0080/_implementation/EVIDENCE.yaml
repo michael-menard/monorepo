@@ -1,8 +1,8 @@
 schema: 1
 story_id: "KBAR-0080"
 phase: implementation
-iteration: 1
-timestamp: "2026-02-25T03:43:00Z"
+iteration: 2
+timestamp: "2026-02-25T05:00:00Z"
 
 summary:
   total_acs: 10
@@ -18,16 +18,16 @@ acceptance_criteria:
     files_modified:
       - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
     test_result: "PASS — 28 tests passing"
-    notes: "Verified via getToolDefinitions() at runtime: 53 tools. Added 'kb_update_story' between 'kb_update_story_status' and 'kb_get_next_story'."
+    notes: "Updated tool count to 55 (added kb_get_plan, kb_list_plans from plan tools feature). Added 'kb_update_story' between 'kb_update_story_status' and 'kb_get_next_story'."
 
   - ac_id: "AC-2"
     status: COVERED
     evidence_type: test
-    description: "handleKbListStories filter tests: feature, state, limit/offset pagination"
-    files_created:
+    description: "handleKbListStories filter tests: feature, epic, state, states[], states[] precedence over state, phase, blocked, priority, limit, offset pagination"
+    files_modified:
       - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
-    test_result: "PASS — 18 story-tools tests passing"
-    notes: "Tests cover feature filter, state filter, limit/offset pagination, empty result set"
+    test_result: "PASS — 25 story-tools tests passing"
+    notes: "Fix iteration 1: Added 7 missing filter tests (epic, states[], states[] precedence, phase, blocked, priority, offset). All 9 filter types independently tested."
 
   - ac_id: "AC-3"
     status: COVERED

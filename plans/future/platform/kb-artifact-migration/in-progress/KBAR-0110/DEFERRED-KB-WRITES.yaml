@@ -1,0 +1,24 @@
+---
+generated: "2026-02-24"
+reason: "KB unavailable during story generation (pg module not accessible in generation context)"
+---
+
+deferred_writes:
+  - operation: INSERT
+    table: stories
+    attempted_at: "2026-02-24T00:00:00Z"
+    data:
+      story_id: "KBAR-0110"
+      feature: "kb-artifact-migration"
+      title: "artifact_write Tool — Dual-Write Artifact to File + KB with Graceful Failure Isolation"
+      story_dir: "plans/future/platform/kb-artifact-migration/backlog/KBAR-0110"
+      story_file: "plans/future/platform/kb-artifact-migration/backlog/KBAR-0110/KBAR-0110.md"
+      story_type: "feature"
+      points: 3
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    on_conflict: "ON CONFLICT (story_id) DO UPDATE SET title = EXCLUDED.title, story_dir = EXCLUDED.story_dir, story_file = EXCLUDED.story_file, points = EXCLUDED.points, priority = EXCLUDED.priority, state = EXCLUDED.state"
