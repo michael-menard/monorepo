@@ -188,8 +188,8 @@ All can start immediately. Ordered by downstream impact.
 | 84 | | WINT-9090 | Create Context Cache LangGraph Nodes ⚡ | ← WINT-9010, 2100 | WINT | **P0** |
 | 85 | x | KBAR-0160 | Update Setup & Plan Leaders **ready-to-work** | ← KBAR-0150 | KBAR | P1 |
 | 86 | | KBAR-0170 | Update Execute & Worker Agents | ← KBAR-0160 | KBAR | P1 |
-| 87 | | KBAR-0180 | Update Code Review Agents | ← KBAR-0160 | KBAR | P1 |
-| 88 | | KBAR-0190 | Update QA & Fix Agents | ← KBAR-0170, KBAR-0180 | KBAR | P2 |
+| 87 | x | KBAR-0180 | Update Code Review Agents **created** | ← KBAR-0160 | KBAR | P1 |
+| 88 | x | KBAR-0190 | Update QA & Fix Agents **created** | ← KBAR-0170, KBAR-0180 | KBAR | P2 |
 | 89 | | KBAR-0200 | Update Knowledge Context Loader | ← KBAR-0190 | KBAR | P2 |
 | 90 | | KBAR-0210 | Update Orchestrator Commands | ← KBAR-0200 | KBAR | P2 |
 | 91 | | KBAR-0220 | Agent Migration Testing | ← KBAR-0210 | KBAR | P2 |

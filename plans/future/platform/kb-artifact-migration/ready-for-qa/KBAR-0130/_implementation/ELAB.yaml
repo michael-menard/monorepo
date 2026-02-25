@@ -1,0 +1,172 @@
+schema: 1
+story_id: "KBAR-0130"
+timestamp: "2026-02-24T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches stories.index.md KBAR-013 entry exactly: "Implement semantic search across artifacts
+      using KB embeddings." Files touched (tool-handlers.ts, tool-schemas.ts, two test files) align with
+      the index description. No extra endpoints, infrastructure, or DB changes introduced. Non-goals section
+      is explicit about what is excluded (no kb_search modifications, no storyArtifacts schema changes,
+      no artifact_read or artifact_write work).
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and Non-goals are consistent. Goal is a thin wrapper over kb_search; Non-goals explicitly
+      exclude modifying kb_search, implementing other KBAR Phase 4 stories, or adding SQL search logic.
+      ACs map cleanly to scope: AC-1 through AC-8 cover the handler and schema, AC-9 covers unit tests,
+      AC-10/AC-11 cover integration test hygiene. Local testing plan (test-plan.yaml HP-1 through HP-6,
+      EC-1 through EC-4, ED-1 through ED-3) maps 1:1 to ACs. No contradictions found between Goals,
+      Non-Goals, ACs, and test plan.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Reuse plan is explicit and comprehensive. handleKbSearch is the direct structural template.
+      SearchInputSchema, ArtifactTypeSchema, and StoryPhaseSchema are reused from existing locations.
+      kb_search is called rather than reimplemented. search-tools.test.ts vi.mock pattern is replicated.
+      No new packages required. No per-story one-off utilities introduced.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      This is a pure MCP tool (backend-only, stdio transport, no HTTP). No HTTP endpoints are involved.
+      The handler pattern (parse → validate → delegate to service → return structured JSON) follows the
+      established ports-and-adapters template from handleKbSearch. Core logic (kb_search) is
+      transport-agnostic. No business logic in route handlers (no route handlers exist for this story).
+      API-layer architecture check: not applicable since this is MCP not HTTP — no apps/api/routes/ or
+      apps/api/services/ changes are planned.
+
+  - id: testability
+    status: PASS
+    note: >
+      Unit tests specified in artifact-search-tools.test.ts with concrete vi.mock pattern, specific
+      call argument inspection (vi.mocked(kb_search).mock.calls[0][0].tags), and explicit expected
+      values for every test case. Integration test updates to mcp-integration.test.ts are concrete
+      (tool count update + names list). No .http tests required (MCP tool, not HTTP). No Playwright
+      tests required (no UI surface, explicitly marked not_applicable). ADR-005 respected: unit tests
+      mock kb_search; real KB not required.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      One unresolved dependency creates a potential implementation-time blocker: "Tag convention used by
+      artifact_write (KBAR-0110) must be confirmed before KBAR-0130 implementation begins." The story
+      acknowledges this and states KBAR-0110 must be merged first. This is not a design-time TBD (the
+      tag pattern is fully specified in AC-4 and the Architecture Notes), but it is a dependency gate
+      that the story cannot self-resolve. The story correctly documents this as a risk and dependency,
+      and provides the tag composition pattern (tags: ['artifact', story_id, artifact_type, phase].filter(Boolean)).
+      WARN rather than FAIL because the unresolved item is a coordination dependency, not a design gap —
+      and the resolution path is clear (KBAR-0110 must land first, then verify tag values written).
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Risks are clearly disclosed: (1) tool count drift — re-verification at implementation time required,
+      documented in multiple places; (2) KB tag OR semantics — documented in AC-4 and Architecture Notes;
+      (3) vi.mock pattern requiring async importOriginal — documented in test plan risks; (4) OpenAI
+      unavailability / fallback_mode — addressed by AC-8 and test cases ED-2. No auth, DB, upload,
+      caching, or infra risks apply (MCP tool, no HTTP, no DB schema changes). Dependency gate on
+      KBAR-0110 and KBAR-0120 is explicitly disclosed.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      11 ACs is above the 8-AC threshold, but the ACs are thin: AC-1 through AC-8 each map to a single
+      handler concern, AC-9 through AC-11 are test hygiene. Total files: 4 (2 source, 2 test). No
+      endpoints created. No frontend work. No new packages. 5 subtasks with clear scope. Token estimate
+      200k (low confidence) but dev_feasibility rates complexity as low with high confidence. The 11 ACs
+      do not represent 11 independent units of work — many (AC-4, AC-5, AC-6, AC-7, AC-8) are properties
+      of a single handler function. No split recommended; story is well-bounded.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      5 subtasks present with explicit AC coverage, dependency ordering (DAG: ST-1 → ST-2, ST-3; ST-2 →
+      ST-4; ST-3 → ST-5), verification commands (pnpm check-types, pnpm test), and token estimates.
+      All 11 ACs covered by at least one subtask (AC-Subtask Coverage matrix included in story).
+      ST-1 touches 1 file (tool-schemas.ts), ST-2 touches 1 file (tool-handlers.ts), ST-3 touches 1
+      file (tool-schemas.ts), ST-4 touches 1 file (artifact-search-tools.test.ts), ST-5 touches 1 file
+      (mcp-integration.test.ts) — all well within the 3-file limit. Canonical references section present
+      with 5 entries. No cycles in dependency graph.
+
+gaps:  # MVP-blocking only
+  - id: gap-1
+    check: decision_completeness
+    finding: >
+      Tag convention dependency on KBAR-0110 is a hard implementation gate. The story correctly
+      documents this, but does not provide a fallback protocol if KBAR-0110 tag values differ from
+      what AC-4 specifies (e.g., if KBAR-0110 uses compound tags like 'artifact:EVIDENCE' rather than
+      separate 'artifact' and 'EVIDENCE' tags). If the conventions diverge, artifact_search will return
+      zero results silently — not an error, just useless results. The story should add an explicit
+      pre-implementation verification step: read the KBAR-0110 implementation to confirm tag values
+      before writing a single line of KBAR-0130 code.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-12: Before writing any KBAR-0130 implementation code, verify merged KBAR-0110 tag convention matches AC-4's tag composition pattern; update if divergent"
+
+opportunities:  # Non-blocking
+  - id: opp-1
+    category: observability
+    finding: >
+      The story documents OR semantics for multi-filter queries (AC-4 note) but does not specify
+      logging of the composed tags array at INFO level. handleKbSearch logs query, role, tags, limit
+      at invocation time — handleArtifactSearch should similarly log the composed tags array so
+      operators can debug filter translation without needing to instrument the handler.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "7ddc170b-6038-41dc-8766-4d6f60384ce0"
+
+  - id: opp-2
+    category: edge_cases
+    finding: >
+      AC-4 specifies OR semantics for multi-filter queries, which means searching for story_id=KBAR-0090
+      AND artifact_type=EVIDENCE may return all artifacts from KBAR-0090 PLUS all EVIDENCE artifacts from
+      any story. The tool description should explicitly warn callers about OR semantics so they can
+      construct queries accordingly. The story notes this but does not specify the exact wording for
+      the tool description field in getToolDefinitions().
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "7008d8f3-a337-4875-9d00-e2a6091f7866"
+
+  - id: opp-3
+    category: performance
+    finding: >
+      handleKbSearch uses withTimeout() wrapping. The story's Architecture Notes say "no timeout
+      wrapping needed unless pattern requires it" but the pattern (handleKbSearch) does use withTimeout.
+      Consider documenting the explicit decision to omit timeout wrapping in handleArtifactSearch, or
+      follow the template exactly and include it.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "8e98cfb7-b372-42f2-a748-f92fb16d145f"
+
+split_recommendation: null  # story_sizing=PASS, no split required
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: PASS
+decided_at: "2026-02-24T00:00:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 1
+
+analyst_notes: >
+  KBAR-0130 is a well-elaborated, tightly scoped story. The handler pattern, test strategy, reuse plan,
+  and subtask decomposition are all production-quality. The single high-severity gap (gap-1) is not a
+  design flaw but a coordination dependency: the implementer must read KBAR-0110's merged code to verify
+  tag values before coding. This is a process risk, not an architectural one. The story should not proceed
+  to implementation until KBAR-0110 and KBAR-0120 are both merged to main and the tool count in
+  mcp-integration.test.ts is re-verified programmatically.
+
+  Observed from codebase inspection:
+  - mcp-integration.test.ts currently asserts toHaveLength(53) at line 72 — confirms the baseline count
+    stated in the story (53 after KBAR-0090 lands) matches actual test file state.
+  - artifact_search does not yet appear in the integration test names list — correct, this story adds it.
+  - handleKbSearch at line 778 of tool-handlers.ts is fully active and confirmed as the structural template.
+  - ArtifactTypeSchema and StoryPhaseSchema confirmed at lines 824 and 799 of __types__/index.ts.
+  - No artifact-search-tools.test.ts exists yet — correct, this story creates it.

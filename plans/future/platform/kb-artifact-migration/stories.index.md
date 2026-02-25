@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T16:12:00Z"
+updated_at: "2026-02-25T20:00:00Z"
 ---
 
 # KBAR Stories Index
@@ -20,12 +20,12 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | failed-qa | 0 |
 | generated | 0 |
 | created | 3 |
-| ready-to-work | 2 |
-| elaboration | 0 |
+| ready-to-work | 1 |
+| elaboration | 1 |
 | in-progress | 0 |
-| needs-code-review | 1 |
-| ready-for-qa | 0 |
-| pending | 17 |
+| needs-code-review | 2 |
+| ready-for-qa | 1 |
+| pending | 16 |
 
 ---
 
@@ -257,7 +257,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-013: artifact_search Tool
 
-**Status:** in-qa
+**Status:** ready-for-qa
 **Story ID:** KBAR-0130
 **Depends On:** KBAR-011
 **Phase:** 4
@@ -330,6 +330,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-017: Update Execute & Worker Agents
 
 **Status:** in-progress
+**Story ID:** KBAR-0170
 **Depends On:** KBAR-016
 **Phase:** 5
 
@@ -346,7 +347,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-018: Update Code Review Agents
 
-**Status:** Created
+**Status:** needs-code-review
 **Story ID:** KBAR-0180
 **Depends On:** KBAR-016
 **Phase:** 5
@@ -381,7 +382,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-020: Update Knowledge Context Loader
 
-**Status:** pending
+**Status:** In Elaboration
+**Story ID:** KBAR-0200
 **Depends On:** KBAR-019
 **Phase:** 5
 
@@ -398,7 +400,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-021: Update Orchestrator Commands
 
-**Status:** pending
+**Status:** Created
+**Story ID:** KBAR-0210
 **Depends On:** KBAR-020
 **Phase:** 5
 

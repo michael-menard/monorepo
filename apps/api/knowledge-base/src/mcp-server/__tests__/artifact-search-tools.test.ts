@@ -353,6 +353,20 @@ describe('artifact_search tool', () => {
       )
     })
 
+    it('should pass explain to kb_search', async () => {
+      vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
+
+      await handleArtifactSearch(
+        { query: 'find artifacts', explain: true },
+        mockDeps as Parameters<typeof handleArtifactSearch>[1],
+      )
+
+      expect(vi.mocked(kb_search)).toHaveBeenCalledWith(
+        expect.objectContaining({ explain: true }),
+        expect.anything(),
+      )
+    })
+
     it('should dispatch artifact_search via handleToolCall', async () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
 

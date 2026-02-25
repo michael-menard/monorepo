@@ -1,0 +1,32 @@
+schema: 1
+story_id: KBAR-0130
+feature_dir: plans/future/platform/kb-artifact-migration
+timestamp: 2026-02-25T16:30:00Z
+current_phase: fix
+last_successful_phase: qa-verify
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
+
+fix_cycles:
+  - iteration: 1
+    triggered_by: qa
+    started_at: "2026-02-25T16:30:00Z"
+    completed_at: "2026-02-25T16:40:00Z"
+    issues_fixed:
+      - file: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+        line: 215
+        issue: "QA flagged missing query param — confirmed query: z.string().min(1) was already present; no code change needed"
+        severity: high
+      - file: "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+        line: 230
+        issue: "QA flagged missing min_confidence/explain — confirmed both fields were already present; no code change needed"
+        severity: medium
+      - file: "apps/api/knowledge-base/src/mcp-server/__tests__/artifact-search-tools.test.ts"
+        line: 0
+        issue: "QA flagged missing query validation and min_confidence tests — confirmed all tests were already present (18 tests total); no code change needed"
+        severity: low
+    verification_result: PASS

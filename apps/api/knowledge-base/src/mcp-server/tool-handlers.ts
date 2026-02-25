@@ -1102,6 +1102,7 @@ export async function handleArtifactSearch(
             tags,
             limit: validated.limit ?? 10,
             min_confidence: validated.min_confidence ?? 0.0,
+            explain: validated.explain ?? false,
           },
           deps,
         ),
