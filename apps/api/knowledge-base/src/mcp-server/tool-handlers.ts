@@ -3567,6 +3567,8 @@ export async function handleKbGetStory(
   logger.info('kb_get_story tool invoked', {
     correlation_id: correlationId,
     story_id: inputObj?.story_id,
+    include_artifacts: inputObj?.include_artifacts,
+    include_dependencies: inputObj?.include_dependencies,
   })
 
   try {
@@ -3579,6 +3581,8 @@ export async function handleKbGetStory(
       correlation_id: correlationId,
       story_id: validated.story_id,
       found: result.story !== null,
+      include_artifacts: validated.include_artifacts,
+      include_dependencies: validated.include_dependencies,
       query_time_ms: queryTimeMs,
     })
 

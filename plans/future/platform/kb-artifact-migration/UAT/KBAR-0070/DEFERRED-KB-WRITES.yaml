@@ -1,0 +1,24 @@
+---
+generated: "2026-02-23"
+reason: "KB PostgreSQL connection unavailable during story generation (pg module not accessible in eval context)"
+retry_after: "Next agent session with KB access"
+---
+
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: KBAR-0070
+      feature: kbar
+      title: "story_get Tool — MCP Story Retrieval with Optional Artifacts and Dependencies"
+      story_dir: plans/future/platform/kb-artifact-migration/backlog/KBAR-0070
+      story_file: plans/future/platform/kb-artifact-migration/backlog/KBAR-0070/KBAR-0070.md
+      story_type: feature
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+    conflict_action: "ON CONFLICT (story_id) DO UPDATE SET title, story_dir, story_file, story_type, points, priority, state, touches_backend, touches_frontend, touches_database, touches_infra"

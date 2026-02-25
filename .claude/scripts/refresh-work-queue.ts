@@ -14,6 +14,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
 // Config
@@ -47,18 +48,19 @@ const STATUS_TO_COMMAND: Record<string, string> = {
 }
 
 // Pipeline priority — finish work before starting new work
-const STAGE_PRIORITY: Record<string, number> = {
-  'qa': 0,           // ready-for-qa → /qa-verify-story
-  'code-review': 1,  // needs-code-review → /dev-code-review
-  'implement': 2,    // ready-to-work / in-progress → /dev-implement-story
-  'elab': 3,         // elaboration → /elab-story
+// (reserved for future queue-sort logic)
+const _STAGE_PRIORITY: Record<string, number> = {
+  qa: 0, // ready-for-qa → /qa-verify-story
+  'code-review': 1, // needs-code-review → /dev-code-review
+  implement: 2, // ready-to-work / in-progress → /dev-implement-story
+  elab: 3, // elaboration → /elab-story
 }
 
 const STAGE_TO_COMMAND: Record<string, string> = {
-  'qa': 'qa-verify-story',
+  qa: 'qa-verify-story',
   'code-review': 'dev-code-review',
-  'implement': 'dev-implement-story',
-  'elab': 'elab-story',
+  implement: 'dev-implement-story',
+  elab: 'elab-story',
 }
 
 const STAGE_DIRS: { dir: string; stage: string }[] = [
@@ -73,53 +75,58 @@ const STAGE_DIRS: { dir: string; stage: string }[] = [
 // Types
 // ---------------------------------------------------------------------------
 
-interface Dep {
-  story_id: string
-  row: string
-  satisfied: boolean
-}
+const DepSchema = z.object({
+  story_id: z.string(),
+  row: z.string(),
+  satisfied: z.boolean(),
+})
+type Dep = z.infer<typeof DepSchema>
 
-interface QueueItem {
-  story_id: string
-  title: string
-  batch: string
-  priority: string
-  row: string
-  status: string
-  stage: 'qa' | 'code-review' | 'implement' | 'elab'
-  feature_dir: string
-  command: string
-  deps: Dep[]
-}
+const QueueItemSchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  batch: z.string(),
+  priority: z.string(),
+  row: z.string(),
+  status: z.string(),
+  stage: z.enum(['qa', 'code-review', 'implement', 'elab']),
+  feature_dir: z.string(),
+  command: z.string(),
+  deps: z.array(DepSchema),
+})
+type QueueItem = z.infer<typeof QueueItemSchema>
 
-interface WorkingItem {
-  story_id: string
-  title: string
-  worker: string
-  row: string
-}
+const WorkingItemSchema = z.object({
+  story_id: z.string(),
+  title: z.string(),
+  worker: z.string(),
+  row: z.string(),
+})
+type WorkingItem = z.infer<typeof WorkingItemSchema>
 
-interface GateInfo {
-  id: string
-  title: string
-  waiting_on: string[]
-}
+const GateInfoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  waiting_on: z.array(z.string()),
+})
+type GateInfo = z.infer<typeof GateInfoSchema>
 
-interface WorkQueue {
-  generated_at: string
-  source: string
-  stale_after_seconds: number
-  summary: {
-    complete: number
-    blocked: number
-    working: number
-    cancelled: number
-    unblocked: number
-  }
-  working: WorkingItem[]
-  queue: QueueItem[]
-  next_gate: GateInfo | null
-}
+const WorkQueueSchema = z.object({
+  generated_at: z.string(),
+  source: z.string(),
+  stale_after_seconds: z.number(),
+  summary: z.object({
+    complete: z.number(),
+    blocked: z.number(),
+    working: z.number(),
+    cancelled: z.number(),
+    unblocked: z.number(),
+  }),
+  working: z.array(WorkingItemSchema),
+  queue: z.array(QueueItemSchema),
+  next_gate: GateInfoSchema.nullable(),
+})
+type WorkQueue = z.infer<typeof WorkQueueSchema>
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -250,7 +257,9 @@ function extractDepRefs(
     const sid = bm[1]
     if (seen.has(sid)) continue // already captured with a (#NN) ref
     const row = storyIdToRow.get(sid) || ''
-    const inlineSatisfied = depText.includes(`${sid}`) && depText.slice(bm.index).match(new RegExp(`${sid.replace('-', '\\-')}[^,|]*✅`)) !== null
+    const inlineSatisfied =
+      depText.includes(`${sid}`) &&
+      depText.slice(bm.index).match(new RegExp(`${sid.replace('-', '\\-')}[^,|]*✅`)) !== null
     refs.push({ storyId: sid, row, inlineSatisfied })
     seen.add(sid)
   }
@@ -265,7 +274,12 @@ function resolveFeatureDir(featureDir: string, storyId: string): string {
   return path.join(featureDir, epicDir)
 }
 
-function resolveCommand(status: string, featureDir: string, storyId: string, stage?: string): string {
+function resolveCommand(
+  status: string,
+  featureDir: string,
+  storyId: string,
+  stage?: string,
+): string {
   let cmd: string | undefined
   // Stage-based command takes precedence when provided
   if (stage && STAGE_TO_COMMAND[stage]) {
@@ -304,8 +318,14 @@ function parseWorkOrder(featureDir: string): WorkQueue {
   // Filesystem ground truth: stories in UAT/ directories have passed QA
   const uatStories = buildUatSet(featureDir)
 
+  // Filesystem stage map: determines each story's pipeline stage from directory location
+  const stageMap = buildStageMap(featureDir, uatStories)
+
   // Pass 1: build row→info map and completion/cancelled sets
-  const rowMap = new Map<string, { storyId: string; checkbox: string; status: string; allCols: string }>()
+  const rowMap = new Map<
+    string,
+    { storyId: string; checkbox: string; status: string; allCols: string }
+  >()
   const storyIdToRow = new Map<string, string>()
   const completedRows = new Set<string>()
   const cancelledRows = new Set<string>()
@@ -333,7 +353,10 @@ function parseWorkOrder(featureDir: string): WorkQueue {
     if (!line.startsWith('|')) continue
 
     // Split columns
-    const cols = line.split('|').map(c => c.trim()).filter(c => c !== '')
+    const cols = line
+      .split('|')
+      .map(c => c.trim())
+      .filter(c => c !== '')
     if (cols.length < 5) continue
 
     // Skip header/separator rows
@@ -402,7 +425,10 @@ function parseWorkOrder(featureDir: string): WorkQueue {
 
     if (!line.startsWith('|')) continue
 
-    const cols = line.split('|').map(c => c.trim()).filter(c => c !== '')
+    const cols = line
+      .split('|')
+      .map(c => c.trim())
+      .filter(c => c !== '')
     if (cols.length < 5) continue
     if (cols[0] === '☑' || cols[0].match(/^-+$/)) continue
 
@@ -503,6 +529,9 @@ function parseWorkOrder(featureDir: string): WorkQueue {
 
     // This story is unblocked — add to queue if we haven't hit max
     if (queue.length < MAX_QUEUE_SIZE) {
+      const stageInfo = stageMap.get(storyId)
+      const stage = (stageInfo?.stage ?? resolveStageFromStatus(status)) as QueueItem['stage']
+      const storyFeatureDir = stageInfo?.feature_dir ?? resolveFeatureDir(featureDir, storyId)
       queue.push({
         story_id: storyId,
         title,
@@ -510,8 +539,9 @@ function parseWorkOrder(featureDir: string): WorkQueue {
         priority: currentPriority || 'P1',
         row: rowNum,
         status: status.trim(),
-        feature_dir: resolveFeatureDir(featureDir, storyId),
-        command: resolveCommand(status, featureDir, storyId),
+        stage,
+        feature_dir: storyFeatureDir,
+        command: resolveCommand(status, featureDir, storyId, stage),
         deps,
       })
     }
@@ -544,7 +574,9 @@ function main() {
   const featureDir = args.find(a => !a.startsWith('--'))
 
   if (!featureDir) {
-    console.error('Usage: pnpm exec tsx .claude/scripts/refresh-work-queue.ts <feature-dir> [--force]')
+    console.error(
+      'Usage: pnpm exec tsx .claude/scripts/refresh-work-queue.ts <feature-dir> [--force]',
+    )
     process.exit(1)
   }
 
@@ -557,7 +589,9 @@ function main() {
       const generatedAt = new Date(existing.generated_at).getTime()
       const ageSeconds = (Date.now() - generatedAt) / 1000
       if (ageSeconds < STALE_AFTER_SECONDS) {
-        console.log(`WORK-QUEUE.json is fresh (${Math.round(ageSeconds)}s old). Use --force to override.`)
+        console.log(
+          `WORK-QUEUE.json is fresh (${Math.round(ageSeconds)}s old). Use --force to override.`,
+        )
         process.exit(0)
       }
     } catch {
@@ -575,7 +609,9 @@ function main() {
   const queue = parseWorkOrder(featureDir)
   fs.writeFileSync(queuePath, JSON.stringify(queue, null, 2) + '\n')
 
-  console.log(`WORK-QUEUE.json written: ${queue.queue.length} unblocked, ${queue.summary.complete} complete, ${queue.summary.blocked} blocked, ${queue.summary.working} working`)
+  console.log(
+    `WORK-QUEUE.json written: ${queue.queue.length} unblocked, ${queue.summary.complete} complete, ${queue.summary.blocked} blocked, ${queue.summary.working} working`,
+  )
 }
 
 main()
