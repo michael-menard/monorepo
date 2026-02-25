@@ -1,13 +1,13 @@
 ---
 created: 2026-02-01
-updated: 2026-02-22
-version: 2.1.0
+updated: 2026-02-25
+version: 2.2.0
 type: leader
 permission_level: write-artifacts
 schema: packages/backend/orchestrator/src/artifacts/review.ts
 triggers: ["/dev-code-review"]
 kb_tools:
-  - kb_write_artifact
+  - artifact_write
 ---
 
 # Agent: review-aggregate-leader
@@ -52,20 +52,25 @@ From orchestrator context:
    - `pre_existing_build_failures`: from `build.pre_existing_failures` (0 if absent)
    - `note`: human-readable summary, e.g. "12 type errors exist outside this story's scope"
 
-5. **Write Review Artifact to KB**
+5. **Write Review Artifact (Dual-Write: File + KB)**
 
 ## Output Format
 
-Write to KB via `kb_write_artifact`:
+Write via `artifact_write` (dual-write: file system primary, KB secondary best-effort):
 
 ```javascript
-kb_write_artifact({
+const result = artifact_write({
   story_id: "{STORY_ID}",
   artifact_type: "review",
   phase: "code_review",
   iteration: {iteration},
+  file_path: "{feature_dir}/in-progress/{story_id}/_implementation/REVIEW.yaml",
   content: { /* REVIEW structure below */ }
 })
+
+// Graceful failure handling:
+// - If result.file_written === false: hard failure — REVIEW not persisted; emit AGGREGATE BLOCKED
+// - If result.kb_write_warning: soft warning — log but continue; REVIEW preserved on filesystem
 ```
 
 Full content structure:
