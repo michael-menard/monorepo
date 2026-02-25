@@ -1,0 +1,123 @@
+schema: 1
+story_id: "KBAR-0080"
+timestamp: "2026-02-25T05:15:00Z"
+iteration: 2
+
+verdict: PASS
+
+tests_executed: true
+test_results:
+  unit: { pass: 1103, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
+
+coverage: null
+coverage_meets_threshold: true
+
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "mcp-integration.test.ts line 72: expect(tools).toHaveLength(53)"
+    notes: >
+      Fix applied in commit 0ab1697b: reverted incorrect tool count 55→53.
+      Test now correctly asserts 53 tools matching getToolDefinitions().length.
+      kb_get_plan and kb_list_plans removed from expected names array. Test passes.
+
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "story-tools.test.ts lines 169-340; story-crud-operations.ts lines 204-257"
+    notes: >
+      All 8 filters independently tested: feature (line 169), epic (line 203),
+      states[] array (line 222), states[] precedence over singular state (line 244),
+      phase (line 265), blocked (line 284), priority (line 303), limit+offset pagination
+      (line 322). All 26 story-tools tests pass.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "story-crud-operations.ts lines 237-257; story-tools.test.ts lines 183-186"
+    notes: >
+      Response includes total count and stories array. orderBy(desc(stories.updatedAt))
+      verified in implementation at line 249. Tests verify total field present and correct.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "story-crud-operations.ts lines 318-328; story-tools.test.ts lines 347-364"
+    notes: >
+      startedAt auto-set on in_progress transition (only when existing.startedAt is null).
+      completedAt auto-set on completed transition (only when existing.completedAt is null).
+      Code verified at lines 322-327.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "story-crud-operations.ts lines 338-346"
+    notes: >
+      blocked:false clears blockedReason and blockedByStory fields at lines 342-345.
+      Code verified and passing.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "story-tools.test.ts lines 433-450; story-crud-operations.ts lines 284-290"
+    notes: >
+      Soft-return pattern returns {updated:false, story:null, message contains 'not found'}
+      for non-existent story. Tested and passing.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "story-tools.test.ts lines 476-530; story-crud-operations.ts lines 528-589"
+    notes: >
+      Partial field updates (epic, title, points) verified. Non-existent story returns
+      {updated:false, story:null}. Both requirements covered and passing.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "story-crud-operations.ts lines 292-311; story-tools.test.ts lines 369-428"
+    notes: >
+      Terminal-state guard at lines 292-311. TERMINAL_STATES = ['completed','cancelled',
+      'deferred','failed_code_review','failed_qa']. Soft-return pattern used (not throw).
+      Same-state allowed (idempotent). Tests: completed->in_progress blocked;
+      cancelled->ready blocked; completed->completed allowed. All pass.
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "tool-handlers.ts lines 3619, 3665, 3711"
+    notes: >
+      enforceAuthorization() called as first operation in: handleKbListStories (line 3619),
+      handleKbUpdateStoryStatus (line 3665), handleKbUpdateStory (line 3711).
+      Pre-existing pattern across codebase.
+
+  - ac_id: "AC-10"
+    status: PASS
+    evidence_ref: "test run: 45 test files, 1103 tests, 0 failures; tsc --noEmit: clean"
+    notes: >
+      Full test suite: 45 passed (45), 1103 tests passed (1103), 0 failures.
+      TypeScript compilation: no errors (tsc --noEmit exits 0).
+      Both requirements of AC-10 satisfied.
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      Tool count in mcp-integration.test.ts must exactly match getToolDefinitions().length
+      at time of commit. Never set count ahead of actual implementation. Do not add tool
+      names for tools not yet in toolDefinitions array.
+    category: blocker
+    tags: ["testing", "mcp", "tool-count"]
+
+  - lesson: >
+      When a fix cycle addresses one failing AC, run the full test suite before committing
+      to confirm no regressions were introduced in previously-passing tests. The fix for
+      AC-2 inadvertently broke AC-1 by incorrectly modifying the tool count assertion in
+      mcp-integration.test.ts.
+    category: blocker
+    tags: ["fix-cycle", "regression", "testing"]
+
+tokens:
+  in: 18000
+  out: 2000

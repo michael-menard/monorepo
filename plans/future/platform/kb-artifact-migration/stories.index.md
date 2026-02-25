@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T04:17:00Z"
+updated_at: "2026-02-25T05:05:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,15 +16,16 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 3 |
+| uat | 4 |
+| failed-qa | 0 |
 | generated | 0 |
-| created | 1 |
-| ready-to-work | 1 |
+| created | 2 |
+| ready-to-work | 4 |
 | elaboration | 0 |
 | in-progress | 0 |
-| needs-code-review | 0 |
+| needs-code-review | 1 |
 | ready-for-qa | 0 |
-| pending | 23 |
+| pending | 19 |
 
 ---
 
@@ -165,7 +166,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-008: story_list & story_update Tools
 
-**Status:** ready-for-qa
+**Status:** uat
 **Story ID:** KBAR-0080
 **Depends On:** KBAR-007
 **Phase:** 3
@@ -185,7 +186,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Status:** uat
 **Story ID:** KBAR-0090
-**Depends On:** KBAR-008
+**Depends On:** none
 **Phase:** 3
 
 **Feature:** Write unit tests for handleKbGetNextStory (already-implemented tool) and fix mcp-integration.test.ts hygiene (tool count 52→53, add kb_update_story to names list)
@@ -201,7 +202,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-010: Story Tools Integration Tests
 
-**Status:** pending
+**Status:** needs-code-review
+**Story ID:** KBAR-0100
 **Depends On:** none
 **Phase:** 3
 
@@ -218,7 +220,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-011: artifact_write Tool
 
-**Status:** pending
+**Status:** Ready to Work
+**Story ID:** KBAR-0110
 **Depends On:** KBAR-010
 **Phase:** 4
 
@@ -236,24 +239,26 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-012: artifact_read Tool
 
-**Status:** pending
+**Status:** Ready to Work
+**Story ID:** KBAR-0120
 **Depends On:** KBAR-011
 **Phase:** 4
 
-**Feature:** Implement artifact reading with fallback from DB → file system
+**Feature:** Unit tests for artifact MCP tool handlers (kb_read_artifact, kb_write_artifact, kb_list_artifacts, kb_delete_artifact)
 
 **Infrastructure:**
-- MCP tool handler
+- Unit tests in apps/api/knowledge-base/src/mcp-server/__tests__/
 
-**Goal:** Enable agents to read artifacts from database or files transparently
+**Goal:** Produce unit test coverage for the already-implemented artifact tool handlers; file-system fallback is explicitly a non-goal
 
-**Risk Notes:** Fallback logic must be fast; cache strategy needed for frequent reads
+**Risk Notes:** Mock must target crud-operations/artifact-operations.js specifically, not the broader index mock
 
 ---
 
 ## KBAR-013: artifact_search Tool
 
-**Status:** pending
+**Status:** ready-to-work
+**Story ID:** KBAR-0130
 **Depends On:** KBAR-011
 **Phase:** 4
 
@@ -305,7 +310,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-016: Update Setup & Plan Leaders
 
-**Status:** pending
+**Status:** Created
+**Story ID:** KBAR-0160
 **Depends On:** KBAR-015
 **Phase:** 5
 

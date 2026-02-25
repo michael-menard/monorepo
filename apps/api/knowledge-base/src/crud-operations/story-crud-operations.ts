@@ -346,6 +346,27 @@ export async function kb_update_story_status(
     }
   }
 
+  // Terminal-state guard: reject state transitions out of terminal states
+  const TERMINAL_STATES = [
+    'completed',
+    'cancelled',
+    'deferred',
+    'failed_code_review',
+    'failed_qa',
+  ] as const
+  const currentState = existing[0].state
+  const isTerminal = (TERMINAL_STATES as readonly string[]).includes(currentState ?? '')
+  const isStateChange = validated.state !== undefined && validated.state !== currentState
+  if (isTerminal && isStateChange) {
+    return {
+      story: null,
+      updated: false,
+      message:
+        `Story ${validated.story_id} is in terminal state '${currentState}'` +
+        ` and cannot be transitioned to '${validated.state}'`,
+    }
+  }
+
   // Build update object
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),

@@ -68,3 +68,35 @@ Token estimate uses 1 token ≈ 4 bytes methodology. Actual usage may vary based
 
 ---
 *Token log updated during planning phase*
+
+---
+
+## QA Verify Completion Phase (qa-verify-completion-leader)
+
+**Date**: 2026-02-24
+**Agent**: qa-verify-completion-leader
+**Phase**: qa-verify
+
+### Token Estimate
+
+| Component | Estimate |
+|-----------|----------|
+| Agent instructions read | 2,800 |
+| KB artifact reads (verification, checkpoint, working-set) | 3,500 |
+| Story file + index reads | 4,200 |
+| Skill reads (story-update, story-move, index-update) | 6,000 |
+| KB writes (verification gate, lesson, archive, status update) | 2,000 |
+| File updates (frontmatter, index, archive) | 1,500 |
+| **Total Estimated Tokens** | **20,000** |
+
+### Call Record
+
+```
+/token-log KBAR-0080 qa-verify 20000 3000
+```
+
+**Input Tokens**: ~20,000
+**Output Tokens**: ~3,000
+
+---
+*Token log updated during QA verify completion phase*
