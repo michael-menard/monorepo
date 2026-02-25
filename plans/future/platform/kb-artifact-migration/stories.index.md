@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T16:50:53Z"
+updated_at: "2026-02-25T17:00:00Z"
 ---
 
 # KBAR Stories Index
@@ -277,7 +277,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-014: Artifact Summary Extraction
 
 **Status:** pending
-**Depends On:** KBAR-012, KBAR-013
+**Depends On:** KBAR-012
 **Phase:** 4
 
 **Feature:** Implement summary extraction for each artifact type (plan, evidence, review, etc.)
