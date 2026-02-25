@@ -205,12 +205,15 @@ export type KbHealthInput = z.infer<typeof KbHealthInputSchema>
 /**
  * Input schema for artifact_search tool.
  *
- * Searches for artifacts indexed in knowledgeEntries via kb_add by composing
- * tags from story_id, artifact_type, and phase.
+ * Performs semantic search over artifacts indexed in knowledgeEntries via kb_add.
+ * Uses a natural language query combined with optional tag filters.
  *
  * @see KBAR-0130 for artifact search requirements
  */
 export const ArtifactSearchInputSchema = z.object({
+  /** Natural language search query (e.g., 'checkpoint artifacts for KBAR-0130') */
+  query: z.string().min(1),
+
   /** Story ID to scope the search (e.g., 'KBAR-0130') */
   story_id: z.string().min(1).optional(),
 
@@ -222,6 +225,12 @@ export const ArtifactSearchInputSchema = z.object({
 
   /** Maximum number of results (1-50, default 10) */
   limit: z.number().int().min(1).max(50).optional().default(10),
+
+  /** Minimum confidence threshold for semantic matches (0.0–1.0, default 0.0) */
+  min_confidence: z.number().min(0).max(1).optional().default(0.0),
+
+  /** Include explanation of why each result matched (default false) */
+  explain: z.boolean().optional().default(false),
 })
 export type ArtifactSearchInput = z.infer<typeof ArtifactSearchInputSchema>
 
@@ -3071,41 +3080,46 @@ Example:
  */
 export const artifactSearchToolDefinition: McpToolDefinition = {
   name: 'artifact_search',
-  description: `Search for artifacts indexed in the knowledge base.
+  description: `Semantic search for artifacts indexed in the knowledge base using natural language.
 
-artifact_search finds artifacts that were indexed via kb_add into the knowledgeEntries
-table using artifact-specific tags. This is different from kb_read_artifact, which
-reads directly from the storyArtifacts table.
+artifact_search performs embedding-based semantic search over artifacts that were indexed
+via kb_add into the knowledgeEntries table. This is different from kb_read_artifact, which
+reads directly from the storyArtifacts table by exact story_id + artifact_type.
 
-Use this tool to discover artifacts by story, type, or phase when you don't know the
-exact artifact ID. Use kb_read_artifact for direct lookup when you know the story_id
-and artifact_type.
+Use this tool when you need to find relevant artifacts across all stories using natural
+language (e.g., "evidence showing test failures in KBAR stories"). Use kb_read_artifact
+for direct lookup when you know the exact story_id and artifact_type.
 
 Parameters:
+- query (required): Natural language search query for semantic matching
 - story_id (optional): Story ID to scope the search (e.g., 'KBAR-0130')
 - artifact_type (optional): Artifact type filter ('checkpoint', 'scope', 'plan', 'evidence', etc.)
 - phase (optional): Implementation phase filter ('setup', 'analysis', 'planning', 'implementation', etc.)
 - limit (optional): Maximum number of results (1-50, default 10)
+- min_confidence (optional): Minimum semantic confidence threshold (0.0–1.0, default 0.0)
+- explain (optional): Include match explanation in results (default false)
 
 Returns: Object with results array and metadata (total, fallback_mode, correlation_id)
 
 Empty results are not an error — the artifact may not have been indexed via kb_add.
 
-Example (search by story):
+Example (natural language query):
 {
+  "query": "implementation evidence for artifact search tool",
   "story_id": "KBAR-0130"
 }
 
-Example (search by type and phase):
+Example (cross-story semantic search):
 {
+  "query": "failing tests checkpoint artifacts",
   "artifact_type": "checkpoint",
-  "phase": "implementation"
+  "min_confidence": 0.5
 }
 
-Example (search by story and type):
+Example (search by phase):
 {
-  "story_id": "KBAR-0130",
-  "artifact_type": "plan"
+  "query": "implementation plans for MCP tools",
+  "phase": "planning"
 }`,
   inputSchema: zodToMcpSchema(ArtifactSearchInputSchema),
 }

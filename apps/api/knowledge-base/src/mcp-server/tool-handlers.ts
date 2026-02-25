@@ -1035,8 +1035,9 @@ export async function handleKbGetRelated(
 /**
  * Handle artifact_search tool invocation.
  *
- * Searches for artifacts indexed in knowledgeEntries via kb_add by composing
- * tags from story_id, artifact_type, and phase.
+ * Performs semantic search over artifacts indexed in knowledgeEntries via kb_add.
+ * Uses the caller-provided natural language query with optional tag filters for
+ * story_id, artifact_type, and phase.
  *
  * Note: artifact_search only finds artifacts indexed in knowledgeEntries via kb_add
  * (not storyArtifacts). Use kb_read_artifact for direct lookup by story_id + artifact_type.
@@ -1061,10 +1062,13 @@ export async function handleArtifactSearch(
   const inputObj = (input ?? {}) as Record<string, unknown>
   logger.info('artifact_search tool invoked', {
     correlation_id: correlationId,
+    query: inputObj?.query,
     story_id: inputObj?.story_id,
     artifact_type: inputObj?.artifact_type,
     phase: inputObj?.phase,
     limit: inputObj?.limit,
+    min_confidence: inputObj?.min_confidence,
+    explain: inputObj?.explain,
   })
 
   try {
@@ -1083,21 +1087,21 @@ export async function handleArtifactSearch(
 
     logger.info('artifact_search composed tags', {
       correlation_id: correlationId,
+      query: validated.query,
       tags,
     })
 
     // Execute search with timeout, delegating to kb_search
+    // Uses caller-provided natural language query for semantic matching
     const domainLogicStart = Date.now()
     const result = await withTimeout(
       () =>
         kb_search(
           {
-            query: ['artifact', validated.story_id, validated.artifact_type, validated.phase]
-              .filter(Boolean)
-              .join(' '),
+            query: validated.query,
             tags,
             limit: validated.limit ?? 10,
-            min_confidence: 0.0,
+            min_confidence: validated.min_confidence ?? 0.0,
           },
           deps,
         ),

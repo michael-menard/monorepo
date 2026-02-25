@@ -58,7 +58,7 @@ describe('artifact_search tool', () => {
   // ============================================================================
 
   describe('Happy paths', () => {
-    it('HP-1: should return results for story_id only search', async () => {
+    it('HP-1: should return results for natural language query with story_id filter', async () => {
       const mockEntry = createMockKnowledgeEntry({ id: generateTestUuid(), content: 'checkpoint for KBAR-0130' })
       vi.mocked(kb_search).mockResolvedValue(
         makeSearchResult({
@@ -77,7 +77,7 @@ describe('artifact_search tool', () => {
       )
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-0130' },
+        { query: 'checkpoint artifacts for KBAR-0130', story_id: 'KBAR-0130' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -87,7 +87,7 @@ describe('artifact_search tool', () => {
       expect(response.metadata.fallback_mode).toBe(false)
     })
 
-    it('HP-2: should return results for artifact_type only search', async () => {
+    it('HP-2: should return results for artifact_type only search with query', async () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult({ results: [
         {
           id: generateTestUuid(),
@@ -101,7 +101,7 @@ describe('artifact_search tool', () => {
       ]}))
 
       const result = await handleArtifactSearch(
-        { artifact_type: 'checkpoint' },
+        { query: 'find checkpoint artifacts', artifact_type: 'checkpoint' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -110,7 +110,7 @@ describe('artifact_search tool', () => {
       expect(response.results).toHaveLength(1)
     })
 
-    it('HP-3: should return results for phase only search', async () => {
+    it('HP-3: should return results for phase only search with query', async () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult({ results: [
         {
           id: generateTestUuid(),
@@ -124,7 +124,7 @@ describe('artifact_search tool', () => {
       ]}))
 
       const result = await handleArtifactSearch(
-        { phase: 'implementation' },
+        { query: 'implementation artifacts', phase: 'implementation' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -133,7 +133,7 @@ describe('artifact_search tool', () => {
       expect(response.results).toHaveLength(1)
     })
 
-    it('HP-4: should return results for story_id + artifact_type combination', async () => {
+    it('HP-4: should return results for story_id + artifact_type combination with query', async () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult({ results: [
         {
           id: generateTestUuid(),
@@ -153,7 +153,7 @@ describe('artifact_search tool', () => {
       }
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-0130', artifact_type: 'plan' },
+        { query: 'plan for KBAR-0130', story_id: 'KBAR-0130', artifact_type: 'plan' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
         context,
       )
@@ -169,7 +169,7 @@ describe('artifact_search tool', () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-9999' },
+        { query: 'artifacts for KBAR-9999', story_id: 'KBAR-9999' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -183,7 +183,7 @@ describe('artifact_search tool', () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult({ fallback_mode: true }))
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-0130' },
+        { query: 'search artifacts', story_id: 'KBAR-0130' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -200,7 +200,7 @@ describe('artifact_search tool', () => {
   describe('Error cases', () => {
     it('EC-1: should handle validation error for invalid artifact_type', async () => {
       const result = await handleArtifactSearch(
-        { artifact_type: 'not_a_valid_type' },
+        { query: 'find artifacts', artifact_type: 'not_a_valid_type' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -209,7 +209,7 @@ describe('artifact_search tool', () => {
 
     it('EC-2: should handle validation error for invalid phase', async () => {
       const result = await handleArtifactSearch(
-        { phase: 'not_a_valid_phase' },
+        { query: 'find artifacts', phase: 'not_a_valid_phase' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -220,7 +220,7 @@ describe('artifact_search tool', () => {
       vi.mocked(kb_search).mockRejectedValue(new Error('Database connection failed'))
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-0130' },
+        { query: 'search artifacts', story_id: 'KBAR-0130' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -239,7 +239,7 @@ describe('artifact_search tool', () => {
       process.env.KB_SEARCH_TIMEOUT_MS = '1'
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-0130' },
+        { query: 'search artifacts', story_id: 'KBAR-0130' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -266,7 +266,7 @@ describe('artifact_search tool', () => {
       }
 
       const result = await handleArtifactSearch(
-        { story_id: 'KBAR-0130' },
+        { query: 'find artifacts', story_id: 'KBAR-0130' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
         context,
       )
@@ -275,24 +275,29 @@ describe('artifact_search tool', () => {
       expect(response.metadata.correlation_id).toBe(correlationId)
     })
 
-    it('should succeed with no parameters (empty input)', async () => {
-      vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
-
+    it('should reject empty input (query is required)', async () => {
       const result = await handleArtifactSearch(
         {},
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
-      expect(result.isError).toBeUndefined()
-      const response = JSON.parse(result.content[0].text)
-      expect(response.results).toBeDefined()
+      expect(result.isError).toBe(true)
+    })
+
+    it('should reject empty string query (min length 1)', async () => {
+      const result = await handleArtifactSearch(
+        { query: '' },
+        mockDeps as Parameters<typeof handleArtifactSearch>[1],
+      )
+
+      expect(result.isError).toBe(true)
     })
 
     it('should respect limit parameter', async () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
 
       await handleArtifactSearch(
-        { story_id: 'KBAR-0130', limit: 5 },
+        { query: 'find artifacts', story_id: 'KBAR-0130', limit: 5 },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -306,7 +311,7 @@ describe('artifact_search tool', () => {
       vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
 
       await handleArtifactSearch(
-        { story_id: 'KBAR-0130', artifact_type: 'plan' },
+        { query: 'find plan artifacts', story_id: 'KBAR-0130', artifact_type: 'plan' },
         mockDeps as Parameters<typeof handleArtifactSearch>[1],
       )
 
@@ -315,6 +320,35 @@ describe('artifact_search tool', () => {
         expect.objectContaining({
           tags: expect.arrayContaining(['artifact', 'KBAR-0130', 'plan']),
         }),
+        expect.anything(),
+      )
+    })
+
+    it('should pass caller query directly to kb_search (not tag-based synthetic query)', async () => {
+      vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
+
+      const naturalLanguageQuery = 'implementation evidence showing passing tests for KBAR-0130'
+      await handleArtifactSearch(
+        { query: naturalLanguageQuery, story_id: 'KBAR-0130' },
+        mockDeps as Parameters<typeof handleArtifactSearch>[1],
+      )
+
+      expect(vi.mocked(kb_search)).toHaveBeenCalledWith(
+        expect.objectContaining({ query: naturalLanguageQuery }),
+        expect.anything(),
+      )
+    })
+
+    it('should pass min_confidence to kb_search', async () => {
+      vi.mocked(kb_search).mockResolvedValue(makeSearchResult())
+
+      await handleArtifactSearch(
+        { query: 'find artifacts', min_confidence: 0.7 },
+        mockDeps as Parameters<typeof handleArtifactSearch>[1],
+      )
+
+      expect(vi.mocked(kb_search)).toHaveBeenCalledWith(
+        expect.objectContaining({ min_confidence: 0.7 }),
         expect.anything(),
       )
     })
@@ -330,7 +364,7 @@ describe('artifact_search tool', () => {
 
       const result = await handleToolCall(
         'artifact_search',
-        { story_id: 'KBAR-0130' },
+        { query: 'find artifacts', story_id: 'KBAR-0130' },
         mockDeps as Parameters<typeof handleToolCall>[2],
         context,
       )
