@@ -16,14 +16,14 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 8 |
+| uat | 9 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 2 |
 | ready-to-work | 1 |
 | elaboration | 0 |
 | in-progress | 2 |
-| needs-code-review | 2 |
+| needs-code-review | 1 |
 | ready-for-qa | 0 |
 | pending | 16 |
 
@@ -36,8 +36,6 @@ Stories with all dependencies satisfied (can be worked in parallel):
 | Story | Title | Blocked By |
 |-------|-------|------------|
 | KBAR-001 | Database Schema Migrations | — |
-| KBAR-007 | story_get Tool | — |
-| KBAR-010 | Story Tools Integration Tests | — |
 
 ---
 
@@ -311,7 +309,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-016: Update Setup & Plan Leaders
 
-**Status:** needs-code-review
+**Status:** uat
 **Story ID:** KBAR-0160
 **Depends On:** KBAR-015
 **Phase:** 5
@@ -331,7 +329,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Status:** uat
 **Story ID:** KBAR-0170
-**Depends On:** KBAR-016
+**Depends On:** none
 **Phase:** 5
 
 **Feature:** Update dev-execute-leader, backend-coder, frontend-coder to use artifact_write for EVIDENCE, logs
@@ -349,7 +347,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Status:** needs-code-review
 **Story ID:** KBAR-0180
-**Depends On:** KBAR-016
+**Depends On:** none
 **Phase:** 5
 
 **Feature:** Update all code-review-*.agent.md files to use artifact_write for REVIEW artifacts
