@@ -20,10 +20,10 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | failed-qa | 0 |
 | generated | 0 |
 | created | 2 |
-| ready-to-work | 1 |
+| ready-to-work | 0 |
 | elaboration | 0 |
 | in-progress | 1 |
-| needs-code-review | 0 |
+| needs-code-review | 1 |
 | ready-for-qa | 2 |
 | pending | 16 |
 
@@ -346,9 +346,9 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-018: Update Code Review Agents
 
-**Status:** uat
+**Status:** ready-for-qa
 **Story ID:** KBAR-0180
-**Depends On:** none
+**Depends On:** KBAR-016
 **Phase:** 5
 
 **Feature:** Update all code-review-*.agent.md files to use artifact_write for REVIEW artifacts
@@ -364,7 +364,8 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-019: Update QA & Fix Agents
 
-**Status:** pending
+**Status:** needs-code-review
+**Story ID:** KBAR-0190
 **Depends On:** none
 **Phase:** 5
 
