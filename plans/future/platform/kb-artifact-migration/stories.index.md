@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T03:29:45Z"
+updated_at: "2026-02-25T03:34:00Z"
 ---
 
 # KBAR Stories Index
@@ -21,8 +21,9 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | created | 1 |
 | ready-to-work | 1 |
 | elaboration | 0 |
-| in-progress | 2 |
+| in-progress | 1 |
 | needs-code-review | 1 |
+| ready-for-qa | 1 |
 | pending | 23 |
 
 ---
@@ -145,7 +146,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-007: story_get Tool
 
-**Status:** Needs Code Review
+**Status:** ready-for-qa
 **Story ID:** KBAR-0070
 **Depends On:** KBAR-006
 **Phase:** 3
@@ -181,7 +182,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-009: kb_get_next_story Unit Tests and Integration Test Hygiene
 
-**Status:** In Progress
+**Status:** Needs Code Review
 **Story ID:** KBAR-0090
 **Depends On:** KBAR-008
 **Phase:** 3

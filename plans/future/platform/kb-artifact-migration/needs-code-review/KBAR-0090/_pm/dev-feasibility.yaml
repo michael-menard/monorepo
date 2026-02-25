@@ -1,0 +1,78 @@
+feasible: true
+confidence: high
+rationale: >
+  KBAR-0090 is a test-authorship story with no implementation work. The kb_get_next_story
+  tool is fully implemented at all layers (DB function, handler, schema, access control).
+  The only work is: (1) writing unit tests for handleKbGetNextStory using the established
+  vi.hoisted + vi.mock pattern from tool-handlers.test.ts, and (2) updating
+  mcp-integration.test.ts to add kb_update_story to the names list and correct the tool
+  count assertion. Both tasks are low-risk, well-understood, and do not require any
+  production code changes.
+complexity: low
+change_surface:
+  areas:
+    - "apps/api/knowledge-base/src/mcp-server/__tests__/"
+  endpoints: []
+  deploy_touchpoints: []
+risks:
+  - finding: "story-tools.test.ts may or may not exist depending on KBAR-0080 landing state"
+    mitigation: "At implementation start, check if file exists. If yes, extend it. If no, create it following tool-handlers.test.ts structure. This is a conditional branch, not a blocker."
+  - finding: "Tool count in mcp-integration.test.ts may have drifted from 53 by implementation time"
+    mitigation: "At implementation start, call getToolDefinitions().length or count the toolDefinitions array in tool-schemas.ts to get actual count before writing the assertion."
+missing_requirements: []
+evidence_expectations:
+  - "pnpm test --filter @repo/knowledge-base passes with all new tests green"
+  - "pnpm check-types --filter @repo/knowledge-base passes with no TypeScript errors"
+  - "mcp-integration.test.ts tool count assertion matches actual getToolDefinitions().length"
+  - "mcp-integration.test.ts expected names list includes kb_update_story"
+subtasks:
+  - id: ST-1
+    title: "Verify KBAR-0080 landing state and actual tool count"
+    goal: "Determine whether story-tools.test.ts exists and what the actual tool count is, then branch accordingly"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    files_to_modify: []
+    acs: []
+    depends_on: "none"
+    verification: "ls check and wc -l on tool-schemas.ts toolDefinitions array"
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Write unit tests for handleKbGetNextStory (AC-1 through AC-8)"
+    goal: "Cover all handler scenarios: no candidates, all blocked, first unblocked wins, include_backlog, exclude_story_ids, feature filter, authorization, Zod validation"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/tool-handlers.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-handlers.ts"
+      - "apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts"
+      - "apps/api/knowledge-base/src/__types__/index.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/story-tools.test.ts"
+    acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"]
+    depends_on: "ST-1"
+    verification: "pnpm test --filter @repo/knowledge-base -- --reporter=verbose"
+    estimated_tokens: 18000
+
+  - id: ST-3
+    title: "Fix mcp-integration.test.ts hygiene (AC-9)"
+    goal: "Add kb_update_story to expected tool names list; update count assertion to match actual getToolDefinitions().length"
+    files_to_read:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+      - "apps/api/knowledge-base/src/mcp-server/tool-schemas.ts"
+    files_to_modify:
+      - "apps/api/knowledge-base/src/mcp-server/__tests__/mcp-integration.test.ts"
+    acs: ["AC-9"]
+    depends_on: "ST-1"
+    verification: "pnpm test --filter @repo/knowledge-base -- mcp-integration"
+    estimated_tokens: 4000
+
+  - id: ST-4
+    title: "Final verification: types + all tests"
+    goal: "Confirm all tests pass and no TypeScript errors remain"
+    files_to_read: []
+    files_to_modify: []
+    acs: ["AC-10"]
+    depends_on: "ST-2, ST-3"
+    verification: "pnpm check-types --filter @repo/knowledge-base && pnpm test --filter @repo/knowledge-base"
+    estimated_tokens: 2000

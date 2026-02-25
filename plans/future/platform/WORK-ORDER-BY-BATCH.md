@@ -263,7 +263,7 @@ Stories exist across: `UAT/`, `wint/UAT/`, `langgraph-update/UAT/`, `ready-for-q
 
 | ☑ | # | Story ID | Title | Status | Dependencies | Notes |
 |---|---|----------|-------|--------|--------------|-------|
-| [ ] | 72 | KBAR-0090 | story_ready_to_start Tool ⚡ | ⏸️ | KBAR-0080 (#68) | Step 1 |
+| [ ] | 72 | KBAR-0090 | story_ready_to_start Tool ⚡ | 🚧 | KBAR-0080 (#68) | Step 1 |
 | [ ] | 73 | KBAR-0100 | Story Tools Integration Tests ⚡ | ⏸️ | KBAR-0090 (#72) | Step 2 |
 | [ ] | 74 | KBAR-0110 | artifact_write Tool ⚡ | ⏸️ | KBAR-0100 (#73) | Step 3 |
 | [ ] | 75 | KBAR-0120 | artifact_read Tool ⚡ | ⏸️ | KBAR-0110 (#74) | Step 4 |
