@@ -1,7 +1,7 @@
 ---
 created: 2026-02-01
-updated: 2026-02-04
-version: 3.1.0
+updated: 2026-02-25
+version: 3.2.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-implement-story"]
@@ -12,7 +12,7 @@ tools: [Read, Grep, Glob, Bash, Task, TaskOutput]
 kb_tools:
   - kb_update_story_status
   - kb_read_artifact
-  - kb_write_artifact
+  - artifact_write
 ---
 
 # Agent: dev-execute-leader
@@ -157,39 +157,54 @@ Task tool:
     Signal: E2E COMPLETE or E2E FAILED: reason
 ```
 
-### Step 8-10: Map ACs to Evidence, Update CHECKPOINT in KB, Write EVIDENCE Artifact
+### Step 8-10: Map ACs to Evidence, Write EVIDENCE Artifact, Update CHECKPOINT
 
-After collecting all evidence, write to KB:
+After collecting all evidence, write artifacts using dual-write (file + KB):
+
+**Step 8: Write EVIDENCE artifact**
 
 ```javascript
-kb_write_artifact({
+artifact_write({
   story_id: "{STORY_ID}",
   artifact_type: "evidence",
   phase: "implementation",
   iteration: checkpoint.content.iteration,
+  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml",
   content: { /* full EVIDENCE structure */ }
 })
+// On response: if kb_write_warning present, log warning — do NOT block execute phase
+```
 
-// Update checkpoint
-kb_write_artifact({
+**Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Execute phase proceeds without blocking — do not stop on KB write failure.
+
+**Step 9: Update CHECKPOINT artifact**
+
+```javascript
+artifact_write({
   story_id: "{STORY_ID}",
   artifact_type: "checkpoint",
   phase: "implementation",
   iteration: checkpoint.content.iteration,
+  file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml",
   content: {
     ...checkpoint.content,
     current_phase: "execute",
     last_successful_phase: "plan"
   }
 })
+// On response: if kb_write_warning present, log warning — do NOT block execute phase
 ```
+
+**Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Execute phase proceeds without blocking — do not stop on KB write failure.
 
 ---
 
 ## Output
 
-- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — main output
-- KB artifact: `checkpoint` (updated, phase: implementation)
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml` (written via `artifact_write`)
+- File: `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/CHECKPOINT.yaml` (updated via `artifact_write`)
+- KB artifact: `evidence` (story_id, phase: implementation, iteration: N) — written via `artifact_write`
+- KB artifact: `checkpoint` (updated, phase: implementation) — written via `artifact_write`
 - Code files (created/modified by workers)
 
 ---
@@ -237,10 +252,11 @@ kb_update_story_status({
 | Rule | Description |
 |------|-------------|
 | Use plan artifact from KB | DO NOT read full story file |
-| Produce evidence artifact in KB | This is the critical output |
+| Produce evidence artifact via artifact_write | Dual-write: file on filesystem + KB indexing |
 | Map every AC | Even if MISSING |
 | Run E2E tests | With LIVE resources, no MSW |
 | Passing E2E required | Stories CANNOT complete without |
 | Write E2E tests | If none exist, create them |
 | Record config issues | Log URL/env/shape mismatches |
 | Token log | Call /token-log before completion |
+| MUST write artifacts via artifact_write | Not direct file writes or legacy write tools — dual-write ensures filesystem + KB |

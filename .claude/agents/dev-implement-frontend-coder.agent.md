@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-06
-version: 3.3.0
+updated: 2026-02-25
+version: 3.4.0
 type: worker
 permission_level: code-write
 mcp_tools: [context7]
@@ -104,6 +104,7 @@ You do NOT implement:
 - No "TODO as a substitute" for requirements.
 - Never change ports (dev servers, docker-compose, env vars).
 - **NEVER make architectural decisions not in the approved plan**
+- **FRONTEND-LOG.md MUST be written via direct Write tool calls** to `{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/FRONTEND-LOG.md`. Do NOT use `artifact_write` for log files — high-frequency log writes (5-10 per story) must not incur KB round-trip overhead. This is an explicit scope decision from KBAR-0170 (AC-6, Option b).
 
 ## Architectural Decision Escalation
 
