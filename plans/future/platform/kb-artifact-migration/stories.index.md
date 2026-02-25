@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T18:00:00Z"
+updated_at: "2026-02-25T17:11:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,7 +16,7 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 9 |
+| uat | 10 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 2 |
@@ -329,7 +329,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 **Status:** uat
 **Story ID:** KBAR-0170
-**Depends On:** none
+**Depends On:** —
 **Phase:** 5
 
 **Feature:** Update dev-execute-leader, backend-coder, frontend-coder to use artifact_write for EVIDENCE, logs
@@ -364,7 +364,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-019: Update QA & Fix Agents
 
 **Status:** pending
-**Depends On:** KBAR-017, KBAR-018
+**Depends On:** KBAR-018
 **Phase:** 5
 
 **Feature:** Update qa-verify-*.agent.md and dev-fix-fix-leader to use artifact_write
