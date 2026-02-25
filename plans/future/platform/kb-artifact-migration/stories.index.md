@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T18:00:00Z"
+updated_at: "2026-02-25T17:35:00Z"
 ---
 
 # KBAR Stories Index
@@ -16,7 +16,7 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 11 |
+| uat | 12 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 2 |
@@ -24,7 +24,7 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | elaboration | 0 |
 | in-progress | 1 |
 | needs-code-review | 1 |
-| ready-for-qa | 2 |
+| ready-for-qa | 1 |
 | pending | 16 |
 
 ---
@@ -401,7 +401,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-021: Update Orchestrator Commands
 
 **Story ID:** KBAR-0210
-**Status:** ready-for-qa
+**Status:** uat
 **Depends On:** KBAR-020
 **Phase:** 5
 
@@ -419,7 +419,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-022: Agent Migration Testing
 
 **Status:** pending
-**Depends On:** KBAR-021
+**Depends On:** none
 **Phase:** 5
 
 **Feature:** End-to-end test of full story workflow using updated agents
