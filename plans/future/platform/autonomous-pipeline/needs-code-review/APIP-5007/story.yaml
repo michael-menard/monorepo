@@ -1,6 +1,6 @@
 id: "APIP-5007"
 title: "Database Schema Versioning and Migration Strategy"
-status: in-progress
+status: needs-code-review
 priority: medium
 phase: 0
 feature: "Define database schema versioning strategy, Alembic migration framework, and checkpoint schema integration with Aurora; document design decisions"
