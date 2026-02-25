@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 
+// Mock @repo/logger — required because getPatternDiscoveryFromKB (imported below) uses it
+vi.mock('@repo/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
+
 import { createKnowledgeContext, KnowledgeContextSchema } from '../knowledge-context'
 
 describe('KnowledgeContextSchema', () => {
