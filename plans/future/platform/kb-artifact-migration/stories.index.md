@@ -23,8 +23,8 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | ready-to-work | 1 |
 | elaboration | 0 |
 | in-progress | 1 |
-| needs-code-review | 2 |
-| ready-for-qa | 0 |
+| needs-code-review | 0 |
+| ready-for-qa | 2 |
 | pending | 16 |
 
 ---
@@ -345,7 +345,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-018: Update Code Review Agents
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Story ID:** KBAR-0180
 **Depends On:** none
 **Phase:** 5
@@ -399,7 +399,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## KBAR-021: Update Orchestrator Commands
 
 **Story ID:** KBAR-0210
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Depends On:** KBAR-020
 **Phase:** 5
 

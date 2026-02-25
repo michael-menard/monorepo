@@ -191,7 +191,7 @@ All can start immediately. Ordered by downstream impact.
 | 87 | x | KBAR-0180 | Update Code Review Agents **created** | ← KBAR-0160 | KBAR | P1 |
 | 88 | x | KBAR-0190 | Update QA & Fix Agents **created** | ← KBAR-0170, KBAR-0180 | KBAR | P2 |
 | 89 | x | KBAR-0200 | Update Knowledge Context Loader **in-progress** | ← KBAR-0190 | KBAR | P2 |
-| 90 | x | KBAR-0210 | Update Orchestrator Commands **needs-code-review** | ← KBAR-0200 | KBAR | P2 |
+| 90 | x | KBAR-0210 | Update Orchestrator Commands **ready-for-qa** | ← KBAR-0200 | KBAR | P2 |
 | 91 | | KBAR-0220 | Agent Migration Testing | ← KBAR-0210 | KBAR | P2 |
 | G12 | | GATE-12 | **E2E: Validate Context & Session** | ← GATE-11, all Wave 8 | GATE | **HARD GATE** |
 
