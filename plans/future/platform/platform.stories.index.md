@@ -165,7 +165,7 @@ All can start immediately. Ordered by downstream impact.
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
 | 73 | | KBAR-0090 | story_ready_to_start Tool ⚡ | ← KBAR-0080 | KBAR | **P0** |
-| 74 | x | KBAR-0100 | Story Tools Integration Tests ⚡ **ready-to-work** | ← KBAR-0090 | KBAR | **P0** |
+| 74 | x | KBAR-0100 | Story Tools Integration Tests ⚡ **uat** | ← KBAR-0090 | KBAR | **P0** |
 | 75 | x | KBAR-0110 | artifact_write Tool ⚡ **ready-to-work** | ← KBAR-0100 | KBAR | **P0** |
 | 76 | x | KBAR-0120 | artifact_read Tool ⚡ **ready-to-work** | ← KBAR-0110 | KBAR | **P0** |
 | 77 | x | KBAR-0130 | artifact_search Tool ⚡ **ready-to-work** | ← KBAR-0110 | KBAR | **P0** |
@@ -186,7 +186,7 @@ All can start immediately. Ordered by downstream impact.
 | 82 | x | WINT-2090 | Implement Session Context Management ⚡ **created** | ← WINT-0110 | WINT | **P0** |
 | 83 | | WINT-2100 | Create session-manager Agent ⚡ | ← WINT-2090 | WINT | **P0** |
 | 84 | | WINT-9090 | Create Context Cache LangGraph Nodes ⚡ | ← WINT-9010, 2100 | WINT | **P0** |
-| 85 | x | KBAR-0160 | Update Setup & Plan Leaders **created** | ← KBAR-0150 | KBAR | P1 |
+| 85 | x | KBAR-0160 | Update Setup & Plan Leaders **ready-to-work** | ← KBAR-0150 | KBAR | P1 |
 | 86 | | KBAR-0170 | Update Execute & Worker Agents | ← KBAR-0160 | KBAR | P1 |
 | 87 | | KBAR-0180 | Update Code Review Agents | ← KBAR-0160 | KBAR | P1 |
 | 88 | | KBAR-0190 | Update QA & Fix Agents | ← KBAR-0170, KBAR-0180 | KBAR | P2 |
