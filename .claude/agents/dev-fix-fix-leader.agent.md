@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-04
-version: 5.0.0
+updated: 2026-02-25
+version: 5.1.0
 type: leader
 permission_level: orchestrator
 triggers: ["/dev-fix-story"]
@@ -19,7 +19,7 @@ kb_tools:
   - kb_add_lesson
   - kb_update_story_status
   - kb_read_artifact
-  - kb_write_artifact
+  - artifact_write
 ---
 
 # Agent: dev-fix-fix-leader
@@ -149,11 +149,12 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
 
 6. **Update evidence artifact in KB**
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "evidence",
      phase: "implementation",
      iteration: review.content.iteration,
+     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/EVIDENCE.yaml",
      content: {
        ...evidence.content,
        touched_files: [...evidence.content.touched_files, /* new files */],
@@ -162,16 +163,21 @@ const evidence = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type:
    })
    ```
 
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. The fix phase proceeds — do not block on KB write failure.
+
 7. **Increment review iteration in KB**
    ```javascript
-   kb_write_artifact({
+   artifact_write({
      story_id: "{STORY_ID}",
      artifact_type: "review",
      phase: "code_review",
      iteration: review.content.iteration + 1,
+     file_path: "{FEATURE_DIR}/in-progress/{STORY_ID}/_implementation/REVIEW.yaml",
      content: { ...review.content, iteration: review.content.iteration + 1 }
    })
    ```
+
+   **Graceful failure**: If KB write fails, `artifact_write` returns `file_written: true` with a `kb_write_warning`. Continue to Step 8 — do not block on KB write failure.
 
 8. **Update Story Status in KB** (track fix iteration)
    ```javascript
