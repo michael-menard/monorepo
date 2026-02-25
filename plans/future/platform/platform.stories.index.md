@@ -166,7 +166,7 @@ All can start immediately. Ordered by downstream impact.
 |---|---|-------|-------|---------------|------|----------|
 | 73 | | KBAR-0090 | story_ready_to_start Tool ⚡ | ← KBAR-0080 | KBAR | **P0** |
 | 74 | x | KBAR-0100 | Story Tools Integration Tests ⚡ **uat** | ← KBAR-0090 | KBAR | **P0** |
-| 75 | x | KBAR-0110 | artifact_write Tool ⚡ **ready-to-work** | ← KBAR-0100 | KBAR | **P0** |
+| 75 | x | KBAR-0110 | artifact_write Tool ⚡ **uat** | ← KBAR-0100 | KBAR | **P0** |
 | 76 | x | KBAR-0120 | artifact_read Tool ⚡ **uat** | ← KBAR-0110 | KBAR | **P0** |
 | 77 | x | KBAR-0130 | artifact_search Tool ⚡ **ready-to-work** | ← KBAR-0110 | KBAR | **P0** |
 | 78 | | KBAR-0140 | Artifact Summary Extraction ⚡ | ← KBAR-0120, KBAR-0130 | KBAR | **P0** |
