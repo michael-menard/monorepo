@@ -44,10 +44,7 @@ import {
   type KbUpdateStoryInput,
   type KbGetNextStoryInput,
 } from '../crud-operations/story-crud-operations.js'
-import {
-  ArtifactTypeSchema,
-  StoryPhaseSchema,
-} from '../__types__/index.js'
+import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
 import {
   KbLogTokensInputSchema,
   type KbLogTokensInput,
