@@ -75,11 +75,12 @@ export type SessionManagerCleanupInput = z.infer<typeof SessionManagerCleanupInp
 // Injectable DB function types (AC-10)
 // ============================================================================
 
-export type SessionCleanupResult = {
-  deletedCount: number
-  dryRun: boolean
-  cutoffDate: Date
-}
+export const SessionCleanupResultSchema = z.object({
+  deletedCount: z.number().int().min(0),
+  dryRun: z.boolean(),
+  cutoffDate: z.date(),
+})
+export type SessionCleanupResult = z.infer<typeof SessionCleanupResultSchema>
 
 /**
  * Injectable DB function for session create.
@@ -154,50 +155,52 @@ export type SessionManagerResult = z.infer<typeof SessionManagerResultSchema>
 // ============================================================================
 
 /**
- * Extended graph state with session management fields.
+ * Schema for extended graph state with session management fields.
  * Extends GraphStateWithContext (from retrieve-context.ts) per AC-9.
  */
-export interface GraphStateWithSession extends GraphStateWithContext {
+export const GraphStateWithSessionSchema = z.object({
   /** Operation to perform: 'create' | 'update' | 'complete' | 'cleanup' */
-  sessionOperation?: 'create' | 'update' | 'complete' | 'cleanup'
+  sessionOperation: z.enum(['create', 'update', 'complete', 'cleanup']).optional(),
 
   // Create fields
   /** Agent name for the session (create) */
-  sessionAgentName?: string
+  sessionAgentName: z.string().optional(),
   /** Story ID for the session (create, optional) */
-  sessionStoryId?: string | null
+  sessionStoryId: z.string().nullable().optional(),
   /** Phase name (create, optional) */
-  sessionPhase?: string | null
+  sessionPhase: z.string().nullable().optional(),
   /** Initial input tokens (create) */
-  sessionInputTokens?: number
+  sessionInputTokens: z.number().int().min(0).optional(),
   /** Initial output tokens (create) */
-  sessionOutputTokens?: number
+  sessionOutputTokens: z.number().int().min(0).optional(),
   /** Initial cached tokens (create) */
-  sessionCachedTokens?: number
+  sessionCachedTokens: z.number().int().min(0).optional(),
 
   // Update / complete fields
   /** Session ID to update/complete */
-  sessionId?: string | null
+  sessionId: z.string().nullable().optional(),
   /** Update mode: 'incremental' (default) or 'absolute' */
-  sessionUpdateMode?: 'incremental' | 'absolute'
+  sessionUpdateMode: z.enum(['incremental', 'absolute']).optional(),
   /** Input tokens delta (update) or final value (complete) */
-  sessionInputTokensDelta?: number
+  sessionInputTokensDelta: z.number().int().optional(),
   /** Output tokens delta (update) or final value (complete) */
-  sessionOutputTokensDelta?: number
+  sessionOutputTokensDelta: z.number().int().optional(),
   /** Cached tokens delta (update) or final value (complete) */
-  sessionCachedTokensDelta?: number
+  sessionCachedTokensDelta: z.number().int().optional(),
   /** End time for complete operation */
-  sessionEndedAt?: Date
+  sessionEndedAt: z.date().optional(),
 
   // Cleanup fields
   /** Retention period in days (cleanup, default 90) */
-  sessionRetentionDays?: number
+  sessionRetentionDays: z.number().int().min(1).optional(),
   /** Whether to dry run (cleanup, default true) */
-  sessionDryRun?: boolean
+  sessionDryRun: z.boolean().optional(),
 
   /** Result of session manager operation */
-  sessionManagerResult?: SessionManagerResult | null
-}
+  sessionManagerResult: SessionManagerResultSchema.nullable().optional(),
+})
+
+export type GraphStateWithSession = GraphStateWithContext & z.infer<typeof GraphStateWithSessionSchema>
 
 // ============================================================================
 // Default DB functions (dynamically loaded at runtime)
@@ -206,32 +209,28 @@ export interface GraphStateWithSession extends GraphStateWithContext {
 async function defaultSessionCreate(
   input: SessionManagerCreateInput,
 ): Promise<SelectContextSession | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { sessionCreate } = await import('@repo/mcp-tools/session-management/session-create.js' as any)
+  const { sessionCreate } = await import('@repo/mcp-tools/session-management/session-create.js')
   return sessionCreate(input)
 }
 
 async function defaultSessionUpdate(
   input: SessionManagerUpdateInput,
 ): Promise<SelectContextSession | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { sessionUpdate } = await import('@repo/mcp-tools/session-management/session-update.js' as any)
+  const { sessionUpdate } = await import('@repo/mcp-tools/session-management/session-update.js')
   return sessionUpdate(input)
 }
 
 async function defaultSessionComplete(
   input: SessionManagerCompleteInput,
 ): Promise<SelectContextSession | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { sessionComplete } = await import('@repo/mcp-tools/session-management/session-complete.js' as any)
+  const { sessionComplete } = await import('@repo/mcp-tools/session-management/session-complete.js')
   return sessionComplete(input)
 }
 
 async function defaultSessionCleanup(
   input: Partial<SessionManagerCleanupInput>,
 ): Promise<SessionCleanupResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { sessionCleanup } = await import('@repo/mcp-tools/session-management/session-cleanup.js' as any)
+  const { sessionCleanup } = await import('@repo/mcp-tools/session-management/session-cleanup.js')
   return sessionCleanup(input)
 }
 

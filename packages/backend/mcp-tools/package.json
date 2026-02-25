@@ -13,6 +13,42 @@
     "./session-management": {
       "types": "./dist/session-management/index.d.ts",
       "default": "./dist/session-management/index.js"
+    },
+    "./context-cache/__types__": {
+      "types": "./dist/context-cache/__types__/index.d.ts",
+      "default": "./dist/context-cache/__types__/index.js"
+    },
+    "./session-management/__types__": {
+      "types": "./dist/session-management/__types__/index.d.ts",
+      "default": "./dist/session-management/__types__/index.js"
+    },
+    "./context-cache/context-cache-get.js": {
+      "types": "./dist/context-cache/context-cache-get.d.ts",
+      "default": "./dist/context-cache/context-cache-get.js"
+    },
+    "./context-cache/context-cache-put.js": {
+      "types": "./dist/context-cache/context-cache-put.d.ts",
+      "default": "./dist/context-cache/context-cache-put.js"
+    },
+    "./context-cache/context-cache-invalidate.js": {
+      "types": "./dist/context-cache/context-cache-invalidate.d.ts",
+      "default": "./dist/context-cache/context-cache-invalidate.js"
+    },
+    "./session-management/session-create.js": {
+      "types": "./dist/session-management/session-create.d.ts",
+      "default": "./dist/session-management/session-create.js"
+    },
+    "./session-management/session-update.js": {
+      "types": "./dist/session-management/session-update.d.ts",
+      "default": "./dist/session-management/session-update.js"
+    },
+    "./session-management/session-complete.js": {
+      "types": "./dist/session-management/session-complete.d.ts",
+      "default": "./dist/session-management/session-complete.js"
+    },
+    "./session-management/session-cleanup.js": {
+      "types": "./dist/session-management/session-cleanup.d.ts",
+      "default": "./dist/session-management/session-cleanup.js"
     }
   },
   "scripts": {

@@ -22,46 +22,27 @@ import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphState } from '../../state/index.js'
 import type { GraphStateWithContext } from '../reality/retrieve-context.js'
 import type { SelectContextPack } from '@repo/database-schema'
+import {
+  ContextCacheGetInputSchema,
+  ContextCachePutInputSchema,
+  ContextCacheInvalidateInputSchema,
+  type ContextCacheGetInput,
+  type ContextCachePutInput,
+  type ContextCacheInvalidateInput,
+} from '@repo/mcp-tools/context-cache/__types__'
 
 // ============================================================================
-// Input Schemas (matching mcp-tools context-cache/__types__/index.ts — AC-14)
+// Input Schemas — re-exported from @repo/mcp-tools (AC-14: no duplication)
 // ============================================================================
 
-const packTypeValues = [
-  'codebase',
-  'story',
-  'feature',
-  'epic',
-  'architecture',
-  'lessons_learned',
-  'test_patterns',
-] as const
+export const ContextWarmerGetInputSchema = ContextCacheGetInputSchema
+export type ContextWarmerGetInput = ContextCacheGetInput
 
-export const ContextWarmerGetInputSchema = z.object({
-  packType: z.enum(packTypeValues),
-  packKey: z.string().min(1),
-})
+export const ContextWarmerPutInputSchema = ContextCachePutInputSchema
+export type ContextWarmerPutInput = ContextCachePutInput
 
-export type ContextWarmerGetInput = z.infer<typeof ContextWarmerGetInputSchema>
-
-export const ContextWarmerPutInputSchema = z.object({
-  packType: z.enum(packTypeValues),
-  packKey: z.string().min(1),
-  content: z.record(z.unknown()),
-  ttl: z.number().int().positive().optional().default(604800),
-  version: z.number().int().optional(),
-})
-
-export type ContextWarmerPutInput = z.infer<typeof ContextWarmerPutInputSchema>
-
-export const ContextWarmerInvalidateInputSchema = z.object({
-  packType: z.enum(packTypeValues).optional(),
-  packKey: z.string().min(1).optional(),
-  olderThan: z.date().optional(),
-  hardDelete: z.boolean().optional().default(false),
-})
-
-export type ContextWarmerInvalidateInput = z.infer<typeof ContextWarmerInvalidateInputSchema>
+export const ContextWarmerInvalidateInputSchema = ContextCacheInvalidateInputSchema
+export type ContextWarmerInvalidateInput = ContextCacheInvalidateInput
 
 // ============================================================================
 // Injectable DB function types (AC-10)
@@ -135,33 +116,36 @@ export type ContextWarmerResult = z.infer<typeof ContextWarmerResultSchema>
 // ============================================================================
 
 /**
- * Extended graph state with context cache fields.
+ * Schema for extended graph state with context cache fields.
  * Extends GraphStateWithContext (from retrieve-context.ts) per AC-9.
  */
-export interface GraphStateWithContextCache extends GraphStateWithContext {
+export const GraphStateWithContextCacheSchema = z.object({
   /** Operation to perform: 'get' | 'put' | 'invalidate' */
-  cacheOperation?: 'get' | 'put' | 'invalidate'
+  cacheOperation: z.enum(['get', 'put', 'invalidate']).optional(),
   /** Pack type for get/put/invalidate */
-  cachePackType?: (typeof packTypeValues)[number]
+  cachePackType: ContextCacheGetInputSchema.shape.packType.optional(),
   /** Pack key for get/put/invalidate */
-  cachePackKey?: string
+  cachePackKey: z.string().optional(),
   /** Content to store (put only) */
-  cacheContent?: Record<string, unknown>
+  cacheContent: z.record(z.unknown()).optional(),
   /** TTL in seconds (put only) */
-  cacheTtl?: number
+  cacheTtl: z.number().int().positive().optional(),
   /** Pack version (put only) */
-  cacheVersion?: number
+  cacheVersion: z.number().int().optional(),
   /** olderThan date for invalidation (invalidate only) */
-  cacheOlderThan?: Date
+  cacheOlderThan: z.date().optional(),
   /** Hard delete flag (invalidate only) */
-  cacheHardDelete?: boolean
+  cacheHardDelete: z.boolean().optional(),
   /** Result of context warmer operation */
-  contextWarmerResult?: ContextWarmerResult | null
+  contextWarmerResult: ContextWarmerResultSchema.nullable().optional(),
   /** Whether cache was hit (convenience field) */
-  contextCacheHit?: boolean
+  contextCacheHit: z.boolean().optional(),
   /** Retrieved context pack content (convenience field) */
-  contextPackContent?: Record<string, unknown> | null
-}
+  contextPackContent: z.record(z.unknown()).nullable().optional(),
+})
+
+export type GraphStateWithContextCache = z.infer<typeof GraphStateWithContextCacheSchema> &
+  GraphStateWithContext
 
 // ============================================================================
 // Default DB functions (dynamically loaded to avoid hard dep on @repo/db)
@@ -172,22 +156,21 @@ export interface GraphStateWithContextCache extends GraphStateWithContext {
  * At runtime, @repo/db is available via the Lambda environment.
  */
 async function defaultCacheGet(input: ContextWarmerGetInput): Promise<SelectContextPack | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { contextCacheGet } = await import('@repo/mcp-tools/context-cache/context-cache-get.js' as any)
+  const { contextCacheGet } = await import('@repo/mcp-tools/context-cache/context-cache-get.js')
   return contextCacheGet(input)
 }
 
 async function defaultCachePut(input: ContextWarmerPutInput): Promise<SelectContextPack | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { contextCachePut } = await import('@repo/mcp-tools/context-cache/context-cache-put.js' as any)
+  const { contextCachePut } = await import('@repo/mcp-tools/context-cache/context-cache-put.js')
   return contextCachePut(input)
 }
 
 async function defaultCacheInvalidate(
   input: ContextWarmerInvalidateInput,
 ): Promise<{ invalidatedCount: number }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { contextCacheInvalidate } = await import('@repo/mcp-tools/context-cache/context-cache-invalidate.js' as any)
+  const { contextCacheInvalidate } = await import(
+    '@repo/mcp-tools/context-cache/context-cache-invalidate.js'
+  )
   return contextCacheInvalidate(input)
 }
 

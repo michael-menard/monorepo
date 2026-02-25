@@ -253,7 +253,7 @@ describe('HP-5: factory pattern and DB injection (AC-8, AC-10)', () => {
     const mockCachePut = vi.fn().mockResolvedValue(makeMockPack())
     const mockCacheInvalidate = vi.fn().mockResolvedValue({ invalidatedCount: 0 })
 
-    const node = createContextWarmerNode({ mockCacheGet, cachePutFn: mockCachePut, cacheGetFn: mockCacheGet, cacheInvalidateFn: mockCacheInvalidate })
+    const node = createContextWarmerNode({ cachePutFn: mockCachePut, cacheGetFn: mockCacheGet, cacheInvalidateFn: mockCacheInvalidate })
 
     await node({ ...baseState(), cacheOperation: 'get', cachePackType: 'codebase', cachePackKey: 'main' })
     expect(mockCacheGet).toHaveBeenCalledTimes(1)
