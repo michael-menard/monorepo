@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-23T23:00:00Z"
+updated_at: "2026-02-25T03:29:45Z"
 ---
 
 # KBAR Stories Index
@@ -19,9 +19,10 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | uat | 1 |
 | generated | 0 |
 | created | 1 |
-| ready-to-work | 2 |
-| elaboration | 1 |
-| in-progress | 1 |
+| ready-to-work | 1 |
+| elaboration | 0 |
+| in-progress | 2 |
+| needs-code-review | 1 |
 | pending | 23 |
 
 ---
@@ -144,7 +145,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-007: story_get Tool
 
-**Status:** In Progress
+**Status:** Needs Code Review
 **Story ID:** KBAR-0070
 **Depends On:** KBAR-006
 **Phase:** 3
@@ -178,21 +179,21 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
-## KBAR-009: story_ready_to_start Tool
+## KBAR-009: kb_get_next_story Unit Tests and Integration Test Hygiene
 
-**Status:** Created
+**Status:** In Progress
 **Story ID:** KBAR-0090
 **Depends On:** KBAR-008
 **Phase:** 3
 
-**Feature:** Implement MCP tool to find stories ready to work (unblocked, dependencies satisfied)
+**Feature:** Write unit tests for handleKbGetNextStory (already-implemented tool) and fix mcp-integration.test.ts hygiene (tool count 52→53, add kb_update_story to names list)
 
 **Infrastructure:**
-- MCP tool handler with dependency resolution
+- Unit tests in apps/api/knowledge-base/src/mcp-server/__tests__/
 
-**Goal:** Enable agents to discover next actionable story automatically
+**Goal:** Produce test coverage for the already-implemented kb_get_next_story MCP tool; fix integration test hygiene gap
 
-**Risk Notes:** Dependency resolution must handle circular dependencies and missing stories
+**Risk Notes:** Check KBAR-0080 landing state before writing — story-tools.test.ts may already exist; tool count must be re-verified at implementation time
 
 ---
 
