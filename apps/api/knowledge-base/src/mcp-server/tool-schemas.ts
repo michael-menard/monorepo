@@ -253,6 +253,7 @@ export const TOOL_SCHEMA_VERSION = '1.0.0'
 /**
  * Convert Zod schema to MCP-compatible JSON Schema.
  * Removes $schema property as MCP SDK handles schema version.
+ * Strips top-level anyOf/oneOf/allOf which the Claude API rejects.
  */
 function zodToMcpSchema(zodSchema: unknown): Record<string, unknown> {
   const jsonSchema = zodToJsonSchema(zodSchema as Parameters<typeof zodToJsonSchema>[0], {
@@ -267,6 +268,30 @@ function zodToMcpSchema(zodSchema: unknown): Record<string, unknown> {
     const schemaObj = jsonSchema as Record<string, unknown>
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { $schema, ...rest } = schemaObj
+
+    // Claude API rejects top-level anyOf/oneOf/allOf in input_schema.
+    // zod-to-json-schema produces these for .optional() on the whole schema
+    // (e.g. `z.object({...}).optional()`). Extract the object branch instead.
+    if (rest.anyOf && Array.isArray(rest.anyOf)) {
+      const objectBranch = (rest.anyOf as Record<string, unknown>[]).find(
+        branch => branch.type === 'object',
+      )
+      if (objectBranch) {
+        // Merge the object branch up, dropping anyOf
+        const { anyOf: _anyOf, ...withoutAnyOf } = rest
+        return { ...withoutAnyOf, ...objectBranch }
+      }
+    }
+    if (rest.oneOf && Array.isArray(rest.oneOf)) {
+      const objectBranch = (rest.oneOf as Record<string, unknown>[]).find(
+        branch => branch.type === 'object',
+      )
+      if (objectBranch) {
+        const { oneOf: _oneOf, ...withoutOneOf } = rest
+        return { ...withoutOneOf, ...objectBranch }
+      }
+    }
+
     if (!rest.type) rest.type = 'object'
     return rest
   }

@@ -4,7 +4,7 @@
  * Provides connection pooling optimized for serverless (Lambda) context.
  *
  * Configuration:
- * - Max connections: 10 (suitable for Lambda concurrency)
+ * - Max connections: 3 (low per-process; each MCP stdio instance needs few connections)
  * - Idle timeout: 10s (release connections quickly)
  * - Connection timeout: 5s (fail fast)
  *
@@ -84,7 +84,7 @@ function getDbConfig(): DbConfig {
     database: process.env.KB_DB_NAME || 'knowledgebase',
     user: process.env.KB_DB_USER || 'kbuser',
     password,
-    maxConnections: parseInt(process.env.KB_DB_MAX_CONNECTIONS || '10', 10),
+    maxConnections: parseInt(process.env.KB_DB_MAX_CONNECTIONS || '3', 10),
     idleTimeoutMs: parseInt(process.env.KB_DB_IDLE_TIMEOUT_MS || '10000', 10),
     connectionTimeoutMs: parseInt(process.env.KB_DB_CONNECTION_TIMEOUT_MS || '5000', 10),
   }
