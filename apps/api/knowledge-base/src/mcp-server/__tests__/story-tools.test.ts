@@ -116,8 +116,8 @@ describe('Story Tool Handlers', () => {
       await handleKbListStories({ feature: 'kb-artifact-migration' }, mockDeps)
 
       expect(mockKbListStories).toHaveBeenCalledWith(
-        expect.objectContaining({ feature: 'kb-artifact-migration' }),
         { db: mockDeps.db },
+        expect.objectContaining({ feature: 'kb-artifact-migration' }),
       )
     })
 
@@ -127,8 +127,8 @@ describe('Story Tool Handlers', () => {
       await handleKbListStories({ state: 'in_progress' }, mockDeps)
 
       expect(mockKbListStories).toHaveBeenCalledWith(
-        expect.objectContaining({ state: 'in_progress' }),
         { db: mockDeps.db },
+        expect.objectContaining({ state: 'in_progress' }),
       )
     })
 
@@ -138,8 +138,8 @@ describe('Story Tool Handlers', () => {
       await handleKbListStories({ limit: 5, offset: 10 }, mockDeps)
 
       expect(mockKbListStories).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: 5, offset: 10 }),
         { db: mockDeps.db },
+        expect.objectContaining({ limit: 5, offset: 10 }),
       )
     })
 
