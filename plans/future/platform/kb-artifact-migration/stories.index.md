@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T20:00:00Z"
+updated_at: "2026-02-25T23:00:00Z"
 ---
 
 # KBAR Stories Index
@@ -20,8 +20,8 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | failed-qa | 0 |
 | generated | 0 |
 | created | 3 |
-| ready-to-work | 1 |
-| elaboration | 1 |
+| ready-to-work | 2 |
+| elaboration | 0 |
 | in-progress | 0 |
 | needs-code-review | 3 |
 | ready-for-qa | 0 |
@@ -257,7 +257,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-013: artifact_search Tool
 
-**Status:** ready-for-qa
+**Status:** uat
 **Story ID:** KBAR-0130
 **Depends On:** KBAR-011
 **Phase:** 4
@@ -382,7 +382,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-020: Update Knowledge Context Loader
 
-**Status:** In Elaboration
+**Status:** ready-to-work
 **Story ID:** KBAR-0200
 **Depends On:** KBAR-019
 **Phase:** 5
@@ -400,7 +400,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-021: Update Orchestrator Commands
 
-**Status:** Created
+**Status:** ready-to-work
 **Story ID:** KBAR-0210
 **Depends On:** KBAR-020
 **Phase:** 5
