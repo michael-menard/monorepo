@@ -18,9 +18,6 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import { createToolNode } from '../../runner/node-factory.js'
-import type { GraphState } from '../../state/index.js'
-import type { GraphStateWithContext } from '../reality/retrieve-context.js'
 import type { SelectContextPack } from '@repo/database-schema'
 import {
   ContextCacheGetInputSchema,
@@ -30,6 +27,9 @@ import {
   type ContextCachePutInput,
   type ContextCacheInvalidateInput,
 } from '@repo/mcp-tools/context-cache/__types__'
+import { createToolNode } from '../../runner/node-factory.js'
+import type { GraphState } from '../../state/index.js'
+import type { GraphStateWithContext } from '../reality/retrieve-context.js'
 
 // ============================================================================
 // Input Schemas — re-exported from @repo/mcp-tools (AC-14: no duplication)
@@ -52,17 +52,13 @@ export type ContextWarmerInvalidateInput = ContextCacheInvalidateInput
  * Injectable DB function for cache get operations.
  * Used to inject a mock in tests.
  */
-export type CacheGetFn = (
-  input: ContextWarmerGetInput,
-) => Promise<SelectContextPack | null>
+export type CacheGetFn = (input: ContextWarmerGetInput) => Promise<SelectContextPack | null>
 
 /**
  * Injectable DB function for cache put operations.
  * Used to inject a mock in tests.
  */
-export type CachePutFn = (
-  input: ContextWarmerPutInput,
-) => Promise<SelectContextPack | null>
+export type CachePutFn = (input: ContextWarmerPutInput) => Promise<SelectContextPack | null>
 
 /**
  * Injectable DB function for cache invalidation operations.
@@ -168,9 +164,8 @@ async function defaultCachePut(input: ContextWarmerPutInput): Promise<SelectCont
 async function defaultCacheInvalidate(
   input: ContextWarmerInvalidateInput,
 ): Promise<{ invalidatedCount: number }> {
-  const { contextCacheInvalidate } = await import(
-    '@repo/mcp-tools/context-cache/context-cache-invalidate.js'
-  )
+  const { contextCacheInvalidate } =
+    await import('@repo/mcp-tools/context-cache/context-cache-invalidate.js')
   return contextCacheInvalidate(input)
 }
 

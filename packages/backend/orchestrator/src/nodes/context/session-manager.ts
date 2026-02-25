@@ -22,9 +22,6 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import { createToolNode } from '../../runner/node-factory.js'
-import type { GraphState } from '../../state/index.js'
-import type { GraphStateWithContext } from '../reality/retrieve-context.js'
 import type { SelectContextSession } from '@repo/database-schema'
 import {
   SessionCreateInputSchema,
@@ -38,6 +35,9 @@ import {
   type SessionCleanupInput,
   type SessionCleanupResult,
 } from '@repo/mcp-tools/session-management/__types__'
+import { createToolNode } from '../../runner/node-factory.js'
+import type { GraphState } from '../../state/index.js'
+import type { GraphStateWithContext } from '../reality/retrieve-context.js'
 
 // ============================================================================
 // Input Schemas — re-exported from @repo/mcp-tools (AC-14: no duplication)
@@ -204,9 +204,7 @@ async function defaultSessionUpdate(
 async function defaultSessionComplete(
   input: SessionManagerCompleteInput,
 ): Promise<SelectContextSession | null> {
-  const { sessionComplete } = await import(
-    '@repo/mcp-tools/session-management/session-complete.js'
-  )
+  const { sessionComplete } = await import('@repo/mcp-tools/session-management/session-complete.js')
   return sessionComplete(input)
 }
 
