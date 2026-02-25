@@ -1,0 +1,174 @@
+schema: 1
+story_id: KBAR-0060
+timestamp: 2026-02-21T00:00:00.000Z
+iteration: 2
+
+verdict: FAIL
+
+workers_run:
+  - lint
+  - style
+  - syntax
+  - security
+  - typecheck
+  - build
+  - reusability
+  - react
+  - typescript
+  - accessibility
+
+workers_skipped: []
+
+ranked_patches:
+  - priority: 1
+    file: packages/backend/kbar-sync/src/__tests__/helpers/testcontainers.ts
+    issue: TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>
+    severity: high
+    auto_fixable: false
+    worker: typescript
+  - priority: 2
+    file: packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts
+    issue: Duplicated testcontainer setup code — identical PostgreSQL schema initialization exists in shared helper packages/backend/kbar-sync/src/__tests__/helpers/testcontainers.ts
+    severity: medium
+    auto_fixable: false
+    worker: reusability
+  - priority: 3
+    file: apps/web/app-wishlist-gallery/vite.config.ts
+    issue: "FRONTEND_PORT environment variable missing in worktree .env — pre-existing config issue, not caused by KBAR-0060"
+    severity: low
+    auto_fixable: false
+    worker: build
+    note: "Build failure is a worktree .env configuration issue, not caused by KBAR-0060 code changes. The kbar-sync package itself compiled successfully."
+
+findings:
+  lint:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 2
+    findings:
+      - file: packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts
+        line: 24
+        severity: warning
+        rule: no-console
+        message: Unexpected console statement
+        auto_fixable: false
+      - file: packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts
+        line: 519
+        severity: warning
+        rule: no-console
+        message: Unexpected console statement
+        auto_fixable: false
+
+  style:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 3
+    findings:
+      - file: packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts
+        line: 519
+        severity: warning
+        message: Consider using test logger instead of console.log
+        auto_fixable: true
+      - file: packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts
+        line: 18
+        severity: warning
+        message: Duplicated testcontainer setup justified per architectural notes
+        auto_fixable: false
+      - file: packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts
+        line: 536
+        severity: warning
+        message: "Clarify partial match 'ymlink' vs 'symlink'"
+        auto_fixable: false
+
+  syntax:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 2
+    findings:
+      - file: packages/backend/kbar-sync/src/__tests__/sync-integration.integration.test.ts
+        line: 418
+        severity: warning
+        message: Could use template literals instead of string concatenation
+        auto_fixable: true
+      - file: packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts
+        line: 42
+        severity: warning
+        message: Could use destructuring for repeated container getter calls
+        auto_fixable: true
+
+  security:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typecheck:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  build:
+    verdict: FAIL
+    skipped: false
+    errors: 1
+    warnings: 0
+    findings:
+      - file: apps/web/app-wishlist-gallery/vite.config.ts
+        severity: error
+        message: "FRONTEND_PORT environment variable is required. Set it in root .env"
+        auto_fixable: false
+        note: "Pre-existing worktree config issue, not caused by KBAR-0060. Package @repo/kbar-sync built successfully."
+
+  reusability:
+    verdict: FAIL
+    skipped: false
+    errors: 1
+    warnings: 0
+    findings:
+      - file: packages/backend/kbar-sync/scripts/__tests__/integration/sync-cli.integration.test.ts
+        line: 1
+        severity: error
+        rule: no-app-duplication
+        message: "Duplicated testcontainer setup code — identical PostgreSQL schema initialization exists in shared helper packages/backend/kbar-sync/src/__tests__/helpers/testcontainers.ts. This file reimplements startKbarTestContainer, applyKbarSchema, createEnumSql, and createTempDir from scratch instead of importing from the shared module."
+        auto_fixable: false
+
+  react:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+  typescript:
+    verdict: FAIL
+    skipped: false
+    errors: 1
+    warnings: 0
+    findings:
+      - file: packages/backend/kbar-sync/src/__tests__/helpers/testcontainers.ts
+        line: 34
+        severity: error
+        rule: zod-first-types
+        message: "TypeScript interface used — CLAUDE.md requires Zod schema with z.infer<>"
+        auto_fixable: false
+
+  accessibility:
+    verdict: PASS
+    skipped: false
+    errors: 0
+    warnings: 0
+    findings: []
+
+total_errors: 3
+total_warnings: 7
+auto_fixable_count: 3
+
+tokens:
+  in: 150000
+  out: 25000
