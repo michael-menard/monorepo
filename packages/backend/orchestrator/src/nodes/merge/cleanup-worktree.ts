@@ -95,10 +95,10 @@ export function createCleanupWorktreeNode(
 
     // ---- Step 1: git worktree remove --force {worktreeDir} ----
     try {
-      const worktreeResult = await gitRunner(
-        ['worktree', 'remove', '--force', worktreeDir],
-        { cwd: mainRepoDir, env },
-      )
+      const worktreeResult = await gitRunner(['worktree', 'remove', '--force', worktreeDir], {
+        cwd: mainRepoDir,
+        env,
+      })
 
       if (worktreeResult.exitCode !== 0) {
         const warning = `git worktree remove failed: ${worktreeResult.stderr || worktreeResult.stdout}`
@@ -125,22 +125,21 @@ export function createCleanupWorktreeNode(
 
     // ---- Step 2: git branch -d/-D {storyBranch} ----
     // Use -D (force delete) on MERGE_FAIL or MERGE_BLOCKED since branch may be unmerged
-    const isMergeFailOrBlocked =
-      mergeVerdict === 'MERGE_FAIL' || mergeVerdict === 'MERGE_BLOCKED'
+    const isMergeFailOrBlocked = mergeVerdict === 'MERGE_FAIL' || mergeVerdict === 'MERGE_BLOCKED'
 
     try {
       const deleteFlag = isMergeFailOrBlocked ? '-D' : '-d'
-      const deleteResult = await gitRunner(
-        ['branch', deleteFlag, storyBranch],
-        { cwd: mainRepoDir, env },
-      )
+      const deleteResult = await gitRunner(['branch', deleteFlag, storyBranch], {
+        cwd: mainRepoDir,
+        env,
+      })
 
       if (deleteResult.exitCode !== 0 && !isMergeFailOrBlocked) {
         // Try -D as fallback for unmerged branch
-        const forceDeleteResult = await gitRunner(
-          ['branch', '-D', storyBranch],
-          { cwd: mainRepoDir, env },
-        )
+        const forceDeleteResult = await gitRunner(['branch', '-D', storyBranch], {
+          cwd: mainRepoDir,
+          env,
+        })
 
         if (forceDeleteResult.exitCode !== 0) {
           const warning = `git branch -D failed: ${forceDeleteResult.stderr || forceDeleteResult.stdout}`

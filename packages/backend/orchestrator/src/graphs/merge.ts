@@ -226,9 +226,7 @@ export function createMergeGraph(config: Partial<MergeGraphConfig> = {}) {
   const graph = new StateGraph(MergeGraphStateAnnotation)
     // Add all nodes with lazy imports to avoid circular dependency issues
     .addNode('check_preconditions', async (state: MergeGraphState) => {
-      const { createCheckPreconditionsNode } = await import(
-        '../nodes/merge/check-preconditions.js'
-      )
+      const { createCheckPreconditionsNode } = await import('../nodes/merge/check-preconditions.js')
       return createCheckPreconditionsNode(fullConfig)(state)
     })
     .addNode('rebase_branch', async (state: MergeGraphState) => {
@@ -236,9 +234,7 @@ export function createMergeGraph(config: Partial<MergeGraphConfig> = {}) {
       return createRebaseBranchNode(fullConfig)(state)
     })
     .addNode('create_or_update_pr', async (state: MergeGraphState) => {
-      const { createCreateOrUpdatePrNode } = await import(
-        '../nodes/merge/create-or-update-pr.js'
-      )
+      const { createCreateOrUpdatePrNode } = await import('../nodes/merge/create-or-update-pr.js')
       return createCreateOrUpdatePrNode(fullConfig)(state)
     })
     .addNode('poll_ci', async (state: MergeGraphState) => {
@@ -258,9 +254,8 @@ export function createMergeGraph(config: Partial<MergeGraphConfig> = {}) {
       return createExtractLearningsNode(fullConfig)(state)
     })
     .addNode('write_merge_artifact', async (state: MergeGraphState) => {
-      const { createWriteMergeArtifactNode } = await import(
-        '../nodes/merge/write-merge-artifact.js'
-      )
+      const { createWriteMergeArtifactNode } =
+        await import('../nodes/merge/write-merge-artifact.js')
       return createWriteMergeArtifactNode(fullConfig)(state)
     })
     // Wire edges (AC-12)

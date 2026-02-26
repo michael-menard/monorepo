@@ -99,10 +99,14 @@ export function createSquashMergeNode(
     // ---- gh pr merge --squash ----
     const mergeResult = await ghRunner(
       [
-        'pr', 'merge', String(prNumber),
+        'pr',
+        'merge',
+        String(prNumber),
         '--squash',
-        '--subject', commitSubject,
-        '--body', commitBody,
+        '--subject',
+        commitSubject,
+        '--body',
+        commitBody,
       ],
       { cwd: worktreeDir, env },
     )
@@ -126,10 +130,10 @@ export function createSquashMergeNode(
     // ---- Extract merge commit SHA ----
     let mergeCommitSha: string | null = null
 
-    const viewResult = await ghRunner(
-      ['pr', 'view', String(prNumber), '--json', 'mergeCommit'],
-      { cwd: worktreeDir, env },
-    )
+    const viewResult = await ghRunner(['pr', 'view', String(prNumber), '--json', 'mergeCommit'], {
+      cwd: worktreeDir,
+      env,
+    })
 
     if (viewResult.exitCode === 0 && viewResult.stdout.trim()) {
       try {

@@ -63,9 +63,7 @@ function buildPrBody(
   qaSummary: string,
   acsVerified: Array<{ ac_id: string; status: string }>,
 ): string {
-  const acLines = acsVerified
-    .map(ac => `- ${ac.ac_id}: ${ac.status}`)
-    .join('\n')
+  const acLines = acsVerified.map(ac => `- ${ac.ac_id}: ${ac.status}`).join('\n')
 
   return [
     `## ${storyId}: ${storyTitle}`,
@@ -186,10 +184,14 @@ export function createCreateOrUpdatePrNode(
       // ---- Step 2b: Create new PR ----
       const createResult = await ghRunner(
         [
-          'pr', 'create',
-          '--title', `${storyId}: ${storyTitle}`,
-          '--body', prBody,
-          '--base', mainBranch,
+          'pr',
+          'create',
+          '--title',
+          `${storyId}: ${storyTitle}`,
+          '--body',
+          prBody,
+          '--base',
+          mainBranch,
         ],
         { cwd: worktreeDir, env },
       )
@@ -214,10 +216,10 @@ export function createCreateOrUpdatePrNode(
 
       // Get PR number from URL or via another gh call
       let prNumber: number | null = null
-      const viewResult = await ghRunner(
-        ['pr', 'view', '--head', storyBranch, '--json', 'number'],
-        { cwd: worktreeDir, env },
-      )
+      const viewResult = await ghRunner(['pr', 'view', '--head', storyBranch, '--json', 'number'], {
+        cwd: worktreeDir,
+        env,
+      })
 
       if (viewResult.exitCode === 0) {
         try {

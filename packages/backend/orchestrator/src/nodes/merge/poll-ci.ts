@@ -55,8 +55,7 @@ function defaultGhRunner(
   })
 }
 
-const defaultSleepFn: SleepFn = (ms: number) =>
-  new Promise(resolve => setTimeout(resolve, ms))
+const defaultSleepFn: SleepFn = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 // ============================================================================
 // CI Check Evaluation

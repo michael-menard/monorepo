@@ -57,12 +57,10 @@ export function createWriteMergeArtifactNode(
     const ciDurationMs = ciStartTime ? Date.now() - ciStartTime : 0
 
     // Extract block reason from errors if verdict is MERGE_BLOCKED
-    const blockReason =
-      mergeVerdict === 'MERGE_BLOCKED' && errors.length > 0 ? errors[0] : null
+    const blockReason = mergeVerdict === 'MERGE_BLOCKED' && errors.length > 0 ? errors[0] : null
 
     // Extract first error if verdict is MERGE_FAIL
-    const errorMsg =
-      mergeVerdict === 'MERGE_FAIL' && errors.length > 0 ? errors[0] : null
+    const errorMsg = mergeVerdict === 'MERGE_FAIL' && errors.length > 0 ? errors[0] : null
 
     // Construct MergeArtifact
     const artifact = createMergeArtifact({
@@ -71,7 +69,8 @@ export function createWriteMergeArtifactNode(
       prNumber: prNumber ?? null,
       prUrl: prUrl ?? null,
       mergeCommitSha: mergeCommitSha ?? null,
-      ciStatus: ciStatus === 'pass' || ciStatus === 'fail' || ciStatus === 'timeout' ? ciStatus : null,
+      ciStatus:
+        ciStatus === 'pass' || ciStatus === 'fail' || ciStatus === 'timeout' ? ciStatus : null,
       ciPollCount: ciPollCount ?? 0,
       ciDurationMs,
       rebaseSuccess: rebaseSuccess ?? null,
@@ -82,9 +81,7 @@ export function createWriteMergeArtifactNode(
     })
 
     // Determine output directory
-    const outputDir =
-      opts.outputDir ??
-      path.join(config.featureDir, 'in-progress', storyId)
+    const outputDir = opts.outputDir ?? path.join(config.featureDir, 'in-progress', storyId)
 
     const finalPath = path.join(outputDir, 'MERGE.yaml')
     const tmpPath = path.join(outputDir, `MERGE.yaml.tmp.${Date.now()}`)
