@@ -71,7 +71,7 @@ export function createWriteMergeArtifactNode(
       prNumber: prNumber ?? null,
       prUrl: prUrl ?? null,
       mergeCommitSha: mergeCommitSha ?? null,
-      ciStatus: ciStatus ?? null,
+      ciStatus: ciStatus === 'pass' || ciStatus === 'fail' || ciStatus === 'timeout' ? ciStatus : null,
       ciPollCount: ciPollCount ?? 0,
       ciDurationMs,
       rebaseSuccess: rebaseSuccess ?? null,

@@ -222,10 +222,9 @@ function afterPollCi(state: MergeGraphState): string {
 export function createMergeGraph(config: Partial<MergeGraphConfig> = {}) {
   const fullConfig = MergeGraphConfigSchema.parse(config)
 
+  // Chain everything in one expression so TypeScript infers node names through the chain
   const graph = new StateGraph(MergeGraphStateAnnotation)
-
-  // Add all nodes with lazy imports to avoid circular dependency issues
-  graph
+    // Add all nodes with lazy imports to avoid circular dependency issues
     .addNode('check_preconditions', async (state: MergeGraphState) => {
       const { createCheckPreconditionsNode } = await import(
         '../nodes/merge/check-preconditions.js'
@@ -264,9 +263,7 @@ export function createMergeGraph(config: Partial<MergeGraphConfig> = {}) {
       )
       return createWriteMergeArtifactNode(fullConfig)(state)
     })
-
-  // Wire edges (AC-12)
-  graph
+    // Wire edges (AC-12)
     .addEdge(START, 'check_preconditions')
     .addConditionalEdges('check_preconditions', afterCheckPreconditions, {
       rebase_branch: 'rebase_branch',
