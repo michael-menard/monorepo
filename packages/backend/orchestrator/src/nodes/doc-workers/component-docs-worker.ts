@@ -39,9 +39,7 @@ export type ComponentDocsWorkerNodeConfig = z.infer<typeof ComponentDocsWorkerNo
 // ============================================================================
 
 function filterComponentFiles(changedFiles: string[], filePatterns: string[]): string[] {
-  return changedFiles.filter(file =>
-    filePatterns.some(pattern => file.includes(pattern)),
-  )
+  return changedFiles.filter(file => filePatterns.some(pattern => file.includes(pattern)))
 }
 
 /**

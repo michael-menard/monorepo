@@ -32,16 +32,16 @@ export const ArchitectureDocsWorkerNodeConfigSchema = z.object({
   filePatterns: z.array(z.string()).default(['architecture/', 'config/', '.config.ts', 'infra/']),
 })
 
-export type ArchitectureDocsWorkerNodeConfig = z.infer<typeof ArchitectureDocsWorkerNodeConfigSchema>
+export type ArchitectureDocsWorkerNodeConfig = z.infer<
+  typeof ArchitectureDocsWorkerNodeConfigSchema
+>
 
 // ============================================================================
 // Worker Implementation
 // ============================================================================
 
 function filterArchitectureFiles(changedFiles: string[], filePatterns: string[]): string[] {
-  return changedFiles.filter(file =>
-    filePatterns.some(pattern => file.includes(pattern)),
-  )
+  return changedFiles.filter(file => filePatterns.some(pattern => file.includes(pattern)))
 }
 
 /**
@@ -167,7 +167,9 @@ export const architectureDocsWorkerNode = createLLMNode(
   },
 )
 
-export function createArchitectureDocsWorkerNode(config: Partial<ArchitectureDocsWorkerConfig> = {}) {
+export function createArchitectureDocsWorkerNode(
+  config: Partial<ArchitectureDocsWorkerConfig> = {},
+) {
   const fullConfig = ArchitectureDocsWorkerNodeConfigSchema.parse(config)
 
   return createLLMNode(

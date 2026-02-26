@@ -129,9 +129,7 @@ export async function generateKbSyncChanges(
   try {
     // ED-1: Empty changedFiles — return success with empty proposedChanges + warning
     if (mergeEvent.changedFiles.length === 0) {
-      warnings.push(
-        `kb-sync: no changed files in merge event for story ${mergeEvent.storyId}`,
-      )
+      warnings.push(`kb-sync: no changed files in merge event for story ${mergeEvent.storyId}`)
       return {
         workerName: 'kb-sync',
         success: true,

@@ -51,9 +51,7 @@ export type ApiDocsWorkerNodeConfig = z.infer<typeof ApiDocsWorkerNodeConfigSche
  * Filters changed files to those relevant to API documentation.
  */
 function filterApiFiles(changedFiles: string[], filePatterns: string[]): string[] {
-  return changedFiles.filter(file =>
-    filePatterns.some(pattern => file.includes(pattern)),
-  )
+  return changedFiles.filter(file => filePatterns.some(pattern => file.includes(pattern)))
 }
 
 /**

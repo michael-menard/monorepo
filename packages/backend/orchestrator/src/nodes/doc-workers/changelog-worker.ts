@@ -46,19 +46,13 @@ export type ChangelogWorkerNodeConfig = z.infer<typeof ChangelogWorkerNodeConfig
 function determineSemverBump(changedFiles: string[]): 'major' | 'minor' | 'patch' {
   // Heuristic: breaking changes in API files or DB schema = major
   const hasMajorChanges = changedFiles.some(
-    f =>
-      f.includes('database-schema') ||
-      f.includes('migration') ||
-      f.includes('breaking'),
+    f => f.includes('database-schema') || f.includes('migration') || f.includes('breaking'),
   )
   if (hasMajorChanges) return 'major'
 
   // New files in API or features = minor
   const hasMinorChanges = changedFiles.some(
-    f =>
-      f.includes('apps/api/src/handlers/') ||
-      f.includes('apps/web/') ||
-      f.includes('packages/'),
+    f => f.includes('apps/api/src/handlers/') || f.includes('apps/web/') || f.includes('packages/'),
   )
   if (hasMinorChanges) return 'minor'
 

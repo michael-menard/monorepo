@@ -39,9 +39,7 @@ export type ReadmeGuidesWorkerNodeConfig = z.infer<typeof ReadmeGuidesWorkerNode
 // ============================================================================
 
 function filterReadmeGuideFiles(changedFiles: string[], filePatterns: string[]): string[] {
-  return changedFiles.filter(file =>
-    filePatterns.some(pattern => file.includes(pattern)),
-  )
+  return changedFiles.filter(file => filePatterns.some(pattern => file.includes(pattern)))
 }
 
 /**

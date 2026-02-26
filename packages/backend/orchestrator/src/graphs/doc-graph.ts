@@ -357,7 +357,9 @@ export function createDispatchNode(config: DocGraphConfig) {
 
     // Return Send objects for all enabled workers
     // expectedWorkers will be set via state update from each Send
-    return enabledWorkers.map(w => new Send(w.nodeName, { ...state, expectedWorkers: enabledWorkers.length }))
+    return enabledWorkers.map(
+      w => new Send(w.nodeName, { ...state, expectedWorkers: enabledWorkers.length }),
+    )
   }
 }
 
@@ -412,7 +414,9 @@ export function createDocReviewNode(config: DocGraphConfig) {
     // EC-3: Check that KB Sync Worker did not propose any deletion
     // This is only possible via schema bypass (operation 'delete' is not in enum)
     // but we check defensively
-    const kbSyncResults = state.workerResults.filter((r: DocWorkerResult) => r.workerName === 'kb-sync')
+    const kbSyncResults = state.workerResults.filter(
+      (r: DocWorkerResult) => r.workerName === 'kb-sync',
+    )
     const kbSyncProposedDeletion = kbSyncResults.some((r: DocWorkerResult) =>
       r.proposedChanges.some((c: ProposedFileChange) => (c.operation as string) === 'delete'),
     )
@@ -577,10 +581,9 @@ export function createCommitNode(config: DocGraphConfig) {
 
       if (config.gitCommitFn) {
         // Use injectable git commit function for testability (OPP-005)
-        const result = await (config.gitCommitFn as (files: string[], message: string) => Promise<string>)(
-          filesWritten,
-          commitMessage,
-        )
+        const result = await (
+          config.gitCommitFn as (files: string[], message: string) => Promise<string>
+        )(filesWritten, commitMessage)
         commitSha = result
       } else {
         // Default: use child_process to run git commit
@@ -736,7 +739,9 @@ export function createDocGraph(config: Partial<DocGraphConfig> = {}) {
  */
 export function createDocGraphWithWorkers(
   config: Partial<DocGraphConfig> = {},
-  workerOverrides?: Partial<Record<string, (state: DocGraphState) => Promise<Partial<DocGraphState>>>>,
+  workerOverrides?: Partial<
+    Record<string, (state: DocGraphState) => Promise<Partial<DocGraphState>>>
+  >,
 ) {
   const fullConfig = DocGraphConfigSchema.parse(config)
 
@@ -790,10 +795,13 @@ function createWorkerStubNode(workerName: DocWorkerName) {
     const startTime = Date.now()
     const storyId = state.mergeEvent?.storyId ?? 'unknown'
 
-    logger.warn('doc-graph: worker stub invoked — use createDocGraphWithWorkers to inject implementations', {
-      workerName,
-      storyId,
-    })
+    logger.warn(
+      'doc-graph: worker stub invoked — use createDocGraphWithWorkers to inject implementations',
+      {
+        workerName,
+        storyId,
+      },
+    )
 
     const durationMs = Date.now() - startTime
     const result: DocWorkerResult = {
