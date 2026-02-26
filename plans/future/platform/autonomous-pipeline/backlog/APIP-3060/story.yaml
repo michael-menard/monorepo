@@ -1,0 +1,14 @@
+id: "APIP-3060"
+title: "Bake-Off Engine for Model Experiments"
+status: backlog
+priority: medium
+phase: 3
+feature: "wint.model_experiments table and A/B model assignment engine that splits a change type across two models, tracks results in change_telemetry, and produces statistically significant winner that auto-promotes into affinity profiles"
+goal: "Enable controlled model comparison experiments that automatically improve the learned affinity profiles without manual analysis."
+depends_on: ["APIP-3020"]
+endpoints: []
+infrastructure:
+  - "Aurora PostgreSQL migration: wint.model_experiments table"
+risk_notes: "Statistical significance requires enough sample volume; bake-off must not bloat costs for low-traffic pipelines; experiment windowing logic needed."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

@@ -1,0 +1,13 @@
+id: "APIP-4060"
+title: "KB Freshness Check and Stale Entry Archival"
+status: backlog
+priority: medium
+phase: 4
+feature: "Monthly cron identifying KB entries >90 days old that reference changed/deleted files, auto-archiving entries referencing non-existent code, and flagging entries whose advice contradicts current CLAUDE.md or codebase patterns"
+goal: "Prevent the knowledge base from becoming a source of outdated or contradictory guidance that degrades agent decision quality."
+depends_on: ["APIP-3090"]
+endpoints: []
+infrastructure: []
+risk_notes: "Auto-archiving valid entries is a high-risk false positive — heuristics must be conservative; contradiction detection against CLAUDE.md requires semantic comparison."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

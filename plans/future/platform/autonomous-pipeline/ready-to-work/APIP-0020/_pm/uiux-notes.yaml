@@ -1,0 +1,9 @@
+skipped: true
+reason: >
+  APIP-0020 is a headless TypeScript supervisor process with no user-facing UI components.
+  The supervisor is invisible to end users. ADR-006 E2E Playwright requirement does not apply.
+
+  The only operator-facing consideration is structured log output consistency:
+  Field names (storyId, stage, threadId, attemptNumber, durationMs) must be consistent
+  and predictable so the future operator CLI (APIP-5005) can consume them without
+  breaking changes. This is a logging contract, not a UI design concern.

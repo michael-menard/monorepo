@@ -1,0 +1,58 @@
+perspective: qa
+verdict: BLOCKED
+
+testability:
+  core_journey_testable: false
+  core_acs_clear: false
+  test_strategy_complete: false
+
+mvp_blockers:
+  - id: QA-001
+    issue: "Core journey lacks unit, integration, and E2E test specifications"
+    stories: [APIP-0010, APIP-0020, APIP-1030, APIP-1060]
+    action: "Each story must define test coverage targets, integration test scenarios, E2E test cases"
+  - id: QA-002
+    issue: "APIP-1060 QA Graph acceptance criteria missing AC verification prompts and verdict logic"
+    stories: [APIP-1060]
+    action: "Define AC verification prompt template, evidence mapping, false-positive thresholds"
+  - id: QA-003
+    issue: "APIP-1030 change loop has no atomic unit test specification for ChangeSpec execution"
+    stories: [APIP-1030]
+    action: "Define test fixtures for ChangeSpec types, micro-verify expectations, retry test scenarios"
+  - id: QA-004
+    issue: "APIP-1050 review aggregation logic undefined—cannot verify PASS/FAIL decision"
+    stories: [APIP-1050]
+    action: "Define how 10 worker results map to PASS/FAIL"
+  - id: QA-005
+    issue: "APIP-0020 supervisor dispatch risks regressing existing graph test suites"
+    stories: [APIP-0020]
+    action: "Require integration tests verifying supervisor dispatch doesn't break existing tests"
+  - id: QA-006
+    issue: "Critical path requires E2E validation end-to-end; no E2E test plan exists"
+    stories: [APIP-0010, APIP-0020, APIP-1010, APIP-1020, APIP-1030, APIP-1050, APIP-1060, APIP-1070]
+    action: "Define Playwright+Cucumber scenarios validating queue → supervisor → graphs → merge"
+
+missing_mvp_stories:
+  - title: "Test Infrastructure Setup for LangGraph Graph Unit Testing"
+  - title: "Test Database Setup and Migration Testing"
+  - title: "Concurrent Change Loop Correctness Verification"
+  - title: "Model Router Escalation Chain Integration Test"
+
+future:
+  suggested_stories:
+    - title: "LangGraph Graph Testing Framework"
+      priority: P0
+    - title: "Test Database Migration Harness"
+      priority: P0
+    - title: "Concurrent Git Worktree Conflict Simulation"
+      priority: P0
+    - title: "Mock Model Provider with Failure Scenarios"
+      priority: P0
+    - title: "AC Verification Benchmark Suite"
+      priority: P1
+
+  recommendations:
+    - "Require every story to document test strategy before implementation"
+    - "Establish E2E test baseline with mocked LLMs in first month"
+    - "Enforce test-first approach for high-risk stories"
+    - "Stage Phase 1 deployment with full test coverage before Phase 2"

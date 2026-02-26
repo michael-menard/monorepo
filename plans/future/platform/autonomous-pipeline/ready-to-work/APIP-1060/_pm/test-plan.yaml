@@ -1,0 +1,322 @@
+strategy: unit+graph-compilation
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  packages_touched:
+    - packages/backend/orchestrator/src/graphs/qa.ts
+    - packages/backend/orchestrator/src/nodes/qa/
+    - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+  test_files:
+    - packages/backend/orchestrator/src/graphs/__tests__/qa.test.ts
+    - packages/backend/orchestrator/src/nodes/qa/__tests__/check-preconditions.test.ts
+    - packages/backend/orchestrator/src/nodes/qa/__tests__/run-unit-tests.test.ts
+    - packages/backend/orchestrator/src/nodes/qa/__tests__/run-e2e-tests.test.ts
+    - packages/backend/orchestrator/src/nodes/qa/__tests__/verify-acs.test.ts
+    - packages/backend/orchestrator/src/nodes/qa/__tests__/gate-decision.test.ts
+    - packages/backend/orchestrator/src/nodes/qa/__tests__/write-qa-artifact.test.ts
+
+happy_path_tests:
+  - id: HP-1
+    title: "runQA() returns PASS when all tests pass and all ACs verified"
+    setup: >
+      Mock child_process.spawn to return exit code 0, stdout with 'Tests: 10 passed',
+      no stderr. Mock model client to return PASS with cited_evidence for each AC.
+      Mock gate model to return { verdict: 'PASS', blocking_issues: [], reasoning: '...' }.
+      Mock YAML write and KB MCP tool. Provide valid EvidenceSchema object with 3 ACs.
+      Provide ReviewSchema object with verdict: 'PASS'.
+    action: "Call runQA(evidence, review, { enableE2e: false, kbWriteBackEnabled: true })"
+    expected: >
+      Returns QAGraphResult with verdict: 'PASS'. QaVerify artifact has all
+      acVerifications[].status === 'PASS'. testResults.unit.fail === 0.
+      qaComplete === true. YAML artifact write was called once. KB write-back called
+      once per lessons_to_record entry.
+    evidence: "Return value from runQA() inspected. Mock call counts verified."
+
+  - id: HP-2
+    title: "check-preconditions passes with valid review PASS and evidence present"
+    setup: >
+      State: review.verdict = 'PASS', evidence = valid EvidenceSchema object.
+      All other state fields at defaults.
+    action: "Execute check-preconditions node with valid state"
+    expected: >
+      State updated to proceed: qaVerdict remains null, qaComplete remains false.
+      Node transitions to run-unit-tests via conditional edge.
+    evidence: "State after node execution inspected. Conditional edge routing verified."
+
+  - id: HP-3
+    title: "run-unit-tests captures stdout/stderr and records CommandRun entry"
+    setup: >
+      Mock spawn to return: exit code 0, stdout 'Tests: 8 passed, 0 failed',
+      stderr ''. worktreeDir = '/tmp/story-worktree'.
+    action: "Execute run-unit-tests node"
+    expected: >
+      state.testResults.unit = { pass: 8, fail: 0, total: 8 }.
+      state.commands_run has one entry with result: 'SUCCESS', stdout captured.
+      spawn called with args ['pnpm', ['test'], { cwd: '/tmp/story-worktree' }].
+    evidence: "Mock spawn called with correct args. State testResults inspected."
+
+  - id: HP-4
+    title: "verify-acs produces PASS with cited_evidence for each AC"
+    setup: >
+      3 ACs in evidence.acceptance_criteria. Mock model client to return JSON string:
+      '{ "status": "PASS", "cited_evidence": "evidence-item-1", "reasoning": "..." }'
+      for each AC call.
+    action: "Execute verify-acs node"
+    expected: >
+      state.acVerifications has 3 entries. Each entry: status: 'PASS',
+      cited_evidence is non-empty string. Model called exactly 3 times (once per AC).
+    evidence: "state.acVerifications length and status fields inspected. Mock call count."
+
+  - id: HP-5
+    title: "write-qa-artifact persists YAML and writes KB lessons when enabled"
+    setup: >
+      State with qaVerify constructed, kbWriteBackEnabled: true.
+      qaVerify.lessons_to_record has 2 entries. Mock fs.writeFile and KB MCP tool.
+    action: "Execute write-qa-artifact node"
+    expected: >
+      YAML written to plans/future/platform/autonomous-pipeline/in-progress/{storyId}/QA-VERIFY.yaml.
+      KB MCP tool called twice (once per lesson). state.qaComplete = true.
+    evidence: "Mock fs.writeFile called with correct path. Mock KB tool call count."
+
+  - id: HP-6
+    title: "E2E test skipped when enableE2e: false via conditional edge routing"
+    setup: >
+      Graph compiled with enableE2e: false. Mock all nodes.
+      Run full graph from START.
+    action: "Execute graph with enableE2e: false from START"
+    expected: >
+      run-e2e-tests node is never called. Graph routes:
+      check-preconditions → run-unit-tests → verify-acs → gate-decision → write-qa-artifact.
+    evidence: "Mock call records for run-e2e-tests — verify it was never called."
+
+  - id: HP-7
+    title: "graph.compile() succeeds and all conditional edges resolve"
+    setup: "Import createQAGraph() with default config."
+    action: "Call createQAGraph(defaultConfig).compile()"
+    expected: "No errors thrown. Compiled graph has all nodes registered."
+    evidence: "No exception. graph object returned."
+
+error_cases:
+  - id: EC-1
+    title: "check-preconditions returns BLOCKED when review.verdict is FAIL"
+    setup: >
+      State: review = { verdict: 'FAIL', ...otherFields }, evidence = valid object.
+    action: "Execute check-preconditions node"
+    expected: >
+      state.qaVerdict = 'BLOCKED'. state.qaComplete = true.
+      Reason includes 'Review FAIL'. Graph routes to END, skipping test nodes.
+    evidence: "State.qaVerdict and qaComplete inspected. Routing to END verified."
+
+  - id: EC-2
+    title: "check-preconditions returns BLOCKED when evidence is null"
+    setup: "State: review.verdict = 'PASS', evidence = null."
+    action: "Execute check-preconditions node"
+    expected: >
+      state.qaVerdict = 'BLOCKED'. state.qaComplete = true.
+      Reason includes 'Evidence artifact missing'.
+    evidence: "State.qaVerdict inspected."
+
+  - id: EC-3
+    title: "run-unit-tests records FAIL when pnpm test exits with non-zero code"
+    setup: >
+      Mock spawn to return exit code 1, stdout 'Tests: 5 passed, 2 failed', stderr '...'.
+      testTimeoutRetries: 0 (no retries).
+    action: "Execute run-unit-tests node"
+    expected: >
+      state.testResults.unit.fail = 2. CommandRun entry has result: 'FAIL'.
+    evidence: "state.testResults.unit.fail value inspected."
+
+  - id: EC-4
+    title: "run-unit-tests records FAIL after all retries exhausted on timeout"
+    setup: >
+      Mock spawn to hang (never emit exit event). testTimeoutMs: 100 (fast for test).
+      testTimeoutRetries: 1. Promise.race timeout fires after 100ms.
+    action: "Execute run-unit-tests node with vi.useFakeTimers()"
+    expected: >
+      Spawn called 2 times (initial + 1 retry). state.testResults.unit has error indicating timeout.
+      CommandRun entry has result: 'FAIL' with reason 'timeout'.
+    evidence: "Mock spawn call count = 2. State.testResults timeout reason present."
+
+  - id: EC-5
+    title: "verify-acs sets BLOCKED for a single AC when model call fails, continues remaining ACs"
+    setup: >
+      3 ACs. Model client throws error on 2nd AC call. Returns PASS for 1st and 3rd.
+    action: "Execute verify-acs node"
+    expected: >
+      state.acVerifications[0].status = 'PASS'.
+      state.acVerifications[1].status = 'BLOCKED' (not FAIL).
+      state.acVerifications[2].status = 'PASS'.
+      Model called 3 times. No exception thrown from node.
+    evidence: "state.acVerifications array values inspected."
+
+  - id: EC-6
+    title: "gate-decision returns BLOCKED when gate model call fails"
+    setup: >
+      Mock gate model client to throw Error('Model unavailable').
+      State with acVerifications all PASS, testResults all 0 failures.
+    action: "Execute gate-decision node"
+    expected: >
+      state.qaVerdict = 'BLOCKED'. state.gateDecision contains 'Gate model unavailable'.
+    evidence: "state.qaVerdict = 'BLOCKED' confirmed."
+
+  - id: EC-7
+    title: "runQA returns FAIL verdict when unit tests fail"
+    setup: >
+      Mock spawn to return exit code 1 with 3 failed tests. 0 retries.
+      Mock model client returns PASS for all ACs.
+      Mock gate model returns { verdict: 'FAIL', blocking_issues: ['3 unit tests failed'], reasoning: '...' }.
+    action: "Call runQA(evidence, review, { enableE2e: false })"
+    expected: "Returns QAGraphResult with verdict: 'FAIL'."
+    evidence: "Return value verdict field."
+
+  - id: EC-8
+    title: "runQA returns FAIL when any AC verification returns FAIL"
+    setup: >
+      Mock spawn returns exit code 0 (tests pass).
+      Model client returns FAIL for 1 AC (status: 'FAIL', cited_evidence: '').
+      Gate model returns { verdict: 'FAIL', blocking_issues: ['AC-2 not fulfilled'], reasoning: '...' }.
+    action: "Call runQA(evidence, review, { enableE2e: false })"
+    expected: "Returns QAGraphResult with verdict: 'FAIL'."
+    evidence: "Return value verdict field."
+
+  - id: EC-9
+    title: "Evidence artifact fails safeParse validation → BLOCKED verdict"
+    setup: >
+      Pass malformed evidence object (missing required fields per EvidenceSchema).
+    action: "Call runQA(malformedEvidence, review, {})"
+    expected: "Returns QAGraphResult with verdict: 'BLOCKED'. Reason includes schema validation failure."
+    evidence: "qaVerdict = 'BLOCKED'. Reason string inspected."
+
+edge_cases:
+  - id: ED-1
+    title: "E2E retry: first attempt fails, second attempt succeeds → PASS"
+    setup: >
+      Mock spawn first call: exit code 1 (fail). Second call: exit code 0 (pass).
+      playwrightMaxRetries: 2. enableE2e: true.
+    action: "Execute run-e2e-tests node"
+    expected: >
+      state.playwrightAttempts = 2. state.testResults.e2e.fail = 0.
+      Final E2E result is PASS (second attempt succeeded).
+    evidence: "playwrightAttempts value and testResults.e2e.fail value inspected."
+
+  - id: ED-2
+    title: "E2E all retries fail → FAIL verdict in testResults"
+    setup: >
+      Mock spawn always returns exit code 1. playwrightMaxRetries: 2. enableE2e: true.
+    action: "Execute run-e2e-tests node"
+    expected: >
+      Spawn called 3 times (initial + 2 retries = playwrightMaxRetries).
+      state.testResults.e2e.fail > 0.
+    evidence: "Mock spawn call count. state.testResults.e2e.fail > 0."
+
+  - id: ED-3
+    title: "AC_VERIFICATION_PROMPT_V1 contains anti-hallucination instruction"
+    setup: "Import AC_VERIFICATION_PROMPT_V1 from verify-acs node file."
+    action: "Inspect the prompt string constant."
+    expected: >
+      String contains: 'Do not infer, assume, or extrapolate'.
+      String contains: 'Only respond PASS if the provided evidence explicitly demonstrates the criterion'.
+      String contains placeholder for AC text and evidence items verbatim.
+    evidence: "Direct string inspection of AC_VERIFICATION_PROMPT_V1 export."
+
+  - id: ED-4
+    title: "QAGraphConfigSchema defaults are all applied when no config provided"
+    setup: "Parse empty object {} through QAGraphConfigSchema."
+    action: "QAGraphConfigSchema.parse({})"
+    expected: >
+      testTimeoutMs = 300000, testTimeoutRetries = 1, playwrightMaxRetries = 2,
+      enableE2e = true, acVerificationModel = 'claude', gateModel = 'claude',
+      kbWriteBackEnabled = true, nodeTimeoutMs = 30000.
+    evidence: "Parsed config object field values."
+
+  - id: ED-5
+    title: "write-qa-artifact does NOT call KB MCP tool when kbWriteBackEnabled: false"
+    setup: "State with qaVerify, kbWriteBackEnabled: false. Mock KB MCP tool."
+    action: "Execute write-qa-artifact node"
+    expected: "KB MCP tool never called. YAML still written."
+    evidence: "Mock KB tool call count = 0. Mock fs.writeFile called."
+
+  - id: ED-6
+    title: "QaVerifySchema additions use z.optional() to maintain backward compatibility"
+    setup: >
+      Parse a QaVerify object that ONLY has fields from original APIP-1070 contract
+      (omitting any new optional fields added by this story).
+    action: "QaVerifySchema.safeParse(legacyQaVerifyObject)"
+    expected: "success: true. No validation errors."
+    evidence: "safeParse result success field."
+
+  - id: ED-7
+    title: "@repo/logger emits structured event for every lifecycle transition"
+    setup: >
+      Spy on @repo/logger methods. Execute full graph with mocked subprocess and model client.
+    action: "Run full graph from START to END"
+    expected: >
+      Logger called with events: qa_preconditions_check, qa_unit_tests_started,
+      qa_unit_tests_complete, qa_ac_verification_started, qa_ac_verified (per AC),
+      qa_gate_decision, qa_artifact_written. Each event has storyId, stage: 'qa', durationMs fields.
+    evidence: "Logger spy call records inspected for event names and required fields."
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "runQA() return type: { verdict: 'PASS' | 'FAIL' | 'BLOCKED', qaVerify: QaVerify }"
+      - "QaVerifySchema.safeParse(result.qaVerify) → success: true"
+      - "createQAGraph(config).compile() — no errors thrown"
+      - "All node handlers exported as mockable pure functions"
+      - "AC_VERIFICATION_PROMPT_V1 exported named constant includes anti-hallucination instruction"
+  frontend:
+    playwright_runs: []
+    assertions: []
+
+manual_cases:
+  - id: MC-1
+    title: "Integration smoke test: runQA with real subprocess against fixture worktree"
+    steps:
+      - "Create a minimal worktree directory with a passing Vitest test suite"
+      - "Build a mock EvidenceSchema object representing one AC with passing evidence"
+      - "Build a ReviewSchema object with verdict: PASS"
+      - "Call runQA(evidence, review, { enableE2e: false, kbWriteBackEnabled: false }) with real child_process.spawn"
+      - "Verify QA-VERIFY.yaml written to expected path"
+    expected: "Returns verdict: PASS. YAML artifact exists on disk."
+    notes: "Requires server to be running. Gate on APIP-5006 completion. Not for CI."
+
+fixture_definitions:
+  - name: validEvidenceFixture
+    type: EvidenceSchema
+    description: >
+      Valid EvidenceSchema object with 3 acceptance_criteria, each having 2 evidence_items
+      that clearly demonstrate fulfillment. Used across verify-acs and gate-decision tests.
+  - name: passingReviewFixture
+    type: ReviewSchema
+    description: "ReviewSchema object with verdict: 'PASS'. Used in check-preconditions and runQA tests."
+  - name: failingReviewFixture
+    type: ReviewSchema
+    description: "ReviewSchema object with verdict: 'FAIL'. Used in check-preconditions BLOCKED path test."
+  - name: mockSpawnSuccess
+    type: "vi.fn()"
+    description: "Mocked child_process.spawn that emits exit code 0 with passing test stdout."
+  - name: mockSpawnFail
+    type: "vi.fn()"
+    description: "Mocked child_process.spawn that emits exit code 1 with failing test stdout."
+  - name: mockSpawnTimeout
+    type: "vi.fn()"
+    description: "Mocked child_process.spawn that never emits exit event (simulates hang)."
+  - name: mockModelClientPass
+    type: "vi.fn()"
+    description: >
+      Mock model client that returns valid JSON string with status: 'PASS' and cited_evidence.
+  - name: mockModelClientFail
+    type: "vi.fn()"
+    description: "Mock model client that returns valid JSON string with status: 'FAIL'."
+  - name: mockModelClientError
+    type: "vi.fn()"
+    description: "Mock model client that throws Error('Model unavailable')."
+
+risks:
+  - "Subprocess mocking complexity: Promise.race with timeout requires careful vi.useFakeTimers() configuration. If fake timers interact badly with the async spawn mock, tests may hang or produce false results."
+  - "Graph routing tests depend on LangGraph StateGraph conditional edge evaluation. If the LangGraph version changes routing semantics, graph compilation tests may need updating."
+  - "AC_VERIFICATION_PROMPT_V1 prompt structure tests are static string checks. If the prompt is refactored (e.g., template literals with dynamic sections), tests must be updated to match."
+  - "Integration test (MC-1) is gated on APIP-5006 server and cannot run in CI without the dedicated server. Do not include in standard pnpm test run."
+  - "Missing evidence schema types if APIP-1030 changes EvidenceSchema — check-preconditions safeParse test may need fixture updates."

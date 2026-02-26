@@ -1,0 +1,168 @@
+schema: 1
+story_id: "APIP-5006"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story index lists APIP-5006 as "LangGraph Server Infrastructure Baseline" with no
+      dependencies and gating APIP-0030. The story body matches exactly: two new files
+      (compose.langgraph-server.yaml, README.md) plus an optional prometheus.yml extension.
+      No extra endpoints, packages, or TypeScript introduced. Scope table is precise and
+      bounded.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals (provisioned server + compose file + README + smoke test) map directly to
+      AC-1 through AC-8 without gaps or overlaps. Non-goals explicitly exclude LangGraph
+      Platform deployment (APIP-0030), BullMQ (APIP-0010), security hardening (APIP-5003),
+      secrets (APIP-5004), CI/CD pipeline, and DB schema changes. No AC contradicts a
+      Non-goal. Architecture Notes reinforce the connection pool isolation decision without
+      conflict. Local Testing Plan (HP-1 through HP-8) covers all 8 ACs with concrete
+      commands.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Pure infrastructure story — no TypeScript, no monorepo packages. Reuse Plan
+      explicitly calls out infra/compose.lego-app.yaml as the canonical pattern for
+      healthchecks, named volumes, restart policies, extra_hosts, and one-shot init
+      containers. elasticache/template.yaml cited as IaC pattern model. prometheus.yml
+      cited for scrape config extension. N/A for packages/** reuse; PASS on infrastructure
+      pattern reuse.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      No TypeScript code produced by this story. Transport-agnostic core logic concern
+      does not apply. Infrastructure story produces only Docker Compose YAML and
+      documentation. N/A.
+
+  - id: testability
+    status: PASS
+    note: >
+      Manual test plan is fully concrete and executable. All 8 happy-path tests (HP-1
+      through HP-8) have explicit setup, action, expected output, and evidence. Four error
+      cases (EC-1 through EC-4) and three edge cases (ED-1 through ED-3) are specified.
+      Two manual runbook cases (MC-1, MC-2) cover operator walkthrough and APIP-0030
+      handoff validation. All subtask verification commands are concrete CLI invocations.
+      Coverage threshold waiver correctly noted for pure infrastructure story.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      All design decisions are resolved and documented: Docker Compose v2 (not v1),
+      manual scp + docker compose pull/up procedure (explicitly NOT GitHub Actions for
+      Phase 0), separate checkpoint pg.Pool (max: 3, explicitly NOT @repo/db), named
+      volumes (not bind mounts), restart: unless-stopped on persistent services, restart:
+      "no" on one-shot init containers. No blocking TBDs or unresolved choices remain.
+      Port assignments (8123/8124) are documented with audit command (ss -tlnp).
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Hardware availability identified as highest-risk prerequisite with concrete
+      mitigation (verify as FIRST action; create BLOCKERS.md entry immediately).
+      Port conflict risk disclosed with mitigation (ss -tlnp audit before writing compose
+      file). Aurora max_connections exhaustion risk disclosed with mitigation (separate
+      pool, explicit README documentation). Healthcheck misconfiguration risk disclosed
+      with mitigation (copy patterns exactly from compose.lego-app.yaml). CI/CD scope
+      creep risk disclosed with mitigation (AC-6 bounded to documented manual procedure
+      only). Coverage threshold waiver risk noted.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      Exactly 8 ACs (at the threshold boundary). Frontmatter split_risk: 0.6 is elevated.
+      However, all ACs are tightly coupled across a single operator journey (provision →
+      configure → document → verify). Only two new files produced. No TypeScript. No
+      frontend/backend split. 4 subtasks form a clean linear DAG. The story is at the
+      boundary but cohesive enough to proceed without a mandatory split. WARN rather than
+      SPLIT_REQUIRED; reviewer should confirm before implementation begins.
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      ST-1 (AC-1, AC-4), ST-2 (AC-2, AC-7), ST-3 (AC-3, AC-4, AC-5, AC-6, AC-8),
+      ST-4 (AC-7, AC-4, AC-1). All subtasks have verification commands and canonical
+      reference citations. DAG is valid (ST-1 → ST-2 → ST-3 → ST-4 linear). No subtask
+      touches more than 1 file. Canonical References section has 3 entries (within
+      2-4 range). CONDITIONAL flag: ST-3 spans 5 ACs (AC-3, AC-4, AC-5, AC-6, AC-8)
+      in a single subtask. While all output goes to one file (README.md), this is a
+      documentation-heavy subtask. Acceptable for Phase 0 given single-file output, but
+      if this story is ever re-elaborated, ST-3 should be split into ST-3a (resource
+      limits + network + checkpoint pool docs) and ST-3b (deployment procedure +
+      APIP-0030 handoff checklist).
+
+gaps: []
+# No MVP-blocking gaps identified. The story covers all prerequisites for APIP-0030
+# to begin work. Hardware availability is a prerequisite constraint, not a story gap.
+
+opportunities:
+  - id: OPP-1
+    title: "Add .env.example template for checkpoint DB and Aurora credentials"
+    description: >
+      The story correctly avoids hardcoding secrets and documents the checkpoint pool
+      spec in README.md. However, an infra/langgraph-server/.env.example file listing
+      required environment variable names (CHECKPOINT_DB_HOST, CHECKPOINT_DB_PORT,
+      CHECKPOINT_DB_NAME, CHECKPOINT_DB_USER, CHECKPOINT_DB_PASSWORD, CHECKPOINT_DB_POOL_MAX)
+      would accelerate the APIP-0030 handoff and reduce onboarding friction. No secrets
+      stored — only variable names as placeholders. Non-blocking; APIP-5004 (Secrets
+      Engine) is the correct story for full secrets management.
+    blocking: false
+    suggested_story: "APIP-5004 or add as optional subtask to APIP-5006 if reviewer approves"
+    decision: "log_to_kb"
+    kb_entry_id: "641aebff-2893-4c3f-8b42-b57f40ffbe8c"
+
+  - id: OPP-2
+    title: "Prometheus scrape target for LangGraph server is marked optional — track for APIP-2020"
+    description: >
+      The scope table lists infra/prometheus/prometheus.yml modification as optional.
+      If LangGraph Platform exposes a /metrics endpoint, adding the scrape target during
+      APIP-5006 is low-cost and would give APIP-2020 (Monitor UI) immediate data. This
+      should be explicitly tracked as a deferred task for APIP-2020 or an optional
+      completion item for APIP-5006 with reviewer sign-off.
+    blocking: false
+    suggested_story: "APIP-2020 (Monitor UI v1)"
+    decision: "log_to_kb"
+    kb_entry_id: "7c521592-13c9-4129-a0ae-1f512daefec5"
+
+  - id: OPP-3
+    title: "ST-3 five-AC span — consider splitting for future re-elaboration"
+    description: >
+      ST-3 currently covers AC-3, AC-4, AC-5, AC-6, and AC-8 in one subtask. While
+      acceptable for Phase 0 (single README.md output), a future re-elaboration should
+      split into ST-3a (resource limits, network config, checkpoint DB spec) and ST-3b
+      (deployment procedure, APIP-0030 handoff checklist) to reduce cognitive load per
+      subtask and enable parallel authoring.
+    blocking: false
+    suggested_story: "Address in re-elaboration if story is re-opened"
+    decision: "log_to_kb"
+    kb_entry_id: "ae416027-b5ab-41a1-8c9e-55b5acb3bd17"
+
+split_recommendation: null
+# Story is at the 8-AC boundary with split_risk 0.6, but all ACs are tightly coupled
+# across a single operator journey. No independent features bundled. A split is not
+# required at this time. Reviewer should confirm before implementation begins.
+
+preliminary_verdict: CONDITIONAL_PASS
+# All 9 checklist items pass or have acceptable conditional notes. No MVP-blocking gaps
+# found. The CONDITIONAL stems from:
+#   1. story_sizing: WARN — exactly at 8-AC boundary, split_risk 0.6. Reviewer should
+#      confirm cohesion argument holds before implementation begins.
+#   2. subtask_decomposition: CONDITIONAL — ST-3 spans 5 ACs but produces one file.
+#      Acceptable for Phase 0; flag for future re-elaboration.
+# Neither condition blocks implementation. Story is ready for implementation with
+# reviewer sign-off on the sizing boundary.
+
+verdict: null
+decided_at: null
+
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

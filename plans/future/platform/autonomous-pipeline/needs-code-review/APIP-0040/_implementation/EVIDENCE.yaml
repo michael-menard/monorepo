@@ -1,0 +1,258 @@
+schema: 1
+story_id: "APIP-0040"
+version: 1
+timestamp: "2026-02-25T16:55:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "PipelineModelRouterFactory singleton — getInstance() always returns same instance"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+        description: "Singleton tests: getInstance() x3 === same ref, clearInstance() creates new instance"
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+        description: "PipelineModelRouterFactory with private static _instance, getInstance(), clearInstance()"
+
+  - ac_id: "AC-2"
+    ac_text: "TokenBucket rate limiter — per-provider token bucket with wait/throw semantics"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/token-bucket.test.ts"
+        description: "11 unit tests: HP-1 (init), HP-2 (consume), EC-2 (wait for refill), ED-1 (RateLimitExceededError), concurrent tests"
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/token-bucket.ts"
+        description: "TokenBucket class with Zod-validated config, setTimeout-based wait, consume(), getTokens()"
+
+  - ac_id: "AC-3"
+    ac_text: "BudgetAccumulator — per-story cumulative token tracking"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/budget-accumulator.test.ts"
+        description: "11 unit tests: HP-3 (record/getStoryUsage), EC-1 (cap crossing), ED-2 (isolation), ED-4 (instanceof)"
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/budget-accumulator.ts"
+        description: "BudgetAccumulator with in-memory Map, record(), getStoryUsage(), checkBudget() using direct numeric comparison"
+
+  - ac_id: "AC-4"
+    ac_text: "BudgetExhaustedError with storyId/tokensUsed/budgetCap fields and correct prototype chain"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/budget-accumulator.test.ts"
+        description: "Tests EC-1, ED-4: instanceof check, correct fields, throws when projected > cap"
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/__types__/index.ts"
+        description: "BudgetExhaustedError class with this.name assignment, Object.setPrototypeOf, correct fields"
+
+  - ac_id: "AC-5"
+    ac_text: "Escalation chain ollama → openrouter → anthropic with structured logging per failure"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+        description: "HP-4 (Ollama success), EC-3 (Ollama→OpenRouter fallback), EC-5 (all fail)"
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/escalation-integration.test.ts"
+        description: "Full chain integration tests, logger.warn spy verification"
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+        description: "ESCALATION_CHAIN = ['ollama','openrouter','anthropic'], logger.warn for each failure"
+
+  - ac_id: "AC-6"
+    ac_text: "DB-backed wint.model_assignments table with Drizzle schema and idempotent migration"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "apps/api/knowledge-base/src/db/migrations/016_wint_model_assignments.sql"
+        description: "CREATE TABLE IF NOT EXISTS wint.model_assignments with all required columns"
+      - type: file
+        path: "packages/backend/database-schema/src/schema/wint.ts"
+        description: "modelAssignments Drizzle table using wintSchema.table(), createInsertSchema/createSelectSchema"
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+        description: "HP-5: DB assignment override test using loadAssignmentsCache()"
+
+  - ac_id: "AC-7"
+    ac_text: "API keys read from environment variables only (ANTHROPIC_API_KEY, OPENROUTER_API_KEY)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+        description: "No hardcoded keys; uses ModelRouterFactory.getInstance() which delegates to env-var-based providers"
+
+  - ac_id: "AC-8"
+    ac_text: "Unit tests covering HP, EC, ED test cases for all pipeline components"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/token-bucket.test.ts"
+        description: "11 tests — HP-1, HP-2, EC-2, ED-1 + concurrent scenarios"
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/budget-accumulator.test.ts"
+        description: "11 tests — HP-3, EC-1, ED-2, ED-4"
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+        description: "12 tests — singleton, HP-4, HP-5, EC-3, EC-5, EC-1, ED-3 + budget/isolation"
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- token-bucket"
+        result: "11/11 PASS"
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- budget-accumulator"
+        result: "11/11 PASS"
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- model-router.test"
+        result: "12/12 PASS"
+
+  - ac_id: "AC-9"
+    ac_text: "Integration test for full escalation chain with mock ILLMProvider providers"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/escalation-integration.test.ts"
+        description: "11 tests: Ollama→OpenRouter, Ollama+OpenRouter→Anthropic, all-fail→ProviderChainExhaustedError, logger spy verification"
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- escalation-integration"
+        result: "11/11 PASS"
+
+  - ac_id: "AC-10"
+    ac_text: "Full orchestrator test suite passes with no WINT/MODL regressions (protected files untouched)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test"
+        result: "137 test files pass, 1 skipped, 0 new failures (2 pre-existing mcp-tools failures are in main monorepo too)"
+      - type: command
+        command: "pnpm build --filter @repo/orchestrator"
+        result: "SUCCESS — 7 tasks successful"
+
+  - ac_id: "AC-11"
+    ac_text: "dispatch() uses provider.getModel(modelString).invoke(messages) (LangChain BaseChatModel API)"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+        description: "_getModelInstance() calls provider.getModel(modelString), then .invoke(messages); usage_metadata extracted from AIMessage"
+      - type: test
+        path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+        description: "Mock providers implement getModel() returning object with invoke() returning AIMessage with usage_metadata"
+
+  - ac_id: "AC-12"
+    ac_text: "PipelineDispatchOptionsSchema and PipelineDispatchResultSchema defined in pipeline/__types__/index.ts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/orchestrator/src/pipeline/__types__/index.ts"
+        description: "PipelineDispatchOptionsSchema (storyId, agentId, messages: BaseMessage[]) and PipelineDispatchResultSchema (response, inputTokens, outputTokens)"
+
+touched_files:
+  - path: "packages/backend/orchestrator/src/pipeline/__types__/index.ts"
+    action: created
+    lines: 131
+    description: "Zod schemas for BudgetExhaustedError, RateLimitExceededError, ProviderChainExhaustedError; PipelineDispatchOptionsSchema; PipelineDispatchResultSchema"
+  - path: "packages/backend/orchestrator/src/pipeline/token-bucket.ts"
+    action: created
+    lines: 139
+    description: "TokenBucket in-memory rate limiter with setTimeout-based wait, vi.useFakeTimers() compatible"
+  - path: "packages/backend/orchestrator/src/pipeline/budget-accumulator.ts"
+    action: created
+    lines: 113
+    description: "BudgetAccumulator per-story token accumulator with direct numeric comparison"
+  - path: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+    action: created
+    lines: 303
+    description: "PipelineModelRouter with ollama→openrouter→anthropic escalation chain, PipelineModelRouterFactory singleton"
+  - path: "packages/backend/orchestrator/src/pipeline/__tests__/token-bucket.test.ts"
+    action: created
+    lines: 145
+    description: "11 unit tests for TokenBucket"
+  - path: "packages/backend/orchestrator/src/pipeline/__tests__/budget-accumulator.test.ts"
+    action: created
+    lines: 145
+    description: "11 unit tests for BudgetAccumulator"
+  - path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+    action: created
+    lines: 220
+    description: "12 unit tests for PipelineModelRouter"
+  - path: "packages/backend/orchestrator/src/pipeline/__tests__/escalation-integration.test.ts"
+    action: created
+    lines: 250
+    description: "11 integration tests for full escalation chain"
+  - path: "apps/api/knowledge-base/src/db/migrations/016_wint_model_assignments.sql"
+    action: created
+    lines: 30
+    description: "Idempotent CREATE TABLE IF NOT EXISTS wint.model_assignments migration"
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: modified
+    lines: 1833
+    description: "Added modelAssignments Drizzle table definition to wintSchema namespace"
+
+commands_run:
+  - command: "pnpm --filter @repo/orchestrator test -- token-bucket"
+    result: SUCCESS
+    output: "11 passed (11)"
+    timestamp: "2026-02-25T16:48:21Z"
+  - command: "pnpm --filter @repo/orchestrator test -- budget-accumulator"
+    result: SUCCESS
+    output: "11 passed (11)"
+    timestamp: "2026-02-25T16:48:25Z"
+  - command: "pnpm --filter @repo/orchestrator test -- model-router.test"
+    result: SUCCESS
+    output: "12 passed (12)"
+    timestamp: "2026-02-25T16:51:53Z"
+  - command: "pnpm --filter @repo/orchestrator test -- escalation-integration"
+    result: SUCCESS
+    output: "11 passed (11)"
+    timestamp: "2026-02-25T16:52:38Z"
+  - command: "pnpm --filter @repo/orchestrator test"
+    result: SUCCESS
+    output: "137 passed, 1 skipped (138) — 3379 tests pass, 0 new failures vs main monorepo"
+    timestamp: "2026-02-25T16:54:17Z"
+  - command: "pnpm build --filter @repo/orchestrator"
+    result: SUCCESS
+    output: "7 tasks successful"
+    timestamp: "2026-02-25T16:54:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 45, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "No HTTP surface and no UI — pure backend infrastructure package (pipeline/). ADR-006 E2E not applicable (frontend_impacted: false). Confirmed in PLAN.yaml notes."
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+
+notable_decisions:
+  - "Used vi.spyOn on _getModelInstance (private method) instead of vi.mock(ModelRouterFactory) for model-router tests — vi.mock had hoisting issues with static async methods across ESM boundaries"
+  - "TokenBucket.consume uses while-loop with setTimeout internally (not setInterval) for vi.useFakeTimers() compatibility — tests use Promise.allSettled to avoid unhandled rejection warnings"
+  - "BudgetAccumulator uses direct numeric comparison (current + newTokens > hardBudgetCap) — explicitly does NOT use checkTokenBudget() which requires PhaseKey"
+  - "ST-4 migration 016 placed in apps/api/knowledge-base/src/db/migrations/ to match existing convention (015_artifact_type_tables.sql pattern)"
+  - "Pre-existing test failures (context-warmer, session-manager) are due to @repo/mcp-tools missing subpath exports — identical in main monorepo branch, not introduced by this story"
+
+known_deviations:
+  - "logger.warn spy in escalation-integration.test.ts checks for calls where first arg contains 'pipeline_model_router' — this matches the logger.warn('pipeline_model_router', { event: 'provider_failure' }) pattern"
+  - "DB model_assignments query is implemented as in-memory cache loaded via loadAssignmentsCache() — actual DB query driver is out of scope for this story (ST-5 notes mention 'cached, invalidateAssignmentsCache() for cache reset')"
+
+token_summary:
+  execute: { in: 0, out: 0 }

@@ -48,41 +48,49 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 2. **Read prefix** - From `_bootstrap/AGENT-CONTEXT.md`
 3. **Validate artifacts** - Check each required file exists
 4. **Count stories** - Parse index for story count
-5. **Create output dir** - `{FEATURE_DIR}/_epic-elab/`
-6. **Write AGENT-CONTEXT.md** - Context for downstream phases
-7. **Initialize CHECKPOINT.md** - For resume capability
-8. **Estimate tokens** - Report expected cost
+5. **Write context to KB** - `kb_write_artifact` for agent context
+6. **Write checkpoint to KB** - `kb_write_artifact` for resume capability
+7. **Estimate tokens** - Report expected cost
 
-## AGENT-CONTEXT.md Format
+## AGENT-CONTEXT (KB Artifact)
 
-Write to `{FEATURE_DIR}/_epic-elab/AGENT-CONTEXT.md`:
-
-```yaml
-feature_dir: "{FEATURE_DIR}"
-prefix: "{PREFIX}"
-stories_path: "{FEATURE_DIR}/stories.index.md"
-output_path: "{FEATURE_DIR}/_epic-elab/"
-story_count: N
-timestamp: <ISO timestamp>
-artifacts:
-  index: found | missing
+Write via `kb_write_artifact`:
+```
+story_id: "{PREFIX}-EPIC"
+artifact_type: "context"
+artifact_name: "AGENT-CONTEXT"
+phase: "setup"
+content:
+  feature_dir: "{FEATURE_DIR}"
+  prefix: "{PREFIX}"
+  stories_path: "{FEATURE_DIR}/stories.index.md"
+  story_count: N
+  scope: "epic"
+  timestamp: <ISO timestamp>
+  artifacts:
+    index: found | missing
 ```
 
-## CHECKPOINT.md Format
+## CHECKPOINT (KB Artifact)
 
-Write to `{FEATURE_DIR}/_epic-elab/CHECKPOINT.md`:
-
-```yaml
-feature_dir: "{FEATURE_DIR}"
-prefix: "{PREFIX}"
-started: <timestamp>
-phases:
-  setup: complete
-  reviews: pending
-  aggregation: pending
-  interactive: pending
-  updates: pending
-resume_from: 1
+Write via `kb_write_artifact`:
+```
+story_id: "{PREFIX}-EPIC"
+artifact_type: "checkpoint"
+artifact_name: "CHECKPOINT"
+phase: "setup"
+content:
+  feature_dir: "{FEATURE_DIR}"
+  prefix: "{PREFIX}"
+  scope: "epic"
+  started: <timestamp>
+  phase_status:
+    setup: complete
+    reviews: pending
+    aggregation: pending
+    interactive: pending
+    updates: pending
+  resume_from: 1
 ```
 
 ## Token Estimate

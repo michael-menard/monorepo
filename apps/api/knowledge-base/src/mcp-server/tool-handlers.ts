@@ -3553,6 +3553,7 @@ export async function handleKbReadArtifact(
     correlation_id: correlationId,
     story_id: inputObj?.story_id,
     artifact_type: inputObj?.artifact_type,
+    artifact_name: inputObj?.artifact_name,
     iteration: inputObj?.iteration,
   })
 

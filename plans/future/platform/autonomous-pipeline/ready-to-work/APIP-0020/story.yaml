@@ -1,0 +1,16 @@
+id: "APIP-0020"
+title: "Supervisor Loop (Plain TypeScript)"
+status: in-progress
+priority: medium
+phase: 0
+feature: "Plain TypeScript async supervisor loop that consumes BullMQ jobs, dispatches to existing LangGraph worker graphs (story-creation, elaboration), monitors progress via LangGraph stream events, and updates job status on completion/failure"
+goal: "Establish the core autonomous loop that drives stories from intake through elaboration without human intervention."
+depends_on: ["APIP-0010"]
+endpoints: []
+infrastructure:
+  - "TypeScript process (not a LangGraph graph)"
+  - "BullMQ worker consuming from pipeline queue"
+risk_notes: "Single-story-at-a-time constraint required initially; dispatch to existing graphs must not regress their existing test suites. Wall clock timeout per stage needed to prevent runaway jobs."
+sizing_warning: false
+adr: "ADR-001 Decision 2: Plain TypeScript supervisor, not LangGraph graph"
+created: "2026-02-25T00:00:00Z"

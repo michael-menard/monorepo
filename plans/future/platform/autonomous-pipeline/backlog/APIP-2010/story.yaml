@@ -1,0 +1,14 @@
+id: "APIP-2010"
+title: "Blocked Queue and Notification System"
+status: backlog
+priority: medium
+phase: 2
+feature: "Supervisor logic to transition stories to status=blocked when attempt_count >= max_attempts, with configurable webhook notifications (Slack/email/push) and blocked queue visibility in the DB"
+goal: "Ensure pipeline failures surface to humans for intervention rather than silently consuming retries."
+depends_on: ["APIP-0020"]
+endpoints: []
+infrastructure:
+  - "Webhook/notification channel configuration"
+risk_notes: "Notification channel reliability; idempotency of block transitions if supervisor crashes mid-transition."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

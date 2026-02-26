@@ -2324,8 +2324,10 @@ export const kbWriteArtifactToolDefinition: McpToolDefinition = {
   description: `Write a workflow artifact to the database (DB-first artifact storage).
 
 Creates or updates an artifact for a story. Uses upsert behavior based on
-story_id + artifact_type + iteration - if an artifact with these values exists,
-it will be updated; otherwise a new artifact is created.
+story_id + artifact_type + artifact_name + iteration - if an artifact with these
+values exists, it will be updated; otherwise a new artifact is created.
+Use artifact_name to store multiple artifacts of the same type (e.g., 6 reviews
+with names REVIEW-ENGINEERING, REVIEW-PRODUCT, etc.).
 
 Supported artifact types:
 - checkpoint: Phase completion checkpoints (CHECKPOINT.yaml)
@@ -2409,12 +2411,16 @@ export const kbReadArtifactToolDefinition: McpToolDefinition = {
 Retrieves an artifact by story_id + artifact_type. If iteration is not specified,
 returns the latest artifact (highest iteration number).
 
+Use artifact_name to disambiguate when multiple artifacts share the same type
+(e.g., REVIEW-ENGINEERING vs REVIEW-PRODUCT for type 'review').
+
 Use this instead of reading YAML files from _implementation/ directory.
 The content field contains the full artifact data that would have been in the YAML file.
 
 Parameters:
 - story_id (required): Story ID (e.g., 'WISH-2045')
 - artifact_type (required): Type of artifact to read
+- artifact_name (optional): Specific artifact name for disambiguation
 - iteration (optional): Specific iteration number (default: latest)
 
 Returns: Artifact or null if not found
@@ -2444,11 +2450,11 @@ Example (read specific iteration):
   "iteration": 2
 }
 
-Example (read review for fix cycle):
+Example (read specific review by name):
 {
-  "story_id": "WISH-2045",
+  "story_id": "WISH-EPIC",
   "artifact_type": "review",
-  "iteration": 1
+  "artifact_name": "REVIEW-ENGINEERING"
 }`,
   inputSchema: zodToMcpSchema(KbReadArtifactInputSchema),
 }

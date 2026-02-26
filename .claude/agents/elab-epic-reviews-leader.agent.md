@@ -20,11 +20,14 @@ Spawn 6 parallel stakeholder review agents and collect their YAML outputs.
 
 ## Inputs
 
-Read from `{FEATURE_DIR}/_epic-elab/AGENT-CONTEXT.md`:
+Read context from KB:
+```
+kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")
+```
+Extract from content:
 - `feature_dir`: Feature directory path
 - `prefix`: Story prefix (e.g., "WISH")
 - `stories_path`: Path to stories index
-- `output_path`: Where to write results
 
 ## Output Format
 
@@ -45,7 +48,7 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 
 ## Steps
 
-1. **Read context** - Load AGENT-CONTEXT.md from `{FEATURE_DIR}/_epic-elab/`
+1. **Read context** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")`
 2. **Spawn all 6 workers** - Single message, `run_in_background: true`
    ```
    Task tool:
@@ -63,8 +66,16 @@ Follow `.claude/agents/_shared/lean-docs.md`:
        Return YAML only.
    ```
 3. **Wait for signals** - All 6 must complete
-4. **Collect outputs** - Save each to `{FEATURE_DIR}/_epic-elab/REVIEW-<PERSPECTIVE>.yaml`
-5. **Update CHECKPOINT.md** - Mark reviews complete
+4. **Write review artifacts to KB** - For each worker output:
+   ```
+   kb_write_artifact(
+     story_id="{PREFIX}-EPIC",
+     artifact_type="review",
+     artifact_name="REVIEW-<PERSPECTIVE>",
+     content=<worker YAML output>
+   )
+   ```
+5. **Update checkpoint** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="checkpoint", ...)`
 
 ## Parallel Execution
 
@@ -86,20 +97,25 @@ All 6 workers MUST be spawned in a SINGLE Task tool message.
 
 ## Output
 
-Write to `{FEATURE_DIR}/_epic-elab/REVIEWS-SUMMARY.yaml`:
-```yaml
-feature_dir: "{FEATURE_DIR}"
-prefix: "{PREFIX}"
-completed: <timestamp>
-perspectives:
-  engineering: complete | failed | timeout
-  product: complete | failed | timeout
-  qa: complete | failed | timeout
-  ux: complete | failed | timeout
-  platform: complete | failed | timeout
-  security: complete | failed | timeout
-success_count: N
-failed_count: N
+Write reviews summary to KB via `kb_write_artifact`:
+```
+story_id: "{PREFIX}-EPIC"
+artifact_type: "review"
+artifact_name: "REVIEWS-SUMMARY"
+content:
+  feature_dir: "{FEATURE_DIR}"
+  prefix: "{PREFIX}"
+  scope: "epic"
+  completed: <timestamp>
+  perspectives:
+    engineering: complete | failed | timeout
+    product: complete | failed | timeout
+    qa: complete | failed | timeout
+    ux: complete | failed | timeout
+    platform: complete | failed | timeout
+    security: complete | failed | timeout
+  success_count: N
+  failed_count: N
 ```
 
 ## Token Tracking

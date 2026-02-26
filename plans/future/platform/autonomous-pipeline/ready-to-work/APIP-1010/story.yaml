@@ -1,0 +1,13 @@
+id: "APIP-1010"
+title: "Structurer Node in Elaboration Graph"
+status: ready-to-work
+priority: medium
+phase: 1
+feature: "Add a Structurer node to the existing elaboration graph that reads acceptance criteria and produces a change_outline (ordered list of expected file changes), estimates complexity per change, and flags stories needing splits (>15 atomic changes)"
+goal: "Produce structured change outlines during elaboration so that downstream diff planning can decompose work into model-executable atomic changes."
+depends_on: ["APIP-0020"]
+endpoints: []
+infrastructure: []
+risk_notes: "Quality of change_outline depends on Claude-level reasoning; inaccurate outlines degrade diff planner output; split-flagging threshold (15 changes) may need tuning."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

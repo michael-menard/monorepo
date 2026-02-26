@@ -1,0 +1,59 @@
+skipped: false
+verdict: PASS-WITH-NOTES
+
+component_patterns:
+  - "Use Card, CardHeader, CardContent from @repo/app-component-library for each of the three dashboard panels (Pipeline View, Cost Panel, Blocked Queue)"
+  - "Use StatsCards pattern from apps/web/app-dashboard/src/components/StatsCards.tsx for summary metric tiles (queue depth, total cost, blocked count)"
+  - "Use ActivityFeed skeleton pattern from apps/web/app-dashboard/src/components/ActivityFeed/index.tsx for loading state (animate-pulse Tailwind class)"
+  - "Use Table, TableHeader, TableBody, TableRow, TableCell from @repo/app-component-library/_primitives for pipeline view table"
+  - "Use Badge primitive from @repo/app-component-library/_primitives for story state color coding"
+  - "Do NOT import shadcn components directly — always via @repo/app-component-library or @repo/ui"
+
+state_color_coding:
+  - "in-progress: text-blue-600 / bg-blue-100 badge"
+  - "blocked: text-red-600 / bg-red-100 badge (warning — most prominent)"
+  - "ready-to-work: text-green-600 / bg-green-100 badge"
+  - "backlog: text-gray-500 / bg-gray-100 badge (muted)"
+
+layout_notes:
+  - "Three panels arranged in a responsive grid: 2-col on desktop (1920px), Pipeline View spanning full width, Cost + Blocked Queue side-by-side below"
+  - "Blocked Queue Panel should appear first or with a prominent warning border (border-red-300) to draw operator attention"
+  - "All three panels must fit on a single viewport at 1920px width without scrolling"
+  - "Dashboard is desktop-first (operator tooling) — mobile layout not required in v1"
+
+live_update_indicators:
+  - "SSE active state: green dot + 'Live' text badge in dashboard header — use bg-green-500 rounded-full pulse animation"
+  - "SSE inactive / polling fallback: amber dot + 'Refreshing every 30s' text in dashboard header"
+  - "Stale data: amber border on panels + 'Data may be stale' tooltip on last-updated timestamp"
+
+accessibility:
+  - "All three panels must have aria-label (e.g., aria-label='Pipeline View Panel')"
+  - "Table must have <caption> or aria-labelledby referencing the panel heading"
+  - "State badges must have aria-label describing the state (not just color) — e.g., aria-label='State: in-progress'"
+  - "Retry buttons must have descriptive aria-label (e.g., aria-label='Retry loading pipeline view')"
+  - "Auto-refresh must announce data updates via aria-live='polite' region so screen readers announce new data"
+  - "Focus must not reset to top of page on data refresh — preserve focus position"
+  - "Keyboard navigation: Tab through all interactive elements (retry buttons, panel headings); no keyboard traps"
+
+design_system_rules:
+  - "token-only colors (hard gate) — use Tailwind semantic tokens, not raw hex or rgb values"
+  - "_primitives import required for all shadcn component usage"
+  - "Use @repo/app-component-library for Card, Badge, Table, Button primitives"
+  - "Loading skeleton must use animate-pulse from Tailwind — no custom CSS animations"
+  - "Error state must use non-blocking inline pattern (no modal dialogs for data fetch errors)"
+
+playwright_evidence:
+  - "Navigate to /monitor — all three panel headings visible"
+  - "Pipeline View panel: table rows with state badges visible after data load"
+  - "Cost Panel: at least one row showing story ID and token count"
+  - "Blocked Queue Panel: empty state message visible when no blocked stories"
+  - "Loading state: skeleton pulse visible during initial fetch (mock slow network)"
+  - "Error state: retry button visible when fetch fails (mock 503 response)"
+  - "Live indicator: green dot badge visible when SSE connected"
+  - "Polling indicator: amber dot visible when SSE disconnected"
+  - "Keyboard: Tab key cycles through all interactive elements without trap"
+
+notes:
+  - "Operator tooling context allows higher data density than consumer-facing UI — multiple columns in table acceptable"
+  - "No write actions in UI v1 — remove/hide any affordances that imply mutability"
+  - "Panel refresh should update data in-place (no full re-mount) to avoid disorienting operators during active monitoring"

@@ -1,0 +1,14 @@
+id: "APIP-4010"
+title: "Codebase Health Gate"
+status: backlog
+priority: medium
+phase: 4
+feature: "wint.codebase_health snapshots table, health check cron after every 5th merge (lint_warnings, type_errors, any_count, test_coverage, circular_deps, bundle_size, dead_exports, eslint_disable_count), auto-generate CLEANUP stories when thresholds drift"
+goal: "Prevent autonomous pipeline output from gradually degrading codebase quality by triggering self-healing cleanup stories."
+depends_on: ["APIP-1070", "APIP-3090"]
+endpoints: []
+infrastructure:
+  - "Aurora PostgreSQL migration: wint.codebase_health table"
+risk_notes: "Threshold calibration is empirical — wrong thresholds generate noisy or missed cleanup stories; baseline management logic (when to update the baseline) is subtle."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

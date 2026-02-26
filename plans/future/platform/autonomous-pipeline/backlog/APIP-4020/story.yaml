@@ -1,0 +1,13 @@
+id: "APIP-4020"
+title: "Cohesion Scanner"
+status: backlog
+priority: medium
+phase: 4
+feature: "Weekly cron that samples codebase for pattern consistency (route handler structure, Zod naming, React directory structure, import conventions), produces a cohesion score, and generates consistency cleanup stories when score drops below threshold"
+goal: "Detect and auto-remediate pattern drift before it becomes entrenched inconsistency across the codebase."
+depends_on: ["APIP-4010"]
+endpoints: []
+infrastructure: []
+risk_notes: "Pattern detection heuristics may produce false positives; cohesion score formula needs calibration; consistency stories must be targeted enough to be implementable."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"

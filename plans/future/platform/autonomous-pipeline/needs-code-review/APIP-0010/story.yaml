@@ -1,0 +1,17 @@
+id: "APIP-0010"
+title: "BullMQ Work Queue Setup"
+status: needs-code-review
+priority: medium
+phase: 0
+feature: "Configure BullMQ queue with existing Redis/ElastiCache infrastructure, Redis AOF persistence for restart durability, job lifecycle (pending/active/completed/failed/delayed), priority ordering, and Bull Board dashboard for queue visibility"
+goal: "Provide a durable, restart-safe work queue as the backbone of all pipeline stage transitions using BullMQ + Redis."
+depends_on: []
+endpoints: []
+infrastructure:
+  - "Redis/ElastiCache with AOF persistence (appendonly yes)"
+  - "BullMQ queue configuration"
+  - "Bull Board dashboard (dev/operator visibility)"
+risk_notes: "Redis AOF fsync interval (1s default) means up to 1s of data loss on hard crash. Acceptable for pipeline queue. Verify ElastiCache AOF support in current tier."
+sizing_warning: false
+adr: "ADR-001 Decision 1: BullMQ replaces PostgreSQL queue"
+created: "2026-02-25T00:00:00Z"

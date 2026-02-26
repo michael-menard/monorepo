@@ -21,14 +21,14 @@ Apply accepted decisions to epic artifacts (stories index, roadmap).
 
 ## Inputs
 
-Read from `{FEATURE_DIR}/_epic-elab/`:
-- `AGENT-CONTEXT.md` - feature_dir, prefix
-- `DECISIONS.yaml` - User decisions
-- `EPIC-REVIEW.yaml` - Original findings
+Read from KB:
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")` → feature_dir, prefix
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="DECISIONS")` → user decisions
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")` → original findings
 
-Read artifacts from `{FEATURE_DIR}/`:
-- `stories.index.md`
-- `roadmap.md`
+Read artifacts from filesystem (these are core plan artifacts, not KB artifacts):
+- `{FEATURE_DIR}/stories.index.md`
+- `{FEATURE_DIR}/roadmap.md`
 
 ## Output Format
 
@@ -38,14 +38,14 @@ Follow `.claude/agents/_shared/lean-docs.md`:
 
 ## Steps
 
-1. **Read context** - Load AGENT-CONTEXT.md for feature_dir and prefix
-2. **Read decisions** - Load DECISIONS.yaml
+1. **Read context** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")`
+2. **Read decisions** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="DECISIONS")`
 3. **Filter accepted items** - Only apply accepted/modified decisions
-4. **Update stories index** - Add new stories, mark splits, add risk notes
-5. **Update roadmap** - Add dependencies, update critical path
-6. **Write FOLLOW-UPS.md** - Deferred items for later
-7. **Write UPDATES-LOG.yaml** - What changed
-8. **Update CHECKPOINT.md** - Mark updates complete
+4. **Update stories index** - Add new stories, mark splits, add risk notes (filesystem write)
+5. **Update roadmap** - Add dependencies, update critical path (filesystem write)
+6. **Write FOLLOW-UPS to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="FOLLOW-UPS", ...)`
+7. **Write UPDATES-LOG to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="UPDATES-LOG", ...)`
+8. **Update checkpoint** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="checkpoint", ...)`
 
 ## Stories Index Updates
 
@@ -86,9 +86,9 @@ Add new stories to dependency graph:
 - {PREFIX}-NEW-XXX depends on {PREFIX}-YYY
 ```
 
-## Output: UPDATES-LOG.yaml
+## Output: UPDATES-LOG (KB Artifact)
 
-Write to `{FEATURE_DIR}/_epic-elab/UPDATES-LOG.yaml`:
+Write via `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="UPDATES-LOG")`:
 
 ```yaml
 feature_dir: "{FEATURE_DIR}"
@@ -111,9 +111,9 @@ files_modified:
 follow_ups_created: true | false
 ```
 
-## Output: FOLLOW-UPS.md (if deferred items)
+## Output: FOLLOW-UPS (KB Artifact, if deferred items)
 
-Write to `{FEATURE_DIR}/_epic-elab/FOLLOW-UPS.md`:
+Write via `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="FOLLOW-UPS")`:
 
 ```markdown
 # Follow-Ups: {PREFIX}
@@ -156,9 +156,9 @@ elaboration: complete
 verdict: READY | CONCERNS | BLOCKED
 next_step: "/elab-story {PREFIX}-001"
 artifacts:
-  - "{FEATURE_DIR}/_epic-elab/EPIC-REVIEW.yaml"
-  - "{FEATURE_DIR}/_epic-elab/DECISIONS.yaml"
-  - "{FEATURE_DIR}/_epic-elab/UPDATES-LOG.yaml"
+  - kb: "{PREFIX}-EPIC / review / EPIC-REVIEW"
+  - kb: "{PREFIX}-EPIC / elaboration / DECISIONS"
+  - kb: "{PREFIX}-EPIC / elaboration / UPDATES-LOG"
 ```
 
 ## Token Tracking
