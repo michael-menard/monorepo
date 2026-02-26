@@ -1,0 +1,51 @@
+deferred_at: "2026-02-25T00:00:00Z"
+reason: "KB MCP server unavailable during story generation and autonomous elaboration"
+retry_when: "KB server available"
+
+stories:
+  - story_id: APIP-5002
+    feature: autonomous-pipeline
+    title: "E2E Test Plan and Playwright Framework Setup for Autonomous Pipeline Critical Path"
+    story_dir: plans/future/platform/autonomous-pipeline/backlog/APIP-5002
+    story_file: plans/future/platform/autonomous-pipeline/backlog/APIP-5002/APIP-5002.md
+    story_type: feature
+    points: 5
+    priority: medium
+    state: backlog
+    touches_backend: true
+    touches_frontend: false
+    touches_database: false
+    touches_infra: false
+
+worktrees:
+  - story_id: APIP-5002
+    branch_name: story/APIP-5002
+    path: tree/story/APIP-5002
+    created_at: "2026-02-25T00:00:00Z"
+
+deferred_opportunity_logs:
+  - opportunity_id: opp-1
+    story_id: APIP-5002
+    category: observability
+    deferred_at: "2026-02-25T00:00:00Z"
+    artifact_type: analysis
+    artifact_name: OPP-1-CI-WORKFLOW-DOCUMENTATION
+    content:
+      finding: "CI workflow job for Phase 0 E2E mentioned in Infrastructure Notes but not specified. The APIP-5002.md mentions a CI job should run phase0 E2E after APIP-0010 and APIP-0020 merge, but the job definition (triggers, environment, Docker Compose setup steps) is not documented anywhere."
+      recommendation: "Document in PIPELINE-E2E-TEST-PLAN.md as a post-merge action item: define CI job name, trigger condition (on merge of APIP-0010 and APIP-0020), required services (Redis), environment variables, and how to spin up the local Docker Compose stack in CI."
+      effort: low
+      blocking: false
+      decision: "Log to KB as non-blocking observability improvement. Implementer should note this when writing PIPELINE-E2E-TEST-PLAN.md (ST-8)."
+
+  - opportunity_id: opp-3
+    story_id: APIP-5002
+    category: edge_cases
+    deferred_at: "2026-02-25T00:00:00Z"
+    artifact_type: analysis
+    artifact_name: OPP-3-REVIEW-YAML-FAIL-BEHAVIOR
+    content:
+      finding: "REVIEW.yaml FAIL verdict behavior in full critical path E2E (phase1-critical-path.spec.ts) is unspecified. AC-7(d) states REVIEW.yaml is written with 'verdict: PASS or FAIL (not null)' but does not say what the test should do if verdict is FAIL. The synthetic ChangeSpec is designed to always pass review, so FAIL means a framework bug — but the spec should fail explicitly rather than silently skip merge assertions."
+      recommendation: "In ST-7 when implementing phase1-critical-path.spec.ts, add an explicit assertion: if REVIEW.yaml verdict is FAIL, use expect.fail() or equivalent with message 'Framework bug: synthetic ChangeSpec produced REVIEW.yaml FAIL verdict — investigate review graph'. Do not silently skip merge assertions on FAIL."
+      effort: low
+      blocking: false
+      decision: "Log to KB as non-blocking edge_cases guidance for ST-7 implementer."

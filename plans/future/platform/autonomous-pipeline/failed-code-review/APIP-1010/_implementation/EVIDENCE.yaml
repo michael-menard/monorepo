@@ -1,0 +1,153 @@
+schema: 1
+story_id: APIP-1010
+timestamp: "2026-02-25T18:45:00Z"
+phase: implementation
+iteration: 0
+
+summary:
+  total_acs: 15
+  acs_with_evidence: 15
+  acs_missing: 0
+  overall_status: COMPLETE
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence_type: file
+    evidence: "StructurerConfigSchema defined in structurer.ts with fields: enabled (boolean, default true), splitThreshold (int, positive, default 15), maxChangesPerItem (int, positive, default 50), nodeTimeoutMs (number, positive, default 60000). Verified by StructurerConfigSchema test suite (3 tests passing)."
+    files:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_type: file
+    evidence: "ChangeOutlineItemSchema defined with id (string min 1), filePath (string min 1), changeType (enum: create|modify|delete), description (string min 1), complexity (enum: low|medium|high|unknown), estimatedAtomicChanges (int, min 1), relatedAcIds (array of strings), extensions (z.record(z.unknown()).optional() — forward-compatibility escape hatch). Validated by schema tests and ChangeOutlineItemSchema.parse() calls in structurer.test.ts."
+    files:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_type: file
+    evidence: "StructurerResultSchema defined with storyId, changeOutline (array of ChangeOutlineItem), totalEstimatedAtomicChanges, splitRequired (boolean), splitReason (string nullable), structuredAt (datetime), durationMs, fallbackUsed (boolean). Validated by StructurerResultSchema test in structurer.test.ts."
+    files:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_type: file
+    evidence: "createStructurerNode(config) factory implemented using createToolNode('structurer', async (state: GraphState) => ...) pattern. Reads state.currentStory.acceptanceCriteria and state.escapeHatchResult (for cross-cutting context). Returns state updates: changeOutline, splitRequired, splitReason, structurerComplete: true. Casts internal state via (state as unknown as StructurerElaborationState) pattern consistent with delta-detect.ts."
+    files:
+      - packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_type: file
+    evidence: "Structurer node wired in createElaborationGraph via .addNode('structurer', createStructurerNode(fullConfig.structurerConfig)). afterAggregate conditional edge routes to 'structurer' when structurerConfig.enabled===true. .addEdge('structurer', 'update_readiness') ensures proper flow. addConditionalEdges for 'aggregate_findings' updated with structurer: 'structurer' in routing map. graph.compile() succeeds in elaboration.test.ts HP-5."
+    files:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_type: file
+    evidence: "ElaborationStateAnnotation extended with: changeOutline Annotation<ChangeOutlineItem[] | null> (overwrite reducer, default null), splitRequired Annotation<boolean> (overwrite, default false), splitReason Annotation<string | null> (overwrite, default null), structurerComplete Annotation<boolean> (overwrite, default false). All use the standard overwrite reducer pattern matching existing fields."
+    files:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_type: file
+    evidence: "ElaborationResultSchema extended with: changeOutline z.array(z.unknown()).nullable().default(null), totalEstimatedAtomicChanges z.number().nullable().default(null), splitRequired z.boolean().default(false), splitReason z.string().nullable().default(null). runElaboration() signature unchanged. runElaboration() populates new fields from result state. Error path return object updated with new fields. HP-8 test validates schema parsing."
+    files:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_type: file
+    evidence: "ElaborationConfigSchema extended with structurerConfig: StructurerConfigSchema.default({}). ElaborationConfigSchema tests confirm accepts structurerConfig with default and custom values. No existing callers changed — backward compatible through Zod defaults."
+    files:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_type: test
+    evidence: "Tests in structurer.test.ts: (b) split flagging — createHighComplexityState produces 2 ACs with 3+ system refs → high complexity → 11 each → 22 total > 15 threshold → splitRequired: true, splitReason non-null; (c) no-split — createLowComplexityState produces 3 ACs with low complexity → 2 each → 6 total ≤ 15 → splitRequired: false, splitReason: null; (f) custom threshold test confirms threshold is respected."
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_type: test
+    evidence: "Tests: (d) empty ACs — createTestState with acceptanceCriteria:[] → changeOutline:[], splitRequired:false, structurerComplete:true, warnings.length>=1, currentPhase!='error'; (EC-3) null currentStory → changeOutline:[], structurerComplete:true, warning appended. Both verify no error state is set."
+
+  - ac_id: AC-11
+    status: PASS
+    evidence_type: test
+    evidence: "Test (e) — model error fallback: createToolNode that throws on first invocation then returns fallback with complexity:'unknown' and estimatedAtomicChanges:1 per AC. structurerComplete:true, fallbackUsed:true verified. Production structurer.ts catch block: catches errors, generates fallbackOutline (one item per AC, complexity:'unknown', estimatedAtomicChanges:1), returns gracefully without propagating exception."
+
+  - ac_id: AC-12
+    status: PASS
+    evidence_type: command
+    evidence: "structurer.ts coverage: 83.05% statements, 80.85% branches (both >80%). pnpm --filter @repo/orchestrator run test src/nodes/elaboration/__tests__/structurer.test.ts --coverage: 21 tests passing. Exports from elaboration/index.ts: structurerNode, createStructurerNode, StructurerConfigSchema, ChangeOutlineItemSchema, StructurerResultSchema, StructurerConfig (type), ChangeOutlineItem (type), StructurerResult (type). pnpm build (tsc) exits 0 with no errors."
+
+  - ac_id: AC-13
+    status: PASS
+    evidence_type: test
+    evidence: "structurer.test.ts covers all 6 required scenarios: (a) happy path — 3 ACs produce correct changeOutline with sequential IDs, valid schema per ChangeOutlineItemSchema.parse(); (b) split flagging — total > threshold → splitRequired:true; (c) no-split — total <= threshold → splitRequired:false, splitReason:null; (d) empty ACs fallback — warning appended, no error state; (e) model error fallback — fallbackUsed:true, one item per AC with complexity:unknown; (f) custom splitThreshold:5 respected. 21 tests total passing."
+
+  - ac_id: AC-14
+    status: PASS
+    evidence_type: test
+    evidence: "elaboration.test.ts extended: (a) HP-5: createElaborationGraph() with structurerConfig.enabled:true — graph.compile() succeeds, no exception; (b) graph.compile() succeeds with Structurer disabled; (c) graph.compile() succeeds with default config; (d) createTestState updated with 4 new fields — regression guard passes. All 57 pre-existing elaboration tests pass unchanged (1 pre-existing failure in runElaboration > handles initial elaboration is NOT introduced by this story — confirmed by stash verification)."
+
+  - ac_id: AC-15
+    status: PASS
+    evidence_type: test
+    evidence: "afterAggregate exported as named function in elaboration.ts: 'export function afterAggregate(state: ElaborationState): structurer | update_readiness | save_to_db'. Imported directly in elaboration.test.ts. HP-6: afterAggregate with structurerConfig.enabled:true returns 'structurer'; HP-7: with enabled:false returns 'update_readiness'; also tests save_to_db routing and structurer taking priority over recalculateReadiness."
+
+build_verification:
+  type_check:
+    command: "pnpm --filter @repo/orchestrator run type-check (via tsc --noEmit from main monorepo node_modules)"
+    status: PASS
+    notes: "No new type errors introduced. Pre-existing errors in __types__/index.ts and adapters/ unrelated to this story. All elaboration/structurer file type checks pass."
+  build:
+    command: "pnpm --filter @repo/orchestrator run build (tsc)"
+    status: PASS
+    notes: "tsc build exits 0 with no errors or warnings for our new files"
+  tests:
+    command: "pnpm --filter @repo/orchestrator run test"
+    status: PASS
+    test_count: 3412
+    pre_existing_failures: 1
+    notes: "3412 tests pass. 1 pre-existing failure (runElaboration > handles initial elaboration without previous story) confirmed to exist before this story's changes via git stash verification. New tests: 21 in structurer.test.ts + 17 in elaboration.test.ts additions = 38 new tests added."
+  coverage:
+    command: "pnpm --filter @repo/orchestrator run test src/nodes/elaboration/__tests__/structurer.test.ts --coverage"
+    status: PASS
+    structurer_statements: "83.05%"
+    structurer_branches: "80.85%"
+    notes: "Exceeds 80% requirement for both statement and branch coverage"
+
+files_created:
+  - path: packages/backend/orchestrator/src/nodes/elaboration/structurer.ts
+    action: create
+    ac_evidence: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-9", "AC-10", "AC-11"]
+
+  - path: packages/backend/orchestrator/src/nodes/elaboration/__tests__/structurer.test.ts
+    action: create
+    ac_evidence: ["AC-9", "AC-10", "AC-11", "AC-12", "AC-13"]
+
+  - path: packages/backend/orchestrator/src/nodes/elaboration/index.ts
+    action: modify
+    ac_evidence: ["AC-12"]
+
+  - path: packages/backend/orchestrator/src/graphs/elaboration.ts
+    action: modify
+    ac_evidence: ["AC-5", "AC-6", "AC-7", "AC-8", "AC-15"]
+
+  - path: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    action: modify
+    ac_evidence: ["AC-14", "AC-15"]
+
+architectural_notes:
+  - "ARCH-001: createToolNode pattern used per delta-detect.ts canonical reference. GraphState cast via (state as unknown as StructurerElaborationState) internally."
+  - "ARCH-002: afterAggregate exported as named function for testability (AC-15). Returns 'structurer' | 'update_readiness' | 'save_to_db'."
+  - "ARCH-003: Heuristic midpoints: low=2 (1 system ref), medium=5 (2 refs), high=11 (3+ refs). Cross-cutting bumps up one level."
+  - "Backward compatibility maintained: all new ElaborationResult fields have nullable defaults. structurerConfig in ElaborationConfigSchema has full defaults."
+  - "Pre-existing failure: runElaboration > handles initial elaboration without previous story was already failing before this story (git stash verified). Not introduced by APIP-1010."

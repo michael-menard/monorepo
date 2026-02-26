@@ -1,0 +1,149 @@
+feasible: true
+confidence: high
+rationale: >
+  All primary mechanisms already exist in the codebase. BullMQ Worker concurrency
+  parameter is the established pattern from APIP-0020. NodeCircuitBreaker is
+  implemented and ready to use. ParallelConfigSchema provides the config shape
+  template. StoryFileAdapter atomic writes handle concurrent YAML safety. The
+  main new code is ConcurrencyController (slot map), WorktreeConflictDetector
+  (path-prefix comparison), and ConcurrencyConfig Zod schema — all small, isolated
+  components. Hard dependency on APIP-0020 and APIP-0040 being merged first.
+complexity: high
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/src/supervisor/ (new ConcurrencyController, worktree lifecycle)"
+    - "packages/backend/orchestrator/src/config/ (new ConcurrencyConfig Zod schema)"
+    - "packages/backend/orchestrator/src/conflicts/ (new WorktreeConflictDetector)"
+    - "packages/backend/orchestrator/src/runner/circuit-breaker.ts (read-only reference)"
+    - "packages/backend/orchestrator/src/utils/parallel-executor.ts (read-only reference)"
+  endpoints: []
+  deploy_touchpoints:
+    - "BullMQ Worker constructor call: add concurrency: config.maxWorktrees"
+    - ".gitignore: add .worktrees/ if not present"
+    - "Environment: REDIS_URL must be set for real BullMQ in integration tests"
+
+risks:
+  - finding: >
+      PipelineModelRouter singleton (APIP-0040) uses in-memory TokenBucket. Under
+      true concurrent BullMQ workers (not Promise.all), concurrent Node.js callbacks
+      may race on Map-based budget tracking. APIP-0040's ED-1 test covers Promise.all
+      but not real BullMQ concurrency. If TokenBucket.consume() is not atomic,
+      double-spend or silent bypass is possible.
+    mitigation: >
+      AC-7 requires explicit concurrency-safety verification. Add integration test
+      (EC-5 in test plan) with real BullMQ concurrency: 3 and budget cap verification.
+      If race is found, add mutex (e.g., async-mutex package) or atomic counter to
+      TokenBucket — scope this as a sub-item within APIP-3080 since APIP-0040 is
+      in code review.
+  - finding: >
+      git worktree creation requires clean git state and user.email/user.name config.
+      CI environments may fail worktree creation if not configured.
+    mitigation: >
+      Integration test setup script configures git identity. Add CI environment
+      check in test beforeAll. Document in story Architecture Notes.
+  - finding: >
+      Hard dependency: APIP-0020 supervisor Worker constructor shape must be stable
+      before ST-2 (BullMQ wiring). APIP-0040 PipelineModelRouter API must be merged
+      before AC-7 (shared router safety).
+    mitigation: >
+      Implement ST-1 (ConcurrencyConfig + ConcurrencyController) and ST-3
+      (WorktreeConflictDetector) independently of APIP-0020 merge. Gate ST-2 and
+      ST-4 on dependency merge. Story status: blocked-pending-dependencies in KB
+      when scheduling.
+
+missing_requirements: []
+
+evidence_expectations:
+  - "Integration test: 2 concurrent stories dispatch, checkpoint, complete without interference (AC-10)"
+  - "Integration test: slot saturation causes delay, then dispatch on slot free (AC-11)"
+  - "Integration test: TokenBucket concurrent safety with real BullMQ workers (AC-7)"
+  - "Unit test: ConcurrencyController.tryAcquireSlot / releaseSlot slot accounting (AC-4)"
+  - "Unit test: WorktreeConflictDetector overlap detection with path prefix (AC-5, AC-6)"
+  - "Unit test: circuit breaker isolation — one breaker open does not affect other (AC-8)"
+  - "Integration test: worktree cleanup failure does not block story completion (AC-9)"
+  - "Regression test: maxWorktrees: 1 behavior identical to APIP-0020 single-story (AC-12)"
+
+subtasks:
+  - id: ST-1
+    title: "ConcurrencyConfig Zod schema and ConcurrencyController class"
+    goal: >
+      Define ConcurrencyConfig Zod schema with maxWorktrees (1-3), conflictPolicy,
+      and worktreeCircuitBreaker thresholds. Implement ConcurrencyController with
+      tryAcquireSlot() / releaseSlot() / activeSlots() using a Map<storyId, worktreeId>.
+    files_to_read:
+      - "packages/backend/orchestrator/src/utils/parallel-executor.ts"
+      - "packages/backend/orchestrator/src/runner/types.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/config/concurrency-config.ts (new)"
+      - "packages/backend/orchestrator/src/supervisor/concurrency-controller.ts (new)"
+    acs: ["AC-1", "AC-4", "AC-12"]
+    depends_on: "none"
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- --testPathPattern concurrency-controller"
+    estimated_tokens: 12000
+
+  - id: ST-2
+    title: "BullMQ Worker concurrency wiring and git worktree lifecycle"
+    goal: >
+      Wire ConcurrencyConfig.maxWorktrees into BullMQ Worker({ concurrency: N }).
+      Implement worktree creation at dispatch time (.worktrees/<storyId>-<timestamp>/)
+      and non-blocking removal on story completion/failure. Add .worktrees/ to .gitignore.
+    files_to_read:
+      - "packages/backend/orchestrator/src/runner/types.ts"
+      - "packages/backend/orchestrator/src/adapters/story-file-adapter.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/supervisor/pipeline-supervisor.ts (APIP-0020 output)"
+      - ".gitignore"
+    acs: ["AC-2", "AC-3", "AC-9"]
+    depends_on: "ST-1; also requires APIP-0020 merge"
+    verification: "pnpm check-types --filter @repo/orchestrator && integration test HP-3"
+    estimated_tokens: 16000
+
+  - id: ST-3
+    title: "WorktreeConflictDetector with path-prefix policy"
+    goal: >
+      Implement WorktreeConflictDetector.checkConflict(incomingStory, activeStories)
+      using story-level path prefix comparison (conservative proxy until APIP-1020
+      ChangeSpec is stable). Wire into dispatch flow: reject/requeue on overlap
+      when conflictPolicy: 'reject'.
+    files_to_read:
+      - "packages/backend/orchestrator/src/adapters/stage-movement-adapter.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/conflicts/worktree-conflict-detector.ts (new)"
+      - "packages/backend/orchestrator/src/supervisor/pipeline-supervisor.ts"
+    acs: ["AC-5", "AC-6"]
+    depends_on: "ST-1"
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test -- --testPathPattern worktree-conflict"
+    estimated_tokens: 10000
+
+  - id: ST-4
+    title: "Per-worktree NodeCircuitBreaker wiring with explicit config thresholds"
+    goal: >
+      Instantiate per-worktree NodeCircuitBreaker from ConcurrencyConfig.worktreeCircuitBreaker
+      thresholds (failureThreshold, recoveryTimeoutMs). Wire into each concurrent worker
+      callback. Verify isolation: one breaker open does not affect other active slots.
+    files_to_read:
+      - "packages/backend/orchestrator/src/runner/circuit-breaker.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/supervisor/pipeline-supervisor.ts"
+      - "packages/backend/orchestrator/src/supervisor/concurrency-controller.ts"
+    acs: ["AC-8"]
+    depends_on: "ST-2; also requires APIP-0040 merge for PipelineModelRouter AC-7"
+    verification: "pnpm check-types --filter @repo/orchestrator && unit test EC-4"
+    estimated_tokens: 10000
+
+  - id: ST-5
+    title: "Integration tests with real Redis BullMQ and real git worktrees"
+    goal: >
+      Write integration tests for: 2 concurrent stories (HP-1), serial regression
+      for maxWorktrees: 1 (HP-2), slot saturation delay (AC-11 / EC-1), conflict
+      detection and requeue (EC-2), cleanup failure non-blocking (EC-3), circuit
+      breaker isolation (EC-4), TokenBucket concurrent safety with real workers (EC-5).
+      All tests must use afterEach try/catch worktree cleanup.
+    files_to_read:
+      - "packages/backend/orchestrator/src/utils/parallel-executor.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/__tests__/integration/concurrent-dispatch.test.ts (new)"
+    acs: ["AC-10", "AC-11", "AC-7"]
+    depends_on: "ST-2, ST-3, ST-4"
+    verification: "pnpm test --filter @repo/orchestrator -- --testPathPattern concurrent-dispatch (requires REDIS_TEST_URL)"
+    estimated_tokens: 20000

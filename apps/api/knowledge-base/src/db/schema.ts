@@ -24,6 +24,7 @@ import {
   boolean,
   integer,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 /**
  * Custom Drizzle column type for pgvector VECTOR columns.
@@ -1326,6 +1327,9 @@ export const plans = pgTable(
     statusIdx: index('idx_plans_status').on(table.status),
     planTypeIdx: index('idx_plans_plan_type').on(table.planType),
     storyPrefixIdx: index('idx_plans_story_prefix').on(table.storyPrefix),
+    storyPrefixUniqueIdx: uniqueIndex('idx_plans_story_prefix_unique')
+      .on(table.storyPrefix)
+      .where(sql`story_prefix IS NOT NULL`),
     featureDirIdx: index('idx_plans_feature_dir').on(table.featureDir),
     createdAtIdx: index('idx_plans_created_at').on(table.createdAt),
   }),

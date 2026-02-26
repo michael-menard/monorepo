@@ -6,7 +6,7 @@ Orchestrators MUST claim and release stories in `WORK-ORDER-BY-BATCH.md` to prev
 
 `{FEATURE_DIR}/WORK-ORDER-BY-BATCH.md` (e.g., `plans/future/platform/WORK-ORDER-BY-BATCH.md`)
 
-If the file does not exist at `{FEATURE_DIR}`, check the parent directory (e.g., `plans/future/platform/wint` → `plans/future/platform`). Both `WORK-ORDER-BY-BATCH.md` and `WORK-QUEUE.json` live at the same level.
+If the file does not exist at `{FEATURE_DIR}`, check the parent directory (e.g., `plans/future/platform/wint` → `plans/future/platform`).
 
 If neither location has the file, skip claim/release silently (not all feature dirs use work orders).
 
@@ -16,7 +16,6 @@ Find the table row where Story ID column matches `{STORY_ID}`. Then:
 
 1. Set the **Status** column to `🔧`
 2. Set the **Worker** column to the worktree name (e.g., `wint-1012`) or session context (e.g., `main`)
-3. **Update `WORK-QUEUE.json`** — see "Queue JSON Update" below
 
 Use the Edit tool to make a targeted replacement of the matching row.
 
@@ -32,22 +31,6 @@ After:
 | [ ] | 48b | WINT-1012 | Compatibility Shim — Observability & Tests ⚡ | 🔧 | main | WINT-1011 (#48a) | P0 — split from WINT-1010; **ready-to-work** |
 ```
 
-### Queue JSON Update (during Claim)
-
-After updating the markdown row, also update `{FEATURE_DIR}/WORK-QUEUE.json` so `/next-work` reflects the claim instantly:
-
-1. Read `{FEATURE_DIR}/WORK-QUEUE.json` (if it doesn't exist, skip)
-2. Find the story in the `queue` array by `story_id`
-3. Remove it from `queue`
-4. Add it to `working` with the worker name:
-   ```json
-   { "story_id": "{STORY_ID}", "title": "...", "worker": "{worker_name}", "row": "..." }
-   ```
-5. Update `summary.working` (+1) and `summary.unblocked` (-1)
-6. Write the updated JSON back
-
-If the story is not found in `queue` (already claimed or not tracked), skip silently.
-
 ## Release (end of orchestrator)
 
 Find the same row and:
@@ -55,7 +38,6 @@ Find the same row and:
 1. Set **Status** to the appropriate final status emoji (see table below)
 2. Clear the **Worker** column (set to empty)
 3. If the story completed successfully, set checkbox to `[x]`
-4. **Update `WORK-QUEUE.json`** — remove the story from `working`, update `summary.working` (-1). If the outcome is a terminal state (QA PASS → `✅`), increment `summary.complete`. Otherwise leave counts as-is (the next refresh will recompute).
 
 | Orchestrator Outcome | Status | Checkbox |
 |---------------------|--------|----------|
@@ -74,7 +56,7 @@ Find the same row and:
 
 If the orchestrator errors or is interrupted:
 - The `🔧` marker remains — this is intentional
-- The next `/next-work` run will see it and skip the story
+- The next `/next-actions` run will see the `🔧` marker and skip the story
 - Manual cleanup: find rows with `🔧` and reset status if the worker is no longer active
 
 ## Story Not Found
@@ -83,7 +65,7 @@ If `{STORY_ID}` is not found in any table row of `WORK-ORDER-BY-BATCH.md`, skip 
 
 ## Add New Story (splits, follow-ups, ad-hoc)
 
-When an orchestrator creates a new story (split, follow-up, or ad-hoc), it MUST add the story to `WORK-ORDER-BY-BATCH.md` so `/next-work` can find and schedule it.
+When an orchestrator creates a new story (split, follow-up, or ad-hoc), it MUST add the story to `WORK-ORDER-BY-BATCH.md` so `/next-actions` can find and schedule it.
 
 ### Placement Rules
 

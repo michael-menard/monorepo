@@ -1,0 +1,122 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-1020 is a research spike with clearly scoped deliverables: one Zod schema file, YAML spike output artifacts, and an ADR. The codebase already has all canonical patterns needed (z.discriminatedUnion in fanout-ux.ts, schema versioning in plan.ts, YAML artifact bridge, Vitest test structure in plan.test.ts). The only open question is whether 4 change_type variants are sufficient for all real-world APIP stories, which is exactly what the 10+ story decomposition exercise resolves. No integration code is written; no Lambda or infrastructure changes.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/artifacts/
+    - packages/backend/orchestrator/src/artifacts/__tests__/
+    - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/
+    - plans/future/platform/autonomous-pipeline/_epic-elab/
+  endpoints: []
+  deploy_touchpoints: []
+
+risks:
+  - finding: "APIP-1010 dependency — ChangeOutlineItem format not finalized"
+    mitigation: "Spike proceeds with documented placeholder change_outline format in decomposition template. ADR-002 explicitly notes re-validation against final APIP-1010 output is required before APIP-1030 elaboration begins."
+  - finding: "4-variant discriminated union may be insufficient for all real-world changes"
+    mitigation: "10+ story decompositions are precisely designed to surface this. If decompositions reveal a 5th variant is needed (e.g., 'schema_change'), add it before publishing ADR-002. Do NOT publish until decompositions confirm coverage."
+  - finding: "Cost model in AC-7 requires actual token measurement — cannot be pre-estimated accurately"
+    mitigation: "Use real Claude Sonnet API calls during MC-1/MC-2 manual decompositions. Record token usage from each call in quality-metrics.yaml. Median across 10 stories gives reliable cost model."
+
+missing_requirements: []
+evidence_expectations:
+  - "pnpm test --filter @repo/orchestrator -- change-spec exits 0 (HP-1 through ED-3 pass)"
+  - "pnpm check-types --filter @repo/orchestrator exits 0 (exhaustiveness check compiles)"
+  - "ls plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/decompositions/ shows 10+ YAML files"
+  - "ChangeSpecSchema.parse() succeeds on all decomposition YAMLs (HP-4 regression test passes)"
+  - "plans/future/platform/autonomous-pipeline/_epic-elab/ADR-002-changespec-schema.md exists with a verdict"
+
+subtasks:
+  - id: ST-1
+    title: "Define ChangeSpecSchema Zod schema with versioning and discriminated union"
+    goal: "Create the draft schema at packages/backend/orchestrator/src/artifacts/change-spec.ts with all fields required by 6 consuming systems, schema: z.literal(1) version pinning, z.discriminatedUnion('change_type', [...]) for file_change / migration_change / config_change / test_change variants, and export ChangeSpec = z.infer<typeof ChangeSpecSchema>"
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/plan.ts
+      - packages/backend/orchestrator/src/nodes/story/fanout-ux.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/artifacts/change-spec.ts
+    acs: ["AC-1", "AC-5"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Write Vitest unit tests for ChangeSpecSchema"
+    goal: "Create packages/backend/orchestrator/src/artifacts/__tests__/change-spec.test.ts following the plan.test.ts pattern: happy path parse for each of the 4 variants, rejection of invalid enum values, rejection of wrong schema version, TypeScript exhaustiveness switch with assertNever()"
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/__tests__/plan.test.ts
+      - packages/backend/orchestrator/src/artifacts/change-spec.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/artifacts/__tests__/change-spec.test.ts
+    acs: ["AC-1", "AC-5"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- change-spec"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Create spike output directory structure and decomposition template"
+    goal: "Set up plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/ with subdirectories (decompositions/, ) and write decomposition-template.yaml documenting the assumed change_outline format (APIP-1010 placeholder) and the prompt template for model-driven decomposition"
+    files_to_read:
+      - packages/backend/orchestrator/src/persistence/yaml-artifact-bridge.ts
+      - packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts
+    files_to_modify:
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/decomposition-template.yaml
+    acs: ["AC-2", "AC-3"]
+    depends_on: ST-1
+    verification: "ls plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/ shows decompositions/ directory and decomposition-template.yaml"
+    estimated_tokens: 4000
+
+  - id: ST-4
+    title: "Execute 10+ manual story decompositions and record quality metrics"
+    goal: "Decompose APIP-0010, APIP-0020, APIP-0040, APIP-1010, APIP-5001, APIP-5007, APIP-5004, APIP-5003, APIP-5006, APIP-5000 into ChangeSpecs using Claude Sonnet and the decomposition template. Persist each as YAML in _spike-output/APIP-1020/decompositions/. Record AC count, ambiguous fields, token cost, and accuracy verdict in quality-metrics.yaml."
+    files_to_read:
+      - plans/future/platform/autonomous-pipeline/backlog/APIP-0010/APIP-0010.md
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/decomposition-template.yaml
+    files_to_modify:
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/decompositions/
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/quality-metrics.yaml
+    acs: ["AC-2", "AC-3"]
+    depends_on: ST-3
+    verification: "ls decompositions/ | wc -l shows >= 10; quality-metrics.yaml has 10+ rows"
+    estimated_tokens: 35000
+
+  - id: ST-5
+    title: "Consumer-perspective validation and consumer-validation.yaml"
+    goal: "Review all decompositions through the lens of each of the 6 consuming systems (implementation, review, QA, telemetry, model affinity, merge). Confirm required fields are present. Document findings and any gaps in _spike-output/APIP-1020/consumer-validation.yaml."
+    files_to_read:
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/decompositions/
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/quality-metrics.yaml
+    files_to_modify:
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/consumer-validation.yaml
+    acs: ["AC-4"]
+    depends_on: ST-4
+    verification: "consumer-validation.yaml exists with entries for all 6 consuming systems"
+    estimated_tokens: 6000
+
+  - id: ST-6
+    title: "Schema regression test: glob-parse all decomposition YAMLs"
+    goal: "Add HP-4 regression test to change-spec.test.ts: glob-read all YAML files in _spike-output/APIP-1020/decompositions/ and call ChangeSpecSchema.parse() on each ChangeSpec entry. This is the primary programmatic validation for the spike."
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/__tests__/change-spec.test.ts
+      - packages/backend/orchestrator/src/artifacts/__tests__/plan.test.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/artifacts/__tests__/change-spec.test.ts
+    acs: ["AC-2", "AC-3"]
+    depends_on: ST-4
+    verification: "pnpm test --filter @repo/orchestrator -- change-spec (all tests pass including HP-4)"
+    estimated_tokens: 4000
+
+  - id: ST-7
+    title: "Publish ADR-002-changespec-schema.md with verdict and cost model"
+    goal: "Write plans/future/platform/autonomous-pipeline/_epic-elab/ADR-002-changespec-schema.md with: summary of schema design decisions, decomposition findings, consumer validation results, verdict (APPROVED / APPROVED WITH CONSTRAINTS / REVISION REQUIRED), and cost model (median tokens + USD per decomposition + model recommendation for APIP-0040)."
+    files_to_read:
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/quality-metrics.yaml
+      - plans/future/platform/autonomous-pipeline/_spike-output/APIP-1020/consumer-validation.yaml
+    files_to_modify:
+      - plans/future/platform/autonomous-pipeline/_epic-elab/ADR-002-changespec-schema.md
+    acs: ["AC-6", "AC-7", "AC-8"]
+    depends_on: ST-5
+    verification: "ADR-002-changespec-schema.md exists and contains a verdict section and cost model section"
+    estimated_tokens: 8000

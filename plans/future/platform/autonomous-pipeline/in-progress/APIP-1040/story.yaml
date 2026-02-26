@@ -1,0 +1,13 @@
+id: "APIP-1040"
+title: "Documentation Graph (Post-Merge)"
+status: in-progress
+priority: medium
+phase: 1
+feature: "6 parallel fan-out workers via LangGraph Send API running post-merge: API docs, component docs, architecture docs, README/guides, KB sync, and changelog — each using appropriate cheap models, with a Doc Review aggregation node before committing"
+goal: "Automatically keep all project documentation in sync with every merged story without human authoring effort."
+depends_on: ["APIP-1030"]
+endpoints: []
+infrastructure: []
+risk_notes: "6 parallel workers represent multiple distinct concerns (different triggers, different update targets); Doc Review hallucination risk for auto-committed content; KB Sync Worker must not overwrite valid learnings."
+sizing_warning: true
+created: "2026-02-25T00:00:00Z"

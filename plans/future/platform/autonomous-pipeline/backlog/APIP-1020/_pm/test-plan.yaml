@@ -1,0 +1,164 @@
+strategy: unit+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+  packages_touched:
+    - packages/backend/orchestrator
+  spike_type: schema_design
+
+happy_path_tests:
+  - id: HP-1
+    title: "Parse valid file_change ChangeSpec variant"
+    setup: "Import ChangeSpecSchema from packages/backend/orchestrator/src/artifacts/change-spec.ts"
+    action: "Call ChangeSpecSchema.parse({ schema: 1, change_type: 'file_change', file_path: 'src/foo.ts', description: 'Add handler', action: 'create', acceptance_criteria_ref: ['AC-1'], estimated_tokens: 1200, risk_level: 'low', affected_patterns: ['zod-schema'], testability_hint: 'unit', test_strategy: 'vitest', commit_message_hint: 'feat: add handler', pr_body_hint: 'Adds foo handler', related_acs: ['AC-1'], model_used: 'sonnet', token_cost: 1200, duration_ms: 4500, file_extension: 'ts', complexity_estimate: 'low', ac_refs: ['AC-1'] })"
+    expected: "Parse succeeds without error; returned object matches input"
+    evidence: "Vitest: expect(() => ChangeSpecSchema.parse(input)).not.toThrow()"
+
+  - id: HP-2
+    title: "Parse valid migration_change ChangeSpec variant"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse with change_type: 'migration_change' and migration-specific required fields"
+    expected: "Parse succeeds; returned type is inferred as migration_change variant"
+    evidence: "Vitest: expect(result.change_type).toBe('migration_change')"
+
+  - id: HP-3
+    title: "Parse valid config_change ChangeSpec variant"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse with change_type: 'config_change' and config-specific required fields"
+    expected: "Parse succeeds without error"
+    evidence: "Vitest: expect(() => ChangeSpecSchema.parse(input)).not.toThrow()"
+
+  - id: HP-4
+    title: "Schema regression: all decomposition YAMLs parse without error"
+    setup: "Run spike decompositions so _spike-output/APIP-1020/decompositions/ contains 10+ YAML files"
+    action: "Vitest test glob-reads all YAML files in _spike-output/APIP-1020/decompositions/ and calls ChangeSpecSchema.parse() on each ChangeSpec entry"
+    expected: "All YAML files parse successfully against the schema; zero ZodErrors"
+    evidence: "pnpm test --filter @repo/orchestrator -- change-spec; all assertions pass"
+
+  - id: HP-5
+    title: "Parse valid test_change ChangeSpec variant"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse with change_type: 'test_change' and test-specific required fields"
+    expected: "Parse succeeds without error"
+    evidence: "Vitest: expect(() => ChangeSpecSchema.parse(input)).not.toThrow()"
+
+error_cases:
+  - id: EC-1
+    title: "Reject unknown change_type discriminant"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse({ schema: 1, change_type: 'unknown_type', ... })"
+    expected: "ZodError thrown; discriminated union rejects unknown variant"
+    evidence: "Vitest: expect(() => ChangeSpecSchema.parse(input)).toThrow(ZodError)"
+
+  - id: EC-2
+    title: "Reject wrong schema version"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse with schema: 2 (or schema: 0)"
+    expected: "ZodError thrown; z.literal(1) rejects version 2"
+    evidence: "Vitest: expect(() => ChangeSpecSchema.parse({ ...validInput, schema: 2 })).toThrow(ZodError)"
+
+  - id: EC-3
+    title: "Reject missing required fields for file_change variant"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse with change_type: 'file_change' but omit file_path"
+    expected: "ZodError thrown with path indicating missing file_path"
+    evidence: "Vitest: expect(error.issues[0].path).toContain('file_path')"
+
+  - id: EC-4
+    title: "Reject missing schema version field entirely"
+    setup: "Import ChangeSpecSchema"
+    action: "Call ChangeSpecSchema.parse with no schema field"
+    expected: "ZodError thrown"
+    evidence: "Vitest: expect(() => ChangeSpecSchema.parse(inputWithoutSchema)).toThrow(ZodError)"
+
+edge_cases:
+  - id: ED-1
+    title: "TypeScript exhaustiveness check compiles without error"
+    setup: "Write a switch statement over ChangeSpec change_type with assertNever() in default branch"
+    action: "pnpm check-types --filter @repo/orchestrator"
+    expected: "TypeScript compiler confirms exhaustiveness; all 4 variants handled; no type error"
+    evidence: "pnpm check-types exits 0"
+
+  - id: ED-2
+    title: "z.infer type alias exports correctly"
+    setup: "Import ChangeSpec type from change-spec.ts"
+    action: "Use ChangeSpec as a TypeScript type annotation in a test function parameter"
+    expected: "TypeScript type inference works; no TS errors"
+    evidence: "pnpm check-types --filter @repo/orchestrator exits 0"
+
+  - id: ED-3
+    title: "Decomposition YAML with multiple ChangeSpecs parses each entry independently"
+    setup: "Create a decomposition YAML with 3 ChangeSpec entries of different change_type variants"
+    action: "Parse each entry with ChangeSpecSchema.parse()"
+    expected: "All 3 entries parse; each resolves to correct TypeScript variant type"
+    evidence: "Vitest assertions on each parsed entry's change_type field"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "ChangeSpecSchema.parse(validInput) does not throw"
+      - "ChangeSpecSchema.parse(invalidInput) throws ZodError"
+      - "All decomposition YAMLs in _spike-output/APIP-1020/decompositions/ parse without error"
+      - "TypeScript exhaustiveness switch compiles successfully"
+  frontend: null
+
+manual_cases:
+  - id: MC-1
+    title: "Manual decomposition: APIP-0010 (BullMQ Work Queue Setup) into ChangeSpecs"
+    status: DEFERRED
+    steps:
+      - "Invoke decomposition prompt with APIP-0010 story ACs as input (using Claude Sonnet)"
+      - "Review model output for completeness and accuracy"
+      - "Manually validate each ChangeSpec against the ChangeSpecSchema"
+      - "Persist to _spike-output/APIP-1020/decompositions/APIP-0010.yaml"
+      - "Record quality metrics in quality-metrics.yaml"
+    expected: "Decomposition produces 3-10 atomic ChangeSpecs covering all ACs; each parses without error; at least 1 ambiguous field flagged"
+    acceptable_qa_outcome: CONDITIONAL_PASS
+
+  - id: MC-2
+    title: "Manual decomposition: 9 additional APIP backlog stories (APIP-0020, APIP-0040, APIP-1010, APIP-5001, APIP-5007, APIP-5004, APIP-5003, APIP-5006, APIP-5000)"
+    status: DEFERRED
+    steps:
+      - "Repeat MC-1 steps for each of the 9 remaining stories"
+      - "Timebox each decomposition to 30 minutes"
+      - "Ensure at least one decomposition per change_type variant"
+      - "Record consumer-perspective validation findings in consumer-validation.yaml"
+    expected: "10+ total decompositions; all YAML files parse via HP-4 regression test; quality-metrics.yaml has 10+ rows"
+    acceptable_qa_outcome: CONDITIONAL_PASS
+
+  - id: MC-3
+    title: "Consumer-perspective validation: confirm all 6 downstream system fields present"
+    status: DEFERRED
+    steps:
+      - "Review decomposition set through the lens of each consuming system: implementation, review, QA, telemetry, model affinity, merge"
+      - "For each system, confirm required fields are present in the schema"
+      - "Document any gaps in consumer-validation.yaml"
+      - "Publish ADR-002 with verdict (APPROVED / APPROVED WITH CONSTRAINTS / REVISION REQUIRED)"
+      - "Include cost model: median tokens, USD per decomposition, model recommendation"
+    expected: "consumer-validation.yaml confirms all 6 systems have required fields; ADR-002 published with verdict and cost model"
+    acceptable_qa_outcome: CONDITIONAL_PASS
+
+fixture_definitions:
+  - name: ValidFileChangeSpec
+    type: object
+    description: "Minimal valid ChangeSpec with change_type: file_change, schema: 1, and all required fields"
+  - name: ValidMigrationChangeSpec
+    type: object
+    description: "Minimal valid ChangeSpec with change_type: migration_change"
+  - name: ValidConfigChangeSpec
+    type: object
+    description: "Minimal valid ChangeSpec with change_type: config_change"
+  - name: ValidTestChangeSpec
+    type: object
+    description: "Minimal valid ChangeSpec with change_type: test_change"
+  - name: SampleDecompositionYaml
+    type: file
+    description: "YAML file with 3 ChangeSpec entries of different variants, placed in _spike-output/APIP-1020/decompositions/sample.yaml for regression test"
+
+risks:
+  - "Manual cases MC-1 through MC-3 require live model invocations — cannot be automated in CI. Designate as DEFERRED with CONDITIONAL_PASS as acceptable QA outcome."
+  - "APIP-1010 dependency: if ChangeOutlineItem format is not finalized, decomposition input format is a placeholder. HP-4 and MC cases must be re-run after APIP-1010 completes."
+  - "Decomposition quality depends on prompt template quality — ambiguous fields in first decomposition may indicate schema redesign needed before completing all 10."
+  - "Cost model in ADR-002 (AC-7) requires actual token measurement from Claude API — estimates only available after MC-1 and MC-2 are executed."

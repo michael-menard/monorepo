@@ -1,0 +1,231 @@
+schema: 2
+story_id: APIP-1010
+timestamp: "2026-02-25T23:55:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: "Create packages/backend/orchestrator/src/nodes/elaboration/structurer.ts with StructurerConfigSchema, ChangeOutlineItemSchema, and StructurerResultSchema Zod schemas at top of file. All fields as specified in AC-1, AC-2, AC-3 including the extensions escape hatch field in ChangeOutlineItemSchema."
+    files:
+      - "packages/backend/orchestrator/src/nodes/elaboration/structurer.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+      - "packages/backend/orchestrator/src/artifacts/story.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+
+  - id: 2
+    subtask_id: ST-2
+    description: "Implement createStructurerNode(config) factory in structurer.ts using createToolNode('structurer', async (state: GraphState) => { const s = state as ElaborationState; ... }) pattern per delta-detect.ts canonical reference. Implement heuristic complexity estimation (1/2/3+ distinct system references = low/medium/high with midpoints 2/5/11). Implement graceful fallback on model error (fallbackUsed:true, complexity:'unknown' per AC-11). Implement split flagging with > threshold semantics. Implement empty/null state guards."
+    files:
+      - "packages/backend/orchestrator/src/nodes/elaboration/structurer.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/runner/node-factory.ts"
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+      - "packages/backend/orchestrator/src/nodes/story/synthesize.ts"
+    dependencies:
+      - 1
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered:
+      - AC-4
+      - AC-9
+      - AC-10
+      - AC-11
+
+  - id: 3
+    subtask_id: ST-3
+    description: "In elaboration.ts: extend ElaborationStateAnnotation with changeOutline (Annotation<ChangeOutlineItem[] | null>), splitRequired (Annotation<boolean>), splitReason (Annotation<string | null>), structurerComplete (Annotation<boolean>). Extend ElaborationResultSchema with nullable fields: changeOutline, totalEstimatedAtomicChanges, splitRequired, splitReason. Extend ElaborationConfigSchema with structurerConfig sub-object using StructurerConfigSchema.default({})."
+    files:
+      - "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    dependencies:
+      - 1
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator && pnpm test --filter packages/backend/orchestrator"
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-8
+
+  - id: 4
+    subtask_id: ST-4
+    description: "In elaboration.ts: add .addNode('structurer', createStructurerNode(fullConfig.structurerConfig)). Export afterAggregate as a named exported function (export function afterAggregate). Modify afterAggregate to return 'structurer' when structurerConfig.enabled===true, 'update_readiness' when disabled. Add edge from 'structurer' to 'update_readiness'. Update addConditionalEdges for 'aggregate_findings' to include 'structurer' in the routing map. Populate ElaborationResult from new state fields (changeOutline, totalEstimatedAtomicChanges, splitRequired, splitReason) in runElaboration()."
+    files:
+      - "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    dependencies:
+      - 2
+      - 3
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered:
+      - AC-5
+      - AC-15
+
+  - id: 5
+    subtask_id: ST-5
+    description: "Add exports for ChangeOutlineItemSchema, StructurerResultSchema, StructurerConfigSchema, ChangeOutlineItem, StructurerResult, StructurerConfig, createStructurerNode from packages/backend/orchestrator/src/nodes/elaboration/index.ts. Follow FLOW comment pattern existing in the file."
+    files:
+      - "packages/backend/orchestrator/src/nodes/elaboration/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/index.ts"
+    dependencies:
+      - 2
+    slice: packages
+    verification: "pnpm check-types --filter packages/backend/orchestrator"
+    acs_covered:
+      - AC-12
+
+  - id: 6
+    subtask_id: ST-6
+    description: "Create packages/backend/orchestrator/src/nodes/elaboration/__tests__/structurer.test.ts with Vitest tests covering: (a) happy path with multiple ACs producing correct changeOutline structure and all fields valid per ChangeOutlineItemSchema.parse(), (b) split flagging when total > threshold, (c) no-split when total <= threshold, (d) empty ACs fallback (warning appended, no error state), (e) model error fallback sets fallbackUsed:true with one item per AC and complexity:'unknown', (f) splitThreshold config respected (threshold 5 with 3 items). Include vi.mock('@repo/logger'). Target >80% coverage on structurer.ts."
+    files:
+      - "packages/backend/orchestrator/src/nodes/elaboration/__tests__/structurer.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/__tests__/delta-detect.test.ts"
+      - "packages/backend/orchestrator/src/nodes/elaboration/structurer.ts"
+    dependencies:
+      - 2
+    slice: packages
+    verification: "pnpm test --filter packages/backend/orchestrator -- structurer.test.ts"
+    acs_covered:
+      - AC-13
+
+  - id: 7
+    subtask_id: ST-7
+    description: "Extend packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts: update createTestState fixture to include new state fields (changeOutline: null, splitRequired: false, splitReason: null, structurerComplete: false). Add tests: (a) graph.compile() still succeeds, (b) afterAggregate routes to 'structurer' when structurerConfig.enabled:true (import afterAggregate by name), (c) afterAggregate routes to 'update_readiness' when structurerConfig.enabled:false, (d) regression guard — all pre-existing elaboration tests still pass. Mock createStructurerNode to a no-op for graph-level tests."
+    files:
+      - "packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts"
+      - "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    dependencies:
+      - 4
+      - 6
+    slice: packages
+    verification: "pnpm test --filter packages/backend/orchestrator -- elaboration.test.ts"
+    acs_covered:
+      - AC-14
+      - AC-15
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/nodes/elaboration/structurer.ts"
+    action: create
+    reason: "New Structurer node — StructurerConfigSchema, ChangeOutlineItemSchema, StructurerResultSchema, createStructurerNode factory with heuristic estimation and graceful fallback"
+  - path: "packages/backend/orchestrator/src/nodes/elaboration/__tests__/structurer.test.ts"
+    action: create
+    reason: "Unit tests for Structurer node covering all AC-13 scenarios"
+  - path: "packages/backend/orchestrator/src/nodes/elaboration/index.ts"
+    action: modify
+    reason: "Add exports for Structurer schemas, types, and factory function per AC-12"
+  - path: "packages/backend/orchestrator/src/graphs/elaboration.ts"
+    action: modify
+    reason: "Extend ElaborationStateAnnotation (AC-6), ElaborationResultSchema (AC-7), ElaborationConfigSchema (AC-8), wire Structurer node (AC-5), export afterAggregate (AC-15)"
+  - path: "packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts"
+    action: modify
+    reason: "Update createTestState fixture for new fields, add routing tests per AC-14 and AC-15"
+
+commands_to_run:
+  - command: "pnpm check-types --filter packages/backend/orchestrator"
+    when: "after each subtask"
+    required: true
+  - command: "pnpm test --filter packages/backend/orchestrator -- structurer.test.ts"
+    when: "after ST-6"
+    required: true
+  - command: "pnpm test --filter packages/backend/orchestrator -- elaboration.test.ts"
+    when: "after ST-7"
+    required: true
+  - command: "pnpm test --filter packages/backend/orchestrator"
+    when: "after all code changes — full orchestrator test suite regression guard"
+    required: true
+  - command: "pnpm build --filter packages/backend/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "StructurerConfigSchema defined in structurer.ts with enabled, splitThreshold, maxChangesPerItem, nodeTimeoutMs fields"
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: "ChangeOutlineItemSchema defined with id, filePath, changeType, description, complexity, estimatedAtomicChanges, relatedAcIds, extensions fields"
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: "StructurerResultSchema defined with storyId, changeOutline, totalEstimatedAtomicChanges, splitRequired, splitReason, structuredAt, durationMs, fallbackUsed fields"
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: "createStructurerNode factory implemented using createToolNode with GraphState cast to ElaborationState internally"
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: "Structurer node wired via .addNode('structurer', ...) in createElaborationGraph(); afterAggregate conditional edge routes to structurer when enabled; edge from structurer to update_readiness"
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: "ElaborationStateAnnotation extended with changeOutline, splitRequired, splitReason, structurerComplete fields with overwrite reducer"
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: "ElaborationResultSchema extended with nullable changeOutline, totalEstimatedAtomicChanges, splitRequired, splitReason fields; runElaboration signature unchanged"
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: "ElaborationConfigSchema extended with structurerConfig: StructurerConfigSchema.default({}); no existing callers changed"
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: "Unit test ST-6(b): splitRequired=true when total > threshold; ST-6(c): splitRequired=false when total <= threshold; splitReason contains human-readable explanation"
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: "Unit test ST-6(d): empty ACs returns changeOutline:[], splitRequired:false, structurerComplete:true, warning appended; null currentStory test (EC-2, EC-3)"
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: "Unit test ST-6(e): model error fallback sets fallbackUsed:true, one item per AC with complexity:'unknown', no exception propagated"
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: "All Structurer schemas, types, and createStructurerNode exported from index.ts; pnpm check-types passes"
+    evidence_type: command
+  - ac_id: AC-13
+    planned_evidence: "structurer.test.ts: 6 scenarios (a-f) covering happy path, split flagging, no-split, empty ACs, model error fallback, custom threshold"
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: "elaboration.test.ts extended: graph.compile() test, routing reachability, regression guard for existing tests"
+    evidence_type: test
+  - ac_id: AC-15
+    planned_evidence: "afterAggregate exported as named function from elaboration.ts; imported and tested directly in elaboration.test.ts for HP-6 and HP-7 routing assertions"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "createToolNode vs plain async function for Structurer node implementation"
+    decision: "Use createToolNode with internal GraphState cast (approach a from delta-detect.ts canonical reference)"
+    rationale: "Maintains retry/circuit-breaker wrapper from node-factory.ts. Consistent with delta-detect.ts canonical reference. ELAB.yaml GAP-004 explicitly resolved this with implementation note confirming delta-detect.ts approach."
+    decided_by: elab-autonomous-decider
+  - id: ARCH-002
+    question: "afterAggregate export strategy for testability"
+    decision: "Export afterAggregate as a named function from elaboration.ts (export function afterAggregate)"
+    rationale: "ELAB.yaml GAP-001 resolved this by adding AC-15. Direct export enables clean unit testing in elaboration.test.ts without requiring graph execution. Story explicitly requires this export per AC-15."
+    decided_by: elab-autonomous-decider
+  - id: ARCH-003
+    question: "Heuristic complexity estimation midpoints"
+    decision: "Low=2 (1-3 changes), Medium=5 (3-8 changes), High=11 (8-15 changes). Cross-cutting flag from escapeHatchResult bumps estimates up one level."
+    rationale: "Explicitly specified in Architecture Notes of story file. Deterministic midpoints enable controlled test fixtures for AC-13f threshold tests."
+    decided_by: story-author
+
+complexity: moderate
+
+notes:
+  - "Single package scope: packages/backend/orchestrator only. No frontend, no DB writes, no infra changes."
+  - "afterAggregate current return type is 'update_readiness' | 'save_to_db' — must be extended to include 'structurer'. Existing addConditionalEdges call must be updated with 'structurer' in routing map."
+  - "createTestState fixture in elaboration.test.ts must be updated to include new state fields before ST-7 tests can compile. New fields: changeOutline: null, splitRequired: false, splitReason: null, structurerComplete: false."
+  - "delta-detect.ts uses interface GraphStateWithDeltaDetection — story must NOT copy this pattern. Use ElaborationState from elaboration.ts for all type references."
+  - "ElaborationResultSchema uses z.unknown().nullable() for complex fields — structurer result fields should use typed schemas (ChangeOutlineItemSchema) as story specifies typed output."
+  - "Backward compatibility: all new ElaborationResult fields use .nullable().default(null) or .default(false). All new ElaborationConfig fields use .default({}). No existing callers affected."
+  - "escapeHatchResult field for cross-cutting detection: inspect escape-hatch.ts to find the relevant field (likely 'triggered' or a cross-cutting-specific field in EscapeHatchResult schema)."
+  - "ElaborationPhaseSchema may need 'structurer' added as a valid phase value if currentPhase is set during Structurer execution. Inspect current phases before modifying."
+  - "Server restart required after elaboration graph update per Architecture Notes."
+  - "Regression risk: afterAggregate type annotation change may affect existing elaboration.test.ts expectations. ED-4 regression guard (AC-14) must catch this."
+  - "ST-3 and ST-4 both modify elaboration.ts — implement ST-3 first (schema changes), then ST-4 (graph wiring) to maintain clean incremental check-types verification."

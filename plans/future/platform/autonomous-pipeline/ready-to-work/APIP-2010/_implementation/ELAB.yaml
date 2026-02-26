@@ -1,0 +1,390 @@
+schema: 1
+story_id: "APIP-2010"
+timestamp: "2026-02-25T00:00:00Z"
+
+# ============================================================================
+# AUDIT — 9 Checklist Points
+# ============================================================================
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story title "Blocked Queue and Notification System" matches the index entry exactly.
+      Phase 2 placement and APIP-0020 dependency are consistent with the index.
+      Scope is pure backend-only supervisor extension: 2 new files + 1 types file + supervisor
+      wiring. No HTTP endpoints added. No UI, no DB schema changes, no cross-phase scope creep.
+      The index entry correctly captures the downstream dependency (APIP-2020 Monitor UI reads
+      from the Redis sorted set this story writes). All scope fields in frontmatter
+      (frontend_impacted: false, backend_impacted: true, database_impacted: false,
+      infra_impacted: false) are accurate.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals (blocked-transition + webhook notification) map cleanly to ACs:
+        - Goal 1 (transitionToBlocked idempotent persistence) → AC-1, AC-2, AC-3, AC-8, AC-9
+        - Goal 2 (configurable webhook notification) → AC-4, AC-5, AC-6, AC-7, AC-10
+        - Test coverage requirements → AC-11, AC-12, AC-13
+      Non-goals explicitly exclude: Monitor UI (APIP-2020), email/push channels, auto-retry,
+      DB writes, operator CLI (APIP-5005), graceful shutdown (APIP-2030). No AC contradicts any
+      non-goal. The extensible NotificationConfigSchema variant definition for email/push
+      (AC-5: "marked not_implemented") correctly avoids violating the "no email/push" non-goal
+      while enabling future extension. Scope section and ACs reference identical file paths.
+      Architecture Notes resolve the storage backend conflict (Redis sorted set vs Aurora)
+      consistently with the "no direct DB writes from supervisor" non-goal.
+
+  - id: reuse_first
+    status: WARN
+    note: >
+      Reuse plan is thorough and references real, verified canonical files. However, one
+      implementation-critical impedance mismatch exists:
+
+      FINDING: error-classification.ts exports `ErrorCategory` as a raw TypeScript `type` union
+      (not a Zod enum). The story's BlockedJobRecordSchema requires `lastErrorCategory` as a Zod
+      field. A Zod `z.object()` cannot directly reference a TypeScript `type` — the implementer
+      must either:
+        (a) Mirror the union values in a new `z.enum(['validation','programming','timeout',
+            'cancellation','circuit_open','network','rate_limit','unknown'])` within the schema, or
+        (b) Use `z.string()` with a custom `.refine()` to accept ErrorCategory values.
+      Option (a) creates value duplication risk if error-classification.ts adds new categories.
+      Option (b) loses compile-time enum safety in the schema.
+      This is a concrete implementation decision that must be resolved before ST-1 begins.
+
+      Additionally, story.ts (canonical Zod conventions) does not export NotificationChannelSchema,
+      BlockedJobEventSchema, or WebhookPayloadSchema — the story correctly states to model on its
+      conventions, not import from it. circuit-breaker.ts and redis-client.ts verified as
+      structurally consistent with the described patterns.
+
+  - id: ports_and_adapters
+    status: PASS
+    note: >
+      This story adds no HTTP endpoints and targets a long-lived Node.js supervisor process
+      (not Lambda). The hexagonal api-layer.md architecture applies to lego-api domains, not the
+      pipeline supervisor. Ports & adapters concern is limited to testability of the supervisor
+      module itself.
+
+      The story correctly addresses this: dispatchNotification() is described as "an injected
+      dependency of transitionToBlocked() for testability (pure function of job metadata +
+      injected side-effect functions)". This is the correct ports-and-adapters pattern for
+      the supervisor domain — Redis client and fetch are injected, not hardcoded, enabling
+      pure unit tests without network. The BlockedJobRecordSchema and NotificationConfigSchema
+      types are transport-agnostic (no HTTP-specific fields). Core blocked-transition logic
+      is not coupled to BullMQ event handling — it receives a Job object and operates on it.
+
+  - id: local_testability
+    status: PASS
+    note: >
+      Test plan is exceptionally concrete. All 6 happy-path tests (HP-1 through HP-6) and
+      5 error cases (EC-1 through EC-5) and 3 edge cases (ED-1, ED-2, ED-3, ED-6) have
+      setup/action/expected/evidence quadrants with specific Redis key names, port numbers,
+      and log field assertions. Fixture definitions are complete (exhausted_bullmq_job,
+      valid_notification_config, redis_test_client, local_echo_server).
+
+      Port conflict mitigation (port 0 OS-assignment) is documented. Unit/integration split
+      is clean: unit tests run without REDIS_URL via mocked ioredis + mocked fetch; integration
+      tests tagged @integration require REDIS_URL. Docker Compose CI strategy documented.
+
+      One observation: ED-6 has ID "ED-6" but there are no ED-4 or ED-5 — likely numbering
+      gap from story generation. Not a blocking issue, but worth correcting for traceability.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      Two items listed under dev_feasibility.missing_requirements are pre-implementation
+      reading tasks, not blocking TBDs:
+        1. "Exact supervisor BullMQ Worker 'failed' event handler signature" — resolved by
+           reading APIP-0020 deliverables before writing code (mitigated).
+        2. "Confirmation that APIP-0010 uses job.opts.attempts" — BullMQ native field, not
+           custom; low risk.
+
+      All architectural decisions are resolved:
+        - Storage backend: Redis sorted set (not Aurora) — explicitly decided.
+        - Idempotency strategy: SET NX in MULTI/EXEC pipeline — explicitly decided.
+        - Notification architecture: in-process fetch from supervisor (not separate service) — ADR-001.
+        - Timeout: AbortController 5s — decided.
+        - TTL: 7-day (604800s) — decided.
+        - Redis key namespace: pipeline:blocked:jobs and notified:{jobId}:{attemptNumber} — decided.
+        - Env vars: NOTIFICATION_WEBHOOK_URL, NOTIFICATION_CHANNEL — decided.
+      No unresolved TBDs found.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      The story discloses the following risks explicitly and with mitigations:
+        - Real Redis required for integration tests → Docker Compose + @integration tag.
+        - Echo server port conflict in parallel CI → dynamic port 0 assignment.
+        - APIP-0020 test suite location unknown → conditional AC-13.
+        - APIP-0020 supervisor module structure not finalized → read deliverables first.
+        - Redis blocked records storage backend decision → resolved (sorted set).
+        - Redis MULTI/EXEC atomicity → single pipeline.
+
+      MISSING RISK: Redis connection failure during transitionToBlocked itself. If Redis is
+      unavailable when the supervisor attempts the MULTI/EXEC pipeline (ZADD + SET NX), the
+      operation throws. The story defines swallow-and-log behavior for webhook failures (AC-7)
+      but is silent on Redis write failures. Options: (a) propagate error to BullMQ Worker
+      failed handler (job remains in BullMQ failed state, no BlockedJobRecord written — safe
+      but incomplete), or (b) log and swallow (job silently loses blocked record — dangerous).
+      This failure path must be decided before AC-1/AC-3 implementation. Classified as a gap
+      rather than an opportunity because it affects core correctness of the blocked state
+      guarantee.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      13 ACs exceeds the >8 threshold trigger for sizing review. Evaluation:
+
+      AC clusters:
+        - Data model (2 ACs): AC-2 (BlockedJobRecordSchema), AC-5 (NotificationConfigSchema variants)
+        - Blocked-transition logic (4 ACs): AC-1, AC-3, AC-8, AC-9
+        - Notification dispatch (3 ACs): AC-6, AC-7, AC-10
+        - Config validation (1 AC): AC-4
+        - Test coverage (3 ACs): AC-11, AC-12, AC-13
+
+      Assessment: SPLIT NOT WARRANTED. The 13 ACs are granular rather than scope-inflating.
+      AC-9 (job_blocked log event) and AC-10 (notification_sent log event) are observability
+      companions to AC-1 and AC-6 respectively — they describe fields, not separate features.
+      AC-11, AC-12, AC-13 are test-coverage ACs that reference the same 2 new files.
+      All 13 ACs live in the same module (apps/api/pipeline/src/supervisor/), touch ≤4 files,
+      and have no UI surface. The 6-subtask decomposition with clear DAG confirms the scope
+      is implementable as a single coherent story.
+
+      5-point estimate is reasonable for a backend-only story with 2 new files + wiring + tests.
+      WARN (not FAIL) — acknowledge the count and confirm during planning.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      6 subtasks with clean sequential DAG: ST-1 → {ST-2, ST-3 in parallel} → ST-4 → ST-5 → ST-6.
+      Each subtask has: goal, files-to-read (canonical refs), files-to-modify (≤2 per task),
+      ACs covered, depends-on, verification commands, token estimates.
+
+      File counts: ST-1 (1 modified), ST-2 (1 modified), ST-3 (1 modified), ST-4 (1 modified),
+      ST-5 (2 modified), ST-6 (1 modified). All within ≤3 file threshold.
+
+      AC coverage map:
+        ST-1: AC-2, AC-4, AC-5
+        ST-2: AC-1, AC-3, AC-8, AC-9
+        ST-3: AC-6, AC-7, AC-10
+        ST-4: AC-1 (wiring), AC-4 (startup), AC-9 (integration of log event)
+        ST-5: AC-11
+        ST-6: AC-12, AC-13
+      Full coverage with intentional AC-1 repetition in ST-2 (implementation) and ST-4 (wiring).
+
+      Verification commands are executable: pnpm check-types, pnpm test, pnpm test:integration.
+      APIP-0020 canonical ref noted for ST-4 (read before modify). No orphaned ACs.
+
+# ============================================================================
+# GAPS — MVP-Blocking Only
+# ============================================================================
+
+gaps:
+  - id: GAP-1
+    title: "ErrorCategory Zod compatibility — type vs enum impedance mismatch"
+    severity: high
+    description: >
+      error-classification.ts exports `ErrorCategory` as a raw TypeScript `type` union
+      (not a Zod schema/enum). BlockedJobRecordSchema in ST-1 must include `lastErrorCategory`
+      as a Zod field, but `z.object()` cannot directly reference a TS `type`.
+
+      The implementer must choose before ST-1:
+        Option A: Mirror the 8 category values in a local `ErrorCategorySchema = z.enum([...])`
+          inside supervisor/__types__/index.ts. Risk: value drift if error-classification.ts
+          adds a new category without updating the supervisor schema.
+        Option B: `z.string()` with `.refine(val => ERROR_CATEGORIES.includes(val))` using
+          an imported const. Looser type safety at schema level, correct at runtime.
+        Option C: Propose adding a `ErrorCategorySchema` export to error-classification.ts
+          as a prerequisite (small 1-line change to the canonical file).
+
+      Option C is cleanest for long-term maintenance but requires a coordinated change.
+      Option A is sufficient for this story if the canonical file is treated as stable.
+      A decision must be recorded before ST-1 begins to avoid rework on BlockedJobRecordSchema.
+    blocking_subtask: "ST-1"
+    resolution: >
+      RESOLVED — Option A chosen: mirror the 8 ErrorCategory values in a local
+      ErrorCategorySchema = z.enum([...]) inside supervisor/__types__/index.ts.
+      A source-of-truth comment referencing error-classification.ts is required in the
+      schema definition to document the drift risk. No new ACs added — AC-2 absorbs this
+      decision. Implementation note added to story Architecture Notes / Implementation
+      Decisions section.
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: GAP-2
+    title: "Redis write failure path undefined — transitionToBlocked has no error handling contract"
+    severity: high
+    description: >
+      The story defines explicit swallow-and-log behavior for webhook dispatch failures (AC-7:
+      "swallowed — the supervisor continues operating normally"). However, there is no defined
+      behavior when the Redis MULTI/EXEC pipeline fails (e.g., Redis connection lost, EXECABORT
+      from command error mid-pipeline, Redis OOM).
+
+      If Redis is unavailable during transitionToBlocked():
+        - The BlockedJobRecord is never written to pipeline:blocked:jobs
+        - The deduplication NX key is never set
+        - The job silently appears "not blocked" in the Redis sorted set
+        - On supervisor restart, the same job may trigger transitionToBlocked again but Redis
+          may still be down — creating potential for notification spam if Redis recovers
+          after the dedup key write but before the notification dispatches
+
+      Required decision before AC-1/AC-3 implementation:
+        Option A: Propagate Redis error upward to BullMQ Worker 'failed' handler. BullMQ logs
+          the failure; job remains in BullMQ 'failed' state (no BlockedJobRecord). Supervisor
+          continues. Risk: blocked state not visible in Redis sorted set.
+        Option B: Log error with event='blocked_transition_failed' + rethrow. Supervisor
+          handles upstream. AC-7-style swallow explicitly excluded for Redis (vs webhook).
+        Option C: Retry the Redis write once (transient connection blip) then propagate.
+          Consistent with createRedisClient's retryStrategy.
+      The story's "Redis AOF persistence" and "no Aurora writes" constraints make this failure
+      path more consequential — Redis is the only durable record of blocked state.
+    blocking_subtask: "ST-2"
+    resolution: >
+      RESOLVED — Option A chosen: propagate the Redis error to the BullMQ Worker 'failed'
+      event handler. transitionToBlocked() does not catch Redis errors. The BullMQ handler
+      catches and logs with event='blocked_transition_failed' then does not rethrow (supervisor
+      continues). Job remains in BullMQ native 'failed' state — visible to operators via BullMQ.
+      On Redis recovery + supervisor restart, SET NX deduplication prevents duplicate notification.
+      Option C (retry-once) rejected: createRedisClient() retryStrategy already handles transient
+      blips; double-retry at application layer masks issues. No new ACs added — AC-1 and AC-3
+      absorb this decision. Implementation note added to story Architecture Notes / Implementation
+      Decisions section.
+    decided_at: "2026-02-25T00:00:00Z"
+
+# ============================================================================
+# OPPORTUNITIES — Non-Blocking
+# ============================================================================
+
+opportunities:
+  - id: OPP-1
+    title: "Consider getRedisClient() singleton vs createRedisClient() factory for supervisor"
+    category: architecture
+    description: >
+      The story's reuse plan specifies: "call createRedisClient() factory for all Redis
+      operations". However, redis-client.ts also exports getRedisClient() — a module-level
+      singleton that reuses an existing connection if available.
+
+      For the supervisor (a long-lived Node.js process, not Lambda), the singleton pattern
+      is more appropriate: it avoids creating a new ioredis connection per blocked-transition
+      event. The Lambda-specific concern ("eager connect for Lambda cold starts") in the
+      factory comments does not apply to the supervisor process model.
+
+      Recommendation: At ST-2 implementation time, evaluate whether to use the singleton
+      getRedisClient() or inject a createRedisClient() instance at supervisor startup and
+      reuse it. The injected-instance approach is more testable (easier to mock in ST-5).
+      This is an architectural preference, not a correctness issue.
+    priority: low
+    logged: false
+    log_note: "KB unavailable at decision time (2026-02-25) — INTERNAL_ERROR from kb_write_artifact. Finding captured in ELAB.yaml for traceability."
+
+  - id: OPP-2
+    title: "BlockedJobEventSchema and WebhookPayloadSchema — clarify scope in ST-1"
+    category: scope_clarity
+    description: >
+      Architecture Notes reference four schemas: BlockedJobRecordSchema, NotificationConfigSchema,
+      BlockedJobEventSchema, and WebhookPayloadSchema. However, ST-1 only mentions
+      BlockedJobRecordSchema and NotificationConfigSchema as deliverables. The other two are
+      mentioned in Architecture Notes without subtask assignment.
+
+      BlockedJobEventSchema appears to be the event object passed from transitionToBlocked to
+      dispatchNotification. WebhookPayloadSchema appears to be the HTTP POST body shape.
+
+      Recommendation: ST-1 should explicitly include BlockedJobEventSchema and WebhookPayloadSchema
+      in its files-to-modify list, or confirm they are inline type definitions within ST-2/ST-3.
+      Ambiguity here risks ST-2 and ST-3 defining incompatible intermediate types.
+    priority: medium
+    logged: false
+    log_note: "KB unavailable at decision time (2026-02-25) — INTERNAL_ERROR from kb_write_artifact. Finding captured in ELAB.yaml for traceability."
+
+  - id: OPP-3
+    title: "ZADD NX flag as complement to SET NX dedup key for sorted set idempotency"
+    category: correctness_enhancement
+    description: >
+      The story uses MULTI/EXEC { ZADD score member, SET NX key EX 604800 } for atomicity and
+      deduplication. ioredis ZADD also supports NX option: "Only add new elements. Don't update
+      already existing elements." Using ZADD NX provides a second layer of idempotency at the
+      sorted set level (prevents score update on duplicate ZADD) independent of the SET NX key.
+
+      This is not required by the current ACs (deduplication is fully covered by the SET NX key
+      check before dispatch). However, adding ZADD NX makes the blocked record write idempotent
+      at the Redis data structure level, which protects against a race condition where two
+      supervisor processes process the same exhausted job simultaneously.
+
+      Recommendation: Evaluate at ST-2 implementation time. ZADD NX + SET NX provides defense
+      in depth; ZADD (without NX) + SET NX is sufficient for the single-supervisor architecture.
+    priority: low
+    logged: false
+    log_note: "KB unavailable at decision time (2026-02-25) — INTERNAL_ERROR from kb_write_artifact. Finding captured in ELAB.yaml for traceability."
+
+  - id: OPP-4
+    title: "Manual verification MC-1 lacks structured evidence capture in subtask plan"
+    category: test_completeness
+    description: >
+      The test plan includes MC-1: "Configure real test Slack webhook (dev workspace), exhaust a
+      test job, verify Slack message has human-readable labels and actionable fields." However,
+      no subtask captures this as a deliverable. ST-6's verification is purely automated
+      (pnpm test:integration).
+
+      The Slack message format (human-readable labels, actionable fields) is observable
+      behavior that cannot be validated by the echo server integration test — the echo server
+      only validates HTTP delivery, not human-readable formatting.
+
+      Recommendation: Add a documentation note to ST-6 or ST-4 requiring manual verification
+      screenshot/log as evidence before story closure. Alternatively, define a Slack message
+      format specification in AC-6 (currently unspecified beyond field names) and validate
+      formatting in the echo server payload assertion.
+    priority: low
+    logged: false
+    log_note: "KB unavailable at decision time (2026-02-25) — INTERNAL_ERROR from kb_write_artifact. Finding captured in ELAB.yaml for traceability."
+
+  - id: OPP-5
+    title: "ED-4 and ED-5 numbering gap in edge cases — traceability cleanup"
+    category: documentation
+    description: >
+      Edge cases are numbered ED-1, ED-2, ED-3, ED-6 — ED-4 and ED-5 are absent. This
+      suggests the seed generator originally included more edge cases that were removed.
+      Renaming ED-6 to ED-4 in the test plan YAML would improve traceability and avoid
+      confusion during AC-13 regression guard verification.
+    priority: low
+    logged: false
+    log_note: "KB unavailable at decision time (2026-02-25) — INTERNAL_ERROR from kb_write_artifact. Finding captured in ELAB.yaml for traceability."
+
+# ============================================================================
+# SPLIT RECOMMENDATION
+# ============================================================================
+
+split_recommendation: null
+# Rationale: 13 ACs evaluated — split not warranted. All ACs are cohesive within a single
+# supervisor module (≤4 files). No UI/BE split axis. AC count is granular (many are
+# observability companions) rather than scope-inflating. 6-subtask DAG is executable as
+# one story. 5-point estimate confirmed reasonable.
+
+# ============================================================================
+# VERDICT
+# ============================================================================
+
+preliminary_verdict: CONDITIONAL_PASS
+# Conditions for PASS:
+#   1. GAP-1 resolved: ErrorCategory Zod compatibility decision recorded before ST-1 begins
+#      (choose Option A, B, or C — any is acceptable; document the choice)
+#   2. GAP-2 resolved: Redis write failure path for transitionToBlocked defined before ST-2
+#      begins (propagate vs swallow vs retry-once — decide and document in AC-1 note or
+#      Architecture Notes)
+# These are lightweight pre-implementation decisions, not scope additions. No new ACs required
+# if existing AC-1 and AC-3 language is updated to include the Redis failure behavior.
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 5
+  opportunities_logged: 0
+  opportunities_log_note: "KB unavailable (INTERNAL_ERROR) — all 5 opportunities captured in ELAB.yaml with log_note fields for traceability"
+  acs_added: 0
+  # Note: No new ACs needed. GAP-1 and GAP-2 resolved as implementation decisions absorbed
+  # by existing ACs (AC-2 for GAP-1, AC-1/AC-3 for GAP-2). Implementation notes appended
+  # to story Architecture Notes / Implementation Decisions section.

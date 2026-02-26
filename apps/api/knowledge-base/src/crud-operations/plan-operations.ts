@@ -8,10 +8,46 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, type SQL } from 'drizzle-orm'
+import { eq, sql, and, ne, isNotNull, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { plans } from '../db/schema.js'
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Check if a story_prefix is already used by another plan.
+ * Throws a descriptive error if a conflict is found.
+ */
+async function assertUniquePrefixOrThrow(
+  db: NodePgDatabase<typeof schema>,
+  storyPrefix: string | null | undefined,
+  excludePlanSlug?: string,
+): Promise<void> {
+  if (!storyPrefix) return
+
+  const conditions: SQL[] = [
+    eq(plans.storyPrefix, storyPrefix),
+    isNotNull(plans.storyPrefix),
+  ]
+  if (excludePlanSlug) {
+    conditions.push(ne(plans.planSlug, excludePlanSlug))
+  }
+
+  const conflict = await db
+    .select({ planSlug: plans.planSlug, title: plans.title })
+    .from(plans)
+    .where(and(...conditions))
+    .limit(1)
+
+  if (conflict.length > 0) {
+    throw new Error(
+      `Story prefix '${storyPrefix}' is already used by plan '${conflict[0]!.planSlug}' (${conflict[0]!.title}). Each plan must have a unique story prefix.`,
+    )
+  }
+}
 
 // ============================================================================
 // Upsert Input Schema
@@ -299,6 +335,9 @@ export async function kb_upsert_plan(
 }> {
   const validated = KbUpsertPlanInputSchema.parse(input)
 
+  // Enforce unique story_prefix across plans
+  await assertUniquePrefixOrThrow(deps.db, validated.story_prefix, validated.plan_slug)
+
   const now = new Date()
 
   const values = {
@@ -367,6 +406,11 @@ export async function kb_update_plan(
       updated: false,
       message: `Plan '${validated.plan_slug}' not found`,
     }
+  }
+
+  // Enforce unique story_prefix across plans
+  if (validated.story_prefix !== undefined) {
+    await assertUniquePrefixOrThrow(deps.db, validated.story_prefix, validated.plan_slug)
   }
 
   // Build update object from provided fields

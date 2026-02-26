@@ -1,0 +1,23 @@
+---
+generated: "2026-02-25"
+reason: "KB unavailable at story generation time (psql not found)"
+---
+
+deferred_writes:
+  - table: stories
+    operation: upsert
+    attempted_at: "2026-02-25T00:00:00Z"
+    data:
+      story_id: APIP-1020
+      feature: autonomous-pipeline
+      title: "ChangeSpec Schema Design and Validation Spike"
+      story_dir: plans/future/platform/autonomous-pipeline/backlog/APIP-1020
+      story_file: plans/future/platform/autonomous-pipeline/backlog/APIP-1020/APIP-1020.md
+      story_type: spike
+      points: 5
+      priority: high
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

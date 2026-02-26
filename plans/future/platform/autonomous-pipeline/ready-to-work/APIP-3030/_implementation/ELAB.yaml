@@ -1,0 +1,83 @@
+schema: 1
+story_id: "APIP-3030"
+timestamp: "2026-02-25T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Story scope matches index entry exactly: 'Learning-Aware Diff Planner' with dependencies [APIP-3020, APIP-1020]. No extra endpoints, infrastructure, or features introduced beyond what the index describes. All scope items are within packages/backend/orchestrator."
+
+  - id: internal_consistency
+    status: PASS
+    note: "Goals align with ACs: AC-1 through AC-8 cover querying, prompt injection, escalation, fallback, schema, tests, and read-only constraint. Non-goals explicitly exclude upstream (APIP-3020, APIP-1020), downstream (APIP-3040), and UI (APIP-2020) concerns. Test plan maps 1:1 to AC-7 test cases."
+
+  - id: reuse_first
+    status: PASS
+    note: "Reuse Plan section identifies 6 concrete reuse targets with file paths: createToolNode pattern (delta-detect.ts), DB query pattern (leaderboard.ts), schema versioning (plan.ts), discriminated union (fanout-ux.ts), YAML persistence (yaml-artifact-bridge.ts), @repo/db client. No new shared packages created."
+
+  - id: ports_adapters
+    status: PASS
+    note: "Backend-only node with no HTTP endpoints. Core logic (prompt assembly, affinity query) is isolated from transport. DB access is encapsulated in affinity-query.ts. Node handler follows existing createToolNode pattern."
+
+  - id: testability
+    status: PASS
+    note: "14 test cases documented across happy path (HP-1 through HP-5), error cases (EC-1 through EC-5), and edge cases (ED-1 through ED-4). All are concrete with setup/action/expected/evidence. Backend-only so Playwright not required (ADR-006 skip condition: frontend_impacted=false). Test command specified: pnpm test --filter @repo/orchestrator -- diff-planner."
+
+  - id: decision_completeness
+    status: WARN
+    note: "Three items flagged as 'needs PM decision' in dev-feasibility (WEAKNESS_THRESHOLD default 0.6, AFFINITY_CONFIDENCE_MIN default medium, escalation_model field type) but the story body already specifies sensible defaults for the first two. The escalation_model source is underspecified - AC-3 says 'annotated with escalation_model: <model_id>' but does not define where the escalation model ID is sourced from (config constant? model router lookup?)."
+
+  - id: risk_disclosure
+    status: PASS
+    note: "Three risks documented with mitigations: ChangeSpec schema instability (placeholder schema), wint.model_affinity column names (constants at top of file), prompt token cost increase (MAX_WEAK_PATTERNS_INJECTED cap). Profile freshness lag documented in Architecture Notes. Upstream dependency gates explicitly stated."
+
+  - id: story_sizing
+    status: PASS
+    note: "8 ACs (at limit, not over). 0 endpoints. Backend-only (no frontend). 1 package touched (orchestrator). 5 subtasks with clear DAG. Split risk prediction 0.6 but scope is well-bounded to a single LangGraph node with supporting modules."
+
+  - id: subtask_decomposition
+    status: PASS
+    note: "5 subtasks with clear DAG: ST-1 (skeleton) -> ST-2 (query) + ST-3 (schema) -> ST-4 (prompt assembly) -> ST-5 (tests). All 8 ACs are covered by at least one subtask. No subtask touches more than 3 files. Each has verification command and canonical reference files. Canonical References section has 4 entries."
+
+gaps:
+  - id: gap-1
+    check: decision_completeness
+    finding: "Escalation model source undefined. AC-3 says ChangeSpecs are 'annotated with escalation_model: <model_id>' but the story does not specify where this model ID comes from. HP-2 test uses 'configured escalation_model = claude-sonnet-4-6' suggesting a config constant, but this constant is not listed in ST-1's config schema (only AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD, MAX_WEAK_PATTERNS_INJECTED are listed). An ESCALATION_MODEL_DEFAULT config constant is needed."
+    severity: medium
+    decision: add_ac
+    ac_added: "AC-9: ESCALATION_MODEL_DEFAULT config constant for weak-pattern ChangeSpec escalation model annotations"
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: "Add structured log entries for affinity query outcomes (profile_used, escalation_preassigned count, confidence_level) to enable pipeline-level dashboards. The profile_metadata field in AC-6 provides the data but no logging of these metrics is specified."
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: null  # KB unavailable - logged to filesystem only
+
+  - id: opp-2
+    category: performance
+    finding: "Consider in-memory caching of affinity profiles with TTL (e.g., 5 minutes) to avoid repeated DB queries when multiple stories are planned in quick succession. Current design queries DB on every invocation."
+    effort: medium
+    decision: defer
+    kb_entry_id: null  # KB unavailable - deferred to future optimization story
+
+  - id: opp-3
+    category: edge_cases
+    finding: "Story does not address duplicate/conflicting rows in wint.model_affinity for the same (model_id, change_type, file_type) key. If APIP-3020 does not enforce uniqueness, the affinity query may return multiple rows. Should the query use DISTINCT ON or take the most recent entry?"
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: null  # KB unavailable - logged to filesystem only. APIP-3020 should enforce uniqueness constraint.
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T12:05:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 3
+  opportunities_logged: 2
+  acs_added: 1

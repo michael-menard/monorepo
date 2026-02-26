@@ -1,0 +1,2 @@
+skipped: true
+reason: "APIP-1020 is a research spike focused on backend schema design. No UI components are created or modified. The story produces: a Zod schema file, YAML spike output artifacts, and an ADR document. No operator CLI visibility is in scope for this spike (that is APIP-5005 scope)."

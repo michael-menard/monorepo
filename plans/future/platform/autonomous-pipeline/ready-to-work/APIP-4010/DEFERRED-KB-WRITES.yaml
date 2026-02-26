@@ -1,0 +1,26 @@
+---
+# Deferred KB writes for APIP-4010
+# These writes were queued because KB MCP tools are not available in the current execution context.
+# Re-run after KB server is available.
+generated: "2026-02-25"
+story_id: APIP-4010
+---
+
+writes:
+  - operation: upsert_story
+    table: stories
+    reason: "KB not accessible during story generation — write deferred"
+    payload:
+      story_id: APIP-4010
+      feature: autonomous-pipeline
+      title: "Codebase Health Gate — Snapshot, Drift Detection, and CLEANUP Story Auto-Generation"
+      story_dir: plans/future/platform/autonomous-pipeline/backlog/APIP-4010
+      story_file: plans/future/platform/autonomous-pipeline/backlog/APIP-4010/APIP-4010.md
+      story_type: feature
+      points: 8
+      priority: P3
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false

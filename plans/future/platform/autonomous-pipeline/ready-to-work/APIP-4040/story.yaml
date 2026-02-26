@@ -1,0 +1,38 @@
+id: "APIP-4040"
+title: "Test Quality Monitor"
+status: ready-to-work
+priority: medium
+phase: 4
+story_type: feature
+points: 5
+experiment_variant: "control"
+epic: autonomous-pipeline
+frontend_impacted: false
+backend_impacted: true
+database_impacted: true
+infra_impacted: false
+feature: "Weekly cron measuring assertion density, mutation testing score (target >60%), orphaned test detection, and critical path coverage floors (auth/payments must exceed 80%) — generates test improvement stories on decay"
+goal: "Ensure autonomous pipeline output includes meaningful tests rather than superficial coverage that passes the QA gate but misses real regressions."
+depends_on:
+  - APIP-3090
+endpoints: []
+infrastructure:
+  - "wint.test_quality_snapshots Aurora PostgreSQL table (new)"
+  - "test-quality-monitor cron job in CronJobRegistry (blocked on APIP-3090)"
+risk_notes: >
+  Mutation testing is computationally expensive — sampling strategy required; assertion
+  density threshold is a crude proxy for test quality. High split risk (0.9): natural
+  split is Part A (all collectors except mutation score) and Part B (MutationScoreCollector,
+  gated on mutation tooling confirmation). All thresholds must be env-var configurable.
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"
+
+predictions:
+  split_risk: 0.9
+  review_cycles: 4
+  token_estimate: 150000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-25T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"

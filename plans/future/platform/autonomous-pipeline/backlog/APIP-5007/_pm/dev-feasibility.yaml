@@ -1,0 +1,139 @@
+feasible: true
+confidence: high
+rationale: "APIP-5007 is a well-scoped infrastructure story with clear canonical patterns to follow. The production app schema (packages/backend/database-schema/) provides a complete template: Drizzle config, CI validation script, schema_versions table design, and unit test pattern. APIP-5001 (ready-for-qa) already established the provisional migration runner at apps/api/pipeline/src/db/ — APIP-5007 formalizes this existing foundation rather than building from scratch. The LangGraph checkpoint schema is already defined by APIP-5001; this story adds the schema_versions dual-tracking layer and CI gate. No novel technical decisions are required — the toolchain (Drizzle-kit for pipeline-specific tables, LangGraph setup() for checkpoint tables) aligns with existing codebase patterns."
+complexity: medium
+change_surface:
+  areas:
+    - "apps/api/pipeline/src/db/ (new files: drizzle.config.ts, schema.ts with schema_versions, migrations/)"
+    - "apps/api/pipeline/scripts/ (new: apply-migrations.ts, validate-pipeline-schema.ts)"
+    - "apps/api/pipeline/package.json (new pnpm commands)"
+    - ".github/workflows/ (new/extended CI job for pipeline schema validation)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Docker Compose test DB (APIP-5001 compose.test-db.yaml) must be running for integration tests"
+    - "CI GitHub Actions must have access to the validate-pipeline-schema-changes script"
+    - "PIPELINE_DB_* env vars required in CI for integration test HP-7"
+
+risks:
+  - finding: "LangGraph setup() may not align with XXXX_description.sql migration file convention"
+    mitigation: "If @langchain/langgraph-checkpoint-postgres ships a built-in setup() that creates checkpoint tables, wrap the setup() call in a script that also inserts the schema_versions record. Use 0001_langgraph_checkpoint_schema.sql as a documentation-only or wrapper file that calls setup() rather than raw SQL. Document this hybrid approach in the decision document."
+
+  - finding: "APIP-5001 provisional runner uses sequential numbered SQL files starting at 001 (not 0001) — naming convention conflict"
+    mitigation: "APIP-5007 must explicitly decide: (a) rename APIP-5001 migrations to 0001 format (preferred — matches MIGRATION_NAME_PATTERN), or (b) define a pipeline-specific convention with 3-digit numbers. Option (a) is recommended for CI validation consistency. Include a migration renaming note in the decision document."
+
+  - finding: "Drizzle-kit db:generate requires schema TypeScript files — if pipeline schema is purely LangGraph-managed SQL, Drizzle-kit adds no value for checkpoint tables specifically"
+    mitigation: "Use Drizzle-kit only for pipeline-specific operational tables defined in TypeScript (schema_versions, and future Phase 3 telemetry tables). For LangGraph checkpoint tables, use the plain SQL runner (APIP-5001 pattern) or LangGraph setup(). Document the boundary clearly in the decision document (AC-1)."
+
+  - finding: "WINT-0080 is in-progress in packages/backend/database-schema/ — any modification to that package creates merge conflict risk"
+    mitigation: "APIP-5007 must NOT touch packages/backend/database-schema/ at all. All pipeline schema work goes to apps/api/pipeline/src/db/. Confirm before implementation."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm test passes for schema unit tests (no live DB)"
+  - "Integration test HP-7 passes against APIP-5001 test DB container"
+  - "CI validate-pipeline-schema-changes job passes on conforming migration PR"
+  - "CI validate-pipeline-schema-changes job fails on naming violation PR"
+  - "pnpm check-types exits 0 for all new files"
+  - "schema_versions table definition matches SCHEMA-VERSIONING.md structure"
+  - "Decision document at documented path is complete and actionable"
+
+subtasks:
+  - id: ST-1
+    title: "Read APIP-5001 output and write migration strategy decision document"
+    goal: "Inspect what APIP-5001 built at apps/api/pipeline/src/db/ (provisional runner, migration naming). Write MIGRATION-STRATEGY.md selecting toolchain (Drizzle-kit for pipeline-specific tables + LangGraph setup()/SQL for checkpoint tables), documenting migration naming convention (0001 format), pnpm command names, and APIP-5001 handoff."
+    files_to_read:
+      - "plans/future/platform/autonomous-pipeline/ready-for-qa/APIP-5001/APIP-5001.md"
+      - "packages/backend/database-schema/docs/SCHEMA-VERSIONING.md"
+      - "packages/backend/database-schema/drizzle.config.ts"
+    files_to_modify:
+      - "apps/api/pipeline/src/db/MIGRATION-STRATEGY.md (create)"
+    acs: ["AC-1", "AC-2"]
+    depends_on: none
+    verification: "File exists at documented path; contains all required sections per AC-1"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Define schema_versions Drizzle table and rename APIP-5001 migration files to 0001 format"
+    goal: "Add schema_versions table definition to apps/api/pipeline/src/db/schema.ts (using Drizzle ORM matching SCHEMA-VERSIONING.md structure). Rename APIP-5001 migration from 001_ format to 0001_ format. Ensure migration file naming matches MIGRATION_NAME_PATTERN."
+    files_to_read:
+      - "packages/backend/database-schema/docs/SCHEMA-VERSIONING.md"
+      - "apps/api/pipeline/src/db/schema.ts (existing from APIP-5001)"
+      - "apps/api/pipeline/src/db/migrations/ (existing APIP-5001 migration files)"
+    files_to_modify:
+      - "apps/api/pipeline/src/db/schema.ts"
+      - "apps/api/pipeline/src/db/migrations/0001_langgraph_checkpoint_schema.sql (rename/update)"
+    acs: ["AC-3", "AC-4", "AC-5"]
+    depends_on: ST-1
+    verification: "schema_versions table definition contains all required columns and constraints; migration file name matches /^\\d{4}_[a-z0-9_]+\\.sql$/; migration includes schema_versions INSERT at end"
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Create pipeline Drizzle config and update migration runner to track schema_versions"
+    goal: "Create apps/api/pipeline/drizzle.config.ts (modeled on production drizzle.config.ts, using PIPELINE_DB_* env vars). Update migration runner script to: apply SQL files in XXXX_description.sql order AND insert schema_versions record after each migration. Add idempotency check (skip already-tracked migrations)."
+    files_to_read:
+      - "packages/backend/database-schema/drizzle.config.ts"
+      - "apps/api/pipeline/scripts/apply-migrations.ts (existing from APIP-5001)"
+      - "apps/api/knowledge-base/src/db/client.ts"
+    files_to_modify:
+      - "apps/api/pipeline/drizzle.config.ts (create)"
+      - "apps/api/pipeline/scripts/apply-migrations.ts"
+    acs: ["AC-4", "AC-7"]
+    depends_on: ST-2
+    verification: "drizzle.config.ts is syntactically valid TypeScript; migration runner script applies migrations, inserts schema_versions records, and is idempotent"
+    estimated_tokens: 9000
+
+  - id: ST-4
+    title: "Create db:status and db:validate commands"
+    goal: "Implement db:status script (reads schema_versions table, shows applied migrations with version and rollback_safe status). Implement db:validate script (runs naming/journal/breaking-change validation locally, mirrors CI gate). Register as pnpm commands in package.json. Document in README or MIGRATION-STRATEGY.md."
+    files_to_read:
+      - "packages/backend/database-schema/scripts/validate-schema-changes.ts"
+      - "packages/backend/database-schema/docs/SCHEMA-VERSIONING.md"
+    files_to_modify:
+      - "apps/api/pipeline/scripts/validate-pipeline-schema.ts (create)"
+      - "apps/api/pipeline/scripts/status.ts (create)"
+      - "apps/api/pipeline/package.json"
+    acs: ["AC-6", "AC-7"]
+    depends_on: ST-3
+    verification: "pnpm db:status exits 0 and shows migration list; pnpm db:validate exits 0 on valid schema; pnpm db:validate exits 1 on naming violation"
+    estimated_tokens: 8000
+
+  - id: ST-5
+    title: "Create CI GitHub Actions job for pipeline schema validation"
+    goal: "Add or extend GitHub Actions workflow to run validate-pipeline-schema.ts on PRs that modify apps/api/pipeline/src/db/ or apps/api/pipeline/scripts/. Job must: fail on critical violations (naming, DROP TABLE without approval), warn on best-practice issues (INDEX without CONCURRENTLY, NOT NULL without DEFAULT)."
+    files_to_read:
+      - "packages/backend/database-schema/scripts/validate-schema-changes.ts"
+      - ".github/workflows/ (existing schema validation workflow if present)"
+    files_to_modify:
+      - ".github/workflows/validate-pipeline-schema.yml (create) or extend existing workflow"
+    acs: ["AC-6"]
+    depends_on: ST-4
+    verification: "Workflow file is valid YAML; job triggers on PRs modifying pipeline schema paths; test by staging a naming violation PR locally with act or via actual PR"
+    estimated_tokens: 5000
+
+  - id: ST-6
+    title: "Create schema unit tests (no live DB)"
+    goal: "Create apps/api/pipeline/src/db/__tests__/pipeline-schema.test.ts following WINT schema unit test pattern. Test: schema_versions table definition exports correctly, drizzle-zod generates insert/select schemas, all enum values are present, Zod schema validates a well-formed schema_versions insert record."
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+      - "apps/api/pipeline/src/db/schema.ts"
+    files_to_modify:
+      - "apps/api/pipeline/src/db/__tests__/pipeline-schema.test.ts (create)"
+    acs: ["AC-8", "AC-10"]
+    depends_on: ST-2
+    verification: "pnpm test passes; no live DB connection required; test imports from schema module only"
+    estimated_tokens: 6000
+
+  - id: ST-7
+    title: "Create migration lifecycle integration test"
+    goal: "Create apps/api/pipeline/src/db/__tests__/migration-lifecycle.integration.test.ts that: (1) starts from empty schema, (2) runs migration runner to apply all migrations, (3) queries schema_versions for latest entry, (4) verifies version format is SemVer, (5) calls testConnection() and asserts success. Test uses APIP-5001 test DB container."
+    files_to_read:
+      - "apps/api/pipeline/src/db/client.ts"
+      - "apps/api/pipeline/scripts/apply-migrations.ts"
+      - "apps/api/pipeline/src/db/__tests__/checkpoint-integration.test.ts (existing from APIP-5001)"
+    files_to_modify:
+      - "apps/api/pipeline/src/db/__tests__/migration-lifecycle.integration.test.ts (create)"
+    acs: ["AC-9", "AC-10"]
+    depends_on: ST-3
+    verification: "Integration test passes when APIP-5001 test DB container is running; test output shows each migration applied and schema_versions record verified"
+    estimated_tokens: 7000

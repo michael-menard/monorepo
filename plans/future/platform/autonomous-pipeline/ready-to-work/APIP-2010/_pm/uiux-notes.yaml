@@ -1,0 +1,6 @@
+skipped: true
+reason: "APIP-2010 is a headless server-side process story with no UI components. The blocked-transition logic and webhook notification dispatch are entirely within the pipeline supervisor process. No React components, no Tailwind, no shadcn/ui, no Playwright E2E required."
+notes:
+  - "The Slack webhook message payload (AC-6) is the only operator-facing surface. Human-readable field labels (Story ID, Stage, Attempts Made / Max, Error Category) are specified in the seed recommendations and captured in the test plan manual case MC-1."
+  - "The webhookUrl must never appear in the Slack message or in logs (AC-10 redaction requirement)."
+  - "APIP-2020 (Monitor UI) will provide the visual blocked queue dashboard — that story will require UIUX review."

@@ -191,7 +191,7 @@ If the story record has a `story_dir` field, use that to derive the feature dire
 If Step 2 returned 0 stories, the database likely needs seeding.
 
 1. Read `plans/future/platform/WORK-ORDER-BY-BATCH.md` directly
-2. Parse the markdown tables to find unblocked stories (same logic as the old `refresh-work-queue.ts`)
+2. Parse the markdown tables to find unblocked stories
 3. Output the results with a **prominent warning**:
 
 ```

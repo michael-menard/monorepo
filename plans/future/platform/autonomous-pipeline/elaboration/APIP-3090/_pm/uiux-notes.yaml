@@ -1,0 +1,7 @@
+skipped: true
+reason: >
+  APIP-3090 has no user-facing UI surface. All operator observability is via structured log output
+  (@repo/logger) and the LangGraph Studio UI delivered by APIP-0030/APIP-5003.
+  ADR-006 E2E skip condition applies (frontend_impacted: false).
+  If cron job status visibility is required in a dashboard, that belongs to APIP-2020
+  (Monitor UI v1) as a downstream consumer of CronRunResult structured logs.

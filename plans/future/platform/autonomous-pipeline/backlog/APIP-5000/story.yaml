@@ -1,19 +1,29 @@
 id: "APIP-5000"
-title: "Test Infrastructure Setup for LangGraph Graph Unit Testing"
+title: "Test Infrastructure Setup for Autonomous Pipeline Unit Testing (Phase 0)"
 status: backlog
 priority: high
 phase: 0
-feature: "Establish Vitest test framework configuration, LangGraph graph mocking utilities, and fixture management for unit testing autonomous pipeline graphs"
-goal: "Provide comprehensive unit testing infrastructure for LangGraph graph implementations in APIP-0010, APIP-0020, and Phase 1 graphs."
+epic: autonomous-pipeline
+experiment_variant: "control"
+points: 3
+story_type: chore
+frontend_impacted: false
+backend_impacted: true
+feature: "Vitest config, BullMQ fixture factories, supervisor state fixtures, vi.fn() mock utilities for the autonomous-pipeline package"
+goal: "Establish unit test infrastructure for the autonomous-pipeline package: vitest.config.ts, Zod-validated BullMQ and supervisor state fixture factories, vi.fn()-based mock utilities, and one integration smoke test."
 depends_on:
   - "APIP-0010"
   - "APIP-0020"
 endpoints: []
 infrastructure:
-  - "Vitest configuration for LangGraph tests"
-  - "Graph mocking utilities and test fixtures"
-  - "Unit test templates for supervisor, structurer, implementation, review, QA graphs"
-risk_notes: "Graph mocking complexity; ensuring mocks accurately represent LangGraph runtime behavior."
+  - "apps/api/autonomous-pipeline package scaffold (package.json, tsconfig.json, src/)"
+  - "vitest.config.ts with v8 coverage provider and >=45% global thresholds"
+  - "BullMQ job fixture factory (Zod-validated)"
+  - "BullMQ Worker and Queue vi.fn() mock factories"
+  - "Supervisor state fixture factory (Zod-validated)"
+  - "Integration smoke test: real supervisor loop + mocked BullMQ"
+risk_notes: "Sequencing dependency on APIP-0010 Zod schema export. Package scaffold may need to be created in this story if APIP-0010 does not deliver it first."
+gate_condition: "Do not pick up until APIP-0010 BullMQ job Zod schema is confirmed available (merged or stable draft in plan artifacts)."
 sizing_warning: false
-created: "2026-02-25T14:30:00Z"
-source: "Epic Elaboration - QA perspective"
+created: "2026-02-25"
+source: "Story seed APIP-5000 — rescoped from LangGraph graph testing to Phase 0 TypeScript unit test infrastructure"
