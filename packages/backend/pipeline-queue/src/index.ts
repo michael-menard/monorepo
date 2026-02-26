@@ -2,7 +2,8 @@
  * Pipeline Queue Package
  *
  * Provides BullMQ-based work queue infrastructure for the autonomous pipeline (APIP).
- * Exports: PIPELINE_QUEUE_NAME, createPipelineConnection, createPipelineQueue, PipelineJobDataSchema, PipelineJobData
+ * Exports: PIPELINE_QUEUE_NAME, createPipelineConnection, createPipelineQueue,
+ * PipelineJobDataSchema, PipelineJobData
  */
 
 import { Queue } from 'bullmq'
@@ -129,7 +130,12 @@ export function createPipelineQueue(
     add(name: string, data: PipelineJobData, opts?: JobsOptions) {
       // Validate payload before enqueue — ensures queue contract is never violated
       const parsed = PipelineJobDataSchema.parse(data)
-      logger.info('Enqueuing pipeline job', { queueName, jobName: name, storyId: parsed.storyId, phase: parsed.phase })
+      logger.info('Enqueuing pipeline job', {
+        queueName,
+        jobName: name,
+        storyId: parsed.storyId,
+        phase: parsed.phase,
+      })
       return bullQueue.add(name, parsed, opts)
     },
   }

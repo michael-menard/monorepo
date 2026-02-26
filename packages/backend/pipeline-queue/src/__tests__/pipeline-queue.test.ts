@@ -132,7 +132,10 @@ describe('createPipelineQueue', () => {
     vi.clearAllMocks()
     mockQueueAdd.mockResolvedValue({ id: 'job-1' })
     createPipelineQueue(mockConn)
-    const [, opts] = MockQueue.mock.calls[0] as [string, { defaultJobOptions: { attempts: number } }]
+    const [, opts] = MockQueue.mock.calls[0] as [
+      string,
+      { defaultJobOptions: { attempts: number } },
+    ]
     expect(opts.defaultJobOptions.attempts).toBe(3)
   })
 
