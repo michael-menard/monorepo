@@ -1,6 +1,6 @@
 id: "APIP-1050"
 title: "Review Graph with Parallel Fan-Out Workers"
-status: in-progress
+status: needs-code-review
 priority: medium
 phase: 1
 feature: "10 parallel review workers (lint, style, syntax, typecheck, build via Ollama; react, typescript, reusability, accessibility via OpenRouter; security via Claude) with fan-in aggregation producing a PASS/FAIL verdict"
