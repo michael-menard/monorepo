@@ -13,6 +13,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { logger } from '@repo/logger'
 import type { AvailabilityCache } from '../config/llm-provider.js'
 import { BaseProvider, checkEndpointAvailability } from './base.js'
+import { secretsClient } from '../secrets/index.js'
 
 // ============================================================================
 // Configuration Schema
@@ -48,7 +49,7 @@ export type AnthropicConfig = z.infer<typeof AnthropicConfigSchema>
  *
  * **Implements**:
  * - `parseModelName()`: Removes 'anthropic/' prefix
- * - `loadConfig()`: Loads Anthropic API key and configuration
+ * - `loadConfig()`: Loads Anthropic API key and configuration via SecretsClient
  * - `createModel()`: Creates ChatAnthropic instances
  * - `checkAvailability()`: Checks Anthropic API availability
  */
@@ -66,7 +67,7 @@ export class AnthropicProvider extends BaseProvider {
   }
 
   /**
-   * Loads Anthropic configuration from environment variables.
+   * Loads Anthropic configuration from SecretsClient (env or AWS Secrets Manager).
    * Configuration is cached after first load.
    */
   loadConfig(): AnthropicConfig {
@@ -74,7 +75,7 @@ export class AnthropicProvider extends BaseProvider {
       return AnthropicProvider.configCache
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = secretsClient.getSync('ANTHROPIC_API_KEY')
 
     if (!apiKey) {
       throw new Error(

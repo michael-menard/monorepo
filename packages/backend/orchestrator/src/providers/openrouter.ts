@@ -13,6 +13,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { logger } from '@repo/logger'
 import type { AvailabilityCache } from '../config/llm-provider.js'
 import { BaseProvider, checkEndpointAvailability } from './base.js'
+import { secretsClient } from '../secrets/index.js'
 
 // ============================================================================
 // Configuration Schema
@@ -51,7 +52,7 @@ export type OpenRouterConfig = z.infer<typeof OpenRouterConfigSchema>
  *
  * **Implements**:
  * - `parseModelName()`: Removes 'openrouter/' prefix
- * - `loadConfig()`: Loads OpenRouter API key and configuration
+ * - `loadConfig()`: Loads OpenRouter API key and configuration via SecretsClient
  * - `createModel()`: Creates ChatOpenAI instances configured for OpenRouter
  * - `checkAvailability()`: Checks OpenRouter API availability
  */
@@ -69,7 +70,7 @@ export class OpenRouterProvider extends BaseProvider {
   }
 
   /**
-   * Loads OpenRouter configuration from environment variables.
+   * Loads OpenRouter configuration from SecretsClient (env or AWS Secrets Manager).
    * Configuration is cached after first load.
    */
   loadConfig(): OpenRouterConfig {
@@ -77,7 +78,7 @@ export class OpenRouterProvider extends BaseProvider {
       return OpenRouterProvider.configCache
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = secretsClient.getSync('OPENROUTER_API_KEY')
 
     if (!apiKey) {
       throw new Error(

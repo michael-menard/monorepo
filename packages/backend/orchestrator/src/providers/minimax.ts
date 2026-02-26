@@ -16,6 +16,7 @@ import { logger } from '@repo/logger'
 import type { AvailabilityCache } from '../config/llm-provider.js'
 import { BaseProvider, checkEndpointAvailability } from './base.js'
 import { MinimaxConfigSchema, type MinimaxConfig } from './__types__/minimax.js'
+import { secretsClient } from '../secrets/index.js'
 
 // ============================================================================
 // MiniMax Provider Adapter
@@ -59,7 +60,7 @@ export class MinimaxProvider extends BaseProvider {
   }
 
   /**
-   * Loads MiniMax configuration from environment variables.
+   * Loads MiniMax configuration from SecretsClient (env or AWS Secrets Manager).
    * Configuration is cached after first load.
    *
    * @throws Error if MINIMAX_API_KEY or MINIMAX_GROUP_ID missing
@@ -69,8 +70,8 @@ export class MinimaxProvider extends BaseProvider {
       return MinimaxProvider.configCache
     }
 
-    const apiKey = process.env.MINIMAX_API_KEY
-    const groupId = process.env.MINIMAX_GROUP_ID
+    const apiKey = secretsClient.getSync('MINIMAX_API_KEY')
+    const groupId = secretsClient.getSync('MINIMAX_GROUP_ID')
 
     if (!apiKey || !groupId) {
       throw new Error(

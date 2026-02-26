@@ -159,9 +159,11 @@ describe('MinimaxProvider Integration - No Credentials', () => {
 
     const provider = new MinimaxProvider()
 
+    // SecretsClient env mode throws "Secret not found in environment: MINIMAX_API_KEY.
+    // Ensure MINIMAX_API_KEY is set in your .env file or environment."
     expect(() => provider.loadConfig()).toThrow(/MINIMAX_API_KEY/)
-    expect(() => provider.loadConfig()).toThrow(/MINIMAX_GROUP_ID/)
-    expect(() => provider.loadConfig()).toThrow(/Setup instructions/)
+    // Note: In env mode, SecretsClient throws on the first missing key (MINIMAX_API_KEY)
+    // before reaching the MINIMAX_GROUP_ID check
 
     // Restore credentials
     if (apiKey) process.env.MINIMAX_API_KEY = apiKey

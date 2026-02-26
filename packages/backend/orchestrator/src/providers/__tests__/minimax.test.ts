@@ -24,6 +24,7 @@ describe('MinimaxProvider', () => {
     delete process.env.MINIMAX_GROUP_ID
     delete process.env.MINIMAX_TEMPERATURE
     delete process.env.MINIMAX_TIMEOUT_MS
+    delete process.env.SECRETS_ENGINE
   })
 
   describe('Configuration Schema', () => {
@@ -190,22 +191,22 @@ describe('MinimaxProvider', () => {
       expect(config.availabilityCacheTtlMs).toBe(30000)
     })
 
-    test('throws clear error when API key missing', () => {
+    test('throws when MINIMAX_API_KEY missing (SecretsClient env mode)', () => {
+      // SecretsClient in env mode throws "Secret not found in environment: MINIMAX_API_KEY"
       process.env.MINIMAX_GROUP_ID = 'test-group'
 
       const provider = new MinimaxProvider()
 
-      expect(() => provider.loadConfig()).toThrow(/MINIMAX_API_KEY.*required/)
-      expect(() => provider.loadConfig()).toThrow(/Setup instructions/)
+      expect(() => provider.loadConfig()).toThrow(/MINIMAX_API_KEY/)
     })
 
-    test('throws clear error when Group ID missing', () => {
+    test('throws when MINIMAX_GROUP_ID missing (SecretsClient env mode)', () => {
+      // SecretsClient in env mode throws "Secret not found in environment: MINIMAX_GROUP_ID"
       process.env.MINIMAX_API_KEY = 'test-key'
 
       const provider = new MinimaxProvider()
 
-      expect(() => provider.loadConfig()).toThrow(/MINIMAX_GROUP_ID.*required/)
-      expect(() => provider.loadConfig()).toThrow(/Setup instructions/)
+      expect(() => provider.loadConfig()).toThrow(/MINIMAX_GROUP_ID/)
     })
 
     test('caches configuration after first load', () => {
@@ -268,17 +269,18 @@ describe('MinimaxProvider', () => {
   })
 
   describe('Error Messages', () => {
-    test('missing credentials error includes setup URL', () => {
+    test('missing credentials error includes the env var name', () => {
+      // SecretsClient env mode throws with env var name in message
       const provider = new MinimaxProvider()
 
-      expect(() => provider.loadConfig()).toThrow(/https:\/\/api\.minimax\.chat/)
+      expect(() => provider.loadConfig()).toThrow(/MINIMAX_API_KEY/)
     })
 
-    test('missing credentials error includes export commands', () => {
+    test('missing credentials error message guides user to set env var', () => {
       const provider = new MinimaxProvider()
 
-      expect(() => provider.loadConfig()).toThrow(/export MINIMAX_API_KEY/)
-      expect(() => provider.loadConfig()).toThrow(/export MINIMAX_GROUP_ID/)
+      // SecretsClient provides a helpful message about .env file
+      expect(() => provider.loadConfig()).toThrow(/\.env file/)
     })
   })
 })
