@@ -1,0 +1,261 @@
+# ChangeSpec Decomposition: APIP-0010 — BullMQ Work Queue Setup
+# Story: Create packages/backend/pipeline-queue with Zod-validated BullMQ queue factory
+schema: 1
+story_id: "APIP-0010"
+generated_at: "2026-02-26T00:00:00.000Z"
+
+changes:
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-1"
+    change_type: "config_change"
+    file_path: "packages/backend/pipeline-queue/package.json"
+    config_type: "package_json"
+    adds_dependency: true
+    dependency_names:
+      - "bullmq"
+      - "ioredis"
+      - "@bull-board/express"
+      - "@bull-board/api"
+      - "zod"
+    description: "Create package.json for @repo/pipeline-queue with BullMQ and ioredis dependencies"
+    rationale: "New monorepo package scaffold — BullMQ v5+ requires ioredis v5+"
+    ac_ids:
+      - "AC-1"
+      - "AC-10"
+    estimated_tokens: 800
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm install succeeds; @repo/pipeline-queue importable from workspace"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-2"
+    change_type: "config_change"
+    file_path: "packages/backend/pipeline-queue/tsconfig.json"
+    config_type: "tsconfig"
+    adds_dependency: false
+    dependency_names: []
+    description: "Create tsconfig.json for pipeline-queue package"
+    rationale: "TypeScript strict mode required; extends root tsconfig"
+    ac_ids:
+      - "AC-1"
+    estimated_tokens: 300
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm check-types --filter @repo/pipeline-queue exits 0"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-3"
+    change_type: "config_change"
+    file_path: "packages/backend/pipeline-queue/tsup.config.ts"
+    config_type: "build_config"
+    adds_dependency: false
+    dependency_names: []
+    description: "Create tsup.config.ts for pipeline-queue package build"
+    rationale: "Follows rate-limiter skeleton pattern for ESM build output"
+    ac_ids:
+      - "AC-1"
+    estimated_tokens: 300
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm build --filter @repo/pipeline-queue exits 0; dist/ contains ESM output"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-4"
+    change_type: "config_change"
+    file_path: "packages/backend/pipeline-queue/vitest.config.ts"
+    config_type: "vitest_config"
+    adds_dependency: false
+    dependency_names: []
+    description: "Create vitest.config.ts for pipeline-queue unit tests"
+    rationale: "Follows orchestrator/rate-limiter vitest config pattern"
+    ac_ids:
+      - "AC-7"
+      - "AC-9"
+    estimated_tokens: 300
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm test --filter @repo/pipeline-queue exits 0"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-5"
+    change_type: "file_change"
+    file_path: "packages/backend/pipeline-queue/src/__types__/index.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Define PipelineJobDataSchema with storyId, phase enum, priority, metadata fields"
+    rationale: "Zod-first schema per CLAUDE.md. Exported as PipelineJobData via z.infer<>"
+    ac_ids:
+      - "AC-2"
+    estimated_tokens: 1500
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "Parse valid payload with all fields"
+      - "Parse minimal payload (storyId + phase only)"
+      - "Reject missing storyId"
+      - "Reject invalid phase enum"
+    expected_behavior: "PipelineJobDataSchema.parse({ storyId: 'APIP-0010', phase: 'elaboration' }) succeeds"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-6"
+    change_type: "file_change"
+    file_path: "packages/backend/pipeline-queue/src/index.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement createPipelineConnection, createPipelineQueue factory, and PIPELINE_QUEUE_NAME constant"
+    rationale: "Injected dependency pattern (no global singleton). Queue name is stable contract for APIP-0020"
+    ac_ids:
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
+    estimated_tokens: 3000
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "createPipelineQueue returns Queue with name === 'apip-pipeline'"
+      - "createPipelineQueue with custom name returns Queue with that name"
+      - "createPipelineConnection returns IORedis instance"
+      - "defaultJobOptions.attempts === 3, backoff.type === 'exponential'"
+    expected_behavior: "Factories return correct typed BullMQ instances with configured defaults"
+    dependencies: ["CS-5"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-7"
+    change_type: "test_change"
+    file_path: "packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts"
+    covers_file: "packages/backend/pipeline-queue/src/__types__/index.ts"
+    test_framework: "vitest"
+    test_type: "unit"
+    description: "Unit tests for PipelineJobDataSchema — HP-1/HP-2/EC-1 through EC-4/ED-3"
+    rationale: "Validates Zod schema for all valid and invalid payloads without Redis"
+    ac_ids:
+      - "AC-7"
+      - "AC-9"
+    estimated_tokens: 3000
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "Valid full payload parse"
+      - "Valid minimal payload parse"
+      - "Reject missing storyId"
+      - "Reject invalid phase enum"
+      - "Reject non-string storyId"
+      - "Reject non-numeric priority"
+      - "All 5 phase values parse successfully"
+    expected_behavior: "pnpm test --filter @repo/pipeline-queue -- pipeline-job-schema exits 0"
+    dependencies: ["CS-5"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-8"
+    change_type: "test_change"
+    file_path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+    covers_file: "packages/backend/pipeline-queue/src/index.ts"
+    test_framework: "vitest"
+    test_type: "unit"
+    description: "Unit tests for createPipelineQueue, createPipelineConnection, PIPELINE_QUEUE_NAME — HP-3 through HP-6/ED-1"
+    rationale: "Factory unit tests without real Redis using mock IORedis connection"
+    ac_ids:
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
+      - "AC-7"
+    estimated_tokens: 4000
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "Mock IORedis connection object"
+      - "Assert queue.name === PIPELINE_QUEUE_NAME"
+      - "Assert custom queue name override works"
+      - "Assert defaultJobOptions matches configured values"
+    expected_behavior: "pnpm test --filter @repo/pipeline-queue -- pipeline-queue exits 0"
+    dependencies: ["CS-6"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-9"
+    change_type: "test_change"
+    file_path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts"
+    covers_file: "packages/backend/pipeline-queue/src/index.ts"
+    test_framework: "vitest"
+    test_type: "integration"
+    description: "Integration test: enqueue/dequeue round-trip against real Redis — HP-7/HP-8"
+    rationale: "Validates end-to-end BullMQ job lifecycle. Guarded by REDIS_URL env var"
+    ac_ids:
+      - "AC-8"
+    estimated_tokens: 3500
+    complexity: "medium"
+    test_strategy: "integration"
+    test_hints:
+      - "Guard with test.skipIf(!process.env.REDIS_URL)"
+      - "Enqueue job, verify queue.getWaitingCount() === 1"
+      - "BullMQ Worker dequeues job, parse data with PipelineJobDataSchema"
+      - "Cleanup: close queue and connection after each test"
+    expected_behavior: "REDIS_URL=redis://localhost:6379 pnpm test --filter @repo/pipeline-queue exits 0"
+    dependencies: ["CS-6"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-10"
+    change_type: "file_change"
+    file_path: "packages/backend/pipeline-queue/README.md"
+    file_action: "create"
+    file_language: "markdown"
+    description: "README documenting queue name, payload schema, connection requirements, AOF note, Bull Board setup"
+    rationale: "AC-6 and AC-11 require documentation of the queue API contract"
+    ac_ids:
+      - "AC-6"
+      - "AC-11"
+    estimated_tokens: 1500
+    complexity: "trivial"
+    test_strategy: "manual"
+    test_hints:
+      - "Sections: queue name, PipelineJobData schema, two IORedis connections note, AOF persistence, ElastiCache tier warning, Bull Board mount instructions"
+    expected_behavior: "README exists; manually verified coverage of all AC-11 items"
+    dependencies: ["CS-6"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0010"
+    id: "CS-11"
+    change_type: "config_change"
+    file_path: "pnpm-workspace.yaml"
+    config_type: "other"
+    adds_dependency: false
+    dependency_names: []
+    description: "Add packages/backend/pipeline-queue to pnpm workspace"
+    rationale: "Package must be registered in workspace for @repo/pipeline-queue imports to resolve"
+    ac_ids:
+      - "AC-10"
+    estimated_tokens: 100
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm install succeeds; workspace resolves @repo/pipeline-queue"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
