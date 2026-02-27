@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, and, ne, isNotNull, type SQL } from 'drizzle-orm'
+import { eq, sql, and, ne, isNotNull, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { plans } from '../db/schema.js'
@@ -189,6 +189,36 @@ export const KbListPlansInputSchema = z.object({
 })
 
 export type KbListPlansInput = z.infer<typeof KbListPlansInputSchema>
+
+/**
+ * Input schema for kb_get_roadmap tool.
+ *
+ * Same as kb_list_plans but without status filter — status is hardcoded
+ * to exclude completed/deferred plans (implemented, superseded, archived).
+ */
+export const KbGetRoadmapInputSchema = z.object({
+  /** Filter by plan type */
+  plan_type: z
+    .enum(['feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike'])
+    .optional(),
+
+  /** Filter by story prefix (e.g., 'SKCR') */
+  story_prefix: z.string().optional(),
+
+  /** Filter by priority (P1-P5) */
+  priority: z.enum(['P1', 'P2', 'P3', 'P4', 'P5']).optional(),
+
+  /** Maximum results (1-100, default 50) */
+  limit: z.number().int().min(1).max(100).optional().default(50),
+
+  /** Offset for pagination (default 0) */
+  offset: z.number().int().min(0).optional().default(0),
+
+  /** Include raw_content in response (default: false, saves bandwidth) */
+  include_content: z.boolean().optional().default(false),
+})
+
+export type KbGetRoadmapInput = z.infer<typeof KbGetRoadmapInputSchema>
 
 // ============================================================================
 // Dependencies
@@ -437,5 +467,96 @@ export async function kb_update_plan(
     plan,
     updated: true,
     message: `Plan '${validated.plan_slug}' updated successfully`,
+  }
+}
+
+/**
+ * Statuses excluded from roadmap view (complete + deferred).
+ */
+const ROADMAP_EXCLUDED_STATUSES = ['implemented', 'superseded', 'archived'] as const
+
+/**
+ * Get the active roadmap — plans with actionable statuses only.
+ *
+ * Excludes implemented, superseded, and archived plans.
+ * Sorted by priority ASC (P1 first), then status, then slug.
+ */
+export async function kb_get_roadmap(
+  deps: PlanCrudDeps,
+  input: KbGetRoadmapInput,
+): Promise<{
+  plans: Array<Partial<typeof plans.$inferSelect>>
+  total: number
+  message: string
+}> {
+  const validated = KbGetRoadmapInputSchema.parse(input)
+
+  const conditions: SQL[] = [
+    notInArray(plans.status, [...ROADMAP_EXCLUDED_STATUSES]),
+  ]
+
+  if (validated.plan_type) {
+    conditions.push(eq(plans.planType, validated.plan_type))
+  }
+  if (validated.story_prefix) {
+    conditions.push(eq(plans.storyPrefix, validated.story_prefix))
+  }
+  if (validated.priority) {
+    conditions.push(eq(plans.priority, validated.priority))
+  }
+
+  const whereClause = sql`${sql.join(conditions, sql` AND `)}`
+
+  // Count total
+  const countResult = await deps.db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(plans)
+    .where(whereClause)
+
+  const total = countResult[0]?.count ?? 0
+
+  // Select columns based on include_content flag
+  const selectColumns = validated.include_content
+    ? undefined // select all
+    : {
+        id: plans.id,
+        planSlug: plans.planSlug,
+        title: plans.title,
+        summary: plans.summary,
+        planType: plans.planType,
+        status: plans.status,
+        featureDir: plans.featureDir,
+        storyPrefix: plans.storyPrefix,
+        estimatedStories: plans.estimatedStories,
+        priority: plans.priority,
+        phases: plans.phases,
+        tags: plans.tags,
+        sourceFile: plans.sourceFile,
+        createdAt: plans.createdAt,
+        updatedAt: plans.updatedAt,
+      }
+
+  const orderBy = [plans.priority, plans.status, plans.planSlug]
+
+  const result = selectColumns
+    ? await deps.db
+        .select(selectColumns)
+        .from(plans)
+        .where(whereClause)
+        .limit(validated.limit)
+        .offset(validated.offset)
+        .orderBy(...orderBy)
+    : await deps.db
+        .select()
+        .from(plans)
+        .where(whereClause)
+        .limit(validated.limit)
+        .offset(validated.offset)
+        .orderBy(...orderBy)
+
+  return {
+    plans: result,
+    total,
+    message: `Roadmap: ${result.length} active plans (${total} total)`,
   }
 }

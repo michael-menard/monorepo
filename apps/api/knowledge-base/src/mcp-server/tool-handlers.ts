@@ -107,10 +107,12 @@ import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-
 import {
   kb_get_plan,
   kb_list_plans,
+  kb_get_roadmap,
   kb_update_plan,
   kb_upsert_plan,
   KbGetPlanInputSchema,
   KbListPlansInputSchema,
+  KbGetRoadmapInputSchema,
   KbUpdatePlanInputSchema,
   KbUpsertPlanInputSchema,
 } from '../crud-operations/plan-operations.js'
@@ -4393,6 +4395,46 @@ export async function handleKbListPlans(
 }
 
 /**
+ * Handle kb_get_roadmap tool invocation.
+ */
+export async function handleKbGetRoadmap(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_roadmap tool invoked', {
+    correlation_id: correlationId,
+    plan_type: inputObj?.plan_type,
+    priority: inputObj?.priority,
+  })
+
+  try {
+    enforceAuthorization('kb_get_roadmap' as ToolName, context)
+    const validated = KbGetRoadmapInputSchema.parse(input)
+    const result = await kb_get_roadmap({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_roadmap succeeded', {
+      correlation_id: correlationId,
+      count: result.plans.length,
+      total: result.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_roadmap failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Handle kb_upsert_plan tool invocation.
  */
 export async function handleKbUpsertPlan(
@@ -4557,6 +4599,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // Plan tools (SKCR - KB-native story creation)
   kb_get_plan: handleKbGetPlan,
   kb_list_plans: handleKbListPlans,
+  kb_get_roadmap: handleKbGetRoadmap,
   kb_update_plan: handleKbUpdatePlan,
   kb_upsert_plan: handleKbUpsertPlan,
   // Artifact search tool (KBAR-0130)

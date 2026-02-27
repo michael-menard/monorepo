@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 56 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics + worktree + plans + artifact_search)', () => {
+    it('should return all 59 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics + worktree + plans + artifact_search)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(56)
+      expect(tools).toHaveLength(59)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -145,6 +145,9 @@ describe('MCP Server Integration', () => {
         // Plan tools (SKCR - KB-native story creation)
         'kb_get_plan',
         'kb_list_plans',
+        'kb_get_roadmap',
+        'kb_update_plan',
+        'kb_upsert_plan',
         // Artifact search tool (KBAR-0130)
         'artifact_search',
       ])

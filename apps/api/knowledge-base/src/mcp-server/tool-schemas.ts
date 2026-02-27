@@ -52,10 +52,12 @@ import {
 import {
   KbGetPlanInputSchema,
   KbListPlansInputSchema,
+  KbGetRoadmapInputSchema,
   KbUpdatePlanInputSchema,
   KbUpsertPlanInputSchema,
   type KbGetPlanInput,
   type KbListPlansInput,
+  type KbGetRoadmapInput,
   type KbUpsertPlanInput,
 } from '../crud-operations/plan-operations.js'
 import {
@@ -105,8 +107,14 @@ export type {
   WorktreeMarkCompleteInput,
 }
 // Re-export plan tool schemas (SKCR)
-export { KbGetPlanInputSchema, KbListPlansInputSchema, KbUpdatePlanInputSchema, KbUpsertPlanInputSchema }
-export type { KbGetPlanInput, KbListPlansInput, KbUpsertPlanInput }
+export {
+  KbGetPlanInputSchema,
+  KbListPlansInputSchema,
+  KbGetRoadmapInputSchema,
+  KbUpdatePlanInputSchema,
+  KbUpsertPlanInputSchema,
+}
+export type { KbGetPlanInput, KbListPlansInput, KbGetRoadmapInput, KbUpsertPlanInput }
 
 // ============================================================================
 // Admin Tool Input Schemas (KNOW-0053)
@@ -3125,6 +3133,41 @@ Example (list P1 priority plans):
 }
 
 /**
+ * kb_get_roadmap tool definition.
+ *
+ * Returns only plans with actionable statuses (excludes implemented, superseded, archived).
+ */
+export const kbGetRoadmapToolDefinition: McpToolDefinition = {
+  name: 'kb_get_roadmap',
+  description: `Get the active roadmap — plans with actionable statuses only.
+
+Excludes implemented, superseded, and archived plans. Returns only draft, accepted, stories-created, and in-progress plans.
+
+Sorted by priority (P1 first), then status, then slug.
+
+Parameters:
+- plan_type (optional): Filter by type ('feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike')
+- story_prefix (optional): Filter by story prefix (e.g., 'SKCR')
+- priority (optional): Filter by priority ('P1', 'P2', 'P3', 'P4', 'P5')
+- limit (optional): Max results 1-100, default 50
+- offset (optional): Pagination offset, default 0
+- include_content (optional): Include raw_content in response, default false
+
+Returns: Array of active plan objects with total count
+
+Example:
+{
+  "limit": 50
+}
+
+Example (P1 roadmap items only):
+{
+  "priority": "P1"
+}`,
+  inputSchema: zodToMcpSchema(KbGetRoadmapInputSchema),
+}
+
+/**
  * kb_upsert_plan tool definition.
  *
  * Inserts or updates a plan record in the plans table.
@@ -3334,6 +3377,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   // Plan tools (SKCR - KB-native story creation)
   kbGetPlanToolDefinition,
   kbListPlansToolDefinition,
+  kbGetRoadmapToolDefinition,
   kbUpdatePlanToolDefinition,
   kbUpsertPlanToolDefinition,
   // Artifact search tool (KBAR-0130)
