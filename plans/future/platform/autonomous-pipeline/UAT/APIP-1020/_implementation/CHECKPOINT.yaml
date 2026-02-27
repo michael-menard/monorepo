@@ -2,8 +2,8 @@ schema: 1
 story_id: "APIP-1020"
 feature_dir: "plans/future/platform/autonomous-pipeline"
 timestamp: "2026-02-26T00:00:00.000Z"
-current_phase: "done"
-last_successful_phase: "proof"
+current_phase: "qa-verify"
+last_successful_phase: "qa-verify"
 e2e_gate: "exempt"
 completed_at: "2026-02-26T15:45:00Z"
 iteration: 0

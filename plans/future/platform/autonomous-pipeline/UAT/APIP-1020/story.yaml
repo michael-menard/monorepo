@@ -1,7 +1,7 @@
 id: "APIP-1020"
 title: "ChangeSpec Schema Design Spike"
 type: spike
-status: backlog
+status: uat
 priority: high
 phase: 1
 feature: "Research spike: design and validate the ChangeSpec schema that defines the atomic change contract between Diff Planner, Implementation Graph, Review, QA, Telemetry, and Model Affinity systems. Decompose 10+ real stories into ChangeSpecs, measure quality, and publish schema as ADR."
