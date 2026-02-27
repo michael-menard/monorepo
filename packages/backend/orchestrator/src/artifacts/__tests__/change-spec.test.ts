@@ -1,18 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { readdir } from 'fs/promises'
+import { readdir , readFile } from 'fs/promises'
 import { join } from 'path'
 import { load } from 'js-yaml'
-import { readFile } from 'fs/promises'
-
+import { describe, expect, it } from 'vitest'
 import {
   ChangeSpecSchema,
   ChangeSpecCollectionSchema,
   FileChangeSpecSchema,
-  MigrationChangeSpecSchema,
-  ConfigChangeSpecSchema,
-  TestChangeSpecSchema,
   createFileChangeSpec,
-  type ChangeSpec,
 } from '../change-spec'
 
 // ============================================================================

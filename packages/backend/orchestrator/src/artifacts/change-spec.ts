@@ -110,7 +110,9 @@ export const FileChangeSpecSchema = ChangeSpecBaseSchema.extend({
   file_action: z.enum(['create', 'modify', 'delete']),
 
   /** Language/type of the file (for tooling context) */
-  file_language: z.enum(['typescript', 'javascript', 'yaml', 'json', 'markdown', 'sql', 'other']).optional(),
+  file_language: z
+    .enum(['typescript', 'javascript', 'yaml', 'json', 'markdown', 'sql', 'other'])
+    .optional(),
 })
 
 export type FileChangeSpec = z.infer<typeof FileChangeSpecSchema>
@@ -159,15 +161,17 @@ export const ConfigChangeSpecSchema = ChangeSpecBaseSchema.extend({
   file_path: z.string().min(1),
 
   /** Type of config file */
-  config_type: z.enum([
-    'package_json',
-    'tsconfig',
-    'env',
-    'docker_compose',
-    'vitest_config',
-    'build_config',
-    'other',
-  ]).optional(),
+  config_type: z
+    .enum([
+      'package_json',
+      'tsconfig',
+      'env',
+      'docker_compose',
+      'vitest_config',
+      'build_config',
+      'other',
+    ])
+    .optional(),
 
   /** Whether this is adding a new dependency */
   adds_dependency: z.boolean().default(false),
