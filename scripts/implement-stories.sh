@@ -68,23 +68,8 @@ if [[ -z "$PLAN_SLUG" ]]; then
   exit 1
 fi
 
-if [[ "$PLAN_SLUG" == *"/"* ]]; then
-  FEATURE_DIR="$PLAN_SLUG"
-  PLAN_SLUG=$(basename "$FEATURE_DIR")
-else
-  INDEX_FILE=$(grep -rl "^\*\*Plan Slug\*\*: ${PLAN_SLUG}$" plans/ 2>/dev/null | head -1) || true
-  if [[ -z "$INDEX_FILE" ]]; then
-    echo "Error: Could not find plan with slug '$PLAN_SLUG'"
-    echo "Searched for '**Plan Slug**: $PLAN_SLUG' in plans/"
-    exit 1
-  fi
-  FEATURE_DIR=$(dirname "$INDEX_FILE")
-fi
-
-if [[ ! -f "$FEATURE_DIR/stories.index.md" ]]; then
-  echo "Error: No stories.index.md found in $FEATURE_DIR"
-  exit 1
-fi
+source "$(dirname "$0")/lib/resolve-plan.sh"
+resolve_plan "$PLAN_SLUG"
 
 LOG_DIR="/tmp/${PLAN_SLUG}-impl-logs"
 DRY_RUN=false
@@ -128,23 +113,10 @@ RESULT_DIR="$LOG_DIR/.results"
 rm -rf "$RESULT_DIR"
 mkdir -p "$RESULT_DIR"
 
-# ── Discover stories from index (phase order) ───────────────────────
-# Read the story prefix from the index to avoid matching non-story table rows
-STORY_PREFIX=$(sed -n 's/^\*\*Prefix\*\*: //p' "$FEATURE_DIR/stories.index.md")
-if [[ -z "$STORY_PREFIX" ]]; then
-  echo "Error: No **Prefix** found in $FEATURE_DIR/stories.index.md"
-  exit 1
-fi
-
-ALL_STORIES=()
-while IFS= read -r story_id; do
-  ALL_STORIES+=("$story_id")
-done < <(grep -oE "^\| ${STORY_PREFIX}-[0-9]+ \|" "$FEATURE_DIR/stories.index.md" | grep -oE "${STORY_PREFIX}-[0-9]+")
-
-if [[ ${#ALL_STORIES[@]} -eq 0 ]]; then
-  echo "Error: No stories found in $FEATURE_DIR/stories.index.md"
-  exit 1
-fi
+# ── Discover stories (from index file or KB) ────────────────────────
+DISCOVERED_STORIES=()
+discover_stories
+ALL_STORIES=("${DISCOVERED_STORIES[@]}")
 
 # ── Build filtered list: only stories ready for implementation ──────
 # A story is ready if it has been elaborated (has _implementation/ or ELAB artifacts)
@@ -157,7 +129,8 @@ fi
 
 find_story_dir() {
   local STORY_ID="$1"
-  for stage_dir in "$FEATURE_DIR"/ready-to-work "$FEATURE_DIR"/backlog "$FEATURE_DIR"/in-progress "$FEATURE_DIR"/elaboration "$FEATURE_DIR"/ready-for-qa "$FEATURE_DIR"/UAT "$FEATURE_DIR"/needs-code-review; do
+  # Search all pipeline stages in progression order
+  for stage_dir in "$FEATURE_DIR"/ready-to-work "$FEATURE_DIR"/backlog "$FEATURE_DIR"/in-progress "$FEATURE_DIR"/elaboration "$FEATURE_DIR"/needs-code-review "$FEATURE_DIR"/ready-for-qa "$FEATURE_DIR"/failed-code-review "$FEATURE_DIR"/failed-qa "$FEATURE_DIR"/UAT "$FEATURE_DIR"/done; do
     if [[ -d "${stage_dir}/${STORY_ID}" ]]; then
       echo "${stage_dir}/${STORY_ID}"
       return 0
@@ -192,6 +165,34 @@ is_completed() {
   [[ -d "$FEATURE_DIR/UAT/${STORY_ID}" ]] || [[ -d "$FEATURE_DIR/done/${STORY_ID}" ]]
 }
 
+check_log_for_failure() {
+  local LOG_FILE="$1"
+  local PHASE="$2"
+  if [[ ! -f "$LOG_FILE" ]]; then
+    echo "FAIL:signal:no-log-file"
+    return 0
+  fi
+  local MATCH
+  MATCH=$(grep -oEi "HARD STOP|SETUP BLOCKED|Phase 0 Validation Failed|cannot proceed|PLANNING BLOCKED|PLANNING FAILED|EXECUTION BLOCKED|DOCUMENTATION BLOCKED" "$LOG_FILE" | head -1) || true
+  if [[ -n "$MATCH" ]]; then
+    echo "FAIL:signal:$MATCH"
+  else
+    echo "OK"
+  fi
+}
+
+verify_stage_transition() {
+  local STORY_ID="$1"
+  shift
+  # Remaining args are acceptable stage directory names
+  for stage in "$@"; do
+    if [[ -d "$FEATURE_DIR/${stage}/${STORY_ID}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # ── Build --only set (comma-separated → lookup string) ───────────────
 ONLY_SET=""
 if [[ -n "$ONLY_LIST" ]]; then
@@ -206,6 +207,17 @@ SKIPPING=true
 SKIPPED_COUNT=0
 NOT_READY_COUNT=0
 
+FILTER_LOG="$LOG_DIR/filter.log"
+{
+  echo "=== Filter Log ==="
+  echo "Timestamp: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Mode: impl_only=$IMPL_ONLY review_only=$REVIEW_ONLY qa_only=$QA_ONLY"
+  echo "Resume from: ${RESUME_FROM:-<none>}"
+  echo "Only list: ${ONLY_LIST:-<none>}"
+  echo "Total stories in index: ${#ALL_STORIES[@]}"
+  echo "---"
+} > "$FILTER_LOG"
+
 for STORY_ID in "${ALL_STORIES[@]}"; do
   # Handle --from resume
   if $SKIPPING; then
@@ -213,6 +225,7 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
       SKIPPING=false
     else
       ((SKIPPED_COUNT++))
+      echo "SKIP $STORY_ID reason=before-resume-point" >> "$FILTER_LOG"
       continue
     fi
   fi
@@ -220,6 +233,7 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
   # If --only is set, skip stories not in the list
   if [[ -n "$ONLY_SET" ]] && [[ "$ONLY_SET" != *",$STORY_ID,"* ]]; then
     ((SKIPPED_COUNT++))
+    echo "SKIP $STORY_ID reason=not-in-only-list" >> "$FILTER_LOG"
     continue
   fi
 
@@ -228,12 +242,16 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
 
   if [[ -z "$STORY_DIR" ]]; then
     ((NOT_READY_COUNT++))
+    echo "SKIP $STORY_ID reason=no-directory-found" >> "$FILTER_LOG"
     continue
   fi
+
+  local_stage=$(basename "$(dirname "$STORY_DIR")")
 
   # Skip completed stories
   if is_completed "$STORY_DIR" "$STORY_ID"; then
     ((SKIPPED_COUNT++))
+    echo "SKIP $STORY_ID reason=completed stage=$local_stage" >> "$FILTER_LOG"
     continue
   fi
 
@@ -241,6 +259,7 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
   if ! $REVIEW_ONLY && ! $QA_ONLY; then
     if ! is_elaborated "$STORY_DIR"; then
       ((NOT_READY_COUNT++))
+      echo "SKIP $STORY_ID reason=not-elaborated stage=$local_stage" >> "$FILTER_LOG"
       continue
     fi
   fi
@@ -249,6 +268,7 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
   if $REVIEW_ONLY; then
     if ! is_implemented "$STORY_DIR"; then
       ((NOT_READY_COUNT++))
+      echo "SKIP $STORY_ID reason=not-implemented stage=$local_stage" >> "$FILTER_LOG"
       continue
     fi
   fi
@@ -257,10 +277,12 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
   if $QA_ONLY; then
     if ! is_reviewed "$STORY_DIR"; then
       ((NOT_READY_COUNT++))
+      echo "SKIP $STORY_ID reason=not-reviewed stage=$local_stage" >> "$FILTER_LOG"
       continue
     fi
   fi
 
+  echo "INCLUDE $STORY_ID stage=$local_stage" >> "$FILTER_LOG"
   FILTERED_STORIES+=("$STORY_ID")
 done
 
@@ -306,6 +328,31 @@ for s in "${FILTERED_STORIES[@]}"; do
 done
 echo ""
 
+# ── Persist run metadata ──────────────────────────────────────────────
+RUN_LOG="$LOG_DIR/run.log"
+{
+  echo "=== Run Log ==="
+  echo "Start: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Plan slug: $PLAN_SLUG"
+  echo "Feature dir: $FEATURE_DIR"
+  echo "Mode: impl_only=$IMPL_ONLY review_only=$REVIEW_ONLY qa_only=$QA_ONLY"
+  echo "Parallel: $PARALLEL"
+  echo "Autonomy: $AUTONOMY"
+  echo "Skip worktree: $SKIP_WORKTREE"
+  echo "Dry run: $DRY_RUN"
+  [[ -n "$ONLY_LIST" ]] && echo "Only: $ONLY_LIST"
+  [[ -n "$RESUME_FROM" ]] && echo "Resume from: $RESUME_FROM"
+  echo "Ready stories: $TOTAL"
+  echo "Not ready: $NOT_READY_COUNT"
+  echo "Skipped: $SKIPPED_COUNT"
+  echo "---"
+  echo "Stories to process:"
+  for s in "${FILTERED_STORIES[@]}"; do
+    echo "  - $s"
+  done
+  echo "---"
+} > "$RUN_LOG"
+
 # ── Worker function (runs in subshell for each story) ───────────────
 process_story() {
   local STORY_ID="$1"
@@ -330,14 +377,18 @@ process_story() {
     else
       echo "$TAG IMPL START:  $STORY_ID"
 
-      if claude -p "/dev-implement-story $FEATURE_DIR $STORY_ID $IMPL_FLAGS" \
+      claude -p "/dev-implement-story $FEATURE_DIR $STORY_ID $IMPL_FLAGS" \
            $CLAUDE_FLAGS \
-           > "$IMPL_LOG" 2>&1; then
+           > "$IMPL_LOG" 2>&1 || true
+
+      local LOG_CHECK
+      LOG_CHECK=$(check_log_for_failure "$IMPL_LOG" "implement")
+      if [[ "$LOG_CHECK" == "OK" ]] && verify_stage_transition "$STORY_ID" needs-code-review in-progress; then
         IMPL_RESULT="ok"
         echo "$TAG IMPL OK:     $STORY_ID"
       else
         IMPL_RESULT="fail"
-        echo "$TAG IMPL FAIL:   $STORY_ID (see $IMPL_LOG)"
+        echo "$TAG IMPL FAIL:   $STORY_ID ($LOG_CHECK) (see $IMPL_LOG)"
         echo "impl=$IMPL_RESULT review=skip qa=skip" > "$STATUS_FILE"
         return 1
       fi
@@ -357,14 +408,19 @@ process_story() {
     else
       echo "$TAG REVW START:  $STORY_ID"
 
-      if claude -p "/dev-code-review $FEATURE_DIR $STORY_ID" \
+      claude -p "/dev-code-review $FEATURE_DIR $STORY_ID" \
            $CLAUDE_FLAGS \
-           > "$REVIEW_LOG" 2>&1; then
+           > "$REVIEW_LOG" 2>&1 || true
+
+      local LOG_CHECK
+      LOG_CHECK=$(check_log_for_failure "$REVIEW_LOG" "review")
+      # A review producing a FAIL verdict (failed-code-review) is a valid outcome — the session ran
+      if [[ "$LOG_CHECK" == "OK" ]] && verify_stage_transition "$STORY_ID" ready-for-qa failed-code-review; then
         REVIEW_RESULT="ok"
         echo "$TAG REVW OK:     $STORY_ID"
       else
         REVIEW_RESULT="fail"
-        echo "$TAG REVW FAIL:   $STORY_ID (see $REVIEW_LOG)"
+        echo "$TAG REVW FAIL:   $STORY_ID ($LOG_CHECK) (see $REVIEW_LOG)"
         # Continue to QA anyway — review failure shouldn't block QA attempt
       fi
     fi
@@ -375,14 +431,18 @@ process_story() {
     local QA_LOG="$LOG_DIR/${STORY_ID}-qa.log"
     echo "$TAG QA   START:  $STORY_ID"
 
-    if claude -p "/qa-verify-story $FEATURE_DIR $STORY_ID" \
+    claude -p "/qa-verify-story $FEATURE_DIR $STORY_ID" \
          $CLAUDE_FLAGS \
-         > "$QA_LOG" 2>&1; then
+         > "$QA_LOG" 2>&1 || true
+
+    local LOG_CHECK
+    LOG_CHECK=$(check_log_for_failure "$QA_LOG" "qa")
+    if [[ "$LOG_CHECK" == "OK" ]] && verify_stage_transition "$STORY_ID" UAT failed-qa; then
       QA_RESULT="ok"
       echo "$TAG QA   OK:     $STORY_ID"
     else
       QA_RESULT="fail"
-      echo "$TAG QA   FAIL:   $STORY_ID (see $QA_LOG)"
+      echo "$TAG QA   FAIL:   $STORY_ID ($LOG_CHECK) (see $QA_LOG)"
     fi
   fi
 
@@ -467,6 +527,27 @@ for STORY_ID in "${FILTERED_STORIES[@]}"; do
     ((MISSING++))
   fi
 done
+
+# ── Append final summary to run.log ────────────────────────────────
+{
+  echo ""
+  echo "=== Final Summary ==="
+  echo "End: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Implement OK: $IMPL_OK  FAIL: $IMPL_FAIL"
+  echo "Review OK: $REVIEW_OK  FAIL: $REVIEW_FAIL"
+  echo "QA OK: $QA_OK  FAIL: $QA_FAIL"
+  echo "Missing: $MISSING"
+  echo "---"
+  echo "Per-story results:"
+  for SID in "${FILTERED_STORIES[@]}"; do
+    local_sf="$RESULT_DIR/${SID}"
+    if [[ -f "$local_sf" ]]; then
+      echo "  $SID: $(cat "$local_sf")"
+    else
+      echo "  $SID: no result (crashed?)"
+    fi
+  done
+} >> "$RUN_LOG"
 
 echo ""
 echo "======================================"

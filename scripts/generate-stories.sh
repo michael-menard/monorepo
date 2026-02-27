@@ -61,26 +61,8 @@ if [[ -z "$PLAN_SLUG" ]]; then
   exit 1
 fi
 
-# Resolve slug to feature dir
-if [[ "$PLAN_SLUG" == *"/"* ]]; then
-  # Direct path provided
-  FEATURE_DIR="$PLAN_SLUG"
-  PLAN_SLUG=$(basename "$FEATURE_DIR")
-else
-  # Search for matching stories.index.md
-  INDEX_FILE=$(grep -rl "^\*\*Plan Slug\*\*: ${PLAN_SLUG}$" plans/ 2>/dev/null | head -1) || true
-  if [[ -z "$INDEX_FILE" ]]; then
-    echo "Error: Could not find plan with slug '$PLAN_SLUG'"
-    echo "Searched for '**Plan Slug**: $PLAN_SLUG' in plans/"
-    exit 1
-  fi
-  FEATURE_DIR=$(dirname "$INDEX_FILE")
-fi
-
-if [[ ! -f "$FEATURE_DIR/stories.index.md" ]]; then
-  echo "Error: No stories.index.md found in $FEATURE_DIR"
-  exit 1
-fi
+source "$(dirname "$0")/lib/resolve-plan.sh"
+resolve_plan "$PLAN_SLUG"
 
 LOG_DIR="/tmp/${PLAN_SLUG}-logs"
 DRY_RUN=false
@@ -118,23 +100,10 @@ RESULT_DIR="$LOG_DIR/.results"
 rm -rf "$RESULT_DIR"
 mkdir -p "$RESULT_DIR"
 
-# ── Discover stories from index (phase order) ───────────────────────
-# Read the story prefix from the index to avoid matching non-story table rows
-STORY_PREFIX=$(sed -n 's/^\*\*Prefix\*\*: //p' "$FEATURE_DIR/stories.index.md")
-if [[ -z "$STORY_PREFIX" ]]; then
-  echo "Error: No **Prefix** found in $FEATURE_DIR/stories.index.md"
-  exit 1
-fi
-
-STORIES=()
-while IFS= read -r story_id; do
-  STORIES+=("$story_id")
-done < <(grep -oE "^\| ${STORY_PREFIX}-[0-9]+ \|" "$FEATURE_DIR/stories.index.md" | grep -oE "${STORY_PREFIX}-[0-9]+")
-
-if [[ ${#STORIES[@]} -eq 0 ]]; then
-  echo "Error: No stories found in $FEATURE_DIR/stories.index.md"
-  exit 1
-fi
+# ── Discover stories (from index file or KB) ────────────────────────
+DISCOVERED_STORIES=()
+discover_stories
+STORIES=("${DISCOVERED_STORIES[@]}")
 
 # ── Build --only set (comma-separated → lookup string) ───────────────
 ONLY_SET=""
@@ -148,20 +117,35 @@ SKIPPING=true
 [[ -z "$RESUME_FROM" ]] && SKIPPING=false
 
 SKIPPED_COUNT=0
+
+FILTER_LOG="$LOG_DIR/filter.log"
+{
+  echo "=== Filter Log ==="
+  echo "Timestamp: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Mode: gen_only=$GEN_ONLY elab_only=$ELAB_ONLY"
+  echo "Resume from: ${RESUME_FROM:-<none>}"
+  echo "Only list: ${ONLY_LIST:-<none>}"
+  echo "Total stories in index: ${#STORIES[@]}"
+  echo "---"
+} > "$FILTER_LOG"
+
 for STORY_ID in "${STORIES[@]}"; do
   if $SKIPPING; then
     if [[ "$STORY_ID" == "$RESUME_FROM" ]]; then
       SKIPPING=false
     else
       ((SKIPPED_COUNT++))
+      echo "SKIP $STORY_ID reason=before-resume-point" >> "$FILTER_LOG"
       continue
     fi
   fi
   # If --only is set, skip stories not in the list
   if [[ -n "$ONLY_SET" ]] && [[ "$ONLY_SET" != *",$STORY_ID,"* ]]; then
     ((SKIPPED_COUNT++))
+    echo "SKIP $STORY_ID reason=not-in-only-list" >> "$FILTER_LOG"
     continue
   fi
+  echo "INCLUDE $STORY_ID" >> "$FILTER_LOG"
   FILTERED_STORIES+=("$STORY_ID")
 done
 
@@ -183,6 +167,44 @@ echo " Logs:         $LOG_DIR/"
 echo "======================================"
 echo ""
 
+# ── Persist run metadata ──────────────────────────────────────────────
+RUN_LOG="$LOG_DIR/run.log"
+{
+  echo "=== Run Log ==="
+  echo "Start: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Plan slug: $PLAN_SLUG"
+  echo "Feature dir: $FEATURE_DIR"
+  echo "Mode: gen_only=$GEN_ONLY elab_only=$ELAB_ONLY"
+  echo "Parallel: $PARALLEL"
+  echo "Dry run: $DRY_RUN"
+  [[ -n "$ONLY_LIST" ]] && echo "Only: $ONLY_LIST"
+  [[ -n "$RESUME_FROM" ]] && echo "Resume from: $RESUME_FROM"
+  echo "Total stories: $TOTAL"
+  echo "Skipped: $SKIPPED_COUNT"
+  echo "---"
+  echo "Stories to process:"
+  for s in "${FILTERED_STORIES[@]}"; do
+    echo "  - $s"
+  done
+  echo "---"
+} > "$RUN_LOG"
+
+check_log_for_failure() {
+  local LOG_FILE="$1"
+  local PHASE="$2"
+  if [[ ! -f "$LOG_FILE" ]]; then
+    echo "FAIL:signal:no-log-file"
+    return 0
+  fi
+  local MATCH
+  MATCH=$(grep -oEi "HARD STOP|SETUP BLOCKED|Phase 0 Validation Failed|cannot proceed|PLANNING BLOCKED|PLANNING FAILED|EXECUTION BLOCKED|DOCUMENTATION BLOCKED" "$LOG_FILE" | head -1) || true
+  if [[ -n "$MATCH" ]]; then
+    echo "FAIL:signal:$MATCH"
+  else
+    echo "OK"
+  fi
+}
+
 # ── Worker function (runs in subshell for each story) ───────────────
 process_story() {
   local STORY_ID="$1"
@@ -194,7 +216,7 @@ process_story() {
   # ── Detect story state ──────────────────────────────────────────
   # Find story directory across all stage folders (backlog/, in-progress/, etc.)
   local STORY_DIR=""
-  for stage_dir in "$FEATURE_DIR"/backlog "$FEATURE_DIR"/in-progress "$FEATURE_DIR"/ready-to-work "$FEATURE_DIR"/elaboration "$FEATURE_DIR"/ready-for-qa "$FEATURE_DIR"/UAT; do
+  for stage_dir in "$FEATURE_DIR"/backlog "$FEATURE_DIR"/in-progress "$FEATURE_DIR"/ready-to-work "$FEATURE_DIR"/elaboration "$FEATURE_DIR"/needs-code-review "$FEATURE_DIR"/ready-for-qa "$FEATURE_DIR"/failed-code-review "$FEATURE_DIR"/failed-qa "$FEATURE_DIR"/UAT "$FEATURE_DIR"/done; do
     if [[ -d "${stage_dir}/${STORY_ID}" ]]; then
       STORY_DIR="${stage_dir}/${STORY_ID}"
       break
@@ -227,15 +249,18 @@ process_story() {
     else
       echo "[${IDX}/${TOTAL}] GEN  START: $STORY_ID"
 
-      if claude -p "/pm-story generate $FEATURE_DIR $STORY_ID" \
+      claude -p "/pm-story generate $FEATURE_DIR $STORY_ID" \
            $CLAUDE_FLAGS \
-           > "$GEN_LOG" 2>&1; then
+           > "$GEN_LOG" 2>&1 || true
+
+      local LOG_CHECK
+      LOG_CHECK=$(check_log_for_failure "$GEN_LOG" "generate")
+      if [[ "$LOG_CHECK" == "OK" ]]; then
         GEN_RESULT="ok"
         echo "[${IDX}/${TOTAL}] GEN  OK:    $STORY_ID"
       else
         GEN_RESULT="fail"
-        echo "[${IDX}/${TOTAL}] GEN  FAIL:  $STORY_ID (see $GEN_LOG)"
-        # Write result and bail — skip elab if gen failed
+        echo "[${IDX}/${TOTAL}] GEN  FAIL:  $STORY_ID ($LOG_CHECK) (see $GEN_LOG)"
         echo "gen=$GEN_RESULT elab=skip" > "$STATUS_FILE"
         return 1
       fi
@@ -252,14 +277,18 @@ process_story() {
     else
       echo "[${IDX}/${TOTAL}] ELAB START: $STORY_ID"
 
-      if claude -p "/elab-story $FEATURE_DIR $STORY_ID --autonomous" \
+      claude -p "/elab-story $FEATURE_DIR $STORY_ID --autonomous" \
            $CLAUDE_FLAGS \
-           > "$ELAB_LOG" 2>&1; then
+           > "$ELAB_LOG" 2>&1 || true
+
+      local LOG_CHECK
+      LOG_CHECK=$(check_log_for_failure "$ELAB_LOG" "elaborate")
+      if [[ "$LOG_CHECK" == "OK" ]]; then
         ELAB_RESULT="ok"
         echo "[${IDX}/${TOTAL}] ELAB OK:    $STORY_ID"
       else
         ELAB_RESULT="fail"
-        echo "[${IDX}/${TOTAL}] ELAB FAIL:  $STORY_ID (see $ELAB_LOG)"
+        echo "[${IDX}/${TOTAL}] ELAB FAIL:  $STORY_ID ($LOG_CHECK) (see $ELAB_LOG)"
       fi
     fi
   fi
@@ -348,6 +377,26 @@ for STORY_ID in "${FILTERED_STORIES[@]}"; do
     ((MISSING++))
   fi
 done
+
+# ── Append final summary to run.log ────────────────────────────────
+{
+  echo ""
+  echo "=== Final Summary ==="
+  echo "End: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Generate OK: $GEN_OK  FAIL: $GEN_FAIL"
+  echo "Elaborate OK: $ELAB_OK  FAIL: $ELAB_FAIL"
+  echo "Missing: $MISSING"
+  echo "---"
+  echo "Per-story results:"
+  for SID in "${FILTERED_STORIES[@]}"; do
+    local_sf="$RESULT_DIR/${SID}"
+    if [[ -f "$local_sf" ]]; then
+      echo "  $SID: $(cat "$local_sf")"
+    else
+      echo "  $SID: no result (crashed?)"
+    fi
+  done
+} >> "$RUN_LOG"
 
 echo ""
 echo "======================================"
