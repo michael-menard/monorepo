@@ -1,0 +1,195 @@
+story_id: KFMB-6010
+generated: "2026-02-26"
+verdict: feasible
+confidence: high
+points_estimate: 3
+sizing_risk: low
+token_estimate: "120,000–150,000"
+
+summary: >
+  KFMB-6010 is a mechanical cleanup story. Every pattern required is
+  already established by KFMB-3030, KFMB-4020, and KFMB-5030. The work
+  is removal of fallback branches and extraction of a shared library — no
+  new design exploration. The highest-risk change is implement-dispatcher.sh
+  (production-style poll loop), but the batch kb_list_stories pattern from
+  KFMB-5030 mitigates per-story latency risk.
+
+risks:
+  - id: RISK-1
+    description: >
+      implement-dispatcher.sh poll loop regression. This script drives
+      production-style pipelines. Removing filesystem fallbacks must not
+      break the --parallel or --only flags. Regression testing with a live
+      KB is required.
+    mitigation: >
+      Use existing --dry-run mode for structural validation. Run one full
+      cycle against kb-first-migration plan with KB available before marking
+      done. Batch kb_list_stories (not per-story calls) for the poll loop.
+    severity: medium
+
+  - id: RISK-2
+    description: >
+      AC-6 is conditionally gated on KFMB-3010 completion. If KFMB-3010 is
+      not done, the discover_stories() filesystem fallback cannot be removed.
+    mitigation: >
+      ACs explicitly handle both paths: full removal if KFMB-3010 complete,
+      or retain with TODO(KFMB-3010) comment. Either outcome passes AC-6.
+    severity: low
+
+  - id: RISK-3
+    description: >
+      KB unavailability must produce a non-zero exit with descriptive message
+      (not hang, not silent empty list). This error path must be explicitly
+      tested.
+    mitigation: >
+      KB unavailability test scenario included in test plan (TS-3, TS-5).
+      The || true + -z guard pattern from resolve-plan.sh is the template —
+      replace the || true + filesystem fallback with || exit 1 + error message.
+    severity: low
+
+  - id: RISK-4
+    description: >
+      Bash 3.2 compatibility (macOS). No associative arrays. The batch
+      kb_list_stories result must be stored as indexed arrays or positional
+      args, not associative arrays.
+    mitigation: >
+      All patterns follow KFMB-5030 batch query pattern which already uses
+      indexed arrays. No new array handling needed.
+    severity: low
+
+dependencies:
+  - story_id: KFMB-3030
+    title: "Eliminate stories.index.md — Script Updates"
+    status: ready-to-work
+    required: true
+    note: "Must be at needs-code-review before KFMB-6010 can remove fallbacks"
+  - story_id: KFMB-4020
+    title: "Stage Directory Elimination — precondition-check, context-init, and Script State Detection"
+    status: ready-to-work
+    required: true
+    note: "Provides kb_state_query() pattern and [KB-FIRST] logging in generate-stories.sh and implement-stories.sh"
+  - story_id: KFMB-5030
+    title: "Migrate _implementation/ Command Orchestrators"
+    status: in-elaboration
+    required: true
+    note: "Provides batch kb_list_stories pattern and artifact-based readiness detection"
+  - story_id: KFMB-3010
+    title: "Eliminate stories.index.md — Agent Updates"
+    status: ready-to-work
+    required: false
+    note: "Only required for full AC-6 (discover_stories fallback removal). Partial pass allowed."
+
+change_surface:
+  files_modified:
+    - scripts/lib/resolve-plan.sh
+    - scripts/generate-stories.sh
+    - scripts/implement-stories.sh
+    - scripts/implement-dispatcher.sh
+    - scripts/sync-work-order.py
+  files_created:
+    - scripts/lib/kb-state.sh
+  files_protected:
+    - packages/backend/database-schema/
+    - packages/backend/orchestrator/ (no changes)
+    - .claude/commands/ (not in scope)
+
+no_typescript: true
+no_http_endpoints: true
+no_deployment: true
+no_frontend: true
+no_pnpm_build: true
+
+architecture_notes: >
+  The kb_state_query() function currently duplicated in generate-stories.sh
+  and implement-stories.sh (both added independently in KFMB-4020) should be
+  extracted to scripts/lib/kb-state.sh. This new library follows the same
+  pattern as scripts/lib/resolve-plan.sh: sourced by calling scripts, exports
+  named functions, uses claude -p + --allowedTools + jq + || true wrapping.
+
+  The implement-dispatcher.sh poll loop must use the batch kb_list_stories
+  pattern (one call per poll cycle → in-memory array → O(1) per-story
+  lookups) rather than per-story claude -p calls. This was established by
+  KFMB-5030 to avoid N-story subprocess latency.
+
+  sync-work-order.py check_untracked_stories() and scan_all_index_stories()
+  became no-ops after KFMB-3030 removed the *stories.index.md glob. These
+  can be removed cleanly (with a comment documenting why) or replaced with
+  KB queries if their original functionality is still needed. The decision
+  should be driven by whether the use case they served is covered by the KB.
+
+subtasks:
+  - id: ST-1
+    title: "Create scripts/lib/kb-state.sh with kb_state_query()"
+    description: >
+      Create a new shared shell library at scripts/lib/kb-state.sh that
+      exports kb_state_query() (and optionally kb_artifact_exists()).
+      Template from KFMB-4020 Architecture Notes kb_state_query() definition.
+      Use resolve-plan.sh as structural template (shebang, comments, function
+      pattern, || true + -z guard).
+    covers_acs: [AC-1]
+    canonical_ref: "scripts/lib/resolve-plan.sh resolve_plan() function"
+    estimated_tokens: 15000
+
+  - id: ST-2
+    title: "Update generate-stories.sh — source kb-state.sh, remove filesystem fallback"
+    description: >
+      Source scripts/lib/kb-state.sh at the top of generate-stories.sh.
+      Remove the local kb_state_query() definition (now in library).
+      Remove the [KB-FIRST FALLBACK] filesystem path from ALREADY_GENERATED
+      and ALREADY_ELABORATED detection in process_story().
+      Replace fallback with non-zero exit + descriptive error on KB unavailability.
+    covers_acs: [AC-1, AC-2]
+    canonical_ref: "scripts/generate-stories.sh process_story() function (lines ~209-297)"
+    estimated_tokens: 25000
+
+  - id: ST-3
+    title: "Update implement-stories.sh — source kb-state.sh, remove filesystem fallbacks from all five state functions"
+    description: >
+      Source scripts/lib/kb-state.sh.
+      Remove local kb_state_query() definition.
+      Remove filesystem directory iteration from find_story_dir(), is_elaborated(),
+      is_implemented(), is_reviewed(), is_completed().
+      Each function uses KB state query as sole path; KB unavailability → non-zero exit.
+    covers_acs: [AC-1, AC-3]
+    canonical_ref: "scripts/implement-stories.sh state functions (lines ~130-166)"
+    estimated_tokens: 35000
+
+  - id: ST-4
+    title: "Update implement-dispatcher.sh — source kb-state.sh, remove filesystem fallbacks, batch KB queries"
+    description: >
+      Replace inline plan resolution (filesystem grep for Plan Slug) with
+      sourcing resolve-plan.sh and calling resolve_plan(). Source kb-state.sh.
+      Remove filesystem fallback from is_elaborated() and EVIDENCE readiness check.
+      Use batch kb_list_stories pattern per poll cycle (not per-story calls).
+      Remove the stories.index.md existence check at startup.
+      KB unavailability → non-zero exit.
+    covers_acs: [AC-4]
+    canonical_ref: "scripts/implement-dispatcher.sh (lines ~69-85, ~164-186)"
+    estimated_tokens: 35000
+
+  - id: ST-5
+    title: "Update sync-work-order.py — remove/replace check_untracked_stories() and scan_all_index_stories()"
+    description: >
+      Investigate check_untracked_stories() and scan_all_index_stories() to
+      determine if their functionality is fully covered by KB. If yes, remove
+      with a comment documenting the rationale (e.g., "Superseded by KB state
+      queries after KFMB-3030"). If not, replace with KB subprocess query
+      following the subprocess.run(['claude', '-p', ...]) pattern from
+      scan_index_file() replacement (added by KFMB-3030).
+      Explicitly preserve scan_directories() and scan_proof_files() unchanged.
+    covers_acs: [AC-5, AC-7]
+    canonical_ref: "scripts/sync-work-order.py scan_index_file() KB replacement (added by KFMB-3030)"
+    estimated_tokens: 20000
+
+  - id: ST-6
+    title: "Conditional: remove discover_stories() filesystem fallback from resolve-plan.sh if KFMB-3010 complete"
+    description: >
+      Check KFMB-3010 status. If at needs-code-review or later: remove the
+      filesystem fallback branch (lines ~79-99) from discover_stories() in
+      scripts/lib/resolve-plan.sh, leaving only the KB-primary path.
+      If KFMB-3010 not complete: add # TODO(KFMB-3010): remove filesystem
+      fallback once KFMB-3010 is merged comment on the fallback branch.
+      Document outcome in AC-6 verification.
+    covers_acs: [AC-6]
+    canonical_ref: "scripts/lib/resolve-plan.sh discover_stories() (lines ~76-132)"
+    estimated_tokens: 10000

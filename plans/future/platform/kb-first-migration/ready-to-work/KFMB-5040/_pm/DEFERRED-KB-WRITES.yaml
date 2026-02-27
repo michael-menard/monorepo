@@ -1,0 +1,19 @@
+deferred_at: "2026-02-26T00:00:00Z"
+reason: "KB MCP tool not available during story generation"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: "KFMB-5040"
+      feature: "kb-first-migration"
+      title: "Migrate _pm/ Writer Agents to kb_write_artifact"
+      story_dir: "plans/future/platform/kb-first-migration/backlog/KFMB-5040"
+      story_file: "plans/future/platform/kb-first-migration/backlog/KFMB-5040/KFMB-5040.md"
+      story_type: "tech_debt"
+      points: 1
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

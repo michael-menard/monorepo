@@ -1,0 +1,13 @@
+id: "KFMB-2030"
+title: "Update /pm-bootstrap-workflow Command"
+status: backlog
+priority: medium
+phase: 2
+feature: "Remove stories.index.md output references, featureDir creation steps; ensure story seeding calls kb_create_story"
+goal: "The /pm-bootstrap-workflow command orchestrates a fully KB-native bootstrap."
+depends_on: ["KFMB-2010", "KFMB-2020"]
+endpoints: []
+infrastructure: ["MCP Tools", "CLI Commands"]
+risk_notes: "Command documentation and agent chain must be updated consistently."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"
