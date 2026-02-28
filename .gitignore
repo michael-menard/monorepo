@@ -96,3 +96,8 @@ tree/
 
 # MCP config (contains secrets)
 .mcp.json
+
+# SonarQube
+.scannerwork/
+.sonar/
+sonar-project.properties.bak
