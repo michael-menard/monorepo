@@ -3,9 +3,14 @@
  * Test LangGraph Workflows with Ollama (Fixed Config Loading)
  */
 
-import { isOllamaAvailable, getLLMForAgent, getModelInfoForAgent, loadModelAssignments } from './dist/config/index.js'
-import { runStoryCreation } from './dist/graphs/story-creation.js'
 import { resolve } from 'path'
+import {
+  isOllamaAvailable,
+  getLLMForAgent,
+  getModelInfoForAgent,
+  loadModelAssignments,
+} from './dist/config/index.js'
+import { runStoryCreation } from './dist/graphs/story-creation.js'
 
 // ANSI colors
 const colors = {
@@ -96,7 +101,9 @@ async function main() {
     const symbol = isOllama ? '💰' : '💵'
     const color = isOllama ? colors.green : colors.yellow
 
-    console.log(`  ${symbol} ${phase.padEnd(30)} → ${color}${info.provider.padEnd(7)}${colors.reset} (${info.modelName || 'default'})`)
+    console.log(
+      `  ${symbol} ${phase.padEnd(30)} → ${color}${info.provider.padEnd(7)}${colors.reset} (${info.modelName || 'default'})`,
+    )
 
     if (isOllama) ollamaCount++
     else claudeCount++
@@ -106,15 +113,20 @@ async function main() {
   console.log()
   console.log(`${colors.cyan}═══════════════════════════════════════════════${colors.reset}`)
   console.log(`${colors.cyan}Cost Optimization Summary:${colors.reset}`)
-  console.log(`  🆓 Ollama (free):  ${ollamaCount.toString().padStart(2)}/${workflowPhases.length} phases (${ollamaPercent}%)`)
-  console.log(`  💳 Claude (paid):  ${claudeCount.toString().padStart(2)}/${workflowPhases.length} phases (${100 - ollamaPercent}%)`)
+  console.log(
+    `  🆓 Ollama (free):  ${ollamaCount.toString().padStart(2)}/${workflowPhases.length} phases (${ollamaPercent}%)`,
+  )
+  console.log(
+    `  💳 Claude (paid):  ${claudeCount.toString().padStart(2)}/${workflowPhases.length} phases (${100 - ollamaPercent}%)`,
+  )
   console.log()
 
   // Rough cost estimation
   const avgClaudeTokens = 10000 // Average tokens per Claude call
   const claudeInputCost = 3 // $3 per 1M input tokens
   const claudeOutputCost = 15 // $15 per 1M output tokens
-  const avgCostPerClaudeCall = ((avgClaudeTokens * claudeInputCost) + (avgClaudeTokens * claudeOutputCost)) / 1_000_000
+  const avgCostPerClaudeCall =
+    (avgClaudeTokens * claudeInputCost + avgClaudeTokens * claudeOutputCost) / 1_000_000
 
   const totalClaudeCost = claudeCount * avgCostPerClaudeCall
   const potentialSavings = ollamaCount * avgCostPerClaudeCall

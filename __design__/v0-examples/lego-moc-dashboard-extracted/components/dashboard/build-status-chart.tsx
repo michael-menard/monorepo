@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import { Info } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
-import type { BuildStatus } from "@/lib/types"
+import { Info } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import type { BuildStatus } from '@/lib/types'
 
 interface BuildStatusChartProps {
   data: BuildStatus
@@ -13,11 +13,11 @@ interface BuildStatusChartProps {
 
 export function BuildStatusChart({ data, isLoading }: BuildStatusChartProps) {
   const total = data.added + data.inProgress + data.built
-  
+
   const chartData = [
-    { name: "Added", value: data.added, color: "#64748b" },
-    { name: "In Progress", value: data.inProgress, color: "#f59e0b" },
-    { name: "Built", value: data.built, color: "#10b981" },
+    { name: 'Added', value: data.added, color: '#64748b' },
+    { name: 'In Progress', value: data.inProgress, color: '#f59e0b' },
+    { name: 'Built', value: data.built, color: '#10b981' },
   ]
 
   if (isLoading) {
@@ -27,7 +27,10 @@ export function BuildStatusChart({ data, isLoading }: BuildStatusChartProps) {
           <div className="h-5 md:h-6 w-28 md:w-32 bg-muted animate-pulse rounded" />
         </CardHeader>
         <CardContent className="px-4 md:px-6">
-          <div className="h-40 md:h-48 w-full bg-muted animate-pulse rounded-full mx-auto" style={{ maxWidth: 180 }} />
+          <div
+            className="h-40 md:h-48 w-full bg-muted animate-pulse rounded-full mx-auto"
+            style={{ maxWidth: 180 }}
+          />
         </CardContent>
       </Card>
     )
@@ -41,7 +44,10 @@ export function BuildStatusChart({ data, isLoading }: BuildStatusChartProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground cursor-help" aria-label="Build status information" />
+                <Info
+                  className="h-4 w-4 text-muted-foreground cursor-help"
+                  aria-label="Build status information"
+                />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Track the build progress of your MOC collection</p>
@@ -65,7 +71,7 @@ export function BuildStatusChart({ data, isLoading }: BuildStatusChartProps) {
                 animationBegin={0}
                 animationDuration={800}
               >
-                {chartData.map((entry) => (
+                {chartData.map(entry => (
                   <Cell key={entry.name} fill={entry.color} />
                 ))}
               </Pie>
@@ -76,17 +82,23 @@ export function BuildStatusChart({ data, isLoading }: BuildStatusChartProps) {
             <span className="text-xs md:text-sm text-muted-foreground">Total</span>
           </div>
         </div>
-        
-        <div className="mt-3 md:mt-4 flex flex-wrap justify-center gap-3 md:gap-6" role="list" aria-label="Build status legend">
-          {chartData.map((item) => (
+
+        <div
+          className="mt-3 md:mt-4 flex flex-wrap justify-center gap-3 md:gap-6"
+          role="list"
+          aria-label="Build status legend"
+        >
+          {chartData.map(item => (
             <div key={item.name} className="flex items-center gap-1.5 md:gap-2" role="listitem">
-              <div 
-                className="h-2.5 w-2.5 md:h-3 md:w-3 rounded-full shrink-0" 
+              <div
+                className="h-2.5 w-2.5 md:h-3 md:w-3 rounded-full shrink-0"
                 style={{ backgroundColor: item.color }}
                 aria-hidden="true"
               />
               <span className="text-xs md:text-sm text-muted-foreground">{item.name}</span>
-              <span className="text-xs md:text-sm font-medium text-card-foreground">{item.value}</span>
+              <span className="text-xs md:text-sm font-medium text-card-foreground">
+                {item.value}
+              </span>
             </div>
           ))}
         </div>

@@ -1,47 +1,42 @@
-"use client"
+'use client'
 
-import { useState, useMemo } from "react"
-import {
-  motion,
-  useMotionValue,
-  useTransform,
-  type PanInfo,
-} from "framer-motion"
-import { ExpandableStack } from "@/components/expandable-stack"
+import { useState, useMemo } from 'react'
+import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
+import { ExpandableStack } from '@/components/expandable-stack'
 
 const photos = [
   {
-    src: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=300&h=420&fit=crop",
-    alt: "Starry sky over snowy mountains",
-    label: "Dolomites",
+    src: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=300&h=420&fit=crop',
+    alt: 'Starry sky over snowy mountains',
+    label: 'Dolomites',
     w: 170,
     h: 230,
   },
   {
-    src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=420&h=280&fit=crop",
-    alt: "Mountain range at sunrise",
-    label: "Swiss Alps",
+    src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=420&h=280&fit=crop',
+    alt: 'Mountain range at sunrise',
+    label: 'Swiss Alps',
     w: 220,
     h: 150,
   },
   {
-    src: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=340&h=340&fit=crop",
-    alt: "Foggy forest valley",
-    label: "Pacific NW",
+    src: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=340&h=340&fit=crop',
+    alt: 'Foggy forest valley',
+    label: 'Pacific NW',
     w: 185,
     h: 185,
   },
   {
-    src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=420&h=280&fit=crop",
-    alt: "Sunlit forest path",
-    label: "Black Forest",
+    src: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=420&h=280&fit=crop',
+    alt: 'Sunlit forest path',
+    label: 'Black Forest',
     w: 220,
     h: 150,
   },
   {
-    src: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=420&fit=crop",
-    alt: "Sunbeam over mountain landscape",
-    label: "Yosemite",
+    src: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=420&fit=crop',
+    alt: 'Sunbeam over mountain landscape',
+    label: 'Yosemite',
     w: 170,
     h: 230,
   },
@@ -60,24 +55,17 @@ function SwipeCard({
   photo: (typeof photos)[0]
   index: number
   active: boolean
-  onSwipe: (dir: "left" | "right") => void
+  onSwipe: (dir: 'left' | 'right') => void
 }) {
   const x = useMotionValue(0)
   const rotate = useTransform(x, [-200, 200], [-12, 12])
-  const opacity = useTransform(
-    x,
-    [-200, -100, 0, 100, 200],
-    [0.5, 1, 1, 1, 0.5],
-  )
+  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5])
 
-  function handleDragEnd(
-    _: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo,
-  ) {
+  function handleDragEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
     if (info.offset.x > SWIPE_THRESHOLD) {
-      onSwipe("right")
+      onSwipe('right')
     } else if (info.offset.x < -SWIPE_THRESHOLD) {
-      onSwipe("left")
+      onSwipe('left')
     }
   }
 
@@ -100,7 +88,7 @@ function SwipeCard({
         scale: active ? 1 : behindScale,
         y: active ? 0 : behindY,
       }}
-      drag={active ? "x" : false}
+      drag={active ? 'x' : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.8}
       onDragEnd={active ? handleDragEnd : undefined}
@@ -109,10 +97,10 @@ function SwipeCard({
         opacity: 0,
         transition: { duration: 0.25 },
       }}
-      transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 26 }}
     >
       <img
-        src={photo.src || "/placeholder.svg"}
+        src={photo.src || '/placeholder.svg'}
         alt={photo.alt}
         className="w-full h-full object-cover block pointer-events-none"
         draggable={false}
@@ -123,9 +111,7 @@ function SwipeCard({
           style={{ opacity }}
           className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/50 to-transparent"
         >
-          <span className="text-white text-sm font-semibold">
-            {photo.label}
-          </span>
+          <span className="text-white text-sm font-semibold">{photo.label}</span>
         </motion.div>
       )}
     </motion.div>
@@ -146,7 +132,7 @@ export function TinderStack({ expandable = false }: { expandable?: boolean }) {
   }, [topIndex])
 
   function handleSwipe(originalIndex: number) {
-    setGone((prev) => {
+    setGone(prev => {
       const next = new Set(prev)
       next.add(originalIndex)
       return next
@@ -162,7 +148,7 @@ export function TinderStack({ expandable = false }: { expandable?: boolean }) {
     setGone(new Set())
   }
 
-  const visible = ordered.filter((p) => !gone.has(photos.indexOf(p)))
+  const visible = ordered.filter(p => !gone.has(photos.indexOf(p)))
   const allGone = visible.length === 0
 
   return (

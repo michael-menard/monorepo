@@ -45,10 +45,11 @@ When('I enter password {string}', async ({ page }, password: string) => {
 When('I click the sign in button', async ({ page }) => {
   // Click and wait for navigation or network response
   const [response] = await Promise.all([
-    page.waitForResponse(
-      resp => resp.url().includes('cognito') || resp.url().includes('auth'),
-      { timeout: 10000 }
-    ).catch(() => null),
+    page
+      .waitForResponse(resp => resp.url().includes('cognito') || resp.url().includes('auth'), {
+        timeout: 10000,
+      })
+      .catch(() => null),
     page.locator('button[type="submit"]').click(),
   ])
 
@@ -103,9 +104,7 @@ Then('I should see the user is authenticated', async ({ page }) => {
 
 Then('I should see email validation error', async ({ page }) => {
   await page.waitForTimeout(500) // Wait for validation
-  const emailError = page
-    .locator('#email-error')
-    .or(page.getByText(/valid email|email.*required/i))
+  const emailError = page.locator('#email-error').or(page.getByText(/valid email|email.*required/i))
   await expect(emailError.first()).toBeVisible({ timeout: 5000 })
 })
 
@@ -159,4 +158,3 @@ When('I click the register link', async ({ page }) => {
 // ============================================================================
 // Additional Sign In Steps (INST-1111)
 // ============================================================================
-

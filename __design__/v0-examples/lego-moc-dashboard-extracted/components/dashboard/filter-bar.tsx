@@ -1,15 +1,15 @@
-"use client"
+'use client'
 
-import { Search, X } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Search, X } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select'
 
 interface FilterBarProps {
   searchQuery: string
@@ -26,11 +26,11 @@ export function FilterBar({
   onThemeChange,
   themes,
 }: FilterBarProps) {
-  const hasFilters = searchQuery || selectedTheme !== "all"
+  const hasFilters = searchQuery || selectedTheme !== 'all'
 
   const clearFilters = () => {
-    onSearchChange("")
-    onThemeChange("all")
+    onSearchChange('')
+    onThemeChange('all')
   }
 
   return (
@@ -43,7 +43,7 @@ export function FilterBar({
             type="search"
             placeholder="Search MOCs..."
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={e => onSearchChange(e.target.value)}
             className="pl-9 h-9 bg-background border-border text-sm"
           />
         </div>
@@ -55,7 +55,7 @@ export function FilterBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Themes</SelectItem>
-            {themes.map((theme) => (
+            {themes.map(theme => (
               <SelectItem key={theme} value={theme}>
                 {theme}
               </SelectItem>

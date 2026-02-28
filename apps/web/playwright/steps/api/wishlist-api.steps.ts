@@ -106,16 +106,19 @@ When('I request the wishlist list endpoint', async () => {
   }
 })
 
-When('I request the wishlist list with page {int} and limit {int}', async ({},page: number, limit: number) => {
-  const response = await apiState.client!.list({ page, limit })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-  if (response.ok()) {
-    apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
-  }
-})
+When(
+  'I request the wishlist list with page {int} and limit {int}',
+  async ({}, page: number, limit: number) => {
+    const response = await apiState.client!.list({ page, limit })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+    if (response.ok()) {
+      apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
+    }
+  },
+)
 
-When('I request the wishlist list with search {string}', async ({},search: string) => {
+When('I request the wishlist list with search {string}', async ({}, search: string) => {
   const response = await apiState.client!.list({ search })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
@@ -124,7 +127,7 @@ When('I request the wishlist list with search {string}', async ({},search: strin
   }
 })
 
-When('I request the wishlist list filtered by store {string}', async ({},store: string) => {
+When('I request the wishlist list filtered by store {string}', async ({}, store: string) => {
   const response = await apiState.client!.list({ store })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
@@ -133,7 +136,7 @@ When('I request the wishlist list filtered by store {string}', async ({},store: 
   }
 })
 
-When('I request the wishlist list filtered by priority {int}', async ({},priority: number) => {
+When('I request the wishlist list filtered by priority {int}', async ({}, priority: number) => {
   const response = await apiState.client!.list({ priority })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
@@ -142,7 +145,7 @@ When('I request the wishlist list filtered by priority {int}', async ({},priorit
   }
 })
 
-When('I request the wishlist list filtered by tags {string}', async ({},tags: string) => {
+When('I request the wishlist list filtered by tags {string}', async ({}, tags: string) => {
   const response = await apiState.client!.list({ tags })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
@@ -151,44 +154,53 @@ When('I request the wishlist list filtered by tags {string}', async ({},tags: st
   }
 })
 
-When('I request the wishlist list sorted by {string} {string}', async ({},sort: string, order: string) => {
-  const response = await apiState.client!.list({
-    sort: sort as WishlistSortField,
-    order: order as 'asc' | 'desc',
-  })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-  if (response.ok()) {
-    apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
-  }
-})
+When(
+  'I request the wishlist list sorted by {string} {string}',
+  async ({}, sort: string, order: string) => {
+    const response = await apiState.client!.list({
+      sort: sort as WishlistSortField,
+      order: order as 'asc' | 'desc',
+    })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+    if (response.ok()) {
+      apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
+    }
+  },
+)
 
-When('I request the wishlist list sorted by {string} {string} with page {int} and limit {int}', async ({},sort: string, order: string, page: number, limit: number) => {
-  const response = await apiState.client!.list({
-    sort: sort as WishlistSortField,
-    order: order as 'asc' | 'desc',
-    page,
-    limit,
-  })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-  if (response.ok()) {
-    apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
-  }
-})
+When(
+  'I request the wishlist list sorted by {string} {string} with page {int} and limit {int}',
+  async ({}, sort: string, order: string, page: number, limit: number) => {
+    const response = await apiState.client!.list({
+      sort: sort as WishlistSortField,
+      order: order as 'asc' | 'desc',
+      page,
+      limit,
+    })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+    if (response.ok()) {
+      apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
+    }
+  },
+)
 
-When('I request the wishlist list filtered by store {string} sorted by {string} {string}', async ({},store: string, sort: string, order: string) => {
-  const response = await apiState.client!.list({
-    store,
-    sort: sort as WishlistSortField,
-    order: order as 'asc' | 'desc',
-  })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-  if (response.ok()) {
-    apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
-  }
-})
+When(
+  'I request the wishlist list filtered by store {string} sorted by {string} {string}',
+  async ({}, store: string, sort: string, order: string) => {
+    const response = await apiState.client!.list({
+      store,
+      sort: sort as WishlistSortField,
+      order: order as 'asc' | 'desc',
+    })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+    if (response.ok()) {
+      apiState.listResponse = apiState.lastResponseBody as WishlistListResponse
+    }
+  },
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Single Item Operations
@@ -201,7 +213,7 @@ When('I request the single item endpoint', async () => {
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I request the item with ID {string}', async ({},id: string) => {
+When('I request the item with ID {string}', async ({}, id: string) => {
   const response = await apiState.client!.get(id)
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
@@ -234,7 +246,7 @@ Given('I have created a wishlist item', async () => {
   apiState.currentItemId = item.id
 })
 
-Given('I have created a wishlist item with title {string}', async ({},title: string) => {
+Given('I have created a wishlist item with title {string}', async ({}, title: string) => {
   const data = createMinimalWishlistItem({ title })
   const response = await apiState.client!.create(data)
   expect(response.status()).toBe(201)
@@ -243,7 +255,7 @@ Given('I have created a wishlist item with title {string}', async ({},title: str
   apiState.currentItemId = item.id
 })
 
-Given('I have created a wishlist item with tags {string}', async ({},tagsStr: string) => {
+Given('I have created a wishlist item with tags {string}', async ({}, tagsStr: string) => {
   const tags = tagsStr.split(',').map(t => t.trim())
   const data = createValidWishlistItem({ title: uniqueItemName(), tags })
   const response = await apiState.client!.create(data)
@@ -253,7 +265,7 @@ Given('I have created a wishlist item with tags {string}', async ({},tagsStr: st
   apiState.currentItemId = item.id
 })
 
-Given('I have created a wishlist item with priority {int}', async ({},priority: number) => {
+Given('I have created a wishlist item with priority {int}', async ({}, priority: number) => {
   const data = createValidWishlistItem({ title: uniqueItemName(), priority })
   const response = await apiState.client!.create(data)
   expect(response.status()).toBe(201)
@@ -262,14 +274,17 @@ Given('I have created a wishlist item with priority {int}', async ({},priority: 
   apiState.currentItemId = item.id
 })
 
-Given('I have created a wishlist item with title {string} and price {string}', async ({},title: string, price: string) => {
-  const data = createValidWishlistItem({ title, price })
-  const response = await apiState.client!.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  apiState.createdItems.push(item)
-  apiState.currentItemId = item.id
-})
+Given(
+  'I have created a wishlist item with title {string} and price {string}',
+  async ({}, title: string, price: string) => {
+    const data = createValidWishlistItem({ title, price })
+    const response = await apiState.client!.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    apiState.createdItems.push(item)
+    apiState.currentItemId = item.id
+  },
+)
 
 Given('I have created a wishlist item with all fields', async () => {
   const data = createValidWishlistItem({ title: uniqueItemName() })
@@ -280,7 +295,7 @@ Given('I have created a wishlist item with all fields', async () => {
   apiState.currentItemId = item.id
 })
 
-Given('I have created {int} wishlist items', async ({},count: number) => {
+Given('I have created {int} wishlist items', async ({}, count: number) => {
   for (let i = 0; i < count; i++) {
     const data = createMinimalWishlistItem({ title: `Test Item ${i + 1}` })
     const response = await apiState.client!.create(data)
@@ -293,35 +308,44 @@ Given('I have created {int} wishlist items', async ({},count: number) => {
   }
 })
 
-Given('I have created items with titles {string}, {string}, {string}', async ({},t1: string, t2: string, t3: string) => {
-  for (const title of [t1, t2, t3]) {
-    const data = createMinimalWishlistItem({ title })
-    const response = await apiState.client!.create(data)
-    expect(response.status()).toBe(201)
-    const item = await response.json()
-    apiState.createdItems.push(item)
-  }
-})
+Given(
+  'I have created items with titles {string}, {string}, {string}',
+  async ({}, t1: string, t2: string, t3: string) => {
+    for (const title of [t1, t2, t3]) {
+      const data = createMinimalWishlistItem({ title })
+      const response = await apiState.client!.create(data)
+      expect(response.status()).toBe(201)
+      const item = await response.json()
+      apiState.createdItems.push(item)
+    }
+  },
+)
 
-Given('I have created items with prices {string}, {string}, {string}', async ({},p1: string, p2: string, p3: string) => {
-  for (const price of [p1, p2, p3]) {
-    const data = createValidWishlistItem({ title: uniqueItemName(), price })
-    const response = await apiState.client!.create(data)
-    expect(response.status()).toBe(201)
-    const item = await response.json()
-    apiState.createdItems.push(item)
-  }
-})
+Given(
+  'I have created items with prices {string}, {string}, {string}',
+  async ({}, p1: string, p2: string, p3: string) => {
+    for (const price of [p1, p2, p3]) {
+      const data = createValidWishlistItem({ title: uniqueItemName(), price })
+      const response = await apiState.client!.create(data)
+      expect(response.status()).toBe(201)
+      const item = await response.json()
+      apiState.createdItems.push(item)
+    }
+  },
+)
 
-Given('I have created items with priorities {int}, {int}, {int}', async ({},p1: number, p2: number, p3: number) => {
-  for (const priority of [p1, p2, p3]) {
-    const data = createValidWishlistItem({ title: uniqueItemName(), priority })
-    const response = await apiState.client!.create(data)
-    expect(response.status()).toBe(201)
-    const item = await response.json()
-    apiState.createdItems.push(item)
-  }
-})
+Given(
+  'I have created items with priorities {int}, {int}, {int}',
+  async ({}, p1: number, p2: number, p3: number) => {
+    for (const priority of [p1, p2, p3]) {
+      const data = createValidWishlistItem({ title: uniqueItemName(), priority })
+      const response = await apiState.client!.create(data)
+      expect(response.status()).toBe(201)
+      const item = await response.json()
+      apiState.createdItems.push(item)
+    }
+  },
+)
 
 When('I create a wishlist item with all fields', async () => {
   const data = createValidWishlistItem({ title: uniqueItemName() })
@@ -345,21 +369,21 @@ When('I create a wishlist item with only required fields', async () => {
   }
 })
 
-When('I create a wishlist item with store {string}', async ({},store: string) => {
+When('I create a wishlist item with store {string}', async ({}, store: string) => {
   const data = createMinimalWishlistItem({ title: uniqueItemName(), store })
   const response = await apiState.client!.create(data)
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I create a wishlist item with currency {string}', async ({},currency: string) => {
+When('I create a wishlist item with currency {string}', async ({}, currency: string) => {
   const data = createValidWishlistItem({ title: uniqueItemName(), currency })
   const response = await apiState.client!.create(data)
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I create a wishlist item with tags {string}', async ({},tagsStr: string) => {
+When('I create a wishlist item with tags {string}', async ({}, tagsStr: string) => {
   const tags = tagsStr.split(',').map(t => t.trim())
   const data = createValidWishlistItem({ title: uniqueItemName(), tags })
   const response = await apiState.client!.create(data)
@@ -371,32 +395,35 @@ When('I create a wishlist item with tags {string}', async ({},tagsStr: string) =
 // Update Operations
 // ─────────────────────────────────────────────────────────────────────────────
 
-When('I update the item with title {string}', async ({},title: string) => {
+When('I update the item with title {string}', async ({}, title: string) => {
   expect(apiState.currentItemId).not.toBeNull()
   const response = await apiState.client!.update(apiState.currentItemId!, { title })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I update the item with price {string}', async ({},price: string) => {
+When('I update the item with price {string}', async ({}, price: string) => {
   expect(apiState.currentItemId).not.toBeNull()
   const response = await apiState.client!.update(apiState.currentItemId!, { price })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I update the item with priority {int}', async ({},priority: number) => {
+When('I update the item with priority {int}', async ({}, priority: number) => {
   expect(apiState.currentItemId).not.toBeNull()
   const response = await apiState.client!.update(apiState.currentItemId!, { priority })
   apiState.lastResponseStatus = response.status()
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I update the item with ID {string} with title {string}', async ({},id: string, title: string) => {
-  const response = await apiState.client!.update(id, { title })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-})
+When(
+  'I update the item with ID {string} with title {string}',
+  async ({}, id: string, title: string) => {
+    const response = await apiState.client!.update(id, { title })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Delete Operations
@@ -414,7 +441,7 @@ When('I delete the item', async () => {
   }
 })
 
-When('I delete the item with ID {string}', async ({},id: string) => {
+When('I delete the item with ID {string}', async ({}, id: string) => {
   const response = await apiState.client!.delete(id)
   apiState.lastResponseStatus = response.status()
   if (response.status() !== 204) {
@@ -452,69 +479,72 @@ Given('I have deleted the second item', async () => {
 // Response Assertions
 // ─────────────────────────────────────────────────────────────────────────────
 
-Then('the response status should be {int}', async ({},status: number) => {
+Then('the response status should be {int}', async ({}, status: number) => {
   expect(apiState.lastResponseStatus).toBe(status)
 })
 
-Then('the response should contain an {string} array', async ({},field: string) => {
+Then('the response should contain an {string} array', async ({}, field: string) => {
   expect(apiState.lastResponseBody).toHaveProperty(field)
   expect(Array.isArray((apiState.lastResponseBody as Record<string, unknown>)[field])).toBe(true)
 })
 
-Then('the response should contain {string} metadata', async ({},field: string) => {
+Then('the response should contain {string} metadata', async ({}, field: string) => {
   expect(apiState.lastResponseBody).toHaveProperty(field)
 })
 
-Then('the pagination should have {string}, {string}, {string}, and {string} fields', async ({},f1: string, f2: string, f3: string, f4: string) => {
-  const body = apiState.lastResponseBody as WishlistListResponse
-  expect(body.pagination).toHaveProperty(f1)
-  expect(body.pagination).toHaveProperty(f2)
-  expect(body.pagination).toHaveProperty(f3)
-  expect(body.pagination).toHaveProperty(f4)
-})
+Then(
+  'the pagination should have {string}, {string}, {string}, and {string} fields',
+  async ({}, f1: string, f2: string, f3: string, f4: string) => {
+    const body = apiState.lastResponseBody as WishlistListResponse
+    expect(body.pagination).toHaveProperty(f1)
+    expect(body.pagination).toHaveProperty(f2)
+    expect(body.pagination).toHaveProperty(f3)
+    expect(body.pagination).toHaveProperty(f4)
+  },
+)
 
-Then('the pagination limit should be {int}', async ({},limit: number) => {
+Then('the pagination limit should be {int}', async ({}, limit: number) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   expect(body.pagination.limit).toBe(limit)
 })
 
-Then('the items array should have at most {int} items', async ({},max: number) => {
+Then('the items array should have at most {int} items', async ({}, max: number) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   expect(body.items.length).toBeLessThanOrEqual(max)
 })
 
-Then('the items array should have {int} items', async ({},count: number) => {
+Then('the items array should have {int} items', async ({}, count: number) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   expect(body.items.length).toBe(count)
 })
 
-Then('the pagination total should be {int}', async ({},total: number) => {
+Then('the pagination total should be {int}', async ({}, total: number) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   expect(body.pagination.total).toBe(total)
 })
 
-Then('all returned items should contain {string} in the title', async ({},searchTerm: string) => {
+Then('all returned items should contain {string} in the title', async ({}, searchTerm: string) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   for (const item of body.items) {
     expect(item.title.toLowerCase()).toContain(searchTerm.toLowerCase())
   }
 })
 
-Then('all returned items should have store {string}', async ({},store: string) => {
+Then('all returned items should have store {string}', async ({}, store: string) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   for (const item of body.items) {
     expect(item.store).toBe(store)
   }
 })
 
-Then('all returned items should have priority {int}', async ({},priority: number) => {
+Then('all returned items should have priority {int}', async ({}, priority: number) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   for (const item of body.items) {
     expect(item.priority).toBe(priority)
   }
 })
 
-Then('all returned items should contain tag {string}', async ({},tag: string) => {
+Then('all returned items should contain tag {string}', async ({}, tag: string) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   for (const item of body.items) {
     expect(item.tags).toContain(tag)
@@ -528,13 +558,13 @@ Then('the items should be sorted by sortOrder ascending', async () => {
   }
 })
 
-Then('the counts should include {string} and {string}', async ({},f1: string, f2: string) => {
+Then('the counts should include {string} and {string}', async ({}, f1: string, f2: string) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   expect(body.counts).toHaveProperty(f1)
   expect(body.counts).toHaveProperty(f2)
 })
 
-Then('the filters should include {string} and {string}', async ({},f1: string, f2: string) => {
+Then('the filters should include {string} and {string}', async ({}, f1: string, f2: string) => {
   const body = apiState.lastResponseBody as WishlistListResponse
   expect(body.filters).toHaveProperty(f1)
   expect(body.filters).toHaveProperty(f2)
@@ -572,27 +602,27 @@ Then('the response should have a sortOrder value', async () => {
   expect(typeof body.sortOrder).toBe('number')
 })
 
-Then('the response store should be {string}', async ({},store: string) => {
+Then('the response store should be {string}', async ({}, store: string) => {
   const body = apiState.lastResponseBody as WishlistItem
   expect(body.store).toBe(store)
 })
 
-Then('the response tags should contain {string}', async ({},tag: string) => {
+Then('the response tags should contain {string}', async ({}, tag: string) => {
   const body = apiState.lastResponseBody as WishlistItem
   expect(body.tags).toContain(tag)
 })
 
-Then('the response title should be {string}', async ({},title: string) => {
+Then('the response title should be {string}', async ({}, title: string) => {
   const body = apiState.lastResponseBody as WishlistItem
   expect(body.title).toBe(title)
 })
 
-Then('the response price should be {string}', async ({},price: string) => {
+Then('the response price should be {string}', async ({}, price: string) => {
   const body = apiState.lastResponseBody as WishlistItem
   expect(body.price).toBe(price)
 })
 
-Then('the response priority should be {int}', async ({},priority: number) => {
+Then('the response priority should be {int}', async ({}, priority: number) => {
   const body = apiState.lastResponseBody as WishlistItem
   expect(body.priority).toBe(priority)
 })
@@ -601,7 +631,7 @@ Then('the response body should be empty', async () => {
   expect(apiState.lastResponseBody).toBeNull()
 })
 
-Then('the response should contain error {string}', async ({},error: string) => {
+Then('the response should contain error {string}', async ({}, error: string) => {
   const body = apiState.lastResponseBody as Record<string, unknown>
   expect(body.error).toBe(error)
 })

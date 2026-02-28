@@ -6,10 +6,10 @@
  * Uses Playwright route interception to mock presign/upload endpoints.
  */
 
-import { expect } from '@playwright/test'
-import { createBdd } from 'playwright-bdd'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { expect } from '@playwright/test'
+import { createBdd } from 'playwright-bdd'
 
 const { Given, When, Then } = createBdd()
 
@@ -115,10 +115,13 @@ Then('I should see the compression quality selector', async ({ page }) => {
   await expect(selector).toBeVisible()
 })
 
-Then('the compression quality selector should default to {string}', async ({ page }, value: string) => {
-  const trigger = page.locator('#compressionPreset')
-  await expect(trigger).toContainText(new RegExp(value, 'i'))
-})
+Then(
+  'the compression quality selector should default to {string}',
+  async ({ page }, value: string) => {
+    const trigger = page.locator('#compressionPreset')
+    await expect(trigger).toContainText(new RegExp(value, 'i'))
+  },
+)
 
 Then('I should see the skip compression checkbox', async ({ page }) => {
   const checkbox = page.locator('#skipCompression')
@@ -199,11 +202,14 @@ Then('I should see {string} in the progress text', async ({ page }, text: string
   await expect(progressText).toBeVisible({ timeout: 30000 })
 })
 
-Then('after compression I should see {string} in the progress text', async ({ page }, text: string) => {
-  // Wait for the uploading phase
-  const uploadText = page.getByText(new RegExp(text, 'i'))
-  await expect(uploadText).toBeVisible({ timeout: 30000 })
-})
+Then(
+  'after compression I should see {string} in the progress text',
+  async ({ page }, text: string) => {
+    // Wait for the uploading phase
+    const uploadText = page.getByText(new RegExp(text, 'i'))
+    await expect(uploadText).toBeVisible({ timeout: 30000 })
+  },
+)
 
 // ============================================================================
 // User Preference Steps

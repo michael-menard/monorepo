@@ -17,7 +17,22 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import { PathResolver, createPathResolver, inferFeatureFromStoryId } from './path-resolver.js'
+import type { StoryArtifact, SurfaceType } from '../artifacts/story.js'
+import type { Plan } from '../artifacts/plan.js'
+import type { Evidence } from '../artifacts/evidence.js'
+import type { StoryRepository } from '../db/story-repository.js'
+import type { WorkflowRepository } from '../db/workflow-repository.js'
+import {
+  normalizeSurfaces,
+  denormalizeSurfaces,
+  type NormalizedSurfaceType,
+} from './surface-normalizer.js'
+import {
+  YamlArtifactWriter,
+  createYamlArtifactWriter,
+  type YamlWriterConfig,
+  type YamlWriteResult,
+} from './yaml-artifact-writer.js'
 import {
   YamlArtifactReader,
   createYamlArtifactReader,
@@ -28,18 +43,7 @@ import {
   type ClaudePlanYaml,
   type ClaudeVerificationYaml,
 } from './yaml-artifact-reader.js'
-import {
-  YamlArtifactWriter,
-  createYamlArtifactWriter,
-  type YamlWriterConfig,
-  type YamlWriteResult,
-} from './yaml-artifact-writer.js'
-import { normalizeSurfaces, denormalizeSurfaces, type NormalizedSurfaceType } from './surface-normalizer.js'
-import type { StoryArtifact, SurfaceType } from '../artifacts/story.js'
-import type { Plan } from '../artifacts/plan.js'
-import type { Evidence } from '../artifacts/evidence.js'
-import type { StoryRepository } from '../db/story-repository.js'
-import type { WorkflowRepository } from '../db/workflow-repository.js'
+import { PathResolver, createPathResolver, inferFeatureFromStoryId } from './path-resolver.js'
 
 // ============================================================================
 // Configuration
@@ -195,11 +199,7 @@ export class YamlArtifactBridge {
    * First tries database (if repositories provided), then falls back to YAML
    * if configured.
    */
-  async loadStory(
-    storyId: string,
-    feature?: string,
-    stage?: string,
-  ): Promise<BridgeLoadResult> {
+  async loadStory(storyId: string, feature?: string, stage?: string): Promise<BridgeLoadResult> {
     const warnings: string[] = []
 
     // Infer feature from story ID if not provided
@@ -282,11 +282,7 @@ export class YamlArtifactBridge {
   /**
    * Load story directly from YAML files
    */
-  async loadFromYaml(
-    storyId: string,
-    feature: string,
-    stage?: string,
-  ): Promise<BridgeLoadResult> {
+  async loadFromYaml(storyId: string, feature: string, stage?: string): Promise<BridgeLoadResult> {
     const warnings: string[] = []
 
     // If stage is known, use it directly
@@ -322,10 +318,7 @@ export class YamlArtifactBridge {
   /**
    * Format artifacts read result to bridge load result
    */
-  private formatLoadResult(
-    result: StoryArtifactsReadResult,
-    warnings: string[],
-  ): BridgeLoadResult {
+  private formatLoadResult(result: StoryArtifactsReadResult, warnings: string[]): BridgeLoadResult {
     // Collect warnings from all artifacts
     if (result.story?.warnings) warnings.push(...result.story.warnings)
     if (result.elaboration?.warnings) warnings.push(...result.elaboration.warnings)
@@ -393,12 +386,10 @@ export class YamlArtifactBridge {
       non_goals: story.non_goals ?? [],
       acs: [],
       risks: [],
-      created_at: typeof story.created_at === 'string'
-        ? story.created_at
-        : story.created_at.toISOString(),
-      updated_at: typeof story.updated_at === 'string'
-        ? story.updated_at
-        : story.updated_at.toISOString(),
+      created_at:
+        typeof story.created_at === 'string' ? story.created_at : story.created_at.toISOString(),
+      updated_at:
+        typeof story.updated_at === 'string' ? story.updated_at : story.updated_at.toISOString(),
     }
   }
 
@@ -485,7 +476,11 @@ export class YamlArtifactBridge {
       if (data.plan) {
         try {
           // Cast to Plan type - the DB repository will serialize to JSON
-          await this.workflowRepo.savePlan(storyId, data.plan as unknown as Plan, this.config.dbActor)
+          await this.workflowRepo.savePlan(
+            storyId,
+            data.plan as unknown as Plan,
+            this.config.dbActor,
+          )
           artifacts.push({
             artifactType: 'plan',
             success: true,
@@ -614,9 +609,7 @@ export class YamlArtifactBridge {
     }
 
     // Normalize surfaces for database
-    const normalizedSurfaces = story.scope?.surfaces
-      ? normalizeSurfaces(story.scope.surfaces)
-      : []
+    const normalizedSurfaces = story.scope?.surfaces ? normalizeSurfaces(story.scope.surfaces) : []
 
     // Check if story exists
     const existing = await this.storyRepo.getStory(story.id)
@@ -625,7 +618,15 @@ export class YamlArtifactBridge {
       // Update existing story
       await this.storyRepo.updateStoryState(
         story.id,
-        story.state as 'draft' | 'backlog' | 'ready-to-work' | 'in-progress' | 'ready-for-qa' | 'uat' | 'done' | 'cancelled',
+        story.state as
+          | 'draft'
+          | 'backlog'
+          | 'ready-to-work'
+          | 'in-progress'
+          | 'ready-for-qa'
+          | 'uat'
+          | 'done'
+          | 'cancelled',
         this.config.dbActor,
         'Synced from YAML',
       )
@@ -635,8 +636,23 @@ export class YamlArtifactBridge {
         schema: 1,
         id: story.id,
         feature: story.feature,
-        type: story.type as 'feature' | 'enhancement' | 'bug' | 'tech-debt' | 'spike' | 'infrastructure' | 'documentation',
-        state: (story.state as 'draft' | 'backlog' | 'ready-to-work' | 'in-progress' | 'ready-for-qa' | 'uat' | 'done' | 'cancelled'),
+        type: story.type as
+          | 'feature'
+          | 'enhancement'
+          | 'bug'
+          | 'tech-debt'
+          | 'spike'
+          | 'infrastructure'
+          | 'documentation',
+        state: story.state as
+          | 'draft'
+          | 'backlog'
+          | 'ready-to-work'
+          | 'in-progress'
+          | 'ready-for-qa'
+          | 'uat'
+          | 'done'
+          | 'cancelled',
         title: story.title,
         goal: story.goal,
         points: story.points ?? null,
@@ -649,18 +665,20 @@ export class YamlArtifactBridge {
           surfaces: normalizedSurfaces as SurfaceType[],
         },
         non_goals: story.non_goals ?? [],
-        acs: story.acs?.map(ac => ({
-          id: ac.id,
-          description: ac.description,
-          testable: ac.testable ?? true,
-          automated: ac.automated ?? false,
-        })) ?? [],
-        risks: story.risks?.map(r => ({
-          id: r.id,
-          description: r.description,
-          severity: r.severity as 'high' | 'medium' | 'low',
-          mitigation: r.mitigation ?? null,
-        })) ?? [],
+        acs:
+          story.acs?.map(ac => ({
+            id: ac.id,
+            description: ac.description,
+            testable: ac.testable ?? true,
+            automated: ac.automated ?? false,
+          })) ?? [],
+        risks:
+          story.risks?.map(r => ({
+            id: r.id,
+            description: r.description,
+            severity: r.severity as 'high' | 'medium' | 'low',
+            mitigation: r.mitigation ?? null,
+          })) ?? [],
         created_at: story.created_at,
         updated_at: story.updated_at,
       }
@@ -706,11 +724,7 @@ export class YamlArtifactBridge {
   /**
    * Sync YAML files to database
    */
-  async syncYamlToDb(
-    storyId: string,
-    feature: string,
-    stage: string,
-  ): Promise<StorySyncResult> {
+  async syncYamlToDb(storyId: string, feature: string, stage: string): Promise<StorySyncResult> {
     // Read from YAML
     const loadResult = await this.loadFromYaml(storyId, feature, stage)
 
@@ -738,11 +752,7 @@ export class YamlArtifactBridge {
   /**
    * Sync database to YAML files
    */
-  async syncDbToYaml(
-    storyId: string,
-    feature: string,
-    stage: string,
-  ): Promise<StorySyncResult> {
+  async syncDbToYaml(storyId: string, feature: string, stage: string): Promise<StorySyncResult> {
     // Read from database
     if (!this.storyRepo) {
       return {

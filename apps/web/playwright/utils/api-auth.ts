@@ -37,7 +37,9 @@ export type AuthTokens = {
 function getRequiredEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}. Check apps/web/playwright/.env`)
+    throw new Error(
+      `Missing required environment variable: ${name}. Check apps/web/playwright/.env`,
+    )
   }
   return value
 }
@@ -141,9 +143,7 @@ export async function authenticateWithCognito(
   }
 
   // Extract userId (sub) from the access token
-  const payload = JSON.parse(
-    Buffer.from(AccessToken.split('.')[1], 'base64').toString(),
-  )
+  const payload = JSON.parse(Buffer.from(AccessToken.split('.')[1], 'base64').toString())
 
   return {
     tokens: {

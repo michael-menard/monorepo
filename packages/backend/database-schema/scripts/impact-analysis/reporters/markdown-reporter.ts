@@ -26,16 +26,16 @@ export function generateMarkdownReport(result: ImpactResult): string {
   sections.push(
     `- **Backward Compatible:** ${result.riskAssessment.backwardCompatible ? '✅ YES' : '❌ NO'}\n`,
   )
-  sections.push(
-    `- **Rollback Safe:** ${result.riskAssessment.rollbackSafe ? '✅ YES' : '⚠️ NO'}\n`,
-  )
+  sections.push(`- **Rollback Safe:** ${result.riskAssessment.rollbackSafe ? '✅ YES' : '⚠️ NO'}\n`)
   sections.push(
     `- **Deployment Order:** ${result.riskAssessment.deploymentOrder.map(step => `\`${step}\``).join(' → ')}\n`,
   )
 
   // Effort Estimate
   sections.push('## Effort Estimate\n')
-  sections.push(`**${result.effortEstimate}** (based on ${getTotalFindings(result)} affected files)\n`)
+  sections.push(
+    `**${result.effortEstimate}** (based on ${getTotalFindings(result)} affected files)\n`,
+  )
 
   // Impact by Category
   sections.push('## Impact Analysis\n')
@@ -57,7 +57,9 @@ export function generateMarkdownReport(result: ImpactResult): string {
 
       for (const finding of findings) {
         sections.push(`#### \`${finding.file}\`\n`)
-        sections.push(`- **Confidence:** ${getConfidenceEmoji(finding.confidence)} ${finding.confidence}\n`)
+        sections.push(
+          `- **Confidence:** ${getConfidenceEmoji(finding.confidence)} ${finding.confidence}\n`,
+        )
         sections.push(`- **Impact:** ${finding.description}\n`)
         sections.push(`- **Action:** ${finding.recommendation}\n`)
       }
@@ -93,12 +95,12 @@ function getTotalFindings(result: ImpactResult): number {
 function getCategoryLabel(category: ImpactCategory): string {
   const labels: Record<ImpactCategory, string> = {
     'backend-service': 'Backend Services',
-    'repository': 'Repositories',
+    repository: 'Repositories',
     'zod-schema': 'Zod Schemas',
     'frontend-component': 'Frontend Components',
     'api-hook': 'API Hooks',
     'db-schema': 'Database Schema',
-    'test': 'Tests',
+    test: 'Tests',
   }
 
   return labels[category]

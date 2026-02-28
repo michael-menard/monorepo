@@ -52,11 +52,14 @@ Given('the reorder-wishlist API is mocked', async ({ page }) => {
   })
 })
 
-Given('the wishlist API is mocked to return an empty list with a "all purchased" state', async () => {
-  // Reuse the shared wishlistState so navigation step in wishlist.steps.ts
-  // appends the appropriate MSW scenario flag.
-  wishlistState.scenario = 'empty'
-})
+Given(
+  'the wishlist API is mocked to return an empty list with a "all purchased" state',
+  async () => {
+    // Reuse the shared wishlistState so navigation step in wishlist.steps.ts
+    // appends the appropriate MSW scenario flag.
+    wishlistState.scenario = 'empty'
+  },
+)
 
 // ---------------------------------------------------------------------------
 // Drag-and-drop & keyboard reorder (high-level checks)
@@ -74,13 +77,16 @@ Then('I should see wishlist cards ordered by current priority', async ({ page })
   lastOrder = titles
 })
 
-When('I drag the wishlist card "Technic Porsche 911 GT3 RS" above "Imperial Star Destroyer"', async ({ page }) => {
-  const source = page.getByText(/technic porsche 911 gt3 rs/i)
-  const target = page.getByText(/imperial star destroyer/i)
+When(
+  'I drag the wishlist card "Technic Porsche 911 GT3 RS" above "Imperial Star Destroyer"',
+  async ({ page }) => {
+    const source = page.getByText(/technic porsche 911 gt3 rs/i)
+    const target = page.getByText(/imperial star destroyer/i)
 
-  // Use the built-in drag-and-drop helper if available
-  await source.dragTo(target)
-})
+    // Use the built-in drag-and-drop helper if available
+    await source.dragTo(target)
+  },
+)
 
 Then('the visual order of cards should update to reflect the new priority', async ({ page }) => {
   // High-level check: both cards still visible; detailed DOM order checks can be added later
@@ -97,11 +103,14 @@ Then('the reorder-wishlist API should be called with the new order of item ids',
   expect(lastReorderRequestBody?.ids.length ?? 0).toBeGreaterThan(0)
 })
 
-When('I drag the wishlist card "Technic Porsche 911 GT3 RS" to a new position', async ({ page }) => {
-  const source = page.getByText(/technic porsche 911 gt3 rs/i)
-  const target = page.getByText(/millennium falcon/i)
-  await source.dragTo(target)
-})
+When(
+  'I drag the wishlist card "Technic Porsche 911 GT3 RS" to a new position',
+  async ({ page }) => {
+    const source = page.getByText(/technic porsche 911 gt3 rs/i)
+    const target = page.getByText(/millennium falcon/i)
+    await source.dragTo(target)
+  },
+)
 
 Then('a "Priority updated" toast with an "Undo" action should appear', async ({ page }) => {
   const toast = page.getByText(/priority updated/i)
@@ -139,10 +148,15 @@ Then('the reorder-wishlist API should be called with the updated order', async (
 // Empty state
 // ---------------------------------------------------------------------------
 
-Then('I should see an empty state message indicating all wishlist items have been purchased', async ({ page }) => {
-  const message = page.getByText(/all wishlist items have been purchased|nothing left in your wishlist/i)
-  await expect(message).toBeVisible({ timeout: 10000 })
-})
+Then(
+  'I should see an empty state message indicating all wishlist items have been purchased',
+  async ({ page }) => {
+    const message = page.getByText(
+      /all wishlist items have been purchased|nothing left in your wishlist/i,
+    )
+    await expect(message).toBeVisible({ timeout: 10000 })
+  },
+)
 
 Then('I should see a celebratory visual or icon', async ({ page }) => {
   const icon = page.locator('svg, [data-testid="celebration-icon"]')
@@ -167,14 +181,18 @@ Given('I select {string} sort option', async ({ page }, option: string) => {
 })
 
 Given('the wishlist has at least {int} items', async ({ page }, count: number) => {
-  const cards = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+  const cards = page.locator(
+    '[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]',
+  )
   await expect(cards.first()).toBeVisible({ timeout: 10000 })
   const cardCount = await cards.count()
   expect(cardCount).toBeGreaterThanOrEqual(count)
 })
 
 Given('I hover over the first wishlist card', async ({ page }) => {
-  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  const card = page
+    .locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+    .first()
   await card.hover()
 })
 
@@ -184,7 +202,9 @@ Then('the drag handle is visible', async ({ page }) => {
 })
 
 When('I drag the first card to the second card position', async ({ page }) => {
-  const cards = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+  const cards = page.locator(
+    '[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]',
+  )
   const firstCard = cards.first()
   const secondCard = cards.nth(1)
 
@@ -194,20 +214,27 @@ When('I drag the first card to the second card position', async ({ page }) => {
 })
 
 Then('the cards should be reordered', async ({ page }) => {
-  const cards = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+  const cards = page.locator(
+    '[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]',
+  )
   await expect(cards.first()).toBeVisible()
 })
 
 Then('the first wishlist card should have role {string}', async ({ page }, role: string) => {
-  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  const card = page
+    .locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+    .first()
   await expect(card).toHaveAttribute('role', role)
 })
 
-Then('the drag handle should have an aria-label containing {string}', async ({ page }, text: string) => {
-  const handle = page.locator('[data-testid="drag-handle"]').first()
-  const ariaLabel = await handle.getAttribute('aria-label')
-  expect(ariaLabel).toContain(text)
-})
+Then(
+  'the drag handle should have an aria-label containing {string}',
+  async ({ page }, text: string) => {
+    const handle = page.locator('[data-testid="drag-handle"]').first()
+    const ariaLabel = await handle.getAttribute('aria-label')
+    expect(ariaLabel).toContain(text)
+  },
+)
 
 Then('there should be a list container with role {string}', async ({ page }, role: string) => {
   const list = page.locator(`[role="${role}"]`)
@@ -226,7 +253,7 @@ Then('an undo option should be available', async ({ page }) => {
 When('I start dragging a wishlist card', async ({ page }) => {
   const card = page.locator('[data-testid="wishlist-card"]').first()
   const dragHandle = card.locator('[data-testid="drag-handle"]')
-  
+
   await dragHandle.hover()
   await page.mouse.down()
   await page.mouse.move(0, 50) // Move down to trigger drag
@@ -246,7 +273,7 @@ Given('I am not hovering over any card', async ({ page }) => {
 Then('the drag handle should become visible', async ({ page }) => {
   const firstCard = page.locator('[data-testid="wishlist-card"]').first()
   await firstCard.hover()
-  
+
   const dragHandle = firstCard.locator('[data-testid="drag-handle"]')
   await expect(dragHandle).toBeVisible()
 })
@@ -254,14 +281,16 @@ Then('the drag handle should become visible', async ({ page }) => {
 When('I start dragging the card', async ({ page }) => {
   const card = page.locator('[data-testid="wishlist-card"]').first()
   const dragHandle = card.locator('[data-testid="drag-handle"]')
-  
+
   await dragHandle.hover()
   await page.mouse.down()
   await page.mouse.move(0, 100)
 })
 
 Then('the card opacity should be reduced', async ({ page }) => {
-  const draggingCard = page.locator('[data-testid="wishlist-card"].dragging, [data-testid="wishlist-card"][data-dragging="true"]')
+  const draggingCard = page.locator(
+    '[data-testid="wishlist-card"].dragging, [data-testid="wishlist-card"][data-dragging="true"]',
+  )
   await expect(draggingCard).toBeVisible()
 })
 
@@ -277,7 +306,9 @@ When('I focus the drag handle', async ({ page }) => {
 
 Then('keyboard instructions should be available', async ({ page }) => {
   // Check for ARIA instructions or visible help text
-  const instructions = page.locator('[data-testid="keyboard-instructions"], [aria-description], .sr-only')
+  const instructions = page.locator(
+    '[data-testid="keyboard-instructions"], [aria-description], .sr-only',
+  )
   const count = await instructions.count()
   expect(count).toBeGreaterThanOrEqual(0)
 })
@@ -287,7 +318,6 @@ When('I focus the drag handle on the first card', async ({ page }) => {
   const dragHandle = firstCard.locator('[data-testid="drag-handle"]')
   await dragHandle.focus()
 })
-
 
 Then('the card should remain in its original position', async ({ page }) => {
   // Verify order hasn't changed
@@ -313,11 +343,14 @@ Then('the first wishlist card should have aria-setsize', async ({ page }) => {
   expect(ariaSetSize).toBeTruthy()
 })
 
-Then('the first wishlist card should have aria-posinset {string}', async ({ page }, position: string) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"]').first()
-  const ariaPosInSet = await firstCard.getAttribute('aria-posinset')
-  expect(ariaPosInSet).toBe(position)
-})
+Then(
+  'the first wishlist card should have aria-posinset {string}',
+  async ({ page }, position: string) => {
+    const firstCard = page.locator('[data-testid="wishlist-card"]').first()
+    const ariaPosInSet = await firstCard.getAttribute('aria-posinset')
+    expect(ariaPosInSet).toBe(position)
+  },
+)
 
 Then('the drag handle should have an aria-label', async ({ page }) => {
   const dragHandle = page.locator('[data-testid="drag-handle"]').first()
@@ -325,11 +358,14 @@ Then('the drag handle should have an aria-label', async ({ page }) => {
   expect(ariaLabel).toBeTruthy()
 })
 
-Then('the list container should have aria-label containing {string}', async ({ page }, text: string) => {
-  const listContainer = page.locator('[role="list"], [data-testid="wishlist-gallery"]').first()
-  const ariaLabel = await listContainer.getAttribute('aria-label')
-  expect(ariaLabel?.toLowerCase()).toContain(text.toLowerCase())
-})
+Then(
+  'the list container should have aria-label containing {string}',
+  async ({ page }, text: string) => {
+    const listContainer = page.locator('[role="list"], [data-testid="wishlist-gallery"]').first()
+    const ariaLabel = await listContainer.getAttribute('aria-label')
+    expect(ariaLabel?.toLowerCase()).toContain(text.toLowerCase())
+  },
+)
 
 Then('the list should contain listitem elements', async ({ page }) => {
   const listItems = page.locator('[role="listitem"]')
@@ -372,9 +408,13 @@ Given('I remember the original order', async ({ page }) => {
   // Store order in test context for comparison
   const cards = page.locator('[data-testid="wishlist-card"]')
   const count = await cards.count()
-  
+
   for (let i = 0; i < count; i++) {
-    const title = await cards.nth(i).locator('[data-testid="card-title"], h2, h3').first().textContent()
+    const title = await cards
+      .nth(i)
+      .locator('[data-testid="card-title"], h2, h3')
+      .first()
+      .textContent()
     // Store in page context
   }
 })
@@ -388,7 +428,7 @@ Then('the original order should be restored', async ({ page }) => {
 Then('drag handles should not be visible or enabled', async ({ page }) => {
   const dragHandles = page.locator('[data-testid="drag-handle"]')
   const count = await dragHandles.count()
-  
+
   if (count > 0) {
     // If they exist, they should be hidden or disabled
     await expect(dragHandles.first()).not.toBeVisible()

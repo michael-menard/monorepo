@@ -160,12 +160,13 @@ async function writeToYaml(
         files: state.planToSave.files_to_change?.length ?? 0,
         tokens: 0,
       },
-      chunks: state.planToSave.steps?.map((step, idx) => ({
-        id: step.id ?? idx + 1,
-        description: step.description,
-        files: step.files ?? [],
-        slice: step.slice,
-      })) ?? [],
+      chunks:
+        state.planToSave.steps?.map((step, idx) => ({
+          id: step.id ?? idx + 1,
+          description: step.description,
+          files: step.files ?? [],
+          slice: step.slice,
+        })) ?? [],
       reuse: [],
     }
   }
@@ -203,16 +204,20 @@ async function writeToYaml(
           failed: qaVerify.test_results?.e2e?.fail ?? 0,
         },
       },
-      acs: qaVerify.acs_verified?.map(ac => ({
-        id: ac.ac_id,
-        verdict: ac.status === 'PASS' ? 'pass' : 'fail',
-        evidence: ac.evidence_ref ?? '',
-      })) ?? [],
+      acs:
+        qaVerify.acs_verified?.map(ac => ({
+          id: ac.ac_id,
+          verdict: ac.status === 'PASS' ? 'pass' : 'fail',
+          evidence: ac.evidence_ref ?? '',
+        })) ?? [],
       qa: {
         verdict: qaVerify.verdict === 'PASS' ? 'pass' : 'fail',
         verified_by: config.actor,
         verified_at: new Date().toISOString(),
-        blocking_issues: qaVerify.issues?.filter(i => i.severity === 'critical' || i.severity === 'high').map(i => i.description) ?? [],
+        blocking_issues:
+          qaVerify.issues
+            ?.filter(i => i.severity === 'critical' || i.severity === 'high')
+            .map(i => i.description) ?? [],
       },
     }
   }

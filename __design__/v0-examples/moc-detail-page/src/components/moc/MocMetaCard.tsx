@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import { useState, useCallback } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ExternalLink, Calendar, User } from "lucide-react"
-import type { MocAuthor } from "./mocTypes"
+import { useState, useCallback } from 'react'
+import { ExternalLink, Calendar, User } from 'lucide-react'
+import type { MocAuthor } from './mocTypes'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface MocMetaCardProps {
   title: string
@@ -24,9 +24,9 @@ const DESCRIPTION_CLAMP_LENGTH = 200
 function formatDate(isoDate: string): string {
   try {
     return new Date(isoDate).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     })
   } catch {
     return isoDate
@@ -46,13 +46,15 @@ export function MocMetaCard({
   const [isExpanded, setIsExpanded] = useState(false)
 
   const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => !prev)
+    setIsExpanded(prev => !prev)
   }, [])
 
   const safeTags = tags ?? []
 
   const shouldClamp = description && description.length > DESCRIPTION_CLAMP_LENGTH && !isExpanded
-  const displayDescription = shouldClamp ? description.slice(0, DESCRIPTION_CLAMP_LENGTH) + "…" : description
+  const displayDescription = shouldClamp
+    ? description.slice(0, DESCRIPTION_CLAMP_LENGTH) + '…'
+    : description
 
   if (isLoading) {
     return (
@@ -157,7 +159,7 @@ export function MocMetaCard({
                 onClick={toggleExpanded}
                 aria-expanded={isExpanded}
               >
-                {isExpanded ? "Show less" : "Show more"}
+                {isExpanded ? 'Show less' : 'Show more'}
               </Button>
             )}
           </div>

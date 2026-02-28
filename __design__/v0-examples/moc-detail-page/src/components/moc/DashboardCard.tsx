@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useState, useCallback } from "react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ChevronDown, GripVertical } from "lucide-react"
+import type React from 'react'
+import { useState, useCallback } from 'react'
+import { ChevronDown, GripVertical } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface DashboardCardProps {
   id: string
@@ -41,7 +41,7 @@ export function DashboardCard({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
   const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => !prev)
+    setIsExpanded(prev => !prev)
   }, [])
 
   return (
@@ -50,8 +50,8 @@ export function DashboardCard({
       className={`
         border-border shadow-sm overflow-hidden
         transition-all duration-300 ease-out
-        ${isDragging ? "opacity-50 scale-[0.98] ring-2 ring-primary shadow-lg" : ""}
-        ${isDragOver ? "ring-2 ring-primary/50 bg-primary/5" : ""}
+        ${isDragging ? 'opacity-50 scale-[0.98] ring-2 ring-primary shadow-lg' : ''}
+        ${isDragOver ? 'ring-2 ring-primary/50 bg-primary/5' : ''}
         hover:shadow-md
       `}
       draggable
@@ -85,7 +85,7 @@ export function DashboardCard({
             aria-expanded={isExpanded}
           >
             <ChevronDown
-              className={`h-4 w-4 transition-transform duration-300 ${isExpanded ? "" : "-rotate-90"}`}
+              className={`h-4 w-4 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`}
               aria-hidden="true"
             />
           </Button>
@@ -96,7 +96,7 @@ export function DashboardCard({
       <div
         className={`
           grid transition-all duration-300 ease-out
-          ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}
+          ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
         `}
       >
         <div className="overflow-hidden">

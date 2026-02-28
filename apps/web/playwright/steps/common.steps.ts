@@ -31,7 +31,10 @@ Given('I am logged in as a test user', async ({ page }) => {
 
   // Fill in credentials
   await page.fill('input[type="email"], input[name="email"], input[id="email"]', TEST_USER.email)
-  await page.fill('input[type="password"], input[name="password"], input[id="password"]', TEST_USER.password)
+  await page.fill(
+    'input[type="password"], input[name="password"], input[id="password"]',
+    TEST_USER.password,
+  )
 
   // Submit the form
   await page.click('button[type="submit"]')
@@ -152,7 +155,9 @@ When('I press Shift+Tab', async ({ page }) => {
 
 // Modal visibility steps
 Then('the {string} modal should be visible', async ({ page }, modalName: string) => {
-  const modal = page.locator(`[data-testid="${modalName}-modal"], [role="dialog"], [role="alertdialog"]`)
+  const modal = page.locator(
+    `[data-testid="${modalName}-modal"], [role="dialog"], [role="alertdialog"]`,
+  )
   await expect(modal.first()).toBeVisible()
 })
 

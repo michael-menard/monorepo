@@ -12,7 +12,6 @@
  */
 
 import { logger } from '@repo/logger'
-import type { DbClient } from './story-repository.js'
 import type { Plan } from '../artifacts/plan.js'
 import type { Evidence } from '../artifacts/evidence.js'
 import type { QaVerify } from '../artifacts/qa-verify.js'
@@ -30,6 +29,7 @@ import {
   type TokenUsageRecord,
   type TokenUsageInput,
 } from '../__types__/index.js'
+import type { DbClient } from './story-repository.js'
 
 // ============================================================================
 // Repository Implementation
@@ -245,7 +245,16 @@ export class WorkflowRepository {
         `INSERT INTO wint.verifications (story_id, version, type, content, verdict, issues_count, created_by, qa_verdict)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::wint.verdict_type)
         RETURNING *`,
-        [storyUuid, nextVersion, type, JSON.stringify(content), verdict, issuesCount, createdBy, qaVerdict],
+        [
+          storyUuid,
+          nextVersion,
+          type,
+          JSON.stringify(content),
+          verdict,
+          issuesCount,
+          createdBy,
+          qaVerdict,
+        ],
       )
 
       logger.info('Saved verification', { storyId, type, version: nextVersion, verdict })
@@ -436,9 +445,7 @@ export class WorkflowRepository {
   /**
    * Get token usage summary for a story
    */
-  async getTokenUsageSummary(
-    storyId: string,
-  ): Promise<{ phase: string; total_tokens: number }[]> {
+  async getTokenUsageSummary(storyId: string): Promise<{ phase: string; total_tokens: number }[]> {
     try {
       // Get story UUID from story_id
       const storyUuid = await this.getStoryUuid(storyId)

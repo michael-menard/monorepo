@@ -31,7 +31,7 @@ const authBypassEnabled = process.env.AUTH_BYPASS === 'true'
 if (isProduction && authBypassEnabled) {
   throw new Error(
     'FATAL: AUTH_BYPASS=true is not allowed in production. ' +
-    'This is a security violation. Remove AUTH_BYPASS or set NODE_ENV to development.'
+      'This is a security violation. Remove AUTH_BYPASS or set NODE_ENV to development.',
   )
 }
 
@@ -82,7 +82,9 @@ function getVerifier(config?: CognitoConfig): ReturnType<typeof CognitoJwtVerifi
 
   // Validate configuration
   if (!effectiveConfig.userPoolId || !effectiveConfig.clientId) {
-    console.warn('[vercel-auth] Missing Cognito configuration. Set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID.')
+    console.warn(
+      '[vercel-auth] Missing Cognito configuration. Set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID.',
+    )
     return null
   }
 
@@ -111,7 +113,11 @@ function getVerifier(config?: CognitoConfig): ReturnType<typeof CognitoJwtVerifi
  */
 export type JwtValidationResult =
   | { valid: true; claims: CognitoJwtClaims; bypassed?: boolean }
-  | { valid: false; error: 'MISSING_TOKEN' | 'INVALID_FORMAT' | 'INVALID_TOKEN' | 'EXPIRED' | 'CONFIG_ERROR'; message: string }
+  | {
+      valid: false
+      error: 'MISSING_TOKEN' | 'INVALID_FORMAT' | 'INVALID_TOKEN' | 'EXPIRED' | 'CONFIG_ERROR'
+      message: string
+    }
 
 /**
  * Create mock Cognito JWT claims for development bypass
@@ -175,7 +181,7 @@ export async function validateCognitoJwt(
   if (isAuthBypassAllowed()) {
     console.warn(
       '[AUTH BYPASS] Authentication bypassed in development mode. ' +
-      `Using mock user: ${process.env.DEV_USER_SUB ?? '00000000-0000-0000-0000-000000000001'}`
+        `Using mock user: ${process.env.DEV_USER_SUB ?? '00000000-0000-0000-0000-000000000001'}`,
     )
     return {
       valid: true,
@@ -222,7 +228,8 @@ export async function validateCognitoJwt(
     return {
       valid: false,
       error: 'CONFIG_ERROR',
-      message: 'Cognito not configured. Set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID environment variables.',
+      message:
+        'Cognito not configured. Set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID environment variables.',
     }
   }
 

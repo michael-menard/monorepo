@@ -16,7 +16,10 @@ import type { VercelResponse } from '@vercel/node'
  * @param result - Lambda handler result (structured format)
  * @param res - Vercel response object
  */
-export function transformResponse(result: APIGatewayProxyStructuredResultV2, res: VercelResponse): void {
+export function transformResponse(
+  result: APIGatewayProxyStructuredResultV2,
+  res: VercelResponse,
+): void {
   // Handle undefined/null result
   if (!result) {
     res.status(500).json({

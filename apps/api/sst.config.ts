@@ -50,25 +50,21 @@ export default $config({
     const { createHttpApi } = await import('./infrastructure/api/http-api')
     const { createWebSocketApi } = await import('./infrastructure/api/websocket-api')
     const { createAuthorizers } = await import('./infrastructure/api/authorizers')
-    const { createHealthCheckFunction } = await import(
-      './infrastructure/functions/health/health-check'
-    )
+    const { createHealthCheckFunction } =
+      await import('./infrastructure/functions/health/health-check')
     const { createAllFunctions } = await import('./infrastructure/functions/all-functions')
-    const { createGalleryWishlistWebSocketFunctions } = await import(
-      './infrastructure/functions/gallery-wishlist-websocket'
-    )
+    const { createGalleryWishlistWebSocketFunctions } =
+      await import('./infrastructure/functions/gallery-wishlist-websocket')
     const { createSnsTopics } = await import('./infrastructure/monitoring/sns-topics')
-    const { createSimpleErrorRateAlarms } = await import(
-      './infrastructure/monitoring/simple-alarms'
-    )
+    const { createSimpleErrorRateAlarms } =
+      await import('./infrastructure/monitoring/simple-alarms')
     const { createDashboards } = await import('./infrastructure/monitoring/dashboards')
     const { createBudgets } = await import('./infrastructure/cost/budgets')
     const { createCostMonitoring } = await import('./infrastructure/cost/cost-monitoring')
 
     // Optional: Import frontend stack for unified deployment
-    const { createFrontendStack } = await import(
-      '../web/lego-moc-instructions-app/infrastructure/frontend-stack'
-    )
+    const { createFrontendStack } =
+      await import('../web/lego-moc-instructions-app/infrastructure/frontend-stack')
 
     // ========================================
     // 1. Core Infrastructure (Foundation)

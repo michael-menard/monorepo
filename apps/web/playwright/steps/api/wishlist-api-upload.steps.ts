@@ -35,15 +35,18 @@ const uploadState: UploadTestState = {
 // Valid Presign Requests
 // ─────────────────────────────────────────────────────────────────────────────
 
-When('I request a presigned URL for {string} with mimeType {string}', async ({ request }, fileName: string, mimeType: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:9000'
-  apiState.client = createWishlistApiClient(request, baseUrl)
-  apiState.client.setAuthToken(authState.currentToken)
+When(
+  'I request a presigned URL for {string} with mimeType {string}',
+  async ({ request }, fileName: string, mimeType: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:9000'
+    apiState.client = createWishlistApiClient(request, baseUrl)
+    apiState.client.setAuthToken(authState.currentToken)
 
-  const response = await apiState.client.presign({ fileName, mimeType })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await apiState.client.presign({ fileName, mimeType })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I request a presigned URL with fileSize {int}', async ({ request }, fileSize: number) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:9000'
@@ -125,19 +128,22 @@ When('I request a presigned URL with empty mimeType', async ({ request }) => {
   apiState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I request a presigned URL for a filename with {int} characters', async ({ request }, length: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:9000'
-  apiState.client = createWishlistApiClient(request, baseUrl)
-  apiState.client.setAuthToken(authState.currentToken)
+When(
+  'I request a presigned URL for a filename with {int} characters',
+  async ({ request }, length: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:9000'
+    apiState.client = createWishlistApiClient(request, baseUrl)
+    apiState.client.setAuthToken(authState.currentToken)
 
-  const fileName = 'a'.repeat(length - 4) + '.jpg'
-  const response = await apiState.client.presign({
-    fileName,
-    mimeType: 'image/jpeg',
-  })
-  apiState.lastResponseStatus = response.status()
-  apiState.lastResponseBody = await response.json().catch(() => null)
-})
+    const fileName = 'a'.repeat(length - 4) + '.jpg'
+    const response = await apiState.client.presign({
+      fileName,
+      mimeType: 'image/jpeg',
+    })
+    apiState.lastResponseStatus = response.status()
+    apiState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Response Assertions
@@ -167,17 +173,17 @@ Then('the key should contain a user identifier or unique path', async () => {
   expect(body.key.length).toBeGreaterThan(10)
 })
 
-Then('the expiresIn should be greater than {int}', async ({},min: number) => {
+Then('the expiresIn should be greater than {int}', async ({}, min: number) => {
   const body = apiState.lastResponseBody as PresignResponse
   expect(body.expiresIn).toBeGreaterThan(min)
 })
 
-Then('I store the presign key as {string}', async ({},keyName: string) => {
+Then('I store the presign key as {string}', async ({}, keyName: string) => {
   const body = apiState.lastResponseBody as PresignResponse
   uploadState.storedKeys[keyName] = body.key
 })
 
-Then('the presign key should be different from {string}', async ({},keyName: string) => {
+Then('the presign key should be different from {string}', async ({}, keyName: string) => {
   const body = apiState.lastResponseBody as PresignResponse
   expect(body.key).not.toBe(uploadState.storedKeys[keyName])
 })
@@ -194,9 +200,12 @@ Then('the response should contain message about maximum limit', async () => {
   expect(String(body.message).toLowerCase()).toContain('maximum')
 })
 
-Then('the response should contain error {string} or {string}', async ({},error1: string, error2: string) => {
-  const body = apiState.lastResponseBody as Record<string, unknown>
-  expect([error1, error2]).toContain(body.error)
-})
+Then(
+  'the response should contain error {string} or {string}',
+  async ({}, error1: string, error2: string) => {
+    const body = apiState.lastResponseBody as Record<string, unknown>
+    expect([error1, error2]).toContain(body.error)
+  },
+)
 
 // Note: 'the response status should be {int} or {int}' is defined in wishlist-api-auth.steps.ts

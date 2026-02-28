@@ -26,7 +26,9 @@ import {
 function getRequiredEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}. Check apps/web/playwright/.env`)
+    throw new Error(
+      `Missing required environment variable: ${name}. Check apps/web/playwright/.env`,
+    )
   }
   return value
 }

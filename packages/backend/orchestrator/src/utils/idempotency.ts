@@ -17,11 +17,11 @@ import { z } from 'zod'
  * Idempotency modes for command execution.
  */
 export const IdempotencyModeSchema = z.enum([
-  'error',    // Fail if already complete
-  'skip',     // Skip if already complete (no error)
-  'resume',   // Auto-detect and resume from last checkpoint
-  'rerun',    // Always re-run (for checks that should always execute)
-  'force',    // Force overwrite existing artifacts
+  'error', // Fail if already complete
+  'skip', // Skip if already complete (no error)
+  'resume', // Auto-detect and resume from last checkpoint
+  'rerun', // Always re-run (for checks that should always execute)
+  'force', // Force overwrite existing artifacts
 ])
 
 export type IdempotencyMode = z.infer<typeof IdempotencyModeSchema>
@@ -202,12 +202,7 @@ export function checkIdempotency(params: {
   activeLock?: PhaseLock | null
   checkpoint?: string | null
 }): IdempotencyCheckResult {
-  const {
-    command,
-    existingArtifacts = [],
-    activeLock,
-    checkpoint,
-  } = params
+  const { command, existingArtifacts = [], activeLock, checkpoint } = params
 
   const config = IdempotencyConfigSchema.parse(params.config ?? {})
   const defaultMode = COMMAND_IDEMPOTENCY_DEFAULTS[command] ?? 'resume'

@@ -11,22 +11,30 @@ const { Given, When, Then } = createBdd()
 // Only wishlist-specific modal steps that don't conflict with inspiration-accessibility.steps.ts
 
 Then('the delete confirmation modal should be visible', async ({ page }) => {
-  const modal = page.locator('[data-testid="delete-confirmation-modal"], [role="dialog"][aria-labelledby*="delete"]')
+  const modal = page.locator(
+    '[data-testid="delete-confirmation-modal"], [role="dialog"][aria-labelledby*="delete"]',
+  )
   await expect(modal).toBeVisible()
 })
 
 Then('the delete confirmation modal should not be visible', async ({ page }) => {
-  const modal = page.locator('[data-testid="delete-confirmation-modal"], [role="dialog"][aria-labelledby*="delete"]')
+  const modal = page.locator(
+    '[data-testid="delete-confirmation-modal"], [role="dialog"][aria-labelledby*="delete"]',
+  )
   await expect(modal).not.toBeVisible()
 })
 
 Then('the Got It modal should be visible', async ({ page }) => {
-  const modal = page.locator('[data-testid="got-it-modal"], [role="dialog"][aria-labelledby*="got"]')
+  const modal = page.locator(
+    '[data-testid="got-it-modal"], [role="dialog"][aria-labelledby*="got"]',
+  )
   await expect(modal).toBeVisible()
 })
 
 Then('the Got It modal should not be visible', async ({ page }) => {
-  const modal = page.locator('[data-testid="got-it-modal"], [role="dialog"][aria-labelledby*="got"]')
+  const modal = page.locator(
+    '[data-testid="got-it-modal"], [role="dialog"][aria-labelledby*="got"]',
+  )
   await expect(modal).not.toBeVisible()
 })
 
@@ -36,7 +44,9 @@ When('I click the delete button', async ({ page }) => {
 })
 
 When('I click the confirm delete button', async ({ page }) => {
-  const confirmButton = page.getByRole('button', { name: /confirm|yes|delete/i }).filter({ hasText: /confirm|yes|delete/i })
+  const confirmButton = page
+    .getByRole('button', { name: /confirm|yes|delete/i })
+    .filter({ hasText: /confirm|yes|delete/i })
   await confirmButton.click()
 })
 
@@ -55,15 +65,19 @@ Then('I should see a not found error message', async ({ page }) => {
   await expect(errorMessage).toBeVisible()
 })
 
-Then('I should see a success toast with {string} or {string}', async ({ page }, text1: string, text2: string) => {
-  const toast = page.locator('[data-testid="toast"], [role="status"], .toast')
-  await expect(toast).toBeVisible()
-  
-  const toastText = await toast.textContent()
-  const hasText = toastText?.toLowerCase().includes(text1.toLowerCase()) || 
-                  toastText?.toLowerCase().includes(text2.toLowerCase())
-  expect(hasText).toBeTruthy()
-})
+Then(
+  'I should see a success toast with {string} or {string}',
+  async ({ page }, text1: string, text2: string) => {
+    const toast = page.locator('[data-testid="toast"], [role="status"], .toast')
+    await expect(toast).toBeVisible()
+
+    const toastText = await toast.textContent()
+    const hasText =
+      toastText?.toLowerCase().includes(text1.toLowerCase()) ||
+      toastText?.toLowerCase().includes(text2.toLowerCase())
+    expect(hasText).toBeTruthy()
+  },
+)
 
 Then('I should see a price validation error', async ({ page }) => {
   const errorMessage = page.getByText(/invalid price|price.*required|price.*format/i)

@@ -9,12 +9,12 @@
 
 import { ScheduledEvent, Context } from 'aws-lambda'
 import { CloudWatchClient, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch'
+import { createLambdaLogger } from '@repo/logger'
 import {
   getCostByProject,
   getCostByComponent,
   getCostByFunction,
 } from '../../lib/cost-monitoring/cost-explorer'
-import { createLambdaLogger } from '@repo/logger'
 
 // Initialize CloudWatch client
 const cloudWatchClient = new CloudWatchClient({ region: process.env.AWS_REGION || 'us-east-1' })

@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Blocks } from "lucide-react"
+import { useEffect, useState } from 'react'
+import { Blocks } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface MocPartsGaugeProps {
   partsOwned: number
@@ -55,7 +55,14 @@ export function MocPartsGauge({ partsOwned, partsTotal }: MocPartsGaugeProps) {
                   </linearGradient>
                 </defs>
                 {/* Background circle */}
-                <circle cx="60" cy="60" r="45" fill="none" strokeWidth="10" className="stroke-muted" />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  strokeWidth="10"
+                  className="stroke-muted"
+                />
                 {/* Progress circle with vaporwave gradient */}
                 <circle
                   cx="60"
@@ -73,7 +80,7 @@ export function MocPartsGauge({ partsOwned, partsTotal }: MocPartsGaugeProps) {
               {/* Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span
-                  className={`text-xl font-bold bg-gradient-to-r from-[#ff6ad5] via-[#00d4ff] to-[#7dffb3] bg-clip-text text-transparent transition-all duration-300 ${percentage >= 100 ? "animate-pulse" : ""}`}
+                  className={`text-xl font-bold bg-gradient-to-r from-[#ff6ad5] via-[#00d4ff] to-[#7dffb3] bg-clip-text text-transparent transition-all duration-300 ${percentage >= 100 ? 'animate-pulse' : ''}`}
                 >
                   {animatedPercentage}%
                 </span>
@@ -97,7 +104,14 @@ export function MocPartsGauge({ partsOwned, partsTotal }: MocPartsGaugeProps) {
                   </linearGradient>
                 </defs>
                 {/* Background circle */}
-                <circle cx="60" cy="60" r="45" fill="none" strokeWidth="10" className="stroke-muted" />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  strokeWidth="10"
+                  className="stroke-muted"
+                />
                 {/* Progress circle with reverse vaporwave gradient */}
                 <circle
                   cx="60"
@@ -115,7 +129,7 @@ export function MocPartsGauge({ partsOwned, partsTotal }: MocPartsGaugeProps) {
               {/* Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span
-                  className={`text-xl font-bold bg-gradient-to-r from-[#7dffb3] via-[#00d4ff] to-[#ff6ad5] bg-clip-text text-transparent transition-all duration-300 ${partsNeeded === 0 ? "animate-pulse" : ""}`}
+                  className={`text-xl font-bold bg-gradient-to-r from-[#7dffb3] via-[#00d4ff] to-[#ff6ad5] bg-clip-text text-transparent transition-all duration-300 ${partsNeeded === 0 ? 'animate-pulse' : ''}`}
                 >
                   {100 - animatedPercentage}%
                 </span>
@@ -128,19 +142,23 @@ export function MocPartsGauge({ partsOwned, partsTotal }: MocPartsGaugeProps) {
           <div className="flex-1 space-y-3">
             <div className="flex justify-between items-center p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <span className="text-sm text-muted-foreground">Parts Owned</span>
-              <span className="text-sm font-semibold text-foreground">{partsOwned.toLocaleString()}</span>
+              <span className="text-sm font-semibold text-foreground">
+                {partsOwned.toLocaleString()}
+              </span>
             </div>
             <div className="flex justify-between items-center p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <span className="text-sm text-muted-foreground">Total Required</span>
-              <span className="text-sm font-semibold text-foreground">{partsTotal.toLocaleString()}</span>
+              <span className="text-sm font-semibold text-foreground">
+                {partsTotal.toLocaleString()}
+              </span>
             </div>
             <div className="h-px bg-border" />
             <div className="flex justify-between items-center p-1.5 -mx-1.5 rounded-md transition-colors hover:bg-muted/50">
               <span className="text-sm text-muted-foreground">Still Needed</span>
               <span
-                className={`text-sm font-semibold ${partsNeeded === 0 ? "bg-gradient-to-r from-[#7dffb3] to-[#00d4ff] bg-clip-text text-transparent" : "text-foreground"}`}
+                className={`text-sm font-semibold ${partsNeeded === 0 ? 'bg-gradient-to-r from-[#7dffb3] to-[#00d4ff] bg-clip-text text-transparent' : 'text-foreground'}`}
               >
-                {partsNeeded === 0 ? "Complete!" : partsNeeded.toLocaleString()}
+                {partsNeeded === 0 ? 'Complete!' : partsNeeded.toLocaleString()}
               </span>
             </div>
 
@@ -150,7 +168,7 @@ export function MocPartsGauge({ partsOwned, partsTotal }: MocPartsGaugeProps) {
                   className="h-full rounded-full transition-all duration-1000 ease-out"
                   style={{
                     width: `${Math.min(100, animatedPercentage)}%`,
-                    background: "linear-gradient(90deg, #ff6ad5, #00d4ff, #7dffb3)",
+                    background: 'linear-gradient(90deg, #ff6ad5, #00d4ff, #7dffb3)',
                   }}
                 />
               </div>

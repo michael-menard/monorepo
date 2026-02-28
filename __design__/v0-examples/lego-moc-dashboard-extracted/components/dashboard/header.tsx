@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { Blocks } from "lucide-react"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { Blocks } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function DashboardHeader() {
   return (
@@ -13,7 +13,9 @@ export function DashboardHeader() {
           </div>
           <div>
             <h1 className="text-base md:text-xl font-bold text-foreground">BrickVault</h1>
-            <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">MOC Collection Dashboard</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground hidden sm:block">
+              MOC Collection Dashboard
+            </p>
           </div>
         </div>
         <ThemeToggle />

@@ -20,33 +20,33 @@ import { z } from 'zod'
  */
 export const StoryStatusSchema = z.enum([
   // Backlog statuses
-  'pending',              // Not yet generated, just an entry in index
-  'generated',            // Story file created by PM
+  'pending', // Not yet generated, just an entry in index
+  'generated', // Story file created by PM
 
   // Elaboration statuses
-  'in-elaboration',       // QA audit in progress
-  'needs-refinement',     // Failed elab, needs PM fixes
-  'needs-split',          // Too large, requires splitting
+  'in-elaboration', // QA audit in progress
+  'needs-refinement', // Failed elab, needs PM fixes
+  'needs-split', // Too large, requires splitting
 
   // Ready for development
-  'ready-to-work',        // Passed elab, awaiting development
+  'ready-to-work', // Passed elab, awaiting development
 
   // Development statuses
-  'in-progress',          // Dev actively implementing
+  'in-progress', // Dev actively implementing
   'ready-for-code-review', // Implementation done, awaiting review
-  'code-review-failed',   // Code review failed, needs fixes
+  'code-review-failed', // Code review failed, needs fixes
 
   // QA statuses
-  'ready-for-qa',         // Dev complete, awaiting QA verification
-  'in-qa',                // QA verification in progress
-  'needs-work',           // QA failed, needs dev fixes
-  'uat',                  // QA passed, awaiting gate
+  'ready-for-qa', // Dev complete, awaiting QA verification
+  'in-qa', // QA verification in progress
+  'needs-work', // QA failed, needs dev fixes
+  'uat', // QA passed, awaiting gate
 
   // Terminal statuses
-  'completed',            // QA gate passed, merged
-  'blocked',              // Waiting on external dependency
-  'cancelled',            // No longer needed
-  'superseded',           // Replaced by split stories
+  'completed', // QA gate passed, merged
+  'blocked', // Waiting on external dependency
+  'cancelled', // No longer needed
+  'superseded', // Replaced by split stories
 ])
 
 export type StoryStatus = z.infer<typeof StoryStatusSchema>
@@ -59,8 +59,8 @@ export type StoryStatus = z.infer<typeof StoryStatusSchema>
  * Maps story status to physical directory location.
  */
 export const STATUS_DIRECTORY_MAP: Record<StoryStatus, string> = {
-  'pending': 'backlog',
-  'generated': 'backlog',
+  pending: 'backlog',
+  generated: 'backlog',
   'in-elaboration': 'elaboration',
   'needs-refinement': 'elaboration',
   'needs-split': 'elaboration',
@@ -71,11 +71,11 @@ export const STATUS_DIRECTORY_MAP: Record<StoryStatus, string> = {
   'ready-for-qa': 'ready-for-qa',
   'in-qa': 'UAT',
   'needs-work': 'in-progress',
-  'uat': 'UAT',
-  'completed': 'UAT',
-  'blocked': 'blocked',
-  'cancelled': 'cancelled',
-  'superseded': 'cancelled',
+  uat: 'UAT',
+  completed: 'UAT',
+  blocked: 'blocked',
+  cancelled: 'cancelled',
+  superseded: 'cancelled',
 }
 
 // ============================================================================
@@ -88,8 +88,8 @@ export const STATUS_DIRECTORY_MAP: Record<StoryStatus, string> = {
  */
 export const validTransitions: Record<StoryStatus, StoryStatus[]> = {
   // Backlog → Elaboration
-  'pending': ['generated'],
-  'generated': ['in-elaboration'],
+  pending: ['generated'],
+  generated: ['in-elaboration'],
 
   // Elaboration outcomes
   'in-elaboration': ['ready-to-work', 'needs-refinement', 'needs-split', 'blocked', 'cancelled'],
@@ -106,13 +106,13 @@ export const validTransitions: Record<StoryStatus, StoryStatus[]> = {
   'ready-for-qa': ['in-qa', 'blocked'],
   'in-qa': ['uat', 'needs-work', 'blocked'],
   'needs-work': ['in-progress', 'blocked', 'cancelled'],
-  'uat': ['completed', 'in-progress', 'blocked'],
+  uat: ['completed', 'in-progress', 'blocked'],
 
   // Terminal statuses (no transitions out, except for recovery)
-  'completed': [],
-  'blocked': ['in-progress', 'ready-to-work', 'in-elaboration', 'cancelled'],
-  'cancelled': [],
-  'superseded': [],
+  completed: [],
+  blocked: ['in-progress', 'ready-to-work', 'in-elaboration', 'cancelled'],
+  cancelled: [],
+  superseded: [],
 }
 
 // ============================================================================

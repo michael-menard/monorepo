@@ -52,7 +52,10 @@ export function loadUploadConfigFromEnv(env: EnvVars): UploadConfig {
   const parseMimeTypes = (key: string): string[] => {
     const value = env[key]
     if (!value) throw new Error(`Missing environment variable: ${key}`)
-    return value.split(',').map(s => s.trim()).filter(Boolean)
+    return value
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
   }
 
   return {
