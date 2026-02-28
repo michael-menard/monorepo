@@ -1,0 +1,14 @@
+id: "ST-3020"
+title: "Dev Execute Leader: Iterate Subtasks as Separate Agent Invocations"
+status: backlog
+priority: medium
+phase: 3
+feature: "Update dev-execute-leader.agent.md to detect PLAN.yaml schema: 2 and enter subtask iteration mode: spawn one coder agent per step sequentially with only the step's goal, 1-3 files, files_to_read (canonical reference + prior outputs), and verification command. Run verification between steps. Accumulate prior step outputs as context for the next step."
+goal: "The execution leader must run each subtask as an isolated ~32K-context agent invocation so that small LLMs like QwenCoder 14B can implement stories incrementally."
+depends_on:
+  - "ST-3010"
+endpoints: []
+infrastructure: []
+risk_notes: "Already fully implemented — dev-execute-leader.agent.md v3.2.0 already contains Step 2 (Determine Execution Mode) with the schema: 2 subtask iteration path fully specified, including the per-step Task tool spawn pattern with SUBTASK CONTEXT, FILES TO READ, FILES TO CREATE/MODIFY, PRIOR SUBTASK OUTPUTS, and VERIFICATION blocks. Step 4 already documents the sequential iteration with verification between steps. This story may be a no-op."
+sizing_warning: false
+created: "2026-02-28T00:00:00Z"
