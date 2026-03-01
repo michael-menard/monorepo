@@ -12,7 +12,6 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { z } from 'zod'
 import { parse as parseYaml } from 'yaml'
-import { z } from 'zod'
 
 // ============================================================================
 // Types
