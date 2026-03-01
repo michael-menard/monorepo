@@ -1,0 +1,32 @@
+---
+reason: "No kb_add_story MCP tool available in current KB implementation. Story record to be inserted when tool becomes available."
+deferred_at: "2026-02-25"
+story_id: APIP-0010
+---
+
+writes:
+  - type: story_upsert
+    priority: high
+    data:
+      story_id: APIP-0010
+      feature: autonomous-pipeline
+      title: "BullMQ Work Queue Setup"
+      story_dir: "plans/future/platform/autonomous-pipeline/backlog/APIP-0010"
+      story_file: "plans/future/platform/autonomous-pipeline/backlog/APIP-0010/APIP-0010.md"
+      story_type: feature
+      points: 5
+      priority: critical
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+      phase: 0
+      epic: autonomous-pipeline
+      dependencies: []
+      blocks:
+        - APIP-0020
+        - APIP-0040
+        - APIP-5000
+        - APIP-5001
+        - APIP-5007

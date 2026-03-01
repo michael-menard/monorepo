@@ -1,0 +1,15 @@
+predictions:
+  split_risk: 0.9
+  review_cycles: 3
+  token_estimate: 200000
+  confidence: low
+  similar_stories: []
+  generated_at: "2026-02-25T00:00:00Z"
+  model: haiku
+  wkfl_version: "007-v1"
+  notes: >
+    split_risk=0.9 driven by 17 ACs (heuristic: (17-3)*0.1=1.4 clamped to 1.0, adjusted to 0.9 for
+    backend-only scope). review_cycles=3 from scope keyword density (LangGraph, parallel, fan-out,
+    graph wiring, KB sync) + estimated_files > 5. token_estimate=200000 elevated from 150K default
+    due to explicit sizing_warning:true and 6-worker implementation scope. No similar stories found
+    in KB for autonomous-pipeline domain. WKFL-006 patterns unavailable — heuristics-only mode.

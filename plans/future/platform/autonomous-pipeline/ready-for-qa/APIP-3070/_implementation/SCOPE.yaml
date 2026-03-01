@@ -1,0 +1,144 @@
+schema: 1
+story_id: "APIP-3070"
+timestamp: "2026-02-28T00:00:00Z"
+gen_mode: false
+
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: true
+  contracts: false
+  ui: false
+  infra: false
+
+touched_paths_globs:
+  - "packages/backend/orchestrator/src/pipeline/**"
+  - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+  - "packages/backend/orchestrator/src/__tests__/pipeline/**"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true
+  security: false
+  performance: true
+
+files_modified:
+  - packages/backend/orchestrator/src/pipeline/model-router.ts
+
+files_created:
+  - packages/backend/orchestrator/src/pipeline/affinity-seeder.ts
+  - packages/backend/orchestrator/src/__tests__/pipeline/model-router-cold-start.test.ts
+  - packages/backend/orchestrator/src/__tests__/pipeline/affinity-seeder.test.ts
+  - packages/backend/orchestrator/src/__tests__/pipeline/integration/cold-start.integration.test.ts
+
+files_protected:
+  - packages/backend/orchestrator/src/models/
+
+acceptance_criteria:
+  - id: AC-1
+    description: "PipelineModelRouterConfig extended with cold-start and exploration fields (conservativeOpenRouterModel, explorationBudgetFraction, explorationMinSuccessRateFloor, manualSeedEnabled, randomFn)"
+    completed: false
+  - id: AC-2
+    description: "dispatch() implements cold-start detection using lazy-evaluated _hasAnyHighConfidenceProfile flag; skips tiers 2-3 when no high-confidence profiles exist"
+    completed: false
+  - id: AC-3
+    description: "Profile Confidence Gate at tier 2 entry point: confidence_level IN (medium, high) AND sample_size >= affinityMinSampleSize"
+    completed: false
+  - id: AC-4
+    description: "10% exploration budget in tier 3: randomFn() < explorationBudgetFraction, checks success_rate floor, skipped when Ollama unavailable"
+    completed: false
+  - id: AC-5
+    description: "importAffinitySeeds(seeds, db) standalone utility in affinity-seeder.ts; upserts validated entries, returns SeedImportResult"
+    completed: false
+  - id: AC-6
+    description: "importAffinitySeeds() derives confidence_level from CONFIDENCE_THRESHOLDS when not provided; uses same thresholds as pattern-miner.ts"
+    completed: false
+  - id: AC-7
+    description: "Cold-start routing logs source=cold_start, exploration logs source=exploration with structured @repo/logger"
+    completed: false
+  - id: AC-8
+    description: "invalidateAffinityCache() resets _hasAnyHighConfidenceProfile flag; re-evaluates cold-start on next dispatch"
+    completed: false
+  - id: AC-9
+    description: "12 unit tests cover cold-start, exploration sampling, success-rate floor, confidence thresholds, PRNG injection, config validation"
+    completed: false
+  - id: AC-10
+    description: "4 integration tests (real PostgreSQL) cover empty cache, seeding, exploration, cache invalidation workflows"
+    completed: false
+  - id: AC-11
+    description: "All APIP-0040 and APIP-3040 tests pass unchanged; no models/ directory modified"
+    completed: false
+  - id: AC-12
+    description: "ManualAffinitySeedEntrySchema defined as Zod in affinity-seeder.ts (model, change_type, file_type, success_rate, sample_size, confidence_level)"
+    completed: false
+  - id: AC-13
+    description: "SeedImportResultSchema and SeedImportErrorSchema defined as Zod; no TypeScript interfaces"
+    completed: false
+
+key_patterns:
+  - pattern: "PipelineModelRouter class structure"
+    source: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+    notes: "Extend dispatch() with cold-start and exploration tiers; add _hasAnyHighConfidenceProfile flag; invalidateAffinityCache() must reset flag"
+
+  - pattern: "Confidence-gated behavior"
+    source: "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    notes: "CONFIDENCE_THRESHOLDS enum and constants must be imported; APIP-3070 derives confidence_level from sample_size using same thresholds"
+
+  - pattern: "Zod-first type definitions"
+    source: "packages/backend/orchestrator/src/artifacts/story.ts"
+    notes: "All new types (ManualAffinitySeedEntrySchema, SeedImportResultSchema, extended config) must be Zod schemas with z.infer<> type exports"
+
+  - pattern: "ON CONFLICT DO UPDATE upsert"
+    source: "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    notes: "affinity-seeder.ts must reuse same upsert pattern for importAffinitySeeds() DB operation"
+
+  - pattern: "Structured logging"
+    source: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+    notes: "All routing decisions and exploration assignments must log via @repo/logger with structured fields (source, model, provider, change_type, file_type)"
+
+infrastructure_notes: |
+  - No new AWS infrastructure required
+  - No new cron jobs (seeding is one-shot manual operation)
+  - Integration tests require real APIP-5001 test PostgreSQL with wint.model_affinity table
+  - Single-process Phase 0-3 limitation: in-memory state not shared across processes (documented in ADR-001 Decision 4)
+
+test_coverage:
+  unit_test_count: 12
+  integration_test_count: 4
+  regression_test_files:
+    - "packages/backend/orchestrator/src/__tests__/pipeline/model-router.test.ts"
+    - "APIP-0040 full test suite"
+    - "APIP-3040 full test suite"
+  e2e_required: false
+  e2e_skip_reason: "No frontend impact; ADR-006 E2E Playwright requirement does not apply"
+
+subtasks:
+  - id: ST-1
+    title: "Extend PipelineModelRouterConfig with cold-start and exploration fields"
+    acs: ["AC-1"]
+    points: 1
+  - id: ST-2
+    title: "Implement cold-start detection in dispatch() and invalidateAffinityCache()"
+    acs: ["AC-2", "AC-7", "AC-8"]
+    points: 2
+  - id: ST-3
+    title: "Implement Profile Confidence Gate (tier 2 entry point)"
+    acs: ["AC-3"]
+    points: 1
+  - id: ST-4
+    title: "Implement 10% exploration budget gate (tier 3) in dispatch()"
+    acs: ["AC-4", "AC-7"]
+    points: 2
+  - id: ST-5
+    title: "Create affinity-seeder.ts with importAffinitySeeds() and schemas"
+    acs: ["AC-5", "AC-6", "AC-12", "AC-13"]
+    points: 2
+  - id: ST-6
+    title: "Integration tests and regression verification"
+    acs: ["AC-9", "AC-10", "AC-11"]
+    points: 2
+
+elaboration: "completed"

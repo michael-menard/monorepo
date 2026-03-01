@@ -166,29 +166,45 @@ function bumpComplexity(complexity: 'low' | 'medium' | 'high'): 'low' | 'medium'
 }
 
 /**
+ * Zod schema for parsing the escape hatch result object.
+ * Used to safely access fields without type assertions (avoids 'as' casting).
+ */
+const EscapeHatchResultSchema = z.object({
+  triggersActivated: z.array(z.string()).optional(),
+  evaluations: z
+    .array(
+      z.object({
+        trigger: z.string().optional(),
+        detected: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+})
+
+/**
  * Detects whether an AC is cross-cutting based on escape hatch result.
  *
- * @param acId - Acceptance criterion ID
+ * @param _acId - Acceptance criterion ID (reserved for future per-AC filtering)
  * @param escapeHatchResult - Escape hatch evaluation result (if available)
  * @returns True if this AC is involved in cross-cutting changes
  */
-function isCrossCutting(acId: string, escapeHatchResult: unknown): boolean {
+function isCrossCutting(_acId: string, escapeHatchResult: unknown): boolean {
   if (!escapeHatchResult || typeof escapeHatchResult !== 'object') return false
-  const result = escapeHatchResult as Record<string, unknown>
+
+  // Use Zod safe parse to avoid type assertions
+  const parsed = EscapeHatchResultSchema.safeParse(escapeHatchResult)
+  if (!parsed.success) return false
+
+  const { triggersActivated, evaluations } = parsed.data
 
   // Check if cross_cutting trigger was activated
-  const triggersActivated = result.triggersActivated
   if (Array.isArray(triggersActivated) && triggersActivated.includes('cross_cutting')) {
     // Check evaluations for items that reference this AC
-    const evaluations = result.evaluations
     if (Array.isArray(evaluations)) {
       for (const evaluation of evaluations) {
-        if (typeof evaluation === 'object' && evaluation !== null) {
-          const ev = evaluation as Record<string, unknown>
-          if (ev.trigger === 'cross_cutting' && ev.detected === true) {
-            // If cross-cutting detected, consider all ACs cross-cutting
-            return true
-          }
+        if (evaluation.trigger === 'cross_cutting' && evaluation.detected === true) {
+          // If cross-cutting detected, consider all ACs cross-cutting
+          return true
         }
       }
     }
@@ -301,19 +317,43 @@ function generateSplitReason(items: ChangeOutlineItem[], total: number, threshol
 // ============================================================================
 
 /**
- * Extended state type for internal Structurer use.
+ * Extended state schema for internal Structurer use.
  * Matches the fields added to ElaborationStateAnnotation in elaboration.ts.
+ * CLAUDE.md: Zod schema with z.infer<> instead of TypeScript interface.
  */
-interface StructurerElaborationState {
-  storyId?: string
-  currentStory?: {
-    acceptanceCriteria: Array<{
-      id: string
-      description: string
-    }>
-  } | null
-  escapeHatchResult?: unknown
-  warnings?: string[]
+const StructurerElaborationStateSchema = z.object({
+  storyId: z.string().optional(),
+  currentStory: z
+    .object({
+      acceptanceCriteria: z.array(
+        z.object({
+          id: z.string(),
+          description: z.string(),
+        }),
+      ),
+    })
+    .nullable()
+    .optional(),
+  escapeHatchResult: z.unknown().optional(),
+  warnings: z.array(z.string()).optional(),
+  // Output fields — present when returning state updates
+  changeOutline: z.array(ChangeOutlineItemSchema).optional(),
+  splitRequired: z.boolean().optional(),
+  splitReason: z.string().nullable().optional(),
+  structurerComplete: z.boolean().optional(),
+})
+
+type StructurerElaborationState = z.infer<typeof StructurerElaborationStateSchema>
+
+/**
+ * Casts elaboration-specific state updates to LangGraph's Partial<GraphState>.
+ * This single cast point is architecturally necessary: the Structurer node writes
+ * to ElaborationStateAnnotation fields (changeOutline, splitRequired, etc.) that
+ * are registered as LangGraph Annotations but not present on the base GraphState type.
+ * LangGraph merges these at runtime via its reducer system.
+ */
+function toStateUpdate(updates: StructurerElaborationState): Partial<GraphState> {
+  return updates as Partial<GraphState>
 }
 
 /**
@@ -329,7 +369,11 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
 
   return createToolNode('structurer', async (state: GraphState): Promise<Partial<GraphState>> => {
     const startTime = Date.now()
-    const s = state as unknown as StructurerElaborationState
+
+    // Use Zod safe parse to read elaboration-specific fields without unsafe casting.
+    // The schema strips unknown fields, so passing the full GraphState is safe.
+    const parsed = StructurerElaborationStateSchema.safeParse(state)
+    const s: StructurerElaborationState = parsed.success ? parsed.data : {}
     const storyId = s.storyId ?? 'unknown'
 
     logger.info('Structurer node starting', { storyId })
@@ -337,13 +381,13 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
     // Guard: null or missing currentStory — AC-10
     if (!s.currentStory) {
       logger.warn('Structurer: currentStory is null — returning empty outline', { storyId })
-      return {
+      return toStateUpdate({
         changeOutline: [],
         splitRequired: false,
         splitReason: null,
         structurerComplete: true,
         warnings: ['Structurer: currentStory is null — returning empty change outline'],
-      } as unknown as Partial<GraphState>
+      })
     }
 
     const acs = s.currentStory.acceptanceCriteria ?? []
@@ -351,13 +395,13 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
     // Guard: empty ACs — AC-10
     if (acs.length === 0) {
       logger.warn('Structurer: no acceptance criteria — returning empty outline', { storyId })
-      return {
+      return toStateUpdate({
         changeOutline: [],
         splitRequired: false,
         splitReason: null,
         structurerComplete: true,
         warnings: ['Structurer: no acceptance criteria found — returning empty change outline'],
-      } as unknown as Partial<GraphState>
+      })
     }
 
     try {
@@ -389,12 +433,12 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
         fallbackUsed: false,
       })
 
-      return {
+      return toStateUpdate({
         changeOutline,
         splitRequired,
         splitReason,
         structurerComplete: true,
-      } as unknown as Partial<GraphState>
+      })
     } catch (error) {
       // AC-11: Graceful fallback on any error
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -422,12 +466,12 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
         ? generateSplitReason(fallbackOutline, totalFallback, fullConfig.splitThreshold)
         : null
 
-      return {
+      return toStateUpdate({
         changeOutline: fallbackOutline,
         splitRequired,
         splitReason,
         structurerComplete: true,
-      } as unknown as Partial<GraphState>
+      })
     }
   })
 }

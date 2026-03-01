@@ -143,7 +143,7 @@ describe('ChangeOutlineItemSchema', () => {
 
   it('validates all complexity values', () => {
     const complexities = ['low', 'medium', 'high', 'unknown']
-    for (const complexity of complexities) {
+    complexities.forEach(complexity => {
       expect(() =>
         ChangeOutlineItemSchema.parse({
           id: 'CO-1',
@@ -155,7 +155,7 @@ describe('ChangeOutlineItemSchema', () => {
           relatedAcIds: [],
         }),
       ).not.toThrow()
-    }
+    })
   })
 
   it('validates all changeType values', () => {
