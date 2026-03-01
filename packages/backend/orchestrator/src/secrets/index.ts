@@ -18,10 +18,7 @@
  */
 
 import { z } from 'zod'
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager'
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 import { logger } from '@repo/logger'
 
 // ============================================================================

@@ -14,9 +14,9 @@ import { ChatMinimax } from '@langchain/community/chat_models/minimax'
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { logger } from '@repo/logger'
 import type { AvailabilityCache } from '../config/llm-provider.js'
+import { secretsClient } from '../secrets/index.js'
 import { BaseProvider, checkEndpointAvailability } from './base.js'
 import { MinimaxConfigSchema, type MinimaxConfig } from './__types__/minimax.js'
-import { secretsClient } from '../secrets/index.js'
 
 // ============================================================================
 // MiniMax Provider Adapter

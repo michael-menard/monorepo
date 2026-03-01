@@ -12,8 +12,8 @@ import { ChatAnthropic } from '@langchain/anthropic'
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { logger } from '@repo/logger'
 import type { AvailabilityCache } from '../config/llm-provider.js'
-import { BaseProvider, checkEndpointAvailability } from './base.js'
 import { secretsClient } from '../secrets/index.js'
+import { BaseProvider, checkEndpointAvailability } from './base.js'
 
 // ============================================================================
 // Configuration Schema
