@@ -1,0 +1,158 @@
+schema: 2
+story_id: "APIP-0030"
+timestamp: "2026-02-25T17:30:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Verify APIP-5006 handoff checklist and confirm infra prerequisites — server provisioned, Docker v2 installed, base compose file exists and validates, ports 8123/8124 free, Aurora langgraph_checkpoint DB and dedicated user exist"
+    files: []
+    files_to_read:
+      - "infra/langgraph-server/README.md"
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    dependencies: []
+    slice: backend
+    verification: "Manual checklist — server accessible, docker --version shows v2, docker compose config validates on base file"
+    acs_covered: []
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Add langgraph-platform and langgraph-checkpoint-postgres service definitions to compose file — port 8123, Studio UI 127.0.0.1:8124, named volumes, healthcheck, restart: unless-stopped, Aurora connection, pg.Pool max 3"
+    files:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+    dependencies: [1]
+    slice: backend
+    verification: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config"
+    acs_covered: ["AC-1", "AC-3", "AC-5"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Add langgraph-checkpoint-init one-shot init container for Aurora schema initialization using minio-init pattern — restart: 'no', depends_on: condition: service_healthy"
+    files:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+    dependencies: [2]
+    slice: backend
+    verification: "docker compose up -d && docker compose logs langgraph-checkpoint-init shows successful schema init and exit 0"
+    acs_covered: ["AC-2"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Extend Prometheus scrape config with LangGraph Platform metrics endpoint — add langgraph-platform job to infra/prometheus/prometheus.yml"
+    files:
+      - "infra/prometheus/prometheus.yml"
+    files_to_read:
+      - "infra/prometheus/prometheus.yml"
+    dependencies: [2]
+    slice: backend
+    verification: "docker compose restart prometheus; Prometheus targets page shows langgraph scrape target up"
+    acs_covered: []
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Write infra/langgraph-server/README.md with deployment procedure, checkpoint schema docs, Studio UI access guide, APIP-0020 connection config (http://langgraph-platform:8123 internal, http://localhost:8123 host)"
+    files:
+      - "infra/langgraph-server/README.md"
+    files_to_read:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    dependencies: [3]
+    slice: backend
+    verification: "README.md exists; all required sections present — schema overview, connection pool spec, deployment procedure, Studio UI access, APIP-0020 connection config"
+    acs_covered: ["AC-7", "AC-8"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Smoke test — verify end-to-end deployment health on server: compose config validates (HP-1), all services healthy (HP-2), API responds on 8123 (HP-3), Studio UI on 8124 localhost-only (HP-4, HP-7), restart safety (HP-5), checkpoint recovery (ED-1), no latest tags (ED-2)"
+    files: []
+    files_to_read:
+      - "infra/langgraph-server/README.md"
+    dependencies: [5]
+    slice: backend
+    verification: "All HP-1 through HP-7 pass; grep -E 'image:.*latest' compose returns no matches"
+    acs_covered: ["AC-4", "AC-5", "AC-6"]
+
+files_to_change:
+  - path: "infra/langgraph-server/compose.langgraph-server.yaml"
+    action: create
+    reason: "New Docker Compose file for LangGraph Platform with langgraph-platform, langgraph-checkpoint-postgres, and langgraph-checkpoint-init services per AC-1, AC-2, AC-3, AC-5"
+  - path: "infra/langgraph-server/README.md"
+    action: create
+    reason: "Deployment documentation required by AC-7 (checkpoint schema docs) and AC-8 (APIP-0020 integration readiness)"
+  - path: "infra/prometheus/prometheus.yml"
+    action: modify
+    reason: "Extend with LangGraph Platform metrics scrape target per AC-4 observability requirements"
+
+commands_to_run:
+  - command: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config"
+    when: "after compose file written (ST-2 / ST-3)"
+    required: true
+  - command: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d && sleep 60 && docker compose -f infra/langgraph-server/compose.langgraph-server.yaml ps"
+    when: "on deployed server (ST-6 smoke test)"
+    required: false
+  - command: "curl -f http://localhost:8123/ok"
+    when: "on deployed server after services up (ST-6)"
+    required: false
+  - command: "ss -tlnp | grep 8124"
+    when: "on deployed server after services up (ST-6)"
+    required: false
+  - command: "grep -E 'image:.*latest' infra/langgraph-server/compose.langgraph-server.yaml"
+    when: "after compose file written — expected: no output"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "LangGraph Platform service definition in compose file; docker compose config exits 0; follows infra/compose.lego-app.yaml conventions (named volumes, CMD-SHELL healthcheck, restart: unless-stopped, extra_hosts)"
+    evidence_type: command
+  - ac_id: "AC-2"
+    planned_evidence: "langgraph-checkpoint-init one-shot container in compose using minio-init pattern (restart: 'no', depends_on: condition: service_healthy); docker compose logs shows successful schema init"
+    evidence_type: command
+  - ac_id: "AC-3"
+    planned_evidence: "Connection pool documented in README.md with pg.Pool max 3, dedicated langgraph_checkpoint_user credentials, isolated from @repo/db; documented in compose environment vars"
+    evidence_type: manual
+  - ac_id: "AC-4"
+    planned_evidence: "curl -f http://localhost:8123/ok returns HTTP 200 within 60s of compose up on deployed server"
+    evidence_type: manual
+  - ac_id: "AC-5"
+    planned_evidence: "Port mapping 127.0.0.1:8124:8124 in compose file; ss -tlnp | grep 8124 shows 127.0.0.1 bind on deployed server"
+    evidence_type: manual
+  - ac_id: "AC-6"
+    planned_evidence: "docker compose restart langgraph-platform followed by curl -f http://localhost:8123/ok passes within 60s; checkpoint rows persist in Aurora after docker kill (ED-1)"
+    evidence_type: manual
+  - ac_id: "AC-7"
+    planned_evidence: "infra/langgraph-server/README.md contains: Aurora langgraph_checkpoint schema overview, connection pool spec (max 3, dedicated credentials, isolated from @repo/db), migration/init procedure"
+    evidence_type: file
+  - ac_id: "AC-8"
+    planned_evidence: "infra/langgraph-server/README.md contains: APIP-0020 integration section with http://langgraph-platform:8123 (Docker network) and http://localhost:8123 (host) URLs; LangGraph Platform image version pinned"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Which LangGraph Platform Docker image version to pin in compose file?"
+    decision: "Auto-accept: use langchain/langgraph-api:0.0.9 as the specific pinned version (do not use 'latest'). Exact version must be confirmed from LangGraph Platform release notes before implementation; implementer should pin to latest stable non-prerelease version available at implementation time."
+    rationale: "Story requires pinned version per ED-2 and AC-1. Image must not use 'latest' tag. Implementer verifies exact latest stable version from https://hub.docker.com/r/langchain/langgraph-api/tags at time of implementation. Tier 1 decision (clarification) — auto-accepted at aggressive autonomy level."
+    decided_by: auto
+  - id: ARCH-002
+    question: "Does LangGraph Platform expose a Prometheus-compatible /metrics endpoint in the pinned version?"
+    decision: "Auto-accept: Add Prometheus scrape config unconditionally per AC story requirements. If endpoint is unavailable in the deployed version, implementer adds a comment noting the target and the version check required."
+    rationale: "ST-4 is listed as 'supporting — observability' with no AC directly mapped. Safer to include the scrape config and note uncertainty than to omit it. Tier 3 decision (ambiguous scope) — auto-accepted at aggressive autonomy level."
+    decided_by: auto
+
+complexity: simple
+
+notes:
+  - "Pure infrastructure story — no TypeScript code changes, no pnpm build/test commands required."
+  - "E2E exemption applies: frontend_impacted: false (ADR-006). No Playwright tests."
+  - "Coverage waiver applies: No TypeScript business logic. QA gate = compose config valid + API reachable."
+  - "infra/langgraph-server/ directory does not yet exist — ST-2 creates it with the compose file."
+  - "APIP-5006 is a hard prerequisite (gating). ST-1 verifies the handoff checklist before writing any files."
+  - "LangGraph Platform image version must be pinned to specific tag — never use 'latest' (ED-2)."
+  - "Port 8124 (Studio UI) MUST be bound to 127.0.0.1, not 0.0.0.0 (SEC-001, AC-5)."
+  - "Connection pool isolation: langgraph-checkpoint-postgres must use dedicated pg.Pool (max 3), separate from @repo/db."
+  - "Follow minio-init one-shot pattern from infra/compose.lego-app.yaml for langgraph-checkpoint-init."
+  - "Prometheus prometheus.yml uses global scrape_interval: 15s; extend with langgraph-platform job at host.docker.internal or service DNS name."
+  - "Elaboration found 2 gaps (auto-fixed): index now includes APIP-5006 dependency; story.yaml goal aligned with ADR-001 Decision 2."
+  - "Elaboration opportunities logged to KB: log rotation, resource limits, checkpoint DB backup docs, .env.example — all deferred."

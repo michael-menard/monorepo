@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus, Minus } from "lucide-react"
+import type React from 'react'
+import { useState } from 'react'
+import { Plus, Minus } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface VaporwaveCounterRatioProps {
   title?: string
@@ -15,7 +15,7 @@ interface VaporwaveCounterRatioProps {
 }
 
 export function VaporwaveCounterRatio({
-  title = "Progress",
+  title = 'Progress',
   initialValue = 0,
   total = 100,
   icon,
@@ -23,8 +23,8 @@ export function VaporwaveCounterRatio({
 }: VaporwaveCounterRatioProps) {
   const [count, setCount] = useState(initialValue)
 
-  const increment = () => setCount((prev) => Math.min(total, prev + step))
-  const decrement = () => setCount((prev) => Math.max(0, prev - step))
+  const increment = () => setCount(prev => Math.min(total, prev + step))
+  const decrement = () => setCount(prev => Math.max(0, prev - step))
 
   const percentage = Math.round((count / total) * 100)
 
@@ -88,7 +88,9 @@ export function VaporwaveCounterRatio({
           />
         </div>
 
-        <p className="text-center text-sm text-vaporwave-text-muted font-mono">{percentage}% Complete</p>
+        <p className="text-center text-sm text-vaporwave-text-muted font-mono">
+          {percentage}% Complete
+        </p>
       </CardContent>
 
       {/* Bottom glow line */}

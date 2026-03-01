@@ -1,0 +1,7 @@
+skipped: true
+justification: >
+  APIP-1060 is a headless backend LangGraph orchestration graph with no UI components,
+  no HTTP routes for the frontend, and no user-facing surfaces. The QA graph runs as
+  a server-side process on the dedicated local server and produces YAML artifact files.
+  UI/UX guidance does not apply. Future operator visibility surfaces (operator CLI in
+  APIP-5005, monitor dashboard in APIP-2020) are separate stories.

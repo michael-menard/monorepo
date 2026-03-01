@@ -383,13 +383,7 @@ export type LangGraphPriority = z.infer<typeof LangGraphPrioritySchema>
 /**
  * LangGraph story type enum values
  */
-export const LangGraphStoryTypeSchema = z.enum([
-  'feature',
-  'bug',
-  'tech-debt',
-  'spike',
-  'chore',
-])
+export const LangGraphStoryTypeSchema = z.enum(['feature', 'bug', 'tech-debt', 'spike', 'chore'])
 export type LangGraphStoryType = z.infer<typeof LangGraphStoryTypeSchema>
 
 /**

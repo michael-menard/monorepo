@@ -65,6 +65,8 @@ export const ToolNameSchema = z.enum([
   'kb_upsert_plan',
   // Artifact search tool (KBAR-0130)
   'artifact_search',
+  // Dual-write artifact tool (KBAR-0110)
+  'artifact_write',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -139,6 +141,8 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_upsert_plan: new Set(['pm', 'dev', 'all']),
   // Artifact search tool (KBAR-0130) - available to all roles
   artifact_search: new Set(['pm', 'dev', 'qa', 'all']),
+  // Dual-write artifact tool (KBAR-0110)
+  artifact_write: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**

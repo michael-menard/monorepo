@@ -8,9 +8,9 @@
  *   pnpm db:impact-analysis --enum wishlist_store --change add-value:Amazon
  *   pnpm db:impact-analysis --table wishlist_items --change drop-column:notes --format json
  */
-import { Project } from 'ts-morph'
 import { resolve, join } from 'path'
 import { writeFileSync, mkdirSync } from 'fs'
+import { Project } from 'ts-morph'
 import { CliOptionsSchema, ParsedChangeSchema, ParsedChange } from './__types__/index.js'
 import { discoverFiles } from './utils/file-scanner.js'
 import { introspectTable, introspectEnum } from './utils/schema-introspector.js'
@@ -90,9 +90,7 @@ async function main() {
 
     // Generate report
     const report =
-      options.format === 'json'
-        ? generateJsonReport(result!)
-        : generateMarkdownReport(result!)
+      options.format === 'json' ? generateJsonReport(result!) : generateMarkdownReport(result!)
 
     // Output report
     if (options.dryRun) {
@@ -169,7 +167,9 @@ function parseChangeSpec(changeSpec: string): ParsedChange {
   const parts = changeSpec.split(':')
 
   if (parts.length < 2) {
-    throw new Error('Change spec must have at least operation and target (e.g., "add-column:priority")')
+    throw new Error(
+      'Change spec must have at least operation and target (e.g., "add-column:priority")',
+    )
   }
 
   const [operation, target, arg1, arg2] = parts

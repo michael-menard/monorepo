@@ -1,0 +1,212 @@
+feasible: true
+confidence: medium
+rationale: >
+  The implementation graph is technically feasible and follows well-established
+  patterns in the existing orchestrator codebase (elaboration.ts, story-creation.ts).
+  The LangGraph StateGraph + Annotation + createToolNode pattern is proven across
+  two existing graphs. The git worktree mechanics are standard (git >= 2.5) and
+  the atomic commit pattern is straightforward with child_process/execa.
+
+  CRITICAL GATE: Feasibility is contingent on APIP-1020 (ChangeSpec schema ADR)
+  completing before integration coding begins. Without the ChangeSpec schema, no
+  change loop integration code can be written. The story CAN be fully specified
+  and the graph skeleton (nodes, state, routing) CAN be built without the schema,
+  but the actual change loop dispatch integration is blocked.
+
+  The sizing_warning: true is well-founded. This story spans 4 distinct technical
+  domains and a split is strongly recommended at elaboration time.
+
+complexity: high
+
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/graphs/
+    - packages/backend/orchestrator/src/nodes/ (new directory for implementation graph nodes)
+    - packages/backend/orchestrator/src/artifacts/ (evidence production, read-only reuse)
+    - packages/backend/orchestrator/src/runner/ (circuit-breaker, error-classification, node-factory — read-only reuse)
+    - packages/backend/orchestrator/src/__tests__/
+  endpoints: []
+  deploy_touchpoints:
+    - "No deployment changes — the graph runs on the existing local LangGraph server (APIP-0030)"
+    - "Git must be >= 2.5 on the pipeline server for worktree support (verify before implementation)"
+
+risks:
+  - finding: "ChangeSpec schema dependency (APIP-1020) — HARD GATE"
+    mitigation: >
+      Do not write any change loop integration code until APIP-1020 closes and
+      publishes the ChangeSpec Zod schema ADR. The graph skeleton (nodes, state
+      definition, routing edges) can proceed with a placeholder ChangeSpec stub.
+      AC-1 explicitly gates the integration phase. Implementation must track
+      APIP-1020 status before starting AC-5 through AC-8 work.
+
+  - finding: "PipelineModelRouter dependency (APIP-0040) — blocker for real dispatch"
+    mitigation: >
+      Define an IModelDispatch interface that PipelineModelRouter satisfies.
+      Inject the interface into the change loop node. Unit tests mock at this
+      interface boundary. Full integration (real model dispatch) requires
+      APIP-0040 complete. Graph skeleton, worktree node, load-story node, and
+      evidence-production node can all be built and tested before APIP-0040.
+
+  - finding: "Sizing warning — 4 distinct technical domains increase review cycle risk"
+    mitigation: >
+      Strong split recommendation: APIP-1030a (graph skeleton + worktree management
+      + load-story + evidence-production, no LLM dispatch) and APIP-1030b (change
+      loop + model dispatch + micro-verify + atomic commit + retry logic). This
+      split reduces the blast radius of each review cycle and allows APIP-1030a
+      to ship before APIP-0040 is complete.
+
+  - finding: "BudgetExhaustedError must be caught at BullMQ job processor level, not swallowed in graph"
+    mitigation: >
+      The implementation graph must propagate BudgetExhaustedError to its caller
+      (the BullMQ job processor in APIP-0020's supervisor). The graph should NOT
+      catch and suppress this error internally. This wiring requires coordination
+      with the APIP-0020 supervisor implementation to ensure permanent failure
+      handling is in place.
+
+  - finding: "Atomic commit invariant — each ChangeSpec must be committed before next begins"
+    mitigation: >
+      Implement git add + git commit as a single synchronous operation within the
+      change loop iteration using child_process.execSync with explicit cwd set to
+      the worktree path. The completedChanges state update must happen AFTER the
+      commit exits 0. Never batch commits. LangGraph checkpointing persists state
+      after each commit, enabling safe resume.
+
+missing_requirements:
+  - "ChangeSpec Zod schema must be published as ADR from APIP-1020 before AC-1 can be completed. Story explicitly gates on this."
+  - "Confirm git version >= 2.5 available on pipeline server before implementation of create-worktree node."
+  - "Confirm ChangeSpec schema includes touched package names (Turborepo filter identifiers) for micro-verify scoping (AC-7 dependency)."
+
+evidence_expectations:
+  - "graph.compile() completes without error (graph compilation smoke test)"
+  - "EVIDENCE.yaml validates against EvidenceSchema (Zod parse success)"
+  - "Integration test shows real git commit in os.tmpdir worktree visible via git log"
+  - "pnpm test --filter @repo/orchestrator passes unchanged (AC-13 regression guard)"
+  - "BudgetExhaustedError propagated to caller, not swallowed (unit test)"
+
+subtasks:
+  - id: ST-1
+    title: "Define ImplementationGraph state type and graph skeleton"
+    goal: "Create packages/backend/orchestrator/src/graphs/implementation.ts with Zod-typed state, StateGraph setup, runImplementation() entry point, and LangGraph checkpointer configured with thread ID convention"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/graphs/story-creation.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/implementation.ts (new)
+    acs: ["AC-2", "AC-10"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-2
+    title: "Implement load-story node with LoadError typed output"
+    goal: "Create load-story node that reads story file and ChangeSpec plan into graph state, produces typed LoadError on missing inputs, transitions to abort edge on error"
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/load-story.ts (new)
+    acs: ["AC-4"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-3
+    title: "Implement create-worktree node with non-blocking cleanup"
+    goal: "Create create-worktree node using git worktree add to isolated path; record worktree path in state; implement non-blocking cleanup via git worktree remove --force on completion/abort"
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts (new)
+    acs: ["AC-3"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-4
+    title: "Implement evidence-production node using EvidenceSchema helpers"
+    goal: "Create evidence-production node that writes EVIDENCE.yaml using createEvidence(), addTouchedFile(), addCommandRun(), updateAcEvidence() from artifacts/evidence.ts; captures AC coverage, commit SHAs, token summary, abort reason"
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/persistence/yaml-artifact-writer.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/evidence-production.ts (new)
+    acs: ["AC-9"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-5
+    title: "Implement IModelDispatch interface and define ChangeSpec placeholder schema"
+    goal: "Define IModelDispatch injectable interface; create placeholder ChangeSpec Zod schema stub (to be replaced with APIP-1020 ADR output); define micro-verify result and commit record Zod schemas"
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/story.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts (new)
+      - packages/backend/orchestrator/src/graphs/change-spec-schema.ts (new, placeholder)
+    acs: ["AC-1"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 5000
+
+  - id: ST-6
+    title: "Implement change-loop node with retry logic, atomic commit, and idempotent resume"
+    goal: "Implement change-loop node that iterates ChangeSpecs; calls IModelDispatch.dispatch() per spec; runs micro-verify; makes atomic git commit on pass; retries (up to maxRetries) on fail; skips already-committed specs; aborts on maxRetries exceeded or BudgetExhaustedError"
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/change-loop.ts (new)
+    acs: ["AC-5", "AC-6", "AC-7", "AC-8"]
+    depends_on: ST-5
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 12000
+
+  - id: ST-7
+    title: "Wire all nodes into implementation graph with conditional edges and structured logging"
+    goal: "Connect all nodes (load-story, create-worktree, change-loop, evidence-production) into the StateGraph with correct conditional edges (commit → next / retry / abort); add @repo/logger structured events for all lifecycle transitions"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/nodes/ (all new nodes)
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    acs: ["AC-2", "AC-10"]
+    depends_on: ST-6
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 8000
+
+  - id: ST-8
+    title: "Write unit tests for implementation graph routing and change loop branches"
+    goal: "Write Vitest unit tests covering: graph compiles; change loop routes commit/retry/abort; BudgetExhaustedError permanent abort; idempotent resume; evidence production output; LoadError abort transition"
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/nodes/ (all)
+      - packages/backend/orchestrator/src/__tests__/ (existing patterns)
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/implementation-graph.test.ts (new)
+      - packages/backend/orchestrator/src/__tests__/change-loop.test.ts (new)
+    acs: ["AC-11", "AC-13"]
+    depends_on: ST-7
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-9
+    title: "Write integration tests using real git subprocess and os.tmpdir fixture"
+    goal: "Write Vitest integration tests using real git init/worktree/commit in os.tmpdir(); verify create-worktree creates real worktree; verify atomic commit visible in git log; verify cleanup removes worktree; verify micro-verify runs pnpm commands"
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/__tests__/integration/create-worktree.integration.test.ts (new)
+      - packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts (new)
+    acs: ["AC-12", "AC-13"]
+    depends_on: ST-8
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 9000

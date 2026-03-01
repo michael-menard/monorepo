@@ -1,0 +1,3 @@
+skipped: true
+reason: "APIP-5004 introduces no UI surface. The SecretsClient module is a backend infrastructure library. No new routes, pages, components, or user-facing interactions are added. UI/UX review is not applicable."
+future_hook: "If APIP-5005 (Minimal Operator Visibility CLI) surfaces secrets status (e.g., 'using env fallback' vs 'connected to Secrets Manager'), the SecretsClient should expose a getStatus(): SecretsClientStatus method. This is a future design point for APIP-5005, not in scope for APIP-5004."

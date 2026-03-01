@@ -1,0 +1,76 @@
+feature_dir: "plans/future/platform/autonomous-pipeline"
+prefix: "APIP"
+updated: "2026-02-25T14:45:00Z"
+updated_by: "elab-epic-updates-leader"
+
+stories_index:
+  stories_added: 8
+  new_story_ids:
+    - "APIP-5000"
+    - "APIP-5001"
+    - "APIP-5002"
+    - "APIP-5003"
+    - "APIP-5004"
+    - "APIP-5005"
+    - "APIP-5006"
+    - "APIP-5007"
+  stories_split: 0
+  risk_notes_added: 0
+
+roadmap:
+  dependencies_added: 8
+  critical_path_changed: false
+  notes: "New stories mostly in Phase 0 (infrastructure/test setup); APIP-5005 (Minimal CLI) pulled forward to Phase 1"
+
+files_modified:
+  - "plans/future/platform/autonomous-pipeline/stories.index.md"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5000/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5001/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5002/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5003/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5004/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5005/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5006/story.yaml"
+  - "plans/future/platform/autonomous-pipeline/backlog/APIP-5007/story.yaml"
+
+decisions_applied:
+  - decision_id: "QA-001"
+    action: "Downgraded to CONCERN; test spec detail enforced at /elab-story level"
+
+  - decision_id: "QA-006"
+    action: "Created APIP-5002 (E2E Test Plan) as P1 story scheduled before Phase 0 completion"
+
+  - decision_id: "ENG-001"
+    action: "ChangeSpec schema review gates APIP-1020 start; documented in story"
+
+  - decision_id: "SEC-001"
+    action: "Created APIP-5003 (Security Hardening) with reduced scope: network boundary docs + container hardening for MVP"
+
+  - decision_id: "SEC-003"
+    action: "Deferred APIP-5008 (Security Scanning Gate); will verify APIP-1050 AC during /elab-story"
+
+  - decision_id: "COST-CONTROL-001"
+    action: "Circuit breaker must be in APIP-0040 AC before APIP-1030 starts"
+
+  - decision_id: "PLAT-001"
+    action: "Created APIP-5006 (Server Infrastructure) to gate APIP-0030"
+
+  - decision_id: "PLAT-002"
+    action: "Created APIP-5007 (Schema Versioning) to document checkpoint integration"
+
+  - decision_id: "UX-001"
+    action: "Created APIP-5005 (Minimal CLI) and pulled forward to Phase 1"
+
+  - decision_id: "QA-002"
+    action: "AC verification detail will be defined during /elab-story for APIP-1060"
+
+deferred:
+  - id: "APIP-5008"
+    title: "Security Scanning Gate in Code Review Graph"
+    reason: "APIP-1050 review graph already scopes security review worker; verify during /elab-story before creating separate story"
+
+summary:
+  total_decisions_applied: 10
+  new_stories_created: 8
+  deferred_stories: 1
+  verdict: "CONCERNS (accepted from user decision review)"

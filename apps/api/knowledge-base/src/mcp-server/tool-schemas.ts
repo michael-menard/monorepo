@@ -52,10 +52,12 @@ import {
 import {
   KbGetPlanInputSchema,
   KbListPlansInputSchema,
+  KbGetRoadmapInputSchema,
   KbUpdatePlanInputSchema,
   KbUpsertPlanInputSchema,
   type KbGetPlanInput,
   type KbListPlansInput,
+  type KbGetRoadmapInput,
   type KbUpsertPlanInput,
 } from '../crud-operations/plan-operations.js'
 import {
@@ -105,8 +107,14 @@ export type {
   WorktreeMarkCompleteInput,
 }
 // Re-export plan tool schemas (SKCR)
-export { KbGetPlanInputSchema, KbListPlansInputSchema, KbUpdatePlanInputSchema, KbUpsertPlanInputSchema }
-export type { KbGetPlanInput, KbListPlansInput, KbUpsertPlanInput }
+export {
+  KbGetPlanInputSchema,
+  KbListPlansInputSchema,
+  KbGetRoadmapInputSchema,
+  KbUpdatePlanInputSchema,
+  KbUpsertPlanInputSchema,
+}
+export type { KbGetPlanInput, KbListPlansInput, KbGetRoadmapInput, KbUpsertPlanInput }
 
 // ============================================================================
 // Admin Tool Input Schemas (KNOW-0053)
@@ -1352,6 +1360,7 @@ import {
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
   KbDeleteArtifactInputSchema,
+  ArtifactWriteInputSchema,
 } from '../crud-operations/index.js'
 
 // Re-export task lifecycle schemas
@@ -1388,12 +1397,15 @@ export {
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
   KbDeleteArtifactInputSchema,
+  ArtifactWriteInputSchema,
 }
 export type {
   KbWriteArtifactInput,
   KbReadArtifactInput,
   KbListArtifactsInput,
   KbDeleteArtifactInput,
+  ArtifactWriteInput,
+  ArtifactWriteResult,
 } from '../crud-operations/index.js'
 
 /**
@@ -2324,8 +2336,10 @@ export const kbWriteArtifactToolDefinition: McpToolDefinition = {
   description: `Write a workflow artifact to the database (DB-first artifact storage).
 
 Creates or updates an artifact for a story. Uses upsert behavior based on
-story_id + artifact_type + iteration - if an artifact with these values exists,
-it will be updated; otherwise a new artifact is created.
+story_id + artifact_type + artifact_name + iteration - if an artifact with these
+values exists, it will be updated; otherwise a new artifact is created.
+Use artifact_name to store multiple artifacts of the same type (e.g., 6 reviews
+with names REVIEW-ENGINEERING, REVIEW-PRODUCT, etc.).
 
 Supported artifact types:
 - checkpoint: Phase completion checkpoints (CHECKPOINT.yaml)
@@ -2409,12 +2423,16 @@ export const kbReadArtifactToolDefinition: McpToolDefinition = {
 Retrieves an artifact by story_id + artifact_type. If iteration is not specified,
 returns the latest artifact (highest iteration number).
 
+Use artifact_name to disambiguate when multiple artifacts share the same type
+(e.g., REVIEW-ENGINEERING vs REVIEW-PRODUCT for type 'review').
+
 Use this instead of reading YAML files from _implementation/ directory.
 The content field contains the full artifact data that would have been in the YAML file.
 
 Parameters:
 - story_id (required): Story ID (e.g., 'WISH-2045')
 - artifact_type (required): Type of artifact to read
+- artifact_name (optional): Specific artifact name for disambiguation
 - iteration (optional): Specific iteration number (default: latest)
 
 Returns: Artifact or null if not found
@@ -2444,11 +2462,11 @@ Example (read specific iteration):
   "iteration": 2
 }
 
-Example (read review for fix cycle):
+Example (read specific review by name):
 {
-  "story_id": "WISH-2045",
+  "story_id": "WISH-EPIC",
   "artifact_type": "review",
-  "iteration": 1
+  "artifact_name": "REVIEW-ENGINEERING"
 }`,
   inputSchema: zodToMcpSchema(KbReadArtifactInputSchema),
 }
@@ -2533,6 +2551,85 @@ Example:
   "artifact_id": "550e8400-e29b-41d4-a716-446655440000"
 }`,
   inputSchema: zodToMcpSchema(KbDeleteArtifactInputSchema),
+}
+
+// ============================================================================
+// Dual-Write Artifact Tool (KBAR-0110)
+// ============================================================================
+
+/**
+ * artifact_write tool definition.
+ *
+ * Write a workflow artifact to the filesystem (YAML) and optionally to the KB database.
+ * KB write failure does NOT block the file write.
+ */
+export const artifactWriteToolDefinition: McpToolDefinition = {
+  name: 'artifact_write',
+  description: `Write a workflow artifact to the filesystem as YAML and optionally index it in the KB.
+
+The filesystem write is the primary operation and must succeed. The KB write is best-effort:
+if it fails, the error is captured in the response but does not cause the tool to fail.
+
+Supported artifact types:
+- checkpoint: Phase completion checkpoint (CHECKPOINT.yaml)
+- scope: Story scope definition (SCOPE.yaml)
+- plan: Implementation plan (PLAN.yaml)
+- evidence: Implementation evidence (EVIDENCE.yaml)
+- verification: QA verification results (VERIFICATION.yaml)
+- analysis: Code analysis results (ANALYSIS.yaml)
+- context: Agent context (AGENT-CONTEXT.yaml)
+- fix_summary: Fix cycle summary (FIX-SUMMARY.yaml)
+- proof: Implementation proof (PROOF.yaml)
+- elaboration: Story elaboration (ELABORATION.yaml)
+- review: Code review results (REVIEW.yaml)
+- qa_gate: QA gate decision (QA-GATE.yaml)
+- completion_report: Story completion report (COMPLETION-REPORT.yaml)
+
+Path formula:
+- {story_dir}/_implementation/{ARTIFACT_FILENAME}.yaml
+- For iteration > 0: {story_dir}/_implementation/{ARTIFACT_FILENAME}.iter{N}.yaml
+
+Parameters:
+- story_id (required): Story ID (e.g., 'KBAR-0110')
+- artifact_type (required): Type of artifact
+- content (required): Artifact content as JSON object (serialized to YAML)
+- story_dir (required): Absolute path to story root directory
+- phase (optional): Implementation phase
+- iteration (optional): Fix cycle iteration number (default: 0)
+- write_to_kb (optional): Also write to KB database (default: true)
+
+Returns:
+{
+  file_written: true,
+  file_path: /absolute/path/to/_implementation/CHECKPOINT.yaml,
+  kb_written: true,
+  kb_artifact_id: uuid-or-null,
+  kb_error: null
+}
+
+Example (write checkpoint):
+{
+  story_id: KBAR-0110,
+  artifact_type: checkpoint,
+  story_dir: /path/to/plans/future/platform/.../in-progress/KBAR-0110,
+  phase: setup,
+  content: {
+    current_phase: plan,
+    blocked: false,
+    iteration: 0
+  }
+}
+
+Example (write evidence, KB write disabled):
+{
+  story_id: KBAR-0110,
+  artifact_type: evidence,
+  story_dir: /path/to/story/dir,
+  phase: implementation,
+  content: { tests_passed: true },
+  write_to_kb: false
+}`,
+  inputSchema: zodToMcpSchema(ArtifactWriteInputSchema),
 }
 
 // ============================================================================
@@ -3068,7 +3165,7 @@ export const kbGetPlanToolDefinition: McpToolDefinition = {
   name: 'kb_get_plan',
   description: `Get a plan by its slug.
 
-Returns the full plan record including raw_content, phases, story_prefix, and feature_dir.
+Returns the full plan record including raw_content, phases, story_prefix, feature_dir, and dependencies.
 Used by /pm-bootstrap-workflow to fetch plan content for story generation.
 
 Parameters:
@@ -3103,7 +3200,7 @@ Parameters:
 - offset (optional): Pagination offset, default 0
 - include_content (optional): Include raw_content in response, default false
 
-Returns: Array of plan objects with total count
+Returns: Array of plan objects with total count. Each plan includes a dependencies field (array of plan slugs that must reach 'implemented' before this plan can start, or null).
 
 Example:
 {
@@ -3116,6 +3213,41 @@ Example (list P1 priority plans):
   "priority": "P1"
 }`,
   inputSchema: zodToMcpSchema(KbListPlansInputSchema),
+}
+
+/**
+ * kb_get_roadmap tool definition.
+ *
+ * Returns only plans with actionable statuses (excludes implemented, superseded, archived).
+ */
+export const kbGetRoadmapToolDefinition: McpToolDefinition = {
+  name: 'kb_get_roadmap',
+  description: `Get the active roadmap — plans with actionable statuses only.
+
+Excludes implemented, superseded, and archived plans. Returns only draft, accepted, stories-created, and in-progress plans.
+
+Sorted by priority (P1 first), then status, then slug.
+
+Parameters:
+- plan_type (optional): Filter by type ('feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike')
+- story_prefix (optional): Filter by story prefix (e.g., 'SKCR')
+- priority (optional): Filter by priority ('P1', 'P2', 'P3', 'P4', 'P5')
+- limit (optional): Max results 1-100, default 50
+- offset (optional): Pagination offset, default 0
+- include_content (optional): Include raw_content in response, default false
+
+Returns: Array of active plan objects with total count. Each plan includes a dependencies field (array of plan slugs that must reach 'implemented' before this plan can start, or null).
+
+Example:
+{
+  "limit": 50
+}
+
+Example (P1 roadmap items only):
+{
+  "priority": "P1"
+}`,
+  inputSchema: zodToMcpSchema(KbGetRoadmapInputSchema),
 }
 
 /**
@@ -3140,6 +3272,7 @@ Parameters:
 - story_prefix (optional): Story ID prefix (e.g., 'APIP')
 - estimated_stories (optional): Total number of planned stories
 - tags (optional): Array of categorization tags
+- dependencies (optional): Array of plan slugs that must reach 'implemented' before this plan can start
 - source_file (optional): Original source file path
 
 Returns: The upserted plan record and whether it was created or updated.`,
@@ -3167,6 +3300,7 @@ Parameters:
 - feature_dir (optional): New feature directory (null to clear)
 - story_prefix (optional): New story prefix (null to clear)
 - estimated_stories (optional): New estimated stories count (null to clear)
+- dependencies (optional): Plan slugs that must reach 'implemented' before this plan can start (null to clear)
 
 Returns: Updated plan object
 
@@ -3303,6 +3437,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbAuditByEntryToolDefinition,
   kbAuditQueryToolDefinition,
   kbAuditRetentionToolDefinition,
+  // Dual-write artifact tool (KBAR-0110)
+  artifactWriteToolDefinition,
   // Artifact tools (DB-first artifact storage)
   kbWriteArtifactToolDefinition,
   kbReadArtifactToolDefinition,
@@ -3328,6 +3464,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   // Plan tools (SKCR - KB-native story creation)
   kbGetPlanToolDefinition,
   kbListPlansToolDefinition,
+  kbGetRoadmapToolDefinition,
   kbUpdatePlanToolDefinition,
   kbUpsertPlanToolDefinition,
   // Artifact search tool (KBAR-0130)

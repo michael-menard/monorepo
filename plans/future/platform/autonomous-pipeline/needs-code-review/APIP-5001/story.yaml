@@ -1,0 +1,19 @@
+id: "APIP-5001"
+title: "Test Database Setup and Migration Testing"
+status: backlog
+priority: high
+phase: 0
+feature: "Establish test database fixtures, Aurora schema validation, and migration testing utilities for checkpoint storage integration and work queue testing"
+goal: "Provide repeatable test database setup and validation for checkpoint integration tests in APIP-0010 and schema evolution scenarios."
+depends_on:
+  - "APIP-0010"
+endpoints: []
+infrastructure:
+  - "Test database fixtures (Aurora local or testcontainers)"
+  - "Database schema validation utilities"
+  - "Migration testing framework"
+  - "Test data seeding for work queue and checkpoint schema"
+risk_notes: "Local database test setup complexity; ensuring test isolation and cleanup."
+sizing_warning: false
+created: "2026-02-25T14:30:00Z"
+source: "Epic Elaboration - QA perspective"

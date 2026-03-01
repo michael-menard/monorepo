@@ -35,12 +35,14 @@ export const TracingConfigSchema = z.object({
   autoInstrumentation: z.boolean().default(true),
 
   /** Specific instrumentations to enable */
-  instrumentations: z.object({
-    http: z.boolean().default(true),
-    pg: z.boolean().default(true),
-    redis: z.boolean().default(true),
-    fetch: z.boolean().default(true),
-  }).default({}),
+  instrumentations: z
+    .object({
+      http: z.boolean().default(true),
+      pg: z.boolean().default(true),
+      redis: z.boolean().default(true),
+      fetch: z.boolean().default(true),
+    })
+    .default({}),
 })
 
 export type TracingConfig = z.infer<typeof TracingConfigSchema>

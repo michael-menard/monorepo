@@ -36,7 +36,7 @@ Given('I have items selected', async ({ page }) => {
   const selectButton = page.getByRole('button', { name: /Select/i })
   await selectButton.click()
   await page.waitForTimeout(500)
-  
+
   // Select all items
   await page.keyboard.press('Control+a')
   await page.waitForTimeout(500)
@@ -51,14 +51,14 @@ Given('the tab list is focused', async ({ page }) => {
   // Tab to reach the tabs component
   let attempts = 0
   const maxAttempts = 20
-  
+
   while (attempts < maxAttempts) {
     await page.keyboard.press('Tab')
     const focusedElement = await page.evaluate(() => {
       const el = document.activeElement
       return el?.getAttribute('role')
     })
-    
+
     if (focusedElement === 'tab' || focusedElement === 'tablist') {
       return
     }
@@ -76,7 +76,6 @@ Given('the first card is focused', async ({ page }) => {
   await card.focus()
 })
 
-
 Given('the search input is focused', async ({ page }) => {
   const searchInput = page.locator('input[placeholder="Search..."]')
   await searchInput.focus()
@@ -85,7 +84,6 @@ Given('the search input is focused', async ({ page }) => {
 // ============================================================================
 // When Steps - User Actions
 // ============================================================================
-
 
 When('I press Tab twice', async ({ page }) => {
   await page.keyboard.press('Tab')
@@ -121,20 +119,23 @@ Then('the bulk actions bar should not be visible', async ({ page }) => {
   await expect(bulkBar).not.toBeVisible()
 })
 
-Then('I should eventually reach action buttons like Select or Add Inspiration', async ({ page }) => {
-  // Check if we've focused on any of the main action buttons
-  const focusedText = await page.evaluate(() => {
-    const el = document.activeElement
-    return el?.textContent || ''
-  })
-  
-  const hasReachedActionButton = 
-    focusedText.includes('Select') || 
-    focusedText.includes('Add') || 
-    focusedText.includes('Upload')
-  
-  expect(hasReachedActionButton).toBe(true)
-})
+Then(
+  'I should eventually reach action buttons like Select or Add Inspiration',
+  async ({ page }) => {
+    // Check if we've focused on any of the main action buttons
+    const focusedText = await page.evaluate(() => {
+      const el = document.activeElement
+      return el?.textContent || ''
+    })
+
+    const hasReachedActionButton =
+      focusedText.includes('Select') ||
+      focusedText.includes('Add') ||
+      focusedText.includes('Upload')
+
+    expect(hasReachedActionButton).toBe(true)
+  },
+)
 
 Then('the Albums tab should be focused', async ({ page }) => {
   const albumsTab = page.getByRole('tab', { name: /Albums/i })
@@ -150,24 +151,26 @@ Then('the first card should be focused', async ({ page }) => {
 
 Then('a modal or detail view should open', async ({ page }) => {
   // Either a modal appears or we navigate to a detail page
-  const modalVisible = await page.locator('[role="dialog"], [role="alertdialog"]')
+  const modalVisible = await page
+    .locator('[role="dialog"], [role="alertdialog"]')
     .isVisible()
     .catch(() => false)
-  
+
   const urlChanged = !page.url().includes('/inspiration')
-  
+
   expect(modalVisible || urlChanged).toBe(true)
 })
 
 Then('either a dialog appears or the card is selected', async ({ page }) => {
   // Space can either open a dialog or select the card in multi-select mode
-  const modalVisible = await page.locator('[role="dialog"], [role="alertdialog"]')
+  const modalVisible = await page
+    .locator('[role="dialog"], [role="alertdialog"]')
     .isVisible()
     .catch(() => false)
-  
+
   const card = page.locator('[data-testid^="inspiration-card-"]').first()
-  const isSelected = await card.getAttribute('aria-pressed') === 'true'
-  
+  const isSelected = (await card.getAttribute('aria-pressed')) === 'true'
+
   expect(modalVisible || isSelected).toBe(true)
 })
 

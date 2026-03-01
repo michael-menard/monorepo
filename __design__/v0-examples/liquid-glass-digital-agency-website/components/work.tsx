@@ -1,8 +1,8 @@
 'use client'
 
-import { GlassCard } from '@/components/ui/glass-card'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { GlassCard } from '@/components/ui/glass-card'
 
 const projects = [
   {

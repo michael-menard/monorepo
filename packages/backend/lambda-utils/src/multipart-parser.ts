@@ -5,9 +5,9 @@
  * Handles file uploads and form fields from API Gateway events.
  */
 
+import { Readable } from 'stream'
 import { APIGatewayProxyEventV2 } from 'aws-lambda'
 import Busboy from 'busboy'
-import { Readable } from 'stream'
 
 export interface ParsedFile {
   fieldname: string
@@ -38,7 +38,9 @@ export async function parseMultipartForm(event: APIGatewayProxyEventV2): Promise
     }
 
     // Decode base64 body if needed
-    const body = event.isBase64Encoded ? Buffer.from(event.body || '', 'base64') : Buffer.from(event.body || '', 'utf-8')
+    const body = event.isBase64Encoded
+      ? Buffer.from(event.body || '', 'base64')
+      : Buffer.from(event.body || '', 'utf-8')
 
     const busboy = Busboy({
       headers: {
@@ -60,28 +62,35 @@ export async function parseMultipartForm(event: APIGatewayProxyEventV2): Promise
     })
 
     // Handle file uploads
-    busboy.on('file', (fieldname: string, file: Readable, info: { filename: string; encoding: string; mimeType: string }) => {
-      const chunks: Buffer[] = []
+    busboy.on(
+      'file',
+      (
+        fieldname: string,
+        file: Readable,
+        info: { filename: string; encoding: string; mimeType: string },
+      ) => {
+        const chunks: Buffer[] = []
 
-      file.on('data', (chunk: Buffer) => {
-        chunks.push(chunk)
-      })
-
-      file.on('end', () => {
-        const buffer = Buffer.concat(chunks)
-        files.push({
-          fieldname,
-          filename: info.filename,
-          encoding: info.encoding,
-          mimetype: info.mimeType,
-          buffer,
+        file.on('data', (chunk: Buffer) => {
+          chunks.push(chunk)
         })
-      })
 
-      file.on('error', (err: Error) => {
-        reject(new Error(`File upload error: ${err.message}`))
-      })
-    })
+        file.on('end', () => {
+          const buffer = Buffer.concat(chunks)
+          files.push({
+            fieldname,
+            filename: info.filename,
+            encoding: info.encoding,
+            mimetype: info.mimeType,
+            buffer,
+          })
+        })
+
+        file.on('error', (err: Error) => {
+          reject(new Error(`File upload error: ${err.message}`))
+        })
+      },
+    )
 
     // Handle limits exceeded
     busboy.on('filesLimit', () => {

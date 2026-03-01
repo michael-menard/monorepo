@@ -1,6 +1,6 @@
-import { VaporwaveCounterSimple } from "@/components/vaporwave-counter-simple"
-import { VaporwaveCounterRatio } from "@/components/vaporwave-counter-ratio"
-import { Package, Hammer } from "lucide-react"
+import { Package, Hammer } from 'lucide-react'
+import { VaporwaveCounterSimple } from '@/components/vaporwave-counter-simple'
+import { VaporwaveCounterRatio } from '@/components/vaporwave-counter-ratio'
 
 export default function Home() {
   return (

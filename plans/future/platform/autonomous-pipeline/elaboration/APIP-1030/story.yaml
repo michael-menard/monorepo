@@ -1,0 +1,14 @@
+id: "APIP-1030"
+title: "Implementation Graph with Atomic Change Loop"
+status: backlog
+priority: medium
+phase: 1
+feature: "Full implementation graph: load story + create worktree → Plan (Claude) → Diff Plan → Change Loop (code-gen per ChangeSpec via Ollama/OpenRouter → micro-verify typecheck+test → atomic git commit) → evidence production"
+goal: "Execute atomic, independently committed code changes with per-change micro-verification so pipeline restarts lose no completed work."
+depends_on: ["APIP-1020", "APIP-0040"]
+endpoints: []
+infrastructure:
+  - "Git worktree management per story"
+risk_notes: "Multiple domains (implementation graph nodes, git tooling, model dispatch, micro-verify toolchain); change loop retry logic must coordinate with model escalation from router."
+sizing_warning: true
+created: "2026-02-25T00:00:00Z"

@@ -1,0 +1,56 @@
+perspective: engineering
+verdict: CONCERNS
+
+feasibility:
+  core_journey_feasible: true
+  blocking_deps:
+    - "LangGraph platform stability and checkpoint persistence in self-hosted Docker"
+    - "Model provider rate limiting API contracts (Ollama, OpenRouter, Claude)"
+    - "PostgreSQL advisory locks (FOR UPDATE SKIP LOCKED) reliable under sustained concurrent load"
+    - "Playwright E2E test flakiness must be resolved before autonomous QA gate can be trusted"
+
+mvp_blockers:
+  - id: "ENG-001"
+    issue: "ChangeSpec schema design is foundational — APIP-1020 defines the atomic change contract that all downstream workers depend on. Retrofitting schema changes after Phase 1 is extremely costly."
+    stories: [APIP-1020, APIP-1030]
+    action: "Schema review and validation before APIP-1020 implementation; consider versioning strategy"
+  - id: "ENG-002"
+    issue: "Cheap model quality (Ollama) at scale is unvalidated. RISK-001 explicitly notes cheap models can produce code that passes micro-verify but fails QA."
+    stories: [APIP-1030, APIP-3040]
+    action: "Establish micro-verify toolchain baseline before executing APIP-1030; define escalation triggers"
+  - id: "ENG-003"
+    issue: "Token budget hard-cap logic (APIP-0040, RISK-009) lacks circuit breaker integration spec."
+    stories: [APIP-0040, APIP-1030]
+    action: "Define token budget enforcement at every model dispatch point; document circuit breaker behavior"
+  - id: "ENG-004"
+    issue: "Learning system (Phase 3) assumes sufficient telemetry volume for statistically significant profiles."
+    stories: [APIP-3070, APIP-3020]
+    action: "Establish cost benchmarks before Phase 3; define exploration budget calibration"
+
+missing_mvp_stories:
+  - title: "Diff Planner validation and testing strategy"
+  - title: "Micro-verify toolchain specification"
+  - title: "Error propagation and retry coordination"
+
+future:
+  suggested_stories:
+    - title: "Micro-Verify Contract and Test Selection Strategy"
+      priority: P1
+    - title: "Error Recovery and Retry Coordination Protocol"
+      priority: P1
+    - title: "Performance Benchmarking and Scaling Model"
+      priority: P1
+    - title: "Diff Planner Output Validation and Feedback Loop"
+      priority: P1
+    - title: "Model Provider Cost Monitoring and Alerts"
+      priority: P2
+    - title: "GitHub API Integration Fault Tolerance"
+      priority: P2
+    - title: "Knowledge Base Contamination Prevention"
+      priority: P2
+
+  recommendations:
+    - "APIP-1020 should be a spike/research story to validate ChangeSpec schema before full integration"
+    - "Establish performance baseline after Phase 0 before committing to Phase 1 timeline"
+    - "QA gate (APIP-1060) depends on Playwright flakiness resolution"
+    - "Consider shadow mode for learning system before enabling automatic routing"

@@ -1,5 +1,10 @@
 import type { CodeAuditState } from '../../graphs/code-audit.js'
-import type { ChallengeResult, AuditFinding, AuditSeverity, DevilsAdvocateDecision } from '../../artifacts/audit-findings.js'
+import type {
+  ChallengeResult,
+  AuditFinding,
+  AuditSeverity,
+  DevilsAdvocateDecision,
+} from '../../artifacts/audit-findings.js'
 
 /**
  * Devil's Advocate Node
@@ -26,7 +31,11 @@ function challengeFinding(finding: AuditFinding): {
   }
 
   // Test file findings should be lower severity
-  if (finding.file.includes('__tests__') || finding.file.includes('.test.') || finding.file.includes('.spec.')) {
+  if (
+    finding.file.includes('__tests__') ||
+    finding.file.includes('.test.') ||
+    finding.file.includes('.spec.')
+  ) {
     if (finding.severity === 'high' || finding.severity === 'critical') {
       return {
         decision: 'downgraded',

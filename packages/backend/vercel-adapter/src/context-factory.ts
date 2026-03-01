@@ -5,8 +5,8 @@
  * Only includes essential fields - does NOT mock business logic or AWS services.
  */
 
-import type { LambdaContext } from './types.js'
 import { randomUUID } from 'crypto'
+import type { LambdaContext } from './types.js'
 
 /**
  * Create minimal Lambda context stub

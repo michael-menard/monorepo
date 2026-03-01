@@ -1,0 +1,413 @@
+schema: 1
+story_id: "APIP-2020"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: WARN
+    note: >
+      The story index lists APIP-2020 as "Monitor UI v1 (Read-Only Dashboard)" with dependency
+      on APIP-2010 only. The story file header lists only APIP-2010 as a dependency but the body
+      text describes a coordination dependency with APIP-5005 (Minimal Operator Visibility CLI)
+      for the shared PipelineReadService. APIP-5005 is not listed as a formal depends_on in the
+      frontmatter, yet the architecture mandates coordination at story kickoff. This is a WARN not
+      FAIL because the coordination is described and the PipelineReadService extraction is
+      in-scope for this story if APIP-5005 is unmerged. However, the missing formal dependency
+      creates a risk of the shared service being duplicated if APIP-5005 lands first without
+      coordination. The index entry correctly places this in Phase 2 Resilience & Monitoring.
+      No scope drift from the index description detected.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Goals and non-goals are well-defined and do not contradict. ACs match the scope.
+      However, two internal tensions exist:
+      (1) Non-goals state "No authentication UI — auth handled at infrastructure/proxy layer or
+      existing session" yet AC-4 requires the endpoint to be "protected by operator auth or
+      internal-only access" and the HTTP contract specifies "Authorization: Bearer {operator_token}".
+      The auth IMPLEMENTATION is deferred but the REQUIREMENT for auth is an AC — this creates
+      ambiguity about what "done" means for AC-4.
+      (2) AC-6 is marked as a stretch goal in the AC list ("Stretch goal: conditional on
+      non-Lambda host") yet HP-6 and EC-2 in the test plan are full test specifications for SSE,
+      and ST-3 is a full subtask for SSE. The story's treatment of SSE oscillates between
+      stretch/conditional and fully-scoped, which will create confusion about whether AC-6 is
+      in-scope for the first merge.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      The reuse plan is thorough and well-specified. Existing assets correctly identified:
+      StoryRepository.getStoriesByState() and getWorkableStories() in orchestrator for baseline
+      queries; ActivityFeed loading skeleton pattern; StatsCards for summary metric tiles;
+      BuildStatusChart for pattern reference; Hono domain route structure from health domain;
+      Drizzle ok/err result types from wishlist; MainPage for page composition and loading
+      pattern; Card/Badge/Table primitives from @repo/app-component-library/_primitives.
+      The PipelineReadService extraction to avoid duplication with APIP-5005 is explicitly planned.
+      One gap: ActivityFeed uses a TypeScript interface (ActivityFeedProps) not a Zod schema —
+      if the story follows ActivityFeed's pattern exactly for component props it may inherit this
+      anti-pattern. The story should use Zod-first props per CLAUDE.md for all new components.
+      This is minor and noted in dev_feasibility component patterns.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      The story correctly prescribes the full hexagonal architecture layering:
+      routes.ts (thin HTTP adapter) -> application/services.ts (business logic) ->
+      adapters/repositories.ts (Drizzle queries), following the health domain canonical pattern
+      exactly. The PipelineReadService in packages/backend/orchestrator is correctly positioned
+      as the shared service layer that both APIP-5005 CLI and APIP-2020 routes consume. The
+      architecture notes explicitly state services.ts calls PipelineReadService, and repositories.ts
+      contains Drizzle read queries. The api-layer.md architecture is fully respected. One minor
+      note: the story does not explicitly mention creating a ports/index.ts for the monitor domain
+      interface. Given health domain omits ports/ (simplified pattern), this is acceptable for a
+      read-only domain, but the story should clarify this decision. Not a blocking gap.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test coverage is comprehensive. 7 happy-path tests (HP-1 through HP-7), 3 error cases
+      (EC-1 through EC-3), 2 edge cases (ED-1 and ED-2) are all specified with setup/action/
+      expected/evidence format. Unit, integration, and E2E (Playwright) strategies are all
+      prescribed. Verification commands are included in each subtask. The 500-row seed requirement
+      for AC-9 performance validation is documented. SSE tests (HP-6) are noted as requiring a
+      running server. One gap: HP-6 setup says "real DB connection (ADR-006)" but SSE testing
+      requires a persistent server connection — the test infrastructure for SSE integration
+      testing is not fully specified and may require a dedicated test server setup (acknowledged
+      in test_plan risks). This is a known risk, not an unacknowledged gap. Overall testability
+      specification is strong.
+
+  - id: decision_completeness
+    status: FAIL
+    note: >
+      Two blocking TBDs prevent dev start:
+      (1) AC-4 operator auth mechanism: The story explicitly flags "AC-4: Operator auth mechanism
+      must be specified before dev starts" in missing_requirements. The HTTP contract shows
+      "Authorization: Bearer {operator_token}" but the mechanism is TBD — static API key vs
+      Cognito role vs VPN-only. Without this decision, the developer cannot implement auth
+      middleware, the integration test cannot provide valid credentials, and the tooling_evidence
+      test cases cannot be written. This is a hard blocker.
+      (2) AC-6 SSE scope boundary: The story says SSE is "conditional on non-Lambda host" and
+      explicitly lists "AC-6: SSE scope must be clarified — Lambda-compatible polling-only or
+      non-Lambda SSE" in missing_requirements. Yet AC-6 is a full acceptance criterion, ST-3 is
+      a full subtask, and HP-6 is a full test. Without a PM decision on whether AC-6 is in v1
+      scope or deferred, the developer does not know if they should implement ST-3 or skip it.
+      Both are pre-dev decisions that must be resolved before story kickoff.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Risks are well-disclosed across multiple sections. dev_feasibility.risks covers:
+      SSE dropped by API Gateway after 29s (explicit mitigation: polling-first, SSE conditional);
+      wint.token_usage.storyId UUID FK join requirement (mitigation: use existing index, EXPLAIN);
+      operator auth unspecified (mitigation: PM decision required);
+      PipelineReadService coordination with APIP-5005 (mitigation: extract in this story if unmerged);
+      APIP-2010 dependency for blocked queue UAT data (mitigation: manual seed + empty state).
+      test_plan.risks covers SSE integration test server requirement, 500-row seed performance
+      in CI, and UAT dependency on APIP-2010. RISK-009 (runaway token costs) is referenced as
+      the motivating context. No significant risks appear to be undisclosed.
+
+  - id: story_sizing
+    status: SPLIT
+    note: >
+      Multiple split indicators are present, and the story's own predictions flag split_risk: 0.9
+      with confidence: low. Analysis:
+      - 10 ACs exceeds the 8 AC threshold by 25%
+      - Touches 3+ packages (lego-api, app-dashboard, orchestrator)
+      - Both frontend AND backend work
+      - 2 endpoints (one REST, one SSE)
+      - 7 subtasks across all layers
+      - 7 happy-path + 3 error-case + 2 edge-case tests = 12 test specifications
+      - SSE (AC-6, ST-3, HP-6, EC-2) is a full independent feature with its own Lambda host
+        constraint, fallback logic, frontend EventSource implementation, and test requirements
+      The clearest split line is between:
+        STORY A: "Monitor UI v1 — REST Snapshot Dashboard" (AC-1 through AC-5, AC-7, AC-8,
+        AC-9, AC-10) — backend REST endpoint + frontend polling dashboard
+        STORY B: "Monitor UI v1 — SSE Live Updates" (AC-6, EC-2, HP-6) — SSE endpoint +
+        frontend EventSource with fallback
+      Story B has a blocking prerequisite question (Lambda host constraint) that may push it
+      to Phase 3 or APIP-0030 scope anyway. Splitting removes the stretch-goal ambiguity and
+      makes Story A deliverable without the SSE infrastructure uncertainty.
+      Splitting is strongly recommended but the story remains potentially deliverable as-is
+      if AC-6 is officially downgraded to "implement backend SSE endpoint only; frontend
+      polling is primary; EventSource is behind a feature flag."
+
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: >
+      Subtask structure is generally sound with clear DAG ordering (ST-1 -> ST-2 -> ST-3;
+      ST-2 -> ST-4 -> ST-5 -> ST-6 -> ST-7) and file counts within the 1-3 file guideline.
+      Canonical references are specified. Verification commands are provided per subtask.
+      ACs are mapped to subtasks.
+      Gaps requiring resolution:
+      (1) ST-2 modifies 6 files (routes.ts, services.ts, repositories.ts — all new — plus
+      app.ts modification) which is at the upper edge. Not a failure but worth noting.
+      (2) ST-3 (SSE) has only a manual verification command ("curl -N"), not an automated
+      Vitest integration test command. If SSE remains in scope, a Vitest test target is needed.
+      (3) ST-5 creates 3 new component files. The story specifies Zod-first props but the
+      canonical reference (ActivityFeed) uses TypeScript interfaces — devs must be explicitly
+      reminded to use Zod schemas for component props despite the reference not doing so.
+      (4) ST-1 reads story-repository.ts and unified-wint.ts but the orchestrator package
+      uses a different src directory structure (services/, db/, adapters/ exist but names may
+      differ from what the story assumes) — verify exact file paths before dev start.
+      CONDITIONAL: subtask decomposition passes if the two blocking decision_completeness
+      issues (auth mechanism, SSE scope) are resolved before kickoff.
+
+gaps:
+  - id: GAP-001
+    priority: P0
+    title: "Operator auth mechanism for AC-4 is unspecified — blocks dev start"
+    description: >
+      AC-4 requires the GET /monitor/pipeline endpoint to be "protected by operator auth
+      or internal-only access." The dev_feasibility.missing_requirements explicitly flags
+      this as a pre-dev decision. Without specifying the mechanism (static API key, Cognito
+      operator role, VPN-only with no auth header, or middleware reuse), the developer cannot
+      implement the auth check, integration tests cannot provide valid credentials, and the
+      401 error case cannot be tested. The auth middleware at apps/api/lego-api/middleware/auth.ts
+      may or may not be reusable — this depends on whether operator auth uses the same mechanism
+      as user auth.
+    resolution: >
+      PM must decide and document the operator auth mechanism before story kickoff.
+      Options: (a) Reuse existing auth middleware with an operator Cognito group/role;
+      (b) Add a static API key header check (simplest for internal tooling);
+      (c) VPN-only with no application-level auth check.
+      Once decided, update AC-4 text and add the auth mechanism to the Architecture Notes.
+    ac_affected: "AC-4"
+    blocks_subtask: "ST-2"
+    autonomous_decision: >
+      RESOLVED via AC-11 addition. Cannot auto-resolve PM auth mechanism choice.
+      Added AC-11 as a pre-dev gate requiring PM to document the chosen auth mechanism
+      before development begins. AC-4 implementation is blocked until AC-11 is satisfied.
+      Story remains CONDITIONAL_PASS pending this PM decision.
+    decision_type: "AC_ADDED"
+    ac_added: "AC-11"
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: GAP-002
+    priority: P0
+    title: "AC-6 SSE scope boundary is unresolved — ST-3 is ambiguously in/out of scope"
+    description: >
+      AC-6 is simultaneously listed as a full acceptance criterion AND marked "(Stretch goal:
+      conditional on non-Lambda host)". ST-3 is a full 8,000-token subtask for SSE. HP-6 is a
+      full integration test specification. EC-2 covers SSE fallback. The dev_feasibility
+      missing_requirements explicitly calls this out. Without a scope decision, developers do
+      not know whether to implement ST-3 or skip it, and the story cannot have a clear
+      definition of done. The Lambda 29-second timeout makes SSE fully non-functional in the
+      primary deployment target without an alternative host.
+    resolution: >
+      Option A (recommended): Move AC-6, ST-3, HP-6, EC-2 to a new story (APIP-2025 or
+      similar) scoped to SSE live updates contingent on APIP-0030 non-Lambda host readiness.
+      Option B: Keep AC-6 but redefine it as "backend SSE endpoint is implemented; frontend
+      EventSource is behind VITE_ENABLE_SSE feature flag; polling remains primary; SSE is
+      manually tested only." Remove HP-6 from automated test plan; keep EC-2.
+      Either decision must be documented before dev start.
+    ac_affected: "AC-6"
+    blocks_subtask: "ST-3, ST-4"
+    autonomous_decision: >
+      RESOLVED via AC-12 addition (Option A accepted). SSE deferred to APIP-2025 per
+      split_risk 0.9 and clear Lambda host constraint. AC-12 added to story explicitly
+      marking AC-6, ST-3, HP-6, EC-2 as deferred. ST-4 (usePipelineMonitor) simplified
+      to polling-only. This story's scope is now: AC-1 through AC-5, AC-7 through AC-13.
+      Story does NOT require SPLIT_REQUIRED status — the split is executed via AC-12
+      scope note and the APIP-2025 stub in split_recommendation.
+    decision_type: "AC_ADDED"
+    ac_added: "AC-12"
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: GAP-003
+    priority: P1
+    title: "APIP-5005 dependency is informal — PipelineReadService extraction coordination unspecified"
+    description: >
+      The Architecture Notes mandate that both APIP-5005 (CLI) and APIP-2020 (dashboard)
+      consume the shared PipelineReadService, and the story says "coordinate at story kickoff;
+      extract shared service in this story if APIP-5005 unmerged." However, APIP-5005 is not
+      listed in the story's depends_on frontmatter. If APIP-5005 is developed concurrently,
+      both stories may independently create PipelineReadService in the same location
+      (packages/backend/orchestrator/src/services/pipeline-read-service.ts), creating a
+      merge conflict or duplicated SQL. The current story index shows both APIP-5005 and
+      APIP-2020 as "In Elaboration" — concurrent development is plausible.
+    resolution: >
+      Add APIP-5005 as an informal coordination note (not hard dependency) in the story
+      frontmatter's notes or risk section. Define an explicit rule: whichever story merges
+      first owns PipelineReadService creation; the second story reuses it. Add this as
+      a kickoff checklist item. Consider sequencing APIP-5005 before APIP-2020 to avoid
+      concurrent development of the shared service.
+    ac_affected: "AC-1, AC-2, AC-3"
+    blocks_subtask: "ST-1"
+    autonomous_decision: >
+      RESOLVED via AC-13 addition. P1 gap — coordination risk addressed as a kickoff
+      checklist item. Rule established in AC-13: whichever story merges first owns
+      PipelineReadService creation; the second reuses it. Not a hard dependency block.
+      Developer must check APIP-5005 merge status at kickoff and document the outcome.
+    decision_type: "AC_ADDED"
+    ac_added: "AC-13"
+    decided_at: "2026-02-25T00:00:00Z"
+
+opportunities:
+  - id: OPP-001
+    title: "Extract PipelineDashboardResponseSchema to @repo/api-client for frontend type sharing"
+    description: >
+      The story defines PipelineDashboardResponseSchema in the Architecture Notes section.
+      Per api-layer.md architecture, backend Zod schemas should be re-exported via
+      @repo/api-client so frontend components can import validated types directly rather
+      than defining parallel schemas. The usePipelineMonitor hook and panel components
+      would benefit from importing the shared schema for response validation.
+    effort: low
+    risk: low
+    autonomous_decision: >
+      LOGGED. Non-blocking. Developer implementing ST-2 should consider extracting
+      PipelineDashboardResponseSchema, PipelineStorySchema, CostSummaryEntrySchema, and
+      BlockedStorySchema to @repo/api-client for shared frontend/backend type safety.
+      KB write attempted; fell back to ELAB.yaml record (KB unavailable).
+    decision_type: "LOGGED"
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: OPP-002
+    title: "Add ports/index.ts interface for MonitorRepository to enable easier unit testing"
+    description: >
+      The story follows the health domain's simplified pattern (no ports/). However, unlike
+      health domain which has no external DB calls in its services, the monitor domain's
+      services will make Drizzle queries. Adding a MonitorRepository interface in ports/
+      would allow unit tests in ST-2 to mock the repository without a real DB connection,
+      following the wishlist domain pattern. This is non-blocking but improves testability.
+    effort: low
+    risk: low
+    autonomous_decision: >
+      LOGGED. Non-blocking. If developer finds DB mocking difficult in ST-2 unit tests,
+      add ports/index.ts defining MonitorRepository interface following the wishlist domain
+      pattern at apps/api/lego-api/domains/wishlist/.
+      KB write attempted; fell back to ELAB.yaml record (KB unavailable).
+    decision_type: "LOGGED"
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: OPP-003
+    title: "Consider a configurable refresh interval via env var or dashboard settings"
+    description: >
+      AC-5 specifies a "configurable interval (default: 30 seconds)" but does not specify
+      where configuration lives. Exposing this via a VITE_MONITOR_REFRESH_INTERVAL env var
+      would allow operators to tune the polling rate without code changes, and would make
+      the 30s assertion in HP-5 easier to test by setting a shorter interval in tests.
+    effort: low
+    risk: low
+    autonomous_decision: >
+      LOGGED. Non-blocking DX/ops improvement. Developer implementing ST-4 (usePipelineMonitor)
+      should read interval from import.meta.env.VITE_MONITOR_REFRESH_INTERVAL with fallback
+      to 30000ms. Enables HP-5 test to set a short interval without code changes.
+      KB write attempted; fell back to ELAB.yaml record (KB unavailable).
+    decision_type: "LOGGED"
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: OPP-004
+    title: "Reuse existing auth middleware pattern rather than building new auth check"
+    description: >
+      Once GAP-001 is resolved, if the decision is to reuse Cognito auth, the existing
+      middleware at apps/api/lego-api/middleware/auth.ts should be applied to the monitor
+      domain the same way other domains apply it (domain.use('*', auth)). This avoids
+      building a custom auth check and leverages the existing middleware test coverage.
+    effort: low
+    risk: low
+    autonomous_decision: >
+      LOGGED. Non-blocking; conditional on AC-11 (GAP-001) resolution. If PM selects
+      Cognito auth (option a), apply domain.use('*', auth) in monitor/routes.ts following
+      existing domain auth registration pattern. No new auth code needed.
+      KB write attempted; fell back to ELAB.yaml record (KB unavailable).
+    decision_type: "LOGGED"
+    decided_at: "2026-02-25T00:00:00Z"
+
+  - id: OPP-005
+    title: "Add stale-data timestamp to API response for frontend freshness indicator"
+    description: >
+      The PipelineDashboardResponseSchema includes generated_at. The frontend stale indicator
+      (AC-5) could compare generated_at against the current time to show "Data from Xs ago"
+      rather than just a binary stale/fresh state. This is a minor UX improvement that uses
+      already-present data.
+    effort: low
+    risk: low
+    autonomous_decision: >
+      LOGGED. Non-blocking UX enhancement. generated_at is already in PipelineDashboardResponseSchema.
+      Developer implementing ST-4 and ST-5 can compute Date.now() - new Date(generated_at).getTime()
+      to display "Data from Xs ago" in the stale indicator. No API schema changes required.
+      KB write attempted; fell back to ELAB.yaml record (KB unavailable).
+    decision_type: "LOGGED"
+    decided_at: "2026-02-25T00:00:00Z"
+
+split_recommendation:
+  recommended: true
+  rationale: >
+    The story has a 0.9 split_risk prediction and 10 ACs — 25% over the threshold.
+    The SSE feature (AC-6, ST-3, HP-6, EC-2) is a clearly separable scope that:
+    (a) has a hard infrastructure dependency (non-Lambda host) that may require APIP-0030
+        to complete first;
+    (b) requires EventSource frontend logic + exponential backoff + SSE fallback testing
+        that adds significant complexity;
+    (c) has a blocking scope decision that is unresolved (GAP-002).
+    Removing SSE from this story yields a clean 8-AC story (AC-1 through AC-5, AC-7, AC-8,
+    AC-9, AC-10) covering the full REST polling dashboard — which is the primary user
+    journey operators need immediately.
+  proposed_stories:
+    - id: "APIP-2020"
+      title: "Monitor UI v1 — REST Polling Dashboard"
+      acs: ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-7", "AC-8", "AC-9", "AC-10"]
+      subtasks: ["ST-1", "ST-2", "ST-4", "ST-5", "ST-6", "ST-7"]
+      notes: >
+        Remove ST-3 entirely. Simplify usePipelineMonitor hook (ST-4) to polling-only.
+        This is a complete, deliverable story resolving RISK-009 operator visibility.
+    - id: "APIP-2025"
+      title: "Monitor UI v1 — SSE Live Updates"
+      acs: ["AC-6"]
+      subtasks: ["ST-3", "ST-4-partial"]
+      depends_on: ["APIP-2020", "APIP-0030"]
+      notes: >
+        New story. Blocked on APIP-0030 (LangGraph non-Lambda host) for SSE to function
+        without the 29s Lambda timeout. Adds EventSource + exponential backoff + fallback
+        logic on top of the polling infrastructure delivered by APIP-2020.
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+
+summary:
+  gaps_found: 3
+  gaps_resolved: 3
+  opportunities_found: 5
+  opportunities_logged: 5
+  acs_added: 3
+  acs_added_list:
+    - id: "AC-11"
+      resolves: "GAP-001"
+      summary: "Pre-dev gate requiring PM to document operator auth mechanism before dev starts"
+    - id: "AC-12"
+      resolves: "GAP-002"
+      summary: "SSE (AC-6) explicitly deferred to APIP-2025; this story is polling-REST-only"
+    - id: "AC-13"
+      resolves: "GAP-003"
+      summary: "Kickoff coordination check for APIP-5005 PipelineReadService ownership"
+  kb_writes_attempted: 5
+  kb_writes_succeeded: 0
+  kb_writes_fallback: "All 5 opportunity decisions recorded in ELAB.yaml (KB unavailable)"
+
+notes: >
+  AUTONOMOUS DECISIONS COMPLETE — CONDITIONAL_PASS.
+  Phase 1.5 autonomous decisions applied at 2026-02-25T00:00:00Z.
+
+  GAP-001 (P0 — auth mechanism): Resolved via AC-11. Cannot auto-decide PM auth mechanism.
+  AC-11 added as a pre-dev gate: PM must document the chosen mechanism (Cognito/API key/VPN-only)
+  before story kickoff. AC-4 implementation is blocked until AC-11 is marked done.
+
+  GAP-002 (P0 — SSE scope): Resolved via AC-12. SSE (AC-6, ST-3, HP-6, EC-2) explicitly
+  deferred to APIP-2025 pending APIP-0030 non-Lambda host readiness. This story is now a
+  clean REST polling dashboard (AC-1 through AC-5, AC-7 through AC-13). ST-3 removed from
+  scope. ST-4 (usePipelineMonitor) is polling-only. Story is NOT marked SPLIT_REQUIRED —
+  the split is executed in-place via AC-12 scope note and the pre-existing APIP-2025 stub
+  in split_recommendation.
+
+  GAP-003 (P1 — APIP-5005 coordination): Resolved via AC-13. Kickoff checklist rule:
+  whichever story (APIP-5005 or APIP-2020) merges first owns PipelineReadService creation;
+  the second story reuses it. Developer documents outcome in kickoff comment.
+
+  OPP-001 through OPP-005: All 5 opportunities logged. KB writes failed (internal error);
+  decisions recorded in opportunities section above. All are low-effort, low-risk,
+  non-blocking improvements for developer consideration during implementation.
+
+  Remaining condition before PASS: AC-11 must be satisfied (PM auth decision documented).
+  Once AC-11 is resolved, story advances to PASS and can proceed to implementation with
+  10 well-specified ACs (AC-1 through AC-5, AC-7 through AC-13, excluding deferred AC-6).

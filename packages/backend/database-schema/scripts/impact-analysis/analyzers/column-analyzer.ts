@@ -3,12 +3,7 @@
  * WISH-20210
  */
 import { Project } from 'ts-morph'
-import {
-  ParsedChange,
-  ImpactResult,
-  ImpactFinding,
-  ImpactCategory,
-} from '../__types__/index.js'
+import { ParsedChange, ImpactResult, ImpactFinding, ImpactCategory } from '../__types__/index.js'
 import { TableInfo } from '../utils/schema-introspector.js'
 import {
   scanForTableReferences,
@@ -359,9 +354,7 @@ function categorizeFile(filePath: string): ImpactCategory {
 /**
  * Group findings by category
  */
-function groupByCategory(
-  findings: ImpactFinding[],
-): Record<ImpactCategory, ImpactFinding[]> {
+function groupByCategory(findings: ImpactFinding[]): Record<ImpactCategory, ImpactFinding[]> {
   const grouped: Record<string, ImpactFinding[]> = {}
 
   for (const finding of findings) {

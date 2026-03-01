@@ -1,0 +1,214 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-1060 is fully feasible within the existing orchestrator package. All foundational
+  patterns exist: StateGraph composition (elaboration.ts), createToolNode factory
+  (node-factory.ts), QaVerifySchema (qa-verify.ts), EvidenceSchema (evidence.ts),
+  ReviewSchema (review.ts), error classification (error-classification.ts), and circuit
+  breaker (circuit-breaker.ts). No new packages are needed. The primary risks are
+  integration dependencies (APIP-0040 model router, APIP-1050 review graph) — both
+  are mitigated by injected abstractions (ModelClient interface) and design for
+  mocked inputs. Node unit tests and graph compilation tests can be written and pass
+  before any upstream graph is complete.
+complexity: high
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/graphs/
+    - packages/backend/orchestrator/src/nodes/qa/
+    - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+  endpoints: []
+  deploy_touchpoints:
+    - "New QA graph wired into supervisor dispatch (BullMQ stage: 'qa') — requires supervisor update in APIP-0020"
+    - "QA-VERIFY.yaml output path must exist under plans/future/platform/autonomous-pipeline/in-progress/{storyId}/"
+    - "ModelClient environment variables for OpenRouter API key — via APIP-5004 secrets engine pattern"
+
+risks:
+  - finding: "APIP-0040 (Model Router) may not be complete when APIP-1060 implementation begins"
+    mitigation: >
+      Define a minimal ModelClientSchema Zod type ({ callModel: (prompt, options) => Promise<string> })
+      and inject it at createQAGraph(config, { modelClient }). In Phase 1 implementation, provide
+      a thin OpenRouter SDK wrapper as the concrete ModelClient. Document the swap point clearly.
+      When APIP-0040 completes, swap the direct wrapper for the model router abstraction without
+      changing node contracts. This allows full unit testing without APIP-0040.
+  - finding: "EvidenceSchema drift risk — APIP-1030 produces the evidence artifact and may change its shape"
+    mitigation: >
+      check-preconditions node validates the evidence artifact via EvidenceSchema.safeParse().
+      If validation fails, sets qaVerdict: 'BLOCKED' with reason describing the schema mismatch.
+      This surfaces schema drift explicitly rather than producing silent downstream failures.
+  - finding: "pnpm test subprocess may hang indefinitely without explicit timeout"
+    mitigation: >
+      Use child_process.spawn (never execSync) wrapped in Promise.race([exitPromise, timeoutPromise]).
+      testTimeoutMs config (default 300000ms) controls the timeout. On timeout, kill the spawned
+      process and retry up to testTimeoutRetries times before recording FAIL with reason 'timeout'.
+  - finding: "QaVerifySchema backward compatibility — APIP-1070 reads this artifact"
+    mitigation: >
+      Any new fields added to QaVerifySchema must use z.optional() or z.nullable().default(null).
+      Do not remove or rename existing fields. Add schema version bump if major shape changes are needed.
+  - finding: "Playwright must run in worktree context (not main repo) — worktreeDir config required"
+    mitigation: >
+      QAGraphConfig includes worktreeDir (absolute path). Playwright invoked as
+      'pnpm exec playwright test' with cwd: worktreeDir. Verify early in integration
+      testing that pnpm exec resolves correctly in worktree context (known integration concern).
+
+missing_requirements: []
+
+evidence_expectations:
+  - "createQAGraph(config, { modelClient }).compile() completes without error"
+  - "runQA(evidence, review, config) returns QAGraphResult type-checked by TypeScript"
+  - "pnpm check-types --filter @repo/orchestrator passes with no errors"
+  - "All unit tests in packages/backend/orchestrator/src/graphs/__tests__/qa.test.ts pass"
+  - "All unit tests in packages/backend/orchestrator/src/nodes/qa/__tests__/ pass"
+  - "QA-VERIFY.yaml written to correct path with valid QaVerify content"
+  - "AC_VERIFICATION_PROMPT_V1 string constant exported and includes anti-hallucination instruction"
+
+subtasks:
+  - id: ST-1
+    title: "Create QAGraphConfigSchema and QAGraphStateAnnotation"
+    goal: >
+      Define the config Zod schema with all defaults and the LangGraph state annotation
+      with all required fields. This establishes the type foundation for all nodes.
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/artifacts/review.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    acs: ["AC-1", "AC-2"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Implement check-preconditions node"
+    goal: >
+      Node reads review and evidence from state. Blocks with BLOCKED verdict if review
+      is FAIL or evidence is null/invalid (via safeParse). Sets state as ready otherwise.
+      Uses createToolNode factory. Includes @repo/logger lifecycle event.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/artifacts/review.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/qa/check-preconditions.ts
+    acs: ["AC-3"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- check-preconditions"
+    estimated_tokens: 5000
+
+  - id: ST-3
+    title: "Implement run-unit-tests and run-e2e-tests nodes"
+    goal: >
+      Both nodes use child_process.spawn wrapped in Promise.race with timeout.
+      run-unit-tests: retry up to testTimeoutRetries on timeout, record CommandRun.
+      run-e2e-tests: retry up to playwrightMaxRetries, only FAIL if all attempts fail,
+      record per-attempt results. Both use createToolNode factory.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/qa/run-unit-tests.ts
+      - packages/backend/orchestrator/src/nodes/qa/run-e2e-tests.ts
+    acs: ["AC-4", "AC-5"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- run-unit-tests run-e2e-tests"
+    estimated_tokens: 9000
+
+  - id: ST-4
+    title: "Implement verify-acs node with AC_VERIFICATION_PROMPT_V1"
+    goal: >
+      Iterates evidence.acceptance_criteria. For each AC, calls ModelClient.callModel()
+      with AC_VERIFICATION_PROMPT_V1 (named export constant containing anti-hallucination
+      instruction). Parses structured JSON response { status, cited_evidence, reasoning }.
+      Model failure for any single AC → that AC is BLOCKED (not FAIL), processing continues.
+      Uses createToolNode factory. Logs qa_ac_verified per AC.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/qa/verify-acs.ts
+    acs: ["AC-6", "AC-7"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- verify-acs"
+    estimated_tokens: 9000
+
+  - id: ST-5
+    title: "Implement gate-decision node"
+    goal: >
+      Aggregates all acVerifications and testResults. Calls Claude (gate model) with
+      structured QA state summary. Parses { verdict, blocking_issues, reasoning }.
+      Sets state.qaVerdict and state.gateDecision. Model failure → BLOCKED verdict.
+      Uses createToolNode factory. Uses NodeCircuitBreaker for gate model calls.
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/qa/gate-decision.ts
+    acs: ["AC-8", "AC-12"]
+    depends_on: ST-4
+    verification: "pnpm test --filter @repo/orchestrator -- gate-decision"
+    estimated_tokens: 7000
+
+  - id: ST-6
+    title: "Implement write-qa-artifact node"
+    goal: >
+      Constructs QaVerify object via createQaVerify() + helpers. Persists QA-VERIFY.yaml
+      under plans/future/platform/autonomous-pipeline/in-progress/{storyId}/.
+      Conditionally writes lessons_to_record to KB via MCP tool when kbWriteBackEnabled.
+      Sets state.qaComplete = true. Logs qa_artifact_written.
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/qa-verify.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/nodes/qa/write-qa-artifact.ts
+    acs: ["AC-9", "AC-15"]
+    depends_on: ST-5
+    verification: "pnpm test --filter @repo/orchestrator -- write-qa-artifact"
+    estimated_tokens: 6000
+
+  - id: ST-7
+    title: "Wire QA graph StateGraph and implement runQA() entry function"
+    goal: >
+      Compose all nodes into StateGraph with correct edges:
+      START → check-preconditions → [END if BLOCKED | run-unit-tests].
+      run-unit-tests → [run-e2e-tests (if enableE2e) | verify-acs].
+      run-e2e-tests → verify-acs → gate-decision → write-qa-artifact → END.
+      Export runQA(evidence, review, config) entry function.
+      All conditional edges use Zod-validated routing functions.
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/qa.ts
+    acs: ["AC-10", "AC-11"]
+    depends_on: ST-6
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator -- qa.test.ts"
+    estimated_tokens: 8000
+
+  - id: ST-8
+    title: "Write graph-level and node-level unit tests"
+    goal: >
+      Graph tests (qa.test.ts): 10 test cases covering all AC-13 scenarios —
+      preconditions BLOCKED paths, happy path, unit FAIL, AC FAIL, E2E retry paths,
+      gate model failure, enableE2e:false routing, graph.compile().
+      Node tests (nodes/qa/__tests__/): Individual test files for all 6 nodes
+      covering all AC-14 scenarios. All using vi.mock('child_process') and mock model client.
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+      - packages/backend/orchestrator/src/graphs/qa.ts
+      - packages/backend/orchestrator/src/nodes/qa/
+    files_to_modify:
+      - packages/backend/orchestrator/src/graphs/__tests__/qa.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/check-preconditions.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/run-unit-tests.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/run-e2e-tests.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/verify-acs.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/gate-decision.test.ts
+      - packages/backend/orchestrator/src/nodes/qa/__tests__/write-qa-artifact.test.ts
+    acs: ["AC-13", "AC-14", "AC-16"]
+    depends_on: ST-7
+    verification: "pnpm test --filter @repo/orchestrator -- qa"
+    estimated_tokens: 14000

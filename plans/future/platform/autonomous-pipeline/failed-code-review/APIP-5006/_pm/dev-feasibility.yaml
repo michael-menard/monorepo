@@ -1,0 +1,79 @@
+feasible: true
+confidence: high
+rationale: "APIP-5006 is a well-scoped infrastructure story with clear patterns to follow from infra/compose.lego-app.yaml and infra/elasticache/template.yaml. All required components (Docker Compose, README documentation, connection pool config) have established precedents in the monorepo. The primary risk is hardware availability (the dedicated server must exist before AC-1 can be verified), but this is a prerequisite constraint, not a feasibility blocker — the dev must flag it immediately. The scope is clearly bounded by the seed's non-goals: no LangGraph Platform deployment, no BullMQ setup, no security hardening."
+complexity: medium
+change_surface:
+  areas:
+    - "infra/langgraph-server/ (new directory — all new files)"
+    - "infra/prometheus/prometheus.yml (optional extension for LangGraph scrape target)"
+  endpoints: []
+  deploy_touchpoints:
+    - "SSH access to target server for Docker installation verification"
+    - "docker compose up on target server for smoke test"
+    - "Manual port audit on target server before writing compose file"
+risks:
+  - finding: "Dedicated server hardware or VM may not yet be provisioned. If the physical/virtual server does not exist, AC-1 (Docker installation) is immediately blocked and all downstream ACs are blocked."
+    mitigation: "Verify server availability as the FIRST action in implementation. If not available, create BLOCKERS.md entry immediately. Do not proceed with compose file authoring until server existence is confirmed — this gates APIP-0030 and all of Phase 0."
+  - finding: "Port 8123 (LangGraph API) and 8124 (LangGraph Studio UI) may conflict with other services on the target server that are not listed in the local dev port inventory."
+    mitigation: "Run `ss -tlnp` or `netstat -tlnp` on the target server to audit all listening ports before writing compose.langgraph-server.yaml. Use ports 8123 and 8124 only if confirmed free on the server (not just on local dev)."
+  - finding: "Connection pool isolation: future engineers may attempt to import @repo/db for LangGraph checkpoint connections, exhausting Aurora max_connections."
+    mitigation: "Document explicitly in README.md that the checkpoint connection pool MUST be a separate instance (not @repo/db). Specify max: 3, dedicated user credentials, and the architectural rationale (Aurora max_connections risk). This documentation is the primary deliverable for AC-5."
+  - finding: "Healthcheck misconfiguration in compose file can cause smoke test (AC-7) to show false healthy status. Docker reports 'healthy' only after the healthcheck passes — missing healthchecks cause 'starting' to persist indefinitely."
+    mitigation: "Copy healthcheck patterns exactly from infra/compose.lego-app.yaml (CMD-SHELL for postgres-style services, CMD for simple ping/wget checks). Include start_period if services have slow startup. Verify healthcheck status with `docker inspect --format='{{.State.Health.Status}}' <container>`."
+  - finding: "CI/CD integration scope risk: building a full CD pipeline is explicitly out of scope for Phase 0, but the story requires a 'documented procedure' (AC-6). Without clear guidance, a dev may over-build."
+    mitigation: "AC-6 is satisfied by a documented `scp + docker compose pull && docker compose up -d` procedure in README.md. Do NOT implement GitHub Actions workflows for server deployment. A simple, repeatable manual procedure is sufficient and correct for Phase 0."
+missing_requirements: []
+evidence_expectations:
+  - "Compose file present at infra/langgraph-server/compose.langgraph-server.yaml and passes `docker compose config` validation"
+  - "README.md present at infra/langgraph-server/README.md with all four documented sections: resource limits, network config, checkpoint DB config, deployment procedure, APIP-0030 readiness checklist"
+  - "docker compose ps shows all services healthy/running within 60 seconds (AC-7 smoke test)"
+  - "Server responds to connectivity checks for Redis (redis-cli ping → PONG) and Aurora PostgreSQL (pg_isready → accepting connections)"
+  - "No port conflicts with documented reserved ports (5432, 5433, 6379, 9090, 3003, 4317, 4318, 9000, 9001)"
+subtasks:
+  - id: ST-1
+    title: "Verify server availability and audit port assignments"
+    goal: "Confirm dedicated server exists with Docker v2 installed and identify safe port assignments for LangGraph services"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+    files_to_modify: []
+    acs: ["AC-1", "AC-4"]
+    depends_on: "none"
+    verification: "SSH to server; run `docker compose version` → output contains v2. Run `ss -tlnp` → ports 8123, 8124 not in use. Document findings."
+    estimated_tokens: 3000
+
+  - id: ST-2
+    title: "Create infra/langgraph-server/compose.langgraph-server.yaml"
+    goal: "Author the base Docker Compose file for the LangGraph server following infra/compose.lego-app.yaml conventions: named volumes, healthchecks, restart policies, extra_hosts, non-conflicting ports"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+    files_to_modify:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+    acs: ["AC-2", "AC-7"]
+    depends_on: "ST-1"
+    verification: "`docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config` exits 0. `docker compose up -d` → all services healthy within 60s."
+    estimated_tokens: 8000
+
+  - id: ST-3
+    title: "Create infra/langgraph-server/README.md with all required documentation sections"
+    goal: "Document resource limits (CPU/RAM/disk sized for 2-3 concurrent graph executions), network configuration, checkpoint DB isolated pool spec (max: 3, not @repo/db), deployment procedure, and APIP-0030 handoff readiness checklist"
+    files_to_read:
+      - "infra/compose.lego-app.yaml"
+      - "apps/api/lego-api/core/cache/redis-client.ts"
+    files_to_modify:
+      - "infra/langgraph-server/README.md"
+    acs: ["AC-3", "AC-4", "AC-5", "AC-6", "AC-8"]
+    depends_on: "ST-2"
+    verification: "README.md exists; contains resource table with CPU/RAM/disk per service; documents ports used (no conflicts with reserved list); documents checkpoint pool as separate from @repo/db with max:3; includes numbered deployment procedure; includes APIP-0030 readiness checklist with at least 5 checkable items."
+    estimated_tokens: 10000
+
+  - id: ST-4
+    title: "Run full smoke test and connectivity validation on provisioned server"
+    goal: "Verify AC-7 smoke test passes and all connectivity requirements are met: Redis reachable, Aurora PostgreSQL reachable, all services healthy"
+    files_to_read:
+      - "infra/langgraph-server/compose.langgraph-server.yaml"
+      - "infra/langgraph-server/README.md"
+    files_to_modify: []
+    acs: ["AC-7", "AC-4", "AC-1"]
+    depends_on: "ST-3"
+    verification: "`docker compose ps` shows all services healthy/running after 60s. `redis-cli ping` → PONG. `pg_isready` → accepting connections. No port conflicts confirmed."
+    estimated_tokens: 4000

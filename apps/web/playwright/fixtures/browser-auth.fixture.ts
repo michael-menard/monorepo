@@ -49,7 +49,10 @@ async function setupBrowserAuthViaUI(page: Page): Promise<string | null> {
 
   // Fill in credentials
   await page.fill('input[type="email"], input[name="email"], input[id="email"]', TEST_USER.email)
-  await page.fill('input[type="password"], input[name="password"], input[id="password"]', TEST_USER.password)
+  await page.fill(
+    'input[type="password"], input[name="password"], input[id="password"]',
+    TEST_USER.password,
+  )
   console.log('Filled login credentials')
 
   // Submit the form
@@ -78,7 +81,7 @@ async function setupBrowserAuthViaUI(page: Page): Promise<string | null> {
   // CRITICAL: Wait for Redux auth state to be set to isAuthenticated: true
   // This ensures the router context has the correct auth state before tests navigate
   const authStateReady = await page.evaluate(() => {
-    return new Promise<boolean>((resolve) => {
+    return new Promise<boolean>(resolve => {
       const checkAuth = () => {
         try {
           // Access Redux store from window (exposed in dev mode)
@@ -148,10 +151,7 @@ async function setupBrowserAuthViaUI(page: Page): Promise<string | null> {
 async function setupApiAuthInterception(page: Page, accessToken: string): Promise<void> {
   // Intercept API requests and add Authorization header
   // Catch both proxy paths (/api/**) and direct API calls (localhost:9000)
-  const apiPatterns = [
-    '**/api/**',
-    '**/localhost:9000/**',
-  ]
+  const apiPatterns = ['**/api/**', '**/localhost:9000/**']
 
   for (const pattern of apiPatterns) {
     await page.route(pattern, async route => {

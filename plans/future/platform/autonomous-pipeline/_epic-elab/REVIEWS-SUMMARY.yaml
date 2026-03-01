@@ -1,0 +1,19 @@
+feature_dir: "plans/future/platform/autonomous-pipeline"
+prefix: "APIP"
+completed: "2026-02-25T14:10:00Z"
+perspectives:
+  engineering: complete
+  product: complete
+  qa: complete
+  ux: complete
+  platform: complete
+  security: complete
+success_count: 6
+failed_count: 0
+verdicts:
+  engineering: CONCERNS
+  product: READY
+  qa: BLOCKED
+  ux: CONCERNS
+  platform: CONCERNS
+  security: CONCERNS

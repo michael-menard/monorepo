@@ -55,57 +55,69 @@ const extState: ExtendedApiState = {
 // Sorting Steps (WISH-2014)
 // ─────────────────────────────────────────────────────────────────────────────
 
-Given('I have created item {string} with price {string} and pieceCount {int}', async ({ request }, title: string, price: string, pieceCount: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created item {string} with price {string} and pieceCount {int}',
+  async ({ request }, title: string, price: string, pieceCount: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const data = createValidWishlistItem({ title, price, pieceCount })
-  const response = await extState.client.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  extState.createdItems.push(item)
-  extState.currentItemId = item.id
-})
+    const data = createValidWishlistItem({ title, price, pieceCount })
+    const response = await extState.client.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    extState.createdItems.push(item)
+    extState.currentItemId = item.id
+  },
+)
 
-Given('I have created item {string} without price but with pieceCount {int}', async ({ request }, title: string, pieceCount: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created item {string} without price but with pieceCount {int}',
+  async ({ request }, title: string, pieceCount: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const data = createMinimalWishlistItem({ title, pieceCount })
-  const response = await extState.client.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  extState.createdItems.push(item)
-})
+    const data = createMinimalWishlistItem({ title, pieceCount })
+    const response = await extState.client.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    extState.createdItems.push(item)
+  },
+)
 
-Given('I have created item {string} with price {string} but without pieceCount', async ({ request }, title: string, price: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created item {string} with price {string} but without pieceCount',
+  async ({ request }, title: string, price: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const data = createValidWishlistItem({ title, price, pieceCount: undefined })
-  const response = await extState.client.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  extState.createdItems.push(item)
-})
+    const data = createValidWishlistItem({ title, price, pieceCount: undefined })
+    const response = await extState.client.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    extState.createdItems.push(item)
+  },
+)
 
-Given('I have created item {string} with releaseDate {string}', async ({ request }, title: string, releaseDate: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created item {string} with releaseDate {string}',
+  async ({ request }, title: string, releaseDate: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const data = createValidWishlistItem({
-    title,
-    releaseDate: new Date(releaseDate).toISOString(),
-  })
-  const response = await extState.client.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  extState.createdItems.push(item)
-})
+    const data = createValidWishlistItem({
+      title,
+      releaseDate: new Date(releaseDate).toISOString(),
+    })
+    const response = await extState.client.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    extState.createdItems.push(item)
+  },
+)
 
 Given('I have created item {string} without releaseDate', async ({ request }, title: string) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -119,29 +131,35 @@ Given('I have created item {string} without releaseDate', async ({ request }, ti
   extState.createdItems.push(item)
 })
 
-Given('I have created item {string} with priority {int} and pieceCount {int}', async ({ request }, title: string, priority: number, pieceCount: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created item {string} with priority {int} and pieceCount {int}',
+  async ({ request }, title: string, priority: number, pieceCount: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const data = createValidWishlistItem({ title, priority, pieceCount })
-  const response = await extState.client.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  extState.createdItems.push(item)
-})
+    const data = createValidWishlistItem({ title, priority, pieceCount })
+    const response = await extState.client.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    extState.createdItems.push(item)
+  },
+)
 
-Given('I have created item {string} with priority {int} but without pieceCount', async ({ request }, title: string, priority: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created item {string} with priority {int} but without pieceCount',
+  async ({ request }, title: string, priority: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const data = createValidWishlistItem({ title, priority, pieceCount: undefined })
-  const response = await extState.client.create(data)
-  expect(response.status()).toBe(201)
-  const item = await response.json()
-  extState.createdItems.push(item)
-})
+    const data = createValidWishlistItem({ title, priority, pieceCount: undefined })
+    const response = await extState.client.create(data)
+    expect(response.status()).toBe(201)
+    const item = await response.json()
+    extState.createdItems.push(item)
+  },
+)
 
 Given('I have created multiple items with different stores and values', async ({ request }) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -163,52 +181,61 @@ Given('I have created multiple items with different stores and values', async ({
   }
 })
 
-Given('I have created items with title containing {string} with different values', async ({ request }, search: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created items with title containing {string} with different values',
+  async ({ request }, search: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const items = [
-    { title: `${search} Cheap`, price: '50.00', pieceCount: 1000 },
-    { title: `${search} Expensive`, price: '200.00', pieceCount: 500 },
-  ]
+    const items = [
+      { title: `${search} Cheap`, price: '50.00', pieceCount: 1000 },
+      { title: `${search} Expensive`, price: '200.00', pieceCount: 500 },
+    ]
 
-  for (const item of items) {
-    const data = createValidWishlistItem(item)
-    const response = await extState.client.create(data)
-    expect(response.status()).toBe(201)
-    const created = await response.json()
-    extState.createdItems.push(created)
-  }
-})
+    for (const item of items) {
+      const data = createValidWishlistItem(item)
+      const response = await extState.client.create(data)
+      expect(response.status()).toBe(201)
+      const created = await response.json()
+      extState.createdItems.push(created)
+    }
+  },
+)
 
-Given('I have created {int} wishlist items with varying values', async ({ request }, count: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created {int} wishlist items with varying values',
+  async ({ request }, count: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  for (let i = 0; i < count; i++) {
-    const data = createValidWishlistItem({
-      title: `Value Item ${i + 1}`,
-      price: String((i + 1) * 10 + '.99'),
-      pieceCount: (i + 1) * 100,
-    })
-    const response = await extState.client.create(data)
-    expect(response.status()).toBe(201)
-    const item = await response.json()
-    extState.createdItems.push(item)
-  }
-})
+    for (let i = 0; i < count; i++) {
+      const data = createValidWishlistItem({
+        title: `Value Item ${i + 1}`,
+        price: String((i + 1) * 10 + '.99'),
+        pieceCount: (i + 1) * 100,
+      })
+      const response = await extState.client.create(data)
+      expect(response.status()).toBe(201)
+      const item = await response.json()
+      extState.createdItems.push(item)
+    }
+  },
+)
 
-Then('{string} should appear before {string} in results', async ({},first: string, second: string) => {
-  // Use apiState for sorting tests (WISH-2001, WISH-2014) which set response in apiState
-  const body = (apiState.lastResponseBody ?? extState.lastResponseBody) as WishlistListResponse
-  const firstIndex = body.items.findIndex(item => item.title === first)
-  const secondIndex = body.items.findIndex(item => item.title === second)
-  expect(firstIndex).toBeGreaterThanOrEqual(0)
-  expect(secondIndex).toBeGreaterThanOrEqual(0)
-  expect(firstIndex).toBeLessThan(secondIndex)
-})
+Then(
+  '{string} should appear before {string} in results',
+  async ({}, first: string, second: string) => {
+    // Use apiState for sorting tests (WISH-2001, WISH-2014) which set response in apiState
+    const body = (apiState.lastResponseBody ?? extState.lastResponseBody) as WishlistListResponse
+    const firstIndex = body.items.findIndex(item => item.title === first)
+    const secondIndex = body.items.findIndex(item => item.title === second)
+    expect(firstIndex).toBeGreaterThanOrEqual(0)
+    expect(secondIndex).toBeGreaterThanOrEqual(0)
+    expect(firstIndex).toBeLessThan(secondIndex)
+  },
+)
 
 Then('items without price should appear at the end', async () => {
   // Use apiState for sorting tests (WISH-2001, WISH-2014) which set response in apiState
@@ -277,20 +304,23 @@ When('I reorder the items with new sort orders', async ({ request }) => {
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I reorder item {int} to position {int}', async ({ request }, itemNum: number, position: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I reorder item {int} to position {int}',
+  async ({ request }, itemNum: number, position: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const item = extState.createdItems[itemNum - 1]
-  expect(item).toBeDefined()
+    const item = extState.createdItems[itemNum - 1]
+    expect(item).toBeDefined()
 
-  const response = await extState.client.reorder({
-    items: [{ id: item.id, sortOrder: position }],
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await extState.client.reorder({
+      items: [{ id: item.id, sortOrder: position }],
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I reorder only the first {int} items', async ({ request }, count: number) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -357,24 +387,27 @@ When('I send a reorder request with sortOrder {int}', async ({ request }, sortOr
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I send a reorder request with decimal sortOrder {string}', async ({ request }, sortOrderStr: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I send a reorder request with decimal sortOrder {string}',
+  async ({ request }, sortOrderStr: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  expect(extState.currentItemId).not.toBeNull()
+    expect(extState.currentItemId).not.toBeNull()
 
-  // Send raw request to test decimal sortOrder validation
-  const response = await request.put(`${baseUrl}/api/wishlist/reorder`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${authState.currentToken}`,
-    },
-    data: { items: [{ id: extState.currentItemId, sortOrder: parseFloat(sortOrderStr) }] },
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    // Send raw request to test decimal sortOrder validation
+    const response = await request.put(`${baseUrl}/api/wishlist/reorder`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authState.currentToken}`,
+      },
+      data: { items: [{ id: extState.currentItemId, sortOrder: parseFloat(sortOrderStr) }] },
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I send a reorder request with non-existent item ID', async ({ request }) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -388,10 +421,13 @@ When('I send a reorder request with non-existent item ID', async ({ request }) =
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-Then('the response should contain {string} count of {int}', async ({},field: string, count: number) => {
-  const body = extState.lastResponseBody as ReorderResponse
-  expect(body[field as keyof ReorderResponse]).toBe(count)
-})
+Then(
+  'the response should contain {string} count of {int}',
+  async ({}, field: string, count: number) => {
+    const body = extState.lastResponseBody as ReorderResponse
+    expect(body[field as keyof ReorderResponse]).toBe(count)
+  },
+)
 
 Then('the items should have the new sort orders when listed', async ({ request }) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -408,7 +444,7 @@ Then('the response should contain error about sortOrder', async () => {
   expect(body.error).toBeDefined()
 })
 
-Then('the response should contain a validation error for {string}', async ({},field: string) => {
+Then('the response should contain a validation error for {string}', async ({}, field: string) => {
   const body = extState.lastResponseBody as { error: string; details?: unknown }
   expect(body.error).toBe('Validation failed')
 })
@@ -437,19 +473,22 @@ When('I mark the item as purchased with price {string}', async ({ request }, pri
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I mark the item as purchased with keepOnWishlist {word}', async ({ request }, keep: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I mark the item as purchased with keepOnWishlist {word}',
+  async ({ request }, keep: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  expect(extState.currentItemId).not.toBeNull()
-  const response = await extState.client.markAsPurchased(extState.currentItemId!, {
-    quantity: 1,
-    keepOnWishlist: keep === 'true',
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    expect(extState.currentItemId).not.toBeNull()
+    const response = await extState.client.markAsPurchased(extState.currentItemId!, {
+      quantity: 1,
+      keepOnWishlist: keep === 'true',
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I mark the item as purchased', async ({ request }) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -478,18 +517,21 @@ When('I mark the item as purchased without specifying date', async ({ request })
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I mark the item as purchased with only quantity {int}', async ({ request }, quantity: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I mark the item as purchased with only quantity {int}',
+  async ({ request }, quantity: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  expect(extState.currentItemId).not.toBeNull()
-  const response = await extState.client.markAsPurchased(extState.currentItemId!, {
-    quantity,
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    expect(extState.currentItemId).not.toBeNull()
+    const response = await extState.client.markAsPurchased(extState.currentItemId!, {
+      quantity,
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I mark the item as purchased with quantity {int}', async ({ request }, quantity: number) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -504,19 +546,22 @@ When('I mark the item as purchased with quantity {int}', async ({ request }, qua
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I mark the item as purchased with purchaseDate {string}', async ({ request }, date: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I mark the item as purchased with purchaseDate {string}',
+  async ({ request }, date: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  expect(extState.currentItemId).not.toBeNull()
-  const response = await extState.client.markAsPurchased(extState.currentItemId!, {
-    quantity: 1,
-    purchaseDate: date,
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    expect(extState.currentItemId).not.toBeNull()
+    const response = await extState.client.markAsPurchased(extState.currentItemId!, {
+      quantity: 1,
+      purchaseDate: date,
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I mark the item as purchased with a future date', async ({ request }) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -567,32 +612,32 @@ Then('the response should match the Set item schema', async () => {
   expect(body).toHaveProperty('createdAt')
 })
 
-Then('the Set title should be {string}', async ({},title: string) => {
+Then('the Set title should be {string}', async ({}, title: string) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.title).toBe(title)
 })
 
-Then('the Set purchasePrice should be {string}', async ({},price: string) => {
+Then('the Set purchasePrice should be {string}', async ({}, price: string) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.purchasePrice).toBe(price)
 })
 
-Then('the Set tax should be {string}', async ({},tax: string) => {
+Then('the Set tax should be {string}', async ({}, tax: string) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.tax).toBe(tax)
 })
 
-Then('the Set shipping should be {string}', async ({},shipping: string) => {
+Then('the Set shipping should be {string}', async ({}, shipping: string) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.shipping).toBe(shipping)
 })
 
-Then('the Set quantity should be {int}', async ({},quantity: number) => {
+Then('the Set quantity should be {int}', async ({}, quantity: number) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.quantity).toBe(quantity)
 })
 
-Then('the Set purchaseDate should contain {string}', async ({},dateStr: string) => {
+Then('the Set purchaseDate should contain {string}', async ({}, dateStr: string) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.purchaseDate).toContain(dateStr)
 })
@@ -602,7 +647,7 @@ Then('the Set should have a purchaseDate', async () => {
   expect(body.purchaseDate).not.toBeNull()
 })
 
-Then('the Set isBuilt should be {word}', async ({},value: string) => {
+Then('the Set isBuilt should be {word}', async ({}, value: string) => {
   const body = extState.lastResponseBody as SetItem
   expect(body.isBuilt).toBe(value === 'true')
 })
@@ -686,120 +731,141 @@ Then('the Set should have a valid UUID id', async () => {
   expect(body.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 })
 
-When('I mark the item as purchased with keepOnWishlist true and quantity {int}', async ({ request }, quantity: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I mark the item as purchased with keepOnWishlist true and quantity {int}',
+  async ({ request }, quantity: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  expect(extState.currentItemId).not.toBeNull()
-  const response = await extState.client.markAsPurchased(extState.currentItemId!, {
-    quantity,
-    keepOnWishlist: true,
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    expect(extState.currentItemId).not.toBeNull()
+    const response = await extState.client.markAsPurchased(extState.currentItemId!, {
+      quantity,
+      keepOnWishlist: true,
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
-When('I mark the same item as purchased again with keepOnWishlist true and quantity {int}', async ({ request }, quantity: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I mark the same item as purchased again with keepOnWishlist true and quantity {int}',
+  async ({ request }, quantity: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  expect(extState.currentItemId).not.toBeNull()
-  const response = await extState.client.markAsPurchased(extState.currentItemId!, {
-    quantity,
-    keepOnWishlist: true,
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    expect(extState.currentItemId).not.toBeNull()
+    const response = await extState.client.markAsPurchased(extState.currentItemId!, {
+      quantity,
+      keepOnWishlist: true,
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Additional Reorder Steps
 // ─────────────────────────────────────────────────────────────────────────────
 
-Given('I have created items {string}, {string}, {string} with sortOrders {int}, {int}, {int}', async ({ request }, t1: string, t2: string, t3: string, s1: number, s2: number, s3: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created items {string}, {string}, {string} with sortOrders {int}, {int}, {int}',
+  async ({ request }, t1: string, t2: string, t3: string, s1: number, s2: number, s3: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const items = [
-    { title: t1, sortOrder: s1 },
-    { title: t2, sortOrder: s2 },
-    { title: t3, sortOrder: s3 },
-  ]
+    const items = [
+      { title: t1, sortOrder: s1 },
+      { title: t2, sortOrder: s2 },
+      { title: t3, sortOrder: s3 },
+    ]
 
-  for (const item of items) {
-    const data = createMinimalWishlistItem({ title: item.title })
-    const response = await extState.client.create(data)
-    expect(response.status()).toBe(201)
-    const created = await response.json()
-    extState.createdItems.push(created)
-  }
-})
+    for (const item of items) {
+      const data = createMinimalWishlistItem({ title: item.title })
+      const response = await extState.client.create(data)
+      expect(response.status()).toBe(201)
+      const created = await response.json()
+      extState.createdItems.push(created)
+    }
+  },
+)
 
-Given('I have created items {string}, {string}, {string}', async ({ request }, t1: string, t2: string, t3: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created items {string}, {string}, {string}',
+  async ({ request }, t1: string, t2: string, t3: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  for (const title of [t1, t2, t3]) {
-    const data = createMinimalWishlistItem({ title })
-    const response = await extState.client.create(data)
-    expect(response.status()).toBe(201)
-    const created = await response.json()
-    extState.createdItems.push(created)
-  }
-})
+    for (const title of [t1, t2, t3]) {
+      const data = createMinimalWishlistItem({ title })
+      const response = await extState.client.create(data)
+      expect(response.status()).toBe(201)
+      const created = await response.json()
+      extState.createdItems.push(created)
+    }
+  },
+)
 
-Given('I have created 2 wishlist items with sortOrders {int} and {int}', async ({ request }, s1: number, s2: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+Given(
+  'I have created 2 wishlist items with sortOrders {int} and {int}',
+  async ({ request }, s1: number, s2: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  for (const sortOrder of [s1, s2]) {
-    const data = createMinimalWishlistItem({ title: `Item ${sortOrder}` })
-    const response = await extState.client.create(data)
-    expect(response.status()).toBe(201)
-    const created = await response.json()
-    extState.createdItems.push(created)
-  }
-})
+    for (const sortOrder of [s1, s2]) {
+      const data = createMinimalWishlistItem({ title: `Item ${sortOrder}` })
+      const response = await extState.client.create(data)
+      expect(response.status()).toBe(201)
+      const created = await response.json()
+      extState.createdItems.push(created)
+    }
+  },
+)
 
-When('I reorder with {string} at {int}, {string} at {int}, {string} at {int}', async ({ request }, t1: string, s1: number, t2: string, s2: number, t3: string, s3: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I reorder with {string} at {int}, {string} at {int}, {string} at {int}',
+  async ({ request }, t1: string, s1: number, t2: string, s2: number, t3: string, s3: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const reorderItems = [
-    { title: t1, sortOrder: s1 },
-    { title: t2, sortOrder: s2 },
-    { title: t3, sortOrder: s3 },
-  ].map(item => {
-    const found = extState.createdItems.find(i => i.title === item.title)
-    expect(found).toBeDefined()
-    return { id: found!.id, sortOrder: item.sortOrder }
-  })
+    const reorderItems = [
+      { title: t1, sortOrder: s1 },
+      { title: t2, sortOrder: s2 },
+      { title: t3, sortOrder: s3 },
+    ].map(item => {
+      const found = extState.createdItems.find(i => i.title === item.title)
+      expect(found).toBeDefined()
+      return { id: found!.id, sortOrder: item.sortOrder }
+    })
 
-  const response = await extState.client.reorder({ items: reorderItems })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await extState.client.reorder({ items: reorderItems })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
-When('I reorder with sortOrders {int}, {int}, {int}', async ({ request }, s1: number, s2: number, s3: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I reorder with sortOrders {int}, {int}, {int}',
+  async ({ request }, s1: number, s2: number, s3: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const reorderItems = extState.createdItems.slice(0, 3).map((item, index) => ({
-    id: item.id,
-    sortOrder: [s1, s2, s3][index],
-  }))
+    const reorderItems = extState.createdItems.slice(0, 3).map((item, index) => ({
+      id: item.id,
+      sortOrder: [s1, s2, s3][index],
+    }))
 
-  const response = await extState.client.reorder({ items: reorderItems })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await extState.client.reorder({ items: reorderItems })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I reorder both items to sortOrder {int}', async ({ request }, sortOrder: number) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -816,35 +882,41 @@ When('I reorder both items to sortOrder {int}', async ({ request }, sortOrder: n
   extState.lastResponseBody = await response.json().catch(() => null)
 })
 
-When('I reorder item {int} to sortOrder {int}', async ({ request }, itemNum: number, sortOrder: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I reorder item {int} to sortOrder {int}',
+  async ({ request }, itemNum: number, sortOrder: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const item = extState.createdItems[itemNum - 1]
-  expect(item).toBeDefined()
+    const item = extState.createdItems[itemNum - 1]
+    expect(item).toBeDefined()
 
-  const response = await extState.client.reorder({
-    items: [{ id: item.id, sortOrder }],
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await extState.client.reorder({
+      items: [{ id: item.id, sortOrder }],
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
-When('I reorder {string} to position {int}', async ({ request }, title: string, position: number) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I reorder {string} to position {int}',
+  async ({ request }, title: string, position: number) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const item = extState.createdItems.find(i => i.title === title)
-  expect(item).toBeDefined()
+    const item = extState.createdItems.find(i => i.title === title)
+    expect(item).toBeDefined()
 
-  const response = await extState.client.reorder({
-    items: [{ id: item!.id, sortOrder: position }],
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await extState.client.reorder({
+      items: [{ id: item!.id, sortOrder: position }],
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)
 
 When('I send a reorder request including both items', async ({ request }) => {
   const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
@@ -868,7 +940,7 @@ Then('the first item should be {string}', async ({ request }, title: string) => 
 
   const response = await extState.client.list({ sort: 'sortOrder', order: 'asc' })
   expect(response.status()).toBe(200)
-  const body = await response.json() as WishlistListResponse
+  const body = (await response.json()) as WishlistListResponse
   expect(body.items[0]?.title).toBe(title)
 })
 
@@ -879,7 +951,7 @@ Then('the second item should be {string}', async ({ request }, title: string) =>
 
   const response = await extState.client.list({ sort: 'sortOrder', order: 'asc' })
   expect(response.status()).toBe(200)
-  const body = await response.json() as WishlistListResponse
+  const body = (await response.json()) as WishlistListResponse
   expect(body.items[1]?.title).toBe(title)
 })
 
@@ -890,7 +962,7 @@ Then('the third item should be {string}', async ({ request }, title: string) => 
 
   const response = await extState.client.list({ sort: 'sortOrder', order: 'asc' })
   expect(response.status()).toBe(200)
-  const body = await response.json() as WishlistListResponse
+  const body = (await response.json()) as WishlistListResponse
   expect(body.items[2]?.title).toBe(title)
 })
 
@@ -901,7 +973,7 @@ Then('the items should maintain relative ordering when listed', async ({ request
 
   const response = await extState.client.list({ sort: 'sortOrder', order: 'asc' })
   expect(response.status()).toBe(200)
-  const body = await response.json() as WishlistListResponse
+  const body = (await response.json()) as WishlistListResponse
 
   // Verify items are in ascending sortOrder
   for (let i = 1; i < body.items.length; i++) {
@@ -909,16 +981,28 @@ Then('the items should maintain relative ordering when listed', async ({ request
   }
 })
 
-When('I request the wishlist list with search {string} sorted by {string} {string}', async ({ request }, search: string, sort: string, order: string) => {
-  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
-  extState.client = createWishlistApiClient(request, baseUrl)
-  extState.client.setAuthToken(authState.currentToken)
+When(
+  'I request the wishlist list with search {string} sorted by {string} {string}',
+  async ({ request }, search: string, sort: string, order: string) => {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3001'
+    extState.client = createWishlistApiClient(request, baseUrl)
+    extState.client.setAuthToken(authState.currentToken)
 
-  const response = await extState.client.list({
-    search,
-    sort: sort as 'sortOrder' | 'createdAt' | 'title' | 'price' | 'pieceCount' | 'priority' | 'bestValue' | 'expiringSoon' | 'hiddenGems',
-    order: order as 'asc' | 'desc',
-  })
-  extState.lastResponseStatus = response.status()
-  extState.lastResponseBody = await response.json().catch(() => null)
-})
+    const response = await extState.client.list({
+      search,
+      sort: sort as
+        | 'sortOrder'
+        | 'createdAt'
+        | 'title'
+        | 'price'
+        | 'pieceCount'
+        | 'priority'
+        | 'bestValue'
+        | 'expiringSoon'
+        | 'hiddenGems',
+      order: order as 'asc' | 'desc',
+    })
+    extState.lastResponseStatus = response.status()
+    extState.lastResponseBody = await response.json().catch(() => null)
+  },
+)

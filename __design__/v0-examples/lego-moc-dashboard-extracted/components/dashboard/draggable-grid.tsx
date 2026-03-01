@@ -1,8 +1,6 @@
-"use client"
+'use client'
 
-import React from "react"
-
-import { useState, useEffect, ReactNode, useCallback, useRef } from "react"
+import React, { useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -13,21 +11,21 @@ import {
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
-} from "@dnd-kit/core"
+} from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, RotateCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical, RotateCcw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
-const STORAGE_KEY = "brickvault-dashboard-layout"
-const SIZE_STORAGE_KEY = "brickvault-dashboard-sizes"
+const STORAGE_KEY = 'brickvault-dashboard-layout'
+const SIZE_STORAGE_KEY = 'brickvault-dashboard-sizes'
 
 export interface DashboardItem {
   id: string
@@ -40,7 +38,7 @@ export interface DashboardItem {
 
 interface ItemSize {
   colSpan: 1 | 2 | 3
-  height: number | "auto"
+  height: number | 'auto'
 }
 
 interface ResizableItemProps {
@@ -53,14 +51,9 @@ interface ResizableItemProps {
 }
 
 function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: ResizableItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  })
 
   const itemRef = useRef<HTMLDivElement>(null)
   const [isResizingWidth, setIsResizingWidth] = useState(false)
@@ -72,8 +65,8 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
     transform: CSS.Transform.toString(transform),
     transition,
     gridColumn: `span ${Math.min(size.colSpan, maxCols)}`,
-    height: size.height === "auto" ? "auto" : `${size.height}px`,
-    minHeight: size.height === "auto" ? undefined : `${size.height}px`,
+    height: size.height === 'auto' ? 'auto' : `${size.height}px`,
+    minHeight: size.height === 'auto' ? undefined : `${size.height}px`,
   }
 
   // Width resize handler
@@ -81,7 +74,7 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
     e.preventDefault()
     e.stopPropagation()
     setIsResizingWidth(true)
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const rect = itemRef.current?.getBoundingClientRect()
     startPosRef.current = { x: clientX, y: 0, width: rect?.width || 0, height: 0 }
   }, [])
@@ -91,7 +84,7 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
     e.preventDefault()
     e.stopPropagation()
     setIsResizingHeight(true)
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
     const rect = itemRef.current?.getBoundingClientRect()
     startPosRef.current = { x: 0, y: clientY, width: 0, height: rect?.height || 0 }
   }, [])
@@ -101,29 +94,34 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
     e.preventDefault()
     e.stopPropagation()
     setIsResizingBoth(true)
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
     const rect = itemRef.current?.getBoundingClientRect()
-    startPosRef.current = { x: clientX, y: clientY, width: rect?.width || 0, height: rect?.height || 0 }
+    startPosRef.current = {
+      x: clientX,
+      y: clientY,
+      width: rect?.width || 0,
+      height: rect?.height || 0,
+    }
   }, [])
 
   useEffect(() => {
     if (!isResizingWidth && !isResizingHeight && !isResizingBoth) return
 
     const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
       if (isResizingWidth || isResizingBoth) {
         const deltaX = clientX - startPosRef.current.x
         const newWidth = startPosRef.current.width + deltaX
         const containerWidth = itemRef.current?.parentElement?.clientWidth || 0
         const colWidth = containerWidth / maxCols
-        
+
         // Calculate new column span based on width
         let newColSpan = Math.round(newWidth / colWidth) as 1 | 2 | 3
         newColSpan = Math.max(1, Math.min(maxCols, newColSpan)) as 1 | 2 | 3
-        
+
         if (newColSpan !== size.colSpan) {
           onResize(id, { colSpan: newColSpan })
         }
@@ -142,16 +140,16 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
       setIsResizingBoth(false)
     }
 
-    document.addEventListener("mousemove", handleMouseMove)
-    document.addEventListener("mouseup", handleMouseUp)
-    document.addEventListener("touchmove", handleMouseMove)
-    document.addEventListener("touchend", handleMouseUp)
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('touchmove', handleMouseMove)
+    document.addEventListener('touchend', handleMouseUp)
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
-      document.removeEventListener("touchmove", handleMouseMove)
-      document.removeEventListener("touchend", handleMouseUp)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('touchmove', handleMouseMove)
+      document.removeEventListener('touchend', handleMouseUp)
     }
   }, [isResizingWidth, isResizingHeight, isResizingBoth, id, maxCols, onResize, size.colSpan])
 
@@ -162,9 +160,9 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative",
-        isDragging && "z-50 opacity-50",
-        isResizing && "z-40 select-none"
+        'group relative',
+        isDragging && 'z-50 opacity-50',
+        isResizing && 'z-40 select-none',
       )}
     >
       <div ref={itemRef} className="h-full">
@@ -173,13 +171,13 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
           {...attributes}
           {...listeners}
           className={cn(
-            "absolute -left-1 top-4 -translate-x-full z-10",
-            "flex items-center justify-center h-8 w-6 rounded-l-md",
-            "bg-muted/80 text-muted-foreground border border-r-0 border-border",
-            "opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing",
-            "hover:bg-muted hover:text-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-            (isLoading || isResizing) && "pointer-events-none"
+            'absolute -left-1 top-4 -translate-x-full z-10',
+            'flex items-center justify-center h-8 w-6 rounded-l-md',
+            'bg-muted/80 text-muted-foreground border border-r-0 border-border',
+            'opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing',
+            'hover:bg-muted hover:text-foreground',
+            'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+            (isLoading || isResizing) && 'pointer-events-none',
           )}
           aria-label="Drag to reorder"
           disabled={isLoading || isResizing}
@@ -188,10 +186,12 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
         </button>
 
         {/* Card content wrapper with overflow handling */}
-        <div className={cn(
-          "h-full overflow-hidden rounded-lg",
-          size.height !== "auto" && "[&>*]:h-full [&>*]:overflow-auto"
-        )}>
+        <div
+          className={cn(
+            'h-full overflow-hidden rounded-lg',
+            size.height !== 'auto' && '[&>*]:h-full [&>*]:overflow-auto',
+          )}
+        >
           {children}
         </div>
 
@@ -200,10 +200,10 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
           onMouseDown={handleWidthResizeStart}
           onTouchStart={handleWidthResizeStart}
           className={cn(
-            "absolute right-0 top-0 bottom-4 w-2 cursor-ew-resize z-20",
-            "opacity-0 group-hover:opacity-100 transition-opacity",
-            "hover:bg-primary/20 rounded-r",
-            isLoading && "pointer-events-none"
+            'absolute right-0 top-0 bottom-4 w-2 cursor-ew-resize z-20',
+            'opacity-0 group-hover:opacity-100 transition-opacity',
+            'hover:bg-primary/20 rounded-r',
+            isLoading && 'pointer-events-none',
           )}
           aria-label="Resize width"
         >
@@ -215,10 +215,10 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
           onMouseDown={handleHeightResizeStart}
           onTouchStart={handleHeightResizeStart}
           className={cn(
-            "absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize z-20",
-            "opacity-0 group-hover:opacity-100 transition-opacity",
-            "hover:bg-primary/20 rounded-b",
-            isLoading && "pointer-events-none"
+            'absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize z-20',
+            'opacity-0 group-hover:opacity-100 transition-opacity',
+            'hover:bg-primary/20 rounded-b',
+            isLoading && 'pointer-events-none',
           )}
           aria-label="Resize height"
         >
@@ -230,10 +230,10 @@ function ResizableItem({ id, children, isLoading, size, onResize, maxCols }: Res
           onMouseDown={handleCornerResizeStart}
           onTouchStart={handleCornerResizeStart}
           className={cn(
-            "absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30",
-            "opacity-0 group-hover:opacity-100 transition-opacity",
-            "hover:bg-primary/20 rounded-br",
-            isLoading && "pointer-events-none"
+            'absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-30',
+            'opacity-0 group-hover:opacity-100 transition-opacity',
+            'hover:bg-primary/20 rounded-br',
+            isLoading && 'pointer-events-none',
           )}
           aria-label="Resize"
         >
@@ -271,7 +271,7 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   )
 
   // Detect container width and set max columns
@@ -288,14 +288,14 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
     }
 
     updateMaxCols()
-    window.addEventListener("resize", updateMaxCols)
-    return () => window.removeEventListener("resize", updateMaxCols)
+    window.addEventListener('resize', updateMaxCols)
+    return () => window.removeEventListener('resize', updateMaxCols)
   }, [])
 
   // Load saved order and sizes from localStorage
   useEffect(() => {
     setMounted(true)
-    
+
     // Load order
     const savedOrder = localStorage.getItem(STORAGE_KEY)
     if (savedOrder) {
@@ -324,7 +324,7 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
         items.forEach(item => {
           defaults[item.id] = {
             colSpan: item.defaultColSpan || 1,
-            height: "auto"
+            height: 'auto',
           }
         })
         setItemSizes(defaults)
@@ -334,7 +334,7 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
       items.forEach(item => {
         defaults[item.id] = {
           colSpan: item.defaultColSpan || 1,
-          height: "auto"
+          height: 'auto',
         }
       })
       setItemSizes(defaults)
@@ -352,19 +352,22 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
     localStorage.setItem(SIZE_STORAGE_KEY, JSON.stringify(newSizes))
   }, [])
 
-  const handleResize = useCallback((id: string, newSize: Partial<ItemSize>) => {
-    setItemSizes(prev => {
-      const updated = {
-        ...prev,
-        [id]: {
-          ...prev[id],
-          ...newSize
+  const handleResize = useCallback(
+    (id: string, newSize: Partial<ItemSize>) => {
+      setItemSizes(prev => {
+        const updated = {
+          ...prev,
+          [id]: {
+            ...prev[id],
+            ...newSize,
+          },
         }
-      }
-      saveSizes(updated)
-      return updated
-    })
-  }, [saveSizes])
+        saveSizes(updated)
+        return updated
+      })
+    },
+    [saveSizes],
+  )
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -374,9 +377,9 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      setOrderedItems((currentItems) => {
-        const oldIndex = currentItems.findIndex((item) => item.id === active.id)
-        const newIndex = currentItems.findIndex((item) => item.id === over.id)
+      setOrderedItems(currentItems => {
+        const oldIndex = currentItems.findIndex(item => item.id === active.id)
+        const newIndex = currentItems.findIndex(item => item.id === over.id)
         const newItems = arrayMove(currentItems, oldIndex, newIndex)
         saveOrder(newItems)
         return newItems
@@ -394,22 +397,25 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
     items.forEach(item => {
       defaults[item.id] = {
         colSpan: item.defaultColSpan || 1,
-        height: "auto"
+        height: 'auto',
       }
     })
     setItemSizes(defaults)
   }
 
   const getItemSize = (id: string, defaultColSpan?: 1 | 2 | 3): ItemSize => {
-    return itemSizes[id] || { colSpan: defaultColSpan || 1, height: "auto" }
+    return itemSizes[id] || { colSpan: defaultColSpan || 1, height: 'auto' }
   }
 
   const activeItem = activeId ? orderedItems.find(item => item.id === activeId) : null
 
   if (!mounted) {
     return (
-      <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-        {items.map((item) => (
+      <div
+        ref={containerRef}
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"
+      >
+        {items.map(item => (
           <div key={item.id} style={{ gridColumn: `span ${item.defaultColSpan || 1}` }}>
             {item.component}
           </div>
@@ -440,11 +446,11 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={orderedItems.map(i => i.id)} strategy={rectSortingStrategy}>
-          <div 
+          <div
             ref={containerRef}
             className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 pl-4 md:pl-6 auto-rows-auto"
           >
-            {orderedItems.map((item) => (
+            {orderedItems.map(item => (
               <ResizableItem
                 key={item.id}
                 id={item.id}
@@ -453,9 +459,7 @@ export function DraggableGrid({ items, isLoading }: DraggableGridProps) {
                 onResize={handleResize}
                 maxCols={maxCols}
               >
-                <section aria-label={item.label}>
-                  {item.component}
-                </section>
+                <section aria-label={item.label}>{item.component}</section>
               </ResizableItem>
             ))}
           </div>

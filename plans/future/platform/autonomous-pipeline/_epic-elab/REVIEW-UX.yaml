@@ -1,0 +1,38 @@
+perspective: ux
+verdict: CONCERNS
+
+core_flow:
+  complete: false
+  usable: false
+
+mvp_blockers:
+  - id: UX-001
+    issue: "Operators have no visibility into pipeline state during Phase 0-1 — dashboard not available until Phase 2"
+    stories: [APIP-2020, APIP-2010]
+    action: "Bring forward minimal read-only dashboard or CLI visibility to Phase 0/1"
+  - id: UX-002
+    issue: "Failure handling only in Phase 2 — Phase 0-1 silent failures will block queue with no alerts"
+    stories: [APIP-2010]
+    action: "Add basic notification/logging to supervisor before Phase 1 gates"
+  - id: UX-003
+    issue: "Model router without cost controls forces all Phase 0-1 work through expensive Claude default"
+    stories: [APIP-0040]
+    action: "Ensure APIP-0040 is concurrent with Phase 0 foundation work"
+
+missing_mvp_stories:
+  - title: "Minimal operator visibility (CLI or dashboard slice)"
+    gap: "Core flow includes no mechanism for operators to see pipeline state before Phase 2"
+
+future:
+  suggested_stories:
+    - title: "CLI tool for operator inspection of work queue and blocked stories"
+      priority: P1
+    - title: "Logs aggregation or structured tracing for story lifecycle debugging"
+      priority: P1
+    - title: "Operator runbook for handling common failure scenarios"
+      priority: P2
+
+  recommendations:
+    - "Deliver APIP-2010 + basic CLI inspection in Phase 0"
+    - "Add structured logging/tracing to each graph node for operator debugging"
+    - "Validate cost bounds with dry-run pipeline execution before Phase 1"

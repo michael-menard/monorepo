@@ -21,14 +21,14 @@ Filter to MVP-critical items only. Track non-MVP suggestions in FUTURE-ROADMAP.y
 
 ## Inputs
 
-Read from `{FEATURE_DIR}/_epic-elab/`:
-- `AGENT-CONTEXT.md` - feature_dir, prefix
-- `REVIEW-ENGINEERING.yaml`
-- `REVIEW-PRODUCT.yaml`
-- `REVIEW-QA.yaml`
-- `REVIEW-UX.yaml`
-- `REVIEW-PLATFORM.yaml`
-- `REVIEW-SECURITY.yaml`
+Read from KB:
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")` → feature_dir, prefix
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="REVIEW-ENGINEERING")`
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="REVIEW-PRODUCT")`
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="REVIEW-QA")`
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="REVIEW-UX")`
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="REVIEW-PLATFORM")`
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="REVIEW-SECURITY")`
 
 ## Output Format
 
@@ -49,15 +49,15 @@ Everything else goes to **FUTURE-ROADMAP.yaml**.
 
 ## Steps
 
-1. **Read context** - Load AGENT-CONTEXT.md for feature_dir and prefix
-2. **Read all review files** - Load 6 YAML outputs from `{FEATURE_DIR}/_epic-elab/`
+1. **Read context** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")`
+2. **Read all review artifacts** - Read 6 review artifacts from KB using `kb_read_artifact`
 3. **Filter MVP-critical** - Separate items that block core journey from nice-to-haves
 4. **Determine overall verdict** - Based on MVP-critical items only
 5. **Merge MVP-critical findings** - Combine only journey-blocking issues
 6. **Merge MVP-critical story suggestions** - Only stories needed for core journey
-7. **Write EPIC-REVIEW.yaml** - MVP-critical only to `{FEATURE_DIR}/_epic-elab/`
-8. **Write FUTURE-ROADMAP.yaml** - All non-MVP suggestions to `{FEATURE_DIR}/_epic-elab/`
-9. **Update CHECKPOINT.md** - Mark aggregation complete
+7. **Write EPIC-REVIEW to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW", ...)`
+8. **Write FUTURE-ROADMAP to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="analysis", artifact_name="FUTURE-ROADMAP", ...)`
+9. **Update checkpoint** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="checkpoint", ...)`
 
 ## Verdict Logic
 
@@ -70,9 +70,9 @@ else:
   verdict = READY
 ```
 
-## Output 1: EPIC-REVIEW.yaml (MVP-Critical Only)
+## Output 1: EPIC-REVIEW (KB Artifact, MVP-Critical Only)
 
-Write to `{FEATURE_DIR}/_epic-elab/EPIC-REVIEW.yaml`:
+Write via `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")`:
 
 ```yaml
 schema: 3
@@ -123,9 +123,9 @@ metrics:
   missing_mvp_stories: N
 ```
 
-## Output 2: FUTURE-ROADMAP.yaml (Non-MVP)
+## Output 2: FUTURE-ROADMAP (KB Artifact, Non-MVP)
 
-Write to `{FEATURE_DIR}/_epic-elab/FUTURE-ROADMAP.yaml`:
+Write via `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="analysis", artifact_name="FUTURE-ROADMAP")`:
 
 ```yaml
 schema: 1
@@ -173,7 +173,7 @@ metrics:
 
 ## Signals
 
-- `AGGREGATION COMPLETE` - EPIC-REVIEW.yaml and FUTURE-ROADMAP.yaml written
+- `AGGREGATION COMPLETE` - EPIC-REVIEW and FUTURE-ROADMAP written to KB
 - `AGGREGATION PARTIAL: N/6 perspectives` - Some missing
 - `AGGREGATION BLOCKED: <reason>` - Cannot proceed
 

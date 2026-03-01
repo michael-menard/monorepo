@@ -7,11 +7,11 @@
  * CRITICAL: All tests use real Cognito authentication and real S3 uploads.
  */
 
-import { expect } from '@playwright/test'
-import { createBdd } from 'playwright-bdd'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import * as fs from 'fs'
+import { createBdd } from 'playwright-bdd'
+import { expect } from '@playwright/test'
 
 const { Given, When, Then } = createBdd()
 
@@ -22,8 +22,8 @@ const __dirname = path.dirname(__filename)
 const FIXTURES_PATH = path.join(__dirname, '..', 'fixtures', 'files')
 
 // Track test state
-let mocDetailLoaded = false
-let currentMocId: string | null = null
+const mocDetailLoaded = false
+const currentMocId: string | null = null
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility Functions
@@ -35,25 +35,25 @@ let currentMocId: string | null = null
  */
 function createTestPDF(sizeInBytes: number, filename: string): string {
   const filePath = path.join(FIXTURES_PATH, filename)
-  
+
   // Minimal valid PDF structure
   const pdfHeader = '%PDF-1.4\n'
   const pdfFooter = '\n%%EOF'
-  
+
   // Calculate how much content we need to add
   const headerSize = Buffer.from(pdfHeader).length
   const footerSize = Buffer.from(pdfFooter).length
   const remainingSize = sizeInBytes - headerSize - footerSize
-  
+
   // Create filler content (repeating pattern)
   const fillerUnit = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '
   const fillerCount = Math.ceil(remainingSize / fillerUnit.length)
   const filler = fillerUnit.repeat(fillerCount).slice(0, remainingSize)
-  
+
   // Write the file
   const content = pdfHeader + filler + pdfFooter
   fs.writeFileSync(filePath, content)
-  
+
   return filePath
 }
 
@@ -78,71 +78,84 @@ function cleanupTestFile(filePath: string): void {
 When('I select a 30MB PDF file for presigned upload', async ({ page }) => {
   const filename = 'test-presigned-30mb.pdf'
   const filePath = createTestPDF(30 * 1024 * 1024, filename)
-  
-  const fileInput = page.locator('input[type="file"]').filter({ hasNot: page.locator('[accept*="image"]') })
+
+  const fileInput = page
+    .locator('input[type="file"]')
+    .filter({ hasNot: page.locator('[accept*="image"]') })
   await fileInput.setInputFiles(filePath)
-  
-  await page.evaluate((path) => {
-    (window as any).__testFileToCleanup = path
+
+  await page.evaluate(path => {
+    ;(window as any).__testFileToCleanup = path
   }, filePath)
 })
 
 When('I select a 60MB PDF file for upload', async ({ page }) => {
   const filename = 'test-oversized-60mb.pdf'
   const filePath = createTestPDF(60 * 1024 * 1024, filename)
-  
-  const fileInput = page.locator('input[type="file"]').filter({ hasNot: page.locator('[accept*="image"]') })
+
+  const fileInput = page
+    .locator('input[type="file"]')
+    .filter({ hasNot: page.locator('[accept*="image"]') })
   await fileInput.setInputFiles(filePath)
-  
-  await page.evaluate((path) => {
-    (window as any).__testFileToCleanup = path
+
+  await page.evaluate(path => {
+    ;(window as any).__testFileToCleanup = path
   }, filePath)
 })
 
 When('I select a 5MB PDF file for upload', async ({ page }) => {
   const filename = 'test-direct-5mb.pdf'
   const filePath = createTestPDF(5 * 1024 * 1024, filename)
-  
-  const fileInput = page.locator('input[type="file"]').filter({ hasNot: page.locator('[accept*="image"]') })
+
+  const fileInput = page
+    .locator('input[type="file"]')
+    .filter({ hasNot: page.locator('[accept*="image"]') })
   await fileInput.setInputFiles(filePath)
-  
-  await page.evaluate((path) => {
-    (window as any).__testFileToCleanup = path
+
+  await page.evaluate(path => {
+    ;(window as any).__testFileToCleanup = path
   }, filePath)
 })
 
 When('I upload a 30MB PDF file successfully', async ({ page }) => {
   const filename = 'test-upload-success-30mb.pdf'
   const filePath = createTestPDF(30 * 1024 * 1024, filename)
-  
-  const fileInput = page.locator('input[type="file"]').filter({ hasNot: page.locator('[accept*="image"]') })
+
+  const fileInput = page
+    .locator('input[type="file"]')
+    .filter({ hasNot: page.locator('[accept*="image"]') })
   await fileInput.setInputFiles(filePath)
-  
+
   const regexPattern = /Instructions uploaded|upload.*success/i
   const successToast = page.locator('[data-sonner-toast]').filter({ hasText: regexPattern })
   await expect(successToast).toBeVisible({ timeout: 120000 })
-  
-  await page.evaluate((path) => {
-    (window as any).__testFileToCleanup = path
+
+  await page.evaluate(path => {
+    ;(window as any).__testFileToCleanup = path
   }, filePath)
 })
 
-When('I select {int} files of {int}MB each for upload', async ({ page }, fileCount: number, sizeMB: number) => {
-  const filePaths: string[] = []
-  
-  for (let i = 0; i < fileCount; i++) {
-    const filename = `test-concurrent-${i + 1}-${sizeMB}mb.pdf`
-    const filePath = createTestPDF(sizeMB * 1024 * 1024, filename)
-    filePaths.push(filePath)
-  }
-  
-  const fileInput = page.locator('input[type="file"]').filter({ hasNot: page.locator('[accept*="image"]') })
-  await fileInput.setInputFiles(filePaths)
-  
-  await page.evaluate((paths) => {
-    (window as any).__testFilesToCleanup = paths
-  }, filePaths)
-})
+When(
+  'I select {int} files of {int}MB each for upload',
+  async ({ page }, fileCount: number, sizeMB: number) => {
+    const filePaths: string[] = []
+
+    for (let i = 0; i < fileCount; i++) {
+      const filename = `test-concurrent-${i + 1}-${sizeMB}mb.pdf`
+      const filePath = createTestPDF(sizeMB * 1024 * 1024, filename)
+      filePaths.push(filePath)
+    }
+
+    const fileInput = page
+      .locator('input[type="file"]')
+      .filter({ hasNot: page.locator('[accept*="image"]') })
+    await fileInput.setInputFiles(filePaths)
+
+    await page.evaluate(paths => {
+      ;(window as any).__testFilesToCleanup = paths
+    }, filePaths)
+  },
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Progress Bar Verification Steps
@@ -155,11 +168,11 @@ Then('I should see a progress bar', async ({ page }) => {
 
 Then('the progress should update during upload', async ({ page }) => {
   const progressBar = page.getByRole('progressbar')
-  
+
   const initialProgress = await progressBar.getAttribute('aria-valuenow')
   await page.waitForTimeout(2000)
   const updatedProgress = await progressBar.getAttribute('aria-valuenow')
-  
+
   if (initialProgress && updatedProgress) {
     const initial = parseInt(initialProgress)
     const updated = parseInt(updatedProgress)
@@ -178,11 +191,11 @@ Then('the percentage should increase over time', async ({ page }) => {
     const match = text?.match(/(\d+)%/)
     return match ? parseInt(match[1]) : 0
   }
-  
+
   const initialPercentage = await getPercentage()
   await page.waitForTimeout(2000)
   const laterPercentage = await getPercentage()
-  
+
   expect(laterPercentage).toBeGreaterThanOrEqual(initialPercentage)
 })
 
@@ -210,7 +223,7 @@ Then('I should see {string} toast', async ({ page }, message: string) => {
 Then('the file should appear in the instructions list', async ({ page }) => {
   const instructionsCard = page.locator('[data-card-id="instructions"]')
   await expect(instructionsCard).toBeVisible()
-  
+
   const fileList = instructionsCard.getByRole('list', { name: /instruction/i })
   const fileItems = fileList.getByRole('listitem')
   await expect(fileItems.first()).toBeVisible()
@@ -244,7 +257,7 @@ Then('I should see an error {string}', async ({ page }, errorMessage: string) =>
 Then('the file should not be added to the upload queue', async ({ page }) => {
   const uploadQueue = page.locator('[data-testid="upload-queue"]')
   const hasQueue = await uploadQueue.isVisible().catch(() => false)
-  
+
   if (hasQueue) {
     const queueItems = uploadQueue.locator('[data-testid="queue-item"]')
     const count = await queueItems.count()
@@ -259,14 +272,14 @@ Then('the file should not be added to the upload queue', async ({ page }) => {
 When('I click the Cancel button during upload', async ({ page }) => {
   const progressBar = page.getByRole('progressbar')
   await progressBar.waitFor({ timeout: 10000 })
-  
+
   const cancelButton = page.getByRole('button', { name: /cancel/i })
   await cancelButton.click()
 })
 
 Then('the upload should be aborted', async ({ page }) => {
   const progressBar = page.getByRole('progressbar')
-  
+
   try {
     await expect(progressBar).not.toBeVisible({ timeout: 5000 })
   } catch {
@@ -277,10 +290,10 @@ Then('the upload should be aborted', async ({ page }) => {
 
 Then('the file should be removed from the queue', async ({ page }) => {
   await page.waitForTimeout(1000)
-  
+
   const uploadQueue = page.locator('[data-testid="upload-queue"]')
   const hasQueue = await uploadQueue.isVisible().catch(() => false)
-  
+
   if (hasQueue) {
     const activeItems = uploadQueue.locator('[data-testid="queue-item"][data-status="uploading"]')
     const count = await activeItems.count()
@@ -296,7 +309,7 @@ Given('the network connection is unstable', async ({ page }) => {
   await page.route('**/s3.amazonaws.com/**', (route, request) => {
     const url = request.url()
     const isRetry = url.includes('retry') || Math.random() > 0.5
-    
+
     if (isRetry) {
       route.continue()
     } else {
@@ -332,9 +345,9 @@ Then('the upload should restart', async ({ page }) => {
 Then('the presigned upload flow should be triggered', async ({ page }) => {
   const sessionRequest = page.waitForRequest(
     req => req.url().includes('/upload-sessions') && req.method() === 'POST',
-    { timeout: 10000 }
+    { timeout: 10000 },
   )
-  
+
   await sessionRequest
 })
 
@@ -353,7 +366,7 @@ Then('I should not see presigned upload indicators', async ({ page }) => {
   await page.waitForTimeout(2000)
   const uploadingProgress = page.locator('text=/uploading.*%/i')
   const hasProgress = await uploadingProgress.isVisible().catch(() => false)
-  
+
   if (hasProgress) {
     await expect(uploadingProgress).not.toBeVisible({ timeout: 3000 })
   }
@@ -363,14 +376,17 @@ Then('I should not see presigned upload indicators', async ({ page }) => {
 // Concurrent Upload Steps
 // ─────────────────────────────────────────────────────────────────────────────
 
-Then('a maximum of {int} files should upload concurrently', async ({ page }, maxConcurrent: number) => {
-  await page.waitForTimeout(2000)
-  
-  const uploadingItems = page.locator('[data-status="uploading"]')
-  const count = await uploadingItems.count()
-  
-  expect(count).toBeLessThanOrEqual(maxConcurrent)
-})
+Then(
+  'a maximum of {int} files should upload concurrently',
+  async ({ page }, maxConcurrent: number) => {
+    await page.waitForTimeout(2000)
+
+    const uploadingItems = page.locator('[data-status="uploading"]')
+    const count = await uploadingItems.count()
+
+    expect(count).toBeLessThanOrEqual(maxConcurrent)
+  },
+)
 
 Then('queued files should wait for available slots', async ({ page }) => {
   const queuedItems = page.locator('[data-status="queued"]')
@@ -380,7 +396,7 @@ Then('queued files should wait for available slots', async ({ page }) => {
 
 Then('all files should eventually complete', async ({ page }) => {
   const allComplete = page.locator('[data-status="success"]')
-  
+
   await expect(async () => {
     const successCount = await allComplete.count()
     expect(successCount).toBeGreaterThanOrEqual(5)
@@ -401,11 +417,12 @@ Then('I should see a session expiry warning', async ({ page }) => {
 })
 
 Then('the session should auto-refresh before expiry', async ({ page }) => {
-  const refreshRequest = page.waitForRequest(
-    req => req.url().includes('/upload-sessions') && req.method() === 'POST',
-    { timeout: 20000 }
-  ).catch(() => null)
-  
+  const refreshRequest = page
+    .waitForRequest(req => req.url().includes('/upload-sessions') && req.method() === 'POST', {
+      timeout: 20000,
+    })
+    .catch(() => null)
+
   await refreshRequest
 })
 
@@ -434,7 +451,6 @@ When('I focus the Cancel button with keyboard', async ({ page }) => {
   const cancelButton = page.getByRole('button', { name: /cancel/i })
   await cancelButton.focus()
 })
-
 
 // Note: Cleanup is handled by the cleanupTestFile function called at the end of each step
 // Test files are stored in FIXTURES_PATH and can be cleaned up manually if needed

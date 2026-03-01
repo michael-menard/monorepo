@@ -1,22 +1,36 @@
 /**
- * Artifact Operations for DB-First Artifact Storage
+ * Artifact Operations for Jump Table + Type-Specific Tables
  *
- * Operations for reading and writing workflow artifacts (CHECKPOINT.yaml,
- * EVIDENCE.yaml, REVIEW.yaml, etc.) directly to the database.
+ * Operations for reading and writing workflow artifacts through the jump table
+ * pattern. The storyArtifacts table serves as a registry/index, while content
+ * is stored in 13 type-specific tables with typed columns for queryability.
  *
- * This eliminates file-based storage and enables:
- * - Semantic search across all artifacts
- * - Centralized artifact history and versioning
- * - Agents don't need to know file paths
+ * The MCP API stays backward-compatible — callers pass generic content JSONB,
+ * and the CRUD layer handles routing to/from type-specific tables transparently.
  *
  * @see plans/future/db-first-artifact-storage/PLAN.md
  */
 
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { storyArtifacts } from '../db/schema.js'
+import {
+  storyArtifacts,
+  artifactCheckpoints,
+  artifactContexts,
+  artifactReviews,
+  artifactElaborations,
+  artifactAnalyses,
+  artifactScopes,
+  artifactPlans,
+  artifactEvidence,
+  artifactVerifications,
+  artifactFixSummaries,
+  artifactProofs,
+  artifactQaGates,
+  artifactCompletionReports,
+} from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
 
@@ -56,6 +70,25 @@ export const PHASES = [
   'completion',
 ] as const
 
+/**
+ * Maps artifact_type to its detail table name.
+ */
+const ARTIFACT_TYPE_TO_TABLE: Record<string, string> = {
+  checkpoint: 'artifact_checkpoints',
+  context: 'artifact_contexts',
+  review: 'artifact_reviews',
+  elaboration: 'artifact_elaborations',
+  analysis: 'artifact_analyses',
+  scope: 'artifact_scopes',
+  plan: 'artifact_plans',
+  evidence: 'artifact_evidence',
+  verification: 'artifact_verifications',
+  fix_summary: 'artifact_fix_summaries',
+  proof: 'artifact_proofs',
+  qa_gate: 'artifact_qa_gates',
+  completion_report: 'artifact_completion_reports',
+}
+
 // ============================================================================
 // Input Schemas
 // ============================================================================
@@ -64,7 +97,7 @@ export const PHASES = [
  * Schema for kb_write_artifact input.
  *
  * Creates or updates an artifact for a story. Uses upsert behavior based on
- * story_id + artifact_type + iteration.
+ * story_id + artifact_type + artifact_name + iteration.
  */
 export const KbWriteArtifactInputSchema = z.object({
   /** Story ID this artifact belongs to (e.g., 'WISH-2045') */
@@ -94,7 +127,7 @@ export type KbWriteArtifactInput = z.infer<typeof KbWriteArtifactInputSchema>
 /**
  * Schema for kb_read_artifact input.
  *
- * Reads an artifact by story_id + artifact_type + optional iteration.
+ * Reads an artifact by story_id + artifact_type + optional artifact_name + optional iteration.
  */
 export const KbReadArtifactInputSchema = z.object({
   /** Story ID to read artifact for */
@@ -102,6 +135,9 @@ export const KbReadArtifactInputSchema = z.object({
 
   /** Type of artifact to read */
   artifact_type: ArtifactTypeSchema,
+
+  /** Specific artifact name (for disambiguating multiple artifacts of same type) */
+  artifact_name: z.string().optional(),
 
   /** Iteration number (default: latest/0) */
   iteration: z.number().int().min(0).optional(),
@@ -184,48 +220,221 @@ export interface ArtifactListItem {
   updated_at: Date
 }
 
+// ============================================================================
+// Content Mapping Helpers
+// ============================================================================
+
 /**
- * Convert DB artifact to API response format.
+ * Extract known typed fields from generic content JSONB for a given artifact type.
+ * Returns { typedColumns, data } where typedColumns are the typed fields and
+ * data is the full content stored as the JSONB remainder.
  */
-function toArtifactResponse(artifact: schema.StoryArtifact): ArtifactResponse {
-  return {
-    id: artifact.id,
-    story_id: artifact.storyId,
-    artifact_type: artifact.artifactType,
-    artifact_name: artifact.artifactName,
-    phase: artifact.phase,
-    iteration: artifact.iteration,
-    content: artifact.content as Record<string, unknown> | null,
-    summary: artifact.summary as Record<string, unknown> | null,
-    created_at: artifact.createdAt,
-    updated_at: artifact.updatedAt,
+function mapContentToTypedColumns(
+  artifactType: string,
+  content: Record<string, unknown>,
+  storyId: string,
+): { typedColumns: Record<string, unknown>; data: Record<string, unknown> } {
+  // The full content is always stored in the `data` column for backward compat
+  const data = content
+
+  switch (artifactType) {
+    case 'checkpoint':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          scope: (content.scope as string) ?? 'story',
+          phaseStatus: content.phase_status ?? content.phaseStatus ?? {},
+          resumeFrom: content.resume_from ?? content.resumeFrom ?? null,
+          featureDir: content.feature_dir ?? content.featureDir ?? null,
+          prefix: content.prefix ?? null,
+        },
+        data,
+      }
+
+    case 'context':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          scope: (content.scope as string) ?? 'story',
+          featureDir: content.feature_dir ?? content.featureDir ?? null,
+          prefix: content.prefix ?? null,
+          storyCount: content.story_count ?? content.storyCount ?? null,
+        },
+        data,
+      }
+
+    case 'review':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          scope: (content.scope as string) ?? 'story',
+          perspective: content.perspective ?? null,
+          verdict: content.verdict ?? null,
+          findingCount: content.finding_count ?? content.findingCount ?? null,
+          criticalCount: content.critical_count ?? content.criticalCount ?? null,
+        },
+        data,
+      }
+
+    case 'elaboration':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          scope: (content.scope as string) ?? 'story',
+          elaborationType: content.elaboration_type ?? content.elaborationType ?? 'story_analysis',
+          verdict: content.verdict ?? null,
+          decisionCount: content.decision_count ?? content.decisionCount ?? null,
+        },
+        data,
+      }
+
+    case 'analysis':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          scope: (content.scope as string) ?? 'story',
+          analysisType: content.analysis_type ?? content.analysisType ?? 'general',
+          summaryText: content.summary_text ?? content.summaryText ?? null,
+        },
+        data,
+      }
+
+    case 'scope':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          touchesBackend: content.touches_backend ?? content.touchesBackend ?? null,
+          touchesFrontend: content.touches_frontend ?? content.touchesFrontend ?? null,
+          touchesDatabase: content.touches_database ?? content.touchesDatabase ?? null,
+          touchesInfra: content.touches_infra ?? content.touchesInfra ?? null,
+          fileCount: content.file_count ?? content.fileCount ?? null,
+        },
+        data,
+      }
+
+    case 'plan':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          stepCount: content.step_count ?? content.stepCount ?? null,
+          estimatedComplexity: content.estimated_complexity ?? content.estimatedComplexity ?? null,
+        },
+        data,
+      }
+
+    case 'evidence':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          acTotal: content.ac_total ?? content.acTotal ?? null,
+          acMet: content.ac_met ?? content.acMet ?? null,
+          acStatus: content.ac_status ?? content.acStatus ?? null,
+          testPassCount: content.test_pass_count ?? content.testPassCount ?? null,
+          testFailCount: content.test_fail_count ?? content.testFailCount ?? null,
+        },
+        data,
+      }
+
+    case 'verification':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          verdict: content.verdict ?? null,
+          findingCount: content.finding_count ?? content.findingCount ?? null,
+          criticalCount: content.critical_count ?? content.criticalCount ?? null,
+        },
+        data,
+      }
+
+    case 'fix_summary':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          iteration: content.iteration ?? 0,
+          issuesFixed: content.issues_fixed ?? content.issuesFixed ?? null,
+          issuesRemaining: content.issues_remaining ?? content.issuesRemaining ?? null,
+        },
+        data,
+      }
+
+    case 'proof':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          proofType: content.proof_type ?? content.proofType ?? null,
+          verified: content.verified ?? null,
+        },
+        data,
+      }
+
+    case 'qa_gate':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          decision: content.decision ?? 'FAIL',
+          reviewer: content.reviewer ?? null,
+          findingCount: content.finding_count ?? content.findingCount ?? null,
+          blockerCount: content.blocker_count ?? content.blockerCount ?? null,
+        },
+        data,
+      }
+
+    case 'completion_report':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          status: content.status ?? null,
+          iterationsUsed: content.iterations_used ?? content.iterationsUsed ?? null,
+        },
+        data,
+      }
+
+    default:
+      return { typedColumns: { targetId: storyId }, data }
   }
 }
 
 /**
- * Convert DB artifact to list item format.
+ * A detail table reference with the minimum columns needed for CRUD operations.
+ * All 13 type-specific tables share id, data, createdAt, updatedAt.
  */
-function toArtifactListItem(
-  artifact: schema.StoryArtifact,
-  includeContent: boolean,
-): ArtifactListItem {
-  const item: ArtifactListItem = {
-    id: artifact.id,
-    story_id: artifact.storyId,
-    artifact_type: artifact.artifactType,
-    artifact_name: artifact.artifactName,
-    phase: artifact.phase,
-    iteration: artifact.iteration,
-    summary: artifact.summary as Record<string, unknown> | null,
-    created_at: artifact.createdAt,
-    updated_at: artifact.updatedAt,
-  }
+type DetailTableRef = {
+  id: typeof artifactCheckpoints.id
+  [key: string]: unknown
+}
 
-  if (includeContent) {
-    item.content = artifact.content as Record<string, unknown> | null
+/**
+ * Get the Drizzle table reference for a given detail table name.
+ * Uses `as any` because Drizzle PgTable types are nominally typed by table name,
+ * but all our detail tables share the same structural pattern (id, data, timestamps).
+ */
+function getDetailTableRef(detailTable: string): DetailTableRef | null {
+  const tableMap: Record<string, any> = {
+    artifact_checkpoints: artifactCheckpoints,
+    artifact_contexts: artifactContexts,
+    artifact_reviews: artifactReviews,
+    artifact_elaborations: artifactElaborations,
+    artifact_analyses: artifactAnalyses,
+    artifact_scopes: artifactScopes,
+    artifact_plans: artifactPlans,
+    artifact_evidence: artifactEvidence,
+    artifact_verifications: artifactVerifications,
+    artifact_fix_summaries: artifactFixSummaries,
+    artifact_proofs: artifactProofs,
+    artifact_qa_gates: artifactQaGates,
+    artifact_completion_reports: artifactCompletionReports,
   }
+  return tableMap[detailTable] ?? null
+}
 
-  return item
+/**
+ * Reconstruct content JSONB from a type-specific table row.
+ * The `data` column contains the full original content.
+ */
+function mergeTypedColumnsToContent(row: Record<string, unknown>): Record<string, unknown> | null {
+  if (!row) return null
+  // The data column stores the full content - return it directly
+  return (row.data as Record<string, unknown>) ?? null
 }
 
 /**
@@ -252,6 +461,156 @@ function generateArtifactName(artifactType: string, iteration: number): string {
   return iteration > 0 ? `${baseName} (iteration ${iteration})` : baseName
 }
 
+/**
+ * Convert jump table row + detail content to API response format.
+ */
+function toArtifactResponse(
+  jumpRow: schema.StoryArtifact,
+  content: Record<string, unknown> | null,
+): ArtifactResponse {
+  return {
+    id: jumpRow.id,
+    story_id: jumpRow.storyId,
+    artifact_type: jumpRow.artifactType,
+    artifact_name: jumpRow.artifactName,
+    phase: jumpRow.phase,
+    iteration: jumpRow.iteration,
+    content,
+    summary: jumpRow.summary as Record<string, unknown> | null,
+    created_at: jumpRow.createdAt,
+    updated_at: jumpRow.updatedAt,
+  }
+}
+
+/**
+ * Convert jump table row to list item format.
+ */
+function toArtifactListItem(
+  jumpRow: schema.StoryArtifact,
+  includeContent: boolean,
+  content?: Record<string, unknown> | null,
+): ArtifactListItem {
+  const item: ArtifactListItem = {
+    id: jumpRow.id,
+    story_id: jumpRow.storyId,
+    artifact_type: jumpRow.artifactType,
+    artifact_name: jumpRow.artifactName,
+    phase: jumpRow.phase,
+    iteration: jumpRow.iteration,
+    summary: jumpRow.summary as Record<string, unknown> | null,
+    created_at: jumpRow.createdAt,
+    updated_at: jumpRow.updatedAt,
+  }
+
+  if (includeContent) {
+    item.content = content ?? null
+  }
+
+  return item
+}
+
+// ============================================================================
+// Detail Table Operations (insert/update/read/delete)
+// ============================================================================
+
+/**
+ * Insert a row into the appropriate type-specific table.
+ * Returns the UUID of the inserted row.
+ *
+ * Uses `as any` casts for dynamic table operations because Drizzle's type system
+ * is nominally typed per-table — all 13 tables share the same structural pattern
+ * but TypeScript treats each as a distinct type.
+ */
+async function insertDetailRow(
+  db: NodePgDatabase<typeof schema>,
+  artifactType: string,
+  content: Record<string, unknown>,
+  storyId: string,
+): Promise<{ detailTable: string; detailId: string }> {
+  const detailTable = ARTIFACT_TYPE_TO_TABLE[artifactType]
+  if (!detailTable) {
+    throw new Error(`Unknown artifact type: ${artifactType}`)
+  }
+
+  const { typedColumns, data } = mapContentToTypedColumns(artifactType, content, storyId)
+
+  const columns = { ...typedColumns, data }
+  const id = crypto.randomUUID()
+
+  const tableRef = getDetailTableRef(detailTable)
+  if (!tableRef) {
+    throw new Error(`No table reference for: ${detailTable}`)
+  }
+
+  const result = await (db as any)
+    .insert(tableRef)
+    .values({ id, ...columns })
+    .returning({ id: (tableRef as any).id })
+
+  return { detailTable, detailId: result[0].id }
+}
+
+/**
+ * Update an existing row in the type-specific table.
+ */
+async function updateDetailRow(
+  db: NodePgDatabase<typeof schema>,
+  detailTable: string,
+  detailId: string,
+  artifactType: string,
+  content: Record<string, unknown>,
+  storyId: string,
+): Promise<void> {
+  const { typedColumns, data } = mapContentToTypedColumns(artifactType, content, storyId)
+
+  const tableRef = getDetailTableRef(detailTable)
+  if (!tableRef) {
+    throw new Error(`No table reference for: ${detailTable}`)
+  }
+
+  const now = new Date()
+
+  await (db as any)
+    .update(tableRef)
+    .set({ ...typedColumns, data, updatedAt: now })
+    .where(eq((tableRef as any).id, detailId))
+}
+
+/**
+ * Read a row from the type-specific table and return its content.
+ */
+async function readDetailRow(
+  db: NodePgDatabase<typeof schema>,
+  detailTable: string,
+  detailId: string,
+): Promise<Record<string, unknown> | null> {
+  const tableRef = getDetailTableRef(detailTable)
+  if (!tableRef) return null
+
+  const result = await (db as any)
+    .select()
+    .from(tableRef)
+    .where(eq((tableRef as any).id, detailId))
+    .limit(1)
+
+  if (result.length === 0) return null
+  return mergeTypedColumnsToContent(result[0] as Record<string, unknown>)
+}
+
+/**
+ * Delete a row from the type-specific table.
+ */
+async function deleteDetailRow(
+  db: NodePgDatabase<typeof schema>,
+  detailTable: string,
+  detailId: string,
+): Promise<void> {
+  const tableRef = getDetailTableRef(detailTable)
+  if (!tableRef) return
+
+  await (db as any).delete(tableRef).where(eq((tableRef as any).id, detailId))
+}
+
 // ============================================================================
 // Operations
 // ============================================================================
@@ -259,12 +618,16 @@ function generateArtifactName(artifactType: string, iteration: number): string {
 /**
  * Write (create or update) an artifact for a story.
  *
- * Uses upsert behavior: if artifact with same story_id + artifact_type + iteration
+ * Uses upsert behavior: if artifact with same story_id + artifact_type + artifact_name + iteration
  * exists, it will be updated. Otherwise, a new artifact is created.
+ *
+ * Flow:
+ * 1. Insert/update the type-specific detail table row
+ * 2. Upsert the jump table row with detail_table + detail_id
  *
  * @param input - Artifact data
  * @param deps - Database dependency
- * @returns Created/updated artifact
+ * @returns Created/updated artifact with content
  */
 export async function kb_write_artifact(
   input: KbWriteArtifactInput,
@@ -276,7 +639,10 @@ export async function kb_write_artifact(
   const now = new Date()
   const iteration = validatedInput.iteration ?? 0
 
-  // Check if artifact exists (using story_id + artifact_type + iteration)
+  const artifactName =
+    validatedInput.artifact_name ?? generateArtifactName(validatedInput.artifact_type, iteration)
+
+  // Check if artifact exists (using story_id + artifact_type + artifact_name + iteration)
   const existing = await db
     .select()
     .from(storyArtifacts)
@@ -284,26 +650,32 @@ export async function kb_write_artifact(
       and(
         eq(storyArtifacts.storyId, validatedInput.story_id),
         eq(storyArtifacts.artifactType, validatedInput.artifact_type),
-        eq(storyArtifacts.iteration, iteration),
+        sql`COALESCE(${storyArtifacts.artifactName}, '') = ${artifactName}`,
+        sql`COALESCE(${storyArtifacts.iteration}, 0) = ${iteration}`,
       ),
     )
     .limit(1)
 
-  const artifactName =
-    validatedInput.artifact_name ?? generateArtifactName(validatedInput.artifact_type, iteration)
-
   if (existing.length === 0) {
-    // Create new artifact
+    // Create new: insert detail row first, then jump table
+    const { detailTable, detailId } = await insertDetailRow(
+      db,
+      validatedInput.artifact_type,
+      validatedInput.content,
+      validatedInput.story_id,
+    )
+
     const result = await db
       .insert(storyArtifacts)
       .values({
         storyId: validatedInput.story_id,
         artifactType: validatedInput.artifact_type,
         artifactName,
-        content: validatedInput.content,
         phase: validatedInput.phase ?? null,
         iteration,
         summary: validatedInput.summary ?? null,
+        detailTable,
+        detailId,
         createdAt: now,
         updatedAt: now,
       })
@@ -314,22 +686,49 @@ export async function kb_write_artifact(
       artifactType: validatedInput.artifact_type,
       iteration,
       artifactId: result[0].id,
+      detailTable,
+      detailId,
     })
 
-    return toArtifactResponse(result[0])
+    return toArtifactResponse(result[0], validatedInput.content)
   }
 
-  // Update existing artifact
+  // Update existing: update detail row, then jump table
+  const existingRow = existing[0]
+
+  if (existingRow.detailTable && existingRow.detailId) {
+    // Update existing detail row
+    await updateDetailRow(
+      db,
+      existingRow.detailTable,
+      existingRow.detailId,
+      validatedInput.artifact_type,
+      validatedInput.content,
+      validatedInput.story_id,
+    )
+  } else {
+    // Legacy row without detail table — create detail row
+    const { detailTable, detailId } = await insertDetailRow(
+      db,
+      validatedInput.artifact_type,
+      validatedInput.content,
+      validatedInput.story_id,
+    )
+    existingRow.detailTable = detailTable
+    existingRow.detailId = detailId
+  }
+
   const result = await db
     .update(storyArtifacts)
     .set({
-      content: validatedInput.content,
       artifactName,
-      phase: validatedInput.phase ?? existing[0].phase,
-      summary: validatedInput.summary ?? existing[0].summary,
+      phase: validatedInput.phase ?? existingRow.phase,
+      summary: validatedInput.summary ?? existingRow.summary,
+      detailTable: existingRow.detailTable,
+      detailId: existingRow.detailId,
       updatedAt: now,
     })
-    .where(eq(storyArtifacts.id, existing[0].id))
+    .where(eq(storyArtifacts.id, existingRow.id))
     .returning()
 
   logger.info('Artifact updated', {
@@ -339,18 +738,20 @@ export async function kb_write_artifact(
     artifactId: result[0].id,
   })
 
-  return toArtifactResponse(result[0])
+  return toArtifactResponse(result[0], validatedInput.content)
 }
 
 /**
- * Read an artifact by story_id + artifact_type + optional iteration.
+ * Read an artifact by story_id + artifact_type + optional artifact_name + optional iteration.
  *
- * If iteration is not specified, returns the artifact with iteration 0
- * (or the latest if multiple exist).
+ * Flow:
+ * 1. Query jump table to find detail_table + detail_id
+ * 2. Query detail table for full content
+ * 3. Return merged result
  *
- * @param input - Story ID and artifact type
+ * @param input - Story ID, artifact type, optional name, optional iteration
  * @param deps - Database dependency
- * @returns Artifact or null if not found
+ * @returns Artifact with content, or null if not found
  */
 export async function kb_read_artifact(
   input: KbReadArtifactInput,
@@ -365,12 +766,18 @@ export async function kb_read_artifact(
     eq(storyArtifacts.artifactType, validatedInput.artifact_type),
   ]
 
+  // If artifact_name specified, add it to conditions
+  if (validatedInput.artifact_name) {
+    eq(storyArtifacts.artifactName, validatedInput.artifact_name)
+    conditions.push(eq(storyArtifacts.artifactName, validatedInput.artifact_name))
+  }
+
   // If iteration specified, add it to conditions
   if (validatedInput.iteration !== undefined) {
     conditions.push(eq(storyArtifacts.iteration, validatedInput.iteration))
   }
 
-  // Query with optional iteration filter, ordered by iteration desc to get latest
+  // Query jump table, ordered by iteration desc to get latest
   const result = await db
     .select()
     .from(storyArtifacts)
@@ -382,19 +789,28 @@ export async function kb_read_artifact(
     logger.debug('Artifact not found', {
       storyId: validatedInput.story_id,
       artifactType: validatedInput.artifact_type,
+      artifactName: validatedInput.artifact_name,
       iteration: validatedInput.iteration,
     })
     return null
   }
 
-  return toArtifactResponse(result[0])
+  const jumpRow = result[0]
+
+  // Read content from detail table
+  let content: Record<string, unknown> | null = null
+  if (jumpRow.detailTable && jumpRow.detailId) {
+    content = await readDetailRow(db, jumpRow.detailTable, jumpRow.detailId)
+  }
+
+  return toArtifactResponse(jumpRow, content)
 }
 
 /**
  * List artifacts for a story with optional filters.
  *
  * By default, content is excluded for performance. Set include_content=true
- * to include full artifact content.
+ * to include full artifact content (requires additional detail table queries).
  *
  * @param input - Story ID and optional filters
  * @param deps - Database dependency
@@ -418,7 +834,7 @@ export async function kb_list_artifacts(
     conditions.push(eq(storyArtifacts.artifactType, validatedInput.artifact_type))
   }
 
-  // Query artifacts
+  // Query jump table
   const result = await db
     .select()
     .from(storyArtifacts)
@@ -426,7 +842,15 @@ export async function kb_list_artifacts(
     .orderBy(desc(storyArtifacts.createdAt))
     .limit(validatedInput.limit ?? 50)
 
-  const artifacts = result.map(a => toArtifactListItem(a, validatedInput.include_content ?? false))
+  // If include_content, fetch content from detail tables
+  const artifacts: ArtifactListItem[] = []
+  for (const row of result) {
+    let content: Record<string, unknown> | null = null
+    if (validatedInput.include_content && row.detailTable && row.detailId) {
+      content = await readDetailRow(db, row.detailTable, row.detailId)
+    }
+    artifacts.push(toArtifactListItem(row, validatedInput.include_content ?? false, content))
+  }
 
   logger.debug('Artifacts listed', {
     storyId: validatedInput.story_id,
@@ -444,7 +868,7 @@ export async function kb_list_artifacts(
 /**
  * Delete an artifact by ID.
  *
- * Used for cleanup or when an artifact is no longer needed.
+ * Deletes from both the type-specific table and the jump table.
  *
  * @param artifactId - UUID of the artifact to delete
  * @param deps - Database dependency
@@ -456,6 +880,25 @@ export async function kb_delete_artifact(
 ): Promise<boolean> {
   const { db } = deps
 
+  // Read jump table row to get detail_table + detail_id
+  const jumpRows = await db
+    .select()
+    .from(storyArtifacts)
+    .where(eq(storyArtifacts.id, artifactId))
+    .limit(1)
+
+  if (jumpRows.length === 0) {
+    return false
+  }
+
+  const jumpRow = jumpRows[0]
+
+  // Delete from detail table first
+  if (jumpRow.detailTable && jumpRow.detailId) {
+    await deleteDetailRow(db, jumpRow.detailTable, jumpRow.detailId)
+  }
+
+  // Delete from jump table
   const result = await db
     .delete(storyArtifacts)
     .where(eq(storyArtifacts.id, artifactId))
@@ -469,7 +912,205 @@ export async function kb_delete_artifact(
     artifactId,
     storyId: result[0].storyId,
     artifactType: result[0].artifactType,
+    detailTable: jumpRow.detailTable,
+    detailId: jumpRow.detailId,
   })
 
   return true
+}
+
+// ============================================================================
+// Dual-Write Tool (artifact_write)
+// ============================================================================
+
+/**
+ * Canonical filename mapping for artifact types.
+ * Maps artifact_type → YAML filename (without extension).
+ */
+const ARTIFACT_FILENAMES: Record<string, string> = {
+  checkpoint: 'CHECKPOINT',
+  scope: 'SCOPE',
+  plan: 'PLAN',
+  evidence: 'EVIDENCE',
+  verification: 'VERIFICATION',
+  analysis: 'ANALYSIS',
+  context: 'AGENT-CONTEXT',
+  fix_summary: 'FIX-SUMMARY',
+  proof: 'PROOF',
+  elaboration: 'ELABORATION',
+  review: 'REVIEW',
+  qa_gate: 'QA-GATE',
+  completion_report: 'COMPLETION-REPORT',
+}
+
+/**
+ * Compute canonical filesystem path for an artifact.
+ *
+ * Formula: {story_dir}/_implementation/{FILENAME}.yaml
+ * For iteration > 0: {story_dir}/_implementation/{FILENAME}.iter{N}.yaml
+ *
+ * @param storyDir - Root directory for the story
+ * @param artifactType - Artifact type (e.g., 'checkpoint')
+ * @param iteration - Iteration number (0 = default, no suffix)
+ * @returns Absolute path to the YAML file
+ */
+export function computeArtifactPath(
+  storyDir: string,
+  artifactType: string,
+  iteration: number,
+): string {
+  const filename = ARTIFACT_FILENAMES[artifactType] ?? artifactType.toUpperCase()
+  const suffix = iteration > 0 ? `.iter${iteration}` : ''
+  return `${storyDir}/_implementation/${filename}${suffix}.yaml`
+}
+
+/**
+ * Input schema for the `artifact_write` dual-write tool.
+ *
+ * Writes a YAML artifact to the filesystem AND optionally indexes it in the KB.
+ * KB write failure does NOT prevent the file write from succeeding.
+ */
+export const ArtifactWriteInputSchema = z.object({
+  /** Story ID this artifact belongs to (e.g., 'KBAR-0110') */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** Type of artifact */
+  artifact_type: ArtifactTypeSchema,
+
+  /** Full artifact content as a JSON object (will be serialized to YAML) */
+  content: z.record(z.unknown()),
+
+  /** Story root directory (absolute path). Required for filesystem write. */
+  story_dir: z.string().min(1, 'story_dir cannot be empty'),
+
+  /** Implementation phase this artifact belongs to */
+  phase: StoryPhaseSchema.optional().nullable(),
+
+  /** Iteration number for fix cycles (default: 0) */
+  iteration: z.number().int().min(0).optional().default(0),
+
+  /** Whether to also write to KB database (default: true) */
+  write_to_kb: z.boolean().optional().default(true),
+})
+
+export type ArtifactWriteInput = z.infer<typeof ArtifactWriteInputSchema>
+
+/**
+ * Result of an `artifact_write` operation.
+ */
+export const ArtifactWriteResultSchema = z.object({
+  /** Whether the filesystem write succeeded */
+  file_written: z.boolean(),
+
+  /** Absolute path to the written file */
+  file_path: z.string(),
+
+  /** Whether the KB write succeeded (null if not attempted) */
+  kb_written: z.boolean().nullable(),
+
+  /** DB artifact ID (null if KB write was not attempted or failed) */
+  kb_artifact_id: z.string().nullable(),
+
+  /** Error message from KB write (null if succeeded or not attempted) */
+  kb_error: z.string().nullable(),
+})
+
+export type ArtifactWriteResult = z.infer<typeof ArtifactWriteResultSchema>
+
+/**
+ * Write a workflow artifact to the filesystem and optionally to the KB.
+ *
+ * The filesystem write is the primary operation. KB write is best-effort:
+ * if it fails, the error is logged and the result notes the failure,
+ * but the overall operation still returns success.
+ *
+ * @param input - Artifact data including story_dir for filesystem path
+ * @param deps - Database dependency for KB write
+ * @returns Write result with file and KB status
+ */
+/**
+ * Optional injectable KB write function (for testing).
+ * Defaults to the module-level kb_write_artifact.
+ */
+export type KbWriteFn = typeof kb_write_artifact
+
+export async function artifact_write(
+  input: ArtifactWriteInput,
+  deps: ArtifactOperationsDeps,
+  kbWriteFn: KbWriteFn = kb_write_artifact,
+): Promise<ArtifactWriteResult> {
+  const validatedInput = ArtifactWriteInputSchema.parse(input)
+  const iteration = validatedInput.iteration ?? 0
+
+  const filePath = computeArtifactPath(
+    validatedInput.story_dir,
+    validatedInput.artifact_type,
+    iteration,
+  )
+
+  // ---- Filesystem write (primary, must succeed) ----
+  const yaml = await import('js-yaml')
+  const fs = await import('fs/promises')
+  const path = await import('path')
+
+  // Ensure the _implementation directory exists
+  const dir = path.dirname(filePath)
+  await fs.mkdir(dir, { recursive: true })
+
+  const yamlContent = yaml.dump(validatedInput.content, { lineWidth: 120, noRefs: true })
+  await fs.writeFile(filePath, yamlContent, 'utf-8')
+
+  logger.info('artifact_write: file written', {
+    storyId: validatedInput.story_id,
+    artifactType: validatedInput.artifact_type,
+    iteration,
+    filePath,
+  })
+
+  // ---- KB write (optional, failure-isolated) ----
+  let kbWritten: boolean | null = null
+  let kbArtifactId: string | null = null
+  let kbError: string | null = null
+
+  if (validatedInput.write_to_kb) {
+    try {
+      const result = await kbWriteFn(
+        {
+          story_id: validatedInput.story_id,
+          artifact_type: validatedInput.artifact_type,
+          content: validatedInput.content,
+          phase: validatedInput.phase ?? null,
+          iteration,
+        },
+        deps,
+      )
+      kbWritten = true
+      kbArtifactId = result.id
+
+      logger.info('artifact_write: KB write succeeded', {
+        storyId: validatedInput.story_id,
+        artifactType: validatedInput.artifact_type,
+        iteration,
+        artifactId: result.id,
+      })
+    } catch (err) {
+      kbWritten = false
+      kbError = err instanceof Error ? err.message : String(err)
+
+      logger.warn('artifact_write: KB write failed (non-blocking)', {
+        storyId: validatedInput.story_id,
+        artifactType: validatedInput.artifact_type,
+        iteration,
+        error: kbError,
+      })
+    }
+  }
+
+  return {
+    file_written: true,
+    file_path: filePath,
+    kb_written: kbWritten,
+    kb_artifact_id: kbArtifactId,
+    kb_error: kbError,
+  }
 }

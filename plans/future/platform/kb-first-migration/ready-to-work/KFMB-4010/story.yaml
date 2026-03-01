@@ -1,0 +1,13 @@
+id: "KFMB-4010"
+title: "Stage Directory Elimination — story-move and story-update Commands"
+status: ready-to-work
+priority: medium
+phase: 3
+feature: "Rewrite /story-move as pure db operation; update /story-update to KB-only"
+goal: "Story state transitions happen via kb_update_story_status exclusively."
+depends_on: ["KFMB-3010"]
+endpoints: []
+infrastructure: ["CLI Commands", "MCP Tools", "PostgreSQL/Aurora"]
+risk_notes: "Tooling relying on directory location to infer state will break."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

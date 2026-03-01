@@ -230,8 +230,7 @@ Then('the button should have a visible focus ring', async ({ page }) => {
       boxShadow: styles.boxShadow,
     }
   })
-  const hasFocusIndicator =
-    focusStyles.outline !== 'none' || focusStyles.boxShadow !== 'none'
+  const hasFocusIndicator = focusStyles.outline !== 'none' || focusStyles.boxShadow !== 'none'
   expect(hasFocusIndicator).toBe(true)
 })
 
@@ -335,10 +334,7 @@ Then('all album cover images should have alt text', async ({ page }) => {
 
 Then('all text should meet 4.5:1 contrast ratio', async ({ page }) => {
   // Verified by axe-core automated checks
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2aa'])
-    .include('body')
-    .analyze()
+  const results = await new AxeBuilder({ page }).withTags(['wcag2aa']).include('body').analyze()
 
   const contrastViolations = results.violations.filter(v => v.id === 'color-contrast')
   expect(contrastViolations.length).toBe(0)
@@ -375,19 +371,13 @@ Then('there should be no critical violations', async ({ page }) => {
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze()
 
-  const criticalViolations = results.violations.filter(
-    v => v.impact === 'critical',
-  )
+  const criticalViolations = results.violations.filter(v => v.impact === 'critical')
   expect(criticalViolations).toHaveLength(0)
 })
 
 Then('there should be no serious violations', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
 
-  const seriousViolations = results.violations.filter(
-    v => v.impact === 'serious',
-  )
+  const seriousViolations = results.violations.filter(v => v.impact === 'serious')
   expect(seriousViolations).toHaveLength(0)
 })

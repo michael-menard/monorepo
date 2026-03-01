@@ -1,0 +1,228 @@
+schema: 2
+story_id: APIP-5004
+timestamp: "2026-02-25T20:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >
+      Create packages/backend/orchestrator/src/secrets/index.ts with SecretsClientConfigSchema
+      (Zod, fail-fast refine for AWS_REGION), SecretsClient class with get() env-fallback logic,
+      prefetch(), getSync(), flush() public methods, and module-level singleton export.
+      Add @aws-sdk/client-secrets-manager to package.json dependencies.
+    files:
+      - packages/backend/orchestrator/src/secrets/index.ts
+      - packages/backend/orchestrator/package.json
+    files_to_read:
+      - apps/api/knowledge-base/src/config/env.ts
+      - packages/backend/orchestrator/src/providers/base.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-10
+
+  - id: 2
+    subtask_id: ST-2
+    description: >
+      Extend SecretsClient.get() in packages/backend/orchestrator/src/secrets/index.ts with
+      in-memory cache (Map<string, {value, fetchedAt}>), configurable TTL from SECRETS_CACHE_TTL_MS
+      env var (default 300000ms), and @repo/logger structured audit log on cache-miss (secretName,
+      engine, latencyMs — no secret value logged). Implement concurrent-request deduplication using
+      in-flight promise map.
+    files:
+      - packages/backend/orchestrator/src/secrets/index.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/secrets/index.ts
+      - packages/backend/orchestrator/src/providers/anthropic.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-4
+      - AC-5
+
+  - id: 3
+    subtask_id: ST-3
+    description: >
+      Refactor AnthropicProvider.loadConfig(), OpenRouterProvider.loadConfig(), and
+      MinimaxProvider.loadConfig() to call secretsClient.getSync() instead of reading
+      process.env directly. Import secretsClient singleton from secrets/index.js.
+      Preserve all existing config shapes, caching behavior, and error message text.
+      Verify generateConfigHash() still excludes apiKey (no change needed, confirmed in base.ts).
+    files:
+      - packages/backend/orchestrator/src/providers/anthropic.ts
+      - packages/backend/orchestrator/src/providers/openrouter.ts
+      - packages/backend/orchestrator/src/providers/minimax.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/providers/anthropic.ts
+      - packages/backend/orchestrator/src/providers/openrouter.ts
+      - packages/backend/orchestrator/src/providers/minimax.ts
+      - packages/backend/orchestrator/src/providers/base.ts
+      - packages/backend/orchestrator/src/secrets/index.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-3
+      - AC-9
+
+  - id: 4
+    subtask_id: ST-4
+    description: >
+      Write secrets-client.test.ts covering HP-1 through HP-8, EC-1 through EC-4, ED-1 through ED-4
+      from the test plan. Mock @aws-sdk/client-secrets-manager via vi.mock(). Use vitest fake timers
+      for TTL tests (ED-1). Reset static configCache fields in beforeEach(). Create or update
+      provider test files for anthropic, openrouter, minimax providers covering HP-4, HP-5, EC-4,
+      ED-4 integration scenarios.
+    files:
+      - packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
+      - packages/backend/orchestrator/src/providers/__tests__/anthropic.test.ts
+      - packages/backend/orchestrator/src/providers/__tests__/openrouter.test.ts
+      - packages/backend/orchestrator/src/providers/__tests__/minimax.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/secrets/index.ts
+      - packages/backend/orchestrator/src/providers/anthropic.ts
+      - packages/backend/orchestrator/src/providers/__tests__/minimax.test.ts
+    dependencies:
+      - 3
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-8
+
+  - id: 5
+    subtask_id: ST-5
+    description: >
+      Create infra/secrets/template.yaml CloudFormation stack defining AWS::SecretsManager::Secret
+      resources for anthropic-api-key, openrouter-api-key, minimax-api-key following
+      infra/elasticache/template.yaml ADR-002 conventions (Parameters, Resources, Outputs, tags).
+      No SecretString values in template. Create infra/secrets/README.md documenting manual rotation
+      procedure, process-lifetime configCache limitation, and SIGHUP/flush() signal pattern.
+    files:
+      - infra/secrets/template.yaml
+      - infra/secrets/README.md
+    files_to_read:
+      - infra/elasticache/template.yaml
+    dependencies: []
+    slice: backend
+    verification: "cfn-lint infra/secrets/template.yaml"
+    acs_covered:
+      - AC-6
+      - AC-7
+
+files_to_change:
+  - path: packages/backend/orchestrator/src/secrets/index.ts
+    action: create
+    reason: New SecretsClient module — core deliverable for AC-1, AC-2, AC-4, AC-5, AC-10
+  - path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
+    action: create
+    reason: Unit tests for SecretsClient covering all happy path, error, and edge cases (AC-8)
+  - path: packages/backend/orchestrator/package.json
+    action: modify
+    reason: Add @aws-sdk/client-secrets-manager dependency for AWS Secrets Manager SDK v3
+  - path: packages/backend/orchestrator/src/providers/anthropic.ts
+    action: modify
+    reason: Refactor loadConfig() to use secretsClient.getSync() instead of process.env (AC-3)
+  - path: packages/backend/orchestrator/src/providers/openrouter.ts
+    action: modify
+    reason: Refactor loadConfig() to use secretsClient.getSync() instead of process.env (AC-3)
+  - path: packages/backend/orchestrator/src/providers/minimax.ts
+    action: modify
+    reason: Refactor loadConfig() to use secretsClient.getSync() instead of process.env (AC-3)
+  - path: packages/backend/orchestrator/src/providers/__tests__/anthropic.test.ts
+    action: create
+    reason: Provider integration tests for HP-4, EC-4, ED-4 test plan coverage
+  - path: packages/backend/orchestrator/src/providers/__tests__/openrouter.test.ts
+    action: create
+    reason: Provider integration tests for HP-5 test plan coverage
+  - path: infra/secrets/template.yaml
+    action: create
+    reason: CloudFormation stack for Secrets Manager resources — AC-6
+  - path: infra/secrets/README.md
+    action: create
+    reason: Rotation procedure documentation — AC-7
+
+commands_to_run:
+  - command: pnpm add @aws-sdk/client-secrets-manager --filter @repo/orchestrator
+    when: during ST-1, before writing secrets/index.ts
+    required: true
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after ST-1 and ST-2
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes (ST-4 complete)
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: cfn-lint infra/secrets/template.yaml
+    when: after ST-5 (if cfn-lint available in CI)
+    required: false
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "SecretsClient class in secrets/index.ts with get(), prefetch(), getSync(), flush() methods; unit test HP-1, HP-2 validate both engine modes"
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: "SecretsClientConfigSchema Zod refine validates AWS_REGION presence; unit test EC-2 asserts constructor throws without AWS_REGION when engine=aws-secrets-manager"
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: "Provider loadConfig() methods updated to call getSync(); integration tests HP-4, HP-5 validate config shape unchanged; pnpm check-types exits 0"
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: "logger.info called with {secretName, engine, latencyMs} on cache-miss; unit test HP-6 asserts no secret value in log payload"
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: "Cache Map with TTL; unit test HP-3 (cache hit), ED-1 (TTL expiry with fake timers), ED-2 (concurrent deduplication), ED-3 (configurable TTL)"
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: "infra/secrets/template.yaml defines 3 secrets resources following elasticache pattern; cfn-lint 0 errors"
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: "infra/secrets/README.md documents manual rotation procedure, configCache lifetime limitation, and flush() signal pattern"
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: "secrets-client.test.ts covers HP-1 through HP-8, EC-1 through EC-4, ED-1 through ED-4; pnpm test passes"
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: "SECRETS_ENGINE defaults to 'env'; local dev uses .env file; no AWS credentials required in env mode; confirmed by HP-1, MC-1 (manual)"
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: "SecretsClient class and secretsClient singleton both exported; SecretsClientConfigSchema exported; all 4 public methods present; unit test ED-3 confirms Zod schema"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Async vs sync loadConfig() — how does SecretsClient integrate with synchronous provider interface?"
+    decision: "Prefetch pattern (Option B) — secretsClient.prefetch() called at pipeline startup; providers call getSync() from pre-populated cache"
+    rationale: "Non-goal explicitly prohibits modifying BaseProvider abstract interface (ILLMProvider.loadConfig(): unknown). Prefetch pattern preserves synchronous loadConfig() contract without any interface changes."
+    decided_by: elaboration
+    decided_at: "2026-02-25T00:00:00Z"
+  - id: ARCH-002
+    question: "Should concurrent get() calls deduplicate to a single SDK call?"
+    decision: "Implement in-flight promise deduplication using Map<string, Promise<string>> inflight map"
+    rationale: >
+      ED-2 test case explicitly requires concurrent get() to result in a single SDK call.
+      Implementation uses a secondary inflight map: if a fetch is in-progress for a given
+      secretName, subsequent get() calls await the same promise. Auto-accepted (aggressive autonomy,
+      well-scoped pattern, no architectural risk).
+    decided_by: auto
+    tier: 1
+
+complexity: moderate
+
+notes:
+  - "The prefetch pattern means APIP-5006 (server infrastructure) MUST call secretsClient.prefetch([...]) before the model router initializes — document this cross-story dependency in implementation"
+  - "Static configCache on providers means rotated secrets are not picked up until process restart OR explicit SecretsClient.flush() + configCache clear — README must document both"
+  - "minimax.ts imports its schema from ./__types__/minimax.js — maintain this pattern when modifying minimax.ts"
+  - "Existing provider test files: __tests__/base.test.ts, factory.test.ts, minimax.integration.test.ts, minimax.test.ts — anthropic.test.ts and openrouter.test.ts are new files to create"
+  - "@aws-sdk/client-secrets-manager is ESM-compatible natively (AWS SDK v3); orchestrator package.json has 'type: module' — no compatibility issue"
+  - "generateConfigHash() in base.ts already destructures away apiKey (line 158) — this invariant is preserved automatically; no code change needed; verified by ED-4 test"
+  - "ST-5 (CloudFormation) has no code dependencies — can be parallelized with ST-1 in implementation"
+  - "cfn-lint may not be in CI — verification is best-effort; template correctness is primary evidence for AC-6"

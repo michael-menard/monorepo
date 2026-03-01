@@ -1,0 +1,82 @@
+schema: 1
+story_id: APIP-5001
+timestamp: "2026-03-01T17:15:00Z"
+generated_by: orchestrator-re-verification
+overall_status: pass
+
+build:
+  status: pass
+  command: tsc
+  exit_code: 0
+  note: "Pipeline package builds cleanly via tsc --noEmit. Full repo tsc has pre-existing error in kbar-sync (unrelated)."
+
+type_check:
+  status: pass
+  command: "tsc --noEmit"
+  exit_code: 0
+  errors: 0
+  note: "Pipeline package types compile cleanly. Pre-existing error in packages/backend/kbar-sync (unrelated to this story)."
+
+unit_tests:
+  status: pass
+  command: "pnpm test --filter=@repo/pipeline"
+  exit_code: 0
+  test_files: 2
+  tests_passed: 30
+  tests_failed: 0
+  details:
+    - file: src/db/__tests__/checkpoint-schema.test.ts
+      tests: 23
+      status: pass
+    - file: src/db/__tests__/checkpoint-integration.test.ts
+      tests: 7
+      status: pass
+
+e2e_tests:
+  status: exempt
+  mode: "n/a"
+  reason: "Infrastructure/backend-only story — no UI surfaces, no E2E tests applicable"
+
+ac_coverage:
+  AC-1:
+    status: pass
+    evidence: "compose.test-db.yaml exists at infra/langgraph-server/ with port 5434"
+  AC-2:
+    status: pass
+    evidence: "001_langgraph_checkpoint_schema.sql (documentation) + PostgresSaver.setup() in migration runner"
+  AC-3:
+    status: pass
+    evidence: "scripts/apply-migrations.ts calls PostgresSaver.setup() idempotently"
+  AC-4:
+    status: pass
+    evidence: "src/db/client.ts with isolated Pool, testConnection(), sanitized errors"
+  AC-5:
+    status: pass
+    evidence: "vitest.config.ts with fileParallelism:false, setupFiles, 30s timeout"
+  AC-6:
+    status: pass
+    evidence: "23 schema unit tests pass — Drizzle tables + drizzle-zod schemas validated"
+  AC-7:
+    status: pass
+    evidence: "7 integration tests pass — connection, lifecycle, idempotency"
+  AC-8:
+    status: pass
+    evidence: "src/db/README.md with start/migrate/isolation/env-var sections"
+  AC-9:
+    status: pass
+    evidence: "tsc --noEmit exits 0, pnpm test exits 0 (30 tests)"
+
+files_created_count: 12
+files_created:
+  - apps/api/pipeline/package.json
+  - apps/api/pipeline/tsconfig.json
+  - apps/api/pipeline/vitest.config.ts
+  - apps/api/pipeline/src/test/setup.ts
+  - apps/api/pipeline/src/db/client.ts
+  - apps/api/pipeline/src/db/schema.ts
+  - apps/api/pipeline/src/db/migrations/001_langgraph_checkpoint_schema.sql
+  - apps/api/pipeline/src/db/__tests__/checkpoint-schema.test.ts
+  - apps/api/pipeline/src/db/__tests__/checkpoint-integration.test.ts
+  - apps/api/pipeline/scripts/apply-migrations.ts
+  - apps/api/pipeline/src/db/README.md
+  - infra/langgraph-server/compose.test-db.yaml

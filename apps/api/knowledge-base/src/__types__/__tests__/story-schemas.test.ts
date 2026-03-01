@@ -480,10 +480,11 @@ describe('Story Schemas (KBAR-001)', () => {
           artifactType: 'plan',
           artifactName: 'Implementation Plan',
           kbEntryId: '550e8400-e29b-41d4-a716-446655440000',
-          filePath: '_implementation/PLAN.md',
           phase: 'planning',
           iteration: 0,
           summary: { key: 'value', steps: ['step1', 'step2'] },
+          detailTable: 'artifact_plans',
+          detailId: '660e8400-e29b-41d4-a716-446655440000',
         }
         const result = NewStoryArtifactSchema.parse(artifact)
         expect(result.storyId).toBe('KBAR-001')
@@ -492,21 +493,24 @@ describe('Story Schemas (KBAR-001)', () => {
         expect(result.kbEntryId).toBe('550e8400-e29b-41d4-a716-446655440000')
         expect(result.phase).toBe('planning')
         expect(result.summary).toEqual({ key: 'value', steps: ['step1', 'step2'] })
+        expect(result.detailTable).toBe('artifact_plans')
+        expect(result.detailId).toBe('660e8400-e29b-41d4-a716-446655440000')
       })
 
       it('should accept artifact without KB entry link', () => {
         const artifact = {
           storyId: 'WISH-2047',
           artifactType: 'evidence',
-          filePath: '_implementation/test-results.json',
           phase: 'qa_verification',
+          detailTable: 'artifact_evidence',
+          detailId: '770e8400-e29b-41d4-a716-446655440000',
         }
         const result = NewStoryArtifactSchema.parse(artifact)
         expect(result.kbEntryId).toBeUndefined()
-        expect(result.filePath).toBe('_implementation/test-results.json')
+        expect(result.detailTable).toBe('artifact_evidence')
       })
 
-      it('should accept artifact with KB entry link but no file path', () => {
+      it('should accept artifact with KB entry link but no detail table', () => {
         const artifact = {
           storyId: 'WISH-2047',
           artifactType: 'context',
@@ -514,7 +518,7 @@ describe('Story Schemas (KBAR-001)', () => {
         }
         const result = NewStoryArtifactSchema.parse(artifact)
         expect(result.kbEntryId).toBe('550e8400-e29b-41d4-a716-446655440000')
-        expect(result.filePath).toBeUndefined()
+        expect(result.detailTable).toBeUndefined()
       })
 
       it('should reject missing storyId', () => {
@@ -584,18 +588,20 @@ describe('Story Schemas (KBAR-001)', () => {
           artifactType: 'checkpoint',
           artifactName: null,
           kbEntryId: null,
-          filePath: null,
           phase: null,
           iteration: null,
           summary: null,
+          detailTable: null,
+          detailId: null,
         }
         const result = StoryArtifactSchema.parse(artifact)
         expect(result.artifactName).toBeNull()
         expect(result.kbEntryId).toBeNull()
-        expect(result.filePath).toBeNull()
         expect(result.phase).toBeNull()
         expect(result.iteration).toBeNull()
         expect(result.summary).toBeNull()
+        expect(result.detailTable).toBeNull()
+        expect(result.detailId).toBeNull()
       })
     })
 
@@ -629,12 +635,14 @@ describe('Story Schemas (KBAR-001)', () => {
       it('should accept null for nullable fields', () => {
         const update = {
           kbEntryId: null,
-          filePath: null,
+          detailTable: null,
+          detailId: null,
           summary: null,
         }
         const result = UpdateStoryArtifactSchema.parse(update)
         expect(result.kbEntryId).toBeNull()
-        expect(result.filePath).toBeNull()
+        expect(result.detailTable).toBeNull()
+        expect(result.detailId).toBeNull()
         expect(result.summary).toBeNull()
       })
 

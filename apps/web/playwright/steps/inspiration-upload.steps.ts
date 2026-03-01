@@ -5,9 +5,9 @@
  * BDD step definitions for inspiration upload E2E tests.
  */
 
+import * as path from 'path'
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
-import * as path from 'path'
 
 const { Given, When, Then } = createBdd()
 
@@ -31,9 +31,9 @@ Then('the upload modal should not be visible', async ({ page }) => {
 })
 
 Then('I should see the file drop zone', async ({ page }) => {
-  const dropzone = page.locator('[data-testid="file-dropzone"]').or(
-    page.getByText(/Drop files here|Drag and drop/i)
-  )
+  const dropzone = page
+    .locator('[data-testid="file-dropzone"]')
+    .or(page.getByText(/Drop files here|Drag and drop/i))
   await expect(dropzone).toBeVisible()
 })
 
@@ -75,7 +75,9 @@ When('I enter title {string}', async ({ page }, title: string) => {
 })
 
 When('I enter description {string}', async ({ page }, description: string) => {
-  const descInput = page.locator('textarea[name="description"], textarea[placeholder*="Description"]')
+  const descInput = page.locator(
+    'textarea[name="description"], textarea[placeholder*="Description"]',
+  )
   await descInput.fill(description)
 })
 
@@ -150,9 +152,9 @@ Then('I should see a title required error', async ({ page }) => {
 // ============================================================================
 
 When('I drag an image file into the drop zone', async ({ page }) => {
-  const dropzone = page.locator('[data-testid="file-dropzone"]').or(
-    page.getByText(/Drop files here|Drag and drop/i)
-  )
+  const dropzone = page
+    .locator('[data-testid="file-dropzone"]')
+    .or(page.getByText(/Drop files here|Drag and drop/i))
 
   // Create a data transfer event
   const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
@@ -162,9 +164,9 @@ When('I drag an image file into the drop zone', async ({ page }) => {
 })
 
 When('I drag a file over the drop zone', async ({ page }) => {
-  const dropzone = page.locator('[data-testid="file-dropzone"]').or(
-    page.getByText(/Drop files here|Drag and drop/i)
-  )
+  const dropzone = page
+    .locator('[data-testid="file-dropzone"]')
+    .or(page.getByText(/Drop files here|Drag and drop/i))
 
   await dropzone.dispatchEvent('dragover')
 })
@@ -181,9 +183,9 @@ Then('the file name should be displayed', async ({ page }) => {
 })
 
 Then('the drop zone should show active styling', async ({ page }) => {
-  const dropzone = page.locator('[data-testid="file-dropzone"]').or(
-    page.getByText(/Drop files here|Drag and drop/i)
-  )
+  const dropzone = page
+    .locator('[data-testid="file-dropzone"]')
+    .or(page.getByText(/Drop files here|Drag and drop/i))
   // Check for active class or styling
   await expect(dropzone).toBeVisible()
 })

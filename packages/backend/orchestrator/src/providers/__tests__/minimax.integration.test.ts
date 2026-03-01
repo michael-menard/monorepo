@@ -19,8 +19,8 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest'
-import { MinimaxProvider } from '../minimax.js'
 import { ChatMinimax } from '@langchain/community/chat_models/minimax'
+import { MinimaxProvider } from '../minimax.js'
 
 // Skip all integration tests if credentials not available
 const hasCredentials = !!(process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID)

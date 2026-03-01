@@ -7,21 +7,21 @@
  * Supports both Claude's YAML format and LangGraph's expected schema format.
  */
 
-import { z } from 'zod'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { z } from 'zod'
 import * as yaml from 'yaml'
 import { logger } from '@repo/logger'
-import { PathResolver, type YamlArtifactType, type ResolvedPath } from './path-resolver.js'
+import { StoryArtifactSchema, type StoryArtifact } from '../artifacts/story.js'
+import { PlanSchema, type Plan } from '../artifacts/plan.js'
+import { EvidenceSchema, type Evidence } from '../artifacts/evidence.js'
+import { ScopeSchema, type Scope } from '../artifacts/scope.js'
 import {
   createSurfaceNormalizer,
   normalizeSurfaces,
   type SurfaceNormalizerConfig,
 } from './surface-normalizer.js'
-import { StoryArtifactSchema, type StoryArtifact } from '../artifacts/story.js'
-import { PlanSchema, type Plan } from '../artifacts/plan.js'
-import { EvidenceSchema, type Evidence } from '../artifacts/evidence.js'
-import { ScopeSchema, type Scope } from '../artifacts/scope.js'
+import { PathResolver, type YamlArtifactType, type ResolvedPath } from './path-resolver.js'
 
 // ============================================================================
 // Claude YAML Schemas (for reading existing files)
@@ -48,18 +48,28 @@ export const ClaudeStoryYamlSchema = z.object({
   }),
   goal: z.string(),
   non_goals: z.array(z.string()).optional().default([]),
-  acs: z.array(z.object({
-    id: z.string(),
-    description: z.string(),
-    testable: z.boolean().optional().default(true),
-    automated: z.boolean().optional().default(false),
-  })).optional().default([]),
-  risks: z.array(z.object({
-    id: z.string(),
-    description: z.string(),
-    severity: z.string(),
-    mitigation: z.string().nullable().optional(),
-  })).optional().default([]),
+  acs: z
+    .array(
+      z.object({
+        id: z.string(),
+        description: z.string(),
+        testable: z.boolean().optional().default(true),
+        automated: z.boolean().optional().default(false),
+      }),
+    )
+    .optional()
+    .default([]),
+  risks: z
+    .array(
+      z.object({
+        id: z.string(),
+        description: z.string(),
+        severity: z.string(),
+        mitigation: z.string().nullable().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -73,26 +83,42 @@ export const ClaudeElaborationYamlSchema = z.object({
   story_id: z.string(),
   date: z.string().optional(),
   verdict: z.string().optional(),
-  audit: z.record(z.object({
-    status: z.string(),
-    note: z.string().optional(),
-  })).optional(),
-  gaps: z.array(z.object({
-    id: z.string(),
-    category: z.string(),
-    severity: z.string(),
-    finding: z.string(),
-    recommendation: z.string().optional(),
-  })).optional().default([]),
+  audit: z
+    .record(
+      z.object({
+        status: z.string(),
+        note: z.string().optional(),
+      }),
+    )
+    .optional(),
+  gaps: z
+    .array(
+      z.object({
+        id: z.string(),
+        category: z.string(),
+        severity: z.string(),
+        finding: z.string(),
+        recommendation: z.string().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
   split_required: z.boolean().optional(),
-  follow_ups: z.array(z.object({
-    finding: z.string(),
-    story_id: z.string().nullable().optional(),
-  })).optional().default([]),
-  tokens: z.object({
-    input: z.number(),
-    output: z.number(),
-  }).optional(),
+  follow_ups: z
+    .array(
+      z.object({
+        finding: z.string(),
+        story_id: z.string().nullable().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
+  tokens: z
+    .object({
+      input: z.number(),
+      output: z.number(),
+    })
+    .optional(),
 })
 export type ClaudeElaborationYaml = z.infer<typeof ClaudeElaborationYamlSchema>
 
@@ -104,20 +130,32 @@ export const ClaudePlanYamlSchema = z.object({
   story_id: z.string(),
   version: z.number().optional().default(1),
   approved: z.boolean().optional().default(false),
-  estimates: z.object({
-    files: z.number().optional().default(0),
-    tokens: z.number().optional().default(0),
-  }).optional(),
-  chunks: z.array(z.object({
-    id: z.number().optional(),
-    description: z.string().optional(),
-    files: z.array(z.string()).optional(),
-    slice: z.string().optional(),
-  })).optional().default([]),
-  reuse: z.array(z.object({
-    source: z.string().optional(),
-    pattern: z.string().optional(),
-  })).optional().default([]),
+  estimates: z
+    .object({
+      files: z.number().optional().default(0),
+      tokens: z.number().optional().default(0),
+    })
+    .optional(),
+  chunks: z
+    .array(
+      z.object({
+        id: z.number().optional(),
+        description: z.string().optional(),
+        files: z.array(z.string()).optional(),
+        slice: z.string().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
+  reuse: z
+    .array(
+      z.object({
+        source: z.string().optional(),
+        pattern: z.string().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
 })
 export type ClaudePlanYaml = z.infer<typeof ClaudePlanYamlSchema>
 
@@ -128,40 +166,59 @@ export const ClaudeVerificationYamlSchema = z.object({
   schema: z.number().default(1),
   story_id: z.string(),
   updated: z.string().optional(),
-  code_review: z.object({
-    verdict: z.string(),
-    iterations: z.number().optional(),
-    final_issues: z.object({
-      errors: z.number(),
-      warnings: z.number(),
-      note: z.string().optional(),
-    }).optional(),
-  }).optional(),
-  tests: z.object({
-    unit: z.object({
-      pass: z.number().optional().default(0),
-      fail: z.number().optional().default(0),
-    }).optional(),
-    integration: z.object({
-      passed: z.number().optional().default(0),
-      failed: z.number().optional().default(0),
-    }).optional(),
-    e2e: z.object({
-      passed: z.number().optional().default(0),
-      failed: z.number().optional().default(0),
-    }).optional(),
-  }).optional(),
-  acs: z.array(z.object({
-    id: z.string(),
-    verdict: z.string(),
-    evidence: z.string().optional(),
-  })).optional().default([]),
-  qa: z.object({
-    verdict: z.string(),
-    verified_by: z.string().optional(),
-    verified_at: z.string().optional(),
-    blocking_issues: z.array(z.string()).optional().default([]),
-  }).optional(),
+  code_review: z
+    .object({
+      verdict: z.string(),
+      iterations: z.number().optional(),
+      final_issues: z
+        .object({
+          errors: z.number(),
+          warnings: z.number(),
+          note: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  tests: z
+    .object({
+      unit: z
+        .object({
+          pass: z.number().optional().default(0),
+          fail: z.number().optional().default(0),
+        })
+        .optional(),
+      integration: z
+        .object({
+          passed: z.number().optional().default(0),
+          failed: z.number().optional().default(0),
+        })
+        .optional(),
+      e2e: z
+        .object({
+          passed: z.number().optional().default(0),
+          failed: z.number().optional().default(0),
+        })
+        .optional(),
+    })
+    .optional(),
+  acs: z
+    .array(
+      z.object({
+        id: z.string(),
+        verdict: z.string(),
+        evidence: z.string().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
+  qa: z
+    .object({
+      verdict: z.string(),
+      verified_by: z.string().optional(),
+      verified_at: z.string().optional(),
+      blocking_issues: z.array(z.string()).optional().default([]),
+    })
+    .optional(),
 })
 export type ClaudeVerificationYaml = z.infer<typeof ClaudeVerificationYamlSchema>
 
@@ -175,10 +232,12 @@ export const ClaudeContextYamlSchema = z.object({
   loaded: z.boolean().optional().default(false),
   lessons: z.array(z.unknown()).optional().default([]),
   adrs: z.array(z.unknown()).optional().default([]),
-  tokens: z.object({
-    input: z.number(),
-    output: z.number(),
-  }).optional(),
+  tokens: z
+    .object({
+      input: z.number(),
+      output: z.number(),
+    })
+    .optional(),
 })
 export type ClaudeContextYaml = z.infer<typeof ClaudeContextYamlSchema>
 
@@ -227,11 +286,13 @@ export const YamlReaderConfigSchema = z.object({
   /** Validate against strict schema */
   strictValidation: z.boolean().default(false),
   /** Surface normalizer config */
-  surfaceNormalizer: z.object({
-    normalizeOnRead: z.boolean().default(true),
-    denormalizeOnWrite: z.boolean().default(true),
-    strictMode: z.boolean().default(false),
-  }).optional(),
+  surfaceNormalizer: z
+    .object({
+      normalizeOnRead: z.boolean().default(true),
+      denormalizeOnWrite: z.boolean().default(true),
+      strictMode: z.boolean().default(false),
+    })
+    .optional(),
 })
 export type YamlReaderConfig = z.infer<typeof YamlReaderConfigSchema>
 
@@ -247,10 +308,7 @@ export class YamlArtifactReader {
   private config: YamlReaderConfig
   private surfaceNormalizer: ReturnType<typeof createSurfaceNormalizer>
 
-  constructor(
-    pathResolver: PathResolver,
-    config: Partial<YamlReaderConfig> = {},
-  ) {
+  constructor(pathResolver: PathResolver, config: Partial<YamlReaderConfig> = {}) {
     this.pathResolver = pathResolver
     this.config = YamlReaderConfigSchema.parse(config)
     this.surfaceNormalizer = createSurfaceNormalizer(this.config.surfaceNormalizer)
@@ -344,7 +402,12 @@ export class YamlArtifactReader {
     stage: string,
     storyId: string,
   ): Promise<YamlReadResult<ClaudeElaborationYaml>> {
-    const resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, 'elaboration')
+    const resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      'elaboration',
+    )
     const warnings: string[] = []
 
     const { success, data, error } = await this.readYamlFile(resolvedPath.absolutePath)
@@ -447,11 +510,20 @@ export class YamlArtifactReader {
     stage: string,
     storyId: string,
   ): Promise<YamlReadResult<ClaudeVerificationYaml>> {
-    const { primary, fallback } = this.pathResolver.getProofOrVerificationPath(feature, stage, storyId)
+    const { primary, fallback } = this.pathResolver.getProofOrVerificationPath(
+      feature,
+      stage,
+      storyId,
+    )
     const warnings: string[] = []
 
     // Try primary first
-    let resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, 'verification')
+    let resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      'verification',
+    )
     let { success, data, error } = await this.readYamlFile(primary)
 
     // Fallback to alternate file
@@ -603,7 +675,12 @@ export class YamlArtifactReader {
     storyId: string,
     artifactType: YamlArtifactType,
   ): Promise<boolean> {
-    const resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, artifactType)
+    const resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      artifactType,
+    )
     try {
       await fs.access(resolvedPath.absolutePath)
       return true

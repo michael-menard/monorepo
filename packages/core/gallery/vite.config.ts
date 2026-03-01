@@ -1,5 +1,5 @@
-import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'path'
+import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vite'
 
 const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
@@ -25,7 +25,13 @@ export default defineConfig({
       fileName: () => 'index.js',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', '@repo/app-component-library', '@repo/logger', 'framer-motion'],
+      external: [
+        'react',
+        'react-dom',
+        '@repo/app-component-library',
+        '@repo/logger',
+        'framer-motion',
+      ],
       output: {
         globals: {
           react: 'React',

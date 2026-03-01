@@ -1,7 +1,7 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Header } from './header'
 import Link from 'next/link'
+import { Header } from './header'
+import { Button } from '@/components/ui/button'
 
 export function HeroSection() {
   return (

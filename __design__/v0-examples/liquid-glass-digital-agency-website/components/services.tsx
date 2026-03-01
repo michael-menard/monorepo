@@ -1,8 +1,8 @@
 'use client'
 
-import { GlassCard } from '@/components/ui/glass-card'
 import { motion } from 'framer-motion'
 import { Code2, Palette, Rocket, Smartphone } from 'lucide-react'
+import { GlassCard } from '@/components/ui/glass-card'
 
 const services = [
   {

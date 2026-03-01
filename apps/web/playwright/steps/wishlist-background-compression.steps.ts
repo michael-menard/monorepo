@@ -6,10 +6,10 @@
  * Tests verify that form remains interactive during background compression.
  */
 
-import { expect } from '@playwright/test'
-import { createBdd } from 'playwright-bdd'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { expect } from '@playwright/test'
+import { createBdd } from 'playwright-bdd'
 
 const { Given, When, Then } = createBdd()
 
@@ -44,7 +44,10 @@ Given('I am signed in', async ({ page }) => {
 
   // Fill in credentials
   await page.fill('input[type="email"], input[name="email"], input[id="email"]', TEST_USER.email)
-  await page.fill('input[type="password"], input[name="password"], input[id="password"]', TEST_USER.password)
+  await page.fill(
+    'input[type="password"], input[name="password"], input[id="password"]',
+    TEST_USER.password,
+  )
 
   // Submit the form
   await page.click('button[type="submit"]')

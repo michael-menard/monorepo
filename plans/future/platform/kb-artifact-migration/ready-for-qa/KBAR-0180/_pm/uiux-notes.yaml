@@ -1,2 +1,0 @@
-skipped: true
-reason: "KBAR-0180 is an agent markdown migration story with no UI impact. Changes are limited to .claude/agents/review-aggregate-leader.agent.md. frontend_impacted: false."

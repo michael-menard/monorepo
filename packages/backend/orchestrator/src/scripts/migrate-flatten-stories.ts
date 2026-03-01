@@ -56,7 +56,7 @@
  * ```
  */
 
-import { promises as fs } from 'node:fs'
+import { promises as fs, existsSync } from 'node:fs'
 import path from 'node:path'
 import { execSync } from 'node:child_process'
 // import { logger } from '@repo/logger' // Temporarily disabled due to type issues
@@ -102,7 +102,6 @@ import {
 // ============================================================================
 
 // Find monorepo root by looking for pnpm-workspace.yaml
-import { existsSync } from 'node:fs'
 
 function findMonorepoRoot(): string {
   let currentDir = process.cwd()
@@ -271,7 +270,12 @@ async function scanLifecycleDirectory(
 
         for (const file of possibleFiles) {
           const filePath = path.join(storyPath, file)
-          if (await fs.access(filePath).then(() => true).catch(() => false)) {
+          if (
+            await fs
+              .access(filePath)
+              .then(() => true)
+              .catch(() => false)
+          ) {
             fileName = file
             break
           }
@@ -453,9 +457,7 @@ async function runValidation(inventory: MigrationInventory): Promise<ValidationR
   const errors: StoryValidationError[] = []
 
   // Validate all stories in parallel
-  const validationPromises = inventory.stories.map(location =>
-    validateStoryFile(location, adapter),
-  )
+  const validationPromises = inventory.stories.map(location => validateStoryFile(location, adapter))
 
   const validationResults = await Promise.all(validationPromises)
 
@@ -503,9 +505,7 @@ function generateOperation(
   // Check if this location should be skipped (duplicate with lower priority)
   const duplicate = duplicates.find(d => d.storyId === location.storyId)
   if (duplicate && duplicate.chosenLocation.path !== location.path) {
-    logger.debug(
-      `Skipping duplicate location: ${location.storyId} in ${location.lifecycleDir}`,
-    )
+    logger.debug(`Skipping duplicate location: ${location.storyId} in ${location.lifecycleDir}`)
     return null // Skip this duplicate
   }
 
@@ -601,7 +601,9 @@ async function runDryRun(inventory: MigrationInventory): Promise<MigrationPlan> 
  * Create backup tarball of plans directory
  */
 async function createBackup(epicPath: string): Promise<string> {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '-' +
+  const timestamp =
+    new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] +
+    '-' +
     new Date().toISOString().replace(/[:.]/g, '-').split('T')[1].split('-')[0]
   const backupFileName = `plans-backup-${epicPath.replace(/\//g, '-')}-${timestamp}.tar.gz`
   const backupPath = path.resolve(process.cwd(), backupFileName)
@@ -648,16 +650,17 @@ async function executeMigrationOperation(
     await fs.rename(operation.sourcePath, operation.targetPath)
 
     // Find story file in new location
-    const possibleFiles = [
-      `${operation.storyId}.md`,
-      `${operation.storyId}.yaml`,
-      'story.yaml',
-    ]
+    const possibleFiles = [`${operation.storyId}.md`, `${operation.storyId}.yaml`, 'story.yaml']
     let storyFilePath: string | null = null
 
     for (const file of possibleFiles) {
       const filePath = path.join(operation.targetPath, file)
-      if (await fs.access(filePath).then(() => true).catch(() => false)) {
+      if (
+        await fs
+          .access(filePath)
+          .then(() => true)
+          .catch(() => false)
+      ) {
         storyFilePath = filePath
         break
       }
@@ -668,7 +671,9 @@ async function executeMigrationOperation(
       await adapter.update(storyFilePath, { status: operation.status })
       logger.debug('Updated frontmatter', { storyId: operation.storyId, status: operation.status })
     } else {
-      logger.warn('No story file found - skipping frontmatter update', { storyId: operation.storyId })
+      logger.warn('No story file found - skipping frontmatter update', {
+        storyId: operation.storyId,
+      })
     }
 
     return {
@@ -799,9 +804,10 @@ async function verifyNoLifecycleDirectories(epicPath: string): Promise<Verificat
     return {
       check: 'no-lifecycle-directories',
       passed: found.length === 0,
-      message: found.length === 0
-        ? 'No lifecycle directories remain'
-        : `Found lifecycle directories: ${found.join(', ')}`,
+      message:
+        found.length === 0
+          ? 'No lifecycle directories remain'
+          : `Found lifecycle directories: ${found.join(', ')}`,
       expected: 0,
       actual: found.length,
     }
@@ -824,11 +830,7 @@ async function verifyStatusFields(epicPath: string, log: MigrationLog): Promise<
   for (const result of log.results) {
     if (!result.success) continue
 
-    const possibleFiles = [
-      `${result.storyId}.md`,
-      `${result.storyId}.yaml`,
-      'story.yaml',
-    ]
+    const possibleFiles = [`${result.storyId}.md`, `${result.storyId}.yaml`, 'story.yaml']
 
     for (const file of possibleFiles) {
       const filePath = path.join(result.targetPath, file)
@@ -847,9 +849,10 @@ async function verifyStatusFields(epicPath: string, log: MigrationLog): Promise<
   return {
     check: 'status-fields',
     passed: storiesWithoutStatus.length === 0,
-    message: storiesWithoutStatus.length === 0
-      ? 'All stories have status field'
-      : `Stories missing status: ${storiesWithoutStatus.join(', ')}`,
+    message:
+      storiesWithoutStatus.length === 0
+        ? 'All stories have status field'
+        : `Stories missing status: ${storiesWithoutStatus.join(', ')}`,
     expected: 0,
     actual: storiesWithoutStatus.length,
   }
@@ -868,9 +871,10 @@ async function verifyFileCount(
   return {
     check: 'file-count',
     passed: expectedCount === actualCount,
-    message: expectedCount === actualCount
-      ? `File count matches: ${actualCount} stories`
-      : `File count mismatch: expected ${expectedCount}, got ${actualCount}`,
+    message:
+      expectedCount === actualCount
+        ? `File count matches: ${actualCount} stories`
+        : `File count mismatch: expected ${expectedCount}, got ${actualCount}`,
     expected: expectedCount,
     actual: actualCount,
   }
@@ -949,7 +953,10 @@ async function main() {
   }
 
   try {
-    logger.info('Migration starting', { epic: args.epic, mode: args.dryRun ? 'dry-run' : 'execute' })
+    logger.info('Migration starting', {
+      epic: args.epic,
+      mode: args.dryRun ? 'dry-run' : 'execute',
+    })
 
     // Always run discovery and validation
     const inventory = await runDiscovery(args.epic)

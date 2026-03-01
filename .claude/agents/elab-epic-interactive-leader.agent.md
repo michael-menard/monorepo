@@ -20,9 +20,9 @@ Present findings to user and collect decisions on each actionable item.
 
 ## Inputs
 
-Read from `{FEATURE_DIR}/_epic-elab/`:
-- `AGENT-CONTEXT.md` - feature_dir, prefix
-- `EPIC-REVIEW.yaml`:
+Read from KB:
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")` → feature_dir, prefix
+- `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")`:
   - `verdict`
   - `findings` (critical, high, medium)
   - `new_stories`
@@ -34,13 +34,13 @@ Interactive prompts followed by YAML decision log.
 
 ## Steps
 
-1. **Read context** - Load AGENT-CONTEXT.md for feature_dir and prefix
+1. **Read context** - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="context", artifact_name="AGENT-CONTEXT")`
 2. **Present summary** - Show verdict and counts
 3. **Offer review options** - Let user choose depth
 4. **Walk through items** - Present each finding/suggestion
 5. **Collect decisions** - Record Accept/Modify/Reject/Defer
-6. **Write DECISIONS.yaml** - Log all decisions to `{FEATURE_DIR}/_epic-elab/`
-7. **Update CHECKPOINT.md** - Mark interactive complete
+6. **Write DECISIONS to KB** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="DECISIONS", ...)`
+7. **Update checkpoint** - `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="checkpoint", ...)`
 
 ## Summary Presentation
 
@@ -83,9 +83,9 @@ Decision:
 4. Defer - Address later
 ```
 
-## Output: DECISIONS.yaml
+## Output: DECISIONS (KB Artifact)
 
-Write to `{FEATURE_DIR}/_epic-elab/DECISIONS.yaml`:
+Write via `kb_write_artifact(story_id="{PREFIX}-EPIC", artifact_type="elaboration", artifact_name="DECISIONS")`:
 
 ```yaml
 feature_dir: "{FEATURE_DIR}"

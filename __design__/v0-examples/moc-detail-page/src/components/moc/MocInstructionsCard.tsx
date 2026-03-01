@@ -1,12 +1,25 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useRef, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Upload, Download, Trash2, MoreVertical, FileText, ExternalLink, Loader2 } from "lucide-react"
-import { validatePdfFile, extractFilenameFromUrl } from "./mocTypes"
+import type React from 'react'
+import { useRef, useState, useCallback } from 'react'
+import {
+  Upload,
+  Download,
+  Trash2,
+  MoreVertical,
+  FileText,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react'
+import { validatePdfFile, extractFilenameFromUrl } from './mocTypes'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface MocInstructionsCardContentProps {
   instructionsPdfUrls: string[]
@@ -26,7 +39,7 @@ export function MocInstructionsCardContent({
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    e.target.value = ""
+    e.target.value = ''
 
     const errors: string[] = []
     const validFiles: File[] = []
@@ -45,15 +58,15 @@ export function MocInstructionsCardContent({
     if (validFiles.length > 0) {
       setIsUploading(true)
       setTimeout(() => {
-        const newUrls = validFiles.map((file) => URL.createObjectURL(file))
-        setPdfUrls((prev) => [...prev, ...newUrls])
+        const newUrls = validFiles.map(file => URL.createObjectURL(file))
+        setPdfUrls(prev => [...prev, ...newUrls])
         setIsUploading(false)
       }, 500)
     }
   }, [])
 
   const handleDelete = useCallback((pdfUrl: string) => {
-    setPdfUrls((prev) => prev.filter((url) => url !== pdfUrl))
+    setPdfUrls(prev => prev.filter(url => url !== pdfUrl))
   }, [])
 
   const handleUploadClick = useCallback(() => {
@@ -62,7 +75,7 @@ export function MocInstructionsCardContent({
 
   const renderSkeletonList = () => (
     <div className="space-y-2" aria-hidden="true">
-      {[1, 2].map((i) => (
+      {[1, 2].map(i => (
         <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
           <Skeleton className="h-10 w-10 rounded-lg" />
           <div className="flex-1 space-y-1.5">
@@ -114,13 +127,17 @@ export function MocInstructionsCardContent({
       {pdfUrls.length === 0 ? (
         <>
           {renderSkeletonList()}
-          <p className="text-center text-sm text-muted-foreground py-2">Upload instruction PDFs to get started</p>
+          <p className="text-center text-sm text-muted-foreground py-2">
+            Upload instruction PDFs to get started
+          </p>
         </>
       ) : (
         <ul className="space-y-2" role="list" aria-label="Instruction PDF files">
           {pdfUrls.map((url, index) => {
             const filename = extractFilenameFromUrl(url)
-            const displayName = filename.toLowerCase().endsWith(".pdf") ? filename : `Instructions PDF #${index + 1}`
+            const displayName = filename.toLowerCase().endsWith('.pdf')
+              ? filename
+              : `Instructions PDF #${index + 1}`
 
             return (
               <li
@@ -150,9 +167,17 @@ export function MocInstructionsCardContent({
                       <MoreVertical className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="animate-in fade-in zoom-in-95 duration-200">
+                  <DropdownMenuContent
+                    align="end"
+                    className="animate-in fade-in zoom-in-95 duration-200"
+                  >
                     <DropdownMenuItem asChild>
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center"
+                      >
                         <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
                         Open
                       </a>

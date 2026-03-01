@@ -4,10 +4,10 @@
  * These steps test the thumbnail upload functionality on MOC detail pages.
  */
 
-import { expect } from '@playwright/test'
-import { createBdd } from 'playwright-bdd'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { expect } from '@playwright/test'
+import { createBdd } from 'playwright-bdd'
 
 const { Given, When, Then } = createBdd()
 
@@ -97,19 +97,22 @@ When('I drag a JPEG image onto the upload zone', async ({ page }) => {
   const base64Data = fileBuffer.toString('base64')
 
   // Create a data transfer with the file in browser context
-  const dataTransfer = await page.evaluateHandle(({ base64, fileName, mimeType }) => {
-    // Convert base64 to Uint8Array
-    const binaryString = atob(base64)
-    const bytes = new Uint8Array(binaryString.length)
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i)
-    }
+  const dataTransfer = await page.evaluateHandle(
+    ({ base64, fileName, mimeType }) => {
+      // Convert base64 to Uint8Array
+      const binaryString = atob(base64)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
 
-    const dt = new DataTransfer()
-    const file = new File([bytes], fileName, { type: mimeType })
-    dt.items.add(file)
-    return dt
-  }, { base64: base64Data, fileName: 'test-thumbnail.jpg', mimeType: 'image/jpeg' })
+      const dt = new DataTransfer()
+      const file = new File([bytes], fileName, { type: mimeType })
+      dt.items.add(file)
+      return dt
+    },
+    { base64: base64Data, fileName: 'test-thumbnail.jpg', mimeType: 'image/jpeg' },
+  )
 
   await dropZone.dispatchEvent('drop', { dataTransfer })
 })
@@ -135,7 +138,7 @@ When('I click the upload button', async ({ page }) => {
   // Wait for the upload request to complete
   const responsePromise = page.waitForResponse(
     response => response.url().includes('/thumbnail') && response.request().method() === 'POST',
-    { timeout: 15000 }
+    { timeout: 15000 },
   )
 
   await uploadButton.click()
@@ -154,14 +157,19 @@ When('I click the remove button on the preview', async ({ page }) => {
 Then('I should see a thumbnail upload success message', async ({ page }) => {
   // Wait for toast notification - Sonner uses data-sonner-toast on the wrapper li
   // Use .first() to handle case where multiple uploads show multiple toasts
-  const toast = page.locator('[data-sonner-toast]').filter({
-    hasText: /Thumbnail uploaded successfully/i,
-  }).first()
+  const toast = page
+    .locator('[data-sonner-toast]')
+    .filter({
+      hasText: /Thumbnail uploaded successfully/i,
+    })
+    .first()
   await expect(toast).toBeVisible({ timeout: 10000 })
 })
 
 Then('I should see an error message about invalid file type', async ({ page }) => {
-  const toast = page.locator('[role="status"], [data-sonner-toast]').filter({ hasText: /invalid|type|only/i })
+  const toast = page
+    .locator('[role="status"], [data-sonner-toast]')
+    .filter({ hasText: /invalid|type|only/i })
   await expect(toast).toBeVisible({ timeout: 5000 })
 })
 
@@ -216,7 +224,9 @@ Then('I should see a loading indicator', async ({ page }) => {
   // Loading state is brief - check if it appeared or upload already completed
   // Look for either "Uploading..." text or the success toast (upload completed fast)
   const loadingText = page.locator('text=Uploading')
-  const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /Thumbnail uploaded/i })
+  const successToast = page
+    .locator('[data-sonner-toast]')
+    .filter({ hasText: /Thumbnail uploaded/i })
 
   // Try to find loading indicator (may appear briefly) - short timeout since it's transient
   try {
@@ -230,7 +240,9 @@ Then('I should see a loading indicator', async ({ page }) => {
 Then('the upload button should be disabled during upload', async ({ page }) => {
   // Button disabled state is transient - check if disabled or upload already completed
   const uploadButton = page.getByRole('button', { name: /upload/i })
-  const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /Thumbnail uploaded/i })
+  const successToast = page
+    .locator('[data-sonner-toast]')
+    .filter({ hasText: /Thumbnail uploaded/i })
 
   try {
     await expect(uploadButton).toBeDisabled({ timeout: 2000 })

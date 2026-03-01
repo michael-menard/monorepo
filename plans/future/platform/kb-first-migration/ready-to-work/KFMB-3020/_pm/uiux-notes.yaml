@@ -1,0 +1,5 @@
+skipped: true
+reason: >
+  KFMB-3020 makes no changes to UI components, pages, or design system.
+  All changes are to .claude/commands/ markdown instruction files only.
+  No frontend surfaces are touched.

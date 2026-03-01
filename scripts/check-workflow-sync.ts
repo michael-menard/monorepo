@@ -44,8 +44,7 @@ function parseMarkdownTable(content: string, sectionHeader: string): string[] {
   const lines = content.split('\n')
   const headerIndex = lines.findIndex(
     line =>
-      line.includes(sectionHeader) ||
-      line.toLowerCase().includes(sectionHeader.toLowerCase()),
+      line.includes(sectionHeader) || line.toLowerCase().includes(sectionHeader.toLowerCase()),
   )
 
   if (headerIndex === -1) {
@@ -91,10 +90,7 @@ function parseMarkdownTable(content: string, sectionHeader: string): string[] {
 
 function extractZodEnumValues(content: string, schemaName: string): string[] {
   // Match z.enum([...]) patterns
-  const enumPattern = new RegExp(
-    `${schemaName}\\s*=\\s*z\\.enum\\(\\[([^\\]]+)\\]\\)`,
-    's',
-  )
+  const enumPattern = new RegExp(`${schemaName}\\s*=\\s*z\\.enum\\(\\[([^\\]]+)\\]\\)`, 's')
   const match = content.match(enumPattern)
 
   if (!match) return []
@@ -110,10 +106,7 @@ function extractZodEnumValues(content: string, schemaName: string): string[] {
 
 function extractObjectKeys(content: string, objectName: string): string[] {
   // Match object literal keys
-  const objectPattern = new RegExp(
-    `${objectName}\\s*[=:]\\s*\\{([^}]+)\\}`,
-    's',
-  )
+  const objectPattern = new RegExp(`${objectName}\\s*[=:]\\s*\\{([^}]+)\\}`, 's')
   const match = content.match(objectPattern)
 
   if (!match) return []
@@ -201,10 +194,7 @@ async function checkStoryStatusSync(): Promise<SyncCheckResult> {
 
 async function checkErrorTypesSync(): Promise<SyncCheckResult> {
   const workflowPath = resolve(ROOT, 'docs/FULL_WORKFLOW.md')
-  const errorsPath = resolve(
-    ROOT,
-    'packages/backend/orchestrator/src/errors/workflow-errors.ts',
-  )
+  const errorsPath = resolve(ROOT, 'packages/backend/orchestrator/src/errors/workflow-errors.ts')
 
   if (!existsSync(workflowPath)) {
     return {
@@ -265,10 +255,7 @@ async function checkErrorTypesSync(): Promise<SyncCheckResult> {
 
 async function checkTokenLimitsSync(): Promise<SyncCheckResult> {
   const workflowPath = resolve(ROOT, 'docs/FULL_WORKFLOW.md')
-  const tokenBudgetPath = resolve(
-    ROOT,
-    'packages/backend/orchestrator/src/utils/token-budget.ts',
-  )
+  const tokenBudgetPath = resolve(ROOT, 'packages/backend/orchestrator/src/utils/token-budget.ts')
 
   if (!existsSync(workflowPath)) {
     return {
@@ -301,8 +288,7 @@ async function checkTokenLimitsSync(): Promise<SyncCheckResult> {
   }
 
   // Normalize phase names for comparison
-  const normalizePhase = (p: string) =>
-    p.toLowerCase().replace(/[^a-z]/g, '')
+  const normalizePhase = (p: string) => p.toLowerCase().replace(/[^a-z]/g, '')
 
   const normalizedMd = mdPhases.map(normalizePhase)
   const normalizedTs = tsPhases.map(normalizePhase)
@@ -336,10 +322,7 @@ async function checkTokenLimitsSync(): Promise<SyncCheckResult> {
 
 async function checkModelAssignmentsSync(): Promise<SyncCheckResult> {
   const yamlPath = resolve(ROOT, '.claude/config/model-assignments.yaml')
-  const tsPath = resolve(
-    ROOT,
-    'packages/backend/orchestrator/src/config/model-assignments.ts',
-  )
+  const tsPath = resolve(ROOT, 'packages/backend/orchestrator/src/config/model-assignments.ts')
 
   if (!existsSync(yamlPath)) {
     return {
@@ -391,8 +374,7 @@ async function main() {
     const result = await check()
     results.push(result)
 
-    const icon =
-      result.status === 'pass' ? '✅' : result.status === 'fail' ? '❌' : '⏭️'
+    const icon = result.status === 'pass' ? '✅' : result.status === 'fail' ? '❌' : '⏭️'
 
     console.log(`${icon} ${result.check}: ${result.message}`)
 
@@ -410,7 +392,9 @@ async function main() {
   if (hasFailures) {
     console.log('❌ Sync check failed. Please update both systems together.')
     if (fixMode) {
-      console.log('   Run `npx tsx scripts/generate-workflow-docs.ts` to regenerate docs from TypeScript.')
+      console.log(
+        '   Run `npx tsx scripts/generate-workflow-docs.ts` to regenerate docs from TypeScript.',
+      )
     }
     process.exit(1)
   } else {

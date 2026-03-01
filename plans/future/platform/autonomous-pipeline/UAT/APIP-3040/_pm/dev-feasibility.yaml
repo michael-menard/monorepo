@@ -1,0 +1,165 @@
+feasible: true
+confidence: high
+rationale: >
+  The implementation is a well-scoped additive extension to an existing module (PipelineModelRouter).
+  The three-tier routing precedence pattern is well-defined, the cache architecture mirrors the
+  existing wint.model_assignments pattern, and all required types/schemas follow established
+  Zod-first and Drizzle ORM patterns already present in the codebase. The primary implementation
+  risk is gating: APIP-0040 must merge before APIP-3040 begins, and APIP-3020 must complete
+  before integration tests can run. Both are known hard dependencies, not design unknowns.
+complexity: medium
+change_surface:
+  areas:
+    - packages/backend/orchestrator/src/pipeline/model-router.ts (primary — extend with affinity layer)
+    - packages/backend/orchestrator/src/pipeline/__types__/index.ts (additive Zod schema fields)
+    - packages/backend/database-schema/src/schema/ (read wint.model_affinity via Drizzle — APIP-3020 types)
+  endpoints: []
+  deploy_touchpoints:
+    - "wint.model_affinity table must exist in target DB (requires APIP-3020 migration)"
+    - "PipelineModelRouter singleton re-initialized after APIP-3040 merge (in-memory cache starts empty)"
+
+risks:
+  - finding: "APIP-0040 not yet merged — PipelineModelRouter v1 interface may change at code review"
+    mitigation: >
+      Gate APIP-3040 implementation on APIP-0040 merge. Dev elaboration can proceed but no
+      code changes until v1 is in main. Document interface contract assumptions in subtask ST-1.
+  - finding: "APIP-3020 not yet implemented — wint.model_affinity table and Drizzle schema types unavailable"
+    mitigation: >
+      Structure affinity query behind an injectable affinityReader abstraction (interface defined
+      in __types__/index.ts via Zod schema). Unit tests use mock reader. Integration tests tagged
+      @integration and skipped in CI until APIP-3020 migration is applied to test DB.
+  - finding: "Provider derivation from model string requires getProviderForModel() from llm-provider.ts — must not break if model string format changes"
+    mitigation: >
+      Reuse existing getProviderForModel() from packages/backend/orchestrator/src/config/llm-provider.ts
+      unchanged. Add a defensive guard: if provider cannot be derived, fall back to static chain
+      and log warning.
+
+missing_requirements: []
+evidence_expectations:
+  - "pnpm check-types --filter @repo/orchestrator passes after all changes"
+  - "All unit tests (AC-10 sub-cases a-g) pass without a real database"
+  - "Existing APIP-0040 test suite passes with zero regressions (AC-12)"
+  - "@integration test passes against APIP-5001 test DB with wint.model_affinity fixture rows"
+  - "logger.info routing decision log contains all required fields for each dispatch call"
+
+subtasks:
+  - id: ST-1
+    title: "Extend PipelineModelRouterConfig Zod schema with affinity threshold constants"
+    goal: >
+      Add affinitySuccessRateThreshold and affinityMinSampleSize to PipelineModelRouterConfig
+      Zod schema in packages/backend/orchestrator/src/pipeline/__types__/index.ts (additive).
+      Also extend PipelineDispatchOptionsSchema with changeType and fileType optional fields
+      (default 'unknown'). Define AffinityProfileSchema for typed affinity query results.
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+      - packages/backend/orchestrator/src/models/unified-interface.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+    acs: ["AC-5", "AC-8", "AC-9"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-2
+    title: "Add in-memory affinity profile cache and queryAffinityProfile() method to PipelineModelRouter"
+    goal: >
+      Extend PipelineModelRouter class in model-router.ts:
+      - Add private affinityCache: Map<string, AffinityProfile | null> initialized as new Map()
+      - Add private queryAffinityProfile(changeType, fileType): reads from injectable affinityReader
+        (or direct Drizzle query) filtered to confidence_level IN ('medium','high'), ordered by
+        avg_cost_usd ASC then success_rate DESC, returns first row or null
+      - Add public invalidateAffinityCache() method (clears entire Map)
+      - Implement lazy-load pattern: check cache key `${changeType}:${fileType}` before querying DB
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/database-schema/src/schema/telemetry.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+    acs: ["AC-2", "AC-6"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-3
+    title: "Implement three-tier routing precedence in PipelineModelRouter.dispatch()"
+    goal: >
+      Update dispatch() to implement the three-tier routing logic:
+      Tier 1: Check wint.model_assignments DB override (existing APIP-0040 logic — unchanged)
+      Tier 2: Call queryAffinityProfile(changeType, fileType); if profile found and
+               success_rate >= affinitySuccessRateThreshold → select that model/provider
+      Tier 3: Fall through to static Ollama → OpenRouter → Anthropic escalation chain
+      Wrap Tier 2 in try/catch: on DB failure → logger.warn + fall through to Tier 3.
+      Accept changeType/fileType from PipelineDispatchOptionsSchema (defaulting to 'unknown').
+      Derive provider from model string via getProviderForModel().
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/orchestrator/src/config/llm-provider.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+    acs: ["AC-1", "AC-3", "AC-4", "AC-8", "AC-13"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 12000
+
+  - id: ST-4
+    title: "Add structured routing decision logging to dispatch()"
+    goal: >
+      After model selection in dispatch(), emit a structured log via @repo/logger with domain
+      'pipeline_model_router' and fields:
+      { source: 'affinity' | 'db_assignment' | 'fallback', model, provider, change_type,
+        file_type, confidence_level: string | null, success_rate: number | null,
+        sample_size: number | null }
+      source='db_assignment' if Tier 1 wins, source='affinity' if Tier 2 wins,
+      source='fallback' if Tier 3 (or DB failure path).
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+    acs: ["AC-7"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator (logger spy assertions)"
+    estimated_tokens: 5000
+
+  - id: ST-5
+    title: "Write unit tests for all AC-10 sub-cases (a-g)"
+    goal: >
+      Write Vitest unit tests in packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts
+      (or affinity-routing.test.ts if splitting) covering:
+      (a) affinity routing selected when qualifying profile exists with correct confidence and success_rate
+      (b) fallback to static chain when no profile exists (cold-start)
+      (c) fallback when confidence_level is 'none' or 'low'
+      (d) fallback when success_rate < threshold
+      (e) wint.model_assignments DB override taking precedence over affinity match
+      (f) invalidateAffinityCache() causes re-query on next dispatch
+      (g) change_type/file_type defaulting to 'unknown' when not provided
+      Plus: DB failure resilience test (AC-13); cache population test; cheapest model wins test.
+      All tests use mock affinityReader (vi.fn()) — no real DB.
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/orchestrator/src/pipeline/__tests__/
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts
+    acs: ["AC-10", "AC-13"]
+    depends_on: ST-4
+    verification: "pnpm test --filter @repo/orchestrator (all unit tests pass)"
+    estimated_tokens: 14000
+
+  - id: ST-6
+    title: "Write integration test with real test PostgreSQL fixture rows (AC-11)"
+    goal: >
+      Write a Vitest integration test tagged @integration in
+      packages/backend/orchestrator/src/pipeline/__tests__/model-router.integration.test.ts.
+      Pre-insert wint.model_affinity fixture rows (one high-confidence, one low-confidence)
+      into the APIP-5001 test DB. Verify that dispatch with matching (change_type, file_type)
+      routes to the high-confidence model. Verify fallback for low-confidence.
+      Test must be skipped if wint.model_affinity table does not exist (APIP-3020 not merged).
+      Document skip condition with a clear comment.
+    files_to_read:
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/database-schema/src/schema/
+    files_to_modify:
+      - packages/backend/orchestrator/src/pipeline/__tests__/model-router.integration.test.ts
+    acs: ["AC-11"]
+    depends_on: ST-5
+    verification: "pnpm test --filter @repo/orchestrator --tag integration (against APIP-5001 test DB)"
+    estimated_tokens: 8000

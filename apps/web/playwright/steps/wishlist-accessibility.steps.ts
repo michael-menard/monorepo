@@ -13,7 +13,9 @@ const { Given, When, Then } = createBdd()
 // ---------------------------------------------------------------------------
 
 Then('focus is on the first wishlist card in the grid', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
   await firstCard.focus()
   const focused = page.locator(':focus')
   await expect(focused).toBeVisible()
@@ -60,7 +62,9 @@ Then('focus should move to the last card in the grid', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 Then('focus is on a wishlist card', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
   await firstCard.focus()
 })
 
@@ -105,7 +109,9 @@ Then('the delete confirmation modal should open for the focused item', async ({ 
 // ---------------------------------------------------------------------------
 
 When('I open the delete confirmation modal from a wishlist card', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
   await firstCard.focus()
   await page.keyboard.press('Delete')
 })
@@ -190,9 +196,12 @@ Then('a screen reader announcement should indicate the item was removed', async 
   expect(true).toBe(true)
 })
 
-Then('a screen reader announcement should indicate the item was added to the wishlist', async () => {
-  expect(true).toBe(true)
-})
+Then(
+  'a screen reader announcement should indicate the item was added to the wishlist',
+  async () => {
+    expect(true).toBe(true)
+  },
+)
 
 // ---------------------------------------------------------------------------
 // Additional accessibility steps for new BDD features
@@ -218,14 +227,18 @@ Given('the wishlist has items loaded', async ({ page }) => {
 })
 
 Given('I open the delete modal for the first wishlist card', async ({ page }) => {
-  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  const card = page
+    .locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+    .first()
   await card.hover()
   const deleteButton = card.locator('[data-testid="wishlist-card-delete"]')
   await deleteButton.click()
 })
 
 Given('I open the Got It modal for the first wishlist card', async ({ page }) => {
-  const card = page.locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]').first()
+  const card = page
+    .locator('[data-testid^="wishlist-card-"], [data-testid^="sortable-wishlist-card-"]')
+    .first()
   await card.hover()
   const gotItButton = card.locator('[data-testid="wishlist-card-got-it"]')
   await gotItButton.click()
@@ -264,9 +277,7 @@ Then('there should be no color contrast violations', async ({ page }) => {
 })
 
 Then('all buttons should have accessible names', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['button-name'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['button-name']).analyze()
 
   expect(results.violations).toEqual([])
 })
@@ -304,16 +315,12 @@ Then('the focus ring should use design system colors', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 Then('all links should have accessible names', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['link-name'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['link-name']).analyze()
   expect(results.violations).toEqual([])
 })
 
 Then('there should be no image-alt violations', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['image-alt'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['image-alt']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -341,9 +348,7 @@ Then('all ARIA attributes should be valid', async ({ page }) => {
 })
 
 Then('required ARIA attributes should be present', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['aria-required-attr'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['aria-required-attr']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -352,16 +357,12 @@ Then('required ARIA attributes should be present', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 Then('focus-order-semantics rules should pass', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['focus-order-semantics'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['focus-order-semantics']).analyze()
   expect(results.violations).toEqual([])
 })
 
 Then('tabindex rules should pass', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['tabindex'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['tabindex']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -375,9 +376,7 @@ When('I navigate to the add item page', async ({ page }) => {
 })
 
 Then('all form inputs should have associated labels', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['label'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['label']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -386,16 +385,12 @@ Then('all form inputs should have associated labels', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 Then('the Got It modal should have no accessibility violations', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
   expect(results.violations).toEqual([])
 })
 
 Then('the delete modal should have no accessibility violations', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -404,9 +399,7 @@ Then('the delete modal should have no accessibility violations', async ({ page }
 // ---------------------------------------------------------------------------
 
 Then('there should be a main landmark', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['landmark-one-main'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['landmark-one-main']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -419,16 +412,12 @@ Then('region rules should mostly pass', async ({ page }) => {
 })
 
 Then('there should be no duplicate-id violations', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['duplicate-id'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['duplicate-id']).analyze()
   expect(results.violations).toEqual([])
 })
 
 Then('list and listitem rules should pass', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['list', 'listitem'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['list', 'listitem']).analyze()
   expect(results.violations).toEqual([])
 })
 
@@ -438,23 +427,17 @@ Then('the gallery should have a list with aria-label', async ({ page }) => {
 })
 
 Then('heading-order rules should pass', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['heading-order'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['heading-order']).analyze()
   expect(results.violations).toEqual([])
 })
 
 Then('all links should have content', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['link-in-text-block'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['link-in-text-block']).analyze()
   expect(results.violations).toEqual([])
 })
 
 Then('all buttons should have content', async ({ page }) => {
-  const results = await new AxeBuilder({ page })
-    .withRules(['button-name'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).withRules(['button-name']).analyze()
   expect(results.violations).toEqual([])
 })
 

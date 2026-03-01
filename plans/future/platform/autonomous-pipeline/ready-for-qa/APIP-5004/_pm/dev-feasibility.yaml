@@ -1,0 +1,107 @@
+feasible: true
+confidence: high
+rationale: >
+  APIP-5004 is a well-scoped infrastructure library story. The injection points (three provider loadConfig() methods) are clearly identified in the codebase. The BaseProvider interface does not need to change — only the three concrete provider implementations are refactored. The Zod-first pattern is already established in the codebase (env.ts). The CloudFormation structure follows the existing infra/elasticache/template.yaml pattern. AWS SDK v3 (@aws-sdk/client-secrets-manager) is the standard modular SDK and is compatible with Node.js ESM. The primary risk is the static configCache pattern on each provider requiring careful reset logic in tests, which is manageable. No cross-package API changes required.
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/src/secrets/ (new directory — SecretsClient module)"
+    - "packages/backend/orchestrator/src/providers/anthropic.ts (loadConfig refactor)"
+    - "packages/backend/orchestrator/src/providers/openrouter.ts (loadConfig refactor)"
+    - "packages/backend/orchestrator/src/providers/minimax.ts (loadConfig refactor)"
+    - "packages/backend/orchestrator/package.json (add @aws-sdk/client-secrets-manager)"
+    - "infra/secrets/template.yaml (new CloudFormation stack)"
+    - "infra/secrets/README.md (rotation procedure documentation)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Deploy infra/secrets/template.yaml to staging/production before server process starts"
+    - "Set SECRETS_ENGINE=aws-secrets-manager and AWS_REGION in server environment (APIP-5006 coordination)"
+    - "Pre-populate AWS Secrets Manager with provider API key values (operational step, not code)"
+
+risks:
+  - finding: "Static configCache fields on each provider class mean a rotated secret is not picked up until process restart unless the provider cache is also cleared."
+    mitigation: "AC-7 rotation procedure must explicitly document this limitation. Optionally, expose a SecretsClient.flush() that also calls Provider.clearCache() — document this as the manual rotation signal. Flag for automated invalidation in Phase 2."
+  - finding: "@aws-sdk/client-secrets-manager adds a non-trivial dependency to the orchestrator package. While bundle size is less critical for a dedicated server (per APIP-5006), the package must be compatible with Node ESM and the existing tsconfig."
+    mitigation: "Verify 'type: module' in orchestrator package.json before adding the dependency. AWS SDK v3 supports ESM natively. Confirm with pnpm add --dry-run before implementation."
+
+missing_requirements: []
+
+evidence_expectations:
+  - "pnpm test --filter @repo/orchestrator passes with all unit tests for SecretsClient (HP-1 through HP-6, EC-1 through EC-4, ED-1 through ED-4)"
+  - "pnpm check-types --filter @repo/orchestrator exits 0 after provider refactoring"
+  - "cfn-lint or aws cloudformation validate-template succeeds on infra/secrets/template.yaml"
+  - "AnthropicProvider.loadConfig() integration test passes with SECRETS_ENGINE=env"
+
+subtasks:
+  - id: ST-1
+    title: "Create SecretsClient module with env fallback and Zod config validation"
+    goal: "Implement packages/backend/orchestrator/src/secrets/index.ts with SecretsClientConfigSchema, SecretsClient class, get() method with env fallback, and fail-fast startup validation."
+    files_to_read:
+      - "apps/api/knowledge-base/src/config/env.ts"
+      - "packages/backend/orchestrator/src/providers/base.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/secrets/index.ts (CREATE)"
+      - "packages/backend/orchestrator/package.json (add @aws-sdk/client-secrets-manager)"
+    acs: ["AC-1", "AC-2", "AC-10"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 10000
+
+  - id: ST-2
+    title: "Add in-memory cache with configurable TTL and audit logging to SecretsClient"
+    goal: "Extend SecretsClient.get() with cache layer (Map + timestamp), TTL from SECRETS_CACHE_TTL_MS env var, and @repo/logger audit log on cache-miss fetch. No secret value in log."
+    files_to_read:
+      - "packages/backend/orchestrator/src/secrets/index.ts"
+      - "packages/backend/orchestrator/src/providers/anthropic.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/secrets/index.ts"
+    acs: ["AC-4", "AC-5"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-3
+    title: "Refactor AnthropicProvider, OpenRouterProvider, and MiniMaxProvider loadConfig() to use SecretsClient"
+    goal: "Replace direct process.env reads in the three provider loadConfig() methods with SecretsClient.get() calls. Preserve existing config shapes, caching behavior, and error messages. Verify generateConfigHash() still excludes apiKey."
+    files_to_read:
+      - "packages/backend/orchestrator/src/providers/anthropic.ts"
+      - "packages/backend/orchestrator/src/providers/openrouter.ts"
+      - "packages/backend/orchestrator/src/providers/minimax.ts"
+      - "packages/backend/orchestrator/src/providers/base.ts"
+      - "packages/backend/orchestrator/src/secrets/index.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/providers/anthropic.ts"
+      - "packages/backend/orchestrator/src/providers/openrouter.ts"
+      - "packages/backend/orchestrator/src/providers/minimax.ts"
+    acs: ["AC-3", "AC-9"]
+    depends_on: ST-2
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 9000
+
+  - id: ST-4
+    title: "Write unit and integration tests for SecretsClient and refactored providers"
+    goal: "Cover all test cases from test-plan.yaml: env fallback, AWS SDK mock, cache hit/miss, TTL expiry, missing secret errors, startup validation failure, audit log content, provider integration with mocked secrets."
+    files_to_read:
+      - "packages/backend/orchestrator/src/secrets/index.ts"
+      - "packages/backend/orchestrator/src/providers/anthropic.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts (CREATE)"
+      - "packages/backend/orchestrator/src/providers/__tests__/anthropic.test.ts (UPDATE or CREATE)"
+    acs: ["AC-8"]
+    depends_on: ST-3
+    verification: "pnpm test --filter @repo/orchestrator"
+    estimated_tokens: 12000
+
+  - id: ST-5
+    title: "Create infra/secrets/template.yaml CloudFormation stack and rotation README"
+    goal: "Define AWS Secrets Manager resources for anthropic-api-key, openrouter-api-key, and minimax-api-key following infra/elasticache/template.yaml structure (ADR-002). Write infra/secrets/README.md documenting manual rotation procedure including the process-lifetime cache limitation."
+    files_to_read:
+      - "infra/elasticache/template.yaml"
+      - "infra/elasticache/README.md"
+    files_to_modify:
+      - "infra/secrets/template.yaml (CREATE)"
+      - "infra/secrets/README.md (CREATE)"
+    acs: ["AC-6", "AC-7"]
+    depends_on: none
+    verification: "cfn-lint infra/secrets/template.yaml (0 errors)"
+    estimated_tokens: 6000

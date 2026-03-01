@@ -22,7 +22,7 @@ Then('wishlist card images should load from CloudFront domain', async ({ page })
   const images = page.locator('[data-testid="wishlist-card"] img, [data-testid="gallery-card"] img')
   const firstImage = images.first()
   await expect(firstImage).toBeVisible()
-  
+
   const src = await firstImage.getAttribute('src')
   expect(src).toMatch(/cloudfront\.net/)
 })
@@ -30,7 +30,7 @@ Then('wishlist card images should load from CloudFront domain', async ({ page })
 Then('image URLs should contain the CloudFront distribution domain', async ({ page }) => {
   const images = page.locator('[data-testid="wishlist-card"] img, [data-testid="gallery-card"] img')
   const count = await images.count()
-  
+
   for (let i = 0; i < count; i++) {
     const src = await images.nth(i).getAttribute('src')
     expect(src).toMatch(/cloudfront\.net|cdn\./)
@@ -41,7 +41,7 @@ Then('wishlist card images should have responsive srcset attributes', async ({ p
   const images = page.locator('[data-testid="wishlist-card"] img, [data-testid="gallery-card"] img')
   const firstImage = images.first()
   await expect(firstImage).toBeVisible()
-  
+
   const srcset = await firstImage.getAttribute('srcset')
   expect(srcset).toBeTruthy()
 })
@@ -50,7 +50,7 @@ Then('thumbnail images should be optimized for size', async ({ page }) => {
   // Verify thumbnail image sizes are small
   const images = page.locator('[data-testid="wishlist-card"] img, [data-testid="gallery-card"] img')
   const firstImage = images.first()
-  
+
   const src = await firstImage.getAttribute('src')
   // Thumbnails should have dimensions in URL or be marked as thumbnails
   expect(src).toMatch(/thumb|small|200x200|w=200/)
@@ -59,7 +59,7 @@ Then('thumbnail images should be optimized for size', async ({ page }) => {
 Then('gallery images should use appropriate compression', async ({ page }) => {
   const images = page.locator('[data-testid="wishlist-card"] img, [data-testid="gallery-card"] img')
   const firstImage = images.first()
-  
+
   const src = await firstImage.getAttribute('src')
   // Modern formats or compression indicators
   expect(src).toMatch(/\.webp|\.jpg|quality=\d+/)
@@ -108,13 +108,15 @@ Then('image placeholders should be visible during load', async ({ page }) => {
 Then('gallery cards should use thumbnail image variant', async ({ page }) => {
   const images = page.locator('[data-testid="wishlist-card"] img, [data-testid="gallery-card"] img')
   const firstImage = images.first()
-  
+
   const src = await firstImage.getAttribute('src')
   expect(src).toMatch(/thumb|thumbnail|small|_t\.|_200/)
 })
 
 When('I open a wishlist item detail view', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
   await firstCard.click()
   await page.waitForLoadState('networkidle')
 })
@@ -122,7 +124,7 @@ When('I open a wishlist item detail view', async ({ page }) => {
 Then('the detail view should use full-size image', async ({ page }) => {
   const detailImage = page.locator('[data-testid="detail-image"], .detail-view img').first()
   await expect(detailImage).toBeVisible()
-  
+
   const src = await detailImage.getAttribute('src')
   expect(src).not.toMatch(/thumb|thumbnail|small/)
 })

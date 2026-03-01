@@ -1,6 +1,5 @@
-import { z } from 'zod'
 import { readFile } from 'fs/promises'
-
+import { z } from 'zod'
 import type { CodeAuditState } from '../../graphs/code-audit.js'
 import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js'
 
@@ -12,20 +11,52 @@ import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js
  */
 
 const CRITICAL_PATTERNS = [
-  { pattern: /(?:const|let|var)\s+\w*(?:key|secret|password|token)\w*\s*=\s*['"][^'"]{8,}['"]/i, title: 'Hardcoded secret in source', severity: 'critical' as const },
-  { pattern: /eval\s*\(/, title: 'eval() usage — potential code injection', severity: 'critical' as const },
-  { pattern: /child_process.*exec\s*\(/, title: 'child_process.exec() — potential command injection', severity: 'critical' as const },
-  { pattern: /dangerouslySetInnerHTML/, title: 'dangerouslySetInnerHTML without sanitization', severity: 'high' as const },
-  { pattern: /cors.*origin:\s*['"]?\*['"]?/, title: 'Wildcard CORS origin', severity: 'high' as const },
+  {
+    pattern: /(?:const|let|var)\s+\w*(?:key|secret|password|token)\w*\s*=\s*['"][^'"]{8,}['"]/i,
+    title: 'Hardcoded secret in source',
+    severity: 'critical' as const,
+  },
+  {
+    pattern: /eval\s*\(/,
+    title: 'eval() usage — potential code injection',
+    severity: 'critical' as const,
+  },
+  {
+    pattern: /child_process.*exec\s*\(/,
+    title: 'child_process.exec() — potential command injection',
+    severity: 'critical' as const,
+  },
+  {
+    pattern: /dangerouslySetInnerHTML/,
+    title: 'dangerouslySetInnerHTML without sanitization',
+    severity: 'high' as const,
+  },
+  {
+    pattern: /cors.*origin:\s*['"]?\*['"]?/,
+    title: 'Wildcard CORS origin',
+    severity: 'high' as const,
+  },
 ]
 
 const HIGH_PATTERNS = [
-  { pattern: /console\.(log|error|warn)\s*\(.*(?:password|token|secret|apiKey)/i, title: 'Sensitive data in console output', severity: 'high' as const },
-  { pattern: /\.query\s*\(\s*`[^`]*\$\{/, title: 'SQL template literal — potential injection', severity: 'high' as const },
+  {
+    pattern: /console\.(log|error|warn)\s*\(.*(?:password|token|secret|apiKey)/i,
+    title: 'Sensitive data in console output',
+    severity: 'high' as const,
+  },
+  {
+    pattern: /\.query\s*\(\s*`[^`]*\$\{/,
+    title: 'SQL template literal — potential injection',
+    severity: 'high' as const,
+  },
 ]
 
 const MEDIUM_PATTERNS = [
-  { pattern: /catch\s*\([^)]*\)\s*\{[^}]*(?:res\.json|res\.send)\s*\([^)]*(?:error|err|e)\b/i, title: 'Error details exposed in API response', severity: 'medium' as const },
+  {
+    pattern: /catch\s*\([^)]*\)\s*\{[^}]*(?:res\.json|res\.send)\s*\([^)]*(?:error|err|e)\b/i,
+    title: 'Error details exposed in API response',
+    severity: 'medium' as const,
+  },
 ]
 
 async function scanFile(filePath: string): Promise<AuditFinding[]> {

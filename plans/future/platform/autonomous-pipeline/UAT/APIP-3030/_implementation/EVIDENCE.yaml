@@ -1,0 +1,482 @@
+---
+story_id: APIP-3030
+title: "Learning-Aware Diff Planner"
+commit: a522b09c
+branch: story/APIP-3030
+reviewed_at: "2026-02-28T00:00:00Z"
+reviewer: claude-sonnet-4-6
+
+# Evidence mapping: each AC traced to specific file + line-level code excerpts.
+
+acceptance_criteria:
+
+  - id: AC-1
+    text: "The Diff Planner node queries wint.model_affinity for the assigned model before
+      generating the decomposition prompt. The query is keyed by (model_id, change_type,
+      file_type) and retrieves success_rate, avg_attempts, confidence, and any recorded
+      weak patterns."
+    verdict: PARTIAL
+    notes: >
+      The node does query wint.model_affinity before generating the decomposition prompt.
+      However, the query is keyed by model_id only (bulk fetch of all change_types for
+      that model), consistent with the Architecture Notes recommendation to 'query for all
+      (model_id, change_type) pairs first, then filter during prompt assembly'. The query
+      does not key by file_type because AffinityProfileSchema has no file_type field —
+      the story's architecture notes omit it from the DB schema. avg_attempts is also
+      absent from the retrieved columns (schema has sample_count instead). The AC text
+      says 'avg_attempts' but the implemented schema uses 'sample_count'. This is a minor
+      field-name deviation consistent with the architecture choosing sample_count over
+      avg_attempts in the Zod schema. The core intent (query affinity before prompt
+      generation, retrieve success_rate and confidence) is satisfied.
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts
+        excerpt: |
+          export const COL_MODEL_ID = 'model_id'
+          export const COL_CHANGE_TYPE = 'change_type'
+          export const COL_SUCCESS_RATE = 'success_rate'
+          export const COL_CONFIDENCE = 'confidence'
+          export const COL_SAMPLE_COUNT = 'sample_count'
+          export const COL_STRONG_PATTERNS = 'strong_patterns'
+          export const COL_WEAK_PATTERNS = 'weak_patterns'
+          export const COL_UPDATED_AT = 'updated_at'
+          export const DB_FULL_TABLE = `${DB_SCHEMA}.${DB_TABLE}`  // wint.model_affinity
+        description: "Column constants confirm wint.model_affinity table and all queried columns."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts
+        excerpt: |
+          const sql = `
+            SELECT
+              ${COL_MODEL_ID},
+              ${COL_CHANGE_TYPE},
+              ${COL_SUCCESS_RATE},
+              ${COL_CONFIDENCE},
+              ${COL_SAMPLE_COUNT},
+              ${COL_STRONG_PATTERNS},
+              ${COL_WEAK_PATTERNS},
+              ${COL_UPDATED_AT}
+            FROM ${DB_FULL_TABLE}
+            WHERE ${COL_MODEL_ID} = $1
+            ORDER BY ${COL_CHANGE_TYPE}
+          `
+          result = await db.query(sql, [modelId])
+        description: "Parameterized query on wint.model_affinity keyed by model_id.
+          Bulk fetch of all change_type rows per architecture notes."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/index.ts
+        excerpt: |
+          const profiles = await queryAffinityProfilesByModel(dbClient, modelId)
+          // ...
+          const { affinityPromptFragment, enrichedSpecs, profileMetadata } = assembleAffinityContext(
+            modelId,
+            profiles,
+            changeSpecs,
+            config,
+          )
+        description: "Affinity query is called before assembleAffinityContext, confirming
+          profiles are loaded prior to prompt generation."
+
+  - id: AC-2
+    text: "When profile confidence meets or exceeds AFFINITY_CONFIDENCE_MIN (default medium),
+      the decomposition prompt includes a concise affinity summary of weak and strong
+      change_type/file_type combinations."
+    verdict: PASS
+    notes: >
+      The confidence gate is implemented in meetsConfidenceThreshold() using a numeric
+      threshold (AFFINITY_CONFIDENCE_MIN = 0.5). The story uses 'medium' as an enum label
+      but the implementation uses a numeric 0-1 scale, which is equivalent and more precise.
+      buildAffinityPromptFragment() injects weak patterns (CAUTION labels) and strong patterns
+      (STRENGTH labels) into a structured 'Model Affinity Context' section. The prompt
+      includes human-readable context for the decomposition LLM.
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts
+        excerpt: |
+          export const AFFINITY_CONFIDENCE_MIN = 0.5
+        description: "Default confidence threshold constant defined and exported."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts
+        excerpt: |
+          export function meetsConfidenceThreshold(
+            profile: AffinityProfile,
+            config: Partial<DiffPlannerConfig> = {},
+          ): boolean {
+            const threshold = config.affinityConfidenceMin ?? AFFINITY_CONFIDENCE_MIN
+            return profile.confidence >= threshold
+          }
+        description: "Confidence gate applied per-profile before injection."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts
+        excerpt: |
+          parts.push('## Model Affinity Context')
+          parts.push('The following patterns are based on historical performance data for this model.')
+          if (weakLines.length > 0) {
+            parts.push('### Areas Requiring Extra Attention')
+            parts.push(...weakLines)
+          }
+          if (strongLines.length > 0) {
+            parts.push('### Areas of Demonstrated Strength')
+            parts.push(...strongLines)
+          }
+        description: "Structured affinity summary injected into decomposition prompt."
+
+  - id: AC-3
+    text: "When a ChangeSpec uses a change_type/file_type the assigned model handles poorly
+      (success_rate below WEAKNESS_THRESHOLD), the ChangeSpec is annotated with
+      escalation_model: <model_id>."
+    verdict: PASS
+    notes: >
+      annotateEscalations() iterates all change specs, looks up each change_type in the
+      profile map, and sets escalation_model to ESCALATION_MODEL_DEFAULT when
+      success_rate < WEAKNESS_THRESHOLD. The affinity_notes field also records the
+      specific success_rate and threshold for observability. Note: the AC mentions
+      file_type-level discrimination but the implementation operates at change_type level
+      (consistent with the schema having no file_type field).
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts
+        excerpt: |
+          export const WEAKNESS_THRESHOLD = 0.6
+          export const ESCALATION_MODEL_DEFAULT = 'claude-sonnet-4-6'
+        description: "Weakness threshold and default escalation model constants."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts
+        excerpt: |
+          if (profile && profile.success_rate < weaknessThreshold) {
+            escalationCount++
+            return {
+              ...spec,
+              escalation_model: escalationModel,
+              affinity_notes: `Pre-assigned escalation (success_rate=${Math.round(profile.success_rate * 100)}%, threshold=${Math.round(weaknessThreshold * 100)}%)`,
+            }
+          }
+        description: "Escalation pre-assignment logic with descriptive affinity_notes."
+
+  - id: AC-4
+    text: "When no affinity profile exists (cold-start) or profile confidence is below
+      threshold, the node falls back to model-agnostic decomposition without error.
+      A profile_used: false field is set on decomposition metadata."
+    verdict: PASS
+    notes: >
+      Three fallback paths all result in profile_used: false. Cold-start (empty profiles
+      array from queryAffinityProfilesByModel) → assembleAffinityContext returns
+      profile_used=false. Confidence below threshold → qualifying profiles filter returns
+      empty → same path. DB error → query returns [] → same path. createFallbackOutput()
+      also explicitly sets profile_metadata=null (which the schema allows as nullable).
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts
+        excerpt: |
+          if (qualifyingProfiles.length === 0) {
+            const metadata: ProfileMetadata = {
+              profile_used: false,
+              model_id: modelId,
+              confidence_level: null,
+              weak_patterns_injected: 0,
+              strong_patterns_injected: 0,
+              escalation_preassigned: false,
+              escalation_count: 0,
+            }
+            return {
+              affinityPromptFragment: '',
+              enrichedSpecs: changeSpecs,
+              profileMetadata: metadata,
+            }
+          }
+        description: "Cold-start and below-threshold fallback — profile_used=false, no-op output."
+      - file: packages/backend/orchestrator/src/artifacts/diff-planner-output.ts
+        excerpt: |
+          export function createFallbackOutput(
+            storyId: string,
+            changeSpecs: PlaceholderChangeSpec[],
+            reason?: string,
+          ): DiffPlannerOutput {
+            return DiffPlannerOutputSchema.parse({
+              schema: 1,
+              story_id: storyId,
+              produced_at: new Date().toISOString(),
+              change_specs: changeSpecs,
+              affinity_prompt_fragment: '',
+              profile_metadata: null,
+              success: true,
+              error: reason,
+            })
+          }
+        description: "createFallbackOutput produces Zod-valid output with profile_metadata=null."
+
+  - id: AC-5
+    text: "The affinity query is non-blocking: if the DB query fails (connection error,
+      timeout), the node logs a warning via @repo/logger and falls back to model-agnostic
+      decomposition. The planning step does not fail due to affinity lookup errors."
+    verdict: PASS
+    notes: >
+      Both query functions (queryAffinityProfile and queryAffinityProfilesByModel) wrap
+      db.query in try/catch. On error: logger.warn is called with structured context
+      including event='db_error', then null/[] is returned. The node handler calls
+      queryAffinityProfilesByModel which returns [] on error, then assembleAffinityContext
+      proceeds with empty profiles (model-agnostic path). The planning step never throws.
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts
+        excerpt: |
+          try {
+            result = await db.query(sql, [modelId])
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            logger.warn('diff-planner:affinity-query', {
+              event: 'db_error',
+              model_id: modelId,
+              change_type: changeType,
+              error: message,
+            })
+            return null
+          }
+        description: "DB error caught, warning logged via @repo/logger, null returned."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts
+        excerpt: |
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            logger.warn('diff-planner:affinity-query', {
+              event: 'db_error_bulk',
+              model_id: modelId,
+              error: message,
+            })
+            return []
+          }
+        description: "Bulk query DB error — returns empty array, logs warning, no throw."
+
+  - id: AC-6
+    text: "The Diff Planner node output schema is Zod-validated and includes a
+      profile_metadata field recording: profile_used (boolean), model_id (string),
+      confidence_level (enum), weak_patterns_injected (number), escalation_preassigned
+      (number). This field is optional/defaulted to allow existing code path to remain valid."
+    verdict: PARTIAL
+    notes: >
+      DiffPlannerOutputSchema is Zod-validated (z.literal(1) versioning per plan.ts pattern).
+      profile_metadata is nullable (ProfileMetadataSchema.nullable()) which achieves the
+      optional/defaulted goal. All required fields are present EXCEPT: AC-6 specifies
+      escalation_preassigned as a NUMBER (count), but the implementation uses
+      escalation_preassigned as a BOOLEAN (true/false) plus a separate escalation_count
+      field. The field is present but its type deviates from the AC spec. Additionally,
+      confidence_level is implemented as z.number().nullable() rather than an enum —
+      a more precise representation but deviates from the spec wording 'enum'.
+    evidence:
+      - file: packages/backend/orchestrator/src/artifacts/diff-planner-output.ts
+        excerpt: |
+          export const ProfileMetadataSchema = z.object({
+            profile_used: z.boolean(),
+            model_id: z.string().min(1),
+            confidence_level: z.number().min(0).max(1).nullable(),
+            weak_patterns_injected: z.number().int().min(0),
+            strong_patterns_injected: z.number().int().min(0),
+            escalation_preassigned: z.boolean(),        // AC-6 specifies this as number
+            escalation_count: z.number().int().min(0),  // added field not in AC-6 spec
+          })
+        description: "ProfileMetadataSchema — escalation_preassigned is boolean not number;
+          extra escalation_count field captures the count intent. Deviation from AC-6 spec."
+      - file: packages/backend/orchestrator/src/artifacts/diff-planner-output.ts
+        excerpt: |
+          export const DiffPlannerOutputSchema = z.object({
+            schema: z.literal(1),
+            story_id: z.string().min(1),
+            produced_at: z.string().datetime(),
+            change_specs: z.array(PlaceholderChangeSpecSchema),
+            affinity_prompt_fragment: z.string(),
+            profile_metadata: ProfileMetadataSchema.nullable(),
+            success: z.boolean(),
+            error: z.string().optional(),
+          })
+        description: "Top-level schema Zod-validated with z.literal(1) versioning. profile_metadata
+          is nullable, satisfying the 'optional/defaulted' requirement."
+
+  - id: AC-7
+    text: "Unit tests cover: (a) populated profile happy path, (b) cold-start fallback,
+      (c) DB error fallback, (d) weak pattern pre-assignment, (e) confidence gate rejection,
+      (f) prompt injection volume gate, (g) mixed-strength escalation assignment,
+      (h) schema regression against all 4 ChangeSpec variants. All tests pass."
+    verdict: PARTIAL
+    notes: >
+      20 tests across 14 describe blocks (HP-1..5, EC-1..5, ED-1..4). Coverage for
+      (a) HP-5/assembleAffinityContext, (b) EC-2/cold-start null, (c) EC-1/DB error,
+      (d) HP-3/annotateEscalations, (e) ED-1/confidence boundary, (f) ED-2/cap at
+      MAX_WEAK_PATTERNS_INJECTED, (g) HP-3 mixed (strong no-escalate + weak escalate)
+      — all present. However (h) schema regression against the specific 4 ChangeSpec
+      variants named in the story (file_change, migration_change, config_change,
+      test_change) is not explicitly tested. Tests use 'schema_migration' and
+      'api_refactor' as change_type values, which do not match the 4 named variants from
+      the story's PlaceholderChangeSpecSchema design. The PlaceholderChangeSpecSchema in
+      the implementation uses z.string().min(1) for change_type (not an enum), so the
+      4-variant regression test is not mechanically enforceable, but the scenario is
+      absent regardless. Commit claims 20/20 tests passing.
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/__tests__/diff-planner.test.ts
+        excerpt: |
+          describe('HP-3: Escalation pre-assignment for weak change type', () => {
+            it('annotates change specs with escalation_model when success_rate < WEAKNESS_THRESHOLD', ...)
+            it('does not annotate specs when success_rate >= WEAKNESS_THRESHOLD', ...)
+          })
+          describe('ED-2: Weak patterns injection cap', () => {
+            it('injects at most MAX_WEAK_PATTERNS_INJECTED weak patterns', ...)
+          })
+          describe('EC-1: DB error returns null from queryAffinityProfile', () => {
+            it('returns null when db.query throws', ...)
+            it('logs a warning when DB query throws', ...)
+          })
+        description: "Representative test coverage for DB error, escalation, and cap scenarios."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/__tests__/diff-planner.test.ts
+        excerpt: |
+          // No test describe block for 'all 4 ChangeSpec variants'
+          // change_type values used: 'schema_migration', 'api_refactor'
+          // Story requires: 'file_change', 'migration_change', 'config_change', 'test_change'
+        description: "AC-7(h) schema regression against 4 named ChangeSpec variants not present."
+
+  - id: AC-8
+    text: "The node does not modify wint.model_affinity — it is read-only from this node."
+    verdict: PASS
+    notes: >
+      Only SELECT statements are issued against wint.model_affinity. No INSERT, UPDATE,
+      or DELETE SQL is present anywhere in the implementation. The affinity-query module
+      JSDoc explicitly states 'Read-only; never writes'. The query functions return data
+      and never issue mutation queries.
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts
+        excerpt: |
+          /**
+           * Queries the wint.model_affinity table to load affinity profiles
+           * for a given (model_id, change_type) pair. Read-only; never writes.
+           */
+        description: "JSDoc explicitly documents read-only contract."
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts
+        excerpt: |
+          const sql = `
+            SELECT
+              ${COL_MODEL_ID},
+              ${COL_CHANGE_TYPE},
+              ...
+            FROM ${DB_FULL_TABLE}
+            WHERE ${COL_MODEL_ID} = $1
+          `
+        description: "All SQL in the file is SELECT-only. No INSERT/UPDATE/DELETE present."
+
+  - id: AC-9
+    text: "The Diff Planner node config schema includes an ESCALATION_MODEL_DEFAULT constant
+      (default claude-sonnet-4-6) that specifies the model ID used for escalation_model
+      annotations. This constant is configurable and referenced in ST-1's config schema
+      alongside AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD, and MAX_WEAK_PATTERNS_INJECTED."
+    verdict: PASS
+    notes: >
+      ESCALATION_MODEL_DEFAULT is defined as 'claude-sonnet-4-6' in __types__/index.ts.
+      DiffPlannerConfigSchema includes escalationModelDefault field with this default.
+      All four constants (AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD,
+      MAX_WEAK_PATTERNS_INJECTED, ESCALATION_MODEL_DEFAULT) are exported from
+      __types__/index.ts and referenced in the config schema as Zod fields with
+      .default() wiring.
+    evidence:
+      - file: packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts
+        excerpt: |
+          export const AFFINITY_CONFIDENCE_MIN = 0.5
+          export const WEAKNESS_THRESHOLD = 0.6
+          export const MAX_WEAK_PATTERNS_INJECTED = 5
+          export const MAX_STRONG_PATTERNS_INJECTED = 3
+          export const ESCALATION_MODEL_DEFAULT = 'claude-sonnet-4-6'
+
+          export const DiffPlannerConfigSchema = z.object({
+            affinityConfidenceMin: z.number().min(0).max(1).default(AFFINITY_CONFIDENCE_MIN),
+            weaknessThreshold: z.number().min(0).max(1).default(WEAKNESS_THRESHOLD),
+            maxWeakPatternsInjected: z.number().int().positive().default(MAX_WEAK_PATTERNS_INJECTED),
+            maxStrongPatternsInjected: z.number().int().positive().default(MAX_STRONG_PATTERNS_INJECTED),
+            escalationModelDefault: z.string().min(1).default(ESCALATION_MODEL_DEFAULT),
+          })
+        description: "All 4 required constants present plus escalationModelDefault. All wired
+          into DiffPlannerConfigSchema with .default() making them configurable."
+
+# ============================================================================
+# Code Quality Evidence
+# ============================================================================
+
+code_quality:
+
+  zod_first_types:
+    verdict: PASS
+    notes: >
+      All data types defined via Zod schemas with z.infer<> for TypeScript types.
+      No TypeScript interfaces used for data shapes. DbClient and DbQueryResult use
+      TypeScript interfaces only as structural injection contracts (not data types),
+      which is acceptable under project guidelines.
+    samples:
+      - "AffinityProfileSchema = z.object({ ... }); type AffinityProfile = z.infer<typeof AffinityProfileSchema>"
+      - "DiffPlannerConfigSchema = z.object({ ... }); type DiffPlannerConfig = z.infer<typeof DiffPlannerConfigSchema>"
+      - "DiffPlannerOutputSchema = z.object({ schema: z.literal(1), ... })"
+      - "ProfileMetadataSchema = z.object({ ... })"
+
+  logger_usage:
+    verdict: PASS
+    notes: >
+      All logging uses @repo/logger. No console.log, console.warn, or console.error
+      present in any implementation file. logger.warn used for DB errors and parse
+      failures. logger.info used for affinity load and completion events.
+    samples:
+      - "import { logger } from '@repo/logger'  // affinity-query.ts"
+      - "import { logger } from '@repo/logger'  // index.ts"
+      - "logger.warn('diff-planner:affinity-query', { event: 'db_error', ... })"
+      - "logger.info('diff-planner', { event: 'complete', ... })"
+
+  no_semicolons:
+    verdict: PASS
+    notes: "All files follow the project no-semicolons Prettier style."
+
+  parameterized_sql:
+    verdict: PASS
+    notes: >
+      All SQL queries use parameterized placeholders ($1, $2) and pass parameters
+      via the params array argument to db.query. No string interpolation of user
+      data into SQL.
+    samples:
+      - "db.query(sql, [modelId, changeType])  // queryAffinityProfile"
+      - "db.query(sql, [modelId])              // queryAffinityProfilesByModel"
+
+  schema_versioning:
+    verdict: PASS
+    notes: "DiffPlannerOutputSchema uses z.literal(1) per the plan.ts artifact versioning pattern."
+    sample: "schema: z.literal(1)"
+
+  no_barrel_files:
+    verdict: PASS
+    notes: "Imports use direct file paths. No re-export barrel index.ts files introduced."
+
+  placeholder_change_spec:
+    verdict: PASS
+    notes: >
+      PlaceholderChangeSpecSchema implemented with TODO comments referencing APIP-1020.
+      change_type uses z.string().min(1) rather than a strict enum — consistent with the
+      story's intent of 'placeholder until ADR-002 is published'. Test fixtures carry
+      TODO comments per AC-7 requirement.
+    sample: |
+      // TODO: Replace with full ChangeSpec schema from APIP-1020 when available.
+      export const PlaceholderChangeSpecSchema = z.object({
+        id: z.string().min(1),
+        change_type: z.string().min(1),
+        ...
+      })
+
+# ============================================================================
+# Test Count Summary
+# ============================================================================
+
+test_coverage:
+  total_describe_blocks: 14
+  total_it_blocks: 20
+  commit_claim: "20/20 tests passing"
+  test_file: packages/backend/orchestrator/src/nodes/diff-planner/__tests__/diff-planner.test.ts
+  scenarios_covered:
+    - "HP-1: Weak patterns injected into prompt (CAUTION label)"
+    - "HP-2: Strong patterns injected into prompt (STRENGTH label)"
+    - "HP-3: Escalation pre-assigned for weak change type (2 cases)"
+    - "HP-4: queryAffinityProfile returns valid parsed profile"
+    - "HP-5: assembleAffinityContext produces valid profile_metadata"
+    - "EC-1: DB error → null returned + logger.warn called (2 cases)"
+    - "EC-2: Cold-start (no rows) → null returned"
+    - "EC-3: Zod parse failure → null + logger.warn (2 cases)"
+    - "EC-4: queryAffinityProfilesByModel returns [] on DB error"
+    - "EC-5: createFallbackOutput passes DiffPlannerOutputSchema (2 cases)"
+    - "ED-1: Confidence threshold boundary (exact and below) (2 cases)"
+    - "ED-2: Weak patterns capped at MAX_WEAK_PATTERNS_INJECTED"
+    - "ED-3: Strong patterns capped at MAX_STRONG_PATTERNS_INJECTED"
+    - "ED-4: Empty profiles produce no-op output (2 cases)"
+  scenarios_missing:
+    - "AC-7(h): Schema regression against the 4 specific ChangeSpec variants
+      (file_change, migration_change, config_change, test_change) — no dedicated test"
+
+  e2e_exemption:
+    applicable: true
+    reason: "frontend_impacted: false per story frontmatter (ADR-006 E2E skip condition)"

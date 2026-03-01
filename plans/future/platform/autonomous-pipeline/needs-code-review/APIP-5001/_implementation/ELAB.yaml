@@ -1,0 +1,268 @@
+schema: 1
+story_id: "APIP-5001"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      The stories.index.md title is "Test Database Setup and Migration Testing" which is
+      slightly broader than the actual scope, but the story body correctly narrows to
+      LangGraph checkpoint DB only. The story includes an explicit scope correction note
+      explaining why BullMQ/Redis (ADR-001 Decision 1) eliminated the PostgreSQL work
+      queue and why "work queue schema testing" is no longer part of this story. The
+      frontmatter, story.yaml feature field, and APIP-5001.md Goal/Scope sections are
+      mutually consistent: a Docker Compose test DB, numbered SQL migrations, a test DB
+      client module, vitest config with setupFiles, schema unit tests, integration test,
+      and README. Exactly 12 files listed in Scope section. No extra endpoints, packages,
+      or UI introduced. The index title mismatch is a cosmetic documentation artifact
+      from before ADR-001 was applied — not a story gap.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals (schema unit tests, integration test fixture lifecycle, test DB client for
+      downstream stories) map directly to AC-1 through AC-9 without gaps or overlaps.
+      Non-goals (BullMQ/Redis queue, production migration strategy, dedicated server
+      deployment, LangGraph graph logic, @repo/db modification, retention/cleanup,
+      Playwright E2E) each name the specific future story that owns that concern.
+      No AC contradicts a Non-goal. Test plan (HP-1 through HP-6, EC-1 through EC-3,
+      ED-1 through ED-3, MC-1 through MC-2) covers all 9 ACs with explicit setup/action/
+      expected/evidence fields. AC-9 explicitly gates on pnpm test and pnpm check-types
+      both passing — consistent with the test plan strategy of unit+integration.
+      Architecture Notes (pool isolation, port allocation, setup() discovery, provisional
+      runner) do not conflict with any AC.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Six canonical references explicitly cited with absolute file paths and rationale
+      in the Reuse Plan table: (1) apps/api/knowledge-base/src/test/setup.ts for env var
+      injection pattern; (2) apps/api/knowledge-base/vitest.config.ts for fileParallelism,
+      testTimeout, setupFiles; (3) apps/api/knowledge-base/src/db/client.ts for isolated
+      Pool + testConnection() + error sanitization; (4) packages/backend/database-schema/
+      src/schema/__tests__/wint-schema.test.ts for Drizzle/Zod schema unit tests without
+      live DB; (5) apps/api/knowledge-base/src/db/migrations/ for numbered SQL file naming
+      convention; (6) infra/compose.lego-app.yaml for healthcheck, named volume, restart
+      policy. All six reference files were verified to exist in the monorepo. The
+      per-subtask files_to_read fields in dev-feasibility.yaml reinforce the reuse
+      mandate at implementation time. No new patterns invented when existing ones suffice.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Infrastructure-only story. No HTTP handlers, no MCP tools, no endpoints introduced.
+      The pool isolation requirement (standalone Pool, NOT @repo/db) is architecturally
+      correct and prevents the pipeline DB client from becoming a transport-layer concern
+      leaked into the core DB client. The testConnection() helper is a pure async
+      function returning { success: boolean; error?: string } — no transport coupling.
+      N/A for handler/adapter separation; PASS on the isolation enforcement direction.
+
+  - id: testability
+    status: PASS
+    note: >
+      Two-tier test strategy is correct and complete. Tier 1 (schema unit tests, HP-1,
+      AC-6): no live DB required — pure Drizzle/Zod schema validation executable in any
+      environment including CI without Docker. Tier 2 (integration tests, HP-3 through
+      HP-5, AC-7): requires Docker Compose test DB container, correctly noted as a CI
+      prerequisite. Error cases EC-1 (bad credentials) and EC-2 (invalid SQL) are
+      explicitly defined with expected error handling behavior. Edge case ED-1 verifies
+      pool isolation via static analysis, not a runtime assertion — appropriate for an
+      architectural invariant. ED-3 (check-types) is an important quality gate for infra
+      stories that produce TypeScript. Coverage threshold waiver for infra/config content
+      is correctly noted with rationale. Manual cases MC-1 and MC-2 are concrete and
+      verifiable. The skip/describe guard on integration tests when PIPELINE_DB_HOST is
+      unset (ST-8 goal) is a clean CI-safety mechanism.
+
+  - id: decision_completeness
+    status: CONDITIONAL
+    note: >
+      Most design decisions are resolved: port 5434, isolated Pool max:3, numbered SQL
+      convention, provisional runner, fileParallelism: false, Docker Compose pattern
+      (not testcontainers). One CONDITIONAL remains: the APIP-0010 dependency may be
+      spurious. ADR-001 Decision 1 eliminated the PostgreSQL work queue; APIP-0010 now
+      covers BullMQ/Redis setup. The LangGraph checkpoint schema is fully independent
+      of BullMQ — APIP-5001 has no code that touches APIP-0010 deliverables. The
+      dev-feasibility.yaml raises this concern ("The actual dependency may be on
+      APIP-0020 or may have no meaningful dependency") but it is not resolved at the
+      story level. The dependency should be confirmed or removed before implementation
+      begins. If removed, APIP-5001 becomes unblocked (no dependencies) and can start
+      immediately alongside APIP-0010. This is a CONDITIONAL, not a blocker: the
+      implementation work is fully specified regardless of the dependency decision.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Five substantive risks documented with mitigations: (1) @langchain/langgraph-
+      checkpoint-postgres setup() method — mitigation is inspect before writing SQL,
+      wrap if available; (2) port 5434 availability — mitigation is compose file
+      adjustment; (3) Docker daemon in CI — mitigation is confirm CI environment;
+      (4) APIP-5007 superseding provisional runner — mitigation is design as
+      explicitly throwaway, documented in README; (5) fileParallelism: false for
+      shared test DB — mitigation is enforce in vitest.config.ts. One minor disclosure
+      gap: the infra/langgraph-server/ directory does not currently exist (confirmed
+      via filesystem check) but the story only notes this as a Reality Baseline item
+      without a migration guard. ST-7 says "create or append to APIP-5006 compose
+      file" — since APIP-5006's compose file is compose.langgraph-server.yaml (a
+      different file from compose.test-db.yaml), the developer must first create the
+      infra/langgraph-server/ directory. This is an implementation note, not a
+      blocking risk. Overall risk disclosure is thorough for a Phase 0 infra story.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      9 ACs exceeds the 8-AC threshold; split_risk: 0.7 is elevated (the highest
+      value observed in Phase 0 elaborated stories). However, analysis shows strong
+      cohesion: all 9 ACs are sequential steps in a single infrastructure setup
+      journey (compose service → migration SQL → migration runner → DB client →
+      vitest config → schema unit tests → integration test → docs → quality gate).
+      Each AC cannot be shipped in isolation — they form a single deployable unit.
+      No independent features bundled. Single package touched (apps/api/pipeline/).
+      No frontend/backend split. 9 subtasks form a linear-to-fan-in DAG (ST-1 → ST-2,
+      ST-3, ST-4, ST-7 → ST-5, ST-6 → ST-8 → ST-9) with clear dependency structure.
+      The 9th AC (AC-9) is a quality gate, not a distinct deliverable. A split would
+      produce two incomplete halves — neither could be QA-verified independently.
+      WARN rather than SPLIT_REQUIRED; reviewer should confirm cohesion argument holds
+      before implementation begins.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      9 subtasks with full AC coverage (verified in story: AC-1 through AC-9, all
+      covered, no gaps). Each subtask has: a goal, files_to_read (reuse anchors),
+      files_to_modify (bounded scope), AC references, dependency declarations,
+      verification command, and estimated token count. The DAG is valid with no
+      cycles: ST-1 as root; ST-2, ST-3, ST-4, ST-7 depend on ST-1; ST-5 depends on
+      ST-4; ST-6 depends on ST-3; ST-8 depends on ST-3, ST-5, ST-6, ST-7; ST-9
+      depends on ST-6, ST-7. Maximum 2 files modified per subtask (ST-6 and ST-7
+      each modify 2 files: source file + package.json scripts; all others touch 1).
+      Token estimates sum to 62,000 — within the 150,000 budget estimate in frontmatter.
+      Canonical reference citations are present in each files_to_read section.
+
+gaps:
+  - id: GAP-1
+    severity: minor
+    title: "infra/langgraph-server/ directory does not exist — ST-7 needs mkdir guard"
+    description: >
+      Filesystem verification confirms infra/langgraph-server/ does not currently exist
+      in the monorepo. ST-7 in dev-feasibility.yaml says "create or append to APIP-5006
+      compose file if it exists," but APIP-5006 will produce compose.langgraph-server.yaml
+      (its own distinct file) — not compose.test-db.yaml. So ST-7 will always need to
+      create compose.test-db.yaml as a new standalone file AND create the directory first.
+      The ambiguity ("or append") could lead to an implementer wasting time searching for
+      a file to append to. Additionally, pnpm db:test:start references an absolute compose
+      file path (infra/langgraph-server/compose.test-db.yaml) that will fail if the
+      directory was not created.
+    recommendation: >
+      Add explicit "mkdir -p infra/langgraph-server/" as the first step in ST-7's
+      verification. Clarify in ST-7 goal: "Create directory infra/langgraph-server/ if
+      it does not exist, then create compose.test-db.yaml as a standalone file."
+      Remove the "or append to APIP-5006 compose file" ambiguity since the two compose
+      files serve different purposes (server infrastructure vs. test DB).
+    blocking: false
+    auto_resolvable: true
+    resolution: >
+      This gap does not block implementation start. The implementer will naturally discover
+      that the directory must be created. Noting here so the implementation agent adds
+      the mkdir step explicitly rather than discovering it mid-task.
+    decision: log_to_kb
+    kb_entry_id: "4896df01-c013-4952-9b00-bde77e8dca6c"
+    decided_at: "2026-02-25T23:29:51Z"
+
+opportunities:
+  - id: OPP-1
+    title: "APIP-0010 dependency is likely spurious — removing it unblocks APIP-5001"
+    description: >
+      The formal dependency on APIP-0010 ("BullMQ Work Queue Setup") appears to be a
+      legacy artifact from before ADR-001 Decision 1 replaced the PostgreSQL work queue
+      with BullMQ/Redis. APIP-5001's entire scope is LangGraph checkpoint PostgreSQL DB
+      setup — there is no code path, schema reference, or package dependency linking
+      APIP-5001 to APIP-0010. The @langchain/langgraph-checkpoint-postgres package
+      defines the checkpoint schema independently of any work queue. If the dependency
+      is removed, APIP-5001 becomes a zero-dependency story, immediately startable.
+      This would allow checkpoint DB setup to proceed in parallel with APIP-0010,
+      shortening Phase 0 critical path by potentially one sprint.
+    blocking: false
+    suggested_story: "APIP-0010 (verify dependency is spurious and remove from story frontmatter)"
+    decision: "log_to_kb"
+    kb_entry_id: "4896df01-c013-4952-9b00-bde77e8dca6c"
+    decided_at: "2026-02-25T23:30:00Z"
+
+  - id: OPP-2
+    title: "Add .env.example for PIPELINE_DB_* credentials to accelerate future onboarding"
+    description: >
+      The story correctly avoids hardcoding secrets and documents env var names in AC-4,
+      AC-5, and README. An apps/api/pipeline/.env.example listing PIPELINE_DB_HOST,
+      PIPELINE_DB_PORT, PIPELINE_DB_NAME, PIPELINE_DB_USER, PIPELINE_DB_PASSWORD with
+      placeholder values (mirroring the test container credentials from compose.test-db.yaml)
+      would: (1) accelerate developer onboarding for any downstream story that adds
+      pipeline DB integration; (2) match the pattern already established by
+      apps/api/knowledge-base/.env.example (canonical reference). No secrets stored —
+      only variable names and test-safe placeholder values. This is a 5-minute addition
+      to ST-9 (README), or a separate ST-10 if desired.
+    blocking: false
+    suggested_story: "Add as optional subtask within APIP-5001 (ST-9 extension) or as part of APIP-5004 secrets engine story"
+    decision: "log_to_kb"
+    kb_entry_id: "4896df01-c013-4952-9b00-bde77e8dca6c"
+    decided_at: "2026-02-25T23:30:08Z"
+
+  - id: OPP-3
+    title: "AC-9 quality gate could explicitly name the turbo filter for pipeline package"
+    description: >
+      AC-9 says "pnpm test passes" and "pnpm check-types passes" but does not specify
+      the turbo/pnpm workspace filter to use. Since apps/api/pipeline does not exist yet,
+      there is no established filter name. The dev-feasibility subtasks use both
+      "--filter @repo/pipeline" and "--filter pipeline" inconsistently (ST-1 uses
+      "@repo/pipeline", ST-6 uses "pipeline" without the @repo/ scope). The package
+      name should be canonicalized in AC-9 to avoid confusion. The canonical pattern
+      from apps/api/knowledge-base/package.json uses the name "knowledge-base" (not
+      "@repo/knowledge-base"), suggesting the pipeline package should use "pipeline"
+      or "autonomous-pipeline" to avoid namespace collision. This is a minor polish
+      item, not a blocker.
+    blocking: false
+    suggested_story: "Resolve during ST-1 package scaffolding; document canonical name in AC-9"
+    decision: "log_to_kb"
+    kb_entry_id: "4896df01-c013-4952-9b00-bde77e8dca6c"
+    decided_at: "2026-02-25T23:30:14Z"
+
+split_recommendation: null
+# 9 ACs exceed threshold and split_risk is 0.7 (elevated), but all ACs form a single
+# indivisible infrastructure setup journey. No AC can be QA-verified in isolation.
+# Split is not warranted at this time. Reviewer should confirm before implementation.
+
+preliminary_verdict: CONDITIONAL_PASS
+# The story is thoroughly elaborated with complete ACs, full test plan, canonical
+# reference citations, architecture notes, and subtask decomposition. One CONDITIONAL
+# flag on decision_completeness (spurious APIP-0010 dependency) requires reviewer
+# confirmation before implementation begins — but does not block the implementation
+# work itself. Story sizing WARN at 9 ACs / split_risk 0.7 is noted but cohesion
+# argument is strong (single sequential infrastructure journey, no independent bundles).
+# One minor gap (GAP-1: infra directory creation) is auto-resolvable during ST-7.
+#
+# CONDITIONAL items before implementation:
+#   1. decision_completeness: Confirm whether APIP-0010 dependency is spurious.
+#      If yes, remove dependency and start APIP-5001 immediately (no blocking dep).
+#      If no (some undocumented contract exists), document the specific reason.
+#   2. story_sizing: Reviewer confirms the 9-AC cohesion argument holds and split
+#      is not required.
+#
+# Neither condition prevents implementation from being scoped or started.
+
+verdict: CONDITIONAL_PASS
+# Autonomous decision rationale:
+#   - No MVP-critical gaps found. GAP-1 (infra/langgraph-server/ directory) is minor and
+#     auto-resolvable during ST-7; logged to KB, no AC added.
+#   - OPP-1 (spurious APIP-0010 dependency): logged to KB; reviewer should confirm before
+#     implementation begins, but does not block implementation work itself.
+#   - OPP-2 (.env.example): logged to KB for future reference; out of scope for this story.
+#   - OPP-3 (package name canonicalization): logged to KB; resolve during ST-1 scaffolding.
+#   - CONDITIONAL items (dependency confirmation, sizing confirmation) are reviewer-level
+#     items, not implementation blockers. Implementation is fully specified regardless.
+decided_at: "2026-02-25T23:30:14Z"
+
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0

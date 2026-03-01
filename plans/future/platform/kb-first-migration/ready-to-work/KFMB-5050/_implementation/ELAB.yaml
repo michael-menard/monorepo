@@ -1,0 +1,224 @@
+schema: 1
+story_id: "KFMB-5050"
+timestamp: "2026-02-26T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches the stated goal precisely. The 6 agent files and 1 shared doc listed in
+      scope align exactly with the ACs and subtasks. Non-goals are explicit and well-bounded:
+      PM writer agents (KFMB-5040), _implementation/ readers (KFMB-5020), command orchestrators
+      (KFMB-5030), gap/fanout/readiness artifact migration (deferred correctly since KFMB-5040 does
+      not cover story-attack-agent, readiness-score-agent, or story-fanout-* writers), and dead code
+      removal (KFMB-6020). The story correctly identifies that story-synthesize-agent reads GAPS-RANKED,
+      ATTACK, and READINESS from _pm/ but scopes only the story_seed read to this story — consistent
+      with the non-goal boundary. No TypeScript, database migrations, or npm changes. Scope is tight
+      and coherent.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      All 12 ACs are covered by subtasks. AC coverage per subtask is explicit (ST-2: AC-1,2,8;
+      ST-3: AC-3,8,10; ST-4: AC-4,8,10; ST-5: AC-5,6,8,9; ST-6: AC-7; ST-7: AC-11; ST-8: AC-12).
+      ST-1 covers pre-conditions for AC-9 and AC-10 via audit. Dependency graph is internally
+      consistent: ST-2 must precede ST-3/ST-4 (pm_artifacts block removal makes the source of truth
+      KB, not story.yaml); ST-5 must precede ST-6 (interface change before callers update); ST-8
+      depends on ST-6 (smoke test after all callers migrated). Minor observation: ST-7 depends on
+      ST-1 only (documentation table update is independent of agent migrations) — this is correct
+      and allows ST-7 to parallelize with ST-2 through ST-6. The test plan's structural checks
+      (ED-1, ED-4, ED-5) are verifiable without KFMB-5040 complete; integration tests correctly
+      gated on KFMB-5040. Token estimate total across subtasks (40,000) is materially lower than
+      the story-level estimate (150,000) — story estimate likely factors in context loading, not
+      just edit operations, and the discrepancy is not a blocking concern.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      Story explicitly calls out three canonical reuse targets: (1) dev-execute-leader.agent.md
+      Promise.all parallel read pattern for pm-story-generation-leader; (2) qa-verify-verification-leader
+      null-check precondition pattern; (3) _shared/kb-integration.md Artifact Type Reference table
+      as the authoritative mapping to extend. All are confirmed to exist and are actively used.
+      dev-execute-leader.agent.md confirmed to have the exact Promise.all([kb_read_artifact(...)])
+      pattern at lines 38-42. No new packages required — kb_read_artifact is a pre-existing MCP
+      tool. No new agents, no new schemas. The analogous KFMB-5020 migration is cited as the
+      direct template pattern. Reuse-first is thoroughly addressed.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      This story touches only agent markdown files (no TypeScript, no backend services, no API
+      contracts, no DB schemas). The ports & adapters boundary is the MCP tool interface
+      (kb_read_artifact), which is pre-existing. No new architectural boundaries are introduced.
+      The interface change for story-synthesize-agent and pm-story-risk-predictor
+      (story_seed_path → story_id) is an internal agent contract change — its blast radius is
+      limited to two explicit callers (pm-story-generation-leader, pm-story-adhoc-leader) both
+      identified in scope. The story correctly identifies this as a cross-agent interface change
+      requiring atomic caller updates. The _shared/cross-domain-protocol.md references
+      pm_artifacts.dev_feasibility — this file is NOT in story scope but was found in the audit
+      and represents a non-blocking undocumented consumer (see opportunities).
+
+  - id: testability
+    status: PASS
+    note: >
+      The structural verification tests (ED-1: grep check, ED-4: frontmatter inspection, ED-5:
+      table row count) are fully runnable without KFMB-5040 and provide strong deterministic
+      signal. The smoke tests (HP-1 through HP-5) are explicitly gated on KFMB-5040 completion
+      and the dependency is stated clearly. Error cases EC-1 through EC-3 are defined with
+      explicit expected behavior. AC-12 smoke test is codified as ST-8. Per ADR-005/ADR-006,
+      story is correctly classified as tech_debt/infra/agents and exempt from E2E browser tests.
+      Test plan is adequate for the change surface.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      Two decisions are left implicit that should be explicit:
+      (1) The null/missing artifact behavior for pm-story-fix-leader and architect-story-review
+      is not specified. story-synthesize-agent (EC-2: STOP) and pm-story-risk-predictor (EC-3:
+      fallback predictions) have explicit error behavior defined. But AC-3 and AC-4 do not state
+      what pm-story-fix-leader and architect-story-review should do when kb_read_artifact returns
+      null (WARN and continue? STOP? attempt filesystem fallback?). The story defines EC-1 for
+      pm-story-generation-leader only. This ambiguity leaves implementers to infer behavior.
+      (2) The _shared/cross-domain-protocol.md file references pm_artifacts.dev_feasibility
+      (confirmed at line 47). This is a consumer outside the 6 scoped agent files. The story's
+      ST-1 audit task should discover it, but no AC addresses updating cross-domain-protocol.md.
+      The story notes pm_artifacts removal is "a breaking change with potentially undiscovered
+      consumers" in dev_feasibility but does not have an explicit AC requiring cross-domain-protocol.md
+      to be updated. These are WARN-level gaps, not blocking if the implementer follows the
+      null-check pattern already established in the codebase and if ST-1 audit surfacing the
+      cross-domain-protocol consumer triggers an out-of-scope deferral decision.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      The story discloses the two primary risks accurately: (1) pm_artifacts removal is a breaking
+      change with potentially undiscovered consumers — mitigated by mandatory pre-implementation
+      grep audit (ST-1); (2) interface change for story-synthesize-agent and pm-story-risk-predictor
+      requires atomic caller updates — mitigated by scoping both callers explicitly. The story also
+      correctly captures that all smoke tests require KFMB-5040 completion. The dependency chain
+      KFMB-1030 → KFMB-2040 → KFMB-5040 → KFMB-5050 is documented. Additional undiscovered
+      risk: story-synthesize-agent also reads GAPS-RANKED, ATTACK, and READINESS from _pm/ (not
+      covered by KFMB-5040 writers) — the story's non-goals correctly defer this but the partial
+      migration creates a mixed-mode agent state (reads story_seed from KB, reads other artifacts
+      from _pm/). This is disclosed via the non-goal clause referencing KFMB-5040 scope boundaries.
+      Overall risk disclosure is adequate.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      3 story points for 6 agent markdown file modifications and 1 doc update with no code changes
+      is well-calibrated. The 8 subtasks cover the work surface without over-decomposing. Subtask
+      token estimates total 40,000 against a 150,000 story-level estimate — the gap is explained
+      by context loading overhead per session (reading all agent files + reference docs before edits).
+      Split risk is declared at 0.5 (medium), which is reasonable given the cross-agent interface
+      change and the breadth of 6 files. The story-level confidence is "low" due to the analogous
+      KFMB-5020 migration not yet being complete, which is an honest assessment. No SPLIT_REQUIRED
+      condition is triggered: all subtasks share a single coherent goal (PM reader migration), no
+      independent releasable unit emerges from splitting, and the 12 ACs form a coupled atomic
+      change set (pm_artifacts removal is only safe once all consumers are migrated).
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      8 subtasks are well-ordered and correctly cover all ACs. ST-1 as a read-only audit before
+      any modifications is an industry-standard safe practice for breaking-change migrations.
+      Each subtask has explicit files-to-modify, ACs covered, depends-on, and verification grep
+      commands. The parallel execution opportunity between ST-3/ST-4 (both depend only on ST-2)
+      and ST-5/ST-7 (both depend only on ST-1 or ST-1) is achievable. One minor issue: ST-3 is
+      listed as depending on ST-2, but pm-story-fix-leader reads pm_artifacts embedded in story.yaml
+      frontmatter (not _pm/ files directly) — so technically ST-3 does not depend on ST-2 completing.
+      However, sequencing ST-3 after ST-2 is defensible to ensure the pm_artifacts write removal is
+      confirmed first (so fix-leader is never caught reading a block that no longer exists). This
+      conservative dependency is acceptable and not a defect. ST-8 (smoke test) correctly deferred
+      to after ST-6 (all callers updated).
+
+gaps:
+  - id: GAP-1
+    severity: low
+    title: "Null artifact behavior undefined for pm-story-fix-leader and architect-story-review"
+    description: >
+      AC-3 and AC-4 specify that pm-story-fix-leader and architect-story-review should read via
+      kb_read_artifact, but no AC or error case defines the expected behavior when the artifact
+      is not found (kb_read_artifact returns null). By contrast, EC-1 covers pm-story-generation-leader
+      (WARN + no filesystem fallback), EC-2 covers story-synthesize-agent (STOP signal), and EC-3
+      covers pm-story-risk-predictor (fallback predictions). The implementer must infer the null
+      behavior for the fix-leader and architect-review agents. Given the null-check pattern from
+      qa-verify-verification-leader is the canonical reference, WARN-and-continue is implied but
+      should be stated explicitly for these two agents.
+    blocking: false
+    decision: log_to_kb
+    decision_rationale: >
+      Low severity and non-blocking. The canonical null-check pattern from qa-verify-verification-leader
+      implies WARN-and-continue. No AC addition required — implementer guidance is sufficient.
+    implementer_guidance: >
+      For pm-story-fix-leader and architect-story-review: when kb_read_artifact returns null,
+      log a WARN ("PM artifact {type} not found in KB for {story_id}") and continue with reduced
+      context. Do NOT STOP or attempt a filesystem fallback. Follow the qa-verify-verification-leader
+      null-check pattern as the canonical reference.
+    kb_entry_id: "kb_write_artifact_unavailable"
+    recommendation: >
+      Add EC-4 and EC-5 to the Test Plan section specifying null artifact behavior for
+      pm-story-fix-leader and architect-story-review respectively. Expected behavior:
+      WARN log ("PM artifact {type} not found in KB for {story_id}") + continue story fix
+      with reduced context. This does not require new ACs — it is implementer guidance.
+
+opportunities:
+  - id: OPP-1
+    title: "cross-domain-protocol.md references pm_artifacts.dev_feasibility — undocumented consumer"
+    description: >
+      .claude/agents/_shared/cross-domain-protocol.md line 47 contains:
+      dev_feasibility: "{story_dir}/pm_artifacts.dev_feasibility"
+      This is a consumer of the pm_artifacts embedding that is not listed in the story scope.
+      ST-1 (pre-migration grep audit) will discover this. If the protocol document is merely
+      documenting the old pattern (not actively read by agents), it should be updated alongside
+      the migration. If it is actively used as an input reference by agents that read it (like
+      architect-story-review which explicitly includes cross-domain-protocol.md in its shared:
+      files... wait, it does not), then it is a latent consumer risk.
+      Recommendation: When ST-1 audit runs, explicitly check _shared/cross-domain-protocol.md
+      and include updating it in ST-4 (architect-story-review migration, which is the primary
+      consumer of dev_feasibility cross-domain) or as an addendum to ST-7.
+    decision: log_to_kb
+    kb_entry_id: "kb_write_artifact_unavailable"
+  - id: OPP-2
+    title: "pm-story-fix-leader Output Summary references pm_artifacts.test_plan write — should update to KB"
+    description: >
+      pm-story-fix-leader Phase 3 and Phase 5 contain instructions to update pm_artifacts.test_plan
+      and pm_artifacts.uiux_notes in story.yaml (not just read them). After this migration,
+      these write-back paths will also be broken. The story scopes reads only (AC-3 covers reads),
+      but the write-back in Phase 5 ("Update pm_artifacts.test_plan in story.yaml") is not addressed.
+      This could be deferred to a follow-on story but warrants a non-goal clarification.
+      Recommendation: Add an explicit non-goal stating "pm-story-fix-leader write-back of updated
+      PM artifacts to story.yaml frontmatter is deferred to a follow-on story" or expand AC-3 to
+      cover the write-back path. This is non-blocking for this story's reader migration goal.
+    decision: log_to_kb
+    kb_entry_id: "kb_write_artifact_unavailable"
+  - id: OPP-3
+    title: "story-synthesize-agent already has story_id input — partial interface already aligned"
+    description: >
+      story-synthesize-agent's Inputs section already includes story_id as an orchestrator context
+      input (line 26). Only the filesystem read (From filesystem: Story seed at {output_dir}/_pm/STORY-SEED.md)
+      needs updating. This means AC-5's interface change is smaller than stated — the input parameter
+      story_seed_path to be removed is in pm-story-risk-predictor (confirmed at line 47), but
+      story-synthesize-agent may already accept story_id as context without formally needing an
+      interface rename. ST-5 should verify whether story-synthesize-agent truly needs the interface
+      change or only the filesystem read replacement.
+    decision: log_to_kb
+    kb_entry_id: "kb_write_artifact_unavailable"
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T12:00:00Z"
+summary:
+  gaps_found: 1
+  gaps_resolved: 1
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 0
+decision_notes: >
+  GAP-1 (low, non-blocking): logged to KB rather than added as AC. The canonical null-check pattern
+  from qa-verify-verification-leader implies WARN-and-continue for pm-story-fix-leader and
+  architect-story-review. No new ACs required.
+  OPP-1/OPP-2/OPP-3: all logged to KB as non-blocking opportunities.
+  kb_write_artifact returned INTERNAL_ERROR on all attempts during this session; decisions and
+  implementer guidance are recorded inline in this ELAB.yaml as the durable record instead.
+  Verdict is unchanged from preliminary (CONDITIONAL_PASS) because no ACs were added.

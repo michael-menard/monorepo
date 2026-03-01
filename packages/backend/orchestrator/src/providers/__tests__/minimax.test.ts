@@ -7,11 +7,11 @@
  * @module providers/__tests__/minimax
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest'
+import { describe, test, expect, beforeEach } from 'vitest'
+import { ZodError } from 'zod'
 import { MinimaxProvider } from '../minimax.js'
 import { MinimaxConfigSchema } from '../__types__/minimax.js'
 import { getProviderForModel, clearProviderRegistry } from '../index.js'
-import { ZodError } from 'zod'
 
 describe('MinimaxProvider', () => {
   beforeEach(() => {
