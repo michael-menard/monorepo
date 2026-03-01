@@ -1103,7 +1103,7 @@ export async function runElaboration(
       completedAt: new Date().toISOString(),
       changeOutline: result.changeOutline ?? null,
       totalEstimatedAtomicChanges: result.changeOutline
-        ? result.changeOutline.reduce((sum: number, item: { estimatedAtomicChanges?: number }) => sum + (item.estimatedAtomicChanges ?? 0), 0)
+        ? result.changeOutline.reduce((sum, item) => sum + (item.estimatedAtomicChanges ?? 0), 0)
         : null,
       splitRequired: result.splitRequired ?? false,
       splitReason: result.splitReason ?? null,
