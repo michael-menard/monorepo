@@ -1,45 +1,137 @@
 schema: 1
-story_id: KBAR-0110
-timestamp: "2026-02-25T17:00:00Z"
+story_id: "KBAR-0110"
+timestamp: "2026-02-25T14:15:00Z"
+
 verdict: PASS
 
-acceptance_criteria:
-  total: 9
-  verified: 9
-  coverage: 100%
-  notes: "All ACs verified against source code"
+tests_executed: true
+test_results:
+  unit: { pass: 1085, fail: 0 }
+  integration: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+  http: { pass: 0, fail: 0 }
 
-testing:
-  unit_tests:
-    total: 1085
-    passing: 1085
-    failing: 0
-    coverage_global: 45%
-    coverage_status: "PASS"
-  integration_tests:
-    status: "PASS"
-    tests_run: 1085
-  e2e_tests:
-    status: "EXEMPT"
-    reason: "Backend MCP server component"
+coverage: {}
+coverage_meets_threshold: true
 
-code_review:
+test_quality:
   verdict: PASS
-  iteration: 2
-  pr_number: 400
-  errors: 0
-  warnings: 0
-  notes: "No architecture compliance issues"
+  anti_patterns: []
 
-architecture_compliance:
-  verdict: PASS
-  checks:
-    zod_first: PASS
-    logger_usage: PASS
-    typescript_clean: PASS
-    test_coverage_minimum: PASS
+acs_verified:
+  - ac_id: "AC-1"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[0]"
+    notes: >
+      mcp-integration.test.ts line 69: toHaveLength(54) and tool names array at line 123
+      includes 'artifact_write' (labelled "Dual-write artifact tool (KBAR-0110)") before
+      'kb_write_artifact'. tool-handlers.ts line 4259: artifact_write: handleArtifactWrite
+      registered in toolHandlers map. Verified by live test run: 1085 tests pass.
 
-gate:
-  decision: PASS
-  reason: "All ACs verified, tests pass, architecture compliant"
-  blocking_issues: []
+  - ac_id: "AC-2"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[1]"
+    notes: >
+      artifact-operations.ts lines 528-549: ArtifactWriteInputSchema defined with story_id,
+      artifact_type, content, story_dir, phase, iteration, write_to_kb fields — all correctly
+      typed with Zod. Also defines ArtifactWriteResultSchema (lines 556-572) and KbWriteFn type
+      (line 590). Confirmed in source read.
+
+  - ac_id: "AC-3"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[2]"
+    notes: >
+      artifact-operations.ts lines 592-671: artifact_write() uses dynamic import of js-yaml and
+      fs/promises, calls yaml.dump() + fs.writeFile() for YAML serialization to filesystem.
+      EC-1 handler test confirms file_written=true and file_path contains CHECKPOINT.yaml.
+      Verified by live test run.
+
+  - ac_id: "AC-4"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[3]"
+    notes: >
+      EC-2 dual-write test at artifact-write-handler.test.ts line 195: passes failingKbWrite
+      that throws 'DB connection timeout'. Result shows file_written=true, kb_written=false,
+      kb_error='DB connection timeout'. KB error is caught in try/catch (lines 651-661) and
+      logged as warn — filesystem write always returns success. Verified by live test run.
+
+  - ac_id: "AC-5"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[4]"
+    notes: >
+      EC-3 dual-write test at line 220: write_to_kb=false produces kb_written=null,
+      kb_artifact_id=null, kb_error=null, and mockKbWriteFn is not called. Verified by
+      live test run: all 8 tests in artifact-write-handler.test.ts pass.
+
+  - ac_id: "AC-6"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[5]"
+    notes: >
+      computeArtifactPath() at artifact-operations.ts lines 512-520: formula
+      {story_dir}/_implementation/{FILENAME}.yaml with .iterN suffix when iteration > 0.
+      EC-6 test (line 243) confirms CHECKPOINT.iter2.yaml for iteration=2.
+      EC-8 test (line 262) confirms EVIDENCE.yaml for evidence artifact type.
+      Verified by live test run.
+
+  - ac_id: "AC-7"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[6]"
+    notes: >
+      artifact-write-handler.test.ts contains exactly 8 tests: EC-1 (handler happy path),
+      EC-2 (KB failure isolation), EC-3 (write_to_kb=false), EC-4 (invalid artifact_type
+      validation), EC-5 (empty story_dir validation), EC-6 (iteration suffix), EC-7
+      (artifact_write throws propagates as isError), EC-8 (evidence filename mapping).
+      All 8 pass in live run: 1085 tests, 45 files.
+
+  - ac_id: "AC-8"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[7]"
+    notes: >
+      mcp-integration.test.ts line 69: test description updated to 'all 54 tool definitions',
+      line 72: expect(tools).toHaveLength(54). Previous count was 52; KBAR-0110 adds
+      artifact_write (1) and also fixed missing kb_update_story (1) = net +2 tools.
+      Verified by live test run: test passes.
+
+  - ac_id: "AC-9"
+    status: PASS
+    evidence_ref: "EVIDENCE.yaml:acceptance_criteria[8]"
+    notes: >
+      mcp-integration.test.ts line 123: 'artifact_write' added to expected tool names array
+      before 'kb_write_artifact' (labelled "Dual-write artifact tool (KBAR-0110)"). Also
+      'kb_update_story' added at line 133 (was previously missing). Both verified in source
+      read and confirmed by live test run.
+
+architecture_compliant: true
+
+issues: []
+
+lessons_to_record:
+  - lesson: >
+      When adding a new MCP tool whose underlying function uses dynamic ESM imports (e.g.,
+      `await import('js-yaml')`, `await import('fs/promises')`), vitest module mocks for those
+      dynamic imports must use vi.mock() at the top level with the bare module name (e.g.,
+      vi.mock('fs/promises', ...)). This allows the mocks to intercept the dynamic import inside
+      the function under test, enabling filesystem behavior to be fully controlled in tests.
+    category: pattern
+    tags: ["testing", "vitest", "esm", "dynamic-import", "mcp", "knowledge-base"]
+
+  - lesson: >
+      For MCP tools that do dual-write (filesystem + DB), inject the DB write function as an
+      optional parameter (kbWriteFn = kb_write_artifact) rather than calling the module-level
+      function directly. This allows vi.importActual() in tests to obtain the real function and
+      pass a mock kbWriteFn, cleanly separating handler-level tests (mock the whole function)
+      from dual-write unit tests (test the real function with a mock DB fn).
+    category: pattern
+    tags: ["testing", "dependency-injection", "mcp", "knowledge-base", "dual-write"]
+
+  - lesson: >
+      The access-control.ts ToolNameSchema enum must include every tool name registered in
+      toolHandlers. If a new tool name is omitted from the enum, enforceAuthorization() will
+      deny all roles since the schema.safeParse will fail. Always add new tool names to both
+      the ToolNameSchema enum and the ACCESS_MATRIX in the same commit.
+    category: blocker
+    tags: ["mcp", "authorization", "knowledge-base", "access-control"]
+
+tokens:
+  in: 18000
+  out: 2800
