@@ -60,13 +60,15 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
-      - name: Build @repo/logger dist (required by downstream builds)
+      - name: Build packages and API dist (required by downstream builds)
         run: |
-          rm -f packages/core/logger/tsconfig.tsbuildinfo
-          cd packages/core/logger && pnpm exec tsc
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"
+        env:
+          FRONTEND_PORT: 3000
 
       - name: Run E2E tests (smoke)
         run: pnpm --filter @repo/playwright test:bdd:smoke
@@ -131,13 +133,15 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
-      - name: Build @repo/logger dist (required by downstream builds)
+      - name: Build packages and API dist (required by downstream builds)
         run: |
-          rm -f packages/core/logger/tsconfig.tsbuildinfo
-          cd packages/core/logger && pnpm exec tsc
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"
+        env:
+          FRONTEND_PORT: 3000
 
       - name: Run all E2E tests
         run: pnpm --filter @repo/playwright test:bdd

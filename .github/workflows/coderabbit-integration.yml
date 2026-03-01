@@ -72,14 +72,8 @@ jobs:
 
       - name: Build dist packages required for type resolution
         run: |
-          rm -f packages/core/logger/tsconfig.tsbuildinfo
-          cd packages/core/logger && pnpm exec tsc && cd ../../..
-          rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
-          cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
-          rm -f packages/backend/db/tsconfig.tsbuildinfo
-          cd packages/backend/db && pnpm exec tsc && cd ../../..
-          rm -f packages/backend/observability/tsconfig.tsbuildinfo
-          cd packages/backend/observability && pnpm exec tsc && cd ../../..
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
 
       - name: Run linting and type checking
         run: |
@@ -179,14 +173,8 @@ jobs:
 
       - name: Build dist packages required for type resolution
         run: |
-          rm -f packages/core/logger/tsconfig.tsbuildinfo
-          cd packages/core/logger && pnpm exec tsc && cd ../../..
-          rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
-          cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
-          rm -f packages/backend/db/tsconfig.tsbuildinfo
-          cd packages/backend/db && pnpm exec tsc && cd ../../..
-          rm -f packages/backend/observability/tsconfig.tsbuildinfo
-          cd packages/backend/observability && pnpm exec tsc && cd ../../..
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
 
       - name: Run comprehensive checks
         run: |
