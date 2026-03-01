@@ -1,9 +1,12 @@
 import { readFile, readdir, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { parse, stringify } from 'yaml'
-
 import type { CodeAuditState } from '../../graphs/code-audit.js'
-import type { TrendSnapshot, TrendDirection, AuditSeverity } from '../../artifacts/audit-findings.js'
+import type {
+  TrendSnapshot,
+  TrendDirection,
+  AuditSeverity,
+} from '../../artifacts/audit-findings.js'
 import { calculateTrend } from '../../artifacts/audit-findings.js'
 
 /**
@@ -65,16 +68,18 @@ export async function persistTrends(state: CodeAuditState): Promise<Partial<Code
   // Overall trend
   const overallTrend = previous
     ? calculateTrend(current.total, previous.total)
-    : 'stable' as TrendDirection
+    : ('stable' as TrendDirection)
 
   const delta = previous ? current.total - previous.total : 0
-  const fixRate = previous && previous.total > 0
-    ? Math.max(0, (previous.total - current.total)) / previous.total
-    : 0
+  const fixRate =
+    previous && previous.total > 0
+      ? Math.max(0, previous.total - current.total) / previous.total
+      : 0
 
   // By severity trends
   const severities: AuditSeverity[] = ['critical', 'high', 'medium', 'low']
-  const bySeverity: Record<string, { current: number; previous: number; trend: TrendDirection }> = {}
+  const bySeverity: Record<string, { current: number; previous: number; trend: TrendDirection }> =
+    {}
   for (const sev of severities) {
     const cur = current.bySeverity[sev] || 0
     const prev = previous?.bySeverity[sev] || 0

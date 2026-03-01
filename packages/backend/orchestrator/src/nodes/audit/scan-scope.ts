@@ -1,7 +1,6 @@
-import { z } from 'zod'
 import { readdir, stat } from 'fs/promises'
 import { join, extname } from 'path'
-
+import { z } from 'zod'
 import type { CodeAuditConfig, CodeAuditState } from '../../graphs/code-audit.js'
 
 /**
@@ -18,14 +17,7 @@ export const ScanScopeResultSchema = z.object({
 
 export type ScanScopeResult = z.infer<typeof ScanScopeResultSchema>
 
-const EXCLUDED_DIRS = new Set([
-  'node_modules',
-  'dist',
-  '.next',
-  'coverage',
-  '.turbo',
-  '.git',
-])
+const EXCLUDED_DIRS = new Set(['node_modules', 'dist', '.next', 'coverage', '.turbo', '.git'])
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx'])
 
@@ -65,7 +57,11 @@ async function walkSourceFiles(dir: string): Promise<string[]> {
  * Categorize a file based on its path
  */
 function categorizeFile(filePath: string): string {
-  if (filePath.includes('__tests__') || filePath.includes('.test.') || filePath.includes('.spec.')) {
+  if (
+    filePath.includes('__tests__') ||
+    filePath.includes('.test.') ||
+    filePath.includes('.spec.')
+  ) {
     return 'tests'
   }
   if (filePath.includes('apps/web/')) return 'frontend'

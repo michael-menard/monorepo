@@ -1,6 +1,5 @@
 import { readFile, readdir } from 'fs/promises'
 import { join } from 'path'
-
 import type { CodeAuditState } from '../../graphs/code-audit.js'
 import type { DedupResult } from '../../artifacts/audit-findings.js'
 

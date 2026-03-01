@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { type FinalAcceptanceCriterion, type SynthesizedStory } from '../../nodes/story/synthesize.js'
-// eslint-disable-next-line import/order
+// eslint-disable-next-line import/order -- false positive: mixed ../../ and ../ relative depth confuses import/order grouping within the parent group
 import {
   type ElaborationConfig,
   type ElaborationState,

@@ -1,0 +1,32 @@
+id: "APIP-3080"
+title: "Parallel Story Concurrency (2-3 Worktrees)"
+status: ready-to-work
+priority: medium
+phase: 3
+epic: autonomous-pipeline
+points: 5
+experiment_variant: "control"
+feature: "Extend PipelineSupervisor to dispatch 2-3 stories concurrently via BullMQ Worker concurrency, each in an isolated git worktree, with ConcurrencyController slot management, WorktreeConflictDetector path-prefix policy, and shared PipelineModelRouter rate limiting"
+goal: "Increase pipeline throughput from 1 story per cycle to 2-3 concurrent stories without sacrificing isolation, correctness, or provider rate limit compliance."
+depends_on:
+  - APIP-0020
+  - APIP-0040
+endpoints: []
+surfaces:
+  - backend
+touches_backend: true
+touches_frontend: false
+touches_database: false
+touches_infra: true
+infrastructure:
+  - "Git worktree isolation per concurrent story (.worktrees/<storyId>-<timestamp>/)"
+  - ".gitignore entry for .worktrees/"
+  - "Real Redis (BullMQ) required for integration tests (REDIS_TEST_URL)"
+risk_notes: >
+  Hard dependency on APIP-0020 and APIP-0040 merge before ST-2/ST-4 implementation.
+  TokenBucket concurrent safety under real BullMQ workers (not just Promise.all) must be
+  verified explicitly (AC-7, EC-5). Split risk is high (0.9) due to 12 ACs and cross-domain
+  complexity — monitor during elaboration for potential split.
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"
+updated: "2026-02-28T00:00:00Z"

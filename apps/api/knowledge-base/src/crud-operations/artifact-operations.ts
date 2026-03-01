@@ -317,8 +317,7 @@ function mapContentToTypedColumns(
         typedColumns: {
           targetId: storyId,
           stepCount: content.step_count ?? content.stepCount ?? null,
-          estimatedComplexity:
-            content.estimated_complexity ?? content.estimatedComplexity ?? null,
+          estimatedComplexity: content.estimated_complexity ?? content.estimatedComplexity ?? null,
         },
         data,
       }
@@ -410,7 +409,6 @@ type DetailTableRef = {
  * but all our detail tables share the same structural pattern (id, data, timestamps).
  */
 function getDetailTableRef(detailTable: string): DetailTableRef | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tableMap: Record<string, any> = {
     artifact_checkpoints: artifactCheckpoints,
     artifact_contexts: artifactContexts,
@@ -544,7 +542,6 @@ async function insertDetailRow(
     throw new Error(`No table reference for: ${detailTable}`)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await (db as any)
     .insert(tableRef)
     .values({ id, ...columns })
@@ -572,7 +569,7 @@ async function updateDetailRow(
   }
 
   const now = new Date()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   await (db as any)
     .update(tableRef)
     .set({ ...typedColumns, data, updatedAt: now })
@@ -590,7 +587,6 @@ async function readDetailRow(
   const tableRef = getDetailTableRef(detailTable)
   if (!tableRef) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await (db as any)
     .select()
     .from(tableRef)
@@ -612,7 +608,6 @@ async function deleteDetailRow(
   const tableRef = getDetailTableRef(detailTable)
   if (!tableRef) return
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (db as any).delete(tableRef).where(eq((tableRef as any).id, detailId))
 }
 

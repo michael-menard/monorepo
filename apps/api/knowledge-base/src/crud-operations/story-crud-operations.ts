@@ -83,7 +83,15 @@ export const KbListStoriesInputSchema = z.object({
 
   /** Filter stories linked to plans with this status (e.g., 'in-progress', 'draft') */
   plan_status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional(),
 
   /** Maximum results (1-100, default 20) */
@@ -177,7 +185,15 @@ export const KbGetNextStoryInputSchema = z.object({
 
   /** Filter stories linked to plans with this status (e.g., 'in-progress', 'draft') */
   plan_status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional(),
 })
 
