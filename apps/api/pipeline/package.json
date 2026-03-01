@@ -1,26 +1,40 @@
 {
   "name": "@repo/pipeline",
   "version": "1.0.0",
-  "description": "Autonomous Pipeline Supervisor - Plain TypeScript BullMQ worker process",
+  "description": "Autonomous Pipeline - BullMQ supervisor with LangGraph checkpoint storage and PostgreSQL integration",
   "type": "module",
   "main": "./src/supervisor/index.ts",
   "scripts": {
+    "build": "tsc",
     "dev": "tsx watch src/supervisor/index.ts",
     "start": "tsx src/supervisor/index.ts",
     "check-types": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint --fix src/",
+    "db:migrate:test": "tsx scripts/apply-migrations.ts",
+    "db:test:start": "docker compose -f ../../infra/langgraph-server/compose.test-db.yaml up -d",
+    "db:test:stop": "docker compose -f ../../infra/langgraph-server/compose.test-db.yaml down"
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
     "@repo/orchestrator": "workspace:*",
     "bullmq": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.44.0",
+    "drizzle-zod": "0.5.1",
     "ioredis": "^5.4.2",
+    "pg": "^8.12.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "drizzle-kit": "^0.30.0",
+    "eslint": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.8.0",
     "vitest": "^3.2.0"
