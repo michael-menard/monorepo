@@ -91,9 +91,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build package dependencies
-        run: pnpm turbo build --filter="./packages/..."
-
       - name: Run type checking
         run: pnpm turbo check-types --filter="./apps/api/lego-api/..."
 

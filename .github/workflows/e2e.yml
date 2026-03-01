@@ -60,11 +60,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
-      - name: Build packages
-        run: pnpm turbo build --filter="./packages/..."
-
-      - name: Build main-app
-        run: pnpm --filter @repo/main-app build
+      - name: Build main-app and dependencies
+        run: pnpm turbo build --filter="@repo/main-app"
 
       - name: Run E2E tests (smoke)
         run: pnpm --filter @repo/playwright test:bdd:smoke
@@ -129,11 +126,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
-      - name: Build packages
-        run: pnpm turbo build --filter="./packages/..."
-
-      - name: Build main-app
-        run: pnpm --filter @repo/main-app build
+      - name: Build main-app and dependencies
+        run: pnpm turbo build --filter="@repo/main-app"
 
       - name: Run all E2E tests
         run: pnpm --filter @repo/playwright test:bdd
