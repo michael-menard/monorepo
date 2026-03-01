@@ -777,7 +777,6 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
   # Skip stories with unmet dependencies (deps must be in UAT/done)
   # Only check for stories that haven't started yet — already-in-progress stories continue
   if [[ "$local_stage" == "ready-to-work" || "$local_stage" == "backlog" ]]; then
-    local unmet_deps
     unmet_deps=$(check_dependencies_met "$STORY_ID" 2>/dev/null) || true
     if [[ -n "$unmet_deps" ]]; then
       ((NOT_READY_COUNT++))
