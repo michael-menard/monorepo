@@ -1,0 +1,16 @@
+schema: 1
+story_id: APIP-1010
+feature_dir: plans/future/platform/autonomous-pipeline
+timestamp: '2026-03-01T10:10:00Z'
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - >-
+    5 pre-existing test file failures in orchestrator unrelated to APIP-1010 touched files (session-manager,
+    context-warmer, doc-sync, __types__, index) — all due to missing @repo/mcp-tools/session-management/__types__ or
+    unrelated deps
+gen_mode: false
