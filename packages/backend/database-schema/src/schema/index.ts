@@ -1050,6 +1050,23 @@ export {
   type SelectWorkflowAuditLog,
 } from './wint.js'
 
+// Re-export APIP-3020: Model Affinity table and schemas
+export {
+  // Enum
+  confidenceLevelEnum,
+
+  // Table
+  modelAffinity,
+
+  // Zod Schemas
+  ModelAffinityInsertSchema,
+  ModelAffinitySelectSchema,
+
+  // TypeScript types
+  type InsertModelAffinity,
+  type SelectModelAffinity,
+} from './wint.js'
+
 // Re-export unified WINT schemas (WINT-1130)
 export {
   worktreeStatusEnum,
@@ -1184,3 +1201,12 @@ export {
   type InsertIndexEntry,
   type SelectIndexEntry,
 } from './kbar.js'
+
+// Re-export Change Telemetry table (APIP-3010)
+export {
+  changeTelemetry,
+  insertChangeTelemetrySchema,
+  selectChangeTelemetrySchema,
+  type InsertChangeTelemetry,
+  type SelectChangeTelemetry,
+} from './change-telemetry.js'

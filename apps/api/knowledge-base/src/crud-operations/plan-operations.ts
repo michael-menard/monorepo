@@ -28,10 +28,7 @@ async function assertUniquePrefixOrThrow(
 ): Promise<void> {
   if (!storyPrefix) return
 
-  const conditions: SQL[] = [
-    eq(plans.storyPrefix, storyPrefix),
-    isNotNull(plans.storyPrefix),
-  ]
+  const conditions: SQL[] = [eq(plans.storyPrefix, storyPrefix), isNotNull(plans.storyPrefix)]
   if (excludePlanSlug) {
     conditions.push(ne(plans.planSlug, excludePlanSlug))
   }
@@ -76,7 +73,15 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Status lifecycle */
   status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional()
     .default('draft'),
 
@@ -94,6 +99,9 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Tags for categorization */
   tags: z.array(z.string()).optional(),
+
+  /** Plan slugs that must reach 'implemented' before this plan can start */
+  dependencies: z.array(z.string()).optional(),
 
   /** Original source file path (e.g., '~/.claude/plans/jiggly-cooking-patterson.md') */
   source_file: z.string().optional(),
@@ -118,7 +126,15 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** New status */
   status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional(),
 
   /** New tags (replaces existing tags) */
@@ -140,6 +156,9 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** New estimated stories count */
   estimated_stories: z.number().int().optional().nullable(),
+
+  /** Plan slugs that must reach 'implemented' before this plan can start (null to clear) */
+  dependencies: z.array(z.string()).optional().nullable(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -164,7 +183,15 @@ export type KbGetPlanInput = z.infer<typeof KbGetPlanInputSchema>
 export const KbListPlansInputSchema = z.object({
   /** Filter by plan status */
   status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional(),
 
   /** Filter by plan type */
@@ -293,10 +320,7 @@ export async function kb_list_plans(
     conditions.push(eq(plans.priority, validated.priority))
   }
 
-  const whereClause =
-    conditions.length > 0
-      ? sql`${sql.join(conditions, sql` AND `)}`
-      : undefined
+  const whereClause = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined
 
   // Count total
   const countResult = await deps.db
@@ -321,6 +345,7 @@ export async function kb_list_plans(
         estimatedStories: plans.estimatedStories,
         priority: plans.priority,
         phases: plans.phases,
+        dependencies: plans.dependencies,
         tags: plans.tags,
         sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,
@@ -381,6 +406,7 @@ export async function kb_upsert_plan(
     storyPrefix: validated.story_prefix ?? null,
     estimatedStories: validated.estimated_stories ?? null,
     priority: validated.priority ?? 'P3',
+    dependencies: validated.dependencies ?? null,
     tags: validated.tags ?? null,
     sourceFile: validated.source_file ?? null,
     updatedAt: now,
@@ -453,7 +479,9 @@ export async function kb_update_plan(
   if (validated.plan_type !== undefined) updates.planType = validated.plan_type
   if (validated.feature_dir !== undefined) updates.featureDir = validated.feature_dir
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
-  if (validated.estimated_stories !== undefined) updates.estimatedStories = validated.estimated_stories
+  if (validated.estimated_stories !== undefined)
+    updates.estimatedStories = validated.estimated_stories
+  if (validated.dependencies !== undefined) updates.dependencies = validated.dependencies
 
   const result = await deps.db
     .update(plans)
@@ -491,9 +519,7 @@ export async function kb_get_roadmap(
 }> {
   const validated = KbGetRoadmapInputSchema.parse(input)
 
-  const conditions: SQL[] = [
-    notInArray(plans.status, [...ROADMAP_EXCLUDED_STATUSES]),
-  ]
+  const conditions: SQL[] = [notInArray(plans.status, [...ROADMAP_EXCLUDED_STATUSES])]
 
   if (validated.plan_type) {
     conditions.push(eq(plans.planType, validated.plan_type))
@@ -530,6 +556,7 @@ export async function kb_get_roadmap(
         estimatedStories: plans.estimatedStories,
         priority: plans.priority,
         phases: plans.phases,
+        dependencies: plans.dependencies,
         tags: plans.tags,
         sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,

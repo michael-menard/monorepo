@@ -328,7 +328,9 @@ Then('the filter bar should be collapsed', async ({ page }) => {
 // ============================================================================
 
 Then('I should see pagination controls', async ({ page }) => {
-  const pagination = page.locator('[data-testid="gallery-pagination"]').or(page.getByRole('navigation'))
+  const pagination = page
+    .locator('[data-testid="gallery-pagination"]')
+    .or(page.getByRole('navigation'))
   await expect(pagination.first()).toBeVisible()
 })
 
@@ -347,7 +349,7 @@ Then('I should see the next page of items', async ({ page }) => {
 Then('each card should display an image', async ({ page }) => {
   const cards = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
   const cardCount = await cards.count()
-  
+
   for (let i = 0; i < cardCount; i++) {
     const card = cards.nth(i)
     const image = card.locator('img')
@@ -358,7 +360,7 @@ Then('each card should display an image', async ({ page }) => {
 Then('each card should display a title', async ({ page }) => {
   const cards = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
   const cardCount = await cards.count()
-  
+
   for (let i = 0; i < cardCount; i++) {
     const card = cards.nth(i)
     const title = card.locator('h2, h3, [data-testid="card-title"]')
@@ -382,8 +384,7 @@ Given('I am in grid view', async ({ page }) => {
 })
 
 Then('items should be displayed in table format', async ({ page }) => {
-  const tableElement = page.getByRole('table')
-    .or(page.locator('[data-testid="wishlist-table"]'))
+  const tableElement = page.getByRole('table').or(page.locator('[data-testid="wishlist-table"]'))
   await expect(tableElement).toBeVisible()
 })
 
@@ -424,9 +425,11 @@ Then('drag handles should be available', async ({ page }) => {
 Then('each card should show the set number', async ({ page }) => {
   const cards = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
   const cardCount = await cards.count()
-  
+
   for (let i = 0; i < cardCount; i++) {
-    const setNumber = cards.nth(i).locator('[data-testid="set-number"]')
+    const setNumber = cards
+      .nth(i)
+      .locator('[data-testid="set-number"]')
       .or(cards.nth(i).getByText(/#\d+/))
     await expect(setNumber.first()).toBeVisible()
   }
@@ -435,7 +438,7 @@ Then('each card should show the set number', async ({ page }) => {
 Then('each card should show the price', async ({ page }) => {
   const cards = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
   const cardCount = await cards.count()
-  
+
   for (let i = 0; i < cardCount; i++) {
     const price = cards.nth(i).getByText(/\$\d+/)
     await expect(price.first()).toBeVisible()
@@ -445,9 +448,11 @@ Then('each card should show the price', async ({ page }) => {
 Then('each card should show the store badge', async ({ page }) => {
   const cards = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
   const cardCount = await cards.count()
-  
+
   for (let i = 0; i < cardCount; i++) {
-    const badge = cards.nth(i).locator('[data-testid="store-badge"]')
+    const badge = cards
+      .nth(i)
+      .locator('[data-testid="store-badge"]')
       .or(cards.nth(i).locator('.badge'))
     await expect(badge.first()).toBeVisible()
   }
@@ -458,22 +463,21 @@ Given('the wishlist has a high priority item', async () => {
 })
 
 Then('the priority indicator should be visible on high priority cards', async ({ page }) => {
-  const priorityIndicator = page.locator('[data-testid="priority-indicator"]')
+  const priorityIndicator = page
+    .locator('[data-testid="priority-indicator"]')
     .or(page.getByText(/must have|high priority/i))
   await expect(priorityIndicator.first()).toBeVisible()
 })
 
 Then('a drag preview should be visible', async ({ page }) => {
-  const dragPreview = page.locator('[data-testid="drag-preview"]')
-    .or(page.locator('.dragging'))
+  const dragPreview = page.locator('[data-testid="drag-preview"]').or(page.locator('.dragging'))
   await expect(dragPreview).toBeVisible()
 })
 
 Then('the drag preview should show the card content', async ({ page }) => {
-  const dragPreview = page.locator('[data-testid="drag-preview"]')
-    .or(page.locator('.dragging'))
+  const dragPreview = page.locator('[data-testid="drag-preview"]').or(page.locator('.dragging'))
   await expect(dragPreview).toBeVisible()
-  
+
   const title = dragPreview.locator('h2, h3, [data-testid="card-title"]')
   await expect(title).toBeVisible()
 })
@@ -503,7 +507,8 @@ When('I type a search query', async ({ page }) => {
 })
 
 When('I click the datatable view button', async ({ page }) => {
-  const button = page.getByRole('button', { name: /datatable|table view/i })
+  const button = page
+    .getByRole('button', { name: /datatable|table view/i })
     .or(page.locator('[data-testid="view-toggle-datatable"]'))
   await button.click()
 })

@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { Search, FileText, Eye, Download, Filter, Globe, Shield, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Eye, Download, Filter, Globe, Shield, AlertTriangle } from 'lucide-react'
 
 export default function IntelligencePage() {
   const [searchTerm, setSearchTerm] = useState('')

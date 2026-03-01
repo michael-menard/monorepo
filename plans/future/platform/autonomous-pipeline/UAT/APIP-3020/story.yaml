@@ -1,6 +1,6 @@
 id: APIP-3020
 title: "Model Affinity Profiles Table and Pattern Miner Cron"
-status: ready-to-work
+status: uat
 priority: high
 experiment_variant: "control"
 epic: autonomous-pipeline

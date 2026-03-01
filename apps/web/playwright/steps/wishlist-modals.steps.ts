@@ -135,9 +135,12 @@ Then('I should see a success toast for adding the item to my collection', async 
   await expect(toast.first()).toBeVisible({ timeout: 10000 })
 })
 
-Then('the wishlist item should be removed from the gallery if not kept on wishlist', async ({ page }) => {
-  await page.waitForURL(/\/wishlist$/, { timeout: 10000 })
-})
+Then(
+  'the wishlist item should be removed from the gallery if not kept on wishlist',
+  async ({ page }) => {
+    await page.waitForURL(/\/wishlist$/, { timeout: 10000 })
+  },
+)
 
 Then('I should see a success toast for marking the item as purchased', async ({ page }) => {
   const toast = page.getByText(/marked as purchased/i)
@@ -198,15 +201,23 @@ Given('the wishlist has exactly {int} item', async () => {
 })
 
 When('I focus and click the delete button on the first wishlist card', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
-  const deleteButton = firstCard.locator('[data-testid="delete-button"], button[aria-label*="delete"]')
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
+  const deleteButton = firstCard.locator(
+    '[data-testid="delete-button"], button[aria-label*="delete"]',
+  )
   await deleteButton.focus()
   await deleteButton.click()
 })
 
 When('I focus and click the Got It button on the first wishlist card', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
-  const gotItButton = firstCard.locator('[data-testid="got-it-button"], button[aria-label*="Got it"]')
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
+  const gotItButton = firstCard.locator(
+    '[data-testid="got-it-button"], button[aria-label*="Got it"]',
+  )
   await gotItButton.focus()
   await gotItButton.click()
 })
@@ -227,7 +238,9 @@ Then('the item preview should be visible', async ({ page }) => {
 })
 
 Then('the item title should be displayed', async ({ page }) => {
-  const title = page.locator('[data-testid="modal-item-title"], [role="dialog"] h2, [role="dialog"] h3')
+  const title = page.locator(
+    '[data-testid="modal-item-title"], [role="dialog"] h2, [role="dialog"] h3',
+  )
   await expect(title.first()).toBeVisible()
 })
 
@@ -242,10 +255,10 @@ Then('the price paid input should have a value', async ({ page }) => {
   expect(value).toBeTruthy()
 })
 
-Then('the purchase date input should have today\'s date', async ({ page }) => {
+Then("the purchase date input should have today's date", async ({ page }) => {
   const dateInput = page.getByLabel(/purchase date|date purchased/i)
   const value = await dateInput.inputValue()
-  
+
   const today = new Date().toISOString().split('T')[0]
   expect(value).toBe(today)
 })
@@ -261,8 +274,8 @@ When('I fill in price paid as {string}', async ({ page }, value: string) => {
 })
 
 When('I wait for the PATCH response', async ({ page }) => {
-  await page.waitForResponse(response => 
-    response.url().includes('/wishlist') && response.request().method() === 'PATCH'
+  await page.waitForResponse(
+    response => response.url().includes('/wishlist') && response.request().method() === 'PATCH',
   )
 })
 

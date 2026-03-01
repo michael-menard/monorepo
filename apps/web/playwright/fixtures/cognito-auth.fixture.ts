@@ -129,9 +129,7 @@ async function authenticateUser(user: CognitoUser): Promise<CognitoAuthResult> {
   }
 
   // Extract userId (sub) from the access token
-  const payload = JSON.parse(
-    Buffer.from(AccessToken.split('.')[1], 'base64').toString(),
-  )
+  const payload = JSON.parse(Buffer.from(AccessToken.split('.')[1], 'base64').toString())
 
   return {
     accessToken: AccessToken,

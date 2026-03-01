@@ -1,6 +1,6 @@
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,7 +12,7 @@ export default defineConfig({
       '@/lib': resolve(__dirname, './src/lib'),
       '@/hooks': resolve(__dirname, './src/hooks'),
       '@/services': resolve(__dirname, './src/services'),
-      
+
       '@/types': resolve(__dirname, './src/types'),
       '@/pages': resolve(__dirname, './src/pages'),
     },
@@ -28,9 +28,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          
+
           ui: ['@repo/app-component-library'],
-          
         },
       },
     },
@@ -39,7 +38,7 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      
+
       '@repo/app-component-library',
       '@repo/api-client',
       '@repo/cache',

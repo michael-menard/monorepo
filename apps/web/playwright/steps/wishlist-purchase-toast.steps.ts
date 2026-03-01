@@ -45,13 +45,10 @@ Given('I count the wishlist cards', async ({ page }) => {
 // Success toast verification (AC3)
 // ---------------------------------------------------------------------------
 
-Then(
-  'I should see a success toast with {string}',
-  async ({ page }, expectedText: string) => {
-    const toast = page.getByText(expectedText)
-    await expect(toast.first()).toBeVisible({ timeout: 10000 })
-  },
-)
+Then('I should see a success toast with {string}', async ({ page }, expectedText: string) => {
+  const toast = page.getByText(expectedText)
+  await expect(toast.first()).toBeVisible({ timeout: 10000 })
+})
 
 Then('the success toast should contain the remembered item title', async ({ page }) => {
   expect(rememberedTitle).toBeTruthy()

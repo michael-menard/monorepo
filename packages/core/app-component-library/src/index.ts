@@ -180,7 +180,11 @@ export {
   TIER_DISPLAY_NAMES,
   FEATURE_DISPLAY_NAMES,
 } from './gates/FeatureGate'
-export type { FeatureGateProps } from './gates/FeatureGate'
+export type {
+  FeatureGateProps,
+  Feature as GateFeature,
+  Tier as GateTier,
+} from './gates/FeatureGate'
 
 // Indicators (Quota display)
 export {

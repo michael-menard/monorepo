@@ -29,7 +29,9 @@ Then('the create album modal should not be visible', async ({ page }) => {
 })
 
 Then('I should see the description field', async ({ page }) => {
-  const descField = page.locator('textarea[name="description"], textarea[placeholder*="Description"]')
+  const descField = page.locator(
+    'textarea[name="description"], textarea[placeholder*="Description"]',
+  )
   await expect(descField).toBeVisible()
 })
 
@@ -43,7 +45,9 @@ When('I enter album title {string}', async ({ page }, title: string) => {
 })
 
 When('I enter album description {string}', async ({ page }, description: string) => {
-  const descInput = page.locator('textarea[name="description"], textarea[placeholder*="Description"]')
+  const descInput = page.locator(
+    'textarea[name="description"], textarea[placeholder*="Description"]',
+  )
   await descInput.fill(description)
 })
 
@@ -83,13 +87,16 @@ When('I select parent album {string}', async ({ page }, parentName: string) => {
   await page.getByRole('option', { name: new RegExp(parentName, 'i') }).click()
 })
 
-Then('{string} should be nested under {string}', async ({ page }, child: string, parent: string) => {
-  // Navigate to parent album and verify child is listed
-  await page.getByRole('tab', { name: /Albums/i }).click()
-  const parentCard = page.locator(`[data-testid^="album-card-"]:has-text("${parent}")`)
-  await parentCard.click()
-  await expect(page.getByText(new RegExp(child, 'i'))).toBeVisible()
-})
+Then(
+  '{string} should be nested under {string}',
+  async ({ page }, child: string, parent: string) => {
+    // Navigate to parent album and verify child is listed
+    await page.getByRole('tab', { name: /Albums/i }).click()
+    const parentCard = page.locator(`[data-testid^="album-card-"]:has-text("${parent}")`)
+    await parentCard.click()
+    await expect(page.getByText(new RegExp(child, 'i'))).toBeVisible()
+  },
+)
 
 // ============================================================================
 // Album Navigation Steps
@@ -118,17 +125,19 @@ Then('I should see the album contents', async ({ page }) => {
 })
 
 Then('I should see the breadcrumb navigation', async ({ page }) => {
-  const breadcrumb = page.locator('nav[aria-label="Breadcrumb"]').or(page.locator('[data-testid="breadcrumbs"]'))
+  const breadcrumb = page
+    .locator('nav[aria-label="Breadcrumb"]')
+    .or(page.locator('[data-testid="breadcrumbs"]'))
   await expect(breadcrumb).toBeVisible()
 })
 
-Given('I am viewing an album\'s contents', async ({ page }) => {
+Given("I am viewing an album's contents", async ({ page }) => {
   await page.goto('/inspiration')
   await page.waitForSelector('[data-testid="inspiration-gallery"]', { timeout: 15000 })
   await page.getByRole('tab', { name: /Albums/i }).click()
   await page.waitForTimeout(1000)
   const albumCards = page.locator('[data-testid^="album-card-"]')
-  if (await albumCards.count() > 0) {
+  if ((await albumCards.count()) > 0) {
     await albumCards.first().click()
     await page.waitForTimeout(1000)
   }
@@ -177,7 +186,9 @@ When('I open the album edit modal', async ({ page }) => {
 })
 
 When('I update the description', async ({ page }) => {
-  const descInput = page.locator('textarea[name="description"], textarea[placeholder*="Description"]')
+  const descInput = page.locator(
+    'textarea[name="description"], textarea[placeholder*="Description"]',
+  )
   await descInput.fill('Updated description ' + Date.now())
 })
 
@@ -313,4 +324,3 @@ When('I press the N key', async ({ page }) => {
 // ============================================================================
 // Additional Album Steps (INST-1111)
 // ============================================================================
-

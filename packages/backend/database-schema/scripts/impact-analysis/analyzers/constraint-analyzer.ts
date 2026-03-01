@@ -3,12 +3,7 @@
  * WISH-20210
  */
 import { Project } from 'ts-morph'
-import {
-  ParsedChange,
-  ImpactResult,
-  ImpactFinding,
-  ImpactCategory,
-} from '../__types__/index.js'
+import { ParsedChange, ImpactResult, ImpactFinding, ImpactCategory } from '../__types__/index.js'
 import { scanForTableReferences } from '../utils/ast-scanner.js'
 
 /**
@@ -187,9 +182,7 @@ function analyzeModifyConstraint(
 /**
  * Group findings by category
  */
-function groupByCategory(
-  findings: ImpactFinding[],
-): Record<ImpactCategory, ImpactFinding[]> {
+function groupByCategory(findings: ImpactFinding[]): Record<ImpactCategory, ImpactFinding[]> {
   const grouped: Record<string, ImpactFinding[]> = {}
 
   for (const finding of findings) {

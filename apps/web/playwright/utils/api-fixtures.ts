@@ -108,7 +108,7 @@ export const SAMPLE_SETS = {
     sourceUrl: 'https://www.lego.com/en-us/product/at-at-75313',
   },
   hogwartsCastle: {
-    title: "Hogwarts Castle",
+    title: 'Hogwarts Castle',
     setNumber: '71043',
     store: 'LEGO' as const,
     price: '469.99',

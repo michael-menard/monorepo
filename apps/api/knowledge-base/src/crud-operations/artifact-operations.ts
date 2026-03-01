@@ -923,3 +923,199 @@ export async function kb_delete_artifact(
 
   return true
 }
+
+// ============================================================================
+// Dual-Write Tool (artifact_write)
+// ============================================================================
+
+/**
+ * Canonical filename mapping for artifact types.
+ * Maps artifact_type → YAML filename (without extension).
+ */
+const ARTIFACT_FILENAMES: Record<string, string> = {
+  checkpoint: 'CHECKPOINT',
+  scope: 'SCOPE',
+  plan: 'PLAN',
+  evidence: 'EVIDENCE',
+  verification: 'VERIFICATION',
+  analysis: 'ANALYSIS',
+  context: 'AGENT-CONTEXT',
+  fix_summary: 'FIX-SUMMARY',
+  proof: 'PROOF',
+  elaboration: 'ELABORATION',
+  review: 'REVIEW',
+  qa_gate: 'QA-GATE',
+  completion_report: 'COMPLETION-REPORT',
+}
+
+/**
+ * Compute canonical filesystem path for an artifact.
+ *
+ * Formula: {story_dir}/_implementation/{FILENAME}.yaml
+ * For iteration > 0: {story_dir}/_implementation/{FILENAME}.iter{N}.yaml
+ *
+ * @param storyDir - Root directory for the story
+ * @param artifactType - Artifact type (e.g., 'checkpoint')
+ * @param iteration - Iteration number (0 = default, no suffix)
+ * @returns Absolute path to the YAML file
+ */
+export function computeArtifactPath(
+  storyDir: string,
+  artifactType: string,
+  iteration: number,
+): string {
+  const filename = ARTIFACT_FILENAMES[artifactType] ?? artifactType.toUpperCase()
+  const suffix = iteration > 0 ? `.iter${iteration}` : ''
+  return `${storyDir}/_implementation/${filename}${suffix}.yaml`
+}
+
+/**
+ * Input schema for the `artifact_write` dual-write tool.
+ *
+ * Writes a YAML artifact to the filesystem AND optionally indexes it in the KB.
+ * KB write failure does NOT prevent the file write from succeeding.
+ */
+export const ArtifactWriteInputSchema = z.object({
+  /** Story ID this artifact belongs to (e.g., 'KBAR-0110') */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** Type of artifact */
+  artifact_type: ArtifactTypeSchema,
+
+  /** Full artifact content as a JSON object (will be serialized to YAML) */
+  content: z.record(z.unknown()),
+
+  /** Story root directory (absolute path). Required for filesystem write. */
+  story_dir: z.string().min(1, 'story_dir cannot be empty'),
+
+  /** Implementation phase this artifact belongs to */
+  phase: StoryPhaseSchema.optional().nullable(),
+
+  /** Iteration number for fix cycles (default: 0) */
+  iteration: z.number().int().min(0).optional().default(0),
+
+  /** Whether to also write to KB database (default: true) */
+  write_to_kb: z.boolean().optional().default(true),
+})
+
+export type ArtifactWriteInput = z.infer<typeof ArtifactWriteInputSchema>
+
+/**
+ * Result of an `artifact_write` operation.
+ */
+export const ArtifactWriteResultSchema = z.object({
+  /** Whether the filesystem write succeeded */
+  file_written: z.boolean(),
+
+  /** Absolute path to the written file */
+  file_path: z.string(),
+
+  /** Whether the KB write succeeded (null if not attempted) */
+  kb_written: z.boolean().nullable(),
+
+  /** DB artifact ID (null if KB write was not attempted or failed) */
+  kb_artifact_id: z.string().nullable(),
+
+  /** Error message from KB write (null if succeeded or not attempted) */
+  kb_error: z.string().nullable(),
+})
+
+export type ArtifactWriteResult = z.infer<typeof ArtifactWriteResultSchema>
+
+/**
+ * Write a workflow artifact to the filesystem and optionally to the KB.
+ *
+ * The filesystem write is the primary operation. KB write is best-effort:
+ * if it fails, the error is logged and the result notes the failure,
+ * but the overall operation still returns success.
+ *
+ * @param input - Artifact data including story_dir for filesystem path
+ * @param deps - Database dependency for KB write
+ * @returns Write result with file and KB status
+ */
+/**
+ * Optional injectable KB write function (for testing).
+ * Defaults to the module-level kb_write_artifact.
+ */
+export type KbWriteFn = typeof kb_write_artifact
+
+export async function artifact_write(
+  input: ArtifactWriteInput,
+  deps: ArtifactOperationsDeps,
+  kbWriteFn: KbWriteFn = kb_write_artifact,
+): Promise<ArtifactWriteResult> {
+  const validatedInput = ArtifactWriteInputSchema.parse(input)
+  const iteration = validatedInput.iteration ?? 0
+
+  const filePath = computeArtifactPath(
+    validatedInput.story_dir,
+    validatedInput.artifact_type,
+    iteration,
+  )
+
+  // ---- Filesystem write (primary, must succeed) ----
+  const yaml = await import('js-yaml')
+  const fs = await import('fs/promises')
+  const path = await import('path')
+
+  // Ensure the _implementation directory exists
+  const dir = path.dirname(filePath)
+  await fs.mkdir(dir, { recursive: true })
+
+  const yamlContent = yaml.dump(validatedInput.content, { lineWidth: 120, noRefs: true })
+  await fs.writeFile(filePath, yamlContent, 'utf-8')
+
+  logger.info('artifact_write: file written', {
+    storyId: validatedInput.story_id,
+    artifactType: validatedInput.artifact_type,
+    iteration,
+    filePath,
+  })
+
+  // ---- KB write (optional, failure-isolated) ----
+  let kbWritten: boolean | null = null
+  let kbArtifactId: string | null = null
+  let kbError: string | null = null
+
+  if (validatedInput.write_to_kb) {
+    try {
+      const result = await kbWriteFn(
+        {
+          story_id: validatedInput.story_id,
+          artifact_type: validatedInput.artifact_type,
+          content: validatedInput.content,
+          phase: validatedInput.phase ?? null,
+          iteration,
+        },
+        deps,
+      )
+      kbWritten = true
+      kbArtifactId = result.id
+
+      logger.info('artifact_write: KB write succeeded', {
+        storyId: validatedInput.story_id,
+        artifactType: validatedInput.artifact_type,
+        iteration,
+        artifactId: result.id,
+      })
+    } catch (err) {
+      kbWritten = false
+      kbError = err instanceof Error ? err.message : String(err)
+
+      logger.warn('artifact_write: KB write failed (non-blocking)', {
+        storyId: validatedInput.story_id,
+        artifactType: validatedInput.artifact_type,
+        iteration,
+        error: kbError,
+      })
+    }
+  }
+
+  return {
+    file_written: true,
+    file_path: filePath,
+    kb_written: kbWritten,
+    kb_artifact_id: kbArtifactId,
+    kb_error: kbError,
+  }
+}

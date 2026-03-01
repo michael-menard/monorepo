@@ -918,7 +918,9 @@ export function createLoadFromDbNode(
     } catch (error) {
       return {
         dbLoadSuccess: false,
-        warnings: [`Failed to load from DB: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to load from DB: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -942,17 +944,23 @@ export function createSaveToDbNode(
 
     try {
       // Save story state transition to backlog after synthesis
-      const saveResult = await saveToDb(state.storyId, storyRepo, workflowRepo, {
-        storyState: 'backlog',
-        stateChangeReason: 'Story created via story-creation graph',
-      }, {
-        actor: 'story-creation-graph',
-        updateStoryState: true,
-        saveElaboration: false,
-        savePlan: false,
-        saveProof: false,
-        saveVerification: false,
-      })
+      const saveResult = await saveToDb(
+        state.storyId,
+        storyRepo,
+        workflowRepo,
+        {
+          storyState: 'backlog',
+          stateChangeReason: 'Story created via story-creation graph',
+        },
+        {
+          actor: 'story-creation-graph',
+          updateStoryState: true,
+          saveElaboration: false,
+          savePlan: false,
+          saveProof: false,
+          saveVerification: false,
+        },
+      )
 
       // Check if save actually succeeded (saveToDb catches errors internally)
       if (!saveResult.saved || saveResult.error) {
@@ -968,7 +976,9 @@ export function createSaveToDbNode(
     } catch (error) {
       return {
         dbSaveSuccess: false,
-        warnings: [`Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -1031,7 +1041,9 @@ export function createPersistLearningsNode(kbDeps: unknown) {
     } catch (error) {
       return {
         learningsPersisted: false,
-        warnings: [`Failed to persist learnings: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to persist learnings: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -1117,8 +1129,8 @@ export function createStoryCreationGraph(config: Partial<StoryCreationConfig> = 
   const fullConfig = StoryCreationConfigSchema.parse(config)
 
   // Get typed repositories if provided
-  const storyRepo = fullConfig.storyRepo as StoryRepository | null ?? null
-  const workflowRepo = fullConfig.workflowRepo as WorkflowRepository | null ?? null
+  const storyRepo = (fullConfig.storyRepo as StoryRepository | null) ?? null
+  const workflowRepo = (fullConfig.workflowRepo as WorkflowRepository | null) ?? null
 
   const graph = new StateGraph(StoryCreationStateAnnotation)
     // Entry node: initialize workflow

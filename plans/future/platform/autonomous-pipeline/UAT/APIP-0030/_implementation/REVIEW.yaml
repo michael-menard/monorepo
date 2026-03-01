@@ -1,0 +1,151 @@
+schema: 1
+story_id: "APIP-0030"
+iteration: 2
+timestamp: "2026-02-28T01:00:00Z"
+code_review_phase: true
+workers_run: ["security", "style", "reusability"]
+workers_skipped: ["lint", "syntax", "typecheck", "build", "react", "typescript", "accessibility"]
+workers_skipped_reason: "Pure infrastructure story — no TypeScript files"
+verdict: PASS
+review_type: infrastructure
+reviewer_checklist:
+  compose_conventions: PASS
+  security_posture: PASS
+  init_pattern: PASS
+  documentation: PASS
+  prometheus_config: PASS
+
+findings: []
+
+detailed_results:
+  compose_conventions:
+    status: PASS
+    checks:
+      - item: "Named volumes with explicit driver declarations"
+        result: PASS
+        evidence: "langgraph_data volume declared at bottom of compose file"
+      - item: "Healthcheck with CMD-SHELL variant"
+        result: PASS
+        evidence: "Uses CMD-SHELL with curl + wget fallback; interval 10s, timeout 5s, retries 5, start_period 30s"
+      - item: "Restart policy: unless-stopped"
+        result: PASS
+        evidence: "langgraph-platform has restart: unless-stopped"
+      - item: "extra_hosts: host.docker.internal:host-gateway"
+        result: PASS
+        evidence: "extra_hosts present on langgraph-platform service"
+      - item: "One-shot init container pattern (restart: no, depends_on service_healthy)"
+        result: PASS
+        evidence: "langgraph-checkpoint-init mirrors minio-init exactly: restart: 'no', depends_on with condition: service_healthy"
+
+  security_posture:
+    status: PASS
+    checks:
+      - item: "Port 8124 bound to 127.0.0.1 only (SEC-001 compliance)"
+        result: PASS
+        evidence: "Port binding '127.0.0.1:8124:8124' confirms localhost-only access"
+      - item: "No 'latest' image tags"
+        result: PASS
+        evidence: "Image pinned to langchain/langgraph-api:0.0.9; verified via grep in EVIDENCE.yaml"
+      - item: "Credentials not hardcoded"
+        result: PASS
+        evidence: "Uses ${LANGGRAPH_CHECKPOINT_DATABASE_URL} environment variable; no secrets in compose file"
+
+  init_pattern:
+    status: PASS
+    comparison_with_minio_init:
+      - aspect: "restart policy"
+        minio_init: "'no'"
+        langgraph_checkpoint_init: "'no'"
+        status: PASS
+      - aspect: "depends_on condition"
+        minio_init: "service_healthy"
+        langgraph_checkpoint_init: "service_healthy"
+        status: PASS
+      - aspect: "entrypoint pattern"
+        minio_init: "/bin/sh -c wrapper with shell commands"
+        langgraph_checkpoint_init: "/bin/sh -c wrapper with shell commands"
+        status: PASS
+      - aspect: "exit handling"
+        minio_init: "exit 0"
+        langgraph_checkpoint_init: "exit 0"
+        status: PASS
+    note: "Pattern perfectly matches minio-init from infra/compose.lego-app.yaml (lines 150-162)"
+
+  documentation:
+    status: PASS
+    ac_coverage:
+      ac_7:
+        requirement: "Checkpoint schema documented in README.md"
+        status: PASS
+        evidence:
+          - "Aurora PostgreSQL langgraph_checkpoint database schema overview (lines 18-33)"
+          - "Connection pool spec: max 3 connections, dedicated langgraph_checkpoint_user, isolated from @repo/db (lines 37-62)"
+          - "Migration/init procedure documented (lines 83-124)"
+      ac_8:
+        requirement: "APIP-0020 integration readiness documented"
+        status: PASS
+        evidence:
+          - "APIP-0020 Integration section present (lines 142-162)"
+          - "Internal Docker network URL: http://langgraph-platform:8123 (line 156)"
+          - "Host URL: http://localhost:8123 (line 159)"
+          - "LANGGRAPH_API_URL env var guidance (lines 152-160)"
+          - "Image version pinned: explicitly stated on line 14"
+
+  prometheus_config:
+    status: PASS
+    comparison_with_lego_api_pattern:
+      lego_api_job:
+        job_name: "'lego-api'"
+        metrics_path: "/metrics"
+        target: "host.docker.internal:3001"
+      langgraph_platform_job:
+        job_name: "'langgraph-platform'"
+        metrics_path: "/metrics"
+        target: "host.docker.internal:8123"
+      pattern_consistency: PASS
+      evidence: "prometheus.yml lines 19-22 mirror lego-api pattern (lines 14-17) exactly; consistent scrape configuration"
+
+evidence_from_story:
+  acceptance_criteria_status:
+    ac_1: "PASS - Compose config validates, follows conventions"
+    ac_2: "PASS - Init container uses minio-init pattern correctly"
+    ac_3: "PASS - Connection pool documented (max 3, dedicated user, isolated)"
+    ac_4: "PASS - API on port 8123 (compose file confirms mapping)"
+    ac_5: "PASS - Studio UI on 127.0.0.1:8124 only"
+    ac_6: "PASS - Restart safety ensured (unless-stopped, state persisted to Aurora)"
+    ac_7: "PASS - Checkpoint schema fully documented in README"
+    ac_8: "PASS - APIP-0020 integration fully documented in README"
+
+  commands_verified:
+    - command: "docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config"
+      result: "SUCCESS - Exit code 0"
+    - command: "grep -E 'image:.*latest' infra/langgraph-server/compose.langgraph-server.yaml"
+      result: "SUCCESS - No matches (pinned image confirmed)"
+    - command: "grep '127.0.0.1:8124' infra/langgraph-server/compose.langgraph-server.yaml"
+      result: "SUCCESS - Port binding confirmed localhost-only"
+
+files_reviewed:
+  - path: "infra/langgraph-server/compose.langgraph-server.yaml"
+    lines: 62
+    action: "created"
+    status: PASS
+    notes: "LangGraph Platform and checkpoint-init services; follows all infra conventions"
+  - path: "infra/langgraph-server/README.md"
+    lines: 180
+    action: "created"
+    status: PASS
+    notes: "Complete operational documentation with schema, connection pool, deployment, and APIP-0020 integration"
+  - path: "infra/prometheus/prometheus.yml"
+    lines: 23
+    action: "modified"
+    status: PASS
+    notes: "Added langgraph-platform scrape job; consistent with existing lego-api pattern"
+
+conclusion: |
+  APIP-0030 implementation passes all infrastructure code review criteria. The Docker Compose configuration
+  correctly implements LangGraph Platform deployment with proper isolation patterns, security controls
+  (localhost-only Studio UI, pinned image), and one-shot initialization. Documentation fully covers
+  Aurora schema, connection pool isolation, deployment procedures, and APIP-0020 supervisor integration.
+  Prometheus scrape configuration is consistent with established patterns. Ready for deployment.
+
+signal: "REVIEW PASS"

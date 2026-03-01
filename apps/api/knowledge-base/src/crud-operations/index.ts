@@ -129,6 +129,12 @@ export {
   type ArtifactOperationsDeps,
   type ArtifactResponse,
   type ArtifactListItem,
+  artifact_write,
+  ArtifactWriteInputSchema,
+  ArtifactWriteResultSchema,
+  computeArtifactPath,
+  type ArtifactWriteInput,
+  type ArtifactWriteResult,
 } from './artifact-operations.js'
 
 // Story CRUD operations (story status tracking)

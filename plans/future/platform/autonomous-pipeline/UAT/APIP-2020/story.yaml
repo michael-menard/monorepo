@@ -1,6 +1,6 @@
 id: "APIP-2020"
 title: "Monitor UI v1 (Read-Only Dashboard)"
-status: backlog
+status: uat
 priority: medium
 phase: 2
 feature: "Read-only web dashboard querying wint.work_queue and wint.token_usage tables directly — showing pipeline view, per-story cost, and blocked queue"

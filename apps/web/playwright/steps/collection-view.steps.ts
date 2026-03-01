@@ -19,7 +19,7 @@ Given('I have {int} owned items in my collection', async ({ page }, count: numbe
   await page.route('**/api/wishlist*', route => {
     const url = new URL(route.request().url())
     const status = url.searchParams.get('status')
-    
+
     if (status === 'owned') {
       const items = Array.from({ length: count }, (_, i) => ({
         id: `owned-${i + 1}`,
@@ -72,60 +72,65 @@ Given('I have {int} owned items', async ({ page }, count: number) => {
   await Given('I have {int} owned items in my collection', { page }, count)
 })
 
-Given('I have {int} owned items from {string} store', async ({ page }, count: number, store: string) => {
-  await page.route('**/api/wishlist*', route => {
-    const url = new URL(route.request().url())
-    const status = url.searchParams.get('status')
-    const filterStore = url.searchParams.get('store')
-    
-    if (status === 'owned') {
-      const allItems = Array.from({ length: count }, (_, i) => ({
-        id: `owned-${store}-${i + 1}`,
-        userId: 'test-user',
-        title: `${store} Set ${i + 1}`,
-        setNumber: `${store[0]}${1000 + i}`,
-        store,
-        imageUrl: `https://example.com/${store}-${i + 1}.jpg`,
-        imageVariants: null,
-        price: '99.99',
-        currency: 'USD',
-        pieceCount: 1000,
-        priority: 5,
-        tags: ['test'],
-        sortOrder: i + 1,
-        status: 'owned',
-        statusChangedAt: new Date().toISOString(),
-        purchaseDate: new Date().toISOString(),
-        purchasePrice: '99.99',
-        purchaseStore: store,
-        buildStatus: 'in_progress',
-        notes: null,
-        releaseDate: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }))
+Given(
+  'I have {int} owned items from {string} store',
+  async ({ page }, count: number, store: string) => {
+    await page.route('**/api/wishlist*', route => {
+      const url = new URL(route.request().url())
+      const status = url.searchParams.get('status')
+      const filterStore = url.searchParams.get('store')
 
-      const filteredItems = filterStore ? allItems.filter(item => item.store === filterStore) : allItems
+      if (status === 'owned') {
+        const allItems = Array.from({ length: count }, (_, i) => ({
+          id: `owned-${store}-${i + 1}`,
+          userId: 'test-user',
+          title: `${store} Set ${i + 1}`,
+          setNumber: `${store[0]}${1000 + i}`,
+          store,
+          imageUrl: `https://example.com/${store}-${i + 1}.jpg`,
+          imageVariants: null,
+          price: '99.99',
+          currency: 'USD',
+          pieceCount: 1000,
+          priority: 5,
+          tags: ['test'],
+          sortOrder: i + 1,
+          status: 'owned',
+          statusChangedAt: new Date().toISOString(),
+          purchaseDate: new Date().toISOString(),
+          purchasePrice: '99.99',
+          purchaseStore: store,
+          buildStatus: 'in_progress',
+          notes: null,
+          releaseDate: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }))
 
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: filteredItems,
-          pagination: {
-            page: 1,
-            limit: 100,
-            total: filteredItems.length,
-            totalPages: 1,
-            hasMore: false,
-          },
-        }),
-      })
-    } else {
-      route.continue()
-    }
-  })
-})
+        const filteredItems = filterStore
+          ? allItems.filter(item => item.store === filterStore)
+          : allItems
+
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: filteredItems,
+            pagination: {
+              page: 1,
+              limit: 100,
+              total: filteredItems.length,
+              totalPages: 1,
+              hasMore: false,
+            },
+          }),
+        })
+      } else {
+        route.continue()
+      }
+    })
+  },
+)
 
 Given('I have owned items:', async ({ page }, dataTable) => {
   const items = dataTable.hashes().map((row: any, i: number) => ({
@@ -158,13 +163,13 @@ Given('I have owned items:', async ({ page }, dataTable) => {
     const url = new URL(route.request().url())
     const status = url.searchParams.get('status')
     const search = url.searchParams.get('search') || url.searchParams.get('q')
-    
+
     if (status === 'owned') {
       let filteredItems = items
-      
+
       if (search) {
-        filteredItems = items.filter(item => 
-          item.title.toLowerCase().includes(search.toLowerCase())
+        filteredItems = items.filter(item =>
+          item.title.toLowerCase().includes(search.toLowerCase()),
         )
       }
 
@@ -203,7 +208,8 @@ When('I am on the {string} page', async ({ page }, path: string) => {
 })
 
 When('I click the {string} button', async ({ page }, buttonText: string) => {
-  const button = page.getByRole('button', { name: new RegExp(buttonText, 'i') })
+  const button = page
+    .getByRole('button', { name: new RegExp(buttonText, 'i') })
     .or(page.getByRole('link', { name: new RegExp(buttonText, 'i') }))
   await button.click()
   await page.waitForLoadState('networkidle')
@@ -217,7 +223,8 @@ When('I click on the {string} link in the sidebar', async ({ page }, linkText: s
 
 When('I filter by store {string}', async ({ page }, store: string) => {
   // Implement store filtering - depends on UI implementation
-  const storeFilter = page.getByRole('combobox', { name: /store/i })
+  const storeFilter = page
+    .getByRole('combobox', { name: /store/i })
     .or(page.locator('[data-testid="store-filter"]'))
   await storeFilter.selectOption(store)
   await page.waitForLoadState('networkidle')
@@ -244,8 +251,7 @@ Then('I should see {int} collection cards', async ({ page }, count: number) => {
 })
 
 Then('the cards should be displayed in a grid layout', async ({ page }) => {
-  const grid = page.locator('[data-testid="gallery-grid"]')
-    .or(page.locator('.grid'))
+  const grid = page.locator('[data-testid="gallery-grid"]').or(page.locator('.grid'))
   await expect(grid).toBeVisible()
 })
 
@@ -255,7 +261,8 @@ Then('I should see the empty state message {string}', async ({ page }, message: 
 })
 
 Then('I should see a call-to-action button {string}', async ({ page }, buttonText: string) => {
-  const button = page.getByRole('button', { name: new RegExp(buttonText, 'i') })
+  const button = page
+    .getByRole('button', { name: new RegExp(buttonText, 'i') })
     .or(page.getByRole('link', { name: new RegExp(buttonText, 'i') }))
   await expect(button).toBeVisible()
 })
@@ -271,8 +278,7 @@ Then('I should see the item {string}', async ({ page }, itemTitle: string) => {
 })
 
 Then('I should see the navigation menu', async ({ page }) => {
-  const nav = page.getByRole('navigation')
-    .or(page.locator('[role="navigation"]'))
+  const nav = page.getByRole('navigation').or(page.locator('[role="navigation"]'))
   await expect(nav.first()).toBeVisible()
 })
 

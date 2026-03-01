@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 59 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + story + tokens + analytics + worktree + plans + artifact_search)', () => {
+    it('should return all 60 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + artifact_search)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(59)
+      expect(tools).toHaveLength(60)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -120,6 +120,8 @@ describe('MCP Server Integration', () => {
         'kb_audit_by_entry',
         'kb_audit_query',
         'kb_audit_retention_cleanup',
+        // Dual-write artifact tool (KBAR-0110)
+        'artifact_write',
         // Artifact tools (DB-first artifact storage)
         'kb_write_artifact',
         'kb_read_artifact',

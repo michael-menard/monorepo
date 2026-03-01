@@ -2,8 +2,8 @@
  * File discovery utilities for scanning the monorepo
  * WISH-20210
  */
-import { glob } from 'glob'
 import { resolve } from 'path'
+import { glob } from 'glob'
 
 /**
  * Default glob patterns for discovering TypeScript files to scan

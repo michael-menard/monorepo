@@ -1,6 +1,6 @@
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -45,11 +45,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      '@tanstack/react-router',
-    ],
+    include: ['react', 'react-dom', '@tanstack/react-router'],
     exclude: [
       // Exclude all workspace packages from pre-bundling
       '@repo/api-client',

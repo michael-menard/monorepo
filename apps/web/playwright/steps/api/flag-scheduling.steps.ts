@@ -85,7 +85,11 @@ Given('the test flag {string} exists', async ({ request }, flagKey: string) => {
   // If flag doesn't exist, the test environment must have it seeded
   // The admin POST endpoint updates existing flags - it doesn't create new ones
   // For E2E tests, we accept either 200 (flag exists) or rely on test data seeding
-  if (flagCheck.status() === 404 && !flagKey.includes('empty') && !flagKey.includes('non-existent')) {
+  if (
+    flagCheck.status() === 404 &&
+    !flagKey.includes('empty') &&
+    !flagKey.includes('non-existent')
+  ) {
     // Flag doesn't exist - skip silently for empty/non-existent test flags
     // Real test flags should be seeded in the test environment
   }
@@ -225,56 +229,47 @@ When(
 // List Schedule Steps
 // ─────────────────────────────────────────────────────────────────────────────
 
-Given(
-  'I have created a schedule for flag {string}',
-  async ({ request }, flagKey: string) => {
-    const response = await request.post(`${BASE_URL}/admin/flags/${flagKey}/schedule`, {
-      headers: getHeaders(),
-      data: {
-        scheduledAt: futureISO(24),
-        updates: { enabled: true },
-      },
-    })
+Given('I have created a schedule for flag {string}', async ({ request }, flagKey: string) => {
+  const response = await request.post(`${BASE_URL}/admin/flags/${flagKey}/schedule`, {
+    headers: getHeaders(),
+    data: {
+      scheduledAt: futureISO(24),
+      updates: { enabled: true },
+    },
+  })
 
-    expect(response.status()).toBe(201)
-    const body = await response.json()
-    scheduleState.createdScheduleId = body.id
-  },
-)
+  expect(response.status()).toBe(201)
+  const body = await response.json()
+  scheduleState.createdScheduleId = body.id
+})
 
-When(
-  'I list schedules for flag {string}',
-  async ({ request }, flagKey: string) => {
-    const response = await request.get(`${BASE_URL}/admin/flags/${flagKey}/schedule`, {
-      headers: getHeaders(),
-    })
+When('I list schedules for flag {string}', async ({ request }, flagKey: string) => {
+  const response = await request.get(`${BASE_URL}/admin/flags/${flagKey}/schedule`, {
+    headers: getHeaders(),
+  })
 
-    apiState.lastResponseStatus = response.status()
-    apiState.lastResponseBody = await response.json().catch(() => null)
+  apiState.lastResponseStatus = response.status()
+  apiState.lastResponseBody = await response.json().catch(() => null)
 
-    if (response.ok() && Array.isArray(apiState.lastResponseBody)) {
-      scheduleState.scheduleList = apiState.lastResponseBody as unknown[]
-    }
-  },
-)
+  if (response.ok() && Array.isArray(apiState.lastResponseBody)) {
+    scheduleState.scheduleList = apiState.lastResponseBody as unknown[]
+  }
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cancel Schedule Steps
 // ─────────────────────────────────────────────────────────────────────────────
 
-When(
-  'I cancel the created schedule for flag {string}',
-  async ({ request }, flagKey: string) => {
-    expect(scheduleState.createdScheduleId).not.toBeNull()
-    const response = await request.delete(
-      `${BASE_URL}/admin/flags/${flagKey}/schedule/${scheduleState.createdScheduleId}`,
-      { headers: getHeaders() },
-    )
+When('I cancel the created schedule for flag {string}', async ({ request }, flagKey: string) => {
+  expect(scheduleState.createdScheduleId).not.toBeNull()
+  const response = await request.delete(
+    `${BASE_URL}/admin/flags/${flagKey}/schedule/${scheduleState.createdScheduleId}`,
+    { headers: getHeaders() },
+  )
 
-    apiState.lastResponseStatus = response.status()
-    apiState.lastResponseBody = await response.json().catch(() => null)
-  },
-)
+  apiState.lastResponseStatus = response.status()
+  apiState.lastResponseBody = await response.json().catch(() => null)
+})
 
 When(
   'I cancel schedule {string} for flag {string}',
@@ -293,36 +288,25 @@ When(
 // Schedule Response Assertions
 // ─────────────────────────────────────────────────────────────────────────────
 
-Then(
-  'the schedule response should have status {string}',
-  async ({}, status: string) => {
-    const body = apiState.lastResponseBody as Record<string, unknown>
-    expect(body.status).toBe(status)
-  },
-)
+Then('the schedule response should have status {string}', async ({}, status: string) => {
+  const body = apiState.lastResponseBody as Record<string, unknown>
+  expect(body.status).toBe(status)
+})
 
-Then(
-  'the schedule response should have flagKey {string}',
-  async ({}, flagKey: string) => {
-    const body = apiState.lastResponseBody as Record<string, unknown>
-    expect(body.flagKey).toBe(flagKey)
-  },
-)
+Then('the schedule response should have flagKey {string}', async ({}, flagKey: string) => {
+  const body = apiState.lastResponseBody as Record<string, unknown>
+  expect(body.flagKey).toBe(flagKey)
+})
 
-Then(
-  'the schedule response should include {string} in updates',
-  async ({}, field: string) => {
-    const body = apiState.lastResponseBody as Record<string, unknown>
-    const updates = body.updates as Record<string, unknown>
-    expect(updates).toHaveProperty(field)
-  },
-)
+Then('the schedule response should include {string} in updates', async ({}, field: string) => {
+  const body = apiState.lastResponseBody as Record<string, unknown>
+  const updates = body.updates as Record<string, unknown>
+  expect(updates).toHaveProperty(field)
+})
 
 Then('the schedule response should have a valid UUID id', async () => {
   const body = apiState.lastResponseBody as Record<string, unknown>
-  expect(body.id).toMatch(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-  )
+  expect(body.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 })
 
 Then('the schedule response should have a valid scheduledAt datetime', async () => {

@@ -40,7 +40,9 @@ export interface ListSetsDbClient {
   }
   selectDistinct: (fields: Record<string, unknown>) => {
     from: (table: unknown) => {
-      where: (condition: unknown) => Promise<Array<{ theme: string | null } | { tags: string[] | null }>>
+      where: (
+        condition: unknown,
+      ) => Promise<Array<{ theme: string | null } | { tags: string[] | null }>>
     }
   }
 }
@@ -116,10 +118,7 @@ export async function listSets(
 
   if (search) {
     conditions.push(
-      or(
-        ilike(sets.title as any, `%${search}%`),
-        ilike(sets.setNumber as any, `%${search}%`),
-      )!,
+      or(ilike(sets.title as any, `%${search}%`), ilike(sets.setNumber as any, `%${search}%`))!,
     )
   }
 
@@ -248,9 +247,7 @@ export async function listSets(
     .from(sets)
     .where(eq(sets.userId as any, userId))) as Array<{ theme: string | null }>
 
-  const availableThemes = themeRows
-    .map(row => row.theme)
-    .filter((t): t is string => Boolean(t))
+  const availableThemes = themeRows.map(row => row.theme).filter((t): t is string => Boolean(t))
 
   const tagRows = (await db
     .selectDistinct({ tags: sets.tags })

@@ -7,7 +7,6 @@
 
 import CircuitBreaker from 'opossum'
 import { logger } from '@repo/logger'
-
 import {
   CircuitBreakerConfigSchema,
   type CircuitBreakerConfig,
@@ -94,7 +93,7 @@ export function createCircuitBreaker<T, TArgs extends unknown[] = []>(
     })
   })
 
-  breaker.on('fallback', (result) => {
+  breaker.on('fallback', result => {
     logger.info('Circuit breaker fallback executed', {
       circuitBreaker: config.name,
       event: 'fallback',

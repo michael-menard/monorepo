@@ -9,7 +9,6 @@ import { z } from 'zod'
 import Bottleneck from 'bottleneck'
 import CircuitBreaker from 'opossum'
 import { logger } from '@repo/logger'
-
 import {
   createCircuitBreaker,
   registerCircuitBreaker,
@@ -154,7 +153,7 @@ export function createServicePolicy(inputConfig: ServicePolicyInput): ServicePol
       return rateLimiter.schedule(async () => {
         // Layer 2: Timeout with AbortController
         return withTimeout(
-          async (signal) => {
+          async signal => {
             // Layer 3: Circuit breaker
             // Since opossum doesn't support dynamic actions, we create a per-call breaker
             // or use the fire() method with the signal
@@ -207,8 +206,31 @@ export function createServicePolicy(inputConfig: ServicePolicyInput): ServicePol
 }
 
 // Re-export individual policies
-export { createOpenAIPolicy, getOpenAIPolicy, createOpenAIEmbeddingsPolicy } from './openai-policy.js'
-export { createCognitoPolicy, getCognitoPolicy, createCognitoAdminPolicy } from './cognito-policy.js'
-export { createS3Policy, getS3Policy, createS3UploadPolicy, createS3DownloadPolicy } from './s3-policy.js'
-export { createPostgresPolicy, getPostgresPolicy, createPostgresFastQueryPolicy, createPostgresSlowQueryPolicy } from './postgres-policy.js'
-export { createRedisPolicy, getRedisPolicy, createRedisCachePolicy, createRedisSessionPolicy } from './redis-policy.js'
+export {
+  createOpenAIPolicy,
+  getOpenAIPolicy,
+  createOpenAIEmbeddingsPolicy,
+} from './openai-policy.js'
+export {
+  createCognitoPolicy,
+  getCognitoPolicy,
+  createCognitoAdminPolicy,
+} from './cognito-policy.js'
+export {
+  createS3Policy,
+  getS3Policy,
+  createS3UploadPolicy,
+  createS3DownloadPolicy,
+} from './s3-policy.js'
+export {
+  createPostgresPolicy,
+  getPostgresPolicy,
+  createPostgresFastQueryPolicy,
+  createPostgresSlowQueryPolicy,
+} from './postgres-policy.js'
+export {
+  createRedisPolicy,
+  getRedisPolicy,
+  createRedisCachePolicy,
+  createRedisSessionPolicy,
+} from './redis-policy.js'

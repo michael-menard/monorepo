@@ -20,11 +20,10 @@ Given('the instructions gallery has items', async ({ page }) => {
   await expect(cards.first()).toBeVisible({ timeout: 10000 })
 })
 
-
 Given('I see the dashboard cards', async ({ page }) => {
   // Wait for dashboard to be visible
   await page.waitForSelector('[data-testid="moc-detail-dashboard"]', { timeout: 10000 })
-  
+
   // Verify at least one card is visible
   const cards = page.locator('[data-testid*="card"]')
   await expect(cards.first()).toBeVisible()
@@ -48,7 +47,6 @@ When('I navigate directly to a MOC detail URL', async ({ page }) => {
   await page.waitForTimeout(1000)
 })
 
-
 When('I navigate to an invalid MOC detail URL', async ({ page }) => {
   await page.goto('/instructions/invalid-non-existent-moc-999')
   await page.waitForTimeout(1000)
@@ -65,7 +63,7 @@ When('I drag the first card to the second position', async ({ page }) => {
   const cards = page.locator('[data-testid*="card"]')
   const firstCard = cards.first()
   const secondCard = cards.nth(1)
-  
+
   // Perform drag and drop
   await firstCard.dragTo(secondCard)
   await page.waitForTimeout(500)
@@ -95,10 +93,10 @@ Then('either the detail page loads or an error page appears', async ({ page }) =
   // Either we see the dashboard or an error message
   const dashboard = page.locator('[data-testid="moc-detail-dashboard"]')
   const errorMsg = page.getByText(/not found|error|404/i)
-  
+
   const dashboardVisible = await dashboard.isVisible().catch(() => false)
   const errorVisible = await errorMsg.isVisible().catch(() => false)
-  
+
   expect(dashboardVisible || errorVisible).toBe(true)
 })
 
@@ -122,7 +120,7 @@ Then('the sidebar should have sticky positioning', async ({ page }) => {
   const position = await sidebar.first().evaluate((el: Element) => {
     return window.getComputedStyle(el).position
   })
-  
+
   expect(position === 'sticky' || position === 'fixed').toBe(true)
 })
 
@@ -154,7 +152,7 @@ Then('the card order should be saved to localStorage', async ({ page }) => {
   const savedOrder = await page.evaluate(() => {
     return localStorage.getItem('moc-detail-card-order')
   })
-  
+
   expect(savedOrder).toBeTruthy()
 })
 
@@ -169,10 +167,10 @@ Then('sections should be stacked vertically', async ({ page }) => {
   // On mobile, sections should stack (sidebar above main)
   const sidebar = page.locator('[data-testid="moc-detail-sidebar"], aside, [class*="sidebar"]')
   const mainArea = page.locator('[data-testid="moc-detail-main"], main, [class*="main"]')
-  
+
   const sidebarBox = await sidebar.first().boundingBox()
   const mainBox = await mainArea.first().boundingBox()
-  
+
   if (sidebarBox && mainBox) {
     // Main should be below sidebar in vertical stack
     expect(mainBox.y).toBeGreaterThan(sidebarBox.y)
@@ -182,10 +180,10 @@ Then('sections should be stacked vertically', async ({ page }) => {
 Then('either a loading skeleton or the dashboard should be visible', async ({ page }) => {
   const skeleton = page.locator('[data-testid="moc-detail-skeleton"]')
   const dashboard = page.locator('[data-testid="moc-detail-dashboard"]')
-  
+
   const skeletonVisible = await skeleton.isVisible().catch(() => false)
   const dashboardVisible = await dashboard.isVisible().catch(() => false)
-  
+
   expect(skeletonVisible || dashboardVisible).toBe(true)
 })
 
@@ -202,7 +200,7 @@ Then('I should see a retry or back button', async ({ page }) => {
 Then('draggable cards should have aria-roledescription', async ({ page }) => {
   const draggableCards = page.locator('[draggable="true"], [data-testid*="draggable"]')
   const firstCard = draggableCards.first()
-  
+
   if (await firstCard.isVisible().catch(() => false)) {
     const ariaRole = await firstCard.getAttribute('aria-roledescription')
     expect(ariaRole).toBeTruthy()
@@ -222,4 +220,3 @@ Then('the MOC detail dashboard should load within 5 seconds', async ({ page }) =
 // ============================================================================
 // Additional MOC Detail Steps (INST-1111)
 // ============================================================================
-
