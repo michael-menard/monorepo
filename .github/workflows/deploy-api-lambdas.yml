@@ -92,7 +92,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build dist packages (required by type-checker)
-        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema"
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/observability" --concurrency=1
 
       - name: Run type checking
         run: pnpm turbo check-types --filter="./apps/api/lego-api/..."

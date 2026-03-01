@@ -80,7 +80,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build dist packages (required by type-checker)
-        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic"
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/observability" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic" --concurrency=1
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"

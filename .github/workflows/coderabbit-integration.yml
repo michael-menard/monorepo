@@ -71,7 +71,7 @@ jobs:
           HUSKY: 0
 
       - name: Build dist packages (required by type-checker)
-        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic"
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/observability" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic" --concurrency=1
 
       - name: Run linting and type checking
         run: |
@@ -170,7 +170,7 @@ jobs:
           HUSKY: 0
 
       - name: Build dist packages (required by type-checker)
-        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic"
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/observability" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic" --concurrency=1
 
       - name: Run comprehensive checks
         run: |
