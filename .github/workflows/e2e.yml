@@ -61,10 +61,10 @@ jobs:
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
       - name: Build packages
-        run: pnpm build --filter="...main-app" --filter="!main-app"
+        run: pnpm build --filter="...@repo/main-app" --filter="!@repo/main-app"
 
       - name: Build main-app
-        run: pnpm --filter main-app build
+        run: pnpm --filter @repo/main-app build
 
       - name: Run E2E tests (smoke)
         run: pnpm --filter @repo/playwright test:bdd:smoke
@@ -130,10 +130,10 @@ jobs:
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
       - name: Build packages
-        run: pnpm build --filter="...main-app" --filter="!main-app"
+        run: pnpm build --filter="...@repo/main-app" --filter="!@repo/main-app"
 
       - name: Build main-app
-        run: pnpm --filter main-app build
+        run: pnpm --filter @repo/main-app build
 
       - name: Run all E2E tests
         run: pnpm --filter @repo/playwright test:bdd
