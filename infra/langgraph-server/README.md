@@ -80,7 +80,7 @@ The checkpoint pool **must** be isolated from the application's primary database
 
 ### Connection Configuration
 
-Set these environment variables at deploy time (see `.env` or secrets manager):
+Set these environment variables at deploy time via `.env` file or secrets manager. **Never hardcode credentials in the compose file or source control.**
 
 ```env
 LANGGRAPH_CHECKPOINT_DB_HOST=<aurora-cluster-endpoint>
@@ -89,7 +89,12 @@ LANGGRAPH_CHECKPOINT_DB_NAME=langgraph_checkpoints
 LANGGRAPH_CHECKPOINT_DB_USER=<service-account-user>
 LANGGRAPH_CHECKPOINT_DB_PASSWORD=<secret>
 LANGGRAPH_CHECKPOINT_DB_POOL_MAX=3
+LANGGRAPH_CHECKPOINT_DB_SSL_MODE=require
 ```
+
+> **TLS Required**: `LANGGRAPH_CHECKPOINT_DB_SSL_MODE=require` enforces encrypted connections to Aurora PostgreSQL. Aurora supports TLS by default; no additional certificate distribution is needed for `sslmode=require`. Do not set this to `disable` in any environment.
+
+> **Fail-fast**: The compose file uses Docker's `:?` syntax for `DB_HOST`, `DB_USER`, and `DB_PASSWORD`. If any of these variables are unset when the service starts, Docker Compose will exit with an error rather than starting with insecure defaults. This is intentional.
 
 The database `langgraph_checkpoints` must be created on the Aurora cluster before first start:
 
@@ -121,6 +126,8 @@ The following procedure deploys or updates the LangGraph server on the target ho
 
 2. **Create environment file on the target host**
 
+   > **Security**: The `.env` file contains plaintext credentials. Restrict it to root/deploy user only (`chmod 600`). Never commit it to source control — add `/opt/langgraph/.env` to `.gitignore`. Prefer injecting credentials via AWS Secrets Manager or Parameter Store in production; the `.env` file is acceptable only for non-production or isolated deployments.
+
    ```bash
    ssh <user>@<host>
    cat > /opt/langgraph/.env << 'ENVEOF'
@@ -129,8 +136,11 @@ The following procedure deploys or updates the LangGraph server on the target ho
    LANGGRAPH_CHECKPOINT_DB_NAME=langgraph_checkpoints
    LANGGRAPH_CHECKPOINT_DB_USER=<user>
    LANGGRAPH_CHECKPOINT_DB_PASSWORD=<password>
+   LANGGRAPH_CHECKPOINT_DB_SSL_MODE=require
    ENVEOF
    chmod 600 /opt/langgraph/.env
+   # Verify permissions — must show -rw------- (owner read/write only)
+   ls -la /opt/langgraph/.env
    ```
 
 3. **Pull latest image**

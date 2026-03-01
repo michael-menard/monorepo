@@ -40,25 +40,34 @@ services:
       - |
         echo "LangGraph server placeholder — replace image in APIP-0030" && sleep infinity
     ports:
-      - '8123:8123'   # LangGraph REST API
-      - '8124:8124'   # LangGraph Studio UI
+      - '127.0.0.1:8123:8123'   # LangGraph REST API — bound to loopback only (not world-routable)
+      - '127.0.0.1:8124:8124'   # LangGraph Studio UI — bound to loopback only (not world-routable)
     volumes:
       - langgraph_data:/app/data
     environment:
       # Checkpoint DB — isolated pool, NOT @repo/db
-      # Targeting Aurora PostgreSQL; fill in actual values at deploy time.
-      LANGGRAPH_CHECKPOINT_DB_HOST: '${LANGGRAPH_CHECKPOINT_DB_HOST:-REPLACE_ME}'
+      # Targeting Aurora PostgreSQL; ALL values must be set via .env or secrets manager at deploy time.
+      # SECURITY: No default values are provided for credentials or host.
+      #   These variables MUST be set externally before starting the service.
+      #   If any required variable is unset, the service will fail to start (intentional fail-fast).
+      # WARNING: Any variable still showing REPLACE_ME at runtime has NOT been configured.
+      LANGGRAPH_CHECKPOINT_DB_HOST: '${LANGGRAPH_CHECKPOINT_DB_HOST:?LANGGRAPH_CHECKPOINT_DB_HOST must be set to the Aurora cluster endpoint}'
       LANGGRAPH_CHECKPOINT_DB_PORT: '${LANGGRAPH_CHECKPOINT_DB_PORT:-5432}'
       LANGGRAPH_CHECKPOINT_DB_NAME: '${LANGGRAPH_CHECKPOINT_DB_NAME:-langgraph_checkpoints}'
-      LANGGRAPH_CHECKPOINT_DB_USER: '${LANGGRAPH_CHECKPOINT_DB_USER:-REPLACE_ME}'
-      LANGGRAPH_CHECKPOINT_DB_PASSWORD: '${LANGGRAPH_CHECKPOINT_DB_PASSWORD:-REPLACE_ME}'
+      LANGGRAPH_CHECKPOINT_DB_USER: '${LANGGRAPH_CHECKPOINT_DB_USER:?LANGGRAPH_CHECKPOINT_DB_USER must be set to the service account username}'
+      LANGGRAPH_CHECKPOINT_DB_PASSWORD: '${LANGGRAPH_CHECKPOINT_DB_PASSWORD:?LANGGRAPH_CHECKPOINT_DB_PASSWORD must be set via secrets manager or .env — never hardcode}'
       LANGGRAPH_CHECKPOINT_DB_POOL_MAX: '3'
+      # TLS: enforce encrypted connections to Aurora PostgreSQL
+      LANGGRAPH_CHECKPOINT_DB_SSL_MODE: '${LANGGRAPH_CHECKPOINT_DB_SSL_MODE:-require}'
       # LangGraph server runtime config
       LANGGRAPH_API_PORT: '8123'
       LANGGRAPH_STUDIO_PORT: '8124'
       # Graph store / persistence directory inside the container
       LANGGRAPH_DATA_DIR: '/app/data'
     healthcheck:
+      # NOTE(SEC-004): /ok is unauthenticated by design (Docker health probe runs inside container).
+      # The endpoint is only reachable from within the container itself (localhost).
+      # External access is restricted by the 127.0.0.1 port binding above.
       test: ['CMD-SHELL', 'curl -sf http://localhost:8123/ok || exit 1']
       interval: 15s
       timeout: 10s
