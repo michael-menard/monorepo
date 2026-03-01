@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod'
+import { ConcurrencyConfigSchema, DEFAULT_CONCURRENCY_CONFIG } from './concurrency-config.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Re-use Zod-native representations of graph input types.
@@ -66,6 +67,8 @@ export const ElaborationJobDataSchema = z.object({
   attemptNumber: z.number().int().min(1),
   payload: SynthesizedStoryPayloadSchema,
   priority: z.number().int().optional(),
+  /** APIP-3080: Path prefixes touched by this story (for conflict detection) */
+  touchedPathPrefixes: z.array(z.string().min(1)).default([]),
 })
 
 export type ElaborationJobData = z.infer<typeof ElaborationJobDataSchema>
@@ -80,6 +83,8 @@ export const StoryCreationJobDataSchema = z.object({
   attemptNumber: z.number().int().min(1),
   payload: StoryRequestPayloadSchema,
   priority: z.number().int().optional(),
+  /** APIP-3080: Path prefixes touched by this story (for conflict detection) */
+  touchedPathPrefixes: z.array(z.string().min(1)).default([]),
 })
 
 export type StoryCreationJobData = z.infer<typeof StoryCreationJobDataSchema>
@@ -145,6 +150,16 @@ export const PipelineSupervisorConfigSchema = z.object({
    * Default: 1 (notify on every blocker).
    */
   notificationThreshold: z.number().int().min(1).optional(),
+  /**
+   * APIP-3080: Absolute path to git repository root for worktree creation.
+   * Required when concurrency.maxWorktrees > 1. Optional for serial mode.
+   */
+  repoRoot: z.string().min(1).optional(),
+  /**
+   * APIP-3080: Concurrency configuration for parallel worktree dispatch.
+   * Default maxWorktrees:1 preserves APIP-0020 serial behavior (AC-12).
+   */
+  concurrency: ConcurrencyConfigSchema.default(DEFAULT_CONCURRENCY_CONFIG).optional(),
 })
 
 export type PipelineSupervisorConfig = z.infer<typeof PipelineSupervisorConfigSchema>

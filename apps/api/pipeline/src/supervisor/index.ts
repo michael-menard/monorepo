@@ -10,6 +10,7 @@
  * APIP-0020: Supervisor Loop (Plain TypeScript)
  * APIP-2030: Graceful Shutdown, Health Check, and Deployment Hardening
  * APIP-2010: Blocker Notification wiring (Worker event listeners, onCircuitOpen callback)
+ * APIP-3080: Parallel Story Concurrency (2-3 Worktrees)
  */
 
 import { Worker, type Job } from 'bullmq'
@@ -26,6 +27,12 @@ import { createHealthServer, type HealthServer } from './health/server.js'
 import { registerDrainHandlers } from './drain/index.js'
 import { createBlockerNotificationModule } from './blocker-notification/index.js'
 
+// APIP-3080: Concurrency imports
+import { ConcurrencyController } from './concurrency/concurrency-controller.js'
+import { generateWorktreePath } from './concurrency/worktree-path.js'
+import { createWorktree, removeWorktree } from './worktree-lifecycle.js'
+import { WorktreeConflictDetector, type StoryConflictDescriptor } from '../conflicts/worktree-conflict-detector.js'
+
 // Use ioredis Redis type directly — same underlying type as RedisClient in lego-api
 export type RedisClient = Redis
 
@@ -37,7 +44,7 @@ export type { PipelineSupervisorConfig }
  *
  * APIP-0020:
  *   AC-1: Exports start() and stop(); stop() triggers graceful BullMQ Worker shutdown.
- *   AC-2: BullMQ Worker with concurrency:1.
+ *   AC-2: BullMQ Worker with concurrency:1 (or config.concurrency.maxWorktrees via APIP-3080).
  *
  * APIP-2030:
  *   AC-1: SIGTERM → drain mode → clean exit (process.exit(0)) or timeout exit (process.exit(1)).
@@ -50,6 +57,15 @@ export type { PipelineSupervisorConfig }
  * APIP-2010:
  *   AC-9: Worker 'failed' and 'completed' event listeners registered in start().
  *   AC-11: Webhook calls are fire-and-forget (not awaited from drain path).
+ *
+ * APIP-3080:
+ *   AC-2: BullMQ Worker concurrency: config.concurrency.maxWorktrees.
+ *   AC-3: Each story runs in an isolated git worktree.
+ *   AC-4: ConcurrencyController manages slot accounting.
+ *   AC-5/AC-6: WorktreeConflictDetector enforces conflictPolicy: 'reject'.
+ *   AC-8: Per-worktree NodeCircuitBreaker isolation.
+ *   AC-9: Non-blocking worktree cleanup with slot release in finally.
+ *   AC-12: Default maxWorktrees:1 preserves APIP-0020 serial behavior.
  *
  * Usage:
  *   const supervisor = new PipelineSupervisor(redisClient, config)
@@ -71,6 +87,11 @@ export class PipelineSupervisor {
   // APIP-2030: Health server
   private healthServer: HealthServer | null = null
 
+  // APIP-3080: Concurrency control
+  private readonly concurrencyController: ConcurrencyController
+  private readonly conflictDetector: WorktreeConflictDetector
+  private readonly activePathPrefixes = new Map<string, string[]>()
+
   constructor(
     redisClient: RedisClient,
     config: Partial<PipelineSupervisorConfig> = {},
@@ -81,6 +102,12 @@ export class PipelineSupervisor {
     this.config = PipelineSupervisorConfigSchema.parse(config)
     this.db = db
     this.startTimeMs = Date.now()
+
+    // APIP-3080: Initialize concurrency controller and conflict detector
+    this.concurrencyController = new ConcurrencyController(
+      this.config.concurrency ?? { maxWorktrees: 1, conflictPolicy: 'reject' as const, worktreeCircuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 } },
+    )
+    this.conflictDetector = new WorktreeConflictDetector()
 
     // Warn if drain timeout < stage timeout (APIP-2030 risk)
     if (this.config.drainTimeoutMs < this.config.stageTimeoutMs) {
@@ -107,6 +134,14 @@ export class PipelineSupervisor {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // APIP-3080: Concurrency accessors
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getConcurrencyController(): ConcurrencyController {
+    return this.concurrencyController
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -126,12 +161,15 @@ export class PipelineSupervisor {
       return
     }
 
+    const maxWorktrees = this.config.concurrency?.maxWorktrees ?? 1
+
     logger.info('PipelineSupervisor starting', {
       queueName: this.config.queueName,
       stageTimeoutMs: this.config.stageTimeoutMs,
       drainTimeoutMs: this.config.drainTimeoutMs,
       healthPort: this.config.healthPort,
       circuitBreakerFailureThreshold: this.config.circuitBreakerFailureThreshold,
+      maxWorktrees,
     })
 
     // APIP-2030 AC-5, HP-6: Start health server BEFORE BullMQ Worker
@@ -147,7 +185,7 @@ export class PipelineSupervisor {
     const notificationModule =
       this.db !== null ? createBlockerNotificationModule(this.db, this.config) : null
 
-    // AC-2: concurrency: 1 enforces single-story-at-a-time constraint (Phase 0)
+    // APIP-3080 AC-2/AC-12: BullMQ Worker concurrency set to maxWorktrees (default 1 preserves serial)
     this.worker = new Worker(
       this.config.queueName,
       async (job: Job) => {
@@ -155,7 +193,7 @@ export class PipelineSupervisor {
       },
       {
         connection: this.redisClient as any,
-        concurrency: 1,
+        concurrency: maxWorktrees,
       },
     )
 
@@ -265,10 +303,11 @@ export class PipelineSupervisor {
   }
 
   /**
-   * Process a single BullMQ job. Delegates to dispatch router.
+   * Process a single BullMQ job.
    *
    * APIP-2030: Tracks active job count for drain mode.
    * APIP-2010: Passes onCircuitOpen callback to dispatchJob().
+   * APIP-3080: Slot acquisition, conflict detection, worktree lifecycle.
    */
   private async processJob(job: Job): Promise<void> {
     // APIP-2030: Increment active job counter
@@ -292,14 +331,136 @@ export class PipelineSupervisor {
         throw parseResult.error
       }
 
-      // APIP-2010 AC-3, AC-9: Pass onCircuitOpen callback to dispatchJob (fire-and-forget)
+      const jobData = parseResult.data
+      const storyId = jobData.storyId
+      const touchedPathPrefixes = jobData.touchedPathPrefixes ?? []
+
+      // APIP-3080: Only apply concurrency control when maxWorktrees > 1
+      const maxWorktrees = this.config.concurrency?.maxWorktrees ?? 1
+
+      if (maxWorktrees > 1 && this.config.repoRoot) {
+        await this.processJobWithConcurrency(job, jobData, storyId, touchedPathPrefixes, notificationModule)
+      } else {
+        // Original APIP-0020 serial path — no worktree isolation
+        await this.processJobSerial(job, jobData, notificationModule)
+      }
+    } finally {
+      // APIP-2030: Always decrement, even on error
+      this._activeJobs = Math.max(0, this._activeJobs - 1)
+    }
+  }
+
+  /**
+   * Original serial processing path (APIP-0020).
+   * No worktree isolation — dispatches directly.
+   */
+  private async processJobSerial(
+    job: Job,
+    _jobData: any,
+    notificationModule: any,
+  ): Promise<void> {
+    // APIP-2010 AC-3, AC-9: Pass onCircuitOpen callback to dispatchJob (fire-and-forget)
+    const onCircuitOpen =
+      notificationModule !== null
+        ? (stage: string, storyId: string) => {
+            notificationModule.insertDependencyBlocker(storyId, stage).catch((err: Error) => {
+              logger.warn('circuit_blocker_insert_failed', {
+                event: 'circuit_blocker_insert_failed',
+                storyId,
+                stage,
+                error: err instanceof Error ? err.message : String(err),
+              })
+            })
+          }
+        : undefined
+
+    await dispatchJob(job, _jobData, this.config, undefined, onCircuitOpen)
+  }
+
+  /**
+   * APIP-3080: Concurrent processing with worktree isolation.
+   *
+   * AC-4: Slot acquisition with delayed retry on saturation.
+   * AC-5/AC-6: Conflict detection with delayed retry on overlap.
+   * AC-8: Per-worktree circuit breaker.
+   * AC-3: Git worktree create/remove lifecycle.
+   * AC-9: Non-blocking cleanup in finally.
+   */
+  private async processJobWithConcurrency(
+    job: Job,
+    _jobData: any,
+    storyId: string,
+    touchedPathPrefixes: string[],
+    notificationModule: any,
+  ): Promise<void> {
+    // AC-4: Slot saturation check
+    const worktreePath = generateWorktreePath(this.config.repoRoot!, storyId)
+
+    if (!this.concurrencyController.tryAcquireSlot(storyId, worktreePath)) {
+      // gap-2: moveToDelayed(Date.now() + 5000) for slot saturation
+      logger.info('Slot saturation: delaying job', {
+        storyId,
+        jobId: job.id,
+        activeSlots: this.concurrencyController.activeSlots(),
+        delayMs: 5000,
+      })
+      await job.moveToDelayed(Date.now() + 5000)
+      return
+    }
+
+    // Register path prefixes for conflict detection of subsequent jobs
+    this.activePathPrefixes.set(storyId, touchedPathPrefixes)
+
+    // Slot acquired — must release in finally
+    try {
+      // AC-5/AC-6: Conflict detection
+      const incoming: StoryConflictDescriptor = { storyId, touchedPathPrefixes }
+      const activeDescriptors = this.buildActiveConflictDescriptors(storyId)
+      const conflictingIds = this.conflictDetector.checkConflict(incoming, activeDescriptors)
+
+      if (conflictingIds.length > 0) {
+        // AC-6: conflictPolicy 'reject' → nack + requeue with delay (gap-2: 30s)
+        logger.warn('Conflict detected: delaying job', {
+          storyId,
+          jobId: job.id,
+          conflictingIds,
+          delayMs: 30000,
+        })
+        this.concurrencyController.releaseSlot(storyId)
+        this.activePathPrefixes.delete(storyId)
+        await job.moveToDelayed(Date.now() + 30000)
+        return
+      }
+
+      // AC-8: Circuit breaker check
+      const slot = this.concurrencyController.getSlot(storyId)
+      if (!slot) {
+        throw new Error(`Slot not found for storyId: ${storyId}`)
+      }
+
+      if (!slot.breaker.canExecute()) {
+        logger.warn('Circuit breaker open: delaying job', {
+          storyId,
+          jobId: job.id,
+          delayMs: 30000,
+        })
+        this.concurrencyController.releaseSlot(storyId)
+        this.activePathPrefixes.delete(storyId)
+        await job.moveToDelayed(Date.now() + 30000)
+        return
+      }
+
+      // AC-3: Create worktree
+      await createWorktree(this.config.repoRoot!, worktreePath, storyId)
+
+      // Execute story processing via dispatch router
       const onCircuitOpen =
         notificationModule !== null
-          ? (stage: string, storyId: string) => {
-              notificationModule.insertDependencyBlocker(storyId, stage).catch(err => {
+          ? (stage: string, sid: string) => {
+              notificationModule.insertDependencyBlocker(sid, stage).catch((err: Error) => {
                 logger.warn('circuit_blocker_insert_failed', {
                   event: 'circuit_blocker_insert_failed',
-                  storyId,
+                  storyId: sid,
                   stage,
                   error: err instanceof Error ? err.message : String(err),
                 })
@@ -307,11 +468,44 @@ export class PipelineSupervisor {
             }
           : undefined
 
-      await dispatchJob(job, parseResult.data, this.config, undefined, onCircuitOpen)
+      try {
+        await dispatchJob(job, _jobData, this.config, undefined, onCircuitOpen)
+        slot.breaker.recordSuccess()
+        logger.info('Story processing complete (concurrent)', { storyId, worktreePath })
+      } catch (processingError) {
+        slot.breaker.recordFailure()
+        logger.error('Story processing failed (concurrent)', { storyId, worktreePath, error: processingError })
+        throw processingError
+      }
     } finally {
-      // APIP-2030: Always decrement, even on error
-      this._activeJobs = Math.max(0, this._activeJobs - 1)
+      // AC-9: Non-blocking cleanup — slot release always happens in finally (WINT-1150 pattern)
+      const finalSlot = this.concurrencyController.getSlot(storyId)
+      if (finalSlot) {
+        await removeWorktree(this.config.repoRoot!, finalSlot.worktreePath, storyId)
+        this.concurrencyController.releaseSlot(storyId)
+      }
+      this.activePathPrefixes.delete(storyId)
     }
+  }
+
+  /**
+   * APIP-3080: Builds StoryConflictDescriptor array from currently active slots.
+   * Excludes the current storyId (which just acquired its slot).
+   */
+  private buildActiveConflictDescriptors(excludeStoryId: string): StoryConflictDescriptor[] {
+    const activeSlots = this.concurrencyController.getActiveSlots()
+    const descriptors: StoryConflictDescriptor[] = []
+
+    for (const [sid] of activeSlots) {
+      if (sid !== excludeStoryId) {
+        descriptors.push({
+          storyId: sid,
+          touchedPathPrefixes: this.activePathPrefixes.get(sid) ?? [],
+        })
+      }
+    }
+
+    return descriptors
   }
 
   /**
