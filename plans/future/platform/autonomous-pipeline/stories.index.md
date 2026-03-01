@@ -10,12 +10,12 @@
 
 | Phase | Name | Total Stories | Ready | In Progress | Completed | Status |
 |-------|------|---------------|-------|-------------|-----------|--------|
-| 0 | Foundation | 11 | 5 | 0 | 1 | backlog |
-| 1 | Full Worker Graphs | 9 | 1 | 2 | 0 | in-progress |
+| 0 | Foundation | 11 | 5 | 0 | 2 | backlog |
+| 1 | Full Worker Graphs | 10 | 2 | 2 | 0 | in-progress |
 | 2 | Resilience & Monitoring | 3 | 0 | 0 | 0 | backlog |
-| 3 | Learning System & Optimization | 5 | 0 | 0 | 0 | backlog |
+| 3 | Learning System & Optimization | 5 | 0 | 0 | 1 | in-progress |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
-| **TOTAL** | | **31** | **6** | **2** | **1** | |
+| **TOTAL** | | **32** | **7** | **2** | **3** | |
 
 ## Phase 0: Foundation (11 stories)
 
@@ -29,7 +29,7 @@ Minimal autonomous loop: Work queue, supervisor loop (plain TypeScript), LangGra
 | APIP-0040 | Model Router v1 with Rate Limiting and Token Budgets | APIP-0010 | uat |
 | APIP-5000 | Test Infrastructure Setup for Autonomous Pipeline Unit Testing (Phase 0) | APIP-0010 | ✅ uat |
 | APIP-5001 | Test Database Setup and Migration Testing | none | ✅ UAT |
-| APIP-5003 | LangGraph Platform Security Hardening and Network Boundary Documentation | APIP-0030 | Failed Code Review |
+| APIP-5003 | LangGraph Platform Security Hardening and Network Boundary Documentation | APIP-0030 | ✅ uat |
 | APIP-5004 | Secrets Engine and API Key Management | none | In QA |
 | APIP-5006 | LangGraph Server Infrastructure Baseline | none | 🔴 Failed Code Review |
 | APIP-5007 | Database Schema Versioning and Migration Strategy | APIP-0010 | Created |
@@ -42,12 +42,13 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 |---|---|---|---|
 | APIP-1010 | Structurer Node in Elaboration Graph | none | Ready for Code Review |
 | APIP-1020 | ChangeSpec Schema Design and Validation Spike | APIP-1010 | Created |
-| APIP-1030 | Implementation Graph with Atomic Change Loop | APIP-1020 | Needs Split |
-| APIP-1040 | Documentation Graph (Post-Merge) | APIP-1030 | In Progress |
-| APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1030 | In Progress |
+| APIP-1031 | Implementation Graph Skeleton with Worktree and Evidence Infrastructure | APIP-1020, APIP-0040 | Ready to Work |
+| APIP-1032 | Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits | APIP-1031, APIP-1020, APIP-0040 | Backlog |
+| APIP-1040 | Documentation Graph (Post-Merge) | APIP-1032 | In Progress |
+| APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | 🔍 Ready for QA |
 | APIP-1060 | QA Graph with Autonomous Verdict | APIP-1050 | Created |
 | APIP-1070 | Merge Graph with Learnings Extraction | APIP-1060 | In Elaboration |
-| APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1030, APIP-1050, APIP-1060, APIP-1070 | Ready to Work |
+| APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1050, APIP-1060, APIP-1070 | Ready to Work |
 | APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | In Elaboration |
 
 ## Phase 2: Resilience & Monitoring (3 stories)
@@ -66,7 +67,7 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
-| APIP-3010 | Change Telemetry Table and Instrumentation | APIP-1030 | Ready for Code Review |
+| APIP-3010 | Change Telemetry Table and Instrumentation | APIP-1032 | Ready for Code Review |
 | APIP-3020 | Model Affinity Profiles Table and Pattern Miner Cron | APIP-3010 | 🔍 Ready for QA |
 | APIP-3030 | Learning-Aware Diff Planner | APIP-3020, APIP-1020 | 🔍 Ready for QA |
 | APIP-3040 | Learning-Aware Model Router | APIP-3020 | 🔴 Failed Code Review |
@@ -74,7 +75,7 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 | APIP-3060 | Bake-Off Engine for Model Experiments | APIP-3020, APIP-3010 | 🔍 Ready for QA |
 | APIP-3070 | Cold Start Bootstrapping and Exploration Budget | APIP-3040 | Ready to Work |
 | APIP-3080 | Parallel Story Concurrency (2-3 Worktrees) | none | In Elaboration |
-| APIP-3090 | Cron Job Infrastructure | APIP-0030, APIP-3020 | Created |
+| APIP-3090 | Cron Job Infrastructure | APIP-0030, APIP-3020 | ✅ uat |
 
 ## Phase 4: Long-Term Quality (3 stories)
 
@@ -92,10 +93,10 @@ Codebase health gate, cohesion scanner, dependency auditor, test quality monitor
 
 ## Metrics Summary
 
-- **Total Stories**: 31
-- **Critical Path Length**: 12 stories
+- **Total Stories**: 32
+- **Critical Path Length**: 13 stories
 - **Maximum Parallelization**: 4 stories at once
-- **Stories with Sizing Warnings**: 2 (APIP-1030, APIP-1040)
+- **Stories with Sizing Warnings**: 1 (APIP-1040)
 - **High-Risk Stories**: 3 (RISK-001, RISK-002, RISK-009)
 - **New Stories Added**: 8 (infrastructure, testing, security, platform)
 
@@ -107,7 +108,8 @@ Minimum dependency chain for full autonomous pipeline operation:
 2. APIP-0020 — Supervisor Loop (Plain TypeScript)
 3. APIP-1010 — Structurer Node in Elaboration Graph
 4. APIP-1020 — ChangeSpec Schema Design and Validation Spike
-5. APIP-1030 — Implementation Graph with Atomic Change Loop
+5. APIP-1031 — Implementation Graph Skeleton
+5a. APIP-1032 — Change Loop with Model Dispatch
 6. APIP-1050 — Review Graph with Parallel Fan-Out Workers
 7. APIP-1060 — QA Graph with Autonomous Verdict
 8. APIP-1070 — Merge Graph with Learnings Extraction
@@ -120,9 +122,9 @@ Minimum dependency chain for full autonomous pipeline operation:
 
 | Risk ID | Description | Severity | Affected Stories |
 |---------|-------------|----------|------------------|
-| RISK-001 | Cheap models produce incorrect code that passes micro-verify but fails QA | high | APIP-1030, APIP-3040, APIP-3030 |
-| RISK-002 | Diff Planner produces poor ChangeSpec decompositions | high | APIP-1020, APIP-1030 |
-| RISK-009 | Runaway token costs per story without budget hard-cap | high | APIP-0040, APIP-1030 |
+| RISK-001 | Cheap models produce incorrect code that passes micro-verify but fails QA | high | APIP-1032, APIP-3040, APIP-3030 |
+| RISK-002 | Diff Planner produces poor ChangeSpec decompositions | high | APIP-1020, APIP-1032 |
+| RISK-009 | Runaway token costs per story without budget hard-cap | high | APIP-0040, APIP-1032 |
 
 ## Next Steps
 

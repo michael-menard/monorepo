@@ -1,9 +1,0 @@
-skipped: true
-reason: >
-  APIP-1030 is a pure backend LangGraph worker graph with no UI surface. The
-  implementation graph runs as a headless server-side process. There are no
-  React components, no HTTP endpoints consumed by a frontend, and no operator
-  UI in scope for this story. The only operator-visible outputs are structured
-  @repo/logger log events and the EVIDENCE.yaml artifact file — both consumed
-  by downstream pipeline tooling (APIP-5005 CLI, APIP-1050 Review Graph), not
-  by a browser UI. UI/UX review is not applicable.
