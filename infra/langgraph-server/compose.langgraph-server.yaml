@@ -1,21 +1,32 @@
 # LangGraph Server + Pipeline Supervisor — Docker Compose
 #
+# Security: All services bind to 127.0.0.1 only (APIP DECISIONS SEC-001).
+# See SECURITY.md for full security posture documentation.
+#
 # Services for the LangGraph Platform and autonomous pipeline execution environment.
 #
 # Usage:
 #   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml up -d          # Start all services
 #   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml down           # Stop all services
 #   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml down -v        # Stop and remove volumes
+#   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml config         # Validate
 #   docker compose -f infra/langgraph-server/compose.langgraph-server.yaml pull           # Pull latest pinned image
 #
+# Prerequisites:
+#   - .env file with secret values (see SECURITY.md Section 4)
+#   - APIP-5004 SecretsClient populates .env at runtime
+#
 # Services:
-#   LangGraph Platform API: http://localhost:8123
-#   LangGraph Studio UI:    http://127.0.0.1:8124  (localhost-only, SEC-001)
+#   LangGraph Platform API: 127.0.0.1:8123
+#   LangGraph Studio UI:    127.0.0.1:8124  (localhost-only, SEC-001)
+#   LangGraph PostgreSQL:   127.0.0.1:5433
 #   Pipeline Supervisor:    http://localhost:9091   (health/liveness probes)
 #   Redis:                  redis://localhost:6379  (pipeline job queue backend)
 #
 # Required environment variables:
 #   LANGGRAPH_CHECKPOINT_DATABASE_URL  - Aurora PostgreSQL connection string for langgraph_checkpoint schema
+#   ANTHROPIC_API_KEY                  - Anthropic API key for LLM calls
+#   OPENROUTER_API_KEY                 - OpenRouter API key for multi-model routing
 #   REDIS_URL                          - Redis connection URL (default: redis://redis:6379)
 #
 # Integration:
@@ -27,18 +38,34 @@
 #
 # APIP-0030: LangGraph Platform Docker deployment
 # APIP-2030: Graceful Shutdown, Health Check, and Deployment Hardening
+# APIP-5003: Security Hardening and Network Boundary Documentation
 
 services:
+  # ─────────────────────────────────────────────────────────────────────────
+  # LangGraph Platform API + Studio UI
+  # ─────────────────────────────────────────────────────────────────────────
+
   langgraph-platform:
     image: langchain/langgraph-api:0.0.9
     container_name: monorepo-langgraph-platform
     ports:
-      - '8123:8123'           # LangGraph Platform API (public)
-      - '127.0.0.1:8124:8124' # LangGraph Studio UI (localhost-only, SEC-001)
+      - '127.0.0.1:8123:8123'
+      - '127.0.0.1:8124:8124'
     volumes:
+      - ./langgraph.json:/app/langgraph.json:ro
       - langgraph_data:/data
     environment:
       LANGGRAPH_CHECKPOINT_DATABASE_URL: ${LANGGRAPH_CHECKPOINT_DATABASE_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      LANGGRAPH_POSTGRES_URL: ${LANGGRAPH_POSTGRES_URL:-postgresql://langgraph:langgraph@langgraph-postgres:5433/langgraph}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    cap_drop:
+      - ALL
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://localhost:8123/ok || wget -q --spider http://localhost:8123/ok']
       interval: 10s
@@ -67,6 +94,36 @@ services:
       exit 0;
       "
     restart: 'no'
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # LangGraph PostgreSQL (State Checkpoint Storage)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  langgraph-postgres:
+    image: postgres:16
+    container_name: langgraph-postgres
+    ports:
+      - '127.0.0.1:5433:5432'
+    environment:
+      POSTGRES_USER: ${LANGGRAPH_PG_USER:-langgraph}
+      POSTGRES_PASSWORD: ${LANGGRAPH_PG_PASSWORD:-langgraph}
+      POSTGRES_DB: ${LANGGRAPH_PG_DB:-langgraph}
+    volumes:
+      - langgraph_postgres_data:/var/lib/postgresql/data
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U langgraph -d langgraph']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   # ─────────────────────────────────────────────────────────────────────────
   # Pipeline Supervisor
@@ -98,11 +155,6 @@ services:
       - redis
 
     # AC-7: Docker HEALTHCHECK — liveness probe using GET /live
-    # curl -f exits non-zero on HTTP 4xx/5xx, so a 200 from /live = healthy.
-    # interval: 30s  — check every 30 seconds
-    # timeout: 5s    — fail check if no response within 5 seconds
-    # retries: 3     — mark unhealthy after 3 consecutive failures
-    # start_period: 10s — grace period before first check (allow supervisor to start)
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:9091/live || exit 1']
       interval: 30s
@@ -111,10 +163,6 @@ services:
       start_period: 10s
 
     # AC-11: stop_grace_period must be >= drainTimeoutMs + buffer
-    # Default drain timeout = 600s (10 min). Buffer = 30s. Total = 630s.
-    # Docker sends SIGTERM then waits stop_grace_period before sending SIGKILL.
-    # If stop_grace_period < drainTimeoutMs, Docker kills the supervisor before
-    # in-flight jobs can complete.
     stop_grace_period: 630s
 
     restart: unless-stopped
@@ -126,7 +174,6 @@ services:
         max-file: '5'
 
   # Redis — pipeline job queue backend
-  # Can be replaced by external Redis via REDIS_URL env var.
   redis:
     image: redis:7-alpine
     container_name: pipeline-redis
@@ -141,3 +188,4 @@ services:
 
 volumes:
   langgraph_data:
+  langgraph_postgres_data:
