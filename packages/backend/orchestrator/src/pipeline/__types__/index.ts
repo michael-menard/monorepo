@@ -110,6 +110,12 @@ export const PipelineDispatchOptionsSchema = z.object({
 
   /** LangChain messages to pass to the model */
   messages: z.custom<BaseMessage[]>(val => Array.isArray(val)),
+
+  /** The type of change being dispatched (e.g. 'refactor', 'feat') */
+  changeType: z.string().default('unknown'),
+
+  /** The file type being operated on (e.g. '.ts', '.tsx') */
+  fileType: z.string().default('unknown'),
 })
 
 export type PipelineDispatchOptions = z.infer<typeof PipelineDispatchOptionsSchema>
@@ -129,3 +135,24 @@ export const PipelineDispatchResultSchema = z.object({
 })
 
 export type PipelineDispatchResult = z.infer<typeof PipelineDispatchResultSchema>
+
+// ============================================================================
+// Affinity Profile Schemas (APIP-3040)
+// ============================================================================
+
+export const AffinityProfileSchema = z.object({
+  model: z.string(),
+  success_rate: z.number().min(0).max(1),
+  avg_cost_usd: z.number().nonnegative(),
+  confidence_level: z.enum(['none', 'low', 'medium', 'high']),
+  sample_size: z.number().int().nonnegative(),
+})
+export type AffinityProfile = z.infer<typeof AffinityProfileSchema>
+
+export const AffinityReaderSchema = z.object({
+  query: z
+    .function()
+    .args(z.string(), z.string(), z.number(), z.number())
+    .returns(z.promise(AffinityProfileSchema.nullable())),
+})
+export type AffinityReader = z.infer<typeof AffinityReaderSchema>

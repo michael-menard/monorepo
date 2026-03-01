@@ -17,6 +17,7 @@ import {
   BudgetExhaustedError,
   ProviderChainExhaustedError,
   type PipelineDispatchOptions,
+  type AffinityProfile,
 } from '../__types__/index.js'
 
 // ============================================================================
@@ -47,6 +48,8 @@ const makeOptions = (overrides: Partial<PipelineDispatchOptions> = {}): Pipeline
   storyId: 'STORY-001',
   agentId: 'dev-execute-leader',
   messages: [{ _getType: () => 'human', content: 'Hello', id: '1' }] as unknown as BaseMessage[],
+  changeType: 'unknown',
+  fileType: 'unknown',
   ...overrides,
 })
 
@@ -64,6 +67,38 @@ function createRouterWithProviders(
   const router = new PipelineModelRouter(hardBudgetCap)
 
   // Stub _getModelInstance using vi.spyOn
+  vi.spyOn(router as any, '_getModelInstance').mockImplementation(
+    async (provider: string, _modelString: string) => {
+      const result = providers[provider]
+      if (!result || result === 'fail') {
+        throw new Error(`Provider '${provider}' is unavailable`)
+      }
+      return result
+    },
+  )
+
+  return router
+}
+
+/**
+ * Helper: create a router with an affinityReader configured.
+ */
+function createRouterWithAffinity(
+  providers: ProviderMap,
+  affinityProfile: AffinityProfile | null,
+  overrides: { hardBudgetCap?: number; affinitySuccessRateThreshold?: number; affinityMinSampleSize?: number } = {},
+): PipelineModelRouter {
+  const mockAffinityReader = {
+    query: vi.fn().mockResolvedValue(affinityProfile),
+  }
+
+  const router = new PipelineModelRouter({
+    hardBudgetCap: overrides.hardBudgetCap ?? 500_000,
+    affinityReader: mockAffinityReader,
+    affinitySuccessRateThreshold: overrides.affinitySuccessRateThreshold,
+    affinityMinSampleSize: overrides.affinityMinSampleSize,
+  })
+
   vi.spyOn(router as any, '_getModelInstance').mockImplementation(
     async (provider: string, _modelString: string) => {
       const result = providers[provider]
@@ -307,6 +342,290 @@ describe('PipelineModelRouter.dispatch', () => {
       const result = await router.dispatch(makeOptions())
       expect(result).toBeDefined()
       expect(result.response).toBe('response')
+    })
+  })
+
+  // ============================================================================
+  // APIP-3040: Affinity Routing Tests
+  // ============================================================================
+
+  describe('HP-1 (AC-1, AC-2, AC-3, AC-7): affinity routing selected when high-confidence profile exists', () => {
+    it('uses the affinity model instead of the static fallback chain', async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'ollama/qwen2.5-coder:7b',
+        success_rate: 0.92,
+        avg_cost_usd: 0.001,
+        confidence_level: 'high',
+        sample_size: 50,
+      }
+
+      const router = createRouterWithAffinity(
+        {
+          ollama: { invoke: createMockInvoke('Affinity model response', 80, 40) },
+          openrouter: { invoke: createMockInvoke('OpenRouter response') },
+          anthropic: { invoke: createMockInvoke('Anthropic response') },
+        },
+        affinityProfile,
+      )
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'refactor', fileType: '.ts' }),
+      )
+
+      expect(result.response).toBe('Affinity model response')
+    })
+  })
+
+  describe('HP-2 (AC-3, AC-7): DB override takes precedence over affinity', () => {
+    it('uses DB assignment model even when affinity reader is configured', async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'openrouter/anthropic/claude-3.5-haiku',
+        success_rate: 0.95,
+        avg_cost_usd: 0.002,
+        confidence_level: 'high',
+        sample_size: 100,
+      }
+
+      const mockAffinityReader = {
+        query: vi.fn().mockResolvedValue(affinityProfile),
+      }
+
+      const router = new PipelineModelRouter({
+        affinityReader: mockAffinityReader,
+      })
+
+      vi.spyOn(router as any, '_getModelInstance').mockImplementation(
+        async (_provider: string, _modelString: string) => ({
+          invoke: createMockInvoke('DB override response', 10, 5),
+        }),
+      )
+
+      await router.loadAssignmentsCache([
+        {
+          agentPattern: 'dev-execute-leader',
+          provider: 'ollama',
+          model: 'custom-model:7b',
+          tier: 3,
+        },
+      ])
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'feat', fileType: '.ts' }),
+      )
+
+      expect(result.response).toBe('DB override response')
+      // Affinity reader should NOT have been called because DB override wins
+      expect(mockAffinityReader.query).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('HP-4-affinity (AC-6): cache populated on first dispatch, reused on second', () => {
+    it('calls affinityReader.query only once for the same changeType/fileType pair', async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'ollama/qwen2.5-coder:7b',
+        success_rate: 0.92,
+        avg_cost_usd: 0.001,
+        confidence_level: 'high',
+        sample_size: 50,
+      }
+
+      const mockAffinityReader = {
+        query: vi.fn().mockResolvedValue(affinityProfile),
+      }
+
+      const router = new PipelineModelRouter({
+        affinityReader: mockAffinityReader,
+      })
+
+      vi.spyOn(router as any, '_getModelInstance').mockResolvedValue({
+        invoke: createMockInvoke('ok', 10, 5),
+      })
+
+      await router.dispatch(makeOptions({ changeType: 'refactor', fileType: '.ts' }))
+      await router.dispatch(makeOptions({ changeType: 'refactor', fileType: '.ts' }))
+
+      expect(mockAffinityReader.query).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('EC-1-affinity (AC-13): affinity reader throws → graceful fallback to static chain', () => {
+    it('falls back to static escalation chain when affinityReader.query throws', async () => {
+      const mockAffinityReader = {
+        query: vi.fn().mockRejectedValue(new Error('DB connection failed')),
+      }
+
+      const router = new PipelineModelRouter({
+        affinityReader: mockAffinityReader,
+      })
+
+      vi.spyOn(router as any, '_getModelInstance').mockImplementation(
+        async (provider: string, _modelString: string) => {
+          if (provider === 'ollama') {
+            return { invoke: createMockInvoke('Fallback response', 10, 5) }
+          }
+          throw new Error(`Provider '${provider}' is unavailable`)
+        },
+      )
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'refactor', fileType: '.ts' }),
+      )
+
+      // Should not throw; should fall back to static chain
+      expect(result.response).toBe('Fallback response')
+    })
+  })
+
+  describe('EC-2 (AC-4): success_rate below threshold → fallback to static chain', () => {
+    it('falls back when profile success_rate is below threshold', async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'ollama/qwen2.5-coder:7b',
+        success_rate: 0.5, // below 0.85 threshold
+        avg_cost_usd: 0.001,
+        confidence_level: 'high',
+        sample_size: 50,
+      }
+
+      const router = createRouterWithAffinity(
+        {
+          ollama: { invoke: createMockInvoke('Static chain response', 10, 5) },
+        },
+        affinityProfile,
+      )
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'refactor', fileType: '.ts' }),
+      )
+
+      expect(result.response).toBe('Static chain response')
+    })
+  })
+
+  describe("EC-3-affinity (AC-4, AC-10c): confidence_level 'none' → fallback", () => {
+    it("falls back to static chain when confidence_level is 'none'", async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'ollama/qwen2.5-coder:7b',
+        success_rate: 0.95,
+        avg_cost_usd: 0.001,
+        confidence_level: 'none',
+        sample_size: 50,
+      }
+
+      const router = createRouterWithAffinity(
+        {
+          ollama: { invoke: createMockInvoke('Static fallback', 10, 5) },
+        },
+        affinityProfile,
+      )
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'refactor', fileType: '.ts' }),
+      )
+
+      expect(result.response).toBe('Static fallback')
+    })
+  })
+
+  describe("EC-4-affinity (AC-4, AC-10c): confidence_level 'low' → fallback", () => {
+    it("falls back to static chain when confidence_level is 'low'", async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'ollama/qwen2.5-coder:7b',
+        success_rate: 0.95,
+        avg_cost_usd: 0.001,
+        confidence_level: 'low',
+        sample_size: 50,
+      }
+
+      const router = createRouterWithAffinity(
+        {
+          ollama: { invoke: createMockInvoke('Static fallback low', 10, 5) },
+        },
+        affinityProfile,
+      )
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'refactor', fileType: '.ts' }),
+      )
+
+      expect(result.response).toBe('Static fallback low')
+    })
+  })
+
+  describe('EC-5-affinity (AC-4, AC-10b): no matching profile (null) → cold-start fallback', () => {
+    it('falls back to static chain when affinityReader returns null', async () => {
+      const router = createRouterWithAffinity(
+        {
+          ollama: { invoke: createMockInvoke('Cold start fallback', 10, 5) },
+        },
+        null, // no profile in DB
+      )
+
+      const result = await router.dispatch(
+        makeOptions({ changeType: 'refactor', fileType: '.ts' }),
+      )
+
+      expect(result.response).toBe('Cold start fallback')
+    })
+  })
+
+  describe('ED-1 (AC-8, AC-10g): changeType/fileType default to "unknown"', () => {
+    it('queries affinity reader with "unknown", "unknown" when not specified', async () => {
+      const mockAffinityReader = {
+        query: vi.fn().mockResolvedValue(null),
+      }
+
+      const router = new PipelineModelRouter({
+        affinityReader: mockAffinityReader,
+      })
+
+      vi.spyOn(router as any, '_getModelInstance').mockResolvedValue({
+        invoke: createMockInvoke('ok', 10, 5),
+      })
+
+      // Dispatch without changeType/fileType (they will default to 'unknown')
+      await router.dispatch(makeOptions({ changeType: 'unknown', fileType: 'unknown' }))
+
+      expect(mockAffinityReader.query).toHaveBeenCalledWith(
+        'unknown',
+        'unknown',
+        expect.any(Number),
+        expect.any(Number),
+      )
+    })
+  })
+
+  describe('ED-2 (AC-6, AC-10f): invalidateAffinityCache() causes re-query', () => {
+    it('calls affinityReader.query twice after cache invalidation', async () => {
+      const affinityProfile: AffinityProfile = {
+        model: 'ollama/qwen2.5-coder:7b',
+        success_rate: 0.92,
+        avg_cost_usd: 0.001,
+        confidence_level: 'high',
+        sample_size: 50,
+      }
+
+      const mockAffinityReader = {
+        query: vi.fn().mockResolvedValue(affinityProfile),
+      }
+
+      const router = new PipelineModelRouter({
+        affinityReader: mockAffinityReader,
+      })
+
+      vi.spyOn(router as any, '_getModelInstance').mockResolvedValue({
+        invoke: createMockInvoke('ok', 10, 5),
+      })
+
+      // First dispatch: populates cache, query called once
+      await router.dispatch(makeOptions({ changeType: 'refactor', fileType: '.ts' }))
+      expect(mockAffinityReader.query).toHaveBeenCalledTimes(1)
+
+      // Invalidate cache
+      router.invalidateAffinityCache()
+
+      // Second dispatch: cache cleared, query called again
+      await router.dispatch(makeOptions({ changeType: 'refactor', fileType: '.ts' }))
+      expect(mockAffinityReader.query).toHaveBeenCalledTimes(2)
     })
   })
 })
