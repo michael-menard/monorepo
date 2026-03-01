@@ -120,13 +120,7 @@ export const checkpointWrites = pgTable(
   },
   table => ({
     pk: primaryKey({
-      columns: [
-        table.threadId,
-        table.checkpointNs,
-        table.checkpointId,
-        table.taskId,
-        table.idx,
-      ],
+      columns: [table.threadId, table.checkpointNs, table.checkpointId, table.taskId, table.idx],
     }),
   }),
 )
