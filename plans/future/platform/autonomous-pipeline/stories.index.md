@@ -30,7 +30,7 @@ Minimal autonomous loop: Work queue, supervisor loop (plain TypeScript), LangGra
 | APIP-5000 | Test Infrastructure Setup for Autonomous Pipeline Unit Testing (Phase 0) | APIP-0010 | ✅ uat |
 | APIP-5001 | Test Database Setup and Migration Testing | none | ✅ UAT |
 | APIP-5003 | LangGraph Platform Security Hardening and Network Boundary Documentation | APIP-0030 | Failed Code Review |
-| APIP-5004 | Secrets Engine and API Key Management | none | Ready for QA |
+| APIP-5004 | Secrets Engine and API Key Management | none | In QA |
 | APIP-5006 | LangGraph Server Infrastructure Baseline | none | 🔴 Failed Code Review |
 | APIP-5007 | Database Schema Versioning and Migration Strategy | APIP-0010 | Created |
 
