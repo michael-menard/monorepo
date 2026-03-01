@@ -4,7 +4,7 @@
  * APIP-1050: AC-5, AC-8, AC-15
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createReviewSecurityNode, ReviewSecurityConfigSchema } from '../review-security.js'
 import { NodeCircuitBreaker } from '../../../../runner/circuit-breaker.js'
 

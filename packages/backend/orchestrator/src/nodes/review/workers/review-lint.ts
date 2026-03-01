@@ -49,7 +49,10 @@ const defaultToolRunner: LintToolRunner = async (command, worktreePath, timeoutM
     const { stdout, stderr } = await Promise.race([
       execAsync(command, { cwd: worktreePath, maxBuffer: 10 * 1024 * 1024 }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Lint worker timed out after ${timeoutMs}ms`)), timeoutMs),
+        setTimeout(
+          () => reject(new Error(`Lint worker timed out after ${timeoutMs}ms`)),
+          timeoutMs,
+        ),
       ),
     ])
     return { stdout, stderr, exitCode: 0 }

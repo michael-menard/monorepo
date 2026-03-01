@@ -11,10 +11,10 @@
  * const threadId = `${storyId}:review:${attempt}`
  */
 
-import { z } from 'zod'
-import { Annotation, StateGraph, END, START, Send } from '@langchain/langgraph'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { z } from 'zod'
+import { Annotation, StateGraph, END, START, Send } from '@langchain/langgraph'
 import * as yaml from 'yaml'
 import { logger } from '@repo/logger'
 import {
@@ -176,9 +176,7 @@ export type ReviewGraphResult = z.infer<typeof ReviewGraphResultSchema>
  */
 export function createDispatcherNode() {
   return (state: ReviewGraphState): Send[] => {
-    const workersToRun = ALL_REVIEW_WORKERS.filter(
-      name => !state.workersToSkip.includes(name),
-    )
+    const workersToRun = ALL_REVIEW_WORKERS.filter(name => !state.workersToSkip.includes(name))
 
     logger.info('Review dispatcher fanning out', {
       storyId: state.storyId,
@@ -289,12 +287,7 @@ export function createFanInNode() {
     }
 
     // Write REVIEW.yaml atomically (AC-11, ARCH-001: direct fs/yaml write)
-    const reviewDir = path.join(
-      state.featureDir,
-      'in-progress',
-      state.storyId,
-      '_implementation',
-    )
+    const reviewDir = path.join(state.featureDir, 'in-progress', state.storyId, '_implementation')
     const reviewYamlPath = path.join(reviewDir, 'REVIEW.yaml')
 
     let writeSuccess = false
@@ -344,22 +337,28 @@ export function createFanInNode() {
  * The dispatcher is a CONDITIONAL EDGE function (not a node) that uses the
  * Send API to dispatch all workers in parallel.
  */
-export function createReviewGraph(workerOverrides: {
-  lint?: ReturnType<typeof createReviewLintNode>
-  style?: ReturnType<typeof createReviewStyleNode>
-  syntax?: ReturnType<typeof createReviewSyntaxNode>
-  typecheck?: ReturnType<typeof createReviewTypecheckNode>
-  build?: ReturnType<typeof createReviewBuildNode>
-  react?: ReturnType<typeof createReviewReactNode>
-  typescript?: ReturnType<typeof createReviewTypescriptNode>
-  reusability?: ReturnType<typeof createReviewReusabilityNode>
-  accessibility?: ReturnType<typeof createReviewAccessibilityNode>
-  security?: ReturnType<typeof createReviewSecurityNode>
-} = {}) {
+export function createReviewGraph(
+  workerOverrides: {
+    lint?: ReturnType<typeof createReviewLintNode>
+    style?: ReturnType<typeof createReviewStyleNode>
+    syntax?: ReturnType<typeof createReviewSyntaxNode>
+    typecheck?: ReturnType<typeof createReviewTypecheckNode>
+    build?: ReturnType<typeof createReviewBuildNode>
+    react?: ReturnType<typeof createReviewReactNode>
+    typescript?: ReturnType<typeof createReviewTypescriptNode>
+    reusability?: ReturnType<typeof createReviewReusabilityNode>
+    accessibility?: ReturnType<typeof createReviewAccessibilityNode>
+    security?: ReturnType<typeof createReviewSecurityNode>
+  } = {},
+) {
   // Wrap each real worker to produce WorkerStateEntry for graph state
   const wrapWorker = (
     workerName: ReviewWorkerName,
-    workerFn: (state: { storyId: string; worktreePath: string; changeSpecIds?: string[] }) => Promise<WorkerResult>,
+    workerFn: (state: {
+      storyId: string
+      worktreePath: string
+      changeSpecIds?: string[]
+    }) => Promise<WorkerResult>,
   ) => {
     return async (state: ReviewGraphState): Promise<Partial<ReviewGraphState>> => {
       const result = await workerFn({
@@ -378,14 +377,32 @@ export function createReviewGraph(workerOverrides: {
   const graph = new StateGraph(ReviewGraphStateAnnotation)
     .addNode('worker_lint', wrapWorker('lint', workerOverrides.lint ?? createReviewLintNode()))
     .addNode('worker_style', wrapWorker('style', workerOverrides.style ?? createReviewStyleNode()))
-    .addNode('worker_syntax', wrapWorker('syntax', workerOverrides.syntax ?? createReviewSyntaxNode()))
-    .addNode('worker_typecheck', wrapWorker('typecheck', workerOverrides.typecheck ?? createReviewTypecheckNode()))
+    .addNode(
+      'worker_syntax',
+      wrapWorker('syntax', workerOverrides.syntax ?? createReviewSyntaxNode()),
+    )
+    .addNode(
+      'worker_typecheck',
+      wrapWorker('typecheck', workerOverrides.typecheck ?? createReviewTypecheckNode()),
+    )
     .addNode('worker_build', wrapWorker('build', workerOverrides.build ?? createReviewBuildNode()))
     .addNode('worker_react', wrapWorker('react', workerOverrides.react ?? createReviewReactNode()))
-    .addNode('worker_typescript', wrapWorker('typescript', workerOverrides.typescript ?? createReviewTypescriptNode()))
-    .addNode('worker_reusability', wrapWorker('reusability', workerOverrides.reusability ?? createReviewReusabilityNode()))
-    .addNode('worker_accessibility', wrapWorker('accessibility', workerOverrides.accessibility ?? createReviewAccessibilityNode()))
-    .addNode('worker_security', wrapWorker('security', workerOverrides.security ?? createReviewSecurityNode()))
+    .addNode(
+      'worker_typescript',
+      wrapWorker('typescript', workerOverrides.typescript ?? createReviewTypescriptNode()),
+    )
+    .addNode(
+      'worker_reusability',
+      wrapWorker('reusability', workerOverrides.reusability ?? createReviewReusabilityNode()),
+    )
+    .addNode(
+      'worker_accessibility',
+      wrapWorker('accessibility', workerOverrides.accessibility ?? createReviewAccessibilityNode()),
+    )
+    .addNode(
+      'worker_security',
+      wrapWorker('security', workerOverrides.security ?? createReviewSecurityNode()),
+    )
     .addNode('fan_in', createFanInNode())
     // Dispatcher as conditional edge from START using Send API (AC-7)
     .addConditionalEdges(START, createDispatcherNode())

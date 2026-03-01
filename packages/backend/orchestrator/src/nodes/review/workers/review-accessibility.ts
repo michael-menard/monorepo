@@ -27,7 +27,9 @@ export function createReviewAccessibilityNode(
   config: Partial<ReviewAccessibilityConfig> & { modelRouterOverride?: LLMModelRouter } = {},
 ) {
   const { modelRouterOverride, ...restConfig } = config
-  const fullConfig = ReviewAccessibilityConfigSchema.omit({ modelRouterOverride: true }).parse(restConfig)
+  const fullConfig = ReviewAccessibilityConfigSchema.omit({ modelRouterOverride: true }).parse(
+    restConfig,
+  )
   const modelRouter: LLMModelRouter = modelRouterOverride ?? defaultModelRouter
 
   return async (state: {
@@ -39,7 +41,14 @@ export function createReviewAccessibilityNode(
 
     if (!fullConfig.enabled) {
       logger.info('Accessibility review worker disabled', { storyId: state.storyId })
-      return { verdict: 'PASS', skipped: true, errors: 0, warnings: 0, findings: [], duration_ms: 0 }
+      return {
+        verdict: 'PASS',
+        skipped: true,
+        errors: 0,
+        warnings: 0,
+        findings: [],
+        duration_ms: 0,
+      }
     }
 
     try {
@@ -48,7 +57,10 @@ export function createReviewAccessibilityNode(
       const responsePromise = modelRouter(prompt, fullConfig.timeoutMs)
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error(`Accessibility review worker timed out after ${fullConfig.timeoutMs}ms`)),
+          () =>
+            reject(
+              new Error(`Accessibility review worker timed out after ${fullConfig.timeoutMs}ms`),
+            ),
           fullConfig.timeoutMs,
         ),
       )
@@ -57,7 +69,14 @@ export function createReviewAccessibilityNode(
       const duration_ms = Date.now() - startTime
 
       if (!response.trim()) {
-        return { verdict: 'PASS', skipped: false, errors: 0, warnings: 0, findings: [], duration_ms }
+        return {
+          verdict: 'PASS',
+          skipped: false,
+          errors: 0,
+          warnings: 0,
+          findings: [],
+          duration_ms,
+        }
       }
 
       const findings = parseFindings(response)
@@ -82,14 +101,16 @@ export function createReviewAccessibilityNode(
         skipped: false,
         errors: 1,
         warnings: 0,
-        findings: [{
-          file: 'unknown',
-          message: isTimeout
-            ? `Accessibility review worker timed out after ${fullConfig.timeoutMs}ms`
-            : msg,
-          severity: 'error',
-          auto_fixable: false,
-        }],
+        findings: [
+          {
+            file: 'unknown',
+            message: isTimeout
+              ? `Accessibility review worker timed out after ${fullConfig.timeoutMs}ms`
+              : msg,
+            severity: 'error',
+            auto_fixable: false,
+          },
+        ],
         duration_ms,
       }
     }

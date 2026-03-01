@@ -34,7 +34,10 @@ const defaultToolRunner: SyntaxToolRunner = async (command, worktreePath, timeou
     const { stdout, stderr } = await Promise.race([
       execAsync(command, { cwd: worktreePath, maxBuffer: 10 * 1024 * 1024 }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`Syntax worker timed out after ${timeoutMs}ms`)), timeoutMs),
+        setTimeout(
+          () => reject(new Error(`Syntax worker timed out after ${timeoutMs}ms`)),
+          timeoutMs,
+        ),
       ),
     ])
     return { stdout, stderr, exitCode: 0 }
@@ -62,7 +65,14 @@ export function createReviewSyntaxNode(
 
     if (!fullConfig.enabled) {
       logger.info('Syntax worker disabled', { storyId: state.storyId })
-      return { verdict: 'PASS', skipped: true, errors: 0, warnings: 0, findings: [], duration_ms: 0 }
+      return {
+        verdict: 'PASS',
+        skipped: true,
+        errors: 0,
+        warnings: 0,
+        findings: [],
+        duration_ms: 0,
+      }
     }
 
     try {
@@ -75,7 +85,14 @@ export function createReviewSyntaxNode(
       const duration_ms = Date.now() - startTime
 
       if (exitCode === 0) {
-        return { verdict: 'PASS', skipped: false, errors: 0, warnings: 0, findings: [], duration_ms }
+        return {
+          verdict: 'PASS',
+          skipped: false,
+          errors: 0,
+          warnings: 0,
+          findings: [],
+          duration_ms,
+        }
       }
 
       const output = stdout + stderr
@@ -94,12 +111,14 @@ export function createReviewSyntaxNode(
         skipped: false,
         errors: 1,
         warnings: 0,
-        findings: [{
-          file: 'unknown',
-          message: isTimeout ? `Syntax worker timed out after ${fullConfig.timeoutMs}ms` : msg,
-          severity: 'error',
-          auto_fixable: false,
-        }],
+        findings: [
+          {
+            file: 'unknown',
+            message: isTimeout ? `Syntax worker timed out after ${fullConfig.timeoutMs}ms` : msg,
+            severity: 'error',
+            auto_fixable: false,
+          },
+        ],
         duration_ms,
       }
     }

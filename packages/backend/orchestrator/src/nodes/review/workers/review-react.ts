@@ -69,7 +69,14 @@ export function createReviewReactNode(
 
     if (!fullConfig.enabled) {
       logger.info('React review worker disabled', { storyId: state.storyId })
-      return { verdict: 'PASS', skipped: true, errors: 0, warnings: 0, findings: [], duration_ms: 0 }
+      return {
+        verdict: 'PASS',
+        skipped: true,
+        errors: 0,
+        warnings: 0,
+        findings: [],
+        duration_ms: 0,
+      }
     }
 
     try {
@@ -88,14 +95,24 @@ export function createReviewReactNode(
 
       if (!response.trim()) {
         // No response = no findings (model router not yet available)
-        return { verdict: 'PASS', skipped: false, errors: 0, warnings: 0, findings: [], duration_ms }
+        return {
+          verdict: 'PASS',
+          skipped: false,
+          errors: 0,
+          warnings: 0,
+          findings: [],
+          duration_ms,
+        }
       }
 
       const findings = parseFindings(response)
       const errors = findings.filter(f => f.severity === 'error').length
       const warnings = findings.filter(f => f.severity === 'warning').length
 
-      logger.info('React review worker completed', { storyId: state.storyId, findings: findings.length })
+      logger.info('React review worker completed', {
+        storyId: state.storyId,
+        findings: findings.length,
+      })
 
       return {
         verdict: errors > 0 ? 'FAIL' : 'PASS',
@@ -117,12 +134,16 @@ export function createReviewReactNode(
         skipped: false,
         errors: 1,
         warnings: 0,
-        findings: [{
-          file: 'unknown',
-          message: isTimeout ? `React review worker timed out after ${fullConfig.timeoutMs}ms` : msg,
-          severity: 'error',
-          auto_fixable: false,
-        }],
+        findings: [
+          {
+            file: 'unknown',
+            message: isTimeout
+              ? `React review worker timed out after ${fullConfig.timeoutMs}ms`
+              : msg,
+            severity: 'error',
+            auto_fixable: false,
+          },
+        ],
         duration_ms,
       }
     }
@@ -134,9 +155,7 @@ export function createReviewReactNode(
 // ============================================================================
 
 function buildReactReviewPrompt(changeSpecIds: string[]): string {
-  const fileList = changeSpecIds.length > 0
-    ? changeSpecIds.join('\n')
-    : 'all changed files'
+  const fileList = changeSpecIds.length > 0 ? changeSpecIds.join('\n') : 'all changed files'
 
   return `Review the following files for React best practices:
 ${fileList}

@@ -27,7 +27,9 @@ export function createReviewTypescriptNode(
   config: Partial<ReviewTypescriptConfig> & { modelRouterOverride?: LLMModelRouter } = {},
 ) {
   const { modelRouterOverride, ...restConfig } = config
-  const fullConfig = ReviewTypescriptConfigSchema.omit({ modelRouterOverride: true }).parse(restConfig)
+  const fullConfig = ReviewTypescriptConfigSchema.omit({ modelRouterOverride: true }).parse(
+    restConfig,
+  )
   const modelRouter: LLMModelRouter = modelRouterOverride ?? defaultModelRouter
 
   return async (state: {
@@ -39,7 +41,14 @@ export function createReviewTypescriptNode(
 
     if (!fullConfig.enabled) {
       logger.info('TypeScript review worker disabled', { storyId: state.storyId })
-      return { verdict: 'PASS', skipped: true, errors: 0, warnings: 0, findings: [], duration_ms: 0 }
+      return {
+        verdict: 'PASS',
+        skipped: true,
+        errors: 0,
+        warnings: 0,
+        findings: [],
+        duration_ms: 0,
+      }
     }
 
     try {
@@ -48,7 +57,8 @@ export function createReviewTypescriptNode(
       const responsePromise = modelRouter(prompt, fullConfig.timeoutMs)
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error(`TypeScript review worker timed out after ${fullConfig.timeoutMs}ms`)),
+          () =>
+            reject(new Error(`TypeScript review worker timed out after ${fullConfig.timeoutMs}ms`)),
           fullConfig.timeoutMs,
         ),
       )
@@ -57,7 +67,14 @@ export function createReviewTypescriptNode(
       const duration_ms = Date.now() - startTime
 
       if (!response.trim()) {
-        return { verdict: 'PASS', skipped: false, errors: 0, warnings: 0, findings: [], duration_ms }
+        return {
+          verdict: 'PASS',
+          skipped: false,
+          errors: 0,
+          warnings: 0,
+          findings: [],
+          duration_ms,
+        }
       }
 
       const findings = parseFindings(response)
@@ -82,14 +99,16 @@ export function createReviewTypescriptNode(
         skipped: false,
         errors: 1,
         warnings: 0,
-        findings: [{
-          file: 'unknown',
-          message: isTimeout
-            ? `TypeScript review worker timed out after ${fullConfig.timeoutMs}ms`
-            : msg,
-          severity: 'error',
-          auto_fixable: false,
-        }],
+        findings: [
+          {
+            file: 'unknown',
+            message: isTimeout
+              ? `TypeScript review worker timed out after ${fullConfig.timeoutMs}ms`
+              : msg,
+            severity: 'error',
+            auto_fixable: false,
+          },
+        ],
         duration_ms,
       }
     }

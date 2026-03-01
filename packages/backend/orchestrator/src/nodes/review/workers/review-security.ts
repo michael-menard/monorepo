@@ -44,7 +44,9 @@ export function createReviewSecurityNode(
   } = {},
 ) {
   const { modelRouterOverride, tokenBudgetChecker, circuitBreaker, ...restConfig } = config
-  const fullConfig = ReviewSecurityConfigSchema.omit({ modelRouterOverride: true }).parse(restConfig)
+  const fullConfig = ReviewSecurityConfigSchema.omit({ modelRouterOverride: true }).parse(
+    restConfig,
+  )
   const modelRouter: LLMModelRouter = modelRouterOverride ?? defaultModelRouter
   const budgetChecker: TokenBudgetChecker = tokenBudgetChecker ?? defaultTokenBudgetChecker
 
@@ -61,7 +63,14 @@ export function createReviewSecurityNode(
 
     if (!fullConfig.enabled) {
       logger.info('Security review worker disabled', { storyId: state.storyId })
-      return { verdict: 'PASS', skipped: true, errors: 0, warnings: 0, findings: [], duration_ms: 0 }
+      return {
+        verdict: 'PASS',
+        skipped: true,
+        errors: 0,
+        warnings: 0,
+        findings: [],
+        duration_ms: 0,
+      }
     }
 
     // AC-5: Per-story token budget check (runs before circuit breaker gate)
@@ -70,7 +79,10 @@ export function createReviewSecurityNode(
       withinBudget = await budgetChecker(state.storyId, fullConfig.tokenBudget)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      logger.warn('Token budget check failed, treating as exceeded', { storyId: state.storyId, error: msg })
+      logger.warn('Token budget check failed, treating as exceeded', {
+        storyId: state.storyId,
+        error: msg,
+      })
       withinBudget = false
     }
 
@@ -128,7 +140,8 @@ export function createReviewSecurityNode(
       const responsePromise = modelRouter(prompt, fullConfig.timeoutMs)
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error(`Security review worker timed out after ${fullConfig.timeoutMs}ms`)),
+          () =>
+            reject(new Error(`Security review worker timed out after ${fullConfig.timeoutMs}ms`)),
           fullConfig.timeoutMs,
         ),
       )
@@ -140,7 +153,14 @@ export function createReviewSecurityNode(
       breaker.recordSuccess()
 
       if (!response.trim()) {
-        return { verdict: 'PASS', skipped: false, errors: 0, warnings: 0, findings: [], duration_ms }
+        return {
+          verdict: 'PASS',
+          skipped: false,
+          errors: 0,
+          warnings: 0,
+          findings: [],
+          duration_ms,
+        }
       }
 
       const findings = parseFindings(response)
