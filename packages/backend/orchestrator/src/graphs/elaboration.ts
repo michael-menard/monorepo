@@ -838,7 +838,9 @@ export function createElaborationLoadFromDbNode(
     } catch (error) {
       return {
         dbLoadSuccess: false,
-        warnings: [`Failed to load from DB: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to load from DB: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -887,17 +889,23 @@ export function createElaborationSaveToDbNode(
         ? 'Passed elaboration'
         : `Elaboration found ${gapsCount} issue(s) requiring attention`
 
-      await saveToDb(state.storyId, storyRepo, workflowRepo, {
-        storyState: newState,
-        stateChangeReason: reason,
-      }, {
-        actor: 'elaboration-graph',
-        updateStoryState: true,
-        saveElaboration: false, // Already saved above
-        savePlan: false,
-        saveProof: false,
-        saveVerification: false,
-      })
+      await saveToDb(
+        state.storyId,
+        storyRepo,
+        workflowRepo,
+        {
+          storyState: newState,
+          stateChangeReason: reason,
+        },
+        {
+          actor: 'elaboration-graph',
+          updateStoryState: true,
+          saveElaboration: false, // Already saved above
+          savePlan: false,
+          saveProof: false,
+          saveVerification: false,
+        },
+      )
 
       return {
         dbSaveSuccess: true,
@@ -905,7 +913,9 @@ export function createElaborationSaveToDbNode(
     } catch (error) {
       return {
         dbSaveSuccess: false,
-        warnings: [`Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -962,6 +972,17 @@ export function afterAggregate(
   return 'save_to_db'
 }
 
+/**
+ * Determines the next node after the structurer.
+ * Routes to update_readiness when recalculateReadiness is enabled, else save_to_db.
+ */
+export function afterStructurer(state: ElaborationState): 'update_readiness' | 'save_to_db' {
+  if (state.config?.recalculateReadiness) {
+    return 'update_readiness'
+  }
+  return 'save_to_db'
+}
+
 // ============================================================================
 // Graph Factory
 // ============================================================================
@@ -982,8 +1003,8 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
   const fullConfig = ElaborationConfigSchema.parse(config)
 
   // Get typed repositories if provided
-  const storyRepo = fullConfig.storyRepo as StoryRepository | null ?? null
-  const workflowRepo = fullConfig.workflowRepo as WorkflowRepository | null ?? null
+  const storyRepo = (fullConfig.storyRepo as StoryRepository | null) ?? null
+  const workflowRepo = (fullConfig.workflowRepo as WorkflowRepository | null) ?? null
 
   const graph = new StateGraph(ElaborationStateAnnotation)
     // Entry node: initialize workflow
@@ -1045,7 +1066,10 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
       update_readiness: 'update_readiness',
       save_to_db: 'save_to_db',
     })
-    .addEdge('structurer', 'update_readiness')
+    .addConditionalEdges('structurer', afterStructurer, {
+      update_readiness: 'update_readiness',
+      save_to_db: 'save_to_db',
+    })
     .addEdge('update_readiness', 'save_to_db')
     .addEdge('save_to_db', 'complete')
     .addEdge('complete', END)
