@@ -1,7 +1,7 @@
 schema: 1
-generated: 2026-02-26T01:57:46.420Z
+generated: 2026-03-01T02:37:56.577Z
 window_days: 30
-audits_analyzed: 10
+audits_analyzed: 11
 overall:
   trend: stable
   total_findings_current: 0
@@ -83,6 +83,12 @@ timeline:
     medium: 0
     low: 0
   - date: 2026-02-26
+    total: 0
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+  - date: 2026-03-01
     total: 0
     critical: 0
     high: 0

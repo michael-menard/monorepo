@@ -19,10 +19,12 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
+    "check-types": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.998.0",
@@ -44,12 +46,14 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.1",
     "@types/axe-core": "3.0.6",
     "@types/inquirer": "^9.0.0",
     "@types/js-yaml": "^4.0.5",
     "@types/node": "^22.19.10",
     "@types/pg": "8.16.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "bullmq": "^5.0.0",
     "tsx": "4.21.0",
     "typescript": "^5.8.0",
     "vitest": "^3.2.4"
