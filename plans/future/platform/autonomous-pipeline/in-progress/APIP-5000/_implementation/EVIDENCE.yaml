@@ -1,0 +1,160 @@
+story_id: APIP-5000
+phase: implementation
+iteration: 1
+generated_at: "2026-02-28T18:48:30Z"
+agent: dev-execute-leader
+
+summary:
+  total_acs: 10
+  acs_with_evidence: 10
+  acs_missing: 0
+  overall_status: PASS
+  test_results:
+    total: 19
+    passed: 19
+    failed: 0
+  type_check: PASS
+  e2e_exempt: true  # story_type: infra (pure test infrastructure, no frontend/HTTP endpoints)
+
+acceptance_criteria_evidence:
+  - ac_id: AC-1
+    description: "vitest.config.ts exists in apps/api/autonomous-pipeline/ with node environment, globals: true, include glob src/**/*.test.ts, v8 coverage with >=45% thresholds, fileParallelism: false, testTimeout: 30000"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: apps/api/autonomous-pipeline/vitest.config.ts
+        detail: "environment: 'node', globals: true, include: ['src/**/*.test.ts'], coverage provider: 'v8', all thresholds 45%, fileParallelism: false, testTimeout: 30000"
+
+  - ac_id: AC-2
+    description: "PipelineJobDataSchema local Zod mirror exists at src/__types__/pipeline-job.ts with correct fields (storyId, phase, priority, metadata)"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: apps/api/autonomous-pipeline/src/__types__/pipeline-job.ts
+        detail: "PipelinePhaseSchema (z.enum of 5 phases) + PipelineJobDataSchema (storyId, phase, priority?, metadata?). TODO comment for APIP-0010 migration."
+
+  - ac_id: AC-3
+    description: "createMockBullMQWorker() returns object with vi.fn() stubs for on() and close()"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: apps/api/autonomous-pipeline/src/__mocks__/bullmq-worker.ts
+        detail: "Exports createMockBullMQWorker() with on and close as vi.fn() stubs. MockBullMQWorker type exported."
+      - type: test_assertion
+        test: "createMockBullMQWorker > records calls made to on()"
+        result: PASS
+
+  - ac_id: AC-4
+    description: "createMockQueue() returns object with vi.fn() stubs for add(), getJob(), pause(), resume(), close()"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: apps/api/autonomous-pipeline/src/__mocks__/bullmq-queue.ts
+        detail: "Exports createMockQueue() with add, getJob, pause, resume, close as vi.fn() stubs. MockBullMQQueue type exported."
+      - type: test_assertion
+        test: "createMockQueue > records calls made to add()"
+        result: PASS
+
+  - ac_id: AC-5
+    description: "SupervisorStateSchema and PipelineSupervisorConfigSchema local Zod mirrors exist at src/__types__/supervisor-state.ts; createSupervisorStateFixture() factory validates with parse()"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: apps/api/autonomous-pipeline/src/__types__/supervisor-state.ts
+        detail: "PipelineSupervisorConfigSchema (queueName, stageTimeoutMs, circuitBreakerFailureThreshold, circuitBreakerRecoveryTimeoutMs) + SupervisorStateSchema (status enum, config, currentJobId, processedCount, errorCount, startedAt, lastProcessedAt)"
+      - type: file_created
+        path: apps/api/autonomous-pipeline/src/__fixtures__/supervisor-state.ts
+        detail: "createSupervisorStateFixture(overrides?) validates with SupervisorStateSchema.parse()"
+      - type: test_assertion
+        test: "createSupervisorStateFixture > validates the returned object against SupervisorStateSchema"
+        result: PASS
+
+  - ac_id: AC-6
+    description: "Integration smoke test exists: supervisor processes job to terminal state; supervisor handles unknown job type gracefully"
+    status: PASS
+    evidence:
+      - type: file_created
+        path: apps/api/autonomous-pipeline/src/__tests__/supervisor-smoke.test.ts
+        detail: "StubPipelineSupervisor integration: 8 tests covering idle->processing->completed, unknown phase -> error, stop lifecycle, all 5 known phases"
+      - type: test_assertion
+        test: "StubPipelineSupervisor > processes a valid job to completed state"
+        result: PASS
+      - type: test_assertion
+        test: "StubPipelineSupervisor > handles unknown job phase gracefully without throwing"
+        result: PASS
+
+  - ac_id: AC-7
+    description: "pnpm --filter autonomous-pipeline test passes (19/19 tests)"
+    status: PASS
+    evidence:
+      - type: test_run
+        command: "pnpm --filter autonomous-pipeline test"
+        output: "Test Files: 1 passed (1), Tests: 19 passed (19), Duration: 167ms"
+
+  - ac_id: AC-8
+    description: "pnpm --filter autonomous-pipeline check-types passes (0 errors)"
+    status: PASS
+    evidence:
+      - type: type_check
+        command: "pnpm --filter autonomous-pipeline check-types"
+        output: "Exit 0, no errors"
+
+  - ac_id: AC-9
+    description: "No barrel files; direct imports only throughout the package"
+    status: PASS
+    evidence:
+      - type: code_review
+        detail: "All files import directly from source paths (e.g., '../__types__/pipeline-job.js'). No index.ts re-export files created."
+
+  - ac_id: AC-10
+    description: "All exported functions have JSDoc comments explaining parameters and return types"
+    status: PASS
+    evidence:
+      - type: code_review
+        detail: "createMockBullMQJob, createSupervisorStateFixture, createMockBullMQWorker, createMockQueue all have @param, @returns, and @example JSDoc blocks"
+
+subtasks_executed:
+  - id: ST-1
+    description: "Scaffold autonomous-pipeline package"
+    status: PASS
+    files_created:
+      - apps/api/autonomous-pipeline/package.json
+      - apps/api/autonomous-pipeline/tsconfig.json
+      - apps/api/autonomous-pipeline/src/ (directory structure)
+
+  - id: ST-2
+    description: "Create vitest.config.ts (AC-1)"
+    status: PASS
+    files_created:
+      - apps/api/autonomous-pipeline/vitest.config.ts
+
+  - id: ST-3
+    description: "Local pipeline-job type mirror + createMockBullMQJob (AC-2, AC-8, AC-9, AC-10)"
+    status: PASS
+    files_created:
+      - apps/api/autonomous-pipeline/src/__types__/pipeline-job.ts
+      - apps/api/autonomous-pipeline/src/__fixtures__/bullmq-job.ts
+
+  - id: ST-4
+    description: "BullMQ Worker + Queue mocks (AC-3, AC-4, AC-8, AC-9, AC-10)"
+    status: PASS
+    files_created:
+      - apps/api/autonomous-pipeline/src/__mocks__/bullmq-worker.ts
+      - apps/api/autonomous-pipeline/src/__mocks__/bullmq-queue.ts
+
+  - id: ST-5
+    description: "Local supervisor config type mirror + createSupervisorStateFixture (AC-5, AC-8, AC-9, AC-10)"
+    status: PASS
+    files_created:
+      - apps/api/autonomous-pipeline/src/__types__/supervisor-state.ts
+      - apps/api/autonomous-pipeline/src/__fixtures__/supervisor-state.ts
+
+  - id: ST-6
+    description: "Integration smoke test (AC-6, AC-7)"
+    status: PASS
+    files_created:
+      - apps/api/autonomous-pipeline/src/__tests__/supervisor-smoke.test.ts
+
+e2e_status:
+  exempt: true
+  reason: "story_type: infra — pure test infrastructure package, no HTTP endpoints or frontend surfaces"

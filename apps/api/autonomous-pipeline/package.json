@@ -1,0 +1,39 @@
+{
+  "name": "@repo/autonomous-pipeline",
+  "version": "1.0.0",
+  "description": "Test infrastructure and utilities for autonomous pipeline LangGraph graph unit testing",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint --fix src/",
+    "check-types": "tsc --noEmit"
+  },
+  "keywords": [
+    "autonomous-pipeline",
+    "langgraph",
+    "test-infrastructure",
+    "bullmq",
+    "vitest"
+  ],
+  "author": "LEGO MOC Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "@repo/logger": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "bullmq": "^5.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
