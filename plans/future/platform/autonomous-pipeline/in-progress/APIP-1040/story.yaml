@@ -1,6 +1,6 @@
 id: "APIP-1040"
 title: "Documentation Graph (Post-Merge)"
-status: in-progress
+status: ready-for-code-review
 priority: medium
 phase: 1
 feature: "6 parallel fan-out workers via LangGraph Send API running post-merge: API docs, component docs, architecture docs, README/guides, KB sync, and changelog — each using appropriate cheap models, with a Doc Review aggregation node before committing"

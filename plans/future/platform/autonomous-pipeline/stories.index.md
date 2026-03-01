@@ -11,7 +11,7 @@
 | Phase | Name | Total Stories | Ready | In Progress | Completed | Status |
 |-------|------|---------------|-------|-------------|-----------|--------|
 | 0 | Foundation | 11 | 5 | 0 | 0 | backlog |
-| 1 | Full Worker Graphs | 9 | 0 | 1 | 0 | in-progress |
+| 1 | Full Worker Graphs | 9 | 0 | 0 | 0 | ready-for-code-review |
 | 2 | Resilience & Monitoring | 3 | 0 | 0 | 0 | backlog |
 | 3 | Learning System & Optimization | 5 | 0 | 0 | 0 | backlog |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
@@ -43,7 +43,7 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1010 | Structurer Node in Elaboration Graph | APIP-0020 | Failed Code Review |
 | APIP-1020 | ChangeSpec Schema Design and Validation Spike | APIP-1010 | Created |
 | APIP-1030 | Implementation Graph with Atomic Change Loop | APIP-1020, APIP-0040 | Needs Split |
-| APIP-1040 | Documentation Graph (Post-Merge) | APIP-1030 | In Progress |
+| APIP-1040 | Documentation Graph (Post-Merge) | APIP-1030 | Needs Code Review |
 | APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1030 | In Progress |
 | APIP-1060 | QA Graph with Autonomous Verdict | APIP-1050 | Created |
 | APIP-1070 | Merge Graph with Learnings Extraction | APIP-1060 | In Elaboration |
