@@ -3165,7 +3165,7 @@ export const kbGetPlanToolDefinition: McpToolDefinition = {
   name: 'kb_get_plan',
   description: `Get a plan by its slug.
 
-Returns the full plan record including raw_content, phases, story_prefix, and feature_dir.
+Returns the full plan record including raw_content, phases, story_prefix, feature_dir, and dependencies.
 Used by /pm-bootstrap-workflow to fetch plan content for story generation.
 
 Parameters:
@@ -3200,7 +3200,7 @@ Parameters:
 - offset (optional): Pagination offset, default 0
 - include_content (optional): Include raw_content in response, default false
 
-Returns: Array of plan objects with total count
+Returns: Array of plan objects with total count. Each plan includes a dependencies field (array of plan slugs that must reach 'implemented' before this plan can start, or null).
 
 Example:
 {
@@ -3236,7 +3236,7 @@ Parameters:
 - offset (optional): Pagination offset, default 0
 - include_content (optional): Include raw_content in response, default false
 
-Returns: Array of active plan objects with total count
+Returns: Array of active plan objects with total count. Each plan includes a dependencies field (array of plan slugs that must reach 'implemented' before this plan can start, or null).
 
 Example:
 {
@@ -3272,6 +3272,7 @@ Parameters:
 - story_prefix (optional): Story ID prefix (e.g., 'APIP')
 - estimated_stories (optional): Total number of planned stories
 - tags (optional): Array of categorization tags
+- dependencies (optional): Array of plan slugs that must reach 'implemented' before this plan can start
 - source_file (optional): Original source file path
 
 Returns: The upserted plan record and whether it was created or updated.`,
@@ -3299,6 +3300,7 @@ Parameters:
 - feature_dir (optional): New feature directory (null to clear)
 - story_prefix (optional): New story prefix (null to clear)
 - estimated_stories (optional): New estimated stories count (null to clear)
+- dependencies (optional): Plan slugs that must reach 'implemented' before this plan can start (null to clear)
 
 Returns: Updated plan object
 
