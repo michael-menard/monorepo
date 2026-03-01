@@ -86,7 +86,7 @@ export async function syncStoryToDatabase(
     }
   }
 
-  let syncEventId: string | undefined
+  let syncEventId!: string
   const startedAt = new Date()
 
   try {

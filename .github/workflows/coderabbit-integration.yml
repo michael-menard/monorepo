@@ -76,6 +76,8 @@ jobs:
           cd packages/core/logger && pnpm exec tsc && cd ../../..
           rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
           cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
+          rm -f packages/backend/db/tsconfig.tsbuildinfo
+          cd packages/backend/db && pnpm exec tsc && cd ../../..
           rm -f packages/backend/observability/tsconfig.tsbuildinfo
           cd packages/backend/observability && pnpm exec tsc && cd ../../..
 
@@ -181,6 +183,8 @@ jobs:
           cd packages/core/logger && pnpm exec tsc && cd ../../..
           rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
           cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
+          rm -f packages/backend/db/tsconfig.tsbuildinfo
+          cd packages/backend/db && pnpm exec tsc && cd ../../..
           rm -f packages/backend/observability/tsconfig.tsbuildinfo
           cd packages/backend/observability && pnpm exec tsc && cd ../../..
 

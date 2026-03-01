@@ -62,7 +62,7 @@ export async function batchSyncArtifactsForStory(
 
   const { storyId, storyDir, triggeredBy } = validatedInput
   const startedAt = new Date()
-  let syncEventId: string | undefined
+  let syncEventId!: string
 
   try {
     // Create single syncEvent for the entire batch (AC-4)
