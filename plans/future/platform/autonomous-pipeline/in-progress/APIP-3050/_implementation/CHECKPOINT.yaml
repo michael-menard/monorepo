@@ -1,0 +1,13 @@
+schema: 1
+story_id: APIP-3050
+forced: false
+blocked: false
+e2e_gate: null
+iteration: 0
+feature_dir: plans/future/platform/autonomous-pipeline
+completed_at: null
+current_phase: plan
+blocked_reason: null
+max_iterations: 3
+last_successful_phase: setup
+warnings: []
