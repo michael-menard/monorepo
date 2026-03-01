@@ -60,6 +60,9 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
+      - name: Build packages
+        run: pnpm build --filter="...[main-app]" --filter="!main-app"
+
       - name: Build main-app
         run: pnpm --filter main-app build
 
@@ -125,6 +128,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
+
+      - name: Build packages
+        run: pnpm build --filter="...[main-app]" --filter="!main-app"
 
       - name: Build main-app
         run: pnpm --filter main-app build
