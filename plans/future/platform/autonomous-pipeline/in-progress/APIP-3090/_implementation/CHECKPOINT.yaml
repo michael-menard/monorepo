@@ -1,0 +1,16 @@
+schema: 1
+story_id: APIP-3090
+timestamp: '2026-03-01T18:00:00Z'
+branch: story/APIP-3090
+worktree_path: tree/story/APIP-3090
+feature_dir: plans/future/platform/autonomous-pipeline
+current_phase: plan
+last_successful_phase: setup
+iteration: 0
+max_iterations: 3
+blocked: false
+blocked_reason: null
+e2e_gate: null
+forced: false
+completed_at: null
+warnings: []

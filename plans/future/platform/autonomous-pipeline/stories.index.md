@@ -58,7 +58,7 @@ Blocked queue handling, monitor dashboard UI, and graceful shutdown.
 |---|---|---|---|
 | APIP-2010 | Blocked Queue and Notification System | APIP-0020 | Ready to Work |
 | APIP-2020 | Monitor UI v1 (Read-Only Dashboard) | APIP-2010 | Ready to Work |
-| APIP-2030 | Graceful Shutdown, Health Check, and Deployment Hardening | APIP-0020, APIP-0030 | Ready to Work |
+| APIP-2030 | Graceful Shutdown, Health Check, and Deployment Hardening | APIP-0020, APIP-0030 | ✅ UAT |
 
 ## Phase 3: Learning System & Optimization (5 stories)
 

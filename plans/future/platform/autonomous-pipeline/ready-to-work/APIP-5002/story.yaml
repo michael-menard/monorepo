@@ -1,6 +1,6 @@
 id: "APIP-5002"
 title: "E2E Test Plan and Playwright Framework Setup"
-status: needs-code-review
+status: uat
 priority: medium
 phase: 1
 feature: "Define E2E test plan for queue->supervisor->graphs->merge critical path; establish Playwright framework configuration and test scaffold"

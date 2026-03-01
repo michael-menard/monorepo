@@ -34,9 +34,7 @@ export async function runRoundtable(state: CodeAuditState): Promise<Partial<Code
   }
 
   // Build lookup from devil's advocate challenges
-  const challengeMap = new Map(
-    daResult.challenges.map(c => [c.finding_id, c]),
-  )
+  const challengeMap = new Map(daResult.challenges.map(c => [c.finding_id, c]))
 
   for (const finding of allFindings) {
     const challenge = challengeMap.get(finding.id)

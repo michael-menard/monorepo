@@ -1,6 +1,6 @@
 id: "APIP-2030"
 title: "Graceful Shutdown, Health Check, and Deployment Hardening"
-status: ready-to-work
+status: ready-for-qa
 priority: medium
 phase: 2
 feature: "Drain mode for zero-downtime deploys (stop accepting new work, complete in-flight), health check endpoint, and deployment runbook for rolling restart"

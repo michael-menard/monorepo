@@ -10,3 +10,14 @@ blocked: false
 forced: false
 warnings: []
 gen_mode: false
+fix_cycles:
+  - iteration: 1
+    triggered_by: code_review
+    started_at: "2026-02-25T16:00:00Z"
+    completed_at: "2026-03-01T10:32:00Z"
+    issues_fixed:
+      - file: packages/backend/orchestrator/src/config/model-assignments.ts
+        line: 13
+        issue: Duplicate import of 'z' from 'zod' on lines 13 and 15
+        severity: high
+    verification_result: PASS
