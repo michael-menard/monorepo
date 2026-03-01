@@ -77,6 +77,7 @@ export interface MonitorRepository {
 // Repository Implementation using Drizzle raw SQL
 // ============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createMonitorRepository(db: NodePgDatabase<any>): MonitorRepository {
   return {
     async getPipelineDashboard(): Promise<PipelineDashboardResponse> {
