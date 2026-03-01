@@ -63,7 +63,7 @@ jobs:
       - name: Build packages and API dist (required by downstream builds)
         run: |
           git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
-          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"
@@ -136,7 +136,7 @@ jobs:
       - name: Build packages and API dist (required by downstream builds)
         run: |
           git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
-          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"

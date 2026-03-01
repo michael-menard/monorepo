@@ -90,7 +90,7 @@ jobs:
           # Build all packages and API apps (in dependency order via turbo).
           # This ensures all dist/ directories exist before type-checking.
           # Excludes web apps which require runtime env vars (FRONTEND_PORT etc).
-          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"

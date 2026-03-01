@@ -94,7 +94,7 @@ jobs:
       - name: Build dist packages required for type resolution
         run: |
           git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
-          pnpm turbo build --filter="./packages/..." --filter="./apps/api/..."
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
 
       - name: Run type checking
         run: pnpm turbo check-types --filter="./apps/api/lego-api/..."
