@@ -559,12 +559,14 @@ get_story_title() {
 
 # ── Dependency helpers ───────────────────────────────────────────────
 
-# Build associative array of dependencies from stories.index.md
-# Key: STORY_ID, Value: comma-separated list of dependency IDs (or "none")
-declare -A STORY_DEPS
+# Build dependency map from stories.index.md as a flat file (bash 3.2 compatible)
+# Format: STORY_ID<tab>dep1,dep2,... (one line per story)
+DEPS_FILE=$(mktemp /tmp/story-deps.XXXXXX)
+trap "rm -f $DEPS_FILE" EXIT
 
 parse_dependencies() {
   local index_file="$FEATURE_DIR/stories.index.md"
+  > "$DEPS_FILE"  # clear
   if [[ ! -f "$index_file" ]]; then
     return 0
   fi
@@ -580,17 +582,28 @@ parse_dependencies() {
     fi
 
     if [[ "$deps" == "none" || -z "$deps" || "$deps" == "---" ]]; then
-      STORY_DEPS["$story_id"]=""
+      echo "${story_id}	" >> "$DEPS_FILE"
     else
-      STORY_DEPS["$story_id"]="$deps"
+      echo "${story_id}	${deps}" >> "$DEPS_FILE"
     fi
   done < "$index_file"
+}
+
+# Look up deps for a story from the flat file
+_get_deps() {
+  local sid="$1"
+  local line
+  line=$(grep "^${sid}	" "$DEPS_FILE" 2>/dev/null) || true
+  if [[ -n "$line" ]]; then
+    echo "${line#*	}"
+  fi
 }
 
 # Check if all dependencies of a story are completed (in UAT or done)
 check_dependencies_met() {
   local STORY_ID="$1"
-  local deps="${STORY_DEPS[$STORY_ID]:-}"
+  local deps
+  deps=$(_get_deps "$STORY_ID")
 
   # No dependencies — always ready
   if [[ -z "$deps" ]]; then
