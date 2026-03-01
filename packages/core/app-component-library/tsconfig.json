@@ -13,7 +13,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": false,
-    "types": ["react", "react-dom", "node"],
+    "types": ["react", "react-dom", "node", "vite/client"],
     "outDir": "dist",
     "declaration": false,
     "declarationMap": false,

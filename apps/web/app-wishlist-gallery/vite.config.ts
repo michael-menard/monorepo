@@ -28,12 +28,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: (() => {
-      if (!process.env.FRONTEND_PORT) {
-        throw new Error('FRONTEND_PORT environment variable is required. Set it in root .env')
-      }
-      return parseInt(process.env.FRONTEND_PORT)
-    })(),
+    port: process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 3000,
     host: true,
   },
   build: {
