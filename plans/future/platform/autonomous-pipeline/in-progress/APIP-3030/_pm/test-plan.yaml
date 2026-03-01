@@ -1,0 +1,147 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "Decomposition with populated affinity profile (happy path)"
+    setup: "Seed wint.model_affinity with high-confidence profile for (model_id='claude-haiku-3', change_type='file_change', file_type='ts'); set AFFINITY_CONFIDENCE_MIN=medium"
+    action: "Invoke Diff Planner node with change outline for a TypeScript file_change; assigned model = claude-haiku-3"
+    expected: "Decomposition prompt contains affinity summary; profile_metadata.profile_used = true; profile_metadata.weak_patterns_injected reflects injected count; output Zod validates against DiffPlannerOutputSchema"
+    evidence: "pnpm test --filter @repo/orchestrator -- diff-planner --reporter=verbose; assert profile_metadata.profile_used === true"
+
+  - id: HP-2
+    title: "Escalation pre-assignment for weak change type"
+    setup: "Insert affinity profile for (claude-haiku-3, migration_change, sql) with success_rate=0.4 (below WEAKNESS_THRESHOLD default 0.6); configured escalation_model = claude-sonnet-4-6"
+    action: "Invoke planner with a change outline that must produce a migration_change/sql ChangeSpec"
+    expected: "The ChangeSpec for migration_change has escalation_model='claude-sonnet-4-6'; profile_metadata.escalation_preassigned = 1"
+    evidence: "Assert each ChangeSpec with weak (change_type, file_type) has escalation_model set; profile_metadata.escalation_preassigned matches count"
+
+  - id: HP-3
+    title: "Multiple change types in single decomposition — mixed-strength"
+    setup: "Profile for (claude-haiku-3, file_change, ts) is strong (success_rate=0.9); profile for (claude-haiku-3, test_change, ts) is weak (success_rate=0.45)"
+    action: "Invoke planner with outline requiring both file_change and test_change ChangeSpecs"
+    expected: "file_change ChangeSpec has no escalation_model; test_change ChangeSpec has escalation_model set; profile_metadata.escalation_preassigned = 1"
+    evidence: "Iterate ChangeSpecs in output; assert escalation_model only on weak-pattern specs"
+
+  - id: HP-4
+    title: "Prompt injection volume gate — cap at MAX_WEAK_PATTERNS_INJECTED"
+    setup: "Insert 10 weak patterns for model; set MAX_WEAK_PATTERNS_INJECTED=5"
+    action: "Invoke planner"
+    expected: "Affinity summary in decomposition prompt lists at most 5 weak patterns; profile_metadata.weak_patterns_injected = 5"
+    evidence: "Parse prompt text for affinity summary section; count listed weak patterns; assert <= MAX_WEAK_PATTERNS_INJECTED"
+
+  - id: HP-5
+    title: "Schema regression against ChangeSpec variants (all 4 variants)"
+    setup: "Provide outline with all 4 change_type variants: file_change, migration_change, config_change, test_change"
+    action: "Invoke planner"
+    expected: "Output ChangeSpec array contains all 4 variants; each parses against ChangeSpecSchema without error"
+    evidence: "Assert ChangeSpecSchema.parse() succeeds for each ChangeSpec in output"
+
+error_cases:
+  - id: EC-1
+    title: "Cold-start fallback — no profile exists for assigned model"
+    setup: "wint.model_affinity has no rows for model_id='claude-haiku-3'"
+    action: "Invoke Diff Planner node with assigned model = claude-haiku-3"
+    expected: "Node returns valid decomposition result (model-agnostic); profile_metadata.profile_used = false; no error thrown"
+    evidence: "Assert result.profile_metadata.profile_used === false; assert result.change_specs is non-empty array; assert no exception propagated"
+
+  - id: EC-2
+    title: "DB error fallback — connection error during affinity query"
+    setup: "Mock @repo/db to throw a connection error on query"
+    action: "Invoke Diff Planner node"
+    expected: "Node returns valid model-agnostic decomposition; @repo/logger.warn called with error message; profile_metadata.profile_used = false; planning step does not fail"
+    evidence: "Spy on @repo/logger.warn; assert called with substring 'affinity'; assert return value parses against DiffPlannerOutputSchema"
+
+  - id: EC-3
+    title: "DB error fallback — query timeout"
+    setup: "Mock @repo/db to throw a timeout error after 5000ms"
+    action: "Invoke Diff Planner node"
+    expected: "Same as EC-2: graceful fallback, warning logged, model-agnostic result returned"
+    evidence: "Same assertions as EC-2"
+
+  - id: EC-4
+    title: "Profile confidence below threshold — fallback to model-agnostic"
+    setup: "Insert profile for (claude-haiku-3, file_change, ts) with confidence='low'; set AFFINITY_CONFIDENCE_MIN=medium"
+    action: "Invoke planner"
+    expected: "Decomposition prompt does NOT include affinity summary for this model; profile_metadata.profile_used = false"
+    evidence: "Assert profile_used === false; assert decomposition prompt text does not contain affinity summary header"
+
+  - id: EC-5
+    title: "Verify node does not write to wint.model_affinity (read-only)"
+    setup: "Spy on @repo/db query calls; run full planner invocation"
+    action: "Invoke Diff Planner node with populated profile"
+    expected: "No INSERT, UPDATE, or DELETE SQL statements issued against wint.model_affinity"
+    evidence: "Assert all @repo/db calls are SELECT only; assert no mutation queries on wint schema"
+
+edge_cases:
+  - id: ED-1
+    title: "Confidence gate at each level — low/medium/high threshold behavior"
+    setup: "Run three separate invocations with profiles at confidence='low', confidence='medium', confidence='high'; set AFFINITY_CONFIDENCE_MIN=medium"
+    action: "Invoke planner for each confidence level"
+    expected: "low: profile_used=false; medium: profile_used=true; high: profile_used=true"
+    evidence: "Assert profile_metadata.profile_used matches expected for each confidence level"
+
+  - id: ED-2
+    title: "All ChangeSpecs are weak — all receive escalation_model pre-assignment"
+    setup: "All change types in outline are weak (success_rate < WEAKNESS_THRESHOLD) for assigned model"
+    action: "Invoke planner"
+    expected: "Every ChangeSpec has escalation_model set; profile_metadata.escalation_preassigned equals change_specs.length"
+    evidence: "Assert every entry in change_specs has escalation_model field; assert escalation_preassigned count matches"
+
+  - id: ED-3
+    title: "Empty weak patterns — prompt injection section omitted"
+    setup: "Model has profile with all strong patterns (no weak patterns above threshold)"
+    action: "Invoke planner"
+    expected: "profile_used=true; weak_patterns_injected=0; decomposition prompt does not include weak-pattern advisory section"
+    evidence: "Assert profile_metadata.weak_patterns_injected === 0"
+
+  - id: ED-4
+    title: "profile_metadata field is optional — legacy code path remains valid"
+    setup: "Invoke node via a test harness that omits profile context entirely (legacy mode)"
+    action: "Parse output against DiffPlannerOutputSchema"
+    expected: "Output parses without error even if profile_metadata is absent (field is optional/defaulted)"
+    evidence: "Assert DiffPlannerOutputSchema.parse(output_without_metadata) does not throw"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "profile_metadata.profile_used: boolean"
+      - "profile_metadata.model_id: string"
+      - "profile_metadata.confidence_level: 'low' | 'medium' | 'high'"
+      - "profile_metadata.weak_patterns_injected: number"
+      - "profile_metadata.escalation_preassigned: number"
+      - "ChangeSpec.escalation_model: string (optional, present when weak pattern)"
+      - "DiffPlannerOutputSchema.parse() succeeds for all test outputs"
+  frontend:
+    playwright_runs: []
+    assertions: []
+
+manual_cases: []
+
+fixture_definitions:
+  - name: AffinityProfileHighConfidence
+    type: DB row (wint.model_affinity)
+    description: "Profile for (claude-haiku-3, file_change, ts) with success_rate=0.88, confidence='high', avg_attempts=1.1, avg_tokens=4200"
+  - name: AffinityProfileWeakMigration
+    type: DB row (wint.model_affinity)
+    description: "Profile for (claude-haiku-3, migration_change, sql) with success_rate=0.4, confidence='medium', avg_attempts=2.8, avg_tokens=9000"
+  - name: AffinityProfileLowConfidence
+    type: DB row (wint.model_affinity)
+    description: "Profile with confidence='low' — used for confidence gate threshold tests"
+  - name: ChangeOutlineAllVariants
+    type: In-memory ChangeOutlineItem[]
+    description: "Minimal change outline containing all 4 change_type variants: file_change, migration_change, config_change, test_change"
+  - name: MockDbConnectionError
+    type: Vitest mock
+    description: "@repo/db mock that throws Error('connection refused') on first query"
+  - name: PlaceholderChangeSpecSchema
+    type: Zod schema
+    description: "Placeholder ChangeSpec schema mirroring expected APIP-1020 output fields; required until ADR-002 is published"
+
+risks:
+  - "APIP-1020 ChangeSpec schema not yet stable — tests must use placeholder ChangeSpec fixtures until ADR-002 is published; flag as re-validation requirement before merge"
+  - "wint.model_affinity schema from APIP-3020 not yet defined — DB fixture definitions may need column-name updates once APIP-3020 story.yaml confirms schema shape"
+  - "Profile confidence threshold behavior (low/medium/high enum) must be consistent with APIP-3020 schema; verify enum values before writing confidence gate tests"
