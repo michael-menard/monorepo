@@ -1,0 +1,15 @@
+schema: 1
+story_id: APIP-2020
+feature_dir: plans/future/platform/autonomous-pipeline
+timestamp: 2026-02-28T00:00:00Z
+current_phase: plan
+last_successful_phase: setup
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - "KB write operations are failing with INTERNAL_ERROR — artifacts written to _implementation/ directory as YAML files only"
+  - "AC-11 auth mechanism resolved autonomously (aggressive autonomy): Cognito middleware reused"
+  - "AC-13 coordination resolved: APIP-5005 unmerged as of 2026-02-28; this story creates PipelineReadService"
+gen_mode: false
