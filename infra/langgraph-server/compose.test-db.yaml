@@ -1,0 +1,44 @@
+# LangGraph Test Database - Docker Compose
+# APIP-5001: Test Database Setup for LangGraph Checkpoint Schema
+#
+# Starts a PostgreSQL 15 container for LangGraph checkpoint integration tests.
+# Isolated from the knowledge-base database (uses port 5434, not 5433).
+#
+# Usage:
+#   pnpm db:test:start     # Start in background
+#   pnpm db:test:stop      # Stop and remove containers
+#   docker compose -f compose.test-db.yaml logs -f  # View logs
+#
+# Connection details:
+#   Host:     localhost
+#   Port:     5434 (host) → 5432 (container)
+#   Database: pipeline_test
+#   User:     pipelineuser
+#   Password: TestPassword123!
+#
+# @see APIP-5001 AC-1
+# @see apps/api/pipeline/src/test/setup.ts for test env config
+
+services:
+  langgraph-test-db:
+    image: postgres:15
+    container_name: langgraph-test-db
+    environment:
+      POSTGRES_USER: pipelineuser
+      POSTGRES_PASSWORD: TestPassword123!
+      POSTGRES_DB: pipeline_test
+    ports:
+      - "5434:5432"
+    volumes:
+      - langgraph_test_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipelineuser -d pipeline_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  langgraph_test_db_data:
+    driver: local
