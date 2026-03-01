@@ -14,13 +14,10 @@
  * - writeTelemetry() instrumentation is GATED on APIP-1030 (see AC-7)
  */
 
-import { check, index, integer, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { sql } from 'drizzle-orm'
+import { check, index, integer, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
-
-// Re-use the wint schema namespace defined in wint.ts
-// Import here to avoid re-declaring it — standalone file pattern per PLAN.yaml
 import { wintSchema } from './wint.js'
 
 // ============================================================================

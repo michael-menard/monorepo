@@ -28,8 +28,15 @@ import { logger } from '@repo/logger'
 /**
  * ChangeTelemetrySchema
  *
- * Mirrors the wint.change_telemetry SQL table columns.
- * All fields match the CHECK constraints defined in the migration.
+ * Defines the shape of a telemetry record for wint.change_telemetry inserts.
+ * All fields mirror the columns and CHECK constraints in the 0028 migration,
+ * which are also reflected in insertChangeTelemetrySchema from @repo/database-schema.
+ *
+ * Note: @repo/database-schema uses Zod v4 (via drizzle-zod 0.8.x) while the
+ * orchestrator uses Zod v3. Direct schema composition across these versions is
+ * not supported, so this schema is defined independently with the same constraints.
+ * When the orchestrator migrates to Zod v4, this can be replaced with a derived
+ * schema from insertChangeTelemetrySchema.omit({ id: true, createdAt: true }).
  *
  * Nullable fields: escalatedTo, errorCode, errorMessage, durationMs
  * These are optional depending on the outcome and calling context.
@@ -153,13 +160,10 @@ export async function writeTelemetry(record: ChangeTelemetry, db: DbQueryable): 
     )
   } catch (err) {
     // Telemetry failures must never propagate — log and continue
-    logger.warn(
-      'writeTelemetry: failed to write change telemetry row — continuing without error',
-      {
-        err: err instanceof Error ? err.message : String(err),
-        storyId: record.storyId,
-        outcome: record.outcome,
-      },
-    )
+    logger.warn('writeTelemetry: failed to write change telemetry row — continuing without error', {
+      err: err instanceof Error ? err.message : String(err),
+      storyId: record.storyId,
+      outcome: record.outcome,
+    })
   }
 }

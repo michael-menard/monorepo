@@ -1,48 +1,208 @@
-story_id: APRS-4030
-e2e_tests:
-  reason: >-
-    Backend-only LangGraph node implementation with injectable adapters — no UI, no API endpoints, no E2E testable
-    surface
-  status: exempt
-iteration: 0
-type_check:
-  status: pass
-  command: npx tsc --noEmit
-unit_tests:
-  status: pass
-  command: cd packages/backend/orchestrator && npx vitest run src/graphs/__tests__/story-generation.test.ts
-  results:
-    files: 1
-    failed: 0
-    passed: 17
-ac_coverage:
-  AC-1: >-
-    PASS — WriteResultSchema added to state, write_to_kb added to GenerationPhaseSchema, writeResult field added to
-    StoryGenerationStateAnnotation
-  AC-2: >-
-    PASS — write_to_kb node generates story IDs using storyPrefix+sequence(step=10), maps GeneratedStory fields to
-    KbStoryPayload
-  AC-3: PASS — dependency edges mapped from composite keys to generated story IDs in KbStoryPayload.dependencies
-  AC-4: PASS — plan status updated only on full success, generationPhase=error on any failure
-  AC-5: PASS — Injectable KbWriterFn with defaultKbWriterFn no-op, Injectable StoryIdGeneratorFn for testability
-  AC-6: 'PASS — Graph wiring updated: validate_graph→write_to_kb→END with conditional error→END edge after validate_graph'
-  AC-7: PASS — 13 unit tests for write_to_kb, 8 validate-graph tests updated, 14 integration tests (4 new for write_to_kb)
+schema: 1
+story_id: "APIP-3010"
+version: 1
+timestamp: "2026-02-28T19:42:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "SQL migration creates wint.change_telemetry with 14 columns and rollback companion"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
+        description: "SQL migration creating wint.change_telemetry table with 14 columns: id, story_id, model_id, affinity_key, change_type, file_type, outcome, tokens_in, tokens_out, escalated_to, retry_count, error_code, error_message, duration_ms, created_at (14 data columns + pk = id is the pk)"
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry_rollback.sql"
+        description: "Rollback companion script drops indexes then table"
+
+  - ac_id: "AC-2"
+    ac_text: "CHECK constraints on change_type and file_type with unknown placeholder"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
+        description: "CONSTRAINT chk_change_telemetry_change_type CHECK (change_type IN ('unknown', 'add', 'modify', 'delete', 'rename', 'refactor')); CONSTRAINT chk_change_telemetry_file_type CHECK (file_type IN ('unknown', 'ts', 'tsx', 'sql', 'yaml', 'json', 'md', 'sh', 'other'))"
+
+  - ac_id: "AC-3"
+    ac_text: "CHECK constraint on outcome: pass, fail, abort, budget_exhausted"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
+        description: "CONSTRAINT chk_change_telemetry_outcome CHECK (outcome IN ('pass', 'fail', 'abort', 'budget_exhausted'))"
+
+  - ac_id: "AC-4"
+    ac_text: "3 indexes: idx_change_telemetry_story_id, idx_change_telemetry_affinity, idx_change_telemetry_created_at"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
+        description: "CREATE INDEX IF NOT EXISTS idx_change_telemetry_story_id ON story_id; CREATE INDEX IF NOT EXISTS idx_change_telemetry_affinity ON affinity_key; CREATE INDEX IF NOT EXISTS idx_change_telemetry_created_at ON created_at"
+
+  - ac_id: "AC-5"
+    ac_text: "ChangeTelemetrySchema z.object() with z.infer<> type alias — no TypeScript interfaces"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+        description: "export const ChangeTelemetrySchema = z.object({...}); export type ChangeTelemetry = z.infer<typeof ChangeTelemetrySchema>. No interfaces used."
+
+  - ac_id: "AC-6"
+    ac_text: "writeTelemetry() exported function with try/catch and logger.warn"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+        description: "export async function writeTelemetry(record: ChangeTelemetry, db: DbQueryable): Promise<void> with try/catch that calls logger.warn on error and returns void without rethrowing"
+
+  - ac_id: "AC-7"
+    ac_text: "GATED on APIP-1030 — change-loop instrumentation call sites"
+    status: MISSING
+    reason: "GATED on APIP-1030 — change-loop.ts does not exist yet. TODO comment placed in change-telemetry.ts: TODO(APIP-1030): Wire writeTelemetry() calls into change-loop.ts once APIP-1030 is merged"
+    evidence_items:
+      - type: manual
+        description: "TODO(APIP-1030) comment in packages/backend/orchestrator/src/telemetry/change-telemetry.ts line ~109"
+
+  - ac_id: "AC-8"
+    ac_text: "Unit test: DB failure does not throw, logger.warn called once"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts"
+        description: "EC-1 tests: 'does not throw when DB query rejects', 'calls logger.warn exactly once when DB query rejects', 'logger.warn receives error and context object' — all pass"
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- change-telemetry.test"
+        result: "PASS — 20 tests pass"
+
+  - ac_id: "AC-9"
+    ac_text: "Unit tests: 4 outcome types produce valid ChangeTelemetrySchema records; nullable fields accept null"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts"
+        description: "ED-3: all 4 outcome values validated; HP-1 pass outcome; HP-2 budget_exhausted+escalatedTo; ED-1 nullable fields (escalatedTo, errorCode, errorMessage, durationMs)"
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- change-telemetry.test"
+        result: "PASS — 20 tests pass"
+
+  - ac_id: "AC-10"
+    ac_text: "Integration tests for migration + round-trip DB operations against APIP-5001 test DB"
+    status: PARTIAL
+    reason: "Integration tests are structurally complete and correct. 8 tests skip (APIP_TEST_DB_URL not set), 1 documentation test passes. Tests cover HP-3, HP-4, HP-5, ED-2, EC-3 — all implemented using describe.skipIf(!HAS_TEST_DB) guard."
+    evidence_items:
+      - type: test
+        path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.integration.test.ts"
+        description: "9 integration tests: HP-3 migration apply, HP-3 3 indexes exist, ED-2 idempotency, HP-4 pass row insert+readback, HP-5 budget_exhausted+escalated_to round-trip, EC-3 outcome/change_type/file_type constraint rejection. Skipped due to missing APIP_TEST_DB_URL."
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test -- change-telemetry.integration"
+        result: "PASS — 1 pass, 8 skipped (no APIP-5001 test DB available)"
+
+  - ac_id: "AC-11"
+    ac_text: "Drizzle ORM schema definition in change-telemetry.ts, exported from schema index"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/database-schema/src/schema/change-telemetry.ts"
+        description: "changeTelemetry table defined using wintSchema.table() with all 14 columns, 3 CHECK constraints, 3 indexes, plus insertChangeTelemetrySchema and selectChangeTelemetrySchema via drizzle-zod"
+      - type: file
+        path: "packages/backend/database-schema/src/schema/index.ts"
+        description: "Exports changeTelemetry, insertChangeTelemetrySchema, selectChangeTelemetrySchema, InsertChangeTelemetry, SelectChangeTelemetry from ./change-telemetry.js"
+      - type: command
+        command: "pnpm --filter @repo/database-schema exec tsc --noEmit (filtered to change-telemetry only)"
+        result: "PASS — no TypeScript errors in change-telemetry.ts"
+
+  - ac_id: "AC-12"
+    ac_text: "GATED on APIP-1030 — orchestrator test suite regression guard"
+    status: PARTIAL
+    reason: "GATED on APIP-1030 for change-loop instrumentation. Non-gated portion: orchestrator test suite runs 3462 passing tests (3482 total minus pre-existing elaboration.test.ts failure which was failing before this story's changes)."
+    evidence_items:
+      - type: command
+        command: "pnpm --filter @repo/orchestrator test"
+        result: "3462 pass, 26 skip, 1 fail (pre-existing elaboration test — confirmed pre-existing by stash check)"
+
 touched_files:
-  - packages/backend/orchestrator/src/state/story-generation-state.ts
-  - packages/backend/orchestrator/src/nodes/story-generation/write-to-kb.ts
-  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/write-to-kb.test.ts
-  - packages/backend/orchestrator/src/nodes/story-generation/validate-graph.ts
-  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/validate-graph.test.ts
-  - packages/backend/orchestrator/src/nodes/story-generation/__tests__/generate-stories.test.ts
-  - packages/backend/orchestrator/src/graphs/story-generation.ts
-  - packages/backend/orchestrator/src/graphs/__tests__/story-generation.test.ts
+  - path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
+    action: created
+    lines: 81
+    description: "SQL migration: wint.change_telemetry table with 14 columns, 3 CHECK constraints, 3 indexes"
+  - path: "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry_rollback.sql"
+    action: created
+    lines: 28
+    description: "Rollback: drops indexes and change_telemetry table"
+  - path: "packages/backend/database-schema/src/schema/change-telemetry.ts"
+    action: created
+    lines: 95
+    description: "Drizzle ORM schema: changeTelemetry table + drizzle-zod insert/select schemas"
+  - path: "packages/backend/database-schema/src/schema/index.ts"
+    action: modified
+    lines: 8
+    description: "Added changeTelemetry and related type exports"
+  - path: "packages/backend/orchestrator/src/telemetry/change-telemetry.ts"
+    action: created
+    lines: 165
+    description: "ChangeTelemetrySchema Zod schema, DbQueryable type, writeTelemetry() fire-and-continue function"
+  - path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.test.ts"
+    action: created
+    lines: 185
+    description: "20 unit tests for AC-8 (DB failure safety) and AC-9 (outcome validation, nullable fields)"
+  - path: "packages/backend/orchestrator/src/telemetry/__tests__/change-telemetry.integration.test.ts"
+    action: created
+    lines: 165
+    description: "9 integration tests for AC-10 (migration, round-trip, constraints) — skips without APIP_TEST_DB_URL"
+
 commands_run:
-  - command: cd packages/backend/orchestrator && npx vitest run src/graphs/__tests__/story-generation.test.ts
-    result: PASS — 17/17 tests passed
-    timestamp: '2026-03-23T22:33:00.000Z'
-    note: Fix verification after removing duplicate describe block and import block from story-generation.test.ts
-fix_iteration: 1
-fix_summary: >-
-  Removed duplicate describe block ('story-generation graph with production adapters (AC-10)') and duplicate import
-  block at lines 411-529 of story-generation.test.ts. Copy-paste artifact from APRS-5030 wiring. All 17 tests pass
-  post-fix.
+  - command: "pnpm --filter @repo/database-schema exec tsc --noEmit (change-telemetry.ts)"
+    result: SUCCESS
+    output: "No errors in change-telemetry.ts (pre-existing seed/db error unrelated)"
+    timestamp: "2026-02-28T19:38:00Z"
+  - command: "pnpm --filter @repo/orchestrator exec tsc --noEmit (change-telemetry.ts)"
+    result: SUCCESS
+    output: "No TypeScript errors in new telemetry files"
+    timestamp: "2026-02-28T19:41:00Z"
+  - command: "pnpm --filter @repo/orchestrator test -- change-telemetry.test"
+    result: SUCCESS
+    output: "20 tests pass"
+    timestamp: "2026-02-28T19:41:41Z"
+  - command: "pnpm --filter @repo/orchestrator test -- change-telemetry.integration"
+    result: SUCCESS
+    output: "1 pass, 8 skipped (no APIP_TEST_DB_URL)"
+    timestamp: "2026-02-28T19:39:46Z"
+  - command: "pnpm --filter @repo/orchestrator test"
+    result: FAIL
+    output: "3462 pass, 26 skip, 1 fail — pre-existing failure in elaboration.test.ts (confirmed pre-existing by stash test)"
+    timestamp: "2026-02-28T19:40:30Z"
+
+endpoints_exercised: []
+
+notable_decisions:
+  - "ARCH-001: Migration sequence 0028 follows 0027_wint_0131_capabilities_feature_fk.sql as the last migration"
+  - "ARCH-002: change_type and file_type use TEXT + CHECK constraints with 'unknown' placeholder (not ENUM) per AC-2 architecture note about APIP-1020 ADR pending"
+  - "ARCH-003: writeTelemetry() uses await + try/catch (fire-and-continue) — telemetry NEVER blocks the change loop"
+  - "DbQueryable uses pg.Pool/Client duck-typing (not Drizzle) since orchestrator depends on pg, not drizzle-orm"
+  - "logger.warn signature is (message: string, metadata?) — not pino-style (object, message). Adjusted to match @repo/logger ILogger interface"
+  - "Integration tests use describe.skipIf(!HAS_TEST_DB) — structurally complete, skip cleanly without APIP_TEST_DB_URL"
+
+known_deviations:
+  - "AC-7 is GATED on APIP-1030 — cannot instrument change-loop.ts (it does not exist). TODO comment added."
+  - "AC-12 regression guard shows 1 pre-existing elaboration test failure (existed before this story's changes, confirmed by git stash test)."
+  - "AC-10 integration tests skip (8/9) due to APIP_TEST_DB_URL not set — tests are structurally complete and will run once APIP-5001 DB is available."
+
+test_summary:
+  unit: { pass: 20, fail: 0 }
+  integration: { pass: 1, fail: 0 }
+
+e2e_tests:
+  status: skipped
+  skip_reason: "No HTTP endpoints or UI surfaces added in this story. Purely internal backend infrastructure (DB migration + telemetry write function). Backend not running (localhost:3001 refused connection). E2E not applicable."
+  config: "playwright.legacy.config.ts"
+  project: "chromium-live"
+  mode: "live"
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []

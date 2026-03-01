@@ -1,11 +1,16 @@
-story_id: WINT-6030
 schema: 1
-forced: false
-blocked: false
-gen_mode: false
-warnings: []
+story_id: "APIP-3010"
+feature_dir: "plans/future/platform/autonomous-pipeline"
+timestamp: "2026-02-28T19:42:00Z"
+current_phase: "proof"
+last_successful_phase: "execute"
 iteration: 0
-timestamp: '2026-03-24T00:00:00Z'
-current_phase: execute
 max_iterations: 3
-last_successful_phase: plan
+blocked: false
+forced: false
+warnings:
+  - "AC-7 gated on APIP-1030"
+  - "AC-10 integration tests skip without APIP_TEST_DB_URL (APIP-5001 DB)"
+  - "Pre-existing elaboration.test.ts failure (not caused by this story)"
+gen_mode: false
+worktree_path: "tree/story/APIP-3010"
