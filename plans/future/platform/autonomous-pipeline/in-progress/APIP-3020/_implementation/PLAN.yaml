@@ -1,0 +1,211 @@
+schema: 2
+story_id: "APIP-3020"
+timestamp: "2026-02-28T10:00:00Z"
+subtask_source: story
+
+# NOTE: The actual wint.change_telemetry column names (from APIP-3010 implementation)
+# differ from the story ACs spec. Actual columns:
+#   model_id (not 'model'), change_type, file_type, outcome ('pass'/'fail'/'abort'/'budget_exhausted'),
+#   tokens_in + tokens_out (not 'tokens'), retry_count (not 'attempts'), created_at
+# The Pattern Miner aggregation SQL must use these actual column names.
+# 'outcome' success condition = outcome IN ('pass') not = 'success'.
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Define wint.model_affinity Drizzle ORM schema with confidenceLevelEnum and indexes in wint.ts"
+    files:
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/telemetry.ts"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/db"
+    acs_covered: ["AC-1", "AC-2", "AC-3"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Write SQL migration 0029 for wint.model_affinity table and indexes inside BEGIN/COMMIT"
+    files:
+      - "packages/backend/database-schema/src/migrations/app/0029_apip_3020_model_affinity.sql"
+    files_to_read:
+      - "apps/api/knowledge-base/src/db/migrations/015_artifact_type_tables.sql"
+      - "packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql"
+    dependencies: [1]
+    slice: packages
+    verification: "SQL syntax review; verify CREATE TYPE before CREATE TABLE"
+    acs_covered: ["AC-4"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Add schema shape tests for ModelAffinityInsertSchema and ModelAffinitySelectSchema to existing wint schema test"
+    files:
+      - "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm test --filter @repo/db"
+    acs_covered: ["AC-3", "AC-13"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Create pattern-miner.ts with PatternMinerConfigSchema, PatternMinerStateAnnotation, createPatternMinerGraph() and runPatternMiner() entry point following metrics.ts pattern"
+    files:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/metrics.ts"
+      - "packages/backend/orchestrator/src/runner/node-factory.ts"
+      - "packages/backend/orchestrator/src/runner/state-helpers.ts"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm check-types --filter orchestrator"
+    acs_covered: ["AC-5"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: "Add CONFIDENCE_THRESHOLDS named constants and assignConfidenceLevel() function to pattern-miner.ts"
+    files:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    dependencies: [4]
+    slice: backend
+    verification: "pnpm check-types --filter orchestrator"
+    acs_covered: ["AC-8"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: "Implement incremental aggregation query (watermark from MAX(last_aggregated_at)), weighted average upsert with ON CONFLICT, and trend detection stored as jsonb"
+    files:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+      - "packages/backend/database-schema/src/schema/change-telemetry.ts"
+    dependencies: [5]
+    slice: backend
+    verification: "pnpm check-types --filter orchestrator"
+    acs_covered: ["AC-6", "AC-7", "AC-9"]
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: "Verify cold-start behavior and write unit tests for Pattern Miner (confidence bands, aggregation fixture, watermark, cold-start, trend)"
+    files:
+      - "packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    dependencies: [6]
+    slice: backend
+    verification: "pnpm test --filter orchestrator"
+    acs_covered: ["AC-10", "AC-11"]
+
+  - id: 8
+    subtask_id: "ST-8"
+    description: "Write integration tests tagged @integration against real test DB: fixture rows, runPatternMiner(), verify model_affinity; upsert idempotency; incremental; multi-combination"
+    files:
+      - "packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.integration.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+      - "packages/backend/database-schema/src/schema/wint.ts"
+    dependencies: [7]
+    slice: backend
+    verification: "pnpm test --filter orchestrator -- --testPathPattern integration"
+    acs_covered: ["AC-12"]
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: modify
+    reason: "Add modelAffinity table, confidenceLevelEnum, ModelAffinityInsertSchema, ModelAffinitySelectSchema (AC-1, AC-2, AC-3)"
+  - path: "packages/backend/database-schema/src/migrations/app/0029_apip_3020_model_affinity.sql"
+    action: create
+    reason: "SQL migration creating wint.confidence_level enum and wint.model_affinity table with indexes (AC-4)"
+  - path: "packages/backend/database-schema/src/schema/__tests__/wint-schema.test.ts"
+    action: modify
+    reason: "Add schema shape tests for new ModelAffinity Zod schemas; regression guard for existing tables (AC-3, AC-13)"
+  - path: "packages/backend/orchestrator/src/graphs/pattern-miner.ts"
+    action: create
+    reason: "Pattern Miner LangGraph cron graph: config schema, state annotation, nodes, createPatternMinerGraph(), runPatternMiner() (AC-5, AC-6, AC-7, AC-8, AC-9, AC-10)"
+  - path: "packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.test.ts"
+    action: create
+    reason: "Unit tests: confidence band assignment (7 boundary values), aggregation fixture, watermark, cold-start, trend (AC-11)"
+  - path: "packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.integration.test.ts"
+    action: create
+    reason: "Integration tests against real PostgreSQL test DB: idempotency, incremental, multi-combination (AC-12)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/db"
+    when: "after ST-1 (wint.ts schema changes)"
+    required: true
+  - command: "pnpm check-types --filter orchestrator"
+    when: "after each orchestrator step (ST-4 through ST-6)"
+    required: true
+  - command: "pnpm test --filter @repo/db"
+    when: "after ST-3 (schema tests)"
+    required: true
+  - command: "pnpm test --filter orchestrator"
+    when: "after ST-7 (unit tests)"
+    required: true
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "modelAffinity table definition in wint.ts with all required columns; pnpm check-types --filter @repo/db passes"
+    evidence_type: command
+  - ac_id: "AC-2"
+    planned_evidence: "uniqueIndex on (model, change_type, file_type) + index on confidence_level + index on last_aggregated_at defined in wint.ts table callback"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "ModelAffinityInsertSchema and ModelAffinitySelectSchema exported from wint.ts; schema shape test in wint-schema.test.ts passes"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "Migration file 0029_apip_3020_model_affinity.sql exists; runs cleanly; idempotent via CREATE TABLE IF NOT EXISTS and CREATE TYPE IF NOT EXISTS"
+    evidence_type: command
+  - ac_id: "AC-5"
+    planned_evidence: "pattern-miner.ts exports createPatternMinerGraph() and runPatternMiner(); pnpm check-types --filter orchestrator passes"
+    evidence_type: command
+  - ac_id: "AC-6"
+    planned_evidence: "fetchTelemetry node uses MAX(last_aggregated_at) watermark; unit test verifies watermark advancement; cold-start epoch fallback"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "upsertProfiles node uses INSERT...ON CONFLICT DO UPDATE with weighted average formula; unit test EC-4 verifies (100*0.9+10*0.5)/110=0.8545"
+    evidence_type: test
+  - ac_id: "AC-8"
+    planned_evidence: "CONFIDENCE_THRESHOLDS named constants defined; unit tests HP-1 through HP-4 and ED-1/ED-2 cover all 7 boundary values"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "trend jsonb {direction, delta, computed_at} computed per run; unit test ED-3 covers stable; up/down cases"
+    evidence_type: test
+  - ac_id: "AC-10"
+    planned_evidence: "cold-start integration test EC-1: empty change_telemetry → no error, no rows, logs rows_aggregated=0"
+    evidence_type: test
+  - ac_id: "AC-11"
+    planned_evidence: "Unit tests in pattern-miner.test.ts: HP-1–HP-4 (confidence bands), HP-5 (fixture aggregation), HP-6 (watermark), EC-3 (div by zero), EC-4 (weighted avg), ED-1/ED-2 (boundaries), ED-3 (trend stable)"
+    evidence_type: test
+  - ac_id: "AC-12"
+    planned_evidence: "Integration tests in pattern-miner.integration.test.ts: HP-7 (fixture→profile), HP-8 (idempotency), HP-9 (incremental), ED-4 (multi-combination)"
+    evidence_type: test
+  - ac_id: "AC-13"
+    planned_evidence: "All existing wint-schema.test.ts tests pass after wint.ts modification; no existing table definitions changed"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "change_telemetry column names differ from story ACs: model_id (not 'model'), outcome values 'pass'/'fail' (not 'success'/'failure'), tokens_in+tokens_out (not 'tokens'), retry_count (not 'attempts'). How should the aggregation SQL handle these discrepancies?"
+    decision: "Use actual APIP-3010 implementation column names. Success condition = outcome = 'pass'. Total tokens = tokens_in + tokens_out. Attempts = retry_count + 1. Affinity key triple = (model_id, change_type, file_type)."
+    rationale: "The change_telemetry.ts file is already committed to the repo with these exact column names. The story ACs describe an aspirational API that APIP-3010 implemented differently. The Pattern Miner must query real columns. Story notes already say 'If APIP-3010 column names differ slightly in implementation, update the aggregation SQL constant in one place.'"
+    decided_by: agent
+
+complexity: moderate
+
+notes:
+  - "CRITICAL: wint.change_telemetry uses model_id (not 'model'), outcome IN ('pass','fail','abort','budget_exhausted') not 'success'/'failure', tokens_in+tokens_out (not single 'tokens'), retry_count (not 'attempts'). Pattern Miner aggregation must use actual columns."
+  - "confidenceLevelEnum must be defined with wintSchema.enum() (NOT pgEnum()) so it lives in the 'wint' schema namespace, matching the pgEnum pattern in telemetry.ts (telemetrySchema.enum). Calling pgEnum() would create it in 'public' schema."
+  - "Migration sequence: next is 0029 (0028 was APIP-3010 change_telemetry). File: 0029_apip_3020_model_affinity.sql."
+  - "Schema shape tests should be added to the existing wint-schema.test.ts (not a new file) to avoid duplication and stay consistent with project patterns."
+  - "Integration tests are gated on APIP-3010 being deployed to test DB. The test file should be created and tagged @integration; CI may skip them until APIP-3010 is merged."
+  - "The model_affinity table should be added to wint.ts (not a separate file) to match the story ACs scope specification: 'packages/backend/database-schema/src/schema/wint.ts — add modelAffinity table'."
+  - "schema/index.ts must be updated to re-export new exports from wint.ts (confidenceLevelEnum, modelAffinity, ModelAffinityInsertSchema, ModelAffinitySelectSchema) — add to files_to_change if needed."
