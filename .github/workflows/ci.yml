@@ -79,12 +79,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build @repo/logger dist (required for type resolution)
-        run: pnpm --filter="@repo/logger" build
-      - name: Build @repo/database-schema dist (required for type resolution)
-        run: pnpm --filter="@repo/database-schema" build
-      - name: Build @repo/observability dist (required for type resolution)
-        run: pnpm --filter="@repo/observability" build
+      - name: Build dist packages required for type resolution
+        run: |
+          # Build packages whose dist/ is needed by TypeScript for module resolution.
+          # These packages use dist-based exports (not src-based), so tsc needs dist/
+          # to exist before type-checking downstream packages.
+          cd packages/core/logger && pnpm exec tsc
+          echo "logger dist after build:" && ls dist/ | head -5
+          cd ../../../packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json
+          echo "database-schema dist after build:" && ls dist/ | head -5
+          cd ../../../packages/backend/observability
+          echo "observability node_modules/@repo/logger before tsc:" && ls node_modules/@repo/logger/ | head -5
+          echo "logger dist via symlink:" && ls node_modules/@repo/logger/dist/ | head -5
+          pnpm exec tsc
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
