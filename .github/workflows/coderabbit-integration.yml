@@ -70,12 +70,15 @@ jobs:
         env:
           HUSKY: 0
 
+      - name: Build dist packages (required by type-checker)
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic"
+
       - name: Run linting and type checking
         run: |
           echo "🔍 Running pre-review checks on changed packages..."
           pnpm turbo lint --filter="...[origin/main]"
           pnpm turbo check-types --filter="...[origin/main]"
-          
+
       - name: Generate Auggie context for CodeRabbit
         run: |
           echo "🤖 Generating Auggie context for CodeRabbit..."
@@ -165,6 +168,9 @@ jobs:
         run: pnpm install --frozen-lockfile
         env:
           HUSKY: 0
+
+      - name: Build dist packages (required by type-checker)
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic"
 
       - name: Run comprehensive checks
         run: |

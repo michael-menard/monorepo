@@ -60,6 +60,9 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
+      - name: Build dist packages (required by downstream builds)
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema"
+
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"
 
@@ -125,6 +128,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
+
+      - name: Build dist packages (required by downstream builds)
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema"
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"

@@ -79,6 +79,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Build dist packages (required by type-checker)
+        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic"
+
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
 
