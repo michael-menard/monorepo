@@ -79,8 +79,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build dist packages (required by type-checker)
-        run: pnpm turbo build --filter="@repo/logger" --filter="@repo/database-schema" --filter="@repo/observability" --filter="@repo/mcp-tools" --filter="@repo/workflow-logic" --concurrency=1
+      - name: Build @repo/logger dist (required for type resolution)
+        run: pnpm --filter="@repo/logger" build
+      - name: Build @repo/database-schema dist (required for type resolution)
+        run: pnpm --filter="@repo/database-schema" build
+      - name: Build @repo/observability dist (required for type resolution)
+        run: pnpm --filter="@repo/observability" build
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
