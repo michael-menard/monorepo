@@ -121,16 +121,16 @@ export function extractFileType(filePath: string): string {
 
 /**
  * Minimal shape of a row returned from wint.model_affinity.
- * Using a plain object type rather than Zod (for DB row intermediary).
  */
-interface AffinityRow {
-  modelId: string
-  changeType: string
-  fileType: string
-  successRate: string | number
-  sampleCount: number
-  confidenceLevel: string
-}
+const AffinityRowSchema = z.object({
+  modelId: z.string(),
+  changeType: z.string(),
+  fileType: z.string(),
+  successRate: z.union([z.string(), z.number()]),
+  sampleCount: z.number(),
+  confidenceLevel: z.string(),
+})
+type AffinityRow = z.infer<typeof AffinityRowSchema>
 
 // ============================================================================
 // Input type

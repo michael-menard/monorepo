@@ -334,17 +334,23 @@ function generateSplitReason(items: ChangeOutlineItem[], total: number, threshol
  * Extended state type for internal Structurer use.
  * Matches the fields added to ElaborationStateAnnotation in elaboration.ts.
  */
-interface StructurerElaborationState {
-  storyId?: string
-  currentStory?: {
-    acceptanceCriteria: Array<{
-      id: string
-      description: string
-    }>
-  } | null
-  escapeHatchResult?: unknown
-  warnings?: string[]
-}
+const StructurerElaborationStateSchema = z.object({
+  storyId: z.string().optional(),
+  currentStory: z
+    .object({
+      acceptanceCriteria: z.array(
+        z.object({
+          id: z.string(),
+          description: z.string(),
+        }),
+      ),
+    })
+    .nullable()
+    .optional(),
+  escapeHatchResult: z.unknown().optional(),
+  warnings: z.array(z.string()).optional(),
+})
+type StructurerElaborationState = z.infer<typeof StructurerElaborationStateSchema>
 
 /**
  * Creates a Structurer node with the given configuration.
