@@ -103,7 +103,7 @@ export function createRunUnitTestsNode(config: QAGraphConfig) {
       },
     },
     async (state: GraphState): Promise<any> => {
-      const qaState = state as unknown as QAGraphState
+      const _qaState = state as unknown as QAGraphState
       const storyId = config.storyId
       const startTime = Date.now()
 

@@ -1,10 +1,14 @@
-current_phase: proof
-last_successful_phase: execute
-blocked: false
-iteration: 0
+schema: 1
 story_id: APIP-1060
-updated_at: '2026-03-01T00:00:00Z'
-notes: >-
-  Proof phase complete. PROOF-APIP-1060.md generated from EVIDENCE.yaml. All 17 ACs summarized
-  with evidence items, test results, file changes, and implementation notes. Evidence contains
-  45 passing tests across 7 test files (11 graph-level + 34 node-level). Ready for code review.
+feature_dir: plans/future/platform/autonomous-pipeline
+current_phase: done
+last_successful_phase: review
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+e2e_gate: exempt
+pr_number: 426
+pr_url: https://github.com/michael-menard/monorepo/pull/426
+completed_at: '2026-03-01T22:00:00Z'
+warnings: []

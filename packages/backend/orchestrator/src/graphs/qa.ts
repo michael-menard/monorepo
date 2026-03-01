@@ -16,7 +16,7 @@ import { z } from 'zod'
 import { Annotation, StateGraph, END, START } from '@langchain/langgraph'
 import type { Evidence } from '../artifacts/evidence.js'
 import type { Review } from '../artifacts/review.js'
-import type { QaVerify, AcVerification } from '../artifacts/qa-verify.js'
+import type { QaVerify } from '../artifacts/qa-verify.js'
 
 // ============================================================================
 // Config Schema (AC-1, AC-17)
@@ -31,20 +31,20 @@ export const QAGraphConfigSchema = z.object({
   /** Absolute path to the worktree directory (required, AC-17) */
   worktreeDir: z.string().min(1),
 
-  /** Story ID under test */
-  storyId: z.string().min(1),
+  /** Story ID under test (validated format: PREFIX-DIGITS) */
+  storyId: z.string().regex(/^[A-Z]{2,10}-\d{3,5}$/, 'Invalid story ID format'),
 
   /** Whether to run E2E tests */
   enableE2e: z.boolean().default(true),
 
   /** pnpm filter for unit tests (e.g. @repo/orchestrator) */
-  testFilter: z.string().default('@repo/orchestrator'),
+  testFilter: z.string().regex(/^[@\w\-\/\*]*$/, 'Invalid pnpm filter format').default('@repo/orchestrator'),
 
   /** Playwright config file */
-  playwrightConfig: z.string().default('playwright.legacy.config.ts'),
+  playwrightConfig: z.string().regex(/^[\w\-\.\/]*\.ts$/, 'Invalid Playwright config filename').default('playwright.legacy.config.ts'),
 
   /** Playwright project */
-  playwrightProject: z.string().default('chromium-live'),
+  playwrightProject: z.string().regex(/^[\w\-]*$/, 'Invalid Playwright project name').default('chromium-live'),
 
   /** Timeout for unit tests in ms */
   testTimeoutMs: z.number().int().positive().default(300000), // 5 minutes
@@ -241,12 +241,16 @@ export const QAGraphResultSchema = z.object({
 export type QAGraphResult = z.infer<typeof QAGraphResultSchema>
 
 // ============================================================================
-// ModelClient interface (injectable for testing)
+// ModelClient schema (injectable for testing)
 // ============================================================================
 
-export interface ModelClient {
-  callModel(prompt: string, options?: { model?: string }): Promise<string>
-}
+const ModelClientSchema = z.object({
+  callModel: z.function()
+    .args(z.string(), z.object({ model: z.string() }).optional())
+    .returns(z.promise(z.string())),
+})
+
+export type ModelClient = z.infer<typeof ModelClientSchema>
 
 // ============================================================================
 // Conditional Edge Functions (AC-10)
@@ -265,9 +269,7 @@ export function afterCheckPreconditions(state: QAGraphState): 'run_unit_tests' |
 /**
  * After run-unit-tests: skip E2E if disabled, else run E2E
  */
-export function afterRunUnitTests(
-  state: QAGraphState,
-): 'run_e2e_tests' | 'verify_acs' {
+export function afterRunUnitTests(state: QAGraphState): 'run_e2e_tests' | 'verify_acs' {
   const config = state.config
   if (!config?.enableE2e) {
     return 'verify_acs'
@@ -294,10 +296,7 @@ export function afterRunE2ETests(_state: QAGraphState): 'verify_acs' {
  * @param config - QA graph configuration
  * @param deps - Injected dependencies (modelClient for testing)
  */
-export function createQAGraph(
-  config: QAGraphConfig,
-  deps: { modelClient: ModelClient },
-) {
+export function createQAGraph(config: QAGraphConfig, deps: { modelClient: ModelClient }) {
   // Lazy-import node factories to allow mocking in tests
   const getCheckPreconditions = async () => {
     const { createCheckPreconditionsNode } = await import('../nodes/qa/check-preconditions.js')
@@ -331,7 +330,7 @@ export function createQAGraph(
 
   // Wrap async node factories: NodeFunction uses GraphState internally, but LangGraph
   // routes QAGraphState. We cast at the boundary since nodes do internal casting.
-  type NodeFactory = () => Promise<(state: any, config?: any) => Promise<any>>
+  type NodeFactory = () => Promise<(state: Record<string, unknown>) => Promise<Record<string, unknown>>>
   const makeNode = (factory: NodeFactory) => {
     return async (state: QAGraphState): Promise<Partial<QAGraphState>> => {
       const node = await factory()

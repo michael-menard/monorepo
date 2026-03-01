@@ -64,126 +64,122 @@ const AcVerificationResponseSchema = z.object({
  * @param modelClient - Injected model client for testability
  */
 export function createVerifyAcsNode(modelClient: ModelClient) {
-  return createToolNode(
-    'qa_verify_acs',
-    async (state: GraphState): Promise<any> => {
-      const qaState = state as unknown as QAGraphState
-      const storyId = qaState.config?.storyId ?? 'unknown'
-      const evidence = qaState.evidence
+  return createToolNode('qa_verify_acs', async (state: GraphState): Promise<any> => {
+    const qaState = state as unknown as QAGraphState
+    const storyId = qaState.config?.storyId ?? 'unknown'
+    const evidence = qaState.evidence
 
-      if (!evidence) {
-        logger.warn('qa_ac_verification_skipped', {
-          storyId,
-          stage: 'qa',
-          event: 'ac_verification_skipped',
-          reason: 'evidence is null',
-        })
-        return {
-          acVerifications: [],
-          warnings: ['AC verification skipped: evidence is null'],
-        }
+    if (!evidence) {
+      logger.warn('qa_ac_verification_skipped', {
+        storyId,
+        stage: 'qa',
+        event: 'ac_verification_skipped',
+        reason: 'evidence is null',
+      })
+      return {
+        acVerifications: [],
+        warnings: ['AC verification skipped: evidence is null'],
       }
+    }
 
-      const acList = evidence.acceptance_criteria
-      const verifications: AcVerificationResult[] = []
+    const acList = evidence.acceptance_criteria
+    const verifications: AcVerificationResult[] = []
 
-      // Serialize evidence for the prompt
-      const evidenceText = JSON.stringify(
-        {
-          story_id: evidence.story_id,
-          acceptance_criteria: evidence.acceptance_criteria,
-          touched_files: evidence.touched_files,
-          commands_run: evidence.commands_run,
-          test_summary: evidence.test_summary,
-          notable_decisions: evidence.notable_decisions,
-        },
-        null,
-        2,
-      )
+    // Serialize evidence for the prompt
+    const evidenceText = JSON.stringify(
+      {
+        story_id: evidence.story_id,
+        acceptance_criteria: evidence.acceptance_criteria,
+        touched_files: evidence.touched_files,
+        commands_run: evidence.commands_run,
+        test_summary: evidence.test_summary,
+        notable_decisions: evidence.notable_decisions,
+      },
+      null,
+      2,
+    )
 
-      for (const acEvidence of acList) {
-        const acId = acEvidence.ac_id
-        const acText = acEvidence.ac_text ?? acId
+    for (const acEvidence of acList) {
+      const acId = acEvidence.ac_id
+      const acText = acEvidence.ac_text ?? acId
 
-        logger.info('qa_ac_verification_started', {
-          storyId,
-          stage: 'qa',
-          event: 'ac_verification_started',
-          acId,
-        })
+      logger.info('qa_ac_verification_started', {
+        storyId,
+        stage: 'qa',
+        event: 'ac_verification_started',
+        acId,
+      })
 
-        try {
-          const prompt = AC_VERIFICATION_PROMPT_V1
-            .replace('{AC_ID}', acId)
-            .replace('{AC_TEXT}', acText)
-            .replace('{EVIDENCE}', evidenceText)
+      try {
+        const prompt = AC_VERIFICATION_PROMPT_V1.replace('{AC_ID}', acId)
+          .replace('{AC_TEXT}', acText)
+          .replace('{EVIDENCE}', evidenceText)
 
-          const rawResponse = await modelClient.callModel(prompt)
+        const rawResponse = await modelClient.callModel(prompt)
 
-          // Parse JSON response - strip markdown if present
-          let jsonStr = rawResponse.trim()
-          if (jsonStr.startsWith('```')) {
-            jsonStr = jsonStr.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '')
-          }
+        // Parse JSON response - strip markdown if present
+        let jsonStr = rawResponse.trim()
+        if (jsonStr.startsWith('```')) {
+          jsonStr = jsonStr.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '')
+        }
 
-          const parsed = AcVerificationResponseSchema.safeParse(JSON.parse(jsonStr))
+        const parsed = AcVerificationResponseSchema.safeParse(JSON.parse(jsonStr))
 
-          if (!parsed.success) {
-            // Model returned invalid JSON structure → BLOCKED
-            logger.warn('qa_ac_verified', {
-              storyId,
-              stage: 'qa',
-              event: 'ac_verified',
-              acId,
-              status: 'BLOCKED',
-              reason: 'invalid response structure',
-            })
-            verifications.push({
-              ac_id: acId,
-              status: 'BLOCKED',
-              reasoning: `Model returned invalid response structure: ${parsed.error.message}`,
-            })
-            continue
-          }
-
-          const { status, cited_evidence, reasoning } = parsed.data
-
-          logger.info('qa_ac_verified', {
-            storyId,
-            stage: 'qa',
-            event: 'ac_verified',
-            acId,
-            status,
-          })
-
-          verifications.push({
-            ac_id: acId,
-            status,
-            cited_evidence: cited_evidence ?? undefined,
-            reasoning: reasoning ?? undefined,
-          })
-        } catch (err) {
-          // Model failure → BLOCKED (not FAIL), continue remaining ACs
-          const errMsg = err instanceof Error ? err.message : String(err)
+        if (!parsed.success) {
+          // Model returned invalid JSON structure → BLOCKED
           logger.warn('qa_ac_verified', {
             storyId,
             stage: 'qa',
             event: 'ac_verified',
             acId,
             status: 'BLOCKED',
-            reason: `model call failed: ${errMsg}`,
+            reason: 'invalid response structure',
           })
           verifications.push({
             ac_id: acId,
             status: 'BLOCKED',
-            reasoning: `Model call failed: ${errMsg}`,
+            reasoning: `Model returned invalid response structure: ${parsed.error.message}`,
           })
+          continue
         }
-      }
 
-      return {
-        acVerifications: verifications,
+        const { status, cited_evidence, reasoning } = parsed.data
+
+        logger.info('qa_ac_verified', {
+          storyId,
+          stage: 'qa',
+          event: 'ac_verified',
+          acId,
+          status,
+        })
+
+        verifications.push({
+          ac_id: acId,
+          status,
+          cited_evidence: cited_evidence ?? undefined,
+          reasoning: reasoning ?? undefined,
+        })
+      } catch (err) {
+        // Model failure → BLOCKED (not FAIL), continue remaining ACs
+        const errMsg = err instanceof Error ? err.message : String(err)
+        logger.warn('qa_ac_verified', {
+          storyId,
+          stage: 'qa',
+          event: 'ac_verified',
+          acId,
+          status: 'BLOCKED',
+          reason: `model call failed: ${errMsg}`,
+        })
+        verifications.push({
+          ac_id: acId,
+          status: 'BLOCKED',
+          reasoning: `Model call failed: ${errMsg}`,
+        })
       }
-    },
-  )
+    }
+
+    return {
+      acVerifications: verifications,
+    }
+  })
 }

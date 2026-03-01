@@ -17,7 +17,12 @@ import { logger } from '@repo/logger'
 import { createNode } from '../../runner/node-factory.js'
 import { NodeCircuitBreaker } from '../../runner/circuit-breaker.js'
 import type { GraphState } from '../../state/index.js'
-import { qaPassedSuccessfully, createQaVerify, addAcVerification, calculateVerdict } from '../../artifacts/qa-verify.js'
+import {
+  qaPassedSuccessfully,
+  createQaVerify,
+  addAcVerification,
+  calculateVerdict,
+} from '../../artifacts/qa-verify.js'
 import type { ModelClient, QAGraphState, QAGraphConfig, GateDecisionData } from '../../graphs/qa.js'
 
 /**
@@ -98,7 +103,8 @@ export function createGateDecisionNode(modelClient: ModelClient, config: QAGraph
         : 'E2E tests: SKIPPED (disabled)'
 
       const acSummaryLines = qaState.acVerifications.map(
-        ac => `  - ${ac.ac_id}: ${ac.status}${ac.reasoning ? ` (${ac.reasoning.slice(0, 100)})` : ''}`,
+        ac =>
+          `  - ${ac.ac_id}: ${ac.status}${ac.reasoning ? ` (${ac.reasoning.slice(0, 100)})` : ''}`,
       )
 
       const stateSummary = [
