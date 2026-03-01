@@ -1,0 +1,329 @@
+schema: 1
+story_id: APIP-3090
+version: 1
+timestamp: '2026-03-01T18:00:00Z'
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: >-
+      cron/schemas.ts exports CronJobDefinitionSchema, CronScheduleRegistrySchema,
+      CronRunResultSchema with correct field shapes
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/schemas.ts
+        description: >-
+          Exports CronJobDefinitionSchema (jobName, schedule, timeoutMs, runFn),
+          CronScheduleRegistrySchema (jobs array), CronRunResultSchema
+          (jobName, startedAt, completedAt, durationMs, status, error)
+      - type: test
+        path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+        description: >-
+          CronJobDefinitionSchema tests: 5 pass (valid/invalid);
+          CronScheduleRegistrySchema tests: 3 pass;
+          CronRunResultSchema tests: 5 pass
+
+  - ac_id: AC-2
+    ac_text: >-
+      registerCronJobs(adapter, registry) registers all jobs with adapter;
+      each wrapper calls withTimeout with TimeoutOptions object
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/registry.ts
+        description: >-
+          registerCronJobs() iterates registry.jobs and calls adapter.schedule()
+          with withTimeout-wrapped functions using TimeoutOptions { timeoutMs, nodeName }
+      - type: file
+        path: packages/backend/orchestrator/src/cron/adapter.ts
+        description: >-
+          CronSchedulerAdapter type + InMemoryCronAdapter test double
+          with registeredJobs tracking
+      - type: test
+        path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+        description: InMemoryCronAdapter tests: 6 pass (records jobs, triggerJob, reset)
+
+  - ac_id: AC-3
+    ac_text: >-
+      pattern-miner.job.ts: schedule=*/15 * * * *, timeoutMs=5*60*1000,
+      pg_try_advisory_lock(42001) guard, SKIPPED on lock miss
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+        description: >-
+          schedule='*/15 * * * *', timeoutMs=5*60*1000=300000,
+          tryAcquireAdvisoryLock(LOCK_KEYS.PATTERN_MINER=42001),
+          returns early (SKIPPED) when lock not acquired
+      - type: test
+        path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+        description: >-
+          'advisory lock skip path' test: mocks getCronDbClient to return false,
+          verifies pg_try_advisory_lock(42001) called, pool.end() called on skip
+
+  - ac_id: AC-4
+    ac_text: >-
+      metrics-collection.job.ts: schedule=0 0 * * *, stub implementation
+      logging cron.job.stub; file exists and type-checks
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/jobs/metrics-collection.job.ts
+        description: >-
+          schedule='0 0 * * *', stub runFn logs cron.job.stub with
+          reason 'Deferred to APIP-4070'. Type-checks clean.
+      - type: command
+        command: pnpm --filter=orchestrator check-types
+        result: SUCCESS
+
+  - ac_id: AC-5
+    ac_text: >-
+      code-audit.job.ts: configurable daily schedule, timeoutMs=10*60*1000,
+      stub with withTimeout wrapping; type-checks clean
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/jobs/code-audit.job.ts
+        description: >-
+          schedule=process.env.CRON_CODE_AUDIT_SCHEDULE ?? '0 2 * * *',
+          timeoutMs=10*60*1000=600000, stub logging cron.job.stub.
+          Type-checks clean.
+
+  - ac_id: AC-6
+    ac_text: >-
+      kb-compression.job.ts: schedule=0 1 * * *, timeoutMs=15*60*1000,
+      stub with withTimeout wrapping; type-checks clean
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/jobs/kb-compression.job.ts
+        description: >-
+          schedule='0 1 * * *', timeoutMs=15*60*1000=900000,
+          stub logging cron.job.stub. Type-checks clean.
+
+  - ac_id: AC-7
+    ac_text: >-
+      doc-sync.job.ts: configurable hourly schedule, timeoutMs=2*60*1000,
+      stub; type-checks clean
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/jobs/doc-sync.job.ts
+        description: >-
+          schedule=process.env.CRON_DOC_SYNC_SCHEDULE ?? '0 * * * *',
+          timeoutMs=2*60*1000=120000, stub logging cron.job.stub.
+          Type-checks clean.
+
+  - ac_id: AC-8
+    ac_text: >-
+      worktree-pruning.job.ts: schedule=0 2 * * *, timeoutMs=3*60*1000,
+      CRON_WORKTREE_PRUNING_TTL_DAYS env var read; type-checks clean
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/jobs/worktree-pruning.job.ts
+        description: >-
+          schedule='0 2 * * *', timeoutMs=3*60*1000=180000,
+          reads CRON_WORKTREE_PRUNING_TTL_DAYS (default 7),
+          logs cron.job.stub. Type-checks clean.
+
+  - ac_id: AC-9
+    ac_text: >-
+      CronRunResultSchema exported with jobName/startedAt/completedAt/durationMs/status/error;
+      registry.ts logs via @repo/logger after each job run
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/schemas.ts
+        description: >-
+          CronRunResultSchema has all required fields with correct types.
+          CronRunStatusSchema enum: SUCCESS | FAILED | TIMEOUT | SKIPPED
+      - type: file
+        path: packages/backend/orchestrator/src/cron/registry.ts
+        description: >-
+          createWrappedJobFn() builds CronRunResult and calls
+          logger.info('cron.job.completed', result) after each run
+      - type: test
+        path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+        description: CronRunResultSchema tests: 5 pass (valid/TIMEOUT/SKIPPED/invalid/null fields)
+
+  - ac_id: AC-10
+    ac_text: >-
+      buildCronRegistry(env) filters jobs with DISABLE_CRON_JOB_<JOBNAME>=true;
+      test: env var removes job from registry
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/cron/registry.ts
+        description: >-
+          buildCronRegistry() filters jobs using DISABLE_CRON_JOB_ prefix,
+          normalizes hyphens to underscores, uppercases job name
+      - type: test
+        path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+        description: >-
+          6 env var filtering tests pass: no env → all included;
+          DISABLE_CRON_JOB_PATTERN_MINER=true removes job;
+          hyphen normalization; false value; absent var; multiple disables
+
+  - ac_id: AC-11
+    ac_text: >-
+      cron.test.ts covers: schema valid/invalid, advisory lock skip,
+      timeout path, env var disable; all tests pass
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+        description: >-
+          27 tests pass covering all required scenarios:
+          (a) CronJobDefinitionSchema: 5 tests,
+          (b) CronScheduleRegistrySchema: 3 tests,
+          (c) advisory lock skip: 1 test,
+          (d) timeout enforcement with vi.useFakeTimers: 1 test,
+          (e) DISABLE_CRON_JOB_*: 6 tests,
+          CronRunResultSchema: 5 tests,
+          InMemoryCronAdapter: 6 tests
+      - type: command
+        command: pnpm --filter=orchestrator test -- cron
+        result: SUCCESS
+        output: 'Test Files: 1 passed, Tests: 27 passed'
+
+  - ac_id: AC-12
+    ac_text: >-
+      pnpm test --filter=orchestrator passes with no regressions;
+      no existing graph/artifact/runner file modified
+    status: PASS
+    evidence_items:
+      - type: command
+        command: pnpm --filter=orchestrator test
+        result: SUCCESS
+        output: >-
+          Test Files: 143 passed + 1 pre-existing failure (elaboration.test.ts —
+          unrelated to APIP-3090, confirmed pre-existing by reverting changes and re-running).
+          Tests: 3538 passed. No new failures introduced.
+      - type: command
+        command: pnpm --filter=orchestrator build
+        result: SUCCESS
+        output: Build complete (tsc)
+      - type: command
+        command: git diff --name-only HEAD~1
+        result: SUCCESS
+        output: >-
+          Only new files in packages/backend/orchestrator/src/cron/ created.
+          No existing graph/artifact/runner files modified.
+
+touched_files:
+  - path: packages/backend/orchestrator/src/cron/schemas.ts
+    action: created
+    lines: 82
+    description: CronJobDefinitionSchema, CronScheduleRegistrySchema, CronRunResultSchema, CronRunStatusSchema
+  - path: packages/backend/orchestrator/src/cron/constants.ts
+    action: created
+    lines: 19
+    description: LOCK_KEYS.PATTERN_MINER = 42001 advisory lock integer constant
+  - path: packages/backend/orchestrator/src/cron/adapter.ts
+    action: created
+    lines: 107
+    description: CronSchedulerAdapter type, InMemoryCronAdapter test double, createInMemoryCronAdapter helper
+  - path: packages/backend/orchestrator/src/cron/db.ts
+    action: created
+    lines: 22
+    description: getCronDbClient() pg Pool factory backed by POSTGRES_* env vars
+  - path: packages/backend/orchestrator/src/cron/registry.ts
+    action: created
+    lines: 100
+    description: registerCronJobs() with withTimeout wrapping + buildCronRegistry() with env filtering
+  - path: packages/backend/orchestrator/src/cron/jobs/pattern-miner.job.ts
+    action: created
+    lines: 96
+    description: Pattern miner job — 15min, 5min timeout, pg advisory lock guard
+  - path: packages/backend/orchestrator/src/cron/jobs/metrics-collection.job.ts
+    action: created
+    lines: 32
+    description: Metrics collection stub (deferred to APIP-4070)
+  - path: packages/backend/orchestrator/src/cron/jobs/code-audit.job.ts
+    action: created
+    lines: 34
+    description: Code audit Phase 4 stub — configurable daily, 10min timeout
+  - path: packages/backend/orchestrator/src/cron/jobs/kb-compression.job.ts
+    action: created
+    lines: 33
+    description: KB compression Phase 4 stub — daily, 15min timeout
+  - path: packages/backend/orchestrator/src/cron/jobs/doc-sync.job.ts
+    action: created
+    lines: 33
+    description: Doc sync Phase 4 stub — configurable hourly, 2min timeout
+  - path: packages/backend/orchestrator/src/cron/jobs/worktree-pruning.job.ts
+    action: created
+    lines: 35
+    description: Worktree pruning Phase 4 stub — daily, 3min timeout, CRON_WORKTREE_PRUNING_TTL_DAYS env var
+  - path: packages/backend/orchestrator/src/cron/__tests__/cron.test.ts
+    action: created
+    lines: 280
+    description: 27 unit tests covering all AC-11 scenarios
+
+commands_run:
+  - command: pnpm --filter=orchestrator check-types
+    result: SUCCESS
+    output: tsc --noEmit (clean)
+    timestamp: '2026-03-01T18:30:00Z'
+  - command: pnpm --filter=orchestrator test -- cron
+    result: SUCCESS
+    output: 'Test Files: 1 passed, Tests: 27 passed'
+    timestamp: '2026-03-01T18:35:00Z'
+  - command: pnpm --filter=orchestrator test
+    result: SUCCESS
+    output: >-
+      Test Files: 143 passed + 1 pre-existing failure (elaboration.test.ts).
+      Tests: 3538 passed. No new regressions.
+    timestamp: '2026-03-01T18:40:00Z'
+  - command: pnpm --filter=orchestrator build
+    result: SUCCESS
+    output: Build complete (tsc)
+    timestamp: '2026-03-01T18:42:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 27
+    fail: 0
+
+e2e_tests:
+  status: exempt
+  exempt_reason: story_type infra — infrastructure-only story, no frontend impact (PLAN.yaml ADR-006 note)
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+
+notable_decisions:
+  - 'ARCH-001: withTimeout uses TimeoutOptions object {timeoutMs, nodeName} — NOT bare number'
+  - 'ARCH-002: LOCK_KEYS.PATTERN_MINER = 42_001 integer constant — NOT hashtext()'
+  - 'ARCH-003: getCronDbClient() creates new pg Pool per job — no shared singleton'
+  - 'ARCH-004: metrics-collection ships as stub — deferred to APIP-4070 (requires story-execution context)'
+  - >-
+    Pre-existing test failure: elaboration.test.ts:800 assertion mismatch —
+    confirmed pre-existing by reverting cron changes and rerunning (same failure)
+
+known_deviations:
+  - >-
+    pattern-miner.job.ts calls runPatternMiner(pool) instead of runPatternMiner() —
+    the actual function signature requires a dbClient argument; pool passed as dbClient
+
+token_summary:
+  execute:
+    in: 45000
+    out: 12000
