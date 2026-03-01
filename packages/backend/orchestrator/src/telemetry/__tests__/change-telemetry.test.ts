@@ -143,7 +143,8 @@ describe('ChangeTelemetrySchema — AC-9: outcome type validation', () => {
   })
 
   it('ED-3: invalid outcome value is rejected by ChangeTelemetrySchema', () => {
-    const result = ChangeTelemetrySchema.safeParse(baseRecord({ outcome: 'unknown' as any }))
+    const invalidRecord = { ...baseRecord(), outcome: 'unknown' }
+    const result = ChangeTelemetrySchema.safeParse(invalidRecord)
     expect(result.success).toBe(false)
   })
 
@@ -234,25 +235,21 @@ describe('ChangeTelemetrySchema — field validation', () => {
   })
 
   it('changeType defaults to unknown when not provided', () => {
-    const record = { ...baseRecord() }
-    delete (record as any).changeType
+    const { changeType: _changeType, ...record } = baseRecord()
     const result = ChangeTelemetrySchema.safeParse(record)
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.changeType).toBe('unknown')
   })
 
   it('fileType defaults to unknown when not provided', () => {
-    const record = { ...baseRecord() }
-    delete (record as any).fileType
+    const { fileType: _fileType, ...record } = baseRecord()
     const result = ChangeTelemetrySchema.safeParse(record)
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.fileType).toBe('unknown')
   })
 
   it('tokensIn and tokensOut default to 0 when not provided', () => {
-    const record = { ...baseRecord() }
-    delete (record as any).tokensIn
-    delete (record as any).tokensOut
+    const { tokensIn: _tokensIn, tokensOut: _tokensOut, ...record } = baseRecord()
     const result = ChangeTelemetrySchema.safeParse(record)
     expect(result.success).toBe(true)
     if (result.success) {
