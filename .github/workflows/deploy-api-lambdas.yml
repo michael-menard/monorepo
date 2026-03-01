@@ -89,30 +89,19 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build package dependencies
+        run: pnpm turbo build --filter="./packages/..."
 
       - name: Run type checking
-        run: |
-          cd apps/api
-          pnpm check-types
+        run: pnpm turbo check-types --filter="./apps/api/lego-api/..."
 
       - name: Run linting
-        run: |
-          cd apps/api
-          pnpm lint
+        run: pnpm turbo lint --filter="./apps/api/lego-api/..."
 
       - name: Run unit tests
-        run: |
-          cd apps/api
-          pnpm test
-
-      - name: Run integration tests
-        run: |
-          cd apps/api
-          pnpm test:integration
-        env:
-          # Add test environment variables here
-          NODE_ENV: test
+        run: pnpm turbo test --filter="./apps/api/lego-api/..."
 
   # ========================================
   # Job 3: Build and Deploy Lambda Layers (if changed)

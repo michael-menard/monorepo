@@ -73,7 +73,7 @@ jobs:
       - name: Run linting and type checking
         run: |
           echo "🔍 Running pre-review checks on changed packages..."
-          pnpm turbo build --filter="...[origin/main]" --filter="!./apps/*"
+          pnpm turbo build --filter="./packages/..."
           pnpm turbo lint --filter="...[origin/main]"
           pnpm turbo check-types --filter="...[origin/main]"
           
@@ -171,9 +171,9 @@ jobs:
         run: |
           echo "🔍 Running quality gates on changed packages..."
 
-          # Build dependencies first
-          echo "🔨 Building package dependencies..."
-          pnpm turbo build --filter="...[origin/main]" --filter="!./apps/*"
+          # Build all packages first to ensure type declarations are available
+          echo "🔨 Building all packages..."
+          pnpm turbo build --filter="./packages/..."
 
           # Linting
           echo "📝 Linting changed packages..."

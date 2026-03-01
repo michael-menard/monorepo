@@ -79,8 +79,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build dependencies for changed projects
-        run: pnpm turbo build --filter="...[HEAD^1]" --filter="!./apps/*"
+      - name: Build all packages
+        run: pnpm turbo build --filter="./packages/..."
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"

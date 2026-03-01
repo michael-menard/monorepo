@@ -61,7 +61,7 @@ jobs:
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
       - name: Build packages
-        run: pnpm build --filter="...@repo/main-app" --filter="!@repo/main-app"
+        run: pnpm turbo build --filter="./packages/..."
 
       - name: Build main-app
         run: pnpm --filter @repo/main-app build
@@ -130,7 +130,7 @@ jobs:
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
       - name: Build packages
-        run: pnpm build --filter="...@repo/main-app" --filter="!@repo/main-app"
+        run: pnpm turbo build --filter="./packages/..."
 
       - name: Build main-app
         run: pnpm --filter @repo/main-app build
