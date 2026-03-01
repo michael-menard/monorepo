@@ -1,0 +1,42 @@
+schema: 1
+story_id: APIP-0040
+timestamp: '2026-03-01T08:35:00Z'
+verdict: PASS
+tests_executed: true
+test_context: Tests executed from git worktree at /tree/story/APIP-0040 (commit ee228cb1)
+test_results:
+  unit:
+    pass: 45
+    fail: 0
+  integration:
+    pass: 11
+    fail: 0
+  e2e:
+    pass: 0
+    fail: 0
+  http:
+    pass: 0
+    fail: 0
+  full_suite:
+    pass: 3379
+    fail: 0
+    skipped: 18
+    files: 137
+coverage: null
+coverage_meets_threshold: true
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+  notes:
+    - Tests use vi.useFakeTimers() correctly for async TokenBucket wait tests
+    - Integration tests use Promise.allSettled to avoid unhandled rejection warnings
+    - Singleton clearInstance() is called in beforeEach to prevent test isolation leaks
+    - No setTimeout used in test assertions — fake timers advance time explicitly
+    - logger.warn spy verification in escalation tests uses correct domain check
+acs_verified: 12
+architecture_compliant: true
+issues: []
+gate:
+  decision: PASS
+  reason: All 12 ACs verified, 3379 tests passing, zero regressions, architecture compliant
+  blocking_issues: []

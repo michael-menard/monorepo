@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-5007 is a pure backend/infrastructure story with no UI impact. It produces database schema files, migration runner scripts, a CI validation GitHub Actions job, pnpm CLI commands, and integration tests. No web UI components, React components, Tailwind styles, or Playwright tests are introduced. ADR-006 E2E requirement explicitly does not apply per story non-goals: 'Implementing a Playwright E2E test for schema migration — no UI surface.'"

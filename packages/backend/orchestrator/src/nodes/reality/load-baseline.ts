@@ -319,7 +319,7 @@ export interface GraphStateWithBaseline extends GraphState {
  */
 export const loadBaselineRealityNode = createToolNode(
   'load_baseline_reality',
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   async (_state: GraphState): Promise<Partial<GraphStateWithBaseline>> => {
     // Get project root from environment or use current working directory
     const projectRoot = process.env.PROJECT_ROOT || process.cwd()
@@ -353,7 +353,7 @@ export const loadBaselineRealityNode = createToolNode(
 export function createLoadBaselineNode(config: Partial<LoadBaselineConfig> = {}) {
   return createToolNode(
     'load_baseline_reality',
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     async (_state: GraphState): Promise<Partial<GraphStateWithBaseline>> => {
       const result = await loadMostRecentBaseline(config)
 
