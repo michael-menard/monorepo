@@ -2,7 +2,6 @@
 
 > **Auto-generated from YAML config**
 > Source: `.claude/config/model-assignments.yaml`
-> Generated: 2026-03-01T17:25:09.117Z
 
 ## Agent → Model Matrix
 

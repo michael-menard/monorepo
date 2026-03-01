@@ -2,7 +2,6 @@
 
 > **Auto-generated from TypeScript schema**
 > Source: `packages/backend/orchestrator/src/errors/workflow-errors.ts`
-> Generated: 2026-03-01T17:25:09.116Z
 
 ## Error Types
 
