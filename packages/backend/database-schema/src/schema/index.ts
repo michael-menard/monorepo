@@ -1184,3 +1184,12 @@ export {
   type InsertIndexEntry,
   type SelectIndexEntry,
 } from './kbar.js'
+
+// Re-export Change Telemetry table (APIP-3010)
+export {
+  changeTelemetry,
+  insertChangeTelemetrySchema,
+  selectChangeTelemetrySchema,
+  type InsertChangeTelemetry,
+  type SelectChangeTelemetry,
+} from './change-telemetry.js'
