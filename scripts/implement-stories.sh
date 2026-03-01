@@ -339,13 +339,20 @@ commands_run:
 overall_status: "$(if [[ "$TYPE_CHECK_STATUS" == "pass" && "$BUILD_STATUS" == "pass" ]]; then echo "pass"; else echo "partial"; fi)"
 YAML
 
-  if [[ -f "$EVIDENCE_FILE" ]]; then
-    echo "${TAG:+$TAG }EVID OK:     $STORY_ID (EVIDENCE.yaml generated: types=$TYPE_CHECK_STATUS lint=$LINT_STATUS test=$TEST_STATUS build=$BUILD_STATUS)"
-    return 0
-  else
+  if [[ ! -f "$EVIDENCE_FILE" ]]; then
     echo "${TAG:+$TAG }EVID FAIL:   $STORY_ID (could not write EVIDENCE.yaml)"
     return 1
   fi
+
+  # Evidence file written — but check if the code actually works
+  if [[ "$TYPE_CHECK_STATUS" == "fail" && "$BUILD_STATUS" == "fail" && "$TEST_STATUS" == "fail" && "$LINT_STATUS" == "fail" ]]; then
+    echo "${TAG:+$TAG }EVID FAIL:   $STORY_ID (EVIDENCE.yaml generated but all checks failed: types=$TYPE_CHECK_STATUS lint=$LINT_STATUS test=$TEST_STATUS build=$BUILD_STATUS — code is broken)"
+    rm -f "$EVIDENCE_FILE"  # remove bad evidence so it doesn't gate-pass later
+    return 1
+  fi
+
+  echo "${TAG:+$TAG }EVID OK:     $STORY_ID (EVIDENCE.yaml generated: types=$TYPE_CHECK_STATUS lint=$LINT_STATUS test=$TEST_STATUS build=$BUILD_STATUS)"
+  return 0
 }
 
 # Check if a story's worktree has commits beyond main (i.e., code was implemented)
@@ -358,6 +365,23 @@ has_worktree_commits() {
   local COMMIT_COUNT
   COMMIT_COUNT=$(git -C "$WT_PATH" rev-list --count main..HEAD 2>/dev/null) || return 1
   [[ "$COMMIT_COUNT" -gt 0 ]]
+}
+
+# Check if EVIDENCE.yaml exists and isn't all-fail (code is actually working)
+evidence_is_healthy() {
+  local EVIDENCE_FILE="$1"
+  if [[ ! -f "$EVIDENCE_FILE" ]]; then
+    return 1
+  fi
+  # Check for all-fail pattern: every status line says "fail"
+  local fail_count pass_count
+  fail_count=$(grep -c 'status:.*fail' "$EVIDENCE_FILE" 2>/dev/null) || fail_count=0
+  pass_count=$(grep -c 'status:.*pass' "$EVIDENCE_FILE" 2>/dev/null) || pass_count=0
+  # If there are status lines and ALL of them are fail, evidence is unhealthy
+  if [[ $fail_count -gt 0 && $pass_count -eq 0 ]]; then
+    return 1
+  fi
+  return 0
 }
 
 # Check worktree sync: uncommitted changes + unpushed commits (informational only)
@@ -934,9 +958,9 @@ process_story() {
     return 0
   fi
 
-  # Has EVIDENCE.yaml? (true proof of implementation)
+  # Has EVIDENCE.yaml that isn't all-fail? (true proof of implementation)
   has_evidence() {
-    [[ -f "$STORY_DIR/_implementation/EVIDENCE.yaml" ]]
+    evidence_is_healthy "$STORY_DIR/_implementation/EVIDENCE.yaml"
   }
 
   echo "$TAG PICK UP:     $STORY_ID (stage=$CURRENT_STAGE)"
