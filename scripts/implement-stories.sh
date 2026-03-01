@@ -355,10 +355,12 @@ YAML
     return 1
   fi
 
-  # Evidence file written — but check if the code actually works
-  if [[ "$TYPE_CHECK_STATUS" == "fail" && "$BUILD_STATUS" == "fail" && "$TEST_STATUS" == "fail" && "$LINT_STATUS" == "fail" ]]; then
-    echo "${TAG:+$TAG }EVID FAIL:   $STORY_ID (EVIDENCE.yaml generated but all checks failed: types=$TYPE_CHECK_STATUS lint=$LINT_STATUS test=$TEST_STATUS build=$BUILD_STATUS — code is broken)"
-    rm -f "$EVIDENCE_FILE"  # remove bad evidence so it doesn't gate-pass later
+  # Evidence file written — check if any checks failed
+  local ANY_FAIL=false
+  [[ "$TYPE_CHECK_STATUS" == "fail" || "$LINT_STATUS" == "fail" || "$TEST_STATUS" == "fail" || "$BUILD_STATUS" == "fail" ]] && ANY_FAIL=true
+
+  if $ANY_FAIL; then
+    echo "${TAG:+$TAG }EVID ISSUE:  $STORY_ID (EVIDENCE.yaml generated with failures: types=$TYPE_CHECK_STATUS lint=$LINT_STATUS test=$TEST_STATUS build=$BUILD_STATUS — needs fix)"
     return 1
   fi
 
@@ -378,21 +380,44 @@ has_worktree_commits() {
   [[ "$COMMIT_COUNT" -gt 0 ]]
 }
 
-# Check if EVIDENCE.yaml exists and isn't all-fail (code is actually working)
+# Check if EVIDENCE.yaml exists and all checks pass (code is actually working)
 evidence_is_healthy() {
   local EVIDENCE_FILE="$1"
   if [[ ! -f "$EVIDENCE_FILE" ]]; then
     return 1
   fi
-  # Check for all-fail pattern: every status line says "fail"
-  local fail_count pass_count
+  # Any failing check means evidence is unhealthy — code needs fixing
+  local fail_count
   fail_count=$(grep -c 'status:.*fail' "$EVIDENCE_FILE" 2>/dev/null) || fail_count=0
-  pass_count=$(grep -c 'status:.*pass' "$EVIDENCE_FILE" 2>/dev/null) || pass_count=0
-  # If there are status lines and ALL of them are fail, evidence is unhealthy
-  if [[ $fail_count -gt 0 && $pass_count -eq 0 ]]; then
+  if [[ $fail_count -gt 0 ]]; then
     return 1
   fi
   return 0
+}
+
+# Get a summary of what failed in EVIDENCE.yaml (for fix notes)
+evidence_failure_summary() {
+  local EVIDENCE_FILE="$1"
+  if [[ ! -f "$EVIDENCE_FILE" ]]; then
+    echo "no evidence file"
+    return
+  fi
+  grep -B1 'status:.*fail' "$EVIDENCE_FILE" 2>/dev/null | grep 'command:' | sed 's/.*command: *"\(.*\)"/\1/' | tr '\n' ', ' | sed 's/,$//'
+}
+
+# Write a FIX-NOTE.md in the story's _implementation dir so the fix agent knows what to fix
+write_fix_note() {
+  local STORY_DIR="$1"
+  local NOTE="$2"
+  local IMPL_DIR="${STORY_DIR}/_implementation"
+  mkdir -p "$IMPL_DIR"
+  cat > "$IMPL_DIR/FIX-NOTE.md" <<EOF
+# Fix Required
+
+$NOTE
+
+Fix these failures and ensure all checks pass before proceeding.
+EOF
 }
 
 # Check worktree sync: uncommitted changes + unpushed commits (informational only)
@@ -1112,20 +1137,36 @@ process_story() {
           break
         fi
 
-        # Guard: must have EVIDENCE.yaml to review
+        # Guard: must have healthy EVIDENCE.yaml to review
         if ! has_evidence; then
-          if has_worktree_commits "$STORY_ID"; then
-            # Code exists — try to generate evidence directly
+          local EVID_FILE="$STORY_DIR/_implementation/EVIDENCE.yaml"
+          if [[ -f "$EVID_FILE" ]]; then
+            # Evidence exists but has failures — route to fix
+            local failures
+            failures=$(evidence_failure_summary "$EVID_FILE")
+            echo "$TAG REVW FIX:   $STORY_ID (evidence has failures: $failures — routing to dev-fix)"
+            write_fix_note "$STORY_DIR" "Evidence checks failed: $failures. Fix the code so all checks (types, lint, test, build) pass."
+            move_story_to "$STORY_ID" "needs-code-review" "failed-code-review" "$TAG"
+          elif has_worktree_commits "$STORY_ID"; then
             echo "$TAG REVW BLOCK:  $STORY_ID (no EVIDENCE.yaml but worktree has commits — generating evidence)"
             if generate_evidence "$STORY_ID" "$STORY_DIR" "$TAG"; then
-              # Evidence generated — stay in needs-code-review and proceed to review
-              continue
+              continue  # evidence generated and healthy — proceed to review
+            fi
+            # generate_evidence failed — check if file was written with failures
+            refresh_story_state
+            EVID_FILE="$STORY_DIR/_implementation/EVIDENCE.yaml"
+            if [[ -f "$EVID_FILE" ]]; then
+              local failures
+              failures=$(evidence_failure_summary "$EVID_FILE")
+              echo "$TAG REVW FIX:   $STORY_ID (evidence generated with failures: $failures — routing to dev-fix)"
+              write_fix_note "$STORY_DIR" "Evidence checks failed: $failures. Fix the code so all checks (types, lint, test, build) pass."
+              move_story_to "$STORY_ID" "needs-code-review" "failed-code-review" "$TAG"
             else
               echo "$TAG REVW BLOCK:  $STORY_ID (evidence generation failed — falling back to ready-to-work)"
               move_story_to "$STORY_ID" "needs-code-review" "ready-to-work" "$TAG"
             fi
           else
-            echo "$TAG REVW BLOCK:  $STORY_ID (in needs-code-review but no EVIDENCE.yaml — moving back to ready-to-work)"
+            echo "$TAG REVW BLOCK:  $STORY_ID (no EVIDENCE.yaml and no worktree commits — moving back to ready-to-work)"
             move_story_to "$STORY_ID" "needs-code-review" "ready-to-work" "$TAG"
           fi
           if $REVIEW_ONLY; then
@@ -1193,18 +1234,27 @@ process_story() {
         fi
         ((RETRIES_LEFT--))
 
-        # Guard: must have EVIDENCE.yaml to fix
-        if ! has_evidence; then
+        # Guard: must have EVIDENCE.yaml to fix (unhealthy evidence is fine — fix agent will fix it)
+        local EVID_FILE="$STORY_DIR/_implementation/EVIDENCE.yaml"
+        if [[ ! -f "$EVID_FILE" ]]; then
           if has_worktree_commits "$STORY_ID"; then
-            # Try to generate evidence directly before fix
-            echo "$TAG FIX  NOTE:   $STORY_ID (no EVIDENCE.yaml — attempting evidence generation before fix)"
-            if ! generate_evidence "$STORY_ID" "$STORY_DIR" "$TAG"; then
-              echo "$TAG FIX  BLOCK:  $STORY_ID (evidence generation failed — moving back to ready-to-work)"
+            echo "$TAG FIX  NOTE:   $STORY_ID (no EVIDENCE.yaml — generating evidence before fix)"
+            generate_evidence "$STORY_ID" "$STORY_DIR" "$TAG" || true
+            refresh_story_state
+            EVID_FILE="$STORY_DIR/_implementation/EVIDENCE.yaml"
+            if [[ ! -f "$EVID_FILE" ]]; then
+              echo "$TAG FIX  BLOCK:  $STORY_ID (evidence generation produced no file — moving back to ready-to-work)"
               move_story_to "$STORY_ID" "failed-code-review" "ready-to-work" "$TAG"
               continue
             fi
+            # Evidence exists (may have failures) — write fix note and proceed to fix
+            if ! evidence_is_healthy "$EVID_FILE"; then
+              local failures
+              failures=$(evidence_failure_summary "$EVID_FILE")
+              write_fix_note "$STORY_DIR" "Evidence checks failed: $failures. Fix the code so all checks (types, lint, test, build) pass."
+            fi
           else
-            echo "$TAG FIX  BLOCK:  $STORY_ID (in failed-code-review but no EVIDENCE.yaml and no worktree commits — moving back to ready-to-work)"
+            echo "$TAG FIX  BLOCK:  $STORY_ID (no EVIDENCE.yaml and no worktree commits — moving back to ready-to-work)"
             move_story_to "$STORY_ID" "failed-code-review" "ready-to-work" "$TAG"
             continue
           fi
@@ -1232,6 +1282,15 @@ process_story() {
 
         echo "$TAG FIX  OK:     $STORY_ID (now in $CURRENT_STAGE)"
 
+        # Clean up fix note and stale evidence — regenerate fresh evidence
+        rm -f "$STORY_DIR/_implementation/FIX-NOTE.md" 2>/dev/null
+        rm -f "$STORY_DIR/_implementation/EVIDENCE.yaml" 2>/dev/null
+        if generate_evidence "$STORY_ID" "$STORY_DIR" "$TAG"; then
+          echo "$TAG FIX  EVID:   $STORY_ID (fresh evidence — all checks pass)"
+        else
+          echo "$TAG FIX  EVID:   $STORY_ID (fresh evidence still has failures — will retry on next loop)"
+        fi
+
         # Commit + push fix changes
         local TITLE
         TITLE=$(get_story_title "$STORY_DIR")
@@ -1246,17 +1305,35 @@ process_story() {
         # Guard: must have EVIDENCE.yaml and REVIEW.yaml to run QA
         # If missing, loop back to the appropriate earlier stage to generate them
         if ! has_evidence; then
-          if has_worktree_commits "$STORY_ID"; then
+          local EVID_FILE="$STORY_DIR/_implementation/EVIDENCE.yaml"
+          if [[ -f "$EVID_FILE" ]]; then
+            # Evidence exists but has failures — route to fix
+            local failures
+            failures=$(evidence_failure_summary "$EVID_FILE")
+            echo "$TAG QA   FIX:    $STORY_ID (evidence has failures: $failures — routing to dev-fix)"
+            write_fix_note "$STORY_DIR" "Evidence checks failed: $failures. Fix the code so all checks (types, lint, test, build) pass."
+            move_story_to "$STORY_ID" "ready-for-qa" "failed-code-review" "$TAG"
+          elif has_worktree_commits "$STORY_ID"; then
             echo "$TAG QA   BLOCK:  $STORY_ID (no EVIDENCE.yaml but worktree has commits — generating evidence)"
             if generate_evidence "$STORY_ID" "$STORY_DIR" "$TAG"; then
-              # Evidence generated — move to needs-code-review so review runs next
               move_story_to "$STORY_ID" "ready-for-qa" "needs-code-review" "$TAG"
             else
-              echo "$TAG QA   BLOCK:  $STORY_ID (evidence generation failed — falling back to ready-to-work)"
-              move_story_to "$STORY_ID" "ready-for-qa" "ready-to-work" "$TAG"
+              # Check if evidence was written with failures
+              refresh_story_state
+              EVID_FILE="$STORY_DIR/_implementation/EVIDENCE.yaml"
+              if [[ -f "$EVID_FILE" ]]; then
+                local failures
+                failures=$(evidence_failure_summary "$EVID_FILE")
+                echo "$TAG QA   FIX:    $STORY_ID (evidence generated with failures: $failures — routing to dev-fix)"
+                write_fix_note "$STORY_DIR" "Evidence checks failed: $failures. Fix the code so all checks (types, lint, test, build) pass."
+                move_story_to "$STORY_ID" "ready-for-qa" "failed-code-review" "$TAG"
+              else
+                echo "$TAG QA   BLOCK:  $STORY_ID (evidence generation failed — falling back to ready-to-work)"
+                move_story_to "$STORY_ID" "ready-for-qa" "ready-to-work" "$TAG"
+              fi
             fi
           else
-            echo "$TAG QA   BLOCK:  $STORY_ID (no EVIDENCE.yaml — moving back to ready-to-work for fresh implementation)"
+            echo "$TAG QA   BLOCK:  $STORY_ID (no EVIDENCE.yaml and no worktree — moving back to ready-to-work)"
             move_story_to "$STORY_ID" "ready-for-qa" "ready-to-work" "$TAG"
           fi
           continue
