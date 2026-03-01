@@ -12,9 +12,12 @@
  * Output: Space-separated list of affected Lambda function names, or empty string if none.
  */
 
-const { execSync } = require('child_process')
-const path = require('path')
-const fs = require('fs')
+import { execSync } from 'child_process'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 // Parse CLI args
 const args = process.argv.slice(2)
@@ -42,21 +45,21 @@ const FUNCTION_MAPPINGS = [
   { pattern: /^packages\/backend\//, functionName: 'lego-api' },
 ]
 
-function getChangedFiles(base) {
+function getChangedFiles(baseRef) {
   try {
-    const output = execSync(
-      `git diff --name-only ${base}...HEAD`,
-      { encoding: 'utf8', cwd: path.resolve(__dirname, '../../..') }
-    ).trim()
+    const output = execSync(`git diff --name-only ${baseRef}...HEAD`, {
+      encoding: 'utf8',
+      cwd: resolve(__dirname, '../../..'),
+    }).trim()
     return output ? output.split('\n') : []
   } catch (err) {
     log('Error getting changed files:', err.message)
     // Try fallback to HEAD^1
     try {
-      const output = execSync(
-        `git diff --name-only HEAD^1...HEAD`,
-        { encoding: 'utf8', cwd: path.resolve(__dirname, '../../..') }
-      ).trim()
+      const output = execSync(`git diff --name-only HEAD^1...HEAD`, {
+        encoding: 'utf8',
+        cwd: resolve(__dirname, '../../..'),
+      }).trim()
       return output ? output.split('\n') : []
     } catch {
       return []
@@ -72,9 +75,9 @@ function getAffectedFunctions(changedFiles) {
       if (pattern.test(file)) {
         if (functionName === 'ALL') {
           // Add all known functions
-          FUNCTION_MAPPINGS
-            .filter(m => m.functionName !== 'ALL')
-            .forEach(m => affected.add(m.functionName))
+          FUNCTION_MAPPINGS.filter(m => m.functionName !== 'ALL').forEach(m =>
+            affected.add(m.functionName),
+          )
         } else {
           affected.add(functionName)
         }
