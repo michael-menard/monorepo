@@ -1,239 +1,55 @@
 schema: 1
 story_id: APIP-5004
-version: 1
-timestamp: "2026-02-25T18:40:00Z"
+timestamp: "2026-03-01T00:00:00Z"
+phase: implementation
+iteration: 2
 
-acceptance_criteria:
-  - ac_id: AC-1
-    ac_text: "SecretsClient module with get(), prefetch(), getSync(), flush() methods; env and aws-secrets-manager engine modes"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/secrets/index.ts
-        description: "SecretsClient class with all 4 public methods (get, getSync, prefetch, flush) and module-level singleton export"
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "25 unit tests pass: HP-1 (env mode), HP-2 (aws mode), HP-4 (prefetch), HP-5 (getSync)"
-      - type: command
-        command: pnpm --filter @repo/orchestrator test
-        result: "3380 passed, 0 failed"
+summary:
+  fixes_applied: 4
+  fixes_total: 4
+  overall_status: COMPLETE
 
-  - ac_id: AC-2
-    ac_text: "SecretsClientConfigSchema Zod refine validates AWS_REGION presence for aws-secrets-manager engine"
-    status: PASS
-    evidence_items:
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "EC-2: constructor throws when engine=aws-secrets-manager without AWS_REGION; SecretsClientConfigSchema refine validated"
-      - type: command
-        command: pnpm --filter @repo/orchestrator type-check
-        result: "PASS (exit 0)"
+fixes_applied:
+  - file: packages/backend/orchestrator/src/secrets/index.ts
+    issue: "TypeScript interface CacheEntry must be Zod schema"
+    severity: error
+    resolution: "Replaced interface CacheEntry with CacheEntrySchema z.object + type CacheEntry = z.infer<typeof CacheEntrySchema>"
+    status: FIXED
 
-  - ac_id: AC-3
-    ac_text: "Provider loadConfig() methods use secretsClient.getSync() instead of process.env directly"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/providers/anthropic.ts
-        description: "loadConfig() calls secretsClient.getSync('ANTHROPIC_API_KEY') — line 77"
-      - type: file
-        path: packages/backend/orchestrator/src/providers/openrouter.ts
-        description: "loadConfig() calls secretsClient.getSync('OPENROUTER_API_KEY') — line 77"
-      - type: file
-        path: packages/backend/orchestrator/src/providers/minimax.ts
-        description: "loadConfig() calls secretsClient.getSync('MINIMAX_API_KEY') and getSync('MINIMAX_GROUP_ID')"
-      - type: test
-        path: packages/backend/orchestrator/src/providers/__tests__/anthropic.test.ts
-        description: "HP-4: loadConfig() returns correct config shape; config shape unchanged"
-      - type: test
-        path: packages/backend/orchestrator/src/providers/__tests__/openrouter.test.ts
-        description: "HP-5: loadConfig() returns correct config shape; config shape unchanged"
-      - type: command
-        command: pnpm --filter @repo/orchestrator type-check
-        result: "PASS (exit 0)"
+  - file: packages/backend/orchestrator/src/providers/anthropic.ts
+    issue: "Type assertion needs Zod parsing"
+    severity: warning
+    resolution: "Replaced (config as AnthropicConfig) with AnthropicConfigSchema.parse(config)"
+    status: FIXED
 
-  - ac_id: AC-4
-    ac_text: "Structured audit log on cache-miss: {secretName, engine, latencyMs} — no secret value logged"
-    status: PASS
-    evidence_items:
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "HP-6: audit log test verifies secretName, engine, latencyMs present; verifies secret value 'do-not-log-me' NOT in log payload"
+  - file: packages/backend/orchestrator/src/providers/openrouter.ts
+    issue: "Type assertion needs Zod parsing"
+    severity: warning
+    resolution: "Replaced (config as OpenRouterConfig) with OpenRouterConfigSchema.parse(config)"
+    status: FIXED
 
-  - ac_id: AC-5
-    ac_text: "In-memory cache with TTL; concurrent deduplication; SECRETS_CACHE_TTL_MS configurable"
-    status: PASS
-    evidence_items:
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "HP-3 (cache hit), ED-1 (TTL expiry with fake timers), ED-2 (concurrent deduplication — 5 concurrent get() calls result in 1 SDK call), ED-3 (configurable TTL)"
-
-  - ac_id: AC-6
-    ac_text: "infra/secrets/template.yaml CloudFormation stack defines 3 Secrets Manager secret resources"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: infra/secrets/template.yaml
-        description: "CloudFormation stack defining AnthropicApiKeySecret, OpenRouterApiKeySecret, MinimaxApiKeySecret following elasticache/template.yaml ADR-002 conventions (Parameters, Resources, Outputs, tags)"
-      - type: command
-        command: cfn-lint infra/secrets/template.yaml
-        result: "cfn-lint not available in environment — template reviewed manually: Parameters, Resources, Outputs structure correct"
-
-  - ac_id: AC-7
-    ac_text: "infra/secrets/README.md documents rotation procedure, configCache limitation, flush() signal pattern"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: infra/secrets/README.md
-        description: "Documents: manual rotation procedure (5 steps), process-lifetime configCache limitation, Option A (restart) and Option B (SIGHUP + flush()) signal patterns, cross-story APIP-5006 dependency, IAM requirements"
-
-  - ac_id: AC-8
-    ac_text: "secrets-client.test.ts covers HP-1 through HP-8, EC-1 through EC-4, ED-1 through ED-4"
-    status: PASS
-    evidence_items:
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "25 unit tests covering all HP-1..HP-8, EC-1..EC-4, ED-1..ED-4 scenarios"
-      - type: command
-        command: pnpm --filter @repo/orchestrator test
-        result: "3380 passed, 0 failed"
-
-  - ac_id: AC-9
-    ac_text: "SECRETS_ENGINE defaults to 'env'; local dev uses .env file; no AWS credentials required in env mode"
-    status: PASS
-    evidence_items:
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "HP-1: env engine reads from process.env without calling AWS SDK; EC-2 confirms aws engine is opt-in only"
-      - type: file
-        path: packages/backend/orchestrator/src/secrets/index.ts
-        description: "Constructor defaults SECRETS_ENGINE to 'env' when unset; getSync() in env mode reads process.env directly"
-
-  - ac_id: AC-10
-    ac_text: "SecretsClient class, secretsClient singleton, SecretsClientConfigSchema all exported; all 4 public methods present"
-    status: PASS
-    evidence_items:
-      - type: file
-        path: packages/backend/orchestrator/src/secrets/index.ts
-        description: "Exports: SecretsClient (class), SecretsClientConfigSchema (Zod schema), secretsClient (singleton); all 4 methods: get(), getSync(), prefetch(), flush()"
-      - type: test
-        path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-        description: "ED-4: exports verified; SecretsClientConfigSchema (AC-10) validated with 3 test cases"
+  - file: packages/backend/orchestrator/src/providers/minimax.ts
+    issue: "Type assertion needs Zod parsing"
+    severity: warning
+    resolution: "Replaced (config as MinimaxConfig) with MinimaxConfigSchema.parse(config)"
+    status: FIXED
 
 touched_files:
-  - path: packages/backend/orchestrator/src/secrets/index.ts
-    action: created
-    lines: 225
-    description: "SecretsClient module — core deliverable, wraps AWS Secrets Manager with env fallback"
-  - path: packages/backend/orchestrator/src/secrets/__tests__/secrets-client.test.ts
-    action: created
-    lines: 290
-    description: "25 unit tests covering all HP/EC/ED scenarios"
-  - path: packages/backend/orchestrator/package.json
-    action: modified
-    lines: 62
-    description: "Added @aws-sdk/client-secrets-manager@3.998.0 dependency"
-  - path: packages/backend/orchestrator/src/providers/anthropic.ts
-    action: modified
-    lines: 165
-    description: "Refactored loadConfig() to use secretsClient.getSync('ANTHROPIC_API_KEY')"
-  - path: packages/backend/orchestrator/src/providers/openrouter.ts
-    action: modified
-    lines: 171
-    description: "Refactored loadConfig() to use secretsClient.getSync('OPENROUTER_API_KEY')"
-  - path: packages/backend/orchestrator/src/providers/minimax.ts
-    action: modified
-    lines: 170
-    description: "Refactored loadConfig() to use secretsClient.getSync() for MINIMAX_API_KEY and MINIMAX_GROUP_ID"
-  - path: packages/backend/orchestrator/src/providers/__tests__/anthropic.test.ts
-    action: created
-    lines: 120
-    description: "Provider integration tests: HP-4, EC-4, ED-4"
-  - path: packages/backend/orchestrator/src/providers/__tests__/openrouter.test.ts
-    action: created
-    lines: 115
-    description: "Provider integration tests: HP-5, EC-4"
-  - path: packages/backend/orchestrator/src/providers/__tests__/minimax.test.ts
-    action: modified
-    lines: 285
-    description: "Updated error message assertions to match SecretsClient env mode errors"
-  - path: packages/backend/orchestrator/src/providers/__tests__/minimax.integration.test.ts
-    action: modified
-    lines: 171
-    description: "Updated no-credentials test to match SecretsClient error message"
-  - path: infra/secrets/template.yaml
-    action: created
-    lines: 84
-    description: "CloudFormation stack for 3 Secrets Manager secrets (Anthropic, OpenRouter, MiniMax)"
-  - path: infra/secrets/README.md
-    action: created
-    lines: 130
-    description: "Rotation procedure, configCache limitation, SIGHUP flush() pattern, APIP-5006 dependency"
+  - packages/backend/orchestrator/src/secrets/index.ts
+  - packages/backend/orchestrator/src/providers/anthropic.ts
+  - packages/backend/orchestrator/src/providers/openrouter.ts
+  - packages/backend/orchestrator/src/providers/minimax.ts
 
 commands_run:
-  - command: pnpm add @aws-sdk/client-secrets-manager --filter @repo/orchestrator
-    result: SUCCESS
-    output: "@aws-sdk/client-secrets-manager@3.998.0 installed"
-    timestamp: "2026-02-25T18:31:00Z"
-  - command: pnpm --filter @repo/orchestrator type-check
-    result: SUCCESS
-    output: "exit 0"
-    timestamp: "2026-02-25T18:33:00Z"
-  - command: pnpm --filter @repo/orchestrator test
-    result: SUCCESS
-    output: "3380 passed, 18 skipped, 0 failed"
-    timestamp: "2026-02-25T18:37:00Z"
-  - command: pnpm --filter @repo/orchestrator build
-    result: SUCCESS
-    output: "tsc compile success"
-    timestamp: "2026-02-25T18:39:00Z"
-  - command: cfn-lint infra/secrets/template.yaml
-    result: SKIPPED
-    output: "cfn-lint not available in environment"
-    timestamp: "2026-02-25T18:39:00Z"
+  - command: "git diff HEAD packages/backend/orchestrator/src/secrets/index.ts"
+    result: "Confirmed interface CacheEntry -> CacheEntrySchema z.object fix present in working tree"
+  - command: "git diff HEAD packages/backend/orchestrator/src/providers/anthropic.ts"
+    result: "Confirmed type assertion -> Schema.parse fix present in working tree"
+  - command: "git diff HEAD packages/backend/orchestrator/src/providers/openrouter.ts"
+    result: "Confirmed type assertion -> Schema.parse fix present in working tree"
+  - command: "git diff HEAD packages/backend/orchestrator/src/providers/minimax.ts"
+    result: "Confirmed type assertion -> Schema.parse fix present in working tree"
+  - command: "git add + git commit"
+    result: "commit efe7b411 — 4 files changed, 10 insertions(+), 8 deletions(-)"
 
-endpoints_exercised: []
-
-test_summary:
-  unit:
-    pass: 3380
-    fail: 0
-  e2e:
-    pass: 0
-    fail: 0
-
-e2e_tests:
-  status: exempt
-  exempt_reason: "Backend infrastructure-only story — no UI changes; exempt per ADR-006 for non-UI stories. story_type: infra"
-  config: null
-  project: null
-  mode: null
-  tests_written: false
-  results:
-    total: 0
-    passed: 0
-    failed: 0
-    skipped: 0
-  failed_tests: []
-  config_issues: []
-  videos: []
-  screenshots: []
-
-coverage:
-  lines: ~85
-  notes: "Full coverage of SecretsClient happy paths, error conditions, and edge cases; provider tests cover config loading integration"
-
-notable_decisions:
-  - "ARCH-001: Prefetch pattern chosen over async loadConfig() to preserve ILLMProvider synchronous interface contract"
-  - "ARCH-002: In-flight promise deduplication implemented using Map<string, Promise<string>> inflight map"
-  - "Static import for AWS SDK instead of dynamic import — enables vi.mock hoisting in tests; no meaningful bundle size impact for server-side package"
-  - "APIP-5006 cross-story dependency: secretsClient.prefetch() must be called at pipeline startup before providers initialize (documented in README)"
-
-known_deviations:
-  - "cfn-lint verification skipped — tool not available in CI; template structure verified manually against elasticache/template.yaml ADR-002 conventions"
-  - "Existing minimax.test.ts error message assertions updated — SecretsClient now throws before reaching the provider-level error messages; this is intentional and correct behavior"
-
-token_summary:
-  execute:
-    in: 45000
-    out: 18000
+commit: "efe7b411"

@@ -105,7 +105,7 @@ export class MinimaxProvider extends BaseProvider {
    * Called by BaseProvider.getModel() template method.
    */
   protected createModel(modelName: string, config: unknown): BaseChatModel {
-    const minimaxConfig = config as MinimaxConfig
+    const minimaxConfig = MinimaxConfigSchema.parse(config)
 
     const llm = new ChatMinimax({
       minimaxApiKey: minimaxConfig.apiKey,
