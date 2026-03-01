@@ -15,7 +15,8 @@
 | 2 | Resilience & Monitoring | 3 | 0 | 0 | 0 | backlog |
 | 3 | Learning System & Optimization | 5 | 0 | 0 | 1 | in-progress |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
-| **TOTAL** | | **32** | **7** | **2** | **3** | |
+| 5 | Pipeline Resilience | 3 | 3 | 0 | 0 | backlog |
+| **TOTAL** | | **35** | **10** | **2** | **3** | |
 
 ## Phase 0: Foundation (11 stories)
 
@@ -45,8 +46,8 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1031 | Implementation Graph Skeleton with Worktree and Evidence Infrastructure | APIP-1020, APIP-0040 | Ready to Work |
 | APIP-1032 | Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits | APIP-1031, APIP-1020, APIP-0040 | Backlog |
 | APIP-1040 | Documentation Graph (Post-Merge) | APIP-1032 | In Progress |
-| APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | 🔍 Ready for QA |
-| APIP-1060 | QA Graph with Autonomous Verdict | APIP-1050 | Created |
+| APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | ✅ UAT |
+| APIP-1060 | QA Graph with Autonomous Verdict | APIP-1050 | In Progress |
 | APIP-1070 | Merge Graph with Learnings Extraction | APIP-1060 | In Elaboration |
 | APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1050, APIP-1060, APIP-1070 | Ready to Work |
 | APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | In Elaboration |
@@ -91,14 +92,24 @@ Codebase health gate, cohesion scanner, dependency auditor, test quality monitor
 | APIP-4060 | KB Freshness Check and Stale Entry Archival | APIP-3090 | Ready to Work |
 | APIP-4070 | Weekly Pipeline Health Report | APIP-4010, APIP-3020, APIP-2010 | Ready to Work |
 
+## Phase 5: Pipeline Resilience (3 stories)
+
+Artifact validation gates, stuck story recovery, and KB-filesystem state reconciliation to eliminate stories getting permanently stuck in the pipeline.
+
+| ID | Title | Dependencies | Status |
+|---|---|---|---|
+| APIP-6001 | Pipeline Phase Gate Validation | none | Ready to Work |
+| APIP-6002 | Stuck Story Recovery Loop | APIP-6001 | Ready to Work |
+| APIP-6003 | KB-Filesystem State Reconciliation | APIP-6001 | Ready to Work |
+
 ## Metrics Summary
 
-- **Total Stories**: 32
+- **Total Stories**: 35
 - **Critical Path Length**: 13 stories
 - **Maximum Parallelization**: 4 stories at once
 - **Stories with Sizing Warnings**: 1 (APIP-1040)
 - **High-Risk Stories**: 3 (RISK-001, RISK-002, RISK-009)
-- **New Stories Added**: 8 (infrastructure, testing, security, platform)
+- **New Stories Added**: 11 (infrastructure, testing, security, platform, pipeline resilience)
 
 ## Critical Path (12 stories)
 
