@@ -1805,7 +1805,6 @@ export const selectWorkflowAuditLogSchema = createSelectSchema(workflowAuditLog)
 export type InsertWorkflowAuditLog = z.infer<typeof insertWorkflowAuditLogSchema>
 export type SelectWorkflowAuditLog = z.infer<typeof selectWorkflowAuditLogSchema>
 
-// ============================================================================
 // MODEL ASSIGNMENTS SCHEMA (APIP-0040)
 // ============================================================================
 
@@ -1914,3 +1913,80 @@ export const ModelAffinityInsertSchema = createInsertSchema(modelAffinity)
 export const ModelAffinitySelectSchema = createSelectSchema(modelAffinity)
 export type InsertModelAffinity = z.infer<typeof ModelAffinityInsertSchema>
 export type SelectModelAffinity = z.infer<typeof ModelAffinitySelectSchema>
+
+// ============================================================================
+// 8. MODEL EXPERIMENTS SCHEMA (APIP-3060)
+// ============================================================================
+
+/**
+ * Experiment Status Enum
+ * Defines the lifecycle states of a bake-off model experiment
+ */
+export const experimentStatusEnum = pgEnum('experiment_status', [
+  'active',
+  'concluded',
+  'expired',
+])
+
+/**
+ * Model Experiments Table
+ * Tracks controlled two-arm model comparison (bake-off) experiments.
+ * Each row represents one live A/B experiment for a (change_type, file_type) pair.
+ *
+ * Story APIP-3060: Bake-Off Engine for Model Experiments
+ */
+export const modelExperiments = wintSchema.table(
+  'model_experiments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Experiment scope — uniquely constrained to one active row per pair
+    changeType: varchar('change_type', { length: 64 }).notNull(),
+    fileType: varchar('file_type', { length: 64 }).notNull(),
+
+    // Arms
+    controlModel: varchar('control_model', { length: 128 }).notNull(),
+    challengerModel: varchar('challenger_model', { length: 128 }).notNull(),
+
+    // Lifecycle
+    status: experimentStatusEnum('status').notNull().default('active'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    concludedAt: timestamp('concluded_at', { withTimezone: true }),
+
+    // Sample counts recorded at conclusion
+    controlSampleSize: integer('control_sample_size'),
+    challengerSampleSize: integer('challenger_sample_size'),
+
+    // Success rates recorded at conclusion (precision 5, scale 4 — e.g. 0.9875)
+    controlSuccessRate: numeric('control_success_rate', { precision: 5, scale: 4 }),
+    challengerSuccessRate: numeric('challenger_success_rate', { precision: 5, scale: 4 }),
+
+    // Window configuration
+    minSamplePerArm: integer('min_sample_per_arm').notNull().default(50),
+    maxWindowRows: integer('max_window_rows'),
+    maxWindowDays: integer('max_window_days'),
+
+    // Winner recorded on conclusion
+    winner: varchar('winner', { length: 128 }),
+
+    // Metadata / notes
+    notes: text('notes'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Only one active experiment per (change_type, file_type) pair at a time
+    activeExperimentUniqueIdx: uniqueIndex('model_experiments_active_unique_idx')
+      .on(table.changeType, table.fileType)
+      .where(sql`${table.status} = 'active'`),
+    statusIdx: index('model_experiments_status_idx').on(table.status),
+    startedAtIdx: index('model_experiments_started_at_idx').on(table.startedAt),
+  }),
+)
+
+// Model Experiments Zod Schemas (APIP-3060)
+export const ModelExperimentInsertSchema = createInsertSchema(modelExperiments)
+export const ModelExperimentSelectSchema = createSelectSchema(modelExperiments)
+export type ModelExperimentInsert = z.infer<typeof ModelExperimentInsertSchema>
+export type ModelExperimentSelect = z.infer<typeof ModelExperimentSelectSchema>
