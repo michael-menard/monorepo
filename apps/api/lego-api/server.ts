@@ -39,6 +39,7 @@ import authorization from './domains/authorization/routes.js'
 import auth from './domains/auth/routes.js'
 import adminUsers from './domains/admin/routes.js'
 import inspiration from './domains/inspiration/routes.js'
+import monitor from './domains/monitor/routes.js'
 
 const app = new Hono()
 
@@ -97,6 +98,7 @@ app.route('/admin/users', adminUsers)
 app.route('/authorization', authorization)
 app.route('/mocs', mocs)
 app.route('/inspiration', inspiration)
+app.route('/monitor', monitor)
 
 // Root endpoint
 app.get('/', c => {

@@ -1,0 +1,28 @@
+{
+  "name": "@repo/pipeline",
+  "version": "1.0.0",
+  "description": "Autonomous Pipeline Supervisor - Plain TypeScript BullMQ worker process",
+  "type": "module",
+  "main": "./src/supervisor/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/supervisor/index.ts",
+    "start": "tsx src/supervisor/index.ts",
+    "check-types": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@repo/logger": "workspace:*",
+    "@repo/orchestrator": "workspace:*",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.4.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

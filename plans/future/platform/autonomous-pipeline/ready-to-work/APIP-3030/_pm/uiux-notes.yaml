@@ -1,2 +1,0 @@
-skipped: true
-reason: "APIP-3030 is a pipeline-internal LangGraph node with no UI surface. No frontend components, no user-facing interactions, no accessibility concerns in this story. The operator visibility story (APIP-5005) is the appropriate place to surface affinity-guided planning decisions to users. The Monitor UI (APIP-2020) may eventually display escalation pre-assignment rates using the profile_metadata.escalation_preassigned signal from this story's AC-6."

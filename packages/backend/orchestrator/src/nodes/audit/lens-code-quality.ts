@@ -1,6 +1,5 @@
 import { readFile } from 'fs/promises'
 import { extname } from 'path'
-
 import type { CodeAuditState } from '../../graphs/code-audit.js'
 import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js'
 
@@ -11,7 +10,9 @@ import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js
  */
 
 function isTestFile(filePath: string): boolean {
-  return filePath.includes('__tests__') || filePath.includes('.test.') || filePath.includes('.spec.')
+  return (
+    filePath.includes('__tests__') || filePath.includes('.test.') || filePath.includes('.spec.')
+  )
 }
 
 const HIGH_PATTERNS = [

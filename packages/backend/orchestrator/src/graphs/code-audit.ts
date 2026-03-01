@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { Annotation, StateGraph, END, START } from '@langchain/langgraph'
-
 import type { GraphState } from '../state/graph-state.js'
 import type {
   AuditFindings,
@@ -33,17 +32,19 @@ import {
 export const CodeAuditConfigSchema = z.object({
   scope: AuditScopeSchema.default('full'),
   mode: AuditModeSchema.default('pipeline'),
-  lenses: z.array(AuditLensSchema).default([
-    'security',
-    'duplication',
-    'react',
-    'typescript',
-    'a11y',
-    'ui-ux',
-    'performance',
-    'test-coverage',
-    'code-quality',
-  ]),
+  lenses: z
+    .array(AuditLensSchema)
+    .default([
+      'security',
+      'duplication',
+      'react',
+      'typescript',
+      'a11y',
+      'ui-ux',
+      'performance',
+      'test-coverage',
+      'code-quality',
+    ]),
   target: z.string().default('apps/'),
   since: z.string().optional(),
   storyId: z.string().optional(),
@@ -327,12 +328,17 @@ export async function runCodeAudit(
   }
 
   const result = await graph.invoke(initialState)
-  return result.auditFindings || createAuditFindings(fullConfig.mode, fullConfig.scope, fullConfig.target, fullConfig.lenses)
+  return (
+    result.auditFindings ||
+    createAuditFindings(fullConfig.mode, fullConfig.scope, fullConfig.target, fullConfig.lenses)
+  )
 }
 
 // --- Node adapter for workflow integration ---
 
-export const codeAuditNode = async (state: GraphState): Promise<Partial<GraphStateWithCodeAudit>> => {
+export const codeAuditNode = async (
+  state: GraphState,
+): Promise<Partial<GraphStateWithCodeAudit>> => {
   const stateWithAudit = state as GraphStateWithCodeAudit
   const result = await runCodeAudit({
     scope: stateWithAudit.scope,

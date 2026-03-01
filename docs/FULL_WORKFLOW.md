@@ -23,3 +23,5 @@ All workflow documentation is now in [`docs/workflow/`](./workflow/):
 - **State Machine**: See [README.md#state-diagram](./workflow/README.md#state-diagram)
 - **Phase Details**: See [phases.md](./workflow/phases.md)
 - **How to Extend**: See [extending.md](./workflow/extending.md)
+
+/plan create — Takes a title + plan text, generates slug/type/tags/summary, writes the markdown file to ~/.claude/plans/, and upserts to KB via kb_upsert_plan
