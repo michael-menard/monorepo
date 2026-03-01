@@ -102,7 +102,7 @@ export class AnthropicProvider extends BaseProvider {
    * Called by BaseProvider.getModel() template method.
    */
   protected createModel(modelName: string, config: unknown): BaseChatModel {
-    const anthropicConfig = config as AnthropicConfig
+    const anthropicConfig = AnthropicConfigSchema.parse(config)
 
     const llm = new ChatAnthropic({
       modelName,
