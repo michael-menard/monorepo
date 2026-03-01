@@ -70,12 +70,14 @@ jobs:
         env:
           HUSKY: 0
 
-      - name: Build @repo/logger dist (required for type resolution)
-        run: pnpm --filter="@repo/logger" build
-      - name: Build @repo/database-schema dist (required for type resolution)
-        run: pnpm --filter="@repo/database-schema" build
-      - name: Build @repo/observability dist (required for type resolution)
-        run: pnpm --filter="@repo/observability" build
+      - name: Build dist packages required for type resolution
+        run: |
+          rm -f packages/core/logger/tsconfig.tsbuildinfo
+          cd packages/core/logger && pnpm exec tsc && cd ../../..
+          rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
+          cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
+          rm -f packages/backend/observability/tsconfig.tsbuildinfo
+          cd packages/backend/observability && pnpm exec tsc && cd ../../..
 
       - name: Run linting and type checking
         run: |
@@ -173,12 +175,14 @@ jobs:
         env:
           HUSKY: 0
 
-      - name: Build @repo/logger dist (required for type resolution)
-        run: pnpm --filter="@repo/logger" build
-      - name: Build @repo/database-schema dist (required for type resolution)
-        run: pnpm --filter="@repo/database-schema" build
-      - name: Build @repo/observability dist (required for type resolution)
-        run: pnpm --filter="@repo/observability" build
+      - name: Build dist packages required for type resolution
+        run: |
+          rm -f packages/core/logger/tsconfig.tsbuildinfo
+          cd packages/core/logger && pnpm exec tsc && cd ../../..
+          rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
+          cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
+          rm -f packages/backend/observability/tsconfig.tsbuildinfo
+          cd packages/backend/observability && pnpm exec tsc && cd ../../..
 
       - name: Run comprehensive checks
         run: |

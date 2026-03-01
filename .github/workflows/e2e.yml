@@ -61,7 +61,9 @@ jobs:
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
       - name: Build @repo/logger dist (required by downstream builds)
-        run: pnpm --filter="@repo/logger" build
+        run: |
+          rm -f packages/core/logger/tsconfig.tsbuildinfo
+          cd packages/core/logger && pnpm exec tsc
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"
@@ -130,7 +132,9 @@ jobs:
         run: pnpm --filter @repo/playwright exec playwright install --with-deps chromium
 
       - name: Build @repo/logger dist (required by downstream builds)
-        run: pnpm --filter="@repo/logger" build
+        run: |
+          rm -f packages/core/logger/tsconfig.tsbuildinfo
+          cd packages/core/logger && pnpm exec tsc
 
       - name: Build main-app and dependencies
         run: pnpm turbo build --filter="@repo/main-app"

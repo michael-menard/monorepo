@@ -82,16 +82,14 @@ jobs:
       - name: Build dist packages required for type resolution
         run: |
           # Build packages whose dist/ is needed by TypeScript for module resolution.
-          # These packages use dist-based exports (not src-based), so tsc needs dist/
-          # to exist before type-checking downstream packages.
-          cd packages/core/logger && pnpm exec tsc
-          echo "logger dist after build:" && ls dist/ | head -5
-          cd ../../../packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json
-          echo "database-schema dist after build:" && ls dist/ | head -5
-          cd ../../../packages/backend/observability
-          echo "observability node_modules/@repo/logger before tsc:" && ls node_modules/@repo/logger/ | head -5
-          echo "logger dist via symlink:" && ls node_modules/@repo/logger/dist/ | head -5
-          pnpm exec tsc
+          # Remove tsbuildinfo files first to force full rebuild (committed tsbuildinfo
+          # can cause incremental tsc to skip generating outputs if source is unchanged).
+          rm -f packages/core/logger/tsconfig.tsbuildinfo
+          cd packages/core/logger && pnpm exec tsc && cd ../../..
+          rm -f packages/backend/database-schema/tsconfig.tsbuildinfo
+          cd packages/backend/database-schema && pnpm exec tsc -p tsconfig.build.json && cd ../../..
+          rm -f packages/backend/observability/tsconfig.tsbuildinfo
+          cd packages/backend/observability && pnpm exec tsc && cd ../../..
 
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
