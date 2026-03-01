@@ -7,6 +7,7 @@
  * before proceeding to implementation.
  *
  * FLOW-034: LangGraph Elaboration Node - Structurer
+ * APIP-3050: Model affinity guidance integration
  */
 
 import { z } from 'zod'
@@ -19,8 +20,31 @@ import type { GraphState } from '../../state/index.js'
 // ============================================================================
 
 /**
+ * Affinity configuration sub-object for model affinity guidance.
+ * APIP-3050 AC-1, AC-6: affinityConfig with affinityEnabled, minAffinityConfidence,
+ * maxAffinityWeight — all with defaults, no breaking change to existing callers.
+ */
+export const AffinityConfigSchema = z.object({
+  /** Whether affinity guidance is enabled */
+  affinityEnabled: z.boolean().default(false),
+  /**
+   * Minimum confidence score (0.0–1.0) required before applying affinity guidance.
+   * Rows below this threshold are ignored.
+   */
+  minAffinityConfidence: z.number().min(0).max(1).default(0.7),
+  /**
+   * Maximum weight (0.0–1.0) for blending affinity guidance with baseline estimates.
+   * 0.0 = no affinity applied even if data present; 1.0 = fully affinity-driven.
+   */
+  maxAffinityWeight: z.number().min(0).max(1).default(0.8),
+})
+
+export type AffinityConfig = z.infer<typeof AffinityConfigSchema>
+
+/**
  * Configuration schema for the Structurer node.
  * AC-1: StructurerConfigSchema with required fields.
+ * APIP-3050 AC-1: Extended with affinityConfig sub-object.
  */
 export const StructurerConfigSchema = z.object({
   /** Whether the Structurer node is enabled */
@@ -31,6 +55,11 @@ export const StructurerConfigSchema = z.object({
   maxChangesPerItem: z.number().int().positive().default(50),
   /** Node execution timeout in milliseconds */
   nodeTimeoutMs: z.number().positive().default(60000),
+  /**
+   * Affinity guidance configuration (APIP-3050).
+   * Defaults to disabled — no breaking change to existing callers.
+   */
+  affinityConfig: AffinityConfigSchema.default({}),
 })
 
 export type StructurerConfig = z.infer<typeof StructurerConfigSchema>
@@ -57,6 +86,7 @@ export const ChangeOutlineItemSchema = z.object({
   /**
    * Forward-compatibility escape hatch for APIP-1020 spike additions.
    * ADR-001 Decision 3: intentionally minimal schema with extensions.
+   * APIP-3050: extensions.preferredChangePattern populated when affinity enabled.
    */
   extensions: z.record(z.unknown()).optional(),
 })
@@ -320,11 +350,13 @@ interface StructurerElaborationState {
  * Creates a Structurer node with the given configuration.
  *
  * AC-4: createStructurerNode factory using createToolNode.
+ * APIP-3050: Accepts optional db for affinity guidance via affinityDb parameter.
  *
  * @param config - Structurer configuration (partial — defaults applied)
+ * @param affinityDb - Optional DB client for affinity queries (z.unknown() pattern)
  * @returns Configured LangGraph node function
  */
-export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
+export function createStructurerNode(config: Partial<StructurerConfig> = {}, affinityDb?: unknown) {
   const fullConfig = StructurerConfigSchema.parse(config)
 
   return createToolNode('structurer', async (state: GraphState): Promise<Partial<GraphState>> => {
@@ -361,13 +393,86 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
     }
 
     try {
-      // Build change outline using heuristic estimation
-      const changeOutline: ChangeOutlineItem[] = acs.map((ac, idx) => {
+      // Step 1: Build preliminary change outline using heuristic estimation
+      const preliminaryOutline: ChangeOutlineItem[] = acs.map((ac, idx) => {
         const crossCutting = isCrossCutting(ac.id, s.escapeHatchResult)
         return generateChangeOutlineItem(ac.id, ac.description, idx, crossCutting, fullConfig)
       })
 
-      const totalEstimatedAtomicChanges = changeOutline.reduce(
+      // Step 2: Resolve affinity guidance if enabled and DB is available
+      // Items in preliminaryOutline have changeType + filePath → used for DB query deduplication
+      let fallbackUsed = false
+
+      if (fullConfig.affinityConfig.affinityEnabled && fullConfig.affinityConfig.maxAffinityWeight > 0) {
+        if (!affinityDb) {
+          logger.warn(
+            'Structurer: affinityEnabled=true but no affinityDb provided — skipping affinity',
+            { storyId },
+          )
+          fallbackUsed = true
+        } else {
+          const { readAffinityProfiles } = await import('./affinity-reader.js')
+          const affinityResult = await readAffinityProfiles(preliminaryOutline, affinityDb, storyId)
+          if (affinityResult.fallbackUsed) {
+            fallbackUsed = true
+          }
+
+          // Step 3: Apply affinity guidance to outline items
+          const guidedOutline: ChangeOutlineItem[] = preliminaryOutline.map(item => {
+            const guidance = affinityResult.map.get(item.id) ?? null
+            if (
+              guidance !== null &&
+              guidance.confidence >= fullConfig.affinityConfig.minAffinityConfidence
+            ) {
+              return {
+                ...item,
+                extensions: {
+                  ...(item.extensions ?? {}),
+                  preferredChangePattern: guidance.preferredChangePattern,
+                  affinityMeta: {
+                    modelId: guidance.modelId,
+                    confidence: guidance.confidence,
+                    successRate: guidance.successRate,
+                    sampleCount: guidance.sampleCount,
+                  },
+                },
+              }
+            }
+            return item
+          })
+
+          const totalEstimatedAtomicChanges = guidedOutline.reduce(
+            (sum, item) => sum + item.estimatedAtomicChanges,
+            0,
+          )
+
+          const splitRequired = totalEstimatedAtomicChanges > fullConfig.splitThreshold
+          const splitReason = splitRequired
+            ? generateSplitReason(guidedOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
+            : null
+
+          const durationMs = Date.now() - startTime
+
+          logger.info('Structurer node complete (with affinity)', {
+            storyId,
+            changeCount: guidedOutline.length,
+            totalEstimatedAtomicChanges,
+            splitRequired,
+            durationMs,
+            fallbackUsed,
+          })
+
+          return {
+            changeOutline: guidedOutline,
+            splitRequired,
+            splitReason,
+            structurerComplete: true,
+          } as unknown as Partial<GraphState>
+        }
+      }
+
+      // No affinity (disabled or no db): return preliminary outline
+      const totalEstimatedAtomicChanges = preliminaryOutline.reduce(
         (sum, item) => sum + item.estimatedAtomicChanges,
         0,
       )
@@ -375,22 +480,22 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
       // Split flagging: strictly > threshold (AC-9, ED-2)
       const splitRequired = totalEstimatedAtomicChanges > fullConfig.splitThreshold
       const splitReason = splitRequired
-        ? generateSplitReason(changeOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
+        ? generateSplitReason(preliminaryOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
         : null
 
       const durationMs = Date.now() - startTime
 
       logger.info('Structurer node complete', {
         storyId,
-        changeCount: changeOutline.length,
+        changeCount: preliminaryOutline.length,
         totalEstimatedAtomicChanges,
         splitRequired,
         durationMs,
-        fallbackUsed: false,
+        fallbackUsed,
       })
 
       return {
-        changeOutline,
+        changeOutline: preliminaryOutline,
         splitRequired,
         splitReason,
         structurerComplete: true,
