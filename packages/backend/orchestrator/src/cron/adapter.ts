@@ -85,9 +85,7 @@ export class InMemoryCronAdapter implements CronSchedulerAdapter {
   private readonly jobFns: Map<string, () => Promise<void>> = new Map()
 
   schedule(jobName: string, schedule: string, fn: () => Promise<void>): void {
-    this.registeredJobs.push(
-      InMemoryJobEntrySchema.parse({ jobName, schedule }),
-    )
+    this.registeredJobs.push(InMemoryJobEntrySchema.parse({ jobName, schedule }))
     this.jobFns.set(jobName, fn)
   }
 

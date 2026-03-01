@@ -25,7 +25,9 @@ import { getCronDbClient } from '../db.js'
  * @param lockKey - Integer advisory lock key
  * @returns true if lock acquired, false if lock is held by another session
  */
-async function tryAcquireAdvisoryLock(lockKey: number): Promise<{ acquired: boolean; pool: ReturnType<typeof getCronDbClient> | null }> {
+async function tryAcquireAdvisoryLock(
+  lockKey: number,
+): Promise<{ acquired: boolean; pool: ReturnType<typeof getCronDbClient> | null }> {
   const pool = getCronDbClient()
   const client = await pool.connect()
 

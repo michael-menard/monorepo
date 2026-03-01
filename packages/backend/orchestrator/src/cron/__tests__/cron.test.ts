@@ -234,7 +234,12 @@ describe('buildCronRegistry env var filtering', () => {
 
   it('removes a job when DISABLE_CRON_JOB_<NAME>=true', () => {
     const jobs = [
-      { jobName: 'pattern-miner', schedule: '*/15 * * * *', timeoutMs: 60_000, runFn: async () => {} },
+      {
+        jobName: 'pattern-miner',
+        schedule: '*/15 * * * *',
+        timeoutMs: 60_000,
+        runFn: async () => {},
+      },
       { jobName: 'code-audit', schedule: '0 2 * * *', timeoutMs: 60_000, runFn: async () => {} },
     ]
 
@@ -246,7 +251,12 @@ describe('buildCronRegistry env var filtering', () => {
 
   it('handles hyphenated job names (hyphens become underscores in env key)', () => {
     const jobs = [
-      { jobName: 'kb-compression', schedule: '0 1 * * *', timeoutMs: 60_000, runFn: async () => {} },
+      {
+        jobName: 'kb-compression',
+        schedule: '0 1 * * *',
+        timeoutMs: 60_000,
+        runFn: async () => {},
+      },
     ]
 
     const registry = buildCronRegistry(jobs, { DISABLE_CRON_JOB_KB_COMPRESSION: 'true' })
@@ -264,7 +274,12 @@ describe('buildCronRegistry env var filtering', () => {
 
   it('does not remove job when env var is absent', () => {
     const jobs = [
-      { jobName: 'worktree-pruning', schedule: '0 2 * * *', timeoutMs: 60_000, runFn: async () => {} },
+      {
+        jobName: 'worktree-pruning',
+        schedule: '0 2 * * *',
+        timeoutMs: 60_000,
+        runFn: async () => {},
+      },
     ]
 
     const registry = buildCronRegistry(jobs, {})
@@ -273,9 +288,19 @@ describe('buildCronRegistry env var filtering', () => {
 
   it('removes multiple jobs when multiple env vars set', () => {
     const jobs = [
-      { jobName: 'pattern-miner', schedule: '*/15 * * * *', timeoutMs: 60_000, runFn: async () => {} },
+      {
+        jobName: 'pattern-miner',
+        schedule: '*/15 * * * *',
+        timeoutMs: 60_000,
+        runFn: async () => {},
+      },
       { jobName: 'code-audit', schedule: '0 2 * * *', timeoutMs: 60_000, runFn: async () => {} },
-      { jobName: 'kb-compression', schedule: '0 1 * * *', timeoutMs: 60_000, runFn: async () => {} },
+      {
+        jobName: 'kb-compression',
+        schedule: '0 1 * * *',
+        timeoutMs: 60_000,
+        runFn: async () => {},
+      },
     ]
 
     const registry = buildCronRegistry(jobs, {
