@@ -295,6 +295,17 @@ generate_evidence() {
 
   echo "${TAG:+$TAG }EVID GEN:    $STORY_ID (generating EVIDENCE.yaml from worktree)"
 
+  # Rebase worktree on main before running checks — stale worktrees cause false failures
+  echo "${TAG:+$TAG }EVID SYNC:   $STORY_ID (rebasing worktree on main)"
+  if ! git -C "$WT_PATH" fetch origin main 2>/dev/null; then
+    echo "${TAG:+$TAG }EVID WARN:   $STORY_ID (fetch failed — continuing with current state)"
+  else
+    if ! git -C "$WT_PATH" rebase origin/main 2>/dev/null; then
+      echo "${TAG:+$TAG }EVID WARN:   $STORY_ID (rebase conflicts — aborting rebase, continuing with current state)"
+      git -C "$WT_PATH" rebase --abort 2>/dev/null || true
+    fi
+  fi
+
   # Collect touched files
   local TOUCHED_FILES
   TOUCHED_FILES=$(git -C "$WT_PATH" diff --name-only main..HEAD 2>/dev/null) || TOUCHED_FILES=""
@@ -459,9 +470,15 @@ ensure_worktree() {
   local BRANCH="story/${STORY_ID}"
   local WT_PATH="${WORKTREE_BASE}/${STORY_ID}"
 
-  # Already exists?
+  # Already exists? Sync it with main
   if [[ -d "$WT_PATH" ]]; then
     echo "$TAG WT   EXISTS:  $STORY_ID ($WT_PATH)"
+    # Rebase on main to avoid stale worktree failures
+    git -C "$WT_PATH" fetch origin main --quiet 2>/dev/null || true
+    if ! git -C "$WT_PATH" rebase origin/main --quiet 2>/dev/null; then
+      echo "$TAG WT   WARN:    $STORY_ID (rebase conflicts — aborting, will continue with current state)"
+      git -C "$WT_PATH" rebase --abort 2>/dev/null || true
+    fi
     return 0
   fi
 
