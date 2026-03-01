@@ -29,6 +29,12 @@ vi.mock('@repo/logger', () => ({
     error: vi.fn(),
     debug: vi.fn(),
   })),
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
 }))
 
 // Test fixtures

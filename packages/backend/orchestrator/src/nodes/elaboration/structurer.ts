@@ -10,9 +10,9 @@
  */
 
 import { z } from 'zod'
+import { logger } from '@repo/logger'
 import { createToolNode } from '../../runner/node-factory.js'
 import type { GraphState } from '../../state/index.js'
-import { logger } from '@repo/logger'
 
 // ============================================================================
 // Schemas
@@ -166,16 +166,20 @@ function bumpComplexity(complexity: 'low' | 'medium' | 'high'): 'low' | 'medium'
 }
 
 /** Zod schema for escape hatch evaluation entries */
-const EscapeHatchEvaluationSchema = z.object({
-  trigger: z.string(),
-  detected: z.boolean(),
-}).passthrough()
+const EscapeHatchEvaluationSchema = z
+  .object({
+    trigger: z.string(),
+    detected: z.boolean(),
+  })
+  .passthrough()
 
 /** Zod schema for escape hatch result shape */
-const EscapeHatchResultSchema = z.object({
-  triggersActivated: z.array(z.string()).optional(),
-  evaluations: z.array(EscapeHatchEvaluationSchema).optional(),
-}).passthrough()
+const EscapeHatchResultSchema = z
+  .object({
+    triggersActivated: z.array(z.string()).optional(),
+    evaluations: z.array(EscapeHatchEvaluationSchema).optional(),
+  })
+  .passthrough()
 
 /**
  * Detects whether an AC is cross-cutting based on escape hatch result.
@@ -233,7 +237,10 @@ function generateChangeOutlineItem(
     complexity = bumpComplexity(complexity)
   }
 
-  const estimatedAtomicChanges = Math.min(COMPLEXITY_MIDPOINTS[complexity], config.maxChangesPerItem)
+  const estimatedAtomicChanges = Math.min(
+    COMPLEXITY_MIDPOINTS[complexity],
+    config.maxChangesPerItem,
+  )
 
   // Derive a plausible file path from the AC description
   const filePath = deriveFilePath(acDescription, index)
@@ -288,11 +295,7 @@ function deriveFilePath(description: string, index: number): string {
  * @param threshold - Split threshold
  * @returns Human-readable split reason
  */
-function generateSplitReason(
-  items: ChangeOutlineItem[],
-  total: number,
-  threshold: number,
-): string {
+function generateSplitReason(items: ChangeOutlineItem[], total: number, threshold: number): string {
   // Find the top contributors (highest estimatedAtomicChanges)
   const sorted = [...items].sort((a, b) => b.estimatedAtomicChanges - a.estimatedAtomicChanges)
   const topContributors = sorted.slice(0, 3)
@@ -317,12 +320,17 @@ function generateSplitReason(
  */
 const StructurerElaborationStateSchema = z.object({
   storyId: z.string().optional(),
-  currentStory: z.object({
-    acceptanceCriteria: z.array(z.object({
-      id: z.string(),
-      description: z.string(),
-    })),
-  }).nullable().optional(),
+  currentStory: z
+    .object({
+      acceptanceCriteria: z.array(
+        z.object({
+          id: z.string(),
+          description: z.string(),
+        }),
+      ),
+    })
+    .nullable()
+    .optional(),
   escapeHatchResult: z.unknown().optional(),
   warnings: z.array(z.string()).optional(),
 })
@@ -360,112 +368,109 @@ function toStateUpdate(update: Record<string, unknown>): Partial<GraphState> {
 export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
   const fullConfig = StructurerConfigSchema.parse(config)
 
-  return createToolNode(
-    'structurer',
-    async (state: GraphState): Promise<Partial<GraphState>> => {
-      const startTime = Date.now()
-      const s = parseStructurerState(state)
-      const storyId = s.storyId ?? 'unknown'
+  return createToolNode('structurer', async (state: GraphState): Promise<Partial<GraphState>> => {
+    const startTime = Date.now()
+    const s = parseStructurerState(state)
+    const storyId = s.storyId ?? 'unknown'
 
-      logger.info('Structurer node starting', { storyId })
+    logger.info('Structurer node starting', { storyId })
 
-      // Guard: null or missing currentStory — AC-10
-      if (!s.currentStory) {
-        logger.warn('Structurer: currentStory is null — returning empty outline', { storyId })
-        return toStateUpdate({
-          changeOutline: [],
-          splitRequired: false,
-          splitReason: null,
-          structurerComplete: true,
-          warnings: ['Structurer: currentStory is null — returning empty change outline'],
-        })
-      }
+    // Guard: null or missing currentStory — AC-10
+    if (!s.currentStory) {
+      logger.warn('Structurer: currentStory is null — returning empty outline', { storyId })
+      return toStateUpdate({
+        changeOutline: [],
+        splitRequired: false,
+        splitReason: null,
+        structurerComplete: true,
+        warnings: ['Structurer: currentStory is null — returning empty change outline'],
+      })
+    }
 
-      const acs = s.currentStory.acceptanceCriteria ?? []
+    const acs = s.currentStory.acceptanceCriteria ?? []
 
-      // Guard: empty ACs — AC-10
-      if (acs.length === 0) {
-        logger.warn('Structurer: no acceptance criteria — returning empty outline', { storyId })
-        return toStateUpdate({
-          changeOutline: [],
-          splitRequired: false,
-          splitReason: null,
-          structurerComplete: true,
-          warnings: ['Structurer: no acceptance criteria found — returning empty change outline'],
-        })
-      }
+    // Guard: empty ACs — AC-10
+    if (acs.length === 0) {
+      logger.warn('Structurer: no acceptance criteria — returning empty outline', { storyId })
+      return toStateUpdate({
+        changeOutline: [],
+        splitRequired: false,
+        splitReason: null,
+        structurerComplete: true,
+        warnings: ['Structurer: no acceptance criteria found — returning empty change outline'],
+      })
+    }
 
-      try {
-        // Build change outline using heuristic estimation
-        const changeOutline: ChangeOutlineItem[] = acs.map((ac, idx) => {
-          const crossCutting = isCrossCutting(ac.id, s.escapeHatchResult)
-          return generateChangeOutlineItem(ac.id, ac.description, idx, crossCutting, fullConfig)
-        })
+    try {
+      // Build change outline using heuristic estimation
+      const changeOutline: ChangeOutlineItem[] = acs.map((ac, idx) => {
+        const crossCutting = isCrossCutting(ac.id, s.escapeHatchResult)
+        return generateChangeOutlineItem(ac.id, ac.description, idx, crossCutting, fullConfig)
+      })
 
-        const totalEstimatedAtomicChanges = changeOutline.reduce(
-          (sum, item) => sum + item.estimatedAtomicChanges,
-          0,
-        )
+      const totalEstimatedAtomicChanges = changeOutline.reduce(
+        (sum, item) => sum + item.estimatedAtomicChanges,
+        0,
+      )
 
-        // Split flagging: strictly > threshold (AC-9, ED-2)
-        const splitRequired = totalEstimatedAtomicChanges > fullConfig.splitThreshold
-        const splitReason = splitRequired
-          ? generateSplitReason(changeOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
-          : null
+      // Split flagging: strictly > threshold (AC-9, ED-2)
+      const splitRequired = totalEstimatedAtomicChanges > fullConfig.splitThreshold
+      const splitReason = splitRequired
+        ? generateSplitReason(changeOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
+        : null
 
-        const durationMs = Date.now() - startTime
+      const durationMs = Date.now() - startTime
 
-        logger.info('Structurer node complete', {
-          storyId,
-          changeCount: changeOutline.length,
-          totalEstimatedAtomicChanges,
-          splitRequired,
-          durationMs,
-          fallbackUsed: false,
-        })
+      logger.info('Structurer node complete', {
+        storyId,
+        changeCount: changeOutline.length,
+        totalEstimatedAtomicChanges,
+        splitRequired,
+        durationMs,
+        fallbackUsed: false,
+      })
 
-        return toStateUpdate({
-          changeOutline,
-          splitRequired,
-          splitReason,
-          structurerComplete: true,
-        })
-      } catch (error) {
-        // AC-11: Graceful fallback on any error
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        logger.error('Structurer: error during estimation — using fallback', {
-          storyId,
-          error: errorMessage,
-        })
+      return toStateUpdate({
+        changeOutline,
+        splitRequired,
+        splitReason,
+        structurerComplete: true,
+      })
+    } catch (error) {
+      // AC-11: Graceful fallback on any error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('Structurer: error during estimation — using fallback', {
+        storyId,
+        error: errorMessage,
+      })
 
-        // One item per AC with complexity 'unknown' and estimatedAtomicChanges: 1
-        const fallbackOutline: ChangeOutlineItem[] = acs.map((ac, idx) =>
-          ChangeOutlineItemSchema.parse({
-            id: `CO-${idx + 1}`,
-            filePath: `src/changes/change-${idx + 1}.ts`,
-            changeType: 'modify',
-            description: `Changes required by ${ac.id}: ${ac.description.slice(0, 100)}`,
-            complexity: 'unknown',
-            estimatedAtomicChanges: 1,
-            relatedAcIds: [ac.id],
-          }),
-        )
+      // One item per AC with complexity 'unknown' and estimatedAtomicChanges: 1
+      const fallbackOutline: ChangeOutlineItem[] = acs.map((ac, idx) =>
+        ChangeOutlineItemSchema.parse({
+          id: `CO-${idx + 1}`,
+          filePath: `src/changes/change-${idx + 1}.ts`,
+          changeType: 'modify',
+          description: `Changes required by ${ac.id}: ${ac.description.slice(0, 100)}`,
+          complexity: 'unknown',
+          estimatedAtomicChanges: 1,
+          relatedAcIds: [ac.id],
+        }),
+      )
 
-        const totalFallback = fallbackOutline.length
-        const splitRequired = totalFallback > fullConfig.splitThreshold
-        const splitReason = splitRequired
-          ? generateSplitReason(fallbackOutline, totalFallback, fullConfig.splitThreshold)
-          : null
+      const totalFallback = fallbackOutline.length
+      const splitRequired = totalFallback > fullConfig.splitThreshold
+      const splitReason = splitRequired
+        ? generateSplitReason(fallbackOutline, totalFallback, fullConfig.splitThreshold)
+        : null
 
-        return toStateUpdate({
-          changeOutline: fallbackOutline,
-          splitRequired,
-          splitReason,
-          structurerComplete: true,
-        })
-      }
-    },
-  )
+      return toStateUpdate({
+        changeOutline: fallbackOutline,
+        splitRequired,
+        splitReason,
+        structurerComplete: true,
+      })
+    }
+  })
 }
 
 /**
