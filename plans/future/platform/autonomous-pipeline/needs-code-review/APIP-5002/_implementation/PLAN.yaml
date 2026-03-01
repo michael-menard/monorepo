@@ -1,0 +1,284 @@
+schema: 2
+story_id: "APIP-5002"
+timestamp: "2026-02-28T00:00:00Z"
+subtask_source: story  # steps derived 1:1 from story subtasks ST-1 through ST-8
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: >
+      Create Playwright E2E config for pipeline: playwright.config.ts with workers:1,
+      timeout:1800000, forbidOnly:!!CI, project name pipeline-e2e, no webServer block.
+      Create tsconfig.json in e2e/ extending root tsconfig with include covering e2e directory.
+      Add bullmq and @playwright/test as devDependencies in orchestrator package.json, add e2e script.
+    files:
+      - "packages/backend/orchestrator/e2e/playwright.config.ts"
+      - "packages/backend/orchestrator/e2e/tsconfig.json"
+      - "packages/backend/orchestrator/package.json"
+    files_to_read:
+      - "apps/web/playwright/playwright.config.ts"
+      - "packages/backend/orchestrator/tsconfig.json"
+      - "packages/backend/orchestrator/package.json"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-1", "AC-14"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: >
+      Create PipelineJobPoller utility in helpers/job-poller.ts with: configurable
+      pollIntervalMs (default 5000), maxWaitMs (default 1800000), exponential back-off
+      capped at maxPollIntervalMs (default 60000), @repo/logger structured logging, and
+      PollTimeoutError Zod-typed error class. Also create unit tests verifying exponential
+      back-off schedule, cap behaviour, and PollTimeoutError on timeout.
+    files:
+      - "packages/backend/orchestrator/e2e/helpers/job-poller.ts"
+      - "packages/backend/orchestrator/e2e/helpers/__tests__/job-poller.test.ts"
+    files_to_read:
+      - "apps/api/lego-api/core/cache/redis-client.ts"
+      - "packages/backend/orchestrator/e2e/playwright.config.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator"
+    acs_covered: ["AC-8"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: >
+      Create artifact assertion helpers in helpers/artifact-assertions.ts:
+      assertEvidenceArtifact, assertReviewArtifact, assertQaVerifyArtifact, assertMergeArtifact.
+      Each reads the corresponding YAML file from storyDir and validates against the canonical
+      Zod schema. assertMergeArtifact uses a stub MergeArtifactSchema with minimum fields
+      { verdict: z.string(), story_id: z.string() } and a TODO comment pending APIP-1070.
+      Also create unit tests validating happy and error paths for each assertion helper.
+    files:
+      - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts"
+      - "packages/backend/orchestrator/e2e/helpers/__tests__/artifact-assertions.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/evidence.ts"
+      - "packages/backend/orchestrator/src/artifacts/review.ts"
+      - "packages/backend/orchestrator/src/artifacts/qa-verify.ts"
+      - "packages/backend/orchestrator/src/persistence/yaml-artifact-reader.ts"
+      - "packages/backend/orchestrator/e2e/helpers/job-poller.ts"
+    dependencies: [1, 2]
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator"
+    acs_covered: ["AC-4", "AC-13"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: >
+      Create SyntheticTestStorySchema Zod schema and pre-built synthetic story fixture in
+      fixtures/synthetic-story.ts. The fixture defines a minimal story with one AC and a
+      ChangeSpec whose code change adds a documented constant + Vitest test to a non-critical
+      utility file in packages/backend/orchestrator/. Includes all required YAML artifact stubs
+      for mid-pipeline seeding. Unit tests verify SyntheticTestStorySchema.parse() succeeds
+      against the fixture value.
+    files:
+      - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts"
+      - "packages/backend/orchestrator/e2e/fixtures/__tests__/synthetic-story.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/evidence.ts"
+      - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts"
+    dependencies: [3]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    acs_covered: ["AC-3"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: >
+      Create PipelineTestFixtures using test.extend() in fixtures/pipeline.fixture.ts.
+      Inject: queueClient (BullMQ Queue, name pipeline-e2e, connected to REDIS_URL),
+      queueEvents (BullMQ QueueEvents, same queue name — separate Redis connection),
+      pipelineStateReader (polls BullMQ job status + reads YAML artifacts from story
+      feature dir), syntheticStory (pre-built SyntheticTestStory fixture).
+      Teardown (afterAll): close both Redis connections; remove synthetic story feature
+      directory; remove BullMQ test job if not cleanly completed. Teardown failures logged
+      as @repo/logger warnings — never throw. Follow browser-auth.fixture.ts pattern exactly.
+    files:
+      - "packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts"
+    files_to_read:
+      - "apps/web/playwright/fixtures/browser-auth.fixture.ts"
+      - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts"
+      - "packages/backend/orchestrator/e2e/helpers/job-poller.ts"
+    dependencies: [4]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-2", "AC-12"]
+
+  - id: 6
+    subtask_id: "ST-6"
+    description: >
+      Create phase0-queue-supervisor.spec.ts E2E test spec. Tests: (a) queueClient.add()
+      returns non-null jobId; (b) BullMQ job transitions from waiting to active within 30s
+      configurable timeout, confirming supervisor polling is active; (c) job does not
+      transition to failed within the observation window. Uses PipelineTestFixtures.
+      Follows drag-preview.spec.ts test.describe / test.beforeEach / test() structure.
+    files:
+      - "packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts"
+    files_to_read:
+      - "apps/web/playwright/tests/wishlist/drag-preview.spec.ts"
+      - "packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts"
+    dependencies: [5]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-5", "AC-10", "AC-11"]
+
+  - id: 7
+    subtask_id: "ST-7"
+    description: >
+      Create phase1-elaboration.spec.ts (skipIf APIP-1010 module unavailable — dynamic
+      import check in test.beforeAll) and phase1-critical-path.spec.ts (skipIf any of
+      APIP-1010/1020/1030/1050/1060/1070 unavailable). Full critical path spec asserts:
+      non-null jobId, supervisor dispatch, EVIDENCE.yaml valid, REVIEW.yaml verdict not null,
+      QA-VERIFY.yaml verdict in PASS|FAIL|BLOCKED, if PASS then MERGE.yaml verdict=MERGE_COMPLETE
+      and git log contains squash commit, BullMQ job in completed state. If REVIEW.yaml
+      verdict is FAIL, use expect.fail() with message indicating framework bug.
+    files:
+      - "packages/backend/orchestrator/e2e/tests/phase1-elaboration.spec.ts"
+      - "packages/backend/orchestrator/e2e/tests/phase1-critical-path.spec.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts"
+      - "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts"
+    dependencies: [6]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-6", "AC-7", "AC-10", "AC-11"]
+
+  - id: 8
+    subtask_id: "ST-8"
+    description: >
+      Create PIPELINE-E2E-TEST-PLAN.md documentation covering: (a) synthetic story design
+      and trivially-passable ChangeSpec rationale (pre-written code patch, no LLM required);
+      (b) per-scenario dependency mapping (which APIP stories must be complete); (c) port
+      isolation strategy preventing conflicts with QA graph Playwright subprocess (project
+      name pipeline-e2e, workers:1, serialization requirement); (d) required environment
+      variables (REDIS_URL, LANGGRAPH_SERVER_URL, TEST_STORY_FEATURE_DIR) and local run
+      instructions; (e) phased activation strategy (Phase 0 vs Phase 1 tiers). Also document
+      the CI job definition for Phase 0 E2E as a post-merge action item.
+    files:
+      - "packages/backend/orchestrator/e2e/PIPELINE-E2E-TEST-PLAN.md"
+    files_to_read:
+      - "packages/backend/orchestrator/e2e/playwright.config.ts"
+      - "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts"
+    dependencies: [7]
+    slice: packages
+    verification: "File exists with all 5 required sections present"
+    acs_covered: ["AC-9"]
+
+files_to_change:
+  - path: "packages/backend/orchestrator/e2e/playwright.config.ts"
+    action: create
+    reason: "Pipeline E2E Playwright configuration — AC-1 (workers:1, timeout:1800000, pipeline-e2e project, no webServer)"
+  - path: "packages/backend/orchestrator/e2e/tsconfig.json"
+    action: create
+    reason: "Separate tsconfig required because root tsconfig has rootDir:./src which excludes e2e/ — AC-14"
+  - path: "packages/backend/orchestrator/package.json"
+    action: modify
+    reason: "Add bullmq + @playwright/test devDependencies and e2e script — AC-14"
+  - path: "packages/backend/orchestrator/e2e/helpers/job-poller.ts"
+    action: create
+    reason: "PipelineJobPoller with exponential back-off and PollTimeoutError — AC-8"
+  - path: "packages/backend/orchestrator/e2e/helpers/__tests__/job-poller.test.ts"
+    action: create
+    reason: "Vitest unit tests for PipelineJobPoller back-off schedule and timeout — AC-8"
+  - path: "packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts"
+    action: create
+    reason: "assertEvidenceArtifact/assertReviewArtifact/assertQaVerifyArtifact/assertMergeArtifact + stub MergeArtifactSchema — AC-4, AC-13"
+  - path: "packages/backend/orchestrator/e2e/helpers/__tests__/artifact-assertions.test.ts"
+    action: create
+    reason: "Vitest unit tests for all assertion helpers (happy path + ZodError throws) — AC-4, AC-13"
+  - path: "packages/backend/orchestrator/e2e/fixtures/synthetic-story.ts"
+    action: create
+    reason: "SyntheticTestStorySchema Zod schema and pre-built fixture with trivially-passable ChangeSpec — AC-3"
+  - path: "packages/backend/orchestrator/e2e/fixtures/__tests__/synthetic-story.test.ts"
+    action: create
+    reason: "Vitest unit test verifying SyntheticTestStorySchema.parse() succeeds — AC-3"
+  - path: "packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts"
+    action: create
+    reason: "PipelineTestFixtures with test.extend(), queueClient, pipelineStateReader, syntheticStory, and teardown — AC-2, AC-12"
+  - path: "packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts"
+    action: create
+    reason: "Phase 0 E2E spec: enqueue + active transition + no-fail assertions — AC-5"
+  - path: "packages/backend/orchestrator/e2e/tests/phase1-elaboration.spec.ts"
+    action: create
+    reason: "Phase 1 elaboration E2E spec with APIP-1010 skipIf guard — AC-6"
+  - path: "packages/backend/orchestrator/e2e/tests/phase1-critical-path.spec.ts"
+    action: create
+    reason: "Full critical path E2E spec with multi-graph skipIf guard — AC-7"
+  - path: "packages/backend/orchestrator/e2e/PIPELINE-E2E-TEST-PLAN.md"
+    action: create
+    reason: "E2E test plan documentation with all 5 required sections — AC-9"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after each subtask that touches TypeScript files (ST-1 through ST-7)"
+    required: true
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after ST-2, ST-3, ST-4 (Vitest unit tests); after all code changes"
+    required: true
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/playwright.config.ts exists with workers:1, timeout:1800000, forbidOnly:!!process.env.CI, project name pipeline-e2e, no webServer block"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts with PipelineTestFixtures using test.extend(), queueClient, pipelineStateReader, syntheticStory fields"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "Unit test: synthetic-story.test.ts — SyntheticTestStorySchema.parse(syntheticStory) passes without ZodError"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "Unit test: artifact-assertions.test.ts — assertEvidenceArtifact returns parsed result on valid YAML; assertReviewArtifact, assertQaVerifyArtifact, assertMergeArtifact follow same pattern"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/tests/phase0-queue-supervisor.spec.ts with three test assertions"
+    evidence_type: file
+  - ac_id: "AC-6"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/tests/phase1-elaboration.spec.ts with skipIf guard for APIP-1010"
+    evidence_type: file
+  - ac_id: "AC-7"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/tests/phase1-critical-path.spec.ts with full critical path assertions and multi-graph skipIf guard"
+    evidence_type: file
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test: job-poller.test.ts — exponential back-off intervals verified (100ms, 200ms, 400ms...), cap at maxPollIntervalMs, PollTimeoutError thrown on timeout"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/PIPELINE-E2E-TEST-PLAN.md with all 5 required sections present"
+    evidence_type: file
+  - ac_id: "AC-10"
+    planned_evidence: "Code inspection: all new files use z.infer<> types, @repo/logger for logging, no TypeScript interfaces, no barrel files — verified via pnpm check-types + pnpm test"
+    evidence_type: command
+  - ac_id: "AC-11"
+    planned_evidence: "Command: git diff apps/web/playwright/ shows zero changes"
+    evidence_type: command
+  - ac_id: "AC-12"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/fixtures/pipeline.fixture.ts teardown section: removes synthetic story directory, git worktrees, BullMQ test job; teardown failures are @repo/logger warnings only"
+    evidence_type: file
+  - ac_id: "AC-13"
+    planned_evidence: "File: packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts contains stub MergeArtifactSchema with { verdict: z.string(), story_id: z.string() } and TODO comment for APIP-1070"
+    evidence_type: file
+  - ac_id: "AC-14"
+    planned_evidence: "File: packages/backend/orchestrator/package.json has bullmq + @playwright/test in devDependencies and e2e script; packages/backend/orchestrator/e2e/tsconfig.json exists extending root tsconfig"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: moderate
+
+notes:
+  - "KB is intermittently failing — CHECKPOINT.yaml and context artifact not pre-loaded; proceeding without KB checkpoint validation."
+  - "ELAB.yaml (CONDITIONAL_PASS) resolved all 5 gaps: AC-13 (stub MergeArtifactSchema), AC-14 (bullmq + @playwright/test devDeps + tsconfig.json). All gaps are reflected in the subtasks."
+  - "BullMQ requires TWO separate Redis connections: one Queue (for enqueue/status) and one QueueEvents (for waitUntilFinished completion signaling). Both must be created in beforeAll and closed in afterAll."
+  - "The e2e/ tsconfig.json cannot extend the orchestrator root tsconfig.json directly for compilation because rootDir:./src would conflict. It should extend the monorepo root tsconfig (tsconfig.json at repo root) with appropriate e2e-specific overrides."
+  - "The SyntheticTestStory ChangeSpec MUST use a pre-written literal code patch (not LLM-generated) so micro-verify (pnpm check-types + pnpm test) passes deterministically."
+  - "Per ELAB opp-3 guidance: if REVIEW.yaml verdict is FAIL in phase1-critical-path.spec.ts, use explicit expect.fail() with message 'Framework bug: synthetic ChangeSpec produced REVIEW.yaml FAIL verdict — investigate review graph'."
+  - "Phase 0 E2E spec is runnable immediately after APIP-0010 + APIP-0020 complete. Phase 1 specs are guarded by dynamic import checks — they auto-activate when dependency graph modules become available."
+  - "Port isolation from QA graph (APIP-1060): pipeline-e2e project name is distinct from all web app project names; workers:1 prevents concurrent runs; CI must serialize pipeline E2E with QA graph executions."
+  - "redis-client.ts in lego-api uses ioredis directly. BullMQ manages its own Redis connections internally — do NOT use the ioredis singleton pattern from lego-api for BullMQ clients in E2E fixtures."
+  - "All new test infrastructure is isolated to packages/backend/orchestrator/e2e/. apps/web/playwright/ must remain untouched."
