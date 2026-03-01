@@ -1,6 +1,6 @@
 id: "APIP-0030"
 title: "LangGraph Platform Docker Deployment"
-status: in-progress
+status: uat
 priority: medium
 phase: 0
 feature: "Docker Compose configuration for self-hosted LangGraph Platform on dedicated server with langgraph-checkpoint-postgres and Studio UI"
