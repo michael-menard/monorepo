@@ -94,6 +94,6 @@ COMMIT;
 -- Enums Created: 1 (wint.confidence_level)
 -- Indexes Created: 3 (unique, confidence_level, last_aggregated_at)
 --
--- Rollback: 0029_apip_3020_model_affinity_rollback.sql
+-- Rollback: not provided (manual rollback required — DROP TABLE wint.model_affinity; DROP TYPE wint.confidence_level;)
 -- Depends on: wint schema (WINT-0010), change_telemetry (APIP-3010)
 -- Downstream: APIP-3020 Pattern Miner reads/writes wint.model_affinity

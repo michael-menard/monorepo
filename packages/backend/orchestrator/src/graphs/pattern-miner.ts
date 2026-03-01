@@ -316,7 +316,7 @@ function createFetchTelemetryNode() {
       const watermarkTs =
         watermarkRow?.watermark != null ? watermarkRow.watermark : COLD_START_EPOCH
 
-      logger.info("pattern-miner: watermark determined", { watermarkTs })
+      logger.info('pattern-miner: watermark determined', { watermarkTs })
 
       // Step 2: Aggregate telemetry rows since watermark
       const aggResult = await db.query<{
@@ -412,8 +412,11 @@ function createComputeProfilesNode() {
     }
 
     try {
-      // Fetch existing affinity rows for all combinations in this batch
-      const keys = state.telemetryRows.map(r => `(${[r.model_id, r.change_type, r.file_type].map(v => `'${v.replace(/'/g, "''")}'`).join(',')})`)
+      // Fetch existing affinity rows for all combinations in this batch.
+      // Uses UNNEST with bound parameter arrays to avoid SQL injection.
+      const modelIds = state.telemetryRows.map(r => r.model_id)
+      const changeTypes = state.telemetryRows.map(r => r.change_type)
+      const fileTypes = state.telemetryRows.map(r => r.file_type)
       const existingResult = await db.query<{
         model_id: string
         change_type: string
@@ -423,11 +426,15 @@ function createComputeProfilesNode() {
         avg_tokens: string
         avg_retry_count: string
       }>(
-        `SELECT model_id, change_type, file_type,
-                success_rate::float, sample_count::int,
-                avg_tokens::float, avg_retry_count::float
-         FROM wint.model_affinity
-         WHERE (model_id, change_type, file_type) IN (${keys.join(',')})`,
+        `SELECT ma.model_id, ma.change_type, ma.file_type,
+                ma.success_rate::float, ma.sample_count::int,
+                ma.avg_tokens::float, ma.avg_retry_count::float
+         FROM wint.model_affinity ma
+         JOIN UNNEST($1::text[], $2::text[], $3::text[]) AS keys(model_id, change_type, file_type)
+           ON ma.model_id = keys.model_id
+          AND ma.change_type = keys.change_type
+          AND ma.file_type = keys.file_type`,
+        [modelIds, changeTypes, fileTypes],
       )
 
       // Build lookup map
