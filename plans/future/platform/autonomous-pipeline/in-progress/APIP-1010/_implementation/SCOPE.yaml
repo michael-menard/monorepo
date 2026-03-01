@@ -1,0 +1,25 @@
+schema: 1
+story_id: APIP-1010
+timestamp: "2026-02-25T18:30:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/**"
+  - "packages/backend/orchestrator/**"
+  - "packages/backend/orchestrator/src/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: true
+summary: "Add Structurer node to elaboration graph that converts acceptance criteria into ordered change_outline with complexity estimates and split flagging"
+elaboration: "completed"

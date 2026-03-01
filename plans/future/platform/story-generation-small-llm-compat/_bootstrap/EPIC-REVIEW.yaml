@@ -1,0 +1,60 @@
+schema: 3
+feature_dir: plans/future/platform/story-generation-small-llm-compat
+prefix: ST
+reviewed: "2026-02-28T00:00:00Z"
+focus: mvp-critical
+
+verdict: CONCERNS
+summary: "Epic is MVP-viable but requires verification of 5 purportedly-implemented stories before dev begins; 2-3 genuinely new features demand careful integration with existing generation/elaboration pipelines."
+
+perspectives:
+  engineering:
+    verdict: CONCERNS
+    mvp_critical_count: 1
+  product:
+    verdict: CONCERNS
+    mvp_critical_count: 2
+  qa:
+    verdict: CONCERNS
+    mvp_critical_count: 1
+  ux:
+    verdict: READY
+    mvp_critical_count: 0
+  platform:
+    verdict: CONCERNS
+    mvp_critical_count: 1
+  security:
+    verdict: READY
+    mvp_critical_count: 0
+
+mvp_blockers:
+  - id: MVP-1
+    source: engineering
+    issue: "Critical path blocked until ST-1010/ST-1020/ST-1030 status verified; 5 of 7 stories marked as 'already implemented' but no proof of active use in production agent files — implementation stubs may exist in spec but not execute correctly."
+    stories: [ST-1010, ST-1020, ST-1030, ST-1040, ST-2010, ST-3010, ST-3020]
+    action: "Before any implementation work, run gap audit: execute each agent end-to-end with sample input and verify Canonical References, Subtasks, and Clarity sections appear in output. Document actual vs. claimed implementation state."
+
+  - id: MVP-2
+    source: product
+    issue: "ST-1020 Examples/Edge Cases enforcement is new work but timing unclear: if Goal format is already in pm-spawn-patterns.md item #4, scope ambiguity creates risk of duplication or missed edge cases."
+    stories: [ST-1020]
+    action: "Audit pm-spawn-patterns.md section 4 and pm-story-generation-leader Phase 4 output to clarify what Goal format is currently enforced; document discrepancy if Examples/Edge Cases are missing."
+
+  - id: MVP-3
+    source: product
+    issue: "ST-2020 Clarity format check (new work) depends on ST-1020, but elab-analyst has 9 checks today — adding a 10th requires care to avoid overlapping scope with Check #9 (Subtask Decomposition)."
+    stories: [ST-2020]
+    action: "Define clear boundary between ST-2020 Check #10 (Goal/Examples/Edge Cases structure) and ST-2010 Check #9 (Subtask decomposition quality); prevent redundant validations."
+
+missing_mvp_stories:
+  - title: "Gap Audit / Verification Story"
+    source: engineering
+    reason: "Critical pre-work to confirm which of ST-1010, ST-1030, ST-2010, ST-3010, ST-3020 are truly implemented and working vs. stubs in spec only."
+
+stories_to_split:
+  - story: ST-1040
+    reason: "Contains both work (Goal/Examples/Edge Cases enforcement) and possibly duplicated work (Subtasks/Canonical References); split into ST-1040A (new clarity enforcement) and ST-1040B (integration of existing features) if gap audit confirms existing implementation."
+
+metrics:
+  mvp_blockers: 3
+  missing_mvp_stories: 1

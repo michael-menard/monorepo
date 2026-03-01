@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Package, Truck, CheckCircle2, XCircle, Clock } from "lucide-react"
-import type { MocOrder } from "./mocTypes"
+import { useState } from 'react'
+import { ExternalLink, Package, Truck, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import type { MocOrder } from './mocTypes'
+import { Badge } from '@/components/ui/badge'
 
 interface MocOrdersCardContentProps {
   orders: MocOrder[]
@@ -11,24 +11,24 @@ interface MocOrdersCardContentProps {
 
 const statusConfig = {
   pending: {
-    label: "Pending",
+    label: 'Pending',
     icon: Clock,
-    color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
   },
   shipped: {
-    label: "Shipped",
+    label: 'Shipped',
     icon: Truck,
-    color: "bg-primary/10 text-primary border-primary/20",
+    color: 'bg-primary/10 text-primary border-primary/20',
   },
   delivered: {
-    label: "Delivered",
+    label: 'Delivered',
     icon: CheckCircle2,
-    color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
   },
   cancelled: {
-    label: "Cancelled",
+    label: 'Cancelled',
     icon: XCircle,
-    color: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
   },
 }
 
@@ -37,23 +37,25 @@ export function MocOrdersCardContent({ orders }: MocOrdersCardContentProps) {
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     })
   }
 
-  const formatPrice = (price: number, currency = "USD") => {
+  const formatPrice = (price: number, currency = 'USD') => {
     return new Intl.NumberFormat(undefined, {
-      style: "currency",
+      style: 'currency',
       currency,
     }).format(price)
   }
 
   // Calculate totals
-  const totalParts = localOrders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + o.partsCount, 0)
+  const totalParts = localOrders
+    .filter(o => o.status !== 'cancelled')
+    .reduce((sum, o) => sum + o.partsCount, 0)
   const totalSpent = localOrders
-    .filter((o) => o.status !== "cancelled" && o.totalPrice)
+    .filter(o => o.status !== 'cancelled' && o.totalPrice)
     .reduce((sum, o) => sum + (o.totalPrice || 0), 0)
 
   return (
@@ -76,7 +78,7 @@ export function MocOrdersCardContent({ orders }: MocOrdersCardContentProps) {
       {localOrders.length === 0 ? (
         // Skeleton placeholder
         <div className="space-y-3">
-          {[1, 2].map((i) => (
+          {[1, 2].map(i => (
             <div
               key={i}
               className="flex items-center gap-4 p-3 rounded-lg border border-dashed border-border bg-muted/30"
@@ -135,7 +137,7 @@ export function MocOrdersCardContent({ orders }: MocOrdersCardContentProps) {
                       </>
                     )}
                   </div>
-                  {order.trackingUrl && order.status === "shipped" && (
+                  {order.trackingUrl && order.status === 'shipped' && (
                     <a
                       href={order.trackingUrl}
                       target="_blank"

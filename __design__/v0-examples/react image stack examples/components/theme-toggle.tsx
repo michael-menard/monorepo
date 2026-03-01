@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useTheme } from 'next-themes'
+import { useEffect, useState } from 'react'
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -14,22 +14,22 @@ export function ThemeToggle() {
   }
 
   const options = [
-    { value: "light", label: "Light" },
-    { value: "dark", label: "Dark" },
-    { value: "system", label: "System" },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
   ] as const
 
   return (
     <div className="inline-flex items-center gap-0.5 rounded-md border border-border bg-muted p-0.5">
-      {options.map((opt) => (
+      {options.map(opt => (
         <button
           key={opt.value}
           type="button"
           onClick={() => setTheme(opt.value)}
           className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
             theme === opt.value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           {opt.label}

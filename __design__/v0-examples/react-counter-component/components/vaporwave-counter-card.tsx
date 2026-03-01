@@ -1,10 +1,9 @@
-"use client"
+'use client'
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp } from "lucide-react"
+import type React from 'react'
+import { useState, useEffect } from 'react'
+import { TrendingUp } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface VaporwaveCounterCardProps {
   title?: string
@@ -13,23 +12,23 @@ interface VaporwaveCounterCardProps {
   interval?: number
   suffix?: string
   icon?: React.ReactNode
-  trend?: "up" | "down" | "neutral"
+  trend?: 'up' | 'down' | 'neutral'
 }
 
 export function VaporwaveCounterCard({
-  title = "Active Users",
+  title = 'Active Users',
   value = 0,
   increment = 1,
   interval = 2000,
-  suffix = "",
+  suffix = '',
   icon,
-  trend = "up",
+  trend = 'up',
 }: VaporwaveCounterCardProps) {
   const [count, setCount] = useState(value)
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCount((prev) => prev + increment)
+      setCount(prev => prev + increment)
     }, interval)
 
     return () => clearInterval(timer)
@@ -59,12 +58,16 @@ export function VaporwaveCounterCard({
           <div className="text-5xl font-bold text-vaporwave-text font-mono tracking-tight [text-shadow:0_0_20px_rgba(0,255,255,0.5),0_0_40px_rgba(255,0,255,0.3)]">
             {count.toLocaleString()}
           </div>
-          {suffix && <span className="text-xl font-medium text-vaporwave-cyan font-mono">{suffix}</span>}
+          {suffix && (
+            <span className="text-xl font-medium text-vaporwave-cyan font-mono">{suffix}</span>
+          )}
         </div>
-        {trend !== "neutral" && (
+        {trend !== 'neutral' && (
           <p className="mt-3 flex items-center gap-1 text-xs text-vaporwave-text-muted font-mono">
-            <span className={`flex items-center ${trend === "up" ? "text-vaporwave-cyan" : "text-vaporwave-pink"}`}>
-              {trend === "up" ? "↗" : "↘"} +{increment * 10}%
+            <span
+              className={`flex items-center ${trend === 'up' ? 'text-vaporwave-cyan' : 'text-vaporwave-pink'}`}
+            >
+              {trend === 'up' ? '↗' : '↘'} +{increment * 10}%
             </span>
             <span>from last hour</span>
           </p>

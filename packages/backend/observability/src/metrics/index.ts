@@ -15,7 +15,6 @@ import {
 } from 'prom-client'
 import type { MiddlewareHandler } from 'hono'
 import { logger } from '@repo/logger'
-
 import { MetricsConfigSchema, type MetricsConfig, type MetricsInput } from './__types__/index.js'
 
 export * from './__types__/index.js'
@@ -183,7 +182,7 @@ export function getMetrics(): MetricsCollectors {
  * ```
  */
 export function createMetricsEndpoint(registry?: Registry): MiddlewareHandler {
-  return async (c) => {
+  return async c => {
     const reg = registry ?? getMetrics().registry
     try {
       const metrics = await reg.metrics()
@@ -232,10 +231,7 @@ export function createHttpMetricsMiddleware(collectors?: MetricsCollectors): Mid
         status,
       })
 
-      metrics.httpDuration.observe(
-        { method: c.req.method, route },
-        duration,
-      )
+      metrics.httpDuration.observe({ method: c.req.method, route }, duration)
 
       metrics.httpActiveConnections.dec()
     }
@@ -292,8 +288,14 @@ export function observeDbQueryDuration(
  * Creates no-op collectors for when metrics are disabled.
  */
 function createNoopCollectors(): MetricsCollectors {
-  const noopCounter = { inc: () => {}, labels: () => ({ inc: () => {} }) } as unknown as Counter<string>
-  const noopHistogram = { observe: () => {}, labels: () => ({ observe: () => {} }) } as unknown as Histogram<string>
+  const noopCounter = {
+    inc: () => {},
+    labels: () => ({ inc: () => {} }),
+  } as unknown as Counter<string>
+  const noopHistogram = {
+    observe: () => {},
+    labels: () => ({ observe: () => {} }),
+  } as unknown as Histogram<string>
   const noopGauge = { set: () => {}, inc: () => {}, dec: () => {} } as unknown as Gauge<string>
 
   return {

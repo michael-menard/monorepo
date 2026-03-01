@@ -1,0 +1,116 @@
+# ChangeSpec Decomposition Template
+# ---------------------------------------------------------------------------
+# Each decomposition file follows the ChangeSpecCollection schema (schema: 1).
+# Parse this against ChangeSpecCollectionSchema in change-spec.ts.
+# This template documents all fields with descriptions and examples.
+# ---------------------------------------------------------------------------
+schema: 1
+story_id: "APIP-XXXX"   # Replace with the story being decomposed (e.g. APIP-0010)
+generated_at: "2026-02-26T00:00:00.000Z"  # ISO-8601 timestamp of decomposition
+
+changes:
+  # -------------------------------------------------------------------------
+  # Variant: file_change — a source file to create, modify, or delete
+  # -------------------------------------------------------------------------
+  - schema: 1
+    story_id: "APIP-XXXX"
+    id: "CS-1"                        # Unique ID within this story (CS-N format)
+    change_type: "file_change"        # Discriminator: file_change | migration_change | config_change | test_change
+    file_path: "packages/backend/my-package/src/index.ts"   # Repo-relative path to the file
+    file_action: "create"             # create | modify | delete
+    file_language: "typescript"       # typescript | javascript | yaml | json | markdown | sql | other
+    description: "Create the main entry point exporting all public APIs"
+    rationale: >
+      Consumers need a stable import path. This file re-exports from sub-modules
+      following the packages/ pattern established in @repo/rate-limiter.
+    ac_ids:                           # One or more ACs this change satisfies
+      - "AC-1"
+      - "AC-10"
+    estimated_tokens: 3000            # Rough LLM token cost to implement
+    complexity: "low"                 # trivial | low | medium | high | unknown
+    test_strategy: "unit"             # unit | integration | e2e | manual | none | unit+integration
+    test_hints:
+      - "Verify all exports are re-exported correctly"
+      - "Check no circular imports"
+    expected_behavior: >
+      Importing from @repo/my-package resolves to dist/index.js with all
+      exported symbols available.
+    dependencies: []                  # CS-N IDs this change depends on within this story
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  # -------------------------------------------------------------------------
+  # Variant: migration_change — a database schema migration
+  # -------------------------------------------------------------------------
+  - schema: 1
+    story_id: "APIP-XXXX"
+    id: "CS-2"
+    change_type: "migration_change"
+    file_path: "db/migrations/apip/002_add_pipeline_jobs.sql"
+    migration_version: "002"          # Sequential version number
+    migration_name: "add_pipeline_jobs"   # Short descriptive name (snake_case)
+    reversible: false                 # Whether a DOWN migration exists
+    affected_tables:                  # Tables created/altered by this migration
+      - "apip.pipeline_jobs"
+    description: "Add pipeline_jobs table to track queued work items"
+    rationale: "Required for job state persistence across supervisor restarts"
+    ac_ids:
+      - "AC-3"
+    estimated_tokens: 2000
+    complexity: "low"
+    test_strategy: "integration"
+    test_hints:
+      - "Verify table exists after migration"
+      - "Verify idempotency: re-run migration without error"
+    expected_behavior: "apip.pipeline_jobs table exists with correct schema"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  # -------------------------------------------------------------------------
+  # Variant: config_change — a config file change (package.json, tsconfig, etc.)
+  # -------------------------------------------------------------------------
+  - schema: 1
+    story_id: "APIP-XXXX"
+    id: "CS-3"
+    change_type: "config_change"
+    file_path: "packages/backend/my-package/package.json"
+    config_type: "package_json"       # package_json | tsconfig | env | docker_compose | vitest_config | build_config | other
+    adds_dependency: true             # Whether this adds a new package dependency
+    dependency_names:                 # Packages being added/updated
+      - "bullmq"
+      - "ioredis"
+    description: "Add bullmq and ioredis dependencies to pipeline-queue package"
+    rationale: "BullMQ v5+ requires ioredis v5+"
+    ac_ids:
+      - "AC-1"
+    estimated_tokens: 500
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm install succeeds; pnpm why bullmq shows correct version"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  # -------------------------------------------------------------------------
+  # Variant: test_change — a test file to create or modify
+  # -------------------------------------------------------------------------
+  - schema: 1
+    story_id: "APIP-XXXX"
+    id: "CS-4"
+    change_type: "test_change"
+    file_path: "packages/backend/my-package/src/__tests__/my-schema.test.ts"
+    covers_file: "packages/backend/my-package/src/__types__/index.ts"   # File under test
+    test_framework: "vitest"          # vitest | playwright | jest | other
+    test_type: "unit"                 # unit | integration | e2e | manual
+    description: "Unit tests for MySchema — HP-1/HP-2/EC-1 test cases"
+    rationale: "Validates all Zod schema variants and rejection cases per test plan"
+    ac_ids:
+      - "AC-7"
+    estimated_tokens: 5000
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "Test valid payload round-trips"
+      - "Test ZodError for each required field missing"
+    expected_behavior: "pnpm test --filter @repo/my-package -- my-schema exits 0"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"

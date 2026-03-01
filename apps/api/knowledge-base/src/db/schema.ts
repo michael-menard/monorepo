@@ -24,6 +24,7 @@ import {
   boolean,
   integer,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 /**
  * Custom Drizzle column type for pgvector VECTOR columns.
@@ -743,10 +744,14 @@ export const storyDependencies = pgTable(
 )
 
 /**
- * Story Artifacts Table (KBAR-001)
+ * Story Artifacts Table (Jump Table)
  *
- * Links stories to implementation artifacts (checkpoints, plans, proofs, etc.)
- * and optionally to knowledge base entries for searchable content.
+ * Registry/index that points to type-specific detail tables.
+ * Each artifact has a row here plus a row in the appropriate type-specific table
+ * (e.g., artifact_checkpoints, artifact_reviews, etc.)
+ *
+ * The detail_table + detail_id columns form a polymorphic FK to the type-specific table.
+ * Content is stored in the type-specific table, not here.
  *
  * @see plans/active/kb-story-artifact-migration/PLAN.md
  */
@@ -766,14 +771,11 @@ export const storyArtifacts = pgTable(
      */
     artifactType: text('artifact_type').notNull(),
 
-    /** Human-readable name for the artifact */
+    /** Human-readable name for the artifact (disambiguates multiple artifacts of same type) */
     artifactName: text('artifact_name'),
 
     /** Optional link to knowledge_entries table */
     kbEntryId: uuid('kb_entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
-
-    /** Relative path to artifact file (deprecated - use content column) */
-    filePath: text('file_path'),
 
     /** Implementation phase this artifact belongs to */
     phase: text('phase'),
@@ -784,11 +786,11 @@ export const storyArtifacts = pgTable(
     /** JSONB summary for quick access without KB query */
     summary: jsonb('summary'),
 
-    /**
-     * Full artifact content stored as JSONB.
-     * Replaces file-based storage for workflow artifacts (CHECKPOINT.yaml, EVIDENCE.yaml, etc.)
-     */
-    content: jsonb('content'),
+    /** Name of the type-specific detail table (e.g., 'artifact_checkpoints') */
+    detailTable: text('detail_table'),
+
+    /** UUID FK to the row in the type-specific table */
+    detailId: uuid('detail_id'),
 
     /** When the artifact was created */
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -801,6 +803,321 @@ export const storyArtifacts = pgTable(
     typeIdx: index('idx_story_artifacts_type').on(table.artifactType),
     kbEntryIdx: index('idx_story_artifacts_kb_entry').on(table.kbEntryId),
     phaseIdx: index('idx_story_artifacts_phase').on(table.phase),
+    detailIdx: index('idx_story_artifacts_detail').on(table.detailTable, table.detailId),
+  }),
+)
+
+// ============================================================================
+// Type-Specific Artifact Tables
+// ============================================================================
+
+/**
+ * Artifact Checkpoints Table
+ *
+ * Stores phase completion checkpoints for stories and epics.
+ */
+export const artifactCheckpoints = pgTable(
+  'artifact_checkpoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    phaseStatus: jsonb('phase_status').notNull().default({}),
+    resumeFrom: integer('resume_from'),
+    featureDir: text('feature_dir'),
+    prefix: text('prefix'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_checkpoints_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifact_checkpoints_scope').on(table.scope),
+  }),
+)
+
+/**
+ * Artifact Contexts Table
+ *
+ * Stores agent context for stories and epics.
+ */
+export const artifactContexts = pgTable(
+  'artifact_contexts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    featureDir: text('feature_dir'),
+    prefix: text('prefix'),
+    storyCount: integer('story_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_contexts_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifact_contexts_scope').on(table.scope),
+  }),
+)
+
+/**
+ * Artifact Reviews Table
+ *
+ * Stores review results from various perspectives.
+ */
+export const artifactReviews = pgTable(
+  'artifact_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    perspective: text('perspective'),
+    verdict: text('verdict'),
+    findingCount: integer('finding_count'),
+    criticalCount: integer('critical_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_reviews_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifact_reviews_scope').on(table.scope),
+    perspectiveIdx: index('idx_artifact_reviews_perspective').on(table.perspective),
+    verdictIdx: index('idx_artifact_reviews_verdict').on(table.verdict),
+  }),
+)
+
+/**
+ * Artifact Elaborations Table
+ *
+ * Stores elaboration results including story analysis, decisions, and follow-ups.
+ */
+export const artifactElaborations = pgTable(
+  'artifact_elaborations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    elaborationType: text('elaboration_type').notNull().default('story_analysis'),
+    verdict: text('verdict'),
+    decisionCount: integer('decision_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_elaborations_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifact_elaborations_scope').on(table.scope),
+    typeIdx: index('idx_artifact_elaborations_type').on(table.elaborationType),
+    verdictIdx: index('idx_artifact_elaborations_verdict').on(table.verdict),
+  }),
+)
+
+/**
+ * Artifact Analyses Table
+ *
+ * Stores analysis results (roadmap, bottleneck, churn, general).
+ */
+export const artifactAnalyses = pgTable(
+  'artifact_analyses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: text('scope').notNull().default('story'),
+    targetId: text('target_id').notNull(),
+    analysisType: text('analysis_type').default('general'),
+    summaryText: text('summary_text'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_analyses_target_id').on(table.targetId),
+    scopeIdx: index('idx_artifact_analyses_scope').on(table.scope),
+    typeIdx: index('idx_artifact_analyses_type').on(table.analysisType),
+  }),
+)
+
+/**
+ * Artifact Scopes Table
+ *
+ * Stores story scope definitions.
+ */
+export const artifactScopes = pgTable(
+  'artifact_scopes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    touchesBackend: boolean('touches_backend'),
+    touchesFrontend: boolean('touches_frontend'),
+    touchesDatabase: boolean('touches_database'),
+    touchesInfra: boolean('touches_infra'),
+    fileCount: integer('file_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_scopes_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact Plans Table
+ *
+ * Stores implementation plans for stories.
+ */
+export const artifactPlans = pgTable(
+  'artifact_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    stepCount: integer('step_count'),
+    estimatedComplexity: text('estimated_complexity'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_plans_target_id').on(table.targetId),
+  }),
+)
+
+/**
+ * Artifact Evidence Table
+ *
+ * Stores implementation evidence with acceptance criteria tracking.
+ */
+export const artifactEvidence = pgTable(
+  'artifact_evidence',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    acTotal: integer('ac_total'),
+    acMet: integer('ac_met'),
+    acStatus: text('ac_status'),
+    testPassCount: integer('test_pass_count'),
+    testFailCount: integer('test_fail_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_evidence_target_id').on(table.targetId),
+    acStatusIdx: index('idx_artifact_evidence_ac_status').on(table.acStatus),
+  }),
+)
+
+/**
+ * Artifact Verifications Table
+ *
+ * Stores QA verification results.
+ */
+export const artifactVerifications = pgTable(
+  'artifact_verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    verdict: text('verdict'),
+    findingCount: integer('finding_count'),
+    criticalCount: integer('critical_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_verifications_target_id').on(table.targetId),
+    verdictIdx: index('idx_artifact_verifications_verdict').on(table.verdict),
+  }),
+)
+
+/**
+ * Artifact Fix Summaries Table
+ *
+ * Stores fix cycle summaries.
+ */
+export const artifactFixSummaries = pgTable(
+  'artifact_fix_summaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    iteration: integer('iteration').notNull().default(0),
+    issuesFixed: integer('issues_fixed'),
+    issuesRemaining: integer('issues_remaining'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_fix_summaries_target_id').on(table.targetId),
+    iterationIdx: index('idx_artifact_fix_summaries_iteration').on(table.iteration),
+  }),
+)
+
+/**
+ * Artifact Proofs Table
+ *
+ * Stores implementation proofs.
+ */
+export const artifactProofs = pgTable(
+  'artifact_proofs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    proofType: text('proof_type'),
+    verified: boolean('verified'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_proofs_target_id').on(table.targetId),
+    proofTypeIdx: index('idx_artifact_proofs_proof_type').on(table.proofType),
+  }),
+)
+
+/**
+ * Artifact QA Gates Table
+ *
+ * Stores QA gate decisions.
+ */
+export const artifactQaGates = pgTable(
+  'artifact_qa_gates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    decision: text('decision').notNull().default('FAIL'),
+    reviewer: text('reviewer'),
+    findingCount: integer('finding_count'),
+    blockerCount: integer('blocker_count'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_qa_gates_target_id').on(table.targetId),
+    decisionIdx: index('idx_artifact_qa_gates_decision').on(table.decision),
+  }),
+)
+
+/**
+ * Artifact Completion Reports Table
+ *
+ * Stores story completion reports.
+ */
+export const artifactCompletionReports = pgTable(
+  'artifact_completion_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetId: text('target_id').notNull(),
+    status: text('status'),
+    iterationsUsed: integer('iterations_used'),
+    data: jsonb('data'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    targetIdIdx: index('idx_artifact_completion_reports_target_id').on(table.targetId),
+    statusIdx: index('idx_artifact_completion_reports_status').on(table.status),
   }),
 )
 
@@ -976,6 +1293,9 @@ export const plans = pgTable(
      */
     priority: text('priority').default('P3'),
 
+    /** Plan slugs that must reach 'implemented' before this plan can start */
+    dependencies: jsonb('dependencies').$type<string[]>(),
+
     /** Tags for filtering (inferred from content) */
     tags: text('tags').array(),
 
@@ -1010,6 +1330,9 @@ export const plans = pgTable(
     statusIdx: index('idx_plans_status').on(table.status),
     planTypeIdx: index('idx_plans_plan_type').on(table.planType),
     storyPrefixIdx: index('idx_plans_story_prefix').on(table.storyPrefix),
+    storyPrefixUniqueIdx: uniqueIndex('idx_plans_story_prefix_unique')
+      .on(table.storyPrefix)
+      .where(sql`story_prefix IS NOT NULL`),
     featureDirIdx: index('idx_plans_feature_dir').on(table.featureDir),
     createdAtIdx: index('idx_plans_created_at').on(table.createdAt),
   }),
@@ -1078,6 +1401,19 @@ export type StoryDependency = typeof storyDependencies.$inferSelect
 export type NewStoryDependency = typeof storyDependencies.$inferInsert
 export type StoryArtifact = typeof storyArtifacts.$inferSelect
 export type NewStoryArtifact = typeof storyArtifacts.$inferInsert
+export type ArtifactCheckpoint = typeof artifactCheckpoints.$inferSelect
+export type ArtifactContext = typeof artifactContexts.$inferSelect
+export type ArtifactReview = typeof artifactReviews.$inferSelect
+export type ArtifactElaboration = typeof artifactElaborations.$inferSelect
+export type ArtifactAnalysis = typeof artifactAnalyses.$inferSelect
+export type ArtifactScope = typeof artifactScopes.$inferSelect
+export type ArtifactPlan = typeof artifactPlans.$inferSelect
+export type ArtifactEvidenceRow = typeof artifactEvidence.$inferSelect
+export type ArtifactVerification = typeof artifactVerifications.$inferSelect
+export type ArtifactFixSummary = typeof artifactFixSummaries.$inferSelect
+export type ArtifactProof = typeof artifactProofs.$inferSelect
+export type ArtifactQaGate = typeof artifactQaGates.$inferSelect
+export type ArtifactCompletionReport = typeof artifactCompletionReports.$inferSelect
 export type StoryAuditLogEntry = typeof storyAuditLog.$inferSelect
 export type NewStoryAuditLogEntry = typeof storyAuditLog.$inferInsert
 export type StoryTokenUsage = typeof storyTokenUsage.$inferSelect

@@ -1,0 +1,194 @@
+schema: 1
+story_id: "KFMB-1040"
+timestamp: "2026-02-26T00:00:00Z"
+
+# ============================================================================
+# SOURCE VERIFICATION — CONFIRMED FINDINGS
+# ============================================================================
+#
+# Files inspected and line-level claims verified:
+#
+#   apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+#     line 3675: export async function handleKbDeleteArtifact — CONFIRMED
+#     line 4539: kb_delete_artifact: handleKbDeleteArtifact (dispatch map) — CONFIRMED
+#
+#   apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+#     line 2524: export const kbDeleteArtifactToolDefinition — CONFIRMED
+#     line 3316: kbDeleteArtifactToolDefinition in toolDefinitions array — CONFIRMED
+#
+#   apps/api/knowledge-base/src/crud-operations/artifact-operations.ts
+#     line 172: export const KbDeleteArtifactInputSchema = z.object({ artifact_id: z.string().uuid(...) }) — CONFIRMED
+#     line 882:  export async function kb_delete_artifact(artifactId, deps) — CONFIRMED
+#                Two-phase delete: reads jump row → deleteDetailRow() → deletes storyArtifacts row — CONFIRMED
+#
+#   apps/api/knowledge-base/src/mcp-server/access-control.ts
+#     line 43:  'kb_delete_artifact' in ToolNameSchema enum — CONFIRMED
+#     line 117: kb_delete_artifact: new Set(['pm']) in ACCESS_MATRIX — CONFIRMED
+#
+#   apps/api/knowledge-base/src/mcp-server/__tests__/artifact-tools.test.ts
+#     line 365: describe('handleKbDeleteArtifact') block — CONFIRMED
+#     Tests present: HP-4 (deleted:true), EC-8 (deleted:false), EC-9 (invalid UUID),
+#                    EC-10 (DB rejection), bare-string dispatch assertion — CONFIRMED
+#     AC-6 authorization test (non-PM role rejection): ABSENT — CONFIRMED GAP
+#
+# EC-9 note: The story claims EC-9 tests authorization before Zod, but the
+# test uses pmContext, not devContext. The describe-block comment explicitly
+# states "EC-9 uses pmContext to isolate the error under test (not authorization
+# failure)." This means EC-9 does NOT cover AC-6. The gap is genuine and
+# unambiguous — one new test is required.
+#
+# handler flow note: enforceAuthorization is called BEFORE KbDeleteArtifactInputSchema.parse().
+# A non-PM caller would fail authorization before reaching Zod validation.
+# The AC-6 test must therefore use a valid UUID to reach the auth gate cleanly.
+# The story's suggested test body uses generateTestUuid() which is correct.
+# ============================================================================
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story is scoped strictly to verification + one test addition. The index
+      (stories.index.md) lists KFMB-1040 as "Register kb_delete_artifact MCP Tool"
+      in Phase 1 (Schema & API Foundation) with no dependencies. The story
+      correctly declares itself a verification task — implementation was already
+      completed as part of the DB-first artifact storage work. Scope matches index.
+      No extra features or undeclared changes are present. The only modification
+      allowed (artifact-tools.test.ts) is scoped to exactly one test (AC-6).
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goals and non-goals are internally consistent. The goal ("confirm full
+      end-to-end operation, add one missing auth test") does not contradict any
+      non-goal. Non-goals correctly prohibit modifying production source files
+      (tool-handlers.ts, tool-schemas.ts, artifact-operations.ts, access-control.ts)
+      which are all confirmed complete. ACs 1-8 all map cleanly to verifiable
+      states. The test plan coverage table (pm_artifacts.test_plan) correctly
+      categorizes each AC as verified_by_code_inspection, verified_by_existing_unit_test,
+      or gap_requiring_new_test. No contradictions found.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      The story explicitly references sibling test patterns (handleKbWriteArtifact /
+      handleKbReadArtifact describe blocks) and authorization test patterns from
+      other describe blocks. The proposed EC-11 test reuses existing test
+      infrastructure: generateTestUuid(), ToolCallContext, mockDeps, and the
+      handleKbDeleteArtifact import already present in the test file. No
+      one-off utilities are introduced. The @repo/logger and enforceAuthorization
+      reuse directives are correctly documented in the Reuse Plan section.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      The handleKbDeleteArtifact handler follows the canonical ports-and-adapters
+      shape established by handleKbWriteArtifact: transport-agnostic core logic
+      in artifact-operations.ts (CRUD layer), MCP-specific wiring in tool-handlers.ts
+      (adapter layer), schema validation via KbDeleteArtifactInputSchema (port
+      contract), and access control via enforceAuthorization (cross-cutting
+      concern). Service file (artifact-operations.ts) is correctly identified.
+      This story makes no changes to the architecture — it only adds a test.
+
+  - id: testability
+    status: PASS
+    note: >
+      All existing tests are concrete, runnable Vitest unit tests with mocked
+      dependencies. The one new test (EC-11) is fully specified in the story with
+      exact code: generateTestUuid(), devContext with agent_role:'dev', and
+      expect(result.isError).toBe(true). The verification command
+      (pnpm test --filter @repo/knowledge-base) is provided at both the story
+      level and per-subtask. AC-1 (ListTools presence) correctly designates manual
+      verification since it requires a running MCP server — this is an accepted
+      limitation not a testability gap. No blocking testability issues.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs. All integration points are confirmed present in code.
+      The only open question (whether to test agent_role:'dev' only or also 'qa'
+      and 'all') is resolved by the story's suggested test body — it uses 'dev'
+      as the representative non-PM role, which is sufficient since all non-PM
+      roles share the same ACCESS_MATRIX exclusion for kb_delete_artifact. The
+      dev_feasibility artifact confirms feasible:true, confidence:high.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Risks are explicitly documented in pm_artifacts. Three risks disclosed:
+      (1) AC-6 auth test missing — risk of silent regression on future refactor.
+        Mitigation: add EC-11 (the purpose of this story).
+      (2) AC-1 ListTools presence not covered by unit tests — manual verification
+        required. This is a known and accepted limitation for MCP ListTools responses.
+      (3) AC-8 dual-table delete verified by code inspection only at unit level —
+        UAT requires real DB per ADR-005. The story correctly scopes unit-only
+        testing and defers DB-level UAT. No auth risks or DB risks are undisclosed.
+        No infrastructure or migration risks (touches_database: false, touches_infra: false).
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      1 story point. 8 ACs but 7 are verification-only (no code changes). Only
+      AC-6 requires a code addition (one test, ~10 lines). Only one file may be
+      modified (artifact-tools.test.ts). No endpoints, no frontend, no DB
+      migrations, no deploy touchpoints. The split_risk prediction of 0.2 is
+      well-justified by the note explaining the downward adjustment from the
+      heuristic baseline. Story does not exhibit any "too large" indicators for
+      a verification task of this nature. PASS — no split required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      Four subtasks defined (ST-1 through ST-4). All 8 ACs are covered:
+        ST-1 covers AC-3, AC-4, AC-5, AC-7 (run existing tests).
+        ST-2 covers AC-6 (add EC-11 authorization test).
+        ST-3 covers AC-1, AC-2 (code inspection of tool-schemas.ts + tool-handlers.ts).
+        ST-4 covers AC-8 (code inspection of artifact-operations.ts).
+      No subtask modifies more than 1 file. DAG dependencies are correct:
+      ST-1 has no dependencies (runs first), ST-2 depends on ST-1, ST-3 and ST-4
+      are independent of each other and of ST-1/ST-2. Each subtask has a concrete
+      verification command. Canonical references table is present with exact line
+      numbers. No gaps in coverage.
+
+gaps: []
+
+opportunities:
+  - id: OPP-1
+    title: "Consider testing agent_role:'qa' and 'all' in AC-6 test for completeness"
+    detail: >
+      The story's suggested EC-11 test uses agent_role:'dev' as the representative
+      non-PM role. The ACCESS_MATRIX for kb_delete_artifact is new Set(['pm']),
+      meaning dev, qa, and all are all rejected. Testing only 'dev' is sufficient
+      for correctness but a parameterized test covering all three non-PM roles
+      would provide stronger regression coverage. Effort: ~5 lines (it.each).
+    effort: "low"
+    category: edge_cases
+    decision: "log_to_kb"
+    kb_entry_id: null
+
+  - id: OPP-2
+    title: "AC-1 ListTools manual verification could be automated via getToolDefinitions() unit assertion"
+    detail: >
+      AC-1 requires manual MCP server startup to verify kb_delete_artifact appears
+      in the ListTools response. The story notes this is verified by code inspection.
+      A lightweight unit test calling getToolDefinitions() and asserting the
+      returned array contains an entry with name:'kb_delete_artifact' would close
+      this gap without requiring a running server. This pattern likely exists for
+      other tools and could be added to artifact-tools.test.ts with minimal effort.
+    effort: "low"
+    category: observability
+    decision: "log_to_kb"
+    kb_entry_id: null
+
+split_recommendation: null
+
+preliminary_verdict: PASS
+
+verdict: PASS
+decided_at: "2026-02-26T00:00:00Z"
+
+summary:
+  gaps_found: 0
+  gaps_resolved: 0
+  opportunities_found: 2
+  opportunities_logged: 2
+  acs_added: 0

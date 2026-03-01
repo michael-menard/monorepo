@@ -1,0 +1,25 @@
+schema: 1
+story_id: APIP-1050
+timestamp: "2026-02-25T18:52:00Z"
+phase: implementation
+branch: "feature/APIP-1050-review-graph"
+worktree: /Users/michaelmenard/Development/monorepo/tree/story/APIP-1050
+constraints:
+  - "Use Zod schemas for all types — Source: CLAUDE.md"
+  - "No barrel files — Source: CLAUDE.md"
+  - "Use @repo/logger, not console — Source: CLAUDE.md"
+  - "Minimum 45% test coverage — Source: CLAUDE.md"
+  - "Named exports preferred — Source: CLAUDE.md"
+  - "Implement 10 parallel review workers (lint, style, syntax, typecheck, build, react, typescript, reusability, accessibility, security) via LangGraph Send API — Source: Story requirements"
+  - "Security worker must budget Claude API calls and check token limits before invoking model — Source: Story risk notes"
+  - "Fan-in aggregation must map findings back to specific ChangeSpecs using RankedPatch schema — Source: Story requirements"
+  - "Thread ID must follow convention storyId:review:attempt for traceability — Source: Happy path test HP-7"
+  - "REVIEW.yaml must be written to correct story feature directory path — Source: Happy path test HP-5"
+next_steps:
+  - "Read story requirements and understand review worker architecture"
+  - "Implement review graph with LangGraph Send API for parallel fan-out"
+  - "Implement 10 worker nodes with proper error handling and timeout detection"
+  - "Implement fan-in aggregation with addWorkerResult and generateRankedPatches helpers"
+  - "Implement REVIEW.yaml artifact writing with proper path resolution"
+  - "Write unit and integration tests (target 45%+ coverage)"
+  - "Run verification against happy path and error case tests"

@@ -1,0 +1,125 @@
+# ChangeSpec Decomposition: APIP-5000 — Test Infrastructure Setup for Autonomous Pipeline Unit Testing
+# Story: Create test fixture factories and mock utilities for BullMQ and supervisor testing
+schema: 1
+story_id: "APIP-5000"
+generated_at: "2026-02-26T00:00:00.000Z"
+
+changes:
+  - schema: 1
+    story_id: "APIP-5000"
+    id: "CS-1"
+    change_type: "config_change"
+    file_path: "apps/api/autonomous-pipeline/package.json"
+    config_type: "package_json"
+    adds_dependency: true
+    dependency_names:
+      - "@repo/pipeline-queue"
+      - "vitest"
+      - "@vitest/coverage-v8"
+    description: "Create package.json for apps/api/autonomous-pipeline test infrastructure package"
+    rationale: "Scaffold new package for shared test utilities; workspace registration"
+    ac_ids:
+      - "AC-1"
+    estimated_tokens: 500
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "Package scaffolded; pnpm install succeeds"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-5000"
+    id: "CS-2"
+    change_type: "config_change"
+    file_path: "apps/api/autonomous-pipeline/vitest.config.ts"
+    config_type: "vitest_config"
+    adds_dependency: false
+    dependency_names: []
+    description: "Create vitest.config.ts with fileParallelism: false, coverage >=45%, setupFiles"
+    rationale: "HP-6: fileParallelism: false required for DB isolation; coverage gate enforced"
+    ac_ids:
+      - "AC-9"
+    estimated_tokens: 400
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints:
+      - "fileParallelism: false"
+      - "coverage threshold: 45% statements/branches/functions/lines"
+    expected_behavior: "pnpm test runs with correct config; coverage report generated"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-5000"
+    id: "CS-3"
+    change_type: "file_change"
+    file_path: "apps/api/autonomous-pipeline/src/test/fixtures/bullmq-fixtures.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement createMockBullMQJob(), createMockBullMQWorker(), createMockQueue() factory functions — all return Zod-validated types"
+    rationale: "HP-2/HP-3/HP-4: fixture factories with override support; all vi.fn() stubs; Zod-validated returns"
+    ac_ids:
+      - "AC-2"
+      - "AC-3"
+      - "AC-4"
+      - "AC-7"
+    estimated_tokens: 3000
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "createMockBullMQJob() returns PipelineJobData.parse()-passing object"
+      - "createMockBullMQWorker() returns { on: vi.fn(), close: vi.fn() }"
+      - "createMockQueue() returns { add: vi.fn(), getJob: vi.fn(), pause: vi.fn(), resume: vi.fn(), close: vi.fn() }"
+      - "Override support: createMockBullMQJob({ name: 'custom-job' })"
+    expected_behavior: "All fixture factories return Zod-validated objects; vi.fn() stubs don't throw"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-5000"
+    id: "CS-4"
+    change_type: "file_change"
+    file_path: "apps/api/autonomous-pipeline/src/test/fixtures/supervisor-fixtures.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement createSupervisorStateFixture() factory with override support — returns Zod-validated supervisor state"
+    rationale: "HP-5: supervisor state fixture factory; EC-2: invalid override is rejected by Zod"
+    ac_ids:
+      - "AC-5"
+      - "AC-8"
+    estimated_tokens: 1500
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "Returns supervisor state that passes SupervisorStateSchema.parse()"
+      - "Override support: createSupervisorStateFixture({ status: 'completed' })"
+      - "Invalid override throws ZodError (EC-2)"
+    expected_behavior: "Fixture factory returns valid state; overrides applied; invalid overrides rejected"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-5000"
+    id: "CS-5"
+    change_type: "test_change"
+    file_path: "apps/api/autonomous-pipeline/src/test/__tests__/fixtures.test.ts"
+    covers_file: "apps/api/autonomous-pipeline/src/test/fixtures/bullmq-fixtures.ts"
+    test_framework: "vitest"
+    test_type: "unit"
+    description: "Unit tests for all fixture factories: HP-2 through HP-7, EC-1 through EC-2"
+    rationale: "Validates fixture factories themselves — ensures downstream tests have valid fixtures"
+    ac_ids:
+      - "AC-6"
+    estimated_tokens: 3000
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "createMockBullMQJob() passes Zod schema parse"
+      - "createMockBullMQWorker() stubs are vi.fn() instances"
+      - "createMockQueue() methods are vi.fn() instances"
+      - "Invalid override throws ZodError"
+      - "pnpm check-types: no raw interfaces on return types"
+    expected_behavior: "pnpm test --filter autonomous-pipeline exits 0 with >=45% coverage"
+    dependencies: ["CS-3", "CS-4"]
+    created_at: "2026-02-26T00:00:00.000Z"

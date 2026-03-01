@@ -11,12 +11,12 @@ import {
   Bell,
   RefreshCw,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import CommandCenterPage from './command-center/page'
 import AgentNetworkPage from './agent-network/page'
 import OperationsPage from './operations/page'
 import IntelligencePage from './intelligence/page'
 import SystemsPage from './systems/page'
+import { Button } from '@/components/ui/button'
 
 export default function TacticalDashboard() {
   const [activeSection, setActiveSection] = useState('overview')

@@ -1,0 +1,20 @@
+id: "APIP-4020"
+title: "Cohesion Scanner — Weekly Pattern Consistency Scan and Auto-Remediation Story Generator"
+status: ready-to-work
+priority: medium
+phase: 4
+epic: autonomous-pipeline
+experiment_variant: "control"
+points: 8
+story_type: feature
+feature: "autonomous-pipeline"
+story_dir: "plans/future/platform/autonomous-pipeline/ready-to-work/APIP-4020"
+story_file: "plans/future/platform/autonomous-pipeline/ready-to-work/APIP-4020/APIP-4020.md"
+depends_on:
+  - APIP-4010
+  - APIP-3090
+touches_backend: true
+touches_frontend: false
+touches_database: true
+touches_infra: false
+created: "2026-02-25T00:00:00Z"

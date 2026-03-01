@@ -790,7 +790,6 @@ export async function generateQAGapAnalysis(
     let edgeCaseGaps = identifyEdgeCases(storyStructure)
     if (!fullConfig.includeExamples) {
       edgeCaseGaps = edgeCaseGaps.map(gap => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { example: _example, ...rest } = gap
         return rest as EdgeCaseGap
       })

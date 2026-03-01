@@ -1,0 +1,235 @@
+strategy: integration+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+  notes: >
+    No HTTP endpoints. All state reads use MCP tool calls to KB (postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase).
+    Shell scripts use `claude -p` + `--allowedTools` pattern. Per ADR-005, integration tests
+    must use a live KB instance — do not mock DB calls. Per ADR-006, E2E tests are
+    not applicable (no frontend surface).
+
+happy_path_tests:
+  - id: HP-1
+    title: "/precondition-check with KB available returns db_state_used: true"
+    setup: >
+      Story exists in DB with state 'ready_to_work'. KB running at port 5433.
+    action: >
+      Invoke `/precondition-check KFMB-4020 --command=dev-implement-story --in-stage=ready-to-work`
+    expected: >
+      Result YAML contains `db_state_used: true`. `story_path` is derived from DB state,
+      not from directory scan. `verdict: PASS` when story is in correct stage.
+    evidence: >
+      Observe result YAML; confirm no directory scan log lines appear when KB returns non-null.
+
+  - id: HP-2
+    title: "/context-init with KB available includes db_state_used: true in result"
+    setup: >
+      Story exists in DB with state 'ready_to_work'. KB running at port 5433.
+    action: >
+      Invoke `/context-init KFMB-4020 dev-implement-story`
+    expected: >
+      AGENT-CONTEXT.md written with `paths.base` derived from DB state → swim-lane mapping.
+      Result YAML includes `db_state_used: true`.
+    evidence: >
+      Read AGENT-CONTEXT.md and result YAML to confirm both DB-sourced paths and the flag.
+
+  - id: HP-3
+    title: "generate-stories.sh skips ALREADY_GENERATED story via KB query"
+    setup: >
+      Story exists in DB with state 'backlog' (generated but not elaborated). KB running.
+    action: >
+      Run `./scripts/generate-stories.sh kb-first-migration --only KFMB-4020 --dry-run`
+    expected: >
+      Script logs `[KB-FIRST] state from DB: backlog` and marks story as `ALREADY_GENERATED`.
+      No directory scan for state detection.
+    evidence: >
+      Filter log in /tmp/kb-first-migration-logs/ shows `SKIP KFMB-4020 reason=already-generated`.
+
+  - id: HP-4
+    title: "implement-stories.sh find_story_dir returns path via KB state"
+    setup: >
+      Story exists in DB with state 'ready_to_work', directory present at ready-to-work/.
+      KB running.
+    action: >
+      Run `find_story_dir KFMB-4020` from within implement-stories.sh context
+    expected: >
+      Returns the path to the story directory based on KB state → swim-lane mapping.
+      Logs `[KB-FIRST] state from DB: ready_to_work`.
+    evidence: >
+      STORY_DIR variable set correctly in filter log.
+
+  - id: HP-5
+    title: "/precondition-check --in-stage validates via STATE_TO_SWIM_LANE reverse map"
+    setup: >
+      DB state = 'ready_to_work'. `--in-stage=ready-to-work` passed.
+    action: >
+      Invoke `/precondition-check KFMB-4020 --command=dev-implement-story --in-stage=ready-to-work`
+    expected: >
+      Checks STATE_TO_SWIM_LANE['ready_to_work'] == 'ready-to-work'. Match found.
+      `checks.stage_correct: true`.
+    evidence: >
+      Result YAML shows `checks.stage_correct: true` and `db_state_used: true`.
+
+error_cases:
+  - id: EC-1
+    title: "/precondition-check falls back to filesystem when KB unavailable"
+    setup: >
+      KB at port 5433 is not running (or returns null for the story).
+    action: >
+      Invoke `/precondition-check KFMB-4020 --command=dev-implement-story`
+    expected: >
+      Command proceeds. `db_state_used: false` in result. Warning logged.
+      Story location determined by directory scan. Does NOT hard-fail.
+    evidence: >
+      Result YAML contains `db_state_used: false`. Warning line appears in command output.
+
+  - id: EC-2
+    title: "/context-init falls back to directory scan when KB returns null"
+    setup: >
+      KB unavailable or returns null for the story ID.
+    action: >
+      Invoke `/context-init KFMB-4020 dev-implement-story`
+    expected: >
+      AGENT-CONTEXT.md written with `paths.base` derived from directory scan.
+      Result YAML contains `db_state_used: false`. Warning logged.
+    evidence: >
+      AGENT-CONTEXT.md present with valid path. Result YAML has `db_state_used: false`.
+
+  - id: EC-3
+    title: "generate-stories.sh logs warning and falls back on KB miss"
+    setup: >
+      KB unavailable for a story ID. Story directory exists at backlog/.
+    action: >
+      Run `./scripts/generate-stories.sh kb-first-migration --only KFMB-4020 --dry-run`
+    expected: >
+      Script logs `[KB-FIRST FALLBACK] using filesystem` for that story.
+      State detection falls back to file presence check. No script crash.
+    evidence: >
+      Script output contains `[KB-FIRST FALLBACK] using filesystem` for KFMB-4020.
+
+  - id: EC-4
+    title: "implement-stories.sh is_implemented falls back when KB miss"
+    setup: >
+      KB returns null for story ID. EVIDENCE.yaml exists on filesystem.
+    action: >
+      Call `is_implemented` function in implement-stories.sh context
+    expected: >
+      Returns truthy via EVIDENCE.yaml check. Logs `[KB-FIRST FALLBACK] using filesystem`.
+      No hard failure.
+    evidence: >
+      Story is not skipped due to KB miss; falls back to file check correctly.
+
+  - id: EC-5
+    title: "/precondition-check --in-stage mismatch fails gracefully when db_state_used: true"
+    setup: >
+      DB state = 'in_progress' (in-progress/). --in-stage=ready-to-work passed.
+    action: >
+      Invoke `/precondition-check KFMB-4020 --command=dev-implement-story --in-stage=ready-to-work`
+    expected: >
+      `verdict: FAIL`. `checks.stage_correct: false`.
+      `failures[].expected: ready-to-work`, `failures[].actual: in-progress`.
+    evidence: >
+      Result YAML contains expected failure structure.
+
+edge_cases:
+  - id: ED-1
+    title: "generate-stories.sh handles mixed KB hit/miss across story batch"
+    setup: >
+      Some stories in DB, some not. KB running.
+    action: >
+      Run `./scripts/generate-stories.sh kb-first-migration --dry-run`
+    expected: >
+      Stories with DB state: log `[KB-FIRST] state from DB: {state}`.
+      Stories without DB state: log `[KB-FIRST FALLBACK] using filesystem`.
+      Script completes without crashing.
+    evidence: >
+      Filter log shows per-story KB vs fallback decisions.
+
+  - id: ED-2
+    title: "STATE_TO_SWIM_LANE reverse map handles DB-only states (blocked, cancelled)"
+    setup: >
+      Story in DB with state 'blocked' (no swim-lane directory equivalent).
+    action: >
+      Invoke `/precondition-check` for such a story.
+    expected: >
+      STATE_TO_SWIM_LANE reverse lookup returns null for 'blocked'.
+      Command falls back to directory scan for stage validation.
+    evidence: >
+      `db_state_used: true` for status check, but stage check uses directory fallback.
+
+  - id: ED-3
+    title: "implement-stories.sh is_completed uses KB state UAT/done equivalents"
+    setup: >
+      Story in DB with state 'done'. No UAT/ or done/ directory exists.
+    action: >
+      Call `is_completed STORY_DIR STORY_ID` in implement-stories.sh.
+    expected: >
+      Returns true based on DB state. Story skipped from implementation run.
+      Logs `[KB-FIRST] state from DB: done`.
+    evidence: >
+      Story correctly excluded from implementation batch.
+
+  - id: ED-4
+    title: "/precondition-check --status reads frontmatter when db_state_used: false"
+    setup: >
+      KB unavailable. Story frontmatter has `status: backlog`.
+    action: >
+      Invoke `/precondition-check KFMB-4020 --command=elab-story --status=backlog`
+    expected: >
+      `db_state_used: false`. Status read from frontmatter. `checks.status_valid: true`.
+    evidence: >
+      Result YAML shows frontmatter-sourced status check passing.
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "db_state_used field present in all /precondition-check result YAMLs"
+      - "db_state_used field present in all /context-init result YAMLs"
+      - "KB query only called once per story per command invocation (no duplicate calls)"
+      - "[KB-FIRST] or [KB-FIRST FALLBACK] log line present for each story processed"
+  frontend: ~
+
+manual_cases:
+  - id: MC-1
+    title: "Version bump and history entry in all modified .md command files"
+    steps:
+      - "Read .claude/commands/precondition-check.md frontmatter"
+      - "Verify version > 1.0.0 (e.g., 2.0.0)"
+      - "Verify version_history entry for KB-first change present"
+      - "Repeat for context-init.md"
+    expected: >
+      Both files have version bump and history entry documenting KB-first behavioral change.
+
+  - id: MC-2
+    title: "All modified shell scripts have [KB-FIRST] log pattern added"
+    steps:
+      - "Grep generate-stories.sh for '[KB-FIRST]'"
+      - "Grep implement-stories.sh for '[KB-FIRST]'"
+      - "Confirm pattern appears in state detection code paths, not just comments"
+    expected: >
+      Both scripts have [KB-FIRST] and [KB-FIRST FALLBACK] log lines in state detection functions.
+
+fixture_definitions:
+  - name: kb_story_ready_to_work
+    type: DB fixture
+    description: >
+      A story row in the stories table with state='ready_to_work' and story_id=KFMB-4020.
+      Used for KB-available happy path tests.
+  - name: kb_story_in_progress
+    type: DB fixture
+    description: >
+      A story row in the stories table with state='in_progress'.
+      Used for stage mismatch tests.
+  - name: story_dir_ready_to_work
+    type: filesystem fixture
+    description: >
+      Story directory at plans/future/platform/kb-first-migration/ready-to-work/KFMB-TEST-001/
+      with minimal story.yaml. Used for directory fallback tests.
+
+risks:
+  - "ADR-005 compliance: integration tests require a live KB at port 5433 — CI must have the KB service available or tests must be tagged as requiring KB"
+  - "Shell script test coverage is limited to --dry-run inspection; actual state detection function behavior requires unit-level bash testing or manual verification"
+  - "STATE_TO_SWIM_LANE reverse map correctness depends on SWIM_LANE_TO_STATE being authoritative — any drift between the constant and actual DB states is not caught by these tests"
+  - "Mixed KB hit/miss scenarios in batch runs require careful fixture setup to avoid false positives from directory presence"

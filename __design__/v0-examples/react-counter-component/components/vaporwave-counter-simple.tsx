@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus, Minus } from "lucide-react"
+import type React from 'react'
+import { useState } from 'react'
+import { Plus, Minus } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface VaporwaveCounterSimpleProps {
   title?: string
@@ -14,15 +14,15 @@ interface VaporwaveCounterSimpleProps {
 }
 
 export function VaporwaveCounterSimple({
-  title = "Total Count",
+  title = 'Total Count',
   initialValue = 0,
   icon,
   step = 1,
 }: VaporwaveCounterSimpleProps) {
   const [count, setCount] = useState(initialValue)
 
-  const increment = () => setCount((prev) => prev + step)
-  const decrement = () => setCount((prev) => Math.max(0, prev - step))
+  const increment = () => setCount(prev => prev + step)
+  const decrement = () => setCount(prev => Math.max(0, prev - step))
 
   return (
     <Card className="relative overflow-hidden border-vaporwave-border bg-vaporwave-bg backdrop-blur-sm aspect-square flex flex-col max-w-xs">

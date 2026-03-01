@@ -120,7 +120,10 @@ export const inspirationAlbumItems = pgTable(
     // Indexes for efficient joins
     inspirationIdx: index('idx_inspiration_album_items_inspiration').on(table.inspirationId),
     albumIdx: index('idx_inspiration_album_items_album').on(table.albumId),
-    albumSortIdx: index('idx_inspiration_album_items_album_sort').on(table.albumId, table.sortOrder),
+    albumSortIdx: index('idx_inspiration_album_items_album_sort').on(
+      table.albumId,
+      table.sortOrder,
+    ),
     // Unique constraint: prevent duplicate inspiration-album pairs
     uniqueInspirationAlbum: uniqueIndex('inspiration_album_items_unique').on(
       table.inspirationId,

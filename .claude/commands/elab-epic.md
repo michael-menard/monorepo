@@ -48,8 +48,12 @@ Task tool:
 
 ## Resume
 
-If `{FEATURE_DIR}/_epic-elab/CHECKPOINT.md` exists:
-- Read `resume_from` value
+Check KB for checkpoint artifact:
+```
+kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="checkpoint")
+```
+If found:
+- Read `resume_from` value from content
 - Skip completed phases
 - Continue from that phase
 
@@ -59,7 +63,10 @@ Report: "{FEATURE_DIR} blocked at Phase N: <reason>"
 
 ## Done
 
-Final verdict from `{FEATURE_DIR}/_epic-elab/EPIC-REVIEW.yaml`.
+Read final verdict from KB:
+```
+kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")
+```
 
 **Next by verdict:**
 - `READY` → `/elab-story {PREFIX}-001`

@@ -105,12 +105,12 @@ export const ERROR_RETRY_DEFAULTS: Record<WorkflowErrorType, ErrorRetryConfig> =
  * Actions that can be taken when an error occurs.
  */
 export const ErrorRecoveryActionSchema = z.enum([
-  'RETRY',           // Retry the operation
-  'FAIL_PHASE',      // Mark the phase as failed
-  'SKIP',            // Skip and continue to next operation
-  'FALLBACK',        // Use fallback behavior
-  'MANUAL',          // Require manual intervention
-  'CIRCUIT_BREAK',   // Open circuit breaker, prevent further attempts
+  'RETRY', // Retry the operation
+  'FAIL_PHASE', // Mark the phase as failed
+  'SKIP', // Skip and continue to next operation
+  'FALLBACK', // Use fallback behavior
+  'MANUAL', // Require manual intervention
+  'CIRCUIT_BREAK', // Open circuit breaker, prevent further attempts
 ])
 
 export type ErrorRecoveryAction = z.infer<typeof ErrorRecoveryActionSchema>
@@ -330,10 +330,7 @@ export function shouldOpenCircuit(
 /**
  * Gets the retry delay for the current attempt.
  */
-export function getRetryDelay(
-  errorType: WorkflowErrorType,
-  attempt: number,
-): number {
+export function getRetryDelay(errorType: WorkflowErrorType, attempt: number): number {
   const config = ERROR_RETRY_DEFAULTS[errorType]
 
   if (!config.retryable || attempt >= config.maxRetries) {

@@ -1,0 +1,222 @@
+schema: 1
+story_id: "APIP-0010"
+version: 1
+timestamp: "2026-02-25T16:50:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "Package skeleton @repo/pipeline-queue created with package.json, tsconfig.json, vitest.config.ts"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/package.json"
+        description: "Package @repo/pipeline-queue with bullmq, ioredis, zod, @repo/logger deps"
+      - type: file
+        path: "packages/backend/pipeline-queue/tsconfig.json"
+        description: "TypeScript config matching rate-limiter pattern (ES2022, moduleResolution: bundler)"
+      - type: file
+        path: "packages/backend/pipeline-queue/vitest.config.ts"
+        description: "Vitest config for node environment"
+
+  - ac_id: "AC-2"
+    ac_text: "PipelineJobDataSchema exported from @repo/pipeline-queue with required storyId/phase and optional priority/metadata"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/src/__types__/index.ts"
+        description: "PipelineJobDataSchema z.object with storyId, phase enum, optional priority/metadata; PipelineJobData type exported"
+      - type: test
+        path: "packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts"
+        description: "13 unit tests validating schema fields, all phases, optional fields, and invalid payloads"
+
+  - ac_id: "AC-3"
+    ac_text: "createPipelineQueue wraps BullMQ Queue with Zod validation at enqueue time, defaultJobOptions: attempts=3, exponential backoff 1000ms"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/src/index.ts"
+        description: "createPipelineQueue factory with PipelineJobDataSchema.parse() in add() wrapper; defaultJobOptions: attempts=3, backoff: exponential/1000ms"
+      - type: test
+        path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+        description: "Tests assert: attempts=3, backoff.type=exponential, backoff.delay=1000, ZodError thrown before bullQueue.add on invalid data"
+
+  - ac_id: "AC-4"
+    ac_text: "createPipelineConnection creates IORedis without lazyConnect, without singleton, with enableOfflineQueue: false"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/src/index.ts"
+        description: "createPipelineConnection: enableOfflineQueue=false, maxRetriesPerRequest=null, no lazyConnect, no module-level singleton"
+      - type: test
+        path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+        description: "Tests assert: enableOfflineQueue=false, maxRetriesPerRequest=null, lazyConnect=undefined, two calls create two instances (no singleton)"
+
+  - ac_id: "AC-5"
+    ac_text: "PIPELINE_QUEUE_NAME = 'apip-pipeline' exported as stable constant; createPipelineQueue defaults to it"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/src/index.ts"
+        description: "PIPELINE_QUEUE_NAME = 'apip-pipeline' exported; createPipelineQueue(connection) defaults queueName to PIPELINE_QUEUE_NAME"
+      - type: test
+        path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+        description: "Test: PIPELINE_QUEUE_NAME === 'apip-pipeline'; Queue created with PIPELINE_QUEUE_NAME when no override"
+
+  - ac_id: "AC-6"
+    ac_text: "README.md contains Bull Board mount instructions section"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/README.md"
+        description: "README contains 'Bull Board Setup' section with @bull-board/api, @bull-board/express mount example"
+
+  - ac_id: "AC-7"
+    ac_text: "pnpm test --filter @repo/pipeline-queue exits 0 (unit tests pass)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm --filter @repo/pipeline-queue test"
+        result: "PASS"
+        description: "29 tests pass (13 schema tests + 16 queue factory tests), 2 integration tests skipped (REDIS_URL not set)"
+
+  - ac_id: "AC-8"
+    ac_text: "Integration test: enqueue/dequeue round-trip, test.skipIf(!REDIS_URL)"
+    status: PASS
+    evidence_items:
+      - type: test
+        path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts"
+        description: "Integration test with REDIS_URL guard (test.skipIf(!REDIS_URL)): enqueue job, verify getWaitingCount>=1, Worker dequeues and schema.parse succeeds; skipped in CI without Redis"
+
+  - ac_id: "AC-9"
+    ac_text: "pnpm check-types exits 0; pnpm test exits 0"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm --filter @repo/pipeline-queue type-check"
+        result: "PASS"
+        description: "tsc --noEmit exits 0, no type errors"
+      - type: command
+        command: "pnpm --filter @repo/pipeline-queue test"
+        result: "PASS"
+        description: "vitest run: 29 passed, 2 skipped"
+      - type: command
+        command: "pnpm --filter @repo/pipeline-queue build"
+        result: "PASS"
+        description: "tsc emit: dist/index.js, dist/index.d.ts, dist/__types__/index.d.ts"
+
+  - ac_id: "AC-10"
+    ac_text: "Package importable as @repo/pipeline-queue after pnpm install (pnpm-workspace.yaml already covers packages/backend/*)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm install && pnpm --filter @repo/pipeline-queue build"
+        result: "PASS"
+        description: "pnpm-workspace.yaml 'packages/backend/*' glob covers pipeline-queue automatically; package installs and builds without workspace.yaml edit"
+
+  - ac_id: "AC-11"
+    ac_text: "README.md contains: queue name, payload schema fields, two-connection model, AOF persistence note"
+    status: PASS
+    evidence_items:
+      - type: file
+        path: "packages/backend/pipeline-queue/README.md"
+        description: "README contains: Queue Contract table (queue name 'apip-pipeline'), Payload Schema section (all fields), Connection Model section (two-connection model), Persistence: AOF note (ElastiCache AOF tier requirement)"
+
+touched_files:
+  - path: "packages/backend/pipeline-queue/package.json"
+    action: created
+    lines: 38
+    description: "@repo/pipeline-queue package manifest with bullmq, ioredis, zod, @repo/logger dependencies"
+  - path: "packages/backend/pipeline-queue/tsconfig.json"
+    action: created
+    lines: 27
+    description: "TypeScript config following rate-limiter pattern"
+  - path: "packages/backend/pipeline-queue/vitest.config.ts"
+    action: created
+    lines: 14
+    description: "Vitest node environment config"
+  - path: "packages/backend/pipeline-queue/README.md"
+    action: created
+    lines: 148
+    description: "Package documentation: queue name, schema, connection model, AOF note, Bull Board setup"
+  - path: "packages/backend/pipeline-queue/src/__types__/index.ts"
+    action: created
+    lines: 37
+    description: "PipelineJobDataSchema (Zod) and PipelineJobData type export"
+  - path: "packages/backend/pipeline-queue/src/index.ts"
+    action: created
+    lines: 136
+    description: "PIPELINE_QUEUE_NAME, createPipelineConnection, createPipelineQueue, PipelineQueue interface"
+  - path: "packages/backend/pipeline-queue/src/__tests__/pipeline-job-schema.test.ts"
+    action: created
+    lines: 109
+    description: "13 unit tests for PipelineJobDataSchema"
+  - path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.test.ts"
+    action: created
+    lines: 216
+    description: "16 unit tests for createPipelineConnection, createPipelineQueue, PIPELINE_QUEUE_NAME"
+  - path: "packages/backend/pipeline-queue/src/__tests__/pipeline-queue.integration.test.ts"
+    action: created
+    lines: 105
+    description: "2 integration tests (skipIf !REDIS_URL) for enqueue/dequeue round-trip"
+
+commands_run:
+  - command: "pnpm install"
+    result: SUCCESS
+    output: "bullmq added to @repo/pipeline-queue; pnpm-workspace.yaml already covered packages/backend/*"
+    timestamp: "2026-02-25T16:45:00Z"
+  - command: "pnpm --filter @repo/pipeline-queue type-check"
+    result: SUCCESS
+    output: "tsc --noEmit exits 0"
+    timestamp: "2026-02-25T16:49:00Z"
+  - command: "pnpm --filter @repo/pipeline-queue build"
+    result: SUCCESS
+    output: "tsc emit: dist/index.js, dist/index.d.ts generated"
+    timestamp: "2026-02-25T16:49:20Z"
+  - command: "pnpm --filter @repo/pipeline-queue test"
+    result: SUCCESS
+    output: "29 passed, 2 skipped (integration tests: REDIS_URL not set)"
+    timestamp: "2026-02-25T16:49:44Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 29, fail: 0 }
+  integration: { pass: 0, fail: 0, skipped: 2 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "Library/infrastructure package — no HTTP endpoints, no UI. PM test plan explicitly sets strategy: unit+integration with coverage_waiver: true. No browser-testable surface."
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+  failed_tests: []
+  config_issues: []
+  videos: []
+  screenshots: []
+
+coverage:
+  lines: null
+  branches: null
+  note: "Coverage waiver granted by PM: infrastructure/library story, QA gate = type-check + unit + integration"
+
+notable_decisions:
+  - "Used ConnectionOptions from bullmq instead of Redis type directly to avoid ioredis version mismatch (BullMQ bundles ioredis@5.9.3; monorepo has 5.9.2)"
+  - "Used vi.hoisted() pattern for vi.mock factories to avoid temporal dead zone in Vitest"
+  - "Used try/catch + instanceof ZodError assertions instead of rejects.toThrow() due to Zod v4 error representation in newer zod@3.25.x"
+  - "Built @repo/logger manually (rm tsconfig.tsbuildinfo + tsc) because incremental cache prevented emit in worktree context"
+  - "Omitted tsup.config.ts per ARCH-003 decision: rate-limiter uses plain tsc, pipeline-queue follows same pattern"
+  - "PIPELINE_QUEUE_NAME = 'apip-pipeline' is a stable contract per ARCH decision — documented prominently in README"
+
+known_deviations:
+  - "tsup.config.ts listed in PLAN.yaml ST-1 files was intentionally omitted (ARCH-003: rate-limiter uses tsc not tsup)"
+  - "Integration tests skipped (REDIS_URL not set in CI) — test.skipIf guard is working as designed (AC-8)"
+
+token_summary:
+  execute: { in: 85000, out: 18000 }

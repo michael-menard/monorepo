@@ -1,0 +1,252 @@
+# ChangeSpec Decomposition: APIP-0020 — Supervisor Loop (Plain TypeScript)
+# Story: Implement PipelineSupervisor that consumes BullMQ jobs and dispatches to LangGraph graphs
+schema: 1
+story_id: "APIP-0020"
+generated_at: "2026-02-26T00:00:00.000Z"
+
+changes:
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-1"
+    change_type: "config_change"
+    file_path: "apps/api/pipeline/package.json"
+    config_type: "package_json"
+    adds_dependency: true
+    dependency_names:
+      - "@repo/orchestrator"
+      - "@repo/pipeline-queue"
+      - "@repo/logger"
+      - "zod"
+      - "bullmq"
+      - "ioredis"
+    description: "Create package.json for apps/api/pipeline with workspace dependencies"
+    rationale: "New app — depends on @repo/orchestrator for NodeCircuitBreaker (AC-14)"
+    ac_ids:
+      - "AC-1"
+      - "AC-14"
+    estimated_tokens: 600
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm install succeeds; @repo/orchestrator importable from pipeline app"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-2"
+    change_type: "config_change"
+    file_path: "apps/api/pipeline/tsconfig.json"
+    config_type: "tsconfig"
+    adds_dependency: false
+    dependency_names: []
+    description: "Create tsconfig.json for pipeline app"
+    rationale: "TypeScript strict mode; extends root tsconfig"
+    ac_ids:
+      - "AC-1"
+    estimated_tokens: 300
+    complexity: "trivial"
+    test_strategy: "none"
+    test_hints: []
+    expected_behavior: "pnpm check-types --filter pipeline exits 0"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-3"
+    change_type: "file_change"
+    file_path: "apps/api/pipeline/src/supervisor/__types__/index.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Define Zod job payload schema with discriminated union on stage (elaboration | story-creation) including payload sub-object"
+    rationale: "Resolves GAP-001: runElaboration() requires SynthesizedStory, not storyId. Thread ID convention documented as inline ADR"
+    ac_ids:
+      - "AC-2"
+      - "AC-3"
+      - "AC-13"
+    estimated_tokens: 2500
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "Validate elaboration stage with SynthesizedStory payload"
+      - "Validate story-creation stage with StoryRequest payload"
+      - "Reject unknown stage enum value"
+      - "Thread ID convention documented as ADR comment"
+    expected_behavior: "Zod schema validates both stage variants; TypeScript types inferred correctly"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-4"
+    change_type: "file_change"
+    file_path: "apps/api/pipeline/src/supervisor/wall-clock-timeout.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Define WallClockTimeoutError class and createWallClockTimeout() helper that returns a rejecting Promise after configurable ms"
+    rationale: "AC-6 and AC-15: timeout must be handled before general error classifier (two-catch pattern)"
+    ac_ids:
+      - "AC-6"
+      - "AC-15"
+    estimated_tokens: 800
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "WallClockTimeoutError instanceof Error === true"
+      - "Timeout rejects after stageTimeoutMs"
+      - "vi.useFakeTimers() for deterministic testing"
+    expected_behavior: "WallClockTimeoutError thrown when timeout fires before graph completion"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-5"
+    change_type: "file_change"
+    file_path: "apps/api/pipeline/src/supervisor/graph-circuit-breakers.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Export elaborationCircuitBreaker and storyCreationCircuitBreaker NodeCircuitBreaker instances imported from @repo/orchestrator"
+    rationale: "AC-8 and AC-14: one NodeCircuitBreaker per graph; must import from @repo/orchestrator, not re-implement"
+    ac_ids:
+      - "AC-8"
+      - "AC-14"
+    estimated_tokens: 800
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "Both circuit breakers start in CLOSED state"
+      - "Circuit OPEN triggers delayed re-queue, not failure"
+    expected_behavior: "NodeCircuitBreaker instances protect each graph independently"
+    dependencies: ["CS-1"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-6"
+    change_type: "file_change"
+    file_path: "apps/api/pipeline/src/supervisor/dispatch-router.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement dispatch router: thread ID derivation, circuit check, Promise.race timeout, two-catch error classification, structured lifecycle logging"
+    rationale: "Core dispatch logic: routes by stage, enforces AC-3/AC-4/AC-5/AC-6/AC-7/AC-8/AC-9/AC-15"
+    ac_ids:
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
+      - "AC-6"
+      - "AC-7"
+      - "AC-8"
+      - "AC-9"
+      - "AC-15"
+    estimated_tokens: 6000
+    complexity: "high"
+    test_strategy: "unit"
+    test_hints:
+      - "Mock runElaboration() and runStoryCreation() at module boundary"
+      - "WallClockTimeoutError caught before general error classifier"
+      - "PERMANENT error → immediate BullMQ fail"
+      - "TRANSIENT error → re-throw for BullMQ retry"
+      - "Circuit OPEN → delayed re-queue"
+      - "All lifecycle events logged with required fields"
+    expected_behavior: "Dispatch router routes correctly for all stages; timeout and error paths work as specified"
+    dependencies: ["CS-3", "CS-4", "CS-5"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-7"
+    change_type: "file_change"
+    file_path: "apps/api/pipeline/src/supervisor/index.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement PipelineSupervisor class with start() and stop() methods; wraps BullMQ Worker with concurrency: 1"
+    rationale: "AC-1 and AC-2: start() creates Worker; stop() closes it gracefully; idempotent start()"
+    ac_ids:
+      - "AC-1"
+      - "AC-2"
+    estimated_tokens: 2500
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "start() is idempotent — Worker constructor called exactly once"
+      - "stop() calls worker.close()"
+      - "Redis client validated on startup (null check)"
+    expected_behavior: "PipelineSupervisor.start() registers BullMQ Worker; stop() gracefully shuts down"
+    dependencies: ["CS-3", "CS-6"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-8"
+    change_type: "test_change"
+    file_path: "apps/api/pipeline/src/supervisor/__tests__/dispatch-router.test.ts"
+    covers_file: "apps/api/pipeline/src/supervisor/dispatch-router.ts"
+    test_framework: "vitest"
+    test_type: "unit"
+    description: "Unit tests: dispatch routing HP-1/HP-2, thread ID HP-3, error classification EC-1/EC-2/EC-3, circuit open EC-4, idempotency ED-2"
+    rationale: "AC-10 requires comprehensive unit coverage without real Redis"
+    ac_ids:
+      - "AC-10"
+    estimated_tokens: 8000
+    complexity: "high"
+    test_strategy: "unit"
+    test_hints:
+      - "Mock runElaboration() and runStoryCreation() via vi.mock()"
+      - "vi.useFakeTimers() for wall clock timeout test"
+      - "PERMANENT error → job.getState() === 'failed'"
+      - "TRANSIENT error → BullMQ retry state"
+      - "Thread ID format: storyId:stage:attemptNumber"
+    expected_behavior: "pnpm test --filter pipeline -- dispatch-router exits 0"
+    dependencies: ["CS-6", "CS-7"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-9"
+    change_type: "test_change"
+    file_path: "apps/api/pipeline/src/supervisor/__tests__/wall-clock-timeout.test.ts"
+    covers_file: "apps/api/pipeline/src/supervisor/wall-clock-timeout.ts"
+    test_framework: "vitest"
+    test_type: "unit"
+    description: "Unit tests for WallClockTimeoutError and createWallClockTimeout()"
+    rationale: "AC-6: timeout path must reject with WallClockTimeoutError; bypass error classifier"
+    ac_ids:
+      - "AC-6"
+      - "AC-15"
+    estimated_tokens: 2000
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "vi.useFakeTimers() to advance time"
+      - "WallClockTimeoutError instanceof Error === true"
+    expected_behavior: "pnpm test --filter pipeline -- wall-clock-timeout exits 0"
+    dependencies: ["CS-4"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0020"
+    id: "CS-10"
+    change_type: "test_change"
+    file_path: "apps/api/pipeline/src/supervisor/__tests__/integration/supervisor.integration.test.ts"
+    covers_file: "apps/api/pipeline/src/supervisor/index.ts"
+    test_framework: "vitest"
+    test_type: "integration"
+    description: "Integration test: enqueue real BullMQ job to Docker Compose Redis; supervisor processes to completed/failed"
+    rationale: "AC-11 and AC-12: validates full BullMQ lifecycle + orchestrator regression guard"
+    ac_ids:
+      - "AC-11"
+      - "AC-12"
+    estimated_tokens: 5000
+    complexity: "high"
+    test_strategy: "integration"
+    test_hints:
+      - "Guard with REDIS_URL env var check"
+      - "Use real Docker Compose Redis (port 6379)"
+      - "Mock LangGraph graphs to return immediately"
+      - "Assert job.getState() === 'completed' or 'failed'"
+      - "Run pnpm test --filter @repo/orchestrator as regression guard"
+    expected_behavior: "REDIS_URL set: BullMQ job processes end-to-end; orchestrator tests pass unchanged"
+    dependencies: ["CS-7"]
+    created_at: "2026-02-26T00:00:00.000Z"

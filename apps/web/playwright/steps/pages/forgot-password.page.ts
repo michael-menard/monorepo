@@ -125,4 +125,3 @@ export class ForgotPasswordPage {
     return null
   }
 }
-

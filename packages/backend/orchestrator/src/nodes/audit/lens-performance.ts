@@ -1,6 +1,5 @@
 import { readFile } from 'fs/promises'
 import { extname } from 'path'
-
 import type { CodeAuditState } from '../../graphs/code-audit.js'
 import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js'
 
@@ -11,7 +10,9 @@ import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js
  */
 
 function isTestFile(filePath: string): boolean {
-  return filePath.includes('__tests__') || filePath.includes('.test.') || filePath.includes('.spec.')
+  return (
+    filePath.includes('__tests__') || filePath.includes('.test.') || filePath.includes('.spec.')
+  )
 }
 
 const BACKEND_HIGH_PATTERNS = [
@@ -70,7 +71,9 @@ async function scanFile(filePath: string): Promise<AuditFinding[]> {
   const patterns = [
     ...(isBackend ? BACKEND_HIGH_PATTERNS.map(p => ({ ...p, severity: 'high' as const })) : []),
     ...(isFrontend ? FRONTEND_HIGH_PATTERNS.map(p => ({ ...p, severity: 'high' as const })) : []),
-    ...(isFrontend ? FRONTEND_MEDIUM_PATTERNS.map(p => ({ ...p, severity: 'medium' as const })) : []),
+    ...(isFrontend
+      ? FRONTEND_MEDIUM_PATTERNS.map(p => ({ ...p, severity: 'medium' as const }))
+      : []),
   ]
 
   for (const { pattern, title, rule, severity } of patterns) {

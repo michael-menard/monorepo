@@ -26,7 +26,9 @@ import {
 function getRequiredEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}. Check apps/web/playwright/.env`)
+    throw new Error(
+      `Missing required environment variable: ${name}. Check apps/web/playwright/.env`,
+    )
   }
   return value
 }
@@ -48,7 +50,11 @@ const TEST_USERS = [
   { username: 'kenny.mccormick', email: 'kenny.mccormick@southpark.test', name: 'Kenny McCormick' },
   { username: 'butters.stotch', email: 'butters.stotch@southpark.test', name: 'Butters Stotch' },
   { username: 'randy.marsh', email: 'randy.marsh@southpark.test', name: 'Randy Marsh' },
-  { username: 'wendy.testaburger', email: 'wendy.testaburger@southpark.test', name: 'Wendy Testaburger' },
+  {
+    username: 'wendy.testaburger',
+    email: 'wendy.testaburger@southpark.test',
+    name: 'Wendy Testaburger',
+  },
   { username: 'jimmy.valmer', email: 'jimmy.valmer@southpark.test', name: 'Jimmy Valmer' },
   { username: 'timmy.burch', email: 'timmy.burch@southpark.test', name: 'Timmy Burch' },
   { username: 'token.black', email: 'token.black@southpark.test', name: 'Token Black' },

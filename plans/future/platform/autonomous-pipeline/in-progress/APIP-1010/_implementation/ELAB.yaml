@@ -1,0 +1,708 @@
+---
+# ELAB.yaml — Phase 1 Elaboration Analysis + Phase 1.5 Autonomous Decisions
+# Story: APIP-1010 — Structurer Node in Elaboration Graph
+# Analyst: elab-analyst (Phase 1 Worker)
+# Decider: elab-autonomous-decider (Phase 1.5 Worker)
+# Generated: 2026-02-25
+# Decided: 2026-02-25T23:48:00Z
+# Methodology: 9-point audit checklist + MVP gap analysis + autonomous gap resolution
+
+meta:
+  story_id: APIP-1010
+  story_title: "Structurer Node in Elaboration Graph"
+  phase: 1_5
+  epic: autonomous-pipeline
+  story_points: 5
+  split_risk_predicted: 0.8
+  analyst_model: claude-sonnet-4-6
+  decider_model: claude-sonnet-4-6
+  canonical_references_verified: true
+  decided_at: "2026-02-25T23:48:00Z"
+
+# ============================================================================
+# CANONICAL REFERENCE VERIFICATION
+# ============================================================================
+
+canonical_references:
+  delta_detect_ts:
+    path: packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts
+    exists: true
+    observations:
+      - "Uses createToolNode (not createLLMNode) — appropriate for computation-heavy node"
+      - "Zod schemas defined at top of file before any functions — canonical pattern confirmed"
+      - "All types are z.infer<typeof Schema> — no TypeScript interfaces"
+      - "Exports include: schemas, types, helper functions, factory function, direct node"
+      - "Node factory pattern: createDeltaDetectionNode(config) returns createToolNode(...)"
+      - "IMPORTANT: delta-detect.ts does NOT import from ElaborationState — uses its own GraphStateWithDeltaDetection interface (NOTE: this uses an interface, not Zod — a deviation from CLAUDE.md)"
+      - "IMPORTANT: delta-detect.ts extends GraphState with interface syntax — story must NOT copy this pattern"
+      - "The story correctly instructs using createToolNode with ElaborationState from elaboration.ts"
+
+  elaboration_ts:
+    path: packages/backend/orchestrator/src/graphs/elaboration.ts
+    exists: true
+    observations:
+      - "ElaborationStateAnnotation uses Annotation.Root() with overwrite reducer — exact pattern story must follow"
+      - "overwrite reducer defined as const: const overwrite = <T>(_: T, b: T): T => b"
+      - "warnings/errors use append reducer: (current, update) => [...current, ...update]"
+      - "afterAggregate currently returns 'update_readiness' | 'save_to_db' — story extends this"
+      - "ElaborationConfigSchema uses sub-object pattern with .default({}) — story must follow same pattern for structurerConfig"
+      - "ElaborationResultSchema fields are z.unknown().nullable() for complex results — structurer fields should use typed schemas"
+      - "runElaboration signature: (currentStory, previousStory, config) — story confirms this must remain unchanged"
+      - "createElaborationGraph: uses fullConfig pattern (ElaborationConfigSchema.parse(config))"
+      - "CRITICAL GAP: afterAggregate currently only returns 'update_readiness' | 'save_to_db' — story must change return type to also include 'structurer'"
+      - "graph.compile() called without arguments — no parameter needed"
+      - "dbLoadSuccess and dbSaveSuccess fields exist in ElaborationStateAnnotation — structurer state fields slot in before these"
+
+  elaboration_index_ts:
+    path: packages/backend/orchestrator/src/nodes/elaboration/index.ts
+    exists: true
+    observations:
+      - "Current exports: delta-detect, delta-review, escape-hatch nodes and schemas"
+      - "Export pattern uses named re-exports with 'type' keyword for types"
+      - "FLOW comments used per export block — story's ST-5 should add FLOW comment for Structurer"
+      - "No barrel file concern — this IS the index for the elaboration nodes subdirectory"
+
+  node_factory_ts:
+    path: packages/backend/orchestrator/src/runner/node-factory.ts
+    exists: true
+    observations:
+      - "createToolNode(name, implementation) — 2 args: string name + NodeImplementation function"
+      - "NodeImplementation signature: (state: GraphState, config?: RunnableConfig) => Promise<Partial<GraphState>> | Partial<GraphState>"
+      - "createToolNode uses: maxAttempts=2, backoffMs=500, timeoutMs=10000"
+      - "MISMATCH: story specifies nodeTimeoutMs: 60000 in StructurerConfigSchema default — but createToolNode hardcodes 10000ms timeout"
+      - "The nodeTimeoutMs in StructurerConfigSchema is a logical timeout for the node's own work (not the wrapper timeout)"
+      - "createLLMNode uses: maxAttempts=5, timeoutMs=60000 — if Structurer may use LLM path, createToolNode may be wrong preset"
+      - "Story uses createToolNode for heuristic-first design — acceptable since LLM is optional fallback"
+
+  elaboration_test_ts:
+    path: packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    exists: true
+    observations:
+      - "createTestState fixture defines all ElaborationState fields explicitly — ST-7 must extend this fixture"
+      - "dbLoadSuccess and dbSaveSuccess NOT in createTestState — they come from ElaborationStateAnnotation defaults"
+      - "Tests use vi.mock('@repo/logger') — structurer.test.ts should mirror this"
+      - "Graph tests call createElaborationGraph() and verify .invoke is a function — routing tests use node return values"
+      - "afterAggregate routing tested indirectly via createAggregateNode tests — ST-7 should test afterAggregate as a named export"
+      - "ISSUE: afterAggregate is NOT currently exported from elaboration.ts — it is a module-level function"
+      - "ST-7 will need to test routing differently: either export afterAggregate or test via graph execution"
+
+  elaboration_nodes_existing:
+    path: packages/backend/orchestrator/src/nodes/elaboration/
+    existing_tests:
+      - __tests__/delta-detect.test.ts
+      - __tests__/delta-review.test.ts
+      - __tests__/escape-hatch.test.ts
+    observations:
+      - "Structurer test should go in: __tests__/structurer.test.ts — consistent with existing pattern"
+      - "Test files exist for all current nodes — pattern is established"
+
+# ============================================================================
+# 9-POINT AUDIT CHECKLIST
+# ============================================================================
+
+audit:
+
+  # --------------------------------------------------------------------------
+  # 1. SCOPE ALIGNMENT
+  # --------------------------------------------------------------------------
+  scope_alignment:
+    verdict: PASS
+    score: 9/10
+    findings:
+      - finding: "Story scope is tightly constrained to packages/backend/orchestrator only"
+        severity: info
+        detail: "No frontend, no database, no infrastructure changes — single package scope"
+      - finding: "Non-goals are explicit and well-bounded — APIP-1020 ChangeSpec schema, automated splitting, LLM-primary path all excluded"
+        severity: info
+        detail: "Non-goals prevent scope creep into downstream stories"
+      - finding: "Critical path position (story #3 of 12) correctly stated with unblocking rationale"
+        severity: info
+        detail: "Unblocks APIP-1020 and APIP-1030"
+      - finding: "Baseline gap clearly documented — no Structurer exists, no change_outline schema exists"
+        severity: info
+        detail: "All new files are net-new, no pre-existing Structurer to refactor"
+      - finding: "MINOR: Story scope says 'Files to Modify: elaboration.ts' but this file is large (1156 lines) — changes are surgical and bounded"
+        severity: low
+        detail: "The scope is well-defined: extend 3 schemas, update afterAggregate, add node to graph"
+
+  # --------------------------------------------------------------------------
+  # 2. INTERNAL CONSISTENCY
+  # --------------------------------------------------------------------------
+  internal_consistency:
+    verdict: PASS_WITH_GAPS
+    score: 7/10
+    findings:
+      - finding: "AC-4 says createStructurerNode implements 'createToolNode(structurer, async (state: ElaborationState) => ...)' but createToolNode takes GraphState, not ElaborationState"
+        severity: medium
+        detail: |
+          Actual createToolNode signature: NodeImplementation = (state: GraphState, config?) => ...
+          The elaboration graph nodes (e.g., createInitializeNode) take ElaborationState directly
+          without going through createToolNode. The delta-detect.ts createDeltaDetectionNode uses
+          createToolNode with (state: GraphState) and casts internally.
+          The story must clarify: use createToolNode with (state: GraphState) cast to ElaborationState,
+          OR use plain async function (state: ElaborationState) => ... as the graph nodes in elaboration.ts do.
+          Recommendation: Follow elaboration.ts inline node pattern (plain async function) for consistency
+          within the elaboration graph, OR follow delta-detect.ts createToolNode pattern.
+          Both are valid — but the story's AC-4 description is slightly ambiguous about which to use.
+        decision: null
+
+      - finding: "AC-4 lists state updates: changeOutline, splitRequired, splitReason, structurerComplete:true — but AC-6 also includes structurerComplete in ElaborationStateAnnotation"
+        severity: info
+        detail: "Consistent — AC-4 lists what to return, AC-6 defines the state field. No conflict."
+
+      - finding: "AC-5 describes afterAggregate routing but afterAggregate is NOT currently exported from elaboration.ts"
+        severity: medium
+        detail: |
+          Currently afterAggregate is a private module-level function. The story extends it inline.
+          ST-7 tests the routing behavior. For testability of ST-7, afterAggregate should be
+          exported as a named function. The story does not explicitly require exporting afterAggregate,
+          but HP-6 and HP-7 test cases invoke the 'afterAggregate routing function' directly.
+          Gap: Either afterAggregate must be exported, or HP-6/HP-7 must test routing via graph execution.
+        decision: null
+
+      - finding: "HP-1 through HP-8 test plan maps correctly to AC-1 through AC-14 coverage — good alignment"
+        severity: info
+        detail: "8 happy paths, 3 error cases, 6 edge cases provide thorough coverage"
+
+      - finding: "AC-11 describes graceful fallback when 'model error (if LLM path used)' — heuristic-first means LLM may never be called"
+        severity: low
+        detail: |
+          The fallback mechanism (AC-11) is primarily for future-proofing when LLM path is added.
+          For v1 heuristic-only implementation, model errors cannot occur. The fallback field
+          (fallbackUsed: false) will always be false in v1. This is acceptable design but the
+          EC-1 test will require a mock to simulate the condition.
+
+      - finding: "StructurerConfigSchema nodeTimeoutMs (default 60000) is a separate concern from createToolNode's hardcoded 10000ms"
+        severity: medium
+        detail: |
+          createToolNode hardcodes timeoutMs=10000. StructurerConfigSchema nodeTimeoutMs=60000 is
+          not wired into the createToolNode call — it would be the node's internal logic timeout.
+          If heuristic estimation runs in < 1 second, this mismatch is harmless. But if a future
+          LLM path is added, 10000ms wrapper timeout will conflict with 60000ms config.
+          Story should document this distinction or use createLLMNode if LLM path is in scope.
+        decision: null
+
+      - finding: "ChangeOutlineItemSchema includes 'extensions: z.record(z.unknown()).optional()' per Architecture Notes — but this field is NOT listed in AC-2"
+        severity: medium
+        detail: |
+          AC-2 defines ChangeOutlineItemSchema fields as: id, filePath, changeType, description,
+          complexity, estimatedAtomicChanges, relatedAcIds. The Architecture Notes section adds
+          'extensions: z.record(z.unknown()).optional()' as an escape hatch.
+          This is a gap between ACs and architecture — implementations might miss the extensions field.
+          Recommend: Either add extensions to AC-2 explicitly, or note it as optional enhancement.
+        decision: null
+
+  # --------------------------------------------------------------------------
+  # 3. REUSE-FIRST ENFORCEMENT
+  # --------------------------------------------------------------------------
+  reuse_first:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - finding: "createToolNode reused from node-factory.ts — correct"
+        severity: info
+        detail: "Factory pattern fully reused, no custom retry/timeout infrastructure"
+      - finding: "@repo/logger required for all logging — explicitly stated in Reuse Plan"
+        severity: info
+        detail: "Structured fields: storyId, changeCount, splitRequired, durationMs"
+      - finding: "Annotation.Root pattern from elaboration.ts reused exactly"
+        severity: info
+        detail: "overwrite reducer and append reducer patterns explicitly referenced"
+      - finding: "FinalAcceptanceCriterionSchema from synthesize.ts reused for reading ACs"
+        severity: info
+        detail: "Story explicitly forbids modifying FinalAcceptanceCriterionSchema"
+      - finding: "No new packages required — all dependencies already in orchestrator"
+        severity: info
+        detail: "z, @langchain/langgraph, @repo/logger, existing node utilities — all available"
+      - finding: "Patterns to avoid section explicitly forbids TypeScript interfaces — Zod-first enforced"
+        severity: info
+        detail: "Story correctly anticipates CLAUDE.md constraint"
+
+  # --------------------------------------------------------------------------
+  # 4. PORTS & ADAPTERS COMPLIANCE
+  # --------------------------------------------------------------------------
+  ports_adapters:
+    verdict: PASS
+    score: 9/10
+    findings:
+      - finding: "No external I/O in Structurer node — pure computation (heuristic estimation)"
+        severity: info
+        detail: "No HTTP calls, no DB writes, no file system access — clean computation node"
+      - finding: "LLM path (if used) would go through createToolNode's retry/timeout wrapper — appropriate"
+        severity: info
+        detail: "Node factory handles infrastructure concerns; node implementation handles business logic"
+      - finding: "Graph lives in dedicated LangGraph server (APIP-5006 dependency) — correct port"
+        severity: info
+        detail: "Server restart required after wiring — documented in Infrastructure Notes"
+      - finding: "escapeHatchResult consumed as input from prior graph state — clean read-only access"
+        severity: info
+        detail: "No direct coupling to escape-hatch node implementation"
+      - finding: "MINOR: Story reads from escapeHatchResult but EscapeHatchResult schema structure not detailed in story"
+        severity: low
+        detail: |
+          AC-4 says 'reads state.escapeHatchResult (for cross-cutting context)' but doesn't specify
+          which field. Architecture Notes mentions 'escapeHatchResult indicates cross-cutting'.
+          Implementation needs to inspect EscapeHatchResult schema to find the correct field.
+          Not a blocker — implementor must read escape-hatch.ts to identify the field name.
+        decision: null
+
+  # --------------------------------------------------------------------------
+  # 5. LOCAL TESTABILITY
+  # --------------------------------------------------------------------------
+  local_testability:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - finding: "All tests are unit or graph-integration — no E2E required (frontend_impacted: false)"
+        severity: info
+        detail: "Consistent with ADR-006 scope decision"
+      - finding: "Heuristic estimation is pure computation — deterministic with controlled fixtures"
+        severity: info
+        detail: "No external services or LLM calls in v1 heuristic path"
+      - finding: "createStructurerNode(config)(mockState) is directly invokable in tests"
+        severity: info
+        detail: "All 8 happy path tests and 3 error cases can run in pure Vitest"
+      - finding: "Graph integration tests mock createStructurerNode to a no-op — avoids LLM in graph tests"
+        severity: info
+        detail: "HP-5 graph.compile() test does not need real LLM"
+      - finding: "Existing test pattern in __tests__/delta-detect.test.ts provides clear template"
+        severity: info
+        detail: "Test file pattern established: describe blocks by function, vi.mock('@repo/logger')"
+      - finding: "Risks in pm_artifacts.test_plan.risks correctly identify heuristic fixture determinism risk"
+        severity: info
+        detail: "AC-13f threshold test requires controlled fixtures — story acknowledges this"
+      - finding: "Verification commands present in all 7 subtasks — local runnable"
+        severity: info
+        detail: "pnpm check-types and pnpm test commands with correct --filter flags"
+
+  # --------------------------------------------------------------------------
+  # 6. DECISION COMPLETENESS
+  # --------------------------------------------------------------------------
+  decision_completeness:
+    verdict: PASS_WITH_GAPS
+    score: 7/10
+    findings:
+      - finding: "Heuristic complexity scoring rules are specified (1/2/3+ system references = low/medium/high) with midpoints"
+        severity: info
+        detail: "Midpoints: low=2, medium=5, high=11 — deterministic for tests"
+
+      - finding: "UNDECIDED: afterAggregate export requirement not stated"
+        severity: medium
+        detail: |
+          HP-6 and HP-7 test afterAggregate as a 'routing function' but afterAggregate is private.
+          Implementation must decide: (a) export afterAggregate for direct testing, OR
+          (b) test via graph execution with state injection. Decision impacts ST-7 implementation.
+        decision: null
+
+      - finding: "UNDECIDED: createToolNode vs plain async function for Structurer node"
+        severity: medium
+        detail: |
+          AC-4 says 'createToolNode(structurer, async (state: ElaborationState) => ...)'.
+          But ElaborationState is not GraphState. Two valid approaches:
+          (a) createToolNode with internal cast: (state: GraphState) => { const eState = state as ElaborationState; ... }
+          (b) Plain async function (state: ElaborationState) => ... like other elaboration graph nodes
+          The story's canonical reference (delta-detect.ts) uses createToolNode with cast.
+          The elaboration.ts inline nodes use plain async functions.
+          Both patterns exist in the codebase. Decision needed for consistency.
+        decision: null
+
+      - finding: "split flagging boundary condition is explicitly decided: > threshold (not >=)"
+        severity: info
+        detail: "ED-2 and ED-3 test cases confirm > semantics — decision documented in test plan"
+
+      - finding: "splitReason format is explicitly specified with example in Architecture Notes"
+        severity: info
+        detail: "Human-readable format with contributing changes listed — implementable without ambiguity"
+
+      - finding: "extensions field in ChangeOutlineItemSchema is mentioned in Architecture Notes but not in AC-2"
+        severity: medium
+        detail: |
+          Whether to include extensions escape hatch in v1 is undecided at AC level.
+          The ADR-001 Decision 3 reference suggests it should be included, but the AC omits it.
+          Implementor could either include or exclude it — both are technically valid.
+        decision: null
+
+      - finding: "UNDECIDED: cross-cutting detection logic from escapeHatchResult field name not specified"
+        severity: low
+        detail: |
+          Architecture Notes say 'Cross-cutting flag from escapeHatchResult bumps estimates up one level'
+          but do not name which field in EscapeHatchResult to read. Implementor must look up
+          escape-hatch.ts to find the appropriate field (likely triggered or crossCuttingChanges).
+        decision: null
+
+  # --------------------------------------------------------------------------
+  # 7. RISK DISCLOSURE
+  # --------------------------------------------------------------------------
+  risk_disclosure:
+    verdict: PASS
+    score: 9/10
+    findings:
+      - finding: "Risk: ElaborationResultSchema regression breaking APIP-0020 — documented with mitigation"
+        severity: info
+        detail: "Mitigation: all new fields use .nullable().default(null) or .default(false)"
+      - finding: "Risk: afterAggregate conditional edge rewrite — documented with mitigation"
+        severity: info
+        detail: "Mitigation: extract as named pure function, add HP-6 and HP-7 routing tests"
+      - finding: "Risk: heuristic estimation quality for novel AC patterns — documented"
+        severity: info
+        detail: "Mitigation: design as v1 baseline, LLM enhancement as Phase 2 improvement"
+      - finding: "Risk: Missing export from index.ts — documented"
+        severity: info
+        detail: "Mitigation: ST-5 explicit export step, pnpm check-types verification"
+      - finding: "UNDISCLOSED RISK: createTestState fixture in elaboration.test.ts must be updated"
+        severity: medium
+        detail: |
+          The createTestState fixture in elaboration.test.ts explicitly lists all state fields.
+          When new fields are added to ElaborationStateAnnotation (AC-6: changeOutline, splitRequired,
+          splitReason, structurerComplete), the createTestState fixture in elaboration.test.ts
+          will need to include these fields OR the test infrastructure will need to handle defaults.
+          If createTestState creates a full ElaborationState object, TypeScript will error if new
+          required fields are missing. Story does not mention this fixture update requirement.
+        decision: null
+
+      - finding: "UNDISCLOSED RISK: afterAggregate return type change"
+        severity: medium
+        detail: |
+          Current afterAggregate returns 'update_readiness' | 'save_to_db'. Adding 'structurer'
+          to the conditional edge map requires changing the return type annotation and the
+          addConditionalEdges call. The existing elaboration test expects specific routing behavior
+          from afterAggregate — tests calling createAggregateNode with recalculateReadiness=true
+          currently expect 'update_readiness'. After ST-4, routing goes through structurer first.
+          The conditional edge map in addConditionalEdges must be updated. ED-4 regression guard
+          should catch this, but the story does not explicitly call it out.
+        decision: null
+
+  # --------------------------------------------------------------------------
+  # 8. STORY SIZING
+  # --------------------------------------------------------------------------
+  story_sizing:
+    verdict: PASS_WITH_CONCERN
+    score: 6/10
+    predicted_split_risk: 0.8
+    actual_assessment: moderate_high
+    ac_count: 14
+    endpoint_count: 0
+    touches_frontend: false
+    touches_database: false
+    package_count: 1
+    happy_path_count: 8
+    subtask_count: 7
+    findings:
+      - finding: "14 ACs exceeds the >8 AC threshold for split risk"
+        severity: medium
+        detail: |
+          14 ACs is above the 8-AC split indicator. However:
+          - 0 endpoints, 0 frontend, 0 database = low surface complexity
+          - Single package (packages/backend/orchestrator) = contained
+          - AC-13 is a compound AC (covers 6 test scenarios a-f)
+          - AC-14 is a compound AC (covers 3 graph test verifications)
+          - Many ACs are schema definitions (AC-1, AC-2, AC-3) that implement quickly
+          The 14 ACs are deceptive — AC-1 through AC-3 are schema-only (~20 lines each),
+          AC-12 is a single export statement, AC-10/11 are defensive guards.
+          Effective complexity is 5-6 substantive ACs.
+
+      - finding: "7 subtasks with total estimated tokens: 52,000 — within normal range"
+        severity: info
+        detail: "Token estimate breakdown: ST-1:6k, ST-2:12k, ST-3:8k, ST-4:6k, ST-5:2k, ST-6:10k, ST-7:8k"
+
+      - finding: "Split risk 0.8 is predicted but actual complexity warrants 0.5-0.6"
+        severity: low
+        detail: |
+          The high predicted split risk may be an artifact of the haiku model's conservative
+          estimation. The scope is genuinely backend-only, single-package, with clear
+          canonical references. No research spike needed. The main uncertainty is heuristic
+          quality, not implementation complexity.
+
+      - finding: "ST-2 (implement createStructurerNode) covers AC-4, AC-9, AC-10, AC-11 — 4 ACs in one subtask"
+        severity: low
+        detail: "These 4 ACs are tightly coupled (all in structurer.ts), so grouping is appropriate"
+
+      - finding: "CONCERN: Predicted review_cycles: 3 suggests implementation issues expected"
+        severity: medium
+        detail: |
+          3 review cycles is high for a single-package backend node. This may indicate:
+          (a) heuristic estimation complexity is higher than apparent, OR
+          (b) the afterAggregate routing change is tricky, OR
+          (c) the createToolNode vs ElaborationState type mismatch will cause review friction
+          Recommend implementor carefully review the type system interactions before starting.
+
+  # --------------------------------------------------------------------------
+  # 9. SUBTASK DECOMPOSITION
+  # --------------------------------------------------------------------------
+  subtask_decomposition:
+    verdict: PASS_WITH_GAPS
+    score: 7/10
+    findings:
+      - finding: "DAG ordering is correct: ST-1 → ST-2 → ST-3 (parallel with ST-2) → ST-4 → ST-5/ST-6 (parallel) → ST-7"
+        severity: info
+        detail: |
+          Dependency graph:
+          ST-1 (schemas) → ST-2 (impl), ST-3 (state/graph schemas)
+          ST-2, ST-3 → ST-4 (wire node)
+          ST-2 → ST-5 (exports), ST-6 (unit tests) [parallel]
+          ST-4, ST-6 → ST-7 (graph tests)
+
+      - finding: "AC coverage: AC-5 only covered by ST-4 — this is the most complex graph wiring step"
+        severity: info
+        detail: "AC-5 covers afterAggregate modification + addNode + addEdge — ST-4 is appropriately scoped"
+
+      - finding: "GAP: createTestState fixture update not assigned to any subtask"
+        severity: medium
+        detail: |
+          When ST-3 adds new fields to ElaborationStateAnnotation, the createTestState fixture
+          in elaboration.test.ts needs updating. This could cause ST-7 to fail if not handled.
+          ST-7 says 'Files to read: elaboration.test.ts' but does not explicitly say 'update
+          createTestState fixture'. Should be added to ST-7 explicitly.
+        decision: null
+
+      - finding: "GAP: afterAggregate export not addressed in any subtask"
+        severity: medium
+        detail: |
+          HP-6 and HP-7 test afterAggregate as a direct function. If afterAggregate remains
+          private, these tests cannot be written as specified. ST-4 modifies afterAggregate
+          but does not mention exporting it. ST-7 does not mention this prerequisite.
+          Resolution: Add 'export function afterAggregate' to ST-4 scope OR revise HP-6/HP-7
+          to test routing via graph execution (less fragile approach).
+        decision: null
+
+      - finding: "All subtasks have verification commands — quality indicator"
+        severity: info
+        detail: "pnpm check-types and pnpm test commands present with --filter flags"
+
+      - finding: "ST-6 verification: 'pnpm test --filter packages/backend/orchestrator -- structurer.test.ts'"
+        severity: info
+        detail: "Correct filter syntax for scoped test execution"
+
+      - finding: "ST-3 and ST-7 both verify with run of full elaboration tests — regression guard integrated"
+        severity: info
+        detail: "ST-3: check-types + full test suite; ST-7: elaboration.test.ts specific"
+
+      - finding: "File count per subtask: ST-2 modifies 1 file, ST-3 modifies 1 file — good isolation"
+        severity: info
+        detail: "No subtask touches more than 2 files — well-decomposed"
+
+# ============================================================================
+# MVP-FOCUSED GAP ANALYSIS (only gaps blocking core user journey)
+# ============================================================================
+
+mvp_gaps:
+
+  gap_1:
+    id: GAP-001
+    title: "afterAggregate export required for HP-6/HP-7 test cases"
+    severity: medium
+    blocks: "ST-7 implementation of HP-6 and HP-7"
+    detail: |
+      HP-6 and HP-7 specify testing the 'afterAggregate routing function' directly by invoking it.
+      Currently afterAggregate is a private module-level function in elaboration.ts. It cannot
+      be imported in elaboration.test.ts without being exported.
+      Two options:
+      (a) Export afterAggregate from elaboration.ts — simple, enables direct testing
+      (b) Test routing behavior via graph execution (invoke graph with mock state, check node reached)
+      Option (a) is cleaner for unit testing. Option (b) is more integration-style.
+      Story must resolve this before ST-7 can be implemented as specified.
+    recommendation: "Add 'export' keyword to afterAggregate function definition in ST-4. Update ST-7 to import and test directly."
+    decision: add_ac
+    decision_details: |
+      Added AC-15: "The afterAggregate conditional edge function in elaboration.ts is exported as
+      a named function for direct unit testing in elaboration.test.ts."
+      Updated ST-4 ACs covered to include AC-15.
+      Updated ST-7 ACs covered to include AC-15.
+      This blocks test implementation in ST-7 — resolving as AC is appropriate.
+    resolved: true
+
+  gap_2:
+    id: GAP-002
+    title: "createTestState fixture update not assigned to any subtask"
+    severity: medium
+    blocks: "ST-7 elaboration.test.ts compilation after ST-3 adds new state fields"
+    detail: |
+      ElaborationState (from ElaborationStateAnnotation) has an explicit TypeScript type.
+      The createTestState fixture in elaboration.test.ts constructs a full ElaborationState object.
+      When ST-3 adds changeOutline, splitRequired, splitReason, structurerComplete to
+      ElaborationStateAnnotation, the ElaborationState type gains new required fields (or fields
+      with defaults that TypeScript may require explicit initialization in tests).
+      If createTestState does not include these fields, pnpm check-types will fail.
+      ST-7 reads elaboration.test.ts but does not explicitly list 'update createTestState fixture'
+      as a task. This is a silent dependency that will surface as a TypeScript error.
+    recommendation: "Add to ST-7 scope: 'Update createTestState fixture to include new fields: changeOutline: null, splitRequired: false, splitReason: null, structurerComplete: false'"
+    decision: implementation_note
+    decision_details: |
+      Not a new AC — fixture update is implicit in ST-7 scope (test maintenance).
+      Added explicit implementation note to ST-7: "Update createTestState fixture to include
+      new fields: changeOutline: null, splitRequired: false, splitReason: null,
+      structurerComplete: false."
+      This is a subtask scope clarification, not a story-level requirement change.
+    resolved: true
+
+  gap_3:
+    id: GAP-003
+    title: "AC-2 omits extensions escape hatch field documented in Architecture Notes"
+    severity: low
+    blocks: "APIP-1020 forward compatibility (not a blocker for APIP-1010 itself)"
+    detail: |
+      Architecture Notes specify: 'Include extensions: z.record(z.unknown()).optional() escape hatch
+      for APIP-1020 spike additions.' This field is referenced in AC-2's parent section but not
+      in the AC-2 field list itself. If an implementor reads only AC-2, they will omit extensions.
+      This is explicitly a forward-compatibility feature — APIP-1020 may need to add fields to
+      ChangeOutlineItem. Without extensions, APIP-1020 would need a schema-breaking change.
+    recommendation: "Add extensions field to AC-2 explicitly OR note it as implementation detail in Architecture Notes. Low urgency but needed before APIP-1020."
+    decision: add_ac
+    decision_details: |
+      Updated AC-2 to explicitly include extensions field:
+      "extensions (z.record(z.unknown()).optional() — forward-compatibility escape hatch for
+      APIP-1020 spike additions per ADR-001 Decision 3)."
+      Explicitly referenced in ADR-001 Decision 3 and Architecture Notes — promoting to AC
+      ensures implementors do not miss this field when reading ACs only. The extensions field
+      is a named architectural requirement, not an optional enhancement.
+    resolved: true
+
+  gap_4:
+    id: GAP-004
+    title: "createToolNode vs ElaborationState type mismatch in AC-4"
+    severity: medium
+    blocks: "ST-2 implementation without TypeScript errors"
+    detail: |
+      AC-4 specifies: 'createToolNode(structurer, async (state: ElaborationState) => ...)'.
+      But createToolNode's NodeImplementation type is: (state: GraphState, config?) => ...
+      ElaborationState is not GraphState — it is typeof ElaborationStateAnnotation.State.
+      Two resolutions:
+      (a) Use createToolNode with internal cast: (state: GraphState) => { const s = state as ElaborationState; ... }
+      (b) Use plain async function (state: ElaborationState) => ... and wire directly into addNode()
+      Delta-detect.ts uses approach (a). Elaboration.ts inline nodes use approach (b).
+      If approach (b) is used, createToolNode wrapper is NOT used, losing retry/circuit-breaker.
+      The story's intent is to use createToolNode for infrastructure benefits.
+      Recommended: Approach (a) — consistent with delta-detect.ts canonical reference.
+    recommendation: "Clarify ST-2 to use: createToolNode('structurer', async (state: GraphState) => { const s = state as ElaborationState; ... })"
+    decision: implementation_note
+    decision_details: |
+      Not a new AC — this is an implementation pattern clarification.
+      Added explicit implementation note to ST-2: "Use createToolNode with GraphState signature
+      and cast internally: createToolNode('structurer', async (state: GraphState) => {
+      const s = state as ElaborationState; ... }) per delta-detect.ts pattern.
+      Do NOT type the outer parameter as ElaborationState."
+      This follows the delta-detect.ts canonical reference exactly and does not require
+      story scope changes.
+    resolved: true
+
+# ============================================================================
+# FUTURE OPPORTUNITIES (non-blocking improvements)
+# ============================================================================
+
+future_opportunities:
+
+  opp_1:
+    id: OPP-001
+    title: "LLM-enhanced complexity estimation (Phase 2)"
+    detail: "Replace heuristic midpoints with actual LLM analysis of AC descriptions. Use createLLMNode instead of createToolNode when LLM path is primary. Tracked as APIP-3050 (Story Structurer Feedback)."
+    target_story: APIP-3050
+    decision: defer
+    decision_rationale: "Heuristic-first is the stated v1 approach. LLM enhancement is an explicit non-goal of APIP-1010. Logged to KB."
+
+  opp_2:
+    id: OPP-002
+    title: "Structured splitReason with structured data"
+    detail: "splitReason is currently a string. Could be structured as { threshold: number, total: number, contributors: Array<{ id, name, changes }> } for better operator tooling. Defer to APIP-5005 operator CLI story."
+    target_story: APIP-5005
+    decision: defer
+    decision_rationale: "String format is specified and sufficient for v1. Structured format is an operator CLI concern. Logged to KB."
+
+  opp_3:
+    id: OPP-003
+    title: "changeOutline persistence to ElaborationResult DB save"
+    detail: "Currently changeOutline lives only in LangGraph state and ElaborationResult. For audit trail, changeOutline could be saved to the workflow elaboration blob in DB. Requires APIP-5007 schema versioning foundation."
+    target_story: APIP-5007
+    decision: defer
+    decision_rationale: "Story explicitly states no DB writes. Requires APIP-5007 schema versioning foundation. Logged to KB."
+
+  opp_4:
+    id: OPP-004
+    title: "Export afterAggregate for testability as named utility"
+    detail: "Exporting afterAggregate and other conditional edge functions improves testability and reuse. Could be a quick refactor in this story (ST-4) with no functional change."
+    target_story: APIP-1010
+    decision: absorbed_by_gap
+    decision_rationale: "GAP-001 resolved this by adding AC-15. OPP-004 is no longer a separate opportunity. Logged to KB."
+
+  opp_5:
+    id: OPP-005
+    title: "ChangeOutlineItem filePath validation"
+    detail: "Currently filePath is z.string() with no path validation. Could add z.string().min(1).refine(p => p.startsWith('packages/') || p.startsWith('apps/')) for monorepo path validation. Defer to APIP-1020."
+    target_story: APIP-1020
+    decision: defer
+    decision_rationale: "Minimalist schema design is intentional for v1 per ADR-001 Decision 3. APIP-1020 may refine field constraints. Logged to KB."
+
+# ============================================================================
+# PRELIMINARY VERDICT
+# ============================================================================
+
+preliminary_verdict:
+  status: CONDITIONAL_PASS
+  confidence: medium
+  rationale: |
+    APIP-1010 is a well-scoped, backend-only story with clear canonical references and a solid
+    test plan. The core implementation path (new Zod schemas, heuristic estimation function,
+    graph wiring) is well-understood and follows established patterns in the codebase.
+
+    Four gaps were identified and all resolved autonomously in Phase 1.5:
+
+    1. GAP-001 (medium): afterAggregate must be exported from elaboration.ts for HP-6/HP-7 tests.
+       RESOLVED: Added AC-15 requiring export of afterAggregate. Updated ST-4 and ST-7 scope.
+
+    2. GAP-002 (medium): createTestState fixture in elaboration.test.ts must be updated in ST-7.
+       RESOLVED: Added implementation note to ST-7 with explicit field list.
+
+    3. GAP-003 (low): extensions field in ChangeOutlineItemSchema is in Architecture Notes but not AC-2.
+       RESOLVED: Added extensions field to AC-2 explicitly.
+
+    4. GAP-004 (medium): createToolNode type signature requires cast to ElaborationState.
+       RESOLVED: Added implementation note to ST-2 with exact pattern from delta-detect.ts.
+
+    All gaps resolved. Story is ready for Phase 2 (Interactive Elaboration) or direct
+    implementation. No story re-scoping required. Split risk of 0.8 remains conservative
+    vs actual moderate complexity.
+
+  blocking_gaps:
+    - GAP-001  # resolved: add_ac (AC-15)
+    - GAP-002  # resolved: implementation_note (ST-7)
+    - GAP-004  # resolved: implementation_note (ST-2)
+
+  non_blocking_gaps:
+    - GAP-003  # resolved: add_ac (AC-2 updated)
+
+  gaps_resolved: true
+  resolved_at: "2026-02-25T23:48:00Z"
+  resolved_by: "elab-autonomous-decider"
+  ac_count_after_decisions: 15
+  new_acs_added:
+    - id: AC-15
+      description: "afterAggregate exported as named function for direct unit testing"
+  acs_updated:
+    - id: AC-2
+      change: "Added extensions field: z.record(z.unknown()).optional()"
+
+  risks_to_monitor:
+    - "afterAggregate type annotation change (from 'update_readiness' | 'save_to_db' to include 'structurer') may affect existing tests"
+    - "createTestState fixture TypeScript errors if new state fields use non-optional Annotation types"
+    - "Heuristic estimation quality in v1 may produce inconsistent totalEstimatedAtomicChanges across test runs if fixture AC descriptions are vague"
+
+  suggested_questions_for_phase2: []
+
+autonomous_decision_summary:
+  phase: 1_5
+  decided_at: "2026-02-25T23:48:00Z"
+  verdict: CONDITIONAL_PASS
+  gaps_total: 4
+  gaps_resolved_as_add_ac: 2
+  gaps_resolved_as_implementation_note: 2
+  opportunities_total: 5
+  opportunities_deferred: 4
+  opportunities_absorbed: 1
+  kb_artifact_written: true
+  kb_artifact_id: "a87ad4e0-9732-45d8-833a-d9c924be6cc0"
+  story_file_updated: true
+  story_changes:
+    - "AC-2 updated to include extensions field"
+    - "AC-15 added (afterAggregate export requirement)"
+    - "ST-2 updated with GAP-004 implementation note"
+    - "ST-4 updated: ACs covered now includes AC-15"
+    - "ST-7 updated: ACs covered now includes AC-15, GAP-002 implementation note added"

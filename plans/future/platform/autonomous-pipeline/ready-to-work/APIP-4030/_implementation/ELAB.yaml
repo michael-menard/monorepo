@@ -1,0 +1,508 @@
+---
+# ELAB.yaml — Phase 1 Analysis
+# Story: APIP-4030 Dependency Auditor — Post-Merge Package Analysis, Overlap Detection, and Human-Blocked Queue Routing
+# Analyst: elab-analyst agent
+# Generated: 2026-02-25
+
+story_id: APIP-4030
+analyst_phase: 1
+analysis_date: "2026-02-25"
+preliminary_verdict: CONDITIONAL_PASS
+
+verdict_rationale: >
+  APIP-4030 triggers two hard sizing flags (16 ACs vs. 8-AC threshold; 2 packages touched:
+  database-schema + orchestrator) and a model-predicted split_risk of 0.80. However, the
+  story is internally coherent — every component (DB tables, 5 analysis functions,
+  orchestrator, blocked-queue routing, cron registration) serves a single user-facing concern:
+  post-merge dependency auditing. Subtasks are well-decomposed into an 11-node DAG with
+  explicit dependency edges and token estimates. No subtask exceeds ~12,000 tokens. The story
+  does NOT mix frontend + backend, does NOT bundle multiple independent features from
+  different user journeys, and the "independent" analysis functions (ST-3 through ST-7) are
+  all leaf nodes of the same orchestrator (ST-8). A split along function lines would produce
+  5 stories with no individually shippable value. CONDITIONAL_PASS is recommended subject to
+  the risk mitigations and gap closures listed below. If the implementing agent estimates
+  >15 atomic changes during structuring, a split into a DB+schema story (ST-1/ST-2/ST-4
+  config) and an analysis-functions+orchestrator story (ST-3 through ST-11) should be
+  considered.
+
+# ==============================================================================
+# 9-POINT CHECKLIST AUDIT
+# ==============================================================================
+
+checklist:
+
+  - id: CHECK-1
+    name: Scope Alignment
+    status: PASS
+    findings: []
+    notes: >
+      Story index lists APIP-4030 as "Dependency Auditor" under Phase 4 Long-Term Quality,
+      with dependency on APIP-2010 only. The story's depends_on field matches (APIP-2010,
+      APIP-3090). Title and scope in the story body are consistent with the index entry.
+      Phase 4 is labeled "backlog" which is consistent with the story's "elaboration" status.
+      Minor note: the index shows only APIP-2010 as the dependency but the story lists both
+      APIP-2010 and APIP-3090 — this is not a conflict, it is a story-level detail not
+      captured in the condensed index row.
+
+  - id: CHECK-2
+    name: Internal Consistency
+    status: PASS_WITH_GAPS
+    findings:
+      - id: GAP-1
+        severity: low
+        description: >
+          AC-10 references a pg_try_advisory_lock guard but no subtask explicitly defines
+          the advisory lock key strategy. ST-8 covers the orchestrator and advisory lock,
+          but the canonical key format (e.g., hash of story_id vs. a static integer constant)
+          is not specified. This could cause implementation ambiguity.
+        recommendation: >
+          Add a note to ST-8 specifying the advisory lock key: recommend using
+          hashtext(story_id)::bigint or a hardcoded constant per the APIP-3020 lesson
+          pattern. Document the chosen key in a code comment.
+      - id: GAP-2
+        severity: low
+        description: >
+          AC-13 says the cron task fires "after any post-merge job that includes a
+          package.json or pnpm-lock.yaml change." However, the triggering mechanism is
+          not defined — the story delegates this entirely to APIP-3090 without specifying
+          how the cron task receives the changed-file manifest from the merge job output.
+          This is a design gap that could block ST-10 implementation.
+        recommendation: >
+          Add a clarifying note to ST-10: the DepAuditCronTask interface should accept a
+          triggering payload containing (storyId, changedFiles[]) as input. When APIP-3090
+          is not available, the stub should accept this payload and log it. This decouples
+          the interface design from APIP-3090's availability.
+    notes: >
+      Goals, non-goals, and ACs are broadly consistent. The non-goal list is comprehensive
+      (no UI, no auto-remediation, no license scanning, no SAST). AC-16 (lint + type-check)
+      is implicitly verified per subtask rather than having a dedicated subtask, which is
+      the correct pattern.
+
+  - id: CHECK-3
+    name: Reuse-First Enforcement
+    status: PASS
+    findings: []
+    notes: >
+      Reuse plan is explicit and complete. The canonical references table covers:
+      (1) wint.ts table pattern for DB schema definitions — correct, wintSchema.table(...)
+      with createInsertSchema/createSelectSchema matches the observed pattern in wint.ts;
+      (2) persist-learnings.ts fire-and-forget with injectable db, try/catch, logger.warn —
+      matches exactly what AC-10 requires; (3) elaboration.test.ts for LangGraph routing
+      test patterns; (4) story-v2-compatible.ts StoryArtifactSchema for auto-generated
+      remediation story validation. The APIP-4010 captureHealthSnapshot() pattern reference
+      for cron-triggered metric capture is appropriate. No reuse opportunities appear to
+      have been missed.
+
+  - id: CHECK-4
+    name: Ports and Adapters Compliance
+    status: PASS
+    findings: []
+    notes: >
+      All five analysis functions accept injectable toolRunner/fetchFn parameters —
+      explicitly called out in Architecture Notes. runDepAudit accepts injectable db.
+      DepBlockedQueueClient is defined as an interface with a stub for pre-APIP-2010
+      development. No analysis function calls external CLIs or network services directly
+      in production code paths without going through the injectable boundary. The YAML
+      equivalence config is loaded from a configurable path, not hardcoded. This is
+      textbook ports-and-adapters compliance for a cron worker.
+
+  - id: CHECK-5
+    name: Local Testability
+    status: PASS_WITH_GAPS
+    findings:
+      - id: GAP-3
+        severity: medium
+        description: >
+          EC-6 (blocked queue deduplication) and EC-7 (pg_try_advisory_lock concurrency)
+          are listed as error cases but are not assigned to any subtask. ST-9 covers
+          route-high-risk-findings.ts for deduplication, but EC-7 concurrency guard testing
+          is only covered by ST-8's advisory lock implementation. There is no explicit test
+          subtask for concurrency simulation. Simulating two simultaneous invocations
+          (EC-7 setup) requires either a real DB transaction test or a mock of the advisory
+          lock function — the story does not specify which approach.
+        recommendation: >
+          Add a test case in ST-11 (or ST-8's unit tests) that mocks the advisory lock
+          to return false on the second call and asserts early exit. This avoids the need
+          for actual concurrent DB connections in unit tests. Document the mock strategy
+          in the test plan section.
+      - id: GAP-4
+        severity: low
+        description: >
+          ED-4 (real pnpm audit --json integration test) requires "actual pnpm version
+          pinned in repo." The story does not specify which CI tag/label to use to
+          distinguish this test from the unit test suite. Without a tag, this test will
+          run on every `pnpm test` invocation and fail in environments without a real
+          pnpm binary.
+        recommendation: >
+          Add vitest.config annotation: tag ED-4 as `integration` and add to
+          dep-audit.integration.test.ts filename. Confirm this file is excluded from
+          the default `pnpm test` run (consistent with how APIP-5001 integration tests
+          are isolated). Document the run command: `pnpm test:integration` or equivalent.
+    notes: >
+      Happy path tests (HP-1 through HP-9) are concrete and specific — each has a named
+      setup, action, expected, and evidence field. Error cases and edge cases are well-
+      defined. Injectable mocks are called out throughout the architecture notes. The
+      test plan correctly identifies the coverage waiver for SQL DDL files.
+
+  - id: CHECK-6
+    name: Decision Completeness
+    status: PASS_WITH_GAPS
+    findings:
+      - id: GAP-5
+        severity: medium
+        description: >
+          The story specifies that dep-equivalences.yaml "must be seeded with an initial
+          set of known package equivalences." However, the actual content of this seed
+          file is left entirely open. An implementing agent starting ST-4 must make a
+          content decision that has lasting codebase impact (which packages are considered
+          equivalent). Without a starting set, the implementing agent may produce a
+          minimal or incorrect seed that degrades the overlap detector's initial utility.
+        recommendation: >
+          Provide the minimum viable seed set in the story or in the ST-4 description.
+          Suggested initial entries: date-fns/dayjs/moment, lodash/ramda/underscore,
+          axios/node-fetch/got, uuid/nanoid, winston/pino. This is not an exhaustive list
+          but gives the implementing agent a concrete starting point.
+      - id: GAP-6
+        severity: low
+        description: >
+          AC-11 deduplication key is "storyId:packageName:findingType" but the story
+          does not specify what happens when the same package triggers both a vulnerability
+          AND an overlap finding in the same run (two different findingTypes). This is a
+          valid state but creates two blocked queue items for the same package per run.
+          No decision is recorded on whether this is intentional or should be collapsed.
+        recommendation: >
+          Add a note to AC-11 or ST-9: "Multiple findings of different types for the same
+          package in the same run create separate blocked queue items — this is intentional.
+          The deduplication key prevents cross-run duplication only." This eliminates
+          ambiguity without changing behavior.
+    notes: >
+      No blocking TBDs found. Both runtime dependencies (APIP-2010, APIP-3090) have
+      defined stub strategies that allow implementation to proceed independently. The
+      bundlephobia vs. cost-of-modules tool choice is resolved (prefer local
+      cost-of-modules, fall back to bundlephobia). The pnpm audit schema variance risk is
+      resolved (.passthrough()). Overall decision completeness is high.
+
+  - id: CHECK-7
+    name: Risk Disclosure
+    status: PASS
+    findings: []
+    notes: >
+      Four test-plan risks and three dev-feasibility risks are documented, non-overlapping,
+      and specific. The highest-risk items are: (1) APIP-2010 not yet stable — mitigated
+      with DepBlockedQueueClient stub; (2) pnpm audit schema varies across major versions —
+      mitigated with .passthrough(); (3) bundlephobia rate limit — mitigated with null
+      return + backoff. All mitigations are concrete and actionable. The advisory lock
+      concurrency risk is noted in Architecture Notes via reference to the APIP-3020 lesson.
+      No undisclosed risks identified during this audit.
+
+  - id: CHECK-8
+    name: Story Sizing
+    status: FLAG
+    flags_triggered:
+      - indicator: ac_count
+        threshold: 8
+        actual: 16
+        triggered: true
+      - indicator: packages_touched
+        threshold: 2
+        actual: 2
+        packages:
+          - packages/backend/database-schema
+          - packages/backend/orchestrator
+        triggered: true
+      - indicator: independent_features_bundled
+        description: "5 analysis functions + DB schema + cron + blocked-queue routing"
+        assessment: >
+          The functions are independently implementable (ST-3 through ST-7 have no inter-
+          dependencies) but they are NOT independently shippable — runDepAudit (ST-8)
+          requires all five. This passes the 'coherent concern' test: the bundling is
+          justified by the orchestrator's need for all analysis outputs before persisting
+          a run record.
+        triggered: false
+      - indicator: subtask_count
+        threshold: 8
+        actual: 11
+        triggered: true
+      - indicator: happy_path_scenarios
+        threshold: 3
+        actual: 9
+        triggered: true
+    sizing_recommendation: >
+      Three sizing indicators trigger (AC count, subtask count, happy path scenarios).
+      Package count is at the threshold (exactly 2). However, the story cannot be
+      meaningfully split: a "DB schema only" story with no analysis functions has no
+      user value; an "analysis functions only" story with no DB tables cannot persist
+      findings. The minimum viable deliverable is all 11 subtasks together.
+
+      SPLIT CONDITION: If the implementing agent's structurer step estimates >15 atomic
+      changes, a forced split is recommended along the following seam:
+        Story A (APIP-4030-A): ST-1 (DB tables), ST-2 (migrations), ST-4 stub for
+          check-overlap config only (equivalence YAML seed). Delivers: schema + config.
+        Story B (APIP-4030-B): ST-3 through ST-11. Depends on A. Delivers: all logic.
+      This split is valid because ST-1/ST-2 have no dependency on any analysis function,
+      and the equivalence config YAML is a pure data file with no runtime dependency.
+
+  - id: CHECK-9
+    name: Subtask Decomposition
+    status: PASS_WITH_GAPS
+    findings:
+      - id: GAP-7
+        severity: low
+        description: >
+          ST-11 is listed as the integration test subtask (AC-14, AC-15) but AC-14 also
+          covers unit tests for all 5 analysis functions. Unit tests for individual
+          functions (detectNewPackages, checkOverlap, etc.) should be co-located with
+          their implementation subtasks (ST-3 through ST-7) per the project's test
+          co-location convention. As written, ST-11 appears to absorb all testing, which
+          concentrates testing risk into a single late subtask.
+        recommendation: >
+          Clarify that ST-3 through ST-8 each include their own unit tests as part of
+          their implementation. ST-11 covers only integration tests (migration + round-
+          trip DB + real pnpm audit). This is the intended interpretation based on the
+          Test Plan section, but the subtask AC mapping creates ambiguity (AC-14 is
+          assigned only to ST-11).
+      - id: GAP-8
+        severity: low
+        description: >
+          The subtask DAG shows ST-8 depends on ST-7 only, but ST-8 (runDepAudit
+          orchestrator) logically requires ST-3, ST-4, ST-5, ST-6, and ST-7 as inputs.
+          The dependency "ST-7" in the table appears to be a shorthand for "all prior
+          analysis subtasks complete," but this is not stated explicitly. An implementing
+          agent reading the DAG literally might start ST-8 after only ST-7 is done,
+          leaving 4 analysis functions unimplemented.
+        recommendation: >
+          Update ST-8 depends_on to: ST-3, ST-4, ST-5, ST-6, ST-7. This makes the DAG
+          unambiguous and prevents out-of-order implementation.
+    notes: >
+      All 16 ACs are covered by at least one subtask. AC-16 (lint/type-check) is
+      correctly handled as a per-subtask quality gate rather than a dedicated subtask.
+      Token estimates are reasonable: total estimated ~82,000 tokens against the
+      150,000 token_estimate budget. Canonical reference files are identified per
+      subtask. The DAG is otherwise clean with no circular dependencies.
+
+# ==============================================================================
+# DISCOVERY ANALYSIS
+# ==============================================================================
+
+discovery:
+
+  mvp_critical_gaps:
+    - id: DISC-1
+      title: "ST-8 DAG dependency is ambiguous — could cause incomplete implementation"
+      priority: high
+      gap: >
+        ST-8's dependency on "ST-7" only (rather than ST-3 through ST-7) means an
+        implementing agent could start the orchestrator before all analysis functions
+        exist. This is a structural correctness issue in the subtask DAG.
+      action: Update ST-8 depends_on to list all five analysis function subtasks.
+
+    - id: DISC-2
+      title: "DepAuditCronTask interface not defined — ST-10 has no contract to implement against"
+      priority: high
+      gap: >
+        ST-10 creates cron/dep-audit-cron-task.ts and references the "DepAuditCronTask
+        interface," but neither the interface shape nor the triggering payload schema is
+        specified anywhere in the story. An implementing agent must invent this interface,
+        risking incompatibility with APIP-3090 when it ships.
+      action: >
+        Define the DepAuditCronTask interface in the story (or ST-10 description):
+          interface DepAuditCronTask {
+            taskId: string
+            trigger: 'post-merge'
+            changedFilesFilter: string[]  // ['package.json', 'pnpm-lock.yaml']
+            run(payload: { storyId: string; changedFiles: string[]; commitSha: string }): Promise<void>
+          }
+        This interface can be committed to orchestrator even before APIP-3090 exists.
+
+    - id: DISC-3
+      title: "dep-equivalences.yaml seed content unspecified — blocks checkOverlap utility at launch"
+      priority: medium
+      gap: >
+        The overlap detector's initial value is entirely determined by the equivalence
+        config seed. An empty or near-empty seed means checkOverlap returns no findings
+        on the first N audit runs, making the feature appear broken to operators.
+      action: >
+        Include a minimum viable seed (5-10 package groups) in ST-4 or a separate
+        seed requirement. Suggested initial set documented in GAP-5 above.
+
+  future_opportunities:
+    - id: OPP-1
+      title: "Trend aggregation table for APIP-4070 Weekly Health Report"
+      priority: medium
+      description: >
+        dep_audit_findings accumulates a historical record of all dependency findings.
+        APIP-4070 (Weekly Pipeline Health Report) will need to query this table for
+        trend data. Adding a partial index on (created_at, severity) now would avoid
+        a migration in APIP-4070. Consider noting this in the schema definition comments.
+
+    - id: OPP-2
+      title: "Auto-generated remediation story for critical findings"
+      priority: low
+      description: >
+        The Reuse Plan references StoryArtifactSchema for "auto-generated follow-up
+        stories from high-risk audit findings." This capability is not an AC in this
+        story (correctly deferred), but the JSONB details payload in dep_audit_findings
+        should be designed to contain enough context for a remediation story generator.
+        Ensure the details schema includes: cve, fixAvailable, npmAdvisoryUrl, and
+        packageVersion so a future story generator can produce meaningful story content.
+
+    - id: OPP-3
+      title: "Operator visibility via APIP-5005 CLI"
+      priority: low
+      description: >
+        APIP-5005 (Minimal Operator Visibility CLI) could expose a `dep-audit status`
+        command that reads dep_audit_runs and dep_audit_findings. The DB schema should
+        be designed with operator-friendly column names and the `overall_risk` summary
+        column (already present) makes this straightforward to implement.
+
+    - id: OPP-4
+      title: "Bundle impact as info-severity finding only"
+      priority: low
+      description: >
+        AC-7 says estimateBundleImpact returns null on failure and should not block.
+        The story correctly marks bundle estimation as info-only. However, the finding
+        persistence logic (in runDepAudit) should filter out bundle impact findings
+        below a configurable threshold so they don't create noise in dep_audit_findings.
+        Consider adding maxBundleDeltaBytes to DepAuditThresholdsSchema as the filter
+        threshold for persisting bundle findings (it's already in AC-12 as a threshold
+        field, but clarify whether non-exceeding bundle findings are persisted at all).
+
+# ==============================================================================
+# CANONICAL REFERENCE VERIFICATION
+# ==============================================================================
+
+canonical_reference_check:
+  - ref: "wint.ts table definition pattern"
+    file: "packages/backend/database-schema/src/schema/wint.ts"
+    verified: true
+    notes: >
+      Confirmed: wintSchema = pgSchema('wint'); tables use wintSchema.table(name, cols, extras).
+      createInsertSchema and createSelectSchema imported from drizzle-zod. Index definitions
+      use index(...).on(...) pattern. UUID PKs use uuid('id').primaryKey().defaultRandom().
+      VARCHAR columns use varchar(name, { length: N }) or text(name). JSONB uses jsonb(name).
+      Timestamp uses timestamp(name, { withTimezone: true }). All patterns confirmed present
+      and consistent with what AC-1/AC-2 describe.
+
+  - ref: "Fire-and-forget insert pattern"
+    file: "packages/backend/orchestrator/src/nodes/completion/persist-learnings.ts"
+    verified: true
+    notes: >
+      Confirmed: injectable kbDeps (db, embeddingClient, functions). try/catch per item
+      with logger.warn on failure. Result object accumulates errors without throwing.
+      The pattern for runDepAudit is analogous: injectable db parameter, try/catch around
+      db.insert, logger.warn on failure, return result without throwing. One difference:
+      persist-learnings uses skipOnError config flag; dep-audit should hardcode fire-and-
+      forget behavior (no skipOnError toggle needed per AC-10 wording).
+
+  - ref: "LangGraph graph routing test pattern"
+    file: "packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts"
+    verified: true
+    notes: >
+      Confirmed: graph routing tested via direct function calls on afterAggregate()
+      routing function with createTestState() fixtures. vi.mock('@repo/logger') pattern
+      at top of file. Tests compile graph with createElaborationGraph() and assert
+      typeof graph.invoke === 'function'. This pattern applies directly to
+      dep-audit-cron-task.ts routing/dispatch tests: mock the advisory lock and db,
+      call runDepAudit with fixture inputs, assert result shape.
+
+  - ref: "StoryArtifactSchema"
+    file: "packages/backend/orchestrator/src/artifacts/story-v2-compatible.ts"
+    verified: true
+    notes: >
+      Confirmed: StoryArtifactSchema uses .passthrough() for unknown fields. Backward-
+      compatible with legacy status/epic/acceptance_criteria fields. createStoryArtifact()
+      factory function available. For any auto-generated remediation stories, the schema
+      requires at minimum: id (matching /^[A-Z]+-\d+$/), title, and one of state/status.
+      The follow_up_from field is available for linking remediation stories back to
+      dep_audit_findings.run_id.
+
+# ==============================================================================
+# IMPLEMENTATION READINESS
+# ==============================================================================
+
+implementation_readiness:
+  blockers:
+    - "APIP-2010 blocked queue API not implemented — use DepBlockedQueueClient stub (documented)"
+    - "APIP-3090 cron infrastructure not available — use DepAuditCronTask interface stub (interface gap documented in DISC-2)"
+    - "APIP-5001 test database must be running for ST-11 integration tests"
+
+  pre_conditions_met:
+    - "wint.ts schema pattern is confirmed and available"
+    - "drizzle-zod (createInsertSchema, createSelectSchema) confirmed in use"
+    - "persist-learnings fire-and-forget pattern confirmed and applicable"
+    - "elaboration.test.ts graph routing test pattern confirmed and reusable"
+    - "pnpm pinned version is present in repo (required for ED-4 integration test)"
+
+  risk_level: medium
+  confidence: high
+
+  recommended_actions_before_implementation:
+    - "RESOLVED: DISC-2 → AC-17 added (DepAuditCronTask interface shape defined)"
+    - "RESOLVED: GAP-5/DISC-3 → AC-18 added (dep-equivalences.yaml seed content specified)"
+    - "RESOLVED: GAP-8/DISC-1 → ST-8 depends_on updated to ST-3, ST-4, ST-5, ST-6, ST-7"
+    - "NOTED: GAP-3 → Recommend mocking advisory lock to return false for EC-7 unit test"
+    - "NOTED: GAP-7 → Unit tests co-located with ST-3 through ST-8; ST-11 covers integration only"
+
+# ==============================================================================
+# AUTONOMOUS DECISIONS (Phase 1.5)
+# ==============================================================================
+
+autonomous_decisions:
+  mode: autonomous
+  decided_at: "2026-02-25T00:00:00Z"
+  verdict: CONDITIONAL_PASS
+
+  gap_decisions:
+    - id: DISC-1
+      decision: fix_story
+      action: "Updated ST-8 depends_on from 'ST-7' to 'ST-3, ST-4, ST-5, ST-6, ST-7' in APIP-4030.md"
+      resolved: true
+
+    - id: DISC-2
+      decision: add_ac
+      ac_added: "AC-17: DepAuditCronTask interface Zod schema with taskId, trigger, changedFilesFilter, run method"
+      resolved: true
+
+    - id: DISC-3
+      decision: add_ac
+      ac_added: "AC-18: dep-equivalences.yaml seeded with 5+ equivalence groups (date-fns/dayjs/moment, lodash/ramda/underscore, axios/node-fetch/got/ky, uuid/nanoid/cuid, winston/pino/bunyan)"
+      resolved: true
+
+  opportunity_decisions:
+    - id: OPP-1
+      decision: log_to_kb
+      notes: "Future optimization — partial index on (created_at, severity) for APIP-4070 trend queries"
+      kb_entry_id: null  # KB write failed — non-blocking
+
+    - id: OPP-2
+      decision: log_to_kb
+      notes: "Future integration — JSONB details should include cve, fixAvailable, npmAdvisoryUrl, packageVersion for remediation story generator"
+      kb_entry_id: null
+
+    - id: OPP-3
+      decision: log_to_kb
+      notes: "Future feature — APIP-5005 CLI dep-audit status command"
+      kb_entry_id: null
+
+    - id: OPP-4
+      decision: log_to_kb
+      notes: "Clarification — maxBundleDeltaBytes threshold should filter sub-threshold bundle findings from persistence"
+      kb_entry_id: null
+
+  low_severity_notes:
+    - "GAP-1: Advisory lock key — recommend hashtext(story_id)::bigint or static constant"
+    - "GAP-2: Cron trigger payload — now defined via AC-17 DepAuditCronTask interface"
+    - "GAP-3: EC-7 concurrency test — mock advisory lock to return false on second call"
+    - "GAP-4: Integration test CI tag — use .integration.test.ts filename convention"
+    - "GAP-6: Multi-finding dedup is intentional (different findingTypes = separate blocked queue items)"
+    - "GAP-7: Unit tests co-located with ST-3 through ST-8; ST-11 is integration only"
+
+  summary:
+    gaps_found: 3
+    gaps_resolved: 3
+    opportunities_found: 4
+    opportunities_logged: 4
+    acs_added: 2
+    kb_writes_attempted: 1
+    kb_writes_succeeded: 0
+    kb_writes_note: "KB artifact write failed (INTERNAL_ERROR) — non-blocking, decisions recorded in ELAB.yaml"

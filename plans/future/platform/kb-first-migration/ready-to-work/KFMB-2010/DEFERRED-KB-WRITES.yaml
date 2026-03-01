@@ -1,0 +1,29 @@
+---
+generated: "2026-02-26T00:00:00Z"
+reason: "psql not available in PATH during story generation; KB write deferred"
+---
+
+deferred_writes:
+  - table: stories
+    operation: upsert
+    story_id: "KFMB-2010"
+    data:
+      story_id: "KFMB-2010"
+      feature: "kb-first-migration"
+      epic: "kb-first-migration"
+      title: "KB-Native Bootstrap Generation Leader"
+      story_dir: "plans/future/platform/kb-first-migration/backlog/KFMB-2010"
+      story_file: "plans/future/platform/kb-first-migration/backlog/KFMB-2010/KFMB-2010.md"
+      story_type: "tech_debt"
+      points: 3
+      priority: "medium"
+      state: "backlog"
+      phase: "backlog"
+      blocked: true
+      blocked_reason: "Depends on KFMB-1020 (kb_create_story MCP tool) which is not yet shipped"
+      blocked_by_story: "KFMB-1020"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
+    conflict_action: "ON CONFLICT (story_id) DO UPDATE SET title, story_dir, story_file, story_type, points, priority, state, phase, blocked, blocked_reason, blocked_by_story, updated_at"

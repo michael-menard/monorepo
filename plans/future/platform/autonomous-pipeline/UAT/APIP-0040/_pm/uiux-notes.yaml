@@ -1,0 +1,3 @@
+skipped: true
+reason: "APIP-0040 is pure backend infrastructure. No UI surface is touched. The story implements PipelineModelRouter, token-bucket rate limiting, per-story budget accumulation, and a DB migration — all internal pipeline components with no React, HTML, or CSS changes."
+future_note: "APIP-5005 (Minimal Operator Visibility CLI) will expose model routing decisions and budget consumption. When that story is generated, the UI/UX Advisor should ensure error messages from BudgetExhaustedError and RateLimitExceededError are human-readable (storyId, cap value, usage amount) for operator display."

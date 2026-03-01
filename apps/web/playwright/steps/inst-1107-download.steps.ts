@@ -39,9 +39,15 @@ Given('I navigate to a MOC detail page with files', async ({ page }) => {
 
   // Wait for gallery to load (could be content, empty state, or error)
   const loadResult = await Promise.race([
-    page.waitForSelector('[data-testid="moc-gallery-region"]', { timeout: 15000 }).then(() => 'gallery'),
-    page.waitForSelector('[data-testid="gallery-empty-state"]', { timeout: 15000 }).then(() => 'empty'),
-    page.waitForSelector('[data-testid="moc-gallery-error"]', { timeout: 15000 }).then(() => 'error'),
+    page
+      .waitForSelector('[data-testid="moc-gallery-region"]', { timeout: 15000 })
+      .then(() => 'gallery'),
+    page
+      .waitForSelector('[data-testid="gallery-empty-state"]', { timeout: 15000 })
+      .then(() => 'empty'),
+    page
+      .waitForSelector('[data-testid="moc-gallery-error"]', { timeout: 15000 })
+      .then(() => 'error'),
   ]).catch(() => 'timeout')
 
   if (loadResult === 'empty') {
@@ -68,7 +74,9 @@ Given('I navigate to a MOC detail page with files', async ({ page }) => {
 
   // Wait for MOC detail page - could succeed or show error
   const detailResult = await Promise.race([
-    page.waitForSelector('[data-testid="moc-detail-dashboard"]', { timeout: 15000 }).then(() => 'success'),
+    page
+      .waitForSelector('[data-testid="moc-detail-dashboard"]', { timeout: 15000 })
+      .then(() => 'success'),
     page.waitForSelector('text="Failed to load MOC"', { timeout: 15000 }).then(() => 'error'),
   ]).catch(() => 'timeout')
 
@@ -110,9 +118,15 @@ Given('I navigate to a MOC detail page with multiple files', async ({ page }) =>
 
   // Wait for gallery to load
   const loadResult = await Promise.race([
-    page.waitForSelector('[data-testid="moc-gallery-region"]', { timeout: 15000 }).then(() => 'gallery'),
-    page.waitForSelector('[data-testid="gallery-empty-state"]', { timeout: 15000 }).then(() => 'empty'),
-    page.waitForSelector('[data-testid="moc-gallery-error"]', { timeout: 15000 }).then(() => 'error'),
+    page
+      .waitForSelector('[data-testid="moc-gallery-region"]', { timeout: 15000 })
+      .then(() => 'gallery'),
+    page
+      .waitForSelector('[data-testid="gallery-empty-state"]', { timeout: 15000 })
+      .then(() => 'empty'),
+    page
+      .waitForSelector('[data-testid="moc-gallery-error"]', { timeout: 15000 })
+      .then(() => 'error'),
   ]).catch(() => 'timeout')
 
   if (loadResult !== 'gallery') {
@@ -133,7 +147,9 @@ Given('I navigate to a MOC detail page with multiple files', async ({ page }) =>
 
   // Wait for MOC detail page
   const detailResult = await Promise.race([
-    page.waitForSelector('[data-testid="moc-detail-dashboard"]', { timeout: 15000 }).then(() => 'success'),
+    page
+      .waitForSelector('[data-testid="moc-detail-dashboard"]', { timeout: 15000 })
+      .then(() => 'success'),
     page.waitForSelector('text="Failed to load MOC"', { timeout: 15000 }).then(() => 'error'),
   ]).catch(() => 'timeout')
 
@@ -248,10 +264,12 @@ When('I click the download button for the first file', async ({ page }) => {
 
 When('I try to access a file download URL directly', async ({ page }) => {
   // Try to access a download URL without authentication
-  const response = await page.request.get('/api/instructions/mocs/test-moc-id/files/test-file-id/download')
+  const response = await page.request.get(
+    '/api/instructions/mocs/test-moc-id/files/test-file-id/download',
+  )
   // Store the response status for verification
-  await page.evaluate((status) => {
-    (window as any).__downloadResponseStatus = status
+  await page.evaluate(status => {
+    ;(window as any).__downloadResponseStatus = status
   }, response.status())
 })
 

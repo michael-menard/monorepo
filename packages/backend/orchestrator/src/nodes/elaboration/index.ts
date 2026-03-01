@@ -90,3 +90,17 @@ export {
   type EscapeHatchNodeResult,
   type GraphStateWithEscapeHatch,
 } from './escape-hatch.js'
+
+export {
+  // Main node (FLOW-034)
+  structurerNode,
+  createStructurerNode,
+  // Schemas
+  StructurerConfigSchema,
+  ChangeOutlineItemSchema,
+  StructurerResultSchema,
+  // Types
+  type StructurerConfig,
+  type ChangeOutlineItem,
+  type StructurerResult,
+} from './structurer.js'

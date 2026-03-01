@@ -1,20 +1,32 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useRef, useState, useCallback, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
-import { Upload, Trash2, GripVertical, ChevronLeft, ChevronRight, X, Loader2, ImageIcon } from "lucide-react"
-import { validateImageFile, IMAGE_MAX_SIZE_MB, GALLERY_MAX_IMAGES, type MocImage } from "./mocTypes"
+import type React from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import {
+  Upload,
+  Trash2,
+  GripVertical,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Loader2,
+  ImageIcon,
+} from 'lucide-react'
+import { validateImageFile, IMAGE_MAX_SIZE_MB, GALLERY_MAX_IMAGES, type MocImage } from './mocTypes'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 interface MocGalleryCardContentProps {
   galleryImages: MocImage[]
   isLoading?: boolean
 }
 
-export function MocGalleryCardContent({ galleryImages: initialImages, isLoading = false }: MocGalleryCardContentProps) {
+export function MocGalleryCardContent({
+  galleryImages: initialImages,
+  isLoading = false,
+}: MocGalleryCardContentProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
@@ -29,11 +41,13 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
       const files = Array.from(e.target.files || [])
       if (files.length === 0) return
 
-      e.target.value = ""
+      e.target.value = ''
 
       const remainingSlots = GALLERY_MAX_IMAGES - localImages.length
       if (files.length > remainingSlots) {
-        setValidationErrors([`Can only upload ${remainingSlots} more image(s). Maximum is ${GALLERY_MAX_IMAGES}.`])
+        setValidationErrors([
+          `Can only upload ${remainingSlots} more image(s). Maximum is ${GALLERY_MAX_IMAGES}.`,
+        ])
         return
       }
 
@@ -58,7 +72,7 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
             id: `new-${Date.now()}-${i}`,
             url: URL.createObjectURL(file),
           }))
-          setLocalImages((prev) => [...prev, ...newImages])
+          setLocalImages(prev => [...prev, ...newImages])
           setIsUploading(false)
         }, 500)
       }
@@ -67,7 +81,7 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
   )
 
   const handleDelete = useCallback((imageId: string) => {
-    setLocalImages((prev) => prev.filter((img) => img.id !== imageId))
+    setLocalImages(prev => prev.filter(img => img.id !== imageId))
   }, [])
 
   const handleUploadClick = useCallback(() => {
@@ -84,11 +98,13 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
   }, [])
 
   const goToPrevious = useCallback(() => {
-    setLightboxIndex((prev) => (prev !== null ? (prev - 1 + localImages.length) % localImages.length : null))
+    setLightboxIndex(prev =>
+      prev !== null ? (prev - 1 + localImages.length) % localImages.length : null,
+    )
   }, [localImages.length])
 
   const goToNext = useCallback(() => {
-    setLightboxIndex((prev) => (prev !== null ? (prev + 1) % localImages.length : null))
+    setLightboxIndex(prev => (prev !== null ? (prev + 1) % localImages.length : null))
   }, [localImages.length])
 
   // Keyboard navigation
@@ -96,24 +112,24 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
     if (lightboxIndex === null) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") goToPrevious()
-      else if (e.key === "ArrowRight") goToNext()
-      else if (e.key === "Escape") closeLightbox()
+      if (e.key === 'ArrowLeft') goToPrevious()
+      else if (e.key === 'ArrowRight') goToNext()
+      else if (e.key === 'Escape') closeLightbox()
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [lightboxIndex, goToPrevious, goToNext, closeLightbox])
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index)
-    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.effectAllowed = 'move'
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
+    e.dataTransfer.dropEffect = 'move'
   }
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
@@ -190,23 +206,30 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
         <>
           {renderSkeletonGrid()}
           <div className="text-center py-4">
-            <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" aria-hidden="true" />
+            <ImageIcon
+              className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2"
+              aria-hidden="true"
+            />
             <p className="text-sm text-muted-foreground">Upload gallery images to get started</p>
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3" role="list" aria-label="Gallery images">
+        <div
+          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3"
+          role="list"
+          aria-label="Gallery images"
+        >
           {localImages.map((image, index) => (
             <div
               key={image.id}
               role="listitem"
               draggable
-              onDragStart={(e) => handleDragStart(e, index)}
+              onDragStart={e => handleDragStart(e, index)}
               onDragEnd={handleDragEnd}
               onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, index)}
+              onDrop={e => handleDrop(e, index)}
               className={`group relative aspect-square overflow-hidden rounded-xl bg-muted cursor-grab active:cursor-grabbing transition-all duration-200 ring-2 ring-transparent hover:ring-primary/50 hover:scale-105 hover:shadow-lg animate-in fade-in zoom-in-95 ${
-                draggedIndex === index ? "opacity-50 ring-primary scale-95" : ""
+                draggedIndex === index ? 'opacity-50 ring-primary scale-95' : ''
               }`}
               style={{ animationDelay: `${index * 30}ms` }}
             >
@@ -221,7 +244,7 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
                 aria-label={`View image ${index + 1} in lightbox`}
               >
                 <img
-                  src={image.url || "/placeholder.svg"}
+                  src={image.url || '/placeholder.svg'}
                   alt={`Gallery image ${index + 1}`}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                   loading="lazy"
@@ -232,7 +255,7 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
                 variant="destructive"
                 size="icon"
                 className="absolute top-1.5 right-1.5 h-7 w-7 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm hover:scale-110"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation()
                   handleDelete(image.id)
                 }}
@@ -245,7 +268,9 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">JPEG or HEIC, max {IMAGE_MAX_SIZE_MB}MB each • Drag to reorder</p>
+      <p className="text-xs text-muted-foreground">
+        JPEG or HEIC, max {IMAGE_MAX_SIZE_MB}MB each • Drag to reorder
+      </p>
 
       <input
         ref={fileInputRef}
@@ -303,7 +328,7 @@ export function MocGalleryCardContent({ galleryImages: initialImages, isLoading 
           {currentImage && (
             <div className="flex items-center justify-center min-h-[60vh] p-8">
               <img
-                src={currentImage.url || "/placeholder.svg"}
+                src={currentImage.url || '/placeholder.svg'}
                 alt={`Gallery image ${(lightboxIndex ?? 0) + 1}`}
                 className="max-h-[80vh] max-w-full object-contain rounded-lg animate-in fade-in zoom-in-95 duration-300"
               />

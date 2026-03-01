@@ -10,8 +10,8 @@
 import { readFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { parse as parseYaml } from 'yaml'
 import { z } from 'zod'
+import { parse as parseYaml } from 'yaml'
 
 // ============================================================================
 // Types

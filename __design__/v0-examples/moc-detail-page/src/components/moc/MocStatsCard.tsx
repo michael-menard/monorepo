@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Blocks, ImageIcon, FileText, File } from "lucide-react"
+import { Blocks, ImageIcon, FileText, File } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface MocStatsCardProps {
   partsCount?: number
@@ -10,39 +10,44 @@ interface MocStatsCardProps {
   partsListsCount: number
 }
 
-export function MocStatsCard({ partsCount, galleryCount, instructionsCount, partsListsCount }: MocStatsCardProps) {
+export function MocStatsCard({
+  partsCount,
+  galleryCount,
+  instructionsCount,
+  partsListsCount,
+}: MocStatsCardProps) {
   const stats = [
     {
-      label: "Parts",
-      value: partsCount?.toLocaleString() ?? "—",
+      label: 'Parts',
+      value: partsCount?.toLocaleString() ?? '—',
       icon: Blocks,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
-      hoverBg: "group-hover:bg-primary/20",
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
+      hoverBg: 'group-hover:bg-primary/20',
     },
     {
-      label: "Photos",
+      label: 'Photos',
       value: galleryCount,
       icon: ImageIcon,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bgColor: "bg-emerald-500/10",
-      hoverBg: "group-hover:bg-emerald-500/20",
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+      hoverBg: 'group-hover:bg-emerald-500/20',
     },
     {
-      label: "Instructions",
+      label: 'Instructions',
       value: instructionsCount,
       icon: FileText,
-      color: "text-rose-600 dark:text-rose-400",
-      bgColor: "bg-rose-500/10",
-      hoverBg: "group-hover:bg-rose-500/20",
+      color: 'text-rose-600 dark:text-rose-400',
+      bgColor: 'bg-rose-500/10',
+      hoverBg: 'group-hover:bg-rose-500/20',
     },
     {
-      label: "Parts Lists",
+      label: 'Parts Lists',
       value: partsListsCount,
       icon: File,
-      color: "text-amber-600 dark:text-amber-400",
-      bgColor: "bg-amber-500/10",
-      hoverBg: "group-hover:bg-amber-500/20",
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      hoverBg: 'group-hover:bg-amber-500/20',
     },
   ]
 

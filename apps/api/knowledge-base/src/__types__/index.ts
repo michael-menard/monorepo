@@ -957,7 +957,10 @@ export const NewStoryDependencySchema = z.object({
 export type NewStoryDependencyInput = z.infer<typeof NewStoryDependencySchema>
 
 /**
- * Story artifact schema for validation.
+ * Story artifact schema for validation (jump table pattern).
+ *
+ * The storyArtifacts table is now a jump table that points to type-specific
+ * detail tables. Content is stored in detail tables, not in the jump table.
  */
 export const StoryArtifactSchema = z.object({
   id: z.string().uuid().optional(),
@@ -965,12 +968,13 @@ export const StoryArtifactSchema = z.object({
   artifactType: ArtifactTypeSchema,
   artifactName: z.string().optional().nullable(),
   kbEntryId: z.string().uuid().optional().nullable(),
-  filePath: z.string().optional().nullable(),
   phase: StoryPhaseSchema.optional().nullable(),
   iteration: z.number().int().min(0).optional().nullable(),
   summary: z.record(z.unknown()).optional().nullable(),
-  /** Full artifact content as JSONB (replaces file-based storage) */
-  content: z.record(z.unknown()).optional().nullable(),
+  /** Name of the type-specific detail table */
+  detailTable: z.string().optional().nullable(),
+  /** UUID FK to the row in the type-specific table */
+  detailId: z.string().uuid().optional().nullable(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 })
@@ -978,35 +982,33 @@ export const StoryArtifactSchema = z.object({
 export type StoryArtifactInput = z.infer<typeof StoryArtifactSchema>
 
 /**
- * Schema for creating a new story artifact.
+ * Schema for creating a new story artifact (jump table row).
  */
 export const NewStoryArtifactSchema = z.object({
   storyId: z.string().min(1, 'Story ID cannot be empty'),
   artifactType: ArtifactTypeSchema,
   artifactName: z.string().optional().nullable(),
   kbEntryId: z.string().uuid().optional().nullable(),
-  filePath: z.string().optional().nullable(),
   phase: StoryPhaseSchema.optional().nullable(),
   iteration: z.number().int().min(0).optional().nullable(),
   summary: z.record(z.unknown()).optional().nullable(),
-  /** Full artifact content as JSONB (replaces file-based storage) */
-  content: z.record(z.unknown()).optional().nullable(),
+  detailTable: z.string().optional().nullable(),
+  detailId: z.string().uuid().optional().nullable(),
 })
 
 export type NewStoryArtifactInput = z.infer<typeof NewStoryArtifactSchema>
 
 /**
- * Schema for updating a story artifact.
+ * Schema for updating a story artifact (jump table row).
  */
 export const UpdateStoryArtifactSchema = z.object({
   artifactName: z.string().optional().nullable(),
   kbEntryId: z.string().uuid().optional().nullable(),
-  filePath: z.string().optional().nullable(),
   phase: StoryPhaseSchema.optional().nullable(),
   iteration: z.number().int().min(0).optional().nullable(),
   summary: z.record(z.unknown()).optional().nullable(),
-  /** Full artifact content as JSONB (replaces file-based storage) */
-  content: z.record(z.unknown()).optional().nullable(),
+  detailTable: z.string().optional().nullable(),
+  detailId: z.string().uuid().optional().nullable(),
 })
 
 export type UpdateStoryArtifactInput = z.infer<typeof UpdateStoryArtifactSchema>

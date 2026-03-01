@@ -8,8 +8,8 @@
  *   node test-story-creation.ts
  */
 
-import { runStoryCreation, loadModelAssignments } from './dist/index.js'
 import { resolve } from 'path'
+import { runStoryCreation, loadModelAssignments } from './dist/index.js'
 
 const colors = {
   reset: '\x1b[0m',
@@ -22,9 +22,15 @@ const colors = {
 }
 
 async function main() {
-  console.log(`${colors.cyan}╔════════════════════════════════════════════════════════════╗${colors.reset}`)
-  console.log(`${colors.cyan}║        LangGraph Story Creation Test (Ollama Hybrid)      ║${colors.reset}`)
-  console.log(`${colors.cyan}╚════════════════════════════════════════════════════════════╝${colors.reset}\n`)
+  console.log(
+    `${colors.cyan}╔════════════════════════════════════════════════════════════╗${colors.reset}`,
+  )
+  console.log(
+    `${colors.cyan}║        LangGraph Story Creation Test (Ollama Hybrid)      ║${colors.reset}`,
+  )
+  console.log(
+    `${colors.cyan}╚════════════════════════════════════════════════════════════╝${colors.reset}\n`,
+  )
 
   // Load model assignments
   const configPath = resolve(process.cwd(), '../../../.claude/config/model-assignments.yaml')
@@ -86,9 +92,13 @@ async function main() {
 
     if (result.success) {
       console.log(`\n${colors.green}✅ Story creation successful!${colors.reset}`)
-      console.log(`${colors.gray}─────────────────────────────────────────────────────────${colors.reset}`)
+      console.log(
+        `${colors.gray}─────────────────────────────────────────────────────────${colors.reset}`,
+      )
       console.log(`   📌 Story ID: ${colors.cyan}${result.storyId}${colors.reset}`)
-      console.log(`   📊 Readiness Score: ${colors.cyan}${result.readinessScore}/100${colors.reset}`)
+      console.log(
+        `   📊 Readiness Score: ${colors.cyan}${result.readinessScore}/100${colors.reset}`,
+      )
       console.log(`   ⏱️  Duration: ${colors.cyan}${duration}s${colors.reset}`)
       console.log(`   🎯 Phase: ${colors.cyan}${result.phase}${colors.reset}`)
 
@@ -96,18 +106,24 @@ async function main() {
         const story = result.synthesizedStory
 
         console.log(`\n${colors.blue}📄 Story Details:${colors.reset}`)
-        console.log(`${colors.gray}─────────────────────────────────────────────────────────${colors.reset}`)
+        console.log(
+          `${colors.gray}─────────────────────────────────────────────────────────${colors.reset}`,
+        )
         console.log(`   Title: ${story.title || 'N/A'}`)
         console.log(`   Priority: ${story.priority || 'N/A'}`)
         console.log(`   Type: ${story.type || 'N/A'}`)
 
         if (story.acceptanceCriteria && story.acceptanceCriteria.length > 0) {
-          console.log(`\n${colors.blue}✓ Acceptance Criteria (${story.acceptanceCriteria.length}):${colors.reset}`)
+          console.log(
+            `\n${colors.blue}✓ Acceptance Criteria (${story.acceptanceCriteria.length}):${colors.reset}`,
+          )
           story.acceptanceCriteria.slice(0, 5).forEach((ac, i) => {
             console.log(`   ${i + 1}. ${ac}`)
           })
           if (story.acceptanceCriteria.length > 5) {
-            console.log(`   ${colors.gray}... and ${story.acceptanceCriteria.length - 5} more${colors.reset}`)
+            console.log(
+              `   ${colors.gray}... and ${story.acceptanceCriteria.length - 5} more${colors.reset}`,
+            )
           }
         }
 
@@ -137,10 +153,13 @@ async function main() {
         }
       }
 
-      console.log(`\n${colors.cyan}═══════════════════════════════════════════════════════════${colors.reset}`)
+      console.log(
+        `\n${colors.cyan}═══════════════════════════════════════════════════════════${colors.reset}`,
+      )
       console.log(`${colors.green}SUCCESS - Story ready for elaboration${colors.reset}`)
-      console.log(`${colors.cyan}═══════════════════════════════════════════════════════════${colors.reset}`)
-
+      console.log(
+        `${colors.cyan}═══════════════════════════════════════════════════════════${colors.reset}`,
+      )
     } else {
       console.log(`\n${colors.red}❌ Story creation failed${colors.reset}`)
       console.log(`   Phase: ${result.phase}`)

@@ -1,6 +1,5 @@
 import { readFile } from 'fs/promises'
 import { extname } from 'path'
-
 import type { CodeAuditState } from '../../graphs/code-audit.js'
 import type { LensResult, AuditFinding, AuditSeverity } from '../../artifacts/audit-findings.js'
 
@@ -11,7 +10,12 @@ import type { LensResult, AuditFinding, AuditSeverity } from '../../artifacts/au
  */
 
 function isTestFile(filePath: string): boolean {
-  return filePath.includes('__tests__') || filePath.includes('.test.') || filePath.includes('.spec.') || filePath.includes('/test/')
+  return (
+    filePath.includes('__tests__') ||
+    filePath.includes('.test.') ||
+    filePath.includes('.spec.') ||
+    filePath.includes('/test/')
+  )
 }
 
 function calibrateSeverity(baseSeverity: AuditSeverity, isTest: boolean): AuditSeverity {

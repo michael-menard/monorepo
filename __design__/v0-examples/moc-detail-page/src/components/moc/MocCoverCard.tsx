@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useRef, useState, useCallback } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ImageIcon, Upload, Trash2, Loader2 } from "lucide-react"
-import { validateImageFile, IMAGE_MAX_SIZE_MB } from "./mocTypes"
+import type React from 'react'
+import { useRef, useState, useCallback } from 'react'
+import { ImageIcon, Upload, Trash2, Loader2 } from 'lucide-react'
+import { validateImageFile, IMAGE_MAX_SIZE_MB } from './mocTypes'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface MocCoverCardProps {
   coverImageUrl?: string
@@ -14,7 +14,11 @@ interface MocCoverCardProps {
   isLoading?: boolean
 }
 
-export function MocCoverCard({ coverImageUrl: initialCoverUrl, title, isLoading = false }: MocCoverCardProps) {
+export function MocCoverCard({
+  coverImageUrl: initialCoverUrl,
+  title,
+  isLoading = false,
+}: MocCoverCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -25,7 +29,7 @@ export function MocCoverCard({ coverImageUrl: initialCoverUrl, title, isLoading 
     const file = e.target.files?.[0]
     if (!file) return
 
-    e.target.value = ""
+    e.target.value = ''
 
     const error = validateImageFile(file)
     if (error) {
@@ -73,8 +77,8 @@ export function MocCoverCard({ coverImageUrl: initialCoverUrl, title, isLoading 
           onClick={handleChangeCoverClick}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
               handleChangeCoverClick()
             }
           }}
@@ -83,13 +87,13 @@ export function MocCoverCard({ coverImageUrl: initialCoverUrl, title, isLoading 
           {coverImageUrl ? (
             <>
               <img
-                src={coverImageUrl || "/placeholder.svg"}
+                src={coverImageUrl || '/placeholder.svg'}
                 alt={`Cover image for ${title}`}
-                className={`h-full w-full object-cover transition-transform duration-500 ${isHovered ? "scale-110" : "scale-100"}`}
+                className={`h-full w-full object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : 'scale-100'}`}
               />
               {/* Overlay on hover */}
               <div
-                className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
               >
                 <Upload className="h-8 w-8 text-white" />
               </div>
@@ -106,14 +110,17 @@ export function MocCoverCard({ coverImageUrl: initialCoverUrl, title, isLoading 
         </div>
 
         {validationError && (
-          <p className="mt-2 text-sm text-destructive animate-in fade-in shake duration-300" role="alert">
+          <p
+            className="mt-2 text-sm text-destructive animate-in fade-in shake duration-300"
+            role="alert"
+          >
             {validationError}
           </p>
         )}
 
         <div className="mt-4 flex gap-2">
           <Button
-            variant={coverImageUrl ? "outline" : "default"}
+            variant={coverImageUrl ? 'outline' : 'default'}
             className="flex-1 transition-all hover:scale-[1.02] active:scale-[0.98]"
             onClick={handleChangeCoverClick}
             disabled={isUploading}
@@ -124,7 +131,7 @@ export function MocCoverCard({ coverImageUrl: initialCoverUrl, title, isLoading 
             ) : (
               <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
             )}
-            {coverImageUrl ? "Change cover" : "Add cover"}
+            {coverImageUrl ? 'Change cover' : 'Add cover'}
           </Button>
 
           {coverImageUrl && (

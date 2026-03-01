@@ -1,0 +1,15 @@
+id: "ST-2020"
+title: "Elab Analyst: Add Story Clarity Format Audit Check"
+status: backlog
+priority: medium
+phase: 2
+feature: "Extend the elab-analyst audit to check for the story clarity format: ## Goal (one sentence), ## Examples (2+ input/output pairs), ## Edge Cases (2+ scenarios). If any are missing → CONDITIONAL PASS with note. This extends Check #9 or becomes Check #10 in the 9-point (now 10-point) checklist."
+goal: "Elaboration analysis must validate the story clarity format sections so that poorly-structured stories are flagged before dev implementation begins."
+depends_on:
+  - "ST-1020"
+  - "ST-2010"
+endpoints: []
+infrastructure: []
+risk_notes: "Not yet implemented — elab-analyst.agent.md currently has exactly 9 audit checks (scope_alignment through subtask_decomposition) but does NOT include a clarity format check for ## Goal / ## Examples / ## Edge Cases. This is genuine new work. Low complexity: requires adding a new check to the audit checklist and a new entry in the ELAB.yaml audit array output schema."
+sizing_warning: false
+created: "2026-02-28T00:00:00Z"

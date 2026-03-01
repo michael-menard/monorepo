@@ -1,12 +1,12 @@
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
-import { SignupPage } from './pages/signup.page'
 import {
   generateTestEmail,
   adminDeleteUser,
   adminConfirmSignUp,
   adminGetUser,
 } from '../utils/cognito-admin'
+import { SignupPage } from './pages/signup.page'
 
 const { Given, When, Then } = createBdd()
 

@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { Search, ArrowRight, LogIn } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import Link from 'next/link'
+import { Search, ArrowRight, LogIn } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function HomePage() {
   return (
@@ -54,14 +54,14 @@ export default function HomePage() {
             <div className="relative z-10 text-center space-y-8">
               <div className="space-y-5">
                 <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-balance leading-tight">
-                  Build Your{" "}
+                  Build Your{' '}
                   <span className="bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 bg-clip-text text-transparent">
                     LEGO Dreams
                   </span>
                 </h1>
                 <p className="text-lg md:text-xl text-foreground/80 max-w-2xl mx-auto text-pretty leading-relaxed">
-                  Discover, organize your custom LEGO MOCs instructions, and sets. Plan your next build, track your
-                  progress.
+                  Discover, organize your custom LEGO MOCs instructions, and sets. Plan your next
+                  build, track your progress.
                 </p>
               </div>
 

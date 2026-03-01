@@ -1,0 +1,43 @@
+schema: 1
+story_id: "APIP-3010"
+timestamp: "2026-02-28T00:00:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: true
+  contracts: true
+  ui: false
+  infra: true
+touched_paths_globs:
+  - "packages/backend/database-schema/**"
+  - "packages/backend/db/**"
+  - "apps/api/orchestrator/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: true
+  external_apis: false
+  security: false
+  performance: true
+summary: "Create change_telemetry Aurora PostgreSQL table with Zod schema and fire-and-continue writeTelemetry() instrumentation for change-loop telemetry capture"
+elaboration: "completed"
+notes:
+  - "Migration: wint.change_telemetry table via APIP-5007 migration runner (ST-1)"
+  - "Schema: ChangeTelemetrySchema Zod type with 14 columns (ST-2, ST-3)"
+  - "Write path: writeTelemetry() function with fire-and-continue error handling (ST-4, ST-5)"
+  - "Change-loop instrumentation: Gated on APIP-1030 merge — AC-7 in ST-6"
+  - "ACs 1-6, 8-12 are independent; AC-7 blocked by APIP-1030"
+  - "High write volume risk; must not block change-loop on write failure"
+  - "Fire-and-continue pattern: await writeTelemetry().catch() to prevent blocking"
+dependencies:
+  - story_id: "APIP-1030"
+    type: "hard_gate"
+    reason: "change-loop.ts does not exist until APIP-1030 merges; AC-7 blocked"
+  - story_id: "APIP-5007"
+    type: "hard_dependency"
+    reason: "Migration runner executes the change_telemetry table creation"
+  - story_id: "APIP-1020"
+    type: "soft_dependency"
+    reason: "ChangeSpec enum taxonomy for change_type/file_type; mitigated with 'unknown' placeholder"

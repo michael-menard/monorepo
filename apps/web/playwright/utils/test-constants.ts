@@ -66,4 +66,3 @@ export const PASSWORD_STRENGTH = {
   GOOD: 'Good',
   STRONG: 'Strong',
 } as const
-

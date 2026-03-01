@@ -1,0 +1,134 @@
+# ChangeSpec Decomposition: APIP-0040 — Model Router v1 with Rate Limiting and Token Budgets
+# Story: Implement PipelineModelRouter with token-bucket rate limiting and per-story budget cap
+schema: 1
+story_id: "APIP-0040"
+generated_at: "2026-02-26T00:00:00.000Z"
+
+changes:
+  - schema: 1
+    story_id: "APIP-0040"
+    id: "CS-1"
+    change_type: "file_change"
+    file_path: "packages/backend/orchestrator/src/pipeline/token-bucket.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement TokenBucket class with capacity, refillRate, consume(), wait(), available() — in-memory only"
+    rationale: "HP-1/HP-2: rate limiting via token bucket; vi.useFakeTimers() compatible (setTimeout-based)"
+    ac_ids:
+      - "AC-1"
+      - "AC-2"
+    estimated_tokens: 2500
+    complexity: "medium"
+    test_strategy: "unit"
+    test_hints:
+      - "consume(n) within capacity succeeds"
+      - "consume(n) beyond capacity throws RateLimitExceededError"
+      - "Bucket refills after elapsed time"
+      - "Concurrent dispatches serialized correctly"
+    expected_behavior: "TokenBucket enforces rate limits; vi.useFakeTimers() works for time-based tests"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0040"
+    id: "CS-2"
+    change_type: "file_change"
+    file_path: "packages/backend/orchestrator/src/pipeline/errors.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Define RateLimitExceededError, BudgetExhaustedError, ProviderChainExhaustedError with correct prototype chain"
+    rationale: "EC-1 through EC-4: typed errors; prototype chain must survive TypeScript transpilation"
+    ac_ids:
+      - "AC-3"
+      - "AC-4"
+    estimated_tokens: 1000
+    complexity: "low"
+    test_strategy: "unit"
+    test_hints:
+      - "instanceof check works post-transpile (assign error.name in constructor)"
+      - "BudgetExhaustedError carries storyId, tokensUsed, budgetCap fields"
+    expected_behavior: "Error instanceof checks work; fields accessible on error instances"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0040"
+    id: "CS-3"
+    change_type: "file_change"
+    file_path: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+    file_action: "create"
+    file_language: "typescript"
+    description: "Implement PipelineModelRouter with Ollama→OpenRouter→Anthropic escalation chain, per-story budget accumulation, DB assignment override, singleton factory"
+    rationale: "Core story deliverable: dispatch() method with rate-limit, budget, escalation, and DB override logic"
+    ac_ids:
+      - "AC-1"
+      - "AC-2"
+      - "AC-3"
+      - "AC-5"
+      - "AC-6"
+    estimated_tokens: 7000
+    complexity: "high"
+    test_strategy: "unit"
+    test_hints:
+      - "Ollama → OpenRouter escalation when Ollama fails"
+      - "All 3 providers fail → ProviderChainExhaustedError"
+      - "Per-story token accumulation isolated by storyId"
+      - "DB override takes precedence over YAML config"
+      - "Singleton: PipelineModelRouterFactory.getInstance() returns same instance"
+    expected_behavior: "dispatch() routes to correct model; escalates on failure; enforces budget cap"
+    dependencies: ["CS-1", "CS-2"]
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0040"
+    id: "CS-4"
+    change_type: "migration_change"
+    file_path: "apps/api/knowledge-base/src/db/migrations/016_wint_model_assignments.sql"
+    migration_version: "016"
+    migration_name: "wint_model_assignments"
+    reversible: false
+    affected_tables:
+      - "wint.model_assignments"
+    description: "Create wint.model_assignments table for DB-driven model overrides per agent pattern"
+    rationale: "HP-5: DB override takes precedence over YAML config. CREATE TABLE IF NOT EXISTS for idempotency"
+    ac_ids:
+      - "AC-5"
+    estimated_tokens: 800
+    complexity: "low"
+    test_strategy: "integration"
+    test_hints:
+      - "Migration is idempotent (CREATE TABLE IF NOT EXISTS)"
+      - "Verify table exists after migration"
+    expected_behavior: "wint.model_assignments table created; DB override integration test passes"
+    dependencies: []
+    created_at: "2026-02-26T00:00:00.000Z"
+
+  - schema: 1
+    story_id: "APIP-0040"
+    id: "CS-5"
+    change_type: "test_change"
+    file_path: "packages/backend/orchestrator/src/pipeline/__tests__/model-router.test.ts"
+    covers_file: "packages/backend/orchestrator/src/pipeline/model-router.ts"
+    test_framework: "vitest"
+    test_type: "unit"
+    description: "Unit tests for PipelineModelRouter: HP-1 through HP-6, EC-1 through EC-5, ED-1 through ED-5"
+    rationale: "Full unit coverage without real LLM providers or DB"
+    ac_ids:
+      - "AC-1"
+      - "AC-2"
+      - "AC-3"
+      - "AC-4"
+      - "AC-5"
+      - "AC-7"
+    estimated_tokens: 8000
+    complexity: "high"
+    test_strategy: "unit"
+    test_hints:
+      - "vi.useFakeTimers() for token-bucket timing tests"
+      - "Mock ILLMProvider with configurable success/failure"
+      - "Budget accumulation: getStoryUsage() returns running total"
+      - "Escalation: logger spy asserts provider failure order"
+      - "Regression guard: existing models/ files checksums unchanged"
+    expected_behavior: "pnpm test --filter @repo/orchestrator -- model-router exits 0"
+    dependencies: ["CS-3"]
+    created_at: "2026-02-26T00:00:00.000Z"

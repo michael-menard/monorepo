@@ -42,15 +42,14 @@ Given('I have no MOCs in my collection', async () => {
   instructionsScenario = 'empty'
 })
 
-Given('I have MOCs with titles {string} and {string} in my collection', async (
-  {},
-  _title1: string,
-  _title2: string,
-) => {
-  // Precondition: Test database should have MOCs with these specific titles
-  resetTestContext()
-  instructionsScenario = 'default'
-})
+Given(
+  'I have MOCs with titles {string} and {string} in my collection',
+  async ({}, _title1: string, _title2: string) => {
+    // Precondition: Test database should have MOCs with these specific titles
+    resetTestContext()
+    instructionsScenario = 'default'
+  },
+)
 
 Given('the MOC API returns an error', async () => {
   // Configure the test to expect error response
@@ -207,11 +206,14 @@ Then('the grid should display {int} or more columns', async ({ page }, minColumn
 // Empty State Steps
 // ============================================================================
 
-Then('I should see the gallery empty state with message {string}', async ({ page }, message: string) => {
-  const emptyState = page.locator('[data-testid="gallery-empty-state"]')
-  await expect(emptyState).toBeVisible()
-  await expect(page.getByText(message)).toBeVisible()
-})
+Then(
+  'I should see the gallery empty state with message {string}',
+  async ({ page }, message: string) => {
+    const emptyState = page.locator('[data-testid="gallery-empty-state"]')
+    await expect(emptyState).toBeVisible()
+    await expect(page.getByText(message)).toBeVisible()
+  },
+)
 
 // Note: 'I should see the {string} button' step is defined in inspiration-gallery.steps.ts
 
@@ -223,8 +225,8 @@ Then('the empty state should be announced to screen readers', async ({ page }) =
 
   // Verify the empty state has the correct accessibility attributes
   // Either role="status" (implicit aria-live="polite") or explicit aria-live attribute
-  const hasRoleStatus = await galleryEmptyState.getAttribute('role') === 'status'
-  const hasAriaLive = await galleryEmptyState.getAttribute('aria-live') !== null
+  const hasRoleStatus = (await galleryEmptyState.getAttribute('role')) === 'status'
+  const hasAriaLive = (await galleryEmptyState.getAttribute('aria-live')) !== null
 
   // At least one accessibility mechanism should be present for screen reader announcement
   expect(hasRoleStatus || hasAriaLive).toBe(true)
@@ -267,10 +269,7 @@ Then('the skeletons should be replaced by content when loaded', async ({ page })
   const emptyState = page.locator('[data-testid="gallery-empty-state"]')
 
   // Wait for content to load
-  await Promise.race([
-    content.waitFor({ timeout: 15000 }),
-    emptyState.waitFor({ timeout: 15000 }),
-  ])
+  await Promise.race([content.waitFor({ timeout: 15000 }), emptyState.waitFor({ timeout: 15000 })])
 
   // Skeleton should be gone
   await expect(skeleton).not.toBeVisible()
@@ -386,10 +385,13 @@ When('I clear the instructions search field', async ({ page }) => {
   await page.waitForTimeout(500)
 })
 
-Then('I should see instructions filtered results matching {string}', async ({ page }, query: string) => {
-  const matchingText = page.getByText(new RegExp(query, 'i'))
-  await expect(matchingText.first()).toBeVisible()
-})
+Then(
+  'I should see instructions filtered results matching {string}',
+  async ({ page }, query: string) => {
+    const matchingText = page.getByText(new RegExp(query, 'i'))
+    await expect(matchingText.first()).toBeVisible()
+  },
+)
 
 Then('I should not see results matching {string}', async ({ page }, query: string) => {
   const cards = page.locator('[data-testid^="instruction-card-"]')
@@ -434,7 +436,8 @@ When('I click the favorite button on the first MOC card', async ({ page }) => {
 
   // Looking at the page snapshot, the favorite button has aria-label="Remove from favorites" or "Add to favorites"
   // Use data-testid for more reliable selection
-  const favoriteButton = card.locator('[data-testid="favorite-button"]')
+  const favoriteButton = card
+    .locator('[data-testid="favorite-button"]')
     .or(card.locator('button[aria-label*="favorite" i]'))
 
   // Wait for button to be visible
@@ -458,7 +461,8 @@ When('I click the favorite button on the first MOC card', async ({ page }) => {
   await page.waitForTimeout(500)
 
   // Store the label for verification in the next step
-  ;(page as unknown as { __favoriteInitialLabel?: string }).__favoriteInitialLabel = initialLabel ?? undefined
+  ;(page as unknown as { __favoriteInitialLabel?: string }).__favoriteInitialLabel =
+    initialLabel ?? undefined
 })
 
 Then('the favorite status should toggle', async ({ page }) => {
@@ -471,13 +475,15 @@ Then('the favorite status should toggle', async ({ page }) => {
   await expect(card).toBeVisible({ timeout: 5000 })
 
   // The favorite button's aria-label should have changed
-  const favoriteButton = card.locator('[data-testid="favorite-button"]')
+  const favoriteButton = card
+    .locator('[data-testid="favorite-button"]')
     .or(card.locator('button[aria-label*="favorite" i]'))
   await expect(favoriteButton.first()).toBeVisible()
 
   // Verify the label changed
   const currentLabel = await favoriteButton.first().getAttribute('aria-label')
-  const initialLabel = (page as unknown as { __favoriteInitialLabel?: string }).__favoriteInitialLabel
+  const initialLabel = (page as unknown as { __favoriteInitialLabel?: string })
+    .__favoriteInitialLabel
 
   // If we captured an initial label, verify it changed
   if (initialLabel && currentLabel) {
@@ -492,7 +498,9 @@ When('I click the edit button on the first MOC card', async ({ page }) => {
   await card.hover()
   // Wait for hover state and any animations
   await page.waitForTimeout(300)
-  const editButton = card.locator('[data-testid="edit-button"], button:has-text("Edit"), button[aria-label*="edit"]')
+  const editButton = card.locator(
+    '[data-testid="edit-button"], button:has-text("Edit"), button[aria-label*="edit"]',
+  )
   // Use force: true to click even if element is covered
   await editButton.click({ force: true })
 })
@@ -526,12 +534,17 @@ Then('I should see instructions in grid format', async ({ page }) => {
 
   // Look for grid content
   const cards = page.locator('[data-testid^="instruction-card-"]')
-  const table = page.locator('table[aria-label*="Instructions"]').or(page.locator('[data-testid="gallery-datatable"]'))
+  const table = page
+    .locator('table[aria-label*="Instructions"]')
+    .or(page.locator('[data-testid="gallery-datatable"]'))
 
   // Wait for cards to appear (grid view shows instruction cards)
-  await cards.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-    // Continue to assertion
-  })
+  await cards
+    .first()
+    .waitFor({ state: 'visible', timeout: 5000 })
+    .catch(() => {
+      // Continue to assertion
+    })
 
   // Verify we have instruction cards visible (grid format)
   const cardCount = await cards.count()
@@ -567,10 +580,10 @@ Then('I should see the filter bar', async ({ page }) => {
   await expect(filterBar).toBeVisible()
 })
 
-Then('the filter bar should have a search input with placeholder {string}', async (
-  { page },
-  placeholder: string,
-) => {
-  const searchInput = page.getByPlaceholder(placeholder)
-  await expect(searchInput).toBeVisible()
-})
+Then(
+  'the filter bar should have a search input with placeholder {string}',
+  async ({ page }, placeholder: string) => {
+    const searchInput = page.getByPlaceholder(placeholder)
+    await expect(searchInput).toBeVisible()
+  },
+)
