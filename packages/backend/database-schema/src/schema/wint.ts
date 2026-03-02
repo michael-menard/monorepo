@@ -1859,7 +1859,9 @@ export const modelAffinity = wintSchema.table(
     trend: jsonb('trend'),
 
     // Incremental aggregation watermark
-    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
     // Audit
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
