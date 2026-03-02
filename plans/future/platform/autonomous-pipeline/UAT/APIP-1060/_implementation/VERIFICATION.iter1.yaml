@@ -1,0 +1,111 @@
+schema: 1
+story_id: APIP-1060
+timestamp: '2026-03-01T17:15:00.000Z'
+verdict: FAIL
+tests_executed: true
+test_results:
+  unit:
+    pass: 45
+    fail: 0
+coverage: null
+coverage_meets_threshold: null
+test_quality:
+  verdict: PASS
+  anti_patterns: []
+acs_verified:
+  - ac_id: AC-1
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[0]
+  - ac_id: AC-2
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[1]
+  - ac_id: AC-3
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[2]
+  - ac_id: AC-4
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[3]
+  - ac_id: AC-5
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[4]
+  - ac_id: AC-6
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[5]
+  - ac_id: AC-7
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[6]
+  - ac_id: AC-8
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[7]
+  - ac_id: AC-9
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[8]
+  - ac_id: AC-10
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[9]
+  - ac_id: AC-11
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[10]
+  - ac_id: AC-12
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[11]
+  - ac_id: AC-13
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[12]
+  - ac_id: AC-14
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[13]
+  - ac_id: AC-15
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[14]
+  - ac_id: AC-16
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[15]
+  - ac_id: AC-17
+    status: PASS
+    evidence_ref: EVIDENCE.yaml:acceptance_criteria[16]
+architecture_compliant: true
+issues:
+  - id: TYPE-001
+    severity: high
+    description: >-
+      7 type errors in QA-scoped files. 6 in src/graphs/qa.ts (lines 342-347): NodeFunction/NodeFactory type
+      incompatibility — factory functions typed as (state: GraphState) but local NodeFactory expects (state:
+      Record<string, unknown>). 1 in src/nodes/qa/verify-acs.ts (line 118): callModel(prompt) called with 1 argument but
+      Zod schema defines args(string, optional_object) causing TS2555. pnpm check-types exits with code 2. EVIDENCE.yaml
+      incorrectly claimed zero type errors in QA-scoped files.
+    suggested_fix: >-
+      NodeFactory mismatch: type NodeFactory = () => Promise<NodeFunction> and handle casting in makeNode.
+      verify-acs.ts: pass second arg to callModel or fix ModelClientSchema to allow single-arg calls.
+lessons_to_record:
+  - lesson: >-
+      Zod z.function().args(a, b_optional) still types callers as needing both args from TypeScript's perspective. If
+      callers may omit the second arg, use z.function() without .args() or type via a standard function type annotation
+      alongside the Zod schema.
+    category: pattern
+    tags:
+      - zod
+      - typescript
+      - function-typing
+      - backend
+  - lesson: >-
+      When a QA node factory returns NodeFunction (typed against the full GraphState), a local NodeFactory alias using
+      Record<string, unknown> creates structural incompatibility. Type the wrapper to accept NodeFunction directly or
+      use 'as unknown as' casting at the correct boundary.
+    category: pattern
+    tags:
+      - langgraph
+      - typescript
+      - type-casting
+      - backend
+  - lesson: >-
+      EVIDENCE.yaml check-types claims must be validated by re-running full pnpm check-types in QA. Running tsc on
+      individual files may miss cross-file type incompatibilities exposed only by the full package build.
+    category: blocker
+    tags:
+      - evidence-quality
+      - type-checking
+      - qa-process
+tokens:
+  in: 28000
+  out: 3500
