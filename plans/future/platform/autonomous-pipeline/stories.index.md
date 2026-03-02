@@ -86,7 +86,7 @@ Codebase health gate, cohesion scanner, dependency auditor, test quality monitor
 |---|---|---|---|
 | APIP-4010 | Codebase Health Gate | APIP-1070, APIP-3090 | Ready to Work |
 | APIP-4020 | Cohesion Scanner | APIP-4010, APIP-3090 | Ready for QA |
-| APIP-4030 | Dependency Auditor | APIP-2010 | Ready to Work |
+| APIP-4030 | Dependency Auditor | — | UAT |
 | APIP-4040 | Test Quality Monitor | APIP-3090 | Ready for QA |
 | APIP-4050 | Dead Code Reaper | APIP-3090 | Ready to Work |
 | APIP-4060 | KB Freshness Check and Stale Entry Archival | APIP-3090 | UAT |
