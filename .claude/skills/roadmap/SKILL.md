@@ -40,17 +40,16 @@ Results are pre-sorted by priority (P1 first), then status, then slug.
 Display results as a markdown table:
 
 ```
-| Priority | Status | Plan Slug | Title | Type | Prefix | Stories | Updated |
+| Priority | Status | Plan Slug | Description | Prefix | Stories | Updated |
 ```
 
 **Column formatting:**
 - **Priority**: P1-P5
 - **Status**: as-is
 - **Plan Slug**: backtick-wrapped slug
-- **Title**: truncate to 50 chars if needed
-- **Type**: as-is or `--`
+- **Description**: use `summary` field from KB response, truncate to 80 chars if needed (append "…")
 - **Prefix**: story_prefix or `--`
-- **Stories**: estimated_stories or `--`
+- **Stories**: If the plan has stories (status is `stories-created` or `in-progress`), call `kb_list_stories` with the plan's `story_prefix` to get total and completed counts, then display as `completed/total` (e.g., `3/20`). Count a story as "completed" if its status is `UAT`, `done`, or `implemented`. If no stories exist yet, show `estimated_stories` or `--`.
 - **Updated**: relative date (e.g., "2h ago", "3d ago")
 
 ### Step 4 — Summary Line

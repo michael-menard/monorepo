@@ -8,10 +8,10 @@ Docker Compose configuration for the LangGraph Platform server and autonomous pi
 
 | Service                      | Purpose                                               | Port(s)                                    |
 | ---------------------------- | ----------------------------------------------------- | ------------------------------------------ |
-| `langgraph-platform`         | LangGraph API server + Studio UI                      | `8123` (API), `127.0.0.1:8124` (Studio)   |
+| `langgraph-platform`         | LangGraph API server + Studio UI                      | `127.0.0.1:8123` (API), `127.0.0.1:8124` (Studio) |
 | `langgraph-checkpoint-init`  | One-shot Aurora schema initializer (exits 0)          | —                                          |
-| `pipeline-supervisor`        | BullMQ job processor + health HTTP server             | `9091`                                     |
-| `redis`                      | Pipeline job queue backend                            | `6379`                                     |
+| `pipeline-supervisor`        | BullMQ job processor + health HTTP server             | `127.0.0.1:9091`                           |
+| `redis`                      | Pipeline job queue backend                            | `127.0.0.1:6379`                           |
 
 Image version is **pinned** to `langchain/langgraph-api:0.0.9`. Do not use `latest`.
 
@@ -74,10 +74,28 @@ The LangGraph Platform uses an **isolated** connection pool to Aurora. It does *
 - Allows independent monitoring and rate-limiting of LangGraph DB activity.
 - The dedicated user has `USAGE` + `CREATE` on the `langgraph_checkpoint` schema only — no access to application tables.
 
+### TLS/Encryption (REQUIRED)
+
+All connections to Aurora PostgreSQL **must** use `sslmode=require` (or `sslmode=verify-full` when CA certificates are available). Plaintext database connections are not permitted.
+
+The connection string must include the SSL mode parameter:
+
+```
+postgresql://langgraph_checkpoint_user:PASSWORD@aurora-host:5432/monorepo?sslmode=require&options=-c%20search_path=langgraph_checkpoint
+```
+
+For `sslmode=verify-full`, additionally set `sslrootcert` to the AWS RDS CA bundle path:
+
+```
+postgresql://...?sslmode=verify-full&sslrootcert=/etc/ssl/certs/rds-combined-ca-bundle.pem&options=-c%20search_path=langgraph_checkpoint
+```
+
 ### Creating the DB user (run once on Aurora)
 
 ```sql
-CREATE USER langgraph_checkpoint_user WITH PASSWORD 'your-password-here';
+-- WARNING: Replace <STRONG_PASSWORD> with a securely generated password.
+-- Store the password in AWS Secrets Manager (APIP-5004). Never commit plaintext credentials.
+CREATE USER langgraph_checkpoint_user WITH PASSWORD '<STRONG_PASSWORD>';
 CREATE SCHEMA IF NOT EXISTS langgraph_checkpoint;
 GRANT USAGE, CREATE ON SCHEMA langgraph_checkpoint TO langgraph_checkpoint_user;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA langgraph_checkpoint TO langgraph_checkpoint_user;
@@ -98,12 +116,12 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA langgraph_checkpoint
 | `SUPERVISOR_DRAIN_TIMEOUT_MS`        | `600000`                     | Max drain wait before forced exit (10 min) |
 | `SUPERVISOR_HEALTH_PORT`             | `9091`                       | Port for health HTTP server |
 
-Store sensitive values in the server's `.env` file (not committed to the repo).
+**Security**: Store all sensitive values in the server's `.env` file (not committed to the repo). The `.env` file must be readable only by the deploy user (`chmod 600 .env`). Never commit `.env` files or embed credentials in compose files. See `SECURITY.md` for the full credential management policy.
 
-Example DSN:
+Example DSN (note: `sslmode=require` is mandatory — see [TLS/Encryption](#tlsencryption-required)):
 
 ```
-postgresql://langgraph_checkpoint_user:password@aurora-host:5432/monorepo?options=-c%20search_path=langgraph_checkpoint
+postgresql://langgraph_checkpoint_user:PASSWORD@aurora-host:5432/monorepo?sslmode=require&options=-c%20search_path=langgraph_checkpoint
 ```
 
 **WARNING**: `SUPERVISOR_DRAIN_TIMEOUT_MS` must be >= `PIPELINE_STAGE_TIMEOUT_MS`. If drain timeout is shorter than a running elaboration stage, the supervisor will force-exit before the job completes, causing that job to be requeued. The supervisor logs a warning on startup if this condition is detected.

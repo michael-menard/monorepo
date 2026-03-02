@@ -1,0 +1,85 @@
+# dep-equivalences.yaml
+#
+# Package equivalence groups for the APIP-4030 Dependency Auditor.
+# Each group lists functionally-equivalent packages that serve the same purpose.
+# If a monorepo already has one member of a group installed and a new package
+# from the same group is added, checkOverlap() will flag it as a potential
+# redundant dependency.
+#
+# Maintenance: Add new groups as the monorepo's dependency inventory grows.
+# This file can be updated without code changes.
+#
+# Format:
+#   groups:
+#     - name: "human-readable group name"
+#       packages:
+#         - package-name-1
+#         - package-name-2
+#         ...
+#
+# Story: APIP-4030 - APIP-4030: Dependency Auditor (DISC-3 seed requirement)
+
+groups:
+  - name: date-and-time
+    packages:
+      - date-fns
+      - dayjs
+      - moment
+      - luxon
+      - spacetime
+
+  - name: utility-libraries
+    packages:
+      - lodash
+      - lodash-es
+      - ramda
+      - underscore
+      - radash
+
+  - name: http-clients
+    packages:
+      - axios
+      - node-fetch
+      - got
+      - ky
+      - undici
+      - superagent
+
+  - name: unique-id-generation
+    packages:
+      - uuid
+      - nanoid
+      - cuid
+      - cuid2
+      - ulid
+      - shortid
+
+  - name: logging
+    packages:
+      - winston
+      - pino
+      - bunyan
+      - log4js
+      - morgan
+
+  - name: schema-validation
+    packages:
+      - zod
+      - yup
+      - joi
+      - ajv
+      - valibot
+
+  - name: state-management
+    packages:
+      - redux
+      - zustand
+      - jotai
+      - recoil
+      - mobx
+
+  - name: date-parsing
+    packages:
+      - chrono-node
+      - sugar-date
+      - dateparser

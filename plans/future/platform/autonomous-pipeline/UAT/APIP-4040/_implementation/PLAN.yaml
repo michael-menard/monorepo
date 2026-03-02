@@ -1,0 +1,344 @@
+schema: 2
+story_id: APIP-4040
+timestamp: '2026-03-01T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Define Zod schemas and config in src/nodes/test-quality/schemas.ts — TestQualityMonitorConfigSchema (AC-1),
+      TestQualitySnapshotSchema (AC-6), plus local CronRunResultSchema alias referencing canonical cron/schemas.ts
+    files:
+      - packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/artifacts/story.ts
+      - packages/backend/orchestrator/src/cron/schemas.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-6
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement AssertionDensityCollector in src/nodes/test-quality/collect-assertion-density.ts — scans
+      **/__tests__/**/*.test.ts, counts assertions and test cases, returns Zod-validated AssertionDensityResultSchema
+    files:
+      - packages/backend/orchestrator/src/nodes/test-quality/collect-assertion-density.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+      - packages/backend/orchestrator/src/nodes/metrics/collect-events.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-2
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement OrphanedTestDetector in src/nodes/test-quality/collect-orphaned-tests.ts — finds test files without
+      corresponding source, excludes fixtures/ and __types__/, returns Zod-validated OrphanedTestResultSchema
+    files:
+      - packages/backend/orchestrator/src/nodes/test-quality/collect-orphaned-tests.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+      - packages/backend/orchestrator/src/nodes/metrics/collect-events.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-4
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement CriticalPathCoverageCollector in src/nodes/test-quality/collect-critical-path-coverage.ts — runs vitest
+      coverage scoped to configurable critical-path module patterns, returns Zod-validated
+      CriticalPathCoverageResultSchema
+    files:
+      - packages/backend/orchestrator/src/nodes/test-quality/collect-critical-path-coverage.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+      - packages/backend/orchestrator/src/runner/timeout.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-5
+  - id: 5
+    subtask_id: ST-6
+    description: >-
+      Implement decayDetector (detect-decay.ts) and generateTestImprovementStory (generate-improvement-story.ts) in
+      src/nodes/test-quality/ — decayDetector compares snapshots, generateTestImprovementStory produces
+      StoryArtifactSchema-valid output
+    files:
+      - packages/backend/orchestrator/src/nodes/test-quality/detect-decay.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/generate-improvement-story.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+      - packages/backend/orchestrator/src/artifacts/story.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-7
+      - AC-8
+  - id: 6
+    subtask_id: ST-7
+    description: >-
+      Define wint.test_quality_snapshots Drizzle ORM table in packages/backend/database-schema/src/schema/wint.ts and
+      create migration 0030_apip_4040_test_quality_snapshots.sql
+    files:
+      - packages/backend/database-schema/src/schema/wint.ts
+      - packages/backend/database-schema/src/migrations/app/0030_apip_4040_test_quality_snapshots.sql
+    files_to_read:
+      - packages/backend/database-schema/src/schema/wint.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/database-schema
+    acs_covered:
+      - AC-9
+  - id: 7
+    subtask_id: ST-8
+    description: >-
+      Implement test-quality-monitor LangGraph graph (src/graphs/test-quality-monitor.ts) and cron job definition
+      (src/cron/jobs/test-quality-monitor.job.ts) — graph follows createMetricsGraph factory pattern; job uses canonical
+      CronJobDefinitionSchema from cron/schemas.ts; env-var disable via DISABLE_CRON_JOB_TEST_QUALITY_MONITOR
+    files:
+      - packages/backend/orchestrator/src/graphs/test-quality-monitor.ts
+      - packages/backend/orchestrator/src/cron/jobs/test-quality-monitor.job.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/metrics.ts
+      - packages/backend/orchestrator/src/cron/schemas.ts
+      - packages/backend/orchestrator/src/cron/registry.ts
+      - packages/backend/orchestrator/src/cron/jobs/metrics-collection.job.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+    dependencies:
+      - 2
+      - 3
+      - 4
+      - 5
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-10
+      - AC-11
+  - id: 8
+    subtask_id: ST-9
+    description: >-
+      Write unit tests for all nodes and graph in src/nodes/test-quality/__tests__/ — fixture directories for density
+      and orphan scenarios, inline snapshot pairs for decay, StoryArtifactSchema.parse() validation for story
+      generation, graph compilation test
+    files:
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/collect-assertion-density.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/collect-orphaned-tests.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/detect-decay.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/generate-improvement-story.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/density/sample-a.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/density/sample-b.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/orphan/orphaned.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/orphan/has-source.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/orphan/has-source.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/__tests__/metrics.test.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/collect-assertion-density.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/collect-orphaned-tests.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/detect-decay.ts
+      - packages/backend/orchestrator/src/nodes/test-quality/generate-improvement-story.ts
+    dependencies:
+      - 2
+      - 3
+      - 5
+      - 7
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-12
+      - AC-13
+files_to_change:
+  - path: packages/backend/orchestrator/src/nodes/test-quality/schemas.ts
+    action: create
+    reason: >-
+      AC-1 (TestQualityMonitorConfigSchema), AC-6 (TestQualitySnapshotSchema), and supporting result schemas for all
+      collectors
+  - path: packages/backend/orchestrator/src/nodes/test-quality/collect-assertion-density.ts
+    action: create
+    reason: AC-2 AssertionDensityCollector implementation
+  - path: packages/backend/orchestrator/src/nodes/test-quality/collect-orphaned-tests.ts
+    action: create
+    reason: AC-4 OrphanedTestDetector implementation
+  - path: packages/backend/orchestrator/src/nodes/test-quality/collect-critical-path-coverage.ts
+    action: create
+    reason: AC-5 CriticalPathCoverageCollector implementation
+  - path: packages/backend/orchestrator/src/nodes/test-quality/detect-decay.ts
+    action: create
+    reason: AC-7 decayDetector implementation
+  - path: packages/backend/orchestrator/src/nodes/test-quality/generate-improvement-story.ts
+    action: create
+    reason: AC-8 generateTestImprovementStory implementation
+  - path: packages/backend/orchestrator/src/graphs/test-quality-monitor.ts
+    action: create
+    reason: >-
+      AC-10 graph wiring createTestQualityMonitorGraph / runTestQualityMonitor following createMetricsGraph factory
+      pattern
+  - path: packages/backend/orchestrator/src/cron/jobs/test-quality-monitor.job.ts
+    action: create
+    reason: AC-10 job definition using canonical CronJobDefinitionSchema; AC-11 CronRunResult logging via @repo/logger
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/collect-assertion-density.test.ts
+    action: create
+    reason: AC-12(a) unit test with fixture files for known assertion/test counts
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/collect-orphaned-tests.test.ts
+    action: create
+    reason: AC-12(b) unit test with fixture directory containing one orphaned test
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/detect-decay.test.ts
+    action: create
+    reason: AC-12(c) unit test with inline snapshot pair where mutation score drops below threshold
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/generate-improvement-story.test.ts
+    action: create
+    reason: AC-12(d) unit test validating output parses against StoryArtifactSchema
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/density/sample-a.test.ts
+    action: create
+    reason: 'Fixture: known assertion/test count for AssertionDensityCollector tests'
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/density/sample-b.test.ts
+    action: create
+    reason: 'Fixture: second density fixture file for known counts'
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/orphan/orphaned.test.ts
+    action: create
+    reason: 'Fixture: test file with no corresponding source (orphaned)'
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/orphan/has-source.ts
+    action: create
+    reason: 'Fixture: source file to ensure has-source.test.ts is NOT orphaned'
+  - path: packages/backend/orchestrator/src/nodes/test-quality/__tests__/fixtures/orphan/has-source.test.ts
+    action: create
+    reason: 'Fixture: test file that has a corresponding source file (should not be detected as orphaned)'
+  - path: packages/backend/database-schema/src/schema/wint.ts
+    action: modify
+    reason: AC-9 add test_quality_snapshots table definition using wintSchema.table() pattern
+  - path: packages/backend/database-schema/src/migrations/app/0030_apip_4040_test_quality_snapshots.sql
+    action: create
+    reason: AC-9 SQL migration for wint.test_quality_snapshots table
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after each step
+    required: true
+  - command: pnpm check-types --filter @repo/database-schema
+    when: after step 6
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: TestQualityMonitorConfigSchema in schemas.ts with all fields and defaults; type-checks cleanly
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test: collect-assertion-density.test.ts with fixture files returning known counts {assertionCount, testCount,
+      densityRatio}
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: 'Unit test: collect-orphaned-tests.test.ts with fixture orphan/ directory asserting count === 1'
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: CriticalPathCoverageCollector function exists and type-checks; unit test validates schema parse succeeds
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: TestQualitySnapshotSchema in schemas.ts with all required fields including status enum pass|warn|fail
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: >-
+      Unit test: detect-decay.test.ts with snapshot pair where mutationScore drops below 0.60 threshold; asserts
+      decayed===true
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: 'Unit test: generate-improvement-story.test.ts validates StoryArtifactSchema.parse() succeeds on output'
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      wint.test_quality_snapshots table in wint.ts; migration 0030_apip_4040_test_quality_snapshots.sql; type-checks
+      cleanly
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      test-quality-monitor.job.ts exports job with schedule '0 3 * * 1', timeoutMs 1800000; graph file exports
+      createTestQualityMonitorGraph and runTestQualityMonitor
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: >-
+      Job runFn logs CronRunResultSchema-valid object via logger.info; unit test with vi.mock('@repo/logger') verifies
+      log fields
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: 'All four unit test files pass: density, orphan, decay, story-gen'
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: pnpm test --filter @repo/orchestrator passes with no regressions in pre-existing tests
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: APIP-3090 cron infrastructure — use canonical schemas or define locally?
+    decision: >-
+      Import from canonical cron/schemas.ts (CronJobDefinitionSchema, CronRunResultSchema, CronRunStatus). APIP-3090 is
+      already delivered.
+    rationale: >-
+      packages/backend/orchestrator/src/cron/schemas.ts exists with CronJobDefinitionSchema and CronRunResultSchema.
+      AC-10 local-schema caveat is now obsolete. Use canonical import.
+    decided_by: auto
+  - id: ARCH-002
+    question: >-
+      CronRunResult status values: AC-11 specifies lowercase (success|failure|timeout|skipped) but canonical
+      CronRunStatusSchema uses uppercase (SUCCESS|FAILED|TIMEOUT|SKIPPED). Which takes precedence?
+    decision: >-
+      Use canonical uppercase enum values from cron/schemas.ts: SUCCESS | FAILED | TIMEOUT | SKIPPED. AC-11 wording will
+      be interpreted accordingly.
+    rationale: >-
+      The cron/registry.ts already uses uppercase values and is the authoritative pattern in the codebase. Deviating
+      would break the existing registry integration.
+    decided_by: auto
+  - id: ARCH-003
+    question: Migration number for test_quality_snapshots table
+    decision: Use migration number 0030. Latest confirmed is 0029_apip_3020_model_affinity.sql.
+    rationale: 0028 is APIP-3010, 0029 is APIP-3020. Next sequential is 0030.
+    decided_by: auto
+  - id: ARCH-004
+    question: >-
+      Should the job file (test-quality-monitor.job.ts) implement CronRunResult logging directly, or rely on the
+      registry wrapper in cron/registry.ts?
+    decision: >-
+      The job's runFn implements the graph execution and emits a CronRunResult via logger.info. The registry wrapper
+      provides an outer timeout+result layer. Both operate: the job logs its own internal result; the registry logs the
+      outer run completion.
+    rationale: >-
+      Looking at existing jobs (metrics-collection.job.ts), they are thin stubs. APIP-4040's job needs to produce its
+      own structured CronRunResult per AC-11 for the test-quality-monitor specifically. The registry.ts wrapper handles
+      the global TIMEOUT/FAILED cases; the job emits its own SUCCESS/SKIPPED result internally.
+    decided_by: auto
+complexity: complex
+notes:
+  - >-
+    APIP-3090 is already delivered — cron/schemas.ts, cron/registry.ts, CronJobDefinitionSchema, CronRunResultSchema all
+    exist. AC-10 local-schema caveat is obsolete.
+  - Migration number is 0030 (0028=APIP-3010, 0029=APIP-3020).
+  - 'CronRunStatus enum is uppercase: SUCCESS|FAILED|TIMEOUT|SKIPPED per cron/schemas.ts.'
+  - AC-3 (MutationScoreCollector) is DEFERRED to APIP-4040-B — no mutation testing tooling installed.
+  - ST-5 is DEFERRED — not included in steps.
+  - >-
+    TestQualitySnapshotSchema status field uses lowercase pass|warn|fail (internal domain concept distinct from
+    CronRunStatus).
+  - >-
+    Fixture files for tests live under src/nodes/test-quality/__tests__/fixtures/ — excluded from OrphanedTestDetector
+    per AC-4 (excludes fixtures/ directories).
+  - >-
+    The fixture files for density tests will contain actual TypeScript with a known count of expect() calls and
+    it()/test() declarations for deterministic assertion counting.
+  - >-
+    CriticalPathCoverageCollector runs vitest with --coverage flag scoped to configurable patterns; it spawns a child
+    process or uses programmatic API — recommend child_process.spawn with withTimeout wrapper.
+  - All thresholds are env-var configurable per Architecture Notes table in the story.

@@ -1,0 +1,19 @@
+schema: 1
+story_id: APIP-4070
+branch: story/APIP-4070
+worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/APIP-4070
+feature_dir: plans/future/platform/autonomous-pipeline
+pr_url: https://github.com/michael-menard/monorepo/pull/434
+pr_number: 434
+current_phase: execute
+last_successful_phase: plan
+blocked: false
+blocked_reason: null
+iteration: 0
+max_iterations: 3
+e2e_gate: EXEMPT
+warnings:
+  - 'AC-11 DEFERRED: cron registration to APIP-3090 (consistent with APIP-4010 AC-10)'
+timestamp: '2026-03-02T21:01:00Z'
+completed_at: null
+forced: false

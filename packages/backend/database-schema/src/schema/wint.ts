@@ -1805,7 +1805,6 @@ export const selectWorkflowAuditLogSchema = createSelectSchema(workflowAuditLog)
 export type InsertWorkflowAuditLog = z.infer<typeof insertWorkflowAuditLogSchema>
 export type SelectWorkflowAuditLog = z.infer<typeof selectWorkflowAuditLogSchema>
 
-// ============================================================================
 // MODEL ASSIGNMENTS SCHEMA (APIP-0040)
 // ============================================================================
 
@@ -1886,7 +1885,9 @@ export const modelAffinity = wintSchema.table(
     trend: jsonb('trend'),
 
     // Incremental aggregation watermark
-    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
     // Audit
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1914,3 +1915,295 @@ export const ModelAffinityInsertSchema = createInsertSchema(modelAffinity)
 export const ModelAffinitySelectSchema = createSelectSchema(modelAffinity)
 export type InsertModelAffinity = z.infer<typeof ModelAffinityInsertSchema>
 export type SelectModelAffinity = z.infer<typeof ModelAffinitySelectSchema>
+
+// ============================================================================
+// 8. MODEL EXPERIMENTS SCHEMA (APIP-3060)
+// ============================================================================
+
+/**
+ * Experiment Status Enum
+ * Defines the lifecycle states of a bake-off model experiment
+ */
+export const experimentStatusEnum = pgEnum('experiment_status', [
+  'active',
+  'concluded',
+  'expired',
+])
+
+/**
+ * Model Experiments Table
+ * Tracks controlled two-arm model comparison (bake-off) experiments.
+ * Each row represents one live A/B experiment for a (change_type, file_type) pair.
+ *
+ * Story APIP-3060: Bake-Off Engine for Model Experiments
+ */
+export const modelExperiments = wintSchema.table(
+  'model_experiments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Experiment scope — uniquely constrained to one active row per pair
+    changeType: varchar('change_type', { length: 64 }).notNull(),
+    fileType: varchar('file_type', { length: 64 }).notNull(),
+
+    // Arms
+    controlModel: varchar('control_model', { length: 128 }).notNull(),
+    challengerModel: varchar('challenger_model', { length: 128 }).notNull(),
+
+    // Lifecycle
+    status: experimentStatusEnum('status').notNull().default('active'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    concludedAt: timestamp('concluded_at', { withTimezone: true }),
+
+    // Sample counts recorded at conclusion
+    controlSampleSize: integer('control_sample_size'),
+    challengerSampleSize: integer('challenger_sample_size'),
+
+    // Success rates recorded at conclusion (precision 5, scale 4 — e.g. 0.9875)
+    controlSuccessRate: numeric('control_success_rate', { precision: 5, scale: 4 }),
+    challengerSuccessRate: numeric('challenger_success_rate', { precision: 5, scale: 4 }),
+
+    // Window configuration
+    minSamplePerArm: integer('min_sample_per_arm').notNull().default(50),
+    maxWindowRows: integer('max_window_rows'),
+    maxWindowDays: integer('max_window_days'),
+
+    // Winner recorded on conclusion
+    winner: varchar('winner', { length: 128 }),
+
+    // Metadata / notes
+    notes: text('notes'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Only one active experiment per (change_type, file_type) pair at a time
+    activeExperimentUniqueIdx: uniqueIndex('model_experiments_active_unique_idx')
+      .on(table.changeType, table.fileType)
+      .where(sql`${table.status} = 'active'`),
+    statusIdx: index('model_experiments_status_idx').on(table.status),
+    startedAtIdx: index('model_experiments_started_at_idx').on(table.startedAt),
+  }),
+)
+
+// Model Experiments Zod Schemas (APIP-3060)
+export const ModelExperimentInsertSchema = createInsertSchema(modelExperiments)
+export const ModelExperimentSelectSchema = createSelectSchema(modelExperiments)
+export type ModelExperimentInsert = z.infer<typeof ModelExperimentInsertSchema>
+export type ModelExperimentSelect = z.infer<typeof ModelExperimentSelectSchema>
+
+// ============================================================================
+// 9. TEST QUALITY SNAPSHOTS SCHEMA (APIP-4040)
+// ============================================================================
+
+/**
+ * Test Quality Snapshot Status Enum
+ * Reflects the overall health status of a test quality run.
+ * Lives in the 'wint' schema namespace.
+ */
+export const testQualitySnapshotStatusEnum = wintSchema.enum('test_quality_snapshot_status', [
+  'pass',
+  'warn',
+  'fail',
+])
+
+/**
+ * Test Quality Snapshots Table
+ * Stores per-run snapshots of test quality metrics collected by the
+ * Test Quality Monitor cron job.
+ *
+ * Story: APIP-4040 - Test Quality Monitor
+ *
+ * Key design decisions:
+ * - mutation_score: nullable — deferred to APIP-4040-B (mutation testing not yet installed)
+ * - config: jsonb — full config echoed for each snapshot for reproducibility
+ * - snapshot_at: the logical time of the snapshot (cron run start time)
+ */
+export const testQualitySnapshots = wintSchema.table(
+  'test_quality_snapshots',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // Snapshot time (logical — cron run start)
+    snapshotAt: timestamp('snapshot_at', { withTimezone: true }).notNull(),
+
+    // Overall status
+    status: testQualitySnapshotStatusEnum('status').notNull(),
+
+    // Assertion density
+    assertionCount: integer('assertion_count').notNull().default(0),
+    testCount: integer('test_count').notNull().default(0),
+    assertionDensityRatio: numeric('assertion_density_ratio', { precision: 8, scale: 4 })
+      .notNull()
+      .default('0'),
+
+    // Orphaned tests
+    orphanedTestCount: integer('orphaned_test_count').notNull().default(0),
+
+    // Critical path coverage (percentages stored as NUMERIC for precision)
+    criticalPathLineCoverage: numeric('critical_path_line_coverage', { precision: 6, scale: 2 })
+      .notNull()
+      .default('0'),
+    criticalPathBranchCoverage: numeric('critical_path_branch_coverage', { precision: 6, scale: 2 })
+      .notNull()
+      .default('0'),
+
+    // Mutation score (DEFERRED to APIP-4040-B — nullable)
+    mutationScore: numeric('mutation_score', { precision: 5, scale: 4 }),
+
+    // Full config snapshot (for reproducibility and threshold tracing)
+    config: jsonb('config').$type<Record<string, unknown>>().notNull(),
+
+    // Audit timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Index: snapshot_at for time-series queries and decay detection
+    snapshotAtIdx: index('idx_test_quality_snapshots_snapshot_at').on(table.snapshotAt),
+    // Index: status for filtering pass/warn/fail snapshots
+    statusIdx: index('idx_test_quality_snapshots_status').on(table.status),
+    // Composite: status + snapshot_at for range queries filtered by status
+    statusSnapshotAtIdx: index('idx_test_quality_snapshots_status_snapshot_at').on(
+      table.status,
+      table.snapshotAt,
+    ),
+  }),
+)
+
+// ============================================================================
+// Test Quality Snapshots Zod Schemas (APIP-4040)
+// ============================================================================
+
+export const TestQualitySnapshotInsertSchema = createInsertSchema(testQualitySnapshots)
+export const TestQualitySnapshotSelectSchema = createSelectSchema(testQualitySnapshots)
+export type InsertTestQualitySnapshot = z.infer<typeof TestQualitySnapshotInsertSchema>
+export type SelectTestQualitySnapshot = z.infer<typeof TestQualitySnapshotSelectSchema>
+
+// ============================================================================
+// APIP-4030: Dependency Auditor Tables
+// ============================================================================
+
+/**
+ * Dep Audit Runs Table
+ *
+ * Records each post-merge dependency audit run.
+ * Tracks which story/commit triggered it, which packages changed,
+ * the overall risk level, and a count of findings.
+ *
+ * Story: APIP-4030 - Dependency Auditor
+ */
+export const depAuditRuns = wintSchema.table(
+  'dep_audit_runs',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // Trigger context
+    storyId: varchar('story_id', { length: 255 }).notNull(),
+    commitSha: varchar('commit_sha', { length: 64 }),
+
+    // Audit timestamp
+    triggeredAt: timestamp('triggered_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // Package change summary (jsonb arrays)
+    packagesAdded: jsonb('packages_added')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    packagesUpdated: jsonb('packages_updated')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    packagesRemoved: jsonb('packages_removed')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+
+    // Overall risk assessment
+    overallRisk: varchar('overall_risk', { length: 16 }).notNull().default('none'),
+    // Constraint: 'none' | 'low' | 'medium' | 'high' | 'critical'
+
+    // Summary counts
+    findingsCount: integer('findings_count').notNull().default(0),
+    blockedQueueItemsCreated: integer('blocked_queue_items_created').notNull().default(0),
+
+    // Audit
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_dep_audit_runs_story_id').on(table.storyId),
+    triggeredAtIdx: index('idx_dep_audit_runs_triggered_at').on(table.triggeredAt),
+  }),
+)
+
+/**
+ * Dep Audit Findings Table
+ *
+ * One row per finding per audit run.
+ * Captures package name, finding type, severity, and structured detail payload.
+ *
+ * Story: APIP-4030 - Dependency Auditor
+ */
+export const depAuditFindings = wintSchema.table(
+  'dep_audit_findings',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // FK to dep_audit_runs
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => depAuditRuns.id, { onDelete: 'cascade' }),
+
+    // Finding identity
+    packageName: varchar('package_name', { length: 255 }).notNull(),
+
+    // finding_type: 'vulnerability' | 'overlap' | 'bundle_bloat' | 'unmaintained'
+    findingType: varchar('finding_type', { length: 32 }).notNull(),
+
+    // severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
+    severity: varchar('severity', { length: 16 }).notNull(),
+
+    // Structured payload (varies by finding_type)
+    details: jsonb('details')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+
+    // Audit
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    runIdIdx: index('idx_dep_audit_findings_run_id').on(table.runId),
+    severityIdx: index('idx_dep_audit_findings_severity').on(table.severity),
+    runSeverityIdx: index('idx_dep_audit_findings_run_severity').on(table.runId, table.severity),
+  }),
+)
+
+// ============================================================================
+// Dep Audit Relations (APIP-4030)
+// ============================================================================
+
+export const depAuditRunsRelations = relations(depAuditRuns, ({ many }) => ({
+  findings: many(depAuditFindings),
+}))
+
+export const depAuditFindingsRelations = relations(depAuditFindings, ({ one }) => ({
+  run: one(depAuditRuns, { fields: [depAuditFindings.runId], references: [depAuditRuns.id] }),
+}))
+
+// ============================================================================
+// Dep Audit Zod Schemas (APIP-4030)
+// ============================================================================
+
+export const DepAuditRunInsertSchema = createInsertSchema(depAuditRuns)
+export const DepAuditRunSelectSchema = createSelectSchema(depAuditRuns)
+export type InsertDepAuditRun = z.infer<typeof DepAuditRunInsertSchema>
+export type SelectDepAuditRun = z.infer<typeof DepAuditRunSelectSchema>
+
+export const DepAuditFindingInsertSchema = createInsertSchema(depAuditFindings)
+export const DepAuditFindingSelectSchema = createSelectSchema(depAuditFindings)
+export type InsertDepAuditFinding = z.infer<typeof DepAuditFindingInsertSchema>
+export type SelectDepAuditFinding = z.infer<typeof DepAuditFindingSelectSchema>

@@ -6,6 +6,7 @@
  *
  * APIP-0020: Supervisor Loop (Plain TypeScript)
  * APIP-2030: Added drainTimeoutMs and healthPort config fields
+ * APIP-2010: Added webhookUrl, slackToken, notificationThreshold notification config fields
  */
 
 import { z } from 'zod'
@@ -126,6 +127,24 @@ export const PipelineSupervisorConfigSchema = z.object({
    * Set via SUPERVISOR_HEALTH_PORT env var.
    */
   healthPort: z.number().int().min(1).max(65535).default(9091),
+  /**
+   * Webhook URL for blocker notifications (HTTP POST on PERMANENT failure or circuit OPEN).
+   * APIP-2010 AC-7, AC-8: Optional. Set via PIPELINE_NOTIFICATION_WEBHOOK_URL env var.
+   * If absent, no webhook calls are made.
+   */
+  webhookUrl: z.string().url().optional(),
+  /**
+   * Slack token for future Slack notification integration.
+   * APIP-2010 AC-8: Reserved for future use — implementation is webhook-only for MVP.
+   * Set via NOTIFICATION_SLACK_TOKEN env var.
+   */
+  slackToken: z.string().optional(),
+  /**
+   * Minimum number of active blockers before a notification is sent.
+   * APIP-2010 AC-8: Reserved for future threshold-based notification suppression.
+   * Default: 1 (notify on every blocker).
+   */
+  notificationThreshold: z.number().int().min(1).optional(),
 })
 
 export type PipelineSupervisorConfig = z.infer<typeof PipelineSupervisorConfigSchema>

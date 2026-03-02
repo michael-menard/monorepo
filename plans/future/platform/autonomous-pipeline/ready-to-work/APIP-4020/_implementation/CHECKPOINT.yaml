@@ -1,0 +1,16 @@
+schema: 1
+story_id: APIP-4020
+timestamp: '2026-03-01T00:00:00Z'
+branch: story/APIP-4020
+forced: false
+blocked: false
+e2e_gate: null
+warnings: []
+iteration: 0
+feature_dir: plans/future/platform/autonomous-pipeline
+completed_at: null
+current_phase: plan
+worktree_path: /Users/michaelmenard/Development/monorepo/tree/story/APIP-4020
+blocked_reason: null
+max_iterations: 3
+last_successful_phase: setup
