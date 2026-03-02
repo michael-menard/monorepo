@@ -68,7 +68,9 @@ export const healthGateJob: CronJobDefinition = {
     })
 
     // Operator log format per APIP-4010 architecture notes (stub values)
-    logger.info('[health-gate] run=stub merge_number=0 metrics_checked=0 metrics_within_threshold=0 cleanup_stories_generated=0 stories=[]')
+    logger.info(
+      '[health-gate] run=stub merge_number=0 metrics_checked=0 metrics_within_threshold=0 cleanup_stories_generated=0 stories=[]',
+    )
   },
 }
 

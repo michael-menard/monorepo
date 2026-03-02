@@ -17,21 +17,15 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import {
-  collectLintWarnings,
-  collectTypeErrors,
-  collectAnyCount,
-  collectEslintDisableCount,
-  collectTestCoverage,
-  collectCircularDeps,
-  collectBundleSize,
-  collectDeadExports,
-  type ExecFn,
-} from './collectors/index.js'
-import type {
-  CodebaseHealthSnapshot,
-  CodebaseHealthInsert,
-} from './schemas/index.js'
+import { collectLintWarnings, type ExecFn } from './collectors/collectLintWarnings.js'
+import { collectTypeErrors } from './collectors/collectTypeErrors.js'
+import { collectAnyCount } from './collectors/collectAnyCount.js'
+import { collectEslintDisableCount } from './collectors/collectEslintDisableCount.js'
+import { collectTestCoverage } from './collectors/collectTestCoverage.js'
+import { collectCircularDeps } from './collectors/collectCircularDeps.js'
+import { collectBundleSize } from './collectors/collectBundleSize.js'
+import { collectDeadExports } from './collectors/collectDeadExports.js'
+import type { CodebaseHealthSnapshot, CodebaseHealthInsert } from './schemas/index.js'
 
 // ============================================================================
 // DB interface (dependency injection)
@@ -62,7 +56,10 @@ export const CaptureHealthSnapshotConfigSchema = z.object({
   execFn: z.function().optional(),
 })
 
-export type CaptureHealthSnapshotConfig = Omit<z.infer<typeof CaptureHealthSnapshotConfigSchema>, 'execFn'> & {
+export type CaptureHealthSnapshotConfig = Omit<
+  z.infer<typeof CaptureHealthSnapshotConfigSchema>,
+  'execFn'
+> & {
   execFn?: ExecFn
 }
 
@@ -223,18 +220,15 @@ export async function captureHealthSnapshot(
     logger.info('captureHealthSnapshot: snapshot inserted successfully', {
       id: snapshotId,
       mergeNumber,
-      tip: 'If this is the first snapshot, run: UPDATE wint.codebase_health SET is_baseline = true WHERE id = \'' + snapshotId + '\';',
+      tip: 'To promote as baseline, set is_baseline=true on this snapshot row.',
     })
   } catch (err) {
     // AC-5: DB failures must never propagate — log and continue
-    logger.warn(
-      'captureHealthSnapshot: failed to insert snapshot row — continuing without error',
-      {
-        err: err instanceof Error ? err.message : String(err),
-        mergeNumber,
-        snapshotId,
-      },
-    )
+    logger.warn('captureHealthSnapshot: failed to insert snapshot row — continuing without error', {
+      err: err instanceof Error ? err.message : String(err),
+      mergeNumber,
+      snapshotId,
+    })
   }
 
   return snapshot

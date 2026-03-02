@@ -15,6 +15,7 @@
  * - logger.warn when baseline is null (OPP-002 from ELAB.yaml)
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { createStoryArtifact } from '../../artifacts/story-v2-compatible.js'
 import type { StoryArtifact } from '../../artifacts/story-v2-compatible.js'
@@ -27,14 +28,16 @@ import type { CodebaseHealthSnapshot, HealthGateThresholds } from './schemas/ind
 /**
  * DriftedMetric — describes a single metric that exceeded its threshold.
  */
-interface DriftedMetric {
-  name: string
-  baseline: number | null
-  current: number | null
-  delta: number
-  threshold: number
-  label: string
-}
+const DriftedMetricSchema = z.object({
+  name: z.string(),
+  baseline: z.number().nullable(),
+  current: z.number().nullable(),
+  delta: z.number(),
+  threshold: z.number(),
+  label: z.string(),
+})
+
+type DriftedMetric = z.infer<typeof DriftedMetricSchema>
 
 /**
  * Check if a metric has drifted beyond its threshold.
@@ -89,7 +92,7 @@ export function detectDriftAndGenerateCleanup(
     logger.warn('detectDriftAndGenerateCleanup: no baseline found — cannot detect drift', {
       snapshotId: snapshot.id,
       mergeNumber: snapshot.mergeNumber,
-      tip: 'Promote a known-good snapshot as baseline: UPDATE wint.codebase_health SET is_baseline = true WHERE id = \'<id>\';',
+      tip: "Promote a known-good snapshot as baseline: UPDATE wint.codebase_health SET is_baseline = true WHERE id = '<id>';",
     })
     return []
   }

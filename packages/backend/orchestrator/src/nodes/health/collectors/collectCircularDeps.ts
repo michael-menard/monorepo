@@ -24,9 +24,7 @@ import type { ExecFn } from './collectLintWarnings.js'
  */
 export async function collectCircularDeps(execFn: ExecFn): Promise<number | null> {
   try {
-    const stdout = await execFn(
-      'pnpm exec madge --circular --extensions ts,tsx . 2>&1 || true',
-    )
+    const stdout = await execFn('pnpm exec madge --circular --extensions ts,tsx . 2>&1 || true')
 
     // madge outputs circular deps as a list of cycles
     // If "No circular dependency found" is in output, count is 0
