@@ -8,10 +8,7 @@
  */
 
 import { z } from 'zod'
-import {
-  StoryArtifactSchema,
-  type StoryArtifact,
-} from '../../artifacts/story.js'
+import { StoryArtifactSchema, type StoryArtifact } from '../../artifacts/story.js'
 import type { DecayDetectionResult } from './schemas.js'
 
 /**
@@ -50,9 +47,7 @@ function generateGoal(decay: DecayDetectionResult): string {
     return 'Improve overall test quality metrics to meet configured floors.'
   }
 
-  const descriptions = decay.decayedMetrics.map(
-    m => `- ${m.metric}: ${m.description}`,
-  )
+  const descriptions = decay.decayedMetrics.map(m => `- ${m.metric}: ${m.description}`)
   return [
     'Address test quality regression(s) detected by the Test Quality Monitor:',
     ...descriptions,

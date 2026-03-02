@@ -98,12 +98,12 @@ export const testQualityMonitorJob: CronJobDefinition = {
       )
 
       const completedAt = new Date().toISOString()
-      const durationMs =
-        new Date(completedAt).getTime() - new Date(startedAt).getTime()
+      const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
 
-      const status = finalState.errors.length === 0
-        ? CronRunStatusSchema.Enum.SUCCESS
-        : CronRunStatusSchema.Enum.FAILED
+      const status =
+        finalState.errors.length === 0
+          ? CronRunStatusSchema.Enum.SUCCESS
+          : CronRunStatusSchema.Enum.FAILED
 
       const result: CronRunResult = CronRunResultSchema.parse({
         jobName,
@@ -128,8 +128,7 @@ export const testQualityMonitorJob: CronJobDefinition = {
       })
     } catch (error) {
       const completedAt = new Date().toISOString()
-      const durationMs =
-        new Date(completedAt).getTime() - new Date(startedAt).getTime()
+      const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
       const result: CronRunResult = CronRunResultSchema.parse({

@@ -13,6 +13,7 @@
 import { spawn } from 'node:child_process'
 import { readFile, access } from 'node:fs/promises'
 import path from 'node:path'
+import { z } from 'zod'
 import {
   CriticalPathCoverageResultSchema,
   type CriticalPathCoverageResult,
@@ -20,26 +21,25 @@ import {
 } from './schemas.js'
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Types for the vitest JSON coverage output
+// Schemas for the vitest JSON coverage output
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface V8CoverageSummary {
-  total: number
-  covered: number
-  pct: number
-}
+const V8CoverageSummarySchema = z.object({
+  total: z.number(),
+  covered: z.number(),
+  pct: z.number(),
+})
 
-interface V8FileSummary {
-  lines: V8CoverageSummary
-  branches: V8CoverageSummary
-  functions: V8CoverageSummary
-  statements: V8CoverageSummary
-}
+const V8FileSummarySchema = z.object({
+  lines: V8CoverageSummarySchema,
+  branches: V8CoverageSummarySchema,
+  functions: V8CoverageSummarySchema,
+  statements: V8CoverageSummarySchema,
+})
 
-interface V8CoverageReport {
-  total?: V8FileSummary
-  [filePath: string]: V8FileSummary | undefined
-}
+const V8CoverageReportSchema = z.record(z.string(), V8FileSummarySchema.optional())
+
+type V8CoverageReport = z.infer<typeof V8CoverageReportSchema>
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -64,8 +64,12 @@ function runCommand(
       reject(new Error(`Command timed out after ${timeoutMs}ms`))
     }, timeoutMs)
 
-    child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString() })
-    child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString()
+    })
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString()
+    })
 
     child.on('close', code => {
       clearTimeout(timer)

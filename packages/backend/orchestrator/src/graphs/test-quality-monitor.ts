@@ -180,8 +180,7 @@ function createBuildSnapshotNode() {
 
     // Determine overall status
     const densityOk = (density?.densityRatio ?? 0) >= cfg.minAssertionDensity || !density?.success
-    const orphanedOk =
-      (orphaned?.orphanedCount ?? 0) <= cfg.maxOrphanedTests || !orphaned?.success
+    const orphanedOk = (orphaned?.orphanedCount ?? 0) <= cfg.maxOrphanedTests || !orphaned?.success
     const coverageOk =
       (coverage?.overallLineCoverage ?? 0) / 100 >= cfg.criticalPathCoverageFloor ||
       !coverage?.success

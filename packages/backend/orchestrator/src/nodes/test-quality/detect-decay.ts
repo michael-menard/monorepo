@@ -34,10 +34,7 @@ export function detectDecay(
   const config = current.config
 
   // ── Assertion density ────────────────────────────────────────────────────
-  if (
-    previous !== null &&
-    current.assertionDensityRatio < config.minAssertionDensity
-  ) {
+  if (previous !== null && current.assertionDensityRatio < config.minAssertionDensity) {
     decayedMetrics.push({
       metric: 'assertionDensityRatio',
       previousValue: previous.assertionDensityRatio,
@@ -48,10 +45,7 @@ export function detectDecay(
   }
 
   // ── Orphaned tests ───────────────────────────────────────────────────────
-  if (
-    previous !== null &&
-    current.orphanedTestCount > config.maxOrphanedTests
-  ) {
+  if (previous !== null && current.orphanedTestCount > config.maxOrphanedTests) {
     decayedMetrics.push({
       metric: 'orphanedTestCount',
       previousValue: previous.orphanedTestCount,
@@ -63,10 +57,7 @@ export function detectDecay(
 
   // ── Critical path coverage ───────────────────────────────────────────────
   const coverageFloorPct = config.criticalPathCoverageFloor * 100
-  if (
-    previous !== null &&
-    current.criticalPathLineCoverage < coverageFloorPct
-  ) {
+  if (previous !== null && current.criticalPathLineCoverage < coverageFloorPct) {
     decayedMetrics.push({
       metric: 'criticalPathLineCoverage',
       previousValue: previous.criticalPathLineCoverage,

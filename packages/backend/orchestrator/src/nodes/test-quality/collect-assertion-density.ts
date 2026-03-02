@@ -8,13 +8,9 @@
  * APIP-4040 AC-2
  */
 
-import { readFile } from 'node:fs/promises'
-import { glob } from 'node:fs/promises'
+import { readFile, glob } from 'node:fs/promises'
 import path from 'node:path'
-import {
-  AssertionDensityResultSchema,
-  type FileDensityStat,
-} from './schemas.js'
+import { AssertionDensityResultSchema, type FileDensityStat } from './schemas.js'
 
 // Patterns used to count assertions and test declarations
 // Matches expect(...), assert(...), assertThat(...)
@@ -42,7 +38,9 @@ function countInSource(source: string): { assertionCount: number; testCount: num
  * @param scanRoot - Absolute or relative path to the directory to scan (default: cwd)
  * @returns AssertionDensityResult
  */
-export async function collectAssertionDensity(scanRoot: string = '.'): Promise<import('./schemas.js').AssertionDensityResult> {
+export async function collectAssertionDensity(
+  scanRoot: string = '.',
+): Promise<import('./schemas.js').AssertionDensityResult> {
   const collectedAt = new Date().toISOString()
 
   try {
@@ -96,7 +94,8 @@ export async function collectAssertionDensity(scanRoot: string = '.'): Promise<i
       success: true,
     })
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error during assertion density collection'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error during assertion density collection'
     return AssertionDensityResultSchema.parse({
       assertionCount: 0,
       testCount: 0,

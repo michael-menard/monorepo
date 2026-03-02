@@ -65,7 +65,11 @@ export const TestQualityMonitorConfigSchema = z.object({
    * Timeout for vitest coverage child process in milliseconds.
    * Default: 5 minutes
    */
-  coverageTimeoutMs: z.number().int().positive().default(5 * 60 * 1000),
+  coverageTimeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .default(5 * 60 * 1000),
 
   /**
    * Whether to generate improvement stories on decay.

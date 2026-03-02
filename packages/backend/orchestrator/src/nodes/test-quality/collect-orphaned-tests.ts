@@ -13,8 +13,7 @@
  * APIP-4040 AC-4
  */
 
-import { access } from 'node:fs/promises'
-import { glob } from 'node:fs/promises'
+import { access, glob } from 'node:fs/promises'
 import path from 'node:path'
 import { OrphanedTestResultSchema, type OrphanedTestResult } from './schemas.js'
 
@@ -40,9 +39,7 @@ function deriveSourcePaths(testRelPath: string, scanRoot: string): string[] {
 
   // Remove .test.ts / .spec.ts suffix to get base name
   const basename = path.basename(absTestPath)
-  const baseStem = basename
-    .replace(/\.test\.[tj]sx?$/, '')
-    .replace(/\.spec\.[tj]sx?$/, '')
+  const baseStem = basename.replace(/\.test\.[tj]sx?$/, '').replace(/\.spec\.[tj]sx?$/, '')
 
   // Navigate up from __tests__/ to find the parent source dir
   const testsDir = path.dirname(absTestPath)
