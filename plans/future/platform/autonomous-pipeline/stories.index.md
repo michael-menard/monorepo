@@ -13,10 +13,10 @@
 | 0 | Foundation | 11 | 4 | 0 | 3 | backlog |
 | 1 | Full Worker Graphs | 10 | 2 | 1 | 2 | in-progress |
 | 2 | Resilience & Monitoring | 3 | 0 | 0 | 0 | backlog |
-| 3 | Learning System & Optimization | 5 | 0 | 0 | 1 | in-progress |
+| 3 | Learning System & Optimization | 5 | 0 | 0 | 2 | in-progress |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
 | 5 | Pipeline Resilience | 3 | 3 | 0 | 0 | backlog |
-| **TOTAL** | | **35** | **9** | **1** | **6** | |
+| **TOTAL** | | **35** | **9** | **1** | **7** | |
 
 ## Phase 0: Foundation (11 stories)
 
@@ -69,8 +69,8 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
 | APIP-3010 | Change Telemetry Table and Instrumentation | APIP-1032 | Ready for Code Review |
-| APIP-3020 | Model Affinity Profiles Table and Pattern Miner Cron | APIP-3010 | 🔍 Ready for QA |
-| APIP-3030 | Learning-Aware Diff Planner | APIP-3020, APIP-1020 | 🔍 Ready for QA |
+| APIP-3020 | Model Affinity Profiles Table and Pattern Miner Cron | APIP-3010 | Ready for Code Review |
+| APIP-3030 | Learning-Aware Diff Planner | APIP-3020, APIP-1020 | ✅ uat |
 | APIP-3040 | Learning-Aware Model Router | APIP-3020 | 🔴 Failed Code Review |
 | APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | In Progress |
 | APIP-3060 | Bake-Off Engine for Model Experiments | APIP-3020, APIP-3010 | 🔍 Ready for QA |

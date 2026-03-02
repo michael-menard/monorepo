@@ -30,14 +30,14 @@ import { logger } from '@repo/logger'
  *
  * Named constants for confidence band assignment.
  * Based on sample_count thresholds (not success_rate):
- *   - HIGH: >= 30 samples
- *   - MEDIUM: >= 10 samples
+ *   - HIGH: >= 50 samples
+ *   - MEDIUM: >= 20 samples
  *   - LOW: >= 1 sample
  *   - UNKNOWN: 0 samples (cold start — should not normally reach upsert)
  */
 export const CONFIDENCE_THRESHOLDS = {
-  HIGH: 30,
-  MEDIUM: 10,
+  HIGH: 50,
+  MEDIUM: 20,
   LOW: 1,
 } as const
 
@@ -225,8 +225,8 @@ export type PatternMinerState = typeof PatternMinerStateAnnotation.State
  * assignConfidenceLevel
  *
  * Assigns a confidence band based on sample_count thresholds:
- *   >= HIGH (30) -> 'high'
- *   >= MEDIUM (10) -> 'medium'
+ *   >= HIGH (50) -> 'high'
+ *   >= MEDIUM (20) -> 'medium'
  *   >= LOW (1) -> 'low'
  *   0 -> 'unknown'
  */
