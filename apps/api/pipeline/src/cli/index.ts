@@ -17,6 +17,7 @@
  *   --help                    Print this help message and exit 0
  */
 
+import { z } from 'zod'
 import {
   createPipelineConnection,
   createPipelineQueue,
@@ -58,13 +59,29 @@ function getRedisUrl(): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Utility: sanitize Redis URL for safe logging (strips credentials)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function sanitizeRedisUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl)
+    parsed.username = ''
+    parsed.password = ''
+    return parsed.toString()
+  } catch {
+    // If URL parsing fails, return a safe placeholder rather than the raw URL
+    return 'redis://<host>:<port>'
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Command: queue status
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function cmdQueueStatus(): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
   try {
     const counts = await pq.bullQueue.getJobCounts(
       'waiting',
@@ -89,12 +106,14 @@ async function cmdQueueStatus(): Promise<void> {
 // Command: queue jobs
 // ─────────────────────────────────────────────────────────────────────────────
 
-type JobStatus = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
+const JobStatusSchema = z.enum(['waiting', 'active', 'completed', 'failed', 'delayed'])
+
+type JobStatus = z.infer<typeof JobStatusSchema>
 
 async function cmdQueueJobs(statusFilter?: JobStatus): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
   try {
     const statuses: JobStatus[] = statusFilter
       ? [statusFilter]
@@ -164,7 +183,7 @@ function formatAge(ms: number): string {
 async function cmdSupervisorStatus(): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
   try {
     const [activeJobs, completedJobs, failedJobs] = await Promise.all([
       pq.bullQueue.getActive(),
@@ -220,7 +239,7 @@ const PIPELINE_STAGES: PipelinePhase[] = ['elaboration', 'implementation', 'revi
 async function cmdGraphStatus(): Promise<void> {
   const redisUrl = getRedisUrl()
   const conn = createPipelineConnection(redisUrl)
-  const pq = createPipelineQueue(conn as any, PIPELINE_QUEUE_NAME)
+  const pq = createPipelineQueue(conn, PIPELINE_QUEUE_NAME)
   try {
     const jobs = await pq.bullQueue.getJobs(
       ['waiting', 'active', 'completed', 'failed', 'delayed'],
@@ -229,14 +248,17 @@ async function cmdGraphStatus(): Promise<void> {
     )
 
     // Group by phase
-    const counts: Record<string, number> = {}
-    for (const stage of PIPELINE_STAGES) {
-      counts[stage] = 0
+    const counts: Record<PipelinePhase, number> = {
+      elaboration: 0,
+      implementation: 0,
+      review: 0,
+      qa: 0,
+      merge: 0,
     }
     for (const job of jobs) {
       const phase = job.data?.phase
       if (phase && phase in counts) {
-        counts[phase]++
+        counts[phase as PipelinePhase]++
       }
     }
 
@@ -262,8 +284,8 @@ async function cmdGraphStatus(): Promise<void> {
 function handleRedisError(err: unknown): void {
   const msg = err instanceof Error ? err.message : String(err)
   if (msg.includes('ECONNREFUSED') || msg.includes('connect ECONNREFUSED')) {
-    const redisUrl = getRedisUrl()
-    console.error(`Error: Cannot connect to Redis at ${redisUrl}. Is the pipeline server running?`)
+    const safeUrl = sanitizeRedisUrl(getRedisUrl())
+    console.error(`Error: Cannot connect to Redis at ${safeUrl}. Is the pipeline server running?`)
   } else {
     console.error(`Error: ${msg}`)
   }
@@ -291,8 +313,19 @@ async function main(): Promise<void> {
     }
     if (subcommand === 'jobs') {
       const statusIdx = rest.indexOf('--status')
-      const statusFilter = statusIdx !== -1 ? (rest[statusIdx + 1] as JobStatus) : undefined
-      await cmdQueueJobs(statusFilter)
+      if (statusIdx !== -1) {
+        const rawStatus = rest[statusIdx + 1]
+        const parsed = JobStatusSchema.safeParse(rawStatus)
+        if (!parsed.success) {
+          console.error(
+            `Error: Invalid --status value "${rawStatus}". Must be one of: waiting, active, completed, failed, delayed`,
+          )
+          process.exit(1)
+        }
+        await cmdQueueJobs(parsed.data)
+      } else {
+        await cmdQueueJobs()
+      }
       return
     }
   }
