@@ -1,6 +1,6 @@
 id: "APIP-4040"
 title: "Test Quality Monitor"
-status: needs-code-review
+status: ready-for-qa
 priority: medium
 phase: 4
 story_type: feature
