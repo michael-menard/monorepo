@@ -16,6 +16,10 @@ import type { Job } from 'bullmq'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import {
+  WorktreeConflictDetector,
+  type StoryConflictDescriptor,
+} from '../conflicts/worktree-conflict-detector.js'
+import {
   ConcurrencyConfigSchema,
   DEFAULT_CONCURRENCY_CONFIG,
   type ConcurrencyConfig,
@@ -24,10 +28,6 @@ import {
 import { ConcurrencyController } from './concurrency/concurrency-controller.js'
 import { generateWorktreePath } from './concurrency/worktree-path.js'
 import { createWorktree, removeWorktree } from './worktree-lifecycle.js'
-import {
-  WorktreeConflictDetector,
-  type StoryConflictDescriptor,
-} from '../conflicts/worktree-conflict-detector.js'
 
 // ============================================================================
 // BullMQ Job Payload
@@ -124,14 +124,10 @@ export class PipelineSupervisor {
     this.queue = new Queue(this.config.queueName, { connection })
 
     // AC-2: BullMQ Worker initialized with concurrency: config.maxWorktrees
-    this.worker = new Worker(
-      this.config.queueName,
-      job => this.processJob(job, storyProcessor),
-      {
-        connection,
-        concurrency: this.config.concurrency.maxWorktrees,
-      },
-    )
+    this.worker = new Worker(this.config.queueName, job => this.processJob(job, storyProcessor), {
+      connection,
+      concurrency: this.config.concurrency.maxWorktrees,
+    })
 
     this.worker.on('error', error => {
       logger.error('PipelineSupervisor worker error', { error })
