@@ -1,9 +1,9 @@
 schema: 1
-story_id: WINT-9090
-feature_dir: plans/future/platform/wint
-timestamp: 2026-02-24T22:15:00Z
-current_phase: execute
-last_successful_phase: plan
+story_id: APIP-2010
+feature_dir: plans/future/platform/autonomous-pipeline
+timestamp: 2026-03-02T20:45:00Z
+current_phase: proof
+last_successful_phase: execute
 iteration: 0
 max_iterations: 3
 blocked: false

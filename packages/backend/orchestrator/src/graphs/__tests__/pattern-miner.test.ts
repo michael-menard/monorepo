@@ -40,19 +40,19 @@ describe('APIP-3020 - AC-8: assignConfidenceLevel() confidence bands', () => {
     expect(assignConfidenceLevel(CONFIDENCE_THRESHOLDS.LOW)).toBe('low')
   })
 
-  it('HP-3: sample_count=9 returns low (below MEDIUM threshold)', () => {
-    expect(assignConfidenceLevel(9)).toBe('low')
+  it('HP-3: sample_count=19 returns low (below MEDIUM threshold)', () => {
+    expect(assignConfidenceLevel(19)).toBe('low')
   })
 
-  it('HP-3b: sample_count=10 returns medium (exactly MEDIUM threshold)', () => {
+  it('HP-3b: sample_count=20 returns medium (exactly MEDIUM threshold)', () => {
     expect(assignConfidenceLevel(CONFIDENCE_THRESHOLDS.MEDIUM)).toBe('medium')
   })
 
-  it('HP-4: sample_count=29 returns medium (below HIGH threshold)', () => {
-    expect(assignConfidenceLevel(29)).toBe('medium')
+  it('HP-4: sample_count=49 returns medium (below HIGH threshold)', () => {
+    expect(assignConfidenceLevel(49)).toBe('medium')
   })
 
-  it('HP-4b: sample_count=30 returns high (exactly HIGH threshold)', () => {
+  it('HP-4b: sample_count=50 returns high (exactly HIGH threshold)', () => {
     expect(assignConfidenceLevel(CONFIDENCE_THRESHOLDS.HIGH)).toBe('high')
   })
 
@@ -66,12 +66,12 @@ describe('APIP-3020 - AC-8: assignConfidenceLevel() confidence bands', () => {
 // ============================================================================
 
 describe('APIP-3020 - AC-8: confidence boundary edge cases', () => {
-  it('ED-1: sample_count just below MEDIUM (9) -> low', () => {
-    expect(assignConfidenceLevel(9)).toBe('low')
+  it('ED-1: sample_count just below MEDIUM (19) -> low', () => {
+    expect(assignConfidenceLevel(19)).toBe('low')
   })
 
-  it('ED-2: sample_count just below HIGH (29) -> medium', () => {
-    expect(assignConfidenceLevel(29)).toBe('medium')
+  it('ED-2: sample_count just below HIGH (49) -> medium', () => {
+    expect(assignConfidenceLevel(49)).toBe('medium')
   })
 })
 
@@ -273,9 +273,9 @@ describe('APIP-3020 - AC-6: dry-run mode skips upsert', async () => {
 })
 
 describe('APIP-3020 - AC-8: CONFIDENCE_THRESHOLDS constants', () => {
-  it('should define HIGH=30, MEDIUM=10, LOW=1', () => {
-    expect(CONFIDENCE_THRESHOLDS.HIGH).toBe(30)
-    expect(CONFIDENCE_THRESHOLDS.MEDIUM).toBe(10)
+  it('should define HIGH=50, MEDIUM=20, LOW=1', () => {
+    expect(CONFIDENCE_THRESHOLDS.HIGH).toBe(50)
+    expect(CONFIDENCE_THRESHOLDS.MEDIUM).toBe(20)
     expect(CONFIDENCE_THRESHOLDS.LOW).toBe(1)
   })
 })

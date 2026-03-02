@@ -1,0 +1,62 @@
+---
+story_id: APIP-3030
+title: "Learning-Aware Diff Planner"
+phase: qa-verify
+status: complete
+timestamp: "2026-03-01T20:00:00Z"
+
+# Workflow tracking
+current_phase: qa-verify
+last_successful_phase: qa-verify
+phase_transitions:
+  - from: review
+    to: qa-setup
+    completed_at: "2026-03-01T00:00:00Z"
+    status: success
+  - from: qa-setup
+    to: qa-verify
+    completed_at: "2026-03-01T20:00:00Z"
+    status: success
+  - from: qa-verify
+    to: complete
+    completed_at: "2026-03-01T19:56:30Z"
+    status: success
+    verdict: PASS
+
+# Setup validation summary
+preconditions_validated:
+  story_exists: true
+  status_is_ready: true
+  evidence_exists: true
+  review_exists: true
+  review_verdict: PASS
+
+# Verification sources for next phase
+evidence_file: "_implementation/EVIDENCE.yaml"
+review_file: "_implementation/REVIEW.yaml"
+
+# Evidence summary (quick reference)
+evidence_summary:
+  version: 1
+  ac_count: 9
+  ac_passing: 6
+  ac_partial: 3
+  ac_failing: 0
+  test_count: 20
+  blocking_findings: 0
+  non_blocking_findings: 3
+  e2e_exempt: true
+
+# Review summary
+review_summary:
+  verdict: PASS
+  iteration: 0
+  reviewer: claude-sonnet-4-6
+  reviewed_at: "2026-02-28T00:00:00Z"
+  commit: a522b09c
+  branch: story/APIP-3030
+
+# Setup details
+setup_phase_complete: true
+moved_to_uat: true
+status_updated_to: in-qa
