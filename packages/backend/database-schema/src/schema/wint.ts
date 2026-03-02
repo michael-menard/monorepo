@@ -1806,6 +1806,33 @@ export type InsertWorkflowAuditLog = z.infer<typeof insertWorkflowAuditLogSchema
 export type SelectWorkflowAuditLog = z.infer<typeof selectWorkflowAuditLogSchema>
 
 // ============================================================================
+// MODEL ASSIGNMENTS SCHEMA (APIP-0040)
+// ============================================================================
+
+/**
+ * Model Assignments Table
+ *
+ * Stores per-agent-pattern model assignments, allowing DB-backed overrides
+ * of the default YAML-driven escalation chain.
+ *
+ * Story APIP-0040: PipelineModelRouter with escalation chain + budget tracking
+ */
+export const modelAssignments = wintSchema.table('model_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  agentPattern: text('agent_pattern').notNull(),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  tier: integer('tier').notNull(),
+  effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const insertModelAssignmentSchema = createInsertSchema(modelAssignments)
+export const selectModelAssignmentSchema = createSelectSchema(modelAssignments)
+export type InsertModelAssignment = z.infer<typeof insertModelAssignmentSchema>
+export type SelectModelAssignment = z.infer<typeof selectModelAssignmentSchema>
+
+// ============================================================================
 // 7. MODEL AFFINITY SCHEMA (APIP-3020)
 // ============================================================================
 
