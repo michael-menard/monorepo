@@ -73,7 +73,7 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 | APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | backlog |
 | APIP-3060 | Bake-Off Engine for Model Experiments | APIP-3020 | backlog |
 | APIP-3070 | Cold Start Bootstrapping and Exploration Budget | APIP-3040 | backlog |
-| APIP-3080 | Parallel Story Concurrency (2-3 Worktrees) | APIP-0020, APIP-0040 | backlog |
+| APIP-3080 | Parallel Story Concurrency (2-3 Worktrees) | APIP-0020, APIP-0040 | ✅ uat |
 | APIP-3090 | Cron Job Infrastructure | APIP-0030, APIP-3020 | backlog |
 
 ## Phase 4: Long-Term Quality (3 stories)
