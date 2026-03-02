@@ -20,6 +20,8 @@ export const LOCK_KEYS = {
   DEP_AUDIT: 42_002,
   /** Weekly pipeline report cron job lock key — APIP-4070 */
   WEEKLY_REPORT: 42_003,
+  /** Dead code reaper cron job lock key (APIP-4050) */
+  DEAD_CODE_REAPER: 42_004,
 } as const
 
 export type LockKey = (typeof LOCK_KEYS)[keyof typeof LOCK_KEYS]
