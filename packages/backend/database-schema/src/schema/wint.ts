@@ -1885,7 +1885,9 @@ export const modelAffinity = wintSchema.table(
     trend: jsonb('trend'),
 
     // Incremental aggregation watermark
-    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
     // Audit
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1990,3 +1992,92 @@ export const ModelExperimentInsertSchema = createInsertSchema(modelExperiments)
 export const ModelExperimentSelectSchema = createSelectSchema(modelExperiments)
 export type ModelExperimentInsert = z.infer<typeof ModelExperimentInsertSchema>
 export type ModelExperimentSelect = z.infer<typeof ModelExperimentSelectSchema>
+
+// ============================================================================
+// 9. TEST QUALITY SNAPSHOTS SCHEMA (APIP-4040)
+// ============================================================================
+
+/**
+ * Test Quality Snapshot Status Enum
+ * Reflects the overall health status of a test quality run.
+ * Lives in the 'wint' schema namespace.
+ */
+export const testQualitySnapshotStatusEnum = wintSchema.enum('test_quality_snapshot_status', [
+  'pass',
+  'warn',
+  'fail',
+])
+
+/**
+ * Test Quality Snapshots Table
+ * Stores per-run snapshots of test quality metrics collected by the
+ * Test Quality Monitor cron job.
+ *
+ * Story: APIP-4040 - Test Quality Monitor
+ *
+ * Key design decisions:
+ * - mutation_score: nullable — deferred to APIP-4040-B (mutation testing not yet installed)
+ * - config: jsonb — full config echoed for each snapshot for reproducibility
+ * - snapshot_at: the logical time of the snapshot (cron run start time)
+ */
+export const testQualitySnapshots = wintSchema.table(
+  'test_quality_snapshots',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // Snapshot time (logical — cron run start)
+    snapshotAt: timestamp('snapshot_at', { withTimezone: true }).notNull(),
+
+    // Overall status
+    status: testQualitySnapshotStatusEnum('status').notNull(),
+
+    // Assertion density
+    assertionCount: integer('assertion_count').notNull().default(0),
+    testCount: integer('test_count').notNull().default(0),
+    assertionDensityRatio: numeric('assertion_density_ratio', { precision: 8, scale: 4 })
+      .notNull()
+      .default('0'),
+
+    // Orphaned tests
+    orphanedTestCount: integer('orphaned_test_count').notNull().default(0),
+
+    // Critical path coverage (percentages stored as NUMERIC for precision)
+    criticalPathLineCoverage: numeric('critical_path_line_coverage', { precision: 6, scale: 2 })
+      .notNull()
+      .default('0'),
+    criticalPathBranchCoverage: numeric('critical_path_branch_coverage', { precision: 6, scale: 2 })
+      .notNull()
+      .default('0'),
+
+    // Mutation score (DEFERRED to APIP-4040-B — nullable)
+    mutationScore: numeric('mutation_score', { precision: 5, scale: 4 }),
+
+    // Full config snapshot (for reproducibility and threshold tracing)
+    config: jsonb('config').$type<Record<string, unknown>>().notNull(),
+
+    // Audit timestamps
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Index: snapshot_at for time-series queries and decay detection
+    snapshotAtIdx: index('idx_test_quality_snapshots_snapshot_at').on(table.snapshotAt),
+    // Index: status for filtering pass/warn/fail snapshots
+    statusIdx: index('idx_test_quality_snapshots_status').on(table.status),
+    // Composite: status + snapshot_at for range queries filtered by status
+    statusSnapshotAtIdx: index('idx_test_quality_snapshots_status_snapshot_at').on(
+      table.status,
+      table.snapshotAt,
+    ),
+  }),
+)
+
+// ============================================================================
+// Test Quality Snapshots Zod Schemas (APIP-4040)
+// ============================================================================
+
+export const TestQualitySnapshotInsertSchema = createInsertSchema(testQualitySnapshots)
+export const TestQualitySnapshotSelectSchema = createSelectSchema(testQualitySnapshots)
+export type InsertTestQualitySnapshot = z.infer<typeof TestQualitySnapshotInsertSchema>
+export type SelectTestQualitySnapshot = z.infer<typeof TestQualitySnapshotSelectSchema>
