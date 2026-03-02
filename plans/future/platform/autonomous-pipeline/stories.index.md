@@ -48,7 +48,7 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1040 | Documentation Graph (Post-Merge) | APIP-1032 | In Progress |
 | APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | ✅ UAT |
 | APIP-1060 | QA Graph with Autonomous Verdict | none | ✅ UAT |
-| APIP-1070 | Merge Graph with Learnings Extraction | none | In Elaboration |
+| APIP-1070 | Merge Graph with Learnings Extraction | none | ✅ UAT |
 | APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1070 | Ready to Work |
 | APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | In Elaboration |
 

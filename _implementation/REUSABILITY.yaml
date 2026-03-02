@@ -1,0 +1,18 @@
+reusability:
+  verdict: PASS
+  files_checked: 10
+  errors: 0
+  warnings: 1
+  findings:
+    - severity: warning
+      file: packages/backend/orchestrator/e2e/helpers/artifact-assertions.ts
+      line: 15
+      message: "Stub MergeArtifactSchema should be replaced with canonical schema from APIP-1070. The e2e helpers have an explicit TODO comment referencing APIP-1070 to replace the minimal stub (verdict + story_id only) with the canonical schema that includes full merge operation details (pr_number, pr_url, merge_commit_sha, ci_status, ci_poll_count, ci_duration_ms, rebase_success, worktree_cleaned_up, learnings_persisted, block_reason, error)."
+      rule: prefer-canonical-schema
+      auto_fixable: false
+      existing_package: "@repo/orchestrator-artifacts"
+      existing_path: "packages/backend/orchestrator/src/artifacts/merge.ts"
+      recommendation: "Import MergeArtifactSchema from canonical merge.ts instead of maintaining stub. This is a follow-up task for consuming the APIP-1070 merge graph output in e2e tests (already marked with TODO)."
+  tokens:
+    in: 45000
+    out: 1800

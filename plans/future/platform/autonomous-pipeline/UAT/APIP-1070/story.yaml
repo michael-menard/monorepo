@@ -1,6 +1,6 @@
 id: "APIP-1070"
 title: "Merge Graph with Learnings Extraction"
-status: backlog
+status: needs-code-review
 priority: medium
 phase: 1
 feature: "Merge graph: create/update PR → verify CI → squash-merge → cleanup worktree → extract implementation learnings and write to KB"
