@@ -27,8 +27,6 @@ import type { TimeWindow, WeeklyReportConfig, NotificationConfig } from '../__ty
 // Test DB Setup
 // ============================================================================
 
-const TEST_SCHEMA = 'wint_test_apip4070'
-
 function createTestPool(): Pool {
   return new Pool({
     host: process.env.POSTGRES_HOST ?? 'localhost',
