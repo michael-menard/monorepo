@@ -9,8 +9,10 @@
  * - Error classification: PERMANENT → immediate fail, TRANSIENT → BullMQ retry (AC-7)
  * - Per-graph circuit breaker check (AC-8)
  * - Structured lifecycle event logging (AC-9)
+ * - Optional onCircuitOpen callback for blocker notification (APIP-2010 AC-3)
  *
  * APIP-0020: Supervisor Loop (Plain TypeScript)
+ * APIP-2010: Added onCircuitOpen callback to dispatchJob()
  */
 
 import type { Job } from 'bullmq'
@@ -83,7 +85,7 @@ export function resetDispatcherState(): void {
  *
  * Supervisor state machine:
  *   Job received → thread ID derived → circuit check
- *     → [circuit OPEN] → re-queue as delayed → log circuit_open
+ *     → [circuit OPEN] → re-queue as delayed → log circuit_open → invoke onCircuitOpen (APIP-2010)
  *     → [circuit CLOSED/HALF_OPEN] → dispatch to graph
  *       → Promise.race([graph, wallClockTimeout])
  *         → [graph complete] → log completed → BullMQ complete
@@ -96,12 +98,14 @@ export function resetDispatcherState(): void {
  * @param data - Zod-validated job payload
  * @param config - Supervisor configuration
  * @param runners - Optional injectable graph runners (for testing)
+ * @param onCircuitOpen - Optional callback invoked when circuit transitions to OPEN (APIP-2010 AC-3)
  */
 export async function dispatchJob(
   job: Job,
   data: PipelineJobData,
   config: PipelineSupervisorConfig,
   runners?: GraphRunners,
+  onCircuitOpen?: (stage: string, storyId: string) => void,
 ): Promise<void> {
   // ADR: Thread ID Convention (APIP-0020)
   // Format: {storyId}:{stage}:{attemptNumber}
@@ -140,6 +144,11 @@ export async function dispatchJob(
       durationMs,
       circuitState: circuitBreaker.getState(),
     })
+
+    // APIP-2010 AC-3: Invoke callback so supervisor can record a dependency blocker
+    if (onCircuitOpen) {
+      onCircuitOpen(data.stage, data.storyId)
+    }
 
     // Re-queue as delayed — let the circuit recover before retrying
     await job.moveToDelayed(Date.now() + config.circuitBreakerRecoveryTimeoutMs)
@@ -278,7 +287,9 @@ export function getCircuitBreakerSummary(
 ): import('./health/__types__/index.js').CircuitBreakerSummary {
   const cbs = getOrCreateCircuitBreakers(config)
   return {
-    elaboration: cbs.elaboration.getState() as import('./health/__types__/index.js').CircuitBreakerState,
-    storyCreation: cbs.storyCreation.getState() as import('./health/__types__/index.js').CircuitBreakerState,
+    elaboration:
+      cbs.elaboration.getState() as import('./health/__types__/index.js').CircuitBreakerState,
+    storyCreation:
+      cbs.storyCreation.getState() as import('./health/__types__/index.js').CircuitBreakerState,
   }
 }

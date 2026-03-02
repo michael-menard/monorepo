@@ -10,11 +10,7 @@
  * APIP-2030: Graceful Shutdown, Health Check, and Deployment Hardening
  */
 
-import type {
-  HealthContext,
-  SupervisorHealth,
-  SupervisorStatus,
-} from './__types__/index.js'
+import type { HealthContext, SupervisorHealth, SupervisorStatus } from './__types__/index.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Health Status Computation

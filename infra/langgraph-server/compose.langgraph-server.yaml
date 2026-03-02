@@ -58,7 +58,7 @@ services:
       LANGGRAPH_CHECKPOINT_DATABASE_URL: ${LANGGRAPH_CHECKPOINT_DATABASE_URL}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      LANGGRAPH_POSTGRES_URL: ${LANGGRAPH_POSTGRES_URL:-postgresql://langgraph:langgraph@langgraph-postgres:5433/langgraph}
+      LANGGRAPH_POSTGRES_URL: ${LANGGRAPH_POSTGRES_URL:?LANGGRAPH_POSTGRES_URL must be set in .env}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
     read_only: true
     tmpfs:
@@ -105,8 +105,8 @@ services:
     ports:
       - '127.0.0.1:5433:5432'
     environment:
-      POSTGRES_USER: ${LANGGRAPH_PG_USER:-langgraph}
-      POSTGRES_PASSWORD: ${LANGGRAPH_PG_PASSWORD:-langgraph}
+      POSTGRES_USER: ${LANGGRAPH_PG_USER:?LANGGRAPH_PG_USER must be set in .env}
+      POSTGRES_PASSWORD: ${LANGGRAPH_PG_PASSWORD:?LANGGRAPH_PG_PASSWORD must be set in .env}
       POSTGRES_DB: ${LANGGRAPH_PG_DB:-langgraph}
     volumes:
       - langgraph_postgres_data:/var/lib/postgresql/data
@@ -148,7 +148,7 @@ services:
       SUPERVISOR_DRAIN_TIMEOUT_MS: ${SUPERVISOR_DRAIN_TIMEOUT_MS:-600000}
       SUPERVISOR_HEALTH_PORT: ${SUPERVISOR_HEALTH_PORT:-9091}
     ports:
-      - '9091:9091'
+      - '127.0.0.1:9091:9091'
     volumes:
       - ./apps/api/pipeline:/app:ro
     depends_on:
@@ -178,7 +178,7 @@ services:
     image: redis:7-alpine
     container_name: pipeline-redis
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s

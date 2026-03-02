@@ -13,10 +13,10 @@
 | 0 | Foundation | 11 | 4 | 0 | 3 | backlog |
 | 1 | Full Worker Graphs | 10 | 2 | 1 | 2 | in-progress |
 | 2 | Resilience & Monitoring | 3 | 0 | 0 | 0 | backlog |
-| 3 | Learning System & Optimization | 5 | 0 | 0 | 1 | in-progress |
+| 3 | Learning System & Optimization | 5 | 0 | 0 | 2 | in-progress |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
 | 5 | Pipeline Resilience | 3 | 3 | 0 | 0 | backlog |
-| **TOTAL** | | **35** | **9** | **1** | **6** | |
+| **TOTAL** | | **35** | **9** | **1** | **7** | |
 
 ## Phase 0: Foundation (11 stories)
 
@@ -31,7 +31,7 @@ Minimal autonomous loop: Work queue, supervisor loop (plain TypeScript), LangGra
 | APIP-5000 | Test Infrastructure Setup for Autonomous Pipeline Unit Testing (Phase 0) | APIP-0010 | ✅ uat |
 | APIP-5001 | Test Database Setup and Migration Testing | none | ✅ UAT |
 | APIP-5003 | LangGraph Platform Security Hardening and Network Boundary Documentation | none | ✅ uat |
-| APIP-5004 | Secrets Engine and API Key Management | none | In QA |
+| APIP-5004 | Secrets Engine and API Key Management | none | ✅ uat |
 | APIP-5006 | LangGraph Server Infrastructure Baseline | none | 🔴 Failed Code Review |
 | APIP-5007 | Database Schema Versioning and Migration Strategy | APIP-0010 | Created |
 
@@ -58,7 +58,7 @@ Blocked queue handling, monitor dashboard UI, and graceful shutdown.
 
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
-| APIP-2010 | Blocked Queue and Notification System | none | Ready to Work |
+| APIP-2010 | Blocked Queue and Notification System | none | In Progress |
 | APIP-2020 | Monitor UI v1 (Read-Only Dashboard) | APIP-2010 | 🔍 Ready for QA |
 | APIP-2030 | Graceful Shutdown, Health Check, and Deployment Hardening | none | 🔍 Ready for QA |
 
@@ -69,10 +69,10 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
 | APIP-3010 | Change Telemetry Table and Instrumentation | APIP-1032 | Ready for Code Review |
-| APIP-3020 | Model Affinity Profiles Table and Pattern Miner Cron | APIP-3010 | 🔍 Ready for QA |
-| APIP-3030 | Learning-Aware Diff Planner | APIP-3020, APIP-1020 | 🔍 Ready for QA |
-| APIP-3040 | Learning-Aware Model Router | APIP-3020 | 🔴 Failed Code Review |
-| APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | In Progress |
+| APIP-3020 | Model Affinity Profiles Table and Pattern Miner Cron | APIP-3010 | Ready for Code Review |
+| APIP-3030 | Learning-Aware Diff Planner | APIP-3020, APIP-1020 | ✅ uat |
+| APIP-3040 | Learning-Aware Model Router | APIP-3020 | 🔍 Ready for QA |
+| APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | ✅ uat |
 | APIP-3060 | Bake-Off Engine for Model Experiments | APIP-3020, APIP-3010 | 🔍 Ready for QA |
 | APIP-3070 | Cold Start Bootstrapping and Exploration Budget | APIP-3040 | Ready to Work |
 | APIP-3080 | Parallel Story Concurrency (2-3 Worktrees) | none | In Elaboration |
@@ -85,11 +85,11 @@ Codebase health gate, cohesion scanner, dependency auditor, test quality monitor
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
 | APIP-4010 | Codebase Health Gate | APIP-1070, APIP-3090 | Ready to Work |
-| APIP-4020 | Cohesion Scanner | APIP-4010, APIP-3090 | Ready to Work |
+| APIP-4020 | Cohesion Scanner | APIP-4010, APIP-3090 | Ready for QA |
 | APIP-4030 | Dependency Auditor | APIP-2010 | Ready to Work |
 | APIP-4040 | Test Quality Monitor | APIP-3090 | Ready for QA |
 | APIP-4050 | Dead Code Reaper | APIP-3090 | Ready to Work |
-| APIP-4060 | KB Freshness Check and Stale Entry Archival | APIP-3090 | Ready to Work |
+| APIP-4060 | KB Freshness Check and Stale Entry Archival | APIP-3090 | UAT |
 | APIP-4070 | Weekly Pipeline Health Report | APIP-4010, APIP-3020, APIP-2010 | Ready to Work |
 
 ## Phase 5: Pipeline Resilience (3 stories)
