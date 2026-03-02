@@ -31,7 +31,7 @@ Minimal autonomous loop: Work queue, supervisor loop (plain TypeScript), LangGra
 | APIP-5000 | Test Infrastructure Setup for Autonomous Pipeline Unit Testing (Phase 0) | APIP-0010 | ✅ uat |
 | APIP-5001 | Test Database Setup and Migration Testing | none | ✅ UAT |
 | APIP-5003 | LangGraph Platform Security Hardening and Network Boundary Documentation | none | ✅ uat |
-| APIP-5004 | Secrets Engine and API Key Management | none | In QA |
+| APIP-5004 | Secrets Engine and API Key Management | none | ✅ uat |
 | APIP-5006 | LangGraph Server Infrastructure Baseline | none | 🔴 Failed Code Review |
 | APIP-5007 | Database Schema Versioning and Migration Strategy | APIP-0010 | Created |
 
@@ -58,7 +58,7 @@ Blocked queue handling, monitor dashboard UI, and graceful shutdown.
 
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
-| APIP-2010 | Blocked Queue and Notification System | none | Ready to Work |
+| APIP-2010 | Blocked Queue and Notification System | none | In Progress |
 | APIP-2020 | Monitor UI v1 (Read-Only Dashboard) | APIP-2010 | 🔍 Ready for QA |
 | APIP-2030 | Graceful Shutdown, Health Check, and Deployment Hardening | none | 🔍 Ready for QA |
 
@@ -71,8 +71,8 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 | APIP-3010 | Change Telemetry Table and Instrumentation | APIP-1032 | Ready for Code Review |
 | APIP-3020 | Model Affinity Profiles Table and Pattern Miner Cron | APIP-3010 | Ready for Code Review |
 | APIP-3030 | Learning-Aware Diff Planner | APIP-3020, APIP-1020 | ✅ uat |
-| APIP-3040 | Learning-Aware Model Router | APIP-3020 | 🔴 Failed Code Review |
-| APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | In Progress |
+| APIP-3040 | Learning-Aware Model Router | APIP-3020 | 🔍 Ready for QA |
+| APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | ✅ uat |
 | APIP-3060 | Bake-Off Engine for Model Experiments | APIP-3020, APIP-3010 | 🔍 Ready for QA |
 | APIP-3070 | Cold Start Bootstrapping and Exploration Budget | APIP-3040 | Ready to Work |
 | APIP-3080 | Parallel Story Concurrency (2-3 Worktrees) | none | In Elaboration |
