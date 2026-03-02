@@ -1,0 +1,188 @@
+schema: 2
+story_id: "APIP-3030"
+timestamp: "2026-02-28T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: >
+      Create the diff-planner node skeleton: directory structure, Zod config schema
+      (AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD, MAX_WEAK_PATTERNS_INJECTED,
+      ESCALATION_MODEL_DEFAULT), createToolNode registration, typed state extension,
+      pass-through handler. No affinity logic yet.
+    files:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/index.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+      - "packages/backend/orchestrator/src/runner/node-factory.ts"
+      - "packages/backend/orchestrator/src/state/index.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-6", "AC-9"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: >
+      Implement affinity-query.ts: query wint.model_affinity via @repo/db keyed by
+      (model_id, change_type). Implement three fallback paths: no rows → return null,
+      DB error → log warning via @repo/logger and return null, Zod parse failure → log
+      warning and return null. Update __types__/index.ts with AffinityProfileSchema.
+    files:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/model-selector/leaderboard.ts"
+      - "packages/backend/orchestrator/src/model-selector/__types__/index.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator -- diff-planner/affinity-query"
+    acs_covered: ["AC-1", "AC-4", "AC-5", "AC-8"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: >
+      Define diff-planner-output.ts in artifacts. Include DiffPlannerOutputSchema with
+      z.literal(1) versioning, profile_metadata as optional field (profile_used, model_id,
+      confidence_level, weak_patterns_injected, escalation_preassigned), and
+      PlaceholderChangeSpecSchema with documented TODO comment for APIP-1020 re-validation.
+    files:
+      - "packages/backend/orchestrator/src/artifacts/diff-planner-output.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/plan.ts"
+    dependencies: [1]
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    acs_covered: ["AC-6", "AC-8"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: >
+      Implement prompt-assembly.ts: confidence threshold gate, affinity summary builder
+      (weak patterns capped at MAX_WEAK_PATTERNS_INJECTED, strong patterns capped at 3,
+      sorted by success_rate), prompt injection, ChangeSpec escalation_model annotation
+      for patterns below WEAKNESS_THRESHOLD. Use z.discriminatedUnion('change_type')
+      for change_type-specific injection dispatch. Wire prompt-assembly into index.ts.
+    files:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/index.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/story/fanout-ux.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts"
+      - "packages/backend/orchestrator/src/artifacts/diff-planner-output.ts"
+    dependencies: [2, 3]
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator -- diff-planner/prompt-assembly"
+    acs_covered: ["AC-2", "AC-3", "AC-4"]
+
+  - id: 5
+    subtask_id: "ST-5"
+    description: >
+      Write Vitest unit test suite covering all 14 test cases from AC-7 and the test plan
+      (HP-1 through HP-5, EC-1 through EC-5, ED-1 through ED-4). Mock @repo/db for DB
+      error cases. Mark PlaceholderChangeSpecSchema fixtures with TODO comment for
+      ADR-002 re-validation. All tests must pass via
+      pnpm test --filter @repo/orchestrator -- diff-planner.
+    files:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__tests__/diff-planner.test.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/index.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts"
+      - "packages/backend/orchestrator/src/artifacts/diff-planner-output.ts"
+    dependencies: [4]
+    slice: packages
+    verification: "pnpm test --filter @repo/orchestrator -- diff-planner"
+    acs_covered: ["AC-7"]
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/nodes/diff-planner/index.ts"
+    action: create
+    reason: "LangGraph node handler — createToolNode registration, typed state extension, async handler with graceful fallback (AC-4, AC-5, AC-9)"
+  - path: "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts"
+    action: create
+    reason: "Zod schemas: DiffPlannerConfigSchema (AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD, MAX_WEAK_PATTERNS_INJECTED, ESCALATION_MODEL_DEFAULT), AffinityProfileSchema, typed graph state extension (AC-6, AC-9)"
+  - path: "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts"
+    action: create
+    reason: "DB query against wint.model_affinity keyed by (model_id, change_type); three fallback paths with @repo/logger warnings (AC-1, AC-4, AC-5, AC-8)"
+  - path: "packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts"
+    action: create
+    reason: "Confidence gate, affinity summary builder with volume caps, prompt injection, escalation_model annotation on weak-pattern ChangeSpecs (AC-2, AC-3)"
+  - path: "packages/backend/orchestrator/src/artifacts/diff-planner-output.ts"
+    action: create
+    reason: "DiffPlannerOutputSchema with z.literal(1) versioning, optional profile_metadata, PlaceholderChangeSpecSchema with APIP-1020 TODO (AC-6)"
+  - path: "packages/backend/orchestrator/src/nodes/diff-planner/__tests__/diff-planner.test.ts"
+    action: create
+    reason: "14 unit test cases covering all HP/EC/ED scenarios from AC-7 test plan"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after ST-1 and ST-3 (type skeleton complete)"
+    required: true
+  - command: "pnpm test --filter @repo/orchestrator -- diff-planner"
+    when: "after ST-5 (all tests written)"
+    required: true
+  - command: "pnpm build --filter @repo/orchestrator"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Unit test HP-1: assert affinity query is invoked with (model_id, change_type) key before prompt generation; affinity-query.ts implementation"
+    evidence_type: test
+  - ac_id: "AC-2"
+    planned_evidence: "Unit tests HP-1, ED-3: assert decomposition prompt contains affinity summary when confidence >= AFFINITY_CONFIDENCE_MIN; prompt-assembly.ts implementation"
+    evidence_type: test
+  - ac_id: "AC-3"
+    planned_evidence: "Unit tests HP-2, HP-3, ED-2: assert ChangeSpec has escalation_model set when success_rate < WEAKNESS_THRESHOLD; profile_metadata.escalation_preassigned count matches"
+    evidence_type: test
+  - ac_id: "AC-4"
+    planned_evidence: "Unit tests EC-1, EC-4: assert profile_used=false and valid DiffPlannerOutput returned when no profile exists or confidence below threshold"
+    evidence_type: test
+  - ac_id: "AC-5"
+    planned_evidence: "Unit tests EC-2, EC-3: mock @repo/db to throw connection/timeout errors; assert @repo/logger.warn called with 'affinity' substring; assert planning step does not throw"
+    evidence_type: test
+  - ac_id: "AC-6"
+    planned_evidence: "pnpm check-types; DiffPlannerOutputSchema.parse() succeeds for all test fixture outputs including optional profile_metadata; ED-4 test case validates legacy path"
+    evidence_type: test
+  - ac_id: "AC-7"
+    planned_evidence: "pnpm test --filter @repo/orchestrator -- diff-planner passes all 14 cases: HP-1..5, EC-1..5, ED-1..4"
+    evidence_type: test
+  - ac_id: "AC-8"
+    planned_evidence: "Unit test EC-5: spy on @repo/db calls; assert all calls are SELECT only, no INSERT/UPDATE/DELETE on wint schema"
+    evidence_type: test
+  - ac_id: "AC-9"
+    planned_evidence: "DiffPlannerConfigSchema in __types__/index.ts includes ESCALATION_MODEL_DEFAULT constant (default 'claude-sonnet-4-6') alongside AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD, MAX_WEAK_PATTERNS_INJECTED; pnpm check-types passes"
+    evidence_type: test
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "PlaceholderChangeSpecSchema field names — use camelCase or snake_case?"
+    decision: "Use snake_case to match the story's documented placeholder schema and existing DB schema conventions in this codebase (wint.model_affinity uses snake_case)"
+    rationale: "Consistent with documented placeholder in story Architecture Notes section and existing DB schema conventions"
+    decided_by: agent
+  - id: ARCH-002
+    question: "Should affinity-query.ts use a single batched query for all (model_id, change_type) pairs or multiple keyed queries?"
+    decision: "Single batched query: SELECT all rows WHERE model_id = $1, then filter by change_type/file_type in-process during prompt assembly"
+    rationale: "Story Architecture Notes explicitly prescribes this approach to avoid N queries per ChangeSpec. More efficient and matches the stated design intent."
+    decided_by: agent
+  - id: ARCH-003
+    question: "wint.model_affinity column names are not yet confirmed (APIP-3020 not complete) — how to handle column references?"
+    decision: "Define column names as named constants at the top of affinity-query.ts (e.g., COLUMN_MODEL_ID, COLUMN_CHANGE_TYPE) to enable single-location updates when APIP-3020 finalizes the schema"
+    rationale: "Story dev_feasibility.risks explicitly prescribes this mitigation"
+    decided_by: agent
+
+complexity: moderate
+
+notes:
+  - "APIP-1020 (ChangeSpec Schema) not yet complete — PlaceholderChangeSpecSchema used throughout. Each fixture in tests must carry '// TODO: re-validate against ADR-002 before merge' comment."
+  - "APIP-3020 (wint.model_affinity table) must exist in local Docker DB before integration tests can run. Unit tests mock @repo/db per ADR-005."
+  - "Profile freshness lag (daily cron from APIP-3020) is accepted as advisory — documented in node JSDoc."
+  - "MAX_WEAK_PATTERNS_INJECTED default=5, strong cap=3, WEAKNESS_THRESHOLD default=0.6, AFFINITY_CONFIDENCE_MIN default=medium per story Architecture Notes."
+  - "ESCALATION_MODEL_DEFAULT default='claude-sonnet-4-6' per AC-9."
+  - "Do NOT import LeaderboardSchema or LeaderboardEntry directly — use as conceptual reference only per story Reuse Plan non-goals."
+  - "Story has 14 test cases (AC-7 lists 8 in headline but test plan table has HP-1..5 + EC-1..5 + ED-1..4 = 14). The '8' in AC-7 text appears to be a stale count; implement all 14."
+  - "No barrel files — all imports use direct source paths per CLAUDE.md."
+  - "e2e_exempt: true (frontend_impacted: false, ADR-006 skip condition)."
