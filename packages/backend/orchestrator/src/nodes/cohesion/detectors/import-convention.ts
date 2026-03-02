@@ -24,7 +24,8 @@ const CONSOLE_LOG_PATTERN = /\bconsole\.(log|warn|error|info|debug|trace)\s*\(/g
 const SHADCN_INDIVIDUAL_IMPORT_PATTERN = /from\s+['"]@repo\/ui\/([a-z-]+)['"]/g
 
 /** Detects TypeScript interface declarations (should use Zod instead) */
-const INTERFACE_PATTERN = /^(?:export\s+)?interface\s+([A-Z][a-zA-Z0-9]*)\s*(?:extends\s+\S+\s*)?\{/gm
+const INTERFACE_PATTERN =
+  /^(?:export\s+)?interface\s+([A-Z][a-zA-Z0-9]*)\s*(?:extends\s+\S+\s*)?\{/gm
 
 /** Detects Zod imports (if present, interfaces may be intentionally minimal) */
 const ZOD_IMPORT_PATTERN = /from\s+['"]zod['"]/
@@ -56,7 +57,11 @@ export function detectImportConventionViolations(filePath: string): PatternViola
   }
 
   // Skip test files — console is acceptable in tests
-  if (filePath.includes('__tests__') || filePath.endsWith('.test.ts') || filePath.endsWith('.test.tsx')) {
+  if (
+    filePath.includes('__tests__') ||
+    filePath.endsWith('.test.ts') ||
+    filePath.endsWith('.test.tsx')
+  ) {
     return []
   }
 

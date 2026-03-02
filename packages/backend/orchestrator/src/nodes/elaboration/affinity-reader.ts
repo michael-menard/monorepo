@@ -244,7 +244,9 @@ export async function readAffinityProfiles(
         rows = await dbClient
           .select()
           .from(modelAffinity)
-          .where(and(eq(modelAffinity.changeType, changeType), eq(modelAffinity.fileType, fileType)))
+          .where(
+            and(eq(modelAffinity.changeType, changeType), eq(modelAffinity.fileType, fileType)),
+          )
       } catch (queryError) {
         const queryMsg = queryError instanceof Error ? queryError.message : String(queryError)
         logger.warn('readAffinityProfiles: DB query error for pair', {
@@ -299,10 +301,13 @@ export async function readAffinityProfiles(
     // Check if ALL items ended up with null (cold-start / empty table scenario)
     const allNull = [...resultMap.values()].every(v => v === null)
     if (allNull && items.length > 0) {
-      logger.info('readAffinityProfiles: all items have null guidance (cold-start or empty table)', {
-        storyId,
-        itemCount: items.length,
-      })
+      logger.info(
+        'readAffinityProfiles: all items have null guidance (cold-start or empty table)',
+        {
+          storyId,
+          itemCount: items.length,
+        },
+      )
       return { map: resultMap, fallbackUsed: true, fallbackReason: 'cold-start' }
     }
 

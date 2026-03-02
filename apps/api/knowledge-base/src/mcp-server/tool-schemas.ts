@@ -3196,11 +3196,12 @@ Parameters:
 - plan_type (optional): Filter by type ('feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike')
 - story_prefix (optional): Filter by story prefix (e.g., 'SKCR')
 - priority (optional): Filter by priority ('P1', 'P2', 'P3', 'P4', 'P5')
+- parent_plan_slug (optional): Filter by parent plan slug (returns child plans of the given parent)
 - limit (optional): Max results 1-100, default 20
 - offset (optional): Pagination offset, default 0
 - include_content (optional): Include raw_content in response, default false
 
-Returns: Array of plan objects with total count. Each plan includes a dependencies field (array of plan slugs that must reach 'implemented' before this plan can start, or null).
+Returns: Array of plan objects with total count. Each plan includes dependencies (array of plan slugs) and parentPlanId (UUID of parent plan, or null).
 
 Example:
 {
@@ -3274,8 +3275,9 @@ Parameters:
 - tags (optional): Array of categorization tags
 - dependencies (optional): Array of plan slugs that must reach 'implemented' before this plan can start
 - source_file (optional): Original source file path
+- parent_plan_slug (optional): Parent plan slug for hierarchical relationships (e.g., sub-epic pointing to program plan)
 
-Returns: The upserted plan record and whether it was created or updated.`,
+Returns: The upserted plan record (includes parentPlanId) and whether it was created or updated.`,
   inputSchema: zodToMcpSchema(KbUpsertPlanInputSchema),
 }
 
@@ -3301,8 +3303,9 @@ Parameters:
 - story_prefix (optional): New story prefix (null to clear)
 - estimated_stories (optional): New estimated stories count (null to clear)
 - dependencies (optional): Plan slugs that must reach 'implemented' before this plan can start (null to clear)
+- parent_plan_slug (optional): Parent plan slug for hierarchy (null to clear, string to set)
 
-Returns: Updated plan object
+Returns: Updated plan object (includes parentPlanId)
 
 Example (set priority):
 {

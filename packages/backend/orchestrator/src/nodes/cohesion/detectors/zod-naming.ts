@@ -57,7 +57,7 @@ export function detectZodNamingViolations(filePath: string): PatternViolation[] 
   }
 
   // Skip files with no Zod usage
-  if (!content.includes('from \'zod\'') && !content.includes('from "zod"')) {
+  if (!content.includes("from 'zod'") && !content.includes('from "zod"')) {
     return []
   }
 

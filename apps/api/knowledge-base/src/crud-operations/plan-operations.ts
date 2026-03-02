@@ -46,6 +46,26 @@ async function assertUniquePrefixOrThrow(
   }
 }
 
+/**
+ * Resolve a parent plan slug to its UUID.
+ * Returns null if no slug provided, throws if slug not found.
+ */
+async function resolveParentPlanId(
+  db: NodePgDatabase<typeof schema>,
+  parentPlanSlug: string | null | undefined,
+): Promise<string | null> {
+  if (!parentPlanSlug) return null
+  const result = await db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(eq(plans.planSlug, parentPlanSlug))
+    .limit(1)
+  if (result.length === 0) {
+    throw new Error(`Parent plan '${parentPlanSlug}' not found. Create the parent plan first.`)
+  }
+  return result[0]!.id
+}
+
 // ============================================================================
 // Upsert Input Schema
 // ============================================================================
@@ -105,6 +125,9 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Original source file path (e.g., '~/.claude/plans/jiggly-cooking-patterson.md') */
   source_file: z.string().optional(),
+
+  /** Parent plan slug for hierarchical relationships (e.g., sub-epic pointing to program plan) */
+  parent_plan_slug: z.string().optional(),
 })
 
 export type KbUpsertPlanInput = z.infer<typeof KbUpsertPlanInputSchema>
@@ -159,6 +182,9 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** Plan slugs that must reach 'implemented' before this plan can start (null to clear) */
   dependencies: z.array(z.string()).optional().nullable(),
+
+  /** Parent plan slug (null to clear, string to set) */
+  parent_plan_slug: z.string().optional().nullable(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -204,6 +230,9 @@ export const KbListPlansInputSchema = z.object({
 
   /** Filter by priority (P1-P5) */
   priority: z.enum(['P1', 'P2', 'P3', 'P4', 'P5']).optional(),
+
+  /** Filter by parent plan slug (returns child plans of the given parent) */
+  parent_plan_slug: z.string().optional(),
 
   /** Maximum results (1-100, default 20) */
   limit: z.number().int().min(1).max(100).optional().default(20),
@@ -319,6 +348,11 @@ export async function kb_list_plans(
   if (validated.priority) {
     conditions.push(eq(plans.priority, validated.priority))
   }
+  if (validated.parent_plan_slug) {
+    conditions.push(
+      sql`${plans.parentPlanId} = (SELECT id FROM plans WHERE plan_slug = ${validated.parent_plan_slug})`,
+    )
+  }
 
   const whereClause = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined
 
@@ -346,6 +380,7 @@ export async function kb_list_plans(
         priority: plans.priority,
         phases: plans.phases,
         dependencies: plans.dependencies,
+        parentPlanId: plans.parentPlanId,
         tags: plans.tags,
         sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,
@@ -393,6 +428,9 @@ export async function kb_upsert_plan(
   // Enforce unique story_prefix across plans
   await assertUniquePrefixOrThrow(deps.db, validated.story_prefix, validated.plan_slug)
 
+  // Resolve parent plan slug to UUID
+  const parentPlanId = await resolveParentPlanId(deps.db, validated.parent_plan_slug)
+
   const now = new Date()
 
   const values = {
@@ -407,6 +445,7 @@ export async function kb_upsert_plan(
     estimatedStories: validated.estimated_stories ?? null,
     priority: validated.priority ?? 'P3',
     dependencies: validated.dependencies ?? null,
+    parentPlanId,
     tags: validated.tags ?? null,
     sourceFile: validated.source_file ?? null,
     updatedAt: now,
@@ -482,6 +521,12 @@ export async function kb_update_plan(
   if (validated.estimated_stories !== undefined)
     updates.estimatedStories = validated.estimated_stories
   if (validated.dependencies !== undefined) updates.dependencies = validated.dependencies
+  if (validated.parent_plan_slug !== undefined) {
+    updates.parentPlanId =
+      validated.parent_plan_slug === null
+        ? null
+        : await resolveParentPlanId(deps.db, validated.parent_plan_slug)
+  }
 
   const result = await deps.db
     .update(plans)
@@ -557,6 +602,7 @@ export async function kb_get_roadmap(
         priority: plans.priority,
         phases: plans.phases,
         dependencies: plans.dependencies,
+        parentPlanId: plans.parentPlanId,
         tags: plans.tags,
         sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,

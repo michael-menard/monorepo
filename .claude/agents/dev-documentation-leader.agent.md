@@ -1,6 +1,6 @@
 ---
 created: 2026-01-24
-updated: 2026-02-07
+updated: 2026-02-22
 version: 3.2.0
 type: leader
 permission_level: orchestrator
@@ -189,13 +189,13 @@ if (story_yaml.predictions) {
 }
 ```
 
-**Trigger accuracy tracking** (inline in pm-story-risk-predictor.agent.md):
+**Trigger accuracy tracking** (inline in risk-predictor.agent.md):
 ```
 Task tool:
   subagent_type: "general-purpose"
   description: "Track {STORY_ID} prediction accuracy"
   prompt: |
-    Read: .claude/agents/pm-story-risk-predictor.agent.md
+    Read: .claude/agents/risk-predictor.agent.md
     
     ACCURACY TRACKING MODE:
     Story ID: {STORY_ID}

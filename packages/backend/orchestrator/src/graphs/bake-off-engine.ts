@@ -430,8 +430,7 @@ export function createPromoteOrExpireNode() {
       const experiment = experimentMap.get(result.experimentId)
       if (!experiment) continue
 
-      const totalRows =
-        result.controlStats.totalSamples + result.variantStats.totalSamples
+      const totalRows = result.controlStats.totalSamples + result.variantStats.totalSamples
       const expiredByRows = isExpiredByRows(totalRows, experiment.maxWindowRows)
       const expiredByDays = isExpired(experiment.startedAt, experiment.maxWindowDays)
       const expired = expiredByDays || expiredByRows

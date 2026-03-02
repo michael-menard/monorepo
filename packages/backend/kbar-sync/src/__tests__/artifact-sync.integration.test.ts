@@ -5,9 +5,8 @@
  * Uses testcontainers to spin up real PostgreSQL for integration testing.
  * Per ADR-005 and ADR-006: at least one happy-path integration test per AC required.
  *
- * NOTE: These tests are excluded from the standard `pnpm test` run via vitest.config.ts
- * (exclude: ['src/**/*.integration.test.ts']).
- * Run explicitly with: pnpm --filter @repo/kbar-sync test -- --run artifact-sync.integration.test
+ * NOTE: These tests are excluded from vitest.config.ts
+ * Run explicitly with: pnpm --filter @repo/kbar-sync test -- artifact-sync.integration.test
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
