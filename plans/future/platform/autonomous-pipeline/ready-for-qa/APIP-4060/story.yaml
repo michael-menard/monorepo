@@ -1,6 +1,6 @@
 id: "APIP-4060"
 title: "KB Freshness Check and Stale Entry Archival"
-status: ready-to-work
+status: ready-for-qa
 priority: medium
 phase: 4
 feature: "Monthly cron identifying KB entries >90 days old that reference changed/deleted files, auto-archiving entries referencing non-existent code, and flagging entries whose advice may be stale"

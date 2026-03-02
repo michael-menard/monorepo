@@ -231,7 +231,6 @@ export async function runKbFreshnessCheck(
   let offset = 0
 
   // Batch loop pattern (AC-14) — mirrors retention-policy.ts structure
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     // AC-14: Fetch next batch via injected Drizzle query
     // Equivalent to: db.select().from(knowledgeEntries)
