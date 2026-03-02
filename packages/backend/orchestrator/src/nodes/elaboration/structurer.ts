@@ -7,7 +7,6 @@
  * before proceeding to implementation.
  *
  * FLOW-034: LangGraph Elaboration Node - Structurer
- * APIP-3050: Model affinity guidance integration
  */
 
 import { z } from 'zod'
@@ -20,31 +19,8 @@ import type { GraphState } from '../../state/index.js'
 // ============================================================================
 
 /**
- * Affinity configuration sub-object for model affinity guidance.
- * APIP-3050 AC-1, AC-6: affinityConfig with affinityEnabled, minAffinityConfidence,
- * maxAffinityWeight — all with defaults, no breaking change to existing callers.
- */
-export const AffinityConfigSchema = z.object({
-  /** Whether affinity guidance is enabled */
-  affinityEnabled: z.boolean().default(false),
-  /**
-   * Minimum confidence score (0.0–1.0) required before applying affinity guidance.
-   * Rows below this threshold are ignored.
-   */
-  minAffinityConfidence: z.number().min(0).max(1).default(0.7),
-  /**
-   * Maximum weight (0.0–1.0) for blending affinity guidance with baseline estimates.
-   * 0.0 = no affinity applied even if data present; 1.0 = fully affinity-driven.
-   */
-  maxAffinityWeight: z.number().min(0).max(1).default(0.8),
-})
-
-export type AffinityConfig = z.infer<typeof AffinityConfigSchema>
-
-/**
  * Configuration schema for the Structurer node.
  * AC-1: StructurerConfigSchema with required fields.
- * APIP-3050 AC-1: Extended with affinityConfig sub-object.
  */
 export const StructurerConfigSchema = z.object({
   /** Whether the Structurer node is enabled */
@@ -55,11 +31,6 @@ export const StructurerConfigSchema = z.object({
   maxChangesPerItem: z.number().int().positive().default(50),
   /** Node execution timeout in milliseconds */
   nodeTimeoutMs: z.number().positive().default(60000),
-  /**
-   * Affinity guidance configuration (APIP-3050).
-   * Defaults to disabled — no breaking change to existing callers.
-   */
-  affinityConfig: AffinityConfigSchema.default({}),
 })
 
 export type StructurerConfig = z.infer<typeof StructurerConfigSchema>
@@ -86,7 +57,6 @@ export const ChangeOutlineItemSchema = z.object({
   /**
    * Forward-compatibility escape hatch for APIP-1020 spike additions.
    * ADR-001 Decision 3: intentionally minimal schema with extensions.
-   * APIP-3050: extensions.preferredChangePattern populated when affinity enabled.
    */
   extensions: z.record(z.unknown()).optional(),
 })
@@ -196,29 +166,45 @@ function bumpComplexity(complexity: 'low' | 'medium' | 'high'): 'low' | 'medium'
 }
 
 /**
+ * Zod schema for parsing the escape hatch result object.
+ * Used to safely access fields without type assertions (avoids 'as' casting).
+ */
+const EscapeHatchResultSchema = z.object({
+  triggersActivated: z.array(z.string()).optional(),
+  evaluations: z
+    .array(
+      z.object({
+        trigger: z.string().optional(),
+        detected: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+})
+
+/**
  * Detects whether an AC is cross-cutting based on escape hatch result.
  *
- * @param acId - Acceptance criterion ID
+ * @param _acId - Acceptance criterion ID (reserved for future per-AC filtering)
  * @param escapeHatchResult - Escape hatch evaluation result (if available)
  * @returns True if this AC is involved in cross-cutting changes
  */
-function isCrossCutting(acId: string, escapeHatchResult: unknown): boolean {
+function isCrossCutting(_acId: string, escapeHatchResult: unknown): boolean {
   if (!escapeHatchResult || typeof escapeHatchResult !== 'object') return false
-  const result = escapeHatchResult as Record<string, unknown>
+
+  // Use Zod safe parse to avoid type assertions
+  const parsed = EscapeHatchResultSchema.safeParse(escapeHatchResult)
+  if (!parsed.success) return false
+
+  const { triggersActivated, evaluations } = parsed.data
 
   // Check if cross_cutting trigger was activated
-  const triggersActivated = result.triggersActivated
   if (Array.isArray(triggersActivated) && triggersActivated.includes('cross_cutting')) {
     // Check evaluations for items that reference this AC
-    const evaluations = result.evaluations
     if (Array.isArray(evaluations)) {
       for (const evaluation of evaluations) {
-        if (typeof evaluation === 'object' && evaluation !== null) {
-          const ev = evaluation as Record<string, unknown>
-          if (ev.trigger === 'cross_cutting' && ev.detected === true) {
-            // If cross-cutting detected, consider all ACs cross-cutting
-            return true
-          }
+        if (evaluation.trigger === 'cross_cutting' && evaluation.detected === true) {
+          // If cross-cutting detected, consider all ACs cross-cutting
+          return true
         }
       }
     }
@@ -331,8 +317,9 @@ function generateSplitReason(items: ChangeOutlineItem[], total: number, threshol
 // ============================================================================
 
 /**
- * Extended state type for internal Structurer use.
+ * Extended state schema for internal Structurer use.
  * Matches the fields added to ElaborationStateAnnotation in elaboration.ts.
+ * CLAUDE.md: Zod schema with z.infer<> instead of TypeScript interface.
  */
 const StructurerElaborationStateSchema = z.object({
   storyId: z.string().optional(),
@@ -349,25 +336,44 @@ const StructurerElaborationStateSchema = z.object({
     .optional(),
   escapeHatchResult: z.unknown().optional(),
   warnings: z.array(z.string()).optional(),
+  // Output fields — present when returning state updates
+  changeOutline: z.array(ChangeOutlineItemSchema).optional(),
+  splitRequired: z.boolean().optional(),
+  splitReason: z.string().nullable().optional(),
+  structurerComplete: z.boolean().optional(),
 })
+
 type StructurerElaborationState = z.infer<typeof StructurerElaborationStateSchema>
+
+/**
+ * Casts elaboration-specific state updates to LangGraph's Partial<GraphState>.
+ * This single cast point is architecturally necessary: the Structurer node writes
+ * to ElaborationStateAnnotation fields (changeOutline, splitRequired, etc.) that
+ * are registered as LangGraph Annotations but not present on the base GraphState type.
+ * LangGraph merges these at runtime via its reducer system.
+ */
+function toStateUpdate(updates: StructurerElaborationState): Partial<GraphState> {
+  return updates as Partial<GraphState>
+}
 
 /**
  * Creates a Structurer node with the given configuration.
  *
  * AC-4: createStructurerNode factory using createToolNode.
- * APIP-3050: Accepts optional db for affinity guidance via affinityDb parameter.
  *
  * @param config - Structurer configuration (partial — defaults applied)
- * @param affinityDb - Optional DB client for affinity queries (z.unknown() pattern)
  * @returns Configured LangGraph node function
  */
-export function createStructurerNode(config: Partial<StructurerConfig> = {}, affinityDb?: unknown) {
+export function createStructurerNode(config: Partial<StructurerConfig> = {}) {
   const fullConfig = StructurerConfigSchema.parse(config)
 
   return createToolNode('structurer', async (state: GraphState): Promise<Partial<GraphState>> => {
     const startTime = Date.now()
-    const s = state as unknown as StructurerElaborationState
+
+    // Use Zod safe parse to read elaboration-specific fields without unsafe casting.
+    // The schema strips unknown fields, so passing the full GraphState is safe.
+    const parsed = StructurerElaborationStateSchema.safeParse(state)
+    const s: StructurerElaborationState = parsed.success ? parsed.data : {}
     const storyId = s.storyId ?? 'unknown'
 
     logger.info('Structurer node starting', { storyId })
@@ -375,13 +381,13 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}, aff
     // Guard: null or missing currentStory — AC-10
     if (!s.currentStory) {
       logger.warn('Structurer: currentStory is null — returning empty outline', { storyId })
-      return {
+      return toStateUpdate({
         changeOutline: [],
         splitRequired: false,
         splitReason: null,
         structurerComplete: true,
         warnings: ['Structurer: currentStory is null — returning empty change outline'],
-      } as unknown as Partial<GraphState>
+      })
     }
 
     const acs = s.currentStory.acceptanceCriteria ?? []
@@ -389,96 +395,23 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}, aff
     // Guard: empty ACs — AC-10
     if (acs.length === 0) {
       logger.warn('Structurer: no acceptance criteria — returning empty outline', { storyId })
-      return {
+      return toStateUpdate({
         changeOutline: [],
         splitRequired: false,
         splitReason: null,
         structurerComplete: true,
         warnings: ['Structurer: no acceptance criteria found — returning empty change outline'],
-      } as unknown as Partial<GraphState>
+      })
     }
 
     try {
-      // Step 1: Build preliminary change outline using heuristic estimation
-      const preliminaryOutline: ChangeOutlineItem[] = acs.map((ac, idx) => {
+      // Build change outline using heuristic estimation
+      const changeOutline: ChangeOutlineItem[] = acs.map((ac, idx) => {
         const crossCutting = isCrossCutting(ac.id, s.escapeHatchResult)
         return generateChangeOutlineItem(ac.id, ac.description, idx, crossCutting, fullConfig)
       })
 
-      // Step 2: Resolve affinity guidance if enabled and DB is available
-      // Items in preliminaryOutline have changeType + filePath → used for DB query deduplication
-      let fallbackUsed = false
-
-      if (fullConfig.affinityConfig.affinityEnabled && fullConfig.affinityConfig.maxAffinityWeight > 0) {
-        if (!affinityDb) {
-          logger.warn(
-            'Structurer: affinityEnabled=true but no affinityDb provided — skipping affinity',
-            { storyId },
-          )
-          fallbackUsed = true
-        } else {
-          const { readAffinityProfiles } = await import('./affinity-reader.js')
-          const affinityResult = await readAffinityProfiles(preliminaryOutline, affinityDb, storyId)
-          if (affinityResult.fallbackUsed) {
-            fallbackUsed = true
-          }
-
-          // Step 3: Apply affinity guidance to outline items
-          const guidedOutline: ChangeOutlineItem[] = preliminaryOutline.map(item => {
-            const guidance = affinityResult.map.get(item.id) ?? null
-            if (
-              guidance !== null &&
-              guidance.confidence >= fullConfig.affinityConfig.minAffinityConfidence
-            ) {
-              return {
-                ...item,
-                extensions: {
-                  ...(item.extensions ?? {}),
-                  preferredChangePattern: guidance.preferredChangePattern,
-                  affinityMeta: {
-                    modelId: guidance.modelId,
-                    confidence: guidance.confidence,
-                    successRate: guidance.successRate,
-                    sampleCount: guidance.sampleCount,
-                  },
-                },
-              }
-            }
-            return item
-          })
-
-          const totalEstimatedAtomicChanges = guidedOutline.reduce(
-            (sum, item) => sum + item.estimatedAtomicChanges,
-            0,
-          )
-
-          const splitRequired = totalEstimatedAtomicChanges > fullConfig.splitThreshold
-          const splitReason = splitRequired
-            ? generateSplitReason(guidedOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
-            : null
-
-          const durationMs = Date.now() - startTime
-
-          logger.info('Structurer node complete (with affinity)', {
-            storyId,
-            changeCount: guidedOutline.length,
-            totalEstimatedAtomicChanges,
-            splitRequired,
-            durationMs,
-            fallbackUsed,
-          })
-
-          return {
-            changeOutline: guidedOutline,
-            splitRequired,
-            splitReason,
-            structurerComplete: true,
-          } as unknown as Partial<GraphState>
-        }
-      }
-
-      // No affinity (disabled or no db): return preliminary outline
-      const totalEstimatedAtomicChanges = preliminaryOutline.reduce(
+      const totalEstimatedAtomicChanges = changeOutline.reduce(
         (sum, item) => sum + item.estimatedAtomicChanges,
         0,
       )
@@ -486,26 +419,26 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}, aff
       // Split flagging: strictly > threshold (AC-9, ED-2)
       const splitRequired = totalEstimatedAtomicChanges > fullConfig.splitThreshold
       const splitReason = splitRequired
-        ? generateSplitReason(preliminaryOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
+        ? generateSplitReason(changeOutline, totalEstimatedAtomicChanges, fullConfig.splitThreshold)
         : null
 
       const durationMs = Date.now() - startTime
 
       logger.info('Structurer node complete', {
         storyId,
-        changeCount: preliminaryOutline.length,
+        changeCount: changeOutline.length,
         totalEstimatedAtomicChanges,
         splitRequired,
         durationMs,
-        fallbackUsed,
+        fallbackUsed: false,
       })
 
-      return {
-        changeOutline: preliminaryOutline,
+      return toStateUpdate({
+        changeOutline,
         splitRequired,
         splitReason,
         structurerComplete: true,
-      } as unknown as Partial<GraphState>
+      })
     } catch (error) {
       // AC-11: Graceful fallback on any error
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -533,12 +466,12 @@ export function createStructurerNode(config: Partial<StructurerConfig> = {}, aff
         ? generateSplitReason(fallbackOutline, totalFallback, fullConfig.splitThreshold)
         : null
 
-      return {
+      return toStateUpdate({
         changeOutline: fallbackOutline,
         splitRequired,
         splitReason,
         structurerComplete: true,
-      } as unknown as Partial<GraphState>
+      })
     }
   })
 }

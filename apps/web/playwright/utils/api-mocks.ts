@@ -92,7 +92,6 @@ export const mockResponses = {
   }),
 }
 
-
 /**
  * Setup mock for session restoration
  */
@@ -117,7 +116,6 @@ export async function setupSessionMock(
     localStorage.setItem('uploader:/instructions/new', JSON.stringify(session))
   }, sessionData)
 }
-
 
 /**
  * Setup authenticated user mock

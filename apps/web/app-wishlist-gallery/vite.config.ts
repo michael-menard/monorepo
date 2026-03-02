@@ -1,6 +1,6 @@
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { resolve } from 'path'
 import { config } from 'dotenv'
 
 // Load .env files before config is processed (Vite loads these after config, so we do it manually)
@@ -21,19 +21,14 @@ export default defineConfig({
       '@/lib': resolve(__dirname, './src/lib'),
       '@/hooks': resolve(__dirname, './src/hooks'),
       '@/services': resolve(__dirname, './src/services'),
-      
+
       '@/types': resolve(__dirname, './src/types'),
       '@/routes': resolve(__dirname, './src/routes'),
       '@/pages': resolve(__dirname, './src/pages'),
     },
   },
   server: {
-    port: (() => {
-      if (!process.env.FRONTEND_PORT) {
-        throw new Error('FRONTEND_PORT environment variable is required. Set it in root .env')
-      }
-      return parseInt(process.env.FRONTEND_PORT)
-    })(),
+    port: process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 3000,
     host: true,
   },
   build: {
@@ -45,7 +40,6 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['@tanstack/react-router'],
           ui: ['@repo/app-component-library'],
-          
         },
       },
     },

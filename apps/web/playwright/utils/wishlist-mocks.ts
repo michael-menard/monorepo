@@ -7,7 +7,10 @@
  * without duplicating data definitions.
  */
 
-import type { MockWishlistItem, MockWishlistListResponse } from '../../main-app/src/test/mocks/wishlist-types'
+import type {
+  MockWishlistItem,
+  MockWishlistListResponse,
+} from '../../main-app/src/test/mocks/wishlist-types'
 import { mockWishlistItems } from '../../main-app/src/test/mocks/wishlist-mocks'
 
 export type { MockWishlistItem, MockWishlistListResponse }
@@ -129,4 +132,3 @@ export interface WishlistMockOptions {
   searchQuery?: string
   delayMs?: number
 }
-

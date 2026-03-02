@@ -106,7 +106,7 @@ export class OpenRouterProvider extends BaseProvider {
    * Called by BaseProvider.getModel() template method.
    */
   protected createModel(modelName: string, config: unknown): BaseChatModel {
-    const openRouterConfig = config as OpenRouterConfig
+    const openRouterConfig = OpenRouterConfigSchema.parse(config)
 
     const llm = new ChatOpenAI({
       modelName,

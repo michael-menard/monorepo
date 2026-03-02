@@ -57,7 +57,7 @@ function parseRollbackArgs(): RollbackCliOptions {
 
   const logFileArg = args.find(a => a.startsWith('--log-file='))
   const logFilePath = logFileArg
-    ? logFileArg.split('=')[1] ?? path.join(process.cwd(), 'migration-log.json')
+    ? (logFileArg.split('=')[1] ?? path.join(process.cwd(), 'migration-log.json'))
     : path.join(process.cwd(), 'migration-log.json')
 
   return { dryRun, logFilePath, verbose }
@@ -163,11 +163,7 @@ async function rollbackStateTransitions(
 /**
  * Delete stories that were inserted by the migration
  */
-async function rollbackStories(
-  pool: Pool,
-  storyIds: string[],
-  dryRun: boolean,
-): Promise<number> {
+async function rollbackStories(pool: Pool, storyIds: string[], dryRun: boolean): Promise<number> {
   if (storyIds.length === 0) {
     logger.info('No stories to roll back')
     return 0
@@ -186,10 +182,9 @@ async function rollbackStories(
     return count
   }
 
-  const deleteResult = await pool.query(
-    `DELETE FROM wint.stories WHERE story_id = ANY($1)`,
-    [storyIds],
-  )
+  const deleteResult = await pool.query(`DELETE FROM wint.stories WHERE story_id = ANY($1)`, [
+    storyIds,
+  ])
 
   logger.info('Stories deleted', { count: deleteResult.rowCount })
   return deleteResult.rowCount ?? 0
@@ -221,10 +216,9 @@ async function rollbackFeatures(
     return count
   }
 
-  const deleteResult = await pool.query(
-    `DELETE FROM wint.features WHERE feature_name = ANY($1)`,
-    [featureNames],
-  )
+  const deleteResult = await pool.query(`DELETE FROM wint.features WHERE feature_name = ANY($1)`, [
+    featureNames,
+  ])
 
   logger.info('Features deleted', { count: deleteResult.rowCount })
   return deleteResult.rowCount ?? 0

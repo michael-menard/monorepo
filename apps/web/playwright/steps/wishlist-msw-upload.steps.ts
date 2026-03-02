@@ -4,7 +4,6 @@
  */
 
 import path from 'path'
-
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
 

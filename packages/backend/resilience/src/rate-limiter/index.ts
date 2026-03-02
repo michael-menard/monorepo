@@ -7,7 +7,6 @@
 
 import Bottleneck from 'bottleneck'
 import { logger } from '@repo/logger'
-
 import {
   RateLimiterConfigSchema,
   type RateLimiterConfig,
@@ -53,8 +52,7 @@ export function createRateLimiter(inputConfig: RateLimiterInput): Bottleneck {
     reservoirRefreshAmount: config.reservoirRefreshAmount ?? undefined,
     reservoirRefreshInterval: config.reservoirRefreshInterval ?? undefined,
     highWater: config.highWater ?? undefined,
-    strategy:
-      config.strategy === 'leak' ? Bottleneck.strategy.LEAK : Bottleneck.strategy.BLOCK,
+    strategy: config.strategy === 'leak' ? Bottleneck.strategy.LEAK : Bottleneck.strategy.BLOCK,
   })
 
   // Log queue events
@@ -65,7 +63,7 @@ export function createRateLimiter(inputConfig: RateLimiterInput): Bottleneck {
     })
   })
 
-  limiter.on('dropped', (dropped) => {
+  limiter.on('dropped', dropped => {
     logger.warn('Rate limiter dropped job', {
       rateLimiter: config.name,
       event: 'dropped',
@@ -185,7 +183,5 @@ export function getRegisteredRateLimiters(): Map<string, Bottleneck> {
  */
 export async function getAllRateLimiterStatuses(): Promise<RateLimiterStatus[]> {
   const entries = Array.from(rateLimiterRegistry.entries())
-  return Promise.all(
-    entries.map(([name, limiter]) => getRateLimiterStatus(limiter, name)),
-  )
+  return Promise.all(entries.map(([name, limiter]) => getRateLimiterStatus(limiter, name)))
 }

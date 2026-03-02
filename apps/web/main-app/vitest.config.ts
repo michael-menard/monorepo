@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
@@ -39,9 +39,7 @@ export default defineConfig({
         'src/main.tsx',
         'src/vite-env.d.ts',
       ],
-      include: [
-        'src/**/*.{ts,tsx}',
-      ],
+      include: ['src/**/*.{ts,tsx}'],
       // Coverage thresholds - enforce minimum coverage
       thresholds: {
         global: {

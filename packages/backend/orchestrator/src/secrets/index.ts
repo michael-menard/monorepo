@@ -56,13 +56,15 @@ export const SecretsClientConfigSchema = z
 export type SecretsClientConfig = z.infer<typeof SecretsClientConfigSchema>
 
 // ============================================================================
-// Cache Entry Type
+// Cache Entry Schema
 // ============================================================================
 
-interface CacheEntry {
-  value: string
-  fetchedAt: number
-}
+const CacheEntrySchema = z.object({
+  value: z.string(),
+  fetchedAt: z.number(),
+})
+
+type CacheEntry = z.infer<typeof CacheEntrySchema>
 
 // ============================================================================
 // SecretsClient

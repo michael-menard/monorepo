@@ -1,2 +1,0 @@
-skipped: true
-reason: "Backend-only story. No user-facing components, no UI surfaces touched. This story adds unit tests for the handleKbGetNextStory MCP handler and fixes mcp-integration.test.ts hygiene. No frontend, no React components, no Tailwind, no Playwright UI flows."

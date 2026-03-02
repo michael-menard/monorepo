@@ -14,8 +14,8 @@
  * └── tokens.yaml
  */
 
-import { z } from 'zod'
 import * as path from 'path'
+import { z } from 'zod'
 
 // ============================================================================
 // Stage Definitions
@@ -268,9 +268,7 @@ export class PathResolver {
     }
 
     // Get the relative path from plans root
-    const relativePath = normalizedPath.substring(
-      plansRootIndex + this.config.plansRoot.length + 1,
-    )
+    const relativePath = normalizedPath.substring(plansRootIndex + this.config.plansRoot.length + 1)
     const parts = relativePath.split(path.sep)
 
     // Expected format: feature/stage/storyId/filename.yaml
@@ -286,7 +284,9 @@ export class PathResolver {
     }
 
     return {
-      absolutePath: normalizedPath.startsWith('/') ? normalizedPath : path.join(this.config.workspaceRoot, normalizedPath),
+      absolutePath: normalizedPath.startsWith('/')
+        ? normalizedPath
+        : path.join(this.config.workspaceRoot, normalizedPath),
       relativePath,
       feature,
       stageDirectory,
@@ -317,17 +317,11 @@ export class PathResolver {
    * Build search paths for a story when stage is unknown
    * Returns paths in priority order (most likely stages first)
    */
-  getSearchPaths(
-    feature: string,
-    storyId: string,
-    artifactType: YamlArtifactType,
-  ): string[] {
+  getSearchPaths(feature: string, storyId: string, artifactType: YamlArtifactType): string[] {
     const stages = this.getAllStageDirectories()
     const filename = this.getArtifactFilename(artifactType)
 
-    return stages.map(stage =>
-      path.join(this.plansAbsolutePath, feature, stage, storyId, filename),
-    )
+    return stages.map(stage => path.join(this.plansAbsolutePath, feature, stage, storyId, filename))
   }
 
   /**

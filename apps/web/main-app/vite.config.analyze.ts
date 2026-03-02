@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
-import { resolve } from 'path'
 import { analyzer } from 'vite-bundle-analyzer'
 
 export default defineConfig({
@@ -37,7 +37,7 @@ export default defineConfig({
           redux: ['@reduxjs/toolkit', 'react-redux'],
           // UI components are imported directly, no barrel file
           icons: ['lucide-react'],
-          
+
           // Feature chunks
           auth: ['aws-amplify', 'aws-amplify/auth'],
           // API client uses direct imports, no barrel file
@@ -46,7 +46,7 @@ export default defineConfig({
     },
     // Generate source maps for analysis
     sourcemap: true,
-    
+
     // Optimize for production
     minify: 'terser',
     terserOptions: {
@@ -55,11 +55,11 @@ export default defineConfig({
         drop_debugger: true,
       },
     },
-    
+
     // Set chunk size warning limit
     chunkSizeWarningLimit: 1000,
   },
-  
+
   // Performance optimizations
   optimizeDeps: {
     include: [

@@ -169,11 +169,7 @@ export function extractTTDCDataPoints(
     const completionTime = new Date(completionEvent.timestamp).getTime()
 
     // Validate times
-    if (
-      isNaN(commitmentTime) ||
-      isNaN(completionTime) ||
-      completionTime <= commitmentTime
-    ) {
+    if (isNaN(commitmentTime) || isNaN(completionTime) || completionTime <= commitmentTime) {
       continue
     }
 
@@ -415,9 +411,7 @@ export async function calculateTTDCMetrics(
   const medianMs = calculateMedian(finalSortedDurations)
   const minMs = finalSortedDurations.length > 0 ? finalSortedDurations[0] : null
   const maxMs =
-    finalSortedDurations.length > 0
-      ? finalSortedDurations[finalSortedDurations.length - 1]
-      : null
+    finalSortedDurations.length > 0 ? finalSortedDurations[finalSortedDurations.length - 1] : null
 
   // Calculate coefficient of variation (measure of predictability)
   const coefficientOfVariation =

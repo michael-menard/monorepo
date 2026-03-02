@@ -1,0 +1,24 @@
+schema: 1
+story_id: "APIP-5002"
+timestamp: "2026-02-28T00:00:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: true
+  db: false
+  contracts: true
+  ui: false
+  infra: false
+touched_paths_globs:
+  - "packages/backend/orchestrator/**"
+  - "packages/backend/orchestrator/e2e/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: true
+  security: false
+  performance: true
+summary: "E2E test framework setup for autonomous pipeline critical path with Playwright fixtures and test scaffold"
+elaboration: "completed"

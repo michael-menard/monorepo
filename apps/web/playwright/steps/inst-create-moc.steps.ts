@@ -42,7 +42,7 @@ Given('I fill in optional fields if available', async ({ page }) => {
   // Fill in description if it exists
   const descriptionField = page.locator('textarea[name="description"], textarea[id="description"]')
   const isVisible = await descriptionField.isVisible().catch(() => false)
-  
+
   if (isVisible) {
     await descriptionField.fill('Test description for E2E test')
   }
@@ -77,7 +77,6 @@ When('I blur the title input without entering text', async ({ page }) => {
   await titleInput.blur()
   await page.waitForTimeout(300)
 })
-
 
 // ============================================================================
 // Then Steps - Assertions
@@ -123,18 +122,21 @@ Then('a validation error may appear', async ({ page }) => {
   // Validation errors may appear but are not required on blur without submission
   const errorMsg = page.locator('[role="alert"], .error, [class*="error"]')
   // Just check if one exists, don't fail if none (some forms only validate on submit)
-  const hasError = await errorMsg.first().isVisible().catch(() => false)
+  const hasError = await errorMsg
+    .first()
+    .isVisible()
+    .catch(() => false)
   // This is a permissive check - errors MAY appear
   expect(true).toBe(true)
 })
 
 Then('the title input should have an associated label', async ({ page }) => {
   const titleInput = page.locator('input[name="title"], input[id="title"]')
-  
+
   // Check for label association via for attribute or aria-label
   const inputId = await titleInput.getAttribute('id')
   const ariaLabel = await titleInput.getAttribute('aria-label')
-  
+
   if (inputId) {
     const label = page.locator(`label[for="${inputId}"]`)
     const hasLabel = await label.isVisible().catch(() => false)
@@ -143,7 +145,7 @@ Then('the title input should have an associated label', async ({ page }) => {
       return
     }
   }
-  
+
   // If no label element, aria-label should be present
   expect(ariaLabel).toBeTruthy()
 })
@@ -151,17 +153,21 @@ Then('the title input should have an associated label', async ({ page }) => {
 Then('required fields should be marked with asterisk', async ({ page }) => {
   // Look for asterisk or required indicator
   const requiredIndicator = page.locator('text="*", [aria-required="true"]')
-  const hasIndicator = await requiredIndicator.first().isVisible().catch(() => false)
+  const hasIndicator = await requiredIndicator
+    .first()
+    .isVisible()
+    .catch(() => false)
   expect(hasIndicator).toBe(true)
 })
 
 Then('the API should return 201 Created', async ({ page }) => {
   // Listen for network response
-  const response = await page.waitForResponse(
-    response => response.url().includes('/api/') && response.status() === 201,
-    { timeout: 5000 }
-  ).catch(() => null)
-  
+  const response = await page
+    .waitForResponse(response => response.url().includes('/api/') && response.status() === 201, {
+      timeout: 5000,
+    })
+    .catch(() => null)
+
   expect(response).toBeTruthy()
 })
 

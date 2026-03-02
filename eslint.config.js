@@ -9,6 +9,11 @@ import jsxA11yPlugin from 'eslint-plugin-jsx-a11y'
 import importPlugin from 'eslint-plugin-import'
 
 export default [
+  // Ignore design examples and other non-production directories
+  {
+    ignores: ['__design__/**', '**/node_modules/**', '**/dist/**'],
+  },
+
   js.configs.recommended,
 
   // Base configuration for all TypeScript/JavaScript files

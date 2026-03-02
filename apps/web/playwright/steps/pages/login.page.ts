@@ -146,4 +146,3 @@ export class LoginPage {
     return await this.forgotPasswordLink.isVisible()
   }
 }
-

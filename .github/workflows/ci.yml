@@ -79,6 +79,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Build dist packages required for type resolution
+        run: |
+          # Remove committed tsbuildinfo files to force full rebuilds.
+          # Committed tsbuildinfo causes incremental tsc to skip output generation
+          # (since source is unchanged from the committed state), resulting in
+          # dist/ not being created in fresh CI environments.
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+
+          # Build all packages and API apps (in dependency order via turbo).
+          # This ensures all dist/ directories exist before type-checking.
+          # Excludes web apps which require runtime env vars (FRONTEND_PORT etc).
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
+
       - name: Lint changed projects
         run: pnpm turbo lint --filter="...[HEAD^1]"
 

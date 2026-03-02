@@ -1,4 +1,4 @@
-import React from "react"
+import React from 'react'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -10,7 +10,8 @@ const _geistMono = Geist_Mono({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Photo Collection Patterns',
-  description: 'A React component library showcase comparing two distinct photo collection UI patterns with Framer Motion animations.',
+  description:
+    'A React component library showcase comparing two distinct photo collection UI patterns with Framer Motion animations.',
 }
 
 export default function RootLayout({
@@ -21,7 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
         </ThemeProvider>
       </body>

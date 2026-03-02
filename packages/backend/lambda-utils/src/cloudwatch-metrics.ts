@@ -144,7 +144,12 @@ export class CloudWatchMetrics {
    * Record image processing time
    */
   async recordProcessingTime(durationMs: number, uploadType: ImageUploadType): Promise<void> {
-    await this.publishMetric(MetricName.ProcessingTime, durationMs, StandardUnit.Milliseconds, uploadType)
+    await this.publishMetric(
+      MetricName.ProcessingTime,
+      durationMs,
+      StandardUnit.Milliseconds,
+      uploadType,
+    )
   }
 
   /**
@@ -157,7 +162,11 @@ export class CloudWatchMetrics {
   /**
    * Record image dimensions
    */
-  async recordImageDimensions(width: number, height: number, uploadType: ImageUploadType): Promise<void> {
+  async recordImageDimensions(
+    width: number,
+    height: number,
+    uploadType: ImageUploadType,
+  ): Promise<void> {
     await this.publishMetric(MetricName.ImageWidth, width, StandardUnit.None, uploadType)
     await this.publishMetric(MetricName.ImageHeight, height, StandardUnit.None, uploadType)
   }
@@ -165,7 +174,10 @@ export class CloudWatchMetrics {
   /**
    * Helper to measure and record processing time
    */
-  async measureProcessingTime<T>(operation: () => Promise<T>, uploadType: ImageUploadType): Promise<T> {
+  async measureProcessingTime<T>(
+    operation: () => Promise<T>,
+    uploadType: ImageUploadType,
+  ): Promise<T> {
     const startTime = Date.now()
     try {
       const result = await operation()

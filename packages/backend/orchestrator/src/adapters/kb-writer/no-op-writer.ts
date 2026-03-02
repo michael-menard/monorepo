@@ -25,7 +25,6 @@ const KB_UNAVAILABLE_ERROR = 'KB dependencies not configured'
  * No-op KB Writer that gracefully handles missing KB dependencies
  */
 export class NoOpKbWriter {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addLesson(_request: KbLessonRequest): Promise<KbWriteResult> {
     logger.warn('KB write skipped - dependencies not configured', {
       entryType: 'lesson',
@@ -37,7 +36,6 @@ export class NoOpKbWriter {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addDecision(_request: KbDecisionRequest): Promise<KbWriteResult> {
     logger.warn('KB write skipped - dependencies not configured', {
       entryType: 'decision',
@@ -49,7 +47,6 @@ export class NoOpKbWriter {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addConstraint(_request: KbConstraintRequest): Promise<KbWriteResult> {
     logger.warn('KB write skipped - dependencies not configured', {
       entryType: 'constraint',
@@ -61,7 +58,6 @@ export class NoOpKbWriter {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addRunbook(_request: KbRunbookRequest): Promise<KbWriteResult> {
     logger.warn('KB write skipped - dependencies not configured', {
       entryType: 'runbook',
@@ -73,7 +69,6 @@ export class NoOpKbWriter {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addNote(_request: KbNoteRequest): Promise<KbWriteResult> {
     logger.warn('KB write skipped - dependencies not configured', {
       entryType: 'note',

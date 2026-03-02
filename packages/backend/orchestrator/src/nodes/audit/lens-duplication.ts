@@ -1,6 +1,5 @@
 import { readFile, readdir } from 'fs/promises'
 import { join, basename } from 'path'
-
 import type { CodeAuditState } from '../../graphs/code-audit.js'
 import type { LensResult, AuditFinding } from '../../artifacts/audit-findings.js'
 
@@ -44,10 +43,14 @@ async function findCrossAppDuplicates(targetFiles: string[]): Promise<AuditFindi
     if (paths.length < 2) continue
 
     // Check if files are in different apps
-    const apps = new Set(paths.map(p => {
-      const match = p.match(/apps\/web\/([^/]+)/)
-      return match ? match[1] : ''
-    }).filter(Boolean))
+    const apps = new Set(
+      paths
+        .map(p => {
+          const match = p.match(/apps\/web\/([^/]+)/)
+          return match ? match[1] : ''
+        })
+        .filter(Boolean),
+    )
 
     if (apps.size >= 2) {
       counter++

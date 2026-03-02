@@ -76,7 +76,7 @@ export async function detectArtifactConflicts(
     }
   }
 
-  let syncEventId: string | undefined
+  let syncEventId!: string
 
   try {
     // Create sync event for conflict detection

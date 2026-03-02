@@ -1,18 +1,31 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useRef, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Upload, Download, Trash2, MoreVertical, FileText, Loader2, FileSpreadsheet } from "lucide-react"
+import type React from 'react'
+import { useRef, useState, useCallback } from 'react'
+import {
+  Upload,
+  Download,
+  Trash2,
+  MoreVertical,
+  FileText,
+  Loader2,
+  FileSpreadsheet,
+} from 'lucide-react'
 import {
   validatePartsListFile,
   getFileExtension,
   PARTS_LIST_MAX_SIZE_MB,
   PARTS_LIST_ALLOWED_EXTENSIONS,
   type MocFile,
-} from "./mocTypes"
+} from './mocTypes'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface MocPartsListsCardContentProps {
   partsLists: MocFile[]
@@ -21,7 +34,7 @@ interface MocPartsListsCardContentProps {
 
 function getFileIcon(filename: string) {
   const ext = getFileExtension(filename).toLowerCase()
-  if (ext === "csv" || ext === "xml") {
+  if (ext === 'csv' || ext === 'xml') {
     return <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
   }
   return <FileText className="h-4 w-4" aria-hidden="true" />
@@ -29,16 +42,16 @@ function getFileIcon(filename: string) {
 
 function getExtensionColor(ext: string): string {
   switch (ext.toLowerCase()) {
-    case "csv":
-      return "bg-green-500/10 text-green-700 dark:text-green-400"
-    case "json":
-      return "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-    case "xml":
-      return "bg-blue-500/10 text-blue-700 dark:text-blue-400"
-    case "html":
-      return "bg-orange-500/10 text-orange-700 dark:text-orange-400"
+    case 'csv':
+      return 'bg-green-500/10 text-green-700 dark:text-green-400'
+    case 'json':
+      return 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+    case 'xml':
+      return 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+    case 'html':
+      return 'bg-orange-500/10 text-orange-700 dark:text-orange-400'
     default:
-      return "bg-muted text-muted-foreground"
+      return 'bg-muted text-muted-foreground'
   }
 }
 
@@ -55,7 +68,7 @@ export function MocPartsListsCardContent({
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    e.target.value = ""
+    e.target.value = ''
 
     const errors: string[] = []
     const validFiles: File[] = []
@@ -79,14 +92,14 @@ export function MocPartsListsCardContent({
           url: URL.createObjectURL(file),
           filename: file.name,
         }))
-        setPartsLists((prev) => [...prev, ...newFiles])
+        setPartsLists(prev => [...prev, ...newFiles])
         setIsUploading(false)
       }, 500)
     }
   }, [])
 
   const handleDelete = useCallback((partsListId: string) => {
-    setPartsLists((prev) => prev.filter((f) => f.id !== partsListId))
+    setPartsLists(prev => prev.filter(f => f.id !== partsListId))
   }, [])
 
   const handleUploadClick = useCallback(() => {
@@ -95,7 +108,7 @@ export function MocPartsListsCardContent({
 
   const renderSkeletonList = () => (
     <div className="space-y-2" aria-hidden="true">
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3].map(i => (
         <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
           <Skeleton className="h-10 w-10 rounded-lg" />
           <div className="flex-1 space-y-1.5">
@@ -147,7 +160,9 @@ export function MocPartsListsCardContent({
       {partsLists.length === 0 ? (
         <>
           {renderSkeletonList()}
-          <p className="text-center text-sm text-muted-foreground py-2">Upload parts lists to get started</p>
+          <p className="text-center text-sm text-muted-foreground py-2">
+            Upload parts lists to get started
+          </p>
         </>
       ) : (
         <ul className="space-y-2" role="list" aria-label="Parts list files">
@@ -184,7 +199,10 @@ export function MocPartsListsCardContent({
                       <MoreVertical className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="animate-in fade-in zoom-in-95 duration-200">
+                  <DropdownMenuContent
+                    align="end"
+                    className="animate-in fade-in zoom-in-95 duration-200"
+                  >
                     <DropdownMenuItem asChild>
                       <a href={file.url} download={file.filename} className="flex items-center">
                         <Download className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -207,13 +225,13 @@ export function MocPartsListsCardContent({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Formats: {PARTS_LIST_ALLOWED_EXTENSIONS.join(", ")} • Max {PARTS_LIST_MAX_SIZE_MB}MB each
+        Formats: {PARTS_LIST_ALLOWED_EXTENSIONS.join(', ')} • Max {PARTS_LIST_MAX_SIZE_MB}MB each
       </p>
 
       <input
         ref={fileInputRef}
         type="file"
-        accept={PARTS_LIST_ALLOWED_EXTENSIONS.join(",")}
+        accept={PARTS_LIST_ALLOWED_EXTENSIONS.join(',')}
         multiple
         onChange={handleFileSelect}
         className="sr-only"

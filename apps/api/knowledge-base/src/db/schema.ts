@@ -1293,6 +1293,9 @@ export const plans = pgTable(
      */
     priority: text('priority').default('P3'),
 
+    /** Plan slugs that must reach 'implemented' before this plan can start */
+    dependencies: jsonb('dependencies').$type<string[]>(),
+
     /** Tags for filtering (inferred from content) */
     tags: text('tags').array(),
 

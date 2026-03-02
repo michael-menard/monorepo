@@ -1,0 +1,27 @@
+schema: 1
+story_id: "APIP-2030"
+timestamp: "2026-02-28T00:00:00Z"
+gen_mode: false
+touches:
+  backend: true
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+touched_paths_globs:
+  - "apps/api/pipeline/**"
+  - "apps/api/lego-api/domains/health/**"
+  - "infra/langgraph-server/**"
+  - "infra/prometheus/**"
+  - "packages/backend/db/src/telemetry-sdk/**"
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: true
+  performance: true
+summary: "Add graceful shutdown with drain mode, health check endpoints (GET /health, GET /live), Docker HEALTHCHECK, and deployment runbook for zero-downtime supervisor restarts"
+elaboration: "completed"

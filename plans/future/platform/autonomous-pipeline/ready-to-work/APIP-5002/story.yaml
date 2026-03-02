@@ -1,6 +1,10 @@
 id: "APIP-5002"
 title: "E2E Test Plan and Playwright Framework Setup"
-status: backlog
+<<<<<<<< HEAD:plans/future/platform/autonomous-pipeline/needs-code-review/APIP-5002/story.yaml
+status: needs-code-review
+========
+status: in-progress
+>>>>>>>> 4b0a1d1a (fix(APIP-1010): documentation phase completion — fix cycle 1 verified, story ready for code review round 2):plans/future/platform/autonomous-pipeline/failed-code-review/APIP-5002/story.yaml
 priority: medium
 phase: 1
 feature: "Define E2E test plan for queue->supervisor->graphs->merge critical path; establish Playwright framework configuration and test scaffold"

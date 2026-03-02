@@ -32,21 +32,26 @@ When('I navigate to the add item page', async ({ page }) => {
 // Form Input Steps
 // ============================================================================
 
-When('I fill in the {string} field with {string}', async ({ page }, fieldLabel: string, value: string) => {
-  // Handle different field types
-  if (fieldLabel.toLowerCase() === 'store') {
-    // Store is a select/combobox
-    const storeSelector = page.getByLabel(/store/i).or(page.getByRole('combobox', { name: /store/i }))
-    await storeSelector.click()
-    // Wait for dropdown to open
-    await page.waitForTimeout(300)
-    await page.getByRole('option', { name: new RegExp(value, 'i') }).click()
-  } else {
-    // Text inputs (Title, Set Number, Price, Piece Count, Notes, etc.)
-    const input = page.getByLabel(new RegExp(fieldLabel, 'i'))
-    await input.fill(value)
-  }
-})
+When(
+  'I fill in the {string} field with {string}',
+  async ({ page }, fieldLabel: string, value: string) => {
+    // Handle different field types
+    if (fieldLabel.toLowerCase() === 'store') {
+      // Store is a select/combobox
+      const storeSelector = page
+        .getByLabel(/store/i)
+        .or(page.getByRole('combobox', { name: /store/i }))
+      await storeSelector.click()
+      // Wait for dropdown to open
+      await page.waitForTimeout(300)
+      await page.getByRole('option', { name: new RegExp(value, 'i') }).click()
+    } else {
+      // Text inputs (Title, Set Number, Price, Piece Count, Notes, etc.)
+      const input = page.getByLabel(new RegExp(fieldLabel, 'i'))
+      await input.fill(value)
+    }
+  },
+)
 
 // ============================================================================
 // Autosave Steps
@@ -94,23 +99,28 @@ When('I click the start fresh button', async ({ page }) => {
 // Form Assertion Steps
 // ============================================================================
 
-Then('the {string} field should contain {string}', async ({ page }, fieldLabel: string, expectedValue: string) => {
-  if (fieldLabel.toLowerCase() === 'store') {
-    // For store selector, check the displayed value in the combobox
-    const storeValue = page.getByLabel(/store/i).or(page.getByRole('combobox', { name: /store/i }))
-    await expect(storeValue).toHaveText(new RegExp(expectedValue, 'i'))
-  } else {
-    // For text inputs, check the input value
-    const input = page.getByLabel(new RegExp(fieldLabel, 'i'))
-    await expect(input).toHaveValue(expectedValue)
-  }
-})
+Then(
+  'the {string} field should contain {string}',
+  async ({ page }, fieldLabel: string, expectedValue: string) => {
+    if (fieldLabel.toLowerCase() === 'store') {
+      // For store selector, check the displayed value in the combobox
+      const storeValue = page
+        .getByLabel(/store/i)
+        .or(page.getByRole('combobox', { name: /store/i }))
+      await expect(storeValue).toHaveText(new RegExp(expectedValue, 'i'))
+    } else {
+      // For text inputs, check the input value
+      const input = page.getByLabel(new RegExp(fieldLabel, 'i'))
+      await expect(input).toHaveValue(expectedValue)
+    }
+  },
+)
 
 Then('all form fields should be empty', async ({ page }) => {
   // Check that key fields are empty/default
   const titleInput = page.getByLabel(/title/i)
   await expect(titleInput).toHaveValue('')
-  
+
   // Store selector should be at default (may show placeholder)
   const storeSelector = page.getByLabel(/store/i).or(page.getByRole('combobox', { name: /store/i }))
   const storeText = await storeSelector.textContent()
@@ -125,7 +135,7 @@ Then('all form fields should be empty', async ({ page }) => {
 When('I complete and submit the form', async ({ page }) => {
   // Fill any remaining required fields if needed
   // Title and Store should already be filled from draft
-  
+
   // Find and click submit button
   const submitButton = page.getByRole('button', { name: /add to wishlist|submit|save/i })
   await submitButton.click()
@@ -136,7 +146,7 @@ Then('the form should be submitted successfully', async ({ page }) => {
   // Check for toast first
   const toast = page.getByText(/success|added|created/i)
   const isToastVisible = await toast.isVisible().catch(() => false)
-  
+
   if (isToastVisible) {
     await expect(toast).toBeVisible({ timeout: 5000 })
   } else {
@@ -152,7 +162,7 @@ Then('the form should be submitted successfully', async ({ page }) => {
 Given('localStorage contains corrupted draft data', async ({ page }) => {
   // Navigate to the page first to establish context
   await page.goto('/add')
-  
+
   // Get the user ID from auth state in localStorage
   const userId = await page.evaluate(() => {
     // Try to extract user ID from Cognito localStorage
@@ -174,9 +184,9 @@ Given('localStorage contains corrupted draft data', async ({ page }) => {
     }
     return 'test-user-id'
   })
-  
+
   // Set corrupted draft data
-  await page.evaluate((uid) => {
+  await page.evaluate(uid => {
     const draftKey = `wishlist:draft:${uid}:add-item`
     localStorage.setItem(draftKey, 'invalid-json-data{{{')
   }, userId)
@@ -185,7 +195,7 @@ Given('localStorage contains corrupted draft data', async ({ page }) => {
 Given('localStorage contains a draft older than 7 days', async ({ page }) => {
   // Navigate to the page first
   await page.goto('/add')
-  
+
   // Get the user ID
   const userId = await page.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
@@ -204,11 +214,11 @@ Given('localStorage contains a draft older than 7 days', async ({ page }) => {
     }
     return 'test-user-id'
   })
-  
+
   // Set expired draft (8 days old)
-  await page.evaluate((uid) => {
+  await page.evaluate(uid => {
     const draftKey = `wishlist:draft:${uid}:add-item`
-    const eightDaysAgo = Date.now() - (8 * 24 * 60 * 60 * 1000)
+    const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000
     const expiredDraft = {
       timestamp: eightDaysAgo,
       formData: {

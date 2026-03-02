@@ -1,0 +1,37 @@
+schema: 1
+story_id: APIP-1060
+timestamp: '2026-03-01T17:15:00.000Z'
+phase: qa-verify
+iteration: 1
+
+verdict: FAIL
+
+signal: "VERIFICATION FAIL: 1 issue"
+
+blocking_issues:
+  - id: TYPE-001
+    severity: high
+    description: >-
+      7 type errors in QA-scoped files (src/graphs/qa.ts lines 342-347: NodeFunction/NodeFactory
+      incompatibility x6; src/nodes/qa/verify-acs.ts line 118: callModel called with 1 arg,
+      expects at least 2 per Zod schema TS2555). pnpm check-types exits with code 2.
+      EVIDENCE.yaml incorrectly claimed zero type errors in QA-scoped files.
+
+tests_passed: true
+test_summary:
+  total: 45
+  pass: 45
+  fail: 0
+  files: 7
+
+type_check_passed: false
+type_check_errors_in_qa_files: 7
+
+acs_verified: 17
+acs_passing: 17
+acs_failing: 0
+
+required_fix: >-
+  Developer must resolve the 7 type errors in QA-scoped files before this story can PASS QA.
+  Suggested fixes are documented in QA-VERIFY.yaml issues[0].suggested_fix.
+  After fixing, re-run: pnpm --filter @repo/orchestrator check-types

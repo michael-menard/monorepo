@@ -256,4 +256,3 @@ export class ResetPasswordPage {
     return await this.confirmPasswordInput.isVisible()
   }
 }
-

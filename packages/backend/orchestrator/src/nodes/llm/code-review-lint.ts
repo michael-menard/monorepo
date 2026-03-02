@@ -219,9 +219,7 @@ export const codeReviewLintNode = createLLMPoweredNode(
 /**
  * Creates a configured code review lint node.
  */
-export function createCodeReviewLintNode(options?: {
-  modelOverride?: string
-}) {
+export function createCodeReviewLintNode(options?: { modelOverride?: string }) {
   return createLLMPoweredNode(
     {
       name: 'code-review-lint',

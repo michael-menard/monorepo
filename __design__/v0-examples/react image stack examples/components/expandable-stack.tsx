@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { useState, type ReactNode } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Photo {
   src: string
@@ -38,10 +38,7 @@ export function ExpandableStack({
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      <motion.div
-        animate={{ opacity: expanded ? 0.3 : 1 }}
-        transition={{ duration: 0.2 }}
-      >
+      <motion.div animate={{ opacity: expanded ? 0.3 : 1 }} transition={{ duration: 0.2 }}>
         {children}
       </motion.div>
 
@@ -59,7 +56,7 @@ export function ExpandableStack({
               initial={{ scale: 0.92, y: 8 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.92, y: 8 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
               <div className="grid grid-cols-2 gap-2">
                 {photos.map((photo, index) => {
@@ -70,8 +67,8 @@ export function ExpandableStack({
                       type="button"
                       className={`rounded-md overflow-hidden shadow-md text-left transition-all ${
                         isTop
-                          ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
-                          : "hover:ring-1 hover:ring-muted-foreground/40"
+                          ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                          : 'hover:ring-1 hover:ring-muted-foreground/40'
                       } border-2 border-card`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -82,7 +79,7 @@ export function ExpandableStack({
                       onClick={() => onSelectTop?.(index)}
                     >
                       <img
-                        src={photo.src || "/placeholder.svg"}
+                        src={photo.src || '/placeholder.svg'}
                         alt={photo.alt}
                         className="w-full h-auto object-cover block"
                         crossOrigin="anonymous"

@@ -23,7 +23,7 @@ export type MocOrder = {
   storeName: string
   storeUrl?: string
   orderDate: string // ISO date
-  status: "pending" | "shipped" | "delivered" | "cancelled"
+  status: 'pending' | 'shipped' | 'delivered' | 'cancelled'
   partsCount: number
   totalPrice?: number
   currency?: string
@@ -51,12 +51,12 @@ export type Moc = {
 // File validation constants
 export const IMAGE_MAX_SIZE_MB = 20
 export const IMAGE_MAX_SIZE_BYTES = IMAGE_MAX_SIZE_MB * 1024 * 1024
-export const IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/heic"]
-export const IMAGE_ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".heic"]
+export const IMAGE_ALLOWED_TYPES = ['image/jpeg', 'image/heic']
+export const IMAGE_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.heic']
 
 export const PARTS_LIST_MAX_SIZE_MB = 5
 export const PARTS_LIST_MAX_SIZE_BYTES = PARTS_LIST_MAX_SIZE_MB * 1024 * 1024
-export const PARTS_LIST_ALLOWED_EXTENSIONS = [".csv", ".json", ".xml", ".html"]
+export const PARTS_LIST_ALLOWED_EXTENSIONS = ['.csv', '.json', '.xml', '.html']
 
 export const GALLERY_MAX_IMAGES = 50
 
@@ -72,9 +72,9 @@ export function validateImageFile(file: File): string | null {
 }
 
 export function validatePartsListFile(file: File): string | null {
-  const ext = "." + file.name.split(".").pop()?.toLowerCase()
+  const ext = '.' + file.name.split('.').pop()?.toLowerCase()
   if (!PARTS_LIST_ALLOWED_EXTENSIONS.includes(ext)) {
-    return `Invalid file type. Allowed: ${PARTS_LIST_ALLOWED_EXTENSIONS.join(", ")}`
+    return `Invalid file type. Allowed: ${PARTS_LIST_ALLOWED_EXTENSIONS.join(', ')}`
   }
   if (file.size > PARTS_LIST_MAX_SIZE_BYTES) {
     return `File too large. Maximum size: ${PARTS_LIST_MAX_SIZE_MB}MB`
@@ -83,21 +83,21 @@ export function validatePartsListFile(file: File): string | null {
 }
 
 export function validatePdfFile(file: File): string | null {
-  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-    return "Invalid file type. Only PDF files are allowed."
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    return 'Invalid file type. Only PDF files are allowed.'
   }
   return null
 }
 
 export function getFileExtension(filename: string): string {
-  return filename.split(".").pop()?.toUpperCase() || "FILE"
+  return filename.split('.').pop()?.toUpperCase() || 'FILE'
 }
 
 export function extractFilenameFromUrl(url: string): string {
   try {
     const pathname = new URL(url).pathname
-    return pathname.split("/").pop() || url
+    return pathname.split('/').pop() || url
   } catch {
-    return url.split("/").pop() || url
+    return url.split('/').pop() || url
   }
 }

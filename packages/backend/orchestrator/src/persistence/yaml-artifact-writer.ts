@@ -11,11 +11,11 @@
  * - Preserves comments and formatting where possible
  */
 
-import { z } from 'zod'
 import * as fs from 'fs/promises'
 import * as path from 'path'
-import * as yaml from 'yaml'
 import * as os from 'os'
+import * as yaml from 'yaml'
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { PathResolver, type YamlArtifactType, type ResolvedPath } from './path-resolver.js'
 import {
@@ -74,11 +74,13 @@ export const YamlWriterConfigSchema = z.object({
   /** Backup file extension */
   backupExtension: z.string().default('.bak'),
   /** Surface normalizer config */
-  surfaceNormalizer: z.object({
-    normalizeOnRead: z.boolean().default(true),
-    denormalizeOnWrite: z.boolean().default(true),
-    strictMode: z.boolean().default(false),
-  }).optional(),
+  surfaceNormalizer: z
+    .object({
+      normalizeOnRead: z.boolean().default(true),
+      denormalizeOnWrite: z.boolean().default(true),
+      strictMode: z.boolean().default(false),
+    })
+    .optional(),
 })
 export type YamlWriterConfig = z.infer<typeof YamlWriterConfigSchema>
 
@@ -94,10 +96,7 @@ export class YamlArtifactWriter {
   private config: YamlWriterConfig
   private surfaceNormalizer: ReturnType<typeof createSurfaceNormalizer>
 
-  constructor(
-    pathResolver: PathResolver,
-    config: Partial<YamlWriterConfig> = {},
-  ) {
+  constructor(pathResolver: PathResolver, config: Partial<YamlWriterConfig> = {}) {
     this.pathResolver = pathResolver
     this.config = YamlWriterConfigSchema.parse(config)
     this.surfaceNormalizer = createSurfaceNormalizer(this.config.surfaceNormalizer)
@@ -262,7 +261,12 @@ export class YamlArtifactWriter {
     storyId: string,
     data: ClaudeElaborationYaml,
   ): Promise<YamlWriteResult> {
-    const resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, 'elaboration')
+    const resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      'elaboration',
+    )
     const warnings: string[] = []
 
     const yamlContent = this.toYamlString(data)
@@ -331,7 +335,12 @@ export class YamlArtifactWriter {
     storyId: string,
     data: ClaudeVerificationYaml,
   ): Promise<YamlWriteResult> {
-    const resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, 'verification')
+    const resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      'verification',
+    )
     const warnings: string[] = []
 
     const yamlContent = this.toYamlString(data)
@@ -452,7 +461,12 @@ export class YamlArtifactWriter {
     artifactType: YamlArtifactType,
     data: unknown,
   ): Promise<YamlWriteResult> {
-    const resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, artifactType)
+    const resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      artifactType,
+    )
     const warnings: string[] = []
 
     const yamlContent = this.toYamlString(data)
@@ -480,7 +494,12 @@ export class YamlArtifactWriter {
     storyId: string,
     artifactType: YamlArtifactType,
   ): Promise<YamlWriteResult> {
-    const resolvedPath = this.pathResolver.resolveArtifactPath(feature, stage, storyId, artifactType)
+    const resolvedPath = this.pathResolver.resolveArtifactPath(
+      feature,
+      stage,
+      storyId,
+      artifactType,
+    )
 
     try {
       // Create backup if configured
@@ -551,7 +570,12 @@ export class YamlArtifactWriter {
     await this.ensureDirectory(targetDir)
 
     for (const artifactType of artifactTypes) {
-      const sourcePath = this.pathResolver.getArtifactPath(feature, fromStage, storyId, artifactType)
+      const sourcePath = this.pathResolver.getArtifactPath(
+        feature,
+        fromStage,
+        storyId,
+        artifactType,
+      )
       const targetPath = this.pathResolver.getArtifactPath(feature, toStage, storyId, artifactType)
 
       try {

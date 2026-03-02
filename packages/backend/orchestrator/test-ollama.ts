@@ -9,9 +9,9 @@
  * 4. Elaboration workflow with actual story file
  */
 
+import * as fs from 'fs'
 import { isOllamaAvailable, getLLMForAgent, getModelInfoForAgent } from './dist/config/index.js'
 import { runStoryCreation } from './dist/graphs/story-creation.js'
-import * as fs from 'fs'
 
 // ANSI color codes
 const colors = {
@@ -82,7 +82,7 @@ async function main() {
         parallelFanout: true,
         nodeTimeoutMs: 60000, // 60 second timeout
         persistToDb: false,
-      }
+      },
     )
 
     if (result.success) {
@@ -95,13 +95,18 @@ async function main() {
         console.log(`\n   Title: ${result.synthesizedStory.title}`)
         console.log(`   Priority: ${result.synthesizedStory.priority}`)
 
-        if (result.synthesizedStory.acceptanceCriteria && result.synthesizedStory.acceptanceCriteria.length > 0) {
+        if (
+          result.synthesizedStory.acceptanceCriteria &&
+          result.synthesizedStory.acceptanceCriteria.length > 0
+        ) {
           console.log(`\n   Acceptance Criteria:`)
           result.synthesizedStory.acceptanceCriteria.slice(0, 3).forEach((ac, i) => {
             console.log(`     ${i + 1}. ${ac}`)
           })
           if (result.synthesizedStory.acceptanceCriteria.length > 3) {
-            console.log(`     ... and ${result.synthesizedStory.acceptanceCriteria.length - 3} more`)
+            console.log(
+              `     ... and ${result.synthesizedStory.acceptanceCriteria.length - 3} more`,
+            )
           }
         }
       }
@@ -148,7 +153,9 @@ async function main() {
     const symbol = isOllama ? '💰' : '💵'
     const color = isOllama ? colors.green : colors.yellow
 
-    console.log(`  ${symbol} ${phase.padEnd(25)} → ${color}${info.provider}${colors.reset} (${info.modelName})`)
+    console.log(
+      `  ${symbol} ${phase.padEnd(25)} → ${color}${info.provider}${colors.reset} (${info.modelName})`,
+    )
 
     if (isOllama) ollamaCount++
     else claudeCount++
@@ -158,7 +165,9 @@ async function main() {
   console.log()
   console.log(`${colors.cyan}Cost Optimization:${colors.reset}`)
   console.log(`  Ollama (free): ${ollamaCount}/${workflowAgents.length} phases (${ollamaPercent}%)`)
-  console.log(`  Claude (paid): ${claudeCount}/${workflowAgents.length} phases (${100 - ollamaPercent}%)`)
+  console.log(
+    `  Claude (paid): ${claudeCount}/${workflowAgents.length} phases (${100 - ollamaPercent}%)`,
+  )
   console.log()
 
   const estimatedSavings = Math.round((ollamaCount / workflowAgents.length) * 100)
@@ -169,7 +178,9 @@ async function main() {
   console.log()
   console.log('Next steps:')
   console.log('  1. Review model assignments in .claude/config/model-assignments.yaml')
-  console.log('  2. Test with real story: import { runElaboration } from "./dist/graphs/elaboration.js"')
+  console.log(
+    '  2. Test with real story: import { runElaboration } from "./dist/graphs/elaboration.js"',
+  )
   console.log('  3. Build file adapter bridge (see MIGRATION_STRATEGY.md)')
 }
 

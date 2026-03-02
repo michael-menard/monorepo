@@ -69,11 +69,12 @@ function generateStatusEnumDoc(): string | null {
         const match = line.match(/['"]?([^'":\s]+)['"]?\s*:\s*\[([^\]]*)\]/)
         if (match) {
           const from = match[1]
-          const to = match[2]
-            .split(',')
-            .map(v => v.trim().replace(/['"]/g, ''))
-            .filter(v => v.length > 0)
-            .join(', ') || '(terminal)'
+          const to =
+            match[2]
+              .split(',')
+              .map(v => v.trim().replace(/['"]/g, ''))
+              .filter(v => v.length > 0)
+              .join(', ') || '(terminal)'
           return `| \`${from}\` | ${to} |`
         }
         return null
@@ -95,7 +96,6 @@ ${transitionLines.join('\n')}
 
 > **Auto-generated from TypeScript schema**
 > Source: \`packages/backend/orchestrator/src/state/story-state-machine.ts\`
-> Generated: ${new Date().toISOString()}
 
 ## Status Values
 
@@ -121,10 +121,7 @@ const invalid = canTransition('pending', 'completed') // false
 }
 
 function generateErrorTypesDoc(): string | null {
-  const errorsPath = resolve(
-    ROOT,
-    'packages/backend/orchestrator/src/errors/workflow-errors.ts',
-  )
+  const errorsPath = resolve(ROOT, 'packages/backend/orchestrator/src/errors/workflow-errors.ts')
 
   if (!existsSync(errorsPath)) {
     console.log('⏭️  Skipping ERROR-TYPES.md: workflow-errors.ts not found')
@@ -134,9 +131,7 @@ function generateErrorTypesDoc(): string | null {
   const content = readFileSync(errorsPath, 'utf-8')
 
   // Extract error types from schema
-  const enumMatch = content.match(
-    /WorkflowErrorTypeSchema\s*=\s*z\.enum\(\[([^\]]+)\]\)/s,
-  )
+  const enumMatch = content.match(/WorkflowErrorTypeSchema\s*=\s*z\.enum\(\[([^\]]+)\]\)/s)
   if (!enumMatch) {
     console.log('⏭️  Skipping ERROR-TYPES.md: WorkflowErrorTypeSchema not found')
     return null
@@ -160,7 +155,6 @@ function generateErrorTypesDoc(): string | null {
 
 > **Auto-generated from TypeScript schema**
 > Source: \`packages/backend/orchestrator/src/errors/workflow-errors.ts\`
-> Generated: ${new Date().toISOString()}
 
 ## Error Types
 
@@ -200,10 +194,7 @@ const error = WorkflowErrorSchema.parse({
 }
 
 function generateTokenLimitsDoc(): string | null {
-  const tokenBudgetPath = resolve(
-    ROOT,
-    'packages/backend/orchestrator/src/utils/token-budget.ts',
-  )
+  const tokenBudgetPath = resolve(ROOT, 'packages/backend/orchestrator/src/utils/token-budget.ts')
 
   if (!existsSync(tokenBudgetPath)) {
     console.log('⏭️  Skipping TOKEN-LIMITS.md: token-budget.ts not found')
@@ -213,9 +204,7 @@ function generateTokenLimitsDoc(): string | null {
   const content = readFileSync(tokenBudgetPath, 'utf-8')
 
   // Extract DEFAULT_LIMITS object
-  const limitsMatch = content.match(
-    /DEFAULT_LIMITS\s*[=:]\s*\{([\s\S]*?)\}(?:\s*as\s*const)?/,
-  )
+  const limitsMatch = content.match(/DEFAULT_LIMITS\s*[=:]\s*\{([\s\S]*?)\}(?:\s*as\s*const)?/)
 
   if (!limitsMatch) {
     console.log('⏭️  Skipping TOKEN-LIMITS.md: DEFAULT_LIMITS not found')
@@ -248,7 +237,6 @@ function generateTokenLimitsDoc(): string | null {
 
 > **Auto-generated from TypeScript schema**
 > Source: \`packages/backend/orchestrator/src/utils/token-budget.ts\`
-> Generated: ${new Date().toISOString()}
 
 ## Phase Limits
 
@@ -296,10 +284,7 @@ if (result.exceeded) {
 
 function generateModelAssignmentsDoc(): string | null {
   const yamlPath = resolve(ROOT, '.claude/config/model-assignments.yaml')
-  const tsPath = resolve(
-    ROOT,
-    'packages/backend/orchestrator/src/config/model-assignments.ts',
-  )
+  const tsPath = resolve(ROOT, 'packages/backend/orchestrator/src/config/model-assignments.ts')
 
   if (!existsSync(yamlPath) && !existsSync(tsPath)) {
     console.log('⏭️  Skipping MODEL-ASSIGNMENTS.md: Neither source file found')
@@ -335,7 +320,6 @@ function generateModelAssignmentsDoc(): string | null {
 
 > **Auto-generated from YAML config**
 > Source: \`.claude/config/model-assignments.yaml\`
-> Generated: ${new Date().toISOString()}
 
 ## Agent → Model Matrix
 
@@ -366,9 +350,7 @@ ${byModel.opus.length > 0 ? byModel.opus.map(a => `- \`${a}\``).join('\n') : '_N
 
   // Fallback to TypeScript
   const tsContent = readFileSync(tsPath, 'utf-8')
-  const assignmentsMatch = tsContent.match(
-    /modelAssignments\s*[=:]\s*\{([\s\S]*?)\}/,
-  )
+  const assignmentsMatch = tsContent.match(/modelAssignments\s*[=:]\s*\{([\s\S]*?)\}/)
 
   if (!assignmentsMatch) {
     console.log('⏭️  Skipping MODEL-ASSIGNMENTS.md: modelAssignments not found in TS')
@@ -379,7 +361,6 @@ ${byModel.opus.length > 0 ? byModel.opus.map(a => `- \`${a}\``).join('\n') : '_N
 
 > **Auto-generated from TypeScript**
 > Source: \`packages/backend/orchestrator/src/config/model-assignments.ts\`
-> Generated: ${new Date().toISOString()}
 
 See source file for current assignments.
 `
@@ -407,7 +388,11 @@ async function main() {
     { name: 'Status Enum', fn: generateStatusEnumDoc, filename: 'STATUS-ENUM.md' },
     { name: 'Error Types', fn: generateErrorTypesDoc, filename: 'ERROR-TYPES.md' },
     { name: 'Token Limits', fn: generateTokenLimitsDoc, filename: 'TOKEN-LIMITS.md' },
-    { name: 'Model Assignments', fn: generateModelAssignmentsDoc, filename: 'MODEL-ASSIGNMENTS.md' },
+    {
+      name: 'Model Assignments',
+      fn: generateModelAssignmentsDoc,
+      filename: 'MODEL-ASSIGNMENTS.md',
+    },
   ]
 
   let generated = 0

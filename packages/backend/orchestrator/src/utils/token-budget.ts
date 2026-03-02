@@ -23,10 +23,10 @@ import { z } from 'zod'
  * Token budget enforcement levels.
  */
 export const EnforcementLevelSchema = z.enum([
-  'advisory',   // Log to TOKEN-LOG.md, continue
-  'warning',    // Log + display warning to user, continue
-  'soft_gate',  // Log + require user confirmation to continue
-  'hard_gate',  // Log + FAIL phase, require budget increase
+  'advisory', // Log to TOKEN-LOG.md, continue
+  'warning', // Log + display warning to user, continue
+  'soft_gate', // Log + require user confirmation to continue
+  'hard_gate', // Log + FAIL phase, require budget increase
 ])
 
 export type EnforcementLevel = z.infer<typeof EnforcementLevelSchema>
@@ -200,13 +200,7 @@ export function checkTokenBudget(params: {
   multiplier?: number
   customLimits?: Partial<PhaseTokenLimits>
 }): BudgetCheckResult {
-  const {
-    phase,
-    tokensUsed,
-    enforcement = 'warning',
-    multiplier = 1.0,
-    customLimits,
-  } = params
+  const { phase, tokensUsed, enforcement = 'warning', multiplier = 1.0, customLimits } = params
 
   // Get limits for this phase
   const baseLimits = customLimits?.[phase] ?? DEFAULT_LIMITS[phase]

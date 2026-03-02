@@ -11,7 +11,6 @@ import { PrometheusExporter } from '@opentelemetry/exporter-prometheus'
 import { trace, SpanStatusCode, context, propagation } from '@opentelemetry/api'
 import type { Tracer, Span, SpanOptions, Context } from '@opentelemetry/api'
 import { logger } from '@repo/logger'
-
 import { TracingConfigSchema, type TracingConfig, type TracingInput } from './__types__/index.js'
 
 export * from './__types__/index.js'
@@ -96,7 +95,7 @@ export function initializeTracing(inputConfig: TracingInput): NodeSDK {
   process.on('SIGTERM', () => {
     sdk.shutdown().then(
       () => logger.info('Tracing shutdown complete'),
-      (err) => logger.error('Error shutting down tracing', { error: err }),
+      err => logger.error('Error shutting down tracing', { error: err }),
     )
   })
 
@@ -138,9 +137,7 @@ export async function withSpan<T>(
   const span = tracer.startSpan(name, options)
 
   try {
-    const result = await context.with(trace.setSpan(context.active(), span), () =>
-      operation(span),
-    )
+    const result = await context.with(trace.setSpan(context.active(), span), () => operation(span))
     span.setStatus({ code: SpanStatusCode.OK })
     return result
   } catch (error) {

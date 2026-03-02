@@ -1,0 +1,293 @@
+schema: 2
+story_id: "APIP-2020"
+timestamp: "2026-02-28T00:00:00Z"
+subtask_source: story
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AC-11 Autonomous Resolution (aggressive autonomy)
+# ─────────────────────────────────────────────────────────────────────────────
+# Auth mechanism decision for GET /monitor/pipeline:
+# Decision: Reuse existing Cognito auth middleware (option a from AC-11).
+# Apply `domain.use('*', auth)` in monitor/routes.ts following the existing
+# domain auth registration pattern (same as wishlist, gallery, etc.).
+# The existing middleware at apps/api/lego-api/middleware/auth.ts handles
+# JWT verification and dev bypass — no new auth code needed.
+# Rationale: aggressive autonomy default is "use existing Cognito middleware".
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AC-13 Kickoff Coordination Note
+# ─────────────────────────────────────────────────────────────────────────────
+# APIP-5005 (Minimal Operator Visibility CLI) is unmerged as of 2026-02-28.
+# This story (APIP-2020) creates PipelineReadService at:
+#   packages/backend/orchestrator/src/services/pipeline-read-service.ts
+# APIP-5005 must reuse it when it merges.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Schema Note: Drizzle vs raw SQL divergence
+# ─────────────────────────────────────────────────────────────────────────────
+# The StoryRepository uses raw SQL against wint.stories (with blocked_by VARCHAR
+# column). The Drizzle unified-wint schema uses storyDependencies table for
+# blocking relationships. For this story's monitor domain adapter (ST-2),
+# use raw SQL via the DbClient interface (as in story-repository.ts pattern)
+# rather than Drizzle, since wint.stories raw SQL is more reliable for
+# blocked_by reads. This matches how PipelineReadService in ST-1 will be built.
+# ─────────────────────────────────────────────────────────────────────────────
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Create PipelineReadService with getPipelineView(), getCostSummary(), and getBlockedQueue() methods using raw SQL via DbClient"
+    files:
+      - "packages/backend/orchestrator/src/services/pipeline-read-service.ts"
+    files_to_read:
+      - "packages/backend/orchestrator/src/db/story-repository.ts"
+      - "packages/backend/database-schema/src/schema/unified-wint.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-9"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Create Hono monitor domain (routes.ts, application/services.ts, adapters/repositories.ts) and register /monitor in server.ts; implement GET /monitor/pipeline with Cognito auth middleware"
+    files:
+      - "apps/api/lego-api/domains/monitor/routes.ts"
+      - "apps/api/lego-api/domains/monitor/application/services.ts"
+      - "apps/api/lego-api/domains/monitor/adapters/repositories.ts"
+      - "apps/api/lego-api/server.ts"
+    files_to_read:
+      - "apps/api/lego-api/domains/health/routes.ts"
+      - "apps/api/lego-api/domains/wishlist/adapters/repositories.ts"
+      - "apps/api/lego-api/middleware/auth.ts"
+      - "apps/api/lego-api/server.ts"
+    dependencies: [1]
+    slice: backend
+    verification: "pnpm check-types --filter lego-api && pnpm test --filter lego-api"
+    acs_covered: ["AC-4", "AC-11"]
+
+  - id: 3
+    subtask_id: "ST-4"
+    description: "Create usePipelineMonitor hook with polling-only data fetch (30s interval, configurable via VITE_MONITOR_REFRESH_INTERVAL), stale detection, loading and error state management"
+    files:
+      - "apps/web/app-dashboard/src/hooks/usePipelineMonitor.ts"
+    files_to_read:
+      - "apps/web/app-dashboard/src/components/ActivityFeed/index.tsx"
+      - "apps/web/app-dashboard/src/pages/main-page.tsx"
+    dependencies: [2]
+    slice: frontend
+    verification: "pnpm test --filter app-dashboard -- usePipelineMonitor"
+    acs_covered: ["AC-5"]
+
+  - id: 4
+    subtask_id: "ST-5"
+    description: "Create PipelineViewPanel, CostPanel, and BlockedQueuePanel components with loading skeleton, error state (retry button), empty state, and data state; Zod-first props; ARIA labels, table captions, aria-live region; state badges color-coded"
+    files:
+      - "apps/web/app-dashboard/src/components/PipelineViewPanel/index.tsx"
+      - "apps/web/app-dashboard/src/components/CostPanel/index.tsx"
+      - "apps/web/app-dashboard/src/components/BlockedQueuePanel/index.tsx"
+    files_to_read:
+      - "apps/web/app-dashboard/src/components/ActivityFeed/index.tsx"
+      - "apps/web/app-dashboard/src/components/StatsCards.tsx"
+    dependencies: [3]
+    slice: frontend
+    verification: "pnpm test --filter app-dashboard -- PipelineViewPanel CostPanel BlockedQueuePanel"
+    acs_covered: ["AC-1", "AC-2", "AC-3", "AC-7", "AC-8"]
+
+  - id: 5
+    subtask_id: "ST-6"
+    description: "Create MonitorDashboardPage composing all three panels with usePipelineMonitor; live/polling status indicator; register /monitor route in AppDashboardModule"
+    files:
+      - "apps/web/app-dashboard/src/pages/monitor-page.tsx"
+      - "apps/web/app-dashboard/src/Module.tsx"
+    files_to_read:
+      - "apps/web/app-dashboard/src/pages/main-page.tsx"
+      - "apps/web/app-dashboard/src/Module.tsx"
+    dependencies: [4]
+    slice: frontend
+    verification: "pnpm test --filter app-dashboard -- MonitorDashboardPage"
+    acs_covered: ["AC-5", "AC-7", "AC-8"]
+
+  - id: 6
+    subtask_id: "ST-7"
+    description: "Write Playwright E2E test for pipeline view with live backend; seed DB in test setup; navigate to /monitor; assert pipeline view table visible and state badges present"
+    files:
+      - "apps/web/playwright/tests/monitor-pipeline.spec.ts"
+    files_to_read:
+      - "apps/web/app-dashboard/src/pages/monitor-page.tsx"
+    dependencies: [5]
+    slice: frontend
+    verification: "pnpm exec playwright test monitor-pipeline.spec.ts --project=chromium"
+    acs_covered: ["AC-10"]
+
+files_to_change:
+  - path: "packages/backend/orchestrator/src/services/pipeline-read-service.ts"
+    action: create
+    reason: "Shared read service for getPipelineView, getCostSummary, getBlockedQueue — consumed by both monitor API and APIP-5005 CLI"
+
+  - path: "apps/api/lego-api/domains/monitor/routes.ts"
+    action: create
+    reason: "Hono monitor domain: thin route layer with Cognito auth middleware, delegates to services"
+
+  - path: "apps/api/lego-api/domains/monitor/application/services.ts"
+    action: create
+    reason: "Monitor application service: calls PipelineReadService, builds PipelineDashboardResponseSchema payload"
+
+  - path: "apps/api/lego-api/domains/monitor/adapters/repositories.ts"
+    action: create
+    reason: "Monitor repository adapter: Drizzle/raw-SQL read queries against wint.* tables, ok/err result types"
+
+  - path: "apps/api/lego-api/server.ts"
+    action: modify
+    reason: "Register /monitor domain route: import monitor from './domains/monitor/routes.js'; app.route('/monitor', monitor)"
+
+  - path: "apps/web/app-dashboard/src/hooks/usePipelineMonitor.ts"
+    action: create
+    reason: "Polling hook: fetches /api/v2/monitor/pipeline on mount and every VITE_MONITOR_REFRESH_INTERVAL ms (default 30000), manages loading/error/stale state"
+
+  - path: "apps/web/app-dashboard/src/components/PipelineViewPanel/index.tsx"
+    action: create
+    reason: "Panel component: displays pipeline stories table with state badges, loading skeleton, error state, empty state; AC-1, AC-7, AC-8"
+
+  - path: "apps/web/app-dashboard/src/components/CostPanel/index.tsx"
+    action: create
+    reason: "Panel component: displays per-story token cost summary table, loading skeleton, error state, empty state; AC-2, AC-7, AC-8"
+
+  - path: "apps/web/app-dashboard/src/components/BlockedQueuePanel/index.tsx"
+    action: create
+    reason: "Panel component: displays blocked stories with blocked_by reason, warning border, loading skeleton, error state, empty state; AC-3, AC-7, AC-8"
+
+  - path: "apps/web/app-dashboard/src/pages/monitor-page.tsx"
+    action: create
+    reason: "Monitor dashboard page: composes PipelineViewPanel, CostPanel, BlockedQueuePanel via usePipelineMonitor, shows polling status indicator; AC-5, AC-7, AC-8"
+
+  - path: "apps/web/app-dashboard/src/Module.tsx"
+    action: modify
+    reason: "Add MonitorPage route registration at /monitor path alongside MainPage"
+
+  - path: "apps/web/playwright/tests/monitor-pipeline.spec.ts"
+    action: create
+    reason: "E2E test: seeds DB, navigates to /monitor, asserts pipeline view table and state badges visible with live backend (VITE_ENABLE_MSW=false)"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/orchestrator"
+    when: "after ST-1"
+    required: true
+
+  - command: "pnpm test --filter @repo/orchestrator"
+    when: "after ST-1"
+    required: true
+
+  - command: "pnpm check-types --filter lego-api"
+    when: "after ST-2"
+    required: true
+
+  - command: "pnpm test --filter lego-api"
+    when: "after ST-2"
+    required: true
+
+  - command: "pnpm test --filter app-dashboard"
+    when: "after ST-4, ST-5, ST-6"
+    required: true
+
+  - command: "pnpm check-types --filter app-dashboard"
+    when: "after all frontend changes"
+    required: true
+
+  - command: "pnpm build"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm test"
+    when: "after all code changes"
+    required: true
+
+  - command: "pnpm exec playwright test monitor-pipeline.spec.ts --project=chromium"
+    when: "after ST-7, requires live backend"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Vitest RTL: PipelineViewPanel renders stories sorted in-progress first; getByRole('table') rows in correct order; state badges present"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "Vitest integration test: GET /monitor/pipeline cost_summary shows SUM(total_tokens) grouped by story_id and phase; Vitest RTL: CostPanel renders per-story cost rows"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "Vitest RTL: BlockedQueuePanel renders blocked stories with blocked_by text; null blocked_by shown as 'Unknown'; Vitest integration: GET /monitor/pipeline blocked_queue populated"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "HTTP test: GET /monitor/pipeline with valid Bearer token returns 200 matching PipelineDashboardResponseSchema; GET /monitor/pipeline with no auth returns 401"
+    evidence_type: http
+
+  - ac_id: "AC-5"
+    planned_evidence: "Vitest RTL: fake timers advance 30s, second fetch triggered; stale indicator shown before refresh; polling configurable via VITE_MONITOR_REFRESH_INTERVAL"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "Vitest RTL: all three panels show animate-pulse skeleton during isLoading=true; getByRole('button', { name: /retry/i }) present when fetch returns 503"
+    evidence_type: test
+
+  - ac_id: "AC-8"
+    planned_evidence: "Vitest RTL + axe: all panels have aria-label; tables have caption/aria-labelledby; state badges have aria-label; retry buttons have descriptive aria-label; aria-live='polite' region present"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "Vitest integration test with 500-row seed: timing assertion under 500ms; EXPLAIN output shows index scan on token_usage_story_id_idx and stories_state_idx"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Playwright E2E: navigate to /monitor with live backend (VITE_ENABLE_MSW=false); await expect(page.getByRole('table')).toBeVisible(); state badges visible"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Architecture decision recorded in PLAN.yaml: Cognito auth middleware reused (option a); monitor/routes.ts applies domain.use('*', auth)"
+    evidence_type: file
+
+  - ac_id: "AC-12"
+    planned_evidence: "ST-3 absent from PLAN.yaml; usePipelineMonitor has no EventSource code; plan notes confirm SSE deferred to APIP-2025"
+    evidence_type: file
+
+  - ac_id: "AC-13"
+    planned_evidence: "Kickoff coordination documented in PLAN.yaml notes: APIP-5005 unmerged as of 2026-02-28; this story creates PipelineReadService"
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Which operator auth mechanism should protect GET /monitor/pipeline? Options: (a) reuse existing Cognito auth middleware, (b) static API key header, (c) VPN-only with no app-level auth"
+    decision: "Option (a): Reuse existing Cognito auth middleware (apps/api/lego-api/middleware/auth.ts) with operator group/role check"
+    rationale: "Aggressive autonomy default. Existing auth middleware has dev bypass (AUTH_BYPASS=true), JWT verification, and group-based access control. Applying domain.use('*', auth) in monitor/routes.ts is consistent with how gallery, wishlist, and mocs domains handle auth. No new auth code needed. For operator access, the monitor route can additionally check that user.groups includes 'operator' or 'admin' (same as adminAuth pattern)."
+    decided_by: autonomous
+
+  - id: ARCH-002
+    question: "Should the monitor domain adapter use Drizzle ORM or raw SQL via DbClient interface?"
+    decision: "Raw SQL via DbClient interface (same pattern as StoryRepository) for PipelineReadService in packages/backend/orchestrator; Drizzle ok/err for the lego-api monitor adapter layer"
+    rationale: "PipelineReadService needs to use the wint.stories blocked_by VARCHAR column which is only on the raw SQL schema (story-repository.ts pattern). The lego-api domain adapter (repositories.ts) will use Drizzle with the unified-wint schema where possible, following the wishlist domain ok/err result type pattern. For blocked_by, will query metadata JSONB or fall back to the story_dependencies join — implementation detail for ST-2."
+    decided_by: autonomous
+
+  - id: ARCH-003
+    question: "Where is the lego-api main entry point for route registration? (app.ts not found)"
+    decision: "Route registration is in apps/api/lego-api/server.ts (not app.ts). Import monitor domain and call app.route('/monitor', monitor) after the existing domain route registrations."
+    rationale: "Canonical reference in story points to apps/api/lego-api/src/app.ts but actual file is apps/api/lego-api/server.ts (confirmed by file read). Route registration pattern matches: import health from './domains/health/routes.js'; app.route('/health', health)."
+    decided_by: autonomous
+
+complexity: complex
+
+notes:
+  - "ST-3 (SSE) is explicitly out of scope per AC-12 — deferred to APIP-2025"
+  - "AC-11 resolved autonomously: Cognito auth middleware reused (ARCH-001)"
+  - "AC-13 resolved: APIP-5005 unmerged as of 2026-02-28; this story creates PipelineReadService"
+  - "Main entry point for route registration is server.ts (not src/app.ts as referenced in story)"
+  - "AppDashboardModule.tsx currently only renders MainPage — MonitorPage route needs to be added"
+  - "ActivityFeed component uses TypeScript interface (not Zod) — new panel components MUST use Zod schemas per CLAUDE.md"
+  - "OPP-001: Consider extracting PipelineDashboardResponseSchema to @repo/api-client for frontend type sharing"
+  - "OPP-003: usePipelineMonitor should read interval from import.meta.env.VITE_MONITOR_REFRESH_INTERVAL with fallback to 30000ms"
+  - "OPP-005: use generated_at from API response to show 'Data from Xs ago' in stale indicator"
+  - "wint.token_usage.storyId is UUID FK — must JOIN wint.stories to get human-readable story_id for cost summary"
+  - "Performance: use token_usage_story_id_idx index; validate with EXPLAIN before merge (AC-9)"
+  - "BlockedQueuePanel must handle null blocked_by gracefully (show 'Unknown' or dash)"
+  - "Drizzle unified-wint stories table uses 'storyId' (camelCase) — verify column mapping when writing Drizzle queries in ST-2 adapter"

@@ -230,9 +230,7 @@ export type PatternMinerState = typeof PatternMinerStateAnnotation.State
  *   >= LOW (1) -> 'low'
  *   0 -> 'unknown'
  */
-export function assignConfidenceLevel(
-  sampleCount: number,
-): 'high' | 'medium' | 'low' | 'unknown' {
+export function assignConfidenceLevel(sampleCount: number): 'high' | 'medium' | 'low' | 'unknown' {
   if (sampleCount >= CONFIDENCE_THRESHOLDS.HIGH) return 'high'
   if (sampleCount >= CONFIDENCE_THRESHOLDS.MEDIUM) return 'medium'
   if (sampleCount >= CONFIDENCE_THRESHOLDS.LOW) return 'low'
@@ -359,7 +357,10 @@ function createFetchTelemetryNode() {
         max_created_at: r.max_created_at,
       }))
 
-      logger.info('pattern-miner: rows_aggregated', { rowsAggregated: telemetryRows.length, watermarkTs })
+      logger.info('pattern-miner: rows_aggregated', {
+        rowsAggregated: telemetryRows.length,
+        watermarkTs,
+      })
 
       return {
         watermarkTs,
@@ -461,8 +462,7 @@ function createComputeProfilesNode() {
         const oldAvgTokens = existing?.avg_tokens ?? 0
         const oldAvgRetryCount = existing?.avg_retry_count ?? 0
 
-        const newSuccessRate =
-          row.total_count > 0 ? row.success_count / row.total_count : 0
+        const newSuccessRate = row.total_count > 0 ? row.success_count / row.total_count : 0
         const newCount = row.total_count
 
         const mergedSuccessRate = computeWeightedAverage(
@@ -544,7 +544,9 @@ function createUpsertProfilesNode() {
     }
 
     if (state.config?.dryRun) {
-      logger.info('pattern-miner: dry-run — skipping upsert', { profiles: state.computedProfiles.length })
+      logger.info('pattern-miner: dry-run — skipping upsert', {
+        profiles: state.computedProfiles.length,
+      })
       return {
         rowsUpserted: 0,
         upsertComplete: true,
@@ -636,7 +638,10 @@ function createCompleteNode() {
     if (!success) {
       logger.error('pattern-miner: run completed with errors', { errors: state.errors })
     } else {
-      logger.info('pattern-miner: run succeeded', { rowsAggregated: result.rowsAggregated, rowsUpserted: result.rowsUpserted })
+      logger.info('pattern-miner: run succeeded', {
+        rowsAggregated: result.rowsAggregated,
+        rowsUpserted: result.rowsUpserted,
+      })
     }
 
     return { runResult: result }

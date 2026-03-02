@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
-import type { ThemeBreakdown } from "@/lib/types"
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { ThemeBreakdown } from '@/lib/types'
 
 interface ThemeChartProps {
   data: ThemeBreakdown[]
@@ -33,10 +33,16 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
   return (
     <Card className="bg-card border-border dark:backdrop-blur-sm dark:hover:border-primary/30 transition-all duration-200">
       <CardHeader className="pb-2 px-4 md:px-6">
-        <CardTitle className="text-base md:text-lg font-semibold text-card-foreground">MOCs by Theme</CardTitle>
+        <CardTitle className="text-base md:text-lg font-semibold text-card-foreground">
+          MOCs by Theme
+        </CardTitle>
       </CardHeader>
       <CardContent className="px-4 md:px-6">
-        <div className="h-56 md:h-64" role="img" aria-label="Bar chart showing MOC count by LEGO theme">
+        <div
+          className="h-56 md:h-64"
+          role="img"
+          aria-label="Bar chart showing MOC count by LEGO theme"
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
@@ -44,9 +50,9 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
               margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
             >
               <XAxis type="number" hide />
-              <YAxis 
-                type="category" 
-                dataKey="theme" 
+              <YAxis
+                type="category"
+                dataKey="theme"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
@@ -57,9 +63,14 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
                   if (active && payload && payload.length) {
                     return (
                       <div className="rounded-lg border border-border bg-card p-2 md:p-3 shadow-lg">
-                        <p className="text-sm md:text-base font-medium text-card-foreground">{payload[0].payload.theme}</p>
+                        <p className="text-sm md:text-base font-medium text-card-foreground">
+                          {payload[0].payload.theme}
+                        </p>
                         <p className="text-xs md:text-sm text-muted-foreground">
-                          MOCs: <span className="font-medium text-card-foreground">{payload[0].value}</span>
+                          MOCs:{' '}
+                          <span className="font-medium text-card-foreground">
+                            {payload[0].value}
+                          </span>
                         </p>
                       </div>
                     )
@@ -73,8 +84,8 @@ export function ThemeChart({ data, isLoading }: ThemeChartProps) {
                   <stop offset="100%" stopColor="#1B5E6D" />
                 </linearGradient>
               </defs>
-              <Bar 
-                dataKey="mocCount" 
+              <Bar
+                dataKey="mocCount"
                 radius={[0, 4, 4, 0]}
                 animationBegin={0}
                 animationDuration={800}

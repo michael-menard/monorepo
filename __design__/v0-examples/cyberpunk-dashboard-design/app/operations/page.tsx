@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { Target, MapPin, Clock, Users, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Target, MapPin, Clock, Users, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 
 export default function OperationsPage() {
   const [selectedOperation, setSelectedOperation] = useState(null)
