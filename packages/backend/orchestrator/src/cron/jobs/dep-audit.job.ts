@@ -96,8 +96,7 @@ export const depAuditCronTask: Omit<DepAuditCronTask, 'run'> & {
       commitSha: validatedPayload.commitSha,
       matchingFiles,
       lockKey: LOCK_KEYS.DEP_AUDIT,
-      message:
-        'Wire to runDepAudit() when APIP-3090 cron infrastructure is available',
+      message: 'Wire to runDepAudit() when APIP-3090 cron infrastructure is available',
     })
 
     // TODO (APIP-3090): Replace stub with:
@@ -130,11 +129,14 @@ export const depAuditJob: CronJobDefinition = {
   schedule: '*/30 * * * *',
   timeoutMs: 10 * 60 * 1000,
   runFn: async () => {
-    logger.info('dep-audit.cron: triggered (APIP-3090 stub — no payload context in scheduled run)', {
-      lockKey: LOCK_KEYS.DEP_AUDIT,
-      message:
-        'Post-merge trigger via depAuditCronTask.run() is the primary invocation path; ' +
-        'scheduled run is a fallback for missed triggers',
-    })
+    logger.info(
+      'dep-audit.cron: triggered (APIP-3090 stub — no payload context in scheduled run)',
+      {
+        lockKey: LOCK_KEYS.DEP_AUDIT,
+        message:
+          'Post-merge trigger via depAuditCronTask.run() is the primary invocation path; ' +
+          'scheduled run is a fallback for missed triggers',
+      },
+    )
   },
 }

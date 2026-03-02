@@ -16,12 +16,12 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
+import { LOCK_KEYS } from '../../cron/constants.js'
 import { type PackageSnapshot, detectNewPackages } from './detect-new-packages.js'
 import { checkOverlap, type CheckOverlapOptions } from './check-overlap.js'
 import { estimateBundleImpact } from './estimate-bundle-impact.js'
 import { runPnpmAudit } from './run-pnpm-audit.js'
 import { detectUnmaintained } from './detect-unmaintained.js'
-import { LOCK_KEYS } from '../../cron/constants.js'
 
 // ============================================================================
 // Thresholds Schema
@@ -37,9 +37,7 @@ import { LOCK_KEYS } from '../../cron/constants.js'
  */
 export const DepAuditThresholdsSchema = z.object({
   /** Minimum severity that routes findings to the blocked queue (default: 'high') */
-  blockingThreshold: z
-    .enum(['critical', 'high', 'medium', 'low', 'info'])
-    .default('high'),
+  blockingThreshold: z.enum(['critical', 'high', 'medium', 'low', 'info']).default('high'),
   /** Max acceptable gzipped bundle delta in bytes (default: 102400 = 100 KB) */
   maxBundleDeltaBytes: z.number().int().positive().default(102400),
   /** Flag packages with no release for this many days (default: 365) */
@@ -161,12 +159,9 @@ function computeOverallRisk(
  * Returns true if the finding severity meets or exceeds the threshold.
  */
 function meetsBlockingThreshold(severity: string, threshold: string): boolean {
-  const sevRank =
-    SEVERITY_RANK[severity as keyof typeof SEVERITY_RANK] ??
-    SEVERITY_RANK['low']
+  const sevRank = SEVERITY_RANK[severity as keyof typeof SEVERITY_RANK] ?? SEVERITY_RANK['low']
   const thresholdRank =
-    SEVERITY_RANK[threshold as keyof typeof SEVERITY_RANK] ??
-    SEVERITY_RANK['high']
+    SEVERITY_RANK[threshold as keyof typeof SEVERITY_RANK] ?? SEVERITY_RANK['high']
   return sevRank >= thresholdRank
 }
 
@@ -249,19 +244,33 @@ export async function runDepAudit(
     ...overrides.overlapOptions,
   }
 
-  const [overlapFindings, bundleResults, vulnFindings, unmaintainedFindings] = await Promise.all([
-    Promise.resolve(checkOverlap(newPackageNames, overlapOptions)),
-    estimateBundleImpact(newPackageNames, {
-      fetchFn: overrides.fetchFn as any,
-    }),
-    runPnpmAudit(config.workspaceRoot, {
-      toolRunner: overrides.toolRunner as any,
-    }),
-    detectUnmaintained(newPackageNames, {
-      fetchFn: overrides.fetchFn as any,
-      unmaintainedAgeDays: thresholds.unmaintainedAgeDays,
-    }),
-  ])
+  let overlapFindings: ReturnType<typeof checkOverlap> = []
+  let bundleResults: Awaited<ReturnType<typeof estimateBundleImpact>> = []
+  let vulnFindings: Awaited<ReturnType<typeof runPnpmAudit>> = []
+  let unmaintainedFindings: Awaited<ReturnType<typeof detectUnmaintained>> = []
+
+  try {
+    ;[overlapFindings, bundleResults, vulnFindings, unmaintainedFindings] = await Promise.all([
+      Promise.resolve(checkOverlap(newPackageNames, overlapOptions)),
+      estimateBundleImpact(newPackageNames, {
+        fetchFn: overrides.fetchFn as any,
+      }),
+      runPnpmAudit(config.workspaceRoot, {
+        toolRunner: overrides.toolRunner as any,
+      }),
+      detectUnmaintained(newPackageNames, {
+        fetchFn: overrides.fetchFn as any,
+        unmaintainedAgeDays: thresholds.unmaintainedAgeDays,
+      }),
+    ])
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.warn('dep-audit: analysis step failed — continuing with partial results', {
+      storyId: config.storyId,
+      error: message,
+    })
+    // Fire-and-forget semantics: continue with whatever results were collected
+  }
 
   // ── 4. Build findings list ────────────────────────────────────────────────
 
@@ -304,10 +313,7 @@ export async function runDepAudit(
 
   // Bundle bloat findings
   for (const bundle of bundleResults) {
-    if (
-      bundle.estimatedBytes !== null &&
-      bundle.estimatedBytes > thresholds.maxBundleDeltaBytes
-    ) {
+    if (bundle.estimatedBytes !== null && bundle.estimatedBytes > thresholds.maxBundleDeltaBytes) {
       rawFindings.push({
         packageName: bundle.package,
         findingType: 'bundle_bloat',

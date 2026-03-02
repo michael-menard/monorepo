@@ -32,9 +32,7 @@ export const PnpmAdvisorySchema = z
     cves: z.array(z.string()).optional(),
     fixAvailable: z.union([z.boolean(), z.object({}).passthrough()]).optional(),
     // via is an array describing the dependency chain
-    via: z
-      .array(z.union([z.string(), z.object({}).passthrough()]))
-      .optional(),
+    via: z.array(z.union([z.string(), z.object({}).passthrough()])).optional(),
   })
   .passthrough()
 

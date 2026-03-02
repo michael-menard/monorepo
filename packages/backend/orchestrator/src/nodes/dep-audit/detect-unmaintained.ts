@@ -246,7 +246,8 @@ export async function detectUnmaintained(
   packages: string[],
   options: DetectUnmaintainedOptions = {},
 ): Promise<UnmaintainedFinding[]> {
-  const fetchFn = (options.fetchFn as FetchFn | undefined) ?? (globalThis.fetch as unknown as FetchFn)
+  const fetchFn =
+    (options.fetchFn as FetchFn | undefined) ?? (globalThis.fetch as unknown as FetchFn)
   const registryBaseUrl = options.registryBaseUrl ?? NPM_REGISTRY_BASE
   const unmaintainedAgeDays = options.unmaintainedAgeDays ?? DEFAULT_UNMAINTAINED_AGE_DAYS
 

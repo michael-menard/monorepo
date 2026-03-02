@@ -171,8 +171,8 @@ export async function routeHighRiskFindings(
   options: RouteHighRiskFindingsOptions,
 ): Promise<RouteHighRiskFindingsResult> {
   const blockingThreshold = options.blockingThreshold ?? 'high'
-  const queueClient = (options.queueClient as DepBlockedQueueClient | undefined) ??
-    createStubBlockedQueueClient()
+  const queueClient =
+    (options.queueClient as DepBlockedQueueClient | undefined) ?? createStubBlockedQueueClient()
   const seenKeys = options.seenKeys ?? new Set<string>()
 
   let routed = 0
@@ -206,7 +206,7 @@ export async function routeHighRiskFindings(
       cve: (finding.details?.cve as string | null | undefined) ?? null,
       npmLink: finding.details?.url
         ? String(finding.details.url)
-        : `https://www.npmjs.com/package/${finding.packageName}`,
+        : `https://www.npmjs.com/package/${encodeURIComponent(finding.packageName)}`,
       details: finding.details,
       deduplicationKey,
     })

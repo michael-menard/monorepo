@@ -57,7 +57,9 @@ export type BundleImpactResult = z.infer<typeof BundleImpactResultSchema>
  * Injectable fetch function type.
  * Matches the global fetch signature for easy substitution in tests.
  */
-export type FetchFn = (url: string) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
+export type FetchFn = (
+  url: string,
+) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
 
 export const EstimateBundleImpactOptionsSchema = z.object({
   /** Injectable fetch function; defaults to globalThis.fetch */
@@ -167,7 +169,8 @@ export async function estimateBundleImpact(
   packages: string[],
   options: EstimateBundleImpactOptions = {},
 ): Promise<BundleImpactResult[]> {
-  const fetchFn = (options.fetchFn as FetchFn | undefined) ?? (globalThis.fetch as unknown as FetchFn)
+  const fetchFn =
+    (options.fetchFn as FetchFn | undefined) ?? (globalThis.fetch as unknown as FetchFn)
   const apiBaseUrl = options.apiBaseUrl ?? BUNDLEPHOBIA_API
   const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS
 

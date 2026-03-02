@@ -1859,7 +1859,9 @@ export const modelAffinity = wintSchema.table(
     trend: jsonb('trend'),
 
     // Incremental aggregation watermark
-    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
     // Audit
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1915,9 +1917,18 @@ export const depAuditRuns = wintSchema.table(
     triggeredAt: timestamp('triggered_at', { withTimezone: true }).notNull().defaultNow(),
 
     // Package change summary (jsonb arrays)
-    packagesAdded: jsonb('packages_added').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    packagesUpdated: jsonb('packages_updated').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    packagesRemoved: jsonb('packages_removed').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    packagesAdded: jsonb('packages_added')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    packagesUpdated: jsonb('packages_updated')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    packagesRemoved: jsonb('packages_removed')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
 
     // Overall risk assessment
     overallRisk: varchar('overall_risk', { length: 16 }).notNull().default('none'),
@@ -1965,7 +1976,9 @@ export const depAuditFindings = wintSchema.table(
     severity: varchar('severity', { length: 16 }).notNull(),
 
     // Structured payload (varies by finding_type)
-    details: jsonb('details').notNull().default(sql`'{}'::jsonb`),
+    details: jsonb('details')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
 
     // Audit
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
