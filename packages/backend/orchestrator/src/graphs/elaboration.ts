@@ -941,9 +941,7 @@ function afterInitialize(state: ElaborationState): string {
  * Determines the next node after the Structurer node.
  * Respects the recalculateReadiness flag, since structurer is always wired first when enabled.
  */
-export function afterStructurer(
-  state: ElaborationState,
-): 'update_readiness' | 'save_to_db' {
+export function afterStructurer(state: ElaborationState): 'update_readiness' | 'save_to_db' {
   if (state.config?.recalculateReadiness) {
     return 'update_readiness'
   }
@@ -1127,7 +1125,7 @@ export async function runElaboration(
       newReadinessScore: result.updatedReadinessResult?.score ?? null,
       warnings: result.warnings ?? [],
       errors: (result.errors ?? []).map((e: unknown) =>
-        typeof e === 'string' ? e : (e as { message?: string })?.message ?? String(e),
+        typeof e === 'string' ? e : ((e as { message?: string })?.message ?? String(e)),
       ),
       durationMs,
       completedAt: new Date().toISOString(),

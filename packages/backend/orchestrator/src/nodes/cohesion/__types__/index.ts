@@ -46,30 +46,23 @@ export const CohesionScannerConfigSchema = z.object({
   /** Root directory to scan */
   rootDir: z.string().min(1),
   /** Categories to run (default: all) */
-  categories: z.array(CohesionCategorySchema).default([
-    'route-handler',
-    'zod-naming',
-    'react-directory',
-    'import-convention',
-  ]),
+  categories: z
+    .array(CohesionCategorySchema)
+    .default(['route-handler', 'zod-naming', 'react-directory', 'import-convention']),
   /** Minimum acceptable score per category (0–1). Below this triggers a cleanup story. */
-  thresholds: z
-    .record(CohesionCategorySchema, z.number().min(0).max(1))
-    .default({
-      'route-handler': 0.8,
-      'zod-naming': 0.8,
-      'react-directory': 0.8,
-      'import-convention': 0.8,
-    }),
+  thresholds: z.record(CohesionCategorySchema, z.number().min(0).max(1)).default({
+    'route-handler': 0.8,
+    'zod-naming': 0.8,
+    'react-directory': 0.8,
+    'import-convention': 0.8,
+  }),
   /** Weight of each category in the composite score (must sum to 1.0) */
-  weightings: z
-    .record(CohesionCategorySchema, z.number().min(0).max(1))
-    .default({
-      'route-handler': 0.25,
-      'zod-naming': 0.25,
-      'react-directory': 0.25,
-      'import-convention': 0.25,
-    }),
+  weightings: z.record(CohesionCategorySchema, z.number().min(0).max(1)).default({
+    'route-handler': 0.25,
+    'zod-naming': 0.25,
+    'react-directory': 0.25,
+    'import-convention': 0.25,
+  }),
   /** Days within which a duplicate cleanup story is suppressed */
   deduplicationWindowDays: z.number().int().positive().default(30),
   /** Maximum files to sample per category scan */
@@ -170,7 +163,10 @@ export type CohesionSnapshot = z.infer<typeof CohesionSnapshotSchema>
 /**
  * Input payload for inserting a new cohesion snapshot.
  */
-export const CohesionSnapshotInsertSchema = CohesionSnapshotSchema.omit({ id: true, createdAt: true })
+export const CohesionSnapshotInsertSchema = CohesionSnapshotSchema.omit({
+  id: true,
+  createdAt: true,
+})
 
 export type CohesionSnapshotInsert = z.infer<typeof CohesionSnapshotInsertSchema>
 

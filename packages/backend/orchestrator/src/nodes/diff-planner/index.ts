@@ -22,14 +22,14 @@ import { logger } from '@repo/logger'
 import { createToolNode } from '../../runner/node-factory.js'
 import { updateState } from '../../runner/state-helpers.js'
 import type { GraphState } from '../../state/index.js'
-import { queryAffinityProfilesByModel } from './affinity-query.js'
-import type { DbClient } from './affinity-query.js'
-import { assembleAffinityContext } from './prompt-assembly.js'
 import {
   DiffPlannerOutputSchema,
   createFallbackOutput,
 } from '../../artifacts/diff-planner-output.js'
 import type { PlaceholderChangeSpec } from '../../artifacts/diff-planner-output.js'
+import { queryAffinityProfilesByModel } from './affinity-query.js'
+import type { DbClient } from './affinity-query.js'
+import { assembleAffinityContext } from './prompt-assembly.js'
 import { DiffPlannerConfigSchema } from './__types__/index.js'
 import type { DiffPlannerConfig } from './__types__/index.js'
 

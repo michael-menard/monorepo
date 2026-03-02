@@ -14,11 +14,11 @@
  * Story: APIP-4020 - Cohesion Scanner
  */
 
+import { readdirSync, statSync } from 'fs'
+import { join } from 'path'
 import { z } from 'zod'
 import { Annotation, StateGraph, END, START } from '@langchain/langgraph'
 import { logger } from '@repo/logger'
-import { readdirSync, statSync } from 'fs'
-import { join } from 'path'
 import {
   CohesionScannerConfigSchema,
   CohesionScanResultSchema,
@@ -26,6 +26,7 @@ import {
   type CohesionScanResult,
   type CohesionScore,
   type PatternViolation,
+  StoryGenerationResult,
 } from '../nodes/cohesion/__types__/index.js'
 import { detectRouteHandlerViolations } from '../nodes/cohesion/detectors/route-handler.js'
 import { detectZodNamingViolations } from '../nodes/cohesion/detectors/zod-naming.js'
@@ -33,7 +34,6 @@ import { detectReactDirectoryViolations } from '../nodes/cohesion/detectors/reac
 import { detectImportConventionViolations } from '../nodes/cohesion/detectors/import-convention.js'
 import { computeCategoryScore, assembleScanResult } from '../nodes/cohesion/scorer.js'
 import { generateCohesionCleanupStory } from '../nodes/cohesion/story-generator.js'
-import type { StoryGenerationResult } from '../nodes/cohesion/__types__/index.js'
 
 // ============================================================================
 // State Annotation
@@ -177,9 +177,7 @@ function collectTsFiles(dir: string, maxFiles: number): string[] {
 /**
  * Entry node: validates config and attempts to acquire the advisory lock.
  */
-async function initializeNode(
-  state: CohesionScannerState,
-): Promise<Partial<CohesionScannerState>> {
+async function initializeNode(state: CohesionScannerState): Promise<Partial<CohesionScannerState>> {
   const config = state.config
   if (!config) {
     logger.error('Cohesion scanner: no config provided')
@@ -211,9 +209,7 @@ async function initializeNode(
 /**
  * Detector node: runs all configured detectors against sampled files.
  */
-async function detectorNode(
-  state: CohesionScannerState,
-): Promise<Partial<CohesionScannerState>> {
+async function detectorNode(state: CohesionScannerState): Promise<Partial<CohesionScannerState>> {
   if (state.skipRun) return {}
 
   const config = state.config!
@@ -255,9 +251,7 @@ async function detectorNode(
 /**
  * Scorer node: computes per-category and composite scores.
  */
-async function scorerNode(
-  state: CohesionScannerState,
-): Promise<Partial<CohesionScannerState>> {
+async function scorerNode(state: CohesionScannerState): Promise<Partial<CohesionScannerState>> {
   if (state.skipRun) return {}
 
   const config = state.config!
@@ -335,9 +329,7 @@ async function storyGeneratorNode(
 /**
  * Routing function: skip detected → go to END, otherwise proceed to detectors.
  */
-function shouldSkip(
-  state: CohesionScannerState,
-): 'detectors' | 'end' {
+function shouldSkip(state: CohesionScannerState): 'detectors' | 'end' {
   return state.skipRun ? 'end' : 'detectors'
 }
 
@@ -408,7 +400,10 @@ export async function invokeCohesionScanner(
 
   // Run story generation separately (needs repoRoot from outside state)
   if (!baseResult.skipRun && baseResult.scanResult) {
-    const storyUpdates = await storyGeneratorNode(baseResult as CohesionScannerState, validatedInput)
+    const storyUpdates = await storyGeneratorNode(
+      baseResult as CohesionScannerState,
+      validatedInput,
+    )
     return {
       ...baseResult,
       generatedStories: [

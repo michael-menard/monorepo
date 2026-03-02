@@ -18,8 +18,10 @@ import type { PatternViolation } from '../__types__/index.js'
 // ============================================================================
 
 const HANDLER_DIR_PATTERN = /[/\\]handlers[/\\]/
-const HANDLER_EXPORT_PATTERN = /export\s+(const\s+handler|default\s+function\s+handler|async\s+function\s+handler)/
-const LAMBDA_HANDLER_IMPORT_PATTERN = /from\s+['"]@aws-lambda-powertools|APIGatewayProxyHandler|APIGatewayEvent|LambdaEvent/
+const HANDLER_EXPORT_PATTERN =
+  /export\s+(const\s+handler|default\s+function\s+handler|async\s+function\s+handler)/
+const LAMBDA_HANDLER_IMPORT_PATTERN =
+  /from\s+['"]@aws-lambda-powertools|APIGatewayProxyHandler|APIGatewayEvent|LambdaEvent/
 const DIRECT_DB_IN_HANDLER_PATTERN = /\bdrizzle\b|\bdb\.(select|insert|update|delete)\b/
 
 // ============================================================================

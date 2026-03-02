@@ -38,13 +38,22 @@ export const QAGraphConfigSchema = z.object({
   enableE2e: z.boolean().default(true),
 
   /** pnpm filter for unit tests (e.g. @repo/orchestrator) */
-  testFilter: z.string().regex(/^[@\w\-\/\*]*$/, 'Invalid pnpm filter format').default('@repo/orchestrator'),
+  testFilter: z
+    .string()
+    .regex(/^[@\w\-\/\*]*$/, 'Invalid pnpm filter format')
+    .default('@repo/orchestrator'),
 
   /** Playwright config file */
-  playwrightConfig: z.string().regex(/^[\w\-\.\/]*\.ts$/, 'Invalid Playwright config filename').default('playwright.legacy.config.ts'),
+  playwrightConfig: z
+    .string()
+    .regex(/^[\w\-\.\/]*\.ts$/, 'Invalid Playwright config filename')
+    .default('playwright.legacy.config.ts'),
 
   /** Playwright project */
-  playwrightProject: z.string().regex(/^[\w\-]*$/, 'Invalid Playwright project name').default('chromium-live'),
+  playwrightProject: z
+    .string()
+    .regex(/^[\w\-]*$/, 'Invalid Playwright project name')
+    .default('chromium-live'),
 
   /** Timeout for unit tests in ms */
   testTimeoutMs: z.number().int().positive().default(300000), // 5 minutes
@@ -245,7 +254,8 @@ export type QAGraphResult = z.infer<typeof QAGraphResultSchema>
 // ============================================================================
 
 const ModelClientSchema = z.object({
-  callModel: z.function()
+  callModel: z
+    .function()
     .args(z.string(), z.object({ model: z.string() }).optional())
     .returns(z.promise(z.string())),
 })
@@ -330,7 +340,7 @@ export function createQAGraph(config: QAGraphConfig, deps: { modelClient: ModelC
 
   // Wrap async node factories: NodeFunction uses GraphState internally, but LangGraph
   // routes QAGraphState. We cast at the boundary since nodes do internal casting.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const makeNode = (factory: () => Promise<(state: any) => Promise<any>>) => {
     return async (state: QAGraphState): Promise<Partial<QAGraphState>> => {
       const node = await factory()

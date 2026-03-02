@@ -136,9 +136,7 @@ export function assembleScanResult(
 ): CohesionScanResult {
   const compositeScore = computeCompositeScore(categoryScores, config.weightings)
 
-  const categoriesBelow = categoryScores
-    .filter(s => !s.thresholdMet)
-    .map(s => s.category)
+  const categoriesBelow = categoryScores.filter(s => !s.thresholdMet).map(s => s.category)
 
   const totalViolations = categoryScores.reduce((sum, s) => sum + s.violationCount, 0)
   const filesScanned = categoryScores.reduce((sum, s) => sum + s.sampleSize, 0)

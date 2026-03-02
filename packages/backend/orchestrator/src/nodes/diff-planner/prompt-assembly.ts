@@ -9,7 +9,12 @@
  */
 
 import { z } from 'zod'
-import type { AffinityProfile } from './__types__/index.js'
+import {
+  PlaceholderChangeSpecSchema,
+  ProfileMetadataSchema,
+} from '../../artifacts/diff-planner-output.js'
+import type { PlaceholderChangeSpec, ProfileMetadata } from '../../artifacts/diff-planner-output.js'
+import type { AffinityProfile, DiffPlannerConfig } from './__types__/index.js'
 import {
   AFFINITY_CONFIDENCE_MIN,
   WEAKNESS_THRESHOLD,
@@ -17,12 +22,6 @@ import {
   MAX_STRONG_PATTERNS_INJECTED,
   ESCALATION_MODEL_DEFAULT,
 } from './__types__/index.js'
-import type { DiffPlannerConfig } from './__types__/index.js'
-import {
-  PlaceholderChangeSpecSchema,
-  ProfileMetadataSchema,
-} from '../../artifacts/diff-planner-output.js'
-import type { PlaceholderChangeSpec, ProfileMetadata } from '../../artifacts/diff-planner-output.js'
 
 // ============================================================================
 // Types
@@ -240,9 +239,7 @@ export function assembleAffinityContext(
   enrichedSpecs: PlaceholderChangeSpec[]
   profileMetadata: ProfileMetadata
 } {
-  const qualifyingProfiles = profiles.filter(p =>
-    meetsConfidenceThreshold(p, config),
-  )
+  const qualifyingProfiles = profiles.filter(p => meetsConfidenceThreshold(p, config))
 
   if (qualifyingProfiles.length === 0) {
     const metadata: ProfileMetadata = {
@@ -267,7 +264,11 @@ export function assembleAffinityContext(
     config,
   )
 
-  const { enrichedSpecs, escalationCount } = annotateEscalations(changeSpecs, qualifyingProfiles, config)
+  const { enrichedSpecs, escalationCount } = annotateEscalations(
+    changeSpecs,
+    qualifyingProfiles,
+    config,
+  )
 
   // Use the highest confidence profile for reporting
   const maxConfidence = Math.max(...qualifyingProfiles.map(p => p.confidence))

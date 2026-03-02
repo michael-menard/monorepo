@@ -1296,6 +1296,9 @@ export const plans = pgTable(
     /** Plan slugs that must reach 'implemented' before this plan can start */
     dependencies: jsonb('dependencies').$type<string[]>(),
 
+    /** Self-referential FK: sub-epic plans point to their parent program plan */
+    parentPlanId: uuid('parent_plan_id'),
+
     /** Tags for filtering (inferred from content) */
     tags: text('tags').array(),
 
@@ -1330,6 +1333,7 @@ export const plans = pgTable(
     statusIdx: index('idx_plans_status').on(table.status),
     planTypeIdx: index('idx_plans_plan_type').on(table.planType),
     storyPrefixIdx: index('idx_plans_story_prefix').on(table.storyPrefix),
+    parentPlanIdx: index('idx_plans_parent_plan_id').on(table.parentPlanId),
     storyPrefixUniqueIdx: uniqueIndex('idx_plans_story_prefix_unique')
       .on(table.storyPrefix)
       .where(sql`story_prefix IS NOT NULL`),

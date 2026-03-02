@@ -16,7 +16,7 @@
 | 3 | Learning System & Optimization | 5 | 0 | 0 | 2 | in-progress |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
 | 5 | Pipeline Resilience | 3 | 3 | 0 | 0 | backlog |
-| **TOTAL** | | **35** | **9** | **1** | **7** | |
+| **TOTAL** | | **35** | **8** | **2** | **7** | |
 
 ## Phase 0: Foundation (11 stories)
 
@@ -50,7 +50,7 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1060 | QA Graph with Autonomous Verdict | none | ✅ UAT |
 | APIP-1070 | Merge Graph with Learnings Extraction | none | ✅ UAT |
 | APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1070 | Ready to Work |
-| APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | In Elaboration |
+| APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | Ready to Work |
 
 ## Phase 2: Resilience & Monitoring (3 stories)
 
@@ -84,7 +84,7 @@ Codebase health gate, cohesion scanner, dependency auditor, test quality monitor
 
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
-| APIP-4010 | Codebase Health Gate | APIP-1070, APIP-3090 | Ready to Work |
+| APIP-4010 | Codebase Health Gate | APIP-1070, APIP-3090 | In Progress |
 | APIP-4020 | Cohesion Scanner | APIP-4010, APIP-3090 | Ready for QA |
 | APIP-4030 | Dependency Auditor | — | UAT |
 | APIP-4040 | Test Quality Monitor | APIP-3090 | Ready for QA |
