@@ -1,6 +1,10 @@
 id: "APIP-1040"
 title: "Documentation Graph (Post-Merge)"
+<<<<<<<< HEAD:plans/future/platform/autonomous-pipeline/UAT/APIP-1040/story.yaml
 status: in-qa
+========
+status: ready-for-code-review
+>>>>>>>> origin/main:plans/future/platform/autonomous-pipeline/failed-code-review/APIP-1040/story.yaml
 priority: medium
 phase: 1
 feature: "6 parallel fan-out workers via LangGraph Send API running post-merge: API docs, component docs, architecture docs, README/guides, KB sync, and changelog — each using appropriate cheap models, with a Doc Review aggregation node before committing"

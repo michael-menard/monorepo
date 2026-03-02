@@ -37,6 +37,7 @@ export const RankedPatchSchema = z.object({
   severity: z.enum(['critical', 'high', 'medium', 'low']),
   auto_fixable: z.boolean().default(false),
   worker: z.string(),
+  changeSpecId: z.string().nullable().default(null),
 })
 
 export type RankedPatch = z.infer<typeof RankedPatchSchema>
@@ -183,6 +184,7 @@ export function generateRankedPatches(review: Review): RankedPatch[] {
           severity: finding.severity === 'error' ? 'high' : 'medium',
           auto_fixable: finding.auto_fixable,
           worker,
+          changeSpecId: null,
         })
       }
     }

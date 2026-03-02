@@ -1,7 +1,0 @@
-skipped: true
-reason: >
-  KBAR-0070 is a backend-only MCP tool extension with no user-facing UI components.
-  The story extends kb_get_story (an MCP protocol tool consumed over stdio by agents),
-  adds optional boolean flags to an existing service function, and updates a JSON Schema
-  tool definition. No React components, no browser surfaces, no Playwright E2E tests are
-  required per ADR-006 (frontend_impacted: false).
