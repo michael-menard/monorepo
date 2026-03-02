@@ -1,6 +1,6 @@
 id: "APIP-3070"
 title: "Cold Start Bootstrapping and Exploration Budget"
-status: in-progress
+status: needs-code-review
 priority: medium
 phase: 3
 feature: "Conservative OpenRouter defaults before profiles build, 10% random Ollama assignment exploration budget, optional manual profile seeding from model benchmark data, and profile confidence gating in router"
