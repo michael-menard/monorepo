@@ -1,0 +1,163 @@
+agent: pm-draft-test-plan
+story_id: APIP-3070
+generated: "2026-02-25"
+frontend_impacted: false
+e2e_required: false
+e2e_skip_reason: "No frontend impact; ADR-006 E2E Playwright requirement does not apply."
+
+test_tiers:
+  unit:
+    framework: vitest
+    location: packages/backend/orchestrator/src/__tests__/pipeline/
+    db_required: false
+    notes: "All unit tests must run in CI without a real database. Inject mock PRNG and mock affinity reader."
+    cases:
+      - id: UT-1
+        description: "Cold-start detection triggers tier-4 conservative default when affinity cache is empty (no qualifying profiles)"
+        ac_refs: [AC-2, AC-7]
+        setup: "Mock affinityCache returning empty / all confidence_level = 'none'"
+        assertions:
+          - "dispatch() returns conservativeOpenRouterModel"
+          - "Logger emits { source: 'cold_start', reason: 'no_qualifying_profiles' }"
+
+      - id: UT-2
+        description: "Exploration slot assigned when injected PRNG returns value < explorationBudgetFraction (e.g. 0.05)"
+        ac_refs: [AC-4, AC-7]
+        setup: "Mock PRNG returning 0.05; mock affinity cache with only low-confidence profiles; explorationBudgetFraction = 0.1"
+        assertions:
+          - "dispatch() routes to Ollama exploration model"
+          - "Logger emits { source: 'exploration', exploration_fraction: 0.1 }"
+
+      - id: UT-3
+        description: "Exploration slot skipped when injected PRNG returns value >= explorationBudgetFraction (e.g. 0.5) — falls through to tier 4"
+        ac_refs: [AC-4]
+        setup: "Mock PRNG returning 0.5; explorationBudgetFraction = 0.1"
+        assertions:
+          - "dispatch() returns conservativeOpenRouterModel"
+
+      - id: UT-4
+        description: "Exploration skipped when known success_rate < explorationMinSuccessRateFloor with sample_size > 0"
+        ac_refs: [AC-4]
+        setup: "Mock affinity data for Ollama with success_rate = 0.2, sample_size = 5; explorationMinSuccessRateFloor = 0.3"
+        assertions:
+          - "dispatch() falls through to tier 4 (conservativeOpenRouterModel)"
+
+      - id: UT-5
+        description: "Exploration allowed when sample_size = 0 (no evidence of failure — floor not violated)"
+        ac_refs: [AC-4]
+        setup: "Mock affinity data for Ollama with sample_size = 0; PRNG returns 0.05"
+        assertions:
+          - "dispatch() routes to Ollama exploration model"
+
+      - id: UT-6
+        description: "importAffinitySeeds() upserts valid seed entries and returns correct counts { seeded, skipped, errors }"
+        ac_refs: [AC-5, AC-6, AC-12]
+        setup: "Mock @repo/db Drizzle client; provide array of ManualAffinitySeedEntrySchema-valid objects"
+        assertions:
+          - "Returns { seeded: N, skipped: 0, errors: [] } for valid entries"
+          - "Returns { seeded: 0, skipped: N, errors: [...] } for invalid entries"
+          - "Upsert uses ON CONFLICT (model, change_type, file_type) DO UPDATE SET"
+
+      - id: UT-7
+        description: "invalidateAffinityCache() resets cold-start detection state (_hasAnyHighConfidenceProfile flag)"
+        ac_refs: [AC-8]
+        setup: "Populate router with high-confidence profile cache, call invalidateAffinityCache()"
+        assertions:
+          - "_hasAnyHighConfidenceProfile is reset to null/undefined"
+          - "Next dispatch() re-evaluates cold-start state from DB"
+
+      - id: UT-8
+        description: "PipelineModelRouterConfig extension fields accept valid values and apply correct defaults"
+        ac_refs: [AC-1]
+        assertions:
+          - "conservativeOpenRouterModel defaults to 'openrouter/anthropic/claude-3-haiku'"
+          - "explorationBudgetFraction defaults to 0.1 and rejects values outside [0, 1]"
+          - "explorationMinSuccessRateFloor defaults to 0.3 and rejects values outside [0, 1]"
+          - "manualSeedEnabled defaults to false"
+
+      - id: UT-9
+        description: "explorationBudgetFraction = 0.0 disables exploration entirely — always falls to tier 4"
+        ac_refs: [AC-4]
+        setup: "explorationBudgetFraction = 0.0; PRNG returns 0.0 (worst case)"
+        assertions:
+          - "dispatch() never routes to Ollama exploration"
+          - "dispatch() returns conservativeOpenRouterModel"
+
+      - id: UT-10
+        description: "explorationBudgetFraction = 1.0 routes every eligible attempt to Ollama unless floor violated"
+        ac_refs: [AC-4]
+        setup: "explorationBudgetFraction = 1.0; sample_size = 0 (no floor violation)"
+        assertions:
+          - "dispatch() always routes to Ollama exploration model"
+
+      - id: UT-11
+        description: "Ollama provider unavailable during exploration slot — graceful fallthrough to tier 4"
+        ac_refs: [AC-4]
+        setup: "Mock Ollama provider returning unavailable; PRNG returns 0.05"
+        assertions:
+          - "dispatch() falls through to conservativeOpenRouterModel"
+          - "No exception thrown"
+
+      - id: UT-12
+        description: "importAffinitySeeds() assigns confidence_level using CONFIDENCE_THRESHOLDS when confidence_level not provided in seed entry"
+        ac_refs: [AC-6]
+        setup: "Seed entry with sample_size = 25, no confidence_level field"
+        assertions:
+          - "Stored confidence_level = 'medium' (per CONFIDENCE_THRESHOLDS: LOW_MAX=19, MEDIUM_MAX=49)"
+
+  integration:
+    framework: vitest
+    tag: "@integration"
+    location: packages/backend/orchestrator/src/__tests__/pipeline/integration/
+    db_required: true
+    db_setup: "APIP-5001 test PostgreSQL with wint.model_affinity table from APIP-3020 migration"
+    notes: "Per ADR-005: integration tests must use real PostgreSQL — no in-memory substitute."
+    cases:
+      - id: IT-1
+        description: "dispatch() with empty wint.model_affinity logs source: 'cold_start' and routes to conservativeOpenRouterModel"
+        ac_refs: [AC-2, AC-7, AC-10]
+        setup: "Truncate wint.model_affinity before test"
+        assertions:
+          - "dispatch() returns conservativeOpenRouterModel"
+          - "Structured log contains { source: 'cold_start', reason: 'no_qualifying_profiles' }"
+
+      - id: IT-2
+        description: "After importAffinitySeeds() inserts one high-confidence seed, dispatch routes via affinity (not cold-start)"
+        ac_refs: [AC-5, AC-8, AC-10]
+        setup: "Import one high-confidence seed for matching (change_type, file_type); call invalidateAffinityCache()"
+        assertions:
+          - "dispatch() routes via tier 2 (affinity) not tier 4"
+          - "Log source is 'affinity' not 'cold_start'"
+
+      - id: IT-3
+        description: "dispatch() with only low-confidence profiles + injected PRNG returning 0.05 → routes to Ollama exploration"
+        ac_refs: [AC-3, AC-4, AC-10]
+        setup: "Insert wint.model_affinity rows with confidence_level = 'low' only; PRNG = 0.05"
+        assertions:
+          - "dispatch() routes to Ollama exploration model"
+          - "Log source is 'exploration'"
+
+      - id: IT-4
+        description: "After invalidateAffinityCache() with newly high-confidence profiles, cold-start detection no longer triggers"
+        ac_refs: [AC-8, AC-10]
+        setup: "Start with empty table (cold-start), insert high-confidence profiles, call invalidateAffinityCache()"
+        assertions:
+          - "dispatch() no longer returns cold-start default"
+          - "Routes via affinity tier"
+
+  regression:
+    description: "Run full APIP-0040 and APIP-3040 test suites without modification (AC-11)"
+    ac_refs: [AC-11]
+    assertions:
+      - "All APIP-0040 unit tests pass unchanged"
+      - "All APIP-3040 unit tests pass unchanged"
+      - "No files in packages/backend/orchestrator/src/models/ are modified"
+
+coverage_requirements:
+  minimum_global: 45
+  new_code_target: 80
+  notes: "New files (affinity-seeder.ts) and modified dispatch() code paths must achieve >= 80% coverage"
+
+implementation_gate:
+  blocked_by: ["APIP-3040 merge"]
+  note: "Unit tests can be written against spec during elaboration. Integration tests require real wint.model_affinity table from APIP-3020 migration."
