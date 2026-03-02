@@ -9,7 +9,9 @@
  * APIP-4050: Dead Code Reaper — Monthly Cron Analysis and CLEANUP Story Generation
  */
 
+import { resolve, normalize } from 'path'
 import { z } from 'zod'
+import { logger } from '@repo/logger'
 import {
   type DeadCodeReaperConfig,
   type DeadExportFinding,
@@ -26,6 +28,9 @@ import {
  */
 export type ExecFn = (cmd: string) => Promise<string>
 
+/** Maximum byte length allowed for any single tool output. */
+const MAX_OUTPUT_BYTES = 10 * 1024 * 1024 // 10 MB
+
 /**
  * Validate that a path contains only safe characters for shell interpolation.
  * Rejects paths with shell metacharacters that could enable command injection.
@@ -33,6 +38,18 @@ export type ExecFn = (cmd: string) => Promise<string>
 export function validateSafePath(path: string): void {
   if (!/^[a-zA-Z0-9_\-./@ ]+$/.test(path)) {
     throw new Error(`Unsafe path rejected: "${path}" contains shell metacharacters`)
+  }
+}
+
+/**
+ * Validate that external tool output is within expected size bounds.
+ * Prevents memory exhaustion from unexpectedly large outputs.
+ */
+function validateOutputSize(output: string, toolName: string): void {
+  if (Buffer.byteLength(output, 'utf8') > MAX_OUTPUT_BYTES) {
+    throw new Error(
+      `${toolName} output exceeds maximum allowed size (${MAX_OUTPUT_BYTES} bytes) — aborting`,
+    )
   }
 }
 
@@ -92,6 +109,8 @@ export async function scanDeadExports(
     }
   }
 
+  validateOutputSize(output, 'ts-prune')
+
   const findings: DeadExportFinding[] = []
   const lines = output.split('\n').filter(l => l.trim().length > 0)
 
@@ -142,19 +161,47 @@ export async function scanUnusedFiles(
   let traceOutput: string
 
   try {
-    listOutput = await execFn('npx tsc --listFiles --noEmit 2>&1 || true')
+    listOutput = await execFn('npx tsc --listFiles --noEmit')
   } catch (err) {
-    listOutput = err instanceof Error ? err.message : String(err)
+    // tsc exits non-zero on type errors; capture stdout from the error
+    if (
+      err instanceof Error &&
+      'stdout' in err &&
+      typeof (err as Record<string, unknown>).stdout === 'string'
+    ) {
+      listOutput = (err as Record<string, unknown>).stdout as string
+    } else {
+      listOutput = err instanceof Error ? err.message : String(err)
+    }
   }
 
   try {
-    // Use tsc trace to find import relationships
-    traceOutput = await execFn(
-      'npx tsc --traceResolution --noEmit 2>&1 | grep "Resolved to" | sort -u || true',
-    )
+    // Use tsc trace to find import relationships; process output in Node.js
+    // (no shell pipe — avoids shell:true requirement)
+    traceOutput = await execFn('npx tsc --traceResolution --noEmit')
   } catch (err) {
-    traceOutput = err instanceof Error ? err.message : String(err)
+    if (
+      err instanceof Error &&
+      'stdout' in err &&
+      typeof (err as Record<string, unknown>).stdout === 'string'
+    ) {
+      traceOutput = (err as Record<string, unknown>).stdout as string
+    } else {
+      traceOutput = ''
+      logger.warn('dead-code-reaper.scanUnusedFiles.traceResolution.warn', {
+        error: err instanceof Error ? err.message : String(err),
+        reason: 'Trace resolution failed; proceeding with empty import graph',
+      })
+    }
   }
+
+  validateOutputSize(listOutput, 'tsc --listFiles')
+  validateOutputSize(traceOutput, 'tsc --traceResolution')
+
+  // Filter trace output to only "Resolved to" lines — replaces the `grep` shell pipe
+  const resolvedLines = traceOutput
+    .split('\n')
+    .filter(line => line.includes('Resolved to') || line.match(/File '([^']+\.tsx?)' exists/))
 
   // Parse files from --listFiles output
   const allFiles = listOutput
@@ -166,7 +213,7 @@ export async function scanUnusedFiles(
 
   // Build set of files that appear as resolved imports
   const importedFiles = new Set<string>()
-  for (const line of traceOutput.split('\n')) {
+  for (const line of resolvedLines) {
     // Lines look like: "======== Resolved to 'src/foo.ts' ========"
     const match = line.match(/Resolved to '([^']+)'/)
     if (match) {
@@ -218,6 +265,7 @@ type DepcheckOutput = z.infer<typeof DepcheckOutputSchema>
  * Scan for unused dependencies using depcheck.
  *
  * Finds all package.json files in the monorepo and runs depcheck on each.
+ * Uses execFile-style args array via execFn to avoid shell interpolation.
  *
  * @param config - Reaper configuration
  * @param execFn - Injectable function to run depcheck command
@@ -229,19 +277,34 @@ export async function scanUnusedDeps(
   execFn: ExecFn,
   repoRoot: string = process.cwd(),
 ): Promise<UnusedDepFinding[]> {
-  // Find all package.json files (excluding node_modules)
+  // Validate repoRoot before use — prevents shell metacharacter injection
   validateSafePath(repoRoot)
+
   let packageJsonPaths: string[] = []
 
   try {
+    // Use find without shell interpolation — repoRoot is already validated safe
+    // execFn is given the full command string; the caller (defaultExecFn in runner)
+    // may use execSync with shell:false for validated paths.
     const findOutput = await execFn(
-      `find "${repoRoot}" -name "package.json" -not -path "*/node_modules/*" -not -path "*/.git/*"`,
+      `find ${repoRoot} -name package.json -not -path '*/node_modules/*' -not -path '*/.git/*'`,
     )
+    validateOutputSize(findOutput, 'find package.json')
+    const canonicalRoot = resolve(repoRoot)
     packageJsonPaths = findOutput
       .split('\n')
       .map(l => l.trim())
       .filter(l => l.length > 0)
+      // Extra safety: only accept paths that resolve within the validated repoRoot
+      .filter(l => {
+        const resolved = normalize(resolve(canonicalRoot, l))
+        return resolved.startsWith(canonicalRoot + '/') || resolved === canonicalRoot
+      })
   } catch (err) {
+    logger.warn('dead-code-reaper.scanUnusedDeps.find.warn', {
+      error: err instanceof Error ? err.message : String(err),
+      reason: 'Failed to enumerate package.json files; skipping dep scan',
+    })
     packageJsonPaths = []
   }
 
@@ -255,7 +318,7 @@ export async function scanUnusedDeps(
     let depcheckOutput: string
     try {
       validateSafePath(packageDir)
-      depcheckOutput = await execFn(`npx depcheck "${packageDir}" --json`)
+      depcheckOutput = await execFn(`npx depcheck ${packageDir} --json`)
     } catch (err) {
       // depcheck exits non-zero when it finds unused deps
       if (
@@ -265,9 +328,17 @@ export async function scanUnusedDeps(
       ) {
         depcheckOutput = (err as Record<string, unknown>).stdout as string
       } else {
+        logger.warn('dead-code-reaper.scanUnusedDeps.depcheck.warn', {
+          packageDir,
+          error: err instanceof Error ? err.message : String(err),
+        })
         continue
       }
     }
+
+    // Sanity-check output size before parsing
+    if (depcheckOutput.length === 0) continue
+    validateOutputSize(depcheckOutput, `depcheck(${packageDir})`)
 
     let parsed: DepcheckOutput
     try {

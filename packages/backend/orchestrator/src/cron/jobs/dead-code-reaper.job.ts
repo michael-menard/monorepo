@@ -13,52 +13,7 @@
 import { logger } from '@repo/logger'
 import type { CronJobDefinition } from '../schemas.js'
 import { LOCK_KEYS } from '../constants.js'
-import { getCronDbClient } from '../db.js'
-
-/**
- * Attempt to acquire a PostgreSQL session-level advisory lock.
- *
- * pg_try_advisory_lock() returns true if the lock was acquired,
- * false if another session already holds it.
- * The lock is automatically released when the client disconnects.
- *
- * @param lockKey - Integer advisory lock key
- * @returns true if lock acquired, false if lock is held by another session
- */
-async function tryAcquireAdvisoryLock(lockKey: number): Promise<{
-  acquired: boolean
-  pool: ReturnType<typeof getCronDbClient> | null
-}> {
-  const pool = getCronDbClient()
-  const client = await pool.connect()
-
-  try {
-    const result = await client.query<{ pg_try_advisory_lock: boolean }>(
-      'SELECT pg_try_advisory_lock($1)',
-      [lockKey],
-    )
-
-    const acquired = result.rows[0]?.pg_try_advisory_lock ?? false
-
-    if (!acquired) {
-      logger.info('cron.dead-code-reaper.lock.skipped', {
-        lockKey,
-        reason: 'Another instance holds the advisory lock',
-      })
-      client.release()
-      await pool.end()
-      return { acquired: false, pool: null }
-    }
-
-    // Release connection back to pool (lock stays on the session until pool ends)
-    client.release()
-    return { acquired: true, pool }
-  } catch (err) {
-    client.release()
-    await pool.end()
-    throw err
-  }
-}
+import { tryAcquireAdvisoryLock } from '../advisory-lock.js'
 
 /**
  * Dead Code Reaper job run function.
