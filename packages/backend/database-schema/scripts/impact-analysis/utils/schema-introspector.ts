@@ -2,8 +2,8 @@
  * Schema introspection utilities for parsing Drizzle schema files
  * WISH-20210
  */
-import { Project, SyntaxKind, VariableDeclaration } from 'ts-morph'
 import { resolve } from 'path'
+import { Project, SyntaxKind, VariableDeclaration } from 'ts-morph'
 
 export interface TableInfo {
   name: string
@@ -32,10 +32,7 @@ export function introspectTable(schemaDir: string, tableName: string): TableInfo
   const project = new Project({ skipAddingFilesFromTsConfig: true })
 
   // Load all schema files
-  project.addSourceFilesAtPaths([
-    `${schemaDir}/*.ts`,
-    `${schemaDir}/**/*.ts`,
-  ])
+  project.addSourceFilesAtPaths([`${schemaDir}/*.ts`, `${schemaDir}/**/*.ts`])
 
   const schemaFiles = project.getSourceFiles()
 
@@ -71,10 +68,7 @@ export function introspectEnum(schemaDir: string, enumName: string): EnumInfo | 
   const project = new Project({ skipAddingFilesFromTsConfig: true })
 
   // Load all schema files
-  project.addSourceFilesAtPaths([
-    `${schemaDir}/*.ts`,
-    `${schemaDir}/**/*.ts`,
-  ])
+  project.addSourceFilesAtPaths([`${schemaDir}/*.ts`, `${schemaDir}/**/*.ts`])
 
   const schemaFiles = project.getSourceFiles()
 

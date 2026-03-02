@@ -1,0 +1,13 @@
+id: "KFMB-2010"
+title: "KB-Native Bootstrap Generation Leader"
+status: backlog
+priority: medium
+phase: 2
+feature: "Rewrite pm-bootstrap-generation-leader to call kb_create_story for each story stub with no filesystem output"
+goal: "Bootstrap story generation writes exclusively to the stories table via kb_create_story."
+depends_on: ["KFMB-1020"]
+endpoints: []
+infrastructure: ["MCP Tools", "PostgreSQL/Aurora"]
+risk_notes: "Agent must handle idempotent re-runs gracefully."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

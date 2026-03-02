@@ -1,27 +1,25 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { SynthesizedStory, FinalAcceptanceCriterion } from '../../nodes/story/synthesize.js'
-import type { ReadinessResult } from '../../nodes/story/readiness-score.js'
+import { describe, expect, it, vi } from 'vitest'
+import { type FinalAcceptanceCriterion, type SynthesizedStory } from '../../nodes/story/synthesize.js'
+// eslint-disable-next-line import/order -- false positive: mixed ../../ and ../ relative depth confuses import/order grouping within the parent group
 import {
-  createElaborationGraph,
-  runElaboration,
-  createInitializeNode,
-  createLoadPreviousVersionNode,
+  type ElaborationConfig,
+  type ElaborationState,
+  AggregatedFindingsSchema,
+  ElaborationConfigSchema,
+  ElaborationPhaseSchema,
+  ElaborationResultSchema,
+  createAggregateNode,
+  createCompleteNode,
   createDeltaDetectNode,
   createDeltaReviewNode,
   createEscapeHatchEvalNode,
+  createElaborationGraph,
+  createInitializeNode,
+  createLoadPreviousVersionNode,
   createTargetedReviewNode,
-  createAggregateNode,
-  createUpdateReadinessNode,
-  createCompleteNode,
-  ElaborationConfigSchema,
-  ElaborationPhaseSchema,
-  AggregatedFindingsSchema,
-  ElaborationResultSchema,
-  type ElaborationState,
-  type ElaborationConfig,
+  runElaboration,
 } from '../elaboration.js'
 
-// Mock @repo/logger
 vi.mock('@repo/logger', () => ({
   createLogger: vi.fn(() => ({
     info: vi.fn(),
@@ -100,6 +98,11 @@ const createTestState = (overrides: Partial<ElaborationState> = {}): Elaboration
   workflowSuccess: false,
   warnings: [],
   errors: [],
+  // Structurer fields (APIP-1010)
+  changeOutline: null,
+  splitRequired: false,
+  splitReason: null,
+  structurerComplete: false,
   ...overrides,
 })
 
@@ -818,5 +821,238 @@ describe('runElaboration', () => {
     expect(result.storyId).toBe('flow-043')
     // Readiness should not be recalculated - result is null (or undefined if not set)
     expect(result.updatedReadinessResult ?? null).toBeNull()
+  })
+})
+
+// ============================================================================
+// APIP-1010: Structurer Node Tests (AC-14, AC-15)
+// ============================================================================
+
+// Import afterAggregate for direct routing tests (AC-15)
+import { afterAggregate } from '../elaboration.js'
+import type { StructurerConfig } from '../../nodes/elaboration/structurer.js'
+
+describe('afterAggregate routing function (AC-15)', () => {
+  it('HP-6: routes to structurer when structurerConfig.enabled is true', () => {
+    const state = createTestState({
+      config: ElaborationConfigSchema.parse({
+        structurerConfig: { enabled: true },
+      }),
+      changeOutline: null,
+      splitRequired: false,
+      splitReason: null,
+      structurerComplete: false,
+    })
+
+    const result = afterAggregate(state)
+
+    expect(result).toBe('structurer')
+  })
+
+  it('HP-7: routes to update_readiness when structurerConfig.enabled is false', () => {
+    const state = createTestState({
+      config: ElaborationConfigSchema.parse({
+        structurerConfig: { enabled: false },
+        recalculateReadiness: true,
+      }),
+      changeOutline: null,
+      splitRequired: false,
+      splitReason: null,
+      structurerComplete: false,
+    })
+
+    const result = afterAggregate(state)
+
+    expect(result).toBe('update_readiness')
+  })
+
+  it('routes to save_to_db when structurerConfig disabled and recalculateReadiness false', () => {
+    const state = createTestState({
+      config: ElaborationConfigSchema.parse({
+        structurerConfig: { enabled: false },
+        recalculateReadiness: false,
+      }),
+      changeOutline: null,
+      splitRequired: false,
+      splitReason: null,
+      structurerComplete: false,
+    })
+
+    const result = afterAggregate(state)
+
+    expect(result).toBe('save_to_db')
+  })
+
+  it('routes to structurer even when recalculateReadiness is false', () => {
+    const state = createTestState({
+      config: ElaborationConfigSchema.parse({
+        structurerConfig: { enabled: true },
+        recalculateReadiness: false,
+      }),
+      changeOutline: null,
+      splitRequired: false,
+      splitReason: null,
+      structurerComplete: false,
+    })
+
+    const result = afterAggregate(state)
+
+    // structurerConfig.enabled takes priority
+    expect(result).toBe('structurer')
+  })
+})
+
+describe('ElaborationStateAnnotation with new Structurer fields', () => {
+  it('createTestState includes all new Structurer fields (regression guard)', () => {
+    const state = createTestState({
+      changeOutline: null,
+      splitRequired: false,
+      splitReason: null,
+      structurerComplete: false,
+    })
+
+    expect(state.changeOutline).toBeNull()
+    expect(state.splitRequired).toBe(false)
+    expect(state.splitReason).toBeNull()
+    expect(state.structurerComplete).toBe(false)
+  })
+})
+
+describe('createElaborationGraph with Structurer node (AC-14)', () => {
+  it('HP-5: graph.compile() succeeds with Structurer node wired', () => {
+    // Tests that graph compiles successfully — no exception thrown
+    expect(() => {
+      const graph = createElaborationGraph({
+        structurerConfig: { enabled: true } as Partial<StructurerConfig>,
+      })
+      expect(graph).toBeDefined()
+      expect(typeof graph.invoke).toBe('function')
+    }).not.toThrow()
+  })
+
+  it('graph.compile() succeeds with Structurer disabled', () => {
+    expect(() => {
+      const graph = createElaborationGraph({
+        structurerConfig: { enabled: false } as Partial<StructurerConfig>,
+      })
+      expect(graph).toBeDefined()
+    }).not.toThrow()
+  })
+
+  it('graph.compile() succeeds with default config (Structurer enabled by default)', () => {
+    expect(() => {
+      const graph = createElaborationGraph()
+      expect(graph).toBeDefined()
+    }).not.toThrow()
+  })
+})
+
+describe('ElaborationResultSchema with Structurer fields (HP-8)', () => {
+  it('validates result with null structurer fields (default state)', () => {
+    const result = {
+      storyId: 'apip-1010',
+      phase: 'complete',
+      success: true,
+      deltaDetectionResult: null,
+      deltaReviewResult: null,
+      escapeHatchResult: null,
+      aggregatedFindings: {
+        storyId: 'apip-1010',
+        aggregatedAt: new Date().toISOString(),
+        totalFindings: 0,
+        criticalCount: 0,
+        majorCount: 0,
+        minorCount: 0,
+        infoCount: 0,
+        escapeHatchTriggered: false,
+        sectionsNeedingAttention: [],
+        recommendedStakeholders: [],
+        passed: true,
+        summary: 'Success',
+      },
+      updatedReadinessResult: null,
+      previousReadinessScore: null,
+      newReadinessScore: null,
+      warnings: [],
+      errors: [],
+      durationMs: 100,
+      completedAt: new Date().toISOString(),
+      changeOutline: null,
+      totalEstimatedAtomicChanges: null,
+      splitRequired: false,
+      splitReason: null,
+    }
+
+    expect(() => ElaborationResultSchema.parse(result)).not.toThrow()
+    const parsed = ElaborationResultSchema.parse(result)
+    expect(parsed.changeOutline).toBeNull()
+    expect(parsed.splitRequired).toBe(false)
+    expect(parsed.splitReason).toBeNull()
+  })
+
+  it('validates result with populated structurer fields', () => {
+    const result = {
+      storyId: 'apip-1010',
+      phase: 'complete',
+      success: true,
+      deltaDetectionResult: null,
+      deltaReviewResult: null,
+      escapeHatchResult: null,
+      aggregatedFindings: null,
+      updatedReadinessResult: null,
+      previousReadinessScore: null,
+      newReadinessScore: null,
+      warnings: [],
+      errors: [],
+      durationMs: 100,
+      completedAt: new Date().toISOString(),
+      changeOutline: [
+        {
+          id: 'CO-1',
+          filePath: 'src/file.ts',
+          changeType: 'modify',
+          description: 'Change description',
+          complexity: 'medium',
+          estimatedAtomicChanges: 5,
+          relatedAcIds: ['AC-1'],
+        },
+      ],
+      totalEstimatedAtomicChanges: 5,
+      splitRequired: false,
+      splitReason: null,
+    }
+
+    expect(() => ElaborationResultSchema.parse(result)).not.toThrow()
+    const parsed = ElaborationResultSchema.parse(result)
+    expect(parsed.changeOutline).toHaveLength(1)
+    expect(parsed.totalEstimatedAtomicChanges).toBe(5)
+  })
+})
+
+describe('ElaborationConfigSchema with Structurer fields (AC-8)', () => {
+  it('accepts structurerConfig with default values', () => {
+    const config = ElaborationConfigSchema.parse({})
+
+    expect((config as { structurerConfig?: { enabled?: boolean } }).structurerConfig?.enabled).toBe(
+      true,
+    )
+    expect(
+      (config as { structurerConfig?: { splitThreshold?: number } }).structurerConfig
+        ?.splitThreshold,
+    ).toBe(15)
+  })
+
+  it('accepts structurerConfig with custom values', () => {
+    const config = ElaborationConfigSchema.parse({
+      structurerConfig: { enabled: false, splitThreshold: 10 },
+    })
+
+    expect(
+      (config as { structurerConfig?: { enabled?: boolean } }).structurerConfig?.enabled,
+    ).toBe(false)
+    expect(
+      (config as { structurerConfig?: { splitThreshold?: number } }).structurerConfig
+        ?.splitThreshold,
+    ).toBe(10)
   })
 })

@@ -9,7 +9,12 @@
 
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
-import { TEST_USERS, authState, authenticateWithCognito, generateExpiredToken } from '../../utils/api-auth'
+import {
+  TEST_USERS,
+  authState,
+  authenticateWithCognito,
+  generateExpiredToken,
+} from '../../utils/api-auth'
 import { apiState } from './wishlist-api.steps'
 
 const { Given, When, Then } = createBdd()
@@ -45,7 +50,7 @@ Given('the API server is running', async ({ request }) => {
 Given('I have a valid Cognito ID token for the primary test user', async () => {
   const result = await authenticateWithCognito(
     TEST_USERS.primary.email,
-    TEST_USERS.primary.password
+    TEST_USERS.primary.password,
   )
   sessionState.idToken = result.tokens.idToken
 })
@@ -61,7 +66,7 @@ Given('I have an expired ID token', async () => {
 Given('I have an active cookie session', async ({ request }) => {
   const result = await authenticateWithCognito(
     TEST_USERS.primary.email,
-    TEST_USERS.primary.password
+    TEST_USERS.primary.password,
   )
 
   const baseUrl = getApiBaseUrl()
@@ -80,7 +85,7 @@ Given('I have an expired cookie session', async () => {
 Given('I have an active cookie session for the primary user', async ({ request }) => {
   const result = await authenticateWithCognito(
     TEST_USERS.primary.email,
-    TEST_USERS.primary.password
+    TEST_USERS.primary.password,
   )
 
   const baseUrl = getApiBaseUrl()
@@ -94,7 +99,7 @@ Given('I have an active cookie session for the primary user', async ({ request }
 Given('I have an Authorization header for a different user', async () => {
   const result = await authenticateWithCognito(
     TEST_USERS.secondary.email,
-    TEST_USERS.secondary.password
+    TEST_USERS.secondary.password,
   )
   authState.currentToken = result.tokens.accessToken
 })
@@ -206,11 +211,14 @@ Then('the response should indicate success', async () => {
   expect(body?.success).toBe(true)
 })
 
-Then('the response should set an httpOnly cookie named {string}', async ({}, cookieName: string) => {
-  const authCookie = sessionState.cookies.find(c => c.startsWith(`${cookieName}=`))
-  expect(authCookie).toBeDefined()
-  expect(authCookie?.toLowerCase()).toContain('httponly')
-})
+Then(
+  'the response should set an httpOnly cookie named {string}',
+  async ({}, cookieName: string) => {
+    const authCookie = sessionState.cookies.find(c => c.startsWith(`${cookieName}=`))
+    expect(authCookie).toBeDefined()
+    expect(authCookie?.toLowerCase()).toContain('httponly')
+  },
+)
 
 Then('the cookie should have SameSite=Strict', async () => {
   const authCookie = sessionState.cookies.find(c => c.startsWith('auth_token='))
@@ -230,9 +238,10 @@ Then('the response should update the {string} cookie', async ({}, cookieName: st
 Then('the {string} cookie should be cleared', async ({}, cookieName: string) => {
   const authCookie = sessionState.cookies.find(c => c.startsWith(`${cookieName}=`))
   if (authCookie) {
-    const isCleared = authCookie.includes('max-age=0') ||
-                      authCookie.includes('Max-Age=0') ||
-                      authCookie.includes('expires=Thu, 01 Jan 1970')
+    const isCleared =
+      authCookie.includes('max-age=0') ||
+      authCookie.includes('Max-Age=0') ||
+      authCookie.includes('expires=Thu, 01 Jan 1970')
     expect(isCleared).toBe(true)
   }
 })

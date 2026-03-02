@@ -16,7 +16,9 @@ const testState: Record<string, any> = {}
 // ============================================================================
 
 Given('I remember the first card title', async ({ page }) => {
-  const firstCard = page.locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]').first()
+  const firstCard = page
+    .locator('[data-testid="wishlist-card"], [data-testid="gallery-card"]')
+    .first()
   const title = await firstCard.locator('[data-testid="card-title"], h2, h3').first().textContent()
   testState.rememberedTitle = title
 })
@@ -82,8 +84,6 @@ Given('I mock DELETE to return {int} No Content', async ({ page }, status: numbe
   })
 })
 
-
 // ============================================================================
 // Order Management Steps
 // ============================================================================
-

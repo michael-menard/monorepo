@@ -10,6 +10,7 @@ loadEnv({ path: resolve(rootDir, '.env') })
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
+import { logger as appLogger } from '@repo/logger'
 // eslint-disable-next-line import/order
 import {
   initializeTracing,
@@ -39,6 +40,7 @@ import authorization from './domains/authorization/routes.js'
 import auth from './domains/auth/routes.js'
 import adminUsers from './domains/admin/routes.js'
 import inspiration from './domains/inspiration/routes.js'
+import monitor from './domains/monitor/routes.js'
 
 const app = new Hono()
 
@@ -97,6 +99,7 @@ app.route('/admin/users', adminUsers)
 app.route('/authorization', authorization)
 app.route('/mocs', mocs)
 app.route('/inspiration', inspiration)
+app.route('/monitor', monitor)
 
 // Root endpoint
 app.get('/', c => {
@@ -114,7 +117,7 @@ app.notFound(c => {
 
 // Error handler
 app.onError((err, c) => {
-  console.error('Unhandled error:', err)
+  appLogger.error('Unhandled error:', err)
   return c.json({ error: 'Internal server error' }, 500)
 })
 
@@ -133,4 +136,4 @@ export default {
 }
 
 // Log startup
-console.log(`🚀 lego-api running on http://localhost:${port}`)
+appLogger.info(`lego-api running on http://localhost:${port}`)

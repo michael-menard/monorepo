@@ -20,9 +20,12 @@ const { When, Then } = createBdd()
 
 When('I click the user avatar in the header', async ({ page }) => {
   // The user avatar is in a dropdown trigger button in the header
-  const avatarButton = page.locator('header').getByRole('button').filter({
-    has: page.locator('[class*="avatar"], [data-slot="avatar"]'),
-  })
+  const avatarButton = page
+    .locator('header')
+    .getByRole('button')
+    .filter({
+      has: page.locator('[class*="avatar"], [data-slot="avatar"]'),
+    })
 
   // Fallback: find button with rounded avatar image
   const fallbackButton = page.locator('header button').filter({
@@ -68,12 +71,13 @@ Then('the Cognito tokens should be cleared from localStorage', async ({ page }) 
     // Check for any Cognito-related tokens in localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && (
-        key.includes('CognitoIdentityServiceProvider') ||
-        key.includes('accessToken') ||
-        key.includes('idToken') ||
-        key.includes('refreshToken')
-      )) {
+      if (
+        key &&
+        (key.includes('CognitoIdentityServiceProvider') ||
+          key.includes('accessToken') ||
+          key.includes('idToken') ||
+          key.includes('refreshToken'))
+      ) {
         console.log(`Found token key: ${key}`)
         return true
       }

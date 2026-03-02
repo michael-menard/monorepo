@@ -8,10 +8,43 @@
  */
 
 import { z } from 'zod'
-import { eq, sql, type SQL } from 'drizzle-orm'
+import { eq, sql, and, ne, isNotNull, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { plans } from '../db/schema.js'
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Check if a story_prefix is already used by another plan.
+ * Throws a descriptive error if a conflict is found.
+ */
+async function assertUniquePrefixOrThrow(
+  db: NodePgDatabase<typeof schema>,
+  storyPrefix: string | null | undefined,
+  excludePlanSlug?: string,
+): Promise<void> {
+  if (!storyPrefix) return
+
+  const conditions: SQL[] = [eq(plans.storyPrefix, storyPrefix), isNotNull(plans.storyPrefix)]
+  if (excludePlanSlug) {
+    conditions.push(ne(plans.planSlug, excludePlanSlug))
+  }
+
+  const conflict = await db
+    .select({ planSlug: plans.planSlug, title: plans.title })
+    .from(plans)
+    .where(and(...conditions))
+    .limit(1)
+
+  if (conflict.length > 0) {
+    throw new Error(
+      `Story prefix '${storyPrefix}' is already used by plan '${conflict[0]!.planSlug}' (${conflict[0]!.title}). Each plan must have a unique story prefix.`,
+    )
+  }
+}
 
 // ============================================================================
 // Upsert Input Schema
@@ -40,7 +73,15 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Status lifecycle */
   status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional()
     .default('draft'),
 
@@ -58,6 +99,9 @@ export const KbUpsertPlanInputSchema = z.object({
 
   /** Tags for categorization */
   tags: z.array(z.string()).optional(),
+
+  /** Plan slugs that must reach 'implemented' before this plan can start */
+  dependencies: z.array(z.string()).optional(),
 
   /** Original source file path (e.g., '~/.claude/plans/jiggly-cooking-patterson.md') */
   source_file: z.string().optional(),
@@ -82,7 +126,15 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** New status */
   status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional(),
 
   /** New tags (replaces existing tags) */
@@ -104,6 +156,9 @@ export const KbUpdatePlanInputSchema = z.object({
 
   /** New estimated stories count */
   estimated_stories: z.number().int().optional().nullable(),
+
+  /** Plan slugs that must reach 'implemented' before this plan can start (null to clear) */
+  dependencies: z.array(z.string()).optional().nullable(),
 })
 
 export type KbUpdatePlanInput = z.infer<typeof KbUpdatePlanInputSchema>
@@ -128,7 +183,15 @@ export type KbGetPlanInput = z.infer<typeof KbGetPlanInputSchema>
 export const KbListPlansInputSchema = z.object({
   /** Filter by plan status */
   status: z
-    .enum(['draft', 'accepted', 'stories-created', 'in-progress', 'implemented', 'superseded', 'archived'])
+    .enum([
+      'draft',
+      'accepted',
+      'stories-created',
+      'in-progress',
+      'implemented',
+      'superseded',
+      'archived',
+    ])
     .optional(),
 
   /** Filter by plan type */
@@ -153,6 +216,36 @@ export const KbListPlansInputSchema = z.object({
 })
 
 export type KbListPlansInput = z.infer<typeof KbListPlansInputSchema>
+
+/**
+ * Input schema for kb_get_roadmap tool.
+ *
+ * Same as kb_list_plans but without status filter — status is hardcoded
+ * to exclude completed/deferred plans (implemented, superseded, archived).
+ */
+export const KbGetRoadmapInputSchema = z.object({
+  /** Filter by plan type */
+  plan_type: z
+    .enum(['feature', 'refactor', 'migration', 'infra', 'tooling', 'workflow', 'audit', 'spike'])
+    .optional(),
+
+  /** Filter by story prefix (e.g., 'SKCR') */
+  story_prefix: z.string().optional(),
+
+  /** Filter by priority (P1-P5) */
+  priority: z.enum(['P1', 'P2', 'P3', 'P4', 'P5']).optional(),
+
+  /** Maximum results (1-100, default 50) */
+  limit: z.number().int().min(1).max(100).optional().default(50),
+
+  /** Offset for pagination (default 0) */
+  offset: z.number().int().min(0).optional().default(0),
+
+  /** Include raw_content in response (default: false, saves bandwidth) */
+  include_content: z.boolean().optional().default(false),
+})
+
+export type KbGetRoadmapInput = z.infer<typeof KbGetRoadmapInputSchema>
 
 // ============================================================================
 // Dependencies
@@ -227,10 +320,7 @@ export async function kb_list_plans(
     conditions.push(eq(plans.priority, validated.priority))
   }
 
-  const whereClause =
-    conditions.length > 0
-      ? sql`${sql.join(conditions, sql` AND `)}`
-      : undefined
+  const whereClause = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined
 
   // Count total
   const countResult = await deps.db
@@ -255,6 +345,7 @@ export async function kb_list_plans(
         estimatedStories: plans.estimatedStories,
         priority: plans.priority,
         phases: plans.phases,
+        dependencies: plans.dependencies,
         tags: plans.tags,
         sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,
@@ -299,6 +390,9 @@ export async function kb_upsert_plan(
 }> {
   const validated = KbUpsertPlanInputSchema.parse(input)
 
+  // Enforce unique story_prefix across plans
+  await assertUniquePrefixOrThrow(deps.db, validated.story_prefix, validated.plan_slug)
+
   const now = new Date()
 
   const values = {
@@ -312,6 +406,7 @@ export async function kb_upsert_plan(
     storyPrefix: validated.story_prefix ?? null,
     estimatedStories: validated.estimated_stories ?? null,
     priority: validated.priority ?? 'P3',
+    dependencies: validated.dependencies ?? null,
     tags: validated.tags ?? null,
     sourceFile: validated.source_file ?? null,
     updatedAt: now,
@@ -369,6 +464,11 @@ export async function kb_update_plan(
     }
   }
 
+  // Enforce unique story_prefix across plans
+  if (validated.story_prefix !== undefined) {
+    await assertUniquePrefixOrThrow(deps.db, validated.story_prefix, validated.plan_slug)
+  }
+
   // Build update object from provided fields
   const updates: Record<string, unknown> = { updatedAt: new Date() }
 
@@ -379,7 +479,9 @@ export async function kb_update_plan(
   if (validated.plan_type !== undefined) updates.planType = validated.plan_type
   if (validated.feature_dir !== undefined) updates.featureDir = validated.feature_dir
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
-  if (validated.estimated_stories !== undefined) updates.estimatedStories = validated.estimated_stories
+  if (validated.estimated_stories !== undefined)
+    updates.estimatedStories = validated.estimated_stories
+  if (validated.dependencies !== undefined) updates.dependencies = validated.dependencies
 
   const result = await deps.db
     .update(plans)
@@ -393,5 +495,95 @@ export async function kb_update_plan(
     plan,
     updated: true,
     message: `Plan '${validated.plan_slug}' updated successfully`,
+  }
+}
+
+/**
+ * Statuses excluded from roadmap view (complete + deferred).
+ */
+const ROADMAP_EXCLUDED_STATUSES = ['implemented', 'superseded', 'archived'] as const
+
+/**
+ * Get the active roadmap — plans with actionable statuses only.
+ *
+ * Excludes implemented, superseded, and archived plans.
+ * Sorted by priority ASC (P1 first), then status, then slug.
+ */
+export async function kb_get_roadmap(
+  deps: PlanCrudDeps,
+  input: KbGetRoadmapInput,
+): Promise<{
+  plans: Array<Partial<typeof plans.$inferSelect>>
+  total: number
+  message: string
+}> {
+  const validated = KbGetRoadmapInputSchema.parse(input)
+
+  const conditions: SQL[] = [notInArray(plans.status, [...ROADMAP_EXCLUDED_STATUSES])]
+
+  if (validated.plan_type) {
+    conditions.push(eq(plans.planType, validated.plan_type))
+  }
+  if (validated.story_prefix) {
+    conditions.push(eq(plans.storyPrefix, validated.story_prefix))
+  }
+  if (validated.priority) {
+    conditions.push(eq(plans.priority, validated.priority))
+  }
+
+  const whereClause = sql`${sql.join(conditions, sql` AND `)}`
+
+  // Count total
+  const countResult = await deps.db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(plans)
+    .where(whereClause)
+
+  const total = countResult[0]?.count ?? 0
+
+  // Select columns based on include_content flag
+  const selectColumns = validated.include_content
+    ? undefined // select all
+    : {
+        id: plans.id,
+        planSlug: plans.planSlug,
+        title: plans.title,
+        summary: plans.summary,
+        planType: plans.planType,
+        status: plans.status,
+        featureDir: plans.featureDir,
+        storyPrefix: plans.storyPrefix,
+        estimatedStories: plans.estimatedStories,
+        priority: plans.priority,
+        phases: plans.phases,
+        dependencies: plans.dependencies,
+        tags: plans.tags,
+        sourceFile: plans.sourceFile,
+        createdAt: plans.createdAt,
+        updatedAt: plans.updatedAt,
+      }
+
+  const orderBy = [plans.priority, plans.status, plans.planSlug]
+
+  const result = selectColumns
+    ? await deps.db
+        .select(selectColumns)
+        .from(plans)
+        .where(whereClause)
+        .limit(validated.limit)
+        .offset(validated.offset)
+        .orderBy(...orderBy)
+    : await deps.db
+        .select()
+        .from(plans)
+        .where(whereClause)
+        .limit(validated.limit)
+        .offset(validated.offset)
+        .orderBy(...orderBy)
+
+  return {
+    plans: result,
+    total,
+    message: `Roadmap: ${result.length} active plans (${total} total)`,
   }
 }

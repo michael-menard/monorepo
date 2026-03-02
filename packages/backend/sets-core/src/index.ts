@@ -28,7 +28,21 @@
  * ```
  */
 
-export { getSetById, type GetSetResult, type GetSetDbClient, type SetsSchema as GetSetSetsSchema } from './get-set.js'
-export { listSets, type ListSetsDbClient, type SetsSchema as ListSetsSetsSchema } from './list-sets.js'
-export { createSet, type CreateSetResult, type CreateSetDbClient, type CreateSetSetsSchema } from './create-set.js'
+export {
+  getSetById,
+  type GetSetResult,
+  type GetSetDbClient,
+  type SetsSchema as GetSetSetsSchema,
+} from './get-set.js'
+export {
+  listSets,
+  type ListSetsDbClient,
+  type SetsSchema as ListSetsSetsSchema,
+} from './list-sets.js'
+export {
+  createSet,
+  type CreateSetResult,
+  type CreateSetDbClient,
+  type CreateSetSetsSchema,
+} from './create-set.js'
 export { ListSetsFiltersSchema, type ListSetsFilters } from './__types__/index.js'

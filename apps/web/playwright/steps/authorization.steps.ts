@@ -27,7 +27,10 @@ Given('I am logged in as a free-tier test user', async ({ page }) => {
   await page.waitForSelector('form', { timeout: 15000 })
 
   await page.fill('input[type="email"], input[name="email"], input[id="email"]', TEST_USER.email)
-  await page.fill('input[type="password"], input[name="password"], input[id="password"]', TEST_USER.password)
+  await page.fill(
+    'input[type="password"], input[name="password"], input[id="password"]',
+    TEST_USER.password,
+  )
   await page.click('button[type="submit"]')
 
   await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 30000 })
@@ -98,7 +101,9 @@ Then('I should not see an upgrade prompt for wishlist', async ({ page }) => {
 })
 
 Then('I should see wishlist content', async ({ page }) => {
-  const content = page.locator('[data-testid="wishlist-filter-bar"], [data-testid="gallery-empty-state"]')
+  const content = page.locator(
+    '[data-testid="wishlist-filter-bar"], [data-testid="gallery-empty-state"]',
+  )
   await expect(content.first()).toBeVisible({ timeout: 10000 })
 })
 

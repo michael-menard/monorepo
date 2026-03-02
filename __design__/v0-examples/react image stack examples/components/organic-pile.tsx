@@ -1,31 +1,31 @@
-"use client"
+'use client'
 
-import { useState, useMemo } from "react"
-import { motion } from "framer-motion"
-import { ExpandableStack } from "@/components/expandable-stack"
+import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { ExpandableStack } from '@/components/expandable-stack'
 
 const photos = [
   {
-    src: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=300&h=400&fit=crop",
-    alt: "Modern architecture building",
+    src: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=300&h=400&fit=crop',
+    alt: 'Modern architecture building',
     w: 140,
     h: 190,
   },
   {
-    src: "https://images.unsplash.com/photo-1494526585095-c41746248156?w=400&h=260&fit=crop",
-    alt: "Contemporary house exterior",
+    src: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=400&h=260&fit=crop',
+    alt: 'Contemporary house exterior',
     w: 190,
     h: 125,
   },
   {
-    src: "https://images.unsplash.com/photo-1448630360428-65456659c479?w=340&h=340&fit=crop",
-    alt: "Glass skyscraper facade",
+    src: 'https://images.unsplash.com/photo-1448630360428-65456659c479?w=340&h=340&fit=crop',
+    alt: 'Glass skyscraper facade',
     w: 160,
     h: 160,
   },
   {
-    src: "https://images.unsplash.com/photo-1431576901776-e539bd916ba2?w=400&h=260&fit=crop",
-    alt: "Geometric architecture detail",
+    src: 'https://images.unsplash.com/photo-1431576901776-e539bd916ba2?w=400&h=260&fit=crop',
+    alt: 'Geometric architecture detail',
     w: 190,
     h: 125,
   },
@@ -87,14 +87,14 @@ export function OrganicPile({ expandable = false }: { expandable?: boolean }) {
                 scale: 1 - (ordered.length - 1 - index) * 0.03,
               }}
               transition={{
-                type: "spring",
+                type: 'spring',
                 stiffness: 200,
                 damping: 22,
               }}
               layout
             >
               <img
-                src={photo.src || "/placeholder.svg"}
+                src={photo.src || '/placeholder.svg'}
                 alt={photo.alt}
                 className="w-full h-full object-cover block"
                 crossOrigin="anonymous"

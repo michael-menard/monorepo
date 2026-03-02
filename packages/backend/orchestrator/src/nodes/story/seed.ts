@@ -303,9 +303,7 @@ export async function generateStorySeed(
     }
 
     // Extract affected files from context
-    const affectedFiles = fullConfig.includeFileImpact
-      ? extractAffectedFiles(context, 10)
-      : []
+    const affectedFiles = fullConfig.includeFileImpact ? extractAffectedFiles(context, 10) : []
 
     if (!context) {
       warnings.push('No retrieved context available - file impact analysis skipped')

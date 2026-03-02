@@ -1,0 +1,19 @@
+deferred_at: "2026-02-26T00:00:00Z"
+reason: "KB tools unavailable during story generation"
+writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: KFMB-1030
+      feature: kb-first-migration
+      title: "PM Artifact Types and Detail Tables"
+      story_dir: plans/future/platform/kb-first-migration/backlog/KFMB-1030
+      story_file: KFMB-1030.md
+      story_type: feature
+      points: 3
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false

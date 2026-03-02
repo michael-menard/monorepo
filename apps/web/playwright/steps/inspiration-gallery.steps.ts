@@ -219,7 +219,8 @@ When('I click the list view button', async ({ page }) => {
 
   // The view toggle uses "Table view" for the list/datatable view
   // Try multiple selectors for the table/list view button
-  const tableButton = page.locator('[data-testid="gallery-view-toggle"] button[aria-label="Table view"]')
+  const tableButton = page
+    .locator('[data-testid="gallery-view-toggle"] button[aria-label="Table view"]')
     .or(page.getByRole('button', { name: /Table view/i }))
     .or(page.locator('[aria-label="Table view"]'))
 
@@ -275,8 +276,7 @@ When('I click the grid view button', async ({ page }) => {
 
   // Get the button's current state before clicking
   const isAlreadySelected = await gridButton.first().evaluate((btn: Element) => {
-    return btn.getAttribute('data-state') === 'on' ||
-           btn.getAttribute('aria-pressed') === 'true'
+    return btn.getAttribute('data-state') === 'on' || btn.getAttribute('aria-pressed') === 'true'
   })
 
   // If already selected, the view should already be in grid mode

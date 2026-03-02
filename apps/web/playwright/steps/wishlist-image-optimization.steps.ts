@@ -58,7 +58,9 @@ Then('the picture element should have a WebP source', async ({ page }) => {
   await expect(cards.first()).toBeVisible({ timeout: 10000 })
 
   // Check for WebP source elements within picture elements
-  const webpSources = page.locator('[data-testid="responsive-image-picture"] source[type="image/webp"]')
+  const webpSources = page.locator(
+    '[data-testid="responsive-image-picture"] source[type="image/webp"]',
+  )
   const count = await webpSources.count()
 
   // Items with completed variants should have WebP sources
@@ -98,7 +100,9 @@ Then('the img element should have a JPEG fallback src', async ({ page }) => {
   await expect(cards.first()).toBeVisible({ timeout: 10000 })
 
   // The img inside picture should have a src pointing to original/JPEG
-  const pictureImgs = page.locator('[data-testid="responsive-image-picture"] img, [data-testid="responsive-image"] ')
+  const pictureImgs = page.locator(
+    '[data-testid="responsive-image-picture"] img, [data-testid="responsive-image"] ',
+  )
   const count = await pictureImgs.count()
 
   if (count > 0) {
@@ -214,8 +218,8 @@ Then('the item should show an optimizing indicator', async ({ page }) => {
   const optimizingText = page.getByText('Optimizing...')
 
   // Either the testid or the text should be present
-  const hasIndicator = await processingIndicator.count() > 0
-  const hasText = await optimizingText.count() > 0
+  const hasIndicator = (await processingIndicator.count()) > 0
+  const hasText = (await optimizingText.count()) > 0
 
   expect(hasIndicator || hasText).toBe(true)
 })
@@ -224,7 +228,7 @@ Then('the original image should still be visible', async ({ page }) => {
   // During processing, the original image should still show
   const processingContainer = page.locator('[data-testid="responsive-image-processing"]')
 
-  if (await processingContainer.count() > 0) {
+  if ((await processingContainer.count()) > 0) {
     const img = processingContainer.locator('img')
     await expect(img.first()).toBeVisible()
   }
@@ -235,8 +239,8 @@ Then('the item should display the original image', async ({ page }) => {
   const failedImage = page.locator('[data-testid="responsive-image-failed"]')
   const fallbackImage = page.locator('[data-testid="responsive-image-fallback"]')
 
-  const hasFailedFallback = await failedImage.count() > 0
-  const hasFallback = await fallbackImage.count() > 0
+  const hasFailedFallback = (await failedImage.count()) > 0
+  const hasFallback = (await fallbackImage.count()) > 0
 
   // Should show either the failed fallback or regular fallback
   expect(hasFailedFallback || hasFallback).toBe(true)
@@ -258,21 +262,24 @@ Then('no broken image icons should appear', async ({ page }) => {
 // Dimensions and Aspect Ratio
 // ============================================================================
 
-Then('thumbnail variant images should have width {int}', async ({ page }, expectedWidth: number) => {
-  const cards = page.locator('[data-testid^="wishlist-card-"]')
-  await expect(cards.first()).toBeVisible({ timeout: 10000 })
+Then(
+  'thumbnail variant images should have width {int}',
+  async ({ page }, expectedWidth: number) => {
+    const cards = page.locator('[data-testid^="wishlist-card-"]')
+    await expect(cards.first()).toBeVisible({ timeout: 10000 })
 
-  // Check that responsive images have width attribute matching thumbnail size
-  const responsiveImages = page.locator('[data-testid="responsive-image"]')
-  const count = await responsiveImages.count()
+    // Check that responsive images have width attribute matching thumbnail size
+    const responsiveImages = page.locator('[data-testid="responsive-image"]')
+    const count = await responsiveImages.count()
 
-  if (count > 0) {
-    const width = await responsiveImages.first().getAttribute('width')
-    if (width) {
-      expect(parseInt(width)).toBe(expectedWidth)
+    if (count > 0) {
+      const width = await responsiveImages.first().getAttribute('width')
+      if (width) {
+        expect(parseInt(width)).toBe(expectedWidth)
+      }
     }
-  }
-})
+  },
+)
 
 Then('landscape image variants should maintain landscape proportions', async ({ page }) => {
   // wish-001 Millennium Falcon: original 4032x3024 = landscape

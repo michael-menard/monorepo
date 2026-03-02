@@ -1831,3 +1831,86 @@ export const insertModelAssignmentSchema = createInsertSchema(modelAssignments)
 export const selectModelAssignmentSchema = createSelectSchema(modelAssignments)
 export type InsertModelAssignment = z.infer<typeof insertModelAssignmentSchema>
 export type SelectModelAssignment = z.infer<typeof selectModelAssignmentSchema>
+
+// ============================================================================
+// 7. MODEL AFFINITY SCHEMA (APIP-3020)
+// ============================================================================
+
+/**
+ * Confidence Level Enum
+ * Defines the confidence band for a model-change-type-file-type affinity profile.
+ * Lives in the 'wint' schema namespace (wintSchema.enum, not pgEnum).
+ */
+export const confidenceLevelEnum = wintSchema.enum('confidence_level', [
+  'high',
+  'medium',
+  'low',
+  'unknown',
+])
+
+/**
+ * Model Affinity Table
+ * Stores aggregated affinity profiles: per-(model_id, change_type, file_type) triple.
+ * Updated incrementally by the Pattern Miner cron graph (runPatternMiner()).
+ *
+ * Story: APIP-3020 - Pattern Miner and Model Affinity Profiles
+ *
+ * Key design decisions:
+ * - success_rate: weighted average (0.0–1.0), updated via ON CONFLICT DO UPDATE
+ * - avg_tokens: weighted average of (tokens_in + tokens_out)
+ * - avg_retry_count: weighted average of retry_count
+ * - trend: jsonb {direction: 'up'|'down'|'stable', delta: number, computed_at: ISO string}
+ * - last_aggregated_at: watermark for incremental re-aggregation
+ */
+export const modelAffinity = wintSchema.table(
+  'model_affinity',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // Affinity key triple
+    modelId: text('model_id').notNull(),
+    changeType: text('change_type').notNull(),
+    fileType: text('file_type').notNull(),
+
+    // Aggregated metrics
+    successRate: numeric('success_rate', { precision: 5, scale: 4 }).notNull().default('0'),
+    sampleCount: integer('sample_count').notNull().default(0),
+    avgTokens: numeric('avg_tokens', { precision: 10, scale: 2 }).notNull().default('0'),
+    avgRetryCount: numeric('avg_retry_count', { precision: 6, scale: 3 }).notNull().default('0'),
+
+    // Confidence band
+    confidenceLevel: confidenceLevelEnum('confidence_level').notNull().default('unknown'),
+
+    // Trend detection (jsonb: {direction, delta, computed_at})
+    trend: jsonb('trend'),
+
+    // Incremental aggregation watermark
+    lastAggregatedAt: timestamp('last_aggregated_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // Audit
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Unique composite: one profile per (model, change_type, file_type)
+    modelAffinityUniqueIdx: uniqueIndex('idx_model_affinity_unique').on(
+      table.modelId,
+      table.changeType,
+      table.fileType,
+    ),
+    // Index: confidence_level for filtering high-confidence profiles
+    confidenceLevelIdx: index('idx_model_affinity_confidence_level').on(table.confidenceLevel),
+    // Index: last_aggregated_at for incremental watermark queries
+    lastAggregatedAtIdx: index('idx_model_affinity_last_aggregated_at').on(table.lastAggregatedAt),
+  }),
+)
+
+// ============================================================================
+// Model Affinity Zod Schemas (APIP-3020)
+// ============================================================================
+
+export const ModelAffinityInsertSchema = createInsertSchema(modelAffinity)
+export const ModelAffinitySelectSchema = createSelectSchema(modelAffinity)
+export type InsertModelAffinity = z.infer<typeof ModelAffinityInsertSchema>
+export type SelectModelAffinity = z.infer<typeof ModelAffinitySelectSchema>

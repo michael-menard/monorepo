@@ -1,0 +1,132 @@
+phase: qa_verification
+feature_dir: plans/future/platform/autonomous-pipeline
+story_id: APIP-0040
+verdict: PASS
+timestamp: "2026-03-01T15:37:00Z"
+
+# Verification Results
+verification:
+  schema: 1
+  verdict: PASS
+  test_results:
+    total: 3379
+    passed: 3379
+    failed: 0
+    skipped: 18
+    test_files: 137
+  acs_verified: 12
+  architecture_compliant: true
+  issues_found: 0
+
+# Status Updates
+status_updates:
+  - update: "Updated story status to uat"
+    file: "plans/future/platform/autonomous-pipeline/UAT/APIP-0040/story.yaml"
+    change: "status: in-qa → uat"
+    timestamp: "2026-03-01T15:37:00Z"
+  - update: "Updated frontmatter in story markdown"
+    file: "plans/future/platform/autonomous-pipeline/UAT/APIP-0040/APIP-0040.md"
+    change: "status: backlog → uat"
+    timestamp: "2026-03-01T15:37:00Z"
+
+# Index Updates
+index_updates:
+  file: "plans/future/platform/autonomous-pipeline/stories.index.md"
+  changes:
+    - status_updated: "APIP-0040: in-qa → uat"
+    - timestamp: "2026-03-01T15:37:00Z"
+
+# KB Artifacts Written
+kb_artifacts:
+  - type: verification
+    story_id: APIP-0040
+    artifact_id: 55e2feaa-08f0-49aa-afbe-ea5787989a0c
+    path: "_implementation/VERIFICATION.yaml"
+    gate_decision: PASS
+    gate_reason: "All 12 ACs verified, 3379 tests passing, zero regressions, architecture compliant"
+    timestamp: "2026-03-01T15:37:00Z"
+
+  - type: qa_gate
+    story_id: APIP-0040
+    artifact_id: 18e99d35-5fbf-435c-b022-c32280b541b9
+    path: "_implementation/QA-GATE.yaml"
+    decision: PASS
+    timestamp: "2026-03-01T15:37:00Z"
+
+# KB Entries Created
+kb_entries:
+  - type: lesson
+    id: 31c81e6f-509a-4d17-a646-a3adeb81023c
+    title: "QA pattern: Running tests from story worktree instead of main"
+    category: testing
+    story_id: APIP-0040
+    tags: ["qa", "worktree", "git", "backend", "testing"]
+
+  - type: lesson
+    id: 1367c568-8a59-46ba-b27d-2ec807cda0e9
+    title: "Effective test pattern: vi.useFakeTimers with token bucket rate limiter"
+    category: testing
+    story_id: APIP-0040
+    tags: ["testing", "vitest", "async", "rate-limiting", "pattern"]
+
+  - type: lesson
+    id: e1201aec-aa8b-4a20-bd1d-1f878cb1a64b
+    title: "Error prototype chain fix: Object.setPrototypeOf for custom Error subclasses"
+    category: architecture
+    story_id: APIP-0040
+    tags: ["typescript", "error-handling", "prototype", "architecture"]
+
+# Story Status in KB
+kb_story_status:
+  story_id: APIP-0040
+  state: completed
+  phase: qa_verification
+  updated: true
+  message: "Updated story APIP-0040"
+  timestamp: "2026-03-01T15:37:00Z"
+
+# Token Tracking
+tokens:
+  phase: qa-verification
+  input_tokens: 8500
+  output_tokens: 3500
+  total_tokens: 12000
+  logged_id: 00282726-0ae4-4afb-9a09-669bb9c76e8c
+  cumulative_tokens: 66200
+  timestamp: "2026-03-01T15:37:00Z"
+
+# Worktree Status
+worktree:
+  active: false
+  lookup_result: null
+  merge_status: skipped
+  reason: "No active worktree found for APIP-0040"
+
+# Summary
+summary:
+  status: COMPLETE
+  signal: "QA PASS"
+  story_location: "plans/future/platform/autonomous-pipeline/UAT/APIP-0040"
+  verification_verdict: PASS
+  all_acs_verified: true
+  test_suite_passing: true
+  architecture_compliant: true
+  qa_findings_captured: true
+  kb_story_completed: true
+  tokens_logged: true
+  index_updated: true
+
+completion_notes: |
+  QA verification for APIP-0040 (Model Router v1 with Rate Limiting and Token Budgets) completed successfully.
+
+  - All 12 acceptance criteria verified
+  - Full test suite passing: 3379 tests pass, 0 failures, 18 skipped
+  - Zero regressions detected
+  - Architecture fully compliant with CLAUDE.md standards
+  - Story moved to UAT directory
+  - Story index updated to uat status
+  - 3 key lessons captured to KB for future teams
+  - KB story status marked completed
+  - Tokens logged: 12000 total (8500 input, 3500 output)
+
+  Next step: UAT acceptance sign-off by stakeholders

@@ -1,0 +1,17 @@
+schema: 1
+story_id: APIP-2020
+feature_dir: plans/future/platform/autonomous-pipeline
+timestamp: 2026-03-01T03:00:00Z
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - "KB write operations are failing with INTERNAL_ERROR — artifacts written to _implementation/ directory as YAML files only"
+  - "AC-11 auth mechanism resolved autonomously (aggressive autonomy): Cognito middleware reused"
+  - "AC-13 coordination resolved: APIP-5005 unmerged as of 2026-02-28; this story creates PipelineReadService"
+  - "wint.stories dev DB schema differs from story-repository.ts expectations; adapted with ::text casts and story_blockers JOIN"
+  - "E2E frontend /monitor navigation not tested (no /monitor route in main-app); API E2E fully covers AC-4/AC-10"
+gen_mode: false

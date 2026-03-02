@@ -1,0 +1,99 @@
+schema: 1
+feature_dir: plans/future/platform/story-generation-small-llm-compat
+prefix: ST
+reviewed: "2026-02-28T00:00:00Z"
+
+summary: "Post-MVP improvements, soft-scope refinements, and enhancements for future iterations once core generation pipeline is verified and stabilized."
+
+enhancements:
+  high_value:
+    - id: FUTURE-1
+      source: platform
+      suggestion: "Add observability checkpoint after each story generation phase (seed → feasibility → synthesis) to detect when agents are not reading required sections from prior outputs."
+      impact: high
+      effort: medium
+
+    - id: FUTURE-2
+      source: engineering
+      suggestion: "Create e2e test harness that generates a 5-story batch end-to-end and validates every generated story has Goal, Examples, Edge Cases, Subtasks, Canonical References, and correct AC→subtask coverage."
+      impact: high
+      effort: medium
+
+    - id: FUTURE-3
+      source: qa
+      suggestion: "Build QA checklist fixture that validates each story output shape (YAML schema compliance) before human review to reduce rework cycles."
+      impact: high
+      effort: low
+
+    - id: FUTURE-4
+      source: engineering
+      suggestion: "Document canonical reference discovery heuristics (Phase 2.5) so that seed agent consistently finds relevant examples across monorepo patterns (API handlers, DB queries, form patterns, etc.)."
+      impact: high
+      effort: medium
+
+  nice_to_have:
+    - id: FUTURE-5
+      source: product
+      suggestion: "Extend clarity format with optional ## Assumptions section for stories with uncertain requirements (detected via feasibility review CONDITIONAL PASS outcomes)."
+
+    - id: FUTURE-6
+      source: ux
+      suggestion: "Create UI for story generation feedback loop so PM can iteratively refine seeds without re-running full pipeline."
+
+    - id: FUTURE-7
+      source: platform
+      suggestion: "Add tracing/debugging output to subtask iteration mode (ST-3020) so small LLMs can log which canonical reference they consulted for each subtask."
+
+    - id: FUTURE-8
+      source: security
+      suggestion: "Audit canonical reference collection logic to ensure no sensitive config, credentials, or internal-only patterns are leaked into story seeds."
+
+suggested_stories:
+  - title: "Implement E2E verification test for full story generation pipeline"
+    source: engineering
+    priority: P1
+    reason: "Unblocks confidence that all 7 stories actually work together end-to-end; catches integration gaps early."
+
+  - title: "Document canonical reference discovery patterns and heuristics"
+    source: engineering
+    priority: P1
+    reason: "Makes ST-1010 repeatable and maintainable for future story types; reduces brittle hard-coded patterns."
+
+  - title: "Build story shape validation (YAML schema) for QA gate"
+    source: qa
+    priority: P2
+    reason: "Automates structural checks so human reviewers focus on content clarity instead of format compliance."
+
+  - title: "Add observability checkpoints to story generation leader phases"
+    source: platform
+    priority: P2
+    reason: "Helps debug when agents silently skip optional sections or mis-order required sections."
+
+stories_to_defer:
+  - story: ST-1020
+    reason: "Defer implementation until gap audit (MVP-1) confirms that pm-spawn-patterns.md section 4 ## Goal format is not already enforced."
+
+  - story: ST-2020
+    reason: "Defer until ST-1020 and ST-2010 end-to-end execution verified; block on MVP-3 blocker (Check #9 vs #10 boundary clarity)."
+
+cross_cutting_concerns:
+  - concern: "Spec vs. Reality Gap"
+    description: "5 of 7 stories exist as complete specs in agent files (v1.2.0, v3.1.0, v3.2.0, etc.) but no evidence of active invocation or output verification in production runs."
+    risk: "Implementation assumes features work; reality may differ (stubs not hooked, optional paths skipped, outputs malformed)."
+    mitigation: "Run mandatory gap audit before proceeding; execute agents with tracing enabled to confirm each story produces claimed output format."
+
+  - concern: "Integration Surface Area"
+    description: "Story generation pipeline has 3+ handoff points (seed → feasibility → synthesis) where each agent must read outputs from prior phase; if reading code is incomplete, sections silently disappear."
+    risk: "Generated stories missing Goal/Examples/Edge Cases/Subtasks despite agents having code to include them."
+    mitigation: "Implement FUTURE-2 e2e test with assertions on every required section; add FUTURE-4 observability checkpoints after each phase."
+
+  - concern: "Scope Ambiguity on Examples/Edge Cases"
+    description: "ST-1020 assumes Goal/Examples/Edge Cases are not currently enforced, but pm-spawn-patterns.md already lists ## Goal as item #4; unclear if examples/edge cases belong elsewhere or are genuinely missing."
+    risk: "Implement ST-1020 only to find ## Goal already in output; rework; or miss genuine Examples/Edge Cases gap."
+    mitigation: "Audit pm-story-generation-leader Phase 4 synthesis block to document exactly what story sections are currently generated; update story specs with findings."
+
+metrics:
+  total_suggestions: 8
+  deferred_stories: 2
+  high_value_enhancements: 4
+  nice_to_have: 4

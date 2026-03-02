@@ -1,0 +1,471 @@
+---
+schema: 1
+story_id: KFMB-3020
+title: "Eliminate stories.index.md — Command Updates"
+analyst: elab-analyst
+analysis_date: "2026-02-26"
+decided_by: elab-autonomous-decider
+decided_at: "2026-02-26T00:00:00Z"
+story_file: plans/future/platform/kb-first-migration/elaboration/KFMB-3020/KFMB-3020.md
+
+verdict: CONDITIONAL_PASS
+
+summary: >
+  KFMB-3020 is well-specified with clear scope, precise ACs, strong test plan,
+  and explicit risk disclosure. All 4 gaps are non-blocking (severity LOW or MEDIUM).
+  No new ACs added to the story. All gap decisions are implementation notes for the
+  implementor. Opportunities logged inline (KB write unavailable at decision time).
+  Conditions: (1) verify elab-epic.md state before ST-4, (2) enumerate ALL
+  pm-story.md references before ST-5 edits, (3) confirm KFMB-3010 complete before
+  ST-5. Story may proceed once these conditions are acknowledged during implementation.
+
+# ============================================================
+# AUDIT CHECKLIST (9 Points)
+# ============================================================
+
+audit:
+
+  scope_alignment:
+    status: PASS
+    notes: >
+      The stories.index.md entry for KFMB-3020 reads "Eliminate stories.index.md —
+      Command Updates" with dependency KFMB-3010. The story file scope table matches
+      exactly: 6 command files in .claude/commands/, no backend/frontend/infra
+      touches, no TypeScript changes. Story metadata correctly marks
+      touches_commands: true and all other touch flags false.
+
+      The story does not introduce any new endpoints, packages, or infrastructure.
+      The only boundary question is whether elab-epic.md's Execution section currently
+      has a stories_index field — on inspection the current elab-epic.md passes only
+      `Feature directory: {FEATURE_DIR}` to agents, so AC-8 may already be satisfied
+      (see Gap section). This is a discovery nuance, not a scope violation.
+
+  internal_consistency:
+    status: PASS_WITH_NOTES
+    notes: >
+      Goals and Non-goals are internally consistent. The goal to "Remove all live
+      stories.index.md reads and writes from the .claude/commands/ layer" does not
+      contradict any Non-goal. The Non-goals are precise (no agents, no scripts, no
+      deletion, no platform.stories.index.md Step 5, no story-move.md).
+
+      ACs 1–13 map cleanly to the 6 command files in scope. Each file has at least
+      one dedicated AC. AC-12 (final grep gate) is the integration AC that validates
+      all others.
+
+      Test Plan (HP-1 through HP-11, EC-1 through EC-3) maps to all 13 ACs:
+      - HP-1, HP-2 → AC-1, AC-2
+      - HP-3 → AC-1, AC-3 (Scenario F, indirectly)
+      - HP-3, HP-4, HP-5 → AC-4, AC-5, AC-6
+      - HP-6 → AC-7
+      - HP-7 → AC-8
+      - HP-8 → AC-9
+      - HP-9, HP-10 → AC-10, AC-11
+      - HP-11 → AC-12
+      - AC-13 (completion signals) has NO dedicated HP test (see Gaps)
+      - EC-1 → --no-index backward compat (complements AC-2)
+      - EC-2 → kb_list_stories fallback (complements AC-4)
+      - EC-3 → call signature validation
+
+      Minor inconsistency: AC-3 requires updating "Integration Test Scenario F"
+      in story-update.md, but HP-3 in the test plan covers pm-story.md collision
+      detection (step numbering reuse). HP-1 covers story-update.md Step 4, and HP-2
+      covers --no-index deprecation, but no HP explicitly validates that Scenario F
+      itself was updated. This is a minor gap, not a blocking inconsistency.
+
+      The story notes pm-story.md has TWO collision detection locations (Architecture
+      Notes); AC-4 references the Collision Detection section but does not explicitly
+      call out the Step 1c / Step 1c-platform embedded check. This is a gap in AC
+      precision but is captured in Architecture Notes and R-3.
+
+  reuse_first:
+    status: PASS
+    notes: >
+      Story explicitly lists KB MCP tools to reuse (kb_list_stories, kb_get_story,
+      kb_search, kb_update_story_status) in the Reuse Plan section. The existing
+      DB-first pattern from story-status.md single-story mode is cited as the
+      template to follow. Post-KFMB-3010 agents are named as canonical references.
+
+      No one-off utilities are introduced. All changes are instructional markdown edits
+      that wire existing KB MCP tools. The Canonical References table provides four
+      concrete reference patterns (story-status.md, story-update.md, pm-story-followup-leader,
+      elab-epic.md).
+
+  ports_and_adapters:
+    status: NOT_APPLICABLE
+    notes: >
+      This story has no API endpoints, no TypeScript code, and no backend services.
+      All changes are to .claude/commands/ markdown instruction files. Ports & adapters
+      compliance does not apply to instructional markdown.
+
+      The KB MCP tools (kb_list_stories, etc.) are already registered and available —
+      the story correctly mandates using existing tools without creating new ones.
+
+  local_testability:
+    status: PASS_WITH_NOTES
+    notes: >
+      The test strategy is manual verification, which is appropriate for markdown
+      instruction files — there is no executable code to unit test.
+
+      All 11 happy-path tests (HP-1 through HP-11) include: title, action, expected
+      result, and evidence (grep commands or file reads). They are concrete and
+      manually executable.
+
+      HP-11 (final grep audit) is the definitive gate: grep -rn 'stories\.index\.md'
+      .claude/commands/ returns zero live references. This is a strong, executable
+      verification criterion.
+
+      EC-1 through EC-3 are error cases with clear expected behaviors. EC-3 calls for
+      signature validation against the MCP schema — this requires KB instance to be
+      running (port 5433), which is the existing dev environment standard.
+
+      Noted: AC-13 (completion signals preserved) has no dedicated HP test. An analyst
+      could add HP-12 checking each command's completion signal post-edit. This is a
+      minor testability gap.
+
+      ADR-005 compliance is noted: Scenarios requiring a live postgres-knowledgebase
+      instance are marked as such (Scenarios A, B, F in story-update.md, EC-3).
+
+  decision_completeness:
+    status: PASS_WITH_NOTES
+    notes: >
+      All major design decisions are resolved:
+      - kb_list_stories call signature is documented: { feature: string, limit?: number }
+      - --no-index becomes a no-op (accepted silently, deprecation warning emitted)
+      - platform.stories.index.md Step 5 explicitly deferred (Non-Goal #4)
+      - KFMB-4010 coordination strategy is clear: review KFMB-4010 scope before editing
+      - index-update.md deprecation text is specified precisely in AC-9
+      - pm-story.md dual collision detection locations are called out explicitly
+
+      The one open question is the elab-epic.md actual current state. On inspection,
+      the current elab-epic.md Execution section passes only `Feature directory: {FEATURE_DIR}`
+      — there is no stories_index field in the current file. This means AC-8 may
+      already be satisfied (elab-epic.md is already migrated or was never using the
+      field). The implementor needs to verify this before editing. If true, the
+      subtask ST-4 becomes a verification-only task (confirm the field is absent)
+      rather than a removal task. This is a mild pre-condition ambiguity, not a
+      blocking TBD.
+
+      KFMB-3010 (the dependency) must be complete before implementation begins.
+      AC-5 references "the pattern established by KFMB-3010 agents" which means the
+      canonical reference (pm-story-followup-leader.agent.md post-KFMB-3010) must exist
+      before ST-5 can be validated. This is a legitimate sequencing constraint, not
+      a gap.
+
+  risk_disclosure:
+    status: PASS
+    notes: >
+      Three risks are explicitly documented with mitigations:
+      - R-1: kb_list_stories call signature mismatch → verify against MCP registration
+      - R-2: KFMB-4010 concurrent edit conflict on story-update.md → review KFMB-4010 diff first
+      - R-3: pm-story.md dual collision detection locations → enumerate with grep before/after
+
+      The dev_feasibility risks section corroborates these and adds a third finding:
+      story-status.md WINT-1070 deferral note needing accurate KFMB context update.
+
+      No auth risks (no auth changes). No DB migration risks (no schema changes).
+      No infrastructure risks (existing MCP tools, existing port 5433 instance).
+      No upload or caching risks. Risk profile is appropriate for a docs-only story.
+
+      One undisclosed risk: if KFMB-3010 is not yet complete, the canonical reference
+      agents don't yet exist. The story states this clearly in Context and Dependency
+      but does not enumerate it as a formal risk in the risks table. This is a minor
+      documentation gap — the dependency blocking is clearly stated.
+
+  story_sizing:
+    status: WARNING
+    notes: >
+      The story has 13 ACs (exceeds the 8 AC threshold that indicates potential
+      oversizing). However, context mitigates this:
+      - All changes are markdown text edits (not code)
+      - 6 files, all in the same directory (.claude/commands/)
+      - No new files created, no TypeScript, no infra
+      - Estimated token budget: 150,000 tokens across 7 subtasks
+      - Story points: 3 (PM assessment: small)
+      - split_risk: 0.4 (moderate, not high)
+
+      The 13 ACs span 6 command files with 1-3 ACs each. This structure is
+      appropriate for a coordinated migration sweep across multiple related files.
+      The ACs are coherent (all serve one goal: eliminate stories.index.md references
+      from commands layer), not disparate features.
+
+      VERDICT: Sizing WARNING but not a blocking concern. The story is large in AC count
+      but justified by the sweep nature of the migration. A split would create 6 single-file
+      stories with heavy coordination overhead and no user-visible decomposition benefit.
+      Proceed as-is, but the implementor should be aware that PM's split_risk of 0.4
+      reflects genuine complexity if any command file requires significant structural
+      rethinking.
+
+  subtask_decomposition:
+    status: PASS_WITH_NOTES
+    notes: >
+      7 subtasks are present. Each subtask includes: files, ACs covered, verification
+      command, and estimated token count.
+
+      AC coverage by subtask:
+      - ST-1: AC-9 (index-update.md deprecation)
+      - ST-2: AC-1, AC-2, AC-3 (story-update.md)
+      - ST-3: AC-7 (code-audit.md)
+      - ST-4: AC-8 (elab-epic.md)
+      - ST-5: AC-4, AC-5, AC-6 (pm-story.md)
+      - ST-6: AC-10, AC-11 (story-status.md)
+      - ST-7: AC-12, AC-13 (final grep audit)
+
+      Full AC coverage confirmed. All 13 ACs are addressed.
+
+      Dependency sequencing: ST-1 through ST-6 have no dependencies on each other
+      (correct — they target independent files). ST-7 depends on ST-6, ensuring
+      the audit runs after all edits complete. This is correct, though ST-7 should
+      ideally depend on all of ST-1 through ST-6 completing (not just ST-6). This
+      is a minor subtask dependency gap — in practice the implementor will complete
+      all prior subtasks before running the final grep.
+
+      Canonical references table (4 entries) provides concrete file references for
+      each pattern the implementor should follow. This is well-structured.
+
+      One note: ST-1 (index-update.md, 3,000 tokens) and ST-4 (elab-epic.md, 3,500
+      tokens) are the smallest subtasks. If elab-epic.md turns out to already be
+      migrated (see Decision Completeness note), ST-4 becomes verification-only
+      and its token estimate is inflated.
+
+# ============================================================
+# GAPS
+# ============================================================
+
+gaps:
+
+  - id: GAP-1
+    title: "elab-epic.md may already be migrated — AC-8 pre-condition requires verification"
+    severity: LOW
+    blocking: false
+    description: >
+      AC-8 specifies removing `stories_index` field from the elab-epic.md
+      context-init template. On inspection of the current elab-epic.md file,
+      the Execution section passes only `Feature directory: {FEATURE_DIR}` to
+      each phase agent — there is no `stories_index` field present in the file.
+
+      If elab-epic.md is already migrated (or was never using the field), ST-4
+      becomes a verify-and-confirm task rather than a removal task. The implementor
+      must grep the file before editing to confirm current state.
+
+      Risk if ignored: Implementor spends tokens searching for a field that does
+      not exist, or introduces incorrect formatting trying to "remove" a nonexistent
+      field.
+    recommended_action: >
+      Before ST-4, run:
+        grep -n "stories_index\|stories\.index\.md\|INDEX_PATH" .claude/commands/elab-epic.md
+      If output is empty, mark AC-8 as "already satisfied" and document the finding
+      in the implementation notes rather than making edits.
+    decision: implementation_note
+    decision_rationale: >
+      Non-blocking. No AC addition needed. Implementor must run the verification grep
+      before ST-4. If AC-8 is already satisfied, ST-4 becomes confirm-and-document only.
+      This is captured as an implementation condition in the verdict summary.
+
+  - id: GAP-2
+    title: "AC-4 does not explicitly address the Step 1c / Step 1c-platform embedded collision check in pm-story.md"
+    severity: MEDIUM
+    blocking: false
+    description: >
+      Architecture Notes explicitly state pm-story.md has TWO collision detection
+      locations:
+        1. The inline `## Collision Detection (REQUIRED)` section (line 115)
+        2. The logic embedded in Step 1c / Step 1c-platform (paths through
+           index_path discovery at lines 163-176)
+
+      AC-4 specifies updating the "Collision Detection section" to use kb_list_stories.
+      However, Step 1c (Find Next Available Story) at line 240-246 also reads
+      `stories.index.md` via `Read the index file`. Similarly, Step 1b-map at
+      lines 210-234 contains multiple `stories.index.md` references in the epic
+      mapping table (structural/lookup data, not live writes).
+
+      The current pm-story.md Step 1 flow at lines 162-176 also discovers
+      `index_path` by finding `*.stories.index.md` in the feature directory —
+      this is a live read that must be addressed.
+
+      If only the Collision Detection section header is updated and the Step 1c
+      embedded read and Step 1 path parsing are not updated, AC-12 (grep returns
+      zero live references) will FAIL.
+
+      Note: Some pm-story.md references to stories.index.md are structural/
+      navigation metadata (platform.stories.index.md routing in Step 1b-map,
+      Step 5 platform index update) which are explicitly out of scope per Non-Goal #4.
+      The implementor must distinguish live-read references from structural routing.
+    recommended_action: >
+      In ST-5, enumerate ALL pm-story.md references before editing:
+        grep -n "stories\.index\.md" .claude/commands/pm-story.md
+      Classify each hit as:
+        (a) Live story-state read/write → must be replaced with kb_list_stories
+        (b) platform.stories.index.md routing → out of scope (Non-Goal #4)
+        (c) Example/documentation text → acceptable to retain with deprecation note
+      The Step 1c "Read the index file" and Step 1 index_path discovery logic
+      are category (a) and must be updated. The Step 1b-map table rows showing
+      per-epic index paths are ambiguous — verify whether they are navigation
+      metadata or live-read targets.
+    decision: implementation_note
+    decision_rationale: >
+      Non-blocking but the highest-severity gap. The Architecture Notes already call
+      out the two locations; R-3 and the Reuse Plan reiterate the need to enumerate
+      all references. No new AC is needed — AC-12 (grep gate) will catch any missed
+      references at verification time. The implementor must follow the classification
+      approach in recommended_action during ST-5. This is the most important
+      implementation condition for this story.
+
+  - id: GAP-3
+    title: "AC-13 (completion signals) has no dedicated test in HP-1 through HP-11"
+    severity: LOW
+    blocking: false
+    description: >
+      AC-13 requires that all updated commands preserve their existing completion
+      signals (UPDATE COMPLETE, INDEX UPDATE COMPLETE, AUDIT COMPLETE, etc.).
+      The test plan covers HP-1 through HP-11 but none of these explicitly
+      verify completion signals. ST-7 addresses AC-13 but its verification command
+      is the grep audit for stories.index.md — it does not include signal verification.
+    recommended_action: >
+      Add a verification step in ST-7: after the grep audit, confirm each command
+      file still contains its expected completion signal:
+        grep -n "UPDATE COMPLETE\|INDEX UPDATE COMPLETE\|AUDIT COMPLETE\|PM COMPLETE\|ELAB COMPLETE" .claude/commands/{file}
+      This is a 5-minute addition to ST-7 and closes the AC-13 gap.
+    decision: implementation_note
+    decision_rationale: >
+      Non-blocking, LOW severity. No new AC needed — AC-13 is already present in the
+      story. The recommended grep command should be added to ST-7 verification steps
+      by the implementor. This is a minor test completeness note, not a story defect.
+
+  - id: GAP-4
+    title: "ST-7 depends only on ST-6 but should depend on all prior subtasks"
+    severity: LOW
+    blocking: false
+    description: >
+      ST-7 (Final grep audit) lists `Depends on: ST-6` but the final grep across
+      all 6 command files should only run after ST-1 through ST-6 all complete.
+      The current dependency chain means an implementor following the story strictly
+      could run ST-7 immediately after ST-6, before ST-1 through ST-5 complete,
+      and the grep would incorrectly pass (if earlier subtasks were not done yet).
+    recommended_action: >
+      Update ST-7 dependency to: "Depends on: ST-1, ST-2, ST-3, ST-4, ST-5, ST-6"
+      This is a documentation correction only.
+    decision: defer
+    decision_rationale: >
+      Non-blocking, LOW severity documentation correction. In practice, the implementor
+      completes subtasks sequentially and ST-7 is clearly the final step. The story
+      narrative makes this ordering implicit. Correcting the dependency chain in the
+      story file is deferred — the implementor should be aware of this and run ST-7
+      last regardless of the stated dependency. No AC impact.
+
+# ============================================================
+# OPPORTUNITIES
+# ============================================================
+
+opportunities:
+
+  - id: OPP-1
+    title: "context-init.md also contains stories_index reference — not in scope but worth noting"
+    priority: low
+    description: >
+      The full grep reveals .claude/commands/context-init.md line 160 contains:
+        stories_index: plans/stories/WRKF.stories.index.md
+      This is not in KFMB-3020 scope (Non-Goal: do not modify commands not listed
+      in scope). However, context-init.md should eventually be migrated as part
+      of the broader elimination. This would naturally fit in a future story or
+      as an addition to KFMB-3010's agent cleanup scope.
+    decision: log_to_kb
+    decision_rationale: >
+      Non-blocking, out-of-scope finding. Logged here for post-KFMB-3020 sweep
+      planning. KB write was unavailable at decision time; tracked in this ELAB.yaml.
+      Candidate for KFMB-3030 or a dedicated command-layer sweep story.
+
+  - id: OPP-2
+    title: "pm-bootstrap-workflow.md also references stories.index.md — not in scope"
+    priority: low
+    description: >
+      .claude/commands/pm-bootstrap-workflow.md line 226 references
+      {feature_dir}/stories.index.md. This is not in KFMB-3020 scope but will
+      need migration eventually. The story correctly excludes it via the Non-Goals
+      (commands not listed in scope).
+    decision: log_to_kb
+    decision_rationale: >
+      Non-blocking, out-of-scope finding. Track for KFMB-3030 or a follow-up
+      command-layer sweep story. KB write was unavailable at decision time;
+      tracked in this ELAB.yaml.
+
+  - id: OPP-3
+    title: "pm-story.md Step 1c index discovery logic is architecturally significant — early design review recommended"
+    priority: medium
+    description: >
+      The Step 1c logic in pm-story.md uses `*.stories.index.md` discovery to
+      resolve the feature directory and story prefix. This is deep routing logic
+      — replacing it with KB queries changes how "next story" is resolved in the
+      generate workflow. The story's AC-4/AC-5 focus is on Collision Detection
+      and leader context, which may not fully address the Step 1c routing path.
+
+      Post-KFMB-3020, pm-story.md's "next" resolution (Step 1c) may still use
+      index discovery as a fallback or primary path. If the index file is being
+      eliminated, Step 1c needs its own migration strategy. The story should
+      confirm this is either addressed in ST-5 or deferred to a later story.
+    decision: log_to_kb
+    decision_rationale: >
+      Non-blocking. Overlaps with GAP-2 classification work — the implementor will
+      encounter this during ST-5 enumeration. If Step 1c is a live-read (category a),
+      it falls within AC-4/AC-12 scope. If it is routing metadata, it is out of scope
+      per Non-Goal #4. The implementor must classify it during ST-5. No separate
+      action needed at elaboration time. KB write unavailable; tracked here.
+
+  - id: OPP-4
+    title: "Token estimate of 150k may be conservative — pm-story.md is a large command file"
+    priority: low
+    description: >
+      pm-story.md is a large, complex command file with multiple collision detection
+      locations, platform routing logic, and numerous stories.index.md references.
+      ST-5 is allocated 8,000 tokens. If the implementor must enumerate, classify,
+      and selectively update all pm-story.md references, the actual token cost
+      may be higher. The 0.4 split_risk score from the predictions block reflects
+      this concern.
+    decision: log_to_kb
+    decision_rationale: >
+      Non-blocking operational note. Monitor token usage during ST-5. If pm-story.md
+      changes are more extensive than anticipated, the implementor may need to defer
+      platform routing table cleanup to a follow-up story. KB write unavailable;
+      tracked here.
+
+# ============================================================
+# SUMMARY
+# ============================================================
+
+summary_counts:
+  audit_pass_count: 6        # PASS or NOT_APPLICABLE
+  audit_warning_count: 2     # PASS_WITH_NOTES + WARNING
+  audit_fail_count: 0        # FAIL
+  audit_na_count: 1          # NOT_APPLICABLE
+  gap_count: 4
+  blocking_gaps: 0
+  new_acs_added: 0
+  opportunity_count: 4
+  opportunities_logged_to_kb: 0   # KB unavailable at decision time; logged in ELAB.yaml
+
+implementation_conditions:
+  - id: COND-1
+    gap: GAP-1
+    condition: >
+      Before ST-4: grep -n "stories_index|stories.index.md|INDEX_PATH" .claude/commands/elab-epic.md.
+      If no output, mark AC-8 as already satisfied and document in implementation notes only.
+  - id: COND-2
+    gap: GAP-2
+    condition: >
+      Before ST-5 edits: enumerate ALL pm-story.md references with
+      grep -n "stories\.index\.md" .claude/commands/pm-story.md.
+      Classify each as (a) live read/write, (b) platform routing metadata, or
+      (c) example/doc text. Only category (a) references require KB tool replacement.
+  - id: COND-3
+    gap: GAP-3
+    condition: >
+      In ST-7: after the grep audit, verify completion signals with
+      grep -n "UPDATE COMPLETE|INDEX UPDATE COMPLETE|AUDIT COMPLETE|PM COMPLETE|ELAB COMPLETE"
+      across all 6 modified command files.
+  - id: COND-4
+    source: verdict_rationale
+    condition: >
+      Confirm KFMB-3010 is complete (or timeline confirmed) before starting ST-5,
+      since AC-5 references post-KFMB-3010 agent patterns as the canonical reference.
+
+preliminary_verdict: PASS_WITH_CONDITIONS
+verdict_confidence: HIGH

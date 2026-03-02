@@ -69,7 +69,9 @@ export function transformRequest(
   // - If options.jwtClaims provided, use those (pre-validated by middleware)
   // - Otherwise, use empty claims (handler must validate auth header directly)
   // Type cast to match APIGateway JWT claims type
-  const jwtClaims = (options?.jwtClaims ?? {}) as { [name: string]: string | number | boolean | string[] }
+  const jwtClaims = (options?.jwtClaims ?? {}) as {
+    [name: string]: string | number | boolean | string[]
+  }
 
   // Path parameters handling
   const pathParameters = options?.pathParameters
@@ -81,7 +83,8 @@ export function transformRequest(
     rawPath: url.pathname,
     rawQueryString: url.search.slice(1), // Remove leading '?'
     headers,
-    queryStringParameters: Object.keys(queryStringParameters).length > 0 ? queryStringParameters : undefined,
+    queryStringParameters:
+      Object.keys(queryStringParameters).length > 0 ? queryStringParameters : undefined,
     pathParameters,
     requestContext: {
       accountId: '000000000000',
@@ -92,8 +95,8 @@ export function transformRequest(
         method: req.method || 'GET',
         path: url.pathname,
         protocol: 'HTTP/1.1',
-        sourceIp: req.headers['x-forwarded-for'] as string || '127.0.0.1',
-        userAgent: req.headers['user-agent'] as string || 'vercel-adapter',
+        sourceIp: (req.headers['x-forwarded-for'] as string) || '127.0.0.1',
+        userAgent: (req.headers['user-agent'] as string) || 'vercel-adapter',
       },
       requestId: `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       routeKey: `${req.method} ${url.pathname}`,

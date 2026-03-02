@@ -1,0 +1,147 @@
+strategy: unit
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "Dry-run returns counts without any DB mutations"
+    setup: "Inject mock db with 10 KB entries older than staleDays; inject mock fs that marks half the file paths as non-existent"
+    action: "Call runKbFreshnessCheck({ db: mockDb }, { staleDays: 90, dryRun: true, batchSize: 500 })"
+    expected: "Returns { archived_count: X, flagged_count: Y, skipped_count: Z, dry_run: true }; zero calls to kb_update on mockDb"
+    evidence: "Spy on kb_update — call count must be 0"
+
+  - id: HP-2
+    title: "Entries referencing non-existent file paths are auto-archived"
+    setup: "Create 3 KB entries with content containing 'apps/api/knowledge-base/old-file.ts'; mock fs.existsSync to return false for that path; dryRun: false"
+    action: "Call runKbFreshnessCheck with injected mock deps"
+    expected: "kb_update called with { archived: true, archivedAt: <date> } for all 3 entries; AuditLogger.logUpdate called 3 times; archived_count: 3"
+    evidence: "Mock call args to kb_update and AuditLogger.logUpdate"
+
+  - id: HP-3
+    title: "Entries referencing existing file paths are flagged (not archived)"
+    setup: "Create 3 KB entries with content containing 'packages/backend/orchestrator/src/nodes/elaboration/index.ts'; mock fs.existsSync to return true for that path"
+    action: "Call runKbFreshnessCheck with dryRun: false"
+    expected: "kb_update called with updated tags including 'stale-candidate'; archived: true NOT set; flagged_count: 3"
+    evidence: "Assert kb_update args contain tags array with 'stale-candidate' but no archived field"
+
+  - id: HP-4
+    title: "Entries without file path references are skipped"
+    setup: "Create 5 KB entries whose content contains no apps/packages/src path patterns"
+    action: "Call runKbFreshnessCheck"
+    expected: "skipped_count: 5; zero calls to kb_update for these entries"
+    evidence: "Total kb_update call count is 0 for these entries"
+
+  - id: HP-5
+    title: "Batch processing respects batchSize config"
+    setup: "Inject db mock that returns 1200 candidate entries; batchSize: 500"
+    action: "Call runKbFreshnessCheck with batchSize: 500"
+    expected: "batches_processed: 3 (500 + 500 + 200); entries_scanned: 1200"
+    evidence: "Assert batches_processed === 3 in returned result"
+
+  - id: HP-6
+    title: "Structured result passes KbFreshnessResultSchema validation"
+    setup: "Run function with a valid mixed set of entries"
+    action: "Take return value; run KbFreshnessResultSchema.parse(result)"
+    expected: "Parse does not throw; all fields present with correct types"
+    evidence: "No Zod parse error thrown"
+
+  - id: HP-7
+    title: "Config input is validated by KbFreshnessConfigSchema with defaults applied"
+    setup: "Pass partial config: { dryRun: true } (omit staleDays and batchSize)"
+    action: "Schema.parse({ dryRun: true })"
+    expected: "Parsed result has staleDays: 90, batchSize: 500 applied as defaults"
+    evidence: "Assert parsed.staleDays === 90 && parsed.batchSize === 500"
+
+error_cases:
+  - id: EC-1
+    title: "Per-entry kb_update failure does not abort the batch"
+    setup: "10 KB entries to process; mock kb_update to throw on entry index 3 only"
+    action: "Call runKbFreshnessCheck"
+    expected: "Entries 1-2 and 4-10 processed successfully; entry 3 counted as skipped_count; no uncaught exception thrown"
+    evidence: "skipped_count includes the failed entry; function returns successfully"
+
+  - id: EC-2
+    title: "AuditLogger.logUpdate failure is soft-failed and does not abort archival"
+    setup: "Mock AuditLogger.logUpdate to throw; entry has non-existent file path"
+    action: "Call runKbFreshnessCheck with dryRun: false"
+    expected: "kb_update still called (archival proceeds); error logged via @repo/logger; function completes"
+    evidence: "kb_update call count > 0 despite AuditLogger failure"
+
+  - id: EC-3
+    title: "Empty KB (no candidates) returns zero counts without error"
+    setup: "Mock db to return empty array for candidate query"
+    action: "Call runKbFreshnessCheck"
+    expected: "Returns { archived_count: 0, flagged_count: 0, skipped_count: 0, entries_scanned: 0, batches_processed: 0 }"
+    evidence: "All count fields are 0; no error thrown"
+
+edge_cases:
+  - id: ED-1
+    title: "Time-bounded truncation halts at batch boundary when maxDurationMs exceeded"
+    setup: "Set maxDurationMs: 1 (1ms, will immediately trigger); inject 500 entries"
+    action: "Call runKbFreshnessCheck with maxDurationMs: 1"
+    expected: "Result includes truncated: true; processing halted at batch boundary; partial counts returned"
+    evidence: "truncated: true in returned result; batches_processed may be 0 or 1"
+
+  - id: ED-2
+    title: "Entry content with multiple file path references extracts first matched path"
+    setup: "Entry content: 'see apps/api/old.ts and packages/core/new.ts for reference'; old.ts non-existent, new.ts exists"
+    action: "Call runKbFreshnessCheck"
+    expected: "Entry archived (first non-existent path matched) OR flagged depending on implementation strategy; behavior is documented and consistent"
+    evidence: "Consistent result across multiple runs; no exception thrown"
+
+  - id: ED-3
+    title: "Batch loop exits correctly when last batch returns fewer than batchSize rows"
+    setup: "Mock db to return 500 entries on first call, 200 on second call (< batchSize 500)"
+    action: "Call runKbFreshnessCheck with batchSize: 500"
+    expected: "Loop exits after second batch; batches_processed: 2; entries_scanned: 700"
+    evidence: "batches_processed === 2; no infinite loop"
+
+  - id: ED-4
+    title: "staleDays: 0 config flags all non-archived entries"
+    setup: "10 entries with various ages; staleDays: 0"
+    action: "Call runKbFreshnessCheck with staleDays: 0"
+    expected: "All 10 entries are candidates for scanning; function handles correctly without negative cutoff errors"
+    evidence: "entries_scanned === 10 (or all non-archived count)"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "kb_update mock call args contain { archived: true, archivedAt: Date } for non-existent paths"
+      - "kb_update mock call args contain updated tags array with 'stale-candidate' for aged entries with existing paths"
+      - "AuditLogger.logUpdate called once per archived entry in non-dry-run mode"
+      - "KbFreshnessResultSchema.parse(result) does not throw"
+      - "No calls to kb_update when dryRun: true"
+  frontend:
+    playwright_runs: []
+    assertions: []
+
+manual_cases: []
+
+fixture_definitions:
+  - name: mockKbEntry
+    type: object
+    description: "KB entry with id, content (with/without file path), createdAt (>90 days ago), archived: false, tags: []"
+  - name: mockKbEntryNoPath
+    type: object
+    description: "KB entry whose content contains no apps/packages/src path pattern — should be skipped"
+  - name: mockKbEntryNonExistentFile
+    type: object
+    description: "KB entry whose content contains 'apps/api/knowledge-base/deleted-file.ts' — fs mock returns false"
+  - name: mockKbEntryExistingFile
+    type: object
+    description: "KB entry whose content contains 'packages/backend/orchestrator/src/nodes/elaboration/index.ts' — fs mock returns true"
+  - name: mockDb
+    type: object
+    description: "Drizzle-compatible db mock with select/where/offset/limit chain and kb_update stub"
+  - name: mockFsExistsSync
+    type: function
+    description: "Mock for fs.existsSync or equivalent — returns false for deleted paths, true for existing ones"
+
+risks:
+  - "File path regex heuristic (AC-3) may need tuning based on real KB entry samples — regex is speculative until validated against actual data"
+  - "Time truncation test (ED-1) may be flaky if maxDurationMs: 1 is too short in CI environments; use a mock timer or vi.useFakeTimers for reliability"
+  - "AuditLogger import path must match exact location — soft-fail wrapping relies on correct import"
+  - "Drizzle mock chain (select().from().where().offset().limit()) requires careful setup to avoid type errors in tests"

@@ -90,6 +90,8 @@ import {
   KbReadArtifactInputSchema,
   KbListArtifactsInputSchema,
   KbDeleteArtifactInputSchema,
+  artifact_write,
+  ArtifactWriteInputSchema,
 } from '../crud-operations/artifact-operations.js'
 import {
   kb_get_story,
@@ -107,10 +109,12 @@ import { kb_log_tokens, KbLogTokensInputSchema } from '../crud-operations/token-
 import {
   kb_get_plan,
   kb_list_plans,
+  kb_get_roadmap,
   kb_update_plan,
   kb_upsert_plan,
   KbGetPlanInputSchema,
   KbListPlansInputSchema,
+  KbGetRoadmapInputSchema,
   KbUpdatePlanInputSchema,
   KbUpsertPlanInputSchema,
 } from '../crud-operations/plan-operations.js'
@@ -3725,6 +3729,73 @@ export async function handleKbDeleteArtifact(
 }
 
 // ============================================================================
+// Dual-Write Artifact Handler (KBAR-0110)
+// ============================================================================
+
+/**
+ * Handle artifact_write tool invocation.
+ *
+ * Writes a workflow artifact to the filesystem as YAML (primary) and
+ * optionally indexes it in the KB (best-effort, failure-isolated).
+ */
+export async function handleArtifactWrite(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('artifact_write tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    artifact_type: inputObj?.artifact_type,
+    iteration: inputObj?.iteration,
+    write_to_kb: inputObj?.write_to_kb,
+  })
+
+  try {
+    // Authorization check
+    enforceAuthorization('artifact_write', context)
+
+    const validated = ArtifactWriteInputSchema.parse(input)
+
+    const result = await artifact_write(validated, { db: deps.db })
+
+    const totalTimeMs = Date.now() - startTime
+
+    logger.info('artifact_write succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      artifact_type: validated.artifact_type,
+      file_path: result.file_path,
+      kb_written: result.kb_written,
+      total_time_ms: totalTimeMs,
+    })
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    }
+  } catch (error) {
+    const queryTimeMs = Date.now() - startTime
+
+    logger.error('artifact_write failed', {
+      correlation_id: correlationId,
+      error,
+      query_time_ms: queryTimeMs,
+    })
+
+    return errorToToolResult(error)
+  }
+}
+
+// ============================================================================
 // Story Status Handlers
 // ============================================================================
 
@@ -4393,6 +4464,46 @@ export async function handleKbListPlans(
 }
 
 /**
+ * Handle kb_get_roadmap tool invocation.
+ */
+export async function handleKbGetRoadmap(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('kb_get_roadmap tool invoked', {
+    correlation_id: correlationId,
+    plan_type: inputObj?.plan_type,
+    priority: inputObj?.priority,
+  })
+
+  try {
+    enforceAuthorization('kb_get_roadmap' as ToolName, context)
+    const validated = KbGetRoadmapInputSchema.parse(input)
+    const result = await kb_get_roadmap({ db: deps.db }, validated)
+
+    const queryTimeMs = Date.now() - startTime
+    logger.info('kb_get_roadmap succeeded', {
+      correlation_id: correlationId,
+      count: result.plans.length,
+      total: result.total,
+      query_time_ms: queryTimeMs,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_roadmap failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Handle kb_upsert_plan tool invocation.
  */
 export async function handleKbUpsertPlan(
@@ -4533,6 +4644,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_audit_query: handleKbAuditQuery,
   kb_audit_retention_cleanup: handleKbAuditRetentionCleanup,
   // Artifact tools (DB-first artifact storage)
+  artifact_write: handleArtifactWrite,
   kb_write_artifact: handleKbWriteArtifact,
   kb_read_artifact: handleKbReadArtifact,
   kb_list_artifacts: handleKbListArtifacts,
@@ -4557,6 +4669,7 @@ export const toolHandlers: Record<string, ToolHandler> = {
   // Plan tools (SKCR - KB-native story creation)
   kb_get_plan: handleKbGetPlan,
   kb_list_plans: handleKbListPlans,
+  kb_get_roadmap: handleKbGetRoadmap,
   kb_update_plan: handleKbUpdatePlan,
   kb_upsert_plan: handleKbUpsertPlan,
   // Artifact search tool (KBAR-0130)

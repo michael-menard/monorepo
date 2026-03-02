@@ -1,0 +1,158 @@
+story_id: APIP-3040
+title: "Learning-Aware Model Router"
+branch: story/APIP-3040
+main_commit: 5d3747b1
+reviewed: "2026-02-28"
+reviewer: claude-sonnet-4-6
+verdict: QA_PASS
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
+summary: >
+  The APIP-3040 implementation correctly delivers the three-tier routing upgrade to
+  PipelineModelRouter. The core behavior — DB override → affinity-based routing →
+  static escalation fallback — is fully implemented and tested. All AC-10 unit test
+  sub-cases (a-g) pass. The AffinityReader injectable abstraction (AC-15) is properly
+  designed via Zod schemas. All routing decision log calls include the required fields
+  (AC-7). Code quality is good: no interfaces, no console.log, no semicolons, @repo/logger
+  throughout.
+
+  Two minor deviations exist but neither is blocking: (1) AC-9 schema uses .nonnegative()
+  instead of .min(1) for affinityMinSampleSize and .optional() instead of .default(0.85)/
+  .default(20), and (2) the ED-4 test (cheapest model wins with multiple profiles) is
+  listed in the test plan but not implemented. AC-11 integration test is correctly
+  deferred per story risk TR-1 (gated on APIP-3020 + APIP-5001 test DB).
+
+# ---------------------------------------------------------------------------
+# AC Status Roll-up
+# ---------------------------------------------------------------------------
+
+ac_results:
+  AC-1:  { status: PASS,           blocking: false }
+  AC-2:  { status: PASS_WITH_NOTE, blocking: false, note: "Ordering delegated to reader; correct design for injectable abstraction" }
+  AC-3:  { status: PASS,           blocking: false }
+  AC-4:  { status: PASS,           blocking: false }
+  AC-5:  { status: PASS,           blocking: false }
+  AC-6:  { status: PASS,           blocking: false }
+  AC-7:  { status: PASS,           blocking: false }
+  AC-8:  { status: PASS,           blocking: false }
+  AC-9:  { status: PASS_WITH_NOTE, blocking: false, note: ".nonnegative() vs .min(1); .optional() vs .default() — functionally equivalent but spec mismatch" }
+  AC-10: { status: PASS,           blocking: false }
+  AC-11: { status: DEFERRED,       blocking: false, note: "Integration test gated on APIP-3020 + APIP-5001; deferred per TR-1; acceptable" }
+  AC-12: { status: PASS,           blocking: false }
+  AC-13: { status: PASS,           blocking: false }
+  AC-14: { status: PASS_WITH_NOTE, blocking: false, note: "Ordering delegated to reader; ED-4 test verifying ordering not implemented" }
+  AC-15: { status: PASS,           blocking: false }
+
+pass_count: 10
+pass_with_note_count: 3
+deferred_count: 1
+fail_count: 0
+
+# ---------------------------------------------------------------------------
+# Findings
+# ---------------------------------------------------------------------------
+
+findings:
+
+  - id: F-1
+    severity: minor
+    category: schema_constraint
+    ac: AC-9
+    description: >
+      PipelineModelRouterConfigSchema uses z.number().int().nonnegative() for
+      affinityMinSampleSize instead of the story-specified z.number().int().min(1).
+      Also uses .optional() rather than .default(0.85) / .default(20). The runtime
+      defaults are correctly applied in the constructor via nullish coalescing, so
+      behavior is functionally identical. Schema-level enforcement is slightly weaker
+      than specified.
+    blocking: false
+    recommendation: "Change .nonnegative() to .min(1) and optionally use .default() in schema"
+
+  - id: F-2
+    severity: minor
+    category: missing_test
+    ac: AC-2, AC-14
+    description: >
+      ED-4 test ('Cheapest qualifying model selected when multiple profiles exist') is
+      listed in the story test plan (edge_cases section) but not implemented in
+      model-router.test.ts. The cost-first ordering contract is documented in the
+      AffinityReaderSchema interface but cannot be verified by unit test without
+      a mock that returns multiple profiles.
+    blocking: false
+    recommendation: >
+      Add ED-4 test: configure affinityReader.query to return the cheapest qualifying
+      profile and verify the dispatched model matches the lowest avg_cost_usd entry.
+      Can be done with a mock returning a pre-sorted profile.
+
+  - id: F-3
+    severity: informational
+    category: deferred_test
+    ac: AC-11
+    description: >
+      ST-6 (integration test with real PostgreSQL and wint.model_affinity fixture rows)
+      was not implemented. This is explicitly expected per story risk TR-1:
+      'skip @integration if [APIP-3020 migration] not applied'. APIP-3020 is still
+      in backlog. AC-11 is correctly deferred rather than unimplemented.
+    blocking: false
+
+  - id: F-4
+    severity: informational
+    category: design_note
+    ac: AC-2, AC-14
+    description: >
+      Cost-first ordering (ORDER BY avg_cost_usd ASC) is delegated entirely to the
+      AffinityReader implementation. The router calls affinityReader.query() and trusts
+      the returned profile is already the cheapest qualifying one. This is the correct
+      design for the injectable abstraction pattern (AC-15), but means the real
+      Drizzle reader (APIP-3020) must be verified to apply the correct ORDER BY clause.
+    blocking: false
+
+# ---------------------------------------------------------------------------
+# Code quality checks
+# ---------------------------------------------------------------------------
+
+code_quality_checks:
+  zod_only_types:          PASS
+  no_typescript_interfaces: PASS
+  repo_logger_used:        PASS
+  no_console_log:          PASS
+  no_semicolons:           PASS
+  no_barrel_files:         PASS
+  parameterized_sql:       PASS  # No raw SQL; delegated to injectable reader
+  protected_files_clean:   PASS  # packages/backend/orchestrator/src/models/ not touched
+
+# ---------------------------------------------------------------------------
+# Test coverage
+# ---------------------------------------------------------------------------
+
+test_coverage:
+  total_tests: 22
+  new_tests_added: 10
+  ac10_sub_cases_covered: "a, b, c, d, e, f, g — all 7 covered"
+  missing_from_plan:
+    - ED-4  # cheapest model ordering test
+    - HP-3  # integration test (deferred, acceptable)
+  regression_safe: true  # 12 existing APIP-0040 tests preserved
+
+# ---------------------------------------------------------------------------
+# QA Verdict
+# ---------------------------------------------------------------------------
+
+qa_verdict:
+  result: QA_PASS
+  rationale: >
+    All 15 ACs are either PASS or carry non-blocking notes. The three-tier routing
+    core (AC-1, AC-3, AC-4, AC-13) is correct and fully tested. The affinity cache
+    (AC-6), injectable reader (AC-15), routing decision logging (AC-7), and backward
+    compatibility (AC-8, AC-12) are all verified. Two minor findings (F-1: schema
+    constraint, F-2: missing ED-4 test) are non-blocking. AC-11 integration test is
+    correctly deferred per the story's own risk register (TR-1). The implementation
+    is production-ready pending APIP-3020 delivering the real AffinityReader.
+  follow_up_items:
+    - "F-1: Tighten schema constraint to .min(1) in next pass (cosmetic)"
+    - "F-2: Add ED-4 test for cost-first ordering verification"
+    - "F-3/AC-11: Implement @integration test when APIP-3020 + APIP-5001 are available"
+    - "F-4: Verify real Drizzle reader in APIP-3020 uses ORDER BY avg_cost_usd ASC, success_rate DESC LIMIT 1"

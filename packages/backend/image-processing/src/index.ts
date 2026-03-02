@@ -74,7 +74,9 @@ export async function processImage(
       size: processedBuffer.length,
     }
   } catch (error) {
-    throw new Error(`Image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
   }
 }
 
@@ -85,7 +87,10 @@ export async function processImage(
  * @param width - Thumbnail width (default 400px)
  * @returns Thumbnail image data
  */
-export async function generateThumbnail(buffer: Buffer, width: number = 400): Promise<ProcessedImage> {
+export async function generateThumbnail(
+  buffer: Buffer,
+  width: number = 400,
+): Promise<ProcessedImage> {
   return processImage(buffer, {
     maxWidth: width,
     quality: 80,

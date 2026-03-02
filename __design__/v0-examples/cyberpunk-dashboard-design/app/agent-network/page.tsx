@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { Search, Filter, MoreHorizontal, MapPin, Clock, Shield } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Filter, MoreHorizontal, MapPin, Clock, Shield } from 'lucide-react'
 
 export default function AgentNetworkPage() {
   const [searchTerm, setSearchTerm] = useState('')

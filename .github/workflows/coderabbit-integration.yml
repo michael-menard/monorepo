@@ -55,54 +55,32 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
-      - name: Enable Corepack
-        run: corepack enable
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
-          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Temporarily disable cache to force fresh installation
-          # cache: 'pnpm'
-          # cache-dependency-path: 'pnpm-lock.yaml'
+          cache: 'pnpm'
 
-      - name: Verify and fix pnpm installation
-        run: |
-          echo "Verifying pnpm installation..."
-          echo "PATH: $PATH"
-          echo "Node version: $(node --version)"
-
-          # Check if pnpm is available
-          if ! command -v pnpm &> /dev/null; then
-            echo "pnpm not found, installing globally..."
-            npm install -g pnpm@9.0.0
-          else
-            echo "pnpm found: $(which pnpm)"
-            echo "pnpm version: $(pnpm --version)"
-          fi
-
-          # Verify final installation
-          pnpm --version
-          echo "Final pnpm location: $(which pnpm)"
-          
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           HUSKY: 0
-        
+
+      - name: Build dist packages required for type resolution
+        run: |
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
+
       - name: Run linting and type checking
         run: |
           echo "🔍 Running pre-review checks on changed packages..."
           pnpm turbo lint --filter="...[origin/main]"
           pnpm turbo check-types --filter="...[origin/main]"
-          
+
       - name: Generate Auggie context for CodeRabbit
         run: |
           echo "🤖 Generating Auggie context for CodeRabbit..."
@@ -138,25 +116,25 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const context = require('fs').readFileSync('.coderabbit-context.md', 'utf8');
-            
+            const reviewContext = require('fs').readFileSync('.coderabbit-context.md', 'utf8');
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `🤖 **Auggie + CodeRabbit Integration**
-              
+
               This PR is ready for collaborative AI review:
-              
+
               - **Auggie**: Handled implementation and follows project patterns
               - **CodeRabbit**: Please review for code quality, security, and best practices
-              
+
               <details>
               <summary>📋 Review Context</summary>
-              
-              ${context}
+
+              ${reviewContext}
               </details>
-              
+
               @coderabbitai Please review this PR with focus on:
               1. Code quality and maintainability
               2. Security best practices
@@ -172,52 +150,32 @@ jobs:
     runs-on: ubuntu-latest
     needs: pre-review
     if: needs.pre-review.outputs.should-review == 'true'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Enable Corepack
-        run: corepack enable
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
-          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Temporarily disable cache to force fresh installation
-          # cache: 'pnpm'
-          # cache-dependency-path: 'pnpm-lock.yaml'
+          cache: 'pnpm'
 
-      - name: Verify and fix pnpm installation
-        run: |
-          echo "Verifying pnpm installation..."
-          echo "PATH: $PATH"
-          echo "Node version: $(node --version)"
-
-          # Check if pnpm is available
-          if ! command -v pnpm &> /dev/null; then
-            echo "pnpm not found, installing globally..."
-            npm install -g pnpm@9.0.0
-          else
-            echo "pnpm found: $(which pnpm)"
-            echo "pnpm version: $(pnpm --version)"
-          fi
-
-          # Verify final installation
-          pnpm --version
-          echo "Final pnpm location: $(which pnpm)"
-          
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         env:
           HUSKY: 0
-        
+
+      - name: Build dist packages required for type resolution
+        run: |
+          git ls-files --error-unmatch '*.tsbuildinfo' 2>/dev/null | xargs -r rm -f || true
+          pnpm turbo build --filter="{packages/**}" --filter="{apps/api/**}"
+
       - name: Run comprehensive checks
         run: |
           echo "🔍 Running quality gates on changed packages..."
@@ -237,7 +195,7 @@ jobs:
           # Tests
           echo "🧪 Running tests on changed packages..."
           pnpm turbo test --filter="...[origin/main]"
-          
+
           echo "✅ All quality gates passed!"
           
       - name: Generate quality report

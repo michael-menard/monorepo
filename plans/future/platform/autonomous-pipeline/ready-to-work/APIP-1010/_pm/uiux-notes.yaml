@@ -1,8 +1,0 @@
-skipped: true
-reason: >
-  APIP-1010 adds a headless LangGraph node (Structurer) to the elaboration graph.
-  There is no UI component, no user-facing surface, and no frontend interaction.
-  ADR-006 E2E Playwright requirement does not apply (frontend_impacted: false).
-  UI visibility for split-flagged stories is deferred to APIP-5005 (Minimal Operator CLI)
-  and APIP-2020 (Monitor UI v1). The only human-readable output is the splitReason string
-  in ElaborationResult, which should be kept actionable per seed guidance.

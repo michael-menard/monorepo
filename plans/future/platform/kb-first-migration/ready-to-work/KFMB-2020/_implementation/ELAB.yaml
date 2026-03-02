@@ -1,0 +1,220 @@
+schema: 1
+story_id: "KFMB-2020"
+timestamp: "2026-02-26T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story scope matches index description exactly. Index entry reads: "KB-Native Bootstrap Setup
+      Leader | KFMB-1020 | Medium | In Elaboration" and the story title/feature field are consistent.
+      Phase 2 intent in the index is "Migrate story bootstrap to write directly to the KB with no
+      filesystem output" — the story is appropriately scoped to the setup-leader Step 4 collision
+      check only, not a full bootstrap KB-native rewrite. Non-goals explicitly defer the full
+      pipeline to KFMB-2030 and the generation leader to KFMB-2010. No extra endpoints, no infra,
+      no TypeScript. Single-file markdown change scope is tightly bounded.
+
+  - id: internal_consistency
+    status: PASS
+    note: >
+      Goal (replace filesystem collision check with kb_list_stories), Non-goals (no File Mode
+      changes, no workflow file changes, no generation leader changes, no SETUP-CONTEXT schema
+      changes), ACs (10 ACs covering primary path, error path, fallback, schema stability, signal
+      stability, version bump, protected-file guards), and Test Plan (HP-1/2/3/4/5, EC-1/2/3,
+      ED-1/2/3, MC-1/2/3) are internally consistent with no contradictions. The SETUP-CONTEXT
+      schema reference in AC-5 lists "schema: 2" (8 fields: schema, mode, plan_slug, feature_dir,
+      prefix, project_name, created, raw_plan_summary) which aligns with the Output section in the
+      target file. The Architecture Notes fallback BLOCKED message format ("filesystem fallback") is
+      distinct from the primary BLOCKED message — both are valid and correctly scoped. One minor
+      observation: HP-3 (structural verification) and AC-5 both address SETUP-CONTEXT schema
+      stability, which is fine but slightly redundant; not a gap.
+
+  - id: reuse_first
+    status: PASS
+    note: >
+      kb_list_stories MCP tool is already implemented in
+      apps/api/knowledge-base/src/crud-operations/story-crud-operations.ts (KbListStoriesInputSchema
+      lines 59–94). The tool supports the required `epic` filter and `limit` parameter. The story
+      correctly identifies the `epic` filter (not `feature` — the feature column stores a
+      human-readable description string per schema inspection, while epic is the plan-slug
+      discriminator). Fallback reuses the existing filesystem check pattern from v4.0.0 rather than
+      inventing a new mechanism. Signal format and SETUP-CONTEXT YAML schema are preserved
+      unchanged. No new tools, libraries, or patterns introduced.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Not applicable in the strict code sense — this is an agent markdown file, not TypeScript.
+      However, the equivalent principle applies: the story correctly isolates the transport
+      mechanism (filesystem vs MCP tool call) from the downstream contract (SETUP-CONTEXT YAML
+      schema, SETUP COMPLETE / SETUP BLOCKED signals). AC-5 and AC-6 enforce contract stability.
+      The fallback design in AC-4 / Architecture Notes further demonstrates transport-agnostic
+      behavior — the collision detection mechanism can vary without changing the output contract.
+      This is a PASS by analogy.
+
+  - id: testability
+    status: PASS
+    note: >
+      Test plan is concrete and executable. HP-1 and HP-2 are UAT-runnable against a real KB MCP
+      server (ADR-005). HP-3, HP-4, HP-5 are structural verification steps (diff + grep) that can
+      be executed by any developer without a running server. EC-1 (MCP unavailability) is testable
+      by disconnecting the MCP server. ED-2 uses git diff — fully concrete and automated. MC-1/2/3
+      are full UAT scenarios with step-by-step instructions. Test cases map cleanly to ACs: AC-1
+      covered by EC-3/HP-1/HP-2, AC-2 by HP-1/ED-1/EC-2, AC-3 by HP-2, AC-4 by EC-1/MC-3, AC-5
+      by HP-3, AC-6 by EC-2/ED-3, AC-7 by HP-4, AC-8 by HP-5, AC-9/10 by ED-2. Coverage is
+      comprehensive. One minor observation: EC-1 "simulate MCP unavailability" requires the
+      implementer to know how to disconnect the server — acceptable for UAT-grade manual testing.
+
+  - id: decision_completeness
+    status: WARN
+    note: >
+      One open question remains at story creation time: the exact value stored in the `epic` column
+      for KFMB-prefixed stories is unconfirmed. The story explicitly acknowledges this as a
+      pre-implementation research task (ST-1) and provides the mitigation (run kb_list_stories
+      against dev KB before editing the file). The story notes the `epic` filter maps to
+      `eq(stories.epic, validated.epic)` in the ORM (confirmed by reading story-crud-operations.ts
+      line ~283). The dependency on KFMB-1020 for sequencing is documented and justified. No other
+      blocking TBDs. The WARN is a minor flag on the epic column value confirmation being a
+      prerequisite task (ST-1) rather than a resolved fact embedded in the story — this is
+      acceptable for a pre-implementation verification task and does not block implementation.
+
+  - id: risk_disclosure
+    status: PASS
+    note: >
+      Three risks are explicitly disclosed in pm_artifacts.test_plan.risks and
+      pm_artifacts.dev_feasibility.risks:
+      (1) epic filter column value unknown at creation — mitigation via ST-1 research task.
+      (2) MCP tool availability in haiku sub-agent context (44% unavailability per KB lesson) —
+          mitigation via AC-4 fallback path.
+      (3) Structural verification is manual with no automated CI check — accepted limitation for
+          agent markdown stories.
+      The 44% MCP unavailability risk is correctly escalated: the story notes the fallback path
+      "may become primary" in practice. All three risks have explicit mitigations. No hidden risks
+      identified. The TOCTOU race condition motivating the story is well-documented in Context.
+
+  - id: story_sizing
+    status: PASS
+    note: >
+      1 story point. Single file, single step replacement, one version bump, one Error Handling
+      table row addition. 10 ACs may appear inflated by the heuristic, but as the predictions note
+      explains, 6 of the 10 ACs are negative-space guards (AC-5 schema stability, AC-6 signal
+      stability, AC-7 version bump, AC-8 File Mode unchanged, AC-9 pm-bootstrap-workflow.md
+      unchanged, AC-10 pm-bootstrap-generation-leader.agent.md unchanged) rather than additive
+      functionality. Only 4 ACs describe new behavior (AC-1 primary path, AC-2 blocked case, AC-3
+      proceed case, AC-4 fallback). 2 subtasks with appropriate decomposition. Token estimate 80K
+      is reasonable for a single-file markdown edit. No split required.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      2 subtasks with correct dependency ordering (ST-1 research → ST-2 implementation). ST-1
+      explicitly declares no file modifications, making it a pure pre-flight verification task.
+      ST-2 covers all 10 ACs. Both subtasks specify files to read, files to modify (or explicitly
+      "none"), verification steps, and token estimates. The dependency DAG is linear (ST-1 → ST-2),
+      which is correct for a single-file story. Verification commands in ST-2 are structural diffs
+      and grep — concrete and executable. One minor gap: ST-1 does not specify a canonical
+      reference to confirm the epic column value against (e.g., querying existing story records in
+      the DB), but the verification step ("run kb_list_stories({ epic: 'kb-first-migration',
+      limit: 5 }) in dev KB") is clear enough. Canonical references section in the story body
+      points to story-crud-operations.ts lines 59–94 for the schema — present and accurate.
+
+gaps:
+  - id: GAP-001
+    severity: mvp_blocking
+    description: >
+      The `epic` column value for KFMB stories is unconfirmed. The story assumes the `epic` column
+      stores the plan slug (e.g., "kb-first-migration"), but this has not been verified against the
+      live database. If the column stores a different format (e.g., a UUID, a display name, or a
+      prefixed slug), the Step 4 filter `kb_list_stories({ epic: "{project_name}", limit: 1 })`
+      will silently return zero results for ALL queries — making the collision check always pass and
+      never block, eliminating the safety guard entirely. ST-1 is designed to catch this, but it
+      must complete and confirm the column value BEFORE ST-2 edits the agent markdown.
+    mitigation: >
+      ST-1 (already defined) is the correct mitigation. Mark ST-1 as a hard gate: ST-2 must not
+      begin until ST-1 research confirms the epic column value. If the value differs from
+      plan_slug, the story's Step 4 prose template must be adjusted before implementation.
+    ac_affected: "AC-1"
+    decision: already_mitigated
+    decision_note: >
+      ST-1 already exists in the story as a hard pre-implementation gate. The subtask decomposition
+      explicitly requires ST-1 to complete and confirm the epic column value before ST-2 begins.
+      No new AC is needed — ST-1 IS the gate. Gap is mitigated by existing story structure.
+
+  - id: GAP-002
+    severity: mvp_blocking
+    description: >
+      The fallback SETUP BLOCKED message (Architecture Notes item 4) uses a different format string
+      than the primary SETUP BLOCKED message in AC-2. Primary: "Stories already exist in KB for
+      plan '{project_name}' — bootstrap already run". Fallback: "stories.index.md already exists
+      in {feature_dir} — bootstrap already run (filesystem fallback)". Both use the correct
+      "SETUP BLOCKED: <reason>" prefix as required by AC-6. However, neither the story body nor
+      any AC explicitly confirms that the filesystem fallback BLOCKED message format is a VALID
+      signal variant for downstream Phase 1 parsing. The signal contract (Signals section in
+      pm-bootstrap-setup-leader.agent.md) only defines `SETUP BLOCKED: <reason>` generically.
+      The note in EC-2 says "Downstream Phase 1 parsing succeeds unchanged" — this needs to be
+      verified by inspection of the Phase 1 orchestrator's BLOCKED signal parsing logic.
+    mitigation: >
+      Implementer should verify that the downstream parser (pm-bootstrap-workflow.md Phase 1
+      orchestration) pattern-matches on the prefix "SETUP BLOCKED:" and not on a full message
+      string. This is a one-line inspection of pm-bootstrap-workflow.md and requires no code
+      change. If the parser uses prefix matching, no gap exists. If it uses full-string matching,
+      both BLOCKED messages must be registered — a small change in KFMB-2030 scope.
+    ac_affected: "AC-4, AC-6"
+    decision: add_ac
+    ac_added: "AC-11: Verify downstream SETUP BLOCKED signal parsing uses prefix matching"
+
+opportunities:
+  - id: OPP-001
+    description: >
+      The story lists scrum-master-setup-leader.agent.md as a canonical reference "If it uses
+      kb_list_stories" — but inspection confirms it does NOT use kb_list_stories. This means there
+      is no existing agent that embeds a kb_list_stories call in step prose, making KFMB-2020 the
+      first such pattern. The canonical reference row is aspirational, not confirmatory. A future
+      opportunity exists to document the MCP-call-in-agent-prose pattern after KFMB-2020
+      implementation, so it can serve as a genuine canonical reference for subsequent Phase 2/3
+      agent migration stories (KFMB-2010, KFMB-3010, etc.).
+    priority: low
+    phase: post_implementation
+    decision: log_to_kb
+    decision_note: Non-blocking finding. No story change required. KB write skipped (tool not available in this context).
+
+  - id: OPP-002
+    description: >
+      The fallback path (AC-4) degrades silently to filesystem check on ANY error from
+      kb_list_stories (connection error, tool not found, timeout). This is the correct conservative
+      approach for a transitional story. However, once all agents have migrated to KB-native
+      storage (Phase 3 completion), the filesystem fallback will become dead code. Noting this now
+      surfaces a natural cleanup target for KFMB-3010 (Eliminate stories.index.md — Agent Updates)
+      where the fallback path in pm-bootstrap-setup-leader.agent.md should be removed or converted
+      to a hard error.
+    priority: low
+    phase: kfmb_phase_3
+    decision: log_to_kb
+    decision_note: Non-blocking finding. Conservative fallback is correct for now. Dead code cleanup is a natural KFMB-3010 scope item. KB write skipped (tool not available in this context).
+
+  - id: OPP-003
+    description: >
+      The story does not specify whether kb_list_stories should filter on all story states or only
+      active/non-terminal states. Currently the Step 4 call uses only the `epic` filter with no
+      `state` filter. If a previous bootstrap run was cancelled or its stories were set to
+      `cancelled` state, the collision check would still block (treating a cancelled bootstrap as
+      if it completed). This may or may not be the desired behavior. A future opportunity exists
+      to add state filter semantics (e.g., exclude `cancelled` stories) if the use case demands it.
+      For the current story scope, blocking on ANY existing story (regardless of state) is the
+      safer default.
+    priority: low
+    phase: future_consideration
+    decision: log_to_kb
+    decision_note: Non-blocking finding. Conservative default (block on any existing story regardless of state) is correct for this story. State filtering is a future consideration. KB write skipped (tool not available in this context).
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+summary:
+  gaps_found: 2
+  gaps_resolved: 2
+  opportunities_found: 3
+  opportunities_logged: 3
+  acs_added: 1

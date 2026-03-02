@@ -144,7 +144,10 @@ export const GapAnalyticsConfigSchema = z.object({
   /** Weight recent gaps more heavily in calculations */
   useRecencyWeighting: z.boolean().default(false),
   /** Time window for recency weighting (ms) */
-  recencyWindowMs: z.number().positive().default(7 * 24 * 60 * 60 * 1000), // 7 days
+  recencyWindowMs: z
+    .number()
+    .positive()
+    .default(7 * 24 * 60 * 60 * 1000), // 7 days
 })
 
 export type GapAnalyticsConfig = z.infer<typeof GapAnalyticsConfigSchema>
@@ -284,9 +287,7 @@ export function calculateEvidenceRates(gaps: readonly RankedGap[]): EvidenceMetr
           : 0,
       future: byCategory.future.total > 0 ? byCategory.future.backed / byCategory.future.total : 0,
       deferred:
-        byCategory.deferred.total > 0
-          ? byCategory.deferred.backed / byCategory.deferred.total
-          : 0,
+        byCategory.deferred.total > 0 ? byCategory.deferred.backed / byCategory.deferred.total : 0,
     },
   }
 }
@@ -531,7 +532,12 @@ export async function generateGapAnalytics(
   const resolutionMetrics = calculateResolutionTimes(gaps)
 
   // Generate insights
-  const insights = generateInsights(yieldMetrics, acceptanceRates, evidenceMetrics, resolutionMetrics)
+  const insights = generateInsights(
+    yieldMetrics,
+    acceptanceRates,
+    evidenceMetrics,
+    resolutionMetrics,
+  )
 
   return {
     storyId,

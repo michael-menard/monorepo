@@ -1,31 +1,31 @@
-"use client"
+'use client'
 
-import { useState, useMemo } from "react"
-import { motion } from "framer-motion"
-import { ExpandableStack } from "@/components/expandable-stack"
+import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { ExpandableStack } from '@/components/expandable-stack'
 
 const photos = [
   {
-    src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=260&fit=crop",
-    alt: "Mountain landscape with clouds",
+    src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=260&fit=crop',
+    alt: 'Mountain landscape with clouds',
     w: 200,
     h: 130,
   },
   {
-    src: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=300&h=400&fit=crop",
-    alt: "Starry night over mountains",
+    src: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=300&h=400&fit=crop',
+    alt: 'Starry night over mountains',
     w: 150,
     h: 200,
   },
   {
-    src: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=340&h=340&fit=crop",
-    alt: "Foggy forest valley",
+    src: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=340&h=340&fit=crop',
+    alt: 'Foggy forest valley',
     w: 170,
     h: 170,
   },
   {
-    src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=260&fit=crop",
-    alt: "Sunlight through forest trees",
+    src: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=260&fit=crop',
+    alt: 'Sunlight through forest trees',
     w: 200,
     h: 130,
   },
@@ -67,14 +67,14 @@ export function PerspectiveStack({ expandable = false }: { expandable?: boolean 
               }}
               animate={{ x, y, opacity: 1, scale: 1 }}
               transition={{
-                type: "spring",
+                type: 'spring',
                 stiffness: 300,
                 damping: 25,
               }}
               layout
             >
               <img
-                src={photo.src || "/placeholder.svg"}
+                src={photo.src || '/placeholder.svg'}
                 alt={photo.alt}
                 className="w-full h-full object-cover block"
                 crossOrigin="anonymous"

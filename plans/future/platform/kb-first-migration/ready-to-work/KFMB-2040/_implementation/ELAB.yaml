@@ -1,0 +1,437 @@
+---
+story_id: KFMB-2040
+title: "KB-Native Story Generation Pipeline"
+analyst: elab-analyst
+phase: 1.5-autonomous-decisions
+date: "2026-02-26"
+preliminary_verdict: approved_with_gaps
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-26T00:00:00Z"
+decided_by: elab-autonomous-decider
+
+# -------------------------------------------------------------------
+# PLAN FILE CHECK
+# -------------------------------------------------------------------
+plan_files:
+  plan_exec_md: false
+  plan_meta_md: false
+  note: >
+    Neither PLAN.exec.md nor PLAN.meta.md exists in plans/future/platform/kb-first-migration/.
+    Feature-level plan context is derived entirely from stories.index.md.
+    Not a blocker — stories.index.md is sufficient for Phase 2 elaboration.
+
+# -------------------------------------------------------------------
+# 9-POINT AUDIT
+# -------------------------------------------------------------------
+audit:
+
+  # 1. Scope Alignment
+  scope_alignment:
+    verdict: pass
+    notes: >
+      Story scope is tightly bounded: exactly 3 .claude/ markdown files modified,
+      zero TypeScript packages touched, zero DB schema changes. The three coupling
+      points identified (story discovery, seed artifact output, story content
+      persistence) map cleanly to ACs 1-5. Non-goals explicitly exclude all
+      adjacent work (adhoc/followup/split leaders, elab-story, dev-implement-story,
+      stories.index.md removal, schema migrations). Scope matches stories.index.md
+      Phase 2 intent: migrate story bootstrap to write directly to KB.
+    gaps: []
+
+  # 2. Internal Consistency
+  internal_consistency:
+    verdict: pass_with_warnings
+    notes: >
+      ACs and subtasks are well-aligned. Each AC is covered by at least one subtask.
+      Test plan happy paths (HP-1 through HP-5) map directly to ACs 1-5.
+      Three observations that deserve attention but are not blocking:
+    warnings:
+      - id: IC-W1
+        description: >
+          AC-5 states seed agent "no longer requires index_path to determine story
+          identity." However, the current pm-story.md Step 2c already passes
+          Story ID: {STORY_ID} alongside Index path: {INDEX_PATH} in the seed agent
+          spawn prompt. index_path is used by the seed agent to load the story entry
+          from the index (Preconditions: "Index exists" / "Story in index" checks).
+          AC-5 is achievable, but the seed agent must retain the ability to load the
+          story entry without relying on index_path — either via kb_get_story or
+          by reading the entry from the inline "Story entry from index" paste in the
+          spawn prompt. This nuance is unaddressed in the story: it is unclear whether
+          the seed agent will switch to kb_get_story for story discovery, or whether
+          the spawning orchestrator will continue to inline the story entry.
+        severity: warning
+        resolution_hint: >
+          Add a note to AC-5 clarifying whether the seed agent should call
+          kb_get_story({story_id}) to resolve story identity, or rely on the inline
+          story entry injected by pm-story.md. Both approaches are valid;
+          the implementer needs explicit guidance.
+      - id: IC-W2
+        description: >
+          ST-3 depends on ST-2, and ST-4 depends on ST-3. However, ST-4 (story
+          discovery via kb_list_stories) is logically independent of ST-3 (seed
+          read from KB). Both modify pm-story-generation-leader.agent.md, so the
+          sequential ordering is a sensible write-conflict avoidance strategy, but
+          the dependency chain implies ST-5 cannot start until all prior subtasks
+          are done. For a docs-only story where the implementer is likely one agent,
+          this is fine; but the story should acknowledge this if parallelization
+          is ever needed.
+        severity: low
+        resolution_hint: >
+          Optional: note that ST-3 and ST-4 are logically independent but are
+          sequenced to avoid concurrent edits to the same file.
+      - id: IC-W3
+        description: >
+          The story body (Non-Goals) states dual-write is "acceptable as a
+          transitional state" for STORY-SEED.md. AC-2 says "in addition to (or
+          instead of) writing STORY-SEED.md." But AC-3 says the generation leader
+          reads from KB "rather than reading STORY-SEED.md." This is a mild tension:
+          if dual-write is the transitional state, then the "rather than" phrasing
+          in AC-3 is premature unless the fallback (EC-2) is also authoritative.
+          The Architecture Notes clarify dual-read, but the AC wording is misleading.
+        severity: warning
+        resolution_hint: >
+          Rephrase AC-3 to: "pm-story-generation-leader reads the seed artifact from
+          KB via kb_read_artifact as primary source, with filesystem STORY-SEED.md
+          as fallback." This aligns AC-3 with the dual-read strategy documented in
+          Architecture Notes.
+
+  # 3. Reuse-First Enforcement
+  reuse_first:
+    verdict: pass
+    notes: >
+      Reuse plan is strong and concrete. Four existing KB MCP tools are reused
+      (kb_list_stories, kb_write_artifact, kb_read_artifact, kb_update_story) —
+      all confirmed to exist at tool-schemas.ts with specific line numbers in the
+      Reality Baseline. The DEFERRED-KB-WRITES.yaml fallback pattern is identified
+      as an existing pattern to extend. KFMB-2010/2020 sister agents are
+      cross-referenced as post-implementation pattern references.
+      No new tools are invented; no new packages are added.
+    gaps: []
+
+  # 4. Ports & Adapters Compliance
+  ports_and_adapters:
+    verdict: pass
+    notes: >
+      This story strengthens ports-and-adapters compliance by eliminating raw SQL
+      INSERTs from agent instruction files in favour of MCP tool calls. The
+      explicit "Patterns to Avoid" section forbids future raw SQL in agents.
+      No direct DB access is introduced. All KB interactions go through the MCP
+      layer. The Architecture Notes also reference the KBAR-0200 lesson: agent
+      and TypeScript node pairs must update together if any TypeScript migration
+      script performs the stories table INSERT — this is noted as a coordination
+      risk, not a gap.
+    gaps: []
+
+  # 5. Local Testability
+  local_testability:
+    verdict: pass_with_warnings
+    notes: >
+      The story correctly identifies that no unit tests exist for markdown
+      instruction files, and prescribes integration + manual testing (ADR-006,
+      ADR-005). The test plan is thorough (5 happy paths, 3 error cases, 4 edge
+      cases, 2 manual checks). Two observations:
+    warnings:
+      - id: LT-W1
+        description: >
+          All integration tests (HP-1 through HP-5) have a hard prerequisite on
+          KFMB-1020 and KFMB-1030 completion. The test plan calls this out in
+          risks. This means the implementer cannot verify any KB-path ACs using
+          automated tests until dependencies land. The only verifiable AC prior
+          to dependencies is AC-6 (frontmatter accuracy) and AC-7 (caller
+          compatibility). This is an inherent sequencing constraint, not a story
+          defect — but it means evidence collection is manually gated on
+          dependency delivery.
+        severity: warning
+        resolution_hint: >
+          Consider adding a note to AC-2 and AC-3 that evidence collection is
+          gated on KFMB-1030 (story_seed artifact type) being available in the
+          target environment. This sets correct implementer expectations.
+      - id: LT-W2
+        description: >
+          EC-3 ("kb_update_story content fields rejected — graceful error")
+          references a scenario where KFMB-1020 is NOT yet deployed. If this
+          story is implemented after KFMB-1020, EC-3 is effectively untestable
+          in a realistic environment. The story should clarify whether EC-3 is
+          a transitional test (only testable before KFMB-1020 ships) or a
+          permanent error path.
+        severity: low
+        resolution_hint: >
+          Clarify EC-3 intent: is this a defensive error path that remains
+          relevant post-KFMB-1020 (e.g. schema rollback scenario), or is it
+          only relevant during the transitional window?
+
+  # 6. Decision Completeness
+  decision_completeness:
+    verdict: pass_with_gaps
+    notes: >
+      Most architectural decisions are adequately documented. Two genuine decision
+      gaps that an implementer will need to resolve:
+    gaps:
+      - id: DC-G1
+        severity: blocking
+        description: >
+          AC-5 says the seed agent "no longer requires index_path to determine
+          story identity." But the story does not specify the replacement mechanism
+          for story identity resolution inside the seed agent. Three options exist:
+          (a) seed agent calls kb_get_story({story_id}) to load story entry;
+          (b) pm-story.md continues to inline the story entry text in the spawn
+          prompt (no change to that part); (c) seed agent reads story entry from
+          the stories.index.md file but story_id alone suffices for KB writes.
+          The story text is ambiguous. An implementer could choose any option and
+          satisfy the AC wording. This will likely cause a review cycle.
+        decision_needed: >
+          How does the seed agent load the story entry (title, description, scope)
+          after index_path is no longer required? Is kb_get_story called as part
+          of Phase 2: Retrieve Story Context, or does the orchestrator continue to
+          inline the story entry in the spawn prompt?
+      - id: DC-G2
+        severity: informational
+        description: >
+          Phase 4.5 of the generation leader currently performs a raw SQL INSERT.
+          pm-story.md Step 4.5 also independently calls `pnpm migrate:stories`
+          after PM COMPLETE. Post-migration, there will be two content persistence
+          paths: (a) kb_update_story from Phase 4.5 of generation leader, and
+          (b) the migrate:stories script called by pm-story.md Step 4.5. The
+          story explicitly defers eliminating the migrate:stories script to
+          KFMB-6010/6020 (Script Modernization). This creates a temporary dual
+          write for story metadata. The story acknowledges this via the
+          KBAR-0200 lesson reference, but does not specify whether Phase 4.5
+          kb_update_story and migrate:stories are now redundant for content
+          fields post-migration, or whether they cover different field sets.
+          Implementer may be confused about what migrate:stories is responsible
+          for after this story lands.
+        decision_needed: >
+          Document which fields are owned by kb_update_story (Phase 4.5) vs.
+          migrate:stories after migration. Are they complementary (different
+          field sets) or partially redundant? This does not block implementation
+          but will cause confusion in Phase 4.5 implementation.
+
+  # 7. Risk Disclosure
+  risk_disclosure:
+    verdict: pass
+    notes: >
+      Risk disclosure is thorough. The dev_feasibility.risks section identifies
+      the three primary risks: (1) partial migration silent break, (2) index_path
+      removal breaking sibling leaders, (3) KFMB-1020 content field support
+      availability. Each has a concrete mitigation (dual-write, pre-audit grep,
+      gate on KFMB-1020 confirmation). Test plan risks section covers dependency
+      sequencing. One additional risk is underweighted:
+    warnings:
+      - id: RD-W1
+        description: >
+          The story identifies that pm-story.md passes index_path to the seed agent
+          spawn prompt. The Architecture Notes require a caller audit (grep
+          .claude/agents/ and .claude/commands/ for index_path). Notably, the
+          adhoc-leader, followup-leader, and split-leader do NOT appear to spawn
+          the seed agent themselves based on the code inspection — the seed agent
+          is only spawned by pm-story.md Step 2c. This means the sibling leader
+          "caller compatibility" risk (AC-7) may be simpler than stated: the
+          sibling leaders receive the seed path from pm-story.md, not by
+          spawning the seed agent directly. If this is true, AC-7 is primarily
+          about whether pm-story.md's updated Step 2c remains compatible with
+          how sibling leaders consume the seed path — not about whether sibling
+          leaders call the seed agent. This nuance should be confirmed in ST-1.
+        severity: warning
+        resolution_hint: >
+          ST-1 (caller audit) will resolve this. If the sibling leaders do not
+          spawn the seed agent, AC-7's scope narrows to: "pm-story.md passes a
+          compatible seed path / story_id to all leader variants." Document
+          this finding in ST-1 output.
+
+  # 8. Story Sizing
+  story_sizing:
+    verdict: pass
+    notes: >
+      sizing_warning: true is set appropriately. Analysis:
+      - 8 ACs (at the borderline threshold, not over it)
+      - 3 files modified (docs only, no TypeScript, no compilation)
+      - No new endpoints, no schema migrations
+      - 6 subtasks, each touching ≤3 files with clear completion signals
+      - Token estimate: 150,000 (reasonable for 3 agent .md files + tool schema reads)
+      - Split risk: 0.5 (appropriately acknowledged)
+      The docs-only nature significantly reduces implementation complexity relative
+      to a code story of similar AC count. 3 points is defensible. A split would
+      produce two stories of ~4 ACs each, which would be: (a) seed agent migration
+      (AC-2, AC-5, AC-6, AC-8) and (b) generation leader migration (AC-1, AC-3,
+      AC-4, AC-6, AC-7). This is a natural split boundary if needed, but is not
+      required at this time.
+    split_recommendation: not_required
+    split_boundary_if_needed: >
+      If split is chosen: Story A = seed agent migration (pm-story-seed-agent.agent.md
+      + pm-story.md AC-5); Story B = generation leader migration
+      (pm-story-generation-leader.agent.md AC-1, AC-3, AC-4). Depends on Story A.
+
+  # 9. Subtask Decomposition
+  subtask_decomposition:
+    verdict: pass
+    notes: >
+      Subtask decomposition is clean and well-structured. Each subtask has a clear
+      goal, explicit files-to-read, files-to-modify, ACs covered, dependencies,
+      verification criteria, and token estimate. The sequential dependency chain
+      (ST-1 → ST-2 → ST-3 → ST-4 → ST-5, with ST-6 depending on ST-1) is logical
+      given that multiple subtasks write to the same files. One observation:
+    warnings:
+      - id: SD-W1
+        description: >
+          ST-3 and ST-4 both modify pm-story-generation-leader.agent.md and are
+          sequenced (ST-4 depends on ST-3). The story does not address whether
+          ST-3 and ST-4 should be a single commit or two separate commits. For a
+          docs-only story, this is minor, but an agent implementing sequentially
+          may make ST-3's change and then have to re-read the file for ST-4.
+          The token estimate accounts for this (8,000 + 7,000), so it is not a
+          blocker.
+        severity: low
+        resolution_hint: >
+          Recommend combining ST-3 and ST-4 into a single edit pass on
+          pm-story-generation-leader.agent.md to reduce re-reads. Or explicitly
+          note that ST-4 should build on ST-3's file state without re-reading
+          from disk.
+
+# -------------------------------------------------------------------
+# MVP GAP ANALYSIS (blocking only)
+# -------------------------------------------------------------------
+mvp_gaps:
+  - id: GAP-1
+    ac: AC-5
+    severity: blocking
+    title: "Seed agent story identity resolution mechanism unspecified"
+    description: >
+      AC-5 removes index_path as a required input for story identity. The story
+      does not specify what replaces it inside the seed agent. The seed agent
+      currently has a HARD STOP precondition: "Index exists — File at index_path —
+      STOP: Index file not found" and "Story in index — Story entry exists for
+      story_id — STOP: Story not found in index." These preconditions must either
+      be replaced with KB lookups (kb_get_story) or the inline story entry from
+      the spawn prompt must be made authoritative. Without this being explicit,
+      the implementer will make an undocumented choice that may not survive review.
+    suggested_resolution: >
+      Add to AC-5: "The seed agent's story identity resolution switches from
+      index file lookup to kb_get_story({story_id}). The HARD STOP precondition
+      'Index exists' is replaced with 'Story exists in KB: kb_get_story returns
+      non-null result for story_id.' The index_path parameter becomes optional
+      (retained for backward compatibility with legacy callers) but is no longer
+      the source of truth for story identity."
+    files_affected:
+      - ".claude/agents/pm-story-seed-agent.agent.md"
+      - ".claude/commands/pm-story.md"
+    decision: add_ac
+    ac_added: "AC-9: Seed agent story identity resolution switches from index file lookup to kb_get_story({story_id}). HARD STOP 'Index exists' replaced with 'Story exists in KB'. index_path becomes optional."
+    decided_by: elab-autonomous-decider
+    decided_at: "2026-02-26T00:00:00Z"
+
+# -------------------------------------------------------------------
+# FUTURE OPPORTUNITIES (non-blocking)
+# -------------------------------------------------------------------
+future_opportunities:
+  - id: OPP-1
+    title: "Consolidate ST-3 and ST-4 into a single generation leader edit pass"
+    description: >
+      Both subtasks modify pm-story-generation-leader.agent.md. Combining them
+      saves a file re-read and reduces token overhead. Not a blocker since the
+      token budget already accounts for separate reads.
+    applicable_phase: implementation
+    decision: log_to_kb
+    kb_entry_id: "649ebee8-9054-4f0b-ba6e-5052ffacd71c"
+
+  - id: OPP-2
+    title: "Document the migrate:stories / kb_update_story field ownership split"
+    description: >
+      After Phase 4.5 migration, there will be two write paths to the stories
+      table: kb_update_story (content fields) and migrate:stories (structural
+      fields). A brief field ownership table in the Architecture Notes would
+      prevent implementer confusion and reduce review cycles.
+    applicable_phase: post-implementation
+    decision: log_to_kb
+    kb_entry_id: "932b9c55-a5f1-411c-86c5-5dcca3a24dec"
+
+  - id: OPP-3
+    title: "Consider making EC-3 a permanent defensive error path"
+    description: >
+      EC-3 tests kb_update_story rejection of content fields when KFMB-1020
+      is not deployed. If the DEFERRED-KB-WRITES.yaml fallback is implemented
+      for EC-3, it remains useful as a permanent defensive path even after
+      KFMB-1020 ships (e.g., schema rollback, feature flag off scenarios).
+      Clarifying this as a permanent path rather than transitional would
+      improve resilience documentation.
+    applicable_phase: implementation
+    decision: log_to_kb
+    kb_entry_id: "de9fff48-4495-4f75-bade-da3b1aebabdc"
+
+  - id: OPP-4
+    title: "AC-7 scope clarification after ST-1 caller audit"
+    description: >
+      If ST-1 confirms sibling leaders (adhoc, followup, split) do not spawn
+      the seed agent directly, AC-7's verification scope narrows significantly.
+      This reduces test surface for ED-1 and ED-2 and may simplify the
+      post-implementation spot-check.
+    applicable_phase: pre-implementation
+    decision: log_to_kb
+    kb_entry_id: "43e8ae4a-8bb6-4ad9-a004-a63393352588"
+
+# -------------------------------------------------------------------
+# SUMMARY
+# -------------------------------------------------------------------
+summary:
+  total_audit_items: 9
+  passed: 6
+  passed_with_warnings: 3
+  failed: 0
+  blocking_gaps: 1
+  gaps_resolved: 1
+  non_blocking_warnings: 7
+  future_opportunities: 4
+  opportunities_logged: 4
+  acs_added: 1
+
+  key_finding: >
+    The story is well-structured, tightly scoped, and implementation-ready.
+    One blocking gap (AC-5 identity resolution) was resolved by adding AC-9
+    specifying kb_get_story as the replacement mechanism. AC-3 wording was
+    softened to align with the dual-read strategy. All 4 non-blocking
+    opportunities were logged to KB. Story is CONDITIONAL PASS — warnings
+    about test gating on KFMB-1020/1030 remain but are inherent sequencing
+    constraints, not story defects.
+
+  recommended_action: >
+    Story is ready for implementation. AC-9 resolves the identity resolution
+    gap. Implementer should note that integration test evidence (HP-1 through
+    HP-5) is gated on KFMB-1020 and KFMB-1030 completion.
+
+# -------------------------------------------------------------------
+# DECISIONS (left for human PM review)
+# -------------------------------------------------------------------
+decisions:
+  - id: DEC-1
+    question: >
+      Should the seed agent call kb_get_story({story_id}) to resolve story
+      identity after index_path is made optional (AC-5), or should the
+      orchestrator continue to inline the story entry in the spawn prompt?
+    options:
+      - "A: Seed agent calls kb_get_story — removes filesystem dependency entirely"
+      - "B: Orchestrator inlines story entry — seed agent remains stateless re KB for story lookup"
+    recommendation: "A"
+    rationale: >
+      Option A aligns with the KB-first migration goal. The seed agent calling
+      kb_get_story directly eliminates filesystem dependency for story identity,
+      which is the explicit intent of this migration. AC-9 was added to make
+      this explicit.
+    decided_by: elab-autonomous-decider
+    decided_at: "2026-02-26T00:00:00Z"
+
+  - id: DEC-2
+    question: >
+      After Phase 4.5 migration, which fields does kb_update_story own vs.
+      migrate:stories? Are they complementary (different field sets) or
+      partially redundant?
+    options:
+      - "A: kb_update_story owns content fields (description, ACs, non_goals); migrate:stories owns structural fields (story_id, title, state, etc.)"
+      - "B: kb_update_story is the sole write path post-migration; migrate:stories is deprecated for content fields"
+    recommendation: "A"
+    rationale: >
+      Option A is the safe transitional choice. kb_update_story handles content
+      fields (description, ACs, non_goals) per KFMB-1020 extension, while
+      migrate:stories handles structural fields (story_id, title, state). This
+      complementary split avoids breaking the migrate:stories script during
+      transition. Full consolidation is deferred to KFMB-6010/6020.
+    decided_by: elab-autonomous-decider
+    decided_at: "2026-02-26T00:00:00Z"

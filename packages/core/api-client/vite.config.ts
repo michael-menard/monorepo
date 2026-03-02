@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
 import { resolve } from 'path'
+import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
 export default defineConfig({
@@ -28,13 +28,7 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        '@reduxjs/toolkit',
-        '@reduxjs/toolkit/query/react',
-        'zod',
-      ],
+      external: ['react', 'react-dom', '@reduxjs/toolkit', '@reduxjs/toolkit/query/react', 'zod'],
     },
     sourcemap: true,
   },

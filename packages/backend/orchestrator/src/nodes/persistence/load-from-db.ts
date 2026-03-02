@@ -97,10 +97,7 @@ export interface GraphStateWithDbLoad extends GraphState {
 /**
  * Load story from YAML files as fallback
  */
-async function loadFromYaml(
-  storyId: string,
-  config: LoadFromDbConfig,
-): Promise<LoadFromDbResult> {
+async function loadFromYaml(storyId: string, config: LoadFromDbConfig): Promise<LoadFromDbResult> {
   if (!config.workspaceRoot) {
     return {
       loaded: false,

@@ -146,7 +146,7 @@ describe('WishlistQueryParamsSchema', () => {
   it('should validate all query params', () => {
     const params = {
       q: 'Star Wars',
-      store: 'LEGO',
+      store: ['LEGO'],
       tags: 'UCS,Space',
       priority: 5,
       sort: 'createdAt',

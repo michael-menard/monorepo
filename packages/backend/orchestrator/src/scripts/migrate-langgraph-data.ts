@@ -637,9 +637,7 @@ function logResults(log: Wint1110MigrationLog): void {
   })
 
   const totalErrors =
-    log.stories.error_count +
-    log.features.error_count +
-    log.state_transitions.error_count
+    log.stories.error_count + log.features.error_count + log.state_transitions.error_count
 
   if (totalErrors > 0) {
     logger.warn('Migration completed with errors', { totalErrors })

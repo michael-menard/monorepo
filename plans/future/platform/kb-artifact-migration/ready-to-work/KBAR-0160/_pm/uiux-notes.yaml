@@ -1,2 +1,0 @@
-skipped: true
-reason: "KBAR-0160 modifies agent markdown files only (.claude/agents/*.agent.md). No UI components, no frontend code, no HTTP endpoints. frontend_impacted: false per seed recommendations."

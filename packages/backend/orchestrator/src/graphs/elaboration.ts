@@ -22,6 +22,8 @@ import { updateState } from '../runner/state-helpers.js'
 import type { StoryRepository } from '../db/story-repository.js'
 import type { WorkflowRepository } from '../db/workflow-repository.js'
 import { loadFromDb } from '../nodes/persistence/load-from-db.js'
+import type { ChangeOutlineItem } from '../nodes/elaboration/structurer.js'
+import { StructurerConfigSchema, createStructurerNode } from '../nodes/elaboration/structurer.js'
 import { saveToDb } from '../nodes/persistence/save-to-db.js'
 
 /**
@@ -81,6 +83,10 @@ export const ElaborationConfigSchema = z.object({
   storyRepo: z.unknown().optional(),
   /** Workflow repository for DB persistence (optional, injected) */
   workflowRepo: z.unknown().optional(),
+  /** Affinity DB client for model affinity queries (APIP-3050 AC-10, injected) */
+  affinityDb: z.unknown().optional(),
+  /** Structurer node configuration (AC-8) */
+  structurerConfig: StructurerConfigSchema.default({}),
 })
 
 export type ElaborationConfig = z.infer<typeof ElaborationConfigSchema>
@@ -166,6 +172,14 @@ export const ElaborationResultSchema = z.object({
   durationMs: z.number().int().min(0),
   /** Timestamp when workflow completed */
   completedAt: z.string().datetime(),
+  /** Structured change outline from Structurer node (AC-7) */
+  changeOutline: z.array(z.unknown()).nullable().default(null),
+  /** Total estimated atomic changes (AC-7) */
+  totalEstimatedAtomicChanges: z.number().nullable().default(null),
+  /** Whether story exceeds split threshold (AC-7) */
+  splitRequired: z.boolean().default(false),
+  /** Human-readable split reason when splitRequired is true (AC-7) */
+  splitReason: z.string().nullable().default(null),
 })
 
 export type ElaborationResult = z.infer<typeof ElaborationResultSchema>
@@ -322,6 +336,24 @@ export const ElaborationStateAnnotation = Annotation.Root({
     default: () => false,
   }),
   dbSaveSuccess: Annotation<boolean>({
+    reducer: overwrite,
+    default: () => false,
+  }),
+
+  // Structurer node output (AC-6)
+  changeOutline: Annotation<ChangeOutlineItem[] | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+  splitRequired: Annotation<boolean>({
+    reducer: overwrite,
+    default: () => false,
+  }),
+  splitReason: Annotation<string | null>({
+    reducer: overwrite,
+    default: () => null,
+  }),
+  structurerComplete: Annotation<boolean>({
     reducer: overwrite,
     default: () => false,
   }),
@@ -808,7 +840,9 @@ export function createElaborationLoadFromDbNode(
     } catch (error) {
       return {
         dbLoadSuccess: false,
-        warnings: [`Failed to load from DB: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to load from DB: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -857,17 +891,23 @@ export function createElaborationSaveToDbNode(
         ? 'Passed elaboration'
         : `Elaboration found ${gapsCount} issue(s) requiring attention`
 
-      await saveToDb(state.storyId, storyRepo, workflowRepo, {
-        storyState: newState,
-        stateChangeReason: reason,
-      }, {
-        actor: 'elaboration-graph',
-        updateStoryState: true,
-        saveElaboration: false, // Already saved above
-        savePlan: false,
-        saveProof: false,
-        saveVerification: false,
-      })
+      await saveToDb(
+        state.storyId,
+        storyRepo,
+        workflowRepo,
+        {
+          storyState: newState,
+          stateChangeReason: reason,
+        },
+        {
+          actor: 'elaboration-graph',
+          updateStoryState: true,
+          saveElaboration: false, // Already saved above
+          savePlan: false,
+          saveProof: false,
+          saveVerification: false,
+        },
+      )
 
       return {
         dbSaveSuccess: true,
@@ -875,7 +915,9 @@ export function createElaborationSaveToDbNode(
     } catch (error) {
       return {
         dbSaveSuccess: false,
-        warnings: [`Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`],
+        warnings: [
+          `Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       }
     }
   }
@@ -893,6 +935,19 @@ function afterInitialize(state: ElaborationState): string {
     return 'complete'
   }
   return 'load_from_db'
+}
+
+/**
+ * Determines the next node after the Structurer node.
+ * Respects the recalculateReadiness flag, since structurer is always wired first when enabled.
+ */
+export function afterStructurer(
+  state: ElaborationState,
+): 'update_readiness' | 'save_to_db' {
+  if (state.config?.recalculateReadiness) {
+    return 'update_readiness'
+  }
+  return 'save_to_db'
 }
 
 /**
@@ -917,8 +972,15 @@ function afterEscapeHatch(state: ElaborationState): 'targeted_review' | 'aggrega
 
 /**
  * Determines the next node after aggregation.
+ * Exported as a named function for direct testability (AC-15).
+ * Routes to structurer when enabled, else directly to update_readiness or save_to_db.
  */
-function afterAggregate(state: ElaborationState): 'update_readiness' | 'save_to_db' {
+export function afterAggregate(
+  state: ElaborationState,
+): 'structurer' | 'update_readiness' | 'save_to_db' {
+  if (state.config?.structurerConfig?.enabled) {
+    return 'structurer'
+  }
   if (state.config?.recalculateReadiness) {
     return 'update_readiness'
   }
@@ -945,8 +1007,8 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
   const fullConfig = ElaborationConfigSchema.parse(config)
 
   // Get typed repositories if provided
-  const storyRepo = fullConfig.storyRepo as StoryRepository | null ?? null
-  const workflowRepo = fullConfig.workflowRepo as WorkflowRepository | null ?? null
+  const storyRepo = (fullConfig.storyRepo as StoryRepository | null) ?? null
+  const workflowRepo = (fullConfig.workflowRepo as WorkflowRepository | null) ?? null
 
   const graph = new StateGraph(ElaborationStateAnnotation)
     // Entry node: initialize workflow
@@ -972,6 +1034,9 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
 
     // Aggregation node
     .addNode('aggregate_findings', createAggregateNode())
+
+    // Structurer node (AC-5)
+    .addNode('structurer', createStructurerNode(fullConfig.structurerConfig, fullConfig.affinityDb))
 
     // Update readiness node
     .addNode('update_readiness', createUpdateReadinessNode())
@@ -1001,6 +1066,11 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
     })
     .addEdge('targeted_review', 'aggregate_findings')
     .addConditionalEdges('aggregate_findings', afterAggregate, {
+      structurer: 'structurer',
+      update_readiness: 'update_readiness',
+      save_to_db: 'save_to_db',
+    })
+    .addConditionalEdges('structurer', afterStructurer, {
       update_readiness: 'update_readiness',
       save_to_db: 'save_to_db',
     })
@@ -1056,9 +1126,17 @@ export async function runElaboration(
       previousReadinessScore: result.previousReadinessResult?.score ?? null,
       newReadinessScore: result.updatedReadinessResult?.score ?? null,
       warnings: result.warnings ?? [],
-      errors: result.errors ?? [],
+      errors: (result.errors ?? []).map((e: unknown) =>
+        typeof e === 'string' ? e : (e as { message?: string })?.message ?? String(e),
+      ),
       durationMs,
       completedAt: new Date().toISOString(),
+      changeOutline: result.changeOutline ?? null,
+      totalEstimatedAtomicChanges: result.changeOutline
+        ? result.changeOutline.reduce((sum, item) => sum + item.estimatedAtomicChanges, 0)
+        : null,
+      splitRequired: result.splitRequired ?? false,
+      splitReason: result.splitReason ?? null,
     })
   } catch (error) {
     const durationMs = Date.now() - startTime
@@ -1079,6 +1157,10 @@ export async function runElaboration(
       errors: [errorMessage],
       durationMs,
       completedAt: new Date().toISOString(),
+      changeOutline: null,
+      totalEstimatedAtomicChanges: null,
+      splitRequired: false,
+      splitReason: null,
     }
   }
 }

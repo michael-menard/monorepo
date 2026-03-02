@@ -1,0 +1,13 @@
+id: "KFMB-3020"
+title: "Eliminate stories.index.md — Command Updates"
+status: backlog
+priority: medium
+phase: 3
+feature: "Update story-update.md, pm-story.md, story-status.md, code-audit.md, elab-epic.md, index-update.md"
+goal: "No command in .claude/commands/ reads or writes stories.index.md as story state."
+depends_on: ["KFMB-3010"]
+endpoints: []
+infrastructure: ["KB MCP Tools", "postgres-knowledgebase"]
+risk_notes: "pm-story.md has two collision detection locations; KFMB-4010 coordination required on story-update.md."
+sizing_warning: false
+created: "2026-02-26T00:00:00Z"

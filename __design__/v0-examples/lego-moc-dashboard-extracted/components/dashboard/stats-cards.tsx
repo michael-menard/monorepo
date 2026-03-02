@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { Card, CardContent } from "@/components/ui/card"
-import type { DashboardStats } from "@/lib/types"
+import { Card, CardContent } from '@/components/ui/card'
+import type { DashboardStats } from '@/lib/types'
 
 interface StatsCardsProps {
   stats: DashboardStats
@@ -11,19 +11,19 @@ interface StatsCardsProps {
 export function StatsCards({ stats, isLoading }: StatsCardsProps) {
   const cards = [
     {
-      label: "Total MOCs",
+      label: 'Total MOCs',
       value: stats.totalMocs,
     },
     {
-      label: "Wishlist",
+      label: 'Wishlist',
       value: stats.wishlistCount,
     },
     {
-      label: "Themes",
+      label: 'Themes',
       value: stats.themeCount,
     },
     {
-      label: "Progress",
+      label: 'Progress',
       value: `${stats.buildProgress}%`,
     },
   ]
@@ -45,7 +45,7 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-      {cards.map((card) => (
+      {cards.map(card => (
         <Card
           key={card.label}
           className="group bg-card border-border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:backdrop-blur-sm dark:hover:border-primary/20"
