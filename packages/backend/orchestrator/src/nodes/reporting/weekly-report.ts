@@ -372,7 +372,7 @@ export function formatSlackMessage(summary: WeeklyPipelineSummary): unknown {
       ? unavailableText
       : `*Total:* $${summary.costs.total_usd.toFixed(2)} | *By Provider:* ${
           Object.entries(summary.costs.by_provider)
-            .map(([p, c]) => `${p}: $${(c as number).toFixed(2)}`)
+            .map(([p, c]) => `${p}: $${Number(c).toFixed(2)}`)
             .join(', ') || 'none'
         }`
 

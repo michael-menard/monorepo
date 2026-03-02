@@ -97,7 +97,7 @@ describe('@integration weekly-report integration tests', () => {
       `)
     } catch (err) {
       dbAvailable = false
-      console.warn('@integration: DB not available, tests will be skipped:', (err as Error).message)
+      // DB not available — tests will be skipped
     }
   })
 
@@ -120,7 +120,7 @@ describe('@integration weekly-report integration tests', () => {
 
   it('@integration: aggregateThroughput matches seed count (4 completed, 1 blocked)', async () => {
     if (!dbAvailable) {
-      console.log('Skipping: DB not available')
+      // DB not available — skip
       return
     }
 
@@ -136,7 +136,7 @@ describe('@integration weekly-report integration tests', () => {
 
   it('@integration: aggregateCosts sums expected provider costs', async () => {
     if (!dbAvailable) {
-      console.log('Skipping: DB not available')
+      // DB not available — skip
       return
     }
 
@@ -154,7 +154,7 @@ describe('@integration weekly-report integration tests', () => {
 
   it('@integration: triggerWeeklyReport calls mocked dispatch with correct payload', async () => {
     if (!dbAvailable) {
-      console.log('Skipping: DB not available')
+      // DB not available — skip
       return
     }
 
