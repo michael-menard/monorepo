@@ -330,8 +330,8 @@ export function createQAGraph(config: QAGraphConfig, deps: { modelClient: ModelC
 
   // Wrap async node factories: NodeFunction uses GraphState internally, but LangGraph
   // routes QAGraphState. We cast at the boundary since nodes do internal casting.
-  type NodeFactory = () => Promise<(state: Record<string, unknown>) => Promise<Record<string, unknown>>>
-  const makeNode = (factory: NodeFactory) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const makeNode = (factory: () => Promise<(state: any) => Promise<any>>) => {
     return async (state: QAGraphState): Promise<Partial<QAGraphState>> => {
       const node = await factory()
       return node(state)

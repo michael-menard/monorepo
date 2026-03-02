@@ -115,7 +115,7 @@ export function createVerifyAcsNode(modelClient: ModelClient) {
           .replace('{AC_TEXT}', acText)
           .replace('{EVIDENCE}', evidenceText)
 
-        const rawResponse = await modelClient.callModel(prompt)
+        const rawResponse = await modelClient.callModel(prompt, undefined)
 
         // Parse JSON response - strip markdown if present
         let jsonStr = rawResponse.trim()
