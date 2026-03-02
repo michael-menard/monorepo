@@ -1,0 +1,105 @@
+feasible: true
+confidence: medium
+rationale: "All required building blocks exist in the codebase: LangGraph node pattern (delta-detect.ts), DB query with Zod validation (leaderboard.ts), schema versioning (plan.ts), and discriminated union dispatch (fanout-ux.ts). The primary confidence reduction is that both upstream schemas (ChangeSpec from APIP-1020, wint.model_affinity from APIP-3020) are not yet stable. Implementation must use documented placeholder types with explicit re-validation gates before merge. Graceful degradation path (cold-start and DB error fallback) is well-understood and low-risk to implement."
+complexity: medium
+change_surface:
+  areas:
+    - "packages/backend/orchestrator/src/nodes/ (new diff-planner node directory)"
+    - "packages/backend/orchestrator/src/nodes/diff-planner/ (new)"
+    - "packages/backend/orchestrator/src/artifacts/ (new DiffPlannerOutputSchema)"
+    - "packages/backend/orchestrator/src/runner/ (createToolNode registration)"
+  endpoints: []
+  deploy_touchpoints:
+    - "Register diff-planner node in LangGraph graph definition (local Docker)"
+    - "Confirm wint.model_affinity table exists in local Docker DB before integration test run"
+
+risks:
+  - finding: "ChangeSpec schema (APIP-1020 ADR-002) not yet published — Diff Planner output schema cannot be finalized"
+    mitigation: "Implement with PlaceholderChangeSpecSchema mirroring APIP-1020 story.yaml intent; add re-validation checklist item in ELAB.yaml before merge. Do not merge APIP-3030 until ADR-002 is published and schema validated."
+  - finding: "wint.model_affinity column names not confirmed — DB query in AC-1 may need column-name updates"
+    mitigation: "Review APIP-3020 story.yaml infrastructure notes for expected schema shape; write DB query with column names as constants at top of file so a single-location update suffices when APIP-3020 completes."
+  - finding: "Prompt token cost increase from affinity injection — unbounded if many weak patterns exist"
+    mitigation: "Implement MAX_WEAK_PATTERNS_INJECTED cap (default 5) as configurable constant; enforce in prompt assembly logic (ST-4); cover with HP-4 test case."
+
+missing_requirements:
+  - "Confirm WEAKNESS_THRESHOLD default value (0.6 suggested) — needs PM decision"
+  - "Confirm AFFINITY_CONFIDENCE_MIN default enum value (medium suggested) — needs PM decision"
+  - "Confirm escalation_model field is a model ID string (not an enum) — depends on APIP-0040 model router design"
+
+evidence_expectations:
+  - "pnpm test --filter @repo/orchestrator -- diff-planner (all 8 unit test cases pass)"
+  - "pnpm check-types --filter @repo/orchestrator (no TypeScript errors)"
+  - "DiffPlannerOutputSchema.parse(actual_output) succeeds for happy path, cold-start, and DB-error scenarios"
+
+subtasks:
+  - id: ST-1
+    title: "Diff Planner node skeleton with config schema"
+    goal: "Create the new LangGraph node directory and files: node handler (async fn), Zod config schema (AFFINITY_CONFIDENCE_MIN, WEAKNESS_THRESHOLD, MAX_WEAK_PATTERNS_INJECTED as configurable constants), createToolNode registration, typed state extension. No affinity logic yet — node must accept input and return a pass-through result."
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/delta-detect.ts"
+      - "packages/backend/orchestrator/src/runner/node-factory.ts"
+      - "packages/backend/orchestrator/src/state/index.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/index.ts (create)"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts (create)"
+    acs: ["AC-6", "AC-7"]
+    depends_on: none
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 7000
+
+  - id: ST-2
+    title: "Affinity profile query with graceful fallback"
+    goal: "Implement the wint.model_affinity DB query using @repo/db. Query keyed by (model_id, change_type, file_type); return typed affinity profile array. Implement three fallback paths: (a) no rows found (cold-start) → return null, (b) DB connection error → log warning via @repo/logger and return null, (c) result Zod parse failure → log warning and return null. All fallback paths set profile_used=false on metadata."
+    files_to_read:
+      - "packages/backend/orchestrator/src/model-selector/leaderboard.ts"
+      - "packages/backend/orchestrator/src/model-selector/__types__/index.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts (create)"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts (update with AffinityProfileSchema)"
+    acs: ["AC-1", "AC-4", "AC-5", "AC-8"]
+    depends_on: ST-1
+    verification: "pnpm test --filter @repo/orchestrator -- diff-planner/affinity-query"
+    estimated_tokens: 9000
+
+  - id: ST-3
+    title: "DiffPlannerOutputSchema with profile_metadata field"
+    goal: "Define Zod-validated output schema for the Diff Planner node. Must include profile_metadata as optional field (profile_used, model_id, confidence_level, weak_patterns_injected, escalation_preassigned). Use z.literal(1) schema versioning per plan.ts pattern. Define PlaceholderChangeSpecSchema as a documented placeholder (mirroring APIP-1020 intent) with explicit TODO comment: 'Re-validate against ADR-002 ChangeSpec schema before merge'."
+    files_to_read:
+      - "packages/backend/orchestrator/src/artifacts/plan.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/artifacts/diff-planner-output.ts (create)"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__types__/index.ts (update)"
+    acs: ["AC-6", "AC-8"]
+    depends_on: ST-1
+    verification: "pnpm check-types --filter @repo/orchestrator"
+    estimated_tokens: 6000
+
+  - id: ST-4
+    title: "Prompt injection logic per change_type with escalation pre-assignment"
+    goal: "Implement the affinity-aware prompt assembly: (1) apply confidence threshold gate (AFFINITY_CONFIDENCE_MIN check), (2) build affinity summary from profile — list weak patterns capped at MAX_WEAK_PATTERNS_INJECTED, (3) inject summary into decomposition prompt, (4) for each ChangeSpec where change_type/file_type success_rate < WEAKNESS_THRESHOLD, annotate with escalation_model. Use z.discriminatedUnion('change_type', [...]) per fanout-ux.ts line 134 pattern for change_type-specific injection logic."
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/story/fanout-ux.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts"
+      - "packages/backend/orchestrator/src/artifacts/diff-planner-output.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/prompt-assembly.ts (create)"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/index.ts (wire prompt-assembly)"
+    acs: ["AC-2", "AC-3", "AC-4"]
+    depends_on: ST-2, ST-3
+    verification: "pnpm test --filter @repo/orchestrator -- diff-planner/prompt-assembly"
+    estimated_tokens: 11000
+
+  - id: ST-5
+    title: "Unit test suite — all 8 test cases"
+    goal: "Write Vitest unit tests covering all 8 required scenarios: (a) happy path with populated profile, (b) cold-start fallback, (c) DB error fallback, (d) weak pattern pre-assignment, (e) confidence gate rejection, (f) prompt injection volume gate, (g) mixed-strength escalation assignment, (h) schema regression against all 4 ChangeSpec variants. Use placeholder ChangeSpec fixtures; mark each test that depends on APIP-1020 with a TODO comment for re-validation."
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/elaboration/__tests__/"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/index.ts"
+      - "packages/backend/orchestrator/src/nodes/diff-planner/affinity-query.ts"
+    files_to_modify:
+      - "packages/backend/orchestrator/src/nodes/diff-planner/__tests__/diff-planner.test.ts (create)"
+    acs: ["AC-7"]
+    depends_on: ST-4
+    verification: "pnpm test --filter @repo/orchestrator -- diff-planner"
+    estimated_tokens: 10000
