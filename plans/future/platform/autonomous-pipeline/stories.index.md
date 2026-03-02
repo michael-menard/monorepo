@@ -89,7 +89,7 @@ Codebase health gate, cohesion scanner, dependency auditor, test quality monitor
 | APIP-4030 | Dependency Auditor | APIP-2010 | Ready to Work |
 | APIP-4040 | Test Quality Monitor | APIP-3090 | Ready to Work |
 | APIP-4050 | Dead Code Reaper | APIP-3090 | Ready to Work |
-| APIP-4060 | KB Freshness Check and Stale Entry Archival | APIP-3090 | Ready for QA |
+| APIP-4060 | KB Freshness Check and Stale Entry Archival | APIP-3090 | UAT |
 | APIP-4070 | Weekly Pipeline Health Report | APIP-4010, APIP-3020, APIP-2010 | Ready to Work |
 
 ## Phase 5: Pipeline Resilience (3 stories)
