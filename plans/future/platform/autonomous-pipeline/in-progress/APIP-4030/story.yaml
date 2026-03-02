@@ -1,0 +1,13 @@
+id: "APIP-4030"
+title: "Dependency Auditor"
+status: ready-to-work
+priority: medium
+phase: 4
+feature: "Post-merge cron that checks new packages added, detects overlap with existing deps, estimates bundle size impact, runs pnpm audit for vulnerabilities, and flags unmaintained packages — blocking queue for human review on high-risk findings"
+goal: "Prevent dependency bloat, vulnerability accumulation, and redundant package introduction without blocking the autonomous pipeline for routine changes."
+depends_on: ["APIP-2010"]
+endpoints: []
+infrastructure: []
+risk_notes: "Overlap detection heuristics (e.g., date-fns vs dayjs) require maintained knowledge of package equivalences; human-in-loop for dep decisions means blocked queue items may accumulate."
+sizing_warning: false
+created: "2026-02-25T00:00:00Z"
