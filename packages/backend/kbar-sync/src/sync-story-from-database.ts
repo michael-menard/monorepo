@@ -72,7 +72,7 @@ export async function syncStoryFromDatabase(
     }
   }
 
-  let syncEventId: string | undefined
+  let syncEventId!: string
   const tempPath = `${outputPath}.tmp`
   const startedAt = new Date()
 

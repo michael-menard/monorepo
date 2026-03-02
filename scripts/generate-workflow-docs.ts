@@ -96,7 +96,6 @@ ${transitionLines.join('\n')}
 
 > **Auto-generated from TypeScript schema**
 > Source: \`packages/backend/orchestrator/src/state/story-state-machine.ts\`
-> Generated: ${new Date().toISOString()}
 
 ## Status Values
 
@@ -156,7 +155,6 @@ function generateErrorTypesDoc(): string | null {
 
 > **Auto-generated from TypeScript schema**
 > Source: \`packages/backend/orchestrator/src/errors/workflow-errors.ts\`
-> Generated: ${new Date().toISOString()}
 
 ## Error Types
 
@@ -239,7 +237,6 @@ function generateTokenLimitsDoc(): string | null {
 
 > **Auto-generated from TypeScript schema**
 > Source: \`packages/backend/orchestrator/src/utils/token-budget.ts\`
-> Generated: ${new Date().toISOString()}
 
 ## Phase Limits
 
@@ -323,7 +320,6 @@ function generateModelAssignmentsDoc(): string | null {
 
 > **Auto-generated from YAML config**
 > Source: \`.claude/config/model-assignments.yaml\`
-> Generated: ${new Date().toISOString()}
 
 ## Agent → Model Matrix
 
@@ -365,7 +361,6 @@ ${byModel.opus.length > 0 ? byModel.opus.map(a => `- \`${a}\``).join('\n') : '_N
 
 > **Auto-generated from TypeScript**
 > Source: \`packages/backend/orchestrator/src/config/model-assignments.ts\`
-> Generated: ${new Date().toISOString()}
 
 See source file for current assignments.
 `

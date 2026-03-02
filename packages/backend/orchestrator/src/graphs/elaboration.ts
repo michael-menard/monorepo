@@ -936,6 +936,19 @@ function afterInitialize(state: ElaborationState): string {
 }
 
 /**
+ * Determines the next node after the Structurer node.
+ * Respects the recalculateReadiness flag, since structurer is always wired first when enabled.
+ */
+export function afterStructurer(
+  state: ElaborationState,
+): 'update_readiness' | 'save_to_db' {
+  if (state.config?.recalculateReadiness) {
+    return 'update_readiness'
+  }
+  return 'save_to_db'
+}
+
+/**
  * Determines the next node after delta detection.
  */
 function afterDeltaDetect(state: ElaborationState): string {
@@ -1055,7 +1068,10 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
       update_readiness: 'update_readiness',
       save_to_db: 'save_to_db',
     })
-    .addEdge('structurer', 'update_readiness')
+    .addConditionalEdges('structurer', afterStructurer, {
+      update_readiness: 'update_readiness',
+      save_to_db: 'save_to_db',
+    })
     .addEdge('update_readiness', 'save_to_db')
     .addEdge('save_to_db', 'complete')
     .addEdge('complete', END)
@@ -1108,7 +1124,9 @@ export async function runElaboration(
       previousReadinessScore: result.previousReadinessResult?.score ?? null,
       newReadinessScore: result.updatedReadinessResult?.score ?? null,
       warnings: result.warnings ?? [],
-      errors: result.errors ?? [],
+      errors: (result.errors ?? []).map((e: unknown) =>
+        typeof e === 'string' ? e : (e as { message?: string })?.message ?? String(e),
+      ),
       durationMs,
       completedAt: new Date().toISOString(),
       changeOutline: result.changeOutline ?? null,

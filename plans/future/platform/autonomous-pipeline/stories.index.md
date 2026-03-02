@@ -43,8 +43,8 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1010 | Structurer Node in Elaboration Graph | APIP-0020 | In Progress |
 | APIP-1020 | ChangeSpec Schema Design and Validation Spike | APIP-1010 | Created |
 | APIP-1030 | Implementation Graph with Atomic Change Loop | APIP-1020, APIP-0040 | Needs Split |
-| APIP-1040 | Documentation Graph (Post-Merge) | APIP-1030 | In Progress |
-| APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1030 | Needs Code Review |
+| APIP-1040 | Documentation Graph (Post-Merge) | APIP-1030 | UAT |
+| APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1030 | In Progress |
 | APIP-1060 | QA Graph with Autonomous Verdict | APIP-1050 | Created |
 | APIP-1070 | Merge Graph with Learnings Extraction | APIP-1060 | In Elaboration |
 | APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-0020, APIP-1010, APIP-1020, APIP-1030, APIP-1050, APIP-1060, APIP-1070 | Ready to Work |
