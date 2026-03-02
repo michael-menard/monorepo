@@ -1,0 +1,648 @@
+---
+schema_version: "1"
+story_id: "APIP-3080"
+timestamp: "2026-03-01T00:00:00Z"
+title: "Code Review Checklist - Parallel Story Concurrency (2-3 Worktrees)"
+phase: "implementation"
+iteration: 0
+
+# Overview section describing the code review scope
+overview:
+  description: >
+    APIP-3080 extends the autonomous pipeline supervisor to support 2-3 concurrent
+    stories via BullMQ's concurrency parameter, with isolated git worktrees,
+    conflict detection, and per-worktree circuit breakers. This checklist
+    validates implementation against the 12 acceptance criteria and project standards.
+
+  feature_scope: |
+    1. ConcurrencyConfig Zod schema with maxWorktrees (1-3), conflictPolicy
+    2. ConcurrencyController for slot management and lifecycle tracking
+    3. WorktreeConflictDetector for path-prefix overlap detection
+    4. BullMQ Worker concurrency integration in pipeline-supervisor
+    5. Git worktree creation/cleanup lifecycle
+    6. Per-worktree circuit breaker instances
+    7. TokenBucket concurrent safety validation
+    8. Integration tests with real Redis and git worktrees
+
+  dependencies:
+    - APIP-0020 (BullMQ supervisor loop - must be merged)
+    - APIP-0040 (PipelineModelRouter with TokenBucket - must be merged)
+    - Git 2.27+ (git worktree command)
+    - Redis instance for BullMQ integration tests
+
+# File manifest showing what should be created/modified
+files:
+  new_files:
+    - path: "apps/api/pipeline/src/supervisor/__types__/concurrency-config.ts"
+      purpose: "Zod schema for ConcurrencyConfig"
+      lines_expected: 30-50
+      critical: true
+      checklist_id: "FILE-1"
+
+    - path: "apps/api/pipeline/src/supervisor/concurrency/concurrency-controller.ts"
+      purpose: "Slot acquisition, release, and status tracking"
+      lines_expected: 100-150
+      critical: true
+      checklist_id: "FILE-2"
+
+    - path: "apps/api/pipeline/src/supervisor/concurrency/worktree-path.ts"
+      purpose: "Worktree path generation with collision prevention"
+      lines_expected: 40-60
+      critical: false
+      checklist_id: "FILE-3"
+
+    - path: "apps/api/pipeline/src/supervisor/worktree-lifecycle.ts"
+      purpose: "Git worktree creation and cleanup orchestration"
+      lines_expected: 80-120
+      critical: true
+      checklist_id: "FILE-4"
+
+    - path: "apps/api/pipeline/src/conflicts/worktree-conflict-detector.ts"
+      purpose: "Path-prefix overlap detection and conflict policy enforcement"
+      lines_expected: 100-150
+      critical: true
+      checklist_id: "FILE-5"
+
+    - path: "apps/api/pipeline/src/__tests__/unit/concurrency-controller.test.ts"
+      purpose: "Unit tests for ConcurrencyController slot management"
+      lines_expected: 150-250
+      critical: true
+      checklist_id: "FILE-6"
+
+    - path: "apps/api/pipeline/src/__tests__/unit/worktree-conflict-detector.test.ts"
+      purpose: "Unit tests for conflict detection logic"
+      lines_expected: 100-150
+      critical: true
+      checklist_id: "FILE-7"
+
+    - path: "apps/api/pipeline/src/__tests__/integration/concurrent-dispatch.test.ts"
+      purpose: "Integration tests with real Redis and git worktrees"
+      lines_expected: 300-500
+      critical: true
+      checklist_id: "FILE-8"
+
+  modified_files:
+    - path: "apps/api/pipeline/src/supervisor/index.ts"
+      purpose: "Wire concurrency and worktree lifecycle into supervisor"
+      checklist_id: "FILE-9"
+
+    - path: ".gitignore"
+      purpose: "Add .worktrees/ to ignore git worktree directories"
+      checklist_id: "FILE-10"
+
+# Code style and standard compliance checks
+code_style:
+  typescript:
+    - check: "Zod-First Types"
+      requirement: "All exported types use z.infer<> from Zod schemas, NO TypeScript interfaces"
+      applies_to: ["FILE-1", "FILE-2", "FILE-4", "FILE-5"]
+      severity: CRITICAL
+      rationale: "Project standard per CLAUDE.md - runtime validation + self-documenting constraints"
+
+    - check: "Strict Mode"
+      requirement: "All files use strict TypeScript (configured in tsconfig.json)"
+      applies_to: "all_files"
+      severity: CRITICAL
+
+    - check: "No Implicit Any"
+      requirement: "noImplicitAny: false is allowed but discouraged - use explicit types"
+      applies_to: "all_files"
+      severity: HIGH
+
+    - check: "Named Exports"
+      requirement: "Export class/function with name, not default export"
+      applies_to: ["FILE-2", "FILE-4", "FILE-5"]
+      severity: HIGH
+      example: "export class ConcurrencyController { ... }"
+
+    - check: "No Barrel Files"
+      requirement: "No re-export index.ts - import directly from source"
+      applies_to: "all_files"
+      severity: HIGH
+
+    - check: "Logger Usage"
+      requirement: "Use @repo/logger, NEVER console.log/console.error"
+      applies_to: ["FILE-2", "FILE-4", "FILE-5", "FILE-9"]
+      severity: CRITICAL
+
+    - check: "Comments"
+      requirement: "Prefix unused vars with _ (e.g., _unused)"
+      applies_to: "all_files"
+      severity: MEDIUM
+
+  formatting:
+    - check: "Prettier Compliance"
+      requirement: "No semicolons, single quotes, trailing commas, 100 char width, 2-space indent"
+      applies_to: "all_files"
+      severity: CRITICAL
+      command: "pnpm --filter @repo/pipeline exec prettier --write src/"
+
+    - check: "ESLint"
+      requirement: "No errors or warnings - run ESLint with auto-fix"
+      applies_to: "all_files"
+      severity: CRITICAL
+      command: "pnpm --filter @repo/pipeline exec eslint --fix src/"
+
+# Acceptance criteria mapping to code review items
+acceptance_criteria:
+  - ac_id: "AC-1"
+    title: "ConcurrencyConfig schema with maxWorktrees defaults"
+    files_involved: ["FILE-1"]
+    review_items:
+      - item: "Zod schema defines maxWorktrees as z.number().int().min(1).max(3)"
+        checklist_id: "AC-1.1"
+      - item: "conflictPolicy field with 'reject' | 'queue' options"
+        checklist_id: "AC-1.2"
+      - item: "Per-worktree circuit breaker config (failureThreshold, recoveryTimeoutMs)"
+        checklist_id: "AC-1.3"
+      - item: "Default maxWorktrees: 1 preserves Phase 0 behavior"
+        checklist_id: "AC-1.4"
+        critical: true
+    test_coverage: >
+      Unit test validates schema parsing, defaults, and validation bounds
+
+  - ac_id: "AC-2"
+    title: "BullMQ Worker concurrency integration"
+    files_involved: ["FILE-9"]
+    review_items:
+      - item: "Worker initialized with concurrency: config.maxWorktrees"
+        checklist_id: "AC-2.1"
+        critical: true
+      - item: "Changing config.maxWorktrees from 1 to 2 enables 2 parallel jobs without code changes"
+        checklist_id: "AC-2.2"
+        critical: true
+      - item: "Worker lifecycle properly integrated with BullMQ queue"
+        checklist_id: "AC-2.3"
+    test_coverage: >
+      Integration test exercises concurrency=1 and concurrency=2 job dispatch
+
+  - ac_id: "AC-3"
+    title: "Isolated git worktree per story"
+    files_involved: ["FILE-4", "FILE-3", "FILE-8"]
+    review_items:
+      - item: "Worktree path format: <repo_root>/.worktrees/<storyId>-<timestamp>/"
+        checklist_id: "AC-3.1"
+        critical: true
+      - item: "Worktree created at dispatch time via git worktree add"
+        checklist_id: "AC-3.2"
+        critical: true
+      - item: "Worktree removed on completion or failure via git worktree remove"
+        checklist_id: "AC-3.3"
+        critical: true
+      - item: "Cleanup includes error handling (log but don't throw)"
+        checklist_id: "AC-3.4"
+    test_coverage: >
+      Integration test validates fs.existsSync before/after, git worktree list confirmation
+
+  - ac_id: "AC-4"
+    title: "ConcurrencyController slot acquisition"
+    files_involved: ["FILE-2", "FILE-6"]
+    review_items:
+      - item: "tryAcquireSlot(storyId) returns true when slot available"
+        checklist_id: "AC-4.1"
+        critical: true
+      - item: "tryAcquireSlot returns false when all slots occupied"
+        checklist_id: "AC-4.2"
+        critical: true
+      - item: "Slot registration tracked internally with story ID"
+        checklist_id: "AC-4.3"
+      - item: "activeSlots() method returns current count"
+        checklist_id: "AC-4.4"
+    test_coverage: >
+      Unit tests cover: slot acquisition, rejection, status after acquire/release
+
+  - ac_id: "AC-5"
+    title: "WorktreeConflictDetector overlap detection"
+    files_involved: ["FILE-5", "FILE-7"]
+    review_items:
+      - item: "checkConflict(incomingStory, activeStories) returns conflicting story IDs array"
+        checklist_id: "AC-5.1"
+        critical: true
+      - item: "Returns empty array when no overlap detected"
+        checklist_id: "AC-5.2"
+        critical: true
+      - item: "Path-prefix based detection (e.g., 'apps/api' vs 'apps/web')"
+        checklist_id: "AC-5.3"
+      - item: "Non-overlapping paths: 'apps/api/pipeline' and 'apps/web' return []"
+        checklist_id: "AC-5.4"
+    test_coverage: >
+      Unit tests cover: no overlap, single overlap, multiple overlaps, complex path prefixes
+
+  - ac_id: "AC-6"
+    title: "Conflict policy rejection and requeue"
+    files_involved: ["FILE-5", "FILE-9"]
+    review_items:
+      - item: "When conflictPolicy: 'reject', overlapping job is nacked"
+        checklist_id: "AC-6.1"
+        critical: true
+      - item: "Nacked job requeued with delay (BullMQ native feature)"
+        checklist_id: "AC-6.2"
+        critical: true
+      - item: "Warning logged via @repo/logger with conflicting story IDs"
+        checklist_id: "AC-6.3"
+      - item: "Log message includes current active stories for context"
+        checklist_id: "AC-6.4"
+    test_coverage: >
+      Integration test triggers overlap scenario, verifies nack and requeue behavior
+
+  - ac_id: "AC-7"
+    title: "TokenBucket concurrent safety"
+    files_involved: ["FILE-2", "FILE-9", "FILE-8"]
+    review_items:
+      - item: "PipelineModelRouter singleton shared across concurrent BullMQ workers"
+        checklist_id: "AC-7.1"
+        critical: true
+      - item: "TokenBucket.consume() is thread-safe under true concurrent workers"
+        checklist_id: "AC-7.2"
+        critical: true
+      - item: "No double-spend or silent bypass in budget tracking"
+        checklist_id: "AC-7.3"
+        critical: true
+      - item: "Integration test EC-5: 3 concurrent workers, verify total_consumed === 3*N"
+        checklist_id: "AC-7.4"
+        critical: true
+    test_coverage: >
+      Integration test with real BullMQ concurrency: 3, real Redis, high iteration count
+
+  - ac_id: "AC-8"
+    title: "Per-worktree circuit breaker isolation"
+    files_involved: ["FILE-1", "FILE-4", "FILE-2"]
+    review_items:
+      - item: "Per-worktree NodeCircuitBreaker instantiated with explicit thresholds"
+        checklist_id: "AC-8.1"
+        critical: true
+      - item: "failureThreshold from ConcurrencyConfig applied to each breaker"
+        checklist_id: "AC-8.2"
+      - item: "Breaker open on one worktree does NOT affect other active worktrees"
+        checklist_id: "AC-8.3"
+        critical: true
+      - item: "Circuit breaker state scoped to story/worktree, not global"
+        checklist_id: "AC-8.4"
+    test_coverage: >
+      Unit test: one breaker opens, others remain closed. Integration test: EC-4 scenario
+
+  - ac_id: "AC-9"
+    title: "Non-blocking worktree cleanup"
+    files_involved: ["FILE-4", "FILE-8"]
+    review_items:
+      - item: "Cleanup called on story completion/failure is non-blocking"
+        checklist_id: "AC-9.1"
+        critical: true
+      - item: "git worktree remove errors are caught and logged"
+        checklist_id: "AC-9.2"
+      - item: "@repo/logger used for outcome logging"
+        checklist_id: "AC-9.3"
+      - item: "Dispatcher continues regardless of cleanup success"
+        checklist_id: "AC-9.4"
+    test_coverage: >
+      Unit test: cleanup throws, verify story completes, slot released. Integration: EC-3
+
+  - ac_id: "AC-10"
+    title: "Integration test: 2 concurrent stories dispatch to checkpoint"
+    files_involved: ["FILE-8"]
+    review_items:
+      - item: "Real Redis instance running (REDIS_TEST_URL env var)"
+        checklist_id: "AC-10.1"
+        critical: true
+      - item: "Real git repo with two distinct story directories"
+        checklist_id: "AC-10.2"
+        critical: true
+      - item: "Two jobs dispatched simultaneously via BullMQ"
+        checklist_id: "AC-10.3"
+      - item: "Both reach first checkpoint independently"
+        checklist_id: "AC-10.4"
+      - item: "No file conflicts or interference between worktrees"
+        checklist_id: "AC-10.5"
+      - item: "Both worktrees cleaned up after completion"
+        checklist_id: "AC-10.6"
+    test_coverage: >
+      Full integration test covering happy path HP-1 from test plan
+
+  - ac_id: "AC-11"
+    title: "Integration test: slot saturation and delayed dispatch"
+    files_involved: ["FILE-8"]
+    review_items:
+      - item: "Cannot dispatch when maxWorktrees concurrent slots are occupied"
+        checklist_id: "AC-11.1"
+        critical: true
+      - item: "Incoming job delayed when all slots full"
+        checklist_id: "AC-11.2"
+        critical: true
+      - item: "Job eventually dispatches when slot frees"
+        checklist_id: "AC-11.3"
+        critical: true
+      - item: "Slot count transitions: maxWorktrees -> max+1 -> maxWorktrees"
+        checklist_id: "AC-11.4"
+    test_coverage: >
+      Integration test covering HP-2 from test plan
+
+  - ac_id: "AC-12"
+    title: "Regression test: maxWorktrees: 1 identical to APIP-0020"
+    files_involved: ["FILE-8"]
+    review_items:
+      - item: "maxWorktrees defaults to 1"
+        checklist_id: "AC-12.1"
+        critical: true
+      - item: "Setting maxWorktrees: 1 produces single-story serial behavior"
+        checklist_id: "AC-12.2"
+        critical: true
+      - item: "activeSlots never exceeds 1 during execution"
+        checklist_id: "AC-12.3"
+        critical: true
+      - item: "No behavioral change vs APIP-0020 when concurrency: 1"
+        checklist_id: "AC-12.4"
+    test_coverage: >
+      Regression integration test covering HP-2 from test plan
+
+# Testing requirements
+testing:
+  unit_tests:
+    - file: "src/__tests__/unit/concurrency-controller.test.ts"
+      minimum_coverage: 85%
+      test_cases:
+        - "Slot acquisition when available"
+        - "Slot rejection when full"
+        - "Active slot count tracking"
+        - "Slot release and reuse"
+        - "Status/metrics reporting"
+
+    - file: "src/__tests__/unit/worktree-conflict-detector.test.ts"
+      minimum_coverage: 80%
+      test_cases:
+        - "No conflict for non-overlapping paths"
+        - "Detect conflict for overlapping prefixes"
+        - "Multiple story scenarios"
+        - "Edge cases: empty paths, root paths"
+        - "Case sensitivity handling"
+
+  integration_tests:
+    - file: "src/__tests__/integration/concurrent-dispatch.test.ts"
+      minimum_coverage: 75%
+      prerequisites:
+        - "Redis instance running (REDIS_TEST_URL env)"
+        - "Git 2.27+ with identity configured"
+        - "Writable .worktrees directory"
+      test_cases:
+        - "Happy Path HP-1: 2 concurrent stories, checkpoint reached, completion"
+        - "Happy Path HP-2: maxWorktrees: 1 regression test"
+        - "Happy Path HP-3: Worktree lifecycle (create, use, remove)"
+        - "Happy Path HP-4: Singleton router shared across workers"
+        - "Error Case EC-1: All slots occupied, rejection"
+        - "Error Case EC-2: Conflict rejection and requeue"
+        - "Error Case EC-3: Cleanup failure non-blocking"
+        - "Error Case EC-4: Per-worktree circuit breaker isolation"
+        - "Error Case EC-5: TokenBucket concurrent safety"
+      timeout_ms: 30000
+
+  test_environment:
+    setup: "beforeAll configures Redis, git identity, creates clean repo"
+    teardown: "afterAll stops Redis, removes test worktrees, cleans git state"
+    coverage_command: "pnpm --filter @repo/pipeline test:coverage"
+    minimum_overall_coverage: 45%
+    coverage_includes:
+      - "src/supervisor/"
+      - "src/conflicts/"
+      - "src/__tests__/"
+
+# Import and dependency checks
+dependencies:
+  required_imports:
+    - pattern: "^import { z } from 'zod'"
+      applies_to: ["FILE-1", "FILE-2", "FILE-4", "FILE-5"]
+      must_exist: true
+
+    - pattern: "^import { logger } from '@repo/logger'"
+      applies_to: ["FILE-2", "FILE-4", "FILE-5", "FILE-9"]
+      must_exist: true
+
+    - pattern: "BullMQ"
+      applies_to: ["FILE-9"]
+      must_exist: true
+
+    - pattern: "NodeCircuitBreaker"
+      applies_to: ["FILE-4", "FILE-2"]
+      must_exist: true
+
+  forbidden_patterns:
+    - pattern: "console\\.(log|error|warn)"
+      severity: CRITICAL
+      message: "Use @repo/logger instead"
+
+    - pattern: "interface.*{.*}"
+      severity: CRITICAL
+      applies_to: ["FILE-1", "FILE-2", "FILE-4", "FILE-5"]
+      message: "Use Zod schemas with z.infer<>, not TypeScript interfaces"
+
+    - pattern: "export default"
+      severity: HIGH
+      message: "Use named exports, not default exports"
+
+    - pattern: "export \\{ .* from"
+      severity: HIGH
+      applies_to: ["FILE-2", "FILE-4", "FILE-5"]
+      message: "No barrel files - import directly from source"
+
+# Performance and safety checks
+performance:
+  concurrency_controller:
+    - check: "Slot acquisition is O(1)"
+      applies_to: ["FILE-2"]
+      requirement: "Use Map<storyId, slotInfo> for O(1) lookup"
+
+    - check: "No unbounded memory growth in active slots"
+      applies_to: ["FILE-2"]
+      requirement: "Cleanup removes entries from tracking structures"
+
+    - check: "File conflict check is bounded"
+      applies_to: ["FILE-5"]
+      requirement: "Path-prefix matching, not full file diff comparison"
+
+  git_operations:
+    - check: "git worktree commands timeout"
+      applies_to: ["FILE-4"]
+      requirement: "Spawn child_process with timeout (e.g., 30s)"
+
+    - check: "Worktree cleanup doesn't block main loop"
+      applies_to: ["FILE-4"]
+      requirement: "Non-blocking cleanup via setImmediate or promise"
+
+# Security and isolation checks
+security:
+  concurrency:
+    - check: "Race condition prevention in slot tracking"
+      applies_to: ["FILE-2"]
+      requirement: "Synchronous slot operations (not async/await based)"
+
+    - check: "Git worktree path injection prevention"
+      applies_to: ["FILE-4", "FILE-3"]
+      requirement: "Sanitize storyId, use path.join for safe concatenation"
+
+    - check: "No sensitive data in logs"
+      applies_to: ["FILE-2", "FILE-4", "FILE-5", "FILE-9"]
+      requirement: "Log story IDs and states, not full config or credentials"
+
+    - check: "Circuit breaker doesn't leak internal state"
+      applies_to: ["FILE-8"]
+      requirement: "Only expose getState(), not raw thresholds or counters"
+
+# Git and .gitignore checks
+git_checks:
+  - file: ".gitignore"
+    requirement: "Contains .worktrees/ entry to prevent committing git worktrees"
+    severity: CRITICAL
+    checklist_id: "FILE-10"
+
+# Configuration validation
+configuration:
+  concurrency_config_schema:
+    - field: "maxWorktrees"
+      type: "number"
+      validation: "int, min: 1, max: 3"
+      default: 1
+
+    - field: "conflictPolicy"
+      type: "string"
+      validation: "'reject' | 'queue'"
+      default: "'queue'"
+
+    - field: "circuitBreaker.failureThreshold"
+      type: "number"
+      validation: "int, min: 1"
+      default: 5
+
+    - field: "circuitBreaker.recoveryTimeoutMs"
+      type: "number"
+      validation: "int, min: 100"
+      default: 30000
+
+# Pre-commit and pre-push validation
+quality_gates:
+  pre_commit:
+    - command: "pnpm --filter @repo/pipeline exec prettier --check src/"
+      description: "Code formatting validation"
+      fail_on_error: true
+
+    - command: "pnpm --filter @repo/pipeline exec eslint src/"
+      description: "Linting validation"
+      fail_on_error: true
+
+    - command: "pnpm --filter @repo/pipeline exec tsc --noEmit"
+      description: "TypeScript compilation"
+      fail_on_error: true
+
+  pre_push:
+    - command: "pnpm --filter @repo/pipeline test"
+      description: "Unit tests pass"
+      fail_on_error: true
+
+    - command: "pnpm --filter @repo/pipeline test:coverage -- --reporter=json"
+      description: "Coverage report generation"
+      fail_on_error: false
+
+# Code review notes and commentary
+review_notes:
+  critical_areas:
+    - title: "TokenBucket Race Condition"
+      area: "FILE-7, FILE-8 (AC-7)"
+      description: >
+        The TokenBucket is shared across concurrent BullMQ workers.
+        Must test with real BullMQ concurrency (not Promise.all).
+        EC-5 integration test is critical to prevent double-spend.
+      recommendation: >
+        Run integration test with REDIS_TEST_URL pointing to real Redis instance.
+        Use concurrency: 3 in test config to force true parallelism.
+
+    - title: "Git Worktree Identity Configuration"
+      area: "FILE-4 (AC-3)"
+      description: >
+        git worktree creation may fail in CI if git user.name/user.email not set.
+        Required before any git operations.
+      recommendation: >
+        In test setup (beforeAll), run:
+        git config user.name "APIP-Test" && git config user.email "test@example.com"
+
+    - title: "Stale Worktree Cleanup"
+      area: "FILE-4, FILE-8 (AC-3, AC-9)"
+      description: >
+        If test fails mid-execution, worktrees may be left behind.
+        Future runs could hit path collisions or space issues.
+      recommendation: >
+        In test setup (beforeAll), enumerate .worktrees/ and remove any stale entries.
+        Use git worktree list to validate integrity.
+
+    - title: "Circuit Breaker State Scope"
+      area: "FILE-2, FILE-4 (AC-8)"
+      description: >
+        Each worktree must have its own isolated circuit breaker instance.
+        Verify no shared state between stories.
+      recommendation: >
+        In ConcurrencyController, maintain Map<storyId, CircuitBreaker>.
+        Each slot stores both state and breaker instance.
+
+    - title: "Conflict Detection Path Sensitivity"
+      area: "FILE-5, FILE-7 (AC-5)"
+      description: >
+        Path-prefix matching must be consistent (case, normalization).
+        'apps/api' vs 'apps/API' could be missed on case-sensitive filesystems.
+      recommendation: >
+        Normalize paths via path.normalize and use case-insensitive comparison
+        if targeting cross-platform deployments.
+
+  testing_strategy:
+    - title: "Integration Test Sequencing"
+      description: >
+        Tests must run sequentially (fileParallelism: false in vitest.config.ts)
+        to prevent concurrent Redis/git conflicts across test files.
+
+    - title: "Real Redis Requirement"
+      description: >
+        BullMQ tests require real Redis instance, not mocking.
+        REDIS_TEST_URL env var must be set. Use docker-compose or local Redis.
+
+    - title: "Timeout Configuration"
+      description: >
+        Integration tests may take 20-30s due to git operations.
+        Ensure testTimeout: 30000 in vitest.config.ts.
+
+  reusability_considerations:
+    - title: "Circuit Breaker Pattern"
+      description: >
+        NodeCircuitBreaker is reused from APIP-3040.
+        Verify compatible ThresholdConfig interface.
+
+    - title: "Slot Tracking Pattern"
+      description: >
+        ConcurrencyController slot map could be adapted for future
+        non-worktree concurrency models (e.g., thread pools).
+
+    - title: "Conflict Detection Extensibility"
+      description: >
+        Current path-prefix detection is suitable for Phase 3.
+        Future versions (APIP-1020+) may use ChangeSpec-based detection.
+        Design with extension points in mind.
+
+# Success criteria summary
+success_criteria:
+  - "All 12 ACs verified with passing tests"
+  - "TypeScript compilation: zero errors"
+  - "ESLint: zero errors, zero warnings"
+  - "Prettier: all files formatted"
+  - "Test coverage: minimum 45% overall, 75%+ per test file"
+  - "Integration tests pass with real Redis and git"
+  - "No console.log() usage"
+  - "All exports are named (no defaults)"
+  - "@repo/logger used for all logging"
+  - ".gitignore includes .worktrees/"
+  - "Code review checklist items cleared"
+  - "Ready for merge to main after code review approval"
+
+# Deferred items (out of scope for this story)
+deferred:
+  - "APIP-1020: ChangeSpec-based conflict detection"
+  - "APIP-2020: UI observability for concurrent story status"
+  - "APIP-3040: Model affinity / smart routing"
+  - "APIP-4000+: Concurrency higher than 3 worktrees"
+  - "Distributed supervisor processes (multiple Node.js)"
+  - "Automatic concurrency scaling based on system load"
+
+---
