@@ -1,0 +1,38 @@
+schema: 1
+story_id: APIP-3020
+timestamp: '2026-03-02T12:00:00Z'
+failure_source: failed-qa
+iteration: 1
+issue_id: QA-001
+issue_severity: critical
+root_cause: "Confidence threshold constants (CONFIDENCE_THRESHOLDS) were implemented with different values than specified in AC-8 without documenting the deviation. Story specifies 1-19→low, 20-49→medium, 50+→high. Implementation has 1-9→low, 10-29→medium, 30+→high."
+fix_status: complete
+fix_completed_at: '2026-03-01T00:00:00Z'
+issues_fixed:
+  - id: 1
+    file: packages/backend/orchestrator/src/graphs/pattern-miner.ts
+    lines: "38-42"
+    issue: "Confidence threshold constants deviate from AC-8 specification without documented justification"
+    severity: critical
+    resolution: "Updated CONFIDENCE_THRESHOLDS from { HIGH: 30, MEDIUM: 10, LOW: 1 } to { HIGH: 50, MEDIUM: 20, LOW: 1 }. Also updated JSDoc and assignConfidenceLevel comment to reflect corrected values."
+  - id: 2
+    file: packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.test.ts
+    lines: "various"
+    issue: "Unit tests HP-1 through HP-4 and ED-1/ED-2 validate against implemented thresholds (10, 30) rather than specified thresholds (20, 50)"
+    severity: critical
+    resolution: "Updated HP-3 boundary from 9 to 19, HP-3b from MEDIUM=10 to MEDIUM=20, HP-4 boundary from 29 to 49, HP-4b from HIGH=30 to HIGH=50. Updated ED-1 boundary from 9 to 19, ED-2 boundary from 29 to 49. Updated constants assertion test from HIGH=30/MEDIUM=10 to HIGH=50/MEDIUM=20."
+focus_files:
+  - packages/backend/orchestrator/src/graphs/pattern-miner.ts
+  - packages/backend/orchestrator/src/graphs/__tests__/pattern-miner.test.ts
+downstream_impact: "Stories APIP-3040, APIP-3050, APIP-3060 depend on model affinity confidence levels and will experience different routing behavior once thresholds are corrected"
+fix_priority: "critical"
+test_results:
+  suite: "pnpm test --filter=@repo/orchestrator"
+  outcome: pass
+  total_tests: 3821
+  passed: 3791
+  skipped: 30
+  failed: 0
+  pattern_miner_tests: 27
+next_steps:
+  - "Request QA re-verification of AC-8"

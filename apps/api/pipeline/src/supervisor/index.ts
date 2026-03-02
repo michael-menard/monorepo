@@ -9,11 +9,13 @@
  *
  * APIP-0020: Supervisor Loop (Plain TypeScript)
  * APIP-2030: Graceful Shutdown, Health Check, and Deployment Hardening
+ * APIP-2010: Blocker Notification wiring (Worker event listeners, onCircuitOpen callback)
  */
 
 import { Worker, type Job } from 'bullmq'
 import { Redis } from 'ioredis'
 import { logger } from '@repo/logger'
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import {
   PipelineJobDataSchema,
   type PipelineSupervisorConfig,
@@ -22,6 +24,7 @@ import {
 import { dispatchJob, getCircuitBreakerSummary } from './dispatch-router.js'
 import { createHealthServer, type HealthServer } from './health/server.js'
 import { registerDrainHandlers } from './drain/index.js'
+import { createBlockerNotificationModule } from './blocker-notification/index.js'
 
 // Use ioredis Redis type directly — same underlying type as RedisClient in lego-api
 export type RedisClient = Redis
@@ -44,6 +47,10 @@ export type { PipelineSupervisorConfig }
  *   AC-5: Health server lifecycle — starts before BullMQ Worker, stops after Worker.close().
  *   AC-6: SIGINT triggers identical drain behavior to SIGTERM.
  *
+ * APIP-2010:
+ *   AC-9: Worker 'failed' and 'completed' event listeners registered in start().
+ *   AC-11: Webhook calls are fire-and-forget (not awaited from drain path).
+ *
  * Usage:
  *   const supervisor = new PipelineSupervisor(redisClient, config)
  *   await supervisor.start()
@@ -54,6 +61,8 @@ export class PipelineSupervisor {
   private readonly redisClient: RedisClient
   private readonly config: PipelineSupervisorConfig
 
+  private readonly db: NodePgDatabase<any> | null
+
   // APIP-2030: Drain mode state
   private _draining = false
   private _activeJobs = 0
@@ -62,9 +71,15 @@ export class PipelineSupervisor {
   // APIP-2030: Health server
   private healthServer: HealthServer | null = null
 
-  constructor(redisClient: RedisClient, config: Partial<PipelineSupervisorConfig> = {}) {
+  constructor(
+    redisClient: RedisClient,
+    config: Partial<PipelineSupervisorConfig> = {},
+
+    db: NodePgDatabase<any> | null = null,
+  ) {
     this.redisClient = redisClient
     this.config = PipelineSupervisorConfigSchema.parse(config)
+    this.db = db
     this.startTimeMs = Date.now()
 
     // Warn if drain timeout < stage timeout (APIP-2030 risk)
@@ -100,6 +115,7 @@ export class PipelineSupervisor {
    *
    * APIP-2030: Health server starts BEFORE BullMQ Worker (HP-6).
    * APIP-2030: Registers SIGTERM/SIGINT drain handlers (idempotent).
+   * APIP-2010: Registers Worker 'failed' and 'completed' event listeners for blocker tracking.
    */
   async start(): Promise<void> {
     // AC-2/ED-2: idempotency guard — do not create a second Worker if already started
@@ -127,6 +143,10 @@ export class PipelineSupervisor {
     }))
     await this.healthServer.start()
 
+    // APIP-2010: Create BlockerNotificationModule if db is available
+    const notificationModule =
+      this.db !== null ? createBlockerNotificationModule(this.db, this.config) : null
+
     // AC-2: concurrency: 1 enforces single-story-at-a-time constraint (Phase 0)
     this.worker = new Worker(
       this.config.queueName,
@@ -134,7 +154,6 @@ export class PipelineSupervisor {
         await this.processJob(job)
       },
       {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         connection: this.redisClient as any,
         concurrency: 1,
       },
@@ -142,6 +161,20 @@ export class PipelineSupervisor {
 
     this.worker.on('completed', job => {
       logger.info('Worker job completed', { jobId: job.id })
+
+      // APIP-2010 AC-4, AC-9: Resolve blocker on successful completion (fire-and-forget)
+      if (notificationModule !== null) {
+        const storyId = job.data?.storyId as string | undefined
+        if (storyId) {
+          notificationModule.resolveBlocker(storyId).catch(err => {
+            logger.warn('blocker_resolve_failed', {
+              event: 'blocker_resolve_failed',
+              storyId,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          })
+        }
+      }
     })
 
     this.worker.on('failed', (job, error) => {
@@ -149,6 +182,23 @@ export class PipelineSupervisor {
         jobId: job?.id,
         error: error instanceof Error ? error.message : String(error),
       })
+
+      // APIP-2010 AC-1, AC-2, AC-9: Insert blocker on PERMANENT failure (fire-and-forget)
+      // Only insert on final failure (attemptsMade >= maxAttempts), not transient retries
+      if (notificationModule !== null && job !== undefined) {
+        const storyId = job.data?.storyId as string | undefined
+        const isFinalFailure = job.attemptsMade >= (job.opts?.attempts ?? 1)
+
+        if (storyId && isFinalFailure) {
+          notificationModule.insertBlocker(storyId, error, job.data).catch(err => {
+            logger.warn('blocker_insert_failed', {
+              event: 'blocker_insert_failed',
+              storyId,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          })
+        }
+      }
     })
 
     this.worker.on('error', error => {
@@ -218,10 +268,15 @@ export class PipelineSupervisor {
    * Process a single BullMQ job. Delegates to dispatch router.
    *
    * APIP-2030: Tracks active job count for drain mode.
+   * APIP-2010: Passes onCircuitOpen callback to dispatchJob().
    */
   private async processJob(job: Job): Promise<void> {
     // APIP-2030: Increment active job counter
     this._activeJobs++
+
+    // APIP-2010: Create BlockerNotificationModule if db is available (for onCircuitOpen)
+    const notificationModule =
+      this.db !== null ? createBlockerNotificationModule(this.db, this.config) : null
 
     try {
       // Validate job payload with Zod before dispatching (AC-2)
@@ -237,7 +292,22 @@ export class PipelineSupervisor {
         throw parseResult.error
       }
 
-      await dispatchJob(job, parseResult.data, this.config)
+      // APIP-2010 AC-3, AC-9: Pass onCircuitOpen callback to dispatchJob (fire-and-forget)
+      const onCircuitOpen =
+        notificationModule !== null
+          ? (stage: string, storyId: string) => {
+              notificationModule.insertDependencyBlocker(storyId, stage).catch(err => {
+                logger.warn('circuit_blocker_insert_failed', {
+                  event: 'circuit_blocker_insert_failed',
+                  storyId,
+                  stage,
+                  error: err instanceof Error ? err.message : String(err),
+                })
+              })
+            }
+          : undefined
+
+      await dispatchJob(job, parseResult.data, this.config, undefined, onCircuitOpen)
     } finally {
       // APIP-2030: Always decrement, even on error
       this._activeJobs = Math.max(0, this._activeJobs - 1)
@@ -305,8 +375,7 @@ export function getOrCreateRedisClient(): Redis {
  * Bootstrap the supervisor as a standalone Node.js process.
  *
  * APIP-2030: Health server and drain handlers are registered by supervisor.start().
- * The SIGTERM/SIGINT handlers in bootstrap are removed — registerDrainHandlers()
- * in start() handles signal registration with proper drain logic.
+ * APIP-2010: Reads notification env vars and passes to config.
  */
 export async function bootstrap(): Promise<void> {
   const redisClient = getOrCreateRedisClient()
@@ -321,6 +390,12 @@ export async function bootstrap(): Promise<void> {
       : undefined,
     healthPort: process.env.SUPERVISOR_HEALTH_PORT
       ? parseInt(process.env.SUPERVISOR_HEALTH_PORT, 10)
+      : undefined,
+    // APIP-2010 AC-8: Notification config from env vars
+    webhookUrl: process.env.PIPELINE_NOTIFICATION_WEBHOOK_URL ?? undefined,
+    slackToken: process.env.NOTIFICATION_SLACK_TOKEN ?? undefined,
+    notificationThreshold: process.env.PIPELINE_NOTIFICATION_THRESHOLD
+      ? parseInt(process.env.PIPELINE_NOTIFICATION_THRESHOLD, 10)
       : undefined,
   })
 
