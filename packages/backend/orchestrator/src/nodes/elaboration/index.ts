@@ -99,8 +99,22 @@ export {
   StructurerConfigSchema,
   ChangeOutlineItemSchema,
   StructurerResultSchema,
+  AffinityConfigSchema,
   // Types
   type StructurerConfig,
   type ChangeOutlineItem,
   type StructurerResult,
+  type AffinityConfig,
 } from './structurer.js'
+
+export {
+  // Affinity reader (APIP-3050)
+  readAffinityProfiles,
+  extractFileType,
+  // Schemas
+  AffinityGuidanceSchema,
+  // Types
+  type AffinityGuidance,
+  type AffinityQueryItem,
+  type AffinityReadResult,
+} from './affinity-reader.js'

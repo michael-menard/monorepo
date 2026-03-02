@@ -83,6 +83,8 @@ export const ElaborationConfigSchema = z.object({
   storyRepo: z.unknown().optional(),
   /** Workflow repository for DB persistence (optional, injected) */
   workflowRepo: z.unknown().optional(),
+  /** Affinity DB client for model affinity queries (APIP-3050 AC-10, injected) */
+  affinityDb: z.unknown().optional(),
   /** Structurer node configuration (AC-8) */
   structurerConfig: StructurerConfigSchema.default({}),
 })
@@ -1034,7 +1036,7 @@ export function createElaborationGraph(config: Partial<ElaborationConfig> = {}) 
     .addNode('aggregate_findings', createAggregateNode())
 
     // Structurer node (AC-5)
-    .addNode('structurer', createStructurerNode(fullConfig.structurerConfig))
+    .addNode('structurer', createStructurerNode(fullConfig.structurerConfig, fullConfig.affinityDb))
 
     // Update readiness node
     .addNode('update_readiness', createUpdateReadinessNode())
