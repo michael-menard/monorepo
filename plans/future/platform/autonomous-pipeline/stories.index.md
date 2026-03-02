@@ -16,7 +16,7 @@
 | 3 | Learning System & Optimization | 5 | 0 | 0 | 1 | in-progress |
 | 4 | Long-Term Quality | 3 | 0 | 0 | 0 | backlog |
 | 5 | Pipeline Resilience | 3 | 3 | 0 | 0 | backlog |
-| **TOTAL** | | **35** | **9** | **1** | **5** | |
+| **TOTAL** | | **35** | **9** | **1** | **6** | |
 
 ## Phase 0: Foundation (11 stories)
 
@@ -35,7 +35,7 @@ Minimal autonomous loop: Work queue, supervisor loop (plain TypeScript), LangGra
 | APIP-5006 | LangGraph Server Infrastructure Baseline | none | 🔴 Failed Code Review |
 | APIP-5007 | Database Schema Versioning and Migration Strategy | APIP-0010 | Created |
 
-## Phase 1: Full Worker Graphs (9 stories)
+## Phase 1: Full Worker Graphs (10 stories)
 
 Structured stories, diff planner, implementation loop, review, QA, merge, documentation graphs, E2E testing, and minimal operator CLI.
 
@@ -47,7 +47,7 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1032 | Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits | APIP-1031, APIP-1020, APIP-0040 | Backlog |
 | APIP-1040 | Documentation Graph (Post-Merge) | APIP-1032 | In Progress |
 | APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | ✅ UAT |
-| APIP-1060 | QA Graph with Autonomous Verdict | none | ✅ uat |
+| APIP-1060 | QA Graph with Autonomous Verdict | none | ✅ UAT |
 | APIP-1070 | Merge Graph with Learnings Extraction | none | In Elaboration |
 | APIP-5002 | E2E Test Plan and Playwright Framework Setup | APIP-0010, APIP-1010, APIP-1020, APIP-1032, APIP-1070 | Ready to Work |
 | APIP-5005 | Minimal Operator Visibility CLI | APIP-0010, APIP-1070 | In Elaboration |
