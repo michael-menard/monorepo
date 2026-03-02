@@ -1,0 +1,166 @@
+schema: 1
+story_id: APIP-4070
+phase: implementation
+iteration: 0
+timestamp: '2026-03-02T21:01:00Z'
+overall_status: PASS
+e2e_status: EXEMPT
+e2e_exempt_reason: story_type is backend-only (frontend_impacted=false); no Playwright tests applicable per ADR-006
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    evidence_type: file
+    description: WeeklyReportConfigSchema defined in __types__/index.ts with lookbackDays, minHistoryWeeks, cronExpression fields
+    files:
+      - packages/backend/orchestrator/src/nodes/reporting/__types__/index.ts
+
+  - ac_id: AC-2
+    status: PASS
+    evidence_type: file
+    description: WeeklyPipelineSummarySchema defined with all section sub-schemas (ThroughputResultSchema, CostResultSchema, ModelPerformanceResultSchema, CodebaseHealthResultSchema, DataUnavailableResultSchema)
+    files:
+      - packages/backend/orchestrator/src/nodes/reporting/__types__/index.ts
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_type: test
+    description: aggregateThroughput HP-1 (4 completed + 1 blocked = success_rate=0.8) and EC-1 (42P01 returns data_unavailable) pass
+    test_results:
+      - test: 'aggregateThroughput > HP-1: returns correct throughput when table exists with data'
+        status: PASS
+      - test: 'aggregateThroughput > EC-1: returns data_unavailable on 42P01 (table missing)'
+        status: PASS
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_type: test
+    description: aggregateCosts HP-3 (total_usd + by_provider breakdown) and ED-5 (zero rows returns zeros) pass
+    test_results:
+      - test: 'aggregateCosts > HP-3: returns total_usd and by_provider breakdown'
+        status: PASS
+      - test: 'aggregateCosts > ED-5: returns zero totals when no rows'
+        status: PASS
+
+  - ac_id: AC-5
+    status: PASS
+    evidence_type: test
+    description: aggregateModelPerformance HP-4 (mocked affinity row) and EC-2 (42P01 returns data_unavailable) pass
+    test_results:
+      - test: 'aggregateModelPerformance > HP-4: returns by_model breakdown with mocked affinity row'
+        status: PASS
+      - test: 'aggregateModelPerformance > EC-2: returns data_unavailable on 42P01'
+        status: PASS
+
+  - ac_id: AC-6
+    status: PASS
+    evidence_type: test
+    description: aggregateCodebaseHealth HP-5 (2 snapshots delta), EC-3/EC-4 (<2 snapshots returns data_unavailable) pass
+    test_results:
+      - test: 'aggregateCodebaseHealth > HP-5: returns delta_from_baseline from 2 snapshots'
+        status: PASS
+      - test: 'aggregateCodebaseHealth > EC-3/EC-4: returns data_unavailable when fewer than 2 snapshots'
+        status: PASS
+      - test: 'aggregateCodebaseHealth > EC-3: returns data_unavailable when table is missing (42P01)'
+        status: PASS
+
+  - ac_id: AC-7
+    status: PASS
+    evidence_type: test
+    description: deriveTopImprovementAndConcern HP-6 (human-readable strings) and ED-3 (all unavailable returns null,null) pass
+    test_results:
+      - test: 'deriveTopImprovementAndConcern > HP-6: returns human-readable strings for high-throughput week'
+        status: PASS
+      - test: 'deriveTopImprovementAndConcern > ED-3: returns null,null when all sections unavailable'
+        status: PASS
+
+  - ac_id: AC-8
+    status: PASS
+    evidence_type: test
+    description: formatSlackMessage HP-7 (blocks[] structure assertions) and ED-2 (unavailable section renders italic text) pass
+    test_results:
+      - test: 'formatSlackMessage > HP-7: returns object with blocks array'
+        status: PASS
+      - test: 'formatSlackMessage > HP-7: includes header block'
+        status: PASS
+      - test: 'formatSlackMessage > HP-7: includes throughput data in blocks'
+        status: PASS
+      - test: 'formatSlackMessage > ED-2: renders italic unavailable text for missing sections'
+        status: PASS
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_type: test
+    description: triggerWeeklyReport HP-8 end-to-end happy path (all sections mocked, dispatch called, weekly_report_dispatched emitted) passes
+    test_results:
+      - test: 'triggerWeeklyReport > HP-8: full happy path — dispatches notification, emits weekly_report_dispatched'
+        status: PASS
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_type: test
+    description: ED-1 (all unavailable sections → no dispatch, weekly_report_skipped emitted) passes
+    test_results:
+      - test: 'triggerWeeklyReport > ED-1: skips dispatch when all sections return data_unavailable, emits no_data'
+        status: PASS
+
+  - ac_id: AC-11
+    status: DEFERRED
+    evidence_type: manual
+    description: Cron registration deferred to APIP-3090 stable interface (same pattern as APIP-4010 AC-10). Not implemented in this story.
+
+  - ac_id: AC-12
+    status: PASS
+    evidence_type: test
+    description: pnpm test weekly-report.test.ts PASS — 27 tests covering all HP/EC/ED cases
+    command_output: '27 tests passed (27)'
+    test_file: packages/backend/orchestrator/src/nodes/reporting/__tests__/weekly-report.test.ts
+
+  - ac_id: AC-13
+    status: PASS
+    evidence_type: test
+    description: Integration test with real DB — seeded wint.change_telemetry, dispatchNotification mocked, summary.throughput.stories_completed=4 matches seed count
+    command_output: '3 tests passed (3)'
+    test_file: packages/backend/orchestrator/src/nodes/reporting/__tests__/weekly-report.integration.test.ts
+
+  - ac_id: AC-14
+    status: PASS
+    evidence_type: command
+    description: Type check shows no errors in new reporting files (pre-existing unresolved module errors in worktree due to missing node_modules are pre-existing throughout the package). ESLint passes with 0 errors on all reporting files after auto-fix.
+    commands:
+      - command: tsc --noEmit
+        result: 'No errors in nodes/reporting/ or cron/constants.ts files'
+      - command: eslint packages/backend/orchestrator/src/nodes/reporting/ packages/backend/orchestrator/src/cron/constants.ts
+        result: '0 errors, 0 warnings'
+
+  - ac_id: AC-15
+    status: PASS
+    evidence_type: test
+    description: triggerWeeklyReport signature is triggerWeeklyReport(config, pool, dispatch, notificationConfig?) — injectability confirmed by unit test using vi.fn() mock without module-level stubbing
+    test_results:
+      - test: 'triggerWeeklyReport > AC-15: dispatch is injectable — no module-level stubbing needed'
+        status: PASS
+
+  - ac_id: AC-16
+    status: PASS
+    evidence_type: test
+    description: Lock-held scenario (mock returns false) causes immediate return without calling aggregation functions. LOCK_KEYS.WEEKLY_REPORT=42_002 added to cron/constants.ts.
+    test_results:
+      - test: 'triggerWeeklyReport > AC-16: skips immediately when lock is held, emits lock_held'
+        status: PASS
+    files:
+      - packages/backend/orchestrator/src/cron/constants.ts
+
+files_created:
+  - packages/backend/orchestrator/src/nodes/reporting/__types__/index.ts
+  - packages/backend/orchestrator/src/nodes/reporting/weekly-report.ts
+  - packages/backend/orchestrator/src/nodes/reporting/__tests__/weekly-report.test.ts
+  - packages/backend/orchestrator/src/nodes/reporting/__tests__/weekly-report.integration.test.ts
+
+files_modified:
+  - packages/backend/orchestrator/src/cron/constants.ts
+
+test_summary:
+  unit_tests: 27 passed / 27 total
+  integration_tests: 3 passed / 3 total
+  e2e_tests: EXEMPT (no frontend, no Playwright applicable)
