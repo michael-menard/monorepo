@@ -10,6 +10,7 @@ loadEnv({ path: resolve(rootDir, '.env') })
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
+import { logger as appLogger } from '@repo/logger'
 // eslint-disable-next-line import/order
 import {
   initializeTracing,
@@ -116,7 +117,7 @@ app.notFound(c => {
 
 // Error handler
 app.onError((err, c) => {
-  console.error('Unhandled error:', err)
+  appLogger.error('Unhandled error:', err)
   return c.json({ error: 'Internal server error' }, 500)
 })
 
@@ -135,4 +136,4 @@ export default {
 }
 
 // Log startup
-console.log(`🚀 lego-api running on http://localhost:${port}`)
+appLogger.info(`lego-api running on http://localhost:${port}`)
