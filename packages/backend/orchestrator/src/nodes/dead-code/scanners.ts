@@ -27,6 +27,16 @@ import {
 export type ExecFn = (cmd: string) => Promise<string>
 
 /**
+ * Validate that a path contains only safe characters for shell interpolation.
+ * Rejects paths with shell metacharacters that could enable command injection.
+ */
+export function validateSafePath(path: string): void {
+  if (!/^[a-zA-Z0-9_\-./@ ]+$/.test(path)) {
+    throw new Error(`Unsafe path rejected: "${path}" contains shell metacharacters`)
+  }
+}
+
+/**
  * Check if a file path matches any of the given exclude patterns.
  * Patterns are simplified glob-style: ** matches any path segment.
  */
@@ -220,6 +230,7 @@ export async function scanUnusedDeps(
   repoRoot: string = process.cwd(),
 ): Promise<UnusedDepFinding[]> {
   // Find all package.json files (excluding node_modules)
+  validateSafePath(repoRoot)
   let packageJsonPaths: string[] = []
 
   try {
@@ -243,7 +254,8 @@ export async function scanUnusedDeps(
 
     let depcheckOutput: string
     try {
-      depcheckOutput = await execFn(`npx depcheck ${packageDir} --json`)
+      validateSafePath(packageDir)
+      depcheckOutput = await execFn(`npx depcheck "${packageDir}" --json`)
     } catch (err) {
       // depcheck exits non-zero when it finds unused deps
       if (

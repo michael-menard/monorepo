@@ -2,14 +2,16 @@
  * Dead Code Reaper — Runner
  *
  * Orchestrates the full Dead Code Reaper run:
- * 1. Acquires pg_try_advisory_lock (skips if held by another instance)
- * 2. Runs all three scanners concurrently via Promise.all
- * 3. Micro-verifies each safe candidate sequentially
- * 4. Filters false-positives
- * 5. Returns DeadCodeReaperResult
+ * 1. Runs all three scanners concurrently via Promise.all
+ * 2. Micro-verifies each safe candidate sequentially
+ * 3. Filters false-positives
+ * 4. Returns DeadCodeReaperResult
  *
  * Wraps the full operation with withTimeout from runner/timeout.ts.
  * Catches NodeTimeoutError and converts to status:'partial'.
+ *
+ * Advisory lock is handled by the cron job (dead-code-reaper.job.ts),
+ * not here — matching the pattern-miner.job.ts pattern.
  *
  * APIP-4050: Dead Code Reaper — Monthly Cron Analysis and CLEANUP Story Generation
  */
@@ -17,8 +19,6 @@
 import { logger } from '@repo/logger'
 import { withTimeout } from '../../runner/timeout.js'
 import { NodeTimeoutError } from '../../runner/errors.js'
-import { LOCK_KEYS } from '../../cron/constants.js'
-import { getCronDbClient } from '../../cron/db.js'
 import type { ExecFn } from './scanners.js'
 import { scanDeadExports, scanUnusedFiles, scanUnusedDeps } from './scanners.js'
 import { microVerify } from './micro-verify.js'
@@ -30,45 +30,6 @@ import {
   DeadCodeReaperConfigSchema,
   DeadCodeReaperResultSchema,
 } from './schemas.js'
-
-/**
- * Attempt to acquire a PostgreSQL session-level advisory lock.
- *
- * @param lockKey - Integer advisory lock key
- * @returns true if lock acquired, false if already held
- */
-async function tryAcquireAdvisoryLock(
-  lockKey: number,
-): Promise<{ acquired: boolean; pool: ReturnType<typeof getCronDbClient> | null }> {
-  const pool = getCronDbClient()
-  const client = await pool.connect()
-
-  try {
-    const result = await client.query<{ pg_try_advisory_lock: boolean }>(
-      'SELECT pg_try_advisory_lock($1)',
-      [lockKey],
-    )
-
-    const acquired = result.rows[0]?.pg_try_advisory_lock ?? false
-
-    if (!acquired) {
-      logger.info('cron.dead-code-reaper.lock.skipped', {
-        lockKey,
-        reason: 'Another instance holds the advisory lock',
-      })
-      client.release()
-      await pool.end()
-      return { acquired: false, pool: null }
-    }
-
-    client.release()
-    return { acquired: true, pool }
-  } catch (err) {
-    client.release()
-    await pool.end()
-    throw err
-  }
-}
 
 /**
  * Create an empty DeadCodeReaperResult for error/skipped/partial cases.
@@ -115,38 +76,13 @@ export async function runDeadCodeReaper(
   // Default execFn uses Node.js child_process
   const defaultExecFn: ExecFn = async (cmd: string) => {
     const { execSync } = await import('child_process')
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] })
+    return execSync(cmd, {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
   }
 
   const exec = execFn ?? defaultExecFn
-
-  // Acquire advisory lock (skip if held by another instance)
-  let pool: ReturnType<typeof getCronDbClient> | null = null
-
-  if (!fullConfig.dryRun) {
-    const lockResult = await tryAcquireAdvisoryLock(LOCK_KEYS.DEAD_CODE_REAPER)
-
-    if (!lockResult.acquired) {
-      const completedAt = new Date().toISOString()
-      const durationMs = Date.now() - startMs
-
-      logger.info('cron.dead-code-reaper.completed', {
-        jobName: 'dead-code-reaper',
-        startedAt,
-        completedAt,
-        durationMs,
-        status: 'skipped',
-        findingsTotal: 0,
-        verifiedDeletions: 0,
-        falsePositives: 0,
-        cleanupStoriesGenerated: 0,
-      })
-
-      return emptyResult('skipped')
-    }
-
-    pool = lockResult.pool
-  }
 
   // Accumulated results for partial timeout recovery
   const accumulatedDeadExports: DeadExportFinding[] = []
@@ -176,17 +112,17 @@ export async function runDeadCodeReaper(
         let falsePositives = 0
 
         for (const finding of [...deadExports, ...unusedFiles]) {
-          const result = await microVerify(finding, exec, fullConfig.dryRun)
-          microVerifyResults.push(result)
+          const verifyResult = await microVerify(finding, exec, fullConfig.dryRun)
+          microVerifyResults.push(verifyResult)
 
-          if (result.status === 'safe') {
+          if (verifyResult.status === 'safe') {
             accumulatedVerifiedDeletions++
             if ('exportName' in finding) {
               verifiedDeadExports.push(finding as DeadExportFinding)
             } else {
               verifiedUnusedFiles.push(finding as UnusedFileFinding)
             }
-          } else if (result.status === 'false-positive') {
+          } else if (verifyResult.status === 'false-positive') {
             falsePositives++
             accumulatedFalsePositives++
           }
@@ -198,7 +134,7 @@ export async function runDeadCodeReaper(
             findingsTotal,
             verifiedDeletions: accumulatedVerifiedDeletions,
             falsePositives,
-            cleanupStoriesGenerated: 0, // Updated by caller after story generation
+            cleanupStoriesGenerated: 0,
           },
           deadExports: verifiedDeadExports,
           unusedFiles: verifiedUnusedFiles,
@@ -283,9 +219,5 @@ export async function runDeadCodeReaper(
     })
 
     return emptyResult('error', errorMessage)
-  } finally {
-    if (pool) {
-      await pool.end()
-    }
   }
 }

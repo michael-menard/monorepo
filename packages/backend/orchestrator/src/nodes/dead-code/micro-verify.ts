@@ -7,7 +7,7 @@
  * APIP-4050: Dead Code Reaper — Monthly Cron Analysis and CLEANUP Story Generation
  */
 
-import type { ExecFn } from './scanners.js'
+import { type ExecFn, validateSafePath } from './scanners.js'
 import {
   type DeadExportFinding,
   type UnusedFileFinding,
@@ -43,15 +43,16 @@ export async function microVerify(
       // In dryRun mode, run tsc with --noUnusedLocals to check if the file/export
       // is truly unused. An empty output means it's safe to delete.
       const filePath = finding.filePath
+      validateSafePath(filePath)
 
-      // Determine the package directory from the file path
-      // e.g., "packages/backend/orchestrator/src/foo.ts" → find tsconfig.json
-      const escapedPath = filePath.replace(/['"\\]/g, '\\$&')
-      const cmd = `npx tsc --noEmit --noUnusedLocals 2>&1 | grep "${escapedPath}" || true`
+      const cmd = ['npx tsc --noEmit --noUnusedLocals 2>&1', `grep "${filePath}" || true`].join(
+        ' | ',
+      )
       typeCheckOutput = await execFn(cmd)
     } else {
-      // In non-dryRun mode, run the full tsc check for the package containing the file
+      // In non-dryRun mode, run the full tsc check for the package
       const packageDir = derivePackageDir(finding.filePath)
+      validateSafePath(packageDir)
       const cmd = `cd "${packageDir}" && npx tsc --noEmit 2>&1 || true`
       typeCheckOutput = await execFn(cmd)
     }

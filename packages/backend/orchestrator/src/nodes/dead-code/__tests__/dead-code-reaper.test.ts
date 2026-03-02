@@ -25,7 +25,12 @@ import {
   DeadCodeReaperResultSchema,
   type DeadCodeReaperResult,
 } from '../schemas.js'
-import { scanDeadExports, scanUnusedFiles, scanUnusedDeps } from '../scanners.js'
+import {
+  scanDeadExports,
+  scanUnusedFiles,
+  scanUnusedDeps,
+  validateSafePath,
+} from '../scanners.js'
 import { microVerify } from '../micro-verify.js'
 import { StoryArtifactSchema } from '../../../artifacts/story.js'
 
@@ -39,10 +44,8 @@ vi.mock('@repo/logger', () => ({
   },
 }))
 
-// Mock cron/db so tests don't need a real PostgreSQL connection
-vi.mock('../../../cron/db.js', () => ({
-  getCronDbClient: vi.fn(),
-}))
+// Note: cron/db is no longer mocked here because advisory lock logic
+// moved from runner.ts to dead-code-reaper.job.ts (matching pattern-miner pattern)
 
 // ============================================================================
 // (a) DeadCodeReaperConfigSchema valid/invalid
@@ -90,6 +93,33 @@ describe('DeadCodeReaperConfigSchema', () => {
   it('accepts minAgeDays: 0', () => {
     const config = DeadCodeReaperConfigSchema.parse({ minAgeDays: 0 })
     expect(config.minAgeDays).toBe(0)
+  })
+})
+
+// ============================================================================
+// (a-bis) validateSafePath — security guard
+// ============================================================================
+
+describe('validateSafePath', () => {
+  it('accepts safe paths', () => {
+    expect(() => validateSafePath('/repo/packages/foo')).not.toThrow()
+    expect(() => validateSafePath('src/utils/bar.ts')).not.toThrow()
+    expect(() => validateSafePath('packages/my-pkg')).not.toThrow()
+    expect(() => validateSafePath('/Users/dev/my repo')).not.toThrow()
+  })
+
+  it('rejects paths with shell metacharacters', () => {
+    expect(() => validateSafePath('foo;rm -rf /')).toThrow('Unsafe path')
+    expect(() => validateSafePath('foo$(whoami)')).toThrow('Unsafe path')
+    expect(() => validateSafePath('foo`id`')).toThrow('Unsafe path')
+    expect(() => validateSafePath('foo|cat')).toThrow('Unsafe path')
+    expect(() => validateSafePath("foo'bar")).toThrow('Unsafe path')
+    expect(() => validateSafePath('foo"bar')).toThrow('Unsafe path')
+    expect(() => validateSafePath('foo&bar')).toThrow('Unsafe path')
+  })
+
+  it('rejects paths with newlines', () => {
+    expect(() => validateSafePath('foo\nbar')).toThrow('Unsafe path')
   })
 })
 
@@ -599,40 +629,23 @@ describe('runDeadCodeReaper - timeout path', () => {
 })
 
 // ============================================================================
-// (i) advisory lock skip path
+// (i) runner does NOT handle advisory lock (moved to job file)
 // ============================================================================
 
-describe('runDeadCodeReaper - advisory lock skip path', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('returns status:skipped when pg_try_advisory_lock returns false', async () => {
-    const { getCronDbClient } = await import('../../../cron/db.js')
-
-    const mockClient = {
-      query: vi.fn().mockResolvedValue({
-        rows: [{ pg_try_advisory_lock: false }],
-      }),
-      release: vi.fn(),
-    }
-    const mockPool = {
-      connect: vi.fn().mockResolvedValue(mockClient),
-      end: vi.fn().mockResolvedValue(undefined),
-    }
-    vi.mocked(getCronDbClient).mockReturnValue(mockPool as any)
-
-    const execFn = vi.fn()
+describe('runDeadCodeReaper - no advisory lock in runner', () => {
+  it('runs scanners in dryRun:false mode without acquiring a lock', async () => {
+    const execFn = vi.fn().mockResolvedValue('')
     const { runDeadCodeReaper } = await import('../runner.js')
 
-    // dryRun:false so it attempts the advisory lock
-    const result = await runDeadCodeReaper({ dryRun: false }, execFn)
+    const result = await runDeadCodeReaper(
+      { dryRun: false, timeoutMs: 30_000 },
+      execFn,
+    )
 
-    expect(result.status).toBe('skipped')
-    // No scan functions should have been invoked
-    expect(execFn).not.toHaveBeenCalled()
-    // Verify the lock query was made with the correct key
-    expect(mockClient.query).toHaveBeenCalledWith('SELECT pg_try_advisory_lock($1)', [42_002])
+    // Runner should execute normally — lock is job file's responsibility
+    expect(result.status).toBe('success')
+    // Scanners should have been invoked
+    expect(execFn).toHaveBeenCalled()
   })
 })
 
