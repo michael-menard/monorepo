@@ -16,6 +16,8 @@
 export const LOCK_KEYS = {
   /** Pattern miner cron job lock key */
   PATTERN_MINER: 42_001,
+  /** Dependency auditor cron job lock key (APIP-4030) */
+  DEP_AUDIT: 42_002,
 } as const
 
 export type LockKey = (typeof LOCK_KEYS)[keyof typeof LOCK_KEYS]

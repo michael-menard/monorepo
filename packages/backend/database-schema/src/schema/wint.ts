@@ -1887,3 +1887,118 @@ export const ModelAffinityInsertSchema = createInsertSchema(modelAffinity)
 export const ModelAffinitySelectSchema = createSelectSchema(modelAffinity)
 export type InsertModelAffinity = z.infer<typeof ModelAffinityInsertSchema>
 export type SelectModelAffinity = z.infer<typeof ModelAffinitySelectSchema>
+
+// ============================================================================
+// APIP-4030: Dependency Auditor Tables
+// ============================================================================
+
+/**
+ * Dep Audit Runs Table
+ *
+ * Records each post-merge dependency audit run.
+ * Tracks which story/commit triggered it, which packages changed,
+ * the overall risk level, and a count of findings.
+ *
+ * Story: APIP-4030 - Dependency Auditor
+ */
+export const depAuditRuns = wintSchema.table(
+  'dep_audit_runs',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // Trigger context
+    storyId: varchar('story_id', { length: 255 }).notNull(),
+    commitSha: varchar('commit_sha', { length: 64 }),
+
+    // Audit timestamp
+    triggeredAt: timestamp('triggered_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // Package change summary (jsonb arrays)
+    packagesAdded: jsonb('packages_added').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    packagesUpdated: jsonb('packages_updated').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    packagesRemoved: jsonb('packages_removed').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+
+    // Overall risk assessment
+    overallRisk: varchar('overall_risk', { length: 16 }).notNull().default('none'),
+    // Constraint: 'none' | 'low' | 'medium' | 'high' | 'critical'
+
+    // Summary counts
+    findingsCount: integer('findings_count').notNull().default(0),
+    blockedQueueItemsCreated: integer('blocked_queue_items_created').notNull().default(0),
+
+    // Audit
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_dep_audit_runs_story_id').on(table.storyId),
+    triggeredAtIdx: index('idx_dep_audit_runs_triggered_at').on(table.triggeredAt),
+  }),
+)
+
+/**
+ * Dep Audit Findings Table
+ *
+ * One row per finding per audit run.
+ * Captures package name, finding type, severity, and structured detail payload.
+ *
+ * Story: APIP-4030 - Dependency Auditor
+ */
+export const depAuditFindings = wintSchema.table(
+  'dep_audit_findings',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    // FK to dep_audit_runs
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => depAuditRuns.id, { onDelete: 'cascade' }),
+
+    // Finding identity
+    packageName: varchar('package_name', { length: 255 }).notNull(),
+
+    // finding_type: 'vulnerability' | 'overlap' | 'bundle_bloat' | 'unmaintained'
+    findingType: varchar('finding_type', { length: 32 }).notNull(),
+
+    // severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
+    severity: varchar('severity', { length: 16 }).notNull(),
+
+    // Structured payload (varies by finding_type)
+    details: jsonb('details').notNull().default(sql`'{}'::jsonb`),
+
+    // Audit
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    runIdIdx: index('idx_dep_audit_findings_run_id').on(table.runId),
+    severityIdx: index('idx_dep_audit_findings_severity').on(table.severity),
+    runSeverityIdx: index('idx_dep_audit_findings_run_severity').on(table.runId, table.severity),
+  }),
+)
+
+// ============================================================================
+// Dep Audit Relations (APIP-4030)
+// ============================================================================
+
+export const depAuditRunsRelations = relations(depAuditRuns, ({ many }) => ({
+  findings: many(depAuditFindings),
+}))
+
+export const depAuditFindingsRelations = relations(depAuditFindings, ({ one }) => ({
+  run: one(depAuditRuns, { fields: [depAuditFindings.runId], references: [depAuditRuns.id] }),
+}))
+
+// ============================================================================
+// Dep Audit Zod Schemas (APIP-4030)
+// ============================================================================
+
+export const DepAuditRunInsertSchema = createInsertSchema(depAuditRuns)
+export const DepAuditRunSelectSchema = createSelectSchema(depAuditRuns)
+export type InsertDepAuditRun = z.infer<typeof DepAuditRunInsertSchema>
+export type SelectDepAuditRun = z.infer<typeof DepAuditRunSelectSchema>
+
+export const DepAuditFindingInsertSchema = createInsertSchema(depAuditFindings)
+export const DepAuditFindingSelectSchema = createSelectSchema(depAuditFindings)
+export type InsertDepAuditFinding = z.infer<typeof DepAuditFindingInsertSchema>
+export type SelectDepAuditFinding = z.infer<typeof DepAuditFindingSelectSchema>
