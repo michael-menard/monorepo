@@ -20,14 +20,14 @@
 
 import { z } from 'zod'
 import { logger } from '@repo/logger'
-import type { BaseMessage } from '@langchain/core/messages'
-import type { AIMessage } from '@langchain/core/messages'
+import type { BaseMessage, AIMessage } from '@langchain/core/messages'
 import { ModelRouterFactory } from '../models/unified-interface.js'
 import { TokenBucket } from './token-bucket.js'
 import { BudgetAccumulator } from './budget-accumulator.js'
 import {
   BudgetExhaustedError,
   ProviderChainExhaustedError,
+  AffinityReaderSchema,
   type AffinityProfile,
   type AffinityReader,
   type PipelineDispatchOptions,
@@ -102,17 +102,12 @@ export type ModelAssignment = z.infer<typeof ModelAssignmentSchema>
 
 export const PipelineModelRouterConfigSchema = z.object({
   hardBudgetCap: z.number().int().positive().optional(),
-  affinityReader: z.any().optional(),
+  affinityReader: AffinityReaderSchema.optional(),
   affinitySuccessRateThreshold: z.number().min(0).max(1).optional(),
   affinityMinSampleSize: z.number().int().nonnegative().optional(),
 })
 
-export type PipelineModelRouterConfig = {
-  hardBudgetCap?: number
-  affinityReader?: AffinityReader
-  affinitySuccessRateThreshold?: number
-  affinityMinSampleSize?: number
-}
+export type PipelineModelRouterConfig = z.infer<typeof PipelineModelRouterConfigSchema>
 
 // ============================================================================
 // PipelineModelRouter
@@ -149,8 +144,7 @@ export class PipelineModelRouter {
       this.affinityReader = config?.affinityReader
       this.affinitySuccessRateThreshold =
         config?.affinitySuccessRateThreshold ?? DEFAULT_AFFINITY_SUCCESS_RATE_THRESHOLD
-      this.affinityMinSampleSize =
-        config?.affinityMinSampleSize ?? DEFAULT_AFFINITY_MIN_SAMPLE_SIZE
+      this.affinityMinSampleSize = config?.affinityMinSampleSize ?? DEFAULT_AFFINITY_MIN_SAMPLE_SIZE
     }
 
     this.budgetAccumulator = new BudgetAccumulator()
@@ -172,13 +166,7 @@ export class PipelineModelRouter {
    * @throws ProviderChainExhaustedError if all providers fail
    */
   async dispatch(options: PipelineDispatchOptions): Promise<PipelineDispatchResult> {
-    const {
-      storyId,
-      agentId,
-      messages,
-      changeType = 'unknown',
-      fileType = 'unknown',
-    } = options
+    const { storyId, agentId, messages, changeType = 'unknown', fileType = 'unknown' } = options
 
     // -------------------------------------------------------------------------
     // Tier 1: Check DB assignment override for this agentId
@@ -402,9 +390,7 @@ export class PipelineModelRouter {
     this.budgetAccumulator.record(storyId, totalTokens)
 
     const responseText =
-      typeof aiMessage.content === 'string'
-        ? aiMessage.content
-        : JSON.stringify(aiMessage.content)
+      typeof aiMessage.content === 'string' ? aiMessage.content : JSON.stringify(aiMessage.content)
 
     logger.info('pipeline_model_router', {
       event: 'dispatch_success',
