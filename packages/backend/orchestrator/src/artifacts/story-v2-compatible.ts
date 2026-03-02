@@ -133,7 +133,7 @@ export const StoryArtifactSchema = z
     schema: z.literal(1).optional(),
 
     /** Story identifier (e.g., "WISH-2001") - REQUIRED in both formats */
-    id: z.string().regex(/^[A-Z]+-\d+$/),
+    id: z.string().regex(/^[A-Z]+(-[A-Z]+)*-\d+$/), // Supports STORY-NNN and STORY-WORD-NNN formats (e.g., APIP-CLEANUP-0001)
 
     /** Feature/epic this story belongs to (v1 name) */
     feature: z.string().optional(),

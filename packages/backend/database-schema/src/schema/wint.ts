@@ -2207,3 +2207,129 @@ export const DepAuditFindingInsertSchema = createInsertSchema(depAuditFindings)
 export const DepAuditFindingSelectSchema = createSelectSchema(depAuditFindings)
 export type InsertDepAuditFinding = z.infer<typeof DepAuditFindingInsertSchema>
 export type SelectDepAuditFinding = z.infer<typeof DepAuditFindingSelectSchema>
+
+// ============================================================================
+// 10. CODEBASE HEALTH SCHEMA (APIP-4010)
+// ============================================================================
+
+/**
+ * Codebase Health Snapshots Table
+ *
+ * Stores one snapshot row per health check run with 8 quality metrics.
+ * Used by captureHealthSnapshot() (fire-and-forget insert helper) and
+ * detectDriftAndGenerateCleanup() (pure drift detection function).
+ *
+ * Story: APIP-4010 - Codebase Health Gate
+ *
+ * Design notes:
+ * - is_baseline flag (default false) marks a row as the reference baseline.
+ *   Manual promotion via: UPDATE wint.codebase_health SET is_baseline = true WHERE id = '<id>';
+ * - All 8 metric columns are nullable — collector failures produce null (partial capture OK).
+ * - merge_number tracks which merge triggered the health check.
+ */
+export const codebaseHealth = wintSchema.table(
+  'codebase_health',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Merge tracking
+    mergeNumber: integer('merge_number').notNull(),
+
+    // Capture timestamp
+    capturedAt: timestamp('captured_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // Baseline flag — operator-promoted, never automatic
+    isBaseline: boolean('is_baseline').notNull().default(false),
+
+    // Metric 1: Lint warnings (stdout line count from pnpm lint)
+    lintWarnings: integer('lint_warnings'),
+
+    // Metric 2: Type errors (error count from pnpm check-types:all)
+    typeErrors: integer('type_errors'),
+
+    // Metric 3: Any count (no-explicit-any violations from ESLint)
+    anyCount: integer('any_count'),
+
+    // Metric 4: Test coverage (percentage, 2 decimal places)
+    testCoverage: numeric('test_coverage', { precision: 5, scale: 2 }),
+
+    // Metric 5: Circular dependencies (madge --circular count)
+    circularDeps: integer('circular_deps'),
+
+    // Metric 6: Bundle size in bytes (build output manifest)
+    bundleSize: integer('bundle_size'),
+
+    // Metric 7: Dead exports (ts-prune count)
+    deadExports: integer('dead_exports'),
+
+    // Metric 8: ESLint disable count (grep -r eslint-disable count)
+    eslintDisableCount: integer('eslint_disable_count'),
+  },
+  table => ({
+    // Index: captured_at for time-range queries
+    capturedAtIdx: index('idx_codebase_health_captured_at').on(table.capturedAt),
+    // Index: merge_number for per-merge lookups
+    mergeNumberIdx: index('idx_codebase_health_merge_number').on(table.mergeNumber),
+    // Index: is_baseline for baseline queries (finding the current reference row)
+    isBaselineIdx: index('idx_codebase_health_is_baseline').on(table.isBaseline),
+  }),
+)
+
+// ============================================================================
+// Codebase Health Zod Schemas (APIP-4010)
+// ============================================================================
+
+export const CodebaseHealthInsertSchema = createInsertSchema(codebaseHealth)
+export const CodebaseHealthSelectSchema = createSelectSchema(codebaseHealth)
+export type InsertCodebaseHealth = z.infer<typeof CodebaseHealthInsertSchema>
+export type SelectCodebaseHealth = z.infer<typeof CodebaseHealthSelectSchema>
+
+// ============================================================================
+// Merge Runs Table (APIP-4010 — standalone fallback for merge-count tracking)
+// ============================================================================
+
+/**
+ * Merge Runs Table
+ *
+ * Standalone fallback for merge-count tracking (RISK-001 from APIP-4010 ELAB).
+ * Used when APIP-1070 has NOT yet added mergeCount to MergeArtifactSchema.
+ *
+ * Each merge-pipeline completion records a row here. The health gate reads the
+ * count to determine if the current merge is the 5th (or multiple of 5).
+ *
+ * Story: APIP-4010 - Codebase Health Gate (ST-08)
+ */
+export const mergeRuns = wintSchema.table(
+  'merge_runs',
+  {
+    // Primary key
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    // Story that triggered the merge
+    storyId: text('story_id').notNull(),
+
+    // Sequential merge count (monotonically increasing per pipeline instance)
+    mergeNumber: integer('merge_number').notNull(),
+
+    // When the merge completed
+    mergedAt: timestamp('merged_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    // Index: storyId for per-story lookup
+    storyIdIdx: index('idx_merge_runs_story_id').on(table.storyId),
+    // Index: mergedAt for time-range queries
+    mergedAtIdx: index('idx_merge_runs_merged_at').on(table.mergedAt),
+    // Index: mergeNumber for count/sequence queries
+    mergeNumberIdx: index('idx_merge_runs_merge_number').on(table.mergeNumber),
+  }),
+)
+
+// ============================================================================
+// Merge Runs Zod Schemas (APIP-4010)
+// ============================================================================
+
+export const MergeRunInsertSchema = createInsertSchema(mergeRuns)
+export const MergeRunSelectSchema = createSelectSchema(mergeRuns)
+export type InsertMergeRun = z.infer<typeof MergeRunInsertSchema>
+export type SelectMergeRun = z.infer<typeof MergeRunSelectSchema>
