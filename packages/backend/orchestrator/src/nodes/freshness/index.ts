@@ -14,6 +14,7 @@
  * @see APIP-4060
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { KbFreshnessConfigSchema } from './__types__/index.js'
 import type { KbFreshnessConfig, KbFreshnessResult } from './__types__/index.js'
@@ -53,16 +54,22 @@ export function extractFirstFilePath(content: string): string | null {
  * Minimal shape of a knowledge entry required for freshness operations.
  * Matches the relevant subset of KnowledgeEntry from @repo/knowledge-base.
  */
-export interface FreshnessKnowledgeEntry {
-  id: string
-  content: string
-  role: string
-  tags: string[] | null
-  createdAt: Date
-  updatedAt: Date
-  archived: boolean
-  archivedAt: Date | null
-}
+export const FreshnessKnowledgeEntrySchema = z.object({
+  id: z.string().uuid(),
+  content: z.string(),
+  role: z.string(),
+  tags: z.array(z.string()).nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  archived: z.boolean(),
+  archivedAt: z.date().nullable(),
+})
+
+export type FreshnessKnowledgeEntry = z.infer<typeof FreshnessKnowledgeEntrySchema>
+
+// NOTE: The following interfaces define injectable function/method contracts
+// for dependency injection. Zod cannot validate function shapes at runtime,
+// so these remain as TypeScript interfaces by design.
 
 /**
  * Minimal embedding client shape (no-op mock acceptable in tests).
