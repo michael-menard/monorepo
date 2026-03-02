@@ -11,6 +11,7 @@
 
 import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { createStoryArtifact } from '../../artifacts/story.js'
 import {
@@ -111,12 +112,14 @@ function findExistingStory(
 /**
  * Configuration for the story generator.
  */
-export interface StoryGeneratorConfig {
+export const StoryGeneratorConfigSchema = z.object({
   /** Absolute path to the monorepo root (used to construct output paths) */
-  repoRoot: string
+  repoRoot: z.string().min(1),
   /** Number of days within which duplicate stories are suppressed */
-  deduplicationWindowDays: number
-}
+  deduplicationWindowDays: z.number().int().positive(),
+})
+
+export type StoryGeneratorConfig = z.infer<typeof StoryGeneratorConfigSchema>
 
 /**
  * Generates a cohesion cleanup story for a category that fell below threshold.
