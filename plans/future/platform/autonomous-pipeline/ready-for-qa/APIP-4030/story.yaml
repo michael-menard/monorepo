@@ -1,6 +1,6 @@
 id: "APIP-4030"
 title: "Dependency Auditor"
-status: needs-code-review
+status: ready-for-qa
 priority: medium
 phase: 4
 feature: "Post-merge cron that checks new packages added, detects overlap with existing deps, estimates bundle size impact, runs pnpm audit for vulnerabilities, and flags unmaintained packages — blocking queue for human review on high-risk findings"
