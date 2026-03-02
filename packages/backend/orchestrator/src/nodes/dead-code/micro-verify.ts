@@ -46,12 +46,13 @@ export async function microVerify(
 
       // Determine the package directory from the file path
       // e.g., "packages/backend/orchestrator/src/foo.ts" → find tsconfig.json
-      const cmd = `npx tsc --noEmit --noUnusedLocals 2>&1 | grep "${filePath}" || true`
+      const escapedPath = filePath.replace(/['"\\]/g, '\\$&')
+      const cmd = `npx tsc --noEmit --noUnusedLocals 2>&1 | grep "${escapedPath}" || true`
       typeCheckOutput = await execFn(cmd)
     } else {
       // In non-dryRun mode, run the full tsc check for the package containing the file
       const packageDir = derivePackageDir(finding.filePath)
-      const cmd = `cd ${packageDir} && npx tsc --noEmit 2>&1 || true`
+      const cmd = `cd "${packageDir}" && npx tsc --noEmit 2>&1 || true`
       typeCheckOutput = await execFn(cmd)
     }
 

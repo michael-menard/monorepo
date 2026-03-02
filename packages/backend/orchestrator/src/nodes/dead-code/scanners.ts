@@ -9,6 +9,7 @@
  * APIP-4050: Dead Code Reaper — Monthly Cron Analysis and CLEANUP Story Generation
  */
 
+import { z } from 'zod'
 import {
   type DeadCodeReaperConfig,
   type DeadExportFinding,
@@ -70,8 +71,12 @@ export async function scanDeadExports(
     output = await execFn('npx ts-prune --error')
   } catch (err) {
     // ts-prune exits with non-zero when it finds dead exports; that's expected
-    if (err instanceof Error && 'stdout' in err) {
-      output = (err as { stdout: string }).stdout || ''
+    if (
+      err instanceof Error &&
+      'stdout' in err &&
+      typeof (err as Record<string, unknown>).stdout === 'string'
+    ) {
+      output = (err as Record<string, unknown>).stdout as string
     } else {
       output = err instanceof Error ? err.message : String(err)
     }
@@ -192,10 +197,12 @@ export async function scanUnusedFiles(
 /**
  * Depcheck output shape (subset of what depcheck --json returns).
  */
-type DepcheckOutput = {
-  dependencies?: string[]
-  devDependencies?: string[]
-}
+const DepcheckOutputSchema = z.object({
+  dependencies: z.array(z.string()).optional(),
+  devDependencies: z.array(z.string()).optional(),
+})
+
+type DepcheckOutput = z.infer<typeof DepcheckOutputSchema>
 
 /**
  * Scan for unused dependencies using depcheck.
@@ -217,7 +224,7 @@ export async function scanUnusedDeps(
 
   try {
     const findOutput = await execFn(
-      `find ${repoRoot} -name "package.json" -not -path "*/node_modules/*" -not -path "*/.git/*"`,
+      `find "${repoRoot}" -name "package.json" -not -path "*/node_modules/*" -not -path "*/.git/*"`,
     )
     packageJsonPaths = findOutput
       .split('\n')
@@ -239,8 +246,12 @@ export async function scanUnusedDeps(
       depcheckOutput = await execFn(`npx depcheck ${packageDir} --json`)
     } catch (err) {
       // depcheck exits non-zero when it finds unused deps
-      if (err instanceof Error && 'stdout' in err) {
-        depcheckOutput = (err as { stdout: string }).stdout || ''
+      if (
+        err instanceof Error &&
+        'stdout' in err &&
+        typeof (err as Record<string, unknown>).stdout === 'string'
+      ) {
+        depcheckOutput = (err as Record<string, unknown>).stdout as string
       } else {
         continue
       }
@@ -248,7 +259,7 @@ export async function scanUnusedDeps(
 
     let parsed: DepcheckOutput
     try {
-      parsed = JSON.parse(depcheckOutput) as DepcheckOutput
+      parsed = DepcheckOutputSchema.parse(JSON.parse(depcheckOutput))
     } catch {
       continue
     }
