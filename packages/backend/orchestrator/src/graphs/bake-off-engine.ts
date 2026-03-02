@@ -88,10 +88,11 @@ export const ActiveExperimentSchema = z.object({
   changeType: z.string(),
   fileType: z.string(),
   controlModel: z.string(),
-  variantModel: z.string(),
+  challengerModel: z.string(),
   status: z.enum(['active', 'concluded', 'expired']),
   startedAt: z.date(),
-  windowDays: z.number().int().positive(),
+  maxWindowDays: z.number().int().positive().nullable().optional(),
+  maxWindowRows: z.number().int().positive().nullable().optional(),
 })
 
 export type ActiveExperiment = z.infer<typeof ActiveExperimentSchema>
@@ -212,11 +213,27 @@ export function isSignificant(
 }
 
 /**
- * Determines whether an experiment has exceeded its observation window.
+ * Determines whether an experiment has exceeded its day-based observation window.
  */
-export function isExpired(startedAt: Date, windowDays: number, now: Date = new Date()): boolean {
-  const windowMs = windowDays * 24 * 60 * 60 * 1000
+export function isExpired(
+  startedAt: Date,
+  maxWindowDays: number | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!maxWindowDays) return false
+  const windowMs = maxWindowDays * 24 * 60 * 60 * 1000
   return now.getTime() - startedAt.getTime() > windowMs
+}
+
+/**
+ * Determines whether an experiment has exceeded its row-count-based window.
+ */
+export function isExpiredByRows(
+  totalRows: number,
+  maxWindowRows: number | null | undefined,
+): boolean {
+  if (!maxWindowRows) return false
+  return totalRows >= maxWindowRows
 }
 
 // ============================================================================
@@ -234,7 +251,7 @@ export function createLoadExperimentsNode() {
   ): Promise<Partial<BakeOffGraphState>> => {
     const db = config?.configurable?.db as DbClient | undefined
     if (!db) {
-      logger.error({ node: 'load_experiments' }, 'No db provided in config.configurable.db')
+      logger.error('No db provided in config.configurable.db', { node: 'load_experiments' })
       return { runErrors: ['load_experiments: db not injected'] }
     }
 
@@ -244,31 +261,33 @@ export function createLoadExperimentsNode() {
         changeType: string
         fileType: string
         controlModel: string
-        variantModel: string
+        challengerModel: string
         status: string
         startedAt: Date
-        windowDays: number
+        maxWindowDays: number | null
+        maxWindowRows: number | null
       }>(
         `SELECT
            id,
-           change_type    AS "changeType",
-           file_type      AS "fileType",
-           control_model  AS "controlModel",
-           variant_model  AS "variantModel",
+           change_type       AS "changeType",
+           file_type         AS "fileType",
+           control_model     AS "controlModel",
+           challenger_model  AS "challengerModel",
            status,
-           started_at     AS "startedAt",
-           window_days    AS "windowDays"
+           started_at        AS "startedAt",
+           max_window_days   AS "maxWindowDays",
+           max_window_rows   AS "maxWindowRows"
          FROM wint.model_experiments
          WHERE status = 'active'
          ORDER BY started_at ASC`,
       )
 
       const parsed = result.rows.map(r => ActiveExperimentSchema.parse(r))
-      logger.info({ node: 'load_experiments', count: parsed.length }, 'Loaded active experiments')
+      logger.info('Loaded active experiments', { node: 'load_experiments', count: parsed.length })
       return { activeExperiments: parsed }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      logger.error({ node: 'load_experiments', err }, 'Failed to load active experiments')
+      logger.error('Failed to load active experiments', { node: 'load_experiments', err })
       return { runErrors: [`load_experiments: ${msg}`] }
     }
   }
@@ -289,7 +308,7 @@ export function createEvaluateSignificanceNode() {
   ): Promise<Partial<BakeOffGraphState>> => {
     const db = config?.configurable?.db as DbClient | undefined
     if (!db) {
-      logger.error({ node: 'evaluate_significance' }, 'No db provided')
+      logger.error('No db provided', { node: 'evaluate_significance' })
       return { runErrors: ['evaluate_significance: db not injected'] }
     }
 
@@ -315,7 +334,7 @@ export function createEvaluateSignificanceNode() {
            WHERE ct.experiment_id = $1
              AND ct.model_used IN ($2, $3)
            GROUP BY ct.model_used`,
-          [experiment.id, experiment.controlModel, experiment.variantModel],
+          [experiment.id, experiment.controlModel, experiment.challengerModel],
         )
 
         const toArmStats = (model: string): ArmStats => {
@@ -335,9 +354,9 @@ export function createEvaluateSignificanceNode() {
         }
 
         const controlStats = toArmStats(experiment.controlModel)
-        const variantStats = toArmStats(experiment.variantModel)
+        const challengerStats = toArmStats(experiment.challengerModel)
 
-        const decision = isSignificant(controlStats, variantStats, bakeOffConfig)
+        const decision = isSignificant(controlStats, challengerStats, bakeOffConfig)
 
         results.push(
           SignificanceResultSchema.parse({
@@ -345,16 +364,17 @@ export function createEvaluateSignificanceNode() {
             significant: decision.significant,
             winnerModel: decision.winnerModel,
             controlStats,
-            variantStats,
+            variantStats: challengerStats,
             reason: decision.reason,
           }),
         )
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        logger.error(
-          { node: 'evaluate_significance', experimentId: experiment.id, err },
-          'Failed to evaluate significance',
-        )
+        logger.error('Failed to evaluate significance', {
+          node: 'evaluate_significance',
+          experimentId: experiment.id,
+          err,
+        })
         results.push(
           SignificanceResultSchema.parse({
             experimentId: experiment.id,
@@ -366,7 +386,7 @@ export function createEvaluateSignificanceNode() {
               acceptanceRate: 0,
             },
             variantStats: {
-              model: experiment.variantModel,
+              model: experiment.challengerModel,
               totalSamples: 0,
               acceptedSamples: 0,
               acceptanceRate: 0,
@@ -398,7 +418,7 @@ export function createPromoteOrExpireNode() {
   ): Promise<Partial<BakeOffGraphState>> => {
     const db = config?.configurable?.db as DbClient | undefined
     if (!db) {
-      logger.error({ node: 'promote_or_expire' }, 'No db provided')
+      logger.error('No db provided', { node: 'promote_or_expire' })
       return { runErrors: ['promote_or_expire: db not injected'] }
     }
 
@@ -410,7 +430,11 @@ export function createPromoteOrExpireNode() {
       const experiment = experimentMap.get(result.experimentId)
       if (!experiment) continue
 
-      const expired = isExpired(experiment.startedAt, experiment.windowDays)
+      const totalRows =
+        result.controlStats.totalSamples + result.variantStats.totalSamples
+      const expiredByRows = isExpiredByRows(totalRows, experiment.maxWindowRows)
+      const expiredByDays = isExpired(experiment.startedAt, experiment.maxWindowDays)
+      const expired = expiredByDays || expiredByRows
 
       if (result.significant && result.winnerModel) {
         // Promote winner: upsert model_affinity, conclude experiment
@@ -432,7 +456,7 @@ export function createPromoteOrExpireNode() {
               `UPDATE wint.model_experiments
                SET
                  status       = 'concluded',
-                 winner_model = $1,
+                 winner       = $1,
                  concluded_at = NOW(),
                  updated_at   = NOW()
                WHERE id = $2`,
@@ -440,15 +464,14 @@ export function createPromoteOrExpireNode() {
             )
           }
 
-          logger.info(
-            {
-              node: 'promote_or_expire',
-              experimentId: result.experimentId,
-              winnerModel: result.winnerModel,
-              dryRun,
-            },
-            'Experiment concluded with winner',
-          )
+          logger.info('Experiment concluded with winner', {
+            node: 'promote_or_expire',
+            experimentId: result.experimentId,
+            winnerModel: result.winnerModel,
+            controlSuccessRate: result.controlStats.acceptanceRate,
+            challengerSuccessRate: result.variantStats.acceptanceRate,
+            dryRun,
+          })
 
           outcomes.push(
             ExperimentOutcomeSchema.parse({
@@ -460,10 +483,11 @@ export function createPromoteOrExpireNode() {
           )
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
-          logger.error(
-            { node: 'promote_or_expire', experimentId: result.experimentId, err },
-            'Failed to promote winner',
-          )
+          logger.error('Failed to promote winner', {
+            node: 'promote_or_expire',
+            experimentId: result.experimentId,
+            err,
+          })
           outcomes.push(
             ExperimentOutcomeSchema.parse({
               experimentId: result.experimentId,
@@ -473,42 +497,46 @@ export function createPromoteOrExpireNode() {
           )
         }
       } else if (expired) {
-        // Expire stale experiment
+        // Expire stale experiment — do NOT modify model_affinity
+        const expiredReason = expiredByRows
+          ? `max_window_rows ${experiment.maxWindowRows} reached (total rows: ${totalRows})`
+          : `max_window_days ${experiment.maxWindowDays} exceeded`
         try {
           if (!dryRun) {
             await db.query(
               `UPDATE wint.model_experiments
                SET
-                 status     = 'expired',
-                 updated_at = NOW()
+                 status       = 'expired',
+                 concluded_at = NOW(),
+                 updated_at   = NOW()
                WHERE id = $1`,
               [result.experimentId],
             )
           }
 
-          logger.info(
-            {
-              node: 'promote_or_expire',
-              experimentId: result.experimentId,
-              windowDays: experiment.windowDays,
-              dryRun,
-            },
-            'Experiment expired: window exceeded without significance',
-          )
+          logger.info('Experiment expired: window exceeded without significance', {
+            node: 'promote_or_expire',
+            experimentId: result.experimentId,
+            maxWindowDays: experiment.maxWindowDays,
+            maxWindowRows: experiment.maxWindowRows,
+            totalRows,
+            dryRun,
+          })
 
           outcomes.push(
             ExperimentOutcomeSchema.parse({
               experimentId: result.experimentId,
               action: 'expired',
-              reason: `Window of ${experiment.windowDays} days exceeded; ${result.reason}`,
+              reason: `${expiredReason}; ${result.reason}`,
             }),
           )
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
-          logger.error(
-            { node: 'promote_or_expire', experimentId: result.experimentId, err },
-            'Failed to expire experiment',
-          )
+          logger.error('Failed to expire experiment', {
+            node: 'promote_or_expire',
+            experimentId: result.experimentId,
+            err,
+          })
           outcomes.push(
             ExperimentOutcomeSchema.parse({
               experimentId: result.experimentId,
@@ -519,10 +547,11 @@ export function createPromoteOrExpireNode() {
         }
       } else {
         // No action needed
-        logger.info(
-          { node: 'promote_or_expire', experimentId: result.experimentId },
-          'No action: experiment not yet significant or expired',
-        )
+        logger.info('No action: experiment not yet significant or expired', {
+          node: 'promote_or_expire',
+          experimentId: result.experimentId,
+          active_experiments: 0,
+        })
 
         outcomes.push(
           ExperimentOutcomeSchema.parse({
@@ -599,16 +628,13 @@ export async function runBakeOff(
 
   const result = await graph.invoke(initialState, config)
 
-  logger.info(
-    {
-      outcomes: result.outcomes.length,
-      concluded: result.outcomes.filter((o: ExperimentOutcome) => o.action === 'concluded').length,
-      expired: result.outcomes.filter((o: ExperimentOutcome) => o.action === 'expired').length,
-      noOp: result.outcomes.filter((o: ExperimentOutcome) => o.action === 'no_op').length,
-      errors: result.runErrors,
-    },
-    'Bake-off engine run complete',
-  )
+  logger.info('Bake-off engine run complete', {
+    outcomes: result.outcomes.length,
+    concluded: result.outcomes.filter((o: ExperimentOutcome) => o.action === 'concluded').length,
+    expired: result.outcomes.filter((o: ExperimentOutcome) => o.action === 'expired').length,
+    noOp: result.outcomes.filter((o: ExperimentOutcome) => o.action === 'no_op').length,
+    errors: result.runErrors,
+  })
 
   return result.outcomes
 }

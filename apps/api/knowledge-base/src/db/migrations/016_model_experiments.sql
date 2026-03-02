@@ -27,22 +27,32 @@ CREATE TABLE IF NOT EXISTS wint.model_experiments (
   file_type      VARCHAR(64)   NOT NULL,
 
   -- Arms
-  control_model  VARCHAR(128)  NOT NULL,
-  variant_model  VARCHAR(128)  NOT NULL,
+  control_model             VARCHAR(128)    NOT NULL,
+  challenger_model          VARCHAR(128)    NOT NULL,
 
   -- Lifecycle
-  status         wint.experiment_status NOT NULL DEFAULT 'active',
-  started_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-  concluded_at   TIMESTAMPTZ,
+  status                    wint.experiment_status NOT NULL DEFAULT 'active',
+  started_at                TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+  concluded_at              TIMESTAMPTZ,
 
-  -- Window duration in days
-  window_days    INTEGER       NOT NULL DEFAULT 14,
+  -- Sample counts recorded at conclusion
+  control_sample_size       INTEGER,
+  challenger_sample_size    INTEGER,
+
+  -- Success rates recorded at conclusion (precision 5, scale 4 — e.g. 0.9875)
+  control_success_rate      NUMERIC(5, 4),
+  challenger_success_rate   NUMERIC(5, 4),
+
+  -- Window configuration
+  min_sample_per_arm        INTEGER         NOT NULL DEFAULT 50,
+  max_window_rows           INTEGER,
+  max_window_days           INTEGER,
 
   -- Winner recorded on conclusion
-  winner_model   VARCHAR(128),
+  winner                    VARCHAR(128),
 
   -- Metadata
-  notes          TEXT,
+  notes                     TEXT,
 
   created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW()

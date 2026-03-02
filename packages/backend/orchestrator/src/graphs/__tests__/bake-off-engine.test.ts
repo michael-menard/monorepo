@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   isSignificant,
   isExpired,
+  isExpiredByRows,
   BakeOffConfigSchema,
   ArmStatsSchema,
   ActiveExperimentSchema,
@@ -59,10 +60,11 @@ function makeExperiment(overrides: Partial<ActiveExperiment> = {}): ActiveExperi
     changeType: 'sql',
     fileType: '.sql',
     controlModel: 'gpt-4o',
-    variantModel: 'claude-3-5-sonnet',
+    challengerModel: 'claude-3-5-sonnet',
     status: 'active',
     startedAt: new Date('2026-01-01T00:00:00Z'),
-    windowDays: 14,
+    maxWindowDays: 14,
+    maxWindowRows: null,
     ...overrides,
   })
 }
@@ -194,6 +196,38 @@ describe('isExpired', () => {
     const now = new Date(startedAt.getTime() + 14 * 24 * 60 * 60 * 1000)
     expect(isExpired(startedAt, 14, now)).toBe(false)
   })
+
+  it('returns false when maxWindowDays is null', () => {
+    const startedAt = new Date('2026-01-01T00:00:00Z')
+    const now = new Date('2026-12-31T00:00:00Z') // far in future
+    expect(isExpired(startedAt, null, now)).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isExpiredByRows — pure function tests (ST-7, AC-10)
+// ---------------------------------------------------------------------------
+
+describe('isExpiredByRows', () => {
+  it('returns false when total rows are below max_window_rows', () => {
+    expect(isExpiredByRows(99, 100)).toBe(false)
+  })
+
+  it('returns true when total rows meet max_window_rows', () => {
+    expect(isExpiredByRows(100, 100)).toBe(true)
+  })
+
+  it('returns true when total rows exceed max_window_rows', () => {
+    expect(isExpiredByRows(150, 100)).toBe(true)
+  })
+
+  it('returns false when maxWindowRows is null', () => {
+    expect(isExpiredByRows(1000, null)).toBe(false)
+  })
+
+  it('returns false when maxWindowRows is undefined', () => {
+    expect(isExpiredByRows(1000, undefined)).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -260,10 +294,11 @@ describe('createLoadExperimentsNode', () => {
       changeType: 'sql',
       fileType: '.sql',
       controlModel: 'gpt-4o',
-      variantModel: 'claude-3-5-sonnet',
+      challengerModel: 'claude-3-5-sonnet',
       status: 'active',
       startedAt: new Date('2026-01-01T00:00:00Z'),
-      windowDays: 14,
+      maxWindowDays: 14,
+      maxWindowRows: null,
     }
 
     const mockDb = { query: vi.fn().mockResolvedValue({ rows: [fakeRow], rowCount: 1 }) }
@@ -458,7 +493,7 @@ describe('createPromoteOrExpireNode', () => {
     const node = createPromoteOrExpireNode()
     // Start date well in the past — 30 days ago exceeds 14-day window
     const startedAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const experiment = makeExperiment({ startedAt })
+    const experiment = makeExperiment({ startedAt, maxWindowDays: 14, maxWindowRows: null })
     const state = makeBaseState({
       bakeOffConfig: BakeOffConfigSchema.parse({}),
       activeExperiments: [experiment],
@@ -479,6 +514,37 @@ describe('createPromoteOrExpireNode', () => {
     const result = await node(state, runnableConfig)
 
     expect(result.outcomes?.[0]?.action).toBe('expired')
+    expect(mockDb.query).toHaveBeenCalledTimes(1)
+  })
+
+  it('expires experiment when max_window_rows reached and not significant (AC-10)', async () => {
+    const node = createPromoteOrExpireNode()
+    // Started recently (within day window) but row limit reached
+    const startedAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    const experiment = makeExperiment({ startedAt, maxWindowDays: 14, maxWindowRows: 200 })
+    const state = makeBaseState({
+      bakeOffConfig: BakeOffConfigSchema.parse({}),
+      activeExperiments: [experiment],
+      significanceResults: [
+        SignificanceResultSchema.parse({
+          experimentId: experiment.id,
+          significant: false,
+          // 100 + 100 = 200 total rows = maxWindowRows → should expire
+          controlStats: makeArm('gpt-4o', 100, 50),
+          variantStats: makeArm('claude-3-5-sonnet', 100, 52),
+          reason: 'delta 0.02 < 0.05',
+        }),
+      ],
+    })
+
+    const mockDb = { query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }) }
+    const runnableConfig = { configurable: { db: mockDb } }
+
+    const result = await node(state, runnableConfig)
+
+    expect(result.outcomes?.[0]?.action).toBe('expired')
+    expect(result.outcomes?.[0]?.reason).toMatch(/max_window_rows/)
+    // model_affinity NOT updated — only model_experiments updated
     expect(mockDb.query).toHaveBeenCalledTimes(1)
   })
 
