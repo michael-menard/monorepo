@@ -33,6 +33,7 @@ import {
 } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
+import { extractArtifactSummary } from './artifact-summary.js'
 
 // ============================================================================
 // Constants
@@ -991,6 +992,9 @@ export const ArtifactWriteInputSchema = z.object({
 
   /** Whether to also write to KB database (default: true) */
   write_to_kb: z.boolean().optional().default(true),
+
+  /** Explicit summary override. When provided, takes precedence over auto-extracted summary. */
+  summary: z.record(z.unknown()).optional(),
 })
 
 export type ArtifactWriteInput = z.infer<typeof ArtifactWriteInputSchema>
@@ -1072,6 +1076,11 @@ export async function artifact_write(
   let kbArtifactId: string | null = null
   let kbError: string | null = null
 
+  // Auto-extract summary; caller-provided summary takes precedence (AC-5, AC-6)
+  const resolvedSummary =
+    validatedInput.summary ??
+    extractArtifactSummary(validatedInput.artifact_type, validatedInput.content)
+
   if (validatedInput.write_to_kb) {
     try {
       const result = await kbWriteFn(
@@ -1081,6 +1090,7 @@ export async function artifact_write(
           content: validatedInput.content,
           phase: validatedInput.phase ?? null,
           iteration,
+          summary: resolvedSummary,
         },
         deps,
       )
