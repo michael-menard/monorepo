@@ -49,6 +49,8 @@ export const CodeAuditConfigSchema = z.object({
   since: z.string().optional(),
   storyId: z.string().optional(),
   nodeTimeoutMs: z.number().positive().default(60000),
+  auditDir: z.string().default('plans/audit'),
+  plansDir: z.string().default('plans'),
 })
 
 export type CodeAuditConfig = z.infer<typeof CodeAuditConfigSchema>
@@ -170,14 +172,6 @@ function routeAfterMergeLenses(state: CodeAuditState): 'devils_advocate' | 'synt
   return state.mode === 'roundtable' ? 'devils_advocate' : 'synthesize'
 }
 
-function routeAfterDevilsAdvocate(_state: CodeAuditState): 'roundtable' {
-  return 'roundtable'
-}
-
-function routeAfterRoundtable(_state: CodeAuditState): 'synthesize' {
-  return 'synthesize'
-}
-
 // --- Placeholder Node Factories ---
 // These create minimal nodes that return state updates.
 // Full implementations live in src/nodes/audit/*.ts
@@ -241,24 +235,24 @@ function createSynthesizeNode() {
   }
 }
 
-function createDeduplicateNode() {
+function createDeduplicateNode(config: CodeAuditConfig) {
   return async (state: CodeAuditState): Promise<Partial<CodeAuditState>> => {
     const { deduplicate } = await import('../nodes/audit/deduplicate.js')
-    return deduplicate(state)
+    return deduplicate(state, config.plansDir)
   }
 }
 
-function createPersistFindingsNode() {
+function createPersistFindingsNode(config: CodeAuditConfig) {
   return async (state: CodeAuditState): Promise<Partial<CodeAuditState>> => {
     const { persistFindings } = await import('../nodes/audit/persist-findings.js')
-    return persistFindings(state)
+    return persistFindings(state, config.auditDir)
   }
 }
 
-function createPersistTrendsNode() {
+function createPersistTrendsNode(config: CodeAuditConfig) {
   return async (state: CodeAuditState): Promise<Partial<CodeAuditState>> => {
     const { persistTrends } = await import('../nodes/audit/persist-trends.js')
-    return persistTrends(state)
+    return persistTrends(state, config.auditDir)
   }
 }
 
@@ -285,10 +279,10 @@ export function createCodeAuditGraph(config: Partial<CodeAuditConfig> = {}) {
     // Phase 4: Synthesize
     .addNode('synthesize', createSynthesizeNode())
     // Phase 5: Deduplicate
-    .addNode('deduplicate', createDeduplicateNode())
+    .addNode('deduplicate', createDeduplicateNode(fullConfig))
     // Phase 6: Persist
-    .addNode('persist_findings', createPersistFindingsNode())
-    .addNode('persist_trends', createPersistTrendsNode())
+    .addNode('persist_findings', createPersistFindingsNode(fullConfig))
+    .addNode('persist_trends', createPersistTrendsNode(fullConfig))
 
     // Edges
     .addEdge(START, 'scan_scope')
@@ -351,7 +345,7 @@ export const codeAuditNode = async (
 }
 
 export function createCodeAuditNode(config: Partial<CodeAuditConfig> = {}) {
-  return async (state: GraphState): Promise<Partial<GraphStateWithCodeAudit>> => {
+  return async (_state: GraphState): Promise<Partial<GraphStateWithCodeAudit>> => {
     const result = await runCodeAudit(config)
     return {
       auditFindings: result,

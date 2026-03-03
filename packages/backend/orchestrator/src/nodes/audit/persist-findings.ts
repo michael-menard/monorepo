@@ -14,9 +14,11 @@ function formatDate(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-export async function persistFindings(state: CodeAuditState): Promise<Partial<CodeAuditState>> {
+export async function persistFindings(
+  state: CodeAuditState,
+  auditDir = 'plans/audit',
+): Promise<Partial<CodeAuditState>> {
   const findings = state.findings || []
-  const lensResults = state.lensResults || []
   const lenses = state.lenses || []
 
   // Calculate summary
@@ -59,7 +61,6 @@ export async function persistFindings(state: CodeAuditState): Promise<Partial<Co
   }
 
   // Write to file
-  const auditDir = 'plans/audit'
   try {
     await mkdir(auditDir, { recursive: true })
   } catch {
