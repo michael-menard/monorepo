@@ -23,6 +23,7 @@
 import {
   boolean,
   check,
+  customType,
   index,
   integer,
   jsonb,
@@ -896,6 +897,164 @@ export const stateTransitions = wintSchema.table(
 )
 
 // ============================================================================
+// WINT-0040: HITL Decisions + Story Outcomes (Telemetry Extension)
+// ============================================================================
+
+/**
+ * Vector Custom Type
+ *
+ * Handles serialization/deserialization between JavaScript number arrays
+ * and PostgreSQL pgvector VECTOR column format.
+ *
+ * NOTE: Defined locally — cross-package import from knowledge-base would create
+ * an inappropriate package dependency. Pattern copied from
+ * apps/api/knowledge-base/src/db/schema.ts lines 43-58.
+ *
+ * @see WINT-3070 for telemetry-log skill that writes to hitlDecisions
+ */
+export const vector = customType<{
+  data: number[]
+  driverData: string
+  config: { dimensions: number }
+}>({
+  dataType(config) {
+    return `vector(${config?.dimensions ?? 1536})`
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`
+  },
+  fromDriver(value: string): number[] {
+    // Parse PostgreSQL vector format: [0.1,0.2,0.3,...]
+    const cleaned = value.replace(/^\[|\]$/g, '')
+    return cleaned.split(',').map(Number)
+  },
+})
+
+/**
+ * HITL Decisions Table (WINT-0040)
+ *
+ * Records every human-in-the-loop decision made during story execution.
+ * Captures the decision text, semantic embedding for similarity search,
+ * and contextual metadata for ML training.
+ *
+ * Decision data enables:
+ * - Semantic search over past decisions (via embedding + ivfflat index)
+ * - Per-operator decision pattern analysis
+ * - Per-story decision audit trail
+ *
+ * @see WINT-3070 for telemetry-log skill that writes to this table (pre-wire comment)
+ */
+export const hitlDecisions = wintSchema.table(
+  'hitl_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** FK to agent_invocations.id — nullable if decision occurred outside an invocation context */
+    invocationId: uuid('invocation_id').references(() => agentInvocations.id, {
+      onDelete: 'set null',
+    }),
+
+    /** Categorizes the decision type (e.g., approve, reject, defer, override) */
+    decisionType: text('decision_type').notNull(),
+
+    /** Human-readable description of the decision made */
+    decisionText: text('decision_text').notNull(),
+
+    /** Structured context at the time of decision (JSON snapshot) */
+    context: jsonb('context').$type<Record<string, unknown>>(),
+
+    /** 1536-dimensional embedding of decisionText for semantic similarity search */
+    embedding: vector('embedding', { dimensions: 1536 }),
+
+    /** Operator/user who made the decision */
+    operatorId: text('operator_id').notNull(),
+
+    /** Story this decision is associated with */
+    storyId: text('story_id').notNull(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('hitl_decisions_story_id_idx').on(table.storyId),
+    operatorIdIdx: index('hitl_decisions_operator_id_idx').on(table.operatorId),
+    createdAtIdx: index('hitl_decisions_created_at_idx').on(table.createdAt),
+    // ivfflat index for embedding column appended manually in migration (Drizzle cannot express it)
+    // CREATE INDEX hitl_decisions_embedding_idx ON wint.hitl_decisions USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+  }),
+)
+
+/**
+ * Story Outcomes Table (WINT-0040)
+ *
+ * Records the final outcome of each completed story execution.
+ * Provides token usage, cost, quality scores, and iteration counts
+ * for pipeline health reporting and ML training data.
+ *
+ * One row per story (unique storyId constraint).
+ *
+ * @see WINT-3070 for telemetry-log skill that writes to this table (pre-wire comment)
+ */
+export const storyOutcomes = wintSchema.table(
+  'story_outcomes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Unique story identifier (e.g., WINT-0040) */
+    storyId: text('story_id').notNull().unique(),
+
+    /** Final outcome: 'pass', 'fail', 'blocked', 'cancelled' */
+    finalVerdict: text('final_verdict').notNull(),
+
+    /** Overall quality score 0-100 (enforced by Zod .refine()) */
+    qualityScore: integer('quality_score').notNull().default(0),
+
+    /** Cumulative input tokens across all agent invocations for this story */
+    totalInputTokens: integer('total_input_tokens').notNull().default(0),
+
+    /** Cumulative output tokens across all agent invocations for this story */
+    totalOutputTokens: integer('total_output_tokens').notNull().default(0),
+
+    /** Cumulative cached tokens across all agent invocations for this story */
+    totalCachedTokens: integer('total_cached_tokens').notNull().default(0),
+
+    /** Estimated total cost in USD (4 decimal precision for sub-cent accuracy) */
+    estimatedTotalCost: numeric('estimated_total_cost', { precision: 10, scale: 4 })
+      .notNull()
+      .default('0.0000'),
+
+    /** Number of review iterations before acceptance */
+    reviewIterations: integer('review_iterations').notNull().default(0),
+
+    /** Number of QA iterations before acceptance */
+    qaIterations: integer('qa_iterations').notNull().default(0),
+
+    /** Total wall-clock duration of story execution in milliseconds */
+    durationMs: integer('duration_ms').notNull().default(0),
+
+    /** Primary reason for failure or blocking (null if passed) */
+    primaryBlocker: text('primary_blocker'),
+
+    /** Arbitrary metadata for extensibility (JSON) */
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+
+    /** Timestamp when the story completed */
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: uniqueIndex('story_outcomes_story_id_idx').on(table.storyId),
+    finalVerdictIdx: index('story_outcomes_final_verdict_idx').on(table.finalVerdict),
+    completedAtIdx: index('story_outcomes_completed_at_idx').on(table.completedAt),
+    // Composite index for common pipeline health query: filter by verdict within date range
+    finalVerdictCompletedAtIdx: index('story_outcomes_final_verdict_completed_at_idx').on(
+      table.finalVerdict,
+      table.completedAt,
+    ),
+  }),
+)
+
+// ============================================================================
 // 4. ML PIPELINE SCHEMA
 // ============================================================================
 
@@ -1734,6 +1893,24 @@ export const insertStateTransitionSchema = createInsertSchema(stateTransitions)
 export const selectStateTransitionSchema = createSelectSchema(stateTransitions)
 export type InsertStateTransition = z.infer<typeof insertStateTransitionSchema>
 export type SelectStateTransition = z.infer<typeof selectStateTransitionSchema>
+
+// HITL Decisions Zod Schemas (WINT-0040)
+export const insertHitlDecisionSchema = createInsertSchema(hitlDecisions)
+export const selectHitlDecisionSchema = createSelectSchema(hitlDecisions)
+export type InsertHitlDecision = z.infer<typeof insertHitlDecisionSchema>
+export type SelectHitlDecision = z.infer<typeof selectHitlDecisionSchema>
+
+// Story Outcomes Zod Schemas (WINT-0040)
+export const insertStoryOutcomeSchema = createInsertSchema(storyOutcomes).refine(
+  data => data.qualityScore === undefined || (data.qualityScore >= 0 && data.qualityScore <= 100),
+  {
+    message: 'qualityScore must be between 0 and 100',
+    path: ['qualityScore'],
+  },
+)
+export const selectStoryOutcomeSchema = createSelectSchema(storyOutcomes)
+export type InsertStoryOutcome = z.infer<typeof insertStoryOutcomeSchema>
+export type SelectStoryOutcome = z.infer<typeof selectStoryOutcomeSchema>
 
 // ML Pipeline Zod Schemas
 export const insertTrainingDataSchema = createInsertSchema(trainingData)
