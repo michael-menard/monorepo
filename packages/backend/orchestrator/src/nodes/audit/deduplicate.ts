@@ -53,9 +53,12 @@ async function loadExistingStoryTitles(plansDir: string): Promise<Map<string, st
   return titles
 }
 
-export async function deduplicate(state: CodeAuditState): Promise<Partial<CodeAuditState>> {
+export async function deduplicate(
+  state: CodeAuditState,
+  plansDir = 'plans',
+): Promise<Partial<CodeAuditState>> {
   const findings = state.findings || []
-  const existingTitles = await loadExistingStoryTitles('plans')
+  const existingTitles = await loadExistingStoryTitles(plansDir)
 
   let duplicatesFound = 0
   let relatedFound = 0
