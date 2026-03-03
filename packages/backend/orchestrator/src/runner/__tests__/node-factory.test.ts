@@ -504,3 +504,128 @@ describe('metricsCollector integration', () => {
     expect(metrics.avgExecutionMs).toBeGreaterThanOrEqual(0)
   })
 })
+
+// WINT-9107: ST-2 — Circuit breaker isolation, RETRY_PRESETS distinct values, classifyError sole decision point
+import { RETRY_PRESETS } from '../types.js'
+
+describe('WINT-9107: NodeCircuitBreaker per-node isolation', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
+
+  it('createNode() produces independent circuit breaker instances — opening one does not affect the other', async () => {
+    const state = createInitialState({ epicPrefix: 'wrkf', storyId: 'wrkf-9107' })
+
+    // Two independent nodes with their own circuit breakers
+    const nodeA = createNode(
+      {
+        name: 'node-a',
+        retry: { maxAttempts: 1 },
+        circuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 },
+      },
+      async () => {
+        throw new Error('node-a always fails')
+      },
+    )
+
+    const nodeB = createNode(
+      {
+        name: 'node-b',
+        retry: { maxAttempts: 1 },
+        circuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 },
+      },
+      async () => ({ routingFlags: { proceed: true } }),
+    )
+
+    // Open node-a's circuit
+    await nodeA(state)
+    await nodeA(state)
+    const nodeAResult = await nodeA(state)
+
+    // node-a circuit is OPEN
+    expect(nodeAResult.errors?.[0].code).toBe('CIRCUIT_OPEN')
+
+    // node-b circuit is NOT affected — still executes successfully
+    const nodeBResult = await nodeB(state)
+    expect(nodeBResult.routingFlags?.proceed).toBe(true)
+    expect(nodeBResult.errors?.[0]?.code).not.toBe('CIRCUIT_OPEN')
+  })
+})
+
+describe('WINT-9107: RETRY_PRESETS distinct values', () => {
+  it('createLLMNode and createToolNode apply distinct retry presets', () => {
+    // createLLMNode uses maxAttempts=5, backoffMs=2000, timeoutMs=60000
+    // createToolNode uses maxAttempts=2, backoffMs=500, timeoutMs=10000
+    // These values must be distinct to ensure per-type retry behavior
+    expect(RETRY_PRESETS.llm.maxAttempts).toBe(5)
+    expect(RETRY_PRESETS.tool.maxAttempts).toBe(2)
+    expect(RETRY_PRESETS.llm.maxAttempts).not.toBe(RETRY_PRESETS.tool.maxAttempts)
+    expect(RETRY_PRESETS.llm.backoffMs).not.toBe(RETRY_PRESETS.tool.backoffMs)
+    expect(RETRY_PRESETS.llm.timeoutMs).not.toBe(RETRY_PRESETS.tool.timeoutMs)
+
+    // Verify factories produce distinct node functions
+    const llmImpl = vi.fn().mockResolvedValue({ routingFlags: { proceed: true } })
+    const toolImpl = vi.fn().mockResolvedValue({ routingFlags: { proceed: true } })
+
+    const llmNode = createLLMNode('llm-test', llmImpl)
+    const toolNode = createToolNode('tool-test', toolImpl)
+
+    expect(llmNode).not.toBe(toolNode)
+    expect(typeof llmNode).toBe('function')
+    expect(typeof toolNode).toBe('function')
+  })
+})
+
+describe('WINT-9107: classifyError as sole retry decision point', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
+
+  it('isRetryableNodeError delegates entirely to classifyError — ZodError is not retryable', async () => {
+    const state = createInitialState({ epicPrefix: 'wrkf', storyId: 'wrkf-9107' })
+    const implementation = vi.fn().mockRejectedValue(new ZodError([]))
+
+    const node = createNode(
+      { name: 'classify-test', retry: { maxAttempts: 3, jitterFactor: 0 } },
+      implementation,
+    )
+
+    await node(state)
+
+    // classifyError marks ZodError as non-retryable → only 1 attempt
+    expect(implementation).toHaveBeenCalledTimes(1)
+  })
+
+  it('classifyError as sole decision: generic Error IS retried up to maxAttempts', async () => {
+    const state = createInitialState({ epicPrefix: 'wrkf', storyId: 'wrkf-9107' })
+    const implementation = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('transient failure 1'))
+      .mockRejectedValueOnce(new Error('transient failure 2'))
+      .mockResolvedValue({ routingFlags: { proceed: true } })
+
+    const node = createNode(
+      { name: 'classify-retry', retry: { maxAttempts: 3, jitterFactor: 0 } },
+      implementation,
+    )
+
+    const promise = node(state)
+    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(2000)
+    const result = await promise
+
+    // classifyError marks generic Error as retryable → all 3 attempts used
+    expect(implementation).toHaveBeenCalledTimes(3)
+    expect(result.routingFlags?.proceed).toBe(true)
+  })
+})
