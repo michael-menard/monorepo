@@ -26,7 +26,8 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "sync:story": "tsx scripts/sync-story.ts",
-    "sync:epic": "tsx scripts/sync-epic.ts"
+    "sync:epic": "tsx scripts/sync-epic.ts",
+    "regenerate:index": "tsx scripts/regenerate-index.ts"
   },
   "dependencies": {
     "@repo/database-schema": "workspace:*",
