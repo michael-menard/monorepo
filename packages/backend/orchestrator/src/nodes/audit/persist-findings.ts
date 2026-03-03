@@ -2,19 +2,22 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { stringify } from 'yaml'
 import type { CodeAuditState } from '../../graphs/code-audit.js'
-import type { AuditFindings, AuditSeverity } from '../../artifacts/audit-findings.js'
+import type { AuditFindings } from '../../artifacts/audit-findings.js'
 
 /**
  * Persist Findings Node
  *
- * Write FINDINGS-{date}.yaml to plans/audit/
+ * Write FINDINGS-{date}.yaml to plans/audit/ (or custom auditDir)
  */
 
 function formatDate(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-export async function persistFindings(state: CodeAuditState): Promise<Partial<CodeAuditState>> {
+export async function persistFindings(
+  state: CodeAuditState,
+  auditDir = 'plans/audit',
+): Promise<Partial<CodeAuditState>> {
   const findings = state.findings || []
   const lensResults = state.lensResults || []
   const lenses = state.lenses || []
@@ -59,7 +62,6 @@ export async function persistFindings(state: CodeAuditState): Promise<Partial<Co
   }
 
   // Write to file
-  const auditDir = 'plans/audit'
   try {
     await mkdir(auditDir, { recursive: true })
   } catch {

@@ -54,8 +54,10 @@ async function loadAllFindings(auditDir: string): Promise<FindingsSummary[]> {
   return summaries
 }
 
-export async function persistTrends(state: CodeAuditState): Promise<Partial<CodeAuditState>> {
-  const auditDir = 'plans/audit'
+export async function persistTrends(
+  state: CodeAuditState,
+  auditDir = 'plans/audit',
+): Promise<Partial<CodeAuditState>> {
   const summaries = await loadAllFindings(auditDir)
 
   if (summaries.length === 0) {
