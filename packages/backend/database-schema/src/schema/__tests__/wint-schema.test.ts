@@ -103,6 +103,14 @@ import {
   mlModelsRelations,
   featuresRelations,
   workflowExecutionsRelations,
+
+  // WINT-0040: HITL Decisions + Story Outcomes
+  hitlDecisions,
+  storyOutcomes,
+  insertHitlDecisionSchema,
+  selectHitlDecisionSchema,
+  insertStoryOutcomeSchema,
+  selectStoryOutcomeSchema,
 } from '../wint'
 
 describe('WINT Schema - AC-001: Schema Namespace', () => {
@@ -144,6 +152,14 @@ describe('WINT Schema - AC-004: Telemetry Schema', () => {
     expect(agentDecisions).toBeDefined()
     expect(agentOutcomes).toBeDefined()
     expect(stateTransitions).toBeDefined()
+  })
+
+  it('should define hitlDecisions table (WINT-0040)', () => {
+    expect(hitlDecisions).toBeDefined()
+  })
+
+  it('should define storyOutcomes table (WINT-0040)', () => {
+    expect(storyOutcomes).toBeDefined()
   })
 })
 
@@ -676,6 +692,80 @@ describe('APIP-3020 - AC-13: Existing wint-schema tests still pass', () => {
     expect(wintSchema).toBeDefined()
     expect(stories).toBeDefined()
     expect(agentInvocations).toBeDefined()
+    expect(workflowExecutions).toBeDefined()
+  })
+})
+
+// ============================================================================
+// WINT-0040 — HITL Decisions + Story Outcomes Schema Tests
+// ============================================================================
+
+describe('WINT-0040 - AC-6/AC-7: HITL Decisions Zod Schemas', () => {
+  it('should export insertHitlDecisionSchema', () => {
+    expect(insertHitlDecisionSchema).toBeDefined()
+  })
+
+  it('should export selectHitlDecisionSchema', () => {
+    expect(selectHitlDecisionSchema).toBeDefined()
+  })
+})
+
+describe('WINT-0040 - AC-7/AC-8: Story Outcomes Zod Schemas', () => {
+  it('should export insertStoryOutcomeSchema', () => {
+    expect(insertStoryOutcomeSchema).toBeDefined()
+  })
+
+  it('should export selectStoryOutcomeSchema', () => {
+    expect(selectStoryOutcomeSchema).toBeDefined()
+  })
+
+  it('should reject qualityScore: 150 (EC-1 — out of 0-100 range)', () => {
+    const result = insertStoryOutcomeSchema.safeParse({
+      storyId: 'WINT-0040',
+      finalVerdict: 'pass',
+      qualityScore: 150,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('should accept qualityScore: 95 (within 0-100 range)', () => {
+    const result = insertStoryOutcomeSchema.safeParse({
+      storyId: 'WINT-0040',
+      finalVerdict: 'pass',
+      qualityScore: 95,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should accept qualityScore: 0 (boundary)', () => {
+    const result = insertStoryOutcomeSchema.safeParse({
+      storyId: 'WINT-0040',
+      finalVerdict: 'pass',
+      qualityScore: 0,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('should accept qualityScore: 100 (boundary)', () => {
+    const result = insertStoryOutcomeSchema.safeParse({
+      storyId: 'WINT-0040',
+      finalVerdict: 'pass',
+      qualityScore: 100,
+    })
+    expect(result.success).toBe(true)
+  })
+})
+
+describe('WINT-0040 - AC-9: No Regression (existing tests still pass)', () => {
+  it('should not have broken any pre-existing wint schema exports', () => {
+    expect(wintSchema).toBeDefined()
+    expect(stories).toBeDefined()
+    expect(agentInvocations).toBeDefined()
+    expect(agentDecisions).toBeDefined()
+    expect(agentOutcomes).toBeDefined()
+    expect(stateTransitions).toBeDefined()
+    expect(trainingData).toBeDefined()
+    expect(features).toBeDefined()
     expect(workflowExecutions).toBeDefined()
   })
 })
