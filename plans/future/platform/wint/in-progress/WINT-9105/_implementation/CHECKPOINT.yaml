@@ -1,0 +1,15 @@
+schema: 1
+story_id: WINT-9105
+current_phase: proof
+last_successful_phase: execute
+blocked: false
+blocked_reason: null
+iteration: 0
+max_iterations: 3
+e2e_gate: null
+forced: false
+timestamp: '2026-03-03T16:00:00Z'
+feature_dir: plans/future/platform/wint
+completed_at: null
+warnings:
+  - KB story record not found - proceeding without DB tracking
