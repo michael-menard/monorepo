@@ -19,16 +19,16 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 22 |
 | in-qa | 2 |
 | ready-for-qa | 2 |
-| needs-code-review | 4 |
+| needs-code-review | 5 |
 | ready-for-code-review | 0 |
-| failed-code-review | 0 |
+| failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 0 |
-| created | 2 |
+| created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
-| pending | 92 |
+| ready-to-work | 6 |
+| pending | 90 |
 
 ---
 
@@ -1031,7 +1031,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2040: Populate Agent Mission Cache
 
-**Status:** created
+**Status:** failed-code-review
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Parse all 115 .agent.md files, extract mission/scope/signals, populate context_cache.agent_missions
@@ -1042,14 +1042,14 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Parser must handle various frontmatter formats
 
-**Story File:** `created/WINT-2040/WINT-2040.md`
+**Story File:** `failed-code-review/WINT-2040/WINT-2040.md`
 **Story Generated:** 2026-03-02
 
 ---
 
 ### WINT-2050: Populate Domain Knowledge Cache
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Extract domain patterns, ADRs, blockers, lessons from docs/ and populate context_cache.domain_kb
@@ -1064,7 +1064,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2060: Populate Library Cache
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs
