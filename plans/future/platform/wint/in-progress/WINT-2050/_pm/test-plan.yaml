@@ -1,0 +1,138 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+
+happy_path_tests:
+  - id: HP-1
+    title: "ADR pack written with correct packType and structured JSONB"
+    setup: "plans/stories/ADR-LOG.md exists with at least one active ADR entry"
+    action: "Call populateDomainKb() with real DATABASE_URL pointing to port 5432"
+    expected: "Row exists in wint.context_packs with packType='architecture', packKey='active-adrs', content.adrs is array, content.summary is non-empty string, JSON.stringify(content).length < 8000"
+    evidence: "SELECT pack_type, pack_key, content FROM wint.context_packs WHERE pack_type='architecture' AND pack_key='active-adrs' returns 1 row"
+
+  - id: HP-2
+    title: "Lessons packs written per domain area from KB query"
+    setup: "KB at port 5433 has entries tagged lesson-learned for at least one domain (backend, frontend, testing, workflow)"
+    action: "Call populateDomainKb() with KB_DATABASE_URL pointing to port 5433"
+    expected: "At least one row exists in wint.context_packs with packType='lessons_learned', packKey matching 'lessons-{area}' pattern, content.summary non-empty, content.lessons is array"
+    evidence: "SELECT pack_key FROM wint.context_packs WHERE pack_type='lessons_learned' AND pack_key LIKE 'lessons-%' returns 1+ rows"
+
+  - id: HP-3
+    title: "Blockers pack written with constraint/blocker KB entries"
+    setup: "KB at port 5433 has entries of entry_type='constraint' or tagged 'blocker'"
+    action: "Call populateDomainKb()"
+    expected: "Row exists with packType='lessons_learned', packKey='blockers-known', content.blockers is array, content.summary is string"
+    evidence: "SELECT content FROM wint.context_packs WHERE pack_key='blockers-known' returns row with .blockers array"
+
+  - id: HP-4
+    title: "Script returns correct summary counts"
+    setup: "Clean database state (no prior domain KB packs)"
+    action: "Call populateDomainKb()"
+    expected: "Result is { attempted: N, succeeded: M, failed: 0 } where M <= N and M >= 2 (ADR pack + at least one lessons pack)"
+    evidence: "Function return value logged and checked"
+
+  - id: HP-5
+    title: "Idempotency — running twice yields same row count"
+    setup: "First run has already populated packs"
+    action: "Call populateDomainKb() a second time"
+    expected: "COUNT(*) from wint.context_packs WHERE pack_type IN ('architecture','lessons_learned') is identical to count after first run; no constraint errors"
+    evidence: "COUNT before second run equals COUNT after second run"
+
+  - id: HP-6
+    title: "All 6+ expected packs present after full run"
+    setup: "Real DB at 5432, real KB at 5433 with data"
+    action: "Call populateDomainKb()"
+    expected: "At least 6 entries in wint.context_packs: active-adrs, lessons-backend, lessons-frontend, lessons-testing, lessons-workflow, blockers-known"
+    evidence: "SELECT pack_key FROM wint.context_packs WHERE pack_type IN ('architecture','lessons_learned') returns >= 6 rows with expected pack keys"
+
+error_cases:
+  - id: EC-1
+    title: "KB unavailable — ADR pack still written, KB-derived packs increment failed count"
+    setup: "KB_DATABASE_URL points to unavailable port or wrong host"
+    action: "Call populateDomainKb() with mocked KB query that throws connection error"
+    expected: "ADR pack is still written (succeeded >= 1); failed count equals number of KB-dependent packs attempted; no exception thrown from populateDomainKb()"
+    evidence: "Result.failed > 0, result.succeeded >= 1; no unhandled exception"
+
+  - id: EC-2
+    title: "ADR-LOG.md missing — ADR pack skipped, warning logged, run continues"
+    setup: "ADR-LOG.md does not exist at expected path"
+    action: "Call populateDomainKb() with mocked file read returning null/error"
+    expected: "Warning logged via @repo/logger; ADR pack not written; KB-derived packs still attempted; result.failed >= 1 (for ADR pack)"
+    evidence: "result.attempted >= 1, result.succeeded counts only KB packs; logger.warn called"
+
+  - id: EC-3
+    title: "Single pack write failure does not abort run"
+    setup: "contextCachePut() throws on the second call only"
+    action: "Call populateDomainKb() with mocked contextCachePut that fails for one pack"
+    expected: "Run continues through all remaining packs; result.failed === 1; other packs succeed"
+    evidence: "result.succeeded > 0, result.failed === 1; no unhandled exception"
+
+  - id: EC-4
+    title: "Empty KB results — no lessons packs written for areas with 0 entries"
+    setup: "KB query returns empty array for all domain areas"
+    action: "Call populateDomainKb() with mocked KB query returning []"
+    expected: "No lessons-{area} packs are written; only ADR pack attempted; result reflects this"
+    evidence: "No rows with pack_key LIKE 'lessons-%' in context_packs"
+
+edge_cases:
+  - id: ED-1
+    title: "Content JSONB length capped at < 8000 chars"
+    setup: "KB returns 100 lesson entries per domain area"
+    action: "Call populateDomainKb()"
+    expected: "Each written pack has JSON.stringify(content).length < 8000; excess entries truncated"
+    evidence: "Query content from wint.context_packs, JSON.stringify each content, all < 8000"
+
+  - id: ED-2
+    title: "Only packType values 'lessons_learned' and 'architecture' are used"
+    setup: "Full run with all data available"
+    action: "Call populateDomainKb()"
+    expected: "SELECT DISTINCT pack_type FROM wint.context_packs WHERE pack_key IN ('active-adrs','lessons-backend','lessons-frontend','lessons-testing','lessons-workflow','blockers-known') returns only ['architecture','lessons_learned']"
+    evidence: "No rows with unexpected packType values"
+
+  - id: ED-3
+    title: "KB injectable dependency — unit test uses mock KB function"
+    setup: "Unit test provides mock kbQueryFn returning fixture data"
+    action: "Call populateDomainKb({ kbQueryFn: mockKbQuery })"
+    expected: "Function uses provided mock, does not attempt real DB connection to port 5433; packs written to port 5432 test DB"
+    evidence: "Mock KB function call count matches expected query count"
+
+  - id: ED-4
+    title: "TTL set to 30 days (2592000 seconds) on all pack writes"
+    setup: "Any run"
+    action: "Call populateDomainKb()"
+    expected: "Each contextCachePut() call receives ttl: 2592000"
+    evidence: "Mock contextCachePut spy receives ttl: 2592000 on every call"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "SELECT pack_type, pack_key, content FROM wint.context_packs WHERE pack_type IN ('architecture','lessons_learned') returns >= 6 rows"
+      - "JSON.stringify(content).length < 8000 for all rows"
+      - "content.summary is non-empty string for all rows"
+      - "Second populate run: COUNT(*) unchanged (idempotency)"
+      - "DISTINCT pack_type IN ('architecture','lessons_learned') only"
+
+manual_cases: []
+
+fixture_definitions:
+  - name: "mockKbLessonsBackend"
+    type: "array of KnowledgeEntry"
+    description: "3-5 lesson entries tagged 'backend' with title, description, tags fields"
+  - name: "mockKbBlockers"
+    type: "array of KnowledgeEntry"
+    description: "2-3 constraint/blocker entries with title, description"
+  - name: "mockAdrLogContent"
+    type: "string"
+    description: "Markdown string with ## ADR-001 through ## ADR-006 headings and descriptions"
+  - name: "emptyKbResponse"
+    type: "array"
+    description: "Empty array [] to simulate no KB results for a domain"
+
+risks:
+  - "Port confusion (5432 vs 5433) in integration test setup — must explicitly assert correct port in test env; most common failure mode for WINT populate stories"
+  - "KB may have sparse data in test environment — HP-2/HP-3 require at least some KB data to be meaningful; may need fixtures"
+  - "ADR-LOG.md path resolution in test context — MONOREPO_ROOT detection must work in Vitest test runner"
+  - "Content truncation logic correctness — need to verify 8000 char limit is enforced without corrupting JSON structure"
