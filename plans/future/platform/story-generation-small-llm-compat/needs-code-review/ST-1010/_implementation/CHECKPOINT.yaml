@@ -1,0 +1,17 @@
+schema: 1
+story_id: ST-1010
+feature_dir: plans/future/platform/story-generation-small-llm-compat
+timestamp: '2026-03-04T02:49:00Z'
+current_phase: qa-verify
+last_successful_phase: qa-setup
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - >-
+    SCOPE.yaml touched_paths_globs (packages/backend/**, packages/core/**) do not match actual deliverable
+    (.claude/agents/pm-story-seed-agent.agent.md) — story is docs-only
+  - >-
+    REVIEW.yaml absent — waived per KB lesson: Review phase waived for documentation-only stories
+gen_mode: false

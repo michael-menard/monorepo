@@ -146,12 +146,19 @@ From filesystem:
    - Prefer files already identified as reuse candidates in Phase 2
    - Skip files with known deprecation or anti-patterns from baseline
 
-3. **Select 2-4 canonical references** (token budget constraint):
+3. **Detect non-code story types** — if story is docs-only, config-only, or agent-prompt-only, emit empty list with explanatory note:
+   ```yaml
+   canonical_references: []
+   canonical_refs_note: 'Non-code story (docs-only/config-only/agent-prompt-only) — no implementation pattern refs applicable'
+   ```
+   Skip steps 4-5 and proceed to Phase 3.
+
+4. **Select 2-4 canonical references** (token budget constraint):
    - Each reference must be a single file path
    - Include a brief "why" explaining what makes it exemplary
    - Include the pattern category it demonstrates
 
-4. **Build canonical references** object:
+5. **Build canonical references** object:
    ```yaml
    canonical_references:
      - pattern: "API handler"
@@ -336,6 +343,11 @@ blocking_conflicts: {count}
 
 ## Canonical References
 
+<!-- If story is docs-only, config-only, or agent-prompt-only: -->
+<!-- canonical_references: [] -->
+<!-- canonical_refs_note: 'Non-code story (docs-only/config-only/agent-prompt-only) — no implementation pattern refs applicable' -->
+
+<!-- If story is a code story, use the table below: -->
 Files that demonstrate the patterns this story should follow:
 
 | Pattern | File | Why |
