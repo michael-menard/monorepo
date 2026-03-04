@@ -90,7 +90,7 @@ AUTONOMY="aggressive"
 # Note: worktree lifecycle is managed by this script (ensure_worktree/merge_and_cleanup)
 # --skip-worktree is always passed to dev-implement-story
 ONLY_LIST=""
-MAX_RETRIES=0
+MAX_RETRIES=1
 
 # All tools needed for implement, review, and QA — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -487,6 +487,139 @@ validate_artifact() {
 
   echo "OK"
 }
+
+# Validate a YAML artifact has required fields (bash 3.2 compatible, grep-based)
+# Usage: validate_artifact_schema FILE FIELD1 [FIELD2 ...]
+# Returns: OK, MISSING (file not found), EMPTY (file too small), or FIELD_MISSING:<name>
+validate_artifact_schema() {
+  local FILE_PATH="$1"
+  shift
+  local REQUIRED_FIELDS=("$@")
+
+  if [[ ! -f "$FILE_PATH" ]]; then
+    echo "MISSING"
+    return 0
+  fi
+
+  local FILE_SIZE
+  FILE_SIZE=$(wc -c < "$FILE_PATH" 2>/dev/null) || FILE_SIZE=0
+  if [[ $FILE_SIZE -lt 10 ]]; then
+    echo "EMPTY"
+    return 0
+  fi
+
+  local field
+  for field in "${REQUIRED_FIELDS[@]}"; do
+    # Check field is present and non-empty (handles "field: value" and "field:\n  - item" patterns)
+    local FIELD_LINE
+    FIELD_LINE=$(grep -m1 "^${field}:" "$FILE_PATH" 2>/dev/null) || true
+    if [[ -z "$FIELD_LINE" ]]; then
+      echo "FIELD_MISSING:${field}"
+      return 0
+    fi
+    # For list fields, also check there is at least one list item or an inline value
+    local INLINE_VALUE
+    INLINE_VALUE=$(echo "$FIELD_LINE" | sed "s/^${field}: *//" | sed 's/^["'"'"']//;s/["'"'"']$//') || true
+    if [[ -z "$INLINE_VALUE" || "$INLINE_VALUE" == "[]" || "$INLINE_VALUE" == "null" || "$INLINE_VALUE" == "~" ]]; then
+      # Check if there is a following list item
+      if ! grep -A3 "^${field}:" "$FILE_PATH" 2>/dev/null | grep -q "^  - "; then
+        echo "FIELD_MISSING:${field}"
+        return 0
+      fi
+    fi
+  done
+
+  echo "OK"
+}
+
+# Validate artifact gates before a phase transition
+# Usage: validate_phase_gate IMPL_DIR STORY_ID FROM_STAGE TO_STAGE
+# Returns: 0 (gate passes), 1 (gate fails)
+# Side effect: prints structured GATE FAIL log on failure
+validate_phase_gate() {
+  local IMPL_DIR="$1"
+  local STORY_ID="$2"
+  local FROM_STAGE="$3"
+  local TO_STAGE="$4"
+
+  local GATE_RESULT VERDICT_VALUE
+
+  case "${FROM_STAGE}→${TO_STAGE}" in
+
+    # impl -> needs-code-review: EVIDENCE.yaml must exist with touched_files and commands_run
+    "in-progress→needs-code-review"|"ready-to-work→needs-code-review"|"backlog→needs-code-review")
+      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/EVIDENCE.yaml" "touched_files" "commands_run")
+      if [[ "$GATE_RESULT" != "OK" ]]; then
+        echo "GATE FAIL: ${STORY_ID} (${FROM_STAGE} -> needs-code-review): ${GATE_RESULT} in EVIDENCE.yaml"
+        return 1
+      fi
+      ;;
+
+    # review -> ready-for-qa: REVIEW.yaml must exist with verdict=pass|conditional-pass
+    "needs-code-review→ready-for-qa")
+      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/REVIEW.yaml" "verdict")
+      if [[ "$GATE_RESULT" != "OK" ]]; then
+        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> ready-for-qa): ${GATE_RESULT} in REVIEW.yaml"
+        return 1
+      fi
+      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/REVIEW.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
+      if ! echo "$VERDICT_VALUE" | grep -qi "^pass$\|^conditional.pass$"; then
+        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> ready-for-qa): verdict='${VERDICT_VALUE}' is not pass|conditional-pass in REVIEW.yaml"
+        return 1
+      fi
+      ;;
+
+    # review -> failed-code-review: REVIEW.yaml must exist with verdict=fail|concerns
+    "needs-code-review→failed-code-review")
+      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/REVIEW.yaml" "verdict")
+      if [[ "$GATE_RESULT" != "OK" ]]; then
+        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> failed-code-review): ${GATE_RESULT} in REVIEW.yaml"
+        return 1
+      fi
+      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/REVIEW.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
+      if ! echo "$VERDICT_VALUE" | grep -qi "^fail$\|concerns"; then
+        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> failed-code-review): verdict='${VERDICT_VALUE}' is not fail|concerns in REVIEW.yaml"
+        return 1
+      fi
+      ;;
+
+    # qa -> UAT: VERIFICATION.yaml must exist with verdict=pass
+    "ready-for-qa→UAT")
+      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/VERIFICATION.yaml" "verdict")
+      if [[ "$GATE_RESULT" != "OK" ]]; then
+        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> UAT): ${GATE_RESULT} in VERIFICATION.yaml"
+        return 1
+      fi
+      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/VERIFICATION.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
+      if ! echo "$VERDICT_VALUE" | grep -qi "^pass$"; then
+        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> UAT): verdict='${VERDICT_VALUE}' is not pass in VERIFICATION.yaml"
+        return 1
+      fi
+      ;;
+
+    # qa -> failed-qa: VERIFICATION.yaml must exist with verdict=fail
+    "ready-for-qa→failed-qa")
+      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/VERIFICATION.yaml" "verdict")
+      if [[ "$GATE_RESULT" != "OK" ]]; then
+        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> failed-qa): ${GATE_RESULT} in VERIFICATION.yaml"
+        return 1
+      fi
+      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/VERIFICATION.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
+      if ! echo "$VERDICT_VALUE" | grep -qi "^fail$"; then
+        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> failed-qa): verdict='${VERDICT_VALUE}' is not fail in VERIFICATION.yaml"
+        return 1
+      fi
+      ;;
+
+    # All other transitions (fix->needs-code-review, etc.) -- no gate required
+    *)
+      return 0
+      ;;
+  esac
+
+  return 0
+}
+
 
 # Create worktree for a story if it doesn't exist
 ensure_worktree() {
@@ -1063,6 +1196,10 @@ process_story() {
         # If it already has evidence (e.g., in-progress but implemented), just move forward
         if has_evidence; then
           echo "$TAG IMPL SKIP:   $STORY_ID (has EVIDENCE.yaml, advancing to needs-code-review)"
+          if ! validate_phase_gate "$STORY_DIR/_implementation" "$STORY_ID" "$CURRENT_STAGE" "needs-code-review"; then
+            # Evidence exists but schema incomplete — attempt recovery then retry
+            generate_evidence "$STORY_ID" "$STORY_DIR" "$TAG" || true
+          fi
           move_story_to "$STORY_ID" "$CURRENT_STAGE" "needs-code-review" "$TAG"
           continue
         fi
@@ -1115,6 +1252,20 @@ process_story() {
         # Ensure it's in needs-code-review/
         refresh_story_state
         if [[ "$CURRENT_STAGE" == "in-progress" ]]; then
+          # Gate: EVIDENCE.yaml must have touched_files + commands_run before advancing
+          if ! validate_phase_gate "$STORY_DIR/_implementation" "$STORY_ID" "in-progress" "needs-code-review"; then
+            echo "$TAG IMPL GATE:   $STORY_ID (gate failed — writing GATE-FAILURE.yaml)"
+            mkdir -p "$STORY_DIR/_implementation"
+            cat > "$STORY_DIR/_implementation/GATE-FAILURE.yaml" <<GATEYAML
+schema: 1
+story_id: "${STORY_ID}"
+timestamp: "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+gate: "in-progress -> needs-code-review"
+reason: "EVIDENCE.yaml missing required fields (touched_files, commands_run)"
+GATEYAML
+            FINAL_RESULT="fail"
+            break
+          fi
           move_story_to "$STORY_ID" "in-progress" "needs-code-review" "$TAG"
         fi
         echo "$TAG IMPL OK:     $STORY_ID"
@@ -1209,6 +1360,18 @@ process_story() {
             move_story_to "$STORY_ID" "needs-code-review" "failed-code-review" "$TAG"
           fi
           continue  # loop picks up failed-code-review → fix → re-review
+        fi
+
+        # Gate check: validate that the review agent produced required artifacts
+        # for the transition it made (needs-code-review → ready-for-qa or failed-code-review)
+        if [[ "$CURRENT_STAGE" == "ready-for-qa" || "$CURRENT_STAGE" == "failed-code-review" ]]; then
+          if ! validate_phase_gate "$STORY_DIR/_implementation" "$STORY_ID" "needs-code-review" "$CURRENT_STAGE"; then
+            # Gate failed — REVIEW.yaml missing or verdict wrong
+            # Move back to needs-code-review so review runs again (retry)
+            echo "$TAG REVW GATE:   $STORY_ID (gate failed — moving back to needs-code-review for retry)"
+            move_story_to "$STORY_ID" "$CURRENT_STAGE" "needs-code-review" "$TAG"
+            continue
+          fi
         fi
 
         # Review passed → ready-for-qa, or review failed → failed-code-review
@@ -1365,11 +1528,23 @@ process_story() {
         fi
 
         if [[ "$CURRENT_STAGE" == "UAT" || "$CURRENT_STAGE" == "done" ]]; then
-          echo "$TAG QA   OK:     $STORY_ID"
-          merge_and_cleanup "$STORY_ID" "$TAG"
+          # Gate: VERIFICATION.yaml must have verdict=pass
+          if ! validate_phase_gate "$STORY_DIR/_implementation" "$STORY_ID" "ready-for-qa" "UAT"; then
+            echo "$TAG QA   GATE:   $STORY_ID (gate failed for ready-for-qa->UAT — moving back to ready-for-qa for retry)"
+            move_story_to "$STORY_ID" "$CURRENT_STAGE" "ready-for-qa" "$TAG"
+          else
+            echo "$TAG QA   OK:     $STORY_ID"
+            merge_and_cleanup "$STORY_ID" "$TAG"
+          fi
         elif [[ "$CURRENT_STAGE" == "failed-qa" ]]; then
-          # QA found real issues — loop will pick up failed-qa and run fix
-          echo "$TAG QA   ISSUE:  $STORY_ID ($LOG_CHECK) — looping to fix (see $QA_LOG)"
+          # Gate: VERIFICATION.yaml must have verdict=fail
+          if ! validate_phase_gate "$STORY_DIR/_implementation" "$STORY_ID" "ready-for-qa" "failed-qa"; then
+            echo "$TAG QA   GATE:   $STORY_ID (gate failed for ready-for-qa->failed-qa — moving back to ready-for-qa for retry)"
+            move_story_to "$STORY_ID" "failed-qa" "ready-for-qa" "$TAG"
+          else
+            # QA found real issues — loop will pick up failed-qa and run fix
+            echo "$TAG QA   ISSUE:  $STORY_ID ($LOG_CHECK) — looping to fix (see $QA_LOG)"
+          fi
         elif [[ "$CURRENT_STAGE" == "ready-for-qa" ]]; then
           # QA ran but stage didn't advance — missing artifacts or silent agent failure
           if ! has_evidence || ! is_reviewed "$STORY_DIR"; then
@@ -1378,7 +1553,21 @@ process_story() {
           else
             # Artifacts exist but QA didn't advance — move to failed-qa so fix can run
             echo "$TAG QA   RECOV:  $STORY_ID (QA ran but stage unchanged — moving to failed-qa for fix) (see $QA_LOG)"
-            move_story_to "$STORY_ID" "ready-for-qa" "failed-qa" "$TAG"
+            # Gate check before moving to failed-qa
+            if validate_phase_gate "$STORY_DIR/_implementation" "$STORY_ID" "ready-for-qa" "failed-qa" 2>/dev/null; then
+              move_story_to "$STORY_ID" "ready-for-qa" "failed-qa" "$TAG"
+            else
+              echo "$TAG QA   GATE:   $STORY_ID (no VERIFICATION.yaml to confirm failure — writing GATE-FAILURE.yaml)"
+              mkdir -p "$STORY_DIR/_implementation"
+              cat > "$STORY_DIR/_implementation/GATE-FAILURE.yaml" <<GATEYAML
+schema: 1
+story_id: "${STORY_ID}"
+timestamp: "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+gate: "ready-for-qa -> failed-qa"
+reason: "VERIFICATION.yaml missing or verdict not fail"
+GATEYAML
+              FINAL_RESULT="fail"
+            fi
           fi
         else
           echo "$TAG QA   OK:     $STORY_ID (now in $CURRENT_STAGE)"
