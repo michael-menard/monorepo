@@ -61,6 +61,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@repo/context-pack-sidecar": "workspace:*",
     "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",

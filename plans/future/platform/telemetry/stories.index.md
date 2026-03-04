@@ -4,7 +4,7 @@
 
 | Status | Count |
 |--------|-------|
-| Elaboration | 1 |
+| UAT | 1 |
 | Pending | 3 |
 | **Total** | **4** |
 
@@ -16,7 +16,7 @@
 
 ### TELE-0010: Docker Telemetry Stack — Validate and Complete Local Observability Foundation
 
-**Status:** `elaboration`
+**Status:** `uat`
 **Priority:** P0
 **Dependencies:** INFR-004 (events table exists)
 **Blocks:** TELE-002, TELE-003, TELE-004

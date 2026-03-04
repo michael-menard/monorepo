@@ -65,3 +65,6 @@ export {
   shimGetStoriesByFeature,
 } from './story-compatibility/index.js'
 export type { ShimOptions } from './story-compatibility/__types__/index.js'
+
+// Re-export context pack get tool (WINT-2020)
+export { contextPackGet } from './context-pack/context-pack-get.js'

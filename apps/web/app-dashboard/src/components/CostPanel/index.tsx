@@ -90,10 +90,7 @@ export function CostPanel({ costSummary, isLoading, error, onRetry }: CostPanelP
   // Error state (AC-7)
   if (error) {
     return (
-      <Card
-        className="bg-card border-border dark:backdrop-blur-sm"
-        aria-label="Cost summary error"
-      >
+      <Card className="bg-card border-border dark:backdrop-blur-sm" aria-label="Cost summary error">
         <CardHeader className="pb-2 px-4 md:px-6">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
             <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -151,14 +148,8 @@ export function CostPanel({ costSummary, isLoading, error, onRetry }: CostPanelP
       <CardContent className="px-4 md:px-6">
         <div aria-live="polite" aria-atomic="false">
           <div className="overflow-x-auto">
-            <table
-              className="w-full text-sm"
-              aria-labelledby="cost-panel-caption"
-            >
-              <caption
-                id="cost-panel-caption"
-                className="sr-only"
-              >
+            <table className="w-full text-sm" aria-labelledby="cost-panel-caption">
+              <caption id="cost-panel-caption" className="sr-only">
                 Per-story token usage grouped by story and phase
               </caption>
               <thead>
@@ -189,9 +180,7 @@ export function CostPanel({ costSummary, isLoading, error, onRetry }: CostPanelP
                     <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">
                       {row.story_id}
                     </td>
-                    <td className="py-2 pr-4 text-card-foreground capitalize">
-                      {row.phase}
-                    </td>
+                    <td className="py-2 pr-4 text-card-foreground capitalize">{row.phase}</td>
                     <td className="py-2 pr-4 text-right font-medium text-card-foreground">
                       {formatTokens(row.total_tokens)}
                     </td>

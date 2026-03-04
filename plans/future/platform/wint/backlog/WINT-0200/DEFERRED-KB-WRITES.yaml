@@ -1,0 +1,22 @@
+deferred_at: "2026-03-02T00:00:00Z"
+reason: "KB unavailable at story generation time (psql connection refused)"
+retry_when: "KB service is available"
+
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: "WINT-0200"
+      feature: "wint"
+      title: "Create User Flows Schema with State/Capability Enums — PM Artifacts and Example"
+      story_dir: "plans/future/platform/wint/backlog/WINT-0200"
+      story_file: "plans/future/platform/wint/backlog/WINT-0200/WINT-0200.md"
+      story_type: "chore"
+      points: 2
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

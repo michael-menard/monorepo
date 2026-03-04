@@ -1,0 +1,161 @@
+strategy: integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: false
+
+happy_path_tests:
+  - id: HP-1
+    title: "Parity harness returns 'matching' when Claude Code and LangGraph produce identical DocSync outputs"
+    setup: "Create DocSyncInput fixture; mock both claudeCodeRunner and langGraphRunner to return identical DocSyncResult objects; instantiate parity-harness.ts"
+    action: "Call harness.run(claudeCodeRunner, langGraphRunner, fixture)"
+    expected: "ParityResult.verdict === 'matching'; diff is empty"
+    evidence: "ParityResult object matches ParityResultSchema; no divergent fields logged"
+
+  - id: HP-2
+    title: "Parity harness returns 'matching' for story-creation workflow with identical SynthesizedStory outputs"
+    setup: "Create StoryRequest fixture via createTestStoryRequest(); mock both runners to return the same SynthesizedStory object validated by SynthesizedStorySchema"
+    action: "Run parity harness for story-creation workflow"
+    expected: "ParityResult.verdict === 'matching'; Zod parse succeeds on both outputs"
+    evidence: "No Zod validation errors; matching verdict returned"
+
+  - id: HP-3
+    title: "Parity harness returns 'matching' for elaboration workflow with identical ElaborationResult outputs"
+    setup: "Create SynthesizedStory + delta fixture via createTestState(); mock both runners to return identical ElaborationResult objects"
+    action: "Run parity harness for elaboration workflow"
+    expected: "ParityResult.verdict === 'matching'"
+    evidence: "Zod parse succeeds; verdict is matching"
+
+  - id: HP-4
+    title: "ParityResult includes structured diff when outputs diverge"
+    setup: "Mock claudeCodeRunner to return { storyId: 'X', title: 'A' }; mock langGraphRunner to return { storyId: 'X', title: 'B' }; both pass Zod parse"
+    action: "Run parity harness"
+    expected: "ParityResult.verdict === 'divergent'; diff includes field path 'title' with actual='A', expected='B'"
+    evidence: "diff array is non-empty; field paths use Zod schema notation"
+
+  - id: HP-5
+    title: "LangGraph vitest alias resolves @langchain/langgraph without module resolution errors"
+    setup: "Ensure @langchain/langgraph alias is configured in packages/backend/orchestrator/vitest.config.ts"
+    action: "Run pnpm test --filter @repo/orchestrator on the parity/ directory"
+    expected: "No module resolution errors; all parity tests collected and run"
+    evidence: "pnpm test exits with code 0; test count matches expected parity test files"
+
+  - id: HP-6
+    title: "All parity tests pass in CI without real services"
+    setup: "All external services (AI, KB, DB, subprocess) mocked via injected toolRunners; no real network calls"
+    action: "Run pnpm test --filter @repo/orchestrator on parity suite"
+    expected: "All tests pass; no network connections attempted; coverage >= 80% within parity/ directory"
+    evidence: "CI green; coverage report shows >= 80% branch coverage in parity/ directory"
+
+  - id: HP-7
+    title: "Parity tests exist for all WINT-9110 workflows (bootstrap, elab-epic, elab-story, dev-implement, qa-verify, backlog-review)"
+    setup: "WINT-9110 graphs exist in packages/backend/orchestrator/src/graphs/; fixture inputs created for each"
+    action: "Run parity suite for each WINT-9110 workflow"
+    expected: "At least one parity test per WINT-9110 workflow returns ParityResult; no missing workflow coverage"
+    evidence: "Test count per workflow >= 1; all pass with mocked runners"
+
+error_cases:
+  - id: EC-1
+    title: "Parity harness returns 'error' when claudeCodeRunner throws"
+    setup: "Mock claudeCodeRunner to throw an Error('subprocess failed'); langGraphRunner succeeds"
+    action: "Run parity harness"
+    expected: "ParityResult.verdict === 'error'; error.source === 'claudeCode'; error.message === 'subprocess failed'"
+    evidence: "ParityResult.error field populated; no unhandled exception thrown from harness"
+
+  - id: EC-2
+    title: "Parity harness returns 'error' when langGraphRunner throws"
+    setup: "claudeCodeRunner succeeds; mock langGraphRunner to throw Error('graph execution failed')"
+    action: "Run parity harness"
+    expected: "ParityResult.verdict === 'error'; error.source === 'langGraph'"
+    evidence: "ParityResult.error field populated correctly"
+
+  - id: EC-3
+    title: "Parity harness returns 'divergent' when output fails Zod schema parse on one path"
+    setup: "claudeCodeRunner returns valid SynthesizedStory; langGraphRunner returns object missing required 'storyId' field"
+    action: "Run parity harness with SynthesizedStorySchema validation"
+    expected: "ParityResult.verdict === 'divergent'; diff includes schema validation failure for 'storyId'"
+    evidence: "Zod parse error captured in diff; verdict is divergent not error"
+
+  - id: EC-4
+    title: "Harness gracefully handles null/undefined output from either runner"
+    setup: "Mock claudeCodeRunner to return null"
+    action: "Run parity harness"
+    expected: "ParityResult.verdict === 'error' with descriptive message; harness does not throw"
+    evidence: "No unhandled exceptions; error message indicates null output from claudeCodeRunner"
+
+edge_cases:
+  - id: ED-1
+    title: "Known divergence test documents an expected behavioral difference without failing"
+    setup: "Create a test that documents a known/acceptable difference (e.g., timestamp formatting between paths); mark as expected divergence"
+    action: "Run parity harness with known-divergence flag"
+    expected: "Test passes; divergence is documented in ParityResult.knownDivergences; test does not fail CI"
+    evidence: "knownDivergences array populated; test result is PASS"
+
+  - id: ED-2
+    title: "Non-deterministic timestamps are pinned via vi.useFakeTimers() for stable comparison"
+    setup: "Call vi.useFakeTimers() before parity test; set fixed date; both runners use Date.now()"
+    action: "Run parity harness"
+    expected: "Both runners produce identical timestamp fields; ParityResult.verdict === 'matching'"
+    evidence: "No timestamp-related divergences in output"
+
+  - id: ED-3
+    title: "Optional fields absent in both outputs are treated as matching (not divergent)"
+    setup: "Both runners return outputs without an optional field (e.g., 'metadata' field not present in either)"
+    action: "Run parity harness with Zod schema that has optional field"
+    expected: "ParityResult.verdict === 'matching'; absent optional fields are not listed in diff"
+    evidence: "diff array is empty despite optional field absence"
+
+  - id: ED-4
+    title: "Parity harness fixture factories produce deterministic inputs across test runs"
+    setup: "Call createTestStoryRequest() twice in same test session"
+    action: "Compare two createTestStoryRequest() outputs"
+    expected: "Both outputs are structurally identical (no random UUIDs or timestamps without seeding)"
+    evidence: "Deep equality assertion passes"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "ParityResult.verdict is one of: 'matching' | 'divergent' | 'error'"
+      - "ParityResult.diff is an array of { fieldPath: string, claudeCodeValue: unknown, langGraphValue: unknown }"
+      - "ParityResult.knownDivergences is an optional array of documented differences"
+      - "All outputs validated through Zod artifact schemas before comparison"
+      - "Coverage >= 80% branch coverage in parity/ directory"
+      - "pnpm test --filter @repo/orchestrator exits code 0 in CI"
+
+manual_cases:
+  - id: MC-1
+    title: "README.md in parity/ directory accurately documents parity definition and cutover criteria"
+    steps:
+      - "Open packages/backend/orchestrator/src/__tests__/parity/README.md"
+      - "Verify 'What Parity Means' section explains schema equivalence vs content equality"
+      - "Verify 'How to Add a New Parity Test' section with step-by-step example"
+      - "Verify 'PASS Verdict for Cutover' section lists all required conditions"
+    expected: "README.md covers all three required topics with clear, actionable guidance"
+
+fixture_definitions:
+  - name: DocSyncInput
+    type: object
+    description: "Input fixture for doc-sync parity test — mirrors the DocSyncNode input contract"
+  - name: StoryRequest
+    type: object
+    description: "Input fixture for story-creation parity test — created via createTestStoryRequest() from existing graph tests"
+  - name: SynthesizedStory
+    type: object
+    description: "Expected output fixture for story-creation and elaboration — validated by SynthesizedStorySchema from src/artifacts/"
+  - name: ElaborationInput
+    type: object
+    description: "Input fixture combining SynthesizedStory + delta — created via createTestState()"
+  - name: MockToolRunner
+    type: function
+    description: "Injectable toolRunner that returns fixture responses without real AI calls — follows pattern from runner/node-factory.test.ts"
+  - name: ParityResult
+    type: object
+    description: "Output of parity harness — Zod-validated; contains verdict, diff array, optional knownDivergences"
+
+risks:
+  - "WINT-9010 (@repo/workflow-logic) QA not yet complete — shared types may shift; parity tests importing shared types may need updates after QA completes"
+  - "WINT-9110 graphs do not yet exist — AC-5 parity tests for bootstrap/elab-epic/dev-implement/qa-verify/backlog-review cannot be written until WINT-9110 is in ready-for-qa"
+  - "@langchain/langgraph vitest alias may not be configured in packages/backend/orchestrator/vitest.config.ts — must verify before parity tests can import LangGraph modules"
+  - "Injection boundaries on existing graphs: if any graph hardcodes external calls (non-injectable toolRunner), parity tests for that graph cannot be written deterministically until the graph is fixed in its own story scope"
+  - "ParityResult schema design must be agreed before any AC verification can be completed — design early to unblock all other subtasks"

@@ -1,0 +1,88 @@
+schema: 1
+story_id: TELE-0010
+timestamp: "2026-02-20T23:35:00Z"
+gen_mode: false
+
+touches:
+  backend: false
+  frontend: false
+  packages: false
+  db: false
+  contracts: false
+  ui: false
+  infra: true
+
+touched_paths_globs:
+  - "infra/compose.lego-app.yaml"
+  - "infra/grafana/**"
+  - "apps/api/lego-api/.env.example"
+
+risk_flags:
+  auth: false
+  payments: false
+  migrations: false
+  external_apis: false
+  security: false
+  performance: false
+
+subtasks:
+  - id: 1
+    title: Add Grafana dashboard folder provisioning
+    description: Configure Grafana folder provisioning YAML to create "Workflow Telemetry" folder
+    status: pending
+
+  - id: 2
+    title: Document ENABLE_METRICS environment variable
+    description: Update .env.example to document ENABLE_METRICS=true for Prometheus scrape target
+    status: pending
+
+  - id: 3
+    title: Resolve dashboard path inconsistency
+    description: Confirm canonical path is infra/grafana/dashboards/ and update PLAN.md
+    status: pending
+
+acceptance_criteria:
+  active:
+    - id: 1
+      criterion: Grafana provisioning YAML creates "Workflow Telemetry" folder on startup
+      scope: infra/grafana/provisioning/folders/
+
+    - id: 2
+      criterion: ENABLE_METRICS=true is documented in apps/api/lego-api/.env.example
+      scope: apps/api/lego-api/
+
+    - id: 3
+      criterion: Docker Compose stack starts cleanly without errors
+      scope: infra/
+
+    - id: 4
+      criterion: All Prometheus scrape targets show UP status after startup
+      scope: infra/
+
+    - id: 5
+      criterion: Grafana dashboard endpoint responds with 200 OK
+      scope: infra/
+
+    - id: 6
+      criterion: OTel Collector receives and processes metrics (smoke test)
+      scope: infra/
+
+    - id: 7
+      criterion: Path documentation resolves infra/ vs apps/telemetry/ discrepancy
+      scope: docs/
+
+    - id: 8
+      criterion: PLAN.md updated to confirm infra/grafana/dashboards/ as canonical
+      scope: docs/
+
+    - id: 9
+      criterion: No warnings or errors in logs during 5-minute smoke test
+      scope: infra/
+
+  deferred:
+    - id: 10
+      criterion: Tempo integration (out of scope for TELE-0010)
+      reason: Deferred to separate story per story context
+
+summary: "Validate and complete Docker Telemetry Stack — add Grafana folder provisioning, document ENABLE_METRICS, resolve dashboard path, run end-to-end smoke test"
+elaboration: "completed"

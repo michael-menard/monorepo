@@ -121,7 +121,7 @@ describe('Integration Tests', () => {
 
       const node = createNode(
         { name: 'test-node', retry: { maxAttempts: 2 } },
-        async state => ({
+        async _state => ({
           routingFlags: { proceed: true },
           artifactPaths: { story: '/path/to/story.md' },
         }),
@@ -413,7 +413,6 @@ describe('WINT-9107: Circuit breaker HALF_OPEN state transitions', () => {
 
   it('HALF_OPEN probe failure re-opens circuit', async () => {
     const state = createInitialState({ epicPrefix: 'wrkf', storyId: 'wrkf-9107' })
-    let callCount = 0
 
     const node = createNode(
       {
@@ -422,7 +421,6 @@ describe('WINT-9107: Circuit breaker HALF_OPEN state transitions', () => {
         circuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 5000 },
       },
       async () => {
-        callCount++
         // Always fail — probe during HALF_OPEN also fails
         throw new Error('always fails')
       },

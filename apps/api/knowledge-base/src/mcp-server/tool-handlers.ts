@@ -4748,3 +4748,55 @@ export async function handleToolCall(
 
   return handler(input, deps, context)
 }
+
+// ============================================================================
+// Context Pack Tool Handler (WINT-2020)
+// ============================================================================
+
+import { contextPackGet } from '@repo/mcp-tools'
+import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
+
+/**
+ * Handle context_pack_get tool invocation.
+ * WINT-2020: Create Context Pack Sidecar
+ */
+export async function handleContextPackGet(
+  input: unknown,
+  _deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const startTime = Date.now()
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  const inputObj = input as Record<string, unknown>
+  logger.info('context_pack_get tool invoked', {
+    correlation_id: correlationId,
+    story_id: inputObj?.story_id,
+    node_type: inputObj?.node_type,
+    role: inputObj?.role,
+  })
+
+  try {
+    enforceAuthorization('context_pack_get' as ToolName, context)
+    const validated = ContextPackRequestSchema.parse(input)
+    const result = await contextPackGet(validated)
+
+    logger.info('context_pack_get succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      node_type: validated.node_type,
+      role: validated.role,
+      query_time_ms: Date.now() - startTime,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('context_pack_get failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+// Register in toolHandlers map
+toolHandlers['context_pack_get'] = handleContextPackGet

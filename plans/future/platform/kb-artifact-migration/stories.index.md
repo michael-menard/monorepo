@@ -4,7 +4,7 @@ title: "KBAR Stories Index"
 status: active
 story_prefix: "KBAR"
 created_at: "2026-02-05T06:30:00Z"
-updated_at: "2026-02-25T20:35:00Z"
+updated_at: "2026-03-03T00:00:00Z"
 ---
 
 # KBAR Stories Index
@@ -23,9 +23,10 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | ready-to-work | 0 |
 | elaboration | 0 |
 | in-progress | 0 |
-| needs-code-review | 1 |
+| needs-code-review | 2 |
+| failed-code-review | 1 |
 | ready-for-qa | 1 |
-| pending | 16 |
+| pending | 15 |
 
 ---
 
@@ -436,7 +437,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-023: DB-Driven Index Generation
 
-**Status:** pending
+**Status:** failed-code-review
 **Depends On:** KBAR-022
 **Phase:** 6
 
@@ -453,7 +454,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-024: Regenerate Index CLI
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** KBAR-023
 **Phase:** 6
 

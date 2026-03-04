@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
 import { createInitialState, type GraphState } from '../../state/index.js'
-import { createNodeMetricsCollector } from '../metrics.js'
 import { createLLMNode, createNode, createSimpleNode, createToolNode } from '../node-factory.js'
+import { createNodeMetricsCollector } from '../metrics.js'
 
 // Mock @repo/logger
 vi.mock('@repo/logger', () => ({

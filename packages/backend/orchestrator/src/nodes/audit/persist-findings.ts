@@ -2,7 +2,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { stringify } from 'yaml'
 import type { CodeAuditState } from '../../graphs/code-audit.js'
-import type { AuditFindings, AuditSeverity } from '../../artifacts/audit-findings.js'
+import type { AuditFindings } from '../../artifacts/audit-findings.js'
 
 /**
  * Persist Findings Node

@@ -1,0 +1,152 @@
+strategy: manual+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true  # KB entry write in AC-7
+happy_path_tests:
+  - id: HP-1
+    title: "Execute full parity test suite from WINT-9120 against both execution paths"
+    setup: "WINT-9120 parity test suite exists and is runnable; WINT-9110 graphs are compiled; workflow-logic package (WINT-9010) is stable"
+    action: "Run all parity test scenarios from packages/backend/orchestrator/src/__tests__/parity/ against both the Claude Code agent path and the LangGraph graph path"
+    expected: "All scenarios produce pass/fail results with input/output comparison artifacts recorded per scenario"
+    evidence: "Parity run output artifacts present; scenario matrix populated with results"
+
+  - id: HP-2
+    title: "All previously-passing WINT-9120 parity scenarios continue to pass"
+    setup: "WINT-9120 baseline passing scenario list is known"
+    action: "Compare WINT-9140 parity run results against WINT-9120 baseline"
+    expected: "Zero regressions — all previously-passing scenarios still pass"
+    evidence: "Regression check section in sign-off document shows 0 regressions"
+
+  - id: HP-3
+    title: "Blocking parity gaps identified, fixed, and parity re-run passes"
+    setup: "Initial parity run has been executed and gaps classified"
+    action: "Apply fixes for blocking gaps; re-run parity suite"
+    expected: "All blocking gaps resolved; re-run shows 100% pass on previously-failing blocking scenarios"
+    evidence: "Deviation register shows 0 blocking open items; second parity run results show pass"
+
+  - id: HP-4
+    title: "Acceptable deviations have follow-up stories created"
+    setup: "Non-blocking gaps classified as acceptable deviations"
+    action: "Create follow-up stories in backlog for each acceptable deviation; record story IDs in deviation register"
+    expected: "Each acceptable deviation entry in deviation register has a valid follow-up story ID"
+    evidence: "Deviation register entries include story IDs; stories exist in WINT index"
+
+  - id: HP-5
+    title: "Phase 9 sign-off document produced at expected path"
+    setup: "Parity run complete, all blocking gaps resolved, deviations documented"
+    action: "Write WINT-9140-PHASE9-SIGNOFF.md to packages/backend/orchestrator/docs/"
+    expected: "File exists with workflow matrix, deviation register, and sign-off statement sections"
+    evidence: "File present at packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md with all required sections"
+
+  - id: HP-6
+    title: "Human operator reviews and confirms sign-off document (HiTL gate)"
+    setup: "Sign-off document written and ready for review"
+    action: "Human operator reads sign-off document and explicitly confirms approval"
+    expected: "Explicit sign-off confirmation recorded; story proceeds to KB entry and index update"
+    evidence: "HiTL confirmation present (log entry or comment on sign-off document)"
+
+  - id: HP-7
+    title: "KB entry written recording Phase 9 completion"
+    setup: "HiTL gate cleared"
+    action: "Call kb_add MCP tool with entry_type: 'decision', tags: ['langgraph', 'phase-9', 'sign-off', 'wint'], including workflows validated count, deviation count, follow-up story IDs"
+    expected: "KB entry persisted with all required fields"
+    evidence: "KB query returns Phase 9 completion entry"
+
+  - id: HP-8
+    title: "Migration documentation spot-checked"
+    setup: "WINT-9130 docs/workflow/langraph-migration.md exists"
+    action: "Review migration documentation for accuracy against parity run findings; note inaccuracies"
+    expected: "Spot-check section in sign-off document notes any inaccuracies; correction task logged if needed"
+    evidence: "Sign-off document includes migration doc review section"
+
+error_cases:
+  - id: EC-1
+    title: "Parity test suite (WINT-9120) not yet complete — story cannot start"
+    setup: "WINT-9140 story activation attempted while WINT-9120 is still in progress"
+    action: "Attempt to run parity tests"
+    expected: "Story is blocked; activation deferred until WINT-9120 reaches UAT or completed state"
+    evidence: "Blocker recorded; story remains in created/backlog state"
+
+  - id: EC-2
+    title: "Blocking parity gap discovered that cannot be fixed in-story"
+    setup: "Parity gap requires significant node re-implementation"
+    action: "Classify gap as blocking; assess fix scope"
+    expected: "If fix is substantial, a new story is created to address it; WINT-9140 does not sign off until that story completes"
+    evidence: "Deviation register shows blocking gap with linked remediation story; re-run scheduled after remediation"
+
+  - id: EC-3
+    title: "LangGraph graph fails to compile during parity run"
+    setup: "WINT-9110 graph exists but has compilation errors"
+    action: "Attempt graph.compile() as part of parity run"
+    expected: "Compilation failure is captured; classified as blocking gap; root cause traced to specific node"
+    evidence: "Error logged via @repo/logger; blocking gap entry in deviation register"
+
+edge_cases:
+  - id: ED-1
+    title: "Partial parity — some workflows pass, some fail"
+    setup: "Multi-workflow parity run with heterogeneous results"
+    action: "Run all scenarios; record mixed results"
+    expected: "Workflow matrix shows per-workflow pass/fail; blocking gaps identified; sign-off proceeds only if all blocking gaps resolved"
+    evidence: "Workflow matrix in sign-off document with per-row status"
+
+  - id: ED-2
+    title: "Migration documentation has inaccuracies identified during parity run"
+    setup: "WINT-9130 docs exist but contain outdated information"
+    action: "Spot-check docs against actual parity run behavior"
+    expected: "Inaccuracies noted in sign-off document; correction task created if significant"
+    evidence: "Migration doc review section in sign-off document; optional follow-up story if needed"
+
+  - id: ED-3
+    title: "WINT index status update fails after sign-off"
+    setup: "Sign-off approved but index write encounters error"
+    action: "Attempt to update WINT stories.index.md WINT-9140 status to completed"
+    expected: "Error handled gracefully; manual fallback documented; re-attempt on next run"
+    evidence: "Status eventually updated; no data loss"
+
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "parity run output artifacts exist in src/__tests__/parity/ (or run output directory)"
+      - "sign-off document present at packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md"
+      - "KB entry returned by kb_get or kb_query with tags ['phase-9', 'sign-off']"
+      - "WINT-9140 status in stories.index.md equals 'completed' after sign-off"
+
+manual_cases:
+  - id: MC-1
+    title: "Human operator sign-off review (HiTL gate — AC-6)"
+    steps:
+      - "Read packages/backend/orchestrator/docs/WINT-9140-PHASE9-SIGNOFF.md"
+      - "Verify workflow matrix covers all Phase 9 workflows"
+      - "Verify deviation register is complete (each entry has classification + follow-up story or resolution)"
+      - "Verify sign-off statement is present"
+      - "Confirm sign-off by explicit acknowledgment"
+    expected: "Human operator confirms document is accurate and complete before WINT-9140 is marked completed"
+
+  - id: MC-2
+    title: "Migration documentation accuracy review (AC-9)"
+    steps:
+      - "Open docs/workflow/langraph-migration.md"
+      - "Cross-reference each step against actual parity run behavior"
+      - "Note any discrepancies in sign-off document migration review section"
+      - "Create correction task story if inaccuracies are material"
+    expected: "Documentation accuracy confirmed or inaccuracies logged with remediation plan"
+
+fixture_definitions:
+  - name: PairtyScenarioResult
+    type: "Zod-validated YAML artifact"
+    description: "Per-scenario parity run output: scenario_id, claude_output, langgraph_output, match: true|false, delta_notes"
+  - name: DeviationRegister
+    type: "YAML/Markdown table"
+    description: "List of parity gaps: gap_id, description, classification (blocking|acceptable), resolution or follow_up_story_id"
+  - name: WorkflowMatrix
+    type: "Markdown table in sign-off doc"
+    description: "Per-workflow parity result: workflow_name, scenarios_run, pass_count, fail_count, status"
+
+risks:
+  - "WINT-9120 may not be complete by the time this story is activated — hard dependency"
+  - "WINT-9130 migration docs may not be finalized — spot-check AC becomes trivial if docs don't exist"
+  - "Blocking parity gaps discovered during validation may require significant remediation work, extending story timeline"
+  - "HiTL gate (AC-6) requires human availability — cannot be automated"
+  - "KB write for Phase 9 completion entry depends on MCP knowledge-base tool availability"

@@ -1,15 +1,15 @@
 # ==============================================================================
 # WINT-0220: Model-per-Task Strategy Configuration
 # ==============================================================================
-# Version: 1.0.0
+# Version: 1.1.0
 # Effective Date: 2026-02-15
-# Review Date: 2026-03-15
+# Review Date: 2026-06-15
 # Related: MODL-0010 (Provider Adapters), WINT-0230 (Unified Interface)
 # ==============================================================================
 
-strategy_version: "1.0.0"
+strategy_version: "1.1.0"
 effective_date: "2026-02-15"
-review_date: "2026-03-15"
+review_date: "2026-06-15"
 
 # ==============================================================================
 # Model Tiers (0-3)
@@ -73,6 +73,9 @@ tiers:
           model: qwen2.5-coder:14b
           cost_per_1m_tokens: 0.00
       fallback:
+        - provider: openrouter
+          model: anthropic/claude-3.5-haiku
+          cost_per_1m_tokens: 0.08
         - provider: anthropic
           model: claude-haiku-3.5
           cost_per_1m_tokens: 0.25
@@ -84,7 +87,7 @@ tiers:
       - "Mid-complexity technical analysis"
     quality_expectations: "Good code quality, follows established patterns"
     latency_tolerance: "low (1-5s preferred)"
-    availability_requirement: "Ollama must be available; fallback to Haiku if not"
+    availability_requirement: "Ollama preferred; fallback to openrouter/anthropic if not available"
 
   - tier: 3
     name: "Simple Tasks"
@@ -95,12 +98,15 @@ tiers:
           model: qwen2.5-coder:7b
           cost_per_1m_tokens: 0.00
         - provider: ollama
-          model: llama3.2:3b
+          model: llama3.2:8b
           cost_per_1m_tokens: 0.00
       fallback:
         - provider: ollama
           model: deepseek-coder-v2:16b
           cost_per_1m_tokens: 0.00
+        - provider: openrouter
+          model: anthropic/claude-3.5-haiku
+          cost_per_1m_tokens: 0.08
         - provider: anthropic
           model: claude-haiku-3.5
           cost_per_1m_tokens: 0.25
@@ -127,6 +133,9 @@ task_types:
       - "elab-setup-leader"
       - "dev-setup-leader"
       - "qa-verify-setup-leader"
+      - "audit-setup-leader"
+      - "architect-setup-leader"
+      - "scrum-master-setup-leader"
 
   - type: "completion_reporting"
     description: "Status updates, artifact formatting, summary generation"
@@ -155,6 +164,7 @@ task_types:
     escalation_to_tier_0: "If security-critical or strategic scope"
     examples:
       - "story-attack-agent"
+      - "audit-devils-advocate"
 
   - type: "synthesis"
     description: "Combine multiple analyses, resolve conflicts, create coherent narrative"
@@ -162,6 +172,8 @@ task_types:
     rationale: "Multi-dimensional integration, judgment on priority/trade-offs"
     examples:
       - "story-synthesize-agent"
+      - "audit-aggregate-leader"
+      - "audit-moderator"
 
   - type: "readiness_scoring"
     description: "Multi-factor decision making, weighted scoring"
@@ -197,6 +209,19 @@ task_types:
       - "code-review-lint"
       - "code-review-syntax"
       - "code-review-style-compliance"
+      - "code-review-typecheck"
+
+  - type: "code_quality_review"
+    description: "Structural quality, duplication detection, maintainability"
+    recommended_tier: 2
+    rationale: "Pattern-based analysis; mid-tier Ollama adequate"
+    examples:
+      - "code-review-react"
+      - "code-review-reusability"
+      - "code-review-typescript"
+      - "code-review-accessibility"
+      - "audit-code-quality"
+      - "audit-duplication"
 
   - type: "security_review"
     description: "Threat modeling, attack vector analysis"
@@ -206,6 +231,8 @@ task_types:
     examples:
       - "code-review-security"
       - "elab-epic-security"
+      - "audit-security"
+      - "quick-security"
 
   # Strategic Planning
   - type: "implementation_planning"
@@ -215,6 +242,7 @@ task_types:
     examples:
       - "dev-implement-planner"
       - "pm-story-generation-leader"
+      - "dev-plan-leader"
 
   - type: "epic_planning"
     description: "Large-scale strategic planning, cross-cutting concerns"
@@ -230,6 +258,7 @@ task_types:
     rationale: "Critical blocking decisions, high cost of error"
     examples:
       - "commitment-gate-agent"
+      - "commitment-gate"
 
   - type: "triage"
     description: "Prioritization, urgency assessment"
@@ -237,6 +266,95 @@ task_types:
     rationale: "Multi-factor judgment, but not blocking"
     examples:
       - "pm-triage-leader"
+
+  # Architecture & Design
+  - type: "architecture_review"
+    description: "Code structure analysis, import boundaries, dependency graphs"
+    recommended_tier: 2
+    rationale: "Pattern-following, structural checks; Ollama codellama adequate"
+    examples:
+      - "architect-barrel-worker"
+      - "architect-boundary-worker"
+      - "architect-circular-worker"
+      - "architect-component-worker"
+      - "architect-hexagonal-worker"
+      - "architect-import-worker"
+      - "architect-interface-worker"
+      - "architect-route-worker"
+      - "architect-schema-worker"
+      - "architect-service-worker"
+      - "architect-workspace-worker"
+      - "architect-zod-worker"
+
+  - type: "architecture_leadership"
+    description: "Architecture planning, aggregation, cross-cutting decisions"
+    recommended_tier: 1
+    rationale: "Requires contextual reasoning across systems"
+    examples:
+      - "architect-aggregation-leader"
+      - "architect-api-leader"
+      - "architect-frontend-leader"
+      - "architect-packages-leader"
+      - "architect-types-leader"
+      - "architect-setup-leader"
+
+  # Audit & Metrics
+  - type: "audit_analysis"
+    description: "Codebase health checks, trend analysis, technical debt mapping"
+    recommended_tier: 2
+    rationale: "Structured analysis against known patterns; Ollama adequate"
+    examples:
+      - "audit-accessibility"
+      - "audit-performance"
+      - "audit-react"
+      - "audit-test-coverage"
+      - "audit-typescript"
+      - "audit-ui-ux"
+
+  - type: "metrics_collection"
+    description: "Quantitative metric extraction, telemetry aggregation"
+    recommended_tier: 3
+    rationale: "Deterministic counting and aggregation; minimal reasoning"
+    examples:
+      - "churn-index-metrics-agent"
+      - "leakage-metrics-agent"
+      - "pcar-metrics-agent"
+      - "ttdc-metrics-agent"
+      - "turn-count-metrics-agent"
+
+  # Pipeline Coordination
+  - type: "pipeline_coordination"
+    description: "Workflow orchestration, story lifecycle management"
+    recommended_tier: 1
+    rationale: "Requires pipeline state reasoning and decision logic"
+    examples:
+      - "dev-execute-leader"
+      - "dev-verification-leader"
+      - "scrum-master-loop-leader"
+      - "uat-orchestrator"
+      - "review-aggregate-leader"
+      - "session-manager"
+      - "workflow-retro"
+
+  - type: "risk_assessment"
+    description: "Story risk prediction, scope defense, feasibility"
+    recommended_tier: 1
+    rationale: "Multi-factor risk reasoning requires complex judgment"
+    examples:
+      - "risk-predictor"
+      - "scope-defender"
+      - "confidence-calibrator"
+
+  - type: "knowledge_management"
+    description: "KB writes, context loading, pattern extraction"
+    recommended_tier: 3
+    rationale: "Structured reads/writes; minimal reasoning needed"
+    examples:
+      - "kb-writer"
+      - "kb-compressor"
+      - "knowledge-context-loader"
+      - "pattern-miner"
+      - "doc-sync"
 
 # ==============================================================================
 # Escalation Triggers
@@ -279,7 +397,7 @@ escalation_triggers:
 
     - trigger: "ollama_unavailable"
       description: "Ollama service down or model missing"
-      action: "Fallback all Tier 2/3 tasks to Claude Haiku"
+      action: "Fallback all Tier 2/3 tasks to openrouter, then anthropic"
 
     - trigger: "timeout"
       description: "Task exceeds latency tolerance by 2x"
@@ -300,6 +418,14 @@ escalation_triggers:
       action: "Immediately escalate to human security review"
 
 # ==============================================================================
+# Escalation Chain
+# ==============================================================================
+escalation_chain:
+  - ollama
+  - openrouter
+  - anthropic
+
+# ==============================================================================
 # Cost Analysis
 # ==============================================================================
 cost_analysis:
@@ -311,7 +437,7 @@ cost_analysis:
     validation: 0.005  # Haiku
     total: 0.113
 
-  proposed_scenario: "Hybrid Ollama + Claude (formal strategy)"
+  proposed_scenario: "Hybrid Ollama + OpenRouter + Claude (formal strategy)"
   proposed_workflow_cost:
     setup: 0.000  # Ollama Tier 3
     analysis: 0.045  # 3x Sonnet (keep on Tier 1)
@@ -326,6 +452,7 @@ cost_analysis:
       - "Ollama available 95% of time"
       - "Tier 2 code generation quality acceptable for routine work"
       - "No quality degradation on Tier 1 reasoning tasks"
+      - "OpenRouter fallback at ~$0.08/1M tokens when Ollama unavailable"
 
   projected_monthly:
     workflows_per_month: 100
@@ -339,9 +466,9 @@ cost_analysis:
 # ==============================================================================
 integration:
   modl_0010:
-    status: "in-progress"
+    status: "uat"
     coordination: "Strategy references provider-agnostic model names"
-    provider_format: "provider/model (e.g., anthropic/claude-opus-4.6)"
+    provider_format: "provider/model (e.g., anthropic/claude-opus-4.6, openrouter/anthropic/claude-3.5-haiku)"
     backward_compatibility: "Existing frontmatter `model:` field preserved"
 
   model_assignments_ts:
@@ -355,10 +482,11 @@ integration:
       tier_2:
         - "deepseek-coder-v2:16b (required)"
         - "codellama:13b (required)"
+        - "qwen2.5-coder:14b (required)"
       tier_3:
         - "qwen2.5-coder:7b (required)"
-        - "llama3.2:3b (required)"
-    fallback_policy: "If Ollama unavailable, escalate Tier 2/3 → Haiku"
+        - "llama3.2:8b (required, runtime truth per ARCH-002)"
+    fallback_policy: "If Ollama unavailable, escalate Tier 2/3 → openrouter → anthropic/claude-haiku-3.5"
     health_check: "30s cache on Ollama availability check"
 
 # ==============================================================================
@@ -366,19 +494,22 @@ integration:
 # ==============================================================================
 agent_migration:
   analysis_summary:
-    total_agents: 143
-    with_model_assignment: 62
-    without_model_assignment: 81
+    total_agents: 142
+    with_model_assignment: 142
+    without_model_assignment: 0
     current_distribution:
       haiku: 37
       sonnet: 23
       opus: 2
+      ollama: 62
+      unmapped_now_assigned: 80
+    note: "v1.1.0 completes full coverage — all 142 agents assigned in model-assignments.yaml"
 
   proposed_distribution:
     tier_0: 5  # Epic planning, commitment gates
     tier_1: 30  # Gap analysis, synthesis, planning, complex code
     tier_2: 20  # Routine code generation, mid-complexity
-    tier_3: 88  # Setup, validation, lint, simple tasks
+    tier_3: 87  # Setup, validation, lint, simple tasks
 
   migration_waves:
     wave_1_critical:
@@ -395,6 +526,9 @@ agent_migration:
       agents:
         - "Simple code gen → Tier 2"
         - "Mid-complexity analysis → Tier 2"
+        - "Architect workers → Tier 2"
+        - "Audit workers → Tier 2"
+        - "Metrics agents → Tier 3"
       timeline: "Week 2-3"
       risk: "Medium - validate quality on Tier 2"
 
@@ -402,14 +536,35 @@ agent_migration:
       priority: "Low"
       agents:
         - "Review Tier 1 assignments for possible downgrade"
+        - "Telemetry-driven re-assignments (INFR-0040)"
       timeline: "Week 4+"
       risk: "Low - incremental optimization"
+
+# ==============================================================================
+# Routing Modes
+# ==============================================================================
+routing_modes:
+  legacy:
+    description: "Static escalation chain — ollama → openrouter → anthropic"
+    activation: "No affinityReader configured (APIP-0040 compat)"
+    tiers_active: [1, 2]
+
+  three_tier_affinity:
+    description: "DB override → Affinity routing → Static escalation chain"
+    activation: "affinityReader configured, no hasAnyQualifyingProfile (APIP-3040 compat)"
+    tiers_active: [1, 2, 3]
+
+  four_tier:
+    description: "DB override → Affinity → Exploration slot (10%) → Conservative OpenRouter"
+    activation: "affinityReader + hasAnyQualifyingProfile configured (APIP-3070)"
+    tiers_active: [1, 2, 3, 4]
+    cold_start_shortcut: "If hasAnyQualifyingProfile() returns false, skip tiers 2+3, go directly to tier 4"
 
 # ==============================================================================
 # Versioning & Review
 # ==============================================================================
 versioning:
-  current_version: "1.0.0"
+  current_version: "1.1.0"
   review_schedule: "Monthly for first 3 months, then quarterly"
   success_metrics:
     - "Cost reduction: 40-60% target"

@@ -74,3 +74,30 @@ export const SyncEpicCLIOptionsSchema = z.object({
 })
 
 export type SyncEpicCLIOptions = z.infer<typeof SyncEpicCLIOptionsSchema>
+
+// ============================================================================
+// regenerate:index CLI Options
+// ============================================================================
+
+/**
+ * Schema for regenerate:index CLI flags.
+ * KBAR-0240
+ *
+ * Required flags:
+ *   --epic <name>         Epic name to generate the stories index for
+ *
+ * Optional flags:
+ *   --output <path>       File path to write the generated index to
+ *   --dry-run             Print result to stdout; exit 0 if matches existing, 1 if differs
+ *   --verbose             Enable verbose logging
+ *   --force               Skip staleness check; regenerate unconditionally
+ */
+export const RegenerateIndexCLIOptionsSchema = z.object({
+  epic: z.string().min(1, 'epic is required'),
+  output: z.string().optional(),
+  dryRun: z.boolean().default(false),
+  verbose: z.boolean().default(false),
+  force: z.boolean().default(false),
+})
+
+export type RegenerateIndexCLIOptions = z.infer<typeof RegenerateIndexCLIOptionsSchema>

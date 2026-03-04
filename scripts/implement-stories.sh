@@ -719,7 +719,7 @@ cleanup_duplicate_stages() {
   fi
   # Keep the last one (most progressed) — but validate: if a later stage
   # has no EVIDENCE.yaml and an earlier one does, prefer the one with evidence
-  local best_stage="${found_stages[-1]}"
+  local best_stage="${found_stages[${#found_stages[@]}-1]}"
   local best_has_evidence=false
   [[ -f "$FEATURE_DIR/${best_stage}/${STORY_ID}/_implementation/EVIDENCE.yaml" ]] && best_has_evidence=true
 
