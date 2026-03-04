@@ -1,0 +1,113 @@
+schema: 2
+story_id: ST-1010
+timestamp: '2026-03-04T02:00:00Z'
+subtask_source: story
+complexity: simple
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Verify and finalize Phase 2.5 logic in pm-story-seed-agent.agent.md — confirm pattern lookup table, scanning
+      strategy (per story-scope category), 2-4 ref selection constraint, and canonical_references YAML output structure
+      are correct and complete
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-seed-agent.agent.md
+      - plans/future/platform/story-generation-small-llm-compat/stories.index.md
+    dependencies: []
+    slice: packages
+    verification: >-
+      grep -n 'Phase 2.5' .claude/agents/pm-story-seed-agent.agent.md && grep -n 'canonical_references'
+      .claude/agents/pm-story-seed-agent.agent.md
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Verify the ## Canonical References section is present in the STORY-SEED.md output template within
+      pm-story-seed-agent.agent.md, with the correct table format (Pattern | File | Why columns)
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-seed-agent.agent.md
+      - .claude/agents/_reference/patterns/pm-spawn-patterns.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: grep -n 'Canonical References' .claude/agents/pm-story-seed-agent.agent.md
+    acs_covered:
+      - AC-4
+      - AC-5
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Add graceful empty canonical_refs handling for non-code stories (docs-only, config-only, agent-prompt-only) —
+      ensure Phase 2.5 emits an empty list with an explanatory note rather than forcing 2-4 refs when no applicable
+      pattern exists
+    files:
+      - .claude/agents/pm-story-seed-agent.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-seed-agent.agent.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: grep -n 'non-code\|docs-only\|empty\|no applicable' .claude/agents/pm-story-seed-agent.agent.md || true
+    acs_covered:
+      - AC-6
+files_to_change:
+  - path: .claude/agents/pm-story-seed-agent.agent.md
+    action: modify
+    reason: >-
+      Primary deliverable — add/finalize Phase 2.5 canonical reference identification step including pattern lookup
+      table, scanning strategy, output format, and graceful empty-ref handling for non-code stories
+commands_to_run:
+  - command: grep -n 'Phase 2.5\|canonical_references\|Canonical References' .claude/agents/pm-story-seed-agent.agent.md
+    when: after all changes to verify structure
+    required: true
+  - command: grep -n 'Canonical References' .claude/agents/_reference/patterns/pm-spawn-patterns.md
+    when: after all changes to verify pm-spawn-patterns references the section
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Phase 2.5 section exists in pm-story-seed-agent.agent.md with pattern category lookup table (API handler,
+      Page/route, DB queries, Form+validation, Shared package, Agent/workflow)
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Phase 2.5 scanning logic selects 2-4 canonical references based on story scope, with each ref including path,
+      pattern category, and 'why' explanation
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: canonical_references YAML output structure is defined in Phase 2.5 with pattern, file, and why fields
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      STORY-SEED.md output template within pm-story-seed-agent.agent.md includes ## Canonical References section with
+      Pattern | File | Why table
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: 'pm-spawn-patterns.md Story File Structure list includes item 16: Canonical References (from seed Phase 2.5)'
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      Phase 2.5 includes graceful handling for non-code/docs-only stories — emits empty canonical_references list with
+      explanatory note rather than forcing refs
+    evidence_type: file
+architectural_decisions: []
+notes:
+  - This is a docs-only story — deliverable is .claude/agents/pm-story-seed-agent.agent.md only
+  - No TypeScript code, no pnpm packages, no DB migrations — tests_exempt applies for QA verification
+  - 'QA verification is structural: grep/read the agent file and verify each AC section exists with correct content'
+  - Phase 2.5 logic appears partially or fully drafted in the seed agent already — Step 1 confirms and completes it
+  - >-
+    Elab finding: graceful empty canonical_refs for non-code stories is non-blocking but low-effort — included as AC-6
+    per ST-3
+  - 'Elab finding: file-existence validation for selected refs deferred (future-work, low priority)'
+  - 'Elab finding: scanning performance on large repos deferred (future-work, medium priority)'
+  - >-
+    Scope globs in SCOPE.yaml (packages/backend/**, packages/core/**) are inaccurate for this docs-only story — actual
+    file is .claude/agents/pm-story-seed-agent.agent.md

@@ -1,0 +1,73 @@
+schema: 1
+story_id: APIP-6001
+timestamp: '2026-03-03T00:00:00Z'
+iteration: 0
+overall_status: pass
+touched_files:
+  - scripts/implement-stories.sh
+  - scripts/implement-dispatcher.sh
+commands_run:
+  - command: "bash -n scripts/implement-stories.sh"
+    status: pass
+    output: "No syntax errors"
+  - command: "bash -n scripts/implement-dispatcher.sh"
+    status: pass
+    output: "No syntax errors"
+acceptance_criteria:
+  - ac_id: AC-1
+    status: pass
+    evidence: >-
+      validate_phase_gate() function added to implement-stories.sh at line 539, accepting
+      (IMPL_DIR, STORY_ID, FROM_STAGE, TO_STAGE) and returning 0 on pass, 1 on fail
+    file: scripts/implement-stories.sh
+  - ac_id: AC-2
+    status: pass
+    evidence: >-
+      5 gate transitions implemented in validate_phase_gate():
+      impl->needs-code-review (EVIDENCE.yaml + touched_files + commands_run at line 551),
+      needs-code-review->ready-for-qa (REVIEW.yaml + verdict=pass|conditional-pass at line 560-568),
+      needs-code-review->failed-code-review (REVIEW.yaml + verdict=fail|concerns at line 574-582),
+      ready-for-qa->UAT (VERIFICATION.yaml + verdict=pass at line 588-596),
+      ready-for-qa->failed-qa (VERIFICATION.yaml + verdict=fail at line 602-610)
+    file: scripts/implement-stories.sh
+  - ac_id: AC-3
+    status: pass
+    evidence: >-
+      validate_phase_gate() called before all phase-advancing move_story_to() calls in process_story():
+      line 1199 (has-evidence skip path), line 1256 (post-impl), line 1368 (post-review),
+      lines 1532/1541/1557 (post-QA UAT/failed-qa paths).
+      Gate failure triggers FINAL_RESULT=fail with GATE-FAILURE.yaml written on exhaustion.
+    file: scripts/implement-stories.sh
+  - ac_id: AC-4
+    status: pass
+    evidence: "MAX_RETRIES=1 at line 93 (changed from 0)"
+    file: scripts/implement-stories.sh
+  - ac_id: AC-5
+    status: pass
+    evidence: >-
+      Structured GATE FAIL log entries emitted in validate_phase_gate() using format
+      'GATE FAIL: {story_id} ({from} -> {to}): {reason} in {artifact}', e.g. lines 553, 562, 576, 590, 604
+    file: scripts/implement-stories.sh
+  - ac_id: AC-6
+    status: pass
+    evidence: >-
+      GATE-FAILURE.yaml written to story _implementation/ dir at lines 1259-1265 (impl gate exhaustion)
+      and lines 1562-1568 (QA gate exhaustion), with schema/story_id/timestamp/gate/reason fields.
+      Story then set to FINAL_RESULT=fail.
+    file: scripts/implement-stories.sh
+  - ac_id: AC-7
+    status: pass
+    evidence: >-
+      Backward compatibility maintained: validate_phase_gate() only fires on explicit phase-advancing
+      move_story_to() calls. Recovery/fallback moves (to ready-to-work, failed-code-review from
+      evidence failures) are not gated. Stories already in later stages with valid artifacts
+      pass gate checks since artifacts are present. The has-evidence skip path at line 1199
+      attempts evidence recovery if gate fails but then proceeds with the move (non-blocking).
+    evidence_type: manual
+  - ac_id: AC-8
+    status: pass
+    evidence: >-
+      validate_artifact_schema() and validate_phase_gate() functions added to implement-dispatcher.sh
+      at lines 252 and 293. Gate validation called in process_story() before accepting impl
+      (line 396), review (line 432), and QA (line 469) transitions via verify_stage_transition().
+    file: scripts/implement-dispatcher.sh

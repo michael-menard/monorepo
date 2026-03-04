@@ -1,0 +1,136 @@
+strategy: unit+integration
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "hitlDecisions table is defined in wint.ts and exported correctly"
+    setup: "Import hitlDecisions from wint.ts in test file"
+    action: "Call expect(hitlDecisions).toBeDefined()"
+    expected: "hitlDecisions is not undefined; table name is 'hitl_decisions'"
+    evidence: "wint-schema.test.ts AC-004 describe block passes"
+  - id: HP-2
+    title: "storyOutcomes table is defined in wint.ts and exported correctly"
+    setup: "Import storyOutcomes from wint.ts in test file"
+    action: "Call expect(storyOutcomes).toBeDefined()"
+    expected: "storyOutcomes is not undefined; table name is 'story_outcomes'"
+    evidence: "wint-schema.test.ts AC-004 describe block passes"
+  - id: HP-3
+    title: "insertHitlDecisionSchema and selectHitlDecisionSchema Zod schemas are exported"
+    setup: "Import insertHitlDecisionSchema, selectHitlDecisionSchema, InsertHitlDecision, SelectHitlDecision from wint.ts"
+    action: "Verify each export is defined; parse a minimal valid object through insertHitlDecisionSchema"
+    expected: "All four exports are defined; schema accepts a valid insert object"
+    evidence: "TypeScript compilation succeeds; Zod parse returns object without error"
+  - id: HP-4
+    title: "insertStoryOutcomeSchema and selectStoryOutcomeSchema Zod schemas are exported"
+    setup: "Import insertStoryOutcomeSchema, selectStoryOutcomeSchema, InsertStoryOutcome, SelectStoryOutcome from wint.ts"
+    action: "Verify each export is defined; parse a minimal valid object through insertStoryOutcomeSchema"
+    expected: "All four exports are defined; schema accepts a valid insert object"
+    evidence: "TypeScript compilation succeeds; Zod parse returns object without error"
+  - id: HP-5
+    title: "Drizzle migration generates valid SQL for hitl_decisions and story_outcomes"
+    setup: "Run pnpm --filter @repo/database-schema db:generate after editing wint.ts"
+    action: "Inspect generated SQL file in packages/backend/database-schema/src/migrations/app/"
+    expected: "Generated file contains CREATE TABLE IF NOT EXISTS wint.hitl_decisions and CREATE TABLE IF NOT EXISTS wint.story_outcomes with all specified columns and indexes"
+    evidence: "Migration file exists with correct content; migration applies cleanly via db:migrate"
+  - id: HP-6
+    title: "Migration applies cleanly to lego_dev database"
+    setup: "Start Docker Compose (lego_dev at port 5432); run pnpm --filter @repo/database-schema db:migrate"
+    action: "Verify migration runs without error"
+    expected: "Both tables created in wint schema; no constraint violations"
+    evidence: "psql query: SELECT table_name FROM information_schema.tables WHERE table_schema = 'wint' AND table_name IN ('hitl_decisions', 'story_outcomes') returns 2 rows"
+  - id: HP-7
+    title: "hitl_decisions.embedding column accepts vector(1536) values"
+    setup: "Connect to lego_dev (port 5432); hitl_decisions table exists"
+    action: "INSERT a row with a 1536-dimensional float array in the embedding column"
+    expected: "Row is inserted without error; SELECT retrieves the embedding as a float array"
+    evidence: "Integration test passes targeting postgresql://postgres:postgres@localhost:5432/lego_dev"
+  - id: HP-8
+    title: "Full build succeeds with no TypeScript errors"
+    setup: "All schema changes committed"
+    action: "Run pnpm build"
+    expected: "Zero TypeScript errors in @repo/database-schema, @repo/api-client, @repo/app-component-library"
+    evidence: "CI-style build output shows no errors"
+error_cases:
+  - id: EC-1
+    title: "insertStoryOutcomeSchema rejects qualityScore outside 0-100"
+    setup: "Import insertStoryOutcomeSchema from wint.ts"
+    action: "Parse { storyId: 'TEST-001', finalVerdict: 'pass', qualityScore: 150 } through insertStoryOutcomeSchema"
+    expected: "Zod parse throws ZodError with path ['qualityScore']"
+    evidence: "Test verifies schema.safeParse(...).success === false"
+  - id: EC-2
+    title: "Migration is idempotent — second apply does not fail"
+    setup: "Migration already applied to lego_dev"
+    action: "Run pnpm --filter @repo/database-schema db:migrate again (no-op run)"
+    expected: "Migration runner reports 0 new migrations applied; no errors thrown"
+    evidence: "Migration runner output confirms idempotent behavior"
+  - id: EC-3
+    title: "Targeting port 5433 (KB database) fails or returns empty schema"
+    setup: "Use DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres"
+    action: "Query information_schema.tables for wint.hitl_decisions"
+    expected: "No rows returned — wint schema does not exist in the KB database"
+    evidence: "Documents ARCH-001: wint tables live in lego_dev (port 5432) only"
+edge_cases:
+  - id: ED-1
+    title: "hitl_decisions.invocationId is nullable (HITL outside agent invocation)"
+    setup: "hitl_decisions table exists in lego_dev"
+    action: "INSERT a row with invocationId = NULL"
+    expected: "Row is inserted without foreign key error (invocationId is nullable)"
+    evidence: "INSERT succeeds; SELECT retrieves row with null invocationId"
+  - id: ED-2
+    title: "story_outcomes.storyId unique constraint prevents duplicates"
+    setup: "story_outcomes table exists with one row for storyId = 'WINT-0040'"
+    action: "INSERT a second row with storyId = 'WINT-0040'"
+    expected: "PostgreSQL raises unique constraint violation error"
+    evidence: "INSERT returns error code 23505 (unique_violation)"
+  - id: ED-3
+    title: "story_outcomes.primaryBlocker is nullable"
+    setup: "story_outcomes table exists in lego_dev"
+    action: "INSERT a row with primaryBlocker = NULL"
+    expected: "Row is inserted without error"
+    evidence: "SELECT retrieves row with null primaryBlocker"
+  - id: ED-4
+    title: "Existing telemetry tests still pass (no regression)"
+    setup: "Run pnpm --filter @repo/database-schema test"
+    action: "All tests in wint-schema.test.ts pass"
+    expected: "100% of pre-existing assertions in AC-004 block still pass; no regressions in AC-001 through AC-009"
+    evidence: "Vitest output shows all tests passing"
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "hitlDecisions and storyOutcomes exports are defined (Vitest unit test)"
+      - "Zod schema parse succeeds for valid insert objects"
+      - "Zod schema rejects qualityScore > 100 (EC-1)"
+      - "Tables exist in wint schema after migration (psql SELECT)"
+      - "vector(1536) column accepts float array insert (integration test)"
+      - "unique constraint on story_outcomes.story_id blocks duplicate storyId"
+  frontend:
+    # omitted — ui_touched: false
+manual_cases:
+  - id: MC-1
+    title: "Verify ivfflat index exists on hitl_decisions.embedding"
+    steps:
+      - "Connect to lego_dev: psql postgresql://postgres:postgres@localhost:5432/lego_dev"
+      - "Run: SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'hitl_decisions' AND schemaname = 'wint';"
+      - "Look for an index using ivfflat with vector_cosine_ops and lists=100"
+    expected: "At least one index on 'embedding' column using ivfflat method is returned"
+  - id: MC-2
+    title: "Confirm pnpm build output has no TypeScript errors"
+    steps:
+      - "Run pnpm build from monorepo root"
+      - "Check output for any errors in @repo/database-schema, @repo/api-client, @repo/app-component-library"
+    expected: "Zero errors in all three packages"
+fixture_definitions:
+  - name: "minimalHitlDecision"
+    type: "InsertHitlDecision"
+    description: "Minimal valid hitl_decisions insert — storyId, decisionType, decisionText, operatorId, embedding (1536 zeros)"
+  - name: "minimalStoryOutcome"
+    type: "InsertStoryOutcome"
+    description: "Minimal valid story_outcomes insert — storyId, finalVerdict, qualityScore (0-100), completedAt"
+risks:
+  - "ivfflat index syntax may not be expressible via Drizzle index() builder — may require post-generation manual edit of migration SQL or raw sql block in schema"
+  - "vector customType must be defined in wint.ts (copy from knowledge-base schema.ts pattern); wint.ts currently has no vector import"
+  - "Integration tests require lego_dev Docker container running on port 5432 — CI must start Docker Compose before running pnpm test"
+  - "Migration number must be verified before committing — current max is 0031; next should be 0032_wint_0040_hitl_decisions_story_outcomes.sql"

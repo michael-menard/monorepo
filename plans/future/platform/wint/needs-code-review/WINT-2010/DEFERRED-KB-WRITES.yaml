@@ -1,0 +1,22 @@
+deferred_at: "2026-03-02"
+reason: "KB unavailable via direct shell access during story generation"
+retry_available: true
+
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: "WINT-2010"
+      feature: "wint"
+      title: "Create Role Pack Sidecar Service"
+      story_dir: "plans/future/platform/wint/created/WINT-2010"
+      story_file: "plans/future/platform/wint/created/WINT-2010/WINT-2010.md"
+      story_type: "feature"
+      points: 5
+      priority: "medium"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: true

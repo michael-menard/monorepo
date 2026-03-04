@@ -5,8 +5,7 @@
 | Status | Count |
 |--------|-------|
 | Ready to Work | 1 |
-| UAT | 1 |
-| Pending | 1 |
+| UAT | 2 |
 | **Total** | **3** |
 
 ## Ready to Start (No Blockers)
@@ -84,8 +83,10 @@ Polish the 9 scaffolded lens nodes. Gap-fill existing unit tests to consistently
 
 ### AUDT-003: Audit Orchestration Nodes
 
-**Status:** `pending`
+**Status:** `uat`
 **Priority:** P1
+**Story ID:** AUDT-0030
+**Story File:** `UAT/AUDT-0030/AUDT-0030.md`
 **Dependencies:** AUDT-002
 **Blocks:** None
 

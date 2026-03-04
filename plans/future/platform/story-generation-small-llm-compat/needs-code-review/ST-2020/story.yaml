@@ -1,0 +1,19 @@
+id: "ST-2020"
+title: "Elab Analyst: Add Story Clarity Format Audit Check"
+status: needs-code-review
+updated_at: "2026-03-03T00:00:00Z"
+priority: medium
+phase: 2
+feature: "Extend elab-analyst.agent.md to audit stories for the presence of ## Goal, ## Examples, and ## Edge Cases sections"
+goal: "The elab-analyst validates that generated stories include the required clarity format sections before entering the backlog."
+depends_on: ["ST-1020", "ST-2010"]
+endpoints: []
+infrastructure: []
+risk_notes: "Low complexity. Single file modification (elab-analyst.agent.md). Genuine new work — no existing clarity format check exists."
+sizing_warning: false
+created: "2026-03-03T00:00:00Z"
+
+acceptance_criteria:
+  - "Rewrite story.yaml to match ST-2020 scope from stories.index.md (this file now reflects the correct scope: Elab Analyst clarity format audit check, not the Generation Leader multi-template story)."
+  - "Add clarity_format as Check #10 (new audit item, separate from subtask_decomposition). The new check id is clarity_format. The ELAB.yaml audit array in elab-analyst.agent.md must be extended with this new entry."
+  - "Include verification procedure: test with fixture stories that are (1) missing all three sections (## Goal, ## Examples, ## Edge Cases), (2) missing only one section, and (3) having all sections present. For each fixture, specify the expected ELAB.yaml output (FAIL, CONDITIONAL, PASS respectively for the clarity_format audit item)."

@@ -1,25 +1,36 @@
 import { describe, expect, it } from 'vitest'
 
 import { synthesize } from '../synthesize.js'
-import type { CodeAuditState } from '../../../graphs/code-audit.js'
 import type { AuditFinding, LensResult } from '../../../artifacts/audit-findings.js'
+import type { CodeAuditState } from '../../../graphs/code-audit.js'
 
-function makeFinding(overrides: Partial<AuditFinding>): AuditFinding {
+// --- Helpers ---
+
+function makeFinding(overrides: Partial<AuditFinding> = {}): AuditFinding {
   return {
     id: '',
     lens: 'security',
     severity: 'medium',
     confidence: 'high',
-    title: 'Test Finding',
-    file: 'src/index.ts',
-    evidence: 'evidence text',
+    title: 'Test finding',
+    file: 'src/test.ts',
+    evidence: 'test evidence',
     remediation: 'fix it',
     status: 'new',
     ...overrides,
   }
 }
 
-function makeState(overrides: Partial<CodeAuditState>): CodeAuditState {
+function makeLensResult(findings: AuditFinding[], lens: AuditFinding['lens'] = 'security'): LensResult {
+  return {
+    lens,
+    total_findings: findings.length,
+    by_severity: { critical: 0, high: 0, medium: 0, low: 0 },
+    findings,
+  }
+}
+
+function makeState(overrides: Partial<CodeAuditState> = {}): CodeAuditState {
   return {
     scope: 'full',
     mode: 'pipeline',
@@ -39,159 +50,230 @@ function makeState(overrides: Partial<CodeAuditState>): CodeAuditState {
     errors: [],
     completed: false,
     ...overrides,
-  }
+  } as CodeAuditState
 }
 
+// --- Tests ---
+
 describe('synthesize', () => {
-  it('assigns sequential AUDIT-001 ... AUDIT-00N IDs in severity order', async () => {
-    const lensResults: LensResult[] = [
-      {
-        lens: 'security',
-        total_findings: 3,
-        by_severity: { critical: 0, high: 0, medium: 2, low: 1 },
-        findings: [
-          makeFinding({ id: 'tmp1', severity: 'low', title: 'Low Finding', file: 'a.ts' }),
-          makeFinding({ id: 'tmp2', severity: 'medium', title: 'Medium Finding', file: 'b.ts' }),
-          makeFinding({ id: 'tmp3', severity: 'medium', title: 'Another Medium', file: 'c.ts' }),
-        ],
-      },
-    ]
+  describe('AC-6: sequential AUDIT-001..AUDIT-00N IDs in severity order', () => {
+    it('assigns sequential IDs starting from AUDIT-001', async () => {
+      const findings = [
+        makeFinding({ severity: 'low', file: 'src/a.ts', title: 'Low issue' }),
+        makeFinding({ severity: 'high', file: 'src/b.ts', title: 'High issue' }),
+        makeFinding({ severity: 'critical', file: 'src/c.ts', title: 'Critical issue' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
 
-    const state = makeState({ lensResults })
-    const result = await synthesize(state)
-
-    expect(result.findings).toBeDefined()
-    const findings = result.findings!
-    expect(findings[0].id).toBe('AUDIT-001')
-    expect(findings[0].severity).toBe('medium')
-    expect(findings[findings.length - 1].id).toBe(`AUDIT-00${findings.length}`)
-    // All IDs should be sequential
-    findings.forEach((f, i) => {
-      expect(f.id).toBe(`AUDIT-${String(i + 1).padStart(3, '0')}`)
+      expect(result.findings).toBeDefined()
+      const ids = result.findings!.map(f => f.id)
+      expect(ids[0]).toBe('AUDIT-001')
+      expect(ids[1]).toBe('AUDIT-002')
+      expect(ids[2]).toBe('AUDIT-003')
     })
-  })
 
-  it('sorts findings by severity: critical before high before medium before low', async () => {
-    const lensResults: LensResult[] = [
-      {
-        lens: 'typescript',
-        total_findings: 4,
-        by_severity: { critical: 1, high: 1, medium: 1, low: 1 },
-        findings: [
-          makeFinding({ id: 'l1', severity: 'low', title: 'Low', file: 'a.ts' }),
-          makeFinding({ id: 'c1', severity: 'critical', title: 'Critical', file: 'b.ts' }),
-          makeFinding({ id: 'm1', severity: 'medium', title: 'Medium', file: 'c.ts' }),
-          makeFinding({ id: 'h1', severity: 'high', title: 'High', file: 'd.ts' }),
-        ],
-      },
-    ]
+    it('orders findings by severity: critical first, then high, medium, low', async () => {
+      const findings = [
+        makeFinding({ severity: 'low', file: 'src/a.ts', title: 'Low issue' }),
+        makeFinding({ severity: 'medium', file: 'src/b.ts', title: 'Medium issue' }),
+        makeFinding({ severity: 'high', file: 'src/c.ts', title: 'High issue' }),
+        makeFinding({ severity: 'critical', file: 'src/d.ts', title: 'Critical issue' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
 
-    const state = makeState({ lensResults })
-    const result = await synthesize(state)
+      expect(result.findings).toBeDefined()
+      const severities = result.findings!.map(f => f.severity)
+      expect(severities).toEqual(['critical', 'high', 'medium', 'low'])
+    })
 
-    const severities = result.findings!.map(f => f.severity)
-    expect(severities[0]).toBe('critical')
-    expect(severities[1]).toBe('high')
-    expect(severities[2]).toBe('medium')
-    expect(severities[3]).toBe('low')
-  })
+    it('sorts findings of same severity alphabetically by file', async () => {
+      const findings = [
+        makeFinding({ severity: 'high', file: 'src/z.ts', title: 'Z file issue' }),
+        makeFinding({ severity: 'high', file: 'src/a.ts', title: 'A file issue' }),
+        makeFinding({ severity: 'high', file: 'src/m.ts', title: 'M file issue' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
 
-  it('merges findings with identical file+title to one (keeps higher severity)', async () => {
-    const lensResults: LensResult[] = [
-      {
-        lens: 'security',
-        total_findings: 1,
-        by_severity: { critical: 0, high: 0, medium: 1, low: 0 },
-        findings: [
-          makeFinding({ id: 'a1', severity: 'medium', title: 'SQL Injection Risk', file: 'db.ts' }),
-        ],
-      },
-      {
-        lens: 'typescript',
-        total_findings: 1,
-        by_severity: { critical: 0, high: 1, medium: 0, low: 0 },
-        findings: [
-          makeFinding({ id: 'b1', severity: 'high', title: 'SQL Injection Risk', file: 'db.ts' }),
-        ],
-      },
-    ]
+      expect(result.findings).toBeDefined()
+      const files = result.findings!.map(f => f.file)
+      expect(files).toEqual(['src/a.ts', 'src/m.ts', 'src/z.ts'])
+    })
 
-    const state = makeState({ lensResults })
-    const result = await synthesize(state)
-
-    // Duplicate file+title should collapse to one finding
-    const sqlFindings = result.findings!.filter(
-      f => f.title === 'SQL Injection Risk' && f.file === 'db.ts',
-    )
-    expect(sqlFindings).toHaveLength(1)
-    // Higher severity (high) should be kept
-    expect(sqlFindings[0].severity).toBe('high')
-  })
-
-  it('caps output at 100 findings when given 101 inputs', async () => {
-    const findings101: AuditFinding[] = Array.from({ length: 101 }, (_, i) =>
-      makeFinding({
-        id: `f${i}`,
-        title: `Finding ${i}`,
-        file: `file${i}.ts`,
-        severity: 'low',
-      }),
-    )
-
-    const lensResults: LensResult[] = [
-      {
-        lens: 'security',
-        total_findings: 101,
-        by_severity: { critical: 0, high: 0, medium: 0, low: 101 },
-        findings: findings101,
-      },
-    ]
-
-    const state = makeState({ lensResults })
-    const result = await synthesize(state)
-
-    expect(result.findings!.length).toBe(100)
-  })
-
-  it('uses vetted_findings from roundtableResult when available', async () => {
-    const vettedFindings: AuditFinding[] = [
-      makeFinding({ id: 'v1', severity: 'high', title: 'Vetted Finding', file: 'app.ts' }),
-    ]
-
-    const state = makeState({
-      roundtableResult: {
-        original_count: 3,
-        vetted_count: 1,
-        removed: { false_positives: 2, duplicates: 0 },
-        severity_changes: { downgraded: 0, upgraded: 0 },
-        cross_references: [],
-        vetted_findings: vettedFindings,
-      },
-      lensResults: [
-        {
-          lens: 'react',
-          total_findings: 3,
-          by_severity: { critical: 0, high: 1, medium: 1, low: 1 },
-          findings: [
-            makeFinding({ id: 'lr1', severity: 'high', title: 'Raw Lens 1', file: 'x.ts' }),
-            makeFinding({ id: 'lr2', severity: 'medium', title: 'Raw Lens 2', file: 'y.ts' }),
-            makeFinding({ id: 'lr3', severity: 'low', title: 'Raw Lens 3', file: 'z.ts' }),
-          ],
+    it('uses roundtable vetted_findings when roundtableResult is set', async () => {
+      const vettedFindings = [
+        makeFinding({ severity: 'critical', file: 'src/vetted.ts', title: 'Vetted critical' }),
+        makeFinding({ severity: 'medium', file: 'src/other.ts', title: 'Vetted medium' }),
+      ]
+      const state = makeState({
+        roundtableResult: {
+          original_count: 3,
+          vetted_count: 2,
+          removed: { false_positives: 1, duplicates: 0 },
+          severity_changes: { downgraded: 0, upgraded: 0 },
+          cross_references: [],
+          vetted_findings: vettedFindings,
         },
-      ],
+        // lensResults present but should be ignored in roundtable mode
+        lensResults: [makeLensResult([makeFinding({ severity: 'low', file: 'src/ignored.ts', title: 'Ignored' })])],
+      })
+      const result = await synthesize(state)
+
+      expect(result.findings).toBeDefined()
+      expect(result.findings!.length).toBe(2)
+      // Confirm it came from vetted_findings, not lensResults
+      const files = result.findings!.map(f => f.file)
+      expect(files).not.toContain('src/ignored.ts')
+      expect(files).toContain('src/vetted.ts')
     })
 
-    const result = await synthesize(state)
+    it('assigns padded 3-digit IDs (AUDIT-001 not AUDIT-1)', async () => {
+      const findings = Array.from({ length: 12 }, (_, i) =>
+        makeFinding({ severity: 'low', file: `src/file${i}.ts`, title: `Issue ${i}` }),
+      )
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
 
-    // Should use vetted findings, not raw lens results
-    const titles = result.findings!.map(f => f.title)
-    expect(titles).toContain('Vetted Finding')
-    expect(titles).not.toContain('Raw Lens 1')
+      expect(result.findings![0].id).toBe('AUDIT-001')
+      expect(result.findings![9].id).toBe('AUDIT-010')
+      expect(result.findings![11].id).toBe('AUDIT-012')
+    })
   })
 
-  it('returns empty findings array when no inputs', async () => {
-    const state = makeState({ lensResults: [] })
-    const result = await synthesize(state)
-    expect(result.findings).toEqual([])
+  describe('AC-7: deduplication — same file+title keeps higher severity', () => {
+    it('deduplicates findings with same file and title, keeping higher severity', async () => {
+      const findings = [
+        makeFinding({ severity: 'medium', file: 'src/dup.ts', title: 'Duplicate issue', lens: 'security' }),
+        makeFinding({ severity: 'high', file: 'src/dup.ts', title: 'Duplicate issue', lens: 'react' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings).toBeDefined()
+      expect(result.findings!.length).toBe(1)
+      expect(result.findings![0].severity).toBe('high')
+    })
+
+    it('deduplicates across multiple lens results', async () => {
+      const lensResult1 = makeLensResult(
+        [makeFinding({ severity: 'low', file: 'src/shared.ts', title: 'Cross-lens issue', lens: 'security' })],
+        'security',
+      )
+      const lensResult2 = makeLensResult(
+        [makeFinding({ severity: 'critical', file: 'src/shared.ts', title: 'Cross-lens issue', lens: 'react' })],
+        'react',
+      )
+      const state = makeState({ lensResults: [lensResult1, lensResult2] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(1)
+      expect(result.findings![0].severity).toBe('critical')
+    })
+
+    it('keeps both findings when file is same but title differs', async () => {
+      const findings = [
+        makeFinding({ severity: 'high', file: 'src/same.ts', title: 'Issue A' }),
+        makeFinding({ severity: 'medium', file: 'src/same.ts', title: 'Issue B' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(2)
+    })
+
+    it('keeps both findings when title is same but file differs', async () => {
+      const findings = [
+        makeFinding({ severity: 'high', file: 'src/file-a.ts', title: 'Same title' }),
+        makeFinding({ severity: 'medium', file: 'src/file-b.ts', title: 'Same title' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(2)
+    })
+
+    it('does not upgrade severity when duplicate has lower severity', async () => {
+      const findings = [
+        makeFinding({ severity: 'critical', file: 'src/dup.ts', title: 'Dup issue' }),
+        makeFinding({ severity: 'low', file: 'src/dup.ts', title: 'Dup issue' }),
+      ]
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(1)
+      expect(result.findings![0].severity).toBe('critical')
+    })
+  })
+
+  describe('AC-8: cap at 100 findings', () => {
+    it('returns at most 100 findings when given more than 100', async () => {
+      const findings = Array.from({ length: 150 }, (_, i) =>
+        makeFinding({ severity: 'low', file: `src/file${i}.ts`, title: `Unique issue ${i}` }),
+      )
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings).toBeDefined()
+      expect(result.findings!.length).toBe(100)
+    })
+
+    it('keeps exactly 100 findings when given exactly 100', async () => {
+      const findings = Array.from({ length: 100 }, (_, i) =>
+        makeFinding({ severity: 'medium', file: `src/file${i}.ts`, title: `Issue ${i}` }),
+      )
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(100)
+    })
+
+    it('keeps higher-severity findings when capped at 100 — critical before low', async () => {
+      // 50 critical + 60 low = 110 total; after cap, only 100 returned
+      // After sort, criticals come first, so all 50 criticals must be in output
+      const criticals = Array.from({ length: 50 }, (_, i) =>
+        makeFinding({ severity: 'critical', file: `src/crit${i}.ts`, title: `Critical ${i}` }),
+      )
+      const lows = Array.from({ length: 60 }, (_, i) =>
+        makeFinding({ severity: 'low', file: `src/low${i}.ts`, title: `Low ${i}` }),
+      )
+      const state = makeState({ lensResults: [makeLensResult([...criticals, ...lows])] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(100)
+      const criticalCount = result.findings!.filter(f => f.severity === 'critical').length
+      expect(criticalCount).toBe(50)
+      // Only 50 low findings should survive (100 - 50 criticals)
+      const lowCount = result.findings!.filter(f => f.severity === 'low').length
+      expect(lowCount).toBe(50)
+    })
+
+    it('returns all findings when fewer than 100', async () => {
+      const findings = Array.from({ length: 5 }, (_, i) =>
+        makeFinding({ severity: 'high', file: `src/file${i}.ts`, title: `Issue ${i}` }),
+      )
+      const state = makeState({ lensResults: [makeLensResult(findings)] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(5)
+    })
+  })
+
+  describe('edge cases', () => {
+    it('returns empty findings when no lens results', async () => {
+      const state = makeState({ lensResults: [] })
+      const result = await synthesize(state)
+
+      expect(result.findings).toBeDefined()
+      expect(result.findings!.length).toBe(0)
+    })
+
+    it('returns empty findings when lens results have no findings', async () => {
+      const state = makeState({ lensResults: [makeLensResult([])] })
+      const result = await synthesize(state)
+
+      expect(result.findings!.length).toBe(0)
+    })
   })
 })

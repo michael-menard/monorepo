@@ -19,7 +19,6 @@ export async function persistFindings(
   auditDir = 'plans/audit',
 ): Promise<Partial<CodeAuditState>> {
   const findings = state.findings || []
-  const lensResults = state.lensResults || []
   const lenses = state.lenses || []
 
   // Calculate summary

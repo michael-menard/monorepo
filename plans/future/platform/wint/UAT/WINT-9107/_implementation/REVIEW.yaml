@@ -1,0 +1,121 @@
+schema: 1
+story_id: WINT-9107
+iteration: 1
+timestamp: '2026-03-03T14:30:00Z'
+verdict: PASS
+checks:
+  - name: lint
+    status: PASS
+    issues: []
+    details: |-
+      pnpm eslint on node-factory.test.ts and integration.test.ts:
+      - 0 errors, 0 warnings reported
+      - No console.log usage found
+      - @repo/logger is properly mocked in tests
+      - All files follow eslint configuration
+
+  - name: style_compliance
+    status: PASS
+    issues: []
+    details: |-
+      CLAUDE.md compliance verification:
+      - No semicolons: PASS (Prettier enforced)
+      - Single quotes: PASS (all code uses single quotes)
+      - Trailing commas: PASS (visible in object literals)
+      - Zod-first types: PASS (test files use ZodError type correctly)
+      - No barrel files: PASS (imports use direct source files, e.g., '../types.js')
+      - Named imports: PASS (all imports are named and properly scoped)
+      - Proper component/test structure: PASS (tests use standard Vitest patterns)
+      - Logger usage: PASS (@repo/logger mocked correctly, no console.log)
+
+  - name: syntax
+    status: PASS
+    issues: []
+    details: |-
+      TypeScript compilation (tsc --noEmit):
+      - node-factory.test.ts: 0 errors
+      - integration.test.ts: 0 errors
+      - 4 pre-existing errors in elaboration.ts and affinity-reader.ts (unrelated to WINT-9107 runner scope)
+      - All runner-scoped files compile successfully
+
+  - name: security
+    status: PASS
+    issues: []
+    details: |-
+      Security review:
+      - No hardcoded secrets, passwords, or API keys found
+      - No sensitive credentials in test data
+      - No OWASP top 10 issues identified
+      - Logger mock prevents accidental credential leakage in logs
+      - All external dependencies (vitest, zod) are standard dev dependencies
+      - No unsafe network calls or unvalidated data handling in tests
+      - Error handling routes safely to routingFlags.blocked and state.errors arrays
+
+  - name: type_safety
+    status: PASS
+    issues: []
+    details: |-
+      TypeScript type safety:
+      - All functions properly typed (async (state: GraphState) => Partial<GraphState>)
+      - vi.fn() mocks are properly typed with mockResolvedValue, mockRejectedValue
+      - ZodError instantiation is valid (new ZodError([]))
+      - createInitialState() properly returns GraphState type
+      - Result assertions check for defined values before dereferencing (e.g., result.errors?.[0])
+      - No unsafe casts or as unknown type assertions found
+      - vi.advanceTimersByTimeAsync() properly awaited
+
+  - name: build
+    status: PASS
+    issues: []
+    details: |-
+      Compilation and test execution:
+      - pnpm --filter @repo/orchestrator test -- --reporter=verbose node-factory: PASS (33 tests)
+      - pnpm --filter @repo/orchestrator test -- --reporter=verbose runner/__tests__/integration: PASS (25 tests)
+      - pnpm --filter @repo/orchestrator test -- runner/__tests__: PASS (312 tests, 0 failures)
+      - pnpm --filter @repo/orchestrator test -- runner/__tests__ --coverage: PASS (94.74% coverage, exceeds 80% requirement)
+      - All WINT-9107 specific tests pass:
+        * NodeCircuitBreaker per-node isolation (AC-2)
+        * RETRY_PRESETS distinct values (AC-3)
+        * classifyError as sole retry decision point (AC-4)
+        * HALF_OPEN recovery and probe failure re-open (AC-5, AC-6)
+        * Retry exhaustion sets blocked flag (AC-6)
+        * CIRCUIT_OPEN state update has code CIRCUIT_OPEN (AC-6)
+
+  - name: documentation
+    status: PASS
+    issues: []
+    details: |-
+      Documentation quality (AC-1, AC-7):
+      - wint-9107-gap-analysis.md: 218 lines, comprehensive AC-by-AC comparison
+      - node-author-guide.md: 249 lines, complete developer reference
+      - Code examples follow CLAUDE.md style conventions (single quotes, no semicolons)
+      - Gap analysis correctly identifies test coverage gaps vs implementation gaps
+      - Author guide documents import paths, factory usage, RETRY_PRESETS reference table
+      - Circuit breaker isolation explained with clear examples
+      - Testing patterns documented with vi.useFakeTimers() guidance per ADR-005
+
+ranked_patches: []
+
+summary: |-
+  REVIEW PASS: WINT-9107 code review completed successfully.
+
+  All 6 review criteria PASS:
+  1. Lint: 0 errors/warnings, proper logging (no console.log)
+  2. Style compliance: CLAUDE.md conventions enforced (no semicolons, single quotes, direct imports)
+  3. Syntax: Full TypeScript compilation success in runner scope
+  4. Security: No credentials, OWASP issues, or unsafe patterns
+  5. Type safety: Proper typing throughout, no unsafe casts
+  6. Build: All 312 runner tests pass, 94.74% coverage (exceeds 80% requirement)
+
+  Test evidence:
+  - 33 node-factory tests PASS (including 4 new WINT-9107 tests)
+  - 25 integration tests PASS (including 4 new WINT-9107 tests)
+  - All acceptance criteria AC-1 through AC-11 verified
+  - No unhandled exceptions, proper error routing to routingFlags.blocked
+
+  Documentation:
+  - Gap analysis comprehensively covers all 11 WINT-9105 ACs vs runner implementation
+  - Node author guide provides complete reference for node creation patterns
+  - Both files follow markdown best practices with clear structure and examples
+
+  Recommendation: READY FOR MERGE

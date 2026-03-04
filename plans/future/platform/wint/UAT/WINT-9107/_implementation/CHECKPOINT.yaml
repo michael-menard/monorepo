@@ -1,0 +1,13 @@
+schema: 1
+story_id: WINT-9107
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-03T09:00:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - Pre-existing TS errors in elaboration.ts/affinity-reader.ts not caused by this story
+gen_mode: false

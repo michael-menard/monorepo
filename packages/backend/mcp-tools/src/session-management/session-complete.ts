@@ -13,7 +13,11 @@
 import { eq, and, isNull } from 'drizzle-orm'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
-import { contextSessions, type SelectContextSession, type InsertContextSession } from '@repo/database-schema'
+import {
+  contextSessions,
+  type SelectContextSession,
+  type InsertContextSession,
+} from '@repo/database-schema'
 import { SessionCompleteInputSchema, type SessionCompleteInput } from './__types__/index.js'
 
 /**

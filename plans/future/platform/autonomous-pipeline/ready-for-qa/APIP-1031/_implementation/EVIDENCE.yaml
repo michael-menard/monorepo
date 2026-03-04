@@ -1,0 +1,183 @@
+schema: 2
+story_id: APIP-1031
+version: 1
+timestamp: '2026-03-03T18:20:00.000Z'
+
+acceptance_criteria:
+  - ac_id: AC-2
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/graphs/__tests__/implementation.test.ts
+        description: >-
+          createImplementationGraph (AC-2): graph.compile() succeeds without config, with partial config,
+          and compiled graph has invoke method. All 3 tests pass. CommitRecordSchema, LoadErrorSchema,
+          ImplementationGraphStateAnnotation all validated.
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/graphs/implementation.ts
+        description: >-
+          ImplementationGraph StateGraph skeleton with ImplementationGraphStateAnnotation, CommitRecordSchema,
+          LoadErrorSchema, all nodes registered as plain async functions, conditional edges, graph.compile().
+        result: PASS
+
+  - ac_id: AC-3
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+        description: >-
+          HP-1: git worktree add called with correct args via injected mock. HP-2: worktreePath recorded
+          in returned state. HP-3: worktreeCreated=false on non-zero exit. HP-4: worktreeCreated=false when
+          gitRunner throws. HP-5: worktree_created event logged with storyId/attemptNumber/durationMs.
+          HP-6: scheduleWorktreeCleanup is fire-and-forget (void IIFE, does not block). HP-7: cleanup
+          failure logs warning without throwing. All 7 tests pass.
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/create-worktree.ts
+        description: >-
+          Injectable gitRunner pattern (spawn-based default), createCreateWorktreeNode factory,
+          scheduleWorktreeCleanup void IIFE for non-blocking cleanup (GAP-2), worktree_created logging.
+        result: PASS
+
+  - ac_id: AC-4
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/__tests__/load-story.test.ts
+        description: >-
+          HP-1: STORY_NOT_FOUND LoadError when all candidate paths missing. HP-2: CHANGE_SPEC_NOT_FOUND
+          when story found but ChangeSpec missing. HP-3: happy path loads story content and changeSpecs.
+          HP-4: STORY_PARSE_ERROR on invalid ChangeSpecCollection. HP-5: story_loaded event logged with
+          correct structured fields. All 5 tests pass.
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/load-story.ts
+        description: >-
+          loadStoryNode reads story file from candidate paths and ChangeSpec collection YAML using
+          ChangeSpecCollectionSchema. Missing file produces typed LoadError transitioning to abort edge.
+        result: PASS
+
+  - ac_id: AC-9
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/nodes/__tests__/evidence-production.test.ts
+        description: >-
+          HP-1: EVIDENCE.yaml written at correct path. HP-2: file written to in-progress/APIP-1031/_implementation.
+          HP-3: YAML content is EvidenceSchema-conformant (schema:2, story_id, touched_files). HP-4: touched files
+          from completedChanges added to evidence. HP-5: empty completedChanges handled gracefully.
+          HP-6: write failure produces warning and evidenceWritten=false. HP-7: evidence_written event logged.
+          All 7 tests pass.
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/evidence-production.ts
+        description: >-
+          evidenceProductionNode uses createEvidence/addTouchedFile/addCommandRun helpers with EvidenceSchema
+          validation. Atomic write via fs.rename. TODO(APIP-1032) comment for failure recovery path.
+        result: PASS
+
+  - ac_id: AC-10
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/src/graphs/implementation.ts
+        description: >-
+          @repo/logger calls with structured fields: graph_started (storyId, attemptNumber, featureDir, durationMs),
+          graph_completed (storyId, attemptNumber, durationMs, success, completedChanges, evidenceWritten),
+          graph_failed (storyId, durationMs, error), implementation_aborted (storyId, reason, loadErrorCode).
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/load-story.ts
+        description: >-
+          story_loaded event with storyId, attemptNumber, durationMs, storyPath, changeSpecCount.
+          story_load_failed warning with errorCode and context.
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/create-worktree.ts
+        description: >-
+          worktree_created event with storyId, stage, durationMs, attemptNumber, worktreePath, branchName.
+          worktree_create_failed warning with error context. worktree_cleanup_failed/worktree_cleanup_error warnings.
+        result: PASS
+      - type: file
+        path: packages/backend/orchestrator/src/nodes/evidence-production.ts
+        description: >-
+          evidence_written event with storyId, stage, durationMs, attemptNumber, evidencePath, completedChanges.
+          evidence_write_failed warning with error context.
+        result: PASS
+
+touched_files:
+  - path: packages/backend/orchestrator/src/graphs/implementation.ts
+    action: created
+    description: ImplementationGraph skeleton with StateAnnotation, CommitRecordSchema, LoadErrorSchema, all nodes, runImplementation()
+  - path: packages/backend/orchestrator/src/nodes/load-story.ts
+    action: created
+    description: load-story node with typed LoadError and ChangeSpecCollectionSchema
+  - path: packages/backend/orchestrator/src/nodes/create-worktree.ts
+    action: created
+    description: create-worktree node with injectable gitRunner and non-blocking cleanup
+  - path: packages/backend/orchestrator/src/nodes/evidence-production.ts
+    action: created
+    description: evidence-production node using EvidenceSchema helpers and atomic write
+  - path: packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+    action: created
+    description: IModelDispatch injectable interface as Zod-first schema
+  - path: packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    action: created
+    description: Re-exports real ChangeSpec discriminated union from artifacts/change-spec.ts
+  - path: packages/backend/orchestrator/src/graphs/__tests__/implementation.test.ts
+    action: created
+    description: Unit tests for graph compilation, schemas, IModelDispatch
+  - path: packages/backend/orchestrator/src/nodes/__tests__/load-story.test.ts
+    action: created
+    description: Unit tests for load-story node (STORY_NOT_FOUND, CHANGE_SPEC_NOT_FOUND, happy path, parse error)
+  - path: packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+    action: created
+    description: Unit tests for create-worktree node (git args, non-blocking cleanup, failure paths)
+  - path: packages/backend/orchestrator/src/nodes/__tests__/evidence-production.test.ts
+    action: created
+    description: Unit tests for evidence-production node (EvidenceSchema conformance, write paths)
+
+commands_run:
+  - command: pnpm --filter @repo/orchestrator exec tsc --noEmit
+    result: SUCCESS
+    output: No errors in new files. 4 pre-existing errors in elaboration.ts/affinity-reader.ts/index.ts (unrelated)
+    timestamp: '2026-03-03T18:20:00.000Z'
+  - command: npx vitest run (4 new test files)
+    result: SUCCESS
+    output: 51 tests pass across implementation.test.ts, load-story.test.ts, create-worktree.test.ts, evidence-production.test.ts
+    timestamp: '2026-03-03T18:20:00.000Z'
+  - command: npx vitest run (full orchestrator suite)
+    result: SUCCESS
+    output: >-
+      Test Files: 3 failed (pre-existing) | 243 passed | 2 skipped.
+      Tests: 13 failed (pre-existing) | 4631 passed. No regressions.
+    timestamp: '2026-03-03T18:20:00.000Z'
+  - command: pnpm --filter @repo/orchestrator exec eslint (new files)
+    result: SUCCESS
+    output: No lint errors in any new file
+    timestamp: '2026-03-03T18:20:00.000Z'
+
+notable_decisions:
+  - >-
+    ARCH-001 (auto): Used injectable gitRunner over execSync for create-worktree. Matches merge/cleanup-worktree.ts
+    pattern. void IIFE fire-and-forget cleanup (GAP-2) retained for non-blocking semantics.
+  - >-
+    ARCH-002 (auto): Used flat __tests__ directories (nodes/__tests__/, graphs/__tests__/). Matches existing elaboration
+    test file placement.
+  - >-
+    graphs/change-spec-schema.ts already existed with real discriminated union re-export from artifacts/change-spec.ts
+    (created by another in-progress story). Accepted this as the authoritative schema instead of creating our placeholder.
+    Updated load-story.ts to use ChangeSpecCollectionSchema from artifacts/change-spec.ts directly.
+  - >-
+    GAP-3: createToolNode used ONLY for runImplementation() adapter export (implementationNode). All internal graph
+    nodes are plain async functions registered via StateGraph.addNode(). CommitRecordSchema exported for APIP-1032.
+
+known_deviations:
+  - >-
+    ChangeSpec placeholder (graphs/change-spec-schema.ts) was already the real discriminated union schema.
+    PLAN.yaml called for a simple placeholder — but the real schema was already in place. Used real schema
+    throughout, which is strictly better for correctness.
+  - >-
+    ChangeSpecPlanSchema was updated to use ChangeSpecCollectionSchema from artifacts/change-spec.ts
+    rather than a custom wrapper. This aligns with the existing schema design.

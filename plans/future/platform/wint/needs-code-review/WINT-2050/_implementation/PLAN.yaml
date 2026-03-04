@@ -1,0 +1,188 @@
+schema: 2
+story_id: WINT-2050
+timestamp: '2026-03-04T08:32:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Scaffold populate-domain-kb.ts with imports, Zod schemas, and constants — no logic yet
+    files:
+      - packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/mcp-tools
+    acs_covered:
+      - AC-7
+      - AC-10
+  - id: 2
+    subtask_id: ST-2
+    description: Implement ADR-LOG.md reader and extractor — produce structured architecture/active-adrs pack via contextCachePut()
+    files:
+      - packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+      - plans/stories/ADR-LOG.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/mcp-tools
+    acs_covered:
+      - AC-1
+      - AC-4
+      - AC-6
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement KB query with injectable kbQueryFn, domain grouping for lessons packs, and blockers pack extraction with
+      8000-char cap
+    files:
+      - packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    files_to_read:
+      - packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/mcp-tools
+    acs_covered:
+      - AC-2
+      - AC-3
+      - AC-6
+      - AC-9
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement resilient write loop accumulating attempted/succeeded/failed counts, log errors and final summary,
+      return PopulateResultSchema result
+    files:
+      - packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+    dependencies:
+      - 2
+      - 3
+    slice: packages
+    verification: pnpm tsx packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-7
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Write unit tests (mocked contextCachePut + kbQueryFn) and integration tests (real PostgreSQL port 5432, mocked KB)
+      covering all happy path, error, and edge cases
+    files:
+      - packages/backend/mcp-tools/src/scripts/__tests__/populate-domain-kb.test.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts
+    dependencies:
+      - 4
+    slice: packages
+    verification: pnpm test --filter @repo/mcp-tools
+    acs_covered:
+      - AC-8
+      - AC-9
+      - AC-5
+      - AC-6
+files_to_change:
+  - path: packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    action: create
+    reason: >-
+      Main populate script — reads ADR-LOG.md and queries KB, writes 6+ packs to wint.context_packs via
+      contextCachePut()
+  - path: packages/backend/mcp-tools/src/scripts/__tests__/populate-domain-kb.test.ts
+    action: create
+    reason: >-
+      Unit + integration tests covering all ACs — mocked unit tests for error paths, integration tests for real DB
+      verification
+commands_to_run:
+  - command: pnpm check-types --filter @repo/mcp-tools
+    when: after each step during development
+    required: true
+  - command: pnpm test --filter @repo/mcp-tools
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/mcp-tools
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Unit test: extractAdrPack() with mocked ADR-LOG.md content; Integration test: SELECT pack_key FROM
+      wint.context_packs WHERE pack_key='active-adrs' returns 1 row with non-null content
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test: mock kbQueryFn returns fixture lessons, verify lessons-backend/frontend/testing/workflow packs written;
+      Integration test: SELECT pack_key FROM wint.context_packs WHERE pack_key LIKE 'lessons-%' returns 1+ rows
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Unit test: mock kbQueryFn with constraint entries, verify blockers-known pack written; Integration test: SELECT
+      content FROM wint.context_packs WHERE pack_key='blockers-known' returns row with blockers array
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Integration test: spy confirms ttl: 2592000 on all contextCachePut calls; idempotency test: COUNT(*) identical
+      before and after second run
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Unit test EC-3: mocked contextCachePut throws on second call only — verify result.failed===1 and run continues;
+      unit test EC-1: KB unavailable — verify ADR pack still written
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit test ED-1: mock kbQueryFn returns 100 entries per area — verify JSON.stringify(content).length < 8000 on all
+      packs; all packs include summary field
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      File inspection: JSDoc comment at top of populate-domain-kb.ts documents run command, DATABASE_URL (port 5432),
+      and KB_DATABASE_URL (port 5433); command: pnpm tsx packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+      exits 0
+    evidence_type: command
+  - ac_id: AC-8
+    planned_evidence: >-
+      Integration test HP-6: SELECT COUNT(*) FROM wint.context_packs WHERE pack_key IN
+      ('active-adrs','lessons-backend','lessons-frontend','lessons-testing','lessons-workflow','blockers-known') >= 6;
+      idempotency: COUNT before = COUNT after second run
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      Unit test ED-3: populateDomainKb({ kbQueryFn: mockKbQuery }) — mock call count assertions pass; unit tests confirm
+      no real port 5433 connection attempted
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Integration test ED-2: SELECT DISTINCT pack_type FROM wint.context_packs returns only 'architecture' and
+      'lessons_learned'; type check confirms only these enum values used in source
+    evidence_type: test
+architectural_decisions: []
+complexity: moderate
+notes:
+  - 'Story has 5 subtasks mapped 1:1 to PLAN steps — schema: 2 (subtask_source: story)'
+  - >-
+    CRITICAL: integration tests MUST use DATABASE_URL pointing to port 5432 (lego_dev). KB queries use KB_DATABASE_URL
+    at port 5433. Per WINT-1120 lesson — port confusion is #1 failure mode.
+  - >-
+    Pattern source: populate-project-context.ts is the direct template. Copy readDoc(), extractSections(),
+    PopulateResultSchema, and resilient for-loop verbatim.
+  - >-
+    kbQueryFn injectable pattern (AC-9): default implementation uses Drizzle connection to port 5433 via
+    KB_DATABASE_URL. Unit tests pass mock. This avoids needing real KB in CI.
+  - >-
+    Content cap: limit KB results to top 8 entries per domain area. Explicitly check JSON.stringify(content).length >=
+    8000 and trim + warn if over limit.
+  - Only 2 new files — populate-domain-kb.ts and its test. No existing files modified.
+  - >-
+    Pack taxonomy: architecture/active-adrs, lessons_learned/lessons-{backend,frontend,testing,workflow},
+    lessons_learned/blockers-known
+  - >-
+    Per elab opp-1: Promise.allSettled() parallelization is deferred — sequential writes are the MVP pattern (logged to
+    KB).
+  - 'Test cleanup: beforeEach/afterEach with db.delete(contextPacks) per integration.test.ts pattern.'

@@ -1,0 +1,198 @@
+schema: 2
+story_id: WINT-9107
+timestamp: '2026-03-03T14:05:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Perform WINT-9105 gap analysis: read WINT-9105 story spec and existing runner implementation (circuit-breaker.ts,
+      retry.ts, node-factory.ts, types.ts, error-classification.ts) to compare requirements against implementation.
+      Document findings in wint-9107-gap-analysis.md.
+    files:
+      - packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md
+    files_to_read:
+      - plans/future/platform/wint/in-progress/WINT-9105/WINT-9105.md
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/runner/retry.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/types.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Add per-node NodeCircuitBreaker isolation test to node-factory.test.ts: assert that two createNode() calls produce
+      independent circuit breaker instances (openning one does not affect the other). Also add RETRY_PRESETS
+      distinct-values assertion and classifyError-as-sole-decision-point coverage.
+    files:
+      - packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+      - packages/backend/orchestrator/src/runner/types.ts
+      - packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- --reporter=verbose node-factory
+    acs_covered:
+      - AC-2
+      - AC-3
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Add integration tests to integration.test.ts for: (a) HALF_OPEN recovery path — drive circuit to OPEN, advance
+      fake timers past recoveryTimeoutMs, send succeeding probe, assert CLOSED; (b) HALF_OPEN probe failure re-opens
+      circuit; (c) NodeRetryExhaustedError routes to routingFlags.blocked; (d) CIRCUIT_OPEN state returns code:
+      CIRCUIT_OPEN. Use vi.useFakeTimers() for all timing.
+    files:
+      - packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/runner/state-helpers.ts
+    dependencies:
+      - 2
+    slice: backend
+    verification: pnpm test --filter @repo/orchestrator -- --reporter=verbose integration
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-8
+      - AC-9
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Create node-author-guide.md documenting the import path for node authors. Reference runner/index.ts exports, show
+      createNode/createLLMNode/createToolNode usage patterns, document RETRY_PRESETS, and explain when to use each
+      factory. Include gap analysis summary from ST-1.
+    files:
+      - packages/backend/orchestrator/docs/node-author-guide.md
+    files_to_read:
+      - packages/backend/orchestrator/src/runner/index.ts
+      - packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-7
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Run final quality gate: pnpm check-types --filter @repo/orchestrator, pnpm test --filter @repo/orchestrator, pnpm
+      lint. Verify coverage >= 80% on new/changed code. All existing runner tests must pass with zero regressions.
+    files: []
+    files_to_read: []
+    dependencies:
+      - 3
+      - 4
+    slice: backend
+    verification: pnpm check-types --filter @repo/orchestrator && pnpm test --filter @repo/orchestrator --coverage && pnpm lint
+    acs_covered:
+      - AC-8
+      - AC-9
+      - AC-10
+      - AC-11
+files_to_change:
+  - path: packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md
+    action: create
+    reason: Gap analysis artifact comparing WINT-9105 spec to existing runner implementation (AC-1)
+  - path: packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    action: modify
+    reason: >-
+      Add per-node circuit breaker isolation test, RETRY_PRESETS distinct-values test, classifyError routing test (AC-2,
+      AC-3)
+  - path: packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+    action: modify
+    reason: >-
+      Add HALF_OPEN recovery, HALF_OPEN probe failure, retry exhaustion blocked state, CIRCUIT_OPEN code tests (AC-4,
+      AC-5, AC-6)
+  - path: packages/backend/orchestrator/docs/node-author-guide.md
+    action: create
+    reason: Node author guide documenting import path via runner/index.ts (AC-7)
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm test --filter @repo/orchestrator --coverage
+    when: final quality gate
+    required: true
+  - command: pnpm lint
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      File: packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md - gap analysis comparing WINT-9105
+      spec ACs to runner implementation
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test: node-factory.test.ts - 'NodeCircuitBreaker instances are isolated per createNode() call' - asserts
+      nodeA OPEN does not affect nodeB
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Unit test: node-factory.test.ts - 'createLLMNode/createToolNode apply distinct retry presets' - asserts
+      RETRY_PRESETS values differ by node type
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Integration test: integration.test.ts - 'classifyError routes retry decision' - non-retryable error fails with
+      attempt count 1, retryable error retries
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: >-
+      Integration test: integration.test.ts - 'retry exhaustion routes to blocked' - state.routingFlags.blocked ===
+      true, no unhandled exception
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Integration test: integration.test.ts - 'CIRCUIT_OPEN state update has code CIRCUIT_OPEN' - drives circuit to
+      OPEN, asserts code in state errors
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'File: packages/backend/orchestrator/docs/node-author-guide.md - documents import path from runner/index.ts'
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: 'Command: pnpm test --filter @repo/orchestrator --coverage - >= 80% on new/changed code'
+    evidence_type: command
+  - ac_id: AC-9
+    planned_evidence: 'Command: pnpm test --filter @repo/orchestrator - all existing runner tests pass, 0 failures'
+    evidence_type: command
+  - ac_id: AC-10
+    planned_evidence: 'Command: pnpm check-types --filter @repo/orchestrator - zero TypeScript errors'
+    evidence_type: command
+  - ac_id: AC-11
+    planned_evidence: 'Command: pnpm lint - zero ESLint errors on new/changed files'
+    evidence_type: command
+architectural_decisions: []
+complexity: simple
+notes:
+  - Story scope is verification + documentation only - no new production code primitives expected
+  - HALF_OPEN tests in integration.test.ts must use vi.useFakeTimers() per ADR-005 unit test policy
+  - >-
+    Existing integration.test.ts 'Circuit breaker end-to-end' test covers CIRCUIT_OPEN but not HALF_OPEN state
+    transitions - ST-3 fills this gap
+  - >-
+    Existing node-factory.test.ts 'allows recovery after timeout' tests recovery but does not assert circuit state names
+    explicitly - ST-2 fills this gap
+  - >-
+    WINT-9105 ADR is in-progress (status: created) - ST-1 gap analysis proceeds against story spec ACs, not finalized
+    ADR
+  - >-
+    WINT-9010 workflow-logic re-export deferred if in-qa - AC-7 satisfiable via runner/index.ts documentation alone per
+    story design
+  - 'ADR-006 E2E skip condition applies: frontend_impacted: false in SCOPE.yaml'
+  - >-
+    ST-4 (node-author-guide.md) depends on ST-1 gap analysis, not ST-2/ST-3 - can run in parallel with ST-2/ST-3 in
+    practice

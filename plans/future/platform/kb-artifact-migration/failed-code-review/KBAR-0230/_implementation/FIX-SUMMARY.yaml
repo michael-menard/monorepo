@@ -1,0 +1,79 @@
+story_id: KBAR-0230
+artifact_type: fix_summary
+phase: implementation
+iteration: 3
+generated_at: "2026-03-03T22:47:00Z"
+completed_at: "2026-03-03T23:10:00Z"
+status: complete
+
+failure_source: code-review-failed
+failure_phase: iteration 2 review
+
+issues_to_fix:
+  - id: 1
+    file: packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+    line: 37
+    issue: "z.any() at line 37 — replace with specific Zod type"
+    severity: critical
+    auto_fixable: false
+    context: >
+      The StoryRowSchema uses z.any() for the depends_on field.
+      This should be replaced with a specific Zod type: z.array(z.string())
+      since depends_on contains an array of story IDs.
+
+  - id: 2
+    file: packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+    line: 187
+    issue: "'as Record<string, unknown>' type assertion at line 187"
+    severity: high
+    auto_fixable: false
+    context: >
+      Type assertion used instead of Zod parsing.
+      Replace with proper Zod schema validation.
+
+  - id: 3
+    file: packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+    line: 208
+    issue: "'as Record<string, boolean> | undefined' type assertion at line 208"
+    severity: high
+    auto_fixable: false
+    context: >
+      Type assertion used instead of Zod parsing.
+      Replace with proper Zod schema validation.
+
+focus_files:
+  - packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts
+  - packages/backend/database-schema/src/seed/generate/__tests__/generateStoriesIndex.test.ts
+
+summary: >
+  Fix iteration 3 addresses 3 remaining type safety issues in generateStoriesIndex.ts.
+  All issues are in the schema definition or parsing logic. Focus on replacing z.any()
+  with specific types and removing type assertions in favor of Zod validation.
+
+fixes_applied:
+  - id: 1
+    resolution: >
+      Added StoryMetadataSchema (z.object with .strict()) mirroring the kbar.stories
+      metadata JSONB shape. StoryRowSchema.metadata now uses StoryMetadataSchema.nullable()
+      instead of z.record(z.string(), z.any()).
+  - id: 2
+    resolution: >
+      Replaced '(story.metadata ?? {}) as Record<string, unknown>' with
+      'const meta: StoryMetadata = story.metadata ?? {}' using the inferred type.
+      Changed meta['wave'] access to meta.wave (property access on typed object).
+  - id: 3
+    resolution: >
+      Replaced 'meta["surfaces"] as Record<string, boolean> | undefined' with
+      'meta.surfaces' — now correctly typed as the surfaces sub-object from StoryMetadata.
+
+verification:
+  tests_passed: 417/417
+  test_suite: src/seed/generate/__tests__/generateStoriesIndex.test.ts (12 tests)
+  type_errors_in_target_file: 0 (only pre-existing module-not-found errors in worktree)
+
+constraints:
+  - "Use Zod schemas for all types — no TypeScript interfaces"
+  - "No type assertions (as keyword) — use Zod parsing instead"
+  - "Named exports preferred"
+  - "Minimum 45% test coverage"
+  - "Use @repo/logger, not console"

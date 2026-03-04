@@ -18,6 +18,10 @@ import { Redis } from 'ioredis'
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import {
+  WorktreeConflictDetector,
+  type StoryConflictDescriptor,
+} from '../conflicts/worktree-conflict-detector.js'
+import {
   PipelineJobDataSchema,
   type PipelineSupervisorConfig,
   PipelineSupervisorConfigSchema,
@@ -26,12 +30,10 @@ import { dispatchJob, getCircuitBreakerSummary } from './dispatch-router.js'
 import { createHealthServer, type HealthServer } from './health/server.js'
 import { registerDrainHandlers } from './drain/index.js'
 import { createBlockerNotificationModule } from './blocker-notification/index.js'
-
 // APIP-3080: Concurrency imports
 import { ConcurrencyController } from './concurrency/concurrency-controller.js'
 import { generateWorktreePath } from './concurrency/worktree-path.js'
 import { createWorktree, removeWorktree } from './worktree-lifecycle.js'
-import { WorktreeConflictDetector, type StoryConflictDescriptor } from '../conflicts/worktree-conflict-detector.js'
 
 // Use ioredis Redis type directly — same underlying type as RedisClient in lego-api
 export type RedisClient = Redis
@@ -105,7 +107,11 @@ export class PipelineSupervisor {
 
     // APIP-3080: Initialize concurrency controller and conflict detector
     this.concurrencyController = new ConcurrencyController(
-      this.config.concurrency ?? { maxWorktrees: 1, conflictPolicy: 'reject' as const, worktreeCircuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 } },
+      this.config.concurrency ?? {
+        maxWorktrees: 1,
+        conflictPolicy: 'reject' as const,
+        worktreeCircuitBreaker: { failureThreshold: 2, recoveryTimeoutMs: 60000 },
+      },
     )
     this.conflictDetector = new WorktreeConflictDetector()
 
@@ -339,7 +345,13 @@ export class PipelineSupervisor {
       const maxWorktrees = this.config.concurrency?.maxWorktrees ?? 1
 
       if (maxWorktrees > 1 && this.config.repoRoot) {
-        await this.processJobWithConcurrency(job, jobData, storyId, touchedPathPrefixes, notificationModule)
+        await this.processJobWithConcurrency(
+          job,
+          jobData,
+          storyId,
+          touchedPathPrefixes,
+          notificationModule,
+        )
       } else {
         // Original APIP-0020 serial path — no worktree isolation
         await this.processJobSerial(job, jobData, notificationModule)
@@ -354,11 +366,7 @@ export class PipelineSupervisor {
    * Original serial processing path (APIP-0020).
    * No worktree isolation — dispatches directly.
    */
-  private async processJobSerial(
-    job: Job,
-    _jobData: any,
-    notificationModule: any,
-  ): Promise<void> {
+  private async processJobSerial(job: Job, _jobData: any, notificationModule: any): Promise<void> {
     // APIP-2010 AC-3, AC-9: Pass onCircuitOpen callback to dispatchJob (fire-and-forget)
     const onCircuitOpen =
       notificationModule !== null
@@ -474,7 +482,11 @@ export class PipelineSupervisor {
         logger.info('Story processing complete (concurrent)', { storyId, worktreePath })
       } catch (processingError) {
         slot.breaker.recordFailure()
-        logger.error('Story processing failed (concurrent)', { storyId, worktreePath, error: processingError })
+        logger.error('Story processing failed (concurrent)', {
+          storyId,
+          worktreePath,
+          error: processingError,
+        })
         throw processingError
       }
     } finally {

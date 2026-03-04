@@ -1,0 +1,242 @@
+schema: 1
+story_id: "APIP-4050"
+timestamp: "2026-02-25T12:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: >
+      Story is correctly positioned as Phase 4 "Dead Code Reaper" in stories.index.md with APIP-3090
+      dependency declared. Scope is additive-only to packages/backend/orchestrator/. No endpoints, DB
+      changes, infra, or frontend touched. Non-goals explicitly exclude CSS dead code, AWS scheduling,
+      and deletion execution. Scope matches the index description precisely.
+
+  - id: internal_consistency
+    status: WARN
+    note: >
+      Goals and Non-Goals are well-aligned. ACs cover Scope section one-to-one. Test plan subcases
+      AC-12a through AC-12h map to ACs. One gap: there is no unit test for scanUnusedFiles (AC-3) —
+      the test plan lists HP-2 for scanDeadExports (AC-2), AC-12c for scanUnusedDeps (AC-4), but
+      AC-3 (scanUnusedFiles) has no corresponding happy-path test or AC-12 subcase. HP-3 is missing
+      from pm_artifacts.test_plan.happy_path_tests. AC-12 subcases skip scanUnusedFiles entirely.
+
+  - id: reuse_first
+    status: WARN
+    note: >
+      Three of four claimed canonical references are verified: createMetricsGraph()/runMetricsCollection()
+      factory exists at graphs/metrics.ts (confirmed); withTimeout() exists at runner/timeout.ts
+      (confirmed, matching the TimeoutOptions signature referenced in AC-8); StoryArtifactSchema and
+      createStoryArtifact() exist at artifacts/story.ts (confirmed). HOWEVER: the story claims
+      "Injectable execFn pattern — proven injectable execFn design" exists at nodes/audit/. This is
+      INCORRECT — no execFn parameter is present anywhere in src/nodes/audit/ (all lens nodes use
+      direct readFile, not subprocess injection). The pattern does exist in the codebase but in
+      context/context-warmer.ts and context/session-manager.ts for injectable DB functions — not for
+      subprocess calls. The execFn pattern will be introduced fresh by this story. The claim of
+      "proven" is overstated; the canonical reference is inaccurate.
+
+  - id: ports_adapters
+    status: PASS
+    note: >
+      Core logic is correctly designed as transport-agnostic. All three scanner functions
+      (scanDeadExports, scanUnusedFiles, scanUnusedDeps) and microVerify explicitly accept injectable
+      execFn: (cmd: string) => Promise<string> parameters. No subprocess calls are hardcoded. dryRun
+      mode prevents filesystem writes in test context. Advisory lock (AC-10) is properly deferred and
+      abstracted via InMemoryCronAdapter for unit testing. The design correctly separates policy (what
+      to scan) from mechanism (how to execute subprocesses).
+
+  - id: testability
+    status: PASS
+    note: >
+      Test strategy is concrete and executable. All subprocess calls are mocked via injectable execFn.
+      dryRun: true prevents filesystem writes in all unit tests. vi.useFakeTimers() used for timeout
+      path with afterEach restoration noted. Advisory lock skip path mocked via pg_try_advisory_lock
+      returning false. Dynamic import guard covered by explicit test case. generateCleanupStory
+      validated via StoryArtifactSchema.parse(). All 8 AC-12 subcases have explicit setup/action/
+      expected/evidence entries.
+
+  - id: decision_completeness
+    status: PASS
+    note: >
+      No blocking TBDs. AC-10 cron registration is explicitly deferred with a clear resolution path
+      (InMemoryCronAdapter for unit testing, wired to APIP-3090's buildCronRegistry when available).
+      APIP-4010 ts-prune overlap is explicitly addressed with a future sharing path
+      (expose runTsPrune(execFn) helper). CLEANUP story ID sequencing uses fs.readdirSync — approach
+      is specified. All design decisions are resolved or explicitly time-boxed.
+
+  - id: risk_disclosure
+    status: WARN
+    note: >
+      Three risks are documented with mitigations: ts-prune false positive rate, micro-verify cost,
+      and depcheck per-package invocation. APIP-4010 and APIP-3090 coordination risks are addressed.
+      However, one critical risk is undisclosed: the CLEANUP story ID format APIP-CLEANUP-NNNN (e.g.,
+      APIP-CLEANUP-0001) will FAIL StoryArtifactSchema.parse() at runtime. StoryArtifactSchema
+      enforces id: z.string().regex(/^[A-Z]+-\d+$/) — this regex requires exactly one hyphen-separator
+      before the numeric suffix. APIP-CLEANUP-0001 has two hyphens and fails this constraint.
+      generateCleanupStory (AC-9) cannot produce a story.yaml that passes StoryArtifactSchema.parse()
+      with the current ID format. This is a blocking implementation conflict between AC-9 and the
+      existing schema.
+
+  - id: story_sizing
+    status: WARN
+    note: >
+      13 ACs exceeds the 8-AC red flag threshold. The story's own split_risk prediction is 0.8
+      (high). Multiple potentially independent features are bundled: static analysis scanning
+      (AC-2/3/4/5), micro-verify loop (AC-6), orchestration + timeout (AC-7/8), CLEANUP story
+      generation (AC-9), cron registration (AC-10, already deferred), structured logging (AC-11),
+      and comprehensive unit tests (AC-12/13). However, all features share a single domain object
+      (DeadCodeReaperResult) with tight coupling — splitting scanners from the micro-verify loop
+      would leave incomplete value. The deferred AC-10 already reduces scope. ST-6 (cron
+      registration) is isolated and could be split off. The story is large but coherent; a split
+      is possible but not required. Recommend flagging for implementer awareness.
+
+  - id: subtask_decomposition
+    status: PASS
+    note: >
+      7 subtasks with explicit AC coverage, DAG dependency structure, per-subtask verification
+      commands, and token estimates. Every AC (1-13) is covered by at least one subtask. ST-1
+      (schemas) is the root with no dependencies. ST-2/ST-3 are parallel. ST-4/ST-5 fan out from
+      ST-1 (with ST-4 requiring ST-2+ST-3). ST-7 (tests) is terminal, depending on ST-2/3/4/5.
+      ST-6 (cron registration, deferred) is properly isolated. AC coverage verification table
+      is complete and accurate. Total token estimate of 66,000 is consistent with 200,000 total
+      budget (story also includes context loading and iteration overhead).
+
+gaps:
+  - id: gap-1
+    check: risk_disclosure
+    finding: >
+      CLEANUP story ID format conflict with StoryArtifactSchema. AC-9 specifies APIP-CLEANUP-NNNN
+      format (e.g., APIP-CLEANUP-0001), but StoryArtifactSchema.id enforces
+      /^[A-Z]+-\d+$/ which requires exactly one hyphen followed by digits only. The compound
+      format APIP-CLEANUP-NNNN fails this regex. generateCleanupStory cannot produce a
+      story.yaml that passes StoryArtifactSchema.parse() without either (a) changing the ID format
+      to a compliant form like APIP-4050C (cleanup suffix) or APIP-NNNN with a new prefix, or
+      (b) updating StoryArtifactSchema to allow compound IDs — but StoryArtifactSchema is listed
+      as protected (must not be modified). Resolution: use a simple numeric-only APIP-XXXX format
+      for cleanup stories with a reserved APIP-CLEANUP prefix tracked separately in the story's
+      title/type fields, or introduce a new prefix (e.g., CLEANUP-NNNN) that satisfies the regex.
+    severity: critical
+    decision: add_ac
+    ac_added: "AC-14: CLEANUP story IDs must use StoryArtifactSchema-compliant format CLEANUP-NNNN (satisfies /^[A-Z]+-\\d+$/); supersedes AC-9's APIP-CLEANUP-NNNN format"
+
+  - id: gap-2
+    check: internal_consistency
+    finding: >
+      Missing unit test for scanUnusedFiles (AC-3). The test plan covers HP-2 (scanDeadExports)
+      and AC-12c (scanUnusedDeps) but has no happy-path or error test for scanUnusedFiles. AC-3
+      specifies a distinct function returning UnusedFileFindingSchema[] — this needs its own
+      mock-execFn test verifying finding extraction and excludePatterns filtering. AC-12 should
+      have a subcase AC-12b-bis or renumbered AC-12c covering scanUnusedFiles with mock compiler
+      output. This is a test coverage gap, not a design gap.
+    severity: medium
+    decision: add_ac
+    ac_added: "AC-12 amended: added subcase AC-12b-bis for scanUnusedFiles with mock execFn verifying UnusedFileFindingSchema[] extraction and excludePatterns filtering"
+
+  - id: gap-3
+    check: reuse_first
+    finding: >
+      The canonical reference for the injectable execFn pattern points to nodes/audit/ which does
+      NOT implement this pattern. The audit lens nodes use direct readFile calls, not subprocess
+      injection. The story's Reuse Plan and Architecture Notes reference a non-existent pattern
+      in the cited location. Implementers following the canonical reference will find no execFn
+      examples there. The correct canonical reference should be context/context-warmer.ts or
+      context/session-manager.ts for injectable dependency patterns, or alternatively acknowledge
+      that execFn is a new pattern being established by this story. This is a documentation
+      accuracy gap, not a blocking implementation issue.
+    severity: low
+    decision: log_to_kb
+    ac_added: null
+
+  - id: gap-4
+    check: internal_consistency
+    finding: >
+      withTimeout throws NodeTimeoutError on timeout — it does NOT return status: 'partial'.
+      AC-8 states "On timeout, it returns whatever verified findings were accumulated before the
+      deadline with status: 'partial'". But withTimeout() throws NodeTimeoutError (confirmed in
+      runner/timeout.ts and runner/errors.ts). The runner must catch NodeTimeoutError and convert
+      it to a partial result — this catch-and-convert logic is not specified in any AC or subtask.
+      ST-4 covers "runDeadCodeReaper orchestration with withTimeout" but does not explicitly call
+      out the NodeTimeoutError catch pattern. EC-4 test expects status: 'partial' — this requires
+      the runner to internally handle NodeTimeoutError, which is an implementation detail that
+      should be made explicit in AC-8 or AC-7.
+    severity: high
+    decision: add_ac
+    ac_added: "AC-8 amended: explicit NodeTimeoutError catch-and-convert — runDeadCodeReaper must catch NodeTimeoutError thrown by withTimeout and convert to partial result with accumulated verifiedDeletions"
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: >
+      AC-11 specifies a structured CronRunResult log entry but does not specify the log level or
+      destination. Adding an explicit requirement to write the run summary as a YAML audit artifact
+      to plans/future/platform/autonomous-pipeline/audit/ (similar to FINDINGS-{date}.yaml from
+      the code-audit graph) would make each Reaper run inspectable without requiring log access.
+      This would also enable trend analysis over time (deletion rates, false positive rates).
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "dae39679-25e9-47bb-bdac-16124c0ac6f0"
+
+  - id: opp-2
+    category: performance
+    finding: >
+      AC-7 specifies running all three scans concurrently via Promise.all, but the micro-verify
+      loop (AC-6) is implicitly sequential (one finding at a time). For large monorepos with
+      maxFindingsPerRun: 50, a bounded concurrent micro-verify pool (e.g., p-limit with
+      concurrency: 3) could reduce wall-clock time significantly. The 5-minute timeout (AC-8)
+      combined with sequential verification of 50 findings at 5-50s each creates a realistic
+      timeout scenario. A concurrency-controlled pool would improve throughput within the timeout
+      window.
+    effort: medium
+    decision: log_to_kb
+    kb_entry_id: "5664cbf6-5eb1-4ebd-b21a-5a9f04d6de83"
+
+  - id: opp-3
+    category: edge_cases
+    finding: >
+      The dynamic import guard (AC-5) specifies excluding files "only referenced via dynamic
+      import" but does not address re-export-only files (files that only contain
+      "export { X } from './Y'"). In a barrel-free monorepo, these should not exist per CLAUDE.md
+      policy, but orphaned re-export files could generate false positives from scanUnusedFiles.
+      An explicit guard or mention in excludePatterns would prevent false positives for any
+      transitional barrel files.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "fa870833-d550-4076-8366-8961bc715506"
+
+  - id: opp-4
+    category: integrations
+    finding: >
+      APIP-4010 (Codebase Health Gate) also runs ts-prune and captures dead_exports count.
+      The story acknowledges this overlap and suggests a future runTsPrune(execFn) shared helper.
+      Formalizing this shared helper as part of APIP-4050's deliverables (rather than "if sharing
+      becomes desirable") would prevent duplicate ts-prune invocations from Day 1 when both
+      graphs are active — especially important given the monthly Dead Code Reaper would re-scan
+      what Health Gate already scanned on every 5th merge.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "07c17b14-5912-4938-bbb8-1c0ba4b652ce"
+
+  - id: opp-5
+    category: edge_cases
+    finding: >
+      CLEANUP story ID sequencing uses fs.readdirSync on the backlog directory to find max
+      existing APIP-CLEANUP-NNNN sequence. This approach has a race condition if two Reaper runs
+      complete simultaneously before either writes to disk. While pg_try_advisory_lock (AC-10)
+      prevents concurrent Reaper instances, the sequence counter is not atomic without it. In
+      the deferred state (before APIP-3090 provides advisory lock), concurrent test runs or
+      manual invocations could generate duplicate IDs. Consider an in-process counter or a lock
+      file as a fallback.
+    effort: low
+    decision: log_to_kb
+    kb_entry_id: "d765b9bc-2d6e-444f-955e-f5e3d1f568f9"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T12:30:00Z"
+summary:
+  gaps_found: 4
+  gaps_resolved: 4
+  opportunities_found: 5
+  opportunities_logged: 5
+  acs_added: 3

@@ -483,6 +483,7 @@ export const contextPackTypeEnum = pgEnum('context_pack_type', [
   'architecture',
   'lessons_learned',
   'test_patterns',
+  'agent_missions',
 ])
 
 /**
@@ -498,12 +499,11 @@ export const contextPacks = wintSchema.table(
     packKey: text('pack_key').notNull(), // Unique identifier for this context (e.g., story_id, feature_name)
 
     // Content
-    content: jsonb('content').notNull().$type<{
-      summary?: string
-      files?: Array<{ path: string; relevance: number }>
-      lessons?: Array<{ id: string; text: string }>
-      architecture?: Array<{ decision: string; rationale: string }>
-    }>(),
+    // The actual runtime shape is ContextPackResponse (from @repo/context-pack-sidecar).
+    // We use `unknown` here to avoid a circular dependency:
+    //   context-pack-sidecar -> database-schema -> context-pack-sidecar (circular)
+    // Callers are expected to validate content via ContextPackResponseSchema.parse().
+    content: jsonb('content').notNull().$type<unknown>(),
 
     // Cache management
     version: integer('version').notNull().default(1),
@@ -2101,11 +2101,7 @@ export type SelectModelAffinity = z.infer<typeof ModelAffinitySelectSchema>
  * Experiment Status Enum
  * Defines the lifecycle states of a bake-off model experiment
  */
-export const experimentStatusEnum = pgEnum('experiment_status', [
-  'active',
-  'concluded',
-  'expired',
-])
+export const experimentStatusEnum = pgEnum('experiment_status', ['active', 'concluded', 'expired'])
 
 /**
  * Model Experiments Table

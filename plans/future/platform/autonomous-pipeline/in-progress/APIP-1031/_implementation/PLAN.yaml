@@ -1,0 +1,243 @@
+schema: 2
+story_id: APIP-1031
+timestamp: '2026-03-04T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Define ImplementationGraph state annotation (ImplementationGraphStateAnnotation), CommitRecord Zod schema,
+      LoadError Zod schema, graph skeleton with all nodes registered as plain async functions in StateGraph.addNode(),
+      and runImplementation() entry point. Wire skeleton lifecycle logging (graph_started, graph_completed) with
+      @repo/logger. Export the compiled graph and state type.
+    files:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+      - packages/backend/orchestrator/src/runner/node-factory.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-2
+      - AC-10
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Implement load-story node that reads the story file (STORY-SEED.md or elaborated story) and ChangeSpec plan into
+      graph state. Missing story or ChangeSpec plan produces a typed LoadError Zod object that transitions to abort
+      edge. Log story_loaded event with storyId, attemptNumber, durationMs.
+    files:
+      - packages/backend/orchestrator/src/nodes/load-story.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- load-story
+    acs_covered:
+      - AC-4
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement create-worktree node using injectable gitRunner pattern (matches merge/cleanup-worktree.ts pattern).
+      Creates worktree at worktrees/{storyId} using git worktree add. Records worktree path in graph state. Non-blocking
+      cleanup uses void IIFE with git worktree remove --force (GAP-2 pattern). Log worktree_created event. Injectable
+      gitRunner defaults to spawn-based runner; unit tests inject mock.
+    files:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/nodes/merge/cleanup-worktree.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- create-worktree
+    acs_covered:
+      - AC-3
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement evidence-production node that writes EVIDENCE.yaml to the story feature directory using EvidenceSchema +
+      createEvidence() / addTouchedFile() / addCommandRun() helpers and yaml-artifact-writer for persistence. Must
+      handle empty/partial change loop state gracefully (completedChanges may be []). Log evidence_written event with
+      storyId, attemptNumber, durationMs. Add TODO comment referencing APIP-1032 for evidence-write failure recovery
+      path.
+    files:
+      - packages/backend/orchestrator/src/nodes/evidence-production.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/persistence/yaml-artifact-writer.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator -- evidence-production
+    acs_covered:
+      - AC-9
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Implement IModelDispatch injectable interface (Zod schema + z.infer<> type alias) and ChangeSpec placeholder Zod
+      schema (id, summary, touchedPackages, instructions). Both are Zod-first — zero TypeScript interfaces. ChangeSpec
+      file includes PLACEHOLDER comment with TODO referencing APIP-1020. Write unit tests for all 5 nodes: graph
+      compilation, load-story (missing file→LoadError, happy path), create-worktree (git args, non-blocking cleanup),
+      evidence-production (partial/empty state), IModelDispatch schema validation.
+    files:
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      - packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/implementation.test.ts
+      - packages/backend/orchestrator/src/nodes/__tests__/load-story.test.ts
+      - packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+      - packages/backend/orchestrator/src/nodes/__tests__/evidence-production.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/elaboration.test.ts
+    dependencies:
+      - 1
+      - 2
+      - 3
+      - 4
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-9
+      - AC-10
+files_to_change:
+  - path: packages/backend/orchestrator/src/graphs/implementation.ts
+    action: create
+    reason: >-
+      ImplementationGraph StateGraph skeleton, state Annotation, CommitRecord/LoadError Zod schemas, runImplementation()
+      entry point, graph_started/graph_completed logging (AC-2, AC-10)
+  - path: packages/backend/orchestrator/src/nodes/load-story.ts
+    action: create
+    reason: >-
+      load-story node reads story file and ChangeSpec plan into state; typed LoadError on missing file transitions to
+      abort edge (AC-4)
+  - path: packages/backend/orchestrator/src/nodes/create-worktree.ts
+    action: create
+    reason: >-
+      create-worktree node with injectable gitRunner, git worktree add, non-blocking void IIFE cleanup (GAP-2),
+      worktree_created logging (AC-3)
+  - path: packages/backend/orchestrator/src/nodes/evidence-production.ts
+    action: create
+    reason: >-
+      evidence-production node writes EVIDENCE.yaml using EvidenceSchema helpers and yaml-artifact-writer; handles
+      partial/empty change loop state (AC-9)
+  - path: packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+    action: create
+    reason: >-
+      IModelDispatch injectable interface as Zod schema + z.infer<> type alias — injectable boundary for model dispatch
+      (Architecture Notes)
+  - path: packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    action: create
+    reason: >-
+      ChangeSpec placeholder Zod schema (PLACEHOLDER — replaced by APIP-1020 ADR); enables graph skeleton to compile
+      independently (Architecture Notes)
+  - path: packages/backend/orchestrator/src/graphs/__tests__/implementation.test.ts
+    action: create
+    reason: 'Unit test: graph compilation succeeds, expected node/edge structure verified'
+  - path: packages/backend/orchestrator/src/nodes/__tests__/load-story.test.ts
+    action: create
+    reason: 'Unit test: LoadError on missing story/plan, happy path load success'
+  - path: packages/backend/orchestrator/src/nodes/__tests__/create-worktree.test.ts
+    action: create
+    reason: >-
+      Unit test: git worktree add with correct args via injected mock runner, non-blocking cleanup verified (not
+      awaited)
+  - path: packages/backend/orchestrator/src/nodes/__tests__/evidence-production.test.ts
+    action: create
+    reason: 'Unit test: EvidenceSchema-conformant YAML with empty completedChanges, mocked yaml-artifact-writer'
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after ST-1 (before proceeding to later steps)
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm lint --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test: implementation.test.ts verifies graph.compile() succeeds with expected node/edge structure; file
+      existence + TypeScript compilation
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Unit test: create-worktree.test.ts verifies git worktree add called with correct args (injected mock), cleanup
+      void IIFE does not block, worktreePath recorded in returned state
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: >-
+      Unit test: load-story.test.ts verifies missing story file produces typed LoadError; happy path loads story content
+      into state
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: >-
+      Unit test: evidence-production.test.ts verifies EvidenceSchema-conformant output with empty completedChanges;
+      mocked yaml-artifact-writer receives correct EVIDENCE.yaml path
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Code inspection: @repo/logger calls with structured fields (storyId, attemptNumber, durationMs) present for
+      graph_started, worktree_created, story_loaded, evidence_written, graph_completed events in implementation.ts and
+      respective node files
+    evidence_type: file
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should create-worktree node use execSync (from Architecture Notes GAP-2 pattern) or injectable spawn-based
+      gitRunner (from merge/cleanup-worktree.ts lesson)?
+    decision: >-
+      Use injectable gitRunner (spawn-based) as default, with void IIFE cleanup pattern from GAP-2. The injectable
+      pattern is explicitly recommended by the KB lesson on subprocess-dependent LangGraph nodes and is already
+      established in cleanup-worktree.ts. The void IIFE cleanup is retained exactly as specified in GAP-2 — execSync
+      inside the IIFE is replaced by gitRunner call to keep the pattern testable.
+    rationale: >-
+      KB lesson (d006bf9a) recommends injectable runner for all subprocess-dependent nodes. The
+      merge/cleanup-worktree.ts precedent already uses this pattern in this package. execSync is not injectable and
+      would block unit tests from mocking git CLI calls. Aggressive autonomy level allows auto-accept of this Tier 2
+      (preference) decision.
+    decided_by: auto
+  - id: ARCH-002
+    question: Where should unit test files for nodes live — flat __tests__ under nodes/, or per-node subdirectories?
+    decision: >-
+      Use flat __tests__ directories: nodes/__tests__/load-story.test.ts, nodes/__tests__/create-worktree.test.ts,
+      nodes/__tests__/evidence-production.test.ts. Graph tests go in graphs/__tests__/implementation.test.ts.
+    rationale: >-
+      Matches the existing pattern observed in graphs/__tests__/ directory (elaboration.test.ts, etc.) and the merge
+      nodes pattern. Tier 1 (clarification) — auto-accepted at aggressive autonomy.
+    decided_by: auto
+complexity: moderate
+notes:
+  - >-
+    GAP-1 (CommitRecordSchema): Must be defined in ST-1 (graphs/implementation.ts) so APIP-1032 can import it. If
+    missing, APIP-1032 is blocked.
+  - >-
+    GAP-2 (non-blocking cleanup): void IIFE pattern adapted to use injectable gitRunner instead of raw execSync for
+    testability. The async IIFE is still fire-and-forget (not awaited by caller).
+  - >-
+    GAP-3 (createToolNode scope): createToolNode is used ONLY for runImplementation() workflow adapter export. Internal
+    graph nodes are plain async functions registered via StateGraph.addNode(). Do not wrap internal nodes with
+    createToolNode.
+  - >-
+    KB lesson (4d887140): Catch TypeScript interface usage at implementation time — all new types must be z.object()
+    schemas with z.infer<>. Zero interfaces allowed in node or graph files.
+  - >-
+    KB lesson (d006bf9a): Use injectable gitRunner for subprocess calls in create-worktree node — enables unit test
+    mocking without real git CLI.
+  - 'KB lesson (3eb763f1): Use Zod safeParse for state extraction in nodes rather than raw type casts.'
+  - 'Thread ID convention: {storyId}:implementation:{attemptNumber} — consistent with APIP-0020 pattern.'
+  - >-
+    ST-5 test files include tests for all 5 new implementation files. The change-spec-schema.ts and i-model-dispatch.ts
+    Zod schema validation test is included in the implementation.test.ts suite.
+  - 'Regression guard: pnpm test --filter @repo/orchestrator must pass unchanged after all changes.'

@@ -42,7 +42,7 @@ All can start immediately. Ordered by downstream impact.
 | 10 | x | AUDT-0010 | Audit Graph & Artifact Schema **uat** | AUDT-0020 | AUDT |
 | 11 | | WINT-0150 | Create doc-sync Skill ⚡ | WINT-0160 | WINT |
 | 12 | | WINT-0180 | Define Examples + Negative Examples Framework **created** | WINT-0190, 0200, 0210 | WINT |
-| 13 | | WINT-0220 | Define Model-per-Task Strategy **created** | WINT-0230, 0240, 0250 | WINT |
+| 13 | x | WINT-0220 | Define Model-per-Task Strategy **created** | WINT-0230, 0240, 0250 | WINT |
 | 14 | x | WINT-1020 | Flatten Story Directories **completed** | WINT-1030 | WINT |
 | 15 | x | WINT-7010 | Audit Agent Directory References **uat** | WINT-7020 | WINT |
 | G1 | | GATE-01 | **E2E: Validate Foundation** | ← all Wave 1 | GATE | **HARD GATE → blocks Wave 2** |
@@ -57,7 +57,7 @@ All can start immediately. Ordered by downstream impact.
 |---|---|-------|-------|---------------|------|----------|
 | 15 | x | LNGG-0020 | Index Management Adapter ⚡ **uat** | ← LNGG-0010 ✓ | LNGG | **P0** |
 | 16 | x | LNGG-0040 | Stage Movement Adapter ⚡ **uat** | ← LNGG-0010 ✓ | LNGG | **P0** |
-| 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **in-qa** | ← LNGG-0010 ✓ | LNGG | **P0** |
+| 17 | x | LNGG-0060 | Checkpoint Adapter ⚡ **uat** | ← LNGG-0010 ✓ | LNGG | **P0** |
 | 18 | x | WINT-1080 | Reconcile WINT Schema with LangGraph ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 19 | x | WINT-0020 | Create Story Management Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
 | 20 | x | WINT-0070 | Create Workflow Tracking Tables ⚡ **uat** | ← WINT-0010 | WINT | **P0** |
@@ -66,13 +66,13 @@ All can start immediately. Ordered by downstream impact.
 | 23 | x | KBAR-0020 | Schema Tests & Validation **completed** | ← KBAR-0010 | KBAR | P1 |
 | 24 | x | MODL-0020 | Task Contracts & Model Selector **uat** | — | MODL | P1 |
 | 24b | x | MODL-0050 | Add MiniMax Model Provider to LangGraph **uat** | — | MODL | P1 |
-| 25 | | WINT-0200 | Create User Flows Schema **ready-to-work** | ← WINT-0180 | WINT | P2 |
+| 25 | x | WINT-0200 | Create User Flows Schema **created** | ← WINT-0180 | WINT | P2 |
 | 26 | x | WINT-0030 | Create Context Cache Tables **UAT** | ← WINT-0010 | WINT | P2 |
 | 27 | x | WINT-0060 | Create Graph Relational Tables **uat** | ← WINT-0010 | WINT | P2 |
 | 28 | x | WINT-0230 | Create Unified Model Interface **uat** | ← WINT-0220 | WINT | P2 |
 | 29 | x | INFR-0041 | Workflow Event SDK - Typed Schemas & Validation **uat** | ← INFR-0040 | INFR | P1 |
 | 30 | x | INFR-0050 | Event SDK (Shared Telemetry Hooks) **completed** | ← none | INFR | P3 |
-| 31 | x | WINT-0040 | Create Telemetry Tables **ready-to-work** | ← WINT-0010 | WINT | P3 |
+| 31 | x | WINT-0040 | Create Telemetry Tables **uat** | ← WINT-0010 | WINT | P3 |
 | 32 | | ~~WINT-0050~~ | ~~Create ML Pipeline Tables~~ **DUPLICATE** (completed in WINT-0010 AC-005) | ← WINT-0010 | WINT | ~~P3~~ |
 | 34 | x | INFR-0030 | MinIO/S3 Docker Setup + Client Adapter **uat** | ← INFR-0110 ✓, INFR-0120 ✓ | INFR | P3 |
 | G2 | | GATE-02 | **E2E: Validate LNGG Adapters** | ← GATE-01, LNGG-0020/0040/0060 | GATE | **HARD GATE** |
@@ -99,7 +99,7 @@ All can start immediately. Ordered by downstream impact.
 | 42 | x | WINT-0130 | Create Graph Query MCP Tools **uat** | ← WINT-0060 | WINT | P2 |
 | 43 | x | WINT-0080 | Seed Initial Workflow Data **uat** | ← WINT-0070, 0060 | WINT | P2 |
 | 44 | | WINT-0170 | Add Doc-Sync Gate | ← WINT-0160 | WINT | P2 |
-| 45 | | WINT-1130 | Track Worktree-to-Story Mapping in DB | ← WINT-0020 | WINT | P2 |
+| 45 | x | WINT-1130 | Track Worktree-to-Story Mapping in DB **uat** | ← WINT-0020 | WINT | P2 |
 | 46 | | WINT-0210 | Populate Role Pack Templates | ← WINT-0180, 0190, 0200 | WINT | P3 |
 | 47 | x | MODL-0030 | Quality Evaluator **uat** | ← MODL-0020 | MODL | P3 |
 | G6 | | GATE-06 | **E2E: Validate LangGraph Types** | ← GATE-05, LNGG-0070, WINT-1100 | GATE | **HARD GATE** |
@@ -169,9 +169,9 @@ All can start immediately. Ordered by downstream impact.
 | 75 | x | KBAR-0110 | artifact_write Tool ⚡ **uat** | ← KBAR-0100 | KBAR | **P0** |
 | 76 | x | KBAR-0120 | artifact_read Tool ⚡ **uat** | ← KBAR-0110 | KBAR | **P0** |
 | 77 | x | KBAR-0130 | artifact_search Tool ⚡ **ready-to-work** | ← KBAR-0110 | KBAR | **P0** |
-| 78 | | KBAR-0140 | Artifact Summary Extraction ⚡ | ← KBAR-0120, KBAR-0130 | KBAR | **P0** |
+| 78 | x | KBAR-0140 | Artifact Summary Extraction ⚡ **created** | ← KBAR-0120, KBAR-0130 | KBAR | **P0** |
 | 79 | | KBAR-0150 | Artifact Tools Integration Tests ⚡ | ← KBAR-0140 | KBAR | **P0** |
-| 80 | | AUDT-0030 | Audit Orchestration Nodes | ← AUDT-0020 | AUDT | P3 |
+| 80 | x | AUDT-0030 | Audit Orchestration Nodes **created** | ← AUDT-0020 | AUDT | P3 |
 | 81 | x | TELE-0010 | Docker Telemetry Stack **created** | ← none | TELE | P3 |
 | G11 | | GATE-11 | **E2E: Validate KBAR Tooling** | ← GATE-10, all Wave 7 | GATE | **HARD GATE** |
 
@@ -190,9 +190,9 @@ All can start immediately. Ordered by downstream impact.
 | 86 | | KBAR-0170 | Update Execute & Worker Agents | ← KBAR-0160 | KBAR | P1 |
 | 87 | x | KBAR-0180 | Update Code Review Agents **created** | ← KBAR-0160 | KBAR | P1 |
 | 88 | x | KBAR-0190 | Update QA & Fix Agents **created** | ← KBAR-0170, KBAR-0180 | KBAR | P2 |
-| 89 | x | KBAR-0200 | Update Knowledge Context Loader **in-qa** | ← KBAR-0190 | KBAR | P2 |
+| 89 | x | KBAR-0200 | Update Knowledge Context Loader **uat** | ← KBAR-0190 | KBAR | P2 |
 | 90 | x | KBAR-0210 | Update Orchestrator Commands **uat** | ← KBAR-0200 | KBAR | P2 |
-| 91 | | KBAR-0220 | Agent Migration Testing | ← KBAR-0210 | KBAR | P2 |
+| 91 | x | KBAR-0220 | Agent Migration Testing **created** | ← KBAR-0210 | KBAR | P2 |
 | G12 | | GATE-12 | **E2E: Validate Context & Session** | ← GATE-11, all Wave 8 | GATE | **HARD GATE** |
 
 ---
@@ -205,15 +205,15 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic | Priority |
 |---|---|-------|-------|---------------|------|----------|
-| 92a | | WINT-9105 | Define LangGraph Error Handling & Retry Strategy ⚡ | ← WINT-9010 | WINT | **P0** |
-| 92b | | WINT-9106 | Implement LangGraph Checkpointer & State Recovery ⚡ | ← WINT-9105, WINT-0070 | WINT | **P0** |
-| 92c | | WINT-9107 | Implement Node-Level Retry & Circuit Breaker Middleware ⚡ | ← WINT-9105, WINT-9010 | WINT | **P0** |
-| 92 | | WINT-9110 | Create Full Workflow LangGraph Graphs ⚡ 🎯 | ← WINT-9060–9100, 9106, 9107 | WINT | **P0** |
-| 93 | | WINT-9120 | Create Workflow Parity Test Suite ⚡ | ← WINT-9110 | WINT | **P0** |
-| 94 | | WINT-9130 | Document Migration Path ⚡ | ← WINT-9120 | WINT | **P0** |
-| 95 | | WINT-9140 | Validate LangGraph Parity Phase ⚡ 🎉 | ← WINT-9120, 9130 | WINT | **P0** |
-| 96 | | KBAR-0230 | DB-Driven Index Generation | ← KBAR-0220 | KBAR | P2 |
-| 97 | | KBAR-0240 | Regenerate Index CLI | ← KBAR-0230 | KBAR | P2 |
+| 92a | x | WINT-9105 | Define LangGraph Error Handling & Retry Strategy ⚡ **created** | ← WINT-9010 | WINT | **P0** |
+| 92b | x | WINT-9106 | Implement LangGraph Checkpointer & State Recovery ⚡ **created** | ← WINT-9105, WINT-0070 | WINT | **P0** |
+| 92c | x | WINT-9107 | Implement Node-Level Retry & Circuit Breaker Middleware ⚡ **created** | ← WINT-9105, WINT-9010 | WINT | **P0** |
+| 92 | x | WINT-9110 | Create Full Workflow LangGraph Graphs ⚡ 🎯 **created** | ← WINT-9060–9100, 9106, 9107 | WINT | **P0** |
+| 93 | x | WINT-9120 | Create Workflow Parity Test Suite ⚡ **created** | ← WINT-9110 | WINT | **P0** |
+| 94 | x | WINT-9130 | Document Migration Path ⚡ **created** | ← WINT-9120 | WINT | **P0** |
+| 95 | x | WINT-9140 | Validate LangGraph Parity Phase ⚡ 🎉 **created** | ← WINT-9120, 9130 | WINT | **P0** |
+| 96 | x | KBAR-0230 | DB-Driven Index Generation **created** | ← KBAR-0220 | KBAR | P2 |
+| 97 | x | KBAR-0240 | Regenerate Index CLI **created** | ← KBAR-0230 | KBAR | P2 |
 | G13 | | GATE-13 | **E2E: Validate LangGraph Operational** | ← GATE-12, all Wave 9 | GATE | **HARD GATE** |
 
 ---
@@ -229,10 +229,10 @@ All can start immediately. Ordered by downstream impact.
 
 | # | S | Story | Title | ← Depends On | Epic |
 |---|---|-------|-------|---------------|------|
-| 98 | | WINT-2010 | Create Role Pack Sidecar | ← WINT-1120 | WINT |
-| 99 | | WINT-2020 | Create Context Pack Sidecar | ← WINT-2010 | WINT |
-| 100 | | WINT-2030 | Populate Project Context Cache | ← WINT-2020, 0100 | WINT |
-| 101 | | WINT-2040 | Populate Agent Mission Cache | ← WINT-2020, 0100 | WINT |
+| 98 | x | WINT-2010 | Create Role Pack Sidecar **created** | ← WINT-1120 | WINT |
+| 99 | x | WINT-2020 | Create Context Pack Sidecar **created** | ← WINT-2010 | WINT |
+| 100 | x | WINT-2030 | Populate Project Context Cache **created** | ← WINT-2020, 0100 | WINT |
+| 101 | x | WINT-2040 | Populate Agent Mission Cache **created** | ← WINT-2020, 0100 | WINT |
 | 102 | | WINT-2050 | Populate Domain Knowledge Cache | ← WINT-2020, 0100 | WINT |
 | 103 | | WINT-2060 | Populate Library Cache | ← WINT-2020, 0100 | WINT |
 | 104 | | WINT-2070 | Implement Cache Warming Strategy | ← WINT-2030, 2040, 2050, 2060 | WINT |

@@ -153,14 +153,8 @@ export function BlockedQueuePanel({
         {/* aria-live region for updates (AC-8) */}
         <div aria-live="polite" aria-atomic="false">
           <div className="overflow-x-auto">
-            <table
-              className="w-full text-sm"
-              aria-labelledby="blocked-queue-caption"
-            >
-              <caption
-                id="blocked-queue-caption"
-                className="sr-only"
-              >
+            <table className="w-full text-sm" aria-labelledby="blocked-queue-caption">
+              <caption id="blocked-queue-caption" className="sr-only">
                 Stories blocked by dependencies or other issues
               </caption>
               <thead>

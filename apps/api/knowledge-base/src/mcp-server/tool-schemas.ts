@@ -3494,3 +3494,48 @@ export function getToolDefinition(name: string): McpToolDefinition | undefined {
 export function getToolNames(): string[] {
   return toolDefinitions.map(tool => tool.name)
 }
+
+// ============================================================================
+// Context Pack Tool (WINT-2020)
+// ============================================================================
+
+import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
+
+/**
+ * context_pack_get tool definition.
+ * WINT-2020: Create Context Pack Sidecar
+ */
+export const contextPackGetToolDefinition: McpToolDefinition = {
+  name: 'context_pack_get',
+  description: `Retrieve or assemble a context pack for a story, role, and node type.
+
+Uses a cache-first strategy:
+1. Checks the context_packs DB table for a valid (non-expired) entry
+2. On cache miss: queries the KB for relevant facts, rules, links, and repo snippets
+3. Applies token budget enforcement (default 2000 tokens)
+4. Writes assembled pack to cache non-blocking (DB write failure does NOT block response)
+5. Returns packed context with empty arrays for missing sections (never null)
+
+Parameters:
+- story_id (required): Story identifier (e.g., "WINT-2020")
+- node_type (required): Graph node type (e.g., "plan", "implement", "review")
+- role (required): Agent role — one of: pm, dev, qa, po
+- ttl (optional): Cache TTL in seconds (default: 3600)
+
+Returns: { story_brief, kb_facts[], kb_rules[], kb_links[], repo_snippets[] }
+
+Example:
+{
+  "story_id": "WINT-2020",
+  "node_type": "implement",
+  "role": "dev",
+  "ttl": 3600
+}`,
+  inputSchema: zodToMcpSchema(ContextPackRequestSchema),
+}
+
+// Append context_pack_get to toolDefinitions
+toolDefinitions.push(
+  // Context pack tool (WINT-2020)
+  contextPackGetToolDefinition,
+)

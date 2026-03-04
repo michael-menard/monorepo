@@ -1,0 +1,266 @@
+schema: 2
+story_id: WINT-2020
+timestamp: '2026-03-04T00:30:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Create context-pack sidecar package scaffold: package.json, tsconfig.json, src/ directory following role-pack
+      structure. pnpm-workspace.yaml already covers packages/backend/sidecars/* — no modification needed.
+    files:
+      - packages/backend/sidecars/context-pack/package.json
+      - packages/backend/sidecars/context-pack/tsconfig.json
+    files_to_read:
+      - packages/backend/sidecars/role-pack/package.json
+      - packages/backend/sidecars/role-pack/tsconfig.json
+    dependencies: []
+    slice: packages
+    verification: pnpm install && pnpm check-types --filter @repo/context-pack-sidecar
+    acs_covered:
+      - AC-1
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Define Zod schemas in __types__/index.ts: ContextPackRequestSchema (story_id, node_type, role enum pm|dev|qa|po,
+      optional ttl), ContextPackResponseSchema (story_brief, kb_facts[], kb_rules[], kb_links[], repo_snippets[]),
+      CACHE_KEY_FORMAT constant, DEFAULT_TTL (3600), DEFAULT_MAX_TOKENS (2000), and estimateTokens() utility.
+    files:
+      - packages/backend/sidecars/context-pack/src/__types__/index.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/__types__/index.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/context-pack-sidecar
+    acs_covered:
+      - AC-2
+      - AC-5
+      - AC-7
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Implement assembleContextPack(input): generate packKey as '{story_id}:{node_type}:{role}', call contextCacheGet
+      (cache hit → return), on miss call kb_search for each category (kb_facts/kb_rules/kb_links/repo_snippets), apply
+      token budget trimming (repo_snippets first, then kb_links), call contextCachePut non-blocking (log warning on
+      failure, continue), return assembled pack with empty arrays for missing sections.
+    files:
+      - packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+      - packages/backend/mcp-tools/src/context-cache/context-cache-put.ts
+      - apps/api/knowledge-base/src/search/kb-search.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm test --filter @repo/context-pack-sidecar
+    acs_covered:
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-7
+      - AC-8
+      - AC-11
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Implement HTTP server route handler: POST /context-pack route using Node.js built-in http (no Hono/Express),
+      validate request with ContextPackRequestSchema (400 on failure with Zod error details), call assembleContextPack,
+      return JSON response. Add src/server.ts and src/index.ts following role-pack pattern.
+    files:
+      - packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+      - packages/backend/sidecars/context-pack/src/server.ts
+      - packages/backend/sidecars/context-pack/src/index.ts
+    files_to_read:
+      - packages/backend/sidecars/role-pack/src/server.ts
+      - packages/backend/sidecars/role-pack/src/index.ts
+    dependencies:
+      - 3
+    slice: packages
+    verification: pnpm check-types --filter @repo/context-pack-sidecar
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Implement context_pack_get MCP tool wrapper in packages/backend/mcp-tools/src/context-pack/context-pack-get.ts
+      that imports assembleContextPack directly from @repo/context-pack-sidecar (direct import, not HTTP call — resolved
+      in elaboration GAP-001). Register in apps/api/knowledge-base/src/mcp-server/tool-schemas.ts and tool-handlers.ts.
+    files:
+      - packages/backend/mcp-tools/src/context-pack/context-pack-get.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/context-cache-get.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+      - apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: pnpm check-types --filter @repo/mcp-tools && grep -r context_pack_get apps/api/knowledge-base/src/
+    acs_covered:
+      - AC-6
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Write unit tests covering: Zod schema validation (valid/invalid inputs for all fields), token budget enforcement
+      (trim repo_snippets first then kb_links using mockKbSearchResult fixture), cache key generation
+      ('{story_id}:{node_type}:{role}' format), section trimming with oversizedContextPack fixture, empty array (not
+      null) returned when sections absent.
+    files:
+      - packages/backend/sidecars/context-pack/src/__tests__/context-pack.unit.test.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-get.test.ts
+      - packages/backend/mcp-tools/src/context-cache/__tests__/context-cache-put.test.ts
+    dependencies:
+      - 3
+    slice: packages
+    verification: pnpm test --filter @repo/context-pack-sidecar
+    acs_covered:
+      - AC-2
+      - AC-5
+      - AC-8
+      - AC-10
+  - id: 7
+    subtask_id: ST-7
+    description: >-
+      Write integration tests against real postgres-knowledgebase (port 5433, no DB mocking per ADR-005): (1) cache hit
+      with timing < 100ms, (2) cache miss with timing < 2000ms, (3) concurrent cache-miss race condition — single
+      contextPacks row after two simultaneous requests, (4) cache write failure resilience — 200 returned even when DB
+      write errors, (5) expired cache entry triggers fresh assembly, (6) MCP tool context_pack_get returns
+      ContextPackResponseSchema-valid response (HP-3 coverage).
+    files:
+      - packages/backend/sidecars/context-pack/src/__tests__/context-pack.integration.test.ts
+    files_to_read:
+      - packages/backend/mcp-tools/src/context-cache/__tests__/integration.test.ts
+    dependencies:
+      - 4
+    slice: packages
+    verification: pnpm test --filter @repo/context-pack-sidecar
+    acs_covered:
+      - AC-3
+      - AC-6
+      - AC-9
+      - AC-11
+      - AC-12
+files_to_change:
+  - path: packages/backend/sidecars/context-pack/package.json
+    action: create
+    reason: New sidecar package — package manifest following role-pack structure with @repo/context-pack-sidecar name
+  - path: packages/backend/sidecars/context-pack/tsconfig.json
+    action: create
+    reason: New sidecar package — TypeScript config extending root tsconfig
+  - path: packages/backend/sidecars/context-pack/src/__types__/index.ts
+    action: create
+    reason: 'Zod schemas: ContextPackRequestSchema, ContextPackResponseSchema, constants, estimateTokens() — AC-2'
+  - path: packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    action: create
+    reason: Core cache-first assembly logic with token budget enforcement — AC-3, AC-4, AC-5, AC-8, AC-11
+  - path: packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+    action: create
+    reason: HTTP route handler for POST /context-pack — AC-1
+  - path: packages/backend/sidecars/context-pack/src/server.ts
+    action: create
+    reason: Node.js http server startup following role-pack pattern
+  - path: packages/backend/sidecars/context-pack/src/index.ts
+    action: create
+    reason: Public API entry point exporting assembleContextPack + schemas
+  - path: packages/backend/mcp-tools/src/context-pack/context-pack-get.ts
+    action: create
+    reason: MCP tool wrapper context_pack_get importing assembleContextPack directly — AC-6
+  - path: apps/api/knowledge-base/src/mcp-server/tool-schemas.ts
+    action: modify
+    reason: Register context_pack_get tool schema
+  - path: apps/api/knowledge-base/src/mcp-server/tool-handlers.ts
+    action: modify
+    reason: Register context_pack_get tool handler
+  - path: packages/backend/sidecars/context-pack/src/__tests__/context-pack.unit.test.ts
+    action: create
+    reason: Unit tests for schema validation, token budget, cache key, trimming logic — AC-10
+  - path: packages/backend/sidecars/context-pack/src/__tests__/context-pack.integration.test.ts
+    action: create
+    reason: Integration tests against real postgres-knowledgebase — AC-9, AC-12
+commands_to_run:
+  - command: pnpm install
+    when: after ST-1 (package.json created)
+    required: true
+  - command: pnpm check-types --filter @repo/context-pack-sidecar
+    when: after each step during development
+    required: true
+  - command: pnpm check-types --filter @repo/mcp-tools
+    when: after ST-5
+    required: true
+  - command: pnpm test --filter @repo/context-pack-sidecar
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/context-pack-sidecar
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/mcp-tools
+    when: after ST-5
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      HTTP test: POST /context-pack with valid body returns 200 with story_brief, kb_facts[], kb_rules[], kb_links[],
+      repo_snippets[] — verified by integration test HP-1
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: >-
+      Unit test: Zod schema validation passes for valid input, rejects invalid role enum with 400 —
+      context-pack.unit.test.ts
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: >-
+      Integration test: cache hit path returns cached content; contextPacks row asserted in DB —
+      context-pack.integration.test.ts HP-2
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: 'Integration test: cache miss path calls KB search and returns assembled result — HP-1'
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: 'Unit test: oversizedContextPack fixture asserts estimateTokens(response) <= 2000 after trimming — ED-1, ED-2'
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: 'Integration test: context_pack_get MCP tool returns ContextPackResponseSchema-valid response — HP-3'
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'Integration test: POST /context-pack with ttl:7200 asserts contextPacks row has ttl=7200 — HP-4'
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: 'Unit test: response with no KB results returns empty arrays [] not null/undefined — HP-5'
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: Integration tests connect to real postgres-knowledgebase on port 5433 with no DB mocking — vitest config
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: >-
+      Unit tests cover: Zod schema validation, token budget enforcement, cache key generation, section trimming logic —
+      context-pack.unit.test.ts
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: 'Integration test: simulated DB write error returns 200 with fresh context — EC-3'
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: 'Integration test: timing assertion cache hit < 100ms (ED-4), cache miss < 2000ms (ED-5)'
+    evidence_type: test
+architectural_decisions:
+  - id: ARCH-001
+    question: Should the MCP tool context_pack_get call the HTTP sidecar endpoint or import assembleContextPack directly?
+    decision: Direct import from @repo/context-pack-sidecar package
+    rationale: >-
+      Avoids requiring the sidecar to be running during MCP tool invocation. Uni-directional dependency (mcp-tools →
+      sidecars/context-pack) is acceptable. Resolved during elaboration (GAP-001) — no user input required.
+    decided_by: elaboration
+complexity: complex
+notes:
+  - pnpm-workspace.yaml already includes 'packages/backend/sidecars/*' — no modification needed for ST-1
+  - >-
+    kb_search requires db + embeddingClient deps injected at runtime — mirror WINT-2010's initialization pattern in
+    assembleContextPack
+  - contextCachePut uses ON CONFLICT DO UPDATE — concurrent cache-miss requests are safe by design (WINT-0100)
+  - estimateTokens(text) = Math.ceil(text.length / 4) — char-count approximation; use tolerance margin in assertions
+  - packType 'story' confirmed available in contextPackTypeEnum from context-cache/__types__/index.ts
+  - ST-7 integration tests require postgres-knowledgebase on port 5433 — may be skipped in CI without that service
+  - Elaboration CONDITIONAL_PASS — 2 gaps resolved, 3 opportunities deferred to KB (telemetry, relevance ranking, auth)

@@ -92,7 +92,7 @@ export async function contextCachePut(
       })
       .returning()
 
-    return pack
+    return pack as SelectContextPack
   } catch (error) {
     // Database errors or validation failures: log warning, return null
     logger.warn('[mcp-tools] Context cache put failed', {

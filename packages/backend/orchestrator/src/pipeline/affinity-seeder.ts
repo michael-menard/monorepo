@@ -83,9 +83,7 @@ export type Db = z.infer<typeof DbSchema>
  *   sample_size >= low threshold → 'low'
  *   otherwise → 'none'
  */
-export function deriveConfidenceLevel(
-  sampleSize: number,
-): 'none' | 'low' | 'medium' | 'high' {
+export function deriveConfidenceLevel(sampleSize: number): 'none' | 'low' | 'medium' | 'high' {
   if (sampleSize >= CONFIDENCE_THRESHOLDS.high) return 'high'
   if (sampleSize >= CONFIDENCE_THRESHOLDS.medium) return 'medium'
   if (sampleSize >= CONFIDENCE_THRESHOLDS.low) return 'low'
@@ -140,8 +138,7 @@ export async function importAffinitySeeds(
     const entry = parseResult.data
 
     // AC-6: Derive confidence_level if not explicitly provided
-    const confidenceLevel =
-      entry.confidence_level ?? deriveConfidenceLevel(entry.sample_size)
+    const confidenceLevel = entry.confidence_level ?? deriveConfidenceLevel(entry.sample_size)
 
     try {
       // Upsert using ON CONFLICT pattern

@@ -1,0 +1,175 @@
+schema: 1
+story_id: APIP-6002
+timestamp: '2026-03-03T19:00:00Z'
+steps:
+  - id: 1
+    description: >-
+      Add detect_stuck_stories() function to scripts/implement-stories.sh — scans all stage directories and returns
+      stuck stories with their stuck pattern
+    files:
+      - scripts/implement-stories.sh
+    dependencies: []
+    slice: backend
+  - id: 2
+    description: >-
+      Add recover_story() function to scripts/implement-stories.sh — applies pattern-matched recovery action and writes
+      STUCK-RECOVERY.yaml artifact
+    files:
+      - scripts/implement-stories.sh
+    dependencies:
+      - 1
+    slice: backend
+  - id: 3
+    description: >-
+      Wire stuck detection sweep into implement-stories.sh main batch loop (runs after all stories are processed) and
+      add --detect-stuck standalone flag
+    files:
+      - scripts/implement-stories.sh
+    dependencies:
+      - 1
+      - 2
+    slice: backend
+  - id: 4
+    description: >-
+      Add structured log emission for all recovery actions (RECOVERY: {story_id} pattern={pattern} action={action}) and
+      STUCK-ALERT.yaml for stories stuck >8 hours
+    files:
+      - scripts/implement-stories.sh
+    dependencies:
+      - 2
+    slice: backend
+  - id: 5
+    description: >-
+      Write tests and validation: verify idempotency of detect_stuck_stories() and recover_story() by running detection
+      twice; verify STUCK-RECOVERY.yaml schema
+    files:
+      - scripts/implement-stories.sh
+    dependencies:
+      - 1
+      - 2
+      - 3
+      - 4
+    slice: backend
+files_to_change:
+  - path: scripts/implement-stories.sh
+    action: modify
+    reason: >-
+      Add detect_stuck_stories(), recover_story(), --detect-stuck flag, post-batch sweep, structured log output, and
+      STUCK-ALERT.yaml for >8hr stuck stories
+commands_to_run:
+  - command: bash -n scripts/implement-stories.sh
+    when: after all code changes
+    required: true
+  - command: shellcheck scripts/implement-stories.sh
+    when: after all code changes
+    required: false
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      detect_stuck_stories() function exists in implement-stories.sh, scans all stage dirs, returns stuck stories with
+      pattern (exhausted-retries, no-evidence, missing-review, stale); manual trace through bash code path
+    evidence_type: manual
+  - ac_id: AC-2
+    planned_evidence: >-
+      recover_story() function exists, takes story_id and pattern, applies recovery action, writes STUCK-RECOVERY.yaml;
+      verified by code inspection and schema check
+    evidence_type: manual
+  - ac_id: AC-3
+    planned_evidence: >-
+      exhausted-retries recovery: resets retry counter, moves failed-code-review→needs-code-review or
+      failed-qa→ready-for-qa with max 1 additional recovery attempt per run; verified by code inspection
+    evidence_type: manual
+  - ac_id: AC-4
+    planned_evidence: >-
+      no-evidence-no-commits recovery: moves story to ready-to-work, cleans up stale worktree if present; verified by
+      code inspection
+    evidence_type: manual
+  - ac_id: AC-5
+    planned_evidence: >-
+      missing-review-bouncing recovery: writes RECOVERY-NOTE.yaml with diagnosis, moves to needs-code-review with
+      force-review flag; verified by code inspection
+    evidence_type: manual
+  - ac_id: AC-6
+    planned_evidence: >-
+      STUCK-ALERT.yaml written for stories stuck >8 hours with full diagnosis (stage, duration, missing artifacts,
+      attempted recoveries); verified by code inspection
+    evidence_type: manual
+  - ac_id: AC-7
+    planned_evidence: >-
+      detect_stuck_stories() sweep called at end of main process loop in implement-stories.sh; verified by code
+      inspection of main batch flow
+    evidence_type: manual
+  - ac_id: AC-8
+    planned_evidence: >-
+      --detect-stuck flag added to implement-stories.sh; running with that flag invokes only detect_stuck_stories() and
+      recover_story() without processing stories; verified by bash -n and code inspection
+    evidence_type: manual
+  - ac_id: AC-9
+    planned_evidence: >-
+      Idempotency: detect_stuck_stories() checks for existing STUCK-RECOVERY.yaml before writing; running twice on same
+      stuck story does not duplicate artifacts or actions; verified by code inspection of idempotency guard
+    evidence_type: manual
+  - ac_id: AC-10
+    planned_evidence: >-
+      All recovery actions emit structured log line: RECOVERY: {story_id} pattern={pattern} action={action}; verified by
+      tracing every recovery action path in code
+    evidence_type: manual
+architectural_decisions:
+  - id: ARCH-001
+    question: >-
+      Should stuck-recovery logic be extracted to scripts/lib/stuck-recovery.sh, or added inline to
+      implement-stories.sh?
+    decision: Inline in implement-stories.sh — no separate lib file
+    rationale: >-
+      The detect_stuck_stories() and recover_story() functions need access to all local variables and helpers already
+      defined in implement-stories.sh (FEATURE_DIR, WORKTREE_BASE, has_worktree_commits, move_story_to,
+      validate_artifact, etc.). Sourcing a lib file creates coupling complexity without benefit. Precedent:
+      validate_artifact_schema, generate_evidence, and other helpers are already inline.
+    decided_by: auto
+    tier: 1
+  - id: ARCH-002
+    question: How to detect 'stuck for >N hours' without associative arrays (macOS bash 3.2)?
+    decision: >-
+      Use stat -f %m (macOS) / stat -c %Y (Linux) on the story directory's mtime to get last-modified timestamp, compare
+      to current epoch via date +%s. The directory mtime changes when story.yaml or _implementation/ artifacts are
+      written.
+    rationale: >-
+      bash 3.2 has no date arithmetic with timestamps directly, but $(date +%s) gives current epoch and stat gives mtime
+      epoch. Simple integer subtraction gives duration in seconds. macOS stat uses -f %m, Linux uses -c %Y — use a
+      portable wrapper that tries macOS first. This is exactly the approach the existing implement-stories.sh uses for
+      worktree timestamp checks.
+    decided_by: auto
+    tier: 1
+  - id: ARCH-003
+    question: Where should STUCK-RECOVERY.yaml and STUCK-ALERT.yaml be written?
+    decision: >-
+      Write to {STORY_DIR}/_implementation/STUCK-RECOVERY.yaml and {STORY_DIR}/_implementation/STUCK-ALERT.yaml (in the
+      story's implementation directory, alongside EVIDENCE.yaml etc.)
+    rationale: >-
+      Consistent with all other pipeline artifacts (EVIDENCE.yaml, REVIEW.yaml, VERIFICATION.yaml, GATE-FAILURE.yaml).
+      Makes the audit trail discoverable alongside other story state artifacts. The _implementation/ directory is the
+      canonical location for pipeline-produced artifacts.
+    decided_by: auto
+    tier: 1
+complexity: moderate
+notes:
+  - >-
+    This story is purely a bash script addition to scripts/implement-stories.sh — no TypeScript or database changes
+    required
+  - >-
+    SCOPE.yaml says 'packages: true' but all work is in scripts/ (shell), not packages/. The SCOPE.yaml was set
+    conservatively. Actual touches are scripts/implement-stories.sh only.
+  - macOS bash 3.2 compatibility is required — no declare -A, no readarray, use flat comparisons only
+  - >-
+    Recovery actions must be idempotent: check for existing STUCK-RECOVERY.yaml before writing to avoid duplicate
+    artifacts
+  - >-
+    The exhausted-retries recovery is capped at 1 additional attempt per pipeline run (MAX_RECOVERY_ATTEMPTS variable)
+    to prevent infinite recovery loops
+  - >-
+    APIP-6001 landed phase gate validation in implement-stories.sh — verify the gate functions are present before adding
+    recovery (depends_on: APIP-6001)
+  - >-
+    Lesson from audit: default --max-retries was 0, now 1 after APIP-6001. Recovery loop is the backstop for the cases
+    that slip through even with retries.
+  - Stale worktree cleanup in AC-4 should use the existing merge_and_cleanup() helper pattern

@@ -2,25 +2,54 @@ import { describe, expect, it } from 'vitest'
 
 import { runRoundtable } from '../roundtable.js'
 import { RoundtableResultSchema } from '../../../artifacts/audit-findings.js'
+import type {
+  AuditFinding,
+  LensResult,
+  ChallengeResult,
+} from '../../../artifacts/audit-findings.js'
 import type { CodeAuditState } from '../../../graphs/code-audit.js'
-import type { AuditFinding, LensResult, ChallengeResult } from '../../../artifacts/audit-findings.js'
 
-function makeFinding(overrides: Partial<AuditFinding>): AuditFinding {
+// --- Helpers ---
+
+function makeFinding(overrides: Partial<AuditFinding> = {}): AuditFinding {
   return {
-    id: 'FIND-001',
+    id: '',
     lens: 'security',
-    severity: 'high',
+    severity: 'medium',
     confidence: 'high',
-    title: 'Test Finding',
-    file: 'src/index.ts',
-    evidence: 'evidence',
+    title: 'Test finding',
+    file: 'src/test.ts',
+    evidence: 'test evidence',
     remediation: 'fix it',
     status: 'new',
     ...overrides,
   }
 }
 
-function makeState(overrides: Partial<CodeAuditState>): CodeAuditState {
+function makeLensResult(findings: AuditFinding[], lens: AuditFinding['lens'] = 'security'): LensResult {
+  return {
+    lens,
+    total_findings: findings.length,
+    by_severity: { critical: 0, high: 0, medium: 0, low: 0 },
+    findings,
+  }
+}
+
+function makeChallengeResult(
+  challenges: ChallengeResult['challenges'],
+): ChallengeResult {
+  return {
+    total_reviewed: challenges.length,
+    confirmed: challenges.filter(c => c.decision === 'confirmed').length,
+    downgraded: challenges.filter(c => c.decision === 'downgraded').length,
+    upgraded: challenges.filter(c => c.decision === 'upgraded').length,
+    false_positives: challenges.filter(c => c.decision === 'false_positive').length,
+    duplicates: challenges.filter(c => c.decision === 'duplicate').length,
+    challenges,
+  }
+}
+
+function makeState(overrides: Partial<CodeAuditState> = {}): CodeAuditState {
   return {
     scope: 'full',
     mode: 'roundtable',
@@ -40,246 +69,356 @@ function makeState(overrides: Partial<CodeAuditState>): CodeAuditState {
     errors: [],
     completed: false,
     ...overrides,
-  }
+  } as CodeAuditState
 }
 
-describe('runRoundtable', () => {
-  it('RoundtableResultSchema.parse() does not throw on valid result', async () => {
-    const findings = [makeFinding({ id: 'F-001' })]
-    const lensResults: LensResult[] = [
-      {
-        lens: 'security',
-        total_findings: 1,
-        by_severity: { critical: 0, high: 1, medium: 0, low: 0 },
-        findings,
-      },
-    ]
+// --- Tests ---
 
-    const daResult: ChallengeResult = {
-      total_reviewed: 1,
-      confirmed: 1,
-      downgraded: 0,
-      upgraded: 0,
-      false_positives: 0,
-      duplicates: 0,
-      challenges: [
+describe('runRoundtable', () => {
+  describe('AC-12: RoundtableResultSchema validates; vetted_count matches expectations', () => {
+    it('produces a result that parses against RoundtableResultSchema without throwing', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', severity: 'high', title: 'Issue A' }),
+        makeFinding({ id: 'F-002', severity: 'medium', title: 'Issue B' }),
+      ]
+      const daResult = makeChallengeResult([
         {
           finding_id: 'F-001',
           original_severity: 'high',
           decision: 'confirmed',
           final_severity: 'high',
-          reasoning: 'Confirmed high severity',
+          reasoning: 'Valid high severity issue',
         },
-      ],
-    }
-
-    const state = makeState({ lensResults, devilsAdvocateResult: daResult })
-    const result = await runRoundtable(state)
-
-    expect(() => RoundtableResultSchema.parse(result.roundtableResult)).not.toThrow()
-  })
-
-  it('false_positive decision → finding excluded from vetted_findings', async () => {
-    const findings = [
-      makeFinding({ id: 'KEEP-001', severity: 'medium', title: 'Real Issue' }),
-      makeFinding({ id: 'FP-001', severity: 'high', title: 'False Positive' }),
-    ]
-
-    const lensResults: LensResult[] = [
-      {
-        lens: 'react',
-        total_findings: 2,
-        by_severity: { critical: 0, high: 1, medium: 1, low: 0 },
-        findings,
-      },
-    ]
-
-    const daResult: ChallengeResult = {
-      total_reviewed: 2,
-      confirmed: 1,
-      downgraded: 0,
-      upgraded: 0,
-      false_positives: 1,
-      duplicates: 0,
-      challenges: [
         {
-          finding_id: 'KEEP-001',
+          finding_id: 'F-002',
+          original_severity: 'medium',
+          decision: 'confirmed',
+          final_severity: 'medium',
+          reasoning: 'Valid medium severity issue',
+        },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult).toBeDefined()
+      expect(() => RoundtableResultSchema.parse(result.roundtableResult)).not.toThrow()
+    })
+
+    it('vetted_count equals number of confirmed findings', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', severity: 'high', title: 'Confirmed' }),
+        makeFinding({ id: 'F-002', severity: 'medium', title: 'Also confirmed' }),
+        makeFinding({ id: 'F-003', severity: 'low', title: 'False positive' }),
+      ]
+      const daResult = makeChallengeResult([
+        {
+          finding_id: 'F-001',
+          original_severity: 'high',
+          decision: 'confirmed',
+          final_severity: 'high',
+          reasoning: 'Confirmed',
+        },
+        {
+          finding_id: 'F-002',
           original_severity: 'medium',
           decision: 'confirmed',
           final_severity: 'medium',
           reasoning: 'Confirmed',
         },
         {
-          finding_id: 'FP-001',
-          original_severity: 'high',
+          finding_id: 'F-003',
+          original_severity: 'low',
           decision: 'false_positive',
           final_severity: null,
-          reasoning: 'Not actually a problem',
+          reasoning: 'Not real',
         },
-      ],
-    }
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
 
-    const state = makeState({ lensResults, devilsAdvocateResult: daResult })
-    const result = await runRoundtable(state)
+      expect(result.roundtableResult!.vetted_count).toBe(2)
+    })
 
-    const vettedIds = result.roundtableResult?.vetted_findings.map(f => f.id)
-    expect(vettedIds).toContain('KEEP-001')
-    expect(vettedIds).not.toContain('FP-001')
-    expect(result.roundtableResult?.removed.false_positives).toBe(1)
-  })
+    it('original_count matches total findings from lensResults', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', title: 'A' }),
+        makeFinding({ id: 'F-002', title: 'B' }),
+        makeFinding({ id: 'F-003', title: 'C' }),
+      ]
+      const daResult = makeChallengeResult([
+        { finding_id: 'F-001', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+        { finding_id: 'F-002', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+        { finding_id: 'F-003', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
 
-  it('duplicate decision → finding excluded from vetted_findings', async () => {
-    const lensResults: LensResult[] = [
-      {
-        lens: 'typescript',
-        total_findings: 2,
-        by_severity: { critical: 0, high: 2, medium: 0, low: 0 },
-        findings: [
-          makeFinding({ id: 'ORIG-001', title: 'Original Issue' }),
-          makeFinding({ id: 'DUP-001', title: 'Duplicate Issue' }),
-        ],
-      },
-    ]
+      expect(result.roundtableResult!.original_count).toBe(3)
+    })
 
-    const daResult: ChallengeResult = {
-      total_reviewed: 2,
-      confirmed: 1,
-      downgraded: 0,
-      upgraded: 0,
-      false_positives: 0,
-      duplicates: 1,
-      challenges: [
+    it('passes all findings through when no devil\'s advocate result', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', title: 'A' }),
+        makeFinding({ id: 'F-002', title: 'B' }),
+      ]
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: null,
+      })
+      const result = await runRoundtable(state)
+
+      expect(() => RoundtableResultSchema.parse(result.roundtableResult)).not.toThrow()
+      expect(result.roundtableResult!.vetted_count).toBe(2)
+      expect(result.roundtableResult!.vetted_findings.length).toBe(2)
+    })
+
+    it('downgraded findings appear in vetted_findings with adjusted severity', async () => {
+      const finding = makeFinding({ id: 'F-001', severity: 'high', title: 'Downgraded' })
+      const daResult = makeChallengeResult([
         {
-          finding_id: 'ORIG-001',
-          original_severity: 'high',
-          decision: 'confirmed',
-          final_severity: 'high',
-          reasoning: 'Confirmed',
-        },
-        {
-          finding_id: 'DUP-001',
-          original_severity: 'high',
-          decision: 'duplicate',
-          final_severity: null,
-          reasoning: 'Duplicate of existing story',
-        },
-      ],
-    }
-
-    const state = makeState({ lensResults, devilsAdvocateResult: daResult })
-    const result = await runRoundtable(state)
-
-    const vettedIds = result.roundtableResult?.vetted_findings.map(f => f.id)
-    expect(vettedIds).toContain('ORIG-001')
-    expect(vettedIds).not.toContain('DUP-001')
-    expect(result.roundtableResult?.removed.duplicates).toBe(1)
-  })
-
-  it('downgraded decision → finding included with updated severity', async () => {
-    const lensResults: LensResult[] = [
-      {
-        lens: 'security',
-        total_findings: 1,
-        by_severity: { critical: 0, high: 1, medium: 0, low: 0 },
-        findings: [makeFinding({ id: 'DG-001', severity: 'high' })],
-      },
-    ]
-
-    const daResult: ChallengeResult = {
-      total_reviewed: 1,
-      confirmed: 0,
-      downgraded: 1,
-      upgraded: 0,
-      false_positives: 0,
-      duplicates: 0,
-      challenges: [
-        {
-          finding_id: 'DG-001',
+          finding_id: 'F-001',
           original_severity: 'high',
           decision: 'downgraded',
           final_severity: 'medium',
-          reasoning: 'Test file, reduced severity',
+          reasoning: 'Reduced after review',
         },
-      ],
-    }
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult([finding])],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
 
-    const state = makeState({ lensResults, devilsAdvocateResult: daResult })
-    const result = await runRoundtable(state)
+      expect(result.roundtableResult!.vetted_count).toBe(1)
+      expect(result.roundtableResult!.vetted_findings[0].severity).toBe('medium')
+      expect(result.roundtableResult!.severity_changes.downgraded).toBe(1)
+    })
 
-    const vetted = result.roundtableResult?.vetted_findings.find(f => f.id === 'DG-001')
-    expect(vetted).toBeDefined()
-    expect(vetted?.severity).toBe('medium')
-    expect(vetted?.devils_advocate?.decision).toBe('downgraded')
-    expect(result.roundtableResult?.severity_changes.downgraded).toBe(1)
-  })
-
-  it('passes all findings through when no devil\'s advocate result', async () => {
-    const findings = [
-      makeFinding({ id: 'A-001', severity: 'high' }),
-      makeFinding({ id: 'A-002', severity: 'low' }),
-    ]
-    const lensResults: LensResult[] = [
-      {
-        lens: 'react',
-        total_findings: 2,
-        by_severity: { critical: 0, high: 1, medium: 0, low: 1 },
-        findings,
-      },
-    ]
-
-    const state = makeState({ lensResults, devilsAdvocateResult: null })
-    const result = await runRoundtable(state)
-
-    expect(result.roundtableResult?.vetted_count).toBe(2)
-    expect(result.roundtableResult?.original_count).toBe(2)
-  })
-
-  it('detects cross-references for findings on same file from different lenses', async () => {
-    const lensResults: LensResult[] = [
-      {
-        lens: 'security',
-        total_findings: 1,
-        by_severity: { critical: 0, high: 1, medium: 0, low: 0 },
-        findings: [makeFinding({ id: 'S-001', lens: 'security', file: 'auth.ts' })],
-      },
-      {
-        lens: 'typescript',
-        total_findings: 1,
-        by_severity: { critical: 0, high: 1, medium: 0, low: 0 },
-        findings: [makeFinding({ id: 'T-001', lens: 'typescript', file: 'auth.ts' })],
-      },
-    ]
-
-    const daResult: ChallengeResult = {
-      total_reviewed: 2,
-      confirmed: 2,
-      downgraded: 0,
-      upgraded: 0,
-      false_positives: 0,
-      duplicates: 0,
-      challenges: [
+    it('upgraded findings appear in vetted_findings with elevated severity', async () => {
+      const finding = makeFinding({ id: 'F-001', severity: 'medium', title: 'Upgraded' })
+      const daResult = makeChallengeResult([
         {
-          finding_id: 'S-001',
+          finding_id: 'F-001',
+          original_severity: 'medium',
+          decision: 'upgraded',
+          final_severity: 'high',
+          reasoning: 'More severe than initially assessed',
+        },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult([finding])],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.vetted_count).toBe(1)
+      expect(result.roundtableResult!.vetted_findings[0].severity).toBe('high')
+      expect(result.roundtableResult!.severity_changes.upgraded).toBe(1)
+    })
+
+    it('deferred findings are kept as-is in vetted_findings', async () => {
+      const finding = makeFinding({ id: 'F-001', severity: 'medium', title: 'Deferred' })
+      const daResult = makeChallengeResult([
+        {
+          finding_id: 'F-001',
+          original_severity: 'medium',
+          decision: 'deferred',
+          final_severity: 'medium',
+          reasoning: 'Review later',
+        },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult([finding])],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.vetted_count).toBe(1)
+      expect(result.roundtableResult!.vetted_findings[0].severity).toBe('medium')
+    })
+
+    it('detects cross-references when same file is flagged by different lenses', async () => {
+      const lensResult1 = makeLensResult(
+        [makeFinding({ id: 'F-001', lens: 'security', file: 'src/shared.ts', title: 'Security issue' })],
+        'security',
+      )
+      const lensResult2 = makeLensResult(
+        [makeFinding({ id: 'F-002', lens: 'react', file: 'src/shared.ts', title: 'React issue' })],
+        'react',
+      )
+      const daResult = makeChallengeResult([
+        { finding_id: 'F-001', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+        { finding_id: 'F-002', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+      ])
+      const state = makeState({
+        lensResults: [lensResult1, lensResult2],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.cross_references.length).toBeGreaterThan(0)
+      const crossRef = result.roundtableResult!.cross_references[0]
+      expect(crossRef.findings).toContain('F-001')
+      expect(crossRef.findings).toContain('F-002')
+    })
+
+    it('no cross-references when findings are in different files', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', lens: 'security', file: 'src/a.ts', title: 'Issue A' }),
+        makeFinding({ id: 'F-002', lens: 'react', file: 'src/b.ts', title: 'Issue B' }),
+      ]
+      const daResult = makeChallengeResult([
+        { finding_id: 'F-001', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+        { finding_id: 'F-002', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'ok' },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.cross_references.length).toBe(0)
+    })
+  })
+
+  describe('AC-13: false_positive decision → finding excluded from vetted_findings', () => {
+    it('excludes a single false_positive finding from vetted_findings', async () => {
+      const finding = makeFinding({ id: 'F-001', severity: 'high', title: 'False positive' })
+      const daResult = makeChallengeResult([
+        {
+          finding_id: 'F-001',
+          original_severity: 'high',
+          decision: 'false_positive',
+          final_severity: null,
+          reasoning: 'Not a real issue',
+        },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult([finding])],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.vetted_findings.length).toBe(0)
+      expect(result.roundtableResult!.vetted_count).toBe(0)
+      expect(result.roundtableResult!.removed.false_positives).toBe(1)
+    })
+
+    it('excludes duplicate findings from vetted_findings', async () => {
+      const finding = makeFinding({ id: 'F-001', severity: 'medium', title: 'Duplicate' })
+      const daResult = makeChallengeResult([
+        {
+          finding_id: 'F-001',
+          original_severity: 'medium',
+          decision: 'duplicate',
+          final_severity: null,
+          reasoning: 'Already covered by another finding',
+        },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult([finding])],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.vetted_findings.length).toBe(0)
+      expect(result.roundtableResult!.removed.duplicates).toBe(1)
+    })
+
+    it('keeps other findings when only some are false positives', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', severity: 'high', title: 'Real issue' }),
+        makeFinding({ id: 'F-002', severity: 'medium', title: 'False positive' }),
+        makeFinding({ id: 'F-003', severity: 'low', title: 'Also real' }),
+      ]
+      const daResult = makeChallengeResult([
+        { finding_id: 'F-001', original_severity: 'high', decision: 'confirmed', final_severity: 'high', reasoning: 'real' },
+        { finding_id: 'F-002', original_severity: 'medium', decision: 'false_positive', final_severity: null, reasoning: 'not real' },
+        { finding_id: 'F-003', original_severity: 'low', decision: 'confirmed', final_severity: 'low', reasoning: 'real' },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.vetted_findings.length).toBe(2)
+      const vettedIds = result.roundtableResult!.vetted_findings.map(f => f.id)
+      expect(vettedIds).toContain('F-001')
+      expect(vettedIds).toContain('F-003')
+      expect(vettedIds).not.toContain('F-002')
+    })
+
+    it('finding not in challengeMap is kept as-is in vetted_findings', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', severity: 'high', title: 'Challenged' }),
+        makeFinding({ id: 'F-002', severity: 'medium', title: 'Not challenged' }),
+      ]
+      const daResult = makeChallengeResult([
+        // Only F-001 in challenges — F-002 has no challenge entry
+        { finding_id: 'F-001', original_severity: 'high', decision: 'confirmed', final_severity: 'high', reasoning: 'ok' },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      const vettedIds = result.roundtableResult!.vetted_findings.map(f => f.id)
+      expect(vettedIds).toContain('F-001')
+      expect(vettedIds).toContain('F-002')
+    })
+
+    it('removed.false_positives count matches number of false_positive decisions', async () => {
+      const findings = [
+        makeFinding({ id: 'F-001', title: 'FP 1' }),
+        makeFinding({ id: 'F-002', title: 'FP 2' }),
+        makeFinding({ id: 'F-003', title: 'Real' }),
+      ]
+      const daResult = makeChallengeResult([
+        { finding_id: 'F-001', original_severity: 'medium', decision: 'false_positive', final_severity: null, reasoning: 'fp' },
+        { finding_id: 'F-002', original_severity: 'medium', decision: 'false_positive', final_severity: null, reasoning: 'fp' },
+        { finding_id: 'F-003', original_severity: 'medium', decision: 'confirmed', final_severity: 'medium', reasoning: 'real' },
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult(findings)],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
+
+      expect(result.roundtableResult!.removed.false_positives).toBe(2)
+    })
+
+    it('vetted_findings include devils_advocate annotation on challenged findings', async () => {
+      const finding = makeFinding({ id: 'F-001', severity: 'high', title: 'Challenged confirmed' })
+      const daResult = makeChallengeResult([
+        {
+          finding_id: 'F-001',
           original_severity: 'high',
           decision: 'confirmed',
           final_severity: 'high',
-          reasoning: 'Confirmed',
+          reasoning: 'Definitely real',
         },
-        {
-          finding_id: 'T-001',
-          original_severity: 'high',
-          decision: 'confirmed',
-          final_severity: 'high',
-          reasoning: 'Confirmed',
-        },
-      ],
-    }
+      ])
+      const state = makeState({
+        lensResults: [makeLensResult([finding])],
+        devilsAdvocateResult: daResult,
+      })
+      const result = await runRoundtable(state)
 
-    const state = makeState({ lensResults, devilsAdvocateResult: daResult })
-    const result = await runRoundtable(state)
-
-    expect(result.roundtableResult?.cross_references.length).toBeGreaterThan(0)
-    const ref = result.roundtableResult?.cross_references[0]
-    expect(ref?.relationship).toContain('auth.ts')
+      const vettedFinding = result.roundtableResult!.vetted_findings[0]
+      expect(vettedFinding.devils_advocate).toBeDefined()
+      expect(vettedFinding.devils_advocate!.challenged).toBe(true)
+      expect(vettedFinding.devils_advocate!.decision).toBe('confirmed')
+    })
   })
 })

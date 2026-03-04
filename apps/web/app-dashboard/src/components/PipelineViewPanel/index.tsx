@@ -161,40 +161,22 @@ export function PipelineViewPanel({ stories, isLoading, error, onRetry }: Pipeli
         {/* aria-live region for data updates (AC-8) */}
         <div aria-live="polite" aria-atomic="false">
           <div className="overflow-x-auto">
-            <table
-              className="w-full text-sm"
-              aria-labelledby="pipeline-view-caption"
-            >
-              <caption
-                id="pipeline-view-caption"
-                className="sr-only"
-              >
+            <table className="w-full text-sm" aria-labelledby="pipeline-view-caption">
+              <caption id="pipeline-view-caption" className="sr-only">
                 Active pipeline stories sorted by state: in-progress first
               </caption>
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
-                  <th
-                    scope="col"
-                    className="py-2 pr-4 text-left font-medium"
-                  >
+                  <th scope="col" className="py-2 pr-4 text-left font-medium">
                     Story
                   </th>
-                  <th
-                    scope="col"
-                    className="py-2 pr-4 text-left font-medium"
-                  >
+                  <th scope="col" className="py-2 pr-4 text-left font-medium">
                     Title
                   </th>
-                  <th
-                    scope="col"
-                    className="py-2 pr-4 text-left font-medium"
-                  >
+                  <th scope="col" className="py-2 pr-4 text-left font-medium">
                     State
                   </th>
-                  <th
-                    scope="col"
-                    className="py-2 text-left font-medium"
-                  >
+                  <th scope="col" className="py-2 text-left font-medium">
                     Priority
                   </th>
                 </tr>

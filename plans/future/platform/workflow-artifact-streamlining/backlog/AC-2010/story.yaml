@@ -1,0 +1,26 @@
+id: AC-2010
+title: "FIX-VERIFICATION-SUMMARY → CHECKPOINT.yaml"
+status: backlog
+priority: medium
+phase: 2
+feature: "Extend CHECKPOINT.yaml schema with a fix_cycles array and update dev-verification-leader to write there; update dev-documentation-leader fix mode and dev-fix-fix-leader to read fix_cycles from CHECKPOINT instead of a separate file"
+goal: "Fix cycle outcomes are recorded in CHECKPOINT.yaml fix_cycles and no agent references FIX-VERIFICATION-SUMMARY.md."
+depends_on:
+  - AC-1010
+  - AC-1020
+endpoints: []
+infrastructure: []
+risk_notes: "CHECKPOINT.yaml schema extension must be backward-compatible with existing written checkpoints. dev-documentation-leader reads both token data (P1-TOKEN story) and fix data — coordinate ordering if done in same session."
+sizing_warning: false
+created: "2026-03-03T00:00:00Z"
+action_items:
+  - "Add schema_version field to CHECKPOINT.yaml fix_cycles section"
+  - "Ensure agents reading fix_cycles tolerate the field being absent (treat as empty array) for backward compatibility"
+  - "Include a grep checklist step in the implementation plan to catch stale cross-references before committing"
+ac_decisions:
+  - id: ENG-ARCH-001
+    decision: accept
+    notes: "Schema versioning required for backward compatibility"
+  - id: ENG-REC-002
+    decision: accept
+    notes: "Grep checklist required before commit"

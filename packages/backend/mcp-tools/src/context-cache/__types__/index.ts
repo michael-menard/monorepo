@@ -44,12 +44,7 @@ export const ContextCachePutInputSchema = z.object({
   }),
   packKey: z.string().min(1, 'packKey must not be empty'),
   content: z.record(z.unknown()),
-  ttl: z
-    .number()
-    .int()
-    .positive('ttl must be positive')
-    .optional()
-    .default(604800), // 7 days in seconds
+  ttl: z.number().int().positive('ttl must be positive').optional().default(604800), // 7 days in seconds
   version: z.number().int().optional(),
 })
 

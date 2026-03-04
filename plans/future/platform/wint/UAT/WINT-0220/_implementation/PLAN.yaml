@@ -1,0 +1,241 @@
+schema: 2
+story_id: WINT-0220
+timestamp: '2026-03-02T18:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Read existing deliverables and pipeline consumers to understand current state — establish gaps between v1.0.0
+      strategy and what pipeline now requires before writing any changes
+    files: []
+    files_to_read:
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md
+      - packages/backend/orchestrator/src/pipeline/model-router.ts
+      - packages/backend/orchestrator/src/models/strategy-loader.ts
+      - .claude/config/model-assignments.yaml
+      - docs/tech-stack/ollama-model-fleet.md
+    dependencies: []
+    slice: backend
+    verification: No files modified. Gap analysis between v1.0.0 strategy and pipeline reality documented in working notes.
+    acs_covered:
+      - AC-1
+      - AC-3
+      - AC-5
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Audit agent roster — enumerate all 142 agents in .claude/agents/*.agent.md, cross-reference against
+      model-assignments.yaml (62 mapped) and strategy YAML tier assignments, identify the 80 unmapped agents and
+      determine appropriate tier for each
+    files: []
+    files_to_read:
+      - .claude/agents/*.agent.md
+      - .claude/config/model-assignments.yaml
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      Coverage matrix produced. List of unmapped agents documented with proposed tier assignments. No file
+      modifications.
+    acs_covered:
+      - AC-2
+      - AC-4
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Update WINT-0220-STRATEGY.yaml in-place — expand task_types from 14 to 20+ entries, align model identifier strings
+      with PipelineModelRouter conventions, update escalation_chain to include openrouter, update review_date to
+      2026-06-15, update integration.modl_0010.status to 'uat', add openrouter provider tier. CRITICAL: update Zod
+      schema in validate-strategy.ts to add 'openrouter' to ProviderModelSchema BEFORE adding any openrouter entries to
+      YAML.
+    files:
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+      - packages/backend/orchestrator/scripts/validate-strategy.ts
+    files_to_read:
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+      - packages/backend/orchestrator/scripts/validate-strategy.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm --filter @repo/orchestrator exec tsx scripts/validate-strategy.ts exits 0 with zero errors
+    acs_covered:
+      - AC-2
+      - AC-3
+      - AC-5
+      - AC-6
+      - AC-9
+      - AC-10
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Update WINT-0220-STRATEGY.md in-place — update decision flowchart to reflect four-tier routing modes
+      (legacy/three-tier-affinity/four-tier), expand task type table to 20+ entries, add DB override mechanism section,
+      refresh cost analysis, add affinity-based routing scenario (APIP-3040/3050/3060), update exploration slot edge
+      case, verify no stale v1.0.0 references remain
+    files:
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md
+    files_to_read:
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      Document reads consistently with updated YAML. No stale v1.0.0 references. 20+ task types in taxonomy table. 6+
+      workflow scenarios including affinity routing.
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-7
+      - AC-8
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Reconcile model-assignments.yaml — using the gap list from ST-2, add missing agent-to-model assignments for all
+      unmapped agents identified. Apply tier guidance from updated strategy: architect/* agents → Tier 2
+      (ollama:codellama:13b) or Tier 3 (ollama:qwen2.5-coder:7b), audit/* → Tier 2/3, metrics agents → Tier 3,
+      pipeline-specific agents → Sonnet. Do not remove or rename existing entries.
+    files:
+      - .claude/config/model-assignments.yaml
+    files_to_read:
+      - .claude/config/model-assignments.yaml
+      - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      model-assignments.yaml contains entries for all 80 agents identified as unmapped in ST-2. No existing entries
+      removed. File is syntactically valid YAML.
+    acs_covered:
+      - AC-4
+  - id: 6
+    subtask_id: ST-6
+    description: >-
+      Run validate-strategy.ts and verify integration — execute validation script against updated
+      WINT-0220-STRATEGY.yaml. Verify strategy-loader.ts can load updated YAML. Run pnpm check-types --filter
+      @repo/orchestrator. The Zod schema update for 'openrouter' was done in ST-3; this step verifies end-to-end
+      validation passes cleanly.
+    files: []
+    files_to_read:
+      - packages/backend/orchestrator/scripts/validate-strategy.ts
+      - packages/backend/orchestrator/src/models/strategy-loader.ts
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      pnpm --filter @repo/orchestrator exec tsx scripts/validate-strategy.ts exits 0. pnpm check-types --filter
+      @repo/orchestrator passes.
+    acs_covered:
+      - AC-6
+files_to_change:
+  - path: packages/backend/orchestrator/docs/WINT-0220-STRATEGY.yaml
+    action: modify
+    reason: >-
+      Expand task_types to 20+ entries, align model identifiers with PipelineModelRouter conventions (openrouter
+      provider), update review_date to 2026-06-15, update escalation_chain to include openrouter, update
+      integration.modl_0010.status to 'uat', bump strategy_version to 1.1.0 (AC-2, AC-3, AC-5, AC-6, AC-9, AC-10)
+  - path: packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md
+    action: modify
+    reason: >-
+      Update narrative to reflect four-tier routing modes, expand task taxonomy table, add affinity routing scenario, DB
+      override section, cost analysis refresh (AC-1, AC-2, AC-7, AC-8)
+  - path: .claude/config/model-assignments.yaml
+    action: modify
+    reason: Add tier assignments for 80 unmapped agents identified in ST-2 audit (AC-4)
+  - path: packages/backend/orchestrator/scripts/validate-strategy.ts
+    action: modify
+    reason: >-
+      Add 'openrouter' to ProviderModelSchema enum (z.enum(['anthropic', 'ollama', 'openrouter'])) before ST-3 adds
+      openrouter model entries to YAML (AC-9)
+commands_to_run:
+  - command: pnpm --filter @repo/orchestrator exec tsx scripts/validate-strategy.ts
+    when: after updating WINT-0220-STRATEGY.yaml and validate-strategy.ts (after ST-3/ST-6)
+    required: true
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after all TypeScript changes
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      WINT-0220-STRATEGY.md updated with correct model identifiers, review_date beyond 2026-03-15, decision flowchart
+      reflecting four-tier routing modes
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      WINT-0220-STRATEGY.yaml task_types section has 20+ entries; WINT-0220-STRATEGY.md has matching taxonomy table with
+      20+ rows
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      Model identifier strings in YAML use provider/model format matching ESCALATION_CHAIN and DEFAULT_MODELS in
+      model-router.ts; Tier 2/3 Ollama model lists match ollama-model-fleet.md
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      model-assignments.yaml contains entries for all 142 agents (80 new mappings added);
+      agent_migration.analysis_summary updated in YAML
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      WINT-0220-STRATEGY.yaml escalation_chain field updated to [ollama, openrouter, anthropic] matching
+      PipelineModelRouter; no circular dependencies in escalation graph
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: validate-strategy.ts exits 0 with zero Zod errors; pnpm check-types --filter @repo/orchestrator passes
+    evidence_type: command
+  - ac_id: AC-7
+    planned_evidence: >-
+      cost_analysis section in WINT-0220-STRATEGY.yaml and STRATEGY.md updated; Ollama 95% availability assumption
+      retained or updated based on actual data
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: >-
+      WINT-0220-STRATEGY.md contains 6+ workflow scenarios including new affinity routing scenario (APIP-3040/3050) and
+      DB cache invalidation edge case
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      validate-strategy.ts ProviderModelSchema updated to z.enum(['anthropic', 'ollama', 'openrouter']);
+      WINT-0220-STRATEGY.yaml includes openrouter provider tier; validate-strategy.ts exits 0
+    evidence_type: command
+  - ac_id: AC-10
+    planned_evidence: WINT-0220-STRATEGY.yaml integration.modl_0010.status field reads 'uat' (not 'in-progress')
+    evidence_type: file
+architectural_decisions: []
+complexity: moderate
+notes:
+  - This is a revision/refresh story — all primary files exist; no new files created per Non-Goals
+  - >-
+    CRITICAL SEQUENCE: ST-3 must update validate-strategy.ts Zod schema (add 'openrouter') BEFORE adding openrouter
+    entries to WINT-0220-STRATEGY.yaml to avoid validation failures during editing
+  - >-
+    PipelineModelRouter ESCALATION_CHAIN is ['ollama', 'openrouter', 'anthropic'] — strategy YAML must reflect this
+    three-provider chain, not just two
+  - >-
+    DEFAULT_MODELS uses: ollama/qwen2.5-coder:7b, openrouter/anthropic/claude-3.5-haiku, anthropic/claude-haiku-3.5 —
+    these are the canonical fallback model strings
+  - >-
+    Model identifier format in DB (provider/model slash separator) vs model-assignments.yaml (provider:model colon
+    separator) — both formats are correct for their respective consumers; document the distinction
+  - >-
+    80 agents are unmapped — all architect/*, audit/*, metrics agents, pipeline-specific agents (risk-predictor,
+    scope-defender, etc.) need tier assignments in model-assignments.yaml
+  - strategy_version should bump from 1.0.0 to 1.1.0 (minor revision — backward-compatible expansion)
+  - >-
+    DB-backed overrides (wint.model_assignments) have single-process cache only — this constraint must be documented in
+    the strategy
+  - >-
+    Ollama fleet: llama3.2:8b is runtime truth (not :3b as strategy YAML shows); strategy YAML should be updated to
+    match actual fleet per ollama-model-fleet.md ARCH-002
+  - >-
+    Four-tier routing modes (legacy/three-tier-affinity/four-tier-APIP-3070) must be documented in strategy MD as
+    distinct routing scenarios
+  - >-
+    task_types schema does NOT enforce min(10) in the Zod schema — it enforces z.array(TaskTypeSchema).min(10); adding
+    20+ entries is well within schema bounds

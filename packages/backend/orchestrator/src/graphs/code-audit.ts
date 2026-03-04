@@ -49,8 +49,8 @@ export const CodeAuditConfigSchema = z.object({
   since: z.string().optional(),
   storyId: z.string().optional(),
   nodeTimeoutMs: z.number().positive().default(60000),
-  auditDir: z.string().optional(),
-  plansDir: z.string().optional(),
+  auditDir: z.string().default('plans/audit'),
+  plansDir: z.string().default('plans'),
 })
 
 export type CodeAuditConfig = z.infer<typeof CodeAuditConfigSchema>
@@ -170,14 +170,6 @@ export interface GraphStateWithCodeAudit extends GraphState {
 
 function routeAfterMergeLenses(state: CodeAuditState): 'devils_advocate' | 'synthesize' {
   return state.mode === 'roundtable' ? 'devils_advocate' : 'synthesize'
-}
-
-function routeAfterDevilsAdvocate(_state: CodeAuditState): 'roundtable' {
-  return 'roundtable'
-}
-
-function routeAfterRoundtable(_state: CodeAuditState): 'synthesize' {
-  return 'synthesize'
 }
 
 // --- Placeholder Node Factories ---
@@ -353,7 +345,7 @@ export const codeAuditNode = async (
 }
 
 export function createCodeAuditNode(config: Partial<CodeAuditConfig> = {}) {
-  return async (state: GraphState): Promise<Partial<GraphStateWithCodeAudit>> => {
+  return async (_state: GraphState): Promise<Partial<GraphStateWithCodeAudit>> => {
     const result = await runCodeAudit(config)
     return {
       auditFindings: result,
