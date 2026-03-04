@@ -21,6 +21,27 @@ export const GenerateStoriesIndexOptionsSchema = z.object({
 
 export type GenerateStoriesIndexOptions = z.infer<typeof GenerateStoriesIndexOptionsSchema>
 
+/** Mirrors the `metadata` JSONB shape defined in kbar.stories */
+const StoryMetadataSchema = z
+  .object({
+    surfaces: z
+      .object({
+        backend: z.boolean().optional(),
+        frontend: z.boolean().optional(),
+        database: z.boolean().optional(),
+        infra: z.boolean().optional(),
+      })
+      .optional(),
+    tags: z.array(z.string()).optional(),
+    wave: z.number().optional(),
+    blocked_by: z.array(z.string()).optional(),
+    blocks: z.array(z.string()).optional(),
+    feature_dir: z.string().optional(),
+  })
+  .strict()
+
+type StoryMetadata = z.infer<typeof StoryMetadataSchema>
+
 /** A single story row enriched with resolved dependency labels */
 const StoryRowSchema = z.object({
   id: z.string(),
@@ -34,7 +55,7 @@ const StoryRowSchema = z.object({
   storyPoints: z.number().nullable(),
   currentPhase: z.string(),
   status: z.string(),
-  metadata: z.record(z.string(), z.any()).nullable(),
+  metadata: StoryMetadataSchema.nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -184,8 +205,8 @@ function renderStorySections(
   const blocks: string[] = []
 
   for (const story of storyRows) {
-    const meta = (story.metadata ?? {}) as Record<string, unknown>
-    const phase = meta['wave'] ?? ''
+    const meta: StoryMetadata = story.metadata ?? {}
+    const phase = meta.wave ?? ''
     const depLabel = resolveDepLabels(story, depsByStory)
 
     const sectionLines: string[] = [
@@ -205,7 +226,7 @@ function renderStorySections(
       sectionLines.push(`**Feature:** ${story.description}`)
     }
 
-    const surfaces = meta['surfaces'] as Record<string, boolean> | undefined
+    const surfaces = meta.surfaces
     if (surfaces) {
       const infra: string[] = []
       if (surfaces.database) infra.push('PostgreSQL migration')
