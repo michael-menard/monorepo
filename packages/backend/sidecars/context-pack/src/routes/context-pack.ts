@@ -26,12 +26,26 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 }
 
 /**
- * Read the request body as a string.
+ * Maximum allowed request body size in bytes (1 MB).
+ * Prevents unbounded memory consumption from oversized payloads.
+ */
+const MAX_BODY_SIZE_BYTES = 1 * 1024 * 1024 // 1 MB
+
+/**
+ * Read the request body as a string, enforcing a maximum size.
+ * Rejects with an error if the body exceeds MAX_BODY_SIZE_BYTES.
  */
 async function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let body = ''
+    let size = 0
     req.on('data', chunk => {
+      size += chunk.length
+      if (size > MAX_BODY_SIZE_BYTES) {
+        reject(new Error(`Request body exceeds ${MAX_BODY_SIZE_BYTES} bytes`))
+        req.destroy()
+        return
+      }
       body += chunk.toString()
     })
     req.on('end', () => resolve(body))
@@ -42,13 +56,19 @@ async function readBody(req: IncomingMessage): Promise<string> {
 /**
  * Handle POST /context-pack requests.
  * Validates request body with Zod, calls assembleContextPack, returns JSON response.
+ *
+ * SEC-002: Authentication/authorization on this endpoint is intentionally omitted.
+ * Per WINT-2020 non-goals: "Authentication/authorization on the sidecar endpoint —
+ * deferred to later phase." This sidecar is deployed as an internal-only service
+ * within the VPC and is NOT exposed to the public internet. Network-level isolation
+ * is the current security boundary; auth will be added in a follow-up story.
  */
 export async function handleContextPackRequest(
   req: IncomingMessage,
   res: ServerResponse,
   deps: AssembleContextPackDeps,
 ): Promise<void> {
-  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+  const url = new URL(req.url ?? '/', `http://${req.headers['host'] ?? 'localhost'}`)
 
   // Only handle POST /context-pack
   if (url.pathname !== '/context-pack') {

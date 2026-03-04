@@ -14,8 +14,6 @@ import {
   assembleContextPack,
   type AssembleContextPackDeps,
   type KbSearchResult,
-} from '@repo/context-pack-sidecar'
-import {
   ContextPackRequestSchema,
   type ContextPackRequest,
   type ContextPackResponse,

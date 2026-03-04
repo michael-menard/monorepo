@@ -18,7 +18,9 @@ import {
   worktreeGetByStory,
   worktreeListActive,
   worktreeMarkComplete,
+  contextPackGet,
 } from '@repo/mcp-tools'
+import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
 import {
   kb_add,
   kb_get,
@@ -4752,9 +4754,6 @@ export async function handleToolCall(
 // ============================================================================
 // Context Pack Tool Handler (WINT-2020)
 // ============================================================================
-
-import { contextPackGet } from '@repo/mcp-tools'
-import { ContextPackRequestSchema } from '@repo/context-pack-sidecar'
 
 /**
  * Handle context_pack_get tool invocation.

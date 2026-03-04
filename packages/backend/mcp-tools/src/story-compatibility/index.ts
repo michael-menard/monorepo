@@ -177,7 +177,7 @@ export async function shimGetStoryStatus(
  */
 export async function shimUpdateStoryStatus(
   input: StoryUpdateStatusInput,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _options?: ShimOptions,
 ): Promise<StoryUpdateStatusOutput> {
   const result = await storyUpdateStatus(input)

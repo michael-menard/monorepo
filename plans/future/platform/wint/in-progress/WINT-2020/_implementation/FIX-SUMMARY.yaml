@@ -1,0 +1,45 @@
+schema: 1
+story_id: WINT-2020
+timestamp: '2026-03-04T17:45:00Z'
+failure_source: code-review-failed
+iteration: 2
+issues_to_fix:
+  - id: SEC-001
+    file: packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    severity: critical
+    issue: SQL injection via sql.raw() - untrusted context parameter used in raw query
+    auto_fixable: false
+  - id: SEC-002
+    file: packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+    severity: high
+    issue: Missing auth on HTTP endpoint - but story non-goals say auth is deferred
+    auto_fixable: false
+  - id: SEC-003
+    file: packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+    severity: high
+    issue: Unbounded request body size - no size limit on incoming POST
+    auto_fixable: false
+  - id: SEC-004
+    file: packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    severity: high
+    issue: 'as any' type assertions found - should use proper typing or Zod schemas'
+    auto_fixable: false
+  - id: TS-ZOD-001
+    file: packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    severity: high
+    issue: 3 TypeScript interfaces instead of Zod schemas - violates CLAUDE.md requirement
+    auto_fixable: false
+  - id: SYN-001
+    file: packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    severity: medium
+    issue: Optional chaining and nullish coalescing suggestions
+    auto_fixable: true
+  - id: SYN-002
+    file: packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+    severity: medium
+    issue: Optional chaining and nullish coalescing suggestions
+    auto_fixable: true
+
+focus_files:
+  - packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+  - packages/backend/sidecars/context-pack/src/routes/context-pack.ts

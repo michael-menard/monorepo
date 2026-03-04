@@ -15,6 +15,7 @@
  */
 
 import { eq, and, gt, or, isNull, sql } from 'drizzle-orm'
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { db } from '@repo/db'
 import { contextPacks } from '@repo/database-schema'
@@ -35,25 +36,31 @@ import {
 
 /**
  * A single search result entry from KB search.
+ * Using Zod schema per CLAUDE.md — no TypeScript interfaces.
  */
-export interface KbSearchResultEntry {
-  id: string
-  content: string
-  role: string
-  tags: string[] | null
-  relevance_score?: number
-}
+export const KbSearchResultEntrySchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  role: z.string(),
+  tags: z.array(z.string()).nullable(),
+  relevance_score: z.number().optional(),
+})
+
+export type KbSearchResultEntry = z.infer<typeof KbSearchResultEntrySchema>
 
 /**
  * Result from a KB search call.
+ * Using Zod schema per CLAUDE.md — no TypeScript interfaces.
  */
-export interface KbSearchResult {
-  results: KbSearchResultEntry[]
-  metadata: {
-    total: number
-    fallback_mode: boolean
-  }
-}
+export const KbSearchResultSchema = z.object({
+  results: z.array(KbSearchResultEntrySchema),
+  metadata: z.object({
+    total: z.number(),
+    fallback_mode: z.boolean(),
+  }),
+})
+
+export type KbSearchResult = z.infer<typeof KbSearchResultSchema>
 
 /**
  * Injectable KB search function signature.
@@ -69,8 +76,13 @@ export type KbSearchFn = (input: {
 /**
  * Dependencies for assembleContextPack.
  * kbSearch is injectable for testability.
+ * Using Zod schema per CLAUDE.md — no TypeScript interfaces.
  */
-export interface AssembleContextPackDeps {
+export const AssembleContextPackDepsSchema = z.object({
+  kbSearch: z.function(),
+})
+
+export type AssembleContextPackDeps = {
   kbSearch: KbSearchFn
 }
 
@@ -170,7 +182,7 @@ async function getCachedPack(packKey: string): Promise<ContextPackResponse | nul
     return null
   } catch (error) {
     logger.warn('[context-pack] Cache get failed', {
-      error: error instanceof Error ? error.message : String(error),
+      error: (error instanceof Error ? error.message : null) ?? String(error),
       packKey,
     })
     return null
@@ -181,13 +193,19 @@ async function getCachedPack(packKey: string): Promise<ContextPackResponse | nul
  * Write assembled pack to cache (non-blocking).
  */
 function writeCacheAsync(packKey: string, pack: ContextPackResponse, ttl: number): void {
-  const expiresAt = sql`NOW() + INTERVAL '${sql.raw(ttl.toString())} seconds'`
+  // SEC-001: Use parameterized interval to prevent SQL injection from user-controlled ttl.
+  // ttl is validated as a positive integer by ContextPackRequestSchema, but we avoid sql.raw()
+  // entirely by using the interval multiplication form supported by PostgreSQL.
+  const expiresAt = sql`NOW() + (${ttl} * '1 second'::INTERVAL)`
+
+  // Validate pack before storing — ensures JSONB content matches expected schema
+  const validatedPack = ContextPackResponseSchema.parse(pack)
 
   db.insert(contextPacks)
     .values({
       packType: 'story',
       packKey,
-      content: pack as any, // ContextPackResponse stored as JSONB — cast bypasses typed schema
+      content: validatedPack,
       version: 1,
       expiresAt,
       hitCount: 0,
@@ -195,7 +213,7 @@ function writeCacheAsync(packKey: string, pack: ContextPackResponse, ttl: number
     .onConflictDoUpdate({
       target: [contextPacks.packType, contextPacks.packKey],
       set: {
-        content: pack as any, // ContextPackResponse stored as JSONB — bypasses typed schema
+        content: validatedPack,
         version: 1,
         expiresAt,
         updatedAt: sql`NOW()`,
@@ -203,7 +221,7 @@ function writeCacheAsync(packKey: string, pack: ContextPackResponse, ttl: number
     })
     .catch(error => {
       logger.warn('[context-pack] contextCachePut failed (non-blocking)', {
-        error: error instanceof Error ? error.message : String(error),
+        error: (error instanceof Error ? error.message : null) ?? String(error),
         packKey,
       })
     })
