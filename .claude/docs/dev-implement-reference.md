@@ -28,8 +28,7 @@ version: 1.0.0
     │       └─→ Playwright Worker (parallel, if UI) → appends to VERIFICATION.md
     │
     └─→ Phase 4: Documentation Leader (sonnet)
-            ├─→ Proof Writer Worker → PROOF-STORY-XXX.md
-            └─→ Learnings Worker → appends to LESSONS-LEARNED.md
+            └─→ Learnings Worker → KB lesson entries
 ```
 
 ## Output Format
@@ -173,5 +172,4 @@ Runs Setup phase only and outputs:
 | Contracts | `.claude/agents/dev-implement-contracts.agent.md` |
 | Verifier | `.claude/agents/dev-implement-verifier.agent.md` |
 | Playwright | `.claude/agents/dev-implement-playwright.agent.md` |
-| Proof Writer | `.claude/agents/dev-implement-proof-writer.agent.md` |
 | Learnings | `.claude/agents/dev-implement-learnings.agent.md` |

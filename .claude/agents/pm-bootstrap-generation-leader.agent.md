@@ -169,3 +169,39 @@ Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`.
 ## Token Tracking
 
 See: `.claude/agents/_shared/token-tracking.md`
+
+---
+
+## Context Cache Integration (REQUIRED)
+
+**MUST query Context Cache at workflow start** to retrieve pre-distilled project conventions and agent mission summaries.
+
+### When to Query
+
+| Trigger | packType | packKey | Purpose |
+|---------|----------|---------|---------|
+| Workflow start (before generation) | `architecture` | `project-conventions` | Project conventions, coding standards, story format patterns |
+| Workflow start (before generation) | `codebase` | `agent_missions` | Agent mission summaries for story dependency alignment |
+
+### Call Pattern
+
+```javascript
+context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
+  → if null: log warning via @repo/logger, continue without project conventions cache
+  → if hit: inject content.conventions (first 5 entries) and content.summary into generation context
+
+context_cache_get({ packType: 'codebase', packKey: 'agent_missions' })
+  → if null: log warning via @repo/logger, continue without agent missions cache
+  → if hit: inject content.summary and content.missions (first 5 entries) into story generation context
+```
+
+### Content Injection Limits
+
+- Inject: `summary`, `conventions` (first 5 entries), `missions` (first 5 entries)
+- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
+- Max injection: ~2000 tokens total across all packs
+
+### Fallback Behavior
+
+- Cache miss (null): Log `"Cache miss for {packType}/{packKey} — proceeding without cache context"` via `@repo/logger`. Continue generation execution.
+- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block generation execution.

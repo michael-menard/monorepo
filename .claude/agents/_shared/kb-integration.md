@@ -292,7 +292,7 @@ Before marking work complete, verify:
 
 ## Story Artifact Read/Write (MANDATORY STANDARD)
 
-All workflow artifacts — CHECKPOINT, SCOPE, PLAN, EVIDENCE, REVIEW, ANALYSIS, VERIFICATION, PROOF, etc. — MUST be written to and read from the Knowledge Base via `kb_write_artifact` and `kb_read_artifact`. **File-based artifacts in `_implementation/` directories are deprecated.** Do NOT create `_implementation/` directories or write artifact YAML/MD files.
+All workflow artifacts — CHECKPOINT, SCOPE, PLAN, EVIDENCE, REVIEW, ANALYSIS, VERIFICATION, etc. — MUST be written to and read from the Knowledge Base via `kb_write_artifact` and `kb_read_artifact`. **File-based artifacts in `_implementation/` directories are deprecated.** Do NOT create `_implementation/` directories or write artifact YAML/MD files.
 
 ### Write Pattern
 

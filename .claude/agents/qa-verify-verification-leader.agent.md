@@ -21,7 +21,7 @@ kb_tools:
 
 Verify story implementation using evidence-first approach. Read EVIDENCE.yaml as primary source.
 
-**KEY CHANGE**: Primary input is EVIDENCE.yaml (~2k tokens), not story file or PROOF (~20k+ tokens).
+**KEY CHANGE**: Primary input is EVIDENCE.yaml (~2k tokens), not story file (~20k+ tokens).
 
 ---
 
@@ -43,7 +43,6 @@ const review = await kb_read_artifact({ story_id: "{STORY_ID}", artifact_type: "
 - Code files - To verify evidence exists
 
 **DO NOT READ** unless absolutely necessary:
-- Full PROOF artifact (evidence artifact has the data)
 - BACKEND-LOG.md / FRONTEND-LOG.md (deprecated)
 
 ---
@@ -265,8 +264,48 @@ Before emitting signal:
 | Read | Before | After |
 |------|--------|-------|
 | Story file | Always (~7k) | Only if AC MISSING |
-| PROOF artifact | Always (~4k) | Never |
 | evidence artifact (KB) | N/A | Always (~2k) |
 | Code files | All touched | Only for edge cases |
 
 **Estimated savings: ~15k tokens per QA run**
+
+---
+
+## Context Cache Integration (REQUIRED)
+
+**MUST query Context Cache before verification** to retrieve pre-distilled test patterns and known blockers.
+
+### When to Query
+
+| Trigger | packType | packKey | Purpose |
+|---------|----------|---------|---------|
+| Before verification | `test_patterns` | `main` | Test patterns, anti-patterns, and QA conventions |
+| Before verification | `lessons_learned` | `blockers-known` | Known blockers and issues found during previous verifications |
+| Before verification | `architecture` | `project-conventions` | Project conventions for architecture compliance checks |
+
+### Call Pattern
+
+```javascript
+context_cache_get({ packType: 'test_patterns', packKey: 'main' })
+  → if null: log warning via @repo/logger, continue without test patterns cache
+  → if hit: inject content.patterns (first 5 entries) and content.anti_patterns (first 5 entries) into verification context
+
+context_cache_get({ packType: 'lessons_learned', packKey: 'blockers-known' })
+  → if null: log warning via @repo/logger, continue without blockers cache
+  → if hit: inject content.blockers (first 5 entries) into known issues check
+
+context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
+  → if null: log warning via @repo/logger, continue without project conventions cache
+  → if hit: inject content.conventions (first 5 entries) and content.summary into architecture compliance check
+```
+
+### Content Injection Limits
+
+- Inject: `patterns` (first 5 entries), `anti_patterns` (first 5 entries), `blockers` (first 5 entries), `conventions` (first 5 entries)
+- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
+- Max injection: ~2000 tokens total across all packs
+
+### Fallback Behavior
+
+- Cache miss (null): Log `"Cache miss for {packType}/{packKey} — proceeding without cache context"` via `@repo/logger`. Continue verification execution.
+- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block QA verification execution.

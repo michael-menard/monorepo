@@ -6,8 +6,8 @@ Plan: [workflow-artifact-streamlining](../..)
 
 | Status | Count |
 |--------|-------|
-| Backlog | 6 |
-| Ready | 0 |
+| Backlog | 4 |
+| Ready | 2 |
 | In Progress | 0 |
 | Ready for Review | 0 |
 | In Review | 0 |
@@ -22,8 +22,8 @@ Eliminate the highest-volume redundant artifacts: replace 4 ELAB artifacts with 
 
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
-| AC-1010 | ELAB.yaml Consolidation | — | backlog |
-| AC-1020 | Eliminate PROOF-{ID}.md | — | backlog |
+| AC-1010 | ELAB.yaml Consolidation | — | ready |
+| AC-1020 | Eliminate PROOF-{ID}.md | — | ready |
 
 ## Phase 2: P1 Data Source Migrations
 

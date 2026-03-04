@@ -344,7 +344,6 @@ This persists the knowledge context so downstream phases (execute, review, qa) c
 
 **Downstream**: Knowledge context file is read by:
 - `dev-execute-leader` - Informs implementation decisions
-- `dev-proof-leader` - References in PROOF
 - `qa-verify-verification-leader` - Edge cases to verify
 
 ---

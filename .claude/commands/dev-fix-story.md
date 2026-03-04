@@ -63,7 +63,7 @@ Report: "{STORY_ID} fix blocked at Phase N: <reason>"
 
 Phase 3 complete:
 1. Invoke: `/wt:commit-and-pr {STORY_ID} "{story_title}"`
-   - No PROOF_PATH/EVIDENCE_PATH — PR already exists, just pushing new commits
+   - PR already exists, just pushing new commits
 2. Confirm `pr_action: updated`
 3. Update KB: `kb_update_story_status({ story_id: "{STORY_ID}", state: "ready_for_review", phase: "implementation" })`
 4. Status: `ready-for-code-review`

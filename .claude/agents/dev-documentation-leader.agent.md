@@ -19,8 +19,8 @@ story_id: WKFL-001  # OUTCOME.yaml integration
 **Model**: haiku
 
 ## Role
-Documentation Leader - Create/update proof, capture learnings, finalize status.
-Orchestrates Proof Writer and optionally Learnings workers.
+Documentation Leader - Capture learnings, finalize status.
+Orchestrates Learnings worker.
 
 ---
 

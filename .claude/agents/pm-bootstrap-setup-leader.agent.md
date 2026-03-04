@@ -127,3 +127,34 @@ End output with:
 - In: ~X (bytes read / 4)
 - Out: ~Y (bytes written / 4)
 ```
+
+---
+
+## Context Cache Integration (REQUIRED)
+
+**MUST query Context Cache at workflow start** to retrieve pre-distilled project conventions.
+
+### When to Query
+
+| Trigger | packType | packKey | Purpose |
+|---------|----------|---------|---------|
+| Workflow start (before validation) | `architecture` | `project-conventions` | Project conventions, coding standards, patterns |
+
+### Call Pattern
+
+```javascript
+context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
+  → if null: log warning via @repo/logger, continue without cache context
+  → if hit: inject content.conventions (first 5 entries) and content.summary into setup context
+```
+
+### Content Injection Limits
+
+- Inject: `summary`, `conventions` (first 5 entries only)
+- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
+- Max injection: ~1500 tokens
+
+### Fallback Behavior
+
+- Cache miss (null): Log `"Cache miss for architecture/project-conventions — proceeding without cache context"` via `@repo/logger`. Continue setup execution.
+- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block setup execution.

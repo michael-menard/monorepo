@@ -174,4 +174,3 @@ Before emitting signal:
 - MUST check for EVIDENCE.yaml (required for evidence-first QA)
 - MUST check for REVIEW.yaml (review must have passed)
 - Do NOT read story file (evidence has AC info)
-- Do NOT read PROOF file (evidence is the source)

@@ -1,0 +1,93 @@
+knowledge_context:
+  loaded: true
+  timestamp: '2026-03-04T10:00:00Z'
+  lessons_learned:
+    count: 4
+    relevant_to_scope:
+      - story_id: WINT-2040
+        lesson: >-
+          packTypeValues Zod array in mcp-tools __types__/index.ts does not include 'agent_missions' — after WINT-2040
+          adds DB enum value, Zod validation rejects queries for agent_missions packType. WINT-2110 must sync this
+          array.
+        category: blocker
+        applies_because: ST-2 must add agent_missions to packTypeValues — the only genuinely new packType enum value
+      - story_id: KBAR-0080
+        lesson: >-
+          MCP tool count in integration tests must match getToolDefinitions() exactly at commit time — never set
+          speculatively.
+        category: pattern
+        applies_because: >-
+          Updating __types__/index.ts Zod enum may affect mcp-integration tests; verify test counts after packTypeValues
+          update
+      - story_id: WINT-2110-elab
+        lesson: >-
+          CRITICAL: AC-7 and ST-2 originally specified adding 'project-conventions', 'blockers-known', 'lib-react19',
+          etc. as new packType enum values. These do NOT exist in the DB — the upstream stories (WINT-2030/2050/2060)
+          use EXISTING packTypes with new packKeys. Only 'agent_missions' is genuinely new (migration 0033). AC-9 and
+          AC-10 added by elaboration correct this.
+        category: blocker
+        applies_because: Implementation MUST use corrected packType+packKey pairs from AC-9/AC-10, not the original AC-7 spec
+      - story_id: KFMB-5010
+        lesson: >-
+          Agent .agent.md files tend to have stale filesystem path references in Output sections. Use KB tool calls as
+          references, not filesystem paths.
+        category: pattern
+        applies_because: >-
+          When adding Context Cache Integration sections to agent files, use canonical pattern from
+          qa-verify-setup-leader as structural template
+    blockers_to_avoid:
+      - >-
+        Do NOT add 'project-conventions', 'blockers-known', 'lib-react19', 'lib-tailwind', 'lib-zod', 'lib-vitest' as
+        packType values — they are packKeys under existing packTypes
+      - Do NOT follow AC-7 as written in the original story — follow AC-9 (elaboration correction) instead
+      - Verify exact packType+packKey pairs against upstream stories before writing agent sections (AC-10)
+    patterns_to_follow:
+      - >-
+        Use qa-verify-setup-leader.agent.md ## Knowledge Base Integration section as structural template for ## Context
+        Cache Integration sections
+      - >-
+        Use context_cache_get({ packType: 'architecture', packKey: 'project-conventions' }) NOT context_cache_get({
+        packType: 'project-conventions', packKey: 'main' })
+      - Only add 'agent_missions' to packTypeValues — all other new content uses existing packTypes
+    patterns_to_avoid:
+      - >-
+        Do not use the slash-notation 'project-conventions/main' to denote packType — always use separate packType and
+        packKey fields
+      - Do not block agent execution on cache miss — graceful degradation is required by AC-4
+  architecture_decisions:
+    active_count: 1
+    relevant_adrs:
+      - id: ADR-005
+        title: Testing Strategy - UAT Must Use Real Services
+        status: active
+        constraint: Integration smoke test (AC-8) must use real DB/seeded pack — no mocking allowed
+        applies_to:
+          - backend
+          - mcp-tools
+          - integration-testing
+    constraints:
+      api_paths: N/A — no new API endpoints
+      infrastructure: N/A — no infra changes (uses existing PostgreSQL context_packs table)
+      storage: N/A
+      auth: N/A
+      testing: Integration smoke test must use real DB; type-check and unit tests required per ADR-005
+  token_optimization:
+    high_cost_operations:
+      - operation: Read full story file for all sections
+        typical_tokens: 8000
+        mitigation: Read only ACs + Subtasks + Canonical References sections
+      - operation: Read all 7 agent .agent.md files in single context
+        typical_tokens: 35000
+        mitigation: 'Per ST decomposition: each step reads only 3 agent files max (ST-3/4/5 each update 2-3 files independently)'
+    recommended_patterns:
+      - Each ST step reads only its target agent files + canonical reference (qa-verify-setup-leader.agent.md)
+      - Grep for '## Context Cache Integration' to verify sections are present without full reads
+      - Run pnpm check-types --filter @repo/mcp-tools after ST-2 before proceeding to agent file STs
+  pattern_discovery: []
+  warnings:
+    - >-
+      agent_missions DB enum value added by migration 0033 but NOT yet in packTypeValues Zod array (7 values) — ST-2
+      must add it
+    - >-
+      ST-1 and ST-6 story file path references in original story point to 'backlog/' — story is now in 'in-progress/' —
+      executor must use dynamic path lookup

@@ -1,0 +1,227 @@
+schema: 1
+story_id: "AC-1010"
+timestamp: "2026-03-03T00:00:00Z"
+
+steps:
+  - id: 1
+    description: "Define golden reference ELAB.yaml schema with schema_version field"
+    files:
+      - ".claude/schemas/elab-schema.md"
+    dependencies: []
+    slice: packages
+    verification: "grep -n 'schema_version' .claude/schemas/elab-schema.md"
+    acs_covered: ["AC1"]
+    notes: >
+      Must be done first per ENG-ARCH-001 and ENG-ARCH-002. Defines the complete ELAB.yaml
+      schema with schema_version as the first field, covering audit[], gaps[], opportunities[],
+      preliminary_verdict, verdict, decided_at, and summary sections. This is the authoritative
+      reference all downstream agents must conform to.
+
+  - id: 2
+    description: "Update elab-analyst.agent.md to align with golden schema (already largely correct, verify schema_version field is present)"
+    files:
+      - ".claude/agents/elab-analyst.agent.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'schema_version' .claude/agents/elab-analyst.agent.md"
+    acs_covered: ["AC2"]
+    notes: >
+      elab-analyst already writes to ELAB.yaml with the correct structure.
+      Add schema_version: 1 as the first field in the output schema definition.
+      Verify no stale references to ANALYSIS.md, DECISIONS.yaml, FUTURE-OPPORTUNITIES.md,
+      or ELAB-{ID}.md remain.
+
+  - id: 3
+    description: "Update elab-completion-leader.agent.md — replace DECISIONS.yaml input reference with ELAB.yaml"
+    files:
+      - ".claude/agents/elab-completion-leader.agent.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'DECISIONS.yaml\|ANALYSIS.md\|FUTURE-OPPORTUNITIES\|ELAB-{' .claude/agents/elab-completion-leader.agent.md | wc -l | grep '^0$'"
+    acs_covered: ["AC2"]
+    notes: >
+      Line 35 references 'DECISIONS.yaml' as an alternative input source for autonomous mode.
+      Replace with 'ELAB.yaml gaps[].decision and opportunities[].decision fields' which is
+      already described in the autonomous mode section. This is the only old-artifact reference
+      in this file.
+
+  - id: 4
+    description: "Update dev-documentation-leader.agent.md — replace DECISIONS.yaml source references with ELAB.yaml"
+    files:
+      - ".claude/agents/dev-documentation-leader.agent.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'DECISIONS.yaml' .claude/agents/dev-documentation-leader.agent.md | grep -v 'ARCHITECTURAL-DECISIONS\|BATCH-DECISIONS\|DECISIONS-AUTO\|PENDING-DECISIONS' | wc -l | grep '^0$'"
+    acs_covered: ["AC2"]
+    notes: >
+      Lines 131-134 reference 'DECISIONS.yaml' as the source for auto_accepted/escalated/deferred
+      decision counts in OUTCOME.yaml. Replace with ELAB.yaml summary fields:
+      auto_accepted from summary.gaps_resolved, escalated from summary.gaps_found - gaps_resolved,
+      deferred from opportunities not kb-logged. Also update the sources.decisions field in
+      OUTCOME.yaml template from '_implementation/DECISIONS.yaml' to '_implementation/ELAB.yaml'.
+
+  - id: 5
+    description: "Update risk-predictor.agent.md — replace FUTURE-OPPORTUNITIES.md references with ELAB.yaml opportunities[]"
+    files:
+      - ".claude/agents/risk-predictor.agent.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'FUTURE-OPPORTUNITIES' .claude/agents/risk-predictor.agent.md | wc -l | grep '^0$'"
+    acs_covered: ["AC2"]
+    notes: >
+      Lines 222 and 516 reference 'FUTURE-OPPORTUNITIES.md Gap #1'. Update both inline
+      code comment and notes section to reference 'ELAB.yaml opportunities[] — see AC-1010
+      deferred items' or similar accurate reference. The actual deferred item logic is
+      unchanged; only the artifact reference name changes.
+
+  - id: 6
+    description: "Update outcome-schema.md — replace DECISIONS.yaml source reference with ELAB.yaml"
+    files:
+      - ".claude/schemas/outcome-schema.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'DECISIONS.yaml' .claude/schemas/outcome-schema.md | grep -v 'ARCHITECTURAL-DECISIONS\|BATCH-DECISIONS' | wc -l | grep '^0$'"
+    acs_covered: ["AC4"]
+    notes: >
+      Three references: line 132 (schema field comment), line 277 (example value), and
+      line 289 (generation description). Replace all with ELAB.yaml. The sources.decisions
+      field in the schema should point to '_implementation/ELAB.yaml' instead of
+      '_implementation/DECISIONS.yaml'.
+
+  - id: 7
+    description: "Update decision-outcome-schema.md — replace DECISIONS.yaml references with ELAB.yaml"
+    files:
+      - ".claude/schemas/decision-outcome-schema.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'DECISIONS.yaml' .claude/schemas/decision-outcome-schema.md | wc -l | grep '^0$'"
+    acs_covered: ["AC4"]
+    notes: >
+      Multiple references to DECISIONS.yaml as the artifact where decisions are logged.
+      Replace with ELAB.yaml where elab-specific decisions are stored, and update the
+      integration section to note that implementation-phase decisions remain in
+      ARCHITECTURAL-DECISIONS.yaml (a separate, unchanged artifact).
+
+  - id: 8
+    description: "Update pm-fix-story-reference.md — replace ELAB-STORY-XXX.md references with ELAB.yaml"
+    files:
+      - ".claude/docs/pm-fix-story-reference.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'ELAB-STORY-' .claude/docs/pm-fix-story-reference.md | wc -l | grep '^0$'"
+    acs_covered: ["AC4"]
+    notes: >
+      Lines 50 and 121 reference 'ELAB-STORY-XXX.md' as the QA audit artifact.
+      Replace with '_implementation/ELAB.yaml' — the elab-analyst already writes
+      findings here. Precondition check should look for ELAB.yaml with
+      preliminary_verdict set, not the old .md file.
+
+  - id: 9
+    description: "Update elab-story-reference.md — verify all artifact references use ELAB.yaml, remove any stale mentions"
+    files:
+      - ".claude/docs/elab-story-reference.md"
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'ANALYSIS.md\|DECISIONS.yaml\|FUTURE-OPPORTUNITIES\|ELAB-STORY-\|ELAB-{' .claude/docs/elab-story-reference.md | wc -l | grep '^0$'"
+    acs_covered: ["AC4"]
+    notes: >
+      This reference doc is mostly already updated (references ELAB.yaml). Verify no stale
+      artifact names remain. If any are found, update to ELAB.yaml.
+
+  - id: 10
+    description: "Grep checklist — verify zero remaining references to the four eliminated files across .claude/"
+    files: []
+    dependencies: [2, 3, 4, 5, 6, 7, 8, 9]
+    slice: packages
+    verification: >
+      grep -rn 'ANALYSIS\.md\|FUTURE-OPPORTUNITIES\.md\|ELAB-{ID}\.md\|ELAB-{STORY_ID}\.md\|ELAB-STORY-' .claude/ --include='*.md' --include='*.yaml' | grep -v '\.bak' | wc -l | grep '^0$'
+    acs_covered: ["AC5"]
+    notes: >
+      Per ENG-REC-002 and action_items: run grep checklist before finalizing.
+      Stale DECISIONS.yaml references to ARCHITECTURAL-DECISIONS.yaml, BATCH-DECISIONS.yaml,
+      DECISIONS-AUTO.yaml, and PENDING-DECISIONS.yaml are NOT old elaboration artifacts
+      and should NOT be flagged. Only the four enumerated files are targets.
+      elab-epic-reference.md DECISIONS.yaml is the epic-level artifact (different workflow)
+      and is also NOT a target for elimination.
+
+files_to_change:
+  - path: ".claude/schemas/elab-schema.md"
+    action: create
+    reason: "Golden reference ELAB.yaml schema (AC1, ENG-ARCH-001, ENG-ARCH-002) — created first per action items"
+
+  - path: ".claude/agents/elab-analyst.agent.md"
+    action: modify
+    reason: "Add schema_version: 1 as first field in ELAB.yaml output schema definition (AC2)"
+
+  - path: ".claude/agents/elab-completion-leader.agent.md"
+    action: modify
+    reason: "Replace 'DECISIONS.yaml' input reference with ELAB.yaml fields (AC2)"
+
+  - path: ".claude/agents/dev-documentation-leader.agent.md"
+    action: modify
+    reason: "Replace DECISIONS.yaml source references with ELAB.yaml in OUTCOME.yaml generation (AC2)"
+
+  - path: ".claude/agents/risk-predictor.agent.md"
+    action: modify
+    reason: "Replace FUTURE-OPPORTUNITIES.md references with ELAB.yaml opportunities[] (AC2)"
+
+  - path: ".claude/schemas/outcome-schema.md"
+    action: modify
+    reason: "Replace DECISIONS.yaml source field with ELAB.yaml (AC4)"
+
+  - path: ".claude/schemas/decision-outcome-schema.md"
+    action: modify
+    reason: "Replace DECISIONS.yaml references with ELAB.yaml where applicable (AC4)"
+
+  - path: ".claude/docs/pm-fix-story-reference.md"
+    action: modify
+    reason: "Replace ELAB-STORY-XXX.md with _implementation/ELAB.yaml (AC4)"
+
+  - path: ".claude/docs/elab-story-reference.md"
+    action: modify
+    reason: "Verify and update any stale artifact references (AC4)"
+
+commands_to_run:
+  - command: "grep -rn 'ANALYSIS\\.md\\|FUTURE-OPPORTUNITIES\\.md\\|ELAB-{ID}\\.md\\|ELAB-STORY-' .claude/ --include='*.md' --include='*.yaml' | grep -v '\\.bak'"
+    when: "after all changes, before completion — grep checklist per ENG-REC-002"
+    required: true
+
+  - command: "grep -rn 'DECISIONS\\.yaml' .claude/ --include='*.md' --include='*.yaml' | grep -v '\\.bak' | grep -v 'ARCHITECTURAL-DECISIONS\\|BATCH-DECISIONS\\|DECISIONS-AUTO\\|PENDING-DECISIONS\\|elab-epic'"
+    when: "after all changes — verify no story-level DECISIONS.yaml refs remain"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC1"
+    planned_evidence: "File created: .claude/schemas/elab-schema.md with schema_version as first field"
+    evidence_type: file
+
+  - ac_id: "AC2"
+    planned_evidence: "Grep shows zero references to old artifacts in agent files; ELAB.yaml is sole elab artifact in elab-analyst, elab-completion-leader, dev-documentation-leader, risk-predictor"
+    evidence_type: command
+
+  - ac_id: "AC3"
+    planned_evidence: "Grep confirms elab-story.md and workflow-batch.md reference only ELAB.yaml (already true per current state — verify only)"
+    evidence_type: command
+
+  - ac_id: "AC4"
+    planned_evidence: "Grep shows zero old artifact references in outcome-schema.md, decision-outcome-schema.md, pm-fix-story-reference.md, elab-story-reference.md, elab-epic-reference.md"
+    evidence_type: command
+
+  - ac_id: "AC5"
+    planned_evidence: "Final grep checklist returns zero matches for the four eliminated artifact names across entire .claude/ directory"
+    evidence_type: command
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "This is an infrastructure/tooling story — no application code changes, no pnpm build or test required"
+  - "ARCHITECTURAL-DECISIONS.yaml, BATCH-DECISIONS.yaml, DECISIONS-AUTO.yaml, and PENDING-DECISIONS.yaml are DIFFERENT artifacts from the old elab DECISIONS.yaml — do NOT conflate them"
+  - "elab-epic-reference.md DECISIONS.yaml is for the /elab-epic workflow (not /elab-story) and should NOT be updated"
+  - "elab-analyst.agent.md and elab-completion-leader.agent.md already use ELAB.yaml as primary artifact — changes are minimal (schema_version field, one input ref cleanup)"
+  - "Step 1 (golden schema creation) MUST be completed before steps 2-9 per ENG-ARCH-002 decision"
+  - "Step 10 (grep checklist) is mandatory per ENG-REC-002 before signaling completion"
+  - "dev-implement-frontend-coder and dev-implement-backend-coder reference ARCHITECTURAL-DECISIONS.yaml — this is correct and unchanged"
+  - "dev-implement-planning-leader references ARCHITECTURAL-DECISIONS.yaml — correct and unchanged"
+  - "spawn-patterns.md line 96 references ARCHITECTURAL-DECISIONS.yaml — correct and unchanged"

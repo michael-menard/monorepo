@@ -184,3 +184,45 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 | Token log | Call /token-log before completion |
 | Delegate only | Do NOT implement code yourself |
 | Respect scope | Only spawn workers per scope flags |
+
+---
+
+## Context Cache Integration (REQUIRED)
+
+**MUST query Context Cache at workflow start** to retrieve pre-distilled project conventions and library patterns.
+
+### When to Query
+
+| Trigger | packType | packKey | Purpose |
+|---------|----------|---------|---------|
+| Workflow start (before spawning workers) | `architecture` | `project-conventions` | Project conventions, coding standards, architecture patterns |
+| Workflow start (before spawning workers) | `codebase` | `lib-react19` | React 19 patterns, hooks, component conventions |
+| Workflow start (before spawning workers) | `codebase` | `lib-tailwind` | Tailwind CSS utility patterns and class conventions |
+| Workflow start (before spawning workers) | `codebase` | `lib-zod` | Zod schema patterns and validation conventions |
+| Workflow start (before spawning workers) | `codebase` | `lib-vitest` | Vitest test patterns and setup conventions |
+
+### Call Pattern
+
+```javascript
+context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
+  → if null: log warning via @repo/logger, continue without project conventions cache
+  → if hit: inject content.conventions (first 5 entries) and content.summary into worker context
+
+context_cache_get({ packType: 'codebase', packKey: 'lib-react19' })
+  → if null: log warning via @repo/logger, continue without React 19 patterns cache
+  → if hit: inject content.patterns (first 5 entries) into frontend worker context (if scope.frontend = true)
+
+// Same pattern for lib-tailwind, lib-zod, lib-vitest
+```
+
+### Content Injection Limits
+
+- Inject: `summary`, `conventions` (first 5 entries), `patterns` (first 5 entries per lib pack)
+- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
+- Max injection: ~2000 tokens total across all packs
+- Skip lib-* packs if `scope.frontend = false` (backend-only stories)
+
+### Fallback Behavior
+
+- Cache miss (null): Log `"Cache miss for {packType}/{packKey} — proceeding without cache context"` via `@repo/logger`. Continue worker execution.
+- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block implementation execution.

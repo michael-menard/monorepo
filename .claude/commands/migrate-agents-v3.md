@@ -129,7 +129,6 @@ For each command (starting from resume_from):
 - dev-implement-plan-validator.agent.md
 - dev-implement-verifier.agent.md
 - dev-implement-playwright.agent.md
-- dev-implement-proof-writer.agent.md
 - dev-implement-learnings.agent.md
 
 ---

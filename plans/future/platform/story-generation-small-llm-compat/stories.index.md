@@ -15,10 +15,11 @@ All stories use `ST-{phase}{story}{variant}` format (e.g., `ST-1010` for Phase 1
 
 | Status | Count |
 |--------|-------|
+| uat | 1 |
 | completed | 0 |
 | generated | 0 |
 | in-progress | 0 |
-| pending | 7 |
+| pending | 6 |
 
 ---
 
@@ -28,7 +29,6 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| ST-1010 | Seed Agent: Phase 2.5 Canonical Reference Identification | — |
 | ST-1020 | Story Template: Add Goal / Examples / Edge Cases Required Sections | — |
 | ST-1030 | Dev Feasibility Worker: Add Subtask Proposal to Output | — |
 
@@ -36,7 +36,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-1010: Seed Agent: Phase 2.5 Canonical Reference Identification
 
-**Status:** pending
+**Status:** uat
 **Depends On:** none
 **Phase:** 1
 **Feature:** Add Phase 2.5 to pm-story-seed-agent that scans the codebase for exemplar files matching the story's pattern categories (API handler, DB query, page/route, form, shared package, agent) and includes them in STORY-SEED.md under a ## Canonical References section.
@@ -76,7 +76,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 ## ST-1040: Generation Leader Phase 4: Include Subtasks and Canonical References in Story
 
 **Status:** pending
-**Depends On:** ST-1010, ST-1020, ST-1030
+**Depends On:** ST-1020, ST-1030
 **Phase:** 1
 **Feature:** Update pm-story-generation-leader Phase 4 synthesis to read subtasks[] from dev-feasibility.yaml and ## Canonical References from STORY-SEED.md, then include both as required sections in the generated story file. Also enforce the Goal/Examples/Edge Cases clarity format. Cross-reference: every AC must be covered by at least one subtask.
 **Endpoints:** (none)

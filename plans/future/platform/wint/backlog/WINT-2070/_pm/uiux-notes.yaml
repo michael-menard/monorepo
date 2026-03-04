@@ -1,0 +1,2 @@
+skipped: true
+reason: "No UI surface. This story delivers a .claude/skills/cache-warm/SKILL.md instruction file only — no React components, no HTTP endpoints, no browser interactions."

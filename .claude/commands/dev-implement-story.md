@@ -7,7 +7,6 @@ agents:
   - dev-plan-leader.agent.md
   - dev-execute-leader.agent.md
   - dev-implement-playwright.agent.md
-  - dev-proof-leader.agent.md
   - knowledge-context-loader.agent.md
   - code-review-*.agent.md
   - dev-fix-fix-leader.agent.md
@@ -148,11 +147,6 @@ Phase 1: dev-plan-leader (sonnet)
 Phase 2: dev-execute-leader (sonnet)
     → Steps: Unit → Build → E2E (LIVE mode)
     → KB: evidence artifact ← SOURCE OF TRUTH
-    │
-    ▼
-Phase 3: dev-proof-leader (haiku)
-    → Reads: evidence artifact (KB) ONLY
-    → KB: proof artifact
     │
     ▼
 REVIEW/FIX LOOP (max 3 iterations)
@@ -448,7 +442,6 @@ coders in dev-execute-leader) write to the same worktree simultaneously.
 | Phase 0 (setup) | `chore({STORY_ID}): setup complete (artifacts in KB)` |
 | Phase 1 (plan) | `chore({STORY_ID}): implementation plan (artifacts in KB)` |
 | Phase 2 (execute) | `feat({STORY_ID}): implementation` |
-| Phase 3 (proof) | `docs({STORY_ID}): proof complete (artifact in KB)` |
 | Review/Fix loop | `fix({STORY_ID}): review fixes iteration N` |
 
 ### Why leaders only?

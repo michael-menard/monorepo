@@ -235,7 +235,7 @@ All can start immediately. Ordered by downstream impact.
 | 101 | x | WINT-2040 | Populate Agent Mission Cache **created** | ← WINT-2020, 0100 | WINT |
 | 102 | | WINT-2050 | Populate Domain Knowledge Cache | ← WINT-2020, 0100 | WINT |
 | 103 | | WINT-2060 | Populate Library Cache | ← WINT-2020, 0100 | WINT |
-| 104 | | WINT-2070 | Implement Cache Warming Strategy | ← WINT-2030, 2040, 2050, 2060 | WINT |
+| 104 | x | WINT-2070 | Implement Cache Warming Strategy **created** | ← WINT-2030, 2040, 2050, 2060 | WINT |
 | 105 | | WINT-2080 | Create context-warmer Agent | ← WINT-2070 | WINT |
 | 106 | | WINT-2110 | Update 5 High-Volume Agents to Use Cache | ← WINT-2030–2060, 0100 | WINT |
 | 107 | | WINT-2120 | Measure Token Reduction | ← WINT-2110 | WINT |

@@ -1,0 +1,20 @@
+reason: "psql not available in environment at generation time"
+generated: "2026-03-03"
+writes:
+  - table: stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: WINT-2070
+      feature: wint
+      title: "Implement Cache Warming Strategy — Create cache-warm Skill that Invokes All Four Populate Scripts"
+      story_dir: "plans/future/platform/wint/backlog/WINT-2070"
+      story_file: "plans/future/platform/wint/backlog/WINT-2070/WINT-2070.md"
+      story_type: feature
+      points: 1
+      priority: medium
+      state: backlog
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false

@@ -19,6 +19,7 @@ const packTypeValues = [
   'architecture',
   'lessons_learned',
   'test_patterns',
+  'agent_missions', // WINT-2040
 ] as const
 
 /**

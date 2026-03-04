@@ -73,6 +73,7 @@ if [[ -z "$PLAN_SLUG" ]]; then
   echo "  --skip-worktree     (ignored — worktrees always managed by script)"
   echo "  --only ID,ID,...    Process only specific stories"
   echo "  --max-retries N     Retry failed phases with fix (default 0)"
+  echo "  --reconcile         Run KB-filesystem reconciliation only (no story processing)"
   exit 1
 fi
 
@@ -91,6 +92,7 @@ AUTONOMY="aggressive"
 # --skip-worktree is always passed to dev-implement-story
 ONLY_LIST=""
 MAX_RETRIES=1
+RECONCILE_ONLY=false
 
 # All tools needed for implement, review, and QA — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -113,6 +115,7 @@ while [[ $# -gt 0 ]]; do
     --skip-worktree)  shift ;;  # Accepted but ignored — worktrees always managed by script
     --only)           ONLY_LIST="$2"; shift 2 ;;
     --max-retries)    MAX_RETRIES="$2"; shift 2 ;;
+    --reconcile)      RECONCILE_ONLY=true; shift ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
@@ -886,9 +889,428 @@ for STORY_ID in "${ALL_STORIES[@]}"; do
   fi
 done
 [[ $DEDUP_COUNT -gt 0 ]] && echo "Cleaned up $DEDUP_COUNT stories with duplicate stage directories."
+# ── KB-Filesystem Reconciliation ──────────────────────────────────────
+#
+# Scans all pipeline stage directories and compares with KB story state.
+# Classifies mismatches and applies corrections:
+#   - FS-ahead: KB updated via kb_update_story_status
+#   - KB-ahead: directory moved to KB-indicated stage
+#   - Duplicate: most-progressed kept, others archived
+#   - Orphan: directory exists in FS but no KB record
+#
+# All functions are bash 3.2 safe (no declare -A, no readarray).
+# Maps are implemented as tab-separated temp files.
+#
+# Usage: reconcile_kb_filesystem [quiet]
+#   quiet — suppress per-correction echo output
+
+# Stage to KB status mapping (FS stage → KB state string)
+fs_stage_to_kb_status() {
+  case "$1" in
+    backlog)            echo "backlog" ;;
+    ready-to-work)      echo "ready" ;;
+    in-progress)        echo "in_progress" ;;
+    needs-code-review)  echo "ready_for_review" ;;
+    failed-code-review) echo "failed_code_review" ;;
+    ready-for-qa)       echo "ready_for_qa" ;;
+    failed-qa)          echo "failed_qa" ;;
+    UAT|done)           echo "completed" ;;
+    *)                  echo "" ;;
+  esac
+}
+
+# KB status to FS stage mapping (KB state → FS directory name)
+kb_status_to_fs_stage() {
+  case "$1" in
+    backlog)                       echo "backlog" ;;
+    ready)                         echo "ready-to-work" ;;
+    in_progress)                   echo "in-progress" ;;
+    ready_for_review|in_review)    echo "needs-code-review" ;;
+    failed_code_review)            echo "failed-code-review" ;;
+    ready_for_qa|in_qa)            echo "ready-for-qa" ;;
+    failed_qa)                     echo "failed-qa" ;;
+    completed|uat|done)            echo "UAT" ;;
+    *)                             echo "" ;;
+  esac
+}
+
+# Stage rank for progression comparison (higher = more progressed)
+fs_stage_rank() {
+  case "$1" in
+    elaboration)        echo 1 ;;
+    backlog)            echo 2 ;;
+    ready-to-work)      echo 3 ;;
+    in-progress)        echo 4 ;;
+    needs-code-review)  echo 5 ;;
+    failed-code-review) echo 6 ;;
+    ready-for-qa)       echo 7 ;;
+    failed-qa)          echo 8 ;;
+    UAT)                echo 9 ;;
+    done)               echo 10 ;;
+    *)                  echo 0 ;;
+  esac
+}
+
+# Scan all stage directories and write a flat map: STORY_ID<tab>stage
+# Args: $1 = output file path
+scan_filesystem_state() {
+  local out_file="$1"
+  > "$out_file"  # clear
+  for stage in elaboration backlog ready-to-work in-progress needs-code-review failed-code-review ready-for-qa failed-qa UAT done; do
+    local stage_dir="$FEATURE_DIR/${stage}"
+    if [[ ! -d "$stage_dir" ]]; then
+      continue
+    fi
+    # Use a while+read pattern (bash 3.2 safe)
+    while IFS= read -r -d '' story_dir; do
+      local sid
+      sid=$(basename "$story_dir")
+      # Only include directories with story IDs (prefix-NNNN pattern)
+      if echo "$sid" | grep -qE '^[A-Z]+-[0-9]+$'; then
+        echo "${sid}	${stage}" >> "$out_file"
+      fi
+    done < <(find "$stage_dir" -maxdepth 1 -mindepth 1 -type d -print0 2>/dev/null)
+  done
+}
+
+# Query KB for all story statuses and write a flat map: STORY_ID<tab>kb_status
+# Uses a single claude -p call with NDJSON output to minimize spawns.
+# Args: $1 = output file path
+scan_kb_state() {
+  local out_file="$1"
+  > "$out_file"  # clear
+
+  if [[ -z "${STORY_PREFIX:-}" ]]; then
+    # Cannot query KB without prefix
+    return 0
+  fi
+
+  local raw
+  raw=$(claude -p     "Call kb_list_stories with prefix '${STORY_PREFIX}'. Return ONLY a JSON array of objects, each with keys id and status. Example: [{"id":"APIP-1001","status":"ready"}]. No markdown, no explanation."     --allowedTools "mcp__knowledge-base__kb_list_stories"     --output-format text 2>/dev/null) || true
+
+  if [[ -z "$raw" ]]; then
+    return 0
+  fi
+
+  # Extract JSON array and parse
+  local json_arr
+  json_arr=$(echo "$raw" | grep -o '\[.*\]' | tail -1) || true
+  if [[ -z "$json_arr" ]]; then
+    return 0
+  fi
+
+  # Parse with jq if available; fall back to grep-based parsing
+  if command -v jq >/dev/null 2>&1; then
+    while IFS=$'\t' read -r sid status; do
+      [[ -n "$sid" && -n "$status" ]] && echo "${sid}	${status}" >> "$out_file"
+    done < <(echo "$json_arr" | jq -r '.[] | [.id, .status] | @tsv' 2>/dev/null)
+  else
+    # Grep-based fallback: extract "id":"X" and "status":"Y" pairs
+    echo "$json_arr" | grep -oE '"id":"[^"]+","status":"[^"]+"' | while IFS= read -r pair; do
+      local sid status
+      sid=$(echo "$pair" | grep -oE '"id":"[^"]+"' | sed 's/"id":"//;s/"//')
+      status=$(echo "$pair" | grep -oE '"status":"[^"]+"' | sed 's/"status":"//;s/"//')
+      [[ -n "$sid" && -n "$status" ]] && echo "${sid}	${status}" >> "$out_file"
+    done
+  fi
+}
+
+# Look up stage in a flat map file (tab-separated: ID<tab>value)
+# Args: $1 = story_id, $2 = map file
+lookup_map() {
+  local sid="$1"
+  local map_file="$2"
+  local line
+  line=$(grep "^${sid}	" "$map_file" 2>/dev/null | head -1) || true
+  if [[ -n "$line" ]]; then
+    echo "${line#*	}"
+  fi
+}
+
+# Classify a single story's mismatch state
+# Args: $1=story_id, $2=fs_stage, $3=kb_status
+# Outputs one of: in-sync, fs-ahead, kb-ahead, orphan, unknown
+classify_mismatch() {
+  local sid="$1"
+  local fs_stage="$2"
+  local kb_status="$3"
+
+  # Orphan: in FS but not in KB
+  if [[ -z "$kb_status" ]]; then
+    echo "orphan"
+    return
+  fi
+
+  # Compute what KB says the FS stage should be
+  local kb_expected_stage
+  kb_expected_stage=$(kb_status_to_fs_stage "$kb_status")
+
+  if [[ -z "$kb_expected_stage" ]]; then
+    echo "unknown"
+    return
+  fi
+
+  if [[ "$fs_stage" == "$kb_expected_stage" ]]; then
+    echo "in-sync"
+    return
+  fi
+
+  # Compare ranks to determine direction
+  local fs_rank kb_rank
+  fs_rank=$(fs_stage_rank "$fs_stage")
+  kb_rank=$(fs_stage_rank "$kb_expected_stage")
+
+  if [[ $fs_rank -gt $kb_rank ]]; then
+    echo "fs-ahead"
+  elif [[ $kb_rank -gt $fs_rank ]]; then
+    echo "kb-ahead"
+  else
+    # Same rank, different name (e.g., backlog vs ready-to-work)
+    echo "in-sync"
+  fi
+}
+
+# Apply authority rules and correct mismatches.
+# Authority: FS wins for stage location, KB wins for metadata.
+#   - fs-ahead  → update KB status to match FS
+#   - kb-ahead  → move FS directory to KB-indicated stage
+#   - duplicate → archive older copies, keep most-progressed
+#
+# Args: $1=fs_map_file, $2=kb_map_file, $3=corrections_out_file, $4=quiet (optional)
+apply_reconciliation_corrections() {
+  local fs_map="$1"
+  local kb_map="$2"
+  local corrections_out="$3"
+  local quiet="${4:-}"
+  > "$corrections_out"
+
+  while IFS='	' read -r sid fs_stage; do
+    [[ -z "$sid" ]] && continue
+
+    # Check for duplicate FS entries (story in multiple stages)
+    local dup_count
+    dup_count=$(grep "^${sid}	" "$fs_map" | wc -l | xargs)
+    if [[ $dup_count -gt 1 ]]; then
+      # Find the most-progressed stage
+      local best_stage="" best_rank=0
+      while IFS='	' read -r _sid stage; do
+        local rank
+        rank=$(fs_stage_rank "$stage")
+        if [[ $rank -gt $best_rank ]]; then
+          best_rank=$rank
+          best_stage="$stage"
+        fi
+      done < <(grep "^${sid}	" "$fs_map")
+
+      # Archive all non-best stages
+      while IFS='	' read -r _sid stage; do
+        if [[ "$stage" != "$best_stage" ]]; then
+          local src_dir="$FEATURE_DIR/${stage}/${sid}"
+          local archive_dir="$FEATURE_DIR/.archive/${sid}-${stage}-$(date -u +%Y%m%dT%H%M%S)"
+          if [[ -d "$src_dir" ]]; then
+            mkdir -p "$FEATURE_DIR/.archive"
+            mv "$src_dir" "$archive_dir" 2>/dev/null || true
+            [[ -z "$quiet" ]] && echo "  RECN DEDUP:  $sid (archived $stage → .archive/, keeping $best_stage)"
+            echo "duplicate	${sid}	archived_${stage}	kept_${best_stage}	${archive_dir}" >> "$corrections_out"
+          fi
+        fi
+      done < <(grep "^${sid}	" "$fs_map")
+
+      # Update fs_stage to best_stage for further processing
+      fs_stage="$best_stage"
+    fi
+
+    local kb_status
+    kb_status=$(lookup_map "$sid" "$kb_map")
+
+    local mismatch
+    mismatch=$(classify_mismatch "$sid" "$fs_stage" "$kb_status")
+
+    case "$mismatch" in
+      in-sync|orphan|unknown)
+        # No correction needed
+        ;;
+
+      fs-ahead)
+        # FS is more progressed — update KB to match
+        local new_kb_status
+        new_kb_status=$(fs_stage_to_kb_status "$fs_stage")
+        if [[ -n "$new_kb_status" ]]; then
+          [[ -z "$quiet" ]] && echo "  RECN FS→KB:  $sid (fs=$fs_stage → kb_status=$new_kb_status)"
+          # Update KB via claude -p
+          claude -p             "Call kb_update_story_status with story_id='${sid}', state='${new_kb_status}', phase='reconciliation'. Output ONLY: OK or ERROR."             --allowedTools "mcp__knowledge-base__kb_update_story_status"             --output-format text >/dev/null 2>&1 || true
+          echo "kb_update	${sid}	${kb_status}→${new_kb_status}	fs_stage=${fs_stage}" >> "$corrections_out"
+        fi
+        ;;
+
+      kb-ahead)
+        # KB is more progressed — move FS directory to KB-indicated stage
+        local target_stage
+        target_stage=$(kb_status_to_fs_stage "$kb_status")
+        if [[ -n "$target_stage" ]]; then
+          local src_dir="$FEATURE_DIR/${fs_stage}/${sid}"
+          local dst_dir="$FEATURE_DIR/${target_stage}/${sid}"
+          if [[ -d "$src_dir" && ! -d "$dst_dir" ]]; then
+            mkdir -p "$FEATURE_DIR/${target_stage}"
+            mv "$src_dir" "$dst_dir" 2>/dev/null || true
+            [[ -z "$quiet" ]] && echo "  RECN KB→FS:  $sid (moved ${fs_stage} → ${target_stage})"
+            echo "dir_move	${sid}	${fs_stage}→${target_stage}	kb_status=${kb_status}" >> "$corrections_out"
+          fi
+        fi
+        ;;
+    esac
+  done < <(sort -u "$fs_map")
+}
+
+# Update stories.index.md Status column to match current filesystem state.
+# Re-scans the FS after corrections are applied.
+update_stories_index() {
+  local index_file="$FEATURE_DIR/stories.index.md"
+  if [[ ! -f "$index_file" ]]; then
+    return 0
+  fi
+
+  local update_count=0
+  local tmp_index
+  tmp_index=$(mktemp /tmp/stories-index.XXXXXX)
+
+  while IFS= read -r line; do
+    # Match table rows with story IDs: | STORY_ID | ... |
+    if echo "$line" | grep -qE '^\| [A-Z]+-[0-9]+ \|'; then
+      local sid
+      sid=$(echo "$line" | grep -oE '[A-Z]+-[0-9]+' | head -1)
+      # Find actual FS stage
+      local actual_stage=""
+      for stage in done UAT failed-qa ready-for-qa failed-code-review needs-code-review in-progress ready-to-work backlog elaboration; do
+        if [[ -d "$FEATURE_DIR/${stage}/${sid}" ]]; then
+          actual_stage="$stage"
+          break
+        fi
+      done
+      if [[ -n "$actual_stage" ]]; then
+        # Replace the last column (Status) with the actual stage
+        # Table format: | ID | Title | Deps | Status |
+        local new_line
+        new_line=$(echo "$line" | sed "s/| *[^ |][^|]* *|$/| ${actual_stage} |/")
+        if [[ "$new_line" != "$line" ]]; then
+          line="$new_line"
+          ((update_count++)) || true
+        fi
+      fi
+    fi
+    echo "$line"
+  done < "$index_file" > "$tmp_index"
+
+  if [[ $update_count -gt 0 ]]; then
+    mv "$tmp_index" "$index_file"
+  else
+    rm -f "$tmp_index"
+  fi
+}
+
+# Write RECONCILIATION.yaml audit trail.
+# Args: $1=corrections_file, $2=timestamp
+write_reconciliation_yaml() {
+  local corrections_file="$1"
+  local ts="$2"
+  local yaml_path="$FEATURE_DIR/RECONCILIATION.yaml"
+  local log_yaml="$LOG_DIR/RECONCILIATION-${ts}.yaml"
+
+  local kb_update_count=0 dir_move_count=0 dedup_count=0 index_update_count=0
+
+  # Count corrections by type
+  if [[ -f "$corrections_file" ]]; then
+    kb_update_count=$(grep -c "^kb_update	" "$corrections_file" 2>/dev/null) || kb_update_count=0
+    dir_move_count=$(grep -c "^dir_move	" "$corrections_file" 2>/dev/null) || dir_move_count=0
+    dedup_count=$(grep -c "^duplicate	" "$corrections_file" 2>/dev/null) || dedup_count=0
+  fi
+
+  # Build YAML content
+  cat > "$yaml_path" <<RECONCYAML
+schema: 1
+story_id: ${PLAN_SLUG}
+timestamp: "${ts}"
+generated_by: implement-stories-reconcile
+plan_slug: ${PLAN_SLUG}
+feature_dir: ${FEATURE_DIR}
+summary:
+  kb_updates: ${kb_update_count}
+  dir_moves: ${dir_move_count}
+  duplicates_archived: ${dedup_count}
+  index_updates: ${index_update_count}
+corrections:
+RECONCYAML
+
+  if [[ -f "$corrections_file" && -s "$corrections_file" ]]; then
+    while IFS='	' read -r correction_type rest; do
+      echo "  - type: ${correction_type}" >> "$yaml_path"
+      echo "    detail: "${rest}"" >> "$yaml_path"
+    done < "$corrections_file"
+  else
+    echo "  []" >> "$yaml_path"
+  fi
+
+  # Copy to log dir with timestamp
+  cp "$yaml_path" "$log_yaml" 2>/dev/null || true
+}
+
+# Orchestrator: run the full KB-filesystem reconciliation cycle.
+# Idempotent: safe to run multiple times.
+# Args: $1 = quiet (optional — suppress per-correction output)
+reconcile_kb_filesystem() {
+  local quiet="${1:-}"
+  local ts
+  ts=$(date -u '+%Y%m%dT%H%M%SZ')
+
+  [[ -z "$quiet" ]] && echo "RECN START:   KB-filesystem reconciliation (${ts})"
+
+  # Temp files for maps
+  local fs_map kb_map corrections_out
+  fs_map=$(mktemp /tmp/recon-fs.XXXXXX)
+  kb_map=$(mktemp /tmp/recon-kb.XXXXXX)
+  corrections_out=$(mktemp /tmp/recon-corrections.XXXXXX)
+  # Step 1: Scan filesystem state
+  scan_filesystem_state "$fs_map"
+  local fs_count
+  fs_count=$(wc -l < "$fs_map" | xargs)
+  [[ -z "$quiet" ]] && echo "RECN SCAN FS: ${fs_count} story entries found"
+
+  # Step 2: Scan KB state
+  scan_kb_state "$kb_map"
+  local kb_count
+  kb_count=$(wc -l < "$kb_map" | xargs)
+  [[ -z "$quiet" ]] && echo "RECN SCAN KB: ${kb_count} KB story statuses fetched"
+
+  # Step 3: Apply corrections (fs-ahead, kb-ahead, duplicates)
+  apply_reconciliation_corrections "$fs_map" "$kb_map" "$corrections_out" "$quiet"
+  local correction_count
+  correction_count=$(wc -l < "$corrections_out" | xargs)
+  [[ -z "$quiet" ]] && echo "RECN CORRECT: ${correction_count} corrections applied"
+
+  # Step 4: Update stories.index.md
+  update_stories_index
+  [[ -z "$quiet" ]] && echo "RECN INDEX:   stories.index.md updated"
+
+  # Step 5: Write audit YAML
+  write_reconciliation_yaml "$corrections_out" "$ts"
+  [[ -z "$quiet" ]] && echo "RECN YAML:    ${FEATURE_DIR}/RECONCILIATION.yaml written"
+
+  [[ -z "$quiet" ]] && echo "RECN DONE:    KB-filesystem reconciliation complete"
+
+  # Clean up temp files
+  rm -f "$fs_map" "$kb_map" "$corrections_out"
+}
+
 
 # ── Parse dependencies from index ────────────────────────────────────
 parse_dependencies
+
+# ── Reconcile-only mode: run reconciliation and exit ─────────────────
+if $RECONCILE_ONLY; then
+  echo "Running KB-filesystem reconciliation for: $PLAN_SLUG"
+  reconcile_kb_filesystem
+  exit 0
+fi
 
 # ── Build --only set (comma-separated → lookup string) ───────────────
 ONLY_SET=""
@@ -1690,6 +2112,11 @@ done
 echo ""
 echo "All stories launched. Waiting for remaining jobs to complete..."
 wait
+
+# ── Post-batch KB-filesystem reconciliation ──────────────────────────
+echo ""
+echo "Running post-batch KB-filesystem reconciliation..."
+reconcile_kb_filesystem quiet
 
 # ── Collect results ─────────────────────────────────────────────────
 RESULT_OK=0

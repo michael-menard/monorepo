@@ -24,11 +24,11 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 0 |
-| created | 1 |
+| created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 6 |
-| pending | 90 |
+| ready-to-work | 7 |
+| pending | 88 |
 
 ---
 
@@ -1079,7 +1079,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2070: Implement Cache Warming Strategy
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-2030, WINT-2040, WINT-2050, WINT-2060
 **Phase:** 2
 **Feature:** Create cache-warm skill that pre-populates all caches before workflow starts
@@ -1141,7 +1141,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2110: Update 5 High-Volume Agents to Use Cache
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WINT-2030, WINT-2040, WINT-2050, WINT-2060, WINT-0100
 **Phase:** 2
 **Feature:** Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache

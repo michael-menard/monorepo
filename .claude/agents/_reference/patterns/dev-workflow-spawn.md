@@ -58,23 +58,6 @@ Task tool:
     Signal: EXECUTION COMPLETE or EXECUTION BLOCKED: reason
 ```
 
-### Proof Leader (haiku)
-
-```
-Task tool:
-  subagent_type: "general-purpose"
-  model: "haiku"
-  description: "Proof {STORY_ID}"
-  prompt: |
-    Read: .claude/agents/dev-proof-leader.agent.md
-
-    CONTEXT:
-    feature_dir: {FEATURE_DIR}
-    story_id: {STORY_ID}
-
-    Signal: PROOF COMPLETE or PROOF BLOCKED: reason
-```
-
 ---
 
 ## Review/Fix Loop
@@ -133,8 +116,8 @@ story_id: "{STORY_ID}"
 feature_dir: "{FEATURE_DIR}"
 timestamp: "<ISO timestamp>"
 
-current_phase: setup | plan | execute | proof | review | fix | done
-last_successful_phase: null | setup | plan | execute | proof | review
+current_phase: setup | plan | execute | review | fix | done
+last_successful_phase: null | setup | plan | execute | review
 
 iteration: 0
 max_iterations: 3
