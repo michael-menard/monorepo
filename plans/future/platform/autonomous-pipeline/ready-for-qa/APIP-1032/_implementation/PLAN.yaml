@@ -1,0 +1,241 @@
+schema: 2
+story_id: APIP-1032
+timestamp: '2026-03-03T00:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-6
+    description: >-
+      Implement change-loop node with retry logic, atomic commit, and idempotent resume. Update change-spec-schema.ts to
+      re-export from artifacts/change-spec.ts (APIP-1020 real schema). Implement micro-verify using
+      spawn-wrapped-in-Promise (matching run-unit-tests.ts pattern). Add toStateUpdate helper and document idempotency
+      contract.
+    files:
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/pipeline/i-model-dispatch.ts
+      - packages/backend/orchestrator/src/artifacts/change-spec.ts
+      - packages/backend/orchestrator/src/runner/circuit-breaker.ts
+      - packages/backend/orchestrator/src/runner/error-classification.ts
+      - packages/backend/orchestrator/src/artifacts/evidence.ts
+      - packages/backend/orchestrator/src/pipeline/__types__/index.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-1
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+  - id: 2
+    subtask_id: ST-7
+    description: >-
+      Wire all nodes into the implementation graph with conditional edges for the full change-loop flow. Replace the
+      stub afterCreateWorktree edge with change_loop node insertion. Add afterChangeLoop conditional edge
+      (pass/retry/abort routing). Remove TODO comment from implementation.ts. Add IModelDispatch injection to
+      createImplementationGraph config.
+    files:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/graphs/elaboration.ts
+    dependencies:
+      - 1
+    slice: packages
+    verification: pnpm check-types --filter @repo/orchestrator
+    acs_covered:
+      - AC-5
+      - AC-8
+  - id: 3
+    subtask_id: ST-8
+    description: >-
+      Write Vitest unit tests for implementation graph routing and change-loop branches. Test: graph compiles with all
+      nodes; change-loop routes to commit on pass; routes to retry on fail; routes to abort after maxRetries;
+      BudgetExhaustedError triggers permanent abort; already-committed ChangeSpec skipped on resume; evidence-production
+      writes EvidenceSchema-conformant output. Use vi.hoisted() for mocks. Use
+      '../../persistence/yaml-artifact-bridge.js' as vi.mock() path.
+    files:
+      - packages/backend/orchestrator/src/__tests__/implementation-graph.test.ts
+      - packages/backend/orchestrator/src/__tests__/change-loop.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/implementation.ts
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/__tests__/index.test.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-11
+      - AC-13
+  - id: 4
+    subtask_id: ST-9
+    description: >-
+      Write Vitest integration tests using real git subprocess and os.tmpdir() fixture. TempGitRepo fixture creates
+      isolated git repo (never touches real monorepo). Test: create-worktree creates real worktree; git commit produces
+      real commit visible in git log; micro-verify invokes pnpm check-types --filter; stdout/stderr captured in
+      commands_run. All integration tests MUST have 180_000ms Vitest timeout (GAP-2 mitigation).
+    files:
+      - packages/backend/orchestrator/src/__tests__/integration/create-worktree.integration.test.ts
+      - packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/create-worktree.ts
+      - packages/backend/orchestrator/src/nodes/change-loop.ts
+      - packages/backend/orchestrator/src/__tests__/index.test.ts
+    dependencies:
+      - 3
+    slice: packages
+    verification: pnpm test --filter @repo/orchestrator
+    acs_covered:
+      - AC-12
+      - AC-13
+files_to_change:
+  - path: packages/backend/orchestrator/src/nodes/change-loop.ts
+    action: create
+    reason: 'Core change-loop node: dispatch → code-gen → micro-verify → atomic commit per ChangeSpec (AC-5, AC-6, AC-7, AC-8)'
+  - path: packages/backend/orchestrator/src/graphs/change-spec-schema.ts
+    action: modify
+    reason: >-
+      AC-1: Replace placeholder schema with re-export from artifacts/change-spec.ts (APIP-1020 real discriminated union
+      schema)
+  - path: packages/backend/orchestrator/src/graphs/implementation.ts
+    action: modify
+    reason: >-
+      ST-7: Wire change-loop node into graph; replace stub afterCreateWorktree with change_loop insertion; add
+      afterChangeLoop conditional edges; add IModelDispatch to config
+  - path: packages/backend/orchestrator/src/__tests__/implementation-graph.test.ts
+    action: create
+    reason: 'AC-11, AC-13: Unit tests for graph compilation and node/edge structure'
+  - path: packages/backend/orchestrator/src/__tests__/change-loop.test.ts
+    action: create
+    reason: 'AC-11, AC-13: Unit tests for all change-loop routing branches and BudgetExhaustedError handling'
+  - path: packages/backend/orchestrator/src/__tests__/integration/create-worktree.integration.test.ts
+    action: create
+    reason: 'AC-12, AC-13: Integration test for real git worktree creation and cleanup'
+  - path: packages/backend/orchestrator/src/__tests__/integration/change-loop.integration.test.ts
+    action: create
+    reason: 'AC-12, AC-13: Integration test for real git commit and micro-verify invocation'
+commands_to_run:
+  - command: pnpm check-types --filter @repo/orchestrator
+    when: after ST-6 and ST-7 (before writing tests)
+    required: true
+  - command: pnpm test --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+  - command: pnpm build --filter @repo/orchestrator
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      change-spec-schema.ts re-exports ChangeSpecSchema from artifacts/change-spec.ts; type-check passes confirming
+      APIP-1020 schema is the contract
+    evidence_type: command
+  - ac_id: AC-5
+    planned_evidence: >-
+      change-loop.ts implements IModelDispatch dispatch → code-gen write → micro-verify → atomic git commit loop; unit
+      test HP-2 confirms routing
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: >-
+      Unit test EC-1: BudgetExhaustedError from mock dispatch triggers immediate permanent abort with evidence status:
+      aborted; error re-thrown
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: >-
+      change-loop.ts runs spawn('pnpm', ['check-types', '--filter', pkg], {cwd: worktreePath}) and spawn('pnpm',
+      ['test', '--filter', pkg]); stdout/stderr captured in commands_run; both exit 0 required for pass
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: >-
+      Unit test HP-5: already-committed ChangeSpec (id in completedChanges) is skipped; commit SHA stored in
+      completedChanges after exit 0
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: implementation-graph.test.ts and change-loop.test.ts covering HP-1 through HP-5 and EC-1 through EC-3 scenarios
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: >-
+      create-worktree.integration.test.ts (ED-4) and change-loop.integration.test.ts (ED-5) using os.tmpdir()
+      TempGitRepo fixture; real git worktree and commit verified; all tests use 180_000ms timeout
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: pnpm test --filter @repo/orchestrator passes unchanged including all pre-existing tests in src/__tests__/
+    evidence_type: command
+architectural_decisions:
+  - id: ARCH-001
+    question: execSync vs spawn for micro-verify subprocess execution
+    decision: Use child_process.spawn wrapped in Promise (matching run-unit-tests.ts pattern). No execSync, no execa.
+    rationale: >-
+      Established orchestrator pattern prevents event loop blocking. execa is not in package.json. GAP-1 from
+      elaboration resolved by autonomous decider.
+    decided_by: autonomous_decider
+    elab_gap: GAP-1
+  - id: ARCH-002
+    question: 'OPP-2 microVerifyTimeoutMs: add configurable timeout or defer?'
+    decision: >-
+      Defer to follow-up story. Accept the risk. Mitigate CI hangs by adding 180_000ms Vitest test timeout to all
+      integration tests.
+    rationale: >-
+      Non-Goals already defers this. Autonomous decider resolved ambiguity between Non-Goals and Architecture Notes in
+      favor of deferral. GAP-2 resolved.
+    decided_by: autonomous_decider
+    elab_gap: GAP-2
+  - id: ARCH-003
+    question: yaml-artifact-writer mock path for ST-8
+    decision: >-
+      Use vi.mock('../../persistence/yaml-artifact-bridge.js') — the actual module import path used by
+      evidence-production.ts
+    rationale: >-
+      GAP-3 from elaboration: 'yaml-artifact-writer' is not the actual module name. Wrong path silently fails to
+      intercept. The actual module is yaml-artifact-bridge.ts in persistence/.
+    decided_by: autonomous_decider
+    elab_gap: GAP-3
+  - id: ARCH-004
+    question: IModelDispatch.dispatch() signature verification
+    decision: >-
+      IModelDispatch.dispatch() accepts ModelDispatchRequest {storyId, attemptNumber, prompt, modelOverride?} and
+      returns Promise<ModelDispatchResponse>. AC-5 calls dispatch with storyId, attemptNumber, and ChangeSpec as the
+      prompt body.
+    rationale: >-
+      GAP-4 coordination note resolved: APIP-1031 files are now present and i-model-dispatch.ts has been read. The
+      signature is confirmed. No mismatch with AC-5 call pattern.
+    decided_by: planner_verification
+    elab_gap: GAP-4
+complexity: complex
+notes:
+  - >-
+    APIP-1031 is complete — all its output files are present in the filesystem (verified by reading them). Dependency
+    gate is clear.
+  - >-
+    APIP-1020 ChangeSpec schema is published in packages/backend/orchestrator/src/artifacts/change-spec.ts as a
+    discriminated union on change_type with variants: file_change, migration_change, config_change, test_change.
+  - >-
+    change-spec-schema.ts currently exports a placeholder ChangeSpec. ST-6 must update it to re-export from
+    artifacts/change-spec.ts before implementing change-loop.ts.
+  - >-
+    The real ChangeSpec has fields: schema (literal 1), story_id, id, description, ac_ids, change_type (discriminator),
+    file_path (for file_change variant). The commit message format must use id and description fields (not summary —
+    that field is in the placeholder only).
+  - >-
+    IModelDispatch.dispatch() signature is (ModelDispatchRequest) => Promise<ModelDispatchResponse>. The request prompt
+    field carries the ChangeSpec serialized as instructions.
+  - BudgetExhaustedError is a class in pipeline/__types__/index.ts. Import it from there. Check with instanceof.
+  - >-
+    OPP-3 from elab: add toStateUpdate helper in change-loop.ts as the single cast point for
+    Partial<ImplementationGraphState> returns.
+  - >-
+    OPP-4 from elab: document idempotency contract in change-loop.ts JSDoc/comments explaining completedChanges check
+    semantics.
+  - Integration test directory src/__tests__/integration/ does not yet exist — ST-9 must create it.
+  - No existing integration tests in the orchestrator package — ST-9 is a net-new test tier for this package.
+  - >-
+    The ImplementationGraphStateAnnotation already includes abortReason field for BudgetExhaustedError message storage
+    before re-throw.
+  - Change loop does NOT use createToolNode wrapper (GAP-3 resolution from APIP-1031 persisted through this story).
+  - >-
+    micro-verify scoped to touchedPackages from ChangeSpec. For file_change variant, derive package filter from
+    file_path prefix (e.g., packages/backend/orchestrator → @repo/orchestrator).

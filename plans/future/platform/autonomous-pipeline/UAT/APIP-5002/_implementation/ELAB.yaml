@@ -1,0 +1,110 @@
+schema: 1
+story_id: "APIP-5002"
+timestamp: "2026-02-25T00:00:00Z"
+
+audit:
+  - id: scope_alignment
+    status: PASS
+    note: "Story scope matches stories.index.md exactly. All 8 dependency IDs match. Scope correctly bounded to packages/backend/orchestrator/e2e/ (9 new files, 1 modified). Minor: story.yaml has stale phase:0 but canonical frontmatter has phase:1."
+  - id: internal_consistency
+    status: PASS
+    note: "Goal, non-goals, ACs, and test plan strongly aligned. Minor: AC-4 pollJobCompletion overlaps AC-8 PipelineJobPoller (thin wrapper vs full impl). AC-9 says 5 sections but MC-1 references 6 steps (6th is meta-check, not a section). No contradictions."
+  - id: reuse_first
+    status: WARN
+    note: "Reuse plan well-documented. GAPS: (1) MergeArtifactSchema does not exist yet (APIP-1070 dependency), (2) bullmq not installed in any monorepo package despite Reuse Plan claiming it, (3) @playwright/test not in orchestrator package.json, (4) ioredis vs BullMQ connection pattern needs clarification. POSITIVE: yaml-artifact-reader, EvidenceSchema/ReviewSchema/QaVerifySchema reuse, test.extend pattern all accurate."
+  - id: ports_adapters
+    status: PASS
+    note: "Not applicable. No API endpoints, no Lambda handlers, no domain services. Pure test infrastructure."
+  - id: testability
+    status: PASS
+    note: "Two-tier test strategy well-defined: Tier 1 Vitest unit tests (no live stack), Tier 2 Playwright E2E with phased skipIf guards. Verification commands per subtask. Env vars documented. Minor: tsconfig rootDir:src excludes e2e/ directory — needs separate tsconfig."
+  - id: decision_completeness
+    status: PASS
+    note: "No unresolved TBDs. Key decisions documented inline. Minor: REVIEW.yaml FAIL behavior in critical path E2E is implicit (synthetic ChangeSpec should always pass review, so FAIL = framework bug) but not explicitly stated."
+  - id: risk_disclosure
+    status: WARN
+    note: "4 risks in test-plan.yaml + 4 in dev-feasibility.yaml with mitigations. UNDISCLOSED: (1) tsconfig rootDir conflict for e2e/ directory, (2) teardown race condition with git worktrees from merge graph, (3) canonical reference path typo (michaelmenager vs michaelmenard)."
+  - id: story_sizing
+    status: PASS
+    note: "12 ACs above 8-AC soft limit but mitigated: all files in single new directory, no existing files modified except 1 line in package.json, no API/DB/deploy. 8 subtasks with clean DAG. No split required despite 0.9 split_risk prediction."
+  - id: subtask_decomposition
+    status: CONDITIONAL
+    note: "8 subtasks, clean DAG, all 12 ACs covered, each subtask touches <=2 files. GAPS: (1) ST-3 depends_on missing ST-2 (pollJobCompletion cross-file dependency), (2) ST-1 missing explicit package.json dependency additions and tsconfig.e2e.json creation, (3) ST-4->ST-3 dependency reason is implicit."
+
+gaps:
+  - id: gap-1
+    check: reuse_first
+    finding: "MergeArtifactSchema does not exist in orchestrator artifacts. AC-4 assertMergeArtifact cannot be implemented. No merge.ts in packages/backend/orchestrator/src/artifacts/. Schema will come from APIP-1070. Recommend: stub schema in ST-3 pending APIP-1070."
+    severity: critical
+    decision: "ADD_AS_AC: Added AC-13 requiring a stub MergeArtifactSchema Zod schema in artifact-assertions.ts with minimum fields { verdict: z.string(), story_id: z.string() } and a TODO comment marking it for replacement when APIP-1070 delivers the canonical schema. ST-3 updated to cover AC-13."
+    ac_added: "AC-13"
+
+  - id: gap-2
+    check: reuse_first
+    finding: "BullMQ not installed in any monorepo package.json. Story claims 'already in dependency tree via APIP-0010' but APIP-0010 not yet complete. Must add bullmq to orchestrator devDependencies in ST-1 or ST-2."
+    severity: critical
+    decision: "ADD_AS_AC: Merged with gap-3 into AC-14. AC-14 explicitly requires bullmq as a devDependency in packages/backend/orchestrator/package.json pinned to a monorepo-compatible version. ST-1 updated to include this devDependency addition."
+    ac_added: "AC-14"
+
+  - id: gap-3
+    check: reuse_first
+    finding: "@playwright/test not in packages/backend/orchestrator/package.json. ST-1 mentions adding e2e script but not the devDependency itself. Must add @playwright/test to orchestrator devDependencies."
+    severity: high
+    decision: "ADD_AS_AC: Merged with gap-2 into AC-14. AC-14 explicitly requires @playwright/test as a devDependency in packages/backend/orchestrator/package.json. ST-1 updated to include this devDependency addition."
+    ac_added: "AC-14"
+
+  - id: gap-4
+    check: risk_disclosure
+    finding: "Orchestrator tsconfig.json has rootDir:./src and include:['src/**/*']. New e2e/ directory is outside src/ and will be excluded from compilation. Need separate tsconfig.e2e.json for e2e/ directory."
+    severity: high
+    decision: "ADD_AS_AC: Merged into AC-14. AC-14 explicitly requires tsconfig.e2e.json at packages/backend/orchestrator/e2e/tsconfig.json extending root tsconfig with include covering the e2e directory. ST-1 updated to create this file."
+    ac_added: "AC-14"
+
+  - id: gap-5
+    check: subtask_decomposition
+    finding: "ST-3 depends_on should include ST-2. pollJobCompletion in artifact-assertions.ts imports from job-poller.ts (produced by ST-2). Current DAG allows ST-3 to start before ST-2 completes."
+    severity: medium
+    decision: "SUBTASK_DAG_FIX: Not added as AC — this is a DAG correctness issue, not a behavior requirement. ST-3 in APIP-5002.md updated to add ST-2 to its depends_on list and add job-poller.ts to its files-to-read. Implementers will not attempt ST-3 before ST-2 completes."
+    ac_added: null
+
+opportunities:
+  - id: opp-1
+    category: observability
+    finding: "CI workflow job for Phase 0 E2E mentioned in Infrastructure Notes but not specified. Should be documented in PIPELINE-E2E-TEST-PLAN.md as a post-merge action item."
+    effort: low
+    decision: "LOGGED_TO_KB: KB write attempted but KB MCP server returned INTERNAL_ERROR. Decision logged to DEFERRED-KB-WRITES.yaml instead. Implementer note: when writing PIPELINE-E2E-TEST-PLAN.md (ST-8), document the CI job definition including triggers, required services, environment variables, and Docker Compose setup."
+    kb_entry_id: "DEFERRED — see DEFERRED-KB-WRITES.yaml opp-1"
+
+  - id: opp-2
+    category: ux_polish
+    finding: "Canonical References table has path typo: /Users/michaelmenager/ should be /Users/michaelmenard/. Will mislead implementers navigating to reference files."
+    effort: low
+    decision: "FIXED_IN_PLACE: Typo corrected directly in APIP-5002.md Canonical References table. Changed 'michaelmenager' to 'michaelmenard'."
+    kb_entry_id: "N/A — fixed in place"
+
+  - id: opp-3
+    category: edge_cases
+    finding: "REVIEW.yaml FAIL verdict behavior in full critical path E2E is unspecified. Synthetic ChangeSpec designed to always pass, so FAIL = framework bug. Test should fail explicitly rather than silently skip merge assertions."
+    effort: low
+    decision: "LOGGED_TO_KB: KB write attempted but KB MCP server returned INTERNAL_ERROR. Decision logged to DEFERRED-KB-WRITES.yaml instead. Implementer note for ST-7: if REVIEW.yaml verdict is FAIL, use expect.fail() with explicit message 'Framework bug: synthetic ChangeSpec produced REVIEW.yaml FAIL verdict — investigate review graph'."
+    kb_entry_id: "DEFERRED — see DEFERRED-KB-WRITES.yaml opp-3"
+
+  - id: opp-4
+    category: ux_polish
+    finding: "story.yaml in elaboration directory has stale phase:0 while canonical APIP-5002.md frontmatter has phase:1. May confuse tooling that reads story.yaml."
+    effort: low
+    decision: "FIXED_IN_PLACE: story.yaml phase field updated from 0 to 1 to match canonical APIP-5002.md frontmatter."
+    kb_entry_id: "N/A — fixed in place"
+
+split_recommendation: null
+
+preliminary_verdict: CONDITIONAL_PASS
+verdict: CONDITIONAL_PASS
+decided_at: "2026-02-25T00:00:00Z"
+summary:
+  gaps_found: 5
+  gaps_resolved: 5
+  opportunities_found: 4
+  opportunities_logged: 4
+  acs_added: 2
+  verdict_rationale: "All 5 gaps resolved: gap-1 through gap-4 added as AC-13 and AC-14; gap-5 fixed as subtask DAG correction (not AC). All 4 opportunities addressed: opp-2 and opp-4 fixed in place; opp-1 and opp-3 deferred to DEFERRED-KB-WRITES.yaml (KB MCP unavailable). Story is clear to proceed to ready-to-work. Minor audit items: subtask DAG corrected for ST-3."

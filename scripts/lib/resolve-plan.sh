@@ -80,10 +80,15 @@ discover_stories() {
   if [[ -f "$index_file" ]]; then
     # Read prefix from index if not already set from KB
     if [[ -z "${STORY_PREFIX:-}" ]]; then
+      # Try markdown format first: **Prefix**: WINT
       STORY_PREFIX=$(sed -n 's/^\*\*Prefix\*\*: //p' "$index_file")
     fi
+    if [[ -z "${STORY_PREFIX:-}" ]]; then
+      # Try YAML frontmatter format: story_prefix: "WINT"
+      STORY_PREFIX=$(sed -n 's/^story_prefix: *"\{0,1\}\([A-Z][A-Z0-9]*\)"\{0,1\} *$/\1/p' "$index_file" | head -1)
+    fi
     if [[ -z "$STORY_PREFIX" ]]; then
-      echo "Error: No **Prefix** found in $index_file and none from KB"
+      echo "Error: No prefix found in $index_file (checked **Prefix** and story_prefix frontmatter)"
       exit 1
     fi
 

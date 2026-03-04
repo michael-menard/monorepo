@@ -42,7 +42,8 @@
     "seed:wint:commands": "tsx src/seed/index.ts --target=commands",
     "seed:wint:skills": "tsx src/seed/index.ts --target=skills",
     "test": "vitest run",
-    "clean": "rm -rf dist node_modules .turbo"
+    "clean": "rm -rf dist node_modules .turbo",
+    "seed:agent-missions": "tsx src/seed/agent-mission-cache-populator.ts"
   },
   "dependencies": {
     "@repo/logger": "workspace:*",

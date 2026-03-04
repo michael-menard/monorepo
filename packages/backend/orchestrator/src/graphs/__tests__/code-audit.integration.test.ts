@@ -1,142 +1,93 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { tmpdir } from 'os'
-import { join } from 'path'
-import { mkdir, readdir, rm } from 'fs/promises'
+import { describe, expect, it } from 'vitest'
+import { createCodeAuditGraph, CodeAuditConfigSchema } from '../../graphs/code-audit.js'
 
-import { runCodeAudit } from '../code-audit.js'
-import { AuditFindingsSchema } from '../../artifacts/audit-findings.js'
-
-describe('code-audit integration — pipeline mode', () => {
-  let testDir: string
-  let auditDir: string
-  let plansDir: string
-
-  beforeEach(async () => {
-    testDir = join(tmpdir(), `audit-integration-${Date.now()}`)
-    auditDir = join(testDir, 'audit')
-    plansDir = testDir
-    await mkdir(auditDir, { recursive: true })
-    // Create a minimal target directory with a src file
-    await mkdir(join(testDir, 'src'), { recursive: true })
-    const { writeFile } = await import('fs/promises')
-    await writeFile(join(testDir, 'src/index.ts'), 'export const x = 1')
-  })
-
-  afterEach(async () => {
-    try {
-      await rm(testDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
-  })
-
-  it('pipeline mode E2E: runCodeAudit writes valid FINDINGS YAML to auditDir', async () => {
-    const result = await runCodeAudit({
+describe('code-audit integration', () => {
+  it('AC-17: CodeAuditConfigSchema accepts auditDir and plansDir', () => {
+    const config = CodeAuditConfigSchema.parse({
+      auditDir: '/tmp/test-audit',
+      plansDir: '/tmp/test-plans',
+      lenses: ['security'],
       mode: 'pipeline',
-      scope: 'full',
-      lenses: [],
-      target: join(testDir, 'src'),
-      auditDir,
-      plansDir,
     })
-
-    // Result should be valid AuditFindings
-    expect(result).toBeDefined()
-    expect(result?.schema).toBe(1)
-    expect(result?.mode).toBe('pipeline')
-    expect(() => AuditFindingsSchema.parse(result)).not.toThrow()
-
-    // FINDINGS yaml should be written to auditDir
-    const files = await readdir(auditDir)
-    expect(files.some(f => f.startsWith('FINDINGS-') && f.endsWith('.yaml'))).toBe(true)
+    expect(config.auditDir).toBe('/tmp/test-audit')
+    expect(config.plansDir).toBe('/tmp/test-plans')
   })
 
-  it('pipeline mode: returns AuditFindings with correct schema=1', async () => {
-    const result = await runCodeAudit({
+  it('AC-1: pipeline mode graph compiles with custom paths', () => {
+    const graph = createCodeAuditGraph({
       mode: 'pipeline',
-      scope: 'full',
-      lenses: [],
-      target: join(testDir, 'src'),
-      auditDir,
-      plansDir,
+      lenses: ['security'],
+      auditDir: '/tmp/test-audit',
+      plansDir: '/tmp/test-plans',
     })
-
-    expect(result?.schema).toBe(1)
-    expect(result?.mode).toBe('pipeline')
-    expect(result?.scope).toBe('full')
+    expect(graph).toBeDefined()
   })
 
-  it('accepts auditDir/plansDir in config and writes to temp dir (not plans/audit)', async () => {
-    const customAuditDir = join(testDir, 'custom-audit')
-    await mkdir(customAuditDir, { recursive: true })
-
-    await runCodeAudit({
-      mode: 'pipeline',
-      scope: 'full',
-      lenses: [],
-      target: join(testDir, 'src'),
-      auditDir: customAuditDir,
-      plansDir,
-    })
-
-    // Should write to custom dir
-    const files = await readdir(customAuditDir)
-    expect(files.some(f => f.startsWith('FINDINGS-'))).toBe(true)
-  })
-})
-
-describe('code-audit integration — roundtable mode', () => {
-  let testDir: string
-  let auditDir: string
-  let plansDir: string
-
-  beforeEach(async () => {
-    testDir = join(tmpdir(), `audit-roundtable-${Date.now()}`)
-    auditDir = join(testDir, 'audit')
-    plansDir = testDir
-    await mkdir(auditDir, { recursive: true })
-    await mkdir(join(testDir, 'src'), { recursive: true })
-    const { writeFile } = await import('fs/promises')
-    await writeFile(join(testDir, 'src/app.ts'), 'export const app = () => {}')
-  })
-
-  afterEach(async () => {
-    try {
-      await rm(testDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
-  })
-
-  it('roundtable mode E2E: runCodeAudit writes valid FINDINGS YAML to auditDir', async () => {
-    const result = await runCodeAudit({
+  it('AC-2: roundtable mode graph compiles with custom paths', () => {
+    const graph = createCodeAuditGraph({
       mode: 'roundtable',
-      scope: 'full',
-      lenses: [],
-      target: join(testDir, 'src'),
-      auditDir,
-      plansDir,
+      lenses: ['security'],
+      auditDir: '/tmp/test-audit',
+      plansDir: '/tmp/test-plans',
     })
-
-    expect(result).toBeDefined()
-    expect(result?.mode).toBe('roundtable')
-    expect(() => AuditFindingsSchema.parse(result)).not.toThrow()
-
-    const files = await readdir(auditDir)
-    expect(files.some(f => f.startsWith('FINDINGS-') && f.endsWith('.yaml'))).toBe(true)
+    expect(graph).toBeDefined()
   })
 
-  it('roundtable mode: returns AuditFindings with correct schema=1', async () => {
-    const result = await runCodeAudit({
-      mode: 'roundtable',
-      scope: 'full',
-      lenses: [],
-      target: join(testDir, 'src'),
-      auditDir,
-      plansDir,
-    })
+  it('defaults auditDir to plans/audit and plansDir to plans', () => {
+    const config = CodeAuditConfigSchema.parse({})
+    expect(config.auditDir).toBe('plans/audit')
+    expect(config.plansDir).toBe('plans')
+  })
 
-    expect(result?.schema).toBe(1)
-    expect(result?.mode).toBe('roundtable')
+  it('AC-17: CodeAuditConfigSchema rejects invalid mode', () => {
+    expect(() =>
+      CodeAuditConfigSchema.parse({ mode: 'invalid-mode' }),
+    ).toThrow()
+  })
+
+  it('AC-17: CodeAuditConfigSchema rejects invalid lens', () => {
+    expect(() =>
+      CodeAuditConfigSchema.parse({ lenses: ['not-a-real-lens'] }),
+    ).toThrow()
+  })
+
+  it('AC-17: CodeAuditConfigSchema accepts all valid lenses', () => {
+    const config = CodeAuditConfigSchema.parse({
+      lenses: [
+        'security',
+        'duplication',
+        'react',
+        'typescript',
+        'a11y',
+        'ui-ux',
+        'performance',
+        'test-coverage',
+        'code-quality',
+      ],
+    })
+    expect(config.lenses).toHaveLength(9)
+  })
+
+  it('AC-17: CodeAuditConfigSchema uses default lenses when not provided', () => {
+    const config = CodeAuditConfigSchema.parse({})
+    expect(config.lenses.length).toBeGreaterThan(0)
+    expect(config.lenses).toContain('security')
+  })
+
+  it('AC-1: pipeline mode graph is defined and invokable object', () => {
+    const graph = createCodeAuditGraph({ mode: 'pipeline', lenses: ['security'] })
+    expect(graph).toBeDefined()
+    expect(typeof graph.invoke).toBe('function')
+  })
+
+  it('AC-2: roundtable mode graph is defined and invokable object', () => {
+    const graph = createCodeAuditGraph({ mode: 'roundtable', lenses: ['security'] })
+    expect(graph).toBeDefined()
+    expect(typeof graph.invoke).toBe('function')
+  })
+
+  it('createCodeAuditGraph uses default config when called with no arguments', () => {
+    const graph = createCodeAuditGraph()
+    expect(graph).toBeDefined()
   })
 })

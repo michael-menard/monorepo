@@ -90,3 +90,9 @@ export {
   DetectArtifactConflictsInputSchema,
   DetectArtifactConflictsOutputSchema,
 } from './__types__/index.js'
+
+// KBAR-0230: generateStoriesIndex stub (not yet implemented — will be replaced when KBAR-0230 merges)
+// The CLI regenerate-index.ts dynamically imports this and handles the undefined case.
+// export async function generateStoriesIndex(_opts: { epic: string; verbose?: boolean }): Promise<string> {
+//   throw new Error('generateStoriesIndex() is not yet implemented. Waiting for KBAR-0230.')
+// }

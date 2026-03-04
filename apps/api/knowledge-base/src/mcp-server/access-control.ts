@@ -67,6 +67,8 @@ export const ToolNameSchema = z.enum([
   'artifact_search',
   // Dual-write artifact tool (KBAR-0110)
   'artifact_write',
+  // Context pack tool (WINT-2020)
+  'context_pack_get',
 ])
 export type ToolName = z.infer<typeof ToolNameSchema>
 
@@ -143,6 +145,8 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   artifact_search: new Set(['pm', 'dev', 'qa', 'all']),
   // Dual-write artifact tool (KBAR-0110)
   artifact_write: new Set(['pm', 'dev', 'qa', 'all']),
+  // Context pack tool (WINT-2020) - available to all roles
+  context_pack_get: new Set(['pm', 'dev', 'qa', 'all']),
 }
 
 /**

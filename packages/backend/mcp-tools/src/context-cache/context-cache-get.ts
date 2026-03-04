@@ -59,10 +59,7 @@ export async function contextCacheGet(
         and(
           eq(contextPacks.packType, validated.packType),
           eq(contextPacks.packKey, validated.packKey),
-          or(
-            gt(contextPacks.expiresAt, sql`NOW()`),
-            isNull(contextPacks.expiresAt),
-          )!, // Filter expired entries OR allow NULL (no expiration)
+          or(gt(contextPacks.expiresAt, sql`NOW()`), isNull(contextPacks.expiresAt))!, // Filter expired entries OR allow NULL (no expiration)
         ),
       )
       .limit(1)
@@ -82,7 +79,7 @@ export async function contextCacheGet(
       .where(eq(contextPacks.id, pack.id))
       .returning()
 
-    return updatedPack
+    return updatedPack as SelectContextPack
   } catch (error) {
     // Database errors or validation failures: log warning, return null
     logger.warn('[mcp-tools] Context cache get failed', {

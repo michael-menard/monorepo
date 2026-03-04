@@ -1,0 +1,96 @@
+schema: 1
+story_id: ST-1020
+feature_dir: plans/future/platform/story-generation-small-llm-compat
+timestamp: "2026-03-03T00:00:00Z"
+iteration: 0
+
+summary: >
+  Documentation-only story. Updated pm-spawn-patterns.md Story File Structure to
+  include ## Examples (item 5) and ## Edge Cases (item 6) after Goal, renumbering
+  subsequent items from 5-17 to 7-19. Updated pm-story-generation-leader.agent.md
+  Phase 4 synthesis with directives for generating both sections, and added two
+  quality gate rows for Examples and Edge Cases presence.
+
+acceptance_criteria:
+  - ac_id: AC-1
+    status: PASS
+    description: "pm-spawn-patterns.md Story File Structure includes ## Examples section (after Goal, before Non-goals)"
+    evidence:
+      type: file_content
+      file: .claude/agents/_reference/patterns/pm-spawn-patterns.md
+      line: 92
+      content: "5. Examples (2+ concrete input/output examples)"
+      verified_by: "grep -n 'Examples' .claude/agents/_reference/patterns/pm-spawn-patterns.md"
+
+  - ac_id: AC-2
+    status: PASS
+    description: "pm-spawn-patterns.md Story File Structure includes ## Edge Cases section (after Examples, before Non-goals)"
+    evidence:
+      type: file_content
+      file: .claude/agents/_reference/patterns/pm-spawn-patterns.md
+      line: 93
+      content: "6. Edge Cases (2+ edge cases)"
+      verified_by: "grep -n 'Edge Cases' .claude/agents/_reference/patterns/pm-spawn-patterns.md"
+
+  - ac_id: AC-3
+    status: PASS
+    description: "pm-story-generation-leader.agent.md Phase 4 synthesis includes directives to generate ## Examples with 2+ concrete input/output examples"
+    evidence:
+      type: file_content
+      file: .claude/agents/pm-story-generation-leader.agent.md
+      lines: [187, 188, 189, 190, 191]
+      content: >
+        **Examples** (REQUIRED — 2+ concrete examples):
+        - Generate `## Examples` section with at least 2 concrete input/output examples
+        - Each example must follow the format: "[input/trigger] → [expected output/result]"
+        - Examples must be grounded in the story's acceptance criteria and scope
+        - Do not generate vague or abstract examples — every example must be testable
+      verified_by: "grep -n 'Examples' .claude/agents/pm-story-generation-leader.agent.md"
+
+  - ac_id: AC-4
+    status: PASS
+    description: "pm-story-generation-leader.agent.md Phase 4 synthesis includes directives to generate ## Edge Cases with 2+ edge cases"
+    evidence:
+      type: file_content
+      file: .claude/agents/pm-story-generation-leader.agent.md
+      lines: [193, 194, 195, 196, 197]
+      content: >
+        **Edge Cases** (REQUIRED — 2+ edge cases):
+        - Generate `## Edge Cases` section with at least 2 edge cases
+        - Each edge case must describe a boundary condition, error state, or conflicting input
+        - Edge cases must be relevant to the story scope (do not invent unrelated scenarios)
+        - Format: "[condition] → [expected behavior]"
+      verified_by: "grep -n 'Edge Cases' .claude/agents/pm-story-generation-leader.agent.md"
+
+  - ac_id: AC-5
+    status: PASS
+    description: "Quality Gates table in pm-story-generation-leader includes gates for Examples and Edge Cases presence"
+    evidence:
+      type: file_content
+      file: .claude/agents/pm-story-generation-leader.agent.md
+      lines: [294, 295]
+      content: >
+        | Examples present | Story includes `## Examples` with 2+ concrete input/output examples (REQUIRED) |
+        | Edge Cases present | Story includes `## Edge Cases` with 2+ edge cases (REQUIRED) |
+      verified_by: "grep -n 'Examples present|Edge Cases present' .claude/agents/pm-story-generation-leader.agent.md"
+
+build:
+  status: exempt
+  reason: Documentation-only story — no TypeScript code
+
+unit_tests:
+  status: exempt
+  reason: Documentation-only story — no TypeScript code
+
+lint:
+  status: exempt
+  reason: Documentation-only story — no TypeScript code
+
+e2e_tests:
+  status: exempt
+  mode: n/a
+  reason: Documentation/agent-config story with no application code
+
+files_modified:
+  - .claude/agents/_reference/patterns/pm-spawn-patterns.md
+  - .claude/agents/pm-story-generation-leader.agent.md

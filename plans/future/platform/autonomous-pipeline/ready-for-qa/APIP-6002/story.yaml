@@ -1,0 +1,24 @@
+id: "APIP-6002"
+title: "Stuck Story Recovery Loop"
+status: ready-for-qa
+priority: high
+phase: 5
+epic: autonomous-pipeline
+points: 3
+story_type: feature
+frontend_impacted: false
+backend_impacted: true
+feature: "Periodic sweep that detects stories stuck in intermediate pipeline stages and automatically recovers them"
+goal: "Eliminate permanently stuck stories by detecting stalled pipeline progress and applying recovery actions (retry, move back, or flag for human intervention)."
+depends_on:
+  - "APIP-6001"
+endpoints: []
+infrastructure:
+  - "Stuck story detector function in implement-stories.sh"
+  - "Recovery action dispatcher"
+  - "STUCK-RECOVERY.yaml artifact for audit trail"
+  - "Integration with implement-dispatcher.sh polling loop"
+risk_notes: "Recovery actions must be idempotent. Moving a story backward that is legitimately in-progress (just slow) could discard work."
+sizing_warning: false
+created: "2026-03-01"
+source: "Pipeline audit — 5 stories permanently stuck in failed-code-review with max-retries=0"

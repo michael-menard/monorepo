@@ -1,0 +1,91 @@
+schema: 2
+story_id: ST-1020
+timestamp: "2026-03-03T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >
+      Update pm-spawn-patterns.md Story File Structure section to insert Examples
+      (item 5) and Edge Cases (item 6) between Goal and Non-goals, renumbering
+      subsequent items
+    files:
+      - .claude/agents/_reference/patterns/pm-spawn-patterns.md
+    files_to_read:
+      - .claude/agents/_reference/patterns/pm-spawn-patterns.md
+    dependencies: []
+    slice: packages
+    verification: "grep -n '## Examples\\|## Edge Cases' .claude/agents/_reference/patterns/pm-spawn-patterns.md"
+    acs_covered: [AC-1, AC-2]
+
+  - id: 2
+    subtask_id: ST-2
+    description: >
+      Update pm-story-generation-leader.agent.md Phase 4 synthesis section to
+      include directives for generating ## Examples (2+ concrete input/output
+      examples) and ## Edge Cases (2+ edge cases) sections
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-generation-leader.agent.md
+      - .claude/agents/_reference/patterns/pm-spawn-patterns.md
+    dependencies: [1]
+    slice: packages
+    verification: "grep -n 'Examples\\|Edge Cases' .claude/agents/pm-story-generation-leader.agent.md"
+    acs_covered: [AC-3, AC-4]
+
+  - id: 3
+    subtask_id: ST-3
+    description: >
+      Add quality gate rows for Examples presence (2+ input/output examples) and
+      Edge Cases presence (2+ edge cases) to the Quality Gates table in
+      pm-story-generation-leader.agent.md
+    files:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    files_to_read:
+      - .claude/agents/pm-story-generation-leader.agent.md
+    dependencies: [2]
+    slice: packages
+    verification: "grep -n 'Examples present\\|Edge Cases present' .claude/agents/pm-story-generation-leader.agent.md"
+    acs_covered: [AC-5]
+
+files_to_change:
+  - path: .claude/agents/_reference/patterns/pm-spawn-patterns.md
+    action: modify
+    reason: Add Examples and Edge Cases as required sections in the Story File Structure list (AC-1, AC-2)
+  - path: .claude/agents/pm-story-generation-leader.agent.md
+    action: modify
+    reason: Add Phase 4 directives for generating Examples and Edge Cases sections, and add quality gate rows (AC-3, AC-4, AC-5)
+
+commands_to_run:
+  - command: "grep -n '## Examples\\|## Edge Cases\\|Examples\\|Edge Cases' .claude/agents/_reference/patterns/pm-spawn-patterns.md .claude/agents/pm-story-generation-leader.agent.md"
+    when: after all edits
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: "pm-spawn-patterns.md Story File Structure list contains '## Examples' entry between Goal and Non-goals"
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: "pm-spawn-patterns.md Story File Structure list contains '## Edge Cases' entry after Examples and before Non-goals"
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: "pm-story-generation-leader.agent.md Phase 4 section contains directive to generate ## Examples with 2+ concrete input/output examples"
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: "pm-story-generation-leader.agent.md Phase 4 section contains directive to generate ## Edge Cases with 2+ edge cases"
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: "Quality Gates table in pm-story-generation-leader.agent.md contains rows for Examples and Edge Cases presence"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "Documentation-only story — no TypeScript, no tests, no builds needed"
+  - "Scope artifact path .claude/agents/pm-spawn-patterns.md maps to _reference/patterns/pm-spawn-patterns.md — treating as same file (reference path is correct from filesystem)"
+  - "Step 2 depends on step 1 so the agent reading pm-spawn-patterns.md gets the updated structure as context"
+  - "Step 3 depends on step 2 to ensure quality gates are added in the same pass as the Phase 4 directives"

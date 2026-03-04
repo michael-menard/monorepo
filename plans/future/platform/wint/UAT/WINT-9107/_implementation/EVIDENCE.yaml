@@ -1,0 +1,233 @@
+schema: 1
+story_id: WINT-9107
+version: 1
+timestamp: '2026-03-03T09:00:00Z'
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: Gap analysis document comparing WINT-9105 spec ACs to runner implementation
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md
+        description: >-
+          Comprehensive gap analysis covering all 11 WINT-9105 ACs against runner/
+          implementation. Confirms: retry primitives complete (llm/tool/validation presets),
+          circuit breaker node-local (as decided), error classification sole decision point,
+          file_io/db_write/git presets deferred per design.
+
+  - ac_id: AC-2
+    ac_text: >-
+      Unit test asserting two createNode() calls produce independent circuit breaker
+      instances (opening one does not affect the other)
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+        description: >-
+          "WINT-9107: NodeCircuitBreaker per-node isolation > createNode() produces
+          independent circuit breaker instances" — opens nodeA circuit, asserts nodeB
+          still executes successfully. 33/33 tests pass.
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- --reporter=verbose node-factory
+        result: PASS (33 tests passed)
+
+  - ac_id: AC-3
+    ac_text: >-
+      Unit test asserting createLLMNode/createToolNode apply distinct RETRY_PRESETS values
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+        description: >-
+          "WINT-9107: RETRY_PRESETS distinct values > createLLMNode and createToolNode apply
+          distinct retry presets" — asserts llm.maxAttempts=5 ≠ tool.maxAttempts=2,
+          llm.backoffMs ≠ tool.backoffMs, llm.timeoutMs ≠ tool.timeoutMs.
+
+  - ac_id: AC-4
+    ac_text: >-
+      Integration test: classifyError routes retry decision — non-retryable error fails
+      with attempt count 1, retryable error retries
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+        description: >-
+          "WINT-9107: classifyError as sole retry decision point" — ZodError (non-retryable)
+          results in 1 attempt; generic Error (retryable) results in 3 attempts (maxAttempts=3).
+      - type: test
+        path: packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+        description: >-
+          "Error classification end-to-end" — does not retry ZodError (1 attempt),
+          NodeTimeoutError isRetryable=true, TypeError isRetryable=false.
+
+  - ac_id: AC-5
+    ac_text: >-
+      Integration test: retry exhaustion routes to blocked — state.routingFlags.blocked
+      === true, no unhandled exception
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+        description: >-
+          "WINT-9107: NodeRetryExhaustedError routes to routingFlags.blocked > retry exhaustion
+          sets routingFlags.blocked=true with no unhandled exception" — 3 attempts exhausted,
+          result.routingFlags.blocked === true, no exception thrown.
+
+  - ac_id: AC-6
+    ac_text: >-
+      Integration test: CIRCUIT_OPEN state update has code CIRCUIT_OPEN — drives circuit
+      to OPEN, asserts code in state errors
+    status: PASS
+    evidence_items:
+      - type: test
+        path: packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+        description: >-
+          "WINT-9107: CIRCUIT_OPEN state update has code CIRCUIT_OPEN" — drives circuit to
+          OPEN via 2 failures (failureThreshold=2), asserts result.errors[0].code==='CIRCUIT_OPEN'
+          and result.routingFlags.blocked===true. Also covers HALF_OPEN recovery and
+          HALF_OPEN probe failure re-opens circuit.
+
+  - ac_id: AC-7
+    ac_text: >-
+      node-author-guide.md documenting import path via runner/index.ts, factory usage patterns,
+      RETRY_PRESETS documentation, and gap analysis summary
+    status: PASS
+    evidence_items:
+      - type: file
+        path: packages/backend/orchestrator/docs/node-author-guide.md
+        description: >-
+          Comprehensive node author guide: import path from @repo/orchestrator/runner, all
+          factory functions (createNode/createLLMNode/createToolNode/createSimpleNode/createLLMPoweredNode),
+          RETRY_PRESETS reference table with when-to-use, circuit breaker isolation explanation,
+          error handling contracts, classifyError documentation, gap analysis summary, testing patterns.
+
+  - ac_id: AC-8
+    ac_text: 'Command: pnpm test --filter @repo/orchestrator --coverage — >= 80% on new/changed code'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- runner/__tests__ --coverage
+        result: PASS — src/runner: 94.74% statements, 94.09% branch, 94.69% functions, 94.74% lines
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- --reporter=verbose node-factory
+        result: PASS — 33 tests passed
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- --reporter=verbose runner/__tests__/integration
+        result: PASS — 25 tests passed
+
+  - ac_id: AC-9
+    ac_text: 'Command: pnpm test --filter @repo/orchestrator — all existing runner tests pass, 0 failures'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: pnpm --filter @repo/orchestrator test -- runner/__tests__
+        result: PASS — 312 tests passed, 0 failures
+
+  - ac_id: AC-10
+    ac_text: 'Command: pnpm check-types --filter @repo/orchestrator — zero TypeScript errors'
+    status: PARTIAL
+    evidence_items:
+      - type: command
+        command: pnpm --filter @repo/orchestrator run check-types
+        result: >-
+          Pre-existing errors in elaboration.ts and affinity-reader.ts (unrelated to WINT-9107
+          scope). Runner module files touched by this story have zero type errors.
+          Errors: src/graphs/elaboration.ts(1037,78) TS2554, src/nodes/elaboration/affinity-reader.ts(226,38)
+          TS2307, src/nodes/elaboration/index.ts(102,3/107,8) TS2305 — all pre-existing, not in runner/.
+
+  - ac_id: AC-11
+    ac_text: 'Command: pnpm lint — zero ESLint errors on new/changed files'
+    status: PASS
+    evidence_items:
+      - type: command
+        command: pnpm eslint packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts packages/backend/orchestrator/src/runner/__tests__/integration.test.ts --no-warn-ignored
+        result: PASS — 0 errors, 0 warnings on changed files
+
+touched_files:
+  - path: packages/backend/orchestrator/docs/architecture/wint-9107-gap-analysis.md
+    action: created
+    lines: 155
+    description: Gap analysis comparing WINT-9105 ACs against runner implementation (AC-1)
+  - path: packages/backend/orchestrator/src/runner/__tests__/node-factory.test.ts
+    action: modified
+    lines: 626
+    description: Added per-node CB isolation, RETRY_PRESETS distinct-values, classifyError sole-decision-point tests (AC-2, AC-3, AC-4)
+  - path: packages/backend/orchestrator/src/runner/__tests__/integration.test.ts
+    action: modified
+    lines: 420
+    description: Added HALF_OPEN recovery, probe failure re-open, retry exhaustion blocked, CIRCUIT_OPEN code tests (AC-5, AC-6, AC-9)
+  - path: packages/backend/orchestrator/docs/node-author-guide.md
+    action: created
+    lines: 175
+    description: Node author guide documenting import path via runner/index.ts (AC-7)
+
+commands_run:
+  - command: pnpm --filter @repo/orchestrator test -- --reporter=verbose node-factory
+    result: SUCCESS
+    output: 33 passed
+    timestamp: '2026-03-03T08:55:28Z'
+  - command: pnpm --filter @repo/orchestrator test -- --reporter=verbose runner/__tests__/integration
+    result: SUCCESS
+    output: 25 passed
+    timestamp: '2026-03-03T08:56:00Z'
+  - command: pnpm --filter @repo/orchestrator test -- runner/__tests__
+    result: SUCCESS
+    output: 312 passed
+    timestamp: '2026-03-03T08:57:10Z'
+  - command: pnpm --filter @repo/orchestrator test -- runner/__tests__ --coverage
+    result: SUCCESS
+    output: src/runner 94.74% stmts, 94.09% branch, 94.69% functions
+    timestamp: '2026-03-03T08:57:37Z'
+  - command: pnpm --filter @repo/orchestrator run check-types
+    result: PARTIAL
+    output: 4 pre-existing errors in elaboration/affinity-reader unrelated to runner/ scope
+    timestamp: '2026-03-03T08:55:00Z'
+  - command: pnpm eslint .../node-factory.test.ts .../integration.test.ts --no-warn-ignored
+    result: SUCCESS
+    output: 0 errors, 0 warnings
+    timestamp: '2026-03-03T09:00:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit:
+    pass: 33
+    fail: 0
+  integration:
+    pass: 25
+    fail: 0
+  runner_total:
+    pass: 312
+    fail: 0
+
+e2e_tests:
+  status: exempt
+  exempt_reason: ADR-006 E2E skip condition — frontend_impacted: false in SCOPE.yaml. Backend-only story.
+  config: playwright.legacy.config.ts
+  project: null
+  mode: null
+  tests_written: false
+
+coverage:
+  runner_statements: 94.74
+  runner_branches: 94.09
+  runner_functions: 94.69
+  runner_lines: 94.74
+  requirement: 80
+  meets_requirement: true
+
+notable_decisions:
+  - Story scope confirmed as verification + documentation only — no new production code primitives
+  - Pre-existing TS errors in elaboration.ts/affinity-reader.ts are unrelated to WINT-9107 runner scope
+  - Circuit breaker isolation confirmed: each createNode() call produces independent NodeCircuitBreaker instance
+  - HALF_OPEN tests use vi.useFakeTimers() per ADR-005 and AGENT-CONTEXT.yaml lessons
+
+known_deviations:
+  - AC-10 (check-types) is PARTIAL due to 4 pre-existing TS errors in elaboration nodes, not in runner/ scope
+  - RETRY_PRESETS distinct-values test imports RETRY_PRESETS directly — factory inspection approach avoids need for internal config inspection
+
+token_summary:
+  execute:
+    in: 45000
+    out: 12000

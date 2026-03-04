@@ -1,0 +1,22 @@
+# Deferred KB writes for WINT-2020
+# Generated: 2026-03-02
+# Reason: KB MCP tools not directly callable from bash synthesis step
+
+pending_writes:
+  - table: stories
+    operation: upsert
+    data:
+      story_id: "WINT-2020"
+      feature: "wint"
+      title: "Create Context Pack Sidecar"
+      story_dir: "plans/future/platform/wint/created/WINT-2020"
+      story_file: "plans/future/platform/wint/created/WINT-2020/WINT-2020.md"
+      story_type: "feature"
+      points: 5
+      priority: "high"
+      state: "backlog"
+      touches_backend: true
+      touches_frontend: false
+      touches_database: true
+      touches_infra: false
+    created_at: "2026-03-02"

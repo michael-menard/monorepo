@@ -1,0 +1,210 @@
+schema: 2
+story_id: "WINT-2040"
+timestamp: "2026-03-03T00:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: >-
+      Add agent_missions enum value via database migration — extend contextPackTypeEnum in wint.ts
+      and create SQL migration file with ALTER TYPE statement
+    files:
+      - "packages/backend/database-schema/src/schema/wint.ts"
+      - "packages/backend/database-schema/src/migrations/app/0033_wint_2040_agent_missions_enum.sql"
+    files_to_read:
+      - "packages/backend/database-schema/src/schema/wint.ts"
+      - "packages/backend/database-schema/src/migrations/app/0032_wint_0040_hitl_decisions_story_outcomes.sql"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/database-schema"
+    acs_covered: ["AC-3", "AC-11", "AC-12"]
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: >-
+      Create agent body content mission extractor — new parsers/mission-extractor.ts with
+      section-based regex extraction, MissionSummarySchema Zod type, and extractMissionSummary function
+    files:
+      - "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+    files_to_read:
+      - "packages/backend/database-schema/src/seed/parsers/metadata-extractor.ts"
+      - "packages/backend/database-schema/src/seed/parsers/frontmatter-parser.ts"
+    dependencies: []
+    slice: packages
+    verification: "pnpm check-types --filter @repo/database-schema"
+    acs_covered: ["AC-2", "AC-7"]
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: >-
+      Create agent-mission-cache-populator script — glob discovery with _archive exclusion,
+      per-agent parse+extract+upsert pipeline, direct Drizzle upsert to wint.context_packs,
+      PopulateResult return type
+    files:
+      - "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+    files_to_read:
+      - "packages/backend/database-schema/src/seed/agent-seeder.ts"
+      - "packages/backend/mcp-tools/src/context-cache/context-cache-put.ts"
+      - "packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+      - "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+    dependencies: [1, 2]
+    slice: packages
+    verification: >-
+      pnpm check-types --filter @repo/database-schema &&
+      pnpm tsx packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts
+    acs_covered: ["AC-1", "AC-3", "AC-4", "AC-5", "AC-6", "AC-8", "AC-9"]
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: >-
+      Write unit and integration tests covering frontmatter extraction, body mission parsing,
+      mock-DB upsert behavior, error handling, archive exclusion, idempotency, and live
+      integration against .claude/agents/
+    files:
+      - "packages/backend/database-schema/src/seed/__tests__/agent-mission-cache-populator.test.ts"
+    files_to_read:
+      - "packages/backend/database-schema/src/seed/__tests__/agent-seeder.test.ts"
+      - "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+      - "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+    dependencies: [3]
+    slice: packages
+    verification: "pnpm test --filter @repo/database-schema"
+    acs_covered: ["AC-10"]
+
+files_to_change:
+  - path: "packages/backend/database-schema/src/schema/wint.ts"
+    action: modify
+    reason: "Add 'agent_missions' to contextPackTypeEnum values array and widen content column type to accommodate agent mission JSONB shape (AC-11, AC-12)"
+
+  - path: "packages/backend/database-schema/src/migrations/app/0033_wint_2040_agent_missions_enum.sql"
+    action: create
+    reason: "ALTER TYPE migration to add agent_missions value to public.context_pack_type PostgreSQL enum (AC-11)"
+
+  - path: "packages/backend/database-schema/src/seed/parsers/mission-extractor.ts"
+    action: create
+    reason: "New parser for extracting mission/scope/signals from .agent.md body Markdown content with MissionSummarySchema (AC-2, AC-7)"
+
+  - path: "packages/backend/database-schema/src/seed/agent-mission-cache-populator.ts"
+    action: create
+    reason: "Population script: glob discovery, parse, extract, upsert to wint.context_packs, return PopulateResult (AC-1 through AC-9)"
+
+  - path: "packages/backend/database-schema/src/seed/__tests__/agent-mission-cache-populator.test.ts"
+    action: create
+    reason: "Unit + integration tests covering all ACs listed in AC-10"
+
+commands_to_run:
+  - command: "pnpm check-types --filter @repo/database-schema"
+    when: "after ST-1 (enum + schema change)"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/database-schema"
+    when: "after ST-2 (mission extractor)"
+    required: true
+
+  - command: "pnpm check-types --filter @repo/database-schema"
+    when: "after ST-3 (populator script)"
+    required: true
+
+  - command: "pnpm test --filter @repo/database-schema"
+    when: "after ST-4 (tests written)"
+    required: true
+
+  - command: "pnpm build --filter @repo/database-schema"
+    when: "after all code changes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "Script uses glob('**/*.agent.md', { ignore: ['**/_archive/**'] }) — verified by test ED-1 (archive exclusion) and HP-1 (discovery count >= 142)"
+    evidence_type: test
+
+  - ac_id: "AC-2"
+    planned_evidence: "extractAgentMetadata (from WINT-0080) + extractMissionSummary (new) — HP-2 and HP-3 tests verify all fields extracted"
+    evidence_type: test
+
+  - ac_id: "AC-3"
+    planned_evidence: "DB upsert called with packType='agent_missions', deterministic packKey, content JSONB — HP-4 test verifies mock DB call args"
+    evidence_type: test
+
+  - ac_id: "AC-4"
+    planned_evidence: "onConflictDoUpdate on (packType, packKey) composite unique index — ED-2 idempotency test verifies no duplicates on second run"
+    evidence_type: test
+
+  - ac_id: "AC-5"
+    planned_evidence: "Per-agent try/catch: parse failure increments skipped, logs via @repo/logger — EC-1 and EC-3 tests verify behavior"
+    evidence_type: test
+
+  - ac_id: "AC-6"
+    planned_evidence: "Glob ignore pattern '**/_archive/**' — ED-1 test with 3 root + 2 _archive/ files verifies only 3 discovered"
+    evidence_type: test
+
+  - ac_id: "AC-7"
+    planned_evidence: "All types use Zod schemas: MissionSummarySchema, PopulateResultSchema, AgentMissionContentSchema — type check passes"
+    evidence_type: command
+
+  - ac_id: "AC-8"
+    planned_evidence: "Script returns { totalFound, cached, skipped, warnings } — HP-6 test verifies result shape with mixed inputs"
+    evidence_type: test
+
+  - ac_id: "AC-9"
+    planned_evidence: "HP-5 integration test against live .claude/agents/ directory on port 5433 — result.cached/result.totalFound >= 0.90"
+    evidence_type: test
+
+  - ac_id: "AC-10"
+    planned_evidence: "Test file agent-mission-cache-populator.test.ts covers HP-1 to HP-6, EC-1 to EC-3, ED-1, ED-2, ED-4"
+    evidence_type: test
+
+  - ac_id: "AC-11"
+    planned_evidence: "Migration file 0033_wint_2040_agent_missions_enum.sql with ALTER TYPE statement; wint.ts enum updated"
+    evidence_type: file
+
+  - ac_id: "AC-12"
+    planned_evidence: "wint.ts content column type widened via z.record(z.unknown()) or type assertion; pnpm check-types passes"
+    evidence_type: command
+
+architectural_decisions:
+  - id: ARCH-001
+    question: "Should the populator use a standalone script structure (not a tx-based seeder) given it needs to connect its own DB and manage its own lifecycle?"
+    decision: >-
+      Standalone script pattern: export async function populateAgentMissionCache(db, agentsDir): PopulateResult.
+      Accept db instance as parameter to allow testing with mock, while CLI entrypoint creates real db connection.
+      Same pattern as the direct contextCachePut tool, not the tx-based agent-seeder.
+    rationale: >-
+      The populator is a one-shot script, not a transactional seed phase. DB errors per-agent should be caught
+      and skipped (not rolled back). Accepting db as a parameter enables unit testing with mock DB (matching
+      the test patterns in agent-seeder.test.ts). The story explicitly says 'direct Drizzle upsert' not
+      'within a transaction'.
+    decided_by: auto
+
+  - id: ARCH-002
+    question: "How should the content column type widening be done for AC-12?"
+    decision: >-
+      Add an AgentMissionContentSchema Zod object for type documentation and test validation. Use
+      z.record(z.unknown()) for DB insert values (already accepted by insertContextPackSchema.content).
+      No TypeScript interface — Zod schema only.
+    rationale: >-
+      The contextPacks.content column is already typed as jsonb (z.record(z.unknown())) at the DB level.
+      The TypeScript error risk (AC-12) is in the insert values object. The existing insertContextPackSchema.content
+      accepts z.record(z.unknown()) which handles this without further schema changes. AgentMissionContentSchema
+      is additive documentation only.
+    decided_by: auto
+
+  - id: ARCH-003
+    question: "What migration number to use given last migration is 0032?"
+    decision: "Use 0033_wint_2040_agent_missions_enum.sql as the migration filename."
+    rationale: >-
+      Latest migration is 0032_wint_0040_hitl_decisions_story_outcomes.sql. Next sequential number is 0033.
+      Pattern: {number}_{story_slug}_{description}.sql.
+    decided_by: auto
+
+complexity: moderate
+
+notes:
+  - "context_pack_type enum is in public schema (not wint schema) — migration must use ALTER TYPE public.context_pack_type ADD VALUE 'agent_missions' (confirmed from 0015_messy_sugar_man.sql)"
+  - "SeedResult from phase-seeder has shape { success, rowCount, warnings } — story requires { totalFound, cached, skipped, warnings } — define new PopulateResultSchema in the populator file rather than reusing SeedResult"
+  - "parseFrontmatter already returns { data, content } where content is the body string after gray-matter strips frontmatter — call parseFrontmatter per-file, pass content to extractMissionSummary, pass data to extractAgentMetadata inline"
+  - "glob ignore pattern for _archive/: { ignore: ['**/_archive/**'] } in glob options"
+  - "Integration test HP-5 requires live PostgreSQL on port 5433 and agent_missions migration applied — tag with vitest environment skip or .runIf(process.env.KB_INTEGRATION)"
+  - "mcp-tools ContextCachePutInputSchema packTypeValues does NOT include agent_missions — do NOT use that schema for validation in the populator; use a local literal type or the Drizzle schema directly"
+  - "WINT-0100 contextCachePut is in UAT — do NOT call it from the populator; use direct Drizzle upsert matching agent-seeder.ts pattern"

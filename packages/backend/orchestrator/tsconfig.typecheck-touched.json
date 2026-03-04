@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/graphs/implementation.ts",
+    "src/nodes/load-story.ts",
+    "src/nodes/create-worktree.ts",
+    "src/nodes/evidence-production.ts",
+    "src/pipeline/i-model-dispatch.ts",
+    "src/graphs/change-spec-schema.ts",
+    "src/graphs/__tests__/implementation.test.ts",
+    "src/nodes/__tests__/load-story.test.ts",
+    "src/nodes/__tests__/create-worktree.test.ts",
+    "src/nodes/__tests__/evidence-production.test.ts"
+  ]
+}

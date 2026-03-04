@@ -1,0 +1,138 @@
+strategy: unit+integration+manual
+scope:
+  endpoints: []
+  ui_touched: false
+  data_touched: true
+happy_path_tests:
+  - id: HP-1
+    title: "packTypeValues array includes all pack types from WINT-2030/2040/2050/2060"
+    setup: "Read packages/backend/mcp-tools/src/context-cache/__types__/index.ts"
+    action: "Verify packTypeValues const array contains: codebase, story, feature, epic, architecture, lessons_learned, test_patterns, agent_missions, project-conventions, blockers-known, lib-react19, lib-tailwind, lib-zod, lib-vitest"
+    expected: "All 14 pack types present in array; Zod schema compiles without errors"
+    evidence: "pnpm check-types --filter @repo/mcp-tools passes; grep shows all values in array"
+  - id: HP-2
+    title: "context_cache_get() returns cached pack content when pack is populated"
+    setup: "Seed a test pack into wint.context_packs via context_cache_put({ packType: 'codebase', packKey: 'main', content: { summary: 'test' } })"
+    action: "Call context_cache_get({ packType: 'codebase', packKey: 'main' })"
+    expected: "Returns non-null pack object with content field populated"
+    evidence: "Integration test log shows cache hit; hitCount incremented"
+  - id: HP-3
+    title: "Each of the 5 agent .agent.md files contains a Context Cache Integration section"
+    setup: "After implementation, read each target agent file"
+    action: "Grep for '## Context Cache Integration' in each of the 5 agent files"
+    expected: "All 5 files contain the section with packType table, context_cache_get() pattern, and fallback behavior"
+    evidence: "Manual checklist review; grep confirms section presence"
+  - id: HP-4
+    title: "pm-bootstrap-generation-leader queries codebase/project-conventions pack at startup"
+    setup: "Read .claude/agents/pm-bootstrap-generation-leader.agent.md"
+    action: "Verify Context Cache Integration section documents context_cache_get({ packType: 'codebase', packKey: 'main' }) call at story generation start"
+    expected: "Section present, trigger documented, fallback specified"
+    evidence: "Manual review against checklist"
+  - id: HP-5
+    title: "dev-implement-implementation-leader queries multiple packs (codebase, architecture, lib-*)"
+    setup: "Read .claude/agents/dev-implement-implementation-leader.agent.md"
+    action: "Verify Context Cache Integration section documents all relevant pack types for implementation context"
+    expected: "Section documents codebase, architecture, and at least one lib-* pack query"
+    evidence: "Manual review of section"
+  - id: HP-6
+    title: "elab-analyst queries lessons_learned and blockers-known packs"
+    setup: "Read .claude/agents/elab-analyst.agent.md"
+    action: "Verify Context Cache Integration section documents lessons_learned and blockers-known pack queries"
+    expected: "Section present with these pack types documented"
+    evidence: "Manual review"
+  - id: HP-7
+    title: "Token baseline estimates are documented for all 5 agents"
+    setup: "Review pre-implementation documentation artifact (baseline estimates doc)"
+    action: "Verify each agent has a rough estimate of input tokens per invocation before cache integration"
+    expected: "5 entries with agent name and token estimate (rough acceptable)"
+    evidence: "Baseline document presence in story _pm/ or story body"
+error_cases:
+  - id: EC-1
+    title: "context_cache_get() returns null on cache miss — agent continues without blocking"
+    setup: "Ensure no pack exists for packType: 'codebase', packKey: 'main' (empty cache)"
+    action: "Invoke agent behavior that calls context_cache_get() with that key"
+    expected: "Agent logs warning via @repo/logger, continues execution without error"
+    evidence: "Logger output shows warning; agent does not throw or halt"
+  - id: EC-2
+    title: "context_cache_get() called with unregistered packType — Zod validation rejects"
+    setup: "Attempt to call context_cache_get with a packType NOT in packTypeValues"
+    expected: "Zod parse throws ZodError with message 'packType must be a valid context pack type'"
+    action: "Pass packType: 'invalid-type' to ContextCacheGetInputSchema.parse()"
+    evidence: "Unit test verifying Zod rejection"
+  - id: EC-3
+    title: "MCP tool unavailable (DB connection failure) — agent degrades gracefully"
+    setup: "Simulate DB unavailability or tool error"
+    action: "context_cache_get() returns null or throws"
+    expected: "Agent catches error, logs warning via @repo/logger, continues without cache context"
+    evidence: "Fallback section in each agent specifies catch behavior; unit test for error path"
+  - id: EC-4
+    title: "TypeScript node update missing for paired agent — caught in AC-5 audit"
+    setup: "Run grep audit for orchestrator LangGraph node files matching 5 target agents"
+    action: "If paired nodes found, verify both .agent.md and .ts node are updated"
+    expected: "Both files updated; pnpm check-types passes on orchestrator"
+    evidence: "pnpm check-types --filter @repo/orchestrator; diff of node files"
+edge_cases:
+  - id: ED-1
+    title: "packTypeValues update does not break existing pack type usage"
+    setup: "After adding new pack types to array, run full type check"
+    action: "pnpm check-types:all"
+    expected: "No new type errors introduced; existing Zod enum usage still valid"
+    evidence: "CI type check pass"
+  - id: ED-2
+    title: "agent_missions pack queried when WINT-2040 still in failed-code-review"
+    setup: "WINT-2040 not yet merged; agent_missions pack not populated in DB"
+    action: "Agent queries context_cache_get({ packType: 'agent_missions', packKey: 'main' })"
+    expected: "Returns null (cache miss); agent logs warning and continues"
+    evidence: "Fallback behavior documented in agent section; integration test covers null path"
+  - id: ED-3
+    title: "Token budget guard prevents unbounded injection"
+    setup: "A cache pack with very large content field (>10KB)"
+    action: "Agent retrieves pack and applies max-size guard before injecting into prompt"
+    expected: "Only first N characters/fields injected; size limit documented in agent section"
+    evidence: "Each agent's section specifies injection subset (fields or character limit)"
+tooling_evidence:
+  backend:
+    http_requests: []
+    assertions:
+      - "packTypeValues array contains all 14 pack types (grep check)"
+      - "context_cache_get() returns SelectContextPack | null (TypeScript type check)"
+      - "pnpm check-types --filter @repo/mcp-tools passes after packTypeValues update"
+      - "pnpm check-types --filter @repo/orchestrator passes after node updates (if applicable)"
+  frontend: null
+manual_cases:
+  - id: MC-1
+    title: "Agent .agent.md checklist review"
+    steps:
+      - "Read .claude/agents/pm-bootstrap-setup-leader.agent.md"
+      - "Verify '## Context Cache Integration' section present"
+      - "Verify trigger table with packType + packKey columns present"
+      - "Verify context_cache_get() call pattern documented"
+      - "Verify graceful fallback behavior documented"
+      - "Repeat for all 5 target agents"
+    expected: "5/5 agents have complete integration section"
+  - id: MC-2
+    title: "LangGraph TypeScript node audit"
+    steps:
+      - "Run: grep -r 'pm-bootstrap\\|dev-implement\\|elab-story\\|qa-verify\\|dev-fix' packages/backend/orchestrator/src/"
+      - "List all .ts files referencing any of the 5 target workflows"
+      - "For each paired node, verify it is updated alongside the .agent.md file"
+    expected: "All paired nodes identified and updated, or confirmed none exist"
+  - id: MC-3
+    title: "End-to-end cache retrieval smoke test"
+    steps:
+      - "Seed a pack: context_cache_put({ packType: 'codebase', packKey: 'main', content: { summary: 'project summary', conventions: [] } })"
+      - "Invoke context_cache_get({ packType: 'codebase', packKey: 'main' })"
+      - "Confirm non-null response with content field"
+    expected: "Cache returns seeded content; hitCount incremented in DB"
+fixture_definitions:
+  - name: seeded-codebase-pack
+    type: database_row
+    description: "A test row in wint.context_packs with packType=codebase, packKey=main, content={summary:'test'} for integration smoke tests"
+  - name: packTypeValues-full-array
+    type: constant
+    description: "The complete expected set of pack type strings after WINT-2110: codebase, story, feature, epic, architecture, lessons_learned, test_patterns, agent_missions, project-conventions, blockers-known, lib-react19, lib-tailwind, lib-zod, lib-vitest"
+risks:
+  - "Agent .agent.md files are markdown, not executable code — no automated linting of section structure; manual checklist is the only verification path"
+  - "WINT-2040 still in failed-code-review — agent_missions pack type not yet available in DB; integration test for that pack type must handle null gracefully"
+  - "LangGraph node audit (AC-5) scope is unknown until implementer runs grep — may expand scope if many nodes found"
+  - "Token baseline estimates (AC-6) are rough estimates only — WINT-2120 must treat them as approximations, not precise measurements"

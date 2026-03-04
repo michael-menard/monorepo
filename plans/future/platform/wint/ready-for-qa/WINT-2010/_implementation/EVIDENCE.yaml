@@ -1,0 +1,153 @@
+story_id: WINT-2010
+phase: implementation
+iteration: 1
+generated_at: "2026-03-03"
+
+summary:
+  status: COMPLETE
+  tests_passed: 16
+  tests_failed: 0
+  build_status: PASS
+  type_check_status: PASS
+
+acceptance_criteria:
+  - id: AC-1
+    description: "MCP tool rolePackGet(input) returns content string or null"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/role-pack-get.ts
+        detail: "rolePackGet function exported — Zod parse at entry, returns content string or null"
+      - file: packages/backend/sidecars/role-pack/src/__tests__/role-pack-get.test.ts
+        detail: "5 tests: happy path, ZodError on invalid, null on miss, all 4 roles, version param"
+
+  - id: AC-2
+    description: "HTTP endpoint GET /role-pack?role=&v= returns 200/400/404 JSON"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/http-handler.ts
+        detail: "GET /role-pack handler with 200/400/404 responses, Content-Type: application/json"
+      - file: packages/backend/sidecars/role-pack/src/server.ts
+        detail: "Node.js built-in http module server on PORT (default 3090)"
+      - file: packages/backend/sidecars/role-pack/src/__tests__/http-endpoint.test.ts
+        detail: "5 tests: 200 happy path, 400 missing role, 400 invalid role (pm), 404 not found, 404 unknown path"
+
+  - id: AC-3
+    description: "File reader reads .claude/prompts/role-packs/{role}.md and parses frontmatter"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/role-pack-reader.ts
+        detail: "readRolePack reads file, parses frontmatter with FRONTMATTER_RE regex, extracts version"
+
+  - id: AC-4
+    description: "In-memory Map cache per role"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/role-pack-reader.ts
+        detail: "const cache = new Map<Role, CachedPack>() — returns cached result on second call"
+      - file: packages/backend/sidecars/role-pack/src/__tests__/role-pack-reader.test.ts
+        detail: "cache hit test: mockReadFile called only once despite two calls to readRolePack"
+
+  - id: AC-5
+    description: "Returns null with logger.warn on file miss or read error"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/role-pack-reader.ts
+        detail: "ENOENT and generic errors both log logger.warn and return null"
+      - file: packages/backend/sidecars/role-pack/src/__tests__/role-pack-reader.test.ts
+        detail: "Tests for ENOENT (null), generic error (null)"
+
+  - id: AC-6
+    description: "ZodError thrown on invalid role input to rolePackGet"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/role-pack-get.ts
+        detail: "RolePackGetInputSchema.parse(input) throws ZodError on invalid"
+      - file: packages/backend/sidecars/role-pack/src/__tests__/role-pack-get.test.ts
+        detail: "Test: rolePackGet({ role: 'pm' }) throws ZodError"
+
+  - id: AC-7
+    description: "HTTP 400 on invalid role, 404 on miss, 200 on success"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/__tests__/http-endpoint.test.ts
+        detail: "Tests verify exact 200/400/404 status codes and JSON response shapes"
+
+  - id: AC-8
+    description: "Package scaffolded at packages/backend/sidecars/role-pack/ as @repo/sidecar-role-pack"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/package.json
+        detail: "name: @repo/sidecar-role-pack, type: module, exports configured"
+      - file: packages/backend/sidecars/role-pack/tsconfig.json
+        detail: "Extends ../../../../tsconfig.json, composite: true"
+      - file: packages/backend/sidecars/role-pack/vitest.config.ts
+        detail: "Coverage thresholds at 80% per all dimensions"
+      - file: pnpm-workspace.yaml
+        detail: "Added packages/backend/sidecars/* glob"
+
+  - id: AC-9
+    description: "4 fixture stubs in src/__fixtures__/ with version: 1 frontmatter"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/__fixtures__/dev.md
+      - file: packages/backend/sidecars/role-pack/src/__fixtures__/po.md
+      - file: packages/backend/sidecars/role-pack/src/__fixtures__/qa.md
+      - file: packages/backend/sidecars/role-pack/src/__fixtures__/da.md
+
+  - id: AC-10
+    description: "RoleSchema = z.enum(['dev', 'po', 'qa', 'da']) — NOT pm"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/__types__/index.ts
+        detail: "RoleSchema = z.enum(['dev', 'po', 'qa', 'da']) — pm excluded with comment"
+
+  - id: AC-11
+    description: "README.md documents service, HTTP API, MCP tool usage, and environment vars"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/README.md
+        detail: "Full README with HTTP API docs, MCP usage examples, env vars, dev commands"
+
+  - id: AC-12
+    description: "src/index.ts exports rolePackGet and all schemas"
+    status: MET
+    evidence:
+      - file: packages/backend/sidecars/role-pack/src/index.ts
+        detail: "Exports rolePackGet, RoleSchema, RolePackGetInputSchema, RolePackGetOutputSchema, RolePackHttpResponseSchema"
+
+verification:
+  pnpm_install: PASS
+  type_check: PASS
+  build: PASS
+  unit_tests:
+    total: 16
+    passed: 16
+    failed: 0
+    files:
+      - src/__tests__/role-pack-reader.test.ts: 6 passed
+      - src/__tests__/role-pack-get.test.ts: 5 passed
+      - src/__tests__/http-endpoint.test.ts: 5 passed
+  e2e: EXEMPT
+  e2e_exempt_reason: "Backend-only package — no UI surfaces. story_type: infra"
+
+files_created:
+  - packages/backend/sidecars/role-pack/package.json
+  - packages/backend/sidecars/role-pack/tsconfig.json
+  - packages/backend/sidecars/role-pack/vitest.config.ts
+  - packages/backend/sidecars/role-pack/README.md
+  - packages/backend/sidecars/role-pack/src/__types__/index.ts
+  - packages/backend/sidecars/role-pack/src/role-pack-reader.ts
+  - packages/backend/sidecars/role-pack/src/role-pack-get.ts
+  - packages/backend/sidecars/role-pack/src/http-handler.ts
+  - packages/backend/sidecars/role-pack/src/server.ts
+  - packages/backend/sidecars/role-pack/src/index.ts
+  - packages/backend/sidecars/role-pack/src/__fixtures__/dev.md
+  - packages/backend/sidecars/role-pack/src/__fixtures__/po.md
+  - packages/backend/sidecars/role-pack/src/__fixtures__/qa.md
+  - packages/backend/sidecars/role-pack/src/__fixtures__/da.md
+  - packages/backend/sidecars/role-pack/src/__tests__/role-pack-reader.test.ts
+  - packages/backend/sidecars/role-pack/src/__tests__/role-pack-get.test.ts
+  - packages/backend/sidecars/role-pack/src/__tests__/http-endpoint.test.ts
+
+files_modified:
+  - pnpm-workspace.yaml

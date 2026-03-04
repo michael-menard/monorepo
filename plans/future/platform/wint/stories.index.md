@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-02-25T16:46:00Z"
+updated_at: "2026-03-04T00:30:00Z"
 ---
 
 # WINT Stories Index
@@ -15,20 +15,20 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 
 | Status | Count |
 |--------|-------|
-| completed | 2 |
-| uat | 21 |
-| in-qa | 0 |
-| ready-for-qa | 0 |
-| needs-code-review | 0 |
+| completed | 17 |
+| uat | 22 |
+| in-qa | 2 |
+| ready-for-qa | 2 |
+| needs-code-review | 5 |
 | ready-for-code-review | 0 |
-| failed-code-review | 0 |
+| failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 0 |
 | created | 1 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
-| pending | 115 |
+| ready-to-work | 6 |
+| pending | 90 |
 
 ---
 
@@ -38,10 +38,9 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
-| WINT-0210 | Populate Role Pack Templates | — |
-| WINT-0220 | Define Model-per-Task Strategy | — |
 | WINT-4060 | Create scope-defender Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
+| WINT-0230 | Create Unified Model Interface | — |
 
 ---
 
@@ -98,7 +97,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0040: Create Telemetry Tables
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-0010
 **Phase:** 0
 **Feature:** Create agent_invocations, hitl_decisions (with embeddings), and story_outcomes tables in telemetry schema
@@ -109,6 +108,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 **Goal:** Enable full observability of agent invocations and human decisions
 
 **Risk Notes:** Volume could be high, needs indexing strategy for performance
+
+**Elaboration Complete:** 2026-03-02 — PASS (autonomous review). 0 MVP-blocking gaps, 5 non-blocking opportunities logged. Ready for implementation.
 
 ---
 
@@ -339,18 +340,15 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0160: Validate and Harden doc-sync Agent for Production Readiness
 
-**Status:** uat
+**Status:** completed
+**Completed:** 2026-03-03
 **Story File:** `wint/UAT/WINT-0160/WINT-0160.md`
 **Code Review:** PASS (2026-02-17) — 0 errors, 1 warning (doc duplication, non-blocking)
 **Elaboration Complete:** 2026-02-17
 **Elaboration Verdict:** CONDITIONAL PASS
 **Implementation Complete:** 2026-02-17
 **Code Review Verdict:** PASS
-**QA Setup Complete:** 2026-02-17 - Moved to UAT, story status updated to in-qa
-**QA Verification Complete:** 2026-02-17 - FAIL verdict: 3 ACs not met (AC-4, AC-6, AC-7)
-**Fix Iteration 2 Complete:** 2026-02-17 - All 3 ACs fixed and verified on disk (AC-4, AC-6, AC-7). Documentation phase complete. Status updated to ready-for-code-review
-**QA Setup Iteration 2 Complete:** 2026-02-17 - Story moved to UAT, status updated to in-qa, ready for verification phase
-**QA Verification Complete (Iteration 2):** 2026-02-17 - PASS verdict: All 8 ACs verified on disk, no failures. Story moves to UAT.
+**QA Verification Complete:** 2026-03-03 - PASS verdict: All 8 ACs verified, story completed.
 **Depends On:** WINT-0150
 **Phase:** 0
 **Points:** 2
@@ -368,7 +366,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0170: Add Doc-Sync Gate to Phase/Story Completion
 
-**Status:** ready-to-work
+**Status:** uat
 **Elaboration Complete:** 2026-02-17
 **Verdict:** PASS
 **Depends On:** WINT-0160
@@ -389,7 +387,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0180: Define Examples + Negative Examples Framework
 
-**Status:** uat
+**Status:** done
 **Verdict:** PASS
 **Elaboration Complete:** 2026-02-14
 **QA Verification Complete:** 2026-02-21
@@ -410,8 +408,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0190: Create Patch Queue Pattern and Schema
 
-**Status:** ready-for-qa
-**Depends On:** WINT-0180
+**Status:** completed
+**Depends On:** none
 **Phase:** 0
 **Feature:** Define Patch Queue pattern for small diffs with verification. Create patch-plan.schema.json with patch ordering (types/schema→API→UI→tests→cleanup), max_files, max_diff_lines constraints. Include Repair Loop pattern (fix only referenced errors, minimal changes, rerun until green).
 **Infrastructure:**
@@ -426,8 +424,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0200: Create User Flows Schema with State/Capability Enums
 
-**Status:** pending
-**Depends On:** WINT-0180
+**Status:** created
+**Depends On:** none
 **Phase:** 0
 **Feature:** Create user-flows.schema.json with required states enum (loading, empty, validation_error, server_error, permission_denied) and capabilities enum (create, view, edit, delete, upload, replace, download). Enforce max 5 flows, max 7 steps per flow.
 **Infrastructure:**
@@ -441,12 +439,12 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0210: Populate Role Pack Templates
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-0210/WINT-0210.md`
+**Status:** uat
+**Story File:** `wint/UAT/WINT-0210/WINT-0210.md`
 **Story Generated:** 2026-02-17
 **Elaboration Complete:** 2026-02-17
 **Verdict:** CONDITIONAL PASS
-**Depends On:** WINT-0180, WINT-0190, WINT-0200
+**Depends On:** none
 **Phase:** 0
 **Points:** 5
 **Priority:** P2
@@ -465,7 +463,10 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0220: Define Model-per-Task Strategy
 
-**Status:** pending
+**Status:** uat
+**Elaboration Complete:** 2026-03-02
+**QA Complete:** 2026-03-03
+**Verdict:** PASS
 **Depends On:** none
 **Phase:** 0
 **Feature:** Document which model to use for each workflow task. Create model-strategy.yaml with task→model mappings. Initial recommendations:
@@ -493,8 +494,8 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0230: Create Unified Model Interface
 
-**Status:** elaboration
-**Depends On:** WINT-0220
+**Status:** ready-to-work
+**Depends On:** ~~WINT-0220~~ (completed)
 **Phase:** 0
 **Feature:** Create abstraction layer that routes to Ollama (local), Hugging Face (local), or cloud APIs (Kimi, DeepSeek, Anthropic) based on model-strategy.yaml. Use LiteLLM or custom adapter. Interface: `const response = await llm.complete({ task: "code-generation", prompt, context })`. Automatic model selection based on task type.
 **Infrastructure:**
@@ -511,7 +512,7 @@ Bootstrap phase - Manual setup of database schemas, MCP tools, and doc-sync infr
 
 ### WINT-0240: Configure Ollama Model Fleet
 
-**Status:** pending
+**Status:** completed
 **Depends On:** WINT-0220
 **Phase:** 0
 **Feature:** Document and script Ollama model setup. Pull recommended models:
@@ -691,7 +692,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1040: Update story-status Command to Use DB
 
-**Status:** uat
+**Status:** completed
 **Story File:** `wint/UAT/WINT-1040/WINT-1040.md`
 **Story Generated:** 2026-02-17
 **QA Verified:** 2026-02-20
@@ -708,7 +709,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1050: Update story-update Command to Use DB
 
-**Status:** uat
+**Status:** completed
 **Depends On:** WINT-1030, WINT-1011
 **Phase:** 1
 **Story File:** `wint/UAT/WINT-1050/WINT-1050.md`
@@ -831,7 +832,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1110: Migrate Existing LangGraph Data
 
-**Status:** completed
+**Status:** uat
 **Depends On:** WINT-1090
 **Phase:** 1
 **Feature:** Create migration script to move any existing data from LangGraph tables to unified schema format
@@ -850,7 +851,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1120: Validate Foundation Phase
 
-**Status:** pending
+**Status:** completed
 **Depends On:** WINT-1040, WINT-1060, WINT-1160
 **Phase:** 1
 **Feature:** Verify all story CRUD operations work via DB, shim fallback functions correctly, 3 updated commands use DB, both LangGraph and Claude Code agents operate on unified schema, AND worktree integration works for parallel development
@@ -882,7 +883,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1140: Integrate Worktree Creation into dev-implement-story
 
-**Status:** uat
+**Status:** completed
 **Elaboration Complete:** 2026-02-16
 **Verdict:** CONDITIONAL PASS
 **Development Started:** 2026-02-17T17:00:00Z - Setup phase complete, ready for implementation
@@ -909,7 +910,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1150: Integrate Worktree Cleanup into Story Completion
 
-**Status:** uat
+**Status:** completed
 **Story File:** `wint/UAT/WINT-1150/WINT-1150.md`
 **Story Generated:** 2026-02-16
 **Elaboration Complete:** 2026-02-16
@@ -938,7 +939,7 @@ AC-11 from the original WINT-1010 (database migration rollback script) has been 
 
 ### WINT-1160: Add Parallel Work Conflict Prevention
 
-**Status:** uat
+**Status:** completed
 **Story File:** `wint/UAT/WINT-1160/WINT-1160.md`
 **Depends On:** WINT-1130, WINT-1140
 **Phase:** 1
@@ -978,23 +979,25 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2010: Create Role Pack Sidecar
 
-**Status:** pending
+**Status:** ready-for-code-review
 **Depends On:** WINT-1120
 **Phase:** 2
-**Feature:** Create versioned role pack sidecar service at GET /role-pack?role=pm|dev|qa|po&v=X returning 150-300 token role instructions
+**Feature:** Create versioned role pack sidecar service at GET /role-pack?role=dev|po|qa|da&v=X returning 150-300 token role instructions
 **Infrastructure:**
 - packages/backend/sidecars/role-pack/
 - HTTP endpoint + MCP tool wrapper
 
 **Goal:** Stop re-teaching agents their job every spawn
 
-**Risk Notes:** Must keep role packs versioned and small
+**Risk Notes:** Must keep role packs versioned and small. pnpm-workspace.yaml requires explicit 'packages/backend/sidecars/*' glob.
+
+**Story File:** `needs-code-review/WINT-2010/WINT-2010.md`
 
 ---
 
 ### WINT-2020: Create Context Pack Sidecar
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-2010
 **Phase:** 2
 **Feature:** Create context pack sidecar at POST /context-pack returning node-scoped context: story_brief, kb_facts, kb_rules, kb_links, repo_snippets
@@ -1006,12 +1009,16 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Must query KB efficiently, respect token budgets
 
+**Story File:** `created/WINT-2020/WINT-2020.md`
+
 ---
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** pending
-**Depends On:** WINT-2020, WINT-0030, WINT-0100
+**Status:** ready-to-work
+**Story File:** `wint/ready-to-work/WINT-2030/WINT-2030.md`
+**Story Generated:** 2026-03-02
+**Depends On:** WINT-0100
 **Phase:** 2
 **Feature:** Extract conventions, patterns, tech stack from CLAUDE.md, tech-stack docs, testing docs and populate context_cache.project_context
 **Infrastructure:**
@@ -1024,7 +1031,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2040: Populate Agent Mission Cache
 
-**Status:** pending
+**Status:** failed-code-review
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Parse all 115 .agent.md files, extract mission/scope/signals, populate context_cache.agent_missions
@@ -1035,11 +1042,14 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Parser must handle various frontmatter formats
 
+**Story File:** `failed-code-review/WINT-2040/WINT-2040.md`
+**Story Generated:** 2026-03-02
+
 ---
 
 ### WINT-2050: Populate Domain Knowledge Cache
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Extract domain patterns, ADRs, blockers, lessons from docs/ and populate context_cache.domain_kb
@@ -1054,7 +1064,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2060: Populate Library Cache
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs
@@ -1099,7 +1109,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2090: Implement Session Context Management
 
-**Status:** pending
+**Status:** uat
 **Depends On:** WINT-0110
 **Phase:** 2
 **Feature:** Create session-create, session-inherit skills for leader→worker context sharing
@@ -1114,7 +1124,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2100: Create session-manager Agent
 
-**Status:** ready-to-work
+**Status:** completed
 **Depends On:** WINT-2090
 **Phase:** 2
 **Feature:** Create haiku-powered worker agent that manages session lifecycle
@@ -1427,7 +1437,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4080: Create scope-defender Agent (Devil's Advocate)
 
-**Status:** pending
+**Status:** completed
 **Depends On:** none
 **Phase:** 4
 **Feature:** Create haiku-powered worker agent that challenges non-MVP features and defers to backlog
@@ -1442,7 +1452,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4090: Create evidence-judge Agent
 
-**Status:** ready-for-qa
+**Status:** completed
 **Story File:** `wint/ready-for-qa/WINT-4090/WINT-4090.md`
 **Elaboration Complete:** 2026-02-18
 **Verdict:** PASS
@@ -1536,7 +1546,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 ### WINT-4150: Standardize Elab Output Artifacts
 
 **Status:** pending
-**Depends On:** WINT-4140, WINT-0200
+**Depends On:** WINT-4140
 **Phase:** 4
 **Feature:** Define and enforce standard elab output artifacts: story-brief.md, gaps.json (blocking/non-blocking split), user-flows.json (per schema), cohesion-findings.json (max 5/2 blocking), mvp-slice.json, scope-challenges.json (max 5), final-scope.json (+ followups), evidence-expectations.json. Add validation to elab-complete gate.
 **Infrastructure:**
@@ -2266,7 +2276,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9020: Create doc-sync LangGraph Node
 
-**Status:** uat
+**Status:** completed
 **Story Generated:** 2026-02-18
 **Story File:** `wint/UAT/WINT-9020/WINT-9020.md`
 **Code Review:** PASS (2026-02-21) — 0 errors, 1 warning (pre-existing, unrelated)
@@ -2378,7 +2388,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9090: Create Context Cache LangGraph Nodes
 
-**Status:** uat
+**Status:** completed
 **Depends On:** WINT-9010, WINT-2100
 **Phase:** 9
 **Feature:** Port context-warmer, session-manager to LangGraph nodes
@@ -2406,9 +2416,46 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ---
 
+### WINT-9105: Define LangGraph Error Handling & Retry Strategy
+
+**Status:** ready-for-qa
+**Story File:** `wint/ready-for-qa/WINT-9105/WINT-9105.md`
+**Story Generated:** 2026-03-02
+**Depends On:** WINT-9010
+**Phase:** 9
+**Priority:** P0
+**Feature:** Produce a binding ADR committed to `packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md` defining node-level retry policies, graph-level error propagation rules, circuit breaker strategy, DLQ semantics, idempotency contracts, timeout mapping, partial-success semantics, Claude Code policy mapping, and budget-aware retry caps.
+**Infrastructure:**
+- packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+
+**Goal:** Establish unified error handling and retry strategy as prerequisite for WINT-9106 (checkpointer), WINT-9107 (middleware), and WINT-9110 (full workflow graphs)
+
+**Risk Notes:** Consolidation decision between runner/ and errors/workflow-errors.ts layers is the highest-stakes AC. Circuit breaker state ownership decision (node-local vs DB-shared) gates WINT-9107 scope.
+
+---
+
+### WINT-9107: Implement Node-Level Retry & Circuit Breaker Middleware for LangGraph Nodes
+
+**Status:** uat
+**Story File:** `wint/UAT/WINT-9107/WINT-9107.md`
+**Story Generated:** 2026-03-02
+**Depends On:** WINT-9010, WINT-9105
+**Phase:** 9
+**Priority:** P1
+**Feature:** Surface and validate the existing runner infrastructure (NodeCircuitBreaker, withNodeRetry, createNode, classifyError, RETRY_PRESETS) as the canonical, discoverable, and tested middleware API for LangGraph node authors. Gap-analyze against WINT-9105 ADR requirements and close any gaps.
+**Infrastructure:**
+- packages/backend/orchestrator/src/runner/ (primary — existing, extend only)
+- packages/backend/workflow-logic/ (re-export surface if needed)
+
+**Goal:** Ensure every LangGraph node built for WINT-9110 can rely on a documented, isolated, tested retry + circuit breaker middleware without duplicating infrastructure
+
+**Risk Notes:** Scope may be smaller than expected if WINT-9105 gap analysis confirms full coverage by existing runner. WINT-9010 in-qa dependency must resolve before workflow-logic re-exports are finalized.
+
+---
+
 ### WINT-9110: Create Full Workflow LangGraph Graphs
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-9060, WINT-9070, WINT-9080, WINT-9100
 **Phase:** 9
 **Feature:** Create complete LangGraph graphs for: bootstrap, elab-epic, elab-story, dev-implement, qa-verify, backlog-review
@@ -2423,7 +2470,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9120: Create Workflow Parity Test Suite
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-9110
 **Phase:** 9
 **Feature:** Create test suite that runs same inputs through both Claude Code and LangGraph, verifies identical outputs
@@ -2433,27 +2480,30 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 **Goal:** Guarantee feature parity
 
 **Risk Notes:** May reveal subtle differences to fix
+**Elaboration Verdict:** PASS (autonomous, 2026-03-03)
+**Story File:** `ready-for-qa/WINT-9120/WINT-9120.md`
 
 ---
 
 ### WINT-9130: Document Migration Path
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-9120
 **Phase:** 9
 **Feature:** Create documentation for migrating from Claude Code to LangGraph workflow, including feature comparison and decision guide
 **Infrastructure:**
-- docs/workflow/langraph-migration.md
+- docs/workflow/langgraph-migration.md
 
 **Goal:** Clear guidance for workflow transition
 
 **Risk Notes:** None
+**Story File:** `needs-code-review/WINT-9130/WINT-9130.md`
 
 ---
 
 ### WINT-9140: Validate LangGraph Parity Phase
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-9120, WINT-9130
 **Phase:** 9
 **Feature:** Execute complete workflow in both systems, verify parity, sign off on Phase 9 completion
@@ -2462,5 +2512,24 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 **Goal:** Confirm full feature parity achieved
 
 **Risk Notes:** May require iterations to fix parity gaps
+**Story File:** `needs-code-review/WINT-9140/WINT-9140.md`
+
+---
+
+### WINT-9106: Implement LangGraph Checkpointer & State Recovery
+
+**Status:** elaboration
+**Depends On:** WINT-9105, WINT-0070
+**Phase:** 9
+**Feature:** PostgreSQL-backed checkpointer for LangGraph graphs with crash-safe state recovery, resume-graph CLI, checkpoint TTL/cleanup, and integration tests
+**Infrastructure:**
+- packages/backend/orchestrator/src/checkpointer/
+- wint.workflow_checkpoints table (via WINT-0070 migration)
+
+**Story File:** `wint/elaboration/WINT-9106/WINT-9106.md`
+
+**Goal:** Replace file-based CHECKPOINT.yaml recovery with DB-backed LangGraph thread checkpoint persistence
+
+**Risk Notes:** Blocked by WINT-9105 (LangGraph Error Handling ADR must define behavioral contract first); scope ambiguity between native PostgresSaver vs. custom repository approach
 
 ---

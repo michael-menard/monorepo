@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-2040 is a backend data-population script with no UI surface. The only human-facing output is structured log output via @repo/logger (JSON lines). No React components, no frontend routes, no user-facing interaction."

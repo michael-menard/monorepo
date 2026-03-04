@@ -1,0 +1,239 @@
+schema: 2
+story_id: AUDT-0030
+timestamp: '2026-03-03T06:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Refactor deduplicate, persist-findings, persist-trends, and code-audit graph to accept optional path params
+    files:
+      - packages/backend/orchestrator/src/nodes/audit/deduplicate.ts
+      - packages/backend/orchestrator/src/nodes/audit/persist-findings.ts
+      - packages/backend/orchestrator/src/nodes/audit/persist-trends.ts
+      - packages/backend/orchestrator/src/graphs/code-audit.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/audit/deduplicate.ts
+      - packages/backend/orchestrator/src/nodes/audit/persist-findings.ts
+      - packages/backend/orchestrator/src/nodes/audit/persist-trends.ts
+      - packages/backend/orchestrator/src/graphs/code-audit.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter orchestrator
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-17
+  - id: 2
+    subtask_id: ST-2
+    description: Add synthesize.test.ts — pure state transformation tests (merge dedup, severity sort, sequential IDs, 100-cap)
+    files:
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/synthesize.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/audit/synthesize.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm test --filter orchestrator -- synthesize.test
+    acs_covered:
+      - AC-6
+      - AC-7
+      - AC-8
+  - id: 3
+    subtask_id: ST-3
+    description: Add deduplicate.test.ts — Jaccard similarity tests with temp plans/ directory fixture
+    files:
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/deduplicate.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/audit/deduplicate.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter orchestrator -- deduplicate.test
+    acs_covered:
+      - AC-5
+  - id: 4
+    subtask_id: ST-4
+    description: Add persist-findings.test.ts and persist-trends.test.ts — filesystem output tests with Zod schema assertions
+    files:
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/persist-findings.test.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/persist-trends.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/audit/persist-findings.ts
+      - packages/backend/orchestrator/src/nodes/audit/persist-trends.ts
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter orchestrator -- persist
+    acs_covered:
+      - AC-3
+      - AC-4
+      - AC-14
+  - id: 5
+    subtask_id: ST-5
+    description: Add devils-advocate.test.ts and roundtable.test.ts — challenge and vetting tests
+    files:
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/devils-advocate.test.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/roundtable.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/nodes/audit/devils-advocate.ts
+      - packages/backend/orchestrator/src/nodes/audit/roundtable.ts
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm test --filter orchestrator -- devils-advocate.test roundtable.test
+    acs_covered:
+      - AC-9
+      - AC-10
+      - AC-11
+      - AC-12
+      - AC-13
+  - id: 6
+    subtask_id: ST-6
+    description: Add code-audit.integration.test.ts — E2E pipeline and roundtable mode tests writing to temp directory
+    files:
+      - packages/backend/orchestrator/src/graphs/__tests__/code-audit.integration.test.ts
+    files_to_read:
+      - packages/backend/orchestrator/src/graphs/code-audit.ts
+      - packages/backend/orchestrator/src/graphs/__tests__/code-audit.test.ts
+      - packages/backend/orchestrator/src/artifacts/audit-findings.ts
+      - packages/backend/orchestrator/src/nodes/audit/__tests__/scan-scope.test.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm test --filter orchestrator -- integration
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-15
+      - AC-16
+      - AC-17
+files_to_change:
+  - path: packages/backend/orchestrator/src/nodes/audit/deduplicate.ts
+    action: modify
+    reason: Add optional plansDir parameter defaulting to 'plans' so tests can redirect to temp dir
+  - path: packages/backend/orchestrator/src/nodes/audit/persist-findings.ts
+    action: modify
+    reason: Add optional auditDir parameter defaulting to 'plans/audit' so tests can redirect to temp dir
+  - path: packages/backend/orchestrator/src/nodes/audit/persist-trends.ts
+    action: modify
+    reason: Add optional auditDir parameter defaulting to 'plans/audit' so tests can redirect to temp dir
+  - path: packages/backend/orchestrator/src/graphs/code-audit.ts
+    action: modify
+    reason: Add optional auditDir/plansDir to CodeAuditConfig, thread through graph node wrappers for E2E isolation (AC-17)
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/synthesize.test.ts
+    action: create
+    reason: 'Integration tests for synthesize node: merge dedup, severity sort, sequential IDs, 100-cap (AC-6, AC-7, AC-8)'
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/deduplicate.test.ts
+    action: create
+    reason: 'Integration tests for deduplicate node: Jaccard >0.8 duplicate, <0.5 new verdicts (AC-5)'
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/persist-findings.test.ts
+    action: create
+    reason: 'Integration tests for persist-findings: FINDINGS YAML schema compliance via AuditFindingsSchema.parse() (AC-3)'
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/persist-trends.test.ts
+    action: create
+    reason: >-
+      Integration tests for persist-trends: TRENDS YAML aggregation, audits_analyzed>=2, empty early return (AC-4,
+      AC-14)
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/devils-advocate.test.ts
+    action: create
+    reason: >-
+      Integration tests for devils-advocate: low-confidence downgrade, test-file downgrade, schema compliance (AC-9,
+      AC-10, AC-11)
+  - path: packages/backend/orchestrator/src/nodes/audit/__tests__/roundtable.test.ts
+    action: create
+    reason: 'Integration tests for roundtable: false-positive removal, schema compliance (AC-12, AC-13)'
+  - path: packages/backend/orchestrator/src/graphs/__tests__/code-audit.integration.test.ts
+    action: create
+    reason: >-
+      E2E pipeline and roundtable mode tests invoking runCodeAudit() with temp dir isolation (AC-1, AC-2, AC-15, AC-16,
+      AC-17)
+commands_to_run:
+  - command: pnpm check-types --filter orchestrator
+    when: after ST-1 production refactors
+    required: true
+  - command: pnpm test --filter orchestrator
+    when: after all test files are written
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: 'Integration test: code-audit.integration.test.ts — pipeline mode E2E writes valid FINDINGS YAML'
+    evidence_type: test
+  - ac_id: AC-2
+    planned_evidence: 'Integration test: code-audit.integration.test.ts — roundtable mode E2E writes valid FINDINGS YAML'
+    evidence_type: test
+  - ac_id: AC-3
+    planned_evidence: 'Unit test: persist-findings.test.ts — AuditFindingsSchema.parse() does not throw'
+    evidence_type: test
+  - ac_id: AC-4
+    planned_evidence: 'Unit test: persist-trends.test.ts — audits_analyzed >= 2 with TrendSnapshotSchema.parse() passing'
+    evidence_type: test
+  - ac_id: AC-5
+    planned_evidence: 'Unit test: deduplicate.test.ts — Jaccard >0.8 → duplicate verdict, <0.5 → new verdict'
+    evidence_type: test
+  - ac_id: AC-6
+    planned_evidence: 'Unit test: synthesize.test.ts — findings have sequential AUDIT-001...AUDIT-00N IDs in severity order'
+    evidence_type: test
+  - ac_id: AC-7
+    planned_evidence: 'Unit test: synthesize.test.ts — two findings with identical file+title merge to one (higher severity kept)'
+    evidence_type: test
+  - ac_id: AC-8
+    planned_evidence: 'Unit test: synthesize.test.ts — 101 input findings → 100 output findings'
+    evidence_type: test
+  - ac_id: AC-9
+    planned_evidence: 'Unit test: devils-advocate.test.ts — ChallengeResultSchema.parse() does not throw, total_reviewed matches input'
+    evidence_type: test
+  - ac_id: AC-10
+    planned_evidence: 'Unit test: devils-advocate.test.ts — low confidence + high severity → decision: downgraded, final_severity: medium'
+    evidence_type: test
+  - ac_id: AC-11
+    planned_evidence: 'Unit test: devils-advocate.test.ts — __tests__/ path + high severity → downgraded to medium'
+    evidence_type: test
+  - ac_id: AC-12
+    planned_evidence: 'Unit test: roundtable.test.ts — RoundtableResultSchema.parse() does not throw'
+    evidence_type: test
+  - ac_id: AC-13
+    planned_evidence: 'Unit test: roundtable.test.ts — false_positive decision → finding excluded from vetted_findings'
+    evidence_type: test
+  - ac_id: AC-14
+    planned_evidence: 'Unit test: persist-trends.test.ts — empty audit directory → returns { completed: true } without throwing'
+    evidence_type: test
+  - ac_id: AC-15
+    planned_evidence: 'Command output: pnpm test --filter orchestrator passes with all new tests green'
+    evidence_type: command
+  - ac_id: AC-16
+    planned_evidence: 'Command output: pnpm check-types --filter orchestrator passes with no new type errors'
+    evidence_type: command
+  - ac_id: AC-17
+    planned_evidence: >-
+      Integration test: code-audit.integration.test.ts — runCodeAudit() accepts auditDir/plansDir in config, writes to
+      temp dir
+    evidence_type: test
+architectural_decisions: []
+complexity: moderate
+notes:
+  - >-
+    ST-1 is the sole prerequisite for ST-3, ST-4, ST-6 — it adds optional path params without changing defaults, so
+    production behavior is preserved
+  - >-
+    ST-2 and ST-5 have no dependency on ST-1 — synthesize, devils-advocate, and roundtable nodes are pure state
+    transformations with no filesystem I/O
+  - >-
+    Finding ID ordering discrepancy: runDevilsAdvocate receives findings from lensResults with id:'' — tests must set
+    explicit non-empty IDs on fixture findings for challengeMap lookup to work
+  - 'E2E target: use packages/backend/orchestrator/src/artifacts/ as fixture — stable, small, no binary files'
+  - All filesystem nodes use tmpdir() + beforeEach/afterEach cleanup pattern from scan-scope.test.ts
+  - 'Zod compliance pattern: const parsed = parse(yamlContent); expect(() => Schema.parse(parsed)).not.toThrow()'
+  - >-
+    deduplicate.ts already has loadExistingStoryTitles accepting plansDir — the export function deduplicate(state) just
+    needs the param added
+  - persistFindings hardcodes auditDir='plans/audit' inline at line 62 — needs to be param
+  - persistTrends hardcodes auditDir='plans/audit' at lines 58 and 59 — needs to be param

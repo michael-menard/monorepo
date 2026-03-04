@@ -1,0 +1,80 @@
+schema: 1
+story_id: APIP-4050
+timestamp: "2026-03-02T04:30:00Z"
+failure_source: code-review-failed
+iteration: 1
+issues_to_fix:
+  - id: 1
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 42
+    issue: "Unescaped user input in find command — use execFile() with shell:false instead of template string interpolation"
+    severity: critical
+    auto_fixable: false
+  - id: 2
+    file: packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts
+    line: 58
+    issue: "Unescaped file path in grep command — replace shell pipe with Node.js string filtering"
+    severity: critical
+    auto_fixable: false
+  - id: 3
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 67
+    issue: "Shell pipe operations (2>&1 | grep) require shell:true — process output in Node.js instead"
+    severity: critical
+    auto_fixable: false
+  - id: 4
+    file: packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts
+    line: 85
+    issue: "Directory path concatenation enables traversal — canonicalize path and validate within repo bounds"
+    severity: critical
+    auto_fixable: false
+  - id: 5
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 101
+    issue: "|| true suppresses all errors including security errors — use try/catch with logger.warn"
+    severity: high
+    auto_fixable: false
+  - id: 6
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 120
+    issue: "No validation of external tool outputs before parsing — add length/sanity checks"
+    severity: high
+    auto_fixable: false
+  - id: 7
+    file: packages/backend/orchestrator/src/cron/jobs/dead-code-reaper.job.ts
+    line: 34
+    issue: "Duplicated advisory lock logic — extract tryAcquireAdvisoryLock() to shared cron utility"
+    severity: high
+    auto_fixable: false
+  - id: 8
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 150
+    issue: "13 lines exceed 100-char width limit — run prettier --write"
+    severity: medium
+    auto_fixable: true
+  - id: 9
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 155
+    issue: "2 missing trailing commas — run prettier --write"
+    severity: medium
+    auto_fixable: true
+  - id: 10
+    file: packages/backend/orchestrator/src/cron/jobs/dead-code-reaper.ts
+    line: 28
+    issue: "Graph factory pattern differs from metrics.ts — align naming convention"
+    severity: medium
+    auto_fixable: false
+  - id: 11
+    file: packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+    line: 200
+    issue: "validateSafePath() could be shared across scanner modules"
+    severity: medium
+    auto_fixable: false
+
+focus_files:
+  - packages/backend/orchestrator/src/nodes/dead-code/scanners.ts
+  - packages/backend/orchestrator/src/nodes/dead-code/micro-verify.ts
+  - packages/backend/orchestrator/src/cron/jobs/dead-code-reaper.job.ts
+  - packages/backend/orchestrator/src/cron/advisory-lock.ts
+
+summary: "Code review failed with 33 errors (critical security vulnerabilities in shell command execution, auto-fixable style issues). Fix iteration 1 already completed with all security issues resolved and extracted shared advisory lock utility. This is setup for fix iteration 2."

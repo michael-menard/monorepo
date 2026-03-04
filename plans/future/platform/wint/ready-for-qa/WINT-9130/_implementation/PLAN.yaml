@@ -1,0 +1,141 @@
+schema: 2
+story_id: "WINT-9130"
+timestamp: "2026-03-03T18:00:00Z"
+subtask_source: story
+
+steps:
+  - id: 1
+    subtask_id: "ST-1"
+    description: "Study canonical patterns and build document skeleton — create docs/workflow/langgraph-migration.md with valid YAML frontmatter and all section headings"
+    files:
+      - "docs/workflow/langgraph-migration.md"
+    files_to_read:
+      - "docs/workflow/README.md"
+      - "docs/workflow/phases.md"
+      - "packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md"
+    dependencies: []
+    slice: packages
+    verification: "ls docs/workflow/langgraph-migration.md && head -20 docs/workflow/langgraph-migration.md | grep -E 'title:|version:|status: active'"
+    acs_covered:
+      - "AC-1"
+      - "AC-6"
+
+  - id: 2
+    subtask_id: "ST-2"
+    description: "Build feature comparison table — enumerate all LangGraph graphs, cross-reference WINT-9120 parity test results, populate three-column table with evidence-backed verdicts (or 'Pending WINT-9120' where WINT-9120 is incomplete)"
+    files:
+      - "docs/workflow/langgraph-migration.md"
+    files_to_read:
+      - "packages/backend/orchestrator/src/graphs/elaboration.ts"
+      - "packages/backend/orchestrator/src/graphs/story-creation.ts"
+      - "packages/backend/orchestrator/src/graphs/qa.ts"
+      - "packages/backend/orchestrator/src/graphs/review.ts"
+      - "packages/backend/orchestrator/src/graphs/metrics.ts"
+      - "packages/backend/orchestrator/src/graphs/code-audit.ts"
+      - "packages/backend/orchestrator/src/graphs/doc-graph.ts"
+      - "packages/backend/orchestrator/src/graphs/merge.ts"
+      - "packages/backend/orchestrator/src/graphs/bootstrap.ts"
+      - "packages/backend/orchestrator/src/graphs/elab-story.ts"
+      - "packages/backend/orchestrator/src/__tests__/parity/README.md"
+      - "packages/backend/orchestrator/src/__tests__/parity/doc-sync.parity.test.ts"
+      - "packages/backend/orchestrator/src/__tests__/parity/story-creation.parity.test.ts"
+      - "packages/backend/orchestrator/src/__tests__/parity/elaboration.parity.test.ts"
+      - "packages/backend/orchestrator/src/__tests__/parity/wint9110-workflows.parity.test.ts"
+      - "packages/backend/orchestrator/src/__tests__/parity/known-divergences.parity.test.ts"
+    dependencies:
+      - 1
+    slice: packages
+    verification: "grep -c 'Pending WINT-9120' docs/workflow/langgraph-migration.md"
+    acs_covered:
+      - "AC-2"
+
+  - id: 3
+    subtask_id: "ST-3"
+    description: "Write decision guide (4 scenarios) and step-by-step migration walkthrough using doc-sync.ts as the canonical example"
+    files:
+      - "docs/workflow/langgraph-migration.md"
+    files_to_read:
+      - "packages/backend/orchestrator/src/nodes/sync/doc-sync.ts"
+      - "docs/workflow/extending.md"
+    dependencies:
+      - 1
+    slice: packages
+    verification: "grep -c 'greenfield\\|extend\\|migrat\\|parallel' docs/workflow/langgraph-migration.md"
+    acs_covered:
+      - "AC-3"
+      - "AC-4"
+
+  - id: 4
+    subtask_id: "ST-4"
+    description: "Add Known Gotchas section (Zod-first types, PostgresSaver.setup(), @repo/workflow-logic scope), finalize cross-references to docs/workflow/ files, fix stories.index.md typo langraph-migration.md → langgraph-migration.md"
+    files:
+      - "docs/workflow/langgraph-migration.md"
+      - "plans/future/platform/wint/stories.index.md"
+    files_to_read:
+      - "plans/future/platform/wint/stories.index.md"
+      - "docs/workflow/orchestration.md"
+    dependencies:
+      - 2
+      - 3
+    slice: packages
+    verification: "grep -c 'PostgresSaver\\|workflow-logic\\|Zod' docs/workflow/langgraph-migration.md && grep 'langgraph-migration.md' plans/future/platform/wint/stories.index.md"
+    acs_covered:
+      - "AC-5"
+      - "AC-6"
+      - "AC-7"
+      - "AC-8"
+
+files_to_change:
+  - path: "docs/workflow/langgraph-migration.md"
+    action: create
+    reason: "New definitive migration guide per AC-1 through AC-7"
+  - path: "plans/future/platform/wint/stories.index.md"
+    action: modify
+    reason: "Fix typo: langraph-migration.md → langgraph-migration.md per AC-8"
+
+commands_to_run:
+  - command: "ls docs/workflow/langgraph-migration.md"
+    when: "after ST-1 completes"
+    required: true
+  - command: "grep 'langgraph-migration.md' plans/future/platform/wint/stories.index.md"
+    when: "after ST-4 completes"
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: "AC-1"
+    planned_evidence: "File exists at docs/workflow/langgraph-migration.md with YAML frontmatter: title, version (semver), created_at, updated_at, status: active, tags"
+    evidence_type: file
+  - ac_id: "AC-2"
+    planned_evidence: "Feature comparison table with 3 columns — 'Supported in Claude Code', 'Supported in LangGraph', 'Parity Verdict' — rows grounded in WINT-9120 test suite; WINT-9110 stubs marked 'Pending WINT-9120'"
+    evidence_type: file
+  - ac_id: "AC-3"
+    planned_evidence: "Decision guide section covering all 4 scenarios: (a) greenfield, (b) extend existing agent, (c) migrate to LangGraph, (d) parallel transition"
+    evidence_type: manual
+  - ac_id: "AC-4"
+    planned_evidence: "Migration walkthrough with 4 steps referencing doc-sync.ts as the canonical example"
+    evidence_type: manual
+  - ac_id: "AC-5"
+    planned_evidence: "Known Gotchas section: Zod-first types, PostgresSaver.setup(), @repo/workflow-logic usage scope"
+    evidence_type: manual
+  - ac_id: "AC-6"
+    planned_evidence: "Cross-references to phases.md, README.md, orchestration.md, extending.md; no _implementation/ paths; all linked files exist"
+    evidence_type: manual
+  - ac_id: "AC-7"
+    planned_evidence: "Mermaid diagrams (if any) use standard flowchart/stateDiagram-v2 syntax compatible with GitHub renderer"
+    evidence_type: manual
+  - ac_id: "AC-8"
+    planned_evidence: "Canonical filename docs/workflow/langgraph-migration.md (double-g); stories.index.md entry updated from langraph to langgraph"
+    evidence_type: file
+
+architectural_decisions: []
+
+complexity: simple
+
+notes:
+  - "WINT-9120 is a hard dependency — parity verdicts where tests are it.todo() stubs must be marked 'Pending WINT-9120', not speculative"
+  - "Known parity verdicts from WINT-9120 parity test suite: doc-sync=Passing (known divergences: database_status field, error format, reportPath format); story-creation=Pending; elaboration=Pending; all WINT-9110 workflow graphs=Pending WINT-9120"
+  - "Graphs to inventory for feature comparison table: elaboration, story-creation, qa, review, metrics, code-audit, doc-graph, merge, bake-off-engine, cohesion-scanner, dead-code-reaper, pattern-miner, test-quality-monitor, bootstrap, elab-story, elab-epic (17 graphs total)"
+  - "Frontmatter schema must match docs/workflow/README.md: title, version (semver), created_at (ISO 8601), updated_at (ISO 8601), status: active, tags (array)"
+  - "No pnpm build or pnpm test commands required — documentation-only story per KB lessons WKFL-001/006/008"
+  - "Code examples in doc must use Zod-style notation (z.object({})), never TypeScript interface syntax per CLAUDE.md"
+  - "stories.index.md fix is a targeted edit of the WINT-9130 infrastructure entry only"

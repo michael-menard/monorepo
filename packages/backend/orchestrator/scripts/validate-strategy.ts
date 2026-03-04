@@ -8,10 +8,10 @@
  *   pnpm --filter @repo/orchestrator exec tsx scripts/validate-strategy.ts
  */
 
-import { z } from 'zod'
 import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { z } from 'zod'
 import { parse as parseYaml } from 'yaml'
 import { logger } from '@repo/logger'
 
@@ -20,7 +20,7 @@ import { logger } from '@repo/logger'
 // ============================================================================
 
 const ProviderModelSchema = z.object({
-  provider: z.enum(['anthropic', 'ollama']),
+  provider: z.enum(['anthropic', 'ollama', 'openrouter']),
   model: z.string(),
   cost_per_1m_tokens: z.number().nonnegative(),
 })

@@ -1,0 +1,2 @@
+skipped: true
+reason: "WINT-2110 modifies agent .agent.md instruction files and one TypeScript constant (packTypeValues). No UI components, pages, or user-facing interactions are added or modified."

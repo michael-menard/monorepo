@@ -1,0 +1,18 @@
+schema: 1
+story_id: WINT-0210
+feature_dir: plans/future/platform/wint
+timestamp: '2026-03-02T23:00:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - >-
+    WINT-0200 is in backlog/created status (not yet implemented) — PO role pack references WINT-0200 as
+    forward dependency; AC-7 schema validation falls back to manual review per story test plan
+  - >-
+    Token counts use line-count proxy (FRAMEWORK.md fallback) since tiktoken is not available;
+    actual cl100k_base counts may differ by up to 15%
+gen_mode: false

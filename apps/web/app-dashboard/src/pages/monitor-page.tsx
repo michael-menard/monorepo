@@ -73,15 +73,13 @@ export function MonitorPage({ className }: MonitorPageProps) {
           aria-live="polite"
           aria-atomic="true"
         >
-          {isStale && (
+          {isStale ? (
             <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
               Stale data —
             </span>
-          )}
+          ) : null}
           {lastFetchedAt ? (
-            <span className="text-xs">
-              Data from {formatRelativeTime(lastFetchedAt)}
-            </span>
+            <span className="text-xs">Data from {formatRelativeTime(lastFetchedAt)}</span>
           ) : isLoading ? (
             <span className="text-xs">Loading...</span>
           ) : null}

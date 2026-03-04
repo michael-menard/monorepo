@@ -125,3 +125,185 @@ export {
   type CodeAuditState,
   type GraphStateWithCodeAudit,
 } from './code-audit.js'
+
+// Bootstrap Graph (WINT-9110, AC-1)
+export {
+  // Graph factory and runner
+  createBootstrapGraph,
+  runBootstrap,
+  // Node adapters for workflow integration
+  createBootstrapNode,
+  // Individual node factories
+  createBootstrapInitializeNode,
+  createRunStoryCreationNode,
+  createBootstrapCompleteNode,
+  // Conditional edge functions (exported for test access — ARCH-002)
+  afterBootstrapInitialize,
+  afterRunStoryCreation,
+  // Schemas
+  BootstrapConfigSchema,
+  BootstrapResultSchema,
+  // State annotation
+  BootstrapStateAnnotation,
+  // Types
+  type BootstrapConfig,
+  type BootstrapResult,
+  type BootstrapState,
+  type GraphStateWithBootstrap,
+} from './bootstrap.js'
+
+// Elab Epic Graph — Send API fan-out (WINT-9110, AC-2)
+export {
+  // Graph factory and runner
+  createElabEpicGraph,
+  runElabEpic,
+  // Node adapters for workflow integration
+  createElabEpicNode,
+  // Individual node factories
+  createElabEpicDispatcher,
+  createElabStoryWorkerNode,
+  createElabEpicFanInNode,
+  createElabEpicCompleteNode,
+  // Conditional edge functions
+  afterFanIn,
+  // Schemas
+  ElabEpicConfigSchema,
+  ElabEpicResultSchema,
+  StoryEntrySchema,
+  // State annotation
+  ElabEpicStateAnnotation,
+  // Types
+  type ElabEpicConfig,
+  type ElabEpicResult,
+  type ElabEpicState,
+  type StoryEntry,
+  type GraphStateWithElabEpic,
+} from './elab-epic.js'
+
+// Elab Story Graph — single-story elaboration wrapper (WINT-9110, AC-3)
+export {
+  // Graph factory and runner
+  createElabStoryGraph,
+  runElabStory,
+  // Node adapters for workflow integration
+  createElabStoryNode,
+  // Individual node factories
+  createElabStoryInitializeNode,
+  createWorktreeSetupNode,
+  createElaborationSubgraphNode,
+  createWorktreeTeardownNode,
+  createElabStoryCompleteNode,
+  // Conditional edge functions
+  afterElabStoryInitialize,
+  afterElaborationSubgraph,
+  afterWorktreeTeardown,
+  // Schemas
+  ElabStoryConfigSchema,
+  ElabStoryResultSchema,
+  // State annotation
+  ElabStoryStateAnnotation,
+  // Types
+  type ElabStoryConfig,
+  type ElabStoryResult,
+  type ElabStoryState,
+  type GraphStateWithElabStory,
+} from './elab-story.js'
+
+// Dev Implement Graph (WINT-9110, AC-4)
+export {
+  // Graph factory and runner
+  createDevImplementGraph,
+  runDevImplement,
+  // Node adapters for workflow integration
+  createDevImplementNode,
+  // Individual node factories
+  createDevImplementInitializeNode,
+  createLoadPlanNode,
+  createExecuteNode,
+  createCollectEvidenceNode,
+  createDevImplementSaveToDbNode,
+  createDevImplementCompleteNode,
+  // Conditional edge functions
+  afterDevImplementInitialize,
+  afterLoadPlan,
+  afterExecute,
+  afterReviewSubgraph,
+  afterCollectEvidence,
+  afterSaveToDb,
+  // Schemas
+  DevImplementConfigSchema,
+  DevImplementResultSchema,
+  // State annotation
+  DevImplementStateAnnotation,
+  // Types
+  type DevImplementConfig,
+  type DevImplementResult,
+  type DevImplementState,
+  type GraphStateWithDevImplement,
+} from './dev-implement.js'
+
+// QA Verify Graph (WINT-9110, AC-5)
+export {
+  // Graph factory and runner
+  createQAVerifyGraph,
+  runQAVerify,
+  // Node adapters for workflow integration
+  createQAVerifyNode,
+  // Individual node factories
+  createQAVerifyInitializeNode,
+  createQAVerifyPreconditionsNode,
+  createQASubgraphNode,
+  createQAStateTransitionNode,
+  createQAVerifyCompleteNode,
+  // Conditional edge functions
+  afterQAVerifyInitialize,
+  afterQAVerifyPreconditions,
+  afterQASubgraph,
+  afterStateTransition,
+  // Schemas
+  QAVerifyConfigSchema,
+  QAVerifyResultSchema,
+  // State annotation
+  QAVerifyStateAnnotation,
+  // Types
+  type QAVerifyConfig,
+  type QAVerifyResult,
+  type QAVerifyState,
+  type GraphStateWithQAVerify,
+} from './qa-verify.js'
+
+// Backlog Review Graph (WINT-9110, AC-6)
+export {
+  // Graph factory and runner
+  createBacklogReviewGraph,
+  runBacklogReview,
+  // Node adapters for workflow integration
+  createBacklogReviewNode,
+  // Individual node factories
+  createBacklogReviewInitializeNode,
+  createLoadBacklogNode,
+  createMLScoreNode,
+  createCuratorAnalyzeNode,
+  createReorderNode,
+  createBacklogPersistNode,
+  createBacklogReviewCompleteNode,
+  // Conditional edge functions
+  afterBacklogReviewInitialize,
+  afterLoadBacklog,
+  afterMLScore,
+  afterCuratorAnalyze,
+  afterReorder,
+  afterPersist,
+  // Schemas
+  BacklogReviewConfigSchema,
+  BacklogReviewResultSchema,
+  BacklogStorySchema,
+  // State annotation
+  BacklogReviewStateAnnotation,
+  // Types
+  type BacklogReviewConfig,
+  type BacklogReviewResult,
+  type BacklogReviewState,
+  type BacklogStory,
+  type GraphStateWithBacklogReview,
+} from './backlog-review.js'

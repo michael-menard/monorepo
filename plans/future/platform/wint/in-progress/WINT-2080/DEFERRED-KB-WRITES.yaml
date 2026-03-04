@@ -1,0 +1,22 @@
+deferred_at: "2026-03-03"
+reason: "KB unavailable via psql and node pg module — no direct DB access in this environment"
+retry_when: "KB MCP tools available"
+
+writes:
+  - table: wint.stories
+    operation: upsert
+    conflict_key: story_id
+    data:
+      story_id: "WINT-2080"
+      feature: "wint"
+      title: "Create context-warmer Agent (Haiku-powered cache-warm skill executor)"
+      story_dir: "plans/future/platform/wint/backlog/WINT-2080"
+      story_file: "plans/future/platform/wint/backlog/WINT-2080/WINT-2080.md"
+      story_type: "feature"
+      points: 1
+      priority: "medium"
+      state: "backlog"
+      touches_backend: false
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
