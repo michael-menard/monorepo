@@ -222,6 +222,19 @@ recover_story() {
   local MINUTES="$4"
   local TAG="${5:-[recovery]}"
 
+  # Defensive input validation (security: prevent path traversal)
+  if ! echo "$STORY_ID" | grep -qE '^[A-Z]{2,10}-[0-9]{3,5}$'; then
+    echo "$TAG RECOVERY SKIP: invalid story ID format: $STORY_ID"
+    return 1
+  fi
+  case "$STAGE" in
+    ready-to-work|backlog|in-progress|needs-code-review|failed-code-review|ready-for-qa|failed-qa) ;;
+    *)
+      echo "$TAG RECOVERY SKIP: invalid stage: $STAGE"
+      return 1
+      ;;
+  esac
+
   # Resolve story directory
   local STORY_DIR="${FEATURE_DIR}/${STAGE}/${STORY_ID}"
   if [[ ! -d "$STORY_DIR" ]]; then
