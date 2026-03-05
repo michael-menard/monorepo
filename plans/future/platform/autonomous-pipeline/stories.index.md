@@ -45,7 +45,7 @@ Structured stories, diff planner, implementation loop, review, QA, merge, docume
 | APIP-1010 | Structurer Node in Elaboration Graph | none | ✅ Completed |
 | APIP-1020 | ChangeSpec Schema Design and Validation Spike | APIP-1010 | ✅ Completed |
 | APIP-1031 | Implementation Graph Skeleton with Worktree and Evidence Infrastructure | APIP-1020, APIP-0040 | 🔍 Ready for QA |
-| APIP-1032 | Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits | APIP-1031, APIP-1020, APIP-0040 | 👀 Needs Code Review |
+| APIP-1032 | Change Loop with Model Dispatch, Micro-Verify, and Atomic Commits | APIP-1031, APIP-1020, APIP-0040 | ✅ UAT |
 | APIP-1040 | Documentation Graph (Post-Merge) | APIP-1032 | ✅ Completed |
 | APIP-1050 | Review Graph with Parallel Fan-Out Workers | APIP-1032 | ✅ Completed |
 | APIP-1060 | QA Graph with Autonomous Verdict | none | ✅ Completed |
@@ -107,9 +107,9 @@ Artifact validation gates, stuck story recovery, and KB-filesystem state reconci
 
 - **Total Stories**: 42
 - **Completed**: 32 (76%)
-- **UAT**: 5 (APIP-0040, APIP-1070, APIP-4020, APIP-5000, APIP-5006)
+- **UAT**: 6 (APIP-0040, APIP-1032, APIP-1070, APIP-4020, APIP-5000, APIP-5006)
 - **Ready for QA**: 1 (APIP-1031)
-- **Needs Code Review**: 1 (APIP-1032)
+- **Needs Code Review**: 0
 - **Remaining**: 3 Phase 5 stories (pipeline resilience)
 - **Cancelled**: 1 (APIP-1030, superseded by APIP-1031/1032)
 
@@ -119,7 +119,7 @@ The only remaining work to reach full autonomous pipeline:
 
 1. APIP-0040 — Model Router v1 (in UAT, needs final acceptance)
 2. APIP-1031 — Implementation Graph Skeleton (🔍 ready for QA)
-3. APIP-1032 — Change Loop with Model Dispatch (🔍 ready for QA)
+3. APIP-1032 — Change Loop with Model Dispatch (✅ UAT verified)
 4. APIP-6001 — Pipeline Phase Gate Validation
 5. APIP-6002 — Stuck Story Recovery Loop
 6. APIP-6003 — KB-Filesystem State Reconciliation
