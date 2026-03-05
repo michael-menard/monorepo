@@ -99,7 +99,7 @@ Artifact validation gates, stuck story recovery, and KB-filesystem state reconci
 
 | ID | Title | Dependencies | Status |
 |---|---|---|---|
-| APIP-6001 | Pipeline Phase Gate Validation | none | 🔴 failed-code-review |
+| APIP-6001 | Pipeline Phase Gate Validation | none | 🧪 UAT |
 | APIP-6002 | Stuck Story Recovery Loop | APIP-6001 | ⚠️ Failed QA |
 | APIP-6003 | KB-Filesystem State Reconciliation | APIP-6001 | 👀 Needs Code Review |
 
