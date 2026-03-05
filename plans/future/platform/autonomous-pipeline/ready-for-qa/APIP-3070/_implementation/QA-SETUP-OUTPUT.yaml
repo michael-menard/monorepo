@@ -1,0 +1,140 @@
+schema: 1
+phase: qa-setup
+status: COMPLETE
+timestamp: "2026-03-05T02:05:00.000Z"
+
+story_id: APIP-3070
+feature_dir: plans/future/platform/autonomous-pipeline
+story_location: plans/future/platform/autonomous-pipeline/ready-for-qa/APIP-3070
+
+# Precondition validation
+preconditions:
+  story_exists: true
+  directory: ready-for-qa
+  evidence_yaml_exists: true
+  review_yaml_exists: true
+  code_review_passed: true
+  review_verdict: PASS
+
+# Story status (KB already in_qa - skipped claiming)
+kb_state_verified: in_qa
+claim_action: SKIPPED
+
+# Setup artifacts created
+artifacts_created:
+  - path: _implementation/CHECKPOINT.yaml
+    content:
+      current_phase: qa-setup
+      last_successful_phase: review
+
+# Evidence summary (from EVIDENCE.yaml)
+evidence_summary:
+  version: 1
+  iteration: 1
+  phase: implementation
+  status: COMPLETE
+  timestamp: "2026-02-28T20:57:00Z"
+
+  test_results:
+    cold_start_tests: 11
+    affinity_seeder_tests: 10
+    regression_model_router: 22
+    regression_escalation: 11
+    regression_budget: 11
+    regression_token_bucket: 11
+    total_tests_passed: 76
+    total_tests_failed: 0
+
+  acceptance_criteria_summary:
+    total_count: 13
+    passing: 12
+    deferred: 1
+    ac_list:
+      - ac_id: AC-1
+        status: PASS
+        focus: PipelineModelRouterConfigSchema extended with 5 new fields
+      - ac_id: AC-2
+        status: PASS
+        focus: Cold-start detection in _dispatchFourTier()
+      - ac_id: AC-3
+        status: PASS
+        focus: Tier 2 confidence gate implementation
+      - ac_id: AC-4
+        status: PASS
+        focus: 10% exploration budget with skip conditions
+      - ac_id: AC-5
+        status: PASS
+        focus: importAffinitySeeds() standalone function
+      - ac_id: AC-6
+        status: PASS
+        focus: deriveConfidenceLevel() with CONFIDENCE_THRESHOLDS
+      - ac_id: AC-7
+        status: PASS
+        focus: Cold-start and exploration routing logs
+      - ac_id: AC-8
+        status: PASS
+        focus: invalidateAffinityCache() clears both cache and flag
+      - ac_id: AC-9
+        status: PASS
+        focus: 21 unit tests all passing
+      - ac_id: AC-10
+        status: DEFERRED
+        focus: Integration tests (real PostgreSQL) deferred per spec
+      - ac_id: AC-11
+        status: PASS
+        focus: All existing tests maintain backward compatibility
+      - ac_id: AC-12
+        status: PASS
+        focus: ManualAffinitySeedEntrySchema exported
+      - ac_id: AC-13
+        status: PASS
+        focus: SeedImportResultSchema and SeedImportErrorSchema exported
+
+  files_created:
+    - packages/backend/orchestrator/src/pipeline/affinity-seeder.ts
+    - packages/backend/orchestrator/src/pipeline/__tests__/model-router-cold-start.test.ts
+    - packages/backend/orchestrator/src/pipeline/__tests__/affinity-seeder.test.ts
+
+  files_modified:
+    - packages/backend/orchestrator/src/pipeline/model-router.ts
+
+# Code review summary (from REVIEW.yaml)
+code_review_summary:
+  verdict: PASS
+  iteration: 2
+  timestamp: "2026-03-05T01:30:00.000Z"
+  total_errors: 0
+  total_warnings: 3
+
+  workers_completed:
+    - typecheck
+    - build
+
+  workers_skipped:
+    - lint
+    - style
+    - syntax
+    - security
+    - reusability
+    - react
+    - typescript
+    - accessibility
+
+# Knowledge Base context (from KB search)
+kb_context:
+  qa_patterns_found: 3
+  key_insights:
+    - attack_vectors_lesson: "If KNOWLEDGE-CONTEXT.yaml includes attack_vectors, use them as primary QA checklist for verification"
+    - infrastructure_qa_note: "Infrastructure stories may be exempt from 45% coverage threshold if they contain only configs"
+    - review_graph_pattern: "LangGraph fan-out/fan-in parallelism patterns available in KB from APIP-1050"
+
+# Verification sources for Phase 1 (QA Verification)
+verification_sources:
+  evidence_file: _implementation/EVIDENCE.yaml
+  review_file: _implementation/REVIEW.yaml
+  knowledge_context_file: null (not yet created)
+  checkpoint_file: _implementation/CHECKPOINT.yaml
+
+# Next phase
+next_phase: qa-verification
+ready_for_phase_1: true

@@ -1,0 +1,6 @@
+schema: 1
+current_phase: qa-verify
+last_successful_phase: qa-setup
+timestamp: "2026-03-05T02:20:00.000Z"
+story_id: APIP-3070
+setup_complete: true

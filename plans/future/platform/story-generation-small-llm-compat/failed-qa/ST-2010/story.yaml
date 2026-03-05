@@ -1,7 +1,7 @@
 id: "ST-2010"
 title: "Dev-Feasibility Worker — Subtask Proposal Output"
-status: needs-code-review
-updated_at: "2026-03-03T00:00:00Z"
+status: failed-qa
+updated_at: "2026-03-05T04:35:00Z"
 priority: medium
 phase: 2
 feature: "Extend the dev-feasibility worker to propose an initial subtask breakdown as part of its output YAML"

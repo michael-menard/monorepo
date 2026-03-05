@@ -1,6 +1,6 @@
 id: "APIP-6001"
 title: "Pipeline Phase Gate Validation"
-status: failed-code-review
+status: in-progress
 priority: critical
 phase: 5
 epic: autonomous-pipeline

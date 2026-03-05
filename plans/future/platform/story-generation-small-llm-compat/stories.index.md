@@ -20,7 +20,8 @@ All stories use `ST-{phase}{story}{variant}` format (e.g., `ST-1010` for Phase 1
 | generated | 0 |
 | in-progress | 0 |
 | ready-to-work | 1 |
-| pending | 5 |
+| pending | 4 |
+| failed-qa | 1 |
 
 ---
 
@@ -88,10 +89,10 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ---
 
-## ST-2010: Elab Analyst: Add Subtask Decomposition Audit Check
+## ST-2010: Dev-Feasibility Worker — Subtask Proposal Output
 
-**Status:** pending
-**Depends On:** ST-1040
+**Status:** failed-qa
+**Depends On:** ST-1020
 **Phase:** 2
 **Feature:** Add Audit Check #9 (Subtask Decomposition) to elab-analyst.agent.md. Validates: every AC covered by a subtask, no subtask >3 files, dependencies form a DAG, each subtask has a verification command and a canonical reference. Result status: PASS | CONDITIONAL | FAIL. CONDITIONAL PASS if decomposition missing or inadequate.
 **Endpoints:** (none)
