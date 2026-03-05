@@ -865,7 +865,7 @@ if $DRY_RUN; then
     case "$ACTION" in
       generate)   CMD="/pm-story generate $FEAT_DIR $STORY_ID" ;;
       elaborate)  CMD="/elab-story $FEAT_DIR $STORY_ID --autonomous" ;;
-      implement)  CMD="/dev-implement-story $FEAT_DIR $STORY_ID --autonomous=$AUTONOMY --skip-worktree" ;;
+      implement)  CMD="/dev-implement-story $FEAT_DIR $STORY_ID --autonomous=$AUTONOMY" ;;
       review)     CMD="/dev-code-review $FEAT_DIR $STORY_ID" ;;
       fix-review) CMD="/dev-fix-story $FEAT_DIR $STORY_ID" ;;
       qa)         CMD="/qa-verify-story $FEAT_DIR $STORY_ID" ;;
@@ -1058,7 +1058,7 @@ process_story() {
         echo "$TAG IMPL START:  $STORY_ID"
         PHASES_RUN="${PHASES_RUN}implement,"
 
-        claude -p "/dev-implement-story $FEAT_DIR $STORY_ID --autonomous=$AUTONOMY --skip-worktree" \
+        claude -p "/dev-implement-story $FEAT_DIR $STORY_ID --autonomous=$AUTONOMY" \
              $CLAUDE_FLAGS \
              > "$IMPL_LOG" 2>&1 || true
 
