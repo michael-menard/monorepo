@@ -1,0 +1,124 @@
+schema: 1
+story_id: "APIP-6002"
+timestamp: "2026-03-05T00:00:00Z"
+phase: implementation
+iteration: 0
+generated_by: dev-execute-leader
+
+touched_files:
+  - scripts/lib/stuck-recovery.sh
+  - scripts/implement-stories.sh
+  - scripts/test-stuck-recovery.sh
+
+commands_run:
+  - command: "bash -n scripts/lib/stuck-recovery.sh"
+    status: pass
+    output: "SYNTAX OK"
+  - command: "bash -n scripts/implement-stories.sh"
+    status: pass
+    output: "SYNTAX OK"
+  - command: "bash -n scripts/test-stuck-recovery.sh"
+    status: pass
+    output: "SYNTAX OK"
+  - command: "bash scripts/test-stuck-recovery.sh"
+    status: pass
+    output: "ALL TESTS PASSED (PASS=5 FAIL=0)"
+
+overall_status: pass
+
+ac_evidence:
+  - ac_id: "AC-1"
+    status: pass
+    evidence: >
+      detect_stuck_stories() implemented in scripts/lib/stuck-recovery.sh.
+      Scans all active stage dirs (ready-to-work, backlog, in-progress, needs-code-review,
+      failed-code-review, ready-for-qa, failed-qa). Emits STORY_ID<TAB>STAGE<TAB>PATTERN<TAB>MINUTES.
+      Verified by Scenario 1 test: TEST-0001 in failed-code-review detected with output
+      'TEST-0001\tfailed-code-review\tstale\t300'.
+
+  - ac_id: "AC-2"
+    status: pass
+    evidence: >
+      recover_story() implemented in scripts/lib/stuck-recovery.sh.
+      Applies pattern-matched recovery and writes STUCK-RECOVERY.yaml.
+      Verified by Scenario 2 test: STUCK-RECOVERY.yaml written at expected path,
+      structured log line 'RECOVERY:' emitted.
+
+  - ac_id: "AC-3"
+    status: pass
+    evidence: >
+      exhausted-retries pattern in recover_story(): resets by moving
+      failed-code-review→needs-code-review or failed-qa→ready-for-qa.
+      Guarded by MAX_RECOVERY_ATTEMPTS=1. Writes STUCK-RECOVERY.yaml before move.
+      Code at lines 172-195 in stuck-recovery.sh.
+
+  - ac_id: "AC-4"
+    status: pass
+    evidence: >
+      no-evidence-no-commits pattern: moves story to ready-to-work,
+      cleans worktree if no recent commits (AC-13 guard present).
+      Code at lines 198-225 in stuck-recovery.sh.
+
+  - ac_id: "AC-5"
+    status: pass
+    evidence: >
+      missing-review-bouncing pattern: writes RECOVERY-NOTE.yaml with force_review=true,
+      moves story to needs-code-review.
+      Code at lines 228-256 in stuck-recovery.sh.
+
+  - ac_id: "AC-6"
+    status: pass
+    evidence: >
+      STUCK-ALERT.yaml written for stories stuck >=STUCK_ALERT_SECONDS (default 28800 = 8hr).
+      Written at start of recover_story() before pattern-specific logic.
+      Code at lines 143-153 in stuck-recovery.sh.
+
+  - ac_id: "AC-7"
+    status: pass
+    evidence: >
+      run_stuck_recovery_sweep() called after 'wait' in implement-stories.sh (line 1922).
+      Inserted as '# Post-batch stuck story recovery sweep (AC-7)' block.
+
+  - ac_id: "AC-8"
+    status: pass
+    evidence: >
+      --detect-stuck flag added to arg parser (line 125 in implement-stories.sh).
+      Standalone mode block exits before story processing (lines 1112-1118).
+      Running './scripts/implement-stories.sh <plan> --detect-stuck' prints stuck stories and exits 0.
+
+  - ac_id: "AC-9"
+    status: pass
+    evidence: >
+      Idempotency guard at top of recover_story(): skips if STUCK-RECOVERY.yaml exists
+      (for non-exhausted-retries patterns). Emits 'RECOVERY SKIP: ... idempotent skip'.
+      Verified by Scenario 3 test: 'RECOVERY SKIP' emitted on second call.
+
+  - ac_id: "AC-10"
+    status: pass
+    evidence: >
+      Structured log in recover_story(): echo "$TAG RECOVERY: $STORY_ID pattern=$PATTERN action=$action"
+      Present for all patterns. Verified by Scenario 2 test: 'RECOVERY:' line in output.
+
+  - ac_id: "AC-11"
+    status: pass
+    evidence: >
+      scripts/test-stuck-recovery.sh created with 3 scenarios using mktemp -d.
+      Scenario 1 (DETECT): mock story in failed-code-review >4hr, verify found.
+      Scenario 2 (RECOVER): run recover_story(), verify STUCK-RECOVERY.yaml + log.
+      Scenario 3 (IDEMPOTENCY): run again, verify 'RECOVERY SKIP'.
+      EXIT trap for cleanup. Exits 0 on all pass. Test run: PASS=5 FAIL=0.
+
+  - ac_id: "AC-12"
+    status: pass
+    evidence: >
+      validate_phase_gate call in missing-review-bouncing pattern is guarded:
+      'declare -f validate_phase_gate > /dev/null 2>&1 && validate_phase_gate ... || true'
+      This ensures stuck-recovery.sh works even when sourced independently of story-utils.sh.
+
+  - ac_id: "AC-13"
+    status: pass
+    evidence: >
+      has_recent_worktree_commits() function implemented. Checks 'git log --since' for
+      commits in the last N minutes (default 30). Called in detect_stuck_stories() before
+      emitting no-evidence-no-commits pattern, and in recover_story() before cleaning worktree.
+      Only cleans worktree if no recent commits detected.

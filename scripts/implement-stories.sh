@@ -79,6 +79,7 @@ fi
 
 source "$(dirname "$0")/lib/resolve-plan.sh"
 source "$(dirname "$0")/lib/story-utils.sh"
+source "$(dirname "$0")/lib/stuck-recovery.sh"
 resolve_plan "$PLAN_SLUG"
 
 LOG_DIR="/tmp/${PLAN_SLUG}-impl-logs"
@@ -94,6 +95,10 @@ AUTONOMY="aggressive"
 ONLY_LIST=""
 MAX_RETRIES=1
 RECONCILE_ONLY=false
+DETECT_STUCK=false
+STUCK_THRESHOLD_SECONDS=14400
+STUCK_ALERT_SECONDS=28800
+MAX_RECOVERY_ATTEMPTS=1
 
 # All tools needed for implement, review, and QA — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -117,6 +122,7 @@ while [[ $# -gt 0 ]]; do
     --only)           ONLY_LIST="$2"; shift 2 ;;
     --max-retries)    MAX_RETRIES="$2"; shift 2 ;;
     --reconcile)      RECONCILE_ONLY=true; shift ;;
+    --detect-stuck)   DETECT_STUCK=true; shift ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
@@ -1103,6 +1109,14 @@ if $RECONCILE_ONLY; then
   exit 0
 fi
 
+# ── Detect-stuck standalone mode (AC-8) ─────────────────────────────
+if $DETECT_STUCK; then
+  echo "Running stuck story detection for: $PLAN_SLUG"
+  detect_stuck_stories "$STUCK_THRESHOLD_SECONDS" "$STUCK_ALERT_SECONDS"
+  exit 0
+fi
+
+
 # ── Build --only set (comma-separated → lookup string) ───────────────
 ONLY_SET=""
 if [[ -n "$ONLY_LIST" ]]; then
@@ -1903,6 +1917,10 @@ done
 echo ""
 echo "All stories launched. Waiting for remaining jobs to complete..."
 wait
+
+# ── Post-batch stuck story recovery sweep (AC-7) ────────────────────
+run_stuck_recovery_sweep "$STUCK_THRESHOLD_SECONDS" "$STUCK_ALERT_SECONDS"
+
 
 # ── Post-batch KB-filesystem reconciliation ──────────────────────────
 echo ""
