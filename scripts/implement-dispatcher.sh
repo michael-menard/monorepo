@@ -84,6 +84,8 @@ if [[ ! -f "$FEATURE_DIR/stories.index.md" ]]; then
   exit 1
 fi
 
+source "$(dirname "$0")/lib/story-utils.sh"
+
 LOG_DIR="/tmp/${PLAN_SLUG}-impl-logs"
 
 # Create log dir early so piping to tee works
@@ -162,23 +164,7 @@ if [[ -n "$ONLY_LIST" ]]; then
 fi
 
 # ── Helper functions ────────────────────────────────────────────────
-
-find_story_dir() {
-  local STORY_ID="$1"
-  # Search all pipeline stages in progression order
-  for stage_dir in "$FEATURE_DIR"/ready-to-work "$FEATURE_DIR"/backlog "$FEATURE_DIR"/in-progress "$FEATURE_DIR"/elaboration "$FEATURE_DIR"/needs-code-review "$FEATURE_DIR"/ready-for-qa "$FEATURE_DIR"/failed-code-review "$FEATURE_DIR"/failed-qa "$FEATURE_DIR"/UAT "$FEATURE_DIR"/done; do
-    if [[ -d "${stage_dir}/${STORY_ID}" ]]; then
-      echo "${stage_dir}/${STORY_ID}"
-      return 0
-    fi
-  done
-  return 1
-}
-
-is_elaborated() {
-  local STORY_DIR="$1"
-  [[ -d "${STORY_DIR}/_implementation" ]] || [[ -f "${STORY_DIR}/_implementation/ELAB.yaml" ]]
-}
+# find_story_dir, is_elaborated — sourced from scripts/lib/story-utils.sh
 
 is_completed() {
   local STORY_ID="$1"
@@ -219,154 +205,8 @@ count_by_state() {
   echo "$COUNT"
 }
 
-check_log_for_failure() {
-  local LOG_FILE="$1"
-  local PHASE="$2"
-  if [[ ! -f "$LOG_FILE" ]]; then
-    echo "FAIL:signal:no-log-file"
-    return 0
-  fi
-  local MATCH
-  MATCH=$(grep -oEi "HARD STOP|SETUP BLOCKED|Phase 0 Validation Failed|cannot proceed|PLANNING BLOCKED|PLANNING FAILED|EXECUTION BLOCKED|DOCUMENTATION BLOCKED" "$LOG_FILE" | head -1) || true
-  if [[ -n "$MATCH" ]]; then
-    echo "FAIL:signal:$MATCH"
-  else
-    echo "OK"
-  fi
-}
-
-verify_stage_transition() {
-  local STORY_ID="$1"
-  shift
-  for stage in "$@"; do
-    if [[ -d "$FEATURE_DIR/${stage}/${STORY_ID}" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-# Validate a YAML artifact has required fields (bash 3.2 compatible, grep-based)
-# Usage: validate_artifact_schema FILE FIELD1 [FIELD2 ...]
-# Returns: OK, MISSING, EMPTY, or FIELD_MISSING:<name>
-validate_artifact_schema() {
-  local FILE_PATH="$1"
-  shift
-  local REQUIRED_FIELDS=("$@")
-
-  if [[ ! -f "$FILE_PATH" ]]; then
-    echo "MISSING"
-    return 0
-  fi
-
-  local FILE_SIZE
-  FILE_SIZE=$(wc -c < "$FILE_PATH" 2>/dev/null) || FILE_SIZE=0
-  if [[ $FILE_SIZE -lt 10 ]]; then
-    echo "EMPTY"
-    return 0
-  fi
-
-  local field
-  for field in "${REQUIRED_FIELDS[@]}"; do
-    local FIELD_LINE
-    FIELD_LINE=$(grep -m1 "^${field}:" "$FILE_PATH" 2>/dev/null) || true
-    if [[ -z "$FIELD_LINE" ]]; then
-      echo "FIELD_MISSING:${field}"
-      return 0
-    fi
-    local INLINE_VALUE
-    INLINE_VALUE=$(echo "$FIELD_LINE" | sed "s/^${field}: *//" | sed 's/^["'"'"']//;s/["'"'"']$//') || true
-    if [[ -z "$INLINE_VALUE" || "$INLINE_VALUE" == "[]" || "$INLINE_VALUE" == "null" || "$INLINE_VALUE" == "~" ]]; then
-      if ! grep -A3 "^${field}:" "$FILE_PATH" 2>/dev/null | grep -q "^  - "; then
-        echo "FIELD_MISSING:${field}"
-        return 0
-      fi
-    fi
-  done
-
-  echo "OK"
-}
-
-# Validate artifact gates before a phase transition (dispatcher version)
-# Usage: validate_phase_gate IMPL_DIR STORY_ID FROM_STAGE TO_STAGE
-# Returns: 0 (gate passes), 1 (gate fails)
-validate_phase_gate() {
-  local IMPL_DIR="$1"
-  local STORY_ID="$2"
-  local FROM_STAGE="$3"
-  local TO_STAGE="$4"
-
-  local GATE_RESULT VERDICT_VALUE
-
-  case "${FROM_STAGE}→${TO_STAGE}" in
-
-    "in-progress→needs-code-review"|"ready-to-work→needs-code-review"|"backlog→needs-code-review")
-      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/EVIDENCE.yaml" "touched_files" "commands_run")
-      if [[ "$GATE_RESULT" != "OK" ]]; then
-        echo "GATE FAIL: ${STORY_ID} (${FROM_STAGE} -> needs-code-review): ${GATE_RESULT} in EVIDENCE.yaml"
-        return 1
-      fi
-      ;;
-
-    "needs-code-review→ready-for-qa")
-      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/REVIEW.yaml" "verdict")
-      if [[ "$GATE_RESULT" != "OK" ]]; then
-        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> ready-for-qa): ${GATE_RESULT} in REVIEW.yaml"
-        return 1
-      fi
-      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/REVIEW.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
-      if ! echo "$VERDICT_VALUE" | grep -qi "^pass$\|^conditional.pass$"; then
-        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> ready-for-qa): verdict='${VERDICT_VALUE}' is not pass|conditional-pass in REVIEW.yaml"
-        return 1
-      fi
-      ;;
-
-    "needs-code-review→failed-code-review")
-      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/REVIEW.yaml" "verdict")
-      if [[ "$GATE_RESULT" != "OK" ]]; then
-        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> failed-code-review): ${GATE_RESULT} in REVIEW.yaml"
-        return 1
-      fi
-      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/REVIEW.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
-      if ! echo "$VERDICT_VALUE" | grep -qi "^fail$\|concerns"; then
-        echo "GATE FAIL: ${STORY_ID} (needs-code-review -> failed-code-review): verdict='${VERDICT_VALUE}' is not fail|concerns in REVIEW.yaml"
-        return 1
-      fi
-      ;;
-
-    "ready-for-qa→UAT")
-      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/VERIFICATION.yaml" "verdict")
-      if [[ "$GATE_RESULT" != "OK" ]]; then
-        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> UAT): ${GATE_RESULT} in VERIFICATION.yaml"
-        return 1
-      fi
-      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/VERIFICATION.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
-      if ! echo "$VERDICT_VALUE" | grep -qi "^pass$"; then
-        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> UAT): verdict='${VERDICT_VALUE}' is not pass in VERIFICATION.yaml"
-        return 1
-      fi
-      ;;
-
-    "ready-for-qa→failed-qa")
-      GATE_RESULT=$(validate_artifact_schema "${IMPL_DIR}/VERIFICATION.yaml" "verdict")
-      if [[ "$GATE_RESULT" != "OK" ]]; then
-        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> failed-qa): ${GATE_RESULT} in VERIFICATION.yaml"
-        return 1
-      fi
-      VERDICT_VALUE=$(grep -m1 "^verdict:" "${IMPL_DIR}/VERIFICATION.yaml" 2>/dev/null | sed 's/^verdict: *//' | sed 's/^["'"'"']//;s/["'"'"']$//') || true
-      if ! echo "$VERDICT_VALUE" | grep -qi "^fail$"; then
-        echo "GATE FAIL: ${STORY_ID} (ready-for-qa -> failed-qa): verdict='${VERDICT_VALUE}' is not fail in VERIFICATION.yaml"
-        return 1
-      fi
-      ;;
-
-    *)
-      return 0
-      ;;
-  esac
-
-  return 0
-}
+# check_log_for_failure, verify_stage_transition, validate_artifact_schema, validate_phase_gate
+# — sourced from scripts/lib/story-utils.sh
 
 # ── Worker function (runs in background for each story) ─────────────
 process_story() {
