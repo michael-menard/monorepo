@@ -75,7 +75,7 @@ Change telemetry, model affinity profiles, smart routing, bake-off engine, concu
 | APIP-3040 | Learning-Aware Model Router | APIP-3020 | ✅ Completed |
 | APIP-3050 | Story Structurer Feedback (Affinity-Guided) | APIP-3020, APIP-1010 | UAT |
 | APIP-3060 | Bake-Off Engine for Model Experiments | APIP-3020, APIP-3010 | UAT |
-| APIP-3070 | Cold Start Bootstrapping and Exploration Budget | APIP-3040 | 🔍 ready-for-qa |
+| APIP-3070 | Cold Start Bootstrapping and Exploration Budget | APIP-3040 | ✅ UAT |
 | APIP-3080 | Parallel Story Concurrency (2-3 Worktrees) | none | ✅ Completed |
 | APIP-3090 | Cron Job Infrastructure | APIP-3020 | ✅ Completed |
 
@@ -107,7 +107,7 @@ Artifact validation gates, stuck story recovery, and KB-filesystem state reconci
 
 - **Total Stories**: 42
 - **Completed**: 32 (76%)
-- **UAT**: 6 (APIP-0040, APIP-1032, APIP-1070, APIP-4020, APIP-5000, APIP-5006)
+- **UAT**: 7 (APIP-0040, APIP-1032, APIP-1070, APIP-3070, APIP-4020, APIP-5000, APIP-5006)
 - **Ready for QA**: 1 (APIP-1031)
 - **Needs Code Review**: 0
 - **Remaining**: 3 Phase 5 stories (pipeline resilience)
