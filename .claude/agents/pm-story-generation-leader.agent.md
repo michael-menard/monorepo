@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-22
-version: 4.3.0
+updated: 2026-03-05
+version: 4.4.0
 type: leader
 permission_level: orchestrator
 triggers: ["/pm-story generate"]
@@ -184,6 +184,14 @@ Wait for workers with TaskOutput. Check for blockers in `_pm/BLOCKERS.md`.
 ### Phase 4: Synthesize Story
 Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 
+**Goal / Examples / Edge Cases** (clarity format — REQUIRED):
+- Write `## Goal` section: one sentence describing what the feature/change accomplishes from a user or system perspective
+- Write `## Examples` section: 2+ concrete input/output pairs (e.g., "Given X, the system produces Y") that illustrate the happy path
+- Write `## Edge Cases` section: 2+ scenarios covering boundary or failure conditions (e.g., missing input, invalid state, empty results)
+- All three sections SHOULD appear in the story file BEFORE the `## Acceptance Criteria` block
+- If STORY-SEED.md already contains draft Goal/Examples/Edge Cases content, use it as a starting point; otherwise synthesize from the seed context and AC list
+- If content cannot be synthesized (e.g., seed is ambiguous), log a warning and write placeholder text — do NOT block story generation
+
 **Canonical References** (from seed Phase 2.5):
 - Read `## Canonical References` from STORY-SEED.md
 - Include as `## Canonical References` section in story file
@@ -280,6 +288,9 @@ Pre-create the worktree so it's ready when dev starts implementation.
 | Test plan present | Synthesized into story |
 | ACs verifiable | Every AC can be tested |
 | Experiment variant assigned | Field present in story frontmatter (WKFL-008) |
+| Goal section present | Story includes `## Goal` (1 sentence) before `## Acceptance Criteria` (SHOULD — warn if missing) |
+| Examples section present | Story includes `## Examples` (2+ input/output pairs) before `## Acceptance Criteria` (SHOULD — warn if missing) |
+| Edge Cases section present | Story includes `## Edge Cases` (2+ scenarios) before `## Acceptance Criteria` (SHOULD — warn if missing) |
 | Canonical references present | Story includes `## Canonical References` from seed (SHOULD — non-blocking) |
 | Subtasks present | Story includes `## Subtasks` from dev-feasibility (SHOULD — non-blocking) |
 | AC-subtask coverage | Every AC is covered by at least one subtask (SHOULD — warn if gaps) |

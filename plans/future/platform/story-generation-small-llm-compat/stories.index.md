@@ -19,7 +19,8 @@ All stories use `ST-{phase}{story}{variant}` format (e.g., `ST-1010` for Phase 1
 | completed | 0 |
 | generated | 0 |
 | in-progress | 0 |
-| pending | 6 |
+| ready-to-work | 1 |
+| pending | 5 |
 
 ---
 
@@ -62,7 +63,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-1030: Dev Feasibility Worker: Add Subtask Proposal to Output
 
-**Status:** pending
+**Status:** completed
 **Depends On:** none
 **Phase:** 1
 **Feature:** Extend pm-dev-feasibility-review.agent.md to produce a subtasks[] array in dev-feasibility.yaml. Each subtask covers 1-3 files, maps to 1-3 ACs, has a depends_on chain, a verification command, and an estimated_tokens field. Sizing: 1-pt story → 1-2 subtasks, 3-pt → 3-5, 5-pt → 5-8.
@@ -75,7 +76,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## ST-1040: Generation Leader Phase 4: Include Subtasks and Canonical References in Story
 
-**Status:** pending
+**Status:** uat
 **Depends On:** ST-1020, ST-1030
 **Phase:** 1
 **Feature:** Update pm-story-generation-leader Phase 4 synthesis to read subtasks[] from dev-feasibility.yaml and ## Canonical References from STORY-SEED.md, then include both as required sections in the generated story file. Also enforce the Goal/Examples/Edge Cases clarity format. Cross-reference: every AC must be covered by at least one subtask.
@@ -83,6 +84,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 **Infrastructure:** (none)
 **Goal:** Phase 4 synthesis must produce story files that contain all five new sections (Goal, Examples, Edge Cases, Subtasks, Canonical References) and must warn when any AC is not covered by a subtask.
 **Risk Notes:** pm-story-generation-leader.agent.md v4.3.0 already has the Canonical References and Subtasks integration in Phase 4 synthesis, and the quality gates table already includes checks for both. The generation leader currently reads ## Canonical References from STORY-SEED.md and subtasks[] from dev-feasibility.yaml. The missing piece is the Goal/Examples/Edge Cases format enforcement. Low additional risk — this is an additive change to an already-updated Phase 4 block.
+**Elaboration Verdict:** PASS (autonomous) - 1 AC added, 2 gaps resolved, 4 opportunities logged to KB
 
 ---
 

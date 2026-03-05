@@ -88,20 +88,22 @@ Required sections in `{STORY_ID}.md`:
 1. YAML frontmatter (`status: backlog`)
 2. Title
 3. Context (grounded in reality baseline)
-4. Goal
-5. Non-goals (include protected features)
-6. Scope (endpoints, packages)
-7. Acceptance Criteria
-8. Reuse Plan
-9. Architecture Notes
-10. Infrastructure Notes (if applicable)
-11. HTTP Contract Plan (if API)
-12. Seed Requirements (if applicable)
-13. Test Plan
-14. UI/UX Notes (if applicable)
-15. Reality Baseline
-16. Canonical References (from seed Phase 2.5)
-17. Subtasks (from dev-feasibility worker)
+4. Goal (1 sentence — what the feature/change accomplishes)
+5. Examples (2+ input/output pairs illustrating the happy path)
+6. Edge Cases (2+ boundary or failure scenarios)
+7. Non-goals (include protected features)
+8. Scope (endpoints, packages)
+9. Acceptance Criteria
+10. Reuse Plan
+11. Architecture Notes
+12. Infrastructure Notes (if applicable)
+13. HTTP Contract Plan (if API)
+14. Seed Requirements (if applicable)
+15. Test Plan
+16. UI/UX Notes (if applicable)
+17. Reality Baseline
+18. Canonical References (from seed Phase 2.5)
+19. Subtasks (from dev-feasibility worker)
 
 ---
 
