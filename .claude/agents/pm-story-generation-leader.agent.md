@@ -207,7 +207,7 @@ Combine index entry + seed + worker artifacts → `{OUTPUT_DIR}/{STORY_ID}.md`
 **PM Artifacts (pm_artifacts section)**:
 Embed worker YAML outputs as `pm_artifacts` block in story.yaml frontmatter:
 - Read `_pm/test-plan.yaml` → `pm_artifacts.test_plan`
-- Read `_pm/dev-feasibility.yaml` → `pm_artifacts.dev_feasibility` (omit `subtasks` key — already in `## Subtasks`)
+- Read `_pm/dev-feasibility.yaml` → `pm_artifacts.dev_feasibility` (include `subtasks` key — embed subtasks under `pm_artifacts.dev_feasibility.subtasks`)
 - Read `_pm/uiux-notes.yaml` → `pm_artifacts.uiux_notes` (omit entirely if `skipped: true`)
 
 **Experiment Variant in Story Frontmatter** (WKFL-008):
