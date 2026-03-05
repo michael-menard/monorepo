@@ -35,6 +35,7 @@
 #   ./scripts/orchestrate-stories.sh --work-order path/to/file.md   # Custom work order
 #   ./scripts/orchestrate-stories.sh --autonomy moderate            # Pass to dev agents
 #   ./scripts/orchestrate-stories.sh --plan code-audit --dry-run    # All stories for a plan
+#   ./scripts/orchestrate-stories.sh --max-passes 5                # Limit dep loop-back passes
 #
 
 set -eo pipefail
@@ -60,6 +61,7 @@ ONLY_LIST=""
 MAX_RETRIES=1
 LOG_DIR=""
 PLAN_SLUG_ARG=""
+MAX_PASSES=10
 
 # All tools needed across all phases — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -79,6 +81,7 @@ while [[ $# -gt 0 ]]; do
     --work-order)     WORK_ORDER="$2"; shift 2 ;;
     --plan)           PLAN_SLUG_ARG="$2"; shift 2 ;;
     --autonomy)       AUTONOMY="$2"; shift 2 ;;
+    --max-passes)     MAX_PASSES="$2"; shift 2 ;;
     --help|-h)
       echo "Usage: $0 [options]"
       echo ""
@@ -92,6 +95,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --work-order FILE     Custom work order file"
       echo "  --plan SLUG           Discover stories from a KB plan (mutually exclusive with --work-order)"
       echo "  --autonomy LEVEL      Set autonomy level (default aggressive)"
+      echo "  --max-passes N        Max dependency loop-back passes (default 10)"
       exit 0
       ;;
     *) echo "Unknown arg: $1"; exit 1 ;;
@@ -269,6 +273,30 @@ for STORY_ID in "${FILTERED_STORIES[@]}"; do
   STATE_SUMMARY="${STATE_SUMMARY}${STORY_ID}=${DETECTED_STATE} "
 done
 
+# ── Build dependency cache ─────────────────────────────────────────────
+# Parse dependencies from each unique stories.index.md once
+echo ""
+echo "Building dependency cache..."
+: > "$LOG_DIR/.deps-cache"  # initialize empty cache file
+PARSED_INDEX_FILES=""
+for STORY_ID in "${FILTERED_STORIES[@]}"; do
+  FEAT_DIR=$(read_state_field "$STORY_ID" "feature_dir")
+  if [[ -z "$FEAT_DIR" ]]; then continue; fi
+  INDEX_FILE="$FEAT_DIR/stories.index.md"
+  # Skip if we already parsed this index file
+  case "$PARSED_INDEX_FILES" in
+    *"|${INDEX_FILE}|"*) continue ;;
+  esac
+  PARSED_INDEX_FILES="${PARSED_INDEX_FILES}|${INDEX_FILE}|"
+  parse_story_dependencies "$INDEX_FILE"
+done
+
+DEPS_COUNT=0
+if [[ -f "$LOG_DIR/.deps-cache" ]]; then
+  DEPS_COUNT=$(grep -cv '	none$' "$LOG_DIR/.deps-cache" 2>/dev/null) || true
+fi
+echo "  Parsed deps for $(wc -l < "$LOG_DIR/.deps-cache" | tr -d ' ') stories ($DEPS_COUNT with dependencies)"
+
 # ── Banner ───────────────────────────────────────────────────────────
 echo ""
 echo "======================================"
@@ -285,6 +313,7 @@ echo " Skipped:       $SKIPPED_COUNT"
 echo " Parallel:      $PARALLEL"
 echo " Autonomy:      $AUTONOMY"
 echo " Max retries:   $MAX_RETRIES"
+echo " Max passes:    $MAX_PASSES"
 echo " Dry run:       $DRY_RUN"
 [[ -n "$ONLY_LIST" ]] && echo " Only:          $ONLY_LIST"
 echo " Logs:          $LOG_DIR/"
@@ -304,6 +333,7 @@ RUN_LOG="$LOG_DIR/run.log"
   echo "Parallel: $PARALLEL"
   echo "Autonomy: $AUTONOMY"
   echo "Max retries: $MAX_RETRIES"
+  echo "Max passes: $MAX_PASSES"
   echo "Dry run: $DRY_RUN"
   [[ -n "$ONLY_LIST" ]] && echo "Only: $ONLY_LIST"
   [[ -n "$RESUME_FROM" ]] && echo "Resume from: $RESUME_FROM"
@@ -539,6 +569,112 @@ get_story_title() {
   grep -m1 "^title:" "${STORY_DIR}/story.yaml" 2>/dev/null | sed 's/^title: *//' | sed 's/^["'"'"']//;s/["'"'"']$//' || echo "Implementation"
 }
 
+# ── Dependency helpers ────────────────────────────────────────────────
+#
+# Parse inter-story dependencies from stories.index.md and check whether
+# a story's deps have been satisfied (reached UAT / result=ok).
+#
+
+# Build a deps cache file from a stories.index.md
+# Format: STORY_ID<TAB>DEP1,DEP2  (or STORY_ID<TAB>none)
+parse_story_dependencies() {
+  local INDEX_FILE="$1"
+  local CACHE_FILE="$LOG_DIR/.deps-cache"
+
+  if [[ ! -f "$INDEX_FILE" ]]; then
+    return 0
+  fi
+
+  local current_story=""
+  while IFS= read -r line; do
+    # Match story header: ## STORY-ID: ...
+    if [[ "$line" =~ ^##[[:space:]]+([A-Z]+-[0-9]+): ]]; then
+      current_story="${BASH_REMATCH[1]}"
+    fi
+    # Match depends-on line within a story section
+    if [[ -n "$current_story" && "$line" =~ \*\*Depends\ On:\*\*[[:space:]]*(.*) ]]; then
+      local deps_raw="${BASH_REMATCH[1]}"
+      # Normalize: strip whitespace, treat "none", "—", empty as no deps
+      deps_raw=$(echo "$deps_raw" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      if [[ -z "$deps_raw" || "$deps_raw" == "none" || "$deps_raw" == "—" || "$deps_raw" == "-" ]]; then
+        # Only write if not already cached (avoid overwriting)
+        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
+          echo "${current_story}	none" >> "$CACHE_FILE"
+        fi
+      else
+        # Comma-separated story IDs — normalize spaces
+        local deps_clean
+        deps_clean=$(echo "$deps_raw" | sed 's/[[:space:]]*,[[:space:]]*/,/g')
+        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
+          echo "${current_story}	${deps_clean}" >> "$CACHE_FILE"
+        fi
+      fi
+      current_story=""
+    fi
+  done < "$INDEX_FILE"
+}
+
+# Check if all dependencies for a story are satisfied.
+# Returns 0 if satisfied (or no deps), 1 if blocked.
+# Sets BLOCKING_DEPS to comma-separated list of blocking story IDs.
+check_deps_satisfied() {
+  local STORY_ID="$1"
+  local CACHE_FILE="$LOG_DIR/.deps-cache"
+  BLOCKING_DEPS=""
+
+  if [[ ! -f "$CACHE_FILE" ]]; then
+    return 0  # No cache = no deps info = proceed
+  fi
+
+  local deps_line
+  deps_line=$(grep "^${STORY_ID}	" "$CACHE_FILE" 2>/dev/null | head -1) || true
+
+  if [[ -z "$deps_line" || "$deps_line" == *"	none" ]]; then
+    return 0  # No deps or explicitly none
+  fi
+
+  local deps_csv
+  deps_csv=$(echo "$deps_line" | cut -f2)
+
+  local blocked=()
+  local IFS_SAVE="$IFS"
+  IFS=',' read -ra dep_ids <<< "$deps_csv"
+  IFS="$IFS_SAVE"
+
+  for dep in "${dep_ids[@]}"; do
+    dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [[ -z "$dep" ]]; then continue; fi
+
+    # Check 1: result file says ok
+    local dep_result_file="$LOG_DIR/.results/${dep}"
+    if [[ -f "$dep_result_file" ]]; then
+      local dep_result
+      dep_result=$(cat "$dep_result_file")
+      if [[ "$dep_result" == *"result=ok"* ]]; then
+        continue  # This dep is satisfied
+      fi
+    fi
+
+    # Check 2: state file says UAT
+    local dep_state
+    dep_state=$(read_state_field "$dep" "current_state" 2>/dev/null) || true
+    if [[ "$dep_state" == "UAT" ]]; then
+      continue  # This dep is satisfied
+    fi
+
+    # Not satisfied
+    blocked+=("$dep")
+  done
+
+  if [[ ${#blocked[@]} -gt 0 ]]; then
+    BLOCKING_DEPS=$(printf '%s,' "${blocked[@]}")
+    BLOCKING_DEPS="${BLOCKING_DEPS%,}"  # trim trailing comma
+    return 1
+  fi
+
+  return 0
+}
+
 # ── Status sync helpers ──────────────────────────────────────────────
 #
 # Keep three sources of truth in sync after each state transition:
@@ -738,10 +874,17 @@ if $DRY_RUN; then
       skip)       CMD="(skip — needs-split)" ;;
       *)          CMD="(unknown state: $STATE)" ;;
     esac
-    printf "  %-14s %-14s → %s\n" "$STORY_ID" "$STATE" "$CMD"
+    # Show dependency status
+    local dep_note=""
+    if [[ "$ACTION" != "done" && "$ACTION" != "skip" ]]; then
+      if ! check_deps_satisfied "$STORY_ID"; then
+        dep_note="  (blocked by: $BLOCKING_DEPS)"
+      fi
+    fi
+    printf "  %-14s %-14s → %s%s\n" "$STORY_ID" "$STATE" "$CMD" "$dep_note"
   done
   echo ""
-  echo "Dry run complete. $TOTAL stories detected, $PARALLEL would run in parallel."
+  echo "Dry run complete. $TOTAL stories detected, $PARALLEL would run in parallel, max $MAX_PASSES passes."
   # Cleanup
   wo_cleanup
   exit 0
@@ -1178,7 +1321,7 @@ process_story() {
   echo "result=$FINAL_RESULT phases=$PHASES_RUN state=${CURRENT_STATE:-unknown} transitions=${TRANSITION_LOG:-none}" > "$RESULT_FILE"
 }
 
-# ── Parallel execution with job pool ──────────────────────────────────
+# ── Parallel execution with job pool (multi-pass for dependencies) ────
 RUNNING_PIDS=()
 
 wait_for_slot() {
@@ -1196,30 +1339,102 @@ wait_for_slot() {
   done
 }
 
+# Helper: check if a story is already finished (result=ok or result=skip) or stuck/failed
+is_story_done_or_stuck() {
+  local sid="$1"
+  local rf="$LOG_DIR/.results/${sid}"
+  if [[ -f "$rf" ]]; then
+    local r
+    r=$(cat "$rf")
+    if [[ "$r" == *"result=ok"* || "$r" == *"result=skip"* || "$r" == *"result=fail"* || "$r" == *"result=stuck"* ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 echo ""
-echo "Starting $TOTAL stories with parallelism=$PARALLEL..."
+echo "Starting $TOTAL stories with parallelism=$PARALLEL, max_passes=$MAX_PASSES..."
 echo ""
 
-for i in "${!FILTERED_STORIES[@]}"; do
-  STORY_ID="${FILTERED_STORIES[$i]}"
-  IDX=$((i + 1))
+PASS_NUM=0
+TOTAL_DEFERRED=0
 
-  wait_for_slot
+while true; do
+  ((PASS_NUM++))
+  if [[ $PASS_NUM -gt $MAX_PASSES ]]; then
+    echo "Reached max passes ($MAX_PASSES). Stopping."
+    break
+  fi
 
-  process_story "$STORY_ID" "$IDX" &
-  RUNNING_PIDS+=($!)
+  DEFERRED_THIS_PASS=0
+  LAUNCHED_THIS_PASS=0
+  RUNNING_PIDS=()
 
-  # Stagger launches to avoid thundering herd
-  sleep 3
+  if [[ $PASS_NUM -gt 1 ]]; then
+    echo ""
+    echo "── Pass $PASS_NUM (retrying dep-blocked stories) ──"
+    echo ""
+  fi
+
+  for i in "${!FILTERED_STORIES[@]}"; do
+    STORY_ID="${FILTERED_STORIES[$i]}"
+    IDX=$((i + 1))
+
+    # Skip stories that already have a final result
+    if is_story_done_or_stuck "$STORY_ID"; then
+      continue
+    fi
+
+    # Check dependencies
+    if ! check_deps_satisfied "$STORY_ID"; then
+      if [[ $PASS_NUM -eq 1 ]]; then
+        echo "  [$IDX/$TOTAL] $STORY_ID: DEFERRED (blocked by: $BLOCKING_DEPS)"
+      else
+        echo "  $STORY_ID: still blocked by $BLOCKING_DEPS"
+      fi
+      ((DEFERRED_THIS_PASS++))
+      continue
+    fi
+
+    wait_for_slot
+
+    process_story "$STORY_ID" "$IDX" &
+    RUNNING_PIDS+=($!)
+    ((LAUNCHED_THIS_PASS++))
+
+    # Stagger launches to avoid thundering herd
+    sleep 3
+  done
+
+  # Wait for all parallel jobs this pass to complete
+  if [[ ${#RUNNING_PIDS[@]} -gt 0 ]]; then
+    echo ""
+    echo "Pass $PASS_NUM: launched $LAUNCHED_THIS_PASS stories, $DEFERRED_THIS_PASS deferred. Waiting..."
+    wait
+    # Wait for background sync jobs too
+    wait 2>/dev/null || true
+  fi
+
+  # If nothing was deferred, we're done
+  if [[ $DEFERRED_THIS_PASS -eq 0 ]]; then
+    break
+  fi
+
+  # If nothing launched but some were deferred, we're stuck
+  if [[ $LAUNCHED_THIS_PASS -eq 0 && $DEFERRED_THIS_PASS -gt 0 ]]; then
+    echo ""
+    echo "All $DEFERRED_THIS_PASS remaining stories blocked by unresolved dependencies. Stopping."
+    TOTAL_DEFERRED=$DEFERRED_THIS_PASS
+    break
+  fi
 done
 
 echo ""
-echo "All stories launched. Waiting for remaining jobs to complete..."
-wait
-
-# ── Wait for any background sync jobs to complete ─────────────────────
-# sync_status_after_transition fires KB/index updates in background
-wait 2>/dev/null || true
+echo "Completed after $PASS_NUM pass(es)."
+if [[ $TOTAL_DEFERRED -gt 0 ]]; then
+  echo "$TOTAL_DEFERRED stories remain blocked by unresolved dependencies."
+fi
 
 # ── Final reconciliation pass ─────────────────────────────────────────
 # Scan for any stories that reached UAT during this run but weren't
@@ -1278,6 +1493,7 @@ done
   echo ""
   echo "=== Final Summary ==="
   echo "End: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  echo "Passes: $PASS_NUM  Dep-blocked: $TOTAL_DEFERRED"
   echo "OK: $RESULT_OK  FAIL: $RESULT_FAIL  STUCK: $RESULT_STUCK  SKIP: $RESULT_SKIP  Missing: $MISSING"
   echo "---"
   echo "Per-story results:"
@@ -1303,6 +1519,8 @@ echo " OK:                $RESULT_OK"
 echo " FAILED:            $RESULT_FAIL"
 echo " STUCK:             $RESULT_STUCK"
 echo " SKIPPED:           $RESULT_SKIP"
+echo " Passes:            $PASS_NUM"
+[[ $TOTAL_DEFERRED -gt 0 ]] && echo " Dep-blocked:       $TOTAL_DEFERRED"
 [[ $MISSING -gt 0 ]] && echo " Missing results:   $MISSING"
 echo " Logs:              $LOG_DIR/"
 echo "======================================"
