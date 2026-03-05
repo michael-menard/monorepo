@@ -221,6 +221,112 @@ if [[ -z "$PLAN_SLUG_ARG" ]]; then
   echo "  KB cache: ${#KB_STORY_IDS[@]} stories found"
 fi
 
+# ── Dependency helpers ────────────────────────────────────────────────
+#
+# Parse inter-story dependencies from stories.index.md and check whether
+# a story's deps have been satisfied (reached UAT / result=ok).
+#
+
+# Build a deps cache file from a stories.index.md
+# Format: STORY_ID<TAB>DEP1,DEP2  (or STORY_ID<TAB>none)
+parse_story_dependencies() {
+  local INDEX_FILE="$1"
+  local CACHE_FILE="$LOG_DIR/.deps-cache"
+
+  if [[ ! -f "$INDEX_FILE" ]]; then
+    return 0
+  fi
+
+  local current_story=""
+  while IFS= read -r line; do
+    # Match story header: ## STORY-ID: ...
+    if [[ "$line" =~ ^##[[:space:]]+([A-Z]+-[0-9]+): ]]; then
+      current_story="${BASH_REMATCH[1]}"
+    fi
+    # Match depends-on line within a story section
+    if [[ -n "$current_story" && "$line" =~ \*\*Depends\ On:\*\*[[:space:]]*(.*) ]]; then
+      local deps_raw="${BASH_REMATCH[1]}"
+      # Normalize: strip whitespace, treat "none", "—", empty as no deps
+      deps_raw=$(echo "$deps_raw" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      if [[ -z "$deps_raw" || "$deps_raw" == "none" || "$deps_raw" == "—" || "$deps_raw" == "-" ]]; then
+        # Only write if not already cached (avoid overwriting)
+        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
+          echo "${current_story}	none" >> "$CACHE_FILE"
+        fi
+      else
+        # Comma-separated story IDs — normalize spaces
+        local deps_clean
+        deps_clean=$(echo "$deps_raw" | sed 's/[[:space:]]*,[[:space:]]*/,/g')
+        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
+          echo "${current_story}	${deps_clean}" >> "$CACHE_FILE"
+        fi
+      fi
+      current_story=""
+    fi
+  done < "$INDEX_FILE"
+}
+
+# Check if all dependencies for a story are satisfied.
+# Returns 0 if satisfied (or no deps), 1 if blocked.
+# Sets BLOCKING_DEPS to comma-separated list of blocking story IDs.
+check_deps_satisfied() {
+  local STORY_ID="$1"
+  local CACHE_FILE="$LOG_DIR/.deps-cache"
+  BLOCKING_DEPS=""
+
+  if [[ ! -f "$CACHE_FILE" ]]; then
+    return 0  # No cache = no deps info = proceed
+  fi
+
+  local deps_line
+  deps_line=$(grep "^${STORY_ID}	" "$CACHE_FILE" 2>/dev/null | head -1) || true
+
+  if [[ -z "$deps_line" || "$deps_line" == *"	none" ]]; then
+    return 0  # No deps or explicitly none
+  fi
+
+  local deps_csv
+  deps_csv=$(echo "$deps_line" | cut -f2)
+
+  local blocked=()
+  local IFS_SAVE="$IFS"
+  IFS=',' read -ra dep_ids <<< "$deps_csv"
+  IFS="$IFS_SAVE"
+
+  for dep in "${dep_ids[@]}"; do
+    dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [[ -z "$dep" ]]; then continue; fi
+
+    # Check 1: result file says ok
+    local dep_result_file="$LOG_DIR/.results/${dep}"
+    if [[ -f "$dep_result_file" ]]; then
+      local dep_result
+      dep_result=$(cat "$dep_result_file")
+      if [[ "$dep_result" == *"result=ok"* ]]; then
+        continue  # This dep is satisfied
+      fi
+    fi
+
+    # Check 2: state file says UAT
+    local dep_state
+    dep_state=$(read_state_field "$dep" "current_state" 2>/dev/null) || true
+    if [[ "$dep_state" == "UAT" ]]; then
+      continue  # This dep is satisfied
+    fi
+
+    # Not satisfied
+    blocked+=("$dep")
+  done
+
+  if [[ ${#blocked[@]} -gt 0 ]]; then
+    BLOCKING_DEPS=$(printf '%s,' "${blocked[@]}")
+    BLOCKING_DEPS="${BLOCKING_DEPS%,}"  # trim trailing comma
+    return 1
+  fi
+
+  return 0
+}
+
 # ── Detect states for all stories ────────────────────────────────────
 echo ""
 echo "Detecting story states..."
@@ -567,112 +673,6 @@ merge_and_cleanup() {
 get_story_title() {
   local STORY_DIR="$1"
   grep -m1 "^title:" "${STORY_DIR}/story.yaml" 2>/dev/null | sed 's/^title: *//' | sed 's/^["'"'"']//;s/["'"'"']$//' || echo "Implementation"
-}
-
-# ── Dependency helpers ────────────────────────────────────────────────
-#
-# Parse inter-story dependencies from stories.index.md and check whether
-# a story's deps have been satisfied (reached UAT / result=ok).
-#
-
-# Build a deps cache file from a stories.index.md
-# Format: STORY_ID<TAB>DEP1,DEP2  (or STORY_ID<TAB>none)
-parse_story_dependencies() {
-  local INDEX_FILE="$1"
-  local CACHE_FILE="$LOG_DIR/.deps-cache"
-
-  if [[ ! -f "$INDEX_FILE" ]]; then
-    return 0
-  fi
-
-  local current_story=""
-  while IFS= read -r line; do
-    # Match story header: ## STORY-ID: ...
-    if [[ "$line" =~ ^##[[:space:]]+([A-Z]+-[0-9]+): ]]; then
-      current_story="${BASH_REMATCH[1]}"
-    fi
-    # Match depends-on line within a story section
-    if [[ -n "$current_story" && "$line" =~ \*\*Depends\ On:\*\*[[:space:]]*(.*) ]]; then
-      local deps_raw="${BASH_REMATCH[1]}"
-      # Normalize: strip whitespace, treat "none", "—", empty as no deps
-      deps_raw=$(echo "$deps_raw" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-      if [[ -z "$deps_raw" || "$deps_raw" == "none" || "$deps_raw" == "—" || "$deps_raw" == "-" ]]; then
-        # Only write if not already cached (avoid overwriting)
-        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
-          echo "${current_story}	none" >> "$CACHE_FILE"
-        fi
-      else
-        # Comma-separated story IDs — normalize spaces
-        local deps_clean
-        deps_clean=$(echo "$deps_raw" | sed 's/[[:space:]]*,[[:space:]]*/,/g')
-        if ! grep -q "^${current_story}	" "$CACHE_FILE" 2>/dev/null; then
-          echo "${current_story}	${deps_clean}" >> "$CACHE_FILE"
-        fi
-      fi
-      current_story=""
-    fi
-  done < "$INDEX_FILE"
-}
-
-# Check if all dependencies for a story are satisfied.
-# Returns 0 if satisfied (or no deps), 1 if blocked.
-# Sets BLOCKING_DEPS to comma-separated list of blocking story IDs.
-check_deps_satisfied() {
-  local STORY_ID="$1"
-  local CACHE_FILE="$LOG_DIR/.deps-cache"
-  BLOCKING_DEPS=""
-
-  if [[ ! -f "$CACHE_FILE" ]]; then
-    return 0  # No cache = no deps info = proceed
-  fi
-
-  local deps_line
-  deps_line=$(grep "^${STORY_ID}	" "$CACHE_FILE" 2>/dev/null | head -1) || true
-
-  if [[ -z "$deps_line" || "$deps_line" == *"	none" ]]; then
-    return 0  # No deps or explicitly none
-  fi
-
-  local deps_csv
-  deps_csv=$(echo "$deps_line" | cut -f2)
-
-  local blocked=()
-  local IFS_SAVE="$IFS"
-  IFS=',' read -ra dep_ids <<< "$deps_csv"
-  IFS="$IFS_SAVE"
-
-  for dep in "${dep_ids[@]}"; do
-    dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    if [[ -z "$dep" ]]; then continue; fi
-
-    # Check 1: result file says ok
-    local dep_result_file="$LOG_DIR/.results/${dep}"
-    if [[ -f "$dep_result_file" ]]; then
-      local dep_result
-      dep_result=$(cat "$dep_result_file")
-      if [[ "$dep_result" == *"result=ok"* ]]; then
-        continue  # This dep is satisfied
-      fi
-    fi
-
-    # Check 2: state file says UAT
-    local dep_state
-    dep_state=$(read_state_field "$dep" "current_state" 2>/dev/null) || true
-    if [[ "$dep_state" == "UAT" ]]; then
-      continue  # This dep is satisfied
-    fi
-
-    # Not satisfied
-    blocked+=("$dep")
-  done
-
-  if [[ ${#blocked[@]} -gt 0 ]]; then
-    BLOCKING_DEPS=$(printf '%s,' "${blocked[@]}")
-    BLOCKING_DEPS="${BLOCKING_DEPS%,}"  # trim trailing comma
-    return 1
-  fi
-
-  return 0
 }
 
 # ── Status sync helpers ──────────────────────────────────────────────
