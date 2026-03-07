@@ -19,8 +19,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 23 |
 | in-qa | 2 |
 | ready-for-qa | 2 |
-| needs-code-review | 7 |
-| ready-for-code-review | 0 |
+| needs-code-review | 6 |
+| ready-for-code-review | 1 |
 | failed-code-review | 1 |
 | failed-qa | 1 |
 | elaboration | 0 |
@@ -1015,8 +1015,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** in-progress
-**Story File:** `wint/in-progress/WINT-2030/WINT-2030.md`
+**Status:** ready-for-code-review
+**Story File:** `wint/needs-code-review/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
