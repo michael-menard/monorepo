@@ -155,6 +155,8 @@ async function getCachedPack(packKey: string): Promise<ContextPackResponse | nul
         and(
           eq(contextPacks.packType, 'story'),
           eq(contextPacks.packKey, packKey),
+          // Non-null assertion: drizzle-orm's `or()` always returns a non-null SQL expression
+          // when called with two non-null arguments; the `!` narrows the type for `and()`.
           or(gt(contextPacks.expiresAt, sql`NOW()`), isNull(contextPacks.expiresAt))!,
         ),
       )
