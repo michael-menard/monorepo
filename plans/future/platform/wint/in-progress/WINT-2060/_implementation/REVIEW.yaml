@@ -1,0 +1,69 @@
+schema: 1
+story_id: WINT-2060
+artifact_type: review
+phase: code_review
+iteration: 2
+timestamp: 2026-03-07T00:00:00Z
+
+verdict: PASS
+
+summary: >
+  Fix iteration 1 verified correct. The critical duplication issue (Issue 1) is resolved.
+  The shared readDoc utility is extracted to utils/read-doc.ts and all three populate-*
+  scripts import from it. No standalone readFileSync implementations remain in any script.
+  The local thin-wrapper functions (function readDoc) that remain in each script are
+  intentional caller-tag adapters — not duplication — and are clean. Issue 2 (low severity
+  shared test utilities) was correctly deferred as not required.
+
+fix_verification:
+  issue_1:
+    id: 1
+    severity: critical
+    description: "Duplicated readDoc utility function — identical readFileSync implementation in all three populate-* scripts"
+    status: FIXED
+    evidence:
+      - "utils/read-doc.ts created at packages/backend/mcp-tools/src/scripts/utils/read-doc.ts"
+      - "readFileSync only appears in utils/read-doc.ts — confirmed by grep across scripts directory"
+      - "populate-library-cache.ts imports readDoc as readDocUtil from ./utils/read-doc.js (line 18)"
+      - "populate-domain-kb.ts imports readDoc as readDocUtil from ./utils/read-doc.js (line 33)"
+      - "populate-project-context.ts imports readDoc as readDocUtil from ./utils/read-doc.js (line 23)"
+      - "Local readDoc wrappers in each script delegate to readDocUtil with CALLER_TAG — thin adapters, not duplication"
+    note: >
+      The FIX-SUMMARY.yaml described removing the wrappers entirely and calling readDocUtil
+      directly, but the actual implementation keeps thin wrapper functions that pass CALLER_TAG.
+      This is an acceptable implementation — the business logic duplication (readFileSync +
+      MONOREPO_ROOT + error handling) is fully eliminated. The wrappers add caller context and
+      are not a code quality concern.
+
+  issue_2:
+    id: 2
+    severity: low
+    description: "Consider creating shared test utilities for populate-* integration tests"
+    status: DEFERRED
+    evidence:
+      - "Low severity — not required per review policy"
+      - "No action taken — acceptable outcome"
+
+ranked_patches: []
+
+files_verified:
+  - path: "packages/backend/mcp-tools/src/scripts/utils/read-doc.ts"
+    status: created
+    assessment: "Clean shared utility. Exports readDoc(relPath, callerTag). Uses readFileSync with error handling. MONOREPO_ROOT resolved correctly."
+  - path: "packages/backend/mcp-tools/src/scripts/populate-library-cache.ts"
+    status: verified
+    assessment: "Imports readDocUtil from utils/read-doc.js. Local readDoc wrapper delegates with CALLER_TAG. No standalone readFileSync."
+  - path: "packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts"
+    status: verified
+    assessment: "Imports readDocUtil from utils/read-doc.js. Local readDoc wrapper delegates with CALLER_TAG. No standalone readFileSync."
+  - path: "packages/backend/mcp-tools/src/scripts/populate-project-context.ts"
+    status: verified
+    assessment: "Imports readDocUtil from utils/read-doc.js. Local readDoc wrapper delegates with CALLER_TAG. No standalone readFileSync."
+
+commits_verified:
+  - sha: "09d40370"
+    message: "feat(WINT-2060): fix iteration 1 — extract shared readDoc utility"
+  - sha: "08ddfd89"
+    message: "feat(WINT-2060): extract shared readDoc utility to fix code review duplication"
+
+next_action: promote_to_needs_code_review
