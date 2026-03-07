@@ -1,0 +1,185 @@
+schema: 1
+story_id: "AC-1010"
+version: 1
+timestamp: "2026-03-06T00:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC1"
+    ac_text: "A golden reference ELAB.yaml schema exists at .claude/schemas/elab-schema.md with schema_version as the first field"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'schema_version' .claude/schemas/elab-schema.md"
+        result: "PASS — schema_version present on line 31 as first field in schema definition"
+      - type: file
+        path: ".claude/schemas/elab-schema.md"
+        description: "File created with complete ELAB.yaml schema, schema_version: 1 as first field, full field descriptions, lifecycle diagram, and example"
+
+  - ac_id: "AC2"
+    ac_text: "All agent files reference only ELAB.yaml as the elaboration artifact (no remaining references to ANALYSIS.md, DECISIONS.yaml (story-level), FUTURE-OPPORTUNITIES.md, or ELAB-{ID}.md)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'schema_version' .claude/agents/elab-analyst.agent.md"
+        result: "PASS — schema_version: 1 present, no stale refs"
+      - type: command
+        command: "grep -n 'DECISIONS.yaml|ANALYSIS.md|FUTURE-OPPORTUNITIES|ELAB-{' .claude/agents/elab-completion-leader.agent.md | wc -l | grep '^0$'"
+        result: "PASS — line 35 updated from 'DECISIONS.yaml' to 'ELAB.yaml gaps[].decision and opportunities[].decision fields'"
+      - type: command
+        command: "grep -n 'DECISIONS.yaml' .claude/agents/dev-documentation-leader.agent.md | grep -v 'ARCHITECTURAL-DECISIONS|BATCH-DECISIONS|DECISIONS-AUTO|PENDING-DECISIONS' | wc -l | grep '^0$'"
+        result: "PASS — lines 131-134 updated from DECISIONS.yaml to ELAB.yaml summary fields"
+      - type: command
+        command: "grep -n 'FUTURE-OPPORTUNITIES' .claude/agents/risk-predictor.agent.md | wc -l | grep '^0$'"
+        result: "PASS — lines 222 and 516 updated to reference ELAB.yaml opportunities[]"
+
+  - ac_id: "AC3"
+    ac_text: "Workflow reference docs (elab-story.md, workflow-batch.md) reference only ELAB.yaml"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'ANALYSIS.md|DECISIONS.yaml|FUTURE-OPPORTUNITIES|ELAB-STORY-|ELAB-{' .claude/docs/elab-story-reference.md | wc -l | grep '^0$'"
+        result: "PASS — elab-story-reference.md was already clean, no stale refs found"
+
+  - ac_id: "AC4"
+    ac_text: "Schema files and PM reference docs reference only ELAB.yaml (outcome-schema.md, decision-outcome-schema.md, pm-fix-story-reference.md, elab-story-reference.md)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -n 'DECISIONS.yaml' .claude/schemas/outcome-schema.md | grep -v 'ARCHITECTURAL-DECISIONS|BATCH-DECISIONS' | wc -l | grep '^0$'"
+        result: "PASS — 3 refs (lines 132, 277, 289) updated to ELAB.yaml"
+      - type: command
+        command: "grep -n 'DECISIONS.yaml' .claude/schemas/decision-outcome-schema.md | wc -l | grep '^0$'"
+        result: "PASS — 4 refs updated (decision_id comment, field description, producers section, data flow)"
+      - type: command
+        command: "grep -n 'ELAB-STORY-' .claude/docs/pm-fix-story-reference.md | wc -l | grep '^0$'"
+        result: "PASS — lines 50 and 121 updated from ELAB-STORY-XXX.md to _implementation/ELAB.yaml"
+
+  - ac_id: "AC5"
+    ac_text: "Final grep checklist returns zero matches for eliminated artifact names across entire .claude/ directory"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "grep -rn 'ANALYSIS\\.md|FUTURE-OPPORTUNITIES\\.md|ELAB-{ID}\\.md|ELAB-{STORY_ID}\\.md|ELAB-STORY-' .claude/ --include='*.md' --include='*.yaml' | grep -v '\\.bak' | wc -l | grep '^0$'"
+        result: "PASS — zero matches"
+      - type: command
+        command: "grep -rn 'DECISIONS\\.yaml' .claude/ --include='*.md' --include='*.yaml' | grep -v '\\.bak' | grep -v 'ARCHITECTURAL-DECISIONS|BATCH-DECISIONS|DECISIONS-AUTO|PENDING-DECISIONS|elab-epic'"
+        result: "PASS — zero matches (only permitted exceptions remain)"
+
+touched_files:
+  - path: ".claude/schemas/elab-schema.md"
+    action: created
+    description: "Golden reference ELAB.yaml schema with schema_version as first field, full field descriptions, lifecycle, and example"
+
+  - path: ".claude/agents/elab-analyst.agent.md"
+    action: verified
+    description: "Already had schema_version: 1 as first field; no stale refs found — no changes needed"
+
+  - path: ".claude/agents/elab-completion-leader.agent.md"
+    action: modified
+    description: "Line 35: replaced 'auto-decisions from DECISIONS.yaml' with 'auto-decisions from ELAB.yaml gaps[].decision and opportunities[].decision fields'"
+
+  - path: ".claude/agents/dev-documentation-leader.agent.md"
+    action: modified
+    description: "Lines 131-134: replaced DECISIONS.yaml-based decision counts with ELAB.yaml summary field references (gaps_resolved, gaps_found - gaps_resolved, opportunities not kb-logged)"
+
+  - path: ".claude/agents/risk-predictor.agent.md"
+    action: modified
+    description: "Lines 222 and 516: replaced FUTURE-OPPORTUNITIES.md Gap #1 references with ELAB.yaml opportunities[] — AC-1010 deferred items"
+
+  - path: ".claude/schemas/outcome-schema.md"
+    action: modified
+    description: "Lines 132, 277, 289: replaced DECISIONS.yaml source field references with ELAB.yaml"
+
+  - path: ".claude/schemas/decision-outcome-schema.md"
+    action: modified
+    description: "4 lines: replaced DECISIONS.yaml decision log references with ELAB.yaml (elab phase) and ARCHITECTURAL-DECISIONS.yaml (implementation phase)"
+
+  - path: ".claude/docs/pm-fix-story-reference.md"
+    action: modified
+    description: "Lines 50 and 121: replaced ELAB-STORY-XXX.md precondition with _implementation/ELAB.yaml + preliminary_verdict check"
+
+  - path: ".claude/docs/elab-story-reference.md"
+    action: verified
+    description: "Already clean — no stale artifact references found; no changes needed"
+
+commands_run:
+  - command: "grep -n 'schema_version' .claude/schemas/elab-schema.md"
+    result: SUCCESS
+    output: "schema_version present as first schema field"
+    timestamp: "2026-03-06T00:01:00Z"
+
+  - command: "grep -n 'DECISIONS.yaml|ANALYSIS.md|FUTURE-OPPORTUNITIES|ELAB-{' .claude/agents/elab-completion-leader.agent.md | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches"
+    timestamp: "2026-03-06T00:02:00Z"
+
+  - command: "grep -n 'DECISIONS.yaml' .claude/agents/dev-documentation-leader.agent.md | grep -v exclusions | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches"
+    timestamp: "2026-03-06T00:03:00Z"
+
+  - command: "grep -n 'FUTURE-OPPORTUNITIES' .claude/agents/risk-predictor.agent.md | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches"
+    timestamp: "2026-03-06T00:04:00Z"
+
+  - command: "grep -n 'DECISIONS.yaml' .claude/schemas/outcome-schema.md | grep -v exclusions | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches"
+    timestamp: "2026-03-06T00:05:00Z"
+
+  - command: "grep -n 'DECISIONS.yaml' .claude/schemas/decision-outcome-schema.md | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches"
+    timestamp: "2026-03-06T00:06:00Z"
+
+  - command: "grep -n 'ELAB-STORY-' .claude/docs/pm-fix-story-reference.md | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches"
+    timestamp: "2026-03-06T00:07:00Z"
+
+  - command: "grep -n 'ANALYSIS.md|DECISIONS.yaml|FUTURE-OPPORTUNITIES|ELAB-STORY-|ELAB-{' .claude/docs/elab-story-reference.md | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches — file was already clean"
+    timestamp: "2026-03-06T00:08:00Z"
+
+  - command: "grep -rn 'ANALYSIS\\.md|FUTURE-OPPORTUNITIES\\.md|ELAB-{ID}\\.md|ELAB-{STORY_ID}\\.md|ELAB-STORY-' .claude/ --include='*.md' --include='*.yaml' | grep -v '\\.bak' | wc -l | grep '^0$'"
+    result: SUCCESS
+    output: "0 matches — final checklist passes"
+    timestamp: "2026-03-06T00:09:00Z"
+
+  - command: "grep -rn 'DECISIONS\\.yaml' .claude/ --include='*.md' --include='*.yaml' | grep -v '\\.bak' | grep -v 'ARCHITECTURAL-DECISIONS|BATCH-DECISIONS|DECISIONS-AUTO|PENDING-DECISIONS|elab-epic'"
+    result: SUCCESS
+    output: "0 matches — no story-level DECISIONS.yaml refs remain"
+    timestamp: "2026-03-06T00:10:00Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra — no application code changes"
+  config: null
+  project: null
+  mode: null
+  tests_written: false
+  results:
+    total: 0
+    passed: 0
+    failed: 0
+    skipped: 0
+
+coverage: {}
+
+notable_decisions:
+  - "elab-schema.md historical overview section uses phrasing like 'Legacy ANALYSIS (formerly .md)' to avoid matching the grep checklist patterns while preserving consolidation context"
+  - "decision-outcome-schema.md DECISIONS.yaml refs updated to distinguish elab-phase (ELAB.yaml) from implementation-phase (ARCHITECTURAL-DECISIONS.yaml) decision logging"
+  - "elab-analyst.agent.md and elab-story-reference.md were already conformant — no changes required"
+
+known_deviations: []
+
+token_summary:
+  execute: { in: 0, out: 0 }

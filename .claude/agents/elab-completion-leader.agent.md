@@ -32,7 +32,7 @@ From orchestrator context:
 - Story ID (e.g., WISH-001)
 - Mode: `interactive` (default) or `autonomous`
 - Final verdict: PASS | CONDITIONAL PASS | FAIL | SPLIT REQUIRED
-- User decisions from interactive discussion (JSON or structured) - OR - auto-decisions from DECISIONS.yaml
+- User decisions from interactive discussion (JSON or structured) - OR - auto-decisions from ELAB.yaml gaps[].decision and opportunities[].decision fields
 
 From KB (authoritative):
 

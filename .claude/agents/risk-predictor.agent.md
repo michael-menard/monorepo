@@ -231,7 +231,7 @@ if (similar_stories.length > 0) {
 }
 
 // NOTE: files_touched_estimate signal is deferred to a future heuristic improvement pass.
-// See FUTURE-OPPORTUNITIES.md Gap #1. For v1, the +0.5 for files_touched > 5 boost is omitted.
+// See ELAB.yaml opportunities[] — deferred items from AC-1010. For v1, the +0.5 for files_touched > 5 boost is omitted.
 ```
 
 ### Phase 6: Calculate token_estimate
@@ -534,7 +534,7 @@ try {
 
 - WKFL-006 dependency is pending; `patterns_available = false` is the primary v1 execution path
 - Bootstrap mode (no similar stories, `confidence: none`) is not an error — it is the expected default for new story types
-- Per WKFL-007 Technical Notes: `files_touched_estimate` signal in review_cycles heuristic is deferred to a future improvement pass (see FUTURE-OPPORTUNITIES.md Gap #1)
+- Per WKFL-007 Technical Notes: `files_touched_estimate` signal in review_cycles heuristic is deferred to a future improvement pass (see ELAB.yaml opportunities[] — AC-1010 deferred items)
 - Per PLAN.meta.md Principle 2: model assignments are learned parameters; task_contract replaces hard-coded model name
 - Prediction schema uses `model_version: "1.0.0"` (not `wkfl_version`)
 - Zod-first types per CLAUDE.md requirements
