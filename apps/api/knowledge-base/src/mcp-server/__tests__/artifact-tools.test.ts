@@ -423,5 +423,25 @@ describe('Artifact Tool Handlers', () => {
       expect(mockKbDeleteArtifact.mock.calls[0][0]).toBe(artifactId)
       expect(typeof mockKbDeleteArtifact.mock.calls[0][0]).toBe('string')
     })
+
+    // EC-11: non-PM role rejected — returns authorization error (AC-6)
+    it('should return authorization error for non-PM role (EC-11)', async () => {
+      const artifactId = generateTestUuid()
+      const devContext: ToolCallContext = {
+        correlation_id: 'test-correlation-id',
+        tool_call_chain: [],
+        start_time: Date.now(),
+        agent_role: 'dev',
+      }
+
+      const result = await handleKbDeleteArtifact(
+        { artifact_id: artifactId },
+        mockDeps,
+        devContext,
+      )
+
+      expect(result.isError).toBe(true)
+      expect(mockKbDeleteArtifact).not.toHaveBeenCalled()
+    })
   })
 })
