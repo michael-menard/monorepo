@@ -182,6 +182,44 @@ files_modified:
   - "packages/backend/database-schema/src/seed/generate/__tests__/generateStoriesIndex.test.ts"
     detail: "Fix iteration 2: NodePgDatabase import, execute mock returns { rows }, cast as unknown as NodePgDatabase"
 
+fix_iteration_4:
+  applied_at: "2026-03-07T15:11:00Z"
+  issues_fixed: 3
+  issues_total: 3
+  status: ALREADY_RESOLVED
+  note: "All 3 issues from iteration 4 review were already absent from the file. No code changes required."
+  patches:
+    - priority: 1
+      file: "packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts"
+      issue: "z.any() in StoryMetadataSchema (line 37)"
+      severity: medium
+      auto_fixable: true
+      status: ALREADY_FIXED
+      note: "StoryMetadataSchema uses specific typed fields (z.boolean(), z.string(), z.number(), z.array(z.string())) with .strict() — no z.any() present"
+    - priority: 2
+      file: "packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts"
+      issue: "'as Record<string, unknown>' type assertion (line 187)"
+      severity: medium
+      auto_fixable: true
+      status: ALREADY_FIXED
+      note: "metadata is accessed as StoryMetadata (Zod-inferred type) — no type assertion present"
+    - priority: 3
+      file: "packages/backend/database-schema/src/seed/generate/generateStoriesIndex.ts"
+      issue: "'as Record<string, boolean> | undefined' type assertion (line 208)"
+      severity: medium
+      auto_fixable: true
+      status: ALREADY_FIXED
+      note: "surfaces is accessed as typed property from StoryMetadata — no type assertion present"
+  verification:
+    type_check:
+      status: PASS
+      command: "tsc --noEmit"
+      result: "0 errors"
+    unit_tests:
+      status: PASS
+      command: "pnpm test (vitest run)"
+      result: "19 test files, 442 tests — all pass"
+
 e2e_tests:
   status: EXEMPT
   reason: "story_type is infra/utility — unit-only scope per AC-11. No E2E applicable."
