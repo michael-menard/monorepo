@@ -12,7 +12,12 @@ import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'driz
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
 import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
-import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__types__/index.js'
+import {
+  StoryStateSchema,
+  StoryPhaseSchema,
+  StoryPrioritySchema,
+  StoryTypeSchema,
+} from '../__types__/index.js'
 
 // ============================================================================
 // Input Schemas
@@ -157,6 +162,21 @@ export const KbUpdateStoryInputSchema = z.object({
 
   /** New story points */
   points: z.number().int().min(0).optional().nullable(),
+
+  /** Human-readable story description */
+  description: z.string().optional().nullable(),
+
+  /**
+   * Acceptance criteria as JSONB (arbitrary structure).
+   * Pass null to explicitly clear. Omit to leave unchanged.
+   */
+  acceptance_criteria: z.any().optional().nullable(),
+
+  /** Non-goals for this story (text array). Pass null to clear. */
+  non_goals: z.array(z.string()).optional().nullable(),
+
+  /** Packages touched by this story (text array). Pass null to clear. */
+  packages: z.array(z.string()).optional().nullable(),
 })
 
 export type KbUpdateStoryInput = z.infer<typeof KbUpdateStoryInputSchema>
@@ -198,6 +218,86 @@ export const KbGetNextStoryInputSchema = z.object({
 })
 
 export type KbGetNextStoryInput = z.infer<typeof KbGetNextStoryInputSchema>
+
+/**
+ * Input schema for kb_create_story tool.
+ *
+ * Upserts a story by story_id — creates a new record if the ID does not exist,
+ * or merges the provided fields into the existing record (partial-merge semantics).
+ * Fields not supplied in the input are NOT overwritten.
+ */
+export const KbCreateStoryInputSchema = z.object({
+  /** Story ID (required, used as upsert key) */
+  story_id: z.string().min(1, 'Story ID cannot be empty'),
+
+  /** Story title (required for create, optional on update) */
+  title: z.string().min(1, 'Story title cannot be empty').optional(),
+
+  /** Feature prefix (e.g., 'kfmb', 'wish') */
+  feature: z.string().optional().nullable(),
+
+  /** Epic name */
+  epic: z.string().optional().nullable(),
+
+  /** Relative path to story directory */
+  story_dir: z.string().optional().nullable(),
+
+  /** Story file name (default: 'story.yaml') */
+  story_file: z.string().optional(),
+
+  /** Type of story: 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt' */
+  story_type: StoryTypeSchema.optional().nullable(),
+
+  /** Story points estimate */
+  points: z.number().int().min(0).optional().nullable(),
+
+  /** Priority level: 'critical' | 'high' | 'medium' | 'low' */
+  priority: StoryPrioritySchema.optional().nullable(),
+
+  /** Workflow state */
+  state: StoryStateSchema.optional(),
+
+  /** Implementation phase */
+  phase: StoryPhaseSchema.optional(),
+
+  /** Whether story is blocked */
+  blocked: z.boolean().optional(),
+
+  /** Reason for being blocked */
+  blocked_reason: z.string().optional().nullable(),
+
+  /** Story ID that blocks this one */
+  blocked_by_story: z.string().optional().nullable(),
+
+  /** Scope flag: touches backend code */
+  touches_backend: z.boolean().optional(),
+
+  /** Scope flag: touches frontend code */
+  touches_frontend: z.boolean().optional(),
+
+  /** Scope flag: touches database */
+  touches_database: z.boolean().optional(),
+
+  /** Scope flag: touches infrastructure */
+  touches_infra: z.boolean().optional(),
+
+  /** Human-readable story description */
+  description: z.string().optional().nullable(),
+
+  /**
+   * Acceptance criteria as JSONB (arbitrary structure).
+   * Pass null to explicitly clear.
+   */
+  acceptance_criteria: z.any().optional().nullable(),
+
+  /** Non-goals for this story (text array) */
+  non_goals: z.array(z.string()).optional().nullable(),
+
+  /** Packages touched by this story (text array) */
+  packages: z.array(z.string()).optional().nullable(),
+})
+
+export type KbCreateStoryInput = z.infer<typeof KbCreateStoryInputSchema>
 
 // ============================================================================
 // Dependencies
@@ -696,6 +796,22 @@ export async function kb_update_story(
     updates.points = validated.points
   }
 
+  if (validated.description !== undefined) {
+    updates.description = validated.description
+  }
+
+  if (validated.acceptance_criteria !== undefined) {
+    updates.acceptanceCriteria = validated.acceptance_criteria
+  }
+
+  if (validated.non_goals !== undefined) {
+    updates.nonGoals = validated.non_goals
+  }
+
+  if (validated.packages !== undefined) {
+    updates.packages = validated.packages
+  }
+
   const result = await deps.db
     .update(stories)
     .set(updates)
@@ -708,5 +824,132 @@ export async function kb_update_story(
     story,
     updated: true,
     message: `Updated story ${validated.story_id}`,
+  }
+}
+
+/**
+ * Create or update a story record (upsert by story_id).
+ *
+ * Implements partial-merge semantics:
+ *   - If the story does not exist, it is created with the supplied fields.
+ *   - If the story already exists, only the fields explicitly supplied in the
+ *     input are written — omitted fields retain their current DB values.
+ *
+ * This is intentionally different from kb_upsert_plan which overwrites all
+ * fields on conflict. Here we must never clobber existing metadata during
+ * re-bootstrap calls that only supply a subset of fields.
+ *
+ * @param deps - Database dependencies
+ * @param input - Story fields to create/merge
+ * @returns Upserted story and whether it was newly created
+ */
+export async function kb_create_story(
+  deps: StoryCrudDeps,
+  input: KbCreateStoryInput,
+): Promise<{
+  story: typeof stories.$inferSelect
+  created: boolean
+  message: string
+}> {
+  const validated = KbCreateStoryInputSchema.parse(input)
+
+  // Require title for new stories — check existence first
+  const existing = await deps.db
+    .select()
+    .from(stories)
+    .where(eq(stories.storyId, validated.story_id))
+    .limit(1)
+
+  const isNew = existing.length === 0
+
+  if (isNew && !validated.title) {
+    throw new Error(`title is required when creating a new story (story_id: ${validated.story_id})`)
+  }
+
+  const now = new Date()
+
+  if (isNew) {
+    // -----------------------------------------------------------------------
+    // INSERT path: create the story with all supplied fields
+    // -----------------------------------------------------------------------
+    const insertValues: typeof stories.$inferInsert = {
+      storyId: validated.story_id,
+      title: validated.title!, // checked above
+      feature: validated.feature ?? null,
+      epic: validated.epic ?? null,
+      storyDir: validated.story_dir ?? null,
+      storyFile: validated.story_file ?? 'story.yaml',
+      storyType: validated.story_type ?? null,
+      points: validated.points ?? null,
+      priority: validated.priority ?? null,
+      state: validated.state ?? null,
+      phase: validated.phase ?? null,
+      blocked: validated.blocked ?? false,
+      blockedReason: validated.blocked_reason ?? null,
+      blockedByStory: validated.blocked_by_story ?? null,
+      touchesBackend: validated.touches_backend ?? false,
+      touchesFrontend: validated.touches_frontend ?? false,
+      touchesDatabase: validated.touches_database ?? false,
+      touchesInfra: validated.touches_infra ?? false,
+      description: validated.description ?? null,
+      acceptanceCriteria: validated.acceptance_criteria ?? null,
+      nonGoals: validated.non_goals ?? null,
+      packages: validated.packages ?? null,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const result = await deps.db.insert(stories).values(insertValues).returning()
+    const story = result[0]!
+
+    return {
+      story,
+      created: true,
+      message: `Story ${validated.story_id} created successfully`,
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // UPDATE path: partial-merge — only overwrite fields that were supplied
+  // -------------------------------------------------------------------------
+  const updates: Partial<typeof stories.$inferInsert> = {
+    updatedAt: now,
+  }
+
+  if (validated.title !== undefined) updates.title = validated.title
+  if (validated.feature !== undefined) updates.feature = validated.feature
+  if (validated.epic !== undefined) updates.epic = validated.epic
+  if (validated.story_dir !== undefined) updates.storyDir = validated.story_dir
+  if (validated.story_file !== undefined) updates.storyFile = validated.story_file
+  if (validated.story_type !== undefined) updates.storyType = validated.story_type
+  if (validated.points !== undefined) updates.points = validated.points
+  if (validated.priority !== undefined) updates.priority = validated.priority
+  if (validated.state !== undefined) updates.state = validated.state
+  if (validated.phase !== undefined) updates.phase = validated.phase
+  if (validated.blocked !== undefined) updates.blocked = validated.blocked
+  if (validated.blocked_reason !== undefined) updates.blockedReason = validated.blocked_reason
+  if (validated.blocked_by_story !== undefined) updates.blockedByStory = validated.blocked_by_story
+  if (validated.touches_backend !== undefined) updates.touchesBackend = validated.touches_backend
+  if (validated.touches_frontend !== undefined) updates.touchesFrontend = validated.touches_frontend
+  if (validated.touches_database !== undefined) updates.touchesDatabase = validated.touches_database
+  if (validated.touches_infra !== undefined) updates.touchesInfra = validated.touches_infra
+  if (validated.description !== undefined) updates.description = validated.description
+  if (validated.acceptance_criteria !== undefined)
+    updates.acceptanceCriteria = validated.acceptance_criteria
+  if (validated.non_goals !== undefined) updates.nonGoals = validated.non_goals
+  if (validated.packages !== undefined) updates.packages = validated.packages
+
+  const result = await deps.db
+    .update(stories)
+    .set(updates)
+    .where(eq(stories.storyId, validated.story_id))
+    .returning()
+
+  const story = result[0]!
+
+  return {
+    story,
+    created: false,
+    message: `Story ${validated.story_id} updated successfully`,
   }
 }
