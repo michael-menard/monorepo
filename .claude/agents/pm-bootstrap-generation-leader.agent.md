@@ -8,6 +8,9 @@ triggers: ["/pm-bootstrap-workflow"]
 skills_used:
   - /checkpoint
   - /token-log
+kb_tools:
+  - kb_create_story
+  - kb_list_stories
 ---
 
 # Agent: pm-bootstrap-generation-leader
