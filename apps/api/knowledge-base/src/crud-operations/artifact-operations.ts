@@ -30,6 +30,10 @@ import {
   artifactProofs,
   artifactQaGates,
   artifactCompletionReports,
+  artifactTestPlans,
+  artifactDevFeasibility,
+  artifactUiuxNotes,
+  artifactStorySeeds,
 } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
@@ -56,6 +60,10 @@ export const ARTIFACT_TYPES = [
   'review',
   'qa_gate',
   'completion_report',
+  'test_plan',
+  'dev_feasibility',
+  'uiux_notes',
+  'story_seed',
 ] as const
 
 /**
@@ -88,6 +96,10 @@ const ARTIFACT_TYPE_TO_TABLE: Record<string, string> = {
   proof: 'artifact_proofs',
   qa_gate: 'artifact_qa_gates',
   completion_report: 'artifact_completion_reports',
+  test_plan: 'artifact_test_plans',
+  dev_feasibility: 'artifact_dev_feasibility',
+  uiux_notes: 'artifact_uiux_notes',
+  story_seed: 'artifact_story_seeds',
 }
 
 // ============================================================================
@@ -390,6 +402,49 @@ function mapContentToTypedColumns(
         data,
       }
 
+    case 'test_plan':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          strategy: content.strategy ?? null,
+          scopeUiTouched: content.scope_ui_touched ?? content.scopeUiTouched ?? null,
+          scopeDataTouched: content.scope_data_touched ?? content.scopeDataTouched ?? null,
+        },
+        data,
+      }
+
+    case 'dev_feasibility':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          feasible: content.feasible ?? null,
+          confidence: content.confidence ?? null,
+          complexity: content.complexity ?? null,
+        },
+        data,
+      }
+
+    case 'uiux_notes':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          hasUiChanges: content.has_ui_changes ?? content.hasUiChanges ?? null,
+          componentCount: content.component_count ?? content.componentCount ?? null,
+        },
+        data,
+      }
+
+    case 'story_seed':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          conflictsFound: content.conflicts_found ?? content.conflictsFound ?? null,
+          blockingConflicts: content.blocking_conflicts ?? content.blockingConflicts ?? null,
+          baselineLoaded: content.baseline_loaded ?? content.baselineLoaded ?? null,
+        },
+        data,
+      }
+
     default:
       return { typedColumns: { targetId: storyId }, data }
   }
@@ -424,6 +479,10 @@ function getDetailTableRef(detailTable: string): DetailTableRef | null {
     artifact_proofs: artifactProofs,
     artifact_qa_gates: artifactQaGates,
     artifact_completion_reports: artifactCompletionReports,
+    artifact_test_plans: artifactTestPlans,
+    artifact_dev_feasibility: artifactDevFeasibility,
+    artifact_uiux_notes: artifactUiuxNotes,
+    artifact_story_seeds: artifactStorySeeds,
   }
   return tableMap[detailTable] ?? null
 }
@@ -456,6 +515,10 @@ function generateArtifactName(artifactType: string, iteration: number): string {
     review: 'REVIEW',
     qa_gate: 'QA-GATE',
     completion_report: 'COMPLETION-REPORT',
+    test_plan: 'TEST-PLAN',
+    dev_feasibility: 'DEV-FEASIBILITY',
+    uiux_notes: 'UIUX-NOTES',
+    story_seed: 'STORY-SEED',
   }
 
   const baseName = typeNames[artifactType] ?? artifactType.toUpperCase()
