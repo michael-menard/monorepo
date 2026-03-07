@@ -1,7 +1,7 @@
 schema: 1
 story_id: "KFMB-1040"
-timestamp: "2026-03-07T00:00:00Z"
-iteration: 1
+timestamp: "2026-03-07T20:20:00Z"
+iteration: 3
 verdict: FAIL
 
 workers_run:
