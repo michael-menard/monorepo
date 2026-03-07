@@ -1,0 +1,14 @@
+schema: 1
+story_id: KFMB-2030
+forced: false
+blocked: false
+e2e_gate: null
+warnings: []
+iteration: 0
+timestamp: '2026-03-07T07:00:00Z'
+feature_dir: plans/future/platform/kb-first-migration
+completed_at: null
+current_phase: execute
+blocked_reason: null
+max_iterations: 3
+last_successful_phase: plan

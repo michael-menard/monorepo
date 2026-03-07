@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-01-24
-version: 1.0.0
+updated: 2026-03-07
+version: 1.1.0
 type: reference
 command: /pm-bootstrap-workflow
 ---
@@ -14,13 +14,13 @@ command: /pm-bootstrap-workflow
 /pm-bootstrap-workflow
     │
     ├─→ Phase 0: pm-bootstrap-setup-leader.agent.md (haiku)
-    │       └─→ Validates inputs, creates AGENT-CONTEXT.md
+    │       └─→ Validates inputs, collision check via kb_list_stories
     │
     ├─→ Phase 1: pm-bootstrap-analysis-leader.agent.md (sonnet)
     │       └─→ Analyzes plan, creates ANALYSIS.yaml
     │
     └─→ Phase 2: pm-bootstrap-generation-leader.agent.md (haiku)
-            └─→ Generates all artifact files
+            └─→ Generates all artifact files, inserts stories via kb_create_story
 ```
 
 ## Output Format
@@ -32,16 +32,17 @@ All agents follow `.claude/agents/_shared/lean-docs.md`:
 
 ## Artifacts
 
-| File | Created By | Purpose |
-|------|------------|---------|
-| `{PREFIX}.bootstrap/AGENT-CONTEXT.md` | Setup | Bootstrap context |
-| `{PREFIX}.bootstrap/CHECKPOINT.md` | All phases | Resume state |
-| `{PREFIX}.bootstrap/ANALYSIS.yaml` | Analysis | Structured story data |
-| `{PREFIX}.bootstrap/SUMMARY.yaml` | Generation | Final summary |
-| `stories/{PREFIX}.stories.index.md` | Generation | Master story index |
-| `{PREFIX}.plan.meta.md` | Generation | Documentation principles |
-| `{PREFIX}.plan.exec.md` | Generation | Execution rules |
-| `{PREFIX}.roadmap.md` | Generation | Visual dependency graphs |
+| File | Created By | Mode | Purpose |
+|------|------------|------|---------|
+| `{PREFIX}.bootstrap/AGENT-CONTEXT.md` | Setup | File Mode only | Bootstrap context |
+| `{PREFIX}.bootstrap/CHECKPOINT.md` | All phases | File Mode only | Resume state |
+| `{PREFIX}.bootstrap/ANALYSIS.yaml` | Analysis | File Mode only | Structured story data |
+| `{PREFIX}.bootstrap/SUMMARY.yaml` | Generation | File Mode only | Final summary |
+| `{feature_dir}/stories.index.md` | Generation | File Mode only | Master story index (filesystem) |
+| `{feature_dir}/{PREFIX}-*/story.yaml` | Generation | Both modes | Per-story scaffold files |
+| KB `stories` table rows | Generation | KB Mode only | Stories inserted via `kb_create_story` |
+
+> **KB Mode**: Intermediate artifacts are returned inline (YAML blocks in prompt context). No `_bootstrap/` files are written. `stories.index.md` is still written to disk as a filesystem index, but the authoritative story records are in the KB `stories` table (inserted via `kb_create_story`).
 
 ## Signals
 
@@ -70,10 +71,11 @@ See: `.claude/agents/_shared/token-tracking.md`
 
 | Issue | Check |
 |-------|-------|
-| "Prefix already exists" | Look for existing `{PREFIX}.stories.index.md` |
+| "Stories already exist" (KB Mode) | Run `kb_list_stories({ feature: "{project_name}" })` to see existing stories |
+| "Prefix already exists" (File Mode) | Look for existing `{feature_dir}/stories.index.md` on disk |
 | "Cannot extract stories" | Ensure raw plan has actionable items |
 | "Circular dependency" | Review story dependencies in ANALYSIS.yaml |
-| Phase stuck | Check CHECKPOINT.md for resume state |
+| Phase stuck | Check CHECKPOINT.md for resume state (File Mode) |
 
 ---
 

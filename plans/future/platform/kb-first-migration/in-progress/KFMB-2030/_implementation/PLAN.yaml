@@ -1,0 +1,169 @@
+schema: 2
+story_id: KFMB-2030
+timestamp: '2026-03-07T06:00:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: Update pm-bootstrap-workflow.md frontmatter kb_tools list to add kb_create_story and kb_list_stories
+    files:
+      - .claude/commands/pm-bootstrap-workflow.md
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+    dependencies: []
+    slice: packages
+    verification: Read frontmatter — kb_create_story and kb_list_stories present in kb_tools list
+    acs_covered:
+      - AC-5
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Update Phase 0 KB Mode prompt in pm-bootstrap-workflow.md to describe kb_list_stories collision detection
+      (removing stories.index.md disk check reference)
+    files:
+      - .claude/commands/pm-bootstrap-workflow.md
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/agents/pm-bootstrap-setup-leader.agent.md
+    dependencies:
+      - 1
+    slice: packages
+    verification: Phase 0 KB Mode prompt describes kb_list_stories; no stories.index.md reference remains in Phase 0 section
+    acs_covered:
+      - AC-1
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Update Phase 2 KB Mode prompt in pm-bootstrap-workflow.md to reflect kb_create_story insertion and removal of pnpm
+      migrate:stories as primary mechanism
+    files:
+      - .claude/commands/pm-bootstrap-workflow.md
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+      - .claude/agents/pm-bootstrap-generation-leader.agent.md
+    dependencies:
+      - 2
+    slice: packages
+    verification: >-
+      Phase 2 KB Mode prompt mentions kb_create_story; stories.index.md not listed as a required KB Mode output in phase
+      prompt
+    acs_covered:
+      - AC-2
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Update Done — KB Mode section and Completion Report: remove pnpm migrate:stories as primary mechanism; remove
+      stories.index.md from Files Created in KB Mode; preserve File Mode unchanged
+    files:
+      - .claude/commands/pm-bootstrap-workflow.md
+    files_to_read:
+      - .claude/commands/pm-bootstrap-workflow.md
+    dependencies:
+      - 3
+    slice: packages
+    verification: >-
+      Done — KB Mode section no longer references pnpm migrate:stories as primary; Completion Report Files Created does
+      not list stories.index.md in KB Mode; File Mode Done and File Mode completion report unchanged
+    acs_covered:
+      - AC-3
+      - AC-4
+      - AC-6
+  - id: 5
+    subtask_id: ST-5
+    description: >-
+      Update pm-bootstrap-workflow-reference.md Artifacts table to remove or annotate stories.index.md as File Mode
+      only; update Troubleshooting section if collision check wording changed
+    files:
+      - .claude/docs/pm-bootstrap-workflow-reference.md
+    files_to_read:
+      - .claude/docs/pm-bootstrap-workflow-reference.md
+    dependencies:
+      - 4
+    slice: packages
+    verification: >-
+      Artifacts table row for stories.index.md removed or annotated (File Mode only); Troubleshooting row for prefix
+      collision updated to reference kb_list_stories
+    acs_covered:
+      - AC-7
+files_to_change:
+  - path: .claude/commands/pm-bootstrap-workflow.md
+    action: modify
+    reason: >-
+      Update frontmatter kb_tools, Phase 0 KB Mode prompt, Phase 2 KB Mode prompt, Done — KB Mode section, and
+      Completion Report to reflect KB-native bootstrap (kb_list_stories, kb_create_story, no stories.index.md in KB
+      Mode)
+  - path: .claude/docs/pm-bootstrap-workflow-reference.md
+    action: modify
+    reason: >-
+      Update Artifacts table to remove/annotate stories.index.md as File Mode only; update Troubleshooting section for
+      kb_list_stories collision check
+commands_to_run:
+  - command: grep -n 'stories.index.md' .claude/commands/pm-bootstrap-workflow.md
+    when: after all edits to pm-bootstrap-workflow.md
+    required: false
+    note: Verify no stale stories.index.md references remain in KB Mode sections
+  - command: grep -n 'migrate:stories' .claude/commands/pm-bootstrap-workflow.md
+    when: after all edits to pm-bootstrap-workflow.md
+    required: false
+    note: Verify migrate:stories is absent from Done — KB Mode section
+  - command: grep -n 'kb_create_story\|kb_list_stories' .claude/commands/pm-bootstrap-workflow.md
+    when: after all edits to pm-bootstrap-workflow.md
+    required: false
+    note: Verify both new tools are referenced in the command
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      Phase 0 KB Mode prompt in pm-bootstrap-workflow.md describes kb_list_stories collision check with no
+      stories.index.md disk reference
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: Phase 2 KB Mode prompt in pm-bootstrap-workflow.md describes kb_create_story insertion
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      Done — KB Mode section removes pnpm migrate:stories as primary mechanism (absent or marked idempotent fallback
+      only)
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: Completion Report Files Created in KB Mode does not list stories.index.md
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: Frontmatter kb_tools in pm-bootstrap-workflow.md includes kb_create_story and kb_list_stories
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      File Mode sections (Done — File Mode, File Mode completion report) unchanged; stories.index.md still listed as
+      File Mode output
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: >-
+      pm-bootstrap-workflow-reference.md Artifacts table row for stories.index.md removed or annotated (File Mode only);
+      Troubleshooting updated for kb_list_stories
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: Manual verification only — requires KFMB-2010/2020 agents active in environment
+    evidence_type: manual
+architectural_decisions: []
+complexity: simple
+notes:
+  - Documentation-only story — no TypeScript, no tests, no build required
+  - >-
+    post-KFMB-2020 setup-leader (v4.1.0): KB Mode Step 4 now calls kb_list_stories({ feature: '{project_name}', limit: 1
+    }) with filesystem fallback when tool unavailable
+  - >-
+    post-KFMB-2010 generation-leader (v5.0.0): uses kb_create_story MCP tool loop; stories.index.md still written
+    (pending KFMB-3010 removal); File Mode removed from agent
+  - >-
+    Key insight: stories.index.md write is still present in generation-leader v5.0.0 (retained pending KFMB-3010). The
+    command doc's Completion Report in KB Mode should still list it — but pnpm migrate:stories is no longer the primary
+    seeding mechanism. Review AC-4 carefully: the generation-leader SUMMARY still lists stories.index.md in
+    files_created.
+  - >-
+    AC-4 nuance: The generation-leader v5.0.0 SUMMARY output block still lists stories.index.md in files_created. So the
+    Completion Report in the command should reflect what the agent actually outputs. The change is that migrate:stories
+    is removed as primary seeding mechanism (AC-3) — stories.index.md is still written as a file artifact. The command
+    doc Completion Report may keep stories.index.md but should clarify it is a filesystem artifact, not the KB seeding
+    mechanism.
+  - >-
+    Step ordering: ST-1 (frontmatter) → ST-2 (Phase 0) → ST-3 (Phase 2) → ST-4 (Done + Report) → ST-5 (reference doc).
+    Each step modifies the same files so sequential ordering prevents read-before-write conflicts.

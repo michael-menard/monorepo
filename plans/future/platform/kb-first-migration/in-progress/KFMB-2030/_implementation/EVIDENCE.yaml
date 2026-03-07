@@ -1,0 +1,155 @@
+schema: 1
+story_id: KFMB-2030
+version: 1
+timestamp: '2026-03-07T07:00:00Z'
+
+acceptance_criteria:
+  - ac_id: AC-1
+    ac_text: Phase 0 KB Mode prompt accurately describes kb_list_stories collision detection
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/pm-bootstrap-workflow.md
+        description: >-
+          Phase 0 prompt block updated to include kb_list_stories({ feature: "{project_name}", limit: 1 })
+          collision check with BLOCKED message and filesystem fallback. Lines 110-113.
+
+  - ac_id: AC-2
+    ac_text: Phase 2 KB Mode prompt accurately describes kb_create_story insertion with no stories.index.md
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/pm-bootstrap-workflow.md
+        description: >-
+          Phase 2 prompt block updated — Mode line reads "inserted into KB stories table via kb_create_story",
+          explicit kb_create_story loop instruction added, "Do NOT rely on pnpm migrate:stories" stated.
+          Lines 152-163.
+
+  - ac_id: AC-3
+    ac_text: "Done — KB Mode" no longer references pnpm migrate:stories as primary mechanism
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/pm-bootstrap-workflow.md
+        description: >-
+          Done — KB Mode section rewritten. Step 1 now reads "Stories are already in the KB — Phase 2
+          generation leader inserts them directly via kb_create_story MCP tool calls during generation."
+          The pnpm migrate:stories fallback step removed entirely from KB Mode. Only File Mode retains it.
+
+  - ac_id: AC-4
+    ac_text: Completion Report doesn't list stories.index.md in KB Mode as KB seeding mechanism
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/pm-bootstrap-workflow.md
+        description: >-
+          Completion Report Files Created section updated. stories.index.md annotated as
+          "(filesystem index — stories are in KB)". New "KB Stories Inserted" section added
+          showing "{N} stories inserted via kb_create_story". The seeding mechanism is
+          clearly kb_create_story, not stories.index.md.
+
+  - ac_id: AC-5
+    ac_text: Frontmatter kb_tools updated to include kb_create_story and kb_list_stories
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/pm-bootstrap-workflow.md
+        description: >-
+          Frontmatter kb_tools list now contains: kb_get_plan, kb_list_plans, kb_create_story,
+          kb_list_stories. Lines 7-11. Version bumped from 5.0.0 to 5.1.0.
+
+  - ac_id: AC-6
+    ac_text: File Mode behavior preserved unchanged
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/commands/pm-bootstrap-workflow.md
+        description: >-
+          File Mode sections (File Mode legacy disk-based prompt, Done — File Mode with pnpm
+          migrate:stories, File Mode completion steps) are unchanged from v5.0.0. Only KB Mode
+          sections were modified.
+
+  - ac_id: AC-7
+    ac_text: Reference doc Artifacts table updated (remove or annotate stories.index.md as File Mode only)
+    status: PASS
+    evidence_items:
+      - type: file
+        path: .claude/docs/pm-bootstrap-workflow-reference.md
+        description: >-
+          Artifacts table updated with Mode column. stories.index.md row annotated "File Mode only".
+          New KB `stories` table rows entry added for "KB Mode only". Architecture diagram updated
+          to show kb_list_stories collision check in Phase 0 and kb_create_story insertion in Phase 2.
+          Troubleshooting table updated: KB Mode collision now references kb_list_stories;
+          File Mode collision references stories.index.md on disk.
+
+  - ac_id: AC-8
+    ac_text: End-to-end bootstrap produces correct output with updated agents (manual verification)
+    status: MISSING
+    evidence_items:
+      - type: manual
+        description: >-
+          Manual verification requires KFMB-2010 (generation-leader v5.0.0 with kb_create_story)
+          and KFMB-2020 (setup-leader v4.1.0 with kb_list_stories) to be active in the environment.
+          This is a documentation-only story — no executable code changed. AC-8 is manual-only
+          per PLAN.yaml planned_evidence.
+
+touched_files:
+  - path: .claude/commands/pm-bootstrap-workflow.md
+    action: modified
+    description: >-
+      Updated frontmatter kb_tools, Phase 0 KB Mode collision check prompt, Phase 2 KB Mode
+      kb_create_story prompt, Done — KB Mode section, and Completion Report. Version 5.0.0 → 5.1.0.
+  - path: .claude/docs/pm-bootstrap-workflow-reference.md
+    action: modified
+    description: >-
+      Updated Artifacts table with Mode column, annotated stories.index.md as File Mode only,
+      added KB stories table row for KB Mode only, updated Architecture diagram, updated
+      Troubleshooting table. Version 1.0.0 → 1.1.0.
+
+commands_run:
+  - command: "grep -n 'kb_create_story|kb_list_stories' .claude/commands/pm-bootstrap-workflow.md"
+    result: SUCCESS
+    output: "Both tools referenced in frontmatter and prompts (lines 10-11, 110-113, 152-235)"
+    timestamp: '2026-03-07T07:00:00Z'
+  - command: "grep -n 'migrate:stories' .claude/commands/pm-bootstrap-workflow.md"
+    result: SUCCESS
+    output: "migrate:stories only present in File Mode section (line 212) and Do NOT rely on statement (line 160)"
+    timestamp: '2026-03-07T07:00:00Z'
+  - command: "grep -n 'stories.index.md' .claude/commands/pm-bootstrap-workflow.md"
+    result: SUCCESS
+    output: "stories.index.md present only as filesystem fallback (line 113) and annotated filesystem artifact in Completion Report (line 232)"
+    timestamp: '2026-03-07T07:00:00Z'
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: docs"
+  tests_written: false
+
+notable_decisions:
+  - >-
+    AC-4 nuance: stories.index.md is KEPT in Completion Report Files Created but annotated as
+    "(filesystem index — stories are in KB)". Per PLAN.yaml notes, generation-leader v5.0.0
+    SUMMARY still lists stories.index.md in files_created. The key change is removing
+    migrate:stories as the primary seeding mechanism.
+  - >-
+    AC-8 marked MISSING — manual verification only, requires live agent environment with
+    KFMB-2010/2020 agents active. Documented in PLAN.yaml as manual-only evidence.
+  - >-
+    Phase 0 prompt instructs orchestrator on KB Mode collision check behavior (kb_list_stories
+    with filesystem fallback) per setup-leader v4.1.0 (post-KFMB-2020) behavior.
+
+known_deviations:
+  - >-
+    The setup-leader agent file (.claude/agents/pm-bootstrap-setup-leader.agent.md) still
+    describes the old disk-based collision check at Step 4 (v4.0.0 on disk). Per PLAN.yaml
+    notes, v4.1.0 KB-first behavior is delivered via KFMB-2020 (already merged). This story
+    updates the command doc to reflect the v4.1.0 behavior.
+
+token_summary:
+  execute: { in: 0, out: 0 }

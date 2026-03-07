@@ -1,12 +1,14 @@
 ---
 created: 2026-01-20
-updated: 2026-02-24
-version: 5.0.0
+updated: 2026-03-07
+version: 5.1.0
 type: orchestrator
 agents: ["pm-bootstrap-setup-leader.agent.md", "pm-bootstrap-analysis-leader.agent.md", "pm-bootstrap-generation-leader.agent.md"]
 kb_tools:
   - kb_get_plan
   - kb_list_plans
+  - kb_create_story
+  - kb_list_stories
 ---
 
 /pm-bootstrap-workflow {plan_slug | --file {FEATURE_DIR}}
@@ -105,6 +107,11 @@ Task tool:
     Feature dir: {feature_dir}
     Prefix: {prefix}
 
+    Collision check: call kb_list_stories({ feature: "{project_name}", limit: 1 }) to detect
+    existing stories for this feature. If any stories returned, BLOCKED: "Stories already exist
+    for feature '{project_name}' — bootstrap already run. Use kb_list_stories to inspect."
+    Fallback: if kb_list_stories unavailable, check for {feature_dir}/stories.index.md on disk.
+
     Return your output as a YAML block labelled SETUP-CONTEXT.
 ```
 
@@ -142,12 +149,16 @@ Task tool:
   prompt: |
     Read instructions: .claude/agents/pm-bootstrap-generation-leader.agent.md
 
-    Mode: KB (story files written to disk, stories inserted into KB stories table)
+    Mode: KB (story files written to disk, stories inserted into KB stories table via kb_create_story)
     Setup context:
     {SETUP-CONTEXT from Phase 0}
 
     Analysis:
     {ANALYSIS from Phase 1}
+
+    For each story in Analysis, call kb_create_story({ story_id, title, feature, epic, ... })
+    to insert directly into the KB stories table. Do NOT rely on pnpm migrate:stories for
+    primary insertion. If kb_create_story is unavailable, log a warning and continue.
 
     Return your output as a YAML block labelled SUMMARY.
 ```
@@ -183,15 +194,9 @@ If `--dry-run` flag:
 On `GENERATION COMPLETE`:
 
 ### KB Mode
-1. Stories are already in the KB (Phase 2 generation leader inserts them via `kb_create_story` or `migrate:stories`).
+1. Stories are already in the KB — Phase 2 generation leader inserts them directly via `kb_create_story` MCP tool calls during generation.
 
-2. Seed stories into KB if the generation leader wrote story.yaml files but didn't insert directly:
-   ```bash
-   pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
-   ```
-   (Idempotent, non-blocking if DB unavailable.)
-
-3. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
+2. Update plan status to `stories-created` (only if current status is `draft` or `accepted`):
    ```
    mcp__knowledge-base__kb_update_plan({
      plan_slug: "{plan_slug}",
@@ -199,7 +204,7 @@ On `GENERATION COMPLETE`:
    })
    ```
 
-4. Report to user.
+3. Report to user.
 
 ### File Mode (legacy)
 1. Seed stories:
@@ -223,8 +228,11 @@ On `GENERATION COMPLETE`:
 | Phases | {N} |
 
 ### Files Created
-- {feature_dir}/stories.index.md
 - {feature_dir}/{PREFIX}-*/story.yaml ({N} files)
+- {feature_dir}/stories.index.md (filesystem index — stories are in KB)
+
+### KB Stories Inserted
+- {N} stories inserted via kb_create_story
 
 **Next**: `/elab-epic {PREFIX}` (recommended) or `/elab-story {PREFIX}-1010`
 ```
