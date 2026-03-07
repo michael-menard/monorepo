@@ -1,0 +1,33 @@
+story_id: WINT-2060
+phase: implementation
+iteration: 2
+generated_at: "2026-03-06"
+
+touched_files:
+  - packages/backend/mcp-tools/src/scripts/utils/read-doc.ts
+  - packages/backend/mcp-tools/src/scripts/populate-library-cache.ts
+  - packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+  - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
+
+commands_run:
+  - cmd: "pnpm --filter @repo/mcp-tools check-types"
+    outcome: pass
+    note: "Type-check passes; no type errors introduced by refactor"
+  - cmd: "pnpm --filter @repo/mcp-tools test"
+    outcome: pass
+    note: "37 test files, 362 tests — all pass"
+
+fix_summary:
+  issue: "Duplicated readDoc utility function across three populate-* scripts"
+  resolution: >
+    Extracted shared readDoc() function to
+    packages/backend/mcp-tools/src/scripts/utils/read-doc.ts.
+    Each script now imports readDocUtil from this shared module and wraps it with
+    a CALLER_TAG constant to preserve distinct log prefixes per script.
+    Removed readFileSync/resolve imports and MONOREPO_ROOT constants from all three scripts.
+  files_created:
+    - packages/backend/mcp-tools/src/scripts/utils/read-doc.ts
+  files_modified:
+    - packages/backend/mcp-tools/src/scripts/populate-library-cache.ts
+    - packages/backend/mcp-tools/src/scripts/populate-domain-kb.ts
+    - packages/backend/mcp-tools/src/scripts/populate-project-context.ts
