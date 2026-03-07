@@ -30,7 +30,7 @@ Extend the stories table, add PM artifact types, update CRUD operations, and reg
 |----|-------|--------------|----------|--------|
 | KFMB-1010 | Stories Table Content Columns Migration | — | Medium | Ready to Work |
 | KFMB-1020 | kb_create_story MCP Tool and CRUD Update | KFMB-1010 | Medium | Ready to Work |
-| KFMB-1030 | PM Artifact Types and Detail Tables | KFMB-1010 | Medium | In Elaboration |
+| KFMB-1030 | PM Artifact Types and Detail Tables | KFMB-1010 | Medium | Failed Code Review |
 | KFMB-1040 | Register kb_delete_artifact MCP Tool | — | Medium | Ready to Work |
 
 ---
