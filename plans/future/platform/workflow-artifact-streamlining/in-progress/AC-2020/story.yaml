@@ -1,0 +1,42 @@
+id: AC-2020
+title: "TOKEN-LOG.md → KB"
+status: backlog
+priority: medium
+phase: 2
+feature: "Update the token-log skill to write to KB instead of appending to a Markdown file; update dev-documentation-leader and _token-logging.md shared instructions to query KB for token entries; update OUTCOME.yaml sources map"
+goal: "Token usage data is written to and queried from the KB; no TOKEN-LOG.md file is created or read during story execution."
+depends_on:
+  - AC-1010
+endpoints: []
+infrastructure: []
+risk_notes: "15+ agent files call /token-log but need no changes (skill-level change only). OUTCOME.yaml sources.token_log field must be updated in the same commit as the skill change to avoid inconsistency. KB write schema for token_usage entries must be defined clearly."
+sizing_warning: false
+created: "2026-03-03T00:00:00Z"
+action_items:
+  - "Include a grep checklist step in the implementation plan to catch stale cross-references before committing"
+acceptance_criteria:
+  - id: AC-1
+    description: "No agent or skill writes to a TOKEN-LOG.md file during active story execution. /token-log skill writes exclusively to KB via kb_log_tokens."
+    added_by: autonomous_elaboration
+    gap_ref: gap-1
+  - id: AC-2
+    description: "Token usage data for a story is queryable from KB by story_id (storyTokenUsage entries exist after /token-log is called)."
+    added_by: autonomous_elaboration
+    gap_ref: gap-1
+  - id: AC-3
+    description: "After commit, a grep of the .claude/ tree finds zero TOKEN-LOG.md references in active-path agent instructions (excluding any intentionally-scoped legacy fallback paths that are explicitly commented as backward-compat only)."
+    added_by: autonomous_elaboration
+    gap_ref: gap-1
+
+ac_decisions:
+  - id: ENG-REC-002
+    decision: accept
+    notes: "Grep checklist required before commit"
+
+qa_notes:
+  verdict: FAIL
+  decided_at: "2026-03-06T00:00:00Z"
+  mode: autonomous
+  acs_added: 3
+  gaps_resolved: 1
+  opportunities_logged: 4
