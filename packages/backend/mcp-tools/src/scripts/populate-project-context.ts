@@ -17,17 +17,13 @@
  * (lego_dev at port 5432 — NOT the KB database at port 5433)
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { contextCachePut } from '../context-cache/context-cache-put.js'
+import { readDoc as readDocUtil } from './utils/read-doc.js'
 
 // TTL: 30 days in seconds
 const TTL_30_DAYS = 2592000
-
-// Resolve from monorepo root (packages/backend/mcp-tools/src/scripts -> ../../../../..)
-const MONOREPO_ROOT = resolve(import.meta.dirname ?? __dirname, '../../../../../')
 
 /** Summary results returned from populateProjectContext() */
 export const PopulateResultSchema = z.object({
@@ -37,19 +33,13 @@ export const PopulateResultSchema = z.object({
 })
 export type PopulateResult = z.infer<typeof PopulateResultSchema>
 
+const CALLER_TAG = '[populate-project-context]'
+
 /**
  * Reads a file relative to the monorepo root. Returns null if not found.
  */
 function readDoc(relPath: string): string | null {
-  try {
-    return readFileSync(resolve(MONOREPO_ROOT, relPath), 'utf-8')
-  } catch (err) {
-    logger.warn('[populate-project-context] Could not read source doc', {
-      path: relPath,
-      error: err instanceof Error ? err.message : String(err),
-    })
-    return null
-  }
+  return readDocUtil(relPath, CALLER_TAG)
 }
 
 /**

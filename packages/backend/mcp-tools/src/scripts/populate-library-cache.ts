@@ -12,17 +12,13 @@
  * @requires DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { contextCachePut } from '../context-cache/context-cache-put.js'
+import { readDoc as readDocUtil } from './utils/read-doc.js'
 
 // TTL: 30 days in seconds
 const TTL_30_DAYS = 2592000
-
-// Resolve from monorepo root (packages/backend/mcp-tools/src/scripts -> ../../../../..)
-const MONOREPO_ROOT = resolve(import.meta.dirname ?? __dirname, '../../../../../')
 
 // ============================================================================
 // Zod Schemas
@@ -49,19 +45,13 @@ export type LibraryContent = z.infer<typeof LibraryContentSchema>
 // File helpers
 // ============================================================================
 
+const CALLER_TAG = '[populate-library-cache]'
+
 /**
  * Reads a file relative to the monorepo root. Returns null if not found.
  */
 function readDoc(relPath: string): string | null {
-  try {
-    return readFileSync(resolve(MONOREPO_ROOT, relPath), 'utf-8')
-  } catch (err) {
-    logger.warn('[populate-library-cache] Could not read source doc', {
-      path: relPath,
-      error: err instanceof Error ? err.message : String(err),
-    })
-    return null
-  }
+  return readDocUtil(relPath, CALLER_TAG)
 }
 
 // ============================================================================
