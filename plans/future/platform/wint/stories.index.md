@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-03-04T00:30:00Z"
+updated_at: "2026-03-07T16:05:00Z"
 ---
 
 # WINT Stories Index
@@ -19,8 +19,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 22 |
 | in-qa | 2 |
 | ready-for-qa | 2 |
-| needs-code-review | 5 |
-| ready-for-code-review | 0 |
+| needs-code-review | 4 |
+| ready-for-code-review | 1 |
 | failed-code-review | 1 |
 | failed-qa | 0 |
 | elaboration | 0 |
@@ -997,7 +997,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2020: Create Context Pack Sidecar
 
-**Status:** created
+**Status:** ready-for-code-review
 **Depends On:** WINT-2010
 **Phase:** 2
 **Feature:** Create context pack sidecar at POST /context-pack returning node-scoped context: story_brief, kb_facts, kb_rules, kb_links, repo_snippets
@@ -1009,7 +1009,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Must query KB efficiently, respect token budgets
 
-**Story File:** `created/WINT-2020/WINT-2020.md`
+**Story File:** `needs-code-review/WINT-2020/WINT-2020.md`
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "name": "@repo/sidecar-utils",
+  "version": "1.0.0",
+  "description": "Shared HTTP utilities for sidecar services (Node.js http module)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "check-types": "tsc --noEmit",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "25.2.1",
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "sidecar",
+    "http",
+    "utils"
+  ]
+}
