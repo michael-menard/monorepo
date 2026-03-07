@@ -769,7 +769,6 @@ export async function kb_read_artifact(
 
   // If artifact_name specified, add it to conditions
   if (validatedInput.artifact_name) {
-    eq(storyArtifacts.artifactName, validatedInput.artifact_name)
     conditions.push(eq(storyArtifacts.artifactName, validatedInput.artifact_name))
   }
 
