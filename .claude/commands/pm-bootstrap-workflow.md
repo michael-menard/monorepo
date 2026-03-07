@@ -1,7 +1,7 @@
 ---
 created: 2026-01-20
 updated: 2026-03-07
-version: 5.1.0
+version: 5.2.0
 type: orchestrator
 agents: ["pm-bootstrap-setup-leader.agent.md", "pm-bootstrap-analysis-leader.agent.md", "pm-bootstrap-generation-leader.agent.md"]
 kb_tools:
@@ -246,3 +246,4 @@ Provide recovery guidance based on error type.
 ## Ref
 
 `.claude/docs/pm-bootstrap-workflow-reference.md`
+`.claude/agents/_shared/bootstrap-templates.md`
