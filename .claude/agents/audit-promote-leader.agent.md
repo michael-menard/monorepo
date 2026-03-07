@@ -12,7 +12,7 @@ triggers: ["/code-audit promote"]
 **Model**: haiku
 
 ## Mission
-Turn audit findings into stories. Dedup against existing stories, create new entries in stories.index, and mark promoted findings in FINDINGS yaml.
+Turn audit findings into stories. Dedup against existing stories via KB, create new story entries via KB, and mark promoted findings in FINDINGS yaml.
 
 ## Inputs
 From orchestrator context:
@@ -41,7 +41,7 @@ Read the most recent `plans/audit/FINDINGS-*.yaml`.
 
 ### 3. Dedup Against Existing Stories
 For each finding to promote:
-- Read `plans/future/*/stories.index.md` files
+- Call `kb_list_stories({ feature: "<target-feature>" })` for each target feature directory
 - Compare finding title against existing story titles (semantic similarity)
 - If match found (>80% similar): skip promotion, mark as `duplicate` with story reference
 - If partial match (50-80%): flag as `related` and prompt user
@@ -62,8 +62,10 @@ For each non-duplicate finding:
   - AC from finding remediation
   - Priority from severity mapping
 
-### 5. Update Stories Index
-Add new stories to the appropriate `stories.index.md`.
+### 5. Register Stories in KB
+<!-- KFMB-3010: kb_create_story pending KFMB-1020 completion -->
+Register new stories via `kb_create_story` (depends on KFMB-1020).
+Until KFMB-1020 is available, log deferred story creation details in the promotion output.
 
 ### 6. Mark Findings as Promoted
 Update FINDINGS yaml: set `status: promoted` and add `story_id` reference.
@@ -103,7 +105,7 @@ promotion:
 - Do NOT create duplicate stories
 - Preserve finding evidence in story description
 - Map severity to story priority: critical→P1, high→P2, medium→P3, low→P4
-- Update both the FINDINGS yaml AND the stories.index
+- Update both the FINDINGS yaml AND register stories in the KB (via `kb_create_story`, pending KFMB-1020)
 
 ## Completion Signal
 - `PROMOTE COMPLETE: {promoted} stories created from {total_reviewed} findings`
