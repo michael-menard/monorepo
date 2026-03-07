@@ -8,12 +8,32 @@
  * @requires DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '@repo/db'
 import { contextPacks } from '@repo/database-schema'
 import { eq, inArray } from 'drizzle-orm'
 import { populateProjectContext } from '../populate-project-context.js'
 import { contextCachePut } from '../../context-cache/context-cache-put.js'
+
+// Mock the context-cache-put module so EC-1 can simulate a throw on first call.
+// All other tests call vi.mocked(contextCachePut).mockRestore() or use the real
+// implementation by restoring the spy after each test.
+vi.mock('../../context-cache/context-cache-put.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../context-cache/context-cache-put.js')>()
+  return {
+    ...actual,
+    contextCachePut: vi.fn(actual.contextCachePut),
+  }
+})
+
+// Mock node:fs so EC-2 can simulate a missing source file for readFileSync.
+vi.mock('node:fs', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...actual,
+    readFileSync: vi.fn(actual.readFileSync),
+  }
+})
 
 const EXPECTED_PACK_KEYS = [
   'project-conventions',
@@ -32,6 +52,9 @@ async function cleanupPacks() {
 
 describe('populateProjectContext integration', () => {
   beforeEach(async () => {
+    // Restore all mocks to real implementations before each test so integration
+    // tests run against the actual DB and filesystem by default.
+    vi.restoreAllMocks()
     await cleanupPacks()
   })
 
@@ -143,46 +166,72 @@ describe('populateProjectContext integration', () => {
     }
   })
 
-  it('EC-1: resilience — contextCachePut returning null is counted as failed (not abort)', async () => {
-    // Simulate the failure path: contextCachePut returns null for invalid packType
-    // We verify that the populate function counts nulls as failures and continues
-    // by directly testing with a packType that will pass Zod but verifying the count logic.
-    //
-    // The populate function has this logic:
-    //   if (written) { results.succeeded++ } else { results.failed++ }
-    //
-    // We test this by verifying that all 5 packs succeed normally,
-    // then confirm the failure counting works via a unit assertion on the result shape.
+  it('EC-1: resilience — contextCachePut throwing on first call is counted as failed, other 4 packs succeed', async () => {
+    // Simulate contextCachePut throwing on the first call (first pack: project-conventions).
+    // The populate function catches errors in its try/catch loop — the remaining 4 packs
+    // must still be written and result.failed must equal 1.
+    const mockedPut = vi.mocked(contextCachePut)
+    const realImplementation = mockedPut.getMockImplementation()
+
+    mockedPut.mockImplementationOnce(() => {
+      throw new Error('Simulated DB failure on first pack')
+    })
+
+    // Restore real implementation for calls 2-5 so the other packs are actually written
+    if (realImplementation) {
+      mockedPut.mockImplementation(realImplementation)
+    }
+
     const result = await populateProjectContext()
 
-    // Base case: all 5 succeed
     expect(result.attempted).toBe(5)
-    expect(result.succeeded + result.failed).toBe(5)
-    expect(result.succeeded).toBe(5)
-    expect(result.failed).toBe(0)
+    expect(result.failed).toBe(1)
+    expect(result.succeeded).toBe(4)
 
-    // Verify that the resilient loop pattern is in place:
-    // A single pack failure must not prevent the others from running.
-    // This is structurally guaranteed by the try/catch loop in the populate function.
-    // EC-1 full simulation (with throw) is covered by the unit contract of the code structure.
+    // Verify that the 4 non-failing packs were actually written to DB
+    const rows = await db
+      .select({ packKey: contextPacks.packKey })
+      .from(contextPacks)
+      .where(inArray(contextPacks.packKey, EXPECTED_PACK_KEYS))
+
+    expect(rows).toHaveLength(4)
+    // project-conventions (first pack) should NOT be present
+    const writtenKeys = rows.map(r => r.packKey)
+    expect(writtenKeys).not.toContain('project-conventions')
   })
 
   it('EC-2: source doc not found — readDoc returns null, pack counted as failed, others continue', async () => {
-    // We test the resilience when readDoc returns null (file not found).
-    // The populate function skips null reads and increments results.failed.
-    // This is tested indirectly: if the 5 source docs are all present, all succeed.
-    // The code path for null is covered by the structure of the readDoc function.
-    //
-    // Direct verification: run populate in a context where all files are found — 5 succeed.
-    // The null-return path of readDoc is verified via the logger.warn call path.
+    // Simulate a missing source file by making readFileSync throw for the CLAUDE.md path.
+    // The readDoc() function catches the error and returns null, so the populate function
+    // increments results.failed and continues — the other 4 packs must still succeed.
+    const fs = await import('node:fs')
+    const mockedReadFileSync = vi.mocked(fs.readFileSync)
+
+    mockedReadFileSync.mockImplementationOnce((path, _options) => {
+      // Only throw for CLAUDE.md (the first source doc — project-conventions pack)
+      if (String(path).endsWith('CLAUDE.md')) {
+        throw new Error('ENOENT: no such file or directory')
+      }
+      // Fall through to real implementation for all other files
+      return fs.readFileSync(path, _options as BufferEncoding)
+    })
+
     const result = await populateProjectContext()
 
     expect(result.attempted).toBe(5)
-    expect(result.succeeded).toBe(5)
+    expect(result.failed).toBe(1)
+    expect(result.succeeded).toBe(4)
 
-    // If source docs were missing, failed would be > 0 and succeeded < 5.
-    // Since the source files exist in this test environment, all 5 succeed.
-    // The resilience path (failed: N, attempted: 5) is the structural guarantee.
+    // Verify that the 4 non-failing packs were written to DB
+    const rows = await db
+      .select({ packKey: contextPacks.packKey })
+      .from(contextPacks)
+      .where(inArray(contextPacks.packKey, EXPECTED_PACK_KEYS))
+
+    expect(rows).toHaveLength(4)
+    // project-conventions (sourced from CLAUDE.md) should NOT be present
+    const writtenKeys = rows.map(r => r.packKey)
+    expect(writtenKeys).not.toContain('project-conventions')
   })
 
   it('EC-3: invalid packType value is rejected by Zod before DB call', async () => {
