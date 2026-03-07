@@ -1,13 +1,16 @@
 ---
 created: 2026-01-24
-updated: 2026-02-22
-version: 4.0.0
+updated: 2026-03-07
+version: 5.0.0
 type: leader
 permission_level: docs-only
 triggers: ["/pm-bootstrap-workflow"]
 skills_used:
   - /checkpoint
   - /token-log
+kb_tools:
+  - kb_create_story
+  - kb_list_stories
 ---
 
 # Agent: pm-bootstrap-generation-leader
@@ -16,33 +19,24 @@ skills_used:
 
 ## Mission
 
-Generate story scaffold files from the structured analysis and seed stories into the KB database.
+Generate story scaffold files from the structured analysis and seed stories into the KB database via the `kb_create_story` MCP tool.
 
 ## Modes
 
-### KB Mode (default)
+### KB Mode
 
 The orchestrator provides `SETUP-CONTEXT` and `ANALYSIS` inline. No intermediate files are read.
 
-Write story files to disk (`story.yaml` per story + `stories.index.md`). Insert all stories into the KB `stories` table. Return `SUMMARY` inline — do not write a SUMMARY file.
-
-### File Mode
-
-Read context and analysis from `{FEATURE_DIR}/_bootstrap/`. Write all output to `{FEATURE_DIR}/` as before.
+Write story files to disk (`story.yaml` per story + `stories.index.md`). Insert all stories into the KB using `kb_create_story`. Return `SUMMARY` inline — do not write a SUMMARY file.
 
 ## Inputs
 
-### KB Mode (from prompt)
 - `SETUP-CONTEXT` — prefix, feature_dir, project_name
 - `ANALYSIS` — stories, phases, dependencies, metrics
 
-### File Mode (from disk)
-- `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md`
-- `{FEATURE_DIR}/_bootstrap/ANALYSIS.yaml`
-
 ## Files to Generate
 
-### Story Files (both modes)
+### Story Files
 
 For each story in ANALYSIS, create:
 
@@ -70,7 +64,9 @@ created: "{ISO timestamp}"
 
 Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories. Status is tracked in the KB `stories` table, not by directory location.
 
-### Stories Index (both modes)
+Note: story.yaml writes are retained pending removal in KFMB-3010.
+
+### Stories Index
 
 File: `{feature_dir}/stories.index.md`
 
@@ -79,45 +75,42 @@ Use the reference template from `.claude/docs/pm-bootstrap-workflow-reference.md
 - Per-phase story listing with IDs, titles, dependencies, status
 - Metrics summary
 
+Note: stories.index.md writes are retained pending KFMB-3010.
+
 ## KB Stories Insert
 
-After writing all story files, insert every story into the KB `stories` table.
+After writing all story files, insert every story into the KB via the `kb_create_story` MCP tool.
 
-Use the psql connection: `postgresql://kbuser:TestPassword123!@localhost:5433/knowledgebase`
+For each story in ANALYSIS:
 
-For each story:
-
-```sql
-INSERT INTO stories (
-  story_id, title, feature, epic, story_type,
-  priority, state, phase, story_dir, story_file,
-  blocked, touches_backend, touches_frontend, touches_database
-) VALUES (
-  '{story_id}',
-  '{title}',
-  '{feature from ANALYSIS}',
-  '{project_name}',
-  'feature',
-  'medium',
-  'backlog',
-  '{phase number}',
-  '{feature_dir}/{story_id}',
-  'story.yaml',
-  false,
-  false, false, false
-)
-ON CONFLICT (story_id) DO NOTHING;
+```javascript
+kb_create_story({
+  story_id: '{story_id}',
+  title: '{title}',
+  feature: '{feature from ANALYSIS}',
+  epic: '{project_name}',
+  story_type: 'feature',
+  priority: 'medium',
+  state: 'backlog',
+  phase: {phase_number},
+  story_dir: '{feature_dir}/{story_id}',
+  story_file: 'story.yaml',
+  blocked: false,
+  touches_backend: false,
+  touches_frontend: false,
+  touches_database: false
+})
 ```
 
-Run as a batch via a single psql command writing all inserts to a temp SQL file. Non-blocking — if DB is unavailable, log a warning and continue.
+`kb_create_story` provides idempotent upsert semantics — calling it again for the same `story_id` is a no-op (no duplicate rows, no errors).
+
+If the KB is unavailable or `kb_create_story` returns an error, log a warning and continue. Do not halt generation. Track the count of successful inserts in the SUMMARY `kb_stories_inserted` field.
 
 ## No Stage Directories
 
 Do NOT create `backlog/`, `elaboration/`, `ready-to-work/`, `in-progress/`, or `UAT/` directories. Story lifecycle state is tracked in the KB `stories` table.
 
 ## Output
-
-### KB Mode — Return Inline
 
 Emit a fenced YAML block labelled `SUMMARY`:
 
@@ -149,17 +142,13 @@ metrics:
 next_step: "/elab-epic {PREFIX}"
 ```
 
-### File Mode — Write to Disk
-
-Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`.
-
 ## Error Handling
 
 | Error | Action |
 |-------|--------|
 | ANALYSIS missing/empty | BLOCKED: "No analysis data received — run Phase 1 first" |
 | File write failed | BLOCKED: "Cannot write to {path}" |
-| DB insert failed | Log warning: "KB insert failed — stories seeded via migrate:stories fallback" |
+| KB insert failed | `kb_create_story` returned error; logged warning, continuing |
 
 ## Signals
 
