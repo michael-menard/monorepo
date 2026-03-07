@@ -12,11 +12,11 @@
 | Phase | Ready | In Progress | Review | QA | Complete | Total |
 |-------|-------|-------------|--------|-----|----------|-------|
 | 1: Schema & API | 0 | 1 | 0 | 0 | 2 | 4 |
-| 2: Bootstrap | 2 | 0 | 2 | 0 | 0 | 4 |
+| 2: Bootstrap | 0 | 0 | 3 | 1 | 0 | 4 |
 | 3: Index & Stage | 3 | 0 | 2 | 0 | 0 | 5 |
 | 4: Artifact Migration | 5 | 0 | 0 | 0 | 0 | 5 |
 | 5: Script Modernization | 2 | 0 | 0 | 0 | 0 | 2 |
-| **TOTAL** | **12** | **1** | **4** | **0** | **2** | **20** |
+| **TOTAL** | **10** | **1** | **5** | **1** | **2** | **20** |
 
 ---
 
@@ -43,10 +43,10 @@ Migrate story bootstrap to write directly to the KB with no filesystem output.
 
 | ID | Title | Dependencies | Priority | Status |
 |----|-------|--------------|----------|--------|
-| KFMB-2010 | KB-Native Bootstrap Generation Leader | — | Medium | Created |
-| KFMB-2020 | KB-Native Bootstrap Setup Leader | — | Medium | Ready to Work |
-| KFMB-2030 | Update /pm-bootstrap-workflow Command | KFMB-2010, KFMB-2020 | Medium | Needs Code Review |
-| KFMB-2040 | KB-Native Story Generation Pipeline | KFMB-1030 | Medium | Needs Code Review |
+| KFMB-2010 | KB-Native Bootstrap Generation Leader | — | Medium | 🔴 Failed Code Review |
+| KFMB-2020 | KB-Native Bootstrap Setup Leader | — | Medium | 🔴 Failed Code Review |
+| KFMB-2030 | Update /pm-bootstrap-workflow Command | KFMB-2010, KFMB-2020 | Medium | 🔴 Failed Code Review |
+| KFMB-2040 | KB-Native Story Generation Pipeline | KFMB-1030 | Medium | 🔍 Ready for QA |
 
 ---
 

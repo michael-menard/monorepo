@@ -16,19 +16,19 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 22 |
+| uat | 23 |
 | in-qa | 2 |
 | ready-for-qa | 2 |
-| needs-code-review | 5 |
+| needs-code-review | 7 |
 | ready-for-code-review | 0 |
 | failed-code-review | 1 |
-| failed-qa | 0 |
+| failed-qa | 1 |
 | elaboration | 0 |
 | created | 2 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 7 |
-| pending | 88 |
+| ready-to-work | 5 |
+| pending | 86 |
 
 ---
 
@@ -1015,8 +1015,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** ready-to-work
-**Story File:** `wint/ready-to-work/WINT-2030/WINT-2030.md`
+**Status:** in-progress
+**Story File:** `wint/in-progress/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1031,7 +1031,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2040: Populate Agent Mission Cache
 
-**Status:** failed-code-review
+**Status:** uat
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Parse all 115 .agent.md files, extract mission/scope/signals, populate context_cache.agent_missions
@@ -1042,7 +1042,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Parser must handle various frontmatter formats
 
-**Story File:** `failed-code-review/WINT-2040/WINT-2040.md`
+**Story File:** `UAT/WINT-2040/WINT-2040.md`
 **Story Generated:** 2026-03-02
 
 ---
@@ -1080,7 +1080,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 ### WINT-2070: Implement Cache Warming Strategy
 
 **Status:** created
-**Depends On:** WINT-2030, WINT-2040, WINT-2050, WINT-2060
+**Depends On:** WINT-2030, WINT-2050, WINT-2060
 **Phase:** 2
 **Feature:** Create cache-warm skill that pre-populates all caches before workflow starts
 **Infrastructure:**
@@ -1094,7 +1094,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2080: Create context-warmer Agent
 
-**Status:** pending
+**Status:** ready-for-qa
 **Depends On:** WINT-2070
 **Phase:** 2
 **Feature:** Create haiku-powered worker agent that implements cache-warm skill
@@ -1141,8 +1141,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2110: Update 5 High-Volume Agents to Use Cache
 
-**Status:** ready-to-work
-**Depends On:** WINT-2030, WINT-2040, WINT-2050, WINT-2060, WINT-0100
+**Status:** needs-code-review
+**Depends On:** WINT-2030, WINT-2050, WINT-2060, WINT-0100
 **Phase:** 2
 **Feature:** Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache
 **Infrastructure:**
@@ -1155,7 +1155,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2120: Measure Token Reduction
 
-**Status:** pending
+**Status:** failed-code-review
 **Depends On:** WINT-2110
 **Phase:** 2
 **Feature:** Run benchmark comparing token usage before/after cache implementation, target 80% reduction
@@ -1330,7 +1330,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4010: Create Cohesion Sidecar
 
-**Status:** pending
+**Status:** created
 **Depends On:** WINT-2020, WINT-1080
 **Phase:** 4
 **Feature:** Create cohesion sidecar at POST /cohesion/audit (post-bootstrap) and POST /cohesion/check (gates) to detect Franken-features and capability gaps

@@ -1,0 +1,115 @@
+story_id: WINT-2020
+artifact_type: review
+phase: code_review
+iteration: 2
+generated_at: 2026-03-07T12:25:00Z
+
+verdict: FAIL
+reason: "Typecheck errors (22) and reusability violations (1 error, 1 warning) must be resolved before merge"
+
+worker_verdicts:
+  lint: PASS
+  style: PASS
+  syntax: PASS
+  security: PASS
+  typecheck: FAIL
+  build: FAIL
+  reusability: FAIL
+  react: N/A
+  typescript: PASS
+  accessibility: N/A
+
+codebase_health:
+  files_checked: 61
+  errors_in_scope: 23
+  warnings_in_scope: 2
+  pre_existing_build_failures: 4
+  pre_existing_typecheck_outside_scope: 1668
+
+ranked_patches:
+  - patch_id: 1
+    severity: error
+    category: typecheck
+    count: 12
+    files_affected:
+      - packages/backend/sidecars/context-pack/src/__tests__/context-pack.integration.test.ts
+    description: "Missing required 'ttl' property in 10 test calls (lines 113, 138, 148, 169, 173, 210, 246, 267, 294, 306) + 1 unused 'DEFAULT_TTL' declaration (line 29) + 1 unused 'timingKey' variable (line 289)"
+    fix_strategy: "Add 'ttl' parameter to context pack calls or adjust schema; remove unused declarations"
+    effort: medium
+    blocking: true
+
+  - patch_id: 2
+    severity: error
+    category: typecheck
+    count: 2
+    files_affected:
+      - packages/backend/mcp-tools/src/context-pack/__tests__/context-pack-get.test.ts
+    description: "Missing required 'ttl' property in test calls (lines 49, 74)"
+    fix_strategy: "Add 'ttl' parameter to context pack calls"
+    effort: low
+    blocking: true
+
+  - patch_id: 3
+    severity: error
+    category: typecheck
+    count: 7
+    files_affected:
+      - packages/backend/sidecars/context-pack/src/__tests__/context-pack.unit.test.ts
+    description: "Missing required 'ttl' property in 7 test calls (lines 232, 247, 265, 279, 310, 349, 371) + 1 unused 'makeKbSearchResult' declaration (line 30)"
+    fix_strategy: "Add 'ttl' parameter to context pack calls; remove unused helper"
+    effort: low
+    blocking: true
+
+  - patch_id: 4
+    severity: error
+    category: reusability
+    count: 1
+    files_affected:
+      - packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+    description: "Duplicated HTTP utility function 'sendJson()' — identical implementation exists in role-pack sidecar (line 19)"
+    rule: no-sidecar-duplication
+    fix_strategy: "Extract shared sendJson() to @repo/sidecar-utils or equivalent shared backend utilities package"
+    effort: high
+    blocking: true
+    notes: "Architectural improvement; may require coordinating refactor across both sidecars"
+
+  - patch_id: 5
+    severity: warning
+    category: reusability
+    count: 1
+    files_affected:
+      - packages/backend/sidecars/context-pack/src/server.ts
+    description: "Similar HTTP server initialization pattern duplicated across sidecars (line 57)"
+    rule: prefer-shared-sidecar-server
+    fix_strategy: "Consider extracting to shared sidecar server factory; document pattern if intentional"
+    effort: medium
+    blocking: false
+
+  - patch_id: 6
+    severity: warning
+    category: typescript
+    count: 1
+    files_affected:
+      - packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+    description: "Non-null assertion without justification comment (line 158)"
+    rule: justified-non-null
+    fix_strategy: "Add explanatory comment above non-null assertion explaining why null is impossible at this point"
+    effort: low
+    blocking: false
+
+summary:
+  blocking_issues: 4
+  non_blocking_issues: 2
+  total_files_with_issues: 6
+  recommended_action: "Fix all typecheck errors and reusability duplication before merge. Address non-blocking warnings in follow-up."
+
+pre_existing_issues:
+  note: "4 build errors found in artifact-operations.ts (NOT in WINT-2020 touched files) — these are uncommitted changes from another story (visible in git status). Do not block WINT-2020 on these."
+  affected_package: "@repo/knowledge-base"
+  affected_file: "src/crud-operations/artifact-operations.ts"
+  error_count: 4
+  missing_schema_exports:
+    - artifactTestPlans
+    - artifactDevFeasibility
+    - artifactUiuxNotes
+    - artifactStorySeeds

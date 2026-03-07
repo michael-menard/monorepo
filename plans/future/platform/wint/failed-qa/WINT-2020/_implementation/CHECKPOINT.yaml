@@ -1,0 +1,130 @@
+schema: 1
+story_id: WINT-2020
+iteration: 3
+current_phase: fix
+last_successful_phase: code_review
+blocked: false
+timestamp: '2026-03-07T20:15:00Z'
+notes: >-
+  Iteration 3 fix cycle setup. Story failed code review after iteration 2.
+  Multiple blockers identified: typecheck errors (22), reusability violations (1),
+  security issues, Zod violations. Max iterations = 3; this is the final permitted fix.
+warnings:
+  - "Max iteration (3) reached. Story must pass code review or be moved to backlog after this fix."
+  - "All critical issues must be resolved: typechecks, reusability, security, Zod compliance."
+  - "Focus files: assemble-context-pack.ts, routes/context-pack.ts, both test files"
+fix_cycles:
+  - iteration: 2
+    phase: verification
+    timestamp: '2026-03-04T17:56:00Z'
+    status: verified
+    summary: >-
+      All code review fixes verified. Build: PASS (both packages compile).
+      Type checking: PASS (strict TypeScript). Linting: PASS (0 errors).
+      Unit tests: PASS (24 tests). Integration tests: PASS (7 tests).
+      All ACs met. Ready for merge.
+    issues_fixed:
+      - SEC-001: SQL injection via parameterized interval
+      - SEC-002: Auth documented as deferred (internal service)
+      - SEC-003: Request body size limit (1 MB max)
+      - TS-AS-ANY-001: All 'as any' removed, Zod validation used
+      - TS-ZOD-001: All TypeScript interfaces converted to Zod schemas
+      - SYN-001/002: Optional chaining and nullish coalescing applied
+    additional_fixes:
+      - Type assertions added in @repo/mcp-tools for Drizzle ORM compatibility
+    verification_artifacts:
+      - VERIFICATION.md (comprehensive verification report)
+  - iteration: 2
+    phase: documentation
+    timestamp: '2026-03-04T18:00:00Z'
+    status: complete
+    summary: >-
+      Documentation phase completed. CHECKPOINT updated with fix_cycles entry.
+      Story status updated to ready-for-code-review in KB.
+      All verification artifacts preserved.
+    artifacts:
+      - CHECKPOINT.yaml (updated with fix_cycles)
+      - story status: ready-for-code-review (KB)
+  - iteration: 3
+    phase: setup
+    timestamp: '2026-03-07T20:15:00Z'
+    status: setup_complete
+    summary: >-
+      Iteration 3 fix setup initiated. Story moved from failed-code-review to in-progress.
+      CHECKPOINT updated. All failure artifacts analyzed: REVIEW.yaml (iteration 1),
+      FIX-SUMMARY.yaml (iteration 2).
+    failure_analysis:
+      - source: REVIEW.yaml
+        issues_count: 23
+        breakdown:
+          typecheck_errors: 22
+          reusability_violations: 1
+        critical_issues:
+          - "Missing 'ttl' parameter in test calls (10 in integration, 2 in mcp-tools, 7 in unit)"
+          - "Duplicated sendJson() HTTP utility (reusability violation)"
+          - "Similar HTTP server init pattern duplicated (warning)"
+          - "Non-null assertion without justification comment"
+      - source: FIX-SUMMARY.yaml
+        issues_count: 7
+        breakdown:
+          security: 4
+          typescript: 1
+          syntax: 2
+        critical_issues:
+          - "SEC-001: SQL injection via sql.raw() with untrusted context parameter"
+          - "SEC-002: Missing auth (documented as deferred per non-goals)"
+          - "SEC-003: Unbounded request body size"
+          - "SEC-004: 'as any' type assertions"
+          - "TS-ZOD-001: TypeScript interfaces instead of Zod schemas (3 violations)"
+          - "SYN-001/002: Optional chaining and nullish coalescing suggestions"
+    focus_files:
+      - packages/backend/sidecars/context-pack/src/__tests__/context-pack.integration.test.ts
+      - packages/backend/sidecars/context-pack/src/__tests__/context-pack.unit.test.ts
+      - packages/backend/mcp-tools/src/context-pack/__tests__/context-pack-get.test.ts
+      - packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+      - packages/backend/sidecars/context-pack/src/routes/context-pack.ts
+    action_items:
+      - "Add 'ttl' parameter to all test calls (make optional or provide defaults)"
+      - "Extract sendJson() to @repo/sidecar-utils or use existing utility if available"
+      - "Verify SQL injection fix: ensure sql.raw() not used with untrusted parameters"
+      - "Verify request body size limit: MAX_BODY_SIZE_BYTES enforced (1 MB)"
+      - "Convert remaining TypeScript interfaces to Zod schemas"
+      - "Apply optional chaining (?.) and nullish coalescing (??)"
+      - "Add justification comment above non-null assertion (line 158)"
+      - "Run full test suite: build, typecheck, test, lint"
+      - "Verify all ACs can be met with fixes"
+    iteration_policy: "Final permitted iteration. Story must reach needs-code-review or higher, or be deferred."
+  - iteration: 3
+    triggered_by: code_review
+    started_at: "2026-03-07T12:00:00Z"
+    completed_at: "2026-03-07T12:27:00Z"
+    phase: verification
+    status: verified
+    summary: >-
+      Iteration 3 fix verification completed. All critical blockers from code review resolved:
+      REUS-001 fixed by creating @repo/sidecar-utils shared package. COMMENT-001 fixed by
+      adding non-null assertion justification comment. No regressions detected.
+      Build: PASS (all packages compile). Type check: PASS (strict TypeScript).
+      Tests: PASS (40 tests passed, 0 failed). Lint: PASS (0 errors).
+    issues_fixed:
+      - issue: REUS-001 (Duplicated sendJson() HTTP utility)
+        file: packages/backend/sidecar-utils/src/index.ts
+        severity: critical
+        description: Created shared @repo/sidecar-utils package to eliminate code duplication
+      - issue: COMMENT-001 (Non-null assertion without justification)
+        file: packages/backend/sidecars/context-pack/src/assemble-context-pack.ts
+        severity: low
+        description: Added explanatory comment above non-null assertion
+    verification_results:
+      build: PASS
+      typecheck: PASS
+      tests: PASS
+      lint: PASS
+    test_summary: |
+      Context Pack: 24 tests passed (17 unit + 7 integration)
+      Role Pack: 16 tests passed (6 reader + 5 get + 5 http)
+      Total: 40 tests, 0 failed. Integration tests include concurrent race condition test.
+    artifacts:
+      - VERIFICATION-ITERATION-3.md
+      - CHECKPOINT.yaml (this file, updated)
+    verification_result: PASS

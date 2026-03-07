@@ -16,14 +16,14 @@ All stories in this epic use the `KBAR-XXX` naming convention (starting at 001).
 | Status | Count |
 |--------|-------|
 | completed | 1 |
-| uat | 14 |
+| uat | 15 |
 | failed-qa | 0 |
 | generated | 0 |
 | created | 1 |
 | ready-to-work | 0 |
 | elaboration | 0 |
 | in-progress | 0 |
-| needs-code-review | 2 |
+| needs-code-review | 1 |
 | failed-code-review | 1 |
 | ready-for-qa | 1 |
 | pending | 15 |
@@ -454,7 +454,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 ## KBAR-024: Regenerate Index CLI
 
-**Status:** needs-code-review
+**Status:** uat
 **Depends On:** KBAR-023
 **Phase:** 6
 

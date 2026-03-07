@@ -62,6 +62,7 @@ MAX_RETRIES=1
 LOG_DIR=""
 PLAN_SLUG_ARG=""
 MAX_PASSES=10
+TOKEN_LIMIT_HIT=false          # Global flag: stop launching when rate-limited
 
 # All tools needed across all phases — pre-allow everything
 ALLOWED_TOOLS="Read,Write,Edit,Glob,Grep,Bash,Task,mcp__knowledge-base__kb_get,mcp__knowledge-base__kb_search,mcp__knowledge-base__kb_get_story,mcp__knowledge-base__kb_list_stories,mcp__knowledge-base__kb_update_story,mcp__knowledge-base__kb_update_story_status,mcp__knowledge-base__kb_write_artifact,mcp__knowledge-base__kb_read_artifact,mcp__knowledge-base__kb_list_artifacts,mcp__knowledge-base__kb_add,mcp__knowledge-base__kb_list,mcp__knowledge-base__kb_get_related,mcp__knowledge-base__kb_get_plan,mcp__knowledge-base__kb_list_plans,mcp__knowledge-base__kb_log_tokens,mcp__knowledge-base__kb_get_work_state,mcp__knowledge-base__kb_update_work_state,mcp__knowledge-base__kb_get_next_story,mcp__knowledge-base__kb_add_decision,mcp__knowledge-base__kb_add_lesson,mcp__knowledge-base__worktree_register,mcp__knowledge-base__worktree_get_by_story,mcp__knowledge-base__worktree_list_active,mcp__knowledge-base__worktree_mark_complete,mcp__knowledge-base__artifact_search"
@@ -105,6 +106,7 @@ done
 # ── Set up logging ───────────────────────────────────────────────────
 LOG_DIR="/tmp/orchestrator-$(date '+%Y%m%d-%H%M%S')"
 mkdir -p "$LOG_DIR/.state" "$LOG_DIR/.results"
+RATE_LIMIT_SENTINEL="$LOG_DIR/.token-limit-hit"
 
 # ── Mutual exclusion: --plan vs --work-order ───────────────────────────
 if [[ -n "$PLAN_SLUG_ARG" && "$WORK_ORDER" != "$REPO_ROOT/plans/future/platform/WORK-ORDER-BY-BATCH.md" ]]; then
@@ -491,7 +493,62 @@ check_log_for_failure() {
     return 0
   fi
 
+  # Check for account-level token/rate limits (triggers orchestrator shutdown)
+  if check_token_limit "$LOG_FILE"; then
+    echo "FAIL:token_limit:account token or rate limit hit"
+    return 0
+  fi
+
   echo "OK"
+}
+
+# ── Token / rate-limit detection ─────────────────────────────────────
+# Check if a claude invocation log indicates we've hit the account token
+# limit or been rate-limited. Writes a sentinel file so all parallel
+# workers and the main loop can detect it.
+RATE_LIMIT_SENTINEL=""   # Set after LOG_DIR is created
+
+check_token_limit() {
+  local LOG_FILE="$1"
+  local EXIT_CODE="${2:-0}"
+  [[ -z "$LOG_FILE" || ! -f "$LOG_FILE" ]] && return 1
+
+  # Exit code 2 is often used for overload/rate-limit by claude CLI
+  local hit=false
+
+  # Scan log for rate-limit / quota / overloaded signals
+  if grep -qEi "rate.?limit|quota.?exceeded|token.?limit|account.?limit|overloaded|too many requests|429|billing|usage.?cap|max.*usage|plan.?limit" "$LOG_FILE" 2>/dev/null; then
+    hit=true
+  fi
+
+  # Also check for specific exit code patterns
+  if [[ "$EXIT_CODE" -eq 2 ]]; then
+    # Claude CLI exit code 2 can indicate overload — only flag if log also looks suspicious
+    if grep -qEi "error|limit|overload|429|quota" "$LOG_FILE" 2>/dev/null; then
+      hit=true
+    fi
+  fi
+
+  if $hit; then
+    TOKEN_LIMIT_HIT=true
+    if [[ -n "$RATE_LIMIT_SENTINEL" ]]; then
+      echo "TOKEN_LIMIT_HIT=$(date '+%Y-%m-%d %H:%M:%S')" > "$RATE_LIMIT_SENTINEL"
+    fi
+    return 0
+  fi
+  return 1
+}
+
+# Check if any worker has already flagged a token limit
+is_token_limited() {
+  if $TOKEN_LIMIT_HIT; then
+    return 0
+  fi
+  if [[ -n "$RATE_LIMIT_SENTINEL" && -f "$RATE_LIMIT_SENTINEL" ]]; then
+    TOKEN_LIMIT_HIT=true
+    return 0
+  fi
+  return 1
 }
 
 # ── Git lifecycle helpers ────────────────────────────────────────────
@@ -933,6 +990,14 @@ process_story() {
   # ── State machine loop ─────────────────────────────────────────
   while [[ $MAX_TRANSITIONS -gt 0 ]]; do
     ((MAX_TRANSITIONS--))
+
+    # Bail out if any worker hit the account token limit
+    if is_token_limited; then
+      FINAL_RESULT="token_limit"
+      echo "$TAG TOKEN LIMIT:  $STORY_ID — account token/rate limit hit, stopping"
+      break
+    fi
+
     refresh_state
 
     local CURRENT_STATE="$DETECTED_STATE"
@@ -1346,7 +1411,7 @@ is_story_done_or_stuck() {
   if [[ -f "$rf" ]]; then
     local r
     r=$(cat "$rf")
-    if [[ "$r" == *"result=ok"* || "$r" == *"result=skip"* || "$r" == *"result=fail"* || "$r" == *"result=stuck"* ]]; then
+    if [[ "$r" == *"result=ok"* || "$r" == *"result=skip"* || "$r" == *"result=fail"* || "$r" == *"result=stuck"* || "$r" == *"result=token_limit"* ]]; then
       return 0
     fi
   fi
@@ -1381,6 +1446,14 @@ while true; do
     STORY_ID="${FILTERED_STORIES[$i]}"
     IDX=$((i + 1))
 
+    # Stop launching if token limit was hit by any worker
+    if is_token_limited; then
+      echo ""
+      echo "TOKEN LIMIT HIT — not launching any more stories."
+      echo "Waiting for ${#RUNNING_PIDS[@]} running jobs to finish..."
+      break
+    fi
+
     # Skip stories that already have a final result
     if is_story_done_or_stuck "$STORY_ID"; then
       continue
@@ -1414,6 +1487,14 @@ while true; do
     wait
     # Wait for background sync jobs too
     wait 2>/dev/null || true
+  fi
+
+  # If token limit was hit, stop all further passes
+  if is_token_limited; then
+    echo ""
+    echo "TOKEN LIMIT: Account token/rate limit detected. Stopping orchestrator."
+    echo "  Check logs in: $LOG_DIR"
+    break
   fi
 
   # If nothing was deferred, we're done
@@ -1473,16 +1554,18 @@ RESULT_OK=0
 RESULT_FAIL=0
 RESULT_SKIP=0
 RESULT_STUCK=0
+RESULT_TOKEN_LIMIT=0
 MISSING=0
 
 for STORY_ID in "${FILTERED_STORIES[@]}"; do
   RESULT_FILE="$LOG_DIR/.results/${STORY_ID}"
   if [[ -f "$RESULT_FILE" ]]; then
     RESULT=$(cat "$RESULT_FILE")
-    [[ "$RESULT" == *"result=ok"* ]]    && ((RESULT_OK++))    || true
-    [[ "$RESULT" == *"result=fail"* ]]  && ((RESULT_FAIL++))  || true
-    [[ "$RESULT" == *"result=skip"* ]]  && ((RESULT_SKIP++))  || true
-    [[ "$RESULT" == *"result=stuck"* ]] && ((RESULT_STUCK++)) || true
+    [[ "$RESULT" == *"result=ok"* ]]           && ((RESULT_OK++))          || true
+    [[ "$RESULT" == *"result=fail"* ]]         && ((RESULT_FAIL++))        || true
+    [[ "$RESULT" == *"result=skip"* ]]         && ((RESULT_SKIP++))        || true
+    [[ "$RESULT" == *"result=stuck"* ]]        && ((RESULT_STUCK++))       || true
+    [[ "$RESULT" == *"result=token_limit"* ]]  && ((RESULT_TOKEN_LIMIT++)) || true
   else
     ((MISSING++))
   fi
@@ -1494,7 +1577,7 @@ done
   echo "=== Final Summary ==="
   echo "End: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   echo "Passes: $PASS_NUM  Dep-blocked: $TOTAL_DEFERRED"
-  echo "OK: $RESULT_OK  FAIL: $RESULT_FAIL  STUCK: $RESULT_STUCK  SKIP: $RESULT_SKIP  Missing: $MISSING"
+  echo "OK: $RESULT_OK  FAIL: $RESULT_FAIL  STUCK: $RESULT_STUCK  SKIP: $RESULT_SKIP  TOKEN_LIMIT: $RESULT_TOKEN_LIMIT  Missing: $MISSING"
   echo "---"
   echo "Per-story results:"
   for SID in "${FILTERED_STORIES[@]}"; do
@@ -1519,6 +1602,7 @@ echo " OK:                $RESULT_OK"
 echo " FAILED:            $RESULT_FAIL"
 echo " STUCK:             $RESULT_STUCK"
 echo " SKIPPED:           $RESULT_SKIP"
+[[ $RESULT_TOKEN_LIMIT -gt 0 ]] && echo " TOKEN LIMITED:     $RESULT_TOKEN_LIMIT"
 echo " Passes:            $PASS_NUM"
 [[ $TOTAL_DEFERRED -gt 0 ]] && echo " Dep-blocked:       $TOTAL_DEFERRED"
 [[ $MISSING -gt 0 ]] && echo " Missing results:   $MISSING"
@@ -1557,6 +1641,16 @@ if [[ $TOTAL_FAIL -gt 0 ]]; then
   if [[ -n "$FAILED_IDS" ]]; then
     echo "Retry failed: $0 --only $FAILED_IDS --max-retries $((MAX_RETRIES + 1))"
   fi
+fi
+
+# ── Token limit exit ────────────────────────────────────────────────
+if is_token_limited; then
+  echo ""
+  echo "*** STOPPED: Claude Code account token/rate limit reached. ***"
+  echo "    Remaining stories were NOT processed."
+  echo "    Wait for your limit to reset, then re-run with:"
+  echo "    $0 --only <remaining-story-ids>"
+  echo ""
 fi
 
 # ── Cleanup ──────────────────────────────────────────────────────────
