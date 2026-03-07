@@ -1,0 +1,108 @@
+schema: 1
+story_id: "KFMB-1010"
+version: 1
+timestamp: "2026-03-07T05:00:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC-1"
+    ac_text: "pnpm db:migrate applies without errors"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "POSTGRES_PASSWORD=postgres POSTGRES_DATABASE=monorepo POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_USERNAME=postgres pnpm --filter @repo/database-schema db:migrate"
+        result: SUCCESS
+        output: "[✓] migrations applied successfully!"
+      - type: command
+        command: "Manual SQL migration file created: 0034_kfmb_1010_story_content_columns.sql"
+        result: SUCCESS
+        output: "db:generate was non-functional (pre-existing drizzle-kit .js import resolution issue); migration authored manually following established pattern from migrations 0028-0033"
+
+  - ac_id: "AC-2"
+    ac_text: "3 new columns present in kbar.stories (nullable)"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "cat packages/backend/database-schema/src/migrations/app/0034_kfmb_1010_story_content_columns.sql"
+        result: SUCCESS
+        output: |
+          ALTER TABLE "kbar"."stories" ADD COLUMN "acceptance_criteria" jsonb;
+          ALTER TABLE "kbar"."stories" ADD COLUMN "non_goals" text[];
+          ALTER TABLE "kbar"."stories" ADD COLUMN "packages" text[];
+        description: "SQL migration adds 3 nullable columns (no NOT NULL, no DEFAULT)"
+
+  - ac_id: "AC-3"
+    ac_text: "Drizzle TypeScript types reflect new columns"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm --filter @repo/database-schema build"
+        result: SUCCESS
+        output: "tsc -p tsconfig.build.json (no errors)"
+        description: "TypeScript compiles cleanly; insertStorySchema and selectStorySchema now include acceptanceCriteria (jsonb), nonGoals (text[]), packages (text[]) fields"
+
+  - ac_id: "AC-4"
+    ac_text: "All existing tests pass"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "pnpm test --filter @repo/database-schema"
+        result: SUCCESS
+        output: "Test Files 19 passed (19), Tests 437 passed (437)"
+        description: "All 437 tests pass; kbar-schema.test.ts updated to include new nullable fields in selectStorySchema validation test; snapshots updated for insertStorySchema and selectStorySchema"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/schema/kbar.ts"
+    action: modified
+    description: "Added acceptanceCriteria (jsonb), nonGoals (text[]), packages (text[]) nullable columns to stories table"
+  - path: "packages/backend/database-schema/src/migrations/app/0034_kfmb_1010_story_content_columns.sql"
+    action: created
+    description: "SQL migration file adding 3 nullable columns to kbar.stories"
+  - path: "packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts"
+    action: modified
+    description: "Updated story object in 'should validate story select with generated fields' test to include new nullable columns"
+  - path: "packages/backend/database-schema/src/schema/__tests__/__snapshots__/kbar-schema.test.ts.snap"
+    action: modified
+    description: "Updated snapshots for insertStorySchema and selectStorySchema to include new columns"
+
+commands_run:
+  - command: "pnpm install --frozen-lockfile (worktree)"
+    result: SUCCESS
+    timestamp: "2026-03-07T04:45:00Z"
+  - command: "pnpm --filter @repo/database-schema build"
+    result: SUCCESS
+    timestamp: "2026-03-07T04:46:00Z"
+  - command: "pnpm --filter @repo/database-schema db:generate"
+    result: FAILURE
+    output: "Cannot find module './sets.js' — pre-existing drizzle-kit issue with .js extension resolution in TypeScript source; migration authored manually"
+    timestamp: "2026-03-07T04:47:00Z"
+  - command: "pnpm --filter @repo/database-schema db:migrate"
+    result: SUCCESS
+    output: "[✓] migrations applied successfully!"
+    timestamp: "2026-03-07T04:50:00Z"
+  - command: "pnpm test --filter @repo/database-schema (with snapshot update)"
+    result: SUCCESS
+    output: "Test Files 19 passed (19), Tests 437 passed (437)"
+    timestamp: "2026-03-07T04:55:00Z"
+
+endpoints_exercised: []
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "Database migration story — no frontend/API surface changes. Pure schema infra work."
+  tests_written: false
+
+test_summary:
+  unit: { pass: 437, fail: 0 }
+
+known_deviations:
+  - "pnpm db:generate is non-functional due to pre-existing drizzle-kit issue: 'Cannot find module ./sets.js'. This is a repository-wide pre-existing issue (confirmed by testing in main monorepo). Migration SQL was authored manually following the established pattern from migrations 0028-0033 (which were also manually authored). The SQL is semantically equivalent to what drizzle-kit would generate."
+
+notable_decisions:
+  - "DEC-1: Only kbar.stories modified per story decision — wint.stories excluded"
+  - "DEC-2: All 3 columns nullable with no defaults — backward compatible; existing rows get NULL"
+  - "Manual migration creation: db:generate broken; SQL authored manually per established pattern"
+
+coverage: {}
+
+token_summary:
+  execute: { in: 45000, out: 8000 }
