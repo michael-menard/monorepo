@@ -14,6 +14,7 @@
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { eq, and, desc, sql } from 'drizzle-orm'
+import type { AnyPgTable } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import {
   storyArtifacts,
@@ -30,6 +31,10 @@ import {
   artifactProofs,
   artifactQaGates,
   artifactCompletionReports,
+  artifactTestPlans,
+  artifactDevFeasibility,
+  artifactUiuxNotes,
+  artifactStorySeeds,
 } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
@@ -56,6 +61,10 @@ export const ARTIFACT_TYPES = [
   'review',
   'qa_gate',
   'completion_report',
+  'test_plan',
+  'dev_feasibility',
+  'uiux_notes',
+  'story_seed',
 ] as const
 
 /**
@@ -88,6 +97,10 @@ const ARTIFACT_TYPE_TO_TABLE: Record<string, string> = {
   proof: 'artifact_proofs',
   qa_gate: 'artifact_qa_gates',
   completion_report: 'artifact_completion_reports',
+  test_plan: 'artifact_test_plans',
+  dev_feasibility: 'artifact_dev_feasibility',
+  uiux_notes: 'artifact_uiux_notes',
+  story_seed: 'artifact_story_seeds',
 }
 
 // ============================================================================
@@ -390,27 +403,87 @@ function mapContentToTypedColumns(
         data,
       }
 
+    case 'test_plan':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          strategy: content.strategy ?? null,
+          scopeUiTouched: content.scope_ui_touched ?? content.scopeUiTouched ?? null,
+          scopeDataTouched: content.scope_data_touched ?? content.scopeDataTouched ?? null,
+        },
+        data,
+      }
+
+    case 'dev_feasibility':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          feasible: content.feasible ?? null,
+          confidence: content.confidence ?? null,
+          complexity: content.complexity ?? null,
+        },
+        data,
+      }
+
+    case 'uiux_notes':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          hasUiChanges: content.has_ui_changes ?? content.hasUiChanges ?? null,
+          componentCount: content.component_count ?? content.componentCount ?? null,
+        },
+        data,
+      }
+
+    case 'story_seed':
+      return {
+        typedColumns: {
+          targetId: storyId,
+          conflictsFound: content.conflicts_found ?? content.conflictsFound ?? null,
+          blockingConflicts: content.blocking_conflicts ?? content.blockingConflicts ?? null,
+          baselineLoaded: content.baseline_loaded ?? content.baselineLoaded ?? null,
+        },
+        data,
+      }
+
     default:
       return { typedColumns: { targetId: storyId }, data }
   }
 }
 
 /**
- * A detail table reference with the minimum columns needed for CRUD operations.
- * All 13 type-specific tables share id, data, createdAt, updatedAt.
+ * Union of all detail table references.
+ * Used to type the return value of getDetailTableRef so callers can
+ * pass it directly to db.insert/update/select/delete without unsafe casts.
  */
-type DetailTableRef = {
-  id: typeof artifactCheckpoints.id
-  [key: string]: unknown
-}
+type DetailTableRef =
+  | typeof artifactCheckpoints
+  | typeof artifactContexts
+  | typeof artifactReviews
+  | typeof artifactElaborations
+  | typeof artifactAnalyses
+  | typeof artifactScopes
+  | typeof artifactPlans
+  | typeof artifactEvidence
+  | typeof artifactVerifications
+  | typeof artifactFixSummaries
+  | typeof artifactProofs
+  | typeof artifactQaGates
+  | typeof artifactCompletionReports
+  | typeof artifactTestPlans
+  | typeof artifactDevFeasibility
+  | typeof artifactUiuxNotes
+  | typeof artifactStorySeeds
 
 /**
  * Get the Drizzle table reference for a given detail table name.
- * Uses `as any` because Drizzle PgTable types are nominally typed by table name,
- * but all our detail tables share the same structural pattern (id, data, timestamps).
+ * Drizzle PgTable types are nominally typed by table name, but all our detail tables
+ * share the same structural pattern (id, data, timestamps). We use DetailTableRef
+ * to capture the shared minimum interface and Record<string, unknown> for the map values,
+ * since each table's exact Drizzle type is distinct but structurally compatible.
  */
 function getDetailTableRef(detailTable: string): DetailTableRef | null {
-  const tableMap: Record<string, any> = {
+  const tableMap: Partial<Record<string, DetailTableRef>> = {
     artifact_checkpoints: artifactCheckpoints,
     artifact_contexts: artifactContexts,
     artifact_reviews: artifactReviews,
@@ -424,6 +497,10 @@ function getDetailTableRef(detailTable: string): DetailTableRef | null {
     artifact_proofs: artifactProofs,
     artifact_qa_gates: artifactQaGates,
     artifact_completion_reports: artifactCompletionReports,
+    artifact_test_plans: artifactTestPlans,
+    artifact_dev_feasibility: artifactDevFeasibility,
+    artifact_uiux_notes: artifactUiuxNotes,
+    artifact_story_seeds: artifactStorySeeds,
   }
   return tableMap[detailTable] ?? null
 }
@@ -456,6 +533,10 @@ function generateArtifactName(artifactType: string, iteration: number): string {
     review: 'REVIEW',
     qa_gate: 'QA-GATE',
     completion_report: 'COMPLETION-REPORT',
+    test_plan: 'TEST-PLAN',
+    dev_feasibility: 'DEV-FEASIBILITY',
+    uiux_notes: 'UIUX-NOTES',
+    story_seed: 'STORY-SEED',
   }
 
   const baseName = typeNames[artifactType] ?? artifactType.toUpperCase()
@@ -518,9 +599,11 @@ function toArtifactListItem(
  * Insert a row into the appropriate type-specific table.
  * Returns the UUID of the inserted row.
  *
- * Uses `as any` casts for dynamic table operations because Drizzle's type system
- * is nominally typed per-table — all 13 tables share the same structural pattern
- * but TypeScript treats each as a distinct type.
+ * We cast tableRef to AnyPgTable when passing to db.insert/update/select/delete
+ * because Drizzle's generics require the exact schema-registered table type.
+ * All 13 detail tables share the same structural pattern (id, data, timestamps),
+ * so the cast is safe and the union return type of getDetailTableRef ensures
+ * tableRef is always a real Drizzle table.
  */
 async function insertDetailRow(
   db: NodePgDatabase<typeof schema>,
@@ -543,12 +626,12 @@ async function insertDetailRow(
     throw new Error(`No table reference for: ${detailTable}`)
   }
 
-  const result = await (db as any)
-    .insert(tableRef)
+  const result = await db
+    .insert(tableRef as AnyPgTable)
     .values({ id, ...columns })
-    .returning({ id: (tableRef as any).id })
+    .returning({ id: tableRef.id })
 
-  return { detailTable, detailId: result[0].id }
+  return { detailTable, detailId: result[0].id as string }
 }
 
 /**
@@ -571,10 +654,10 @@ async function updateDetailRow(
 
   const now = new Date()
 
-  await (db as any)
-    .update(tableRef)
+  await db
+    .update(tableRef as AnyPgTable)
     .set({ ...typedColumns, data, updatedAt: now })
-    .where(eq((tableRef as any).id, detailId))
+    .where(eq(tableRef.id, detailId))
 }
 
 /**
@@ -588,10 +671,10 @@ async function readDetailRow(
   const tableRef = getDetailTableRef(detailTable)
   if (!tableRef) return null
 
-  const result = await (db as any)
+  const result = await db
     .select()
-    .from(tableRef)
-    .where(eq((tableRef as any).id, detailId))
+    .from(tableRef as AnyPgTable)
+    .where(eq(tableRef.id, detailId))
     .limit(1)
 
   if (result.length === 0) return null
@@ -609,7 +692,7 @@ async function deleteDetailRow(
   const tableRef = getDetailTableRef(detailTable)
   if (!tableRef) return
 
-  await (db as any).delete(tableRef).where(eq((tableRef as any).id, detailId))
+  await db.delete(tableRef as AnyPgTable).where(eq(tableRef.id, detailId))
 }
 
 // ============================================================================

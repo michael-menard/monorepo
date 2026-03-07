@@ -835,6 +835,10 @@ export const ArtifactTypeSchema = z.enum([
   'review',
   'qa_gate',
   'completion_report',
+  'test_plan',
+  'dev_feasibility',
+  'uiux_notes',
+  'story_seed',
 ])
 export type ArtifactType = z.infer<typeof ArtifactTypeSchema>
 

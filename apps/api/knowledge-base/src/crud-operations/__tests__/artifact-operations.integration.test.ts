@@ -138,3 +138,189 @@ describe('artifact_write integration: summary auto-extraction', () => {
     createdIds.push(result.kb_artifact_id!)
   })
 })
+
+// ============================================================================
+// KFMB-1030: New PM Artifact Type Tests
+// ============================================================================
+
+describe('kb_write_artifact: PM artifact types (KFMB-1030)', () => {
+  const db = getDbClient()
+  const deps = { db }
+  const createdIds: string[] = []
+
+  afterEach(async () => {
+    for (const id of createdIds) {
+      await db.delete(storyArtifacts).where(eq(storyArtifacts.id, id))
+    }
+    createdIds.length = 0
+  })
+
+  // TC-KFMB-1030-01: test_plan type write+read round-trip
+  it('TC-KFMB-1030-01: write and read test_plan artifact succeeds', async () => {
+    const storyId = `KFMB-1030-TC01-${Date.now()}`
+    const content = {
+      strategy: 'integration',
+      scope_ui_touched: true,
+      scope_data_touched: false,
+      notes: 'Test plan for PM story',
+    }
+
+    const result = await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'test_plan',
+        content,
+        phase: 'planning',
+        iteration: 0,
+      },
+      deps,
+    )
+
+    expect(result.id).toBeDefined()
+    expect(result.artifact_type).toBe('test_plan')
+    expect(result.artifact_name).toBe('TEST-PLAN')
+    expect(result.content).toMatchObject(content)
+    createdIds.push(result.id)
+  })
+
+  // TC-KFMB-1030-02: dev_feasibility type write+read round-trip
+  it('TC-KFMB-1030-02: write and read dev_feasibility artifact succeeds', async () => {
+    const storyId = `KFMB-1030-TC02-${Date.now()}`
+    const content = {
+      feasible: true,
+      confidence: 'high',
+      complexity: 'simple',
+      notes: 'Feasibility assessment',
+    }
+
+    const result = await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'dev_feasibility',
+        content,
+        phase: 'planning',
+        iteration: 0,
+      },
+      deps,
+    )
+
+    expect(result.id).toBeDefined()
+    expect(result.artifact_type).toBe('dev_feasibility')
+    expect(result.artifact_name).toBe('DEV-FEASIBILITY')
+    expect(result.content).toMatchObject(content)
+    createdIds.push(result.id)
+  })
+
+  // TC-KFMB-1030-03: uiux_notes type write+read round-trip
+  it('TC-KFMB-1030-03: write and read uiux_notes artifact succeeds', async () => {
+    const storyId = `KFMB-1030-TC03-${Date.now()}`
+    const content = {
+      has_ui_changes: false,
+      component_count: 0,
+      notes: 'No UI changes expected',
+    }
+
+    const result = await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'uiux_notes',
+        content,
+        phase: 'planning',
+        iteration: 0,
+      },
+      deps,
+    )
+
+    expect(result.id).toBeDefined()
+    expect(result.artifact_type).toBe('uiux_notes')
+    expect(result.artifact_name).toBe('UIUX-NOTES')
+    expect(result.content).toMatchObject(content)
+    createdIds.push(result.id)
+  })
+
+  // TC-KFMB-1030-04: story_seed type write+read round-trip
+  it('TC-KFMB-1030-04: write and read story_seed artifact succeeds', async () => {
+    const storyId = `KFMB-1030-TC04-${Date.now()}`
+    const content = {
+      conflicts_found: 0,
+      blocking_conflicts: 0,
+      baseline_loaded: true,
+      notes: 'Story seed with no conflicts',
+    }
+
+    const result = await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'story_seed',
+        content,
+        phase: 'planning',
+        iteration: 0,
+      },
+      deps,
+    )
+
+    expect(result.id).toBeDefined()
+    expect(result.artifact_type).toBe('story_seed')
+    expect(result.artifact_name).toBe('STORY-SEED')
+    expect(result.content).toMatchObject(content)
+    createdIds.push(result.id)
+  })
+
+  // TC-KFMB-1030-05: generateArtifactName returns correct display names for all 4 types
+  it('TC-KFMB-1030-05: generateArtifactName returns correct names for all 4 new PM types', async () => {
+    const storyId = `KFMB-1030-TC05-${Date.now()}`
+    const types = [
+      { type: 'test_plan' as const, expectedName: 'TEST-PLAN' },
+      { type: 'dev_feasibility' as const, expectedName: 'DEV-FEASIBILITY' },
+      { type: 'uiux_notes' as const, expectedName: 'UIUX-NOTES' },
+      { type: 'story_seed' as const, expectedName: 'STORY-SEED' },
+    ]
+
+    for (const { type, expectedName } of types) {
+      const result = await kb_write_artifact(
+        {
+          story_id: `${storyId}-${type}`,
+          artifact_type: type,
+          content: { placeholder: true },
+          iteration: 0,
+        },
+        deps,
+      )
+      expect(result.artifact_name).toBe(expectedName)
+      createdIds.push(result.id)
+    }
+  })
+
+  // TC-KFMB-1030-06: Regression — existing types still work after extension
+  it('TC-KFMB-1030-06: existing artifact types (checkpoint, scope) still work after enum extension', async () => {
+    const storyId = `KFMB-1030-TC06-${Date.now()}`
+
+    const checkpointResult = await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'checkpoint',
+        content: { current_phase: 'plan', blocked: false, iteration: 0 },
+        phase: 'planning',
+        iteration: 0,
+      },
+      deps,
+    )
+    expect(checkpointResult.artifact_type).toBe('checkpoint')
+    expect(checkpointResult.artifact_name).toBe('CHECKPOINT')
+    createdIds.push(checkpointResult.id)
+
+    const scopeResult = await kb_write_artifact(
+      {
+        story_id: storyId,
+        artifact_type: 'scope',
+        content: { touches_backend: true, touches_frontend: false },
+        phase: 'planning',
+        iteration: 0,
+      },
+      deps,
+    )
+    expect(scopeResult.artifact_type).toBe('scope')
+    expect(scopeResult.artifact_name).toBe('SCOPE')
+    createdIds.push(scopeResult.id)
+  })
+})
