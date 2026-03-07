@@ -1,0 +1,70 @@
+schema: 1
+story_id: KFMB-3020
+phase: implementation
+iteration: 0
+status: pass
+
+files_changed:
+  - .claude/commands/index-update.md
+  - .claude/commands/story-update.md
+  - .claude/commands/code-audit.md
+  - .claude/commands/context-init.md
+  - .claude/commands/pm-story.md
+  - .claude/commands/story-status.md
+
+baseline_references: 45
+remaining_references: 41
+remaining_live_references: 0
+
+grep_summary: |
+  All remaining references in the 6 targeted files fall into acceptable categories:
+  - Deprecated body (index-update.md): entire body under deprecation notice, preserved for reference window
+  - Deprecation/removal notices (story-update.md): explicitly noting "no longer updated" and "NOT updated under ANY condition"
+  - Replacement notices (code-audit.md, pm-story.md, story-status.md): "replaces stories.index.md" context notes
+  - Per-epic index file paths (pm-story.md Step 1b-map table): structural filesystem paths, not story-state reads
+  - Fallback references (story-status.md): explicitly labeled "legacy fallback" for KB-unavailable scenarios
+  - Command argument docs (story-status.md): INDEX_PATH argument accepts path to stories.index.md — valid command input
+  Out-of-scope files (migrate-agents-v3.md, pm-bootstrap-workflow.md) not edited per story scope.
+
+completion_signals_verified: true
+
+acceptance_criteria:
+  AC-1:
+    status: pass
+    evidence: "story-update.md Step 4 (Update Index) removed. Execution sequence is now: locate -> worktree cleanup -> DB write (Step 3a) -> frontmatter update (Step 3b) -> return result."
+  AC-2:
+    status: pass
+    evidence: "story-update.md --no-index flag marked DEPRECATED in Arguments table: 'accepted as no-op for backward compatibility. Index writes have been removed (KFMB-3020).'"
+  AC-3:
+    status: pass
+    evidence: "story-update.md result YAML: index_updated field removed. Comment added noting removal in KFMB-3020."
+  AC-4:
+    status: pass
+    evidence: "pm-story.md Collision Detection section: Index check replaced with 'KB check: Does kb_list_stories({ feature: PREFIX, limit: 100 }) return an entry for {STORY_ID}?'"
+  AC-5:
+    status: pass
+    evidence: "pm-story.md Step 1c: Updated to use kb_list_stories for next-story resolution with filesystem fallback."
+  AC-6:
+    status: pass
+    evidence: "pm-story.md Step 3 leader prompt: 'Index path: {INDEX_PATH}' line removed. Note added about KFMB-3020 removal."
+  AC-7:
+    status: pass
+    evidence: "code-audit.md /code-audit promote: Steps 1 and 3 updated to use kb_list_stories and kb_update_story_status instead of stories.index.md reads/writes."
+  AC-8:
+    status: pass
+    evidence: "context-init.md /elab-epic context template: stories_index field removed. Comment added noting KFMB-3020 removal and KB resolution via feature_dir."
+  AC-9:
+    status: pass
+    evidence: "index-update.md: Deprecation notice added immediately after frontmatter: 'DEPRECATED as of KFMB-3020. All callers have been migrated to KB tools. This command will be deleted in KFMB-6020. Body preserved for reference during deprecation window.'"
+  AC-10:
+    status: pass
+    evidence: "story-status.md Feature Only mode: Updated to note it uses kb_list_stories for story counts. WINT-1070 deferral note updated to reference KFMB migration path (resolved)."
+  AC-11:
+    status: pass
+    evidence: "story-status.md --depth and --deps-order modes: Both updated to read from kb_list_stories({ feature: PREFIX }) with filesystem fallback. --deps-order updated to use depends_on from KB story records."
+  AC-12:
+    status: pass
+    evidence: "Zero live operational stories.index.md references in the 6 targeted command files. Only deprecated notices, fallback references, structural path constants, and example comments remain."
+  AC-13:
+    status: pass
+    evidence: "Completion signals verified: UPDATE COMPLETE (story-update.md line 209), INDEX UPDATE COMPLETE (index-update.md line 184), AUDIT COMPLETE (code-audit.md line 174)."
