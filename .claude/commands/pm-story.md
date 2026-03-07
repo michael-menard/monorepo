@@ -376,14 +376,16 @@ Task tool:
     Read instructions: .claude/agents/pm-story-seed-agent.agent.md
 
     CONTEXT:
+    Story ID: {STORY_ID}            # Primary identity key — seed agent uses kb_get_story to resolve
     Baseline path: {BASELINE_PATH}  # May be null if no baseline exists
-    Index path: {INDEX_PATH}
-    Story ID: {STORY_ID}
+    Index path: {INDEX_PATH}        # Optional — retained for backward compatibility
     Output directory: {OUTPUT_DIR}
 
     Story entry from index:
     <paste relevant story entry from index>
 ```
+
+Note: `index_path` is optional for the seed agent as of KFMB-2040. The seed agent uses `kb_get_story({ story_id })` as the primary identity source. `index_path` is retained for backward compatibility with any callers that still pass it, but the seed agent no longer requires it to determine story identity.
 
 **2d. Handle Seed Response**
 

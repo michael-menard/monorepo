@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-03-05
-version: 4.4.0
+updated: 2026-03-07
+version: 4.5.0
 type: leader
 permission_level: orchestrator
 triggers: ["/pm-story generate"]
@@ -11,7 +11,9 @@ model: sonnet
 tools: [Read, Grep, Glob, Write, Edit, Bash, Task, TaskOutput]
 kb_tools:
   - kb_search
-  - mcp__postgres-knowledgebase__query
+  - kb_read_artifact
+  - kb_list_stories
+  - kb_update_story
   - worktree_register
 skills_used:
   - /wt:new
@@ -47,18 +49,39 @@ Coordinate Test Plan Writer, UI/UX Advisor, and Dev Feasibility workers to gathe
 
 ## Inputs
 
-- Index path (e.g., `plans/stories/WISH.stories.index.md`)
-- Story ID
-- Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`)
+- Story ID (primary — used to query KB for story context)
+- Seed path (e.g., `plans/stories/WISH/WISH-001/_pm/STORY-SEED.md`) — used as filesystem fallback for seed read
 
 ---
 
 ## Execution Flow
 
 ### Phase 0: Setup and Load Seed
-1. Read seed file at `{SEED_PATH}` - extract reality_context, retrieved_context, conflicts
-2. Check for blocking conflicts → `PM BLOCKED`
-3. Resolve paths from index
+
+1. **Load seed from KB (primary)**:
+   ```javascript
+   // Primary: read seed artifact from KB
+   try {
+     const result = await kb_read_artifact({
+       story_id: "{STORY_ID}",
+       artifact_type: "story_seed",
+     })
+     if (result && result.content) {
+       seed = result.content
+       log("Seed loaded from KB artifact")
+     } else {
+       throw new Error("Artifact not found in KB")
+     }
+   } catch (error) {
+     // Fallback: read STORY-SEED.md from filesystem
+     log("kb_read_artifact failed or returned empty — falling back to filesystem seed: {SEED_PATH}")
+     seed = readFile("{SEED_PATH}")  // STORY-SEED.md written by seed agent
+   }
+   ```
+   **Dependency gate (KFMB-1030):** Until `story_seed` artifact type is registered, `kb_read_artifact` will return null or error. The filesystem fallback at `{SEED_PATH}` ensures pipeline continuity.
+
+2. Extract `reality_context`, `retrieved_context`, `conflicts` from seed
+3. Check for blocking conflicts → `PM BLOCKED`
 4. Create directory structure: `{OUTPUT_DIR}/`, `{OUTPUT_DIR}/_pm/`
 
 ### Phase 0.5: Collision Detection
@@ -66,17 +89,28 @@ Check if story directory already exists. If collision:
 - Auto-resolved "next": skip to next eligible
 - Explicit ID: `PM FAILED: Story ID already exists`
 
-### Phase 0.6: Claim Story in Index (REQUIRED — FIRST WRITE)
+### Phase 0.6: Claim Story in KB + Index (REQUIRED — FIRST WRITE)
 
-Immediately update the index to prevent parallel generation windows from picking up the same story.
+Immediately claim the story to prevent parallel generation windows from picking up the same story.
+
+```javascript
+// Update story state to 'created' in KB
+kb_update_story_status({
+  story_id: "{STORY_ID}",
+  state: "created"
+})
+```
 
 ```bash
 /index-update {INDEX_PATH} {STORY_ID} --status=Created
 ```
 
-This MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken and skip to the next eligible story.
+Both MUST happen before any worker spawning or synthesis. The early claim ensures that other concurrent `/pm-story generate` sessions will see this story as taken.
 
-If story generation later fails (PM BLOCKED / PM FAILED), the status should be reverted:
+If story generation later fails (PM BLOCKED / PM FAILED), revert:
+```javascript
+kb_update_story_status({ story_id: "{STORY_ID}", state: "pending" })
+```
 ```bash
 /index-update {INDEX_PATH} {STORY_ID} --status=Pending
 ```
@@ -230,32 +264,52 @@ For required sections, read: `.claude/agents/_reference/patterns/pm-spawn-patter
 
 ### Phase 4.5: KB Persistence (REQUIRED)
 
-After story file is written, persist to knowledge base for searchability.
+After story file is written, persist story content to the knowledge base.
 
-**Write to stories table:**
-```sql
-INSERT INTO stories (
-  story_id, feature, title, story_dir, story_file, story_type,
-  points, priority, state, touches_backend, touches_frontend,
-  touches_database, touches_infra
-) VALUES (...)
-ON CONFLICT (story_id) DO UPDATE SET ...
+**Dependency gate (KFMB-1020):** The `description`, `acceptance_criteria`, and `non_goals` content columns are added by KFMB-1020. Until that story ships, `kb_update_story` calls with these fields will fail with a schema error. The DEFERRED-KB-WRITES.yaml fallback handles this gracefully.
+
+**Write story content via kb_update_story:**
+```javascript
+// Post-KFMB-1020: update story with generated content fields
+try {
+  await kb_update_story({
+    story_id: "{STORY_ID}",
+    title: "{STORY_TITLE}",
+    priority: "{PRIORITY}",          // "critical" | "high" | "medium" | "low"
+    points: {STORY_POINTS},
+    // Content fields — available after KFMB-1020 deploys:
+    description: "{STORY_DESCRIPTION}",
+    acceptance_criteria: "{ACCEPTANCE_CRITERIA_MARKDOWN}",
+    non_goals: "{NON_GOALS_MARKDOWN}",
+  })
+  log("Story content persisted to KB via kb_update_story")
+} catch (error) {
+  // KB unavailable OR content columns not yet present (KFMB-1020 gate)
+  log("kb_update_story failed: {error.message} — writing DEFERRED-KB-WRITES.yaml")
+  // Append to DEFERRED-KB-WRITES.yaml in story dir (see fallback below)
+}
 ```
 
-**Fields to extract from story:**
-- `story_id`: From story file (e.g., WISH-2068)
-- `feature`: From index path (e.g., "wish" from plans/future/wish/)
-- `title`: Story title
-- `story_dir`: Relative path to story directory
-- `story_type`: "feature" | "bug" | "spike" | "chore" | "tech_debt"
-- `points`: Story points estimate
-- `priority`: "critical" | "high" | "medium" | "low"
-- `state`: "backlog" (initial state)
-- `touches_*`: Derive from story scope/surfaces
-
 **Fallback behavior:**
-- If KB unavailable: Log warning, continue without KB write
-- Queue failed writes to `DEFERRED-KB-WRITES.yaml` in story dir for later retry
+- If KB unavailable or content columns missing (pre-KFMB-1020): log warning, write DEFERRED-KB-WRITES.yaml entry
+- Story `.md` file is always written to filesystem regardless of KB outcome
+
+**DEFERRED-KB-WRITES.yaml fallback entry:**
+```yaml
+# DEFERRED-KB-WRITES.yaml
+# Written when KB MCP tool calls fail. Retry after KB is restored or KFMB-1020 ships.
+deferred_writes:
+  - attempted_at: "{ISO_TIMESTAMP}"
+    tool: kb_update_story
+    args:
+      story_id: "{STORY_ID}"
+      title: "{STORY_TITLE}"
+      description: "{STORY_DESCRIPTION}"
+      acceptance_criteria: "{ACCEPTANCE_CRITERIA_MARKDOWN}"
+      non_goals: "{NON_GOALS_MARKDOWN}"
+    failure_reason: "{error.message}"
+    retry_when: "KFMB-1020 deployed (adds description/acceptance_criteria/non_goals columns)"
+```
 
 ### Phase 5: Verify Index Status
 
@@ -274,6 +328,30 @@ Pre-create the worktree so it's ready when dev starts implementation.
 2. Invoke: `/wt:new story/{STORY_ID} main`
 3. Register: `worktree_register({ story_id: "{STORY_ID}", branch_name: "story/{STORY_ID}", path: "tree/story/{STORY_ID}" })`
 4. If registration fails: log WARNING, continue (non-blocking)
+
+---
+
+## Story Discovery (when selecting next story)
+
+When the leader needs to discover which story to generate next, use KB as the primary source rather than reading `stories.index.md` from the filesystem:
+
+```javascript
+// Primary: discover stories via KB
+const stories = await kb_list_stories({
+  feature: "{FEATURE_NAME}",   // e.g., "kb-first-migration"
+  state: "pending",            // stories awaiting generation
+})
+
+// If KB unavailable, fall back to reading stories.index.md from filesystem
+// (filesystem read is fallback only — KB is the source of truth)
+```
+
+Use `kb_list_stories` with appropriate filters:
+- `feature` — filter to current epic/feature
+- `state` or `states` — filter to `"pending"` for stories awaiting generation
+- Returns story list with IDs, titles, states — sufficient for "next" resolution
+
+**Note:** `stories.index.md` should not be used as the primary discovery mechanism after this migration. It may still be referenced for `/index-update` operations, but story list discovery routes through the KB.
 
 ---
 
@@ -324,13 +402,13 @@ Read: `.claude/agents/_reference/patterns/session-lifecycle.md`
 
 | Rule | Description |
 |------|-------------|
-| Read seed file | MUST read at {SEED_PATH} before spawning |
+| Read seed via kb_read_artifact | Call `kb_read_artifact({ story_id, artifact_type: 'story_seed' })` first; fall back to filesystem {SEED_PATH} if not found |
 | Pass seed context | To all workers |
 | Protected features | Do not modify seed's protected_features |
 | Experiment assignment | MUST assign variant in Phase 0.5a (WKFL-008) |
 | First match wins | Story in ONE experiment only (WKFL-008) |
 | Graceful degradation | Workflow continues if experiments.yaml unavailable (WKFL-008) |
-| KB persistence | MUST write story to KB after synthesis (Phase 4.5) |
+| KB persistence | MUST call kb_update_story after synthesis (Phase 4.5); DEFERRED-KB-WRITES.yaml on failure |
 | Claim early | MUST call /index-update --status=Created in Phase 0.6 before workers |
 | Revert on failure | MUST revert index to Pending if generation fails |
 | Token log | MUST call before completion |

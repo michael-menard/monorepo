@@ -1,0 +1,15 @@
+schema: 1
+story_id: KFMB-2040
+forced: false
+blocked: false
+blocked_reason: null
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+feature_dir: plans/future/platform/kb-first-migration
+e2e_gate: null
+warnings:
+  - "E2E tests exempt: docs-only story (story_type: docs), no frontend surface"
+  - "Build exempt: docs-only story, no TypeScript changes"
+completed_at: null
