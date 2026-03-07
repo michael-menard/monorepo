@@ -66,10 +66,10 @@ describe('MCP Server Integration', () => {
   })
 
   describe('Tool Discovery', () => {
-    it('should return all 60 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + artifact_search)', () => {
+    it('should return all 61 tool definitions (CRUD + search + typed entry + work state + sync + fallback + inheritance + archive + task + triage + promotion + stale + deferred + admin + audit + artifacts + artifact_write + story + tokens + analytics + worktree + plans + artifact_search)', () => {
       const tools = getToolDefinitions()
 
-      expect(tools).toHaveLength(60)
+      expect(tools).toHaveLength(61)
       expect(tools.map(t => t.name)).toEqual([
         'kb_add',
         'kb_get',
@@ -128,6 +128,7 @@ describe('MCP Server Integration', () => {
         'kb_list_artifacts',
         'kb_delete_artifact',
         // Story status tools
+        'kb_create_story',
         'kb_get_story',
         'kb_list_stories',
         'kb_update_story_status',
