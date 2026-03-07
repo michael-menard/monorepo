@@ -198,6 +198,32 @@ touched_files:
     description: Added @repo/context-pack-sidecar dependency
 
 commands_run:
+  - command: pnpm run --filter @repo/workflow-logic build
+    result: SUCCESS
+    timestamp: '2026-03-07T22:17:00Z'
+    note: >-
+      Fix-fix iteration: built workflow-logic dist/ which was missing in worktree,
+      causing mcp-tools story-compat tests to fail. Root cause of failed-qa state.
+  - command: pnpm run -r --filter @repo/sidecar-utils --filter @repo/context-pack-sidecar --filter @repo/sidecar-role-pack check-types
+    result: SUCCESS
+    timestamp: '2026-03-07T22:15:00Z'
+    output: 'sidecar-utils: Done, context-pack: Done'
+  - command: pnpm run -r --filter @repo/sidecar-utils --filter @repo/context-pack-sidecar --filter @repo/sidecar-role-pack build
+    result: SUCCESS
+    timestamp: '2026-03-07T22:16:00Z'
+    output: 'sidecar-utils: Done, role-pack: Done, context-pack: Done'
+  - command: pnpm run -r --filter @repo/sidecar-utils --filter @repo/context-pack-sidecar --filter @repo/sidecar-role-pack test
+    result: SUCCESS
+    timestamp: '2026-03-07T22:16:00Z'
+    output: 'role-pack: 16/16 pass, context-pack: 24/24 pass'
+  - command: pnpm eslint packages/backend/sidecar-utils packages/backend/sidecars/context-pack packages/backend/sidecars/role-pack
+    result: SUCCESS
+    timestamp: '2026-03-07T22:16:00Z'
+    output: '0 errors, 0 warnings'
+  - command: pnpm run --filter @repo/mcp-tools test
+    result: SUCCESS
+    timestamp: '2026-03-07T22:17:00Z'
+    output: 'Test Files: 37 passed (37), Tests: 362 passed (362)'
   - command: pnpm install
     result: SUCCESS
     timestamp: '2026-03-04T17:10:00Z'
