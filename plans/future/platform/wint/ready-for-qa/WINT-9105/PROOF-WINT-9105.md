@@ -147,7 +147,7 @@ This documentation-only story synthesized LangGraph error handling strategy from
 
 | Path | Action | Lines |
 |------|--------|-------|
-| `packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md` | CREATE | 677 |
+| `docs/adr/ADR-006-langgraph-error-handling.md` | CREATE | 677 |
 
 **Total**: 1 file, 677 lines
 
@@ -157,10 +157,10 @@ This documentation-only story synthesized LangGraph error handling strategy from
 
 | Command | Result | Timestamp |
 |---------|--------|-----------|
-| `ls -la packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md` | File exists, 677 lines | 2026-03-03T16:00:00Z |
-| `grep -c "^##" packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md` | 13 sections found (TOC + 12 main sections) | 2026-03-03T16:00:00Z |
+| `ls -la docs/adr/ADR-006-langgraph-error-handling.md` | File exists, 677 lines | 2026-03-03T16:00:00Z |
+| `grep -c "^##" docs/adr/ADR-006-langgraph-error-handling.md` | 13 sections found (TOC + 12 main sections) | 2026-03-03T16:00:00Z |
 | `git diff --name-only` | Only ADR file shown; no src/ changes | 2026-03-03T16:00:00Z |
-| `grep "interface " packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md` | No TypeScript interfaces — only Zod schemas | 2026-03-03T16:00:00Z |
+| `grep "interface " docs/adr/ADR-006-langgraph-error-handling.md` | No TypeScript interfaces — only Zod schemas | 2026-03-03T16:00:00Z |
 | All AC sections present: AC-001 through AC-011 | All 11 sections addressable | 2026-03-03T16:00:00Z |
 
 ---

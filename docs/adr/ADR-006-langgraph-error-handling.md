@@ -643,7 +643,7 @@ All decisions in this ADR that require code changes are deferred to WINT-9107:
 ### Source File Change Prohibition (this story)
 
 `git diff --name-only` after WINT-9105 completion MUST show only:
-- `packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md`
+- `docs/adr/ADR-006-langgraph-error-handling.md`
 
 No `src/` files may be modified in WINT-9105.
 

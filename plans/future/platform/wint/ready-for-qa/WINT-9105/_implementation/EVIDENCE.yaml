@@ -8,7 +8,7 @@ e2e_exempt: true
 e2e_skip_reason: "Documentation-only story — no UI-facing ACs; ADR-006 E2E skip condition applies"
 
 deliverables:
-  - path: packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+  - path: docs/adr/ADR-006-langgraph-error-handling.md
     action: CREATE
     status: complete
     word_count: 3929
@@ -132,7 +132,7 @@ acceptance_criteria:
         status: accepted
         decision-date: "2026-03-03"
         deciders: ["Michael Menard", "dev-execute-leader (claude-sonnet-4-6)"]
-      File committed to packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md.
+      File committed to docs/adr/ADR-006-langgraph-error-handling.md.
       No TypeScript interface declarations in code examples — Zod schemas only.
 
 scope_validation:
@@ -140,5 +140,4 @@ scope_validation:
   git_diff_shows_only_adr: true
   interface_keyword_count: 0
   new_files:
-    - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
-    - packages/backend/orchestrator/docs/architecture/ (directory)
+    - docs/adr/ADR-006-langgraph-error-handling.md

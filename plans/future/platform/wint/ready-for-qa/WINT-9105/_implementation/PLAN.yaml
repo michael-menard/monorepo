@@ -32,7 +32,7 @@ steps:
       Draft ADR sections: retry policy, error propagation, layer consolidation — include extended RETRY_PRESETS table
       (add git, db_write, file_io), graph-level fail-fast vs saga semantics, and layer ownership partition decision
     files:
-      - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+      - docs/adr/ADR-006-langgraph-error-handling.md
     files_to_read:
       - packages/backend/orchestrator/src/runner/types.ts
       - packages/backend/orchestrator/src/runner/retry.ts
@@ -52,7 +52,7 @@ steps:
       Draft ADR sections: circuit breaker (explicit node-local vs DB-shared decision with WINT-9107 impact callout), DLQ
       strategy for batch workflows, and idempotency contracts per side-effect category
     files:
-      - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+      - docs/adr/ADR-006-langgraph-error-handling.md
     files_to_read:
       - packages/backend/orchestrator/src/runner/circuit-breaker.ts
       - packages/backend/orchestrator/src/errors/workflow-errors.ts
@@ -72,7 +72,7 @@ steps:
       Draft ADR sections: timeout mapping from max_turns to timeoutMs, partial-success semantics for batch graphs,
       Claude Code agent retry parity table, and budget-aware retry caps per model tier
     files:
-      - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+      - docs/adr/ADR-006-langgraph-error-handling.md
     files_to_read:
       - packages/backend/orchestrator/docs/WINT-0220-STRATEGY.md
       - .claude/config/model-assignments.yaml
@@ -94,9 +94,9 @@ steps:
       Add YAML frontmatter status header with status, decision-date, and deciders fields; perform final document review
       against all 11 ACs; verify no TypeScript interfaces used in code examples
     files:
-      - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+      - docs/adr/ADR-006-langgraph-error-handling.md
     files_to_read:
-      - packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+      - docs/adr/ADR-006-langgraph-error-handling.md
     dependencies:
       - 4
     slice: backend
@@ -106,17 +106,17 @@ steps:
     acs_covered:
       - AC-011
 files_to_change:
-  - path: packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+  - path: docs/adr/ADR-006-langgraph-error-handling.md
     action: create
     reason: Primary deliverable — ADR unifying LangGraph error handling strategy across all 11 ACs
 commands_to_run:
-  - command: ls -la packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+  - command: ls -la docs/adr/ADR-006-langgraph-error-handling.md
     when: after ADR is written
     required: true
-  - command: wc -w packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+  - command: wc -w docs/adr/ADR-006-langgraph-error-handling.md
     when: after ADR is written
     required: true
-  - command: grep -n 'interface ' packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md
+  - command: grep -n 'interface ' docs/adr/ADR-006-langgraph-error-handling.md
     when: after ADR is written — must return no matches
     required: true
   - command: git diff --name-only

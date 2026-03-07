@@ -5,7 +5,7 @@ timestamp: "2026-03-02T12:00:00Z"
 audit:
   - id: scope_alignment
     status: PASS
-    note: "Story scope matches index entry exactly — single ADR file at packages/backend/orchestrator/docs/architecture/adr-langgraph-error-handling.md. No endpoints, infrastructure, or code changes. Non-goals explicitly fence off WINT-9106, WINT-9107 implementation scope."
+    note: "Story scope matches index entry exactly — single ADR file at docs/adr/ADR-006-langgraph-error-handling.md. No endpoints, infrastructure, or code changes. Non-goals explicitly fence off WINT-9106, WINT-9107 implementation scope."
 
   - id: internal_consistency
     status: PASS
