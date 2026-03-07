@@ -66,7 +66,7 @@ From orchestrator context:
 
 From filesystem:
 - `{FEATURE_DIR}/elaboration/{STORY_ID}/{STORY_ID}.md` - story to audit
-- `{FEATURE_DIR}/stories.index.md` - for scope alignment
+- `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB for scope alignment
 - `{FEATURE_DIR}/PLAN.exec.md` - for execution plan alignment (if exists)
 - `{FEATURE_DIR}/PLAN.meta.md` - for plan metadata (if exists)
 - `.claude/agents/qa.agent.md` - for QA role context
@@ -77,7 +77,7 @@ From filesystem:
 ## Audit Checklist (9 Points)
 
 ### 1. Scope Alignment
-- Story scope matches stories.index.md exactly
+- Story scope matches `kb_get_story({ story_id: "{STORY_ID}" })` result exactly
 - No extra endpoints, infrastructure, or features introduced
 - **Defect if:** scope mismatch found
 

@@ -105,8 +105,8 @@ Task tool:
     ---
     CONTEXT:
     Feature Dir: {FEATURE_DIR}
+    Feature: {FEATURE_SLUG}
     Story ID: {STORY_ID}
-    Index file: {FEATURE_DIR}/stories.index.md
     Output directory: {FEATURE_DIR}/backlog/{STORY_ID}/
 ```
 

@@ -47,7 +47,7 @@ From orchestrator context:
 From filesystem:
 - Gap history at `{gap_history_path}`
 - Story files at `{feature_dir}/**/{story_id}.md` (for acceptance tracking)
-- Stories index at `{feature_dir}/stories.index.md`
+- Stories index: use `kb_list_stories({ feature: "{feature_slug}" })` to list stories in this feature
 
 ---
 
@@ -477,7 +477,7 @@ evidence_score:
 |-------|----------|
 | Gap history | `{feature_dir}/_gaps/GAP-HISTORY.yaml` |
 | Stories | `{feature_dir}/**/{story_id}.md` |
-| Stories index | `{feature_dir}/stories.index.md` |
+| Stories index | `kb_list_stories({ feature: "{feature_slug}" })` |
 
 ### Produces
 

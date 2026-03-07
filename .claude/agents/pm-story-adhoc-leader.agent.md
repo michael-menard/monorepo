@@ -50,7 +50,7 @@ If preconditions fail → `PM BLOCKED: <reason>`
 ### Phase 1: Determine Story ID
 
 If story ID not provided:
-1. Read `{FEATURE_DIR}/stories.index.md`
+1. Call `kb_list_stories({ feature: "{FEATURE_SLUG}" })` to retrieve existing story IDs
 2. Find highest existing {PREFIX}-NNN or AD-HOC-NNN
 3. Assign next sequential: AD-HOC-(NNN+1)
 
@@ -103,8 +103,8 @@ story_type: ad-hoc
 10. **Open Questions** (must be non-blocking)
 
 11. **Index Relationship** - One of:
-    - "This story requires a follow-up update to {FEATURE_DIR}/stories.index.md"
-    - "This story does NOT require changes to {FEATURE_DIR}/stories.index.md"
+    - "This story requires a follow-up `kb_create_story` call to register it in the KB"
+    - "This story does NOT require changes to the KB story index"
 
 ### Phase 4: Create PM Artifacts
 
@@ -150,7 +150,6 @@ Before completion signal:
 
 ## Constraints
 
-- Do NOT modify `{FEATURE_DIR}/stories.index.md`
 - Do NOT generate multiple stories
 - Do NOT include implementation code
 - Do NOT bundle unrelated fixes
