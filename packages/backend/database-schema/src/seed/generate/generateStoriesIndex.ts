@@ -69,6 +69,8 @@ const DependencyRowSchema = z.object({
   resolved: z.boolean(),
   /** Human-readable story ID of the depended-upon story (resolved via JOIN) */
   dependsOnStoryLabel: z.string().nullable(),
+  /** Status of the depended-upon story (resolved via JOIN for AC-4) */
+  dependsOnStoryStatus: z.string().nullable(),
 })
 
 type DependencyRow = z.infer<typeof DependencyRowSchema>
@@ -158,6 +160,18 @@ function renderProgressSummary(statusCounts: Map<string, number>): string {
 // Renderer: Ready to Start section
 // ============================================================================
 
+/** Statuses that represent stories not yet being worked on */
+const WORKABLE_STATUSES = new Set([
+  'created',
+  'ready-to-work',
+  'elaboration',
+  'pending',
+  'generated',
+])
+
+/** Statuses where the target dependency is considered satisfied (AC-4) */
+const SATISFIED_DEP_STATUSES = new Set(['completed', 'uat'])
+
 function renderReadyToStart(
   storyRows: StoryRow[],
   depsByStory: Map<string, DependencyRow[]>,
@@ -172,14 +186,21 @@ function renderReadyToStart(
   ]
 
   for (const story of storyRows) {
+    // Only include stories that haven't started work yet
+    if (!WORKABLE_STATUSES.has(story.status)) continue
+
     const deps = depsByStory.get(story.id) ?? []
 
-    // A story is ready if all blocking deps are resolved
-    const blockingUnresolved = deps.filter(
-      d => (d.dependencyType === 'blocks' || d.dependencyType === 'requires') && !d.resolved,
-    )
+    // AC-4: Check target story status, not just the resolved boolean
+    const blockingDeps = deps.filter(d => {
+      if (d.dependencyType !== 'blocks' && d.dependencyType !== 'requires') return false
+      // Check the actual target story status (not just resolved boolean)
+      const targetStatus = d.dependsOnStoryStatus
+      if (targetStatus && SATISFIED_DEP_STATUSES.has(targetStatus)) return false
+      return true
+    })
 
-    if (blockingUnresolved.length === 0) {
+    if (blockingDeps.length === 0) {
       lines.push(`| ${story.storyId} | ${story.title} | — |`)
     }
   }
@@ -390,7 +411,8 @@ export async function generateStoriesIndex(
         sd.depends_on_story_id AS "dependsOnStoryId",
         sd.dependency_type AS "dependencyType",
         sd.resolved        AS "resolved",
-        s2.story_id        AS "dependsOnStoryLabel"
+        s2.story_id        AS "dependsOnStoryLabel",
+        s2.status          AS "dependsOnStoryStatus"
       FROM kbar.story_dependencies sd
       JOIN kbar.stories s1 ON s1.id = sd.story_id
       JOIN kbar.stories s2 ON s2.id = sd.depends_on_story_id
@@ -405,6 +427,7 @@ export async function generateStoriesIndex(
       dependencyType: r['dependencyType'],
       resolved: r['resolved'],
       dependsOnStoryLabel: r['dependsOnStoryLabel'] ?? null,
+      dependsOnStoryStatus: r['dependsOnStoryStatus'] ?? null,
     })),
   )
 
