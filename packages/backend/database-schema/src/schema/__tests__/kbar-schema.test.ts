@@ -324,6 +324,9 @@ describe('KBAR Schema - Zod Validation (AC-9)', () => {
         currentPhase: 'setup',
         status: 'backlog',
         metadata: null,
+        acceptanceCriteria: null,
+        nonGoals: null,
+        packages: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       }

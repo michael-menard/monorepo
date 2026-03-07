@@ -154,6 +154,11 @@ export const stories = kbarSchema.table(
       feature_dir?: string
     }>(),
 
+    // Story content fields
+    acceptanceCriteria: jsonb('acceptance_criteria'),
+    nonGoals: text('non_goals').array(),
+    packages: text('packages').array(),
+
     // Timestamps
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
