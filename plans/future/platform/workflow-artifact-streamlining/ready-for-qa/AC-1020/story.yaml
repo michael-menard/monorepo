@@ -1,6 +1,6 @@
 id: AC-1020
 title: "Eliminate PROOF-{ID}.md"
-status: ready
+status: ready-for-qa
 priority: medium
 phase: 1
 feature: "Remove dev-implement-proof-writer and dev-proof-leader agents (archive them), strip proof generation steps from dev-documentation-leader, and redirect dev-implement-learnings to read EVIDENCE.yaml directly"
