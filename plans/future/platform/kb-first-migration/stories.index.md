@@ -45,7 +45,7 @@ Migrate story bootstrap to write directly to the KB with no filesystem output.
 |----|-------|--------------|----------|--------|
 | KFMB-2010 | KB-Native Bootstrap Generation Leader | KFMB-1020 | Medium | Created |
 | KFMB-2020 | KB-Native Bootstrap Setup Leader | KFMB-1020 | Medium | Ready to Work |
-| KFMB-2030 | Update /pm-bootstrap-workflow Command | KFMB-2010, KFMB-2020 | Medium | Ready to Work |
+| KFMB-2030 | Update /pm-bootstrap-workflow Command | KFMB-2010, KFMB-2020 | Medium | Needs Code Review |
 | KFMB-2040 | KB-Native Story Generation Pipeline | KFMB-1020, KFMB-1030 | Medium | Ready to Work |
 
 ---
