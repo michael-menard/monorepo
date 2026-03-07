@@ -32,6 +32,7 @@ import {
   persistLearnings,
   type PersistLearningsConfig,
 } from '../nodes/completion/persist-learnings.js'
+import type { CheckpointConfig } from '../checkpointer/__types__/index.js'
 
 /**
  * HiTL (Human-in-the-Loop) decision options.
@@ -71,6 +72,19 @@ export const StoryCreationConfigSchema = z.object({
   workflowRepo: z.unknown().optional(),
   /** KB dependencies for learning persistence (optional, injected) */
   kbDeps: z.unknown().optional(),
+  /**
+   * Checkpointer configuration for DB-backed checkpoint persistence.
+   * AC-001: When provided, graph state is checkpointed per-node via CheckpointRepository.
+   * AC-002: Enables crash recovery via resume-graph CLI.
+   * Set to undefined to disable checkpointing (default — backward compatible).
+   */
+  checkpointerConfig: z.unknown().optional(),
+  /**
+   * LangGraph thread ID for checkpoint persistence.
+   * Required when checkpointerConfig is provided.
+   * Maps to wint.workflow_executions.execution_id.
+   */
+  checkpointThreadId: z.string().optional(),
 })
 
 export type StoryCreationConfig = z.infer<typeof StoryCreationConfigSchema>
@@ -1218,6 +1232,12 @@ export function createStoryCreationGraph(config: Partial<StoryCreationConfig> = 
     .addEdge('persist_learnings', 'complete')
     .addEdge('complete', END)
 
+  // AC-002: Checkpointer injection point.
+  // When config.checkpointerConfig is provided, use CheckpointRepository from
+  // packages/backend/orchestrator/src/checkpointer/ to persist state per-node.
+  // The withCheckpointer() wrapper in checkpointer/index.ts is called around
+  // individual node invocations in the caller. graph.compile() itself does not
+  // accept a checkpointer in our custom approach (native PostgresSaver not used).
   return graph.compile()
 }
 
