@@ -31,12 +31,14 @@ import {
 } from '../crud-operations/schemas.js'
 import { SearchInputSchema, GetRelatedInputSchema } from '../search/index.js'
 import {
+  KbCreateStoryInputSchema,
   KbGetStoryInputSchema,
   KbGetStoryResultSchema,
   KbListStoriesInputSchema,
   KbUpdateStoryStatusInputSchema,
   KbUpdateStoryInputSchema,
   KbGetNextStoryInputSchema,
+  type KbCreateStoryInput,
   type KbGetStoryInput,
   type KbGetStoryResult,
   type KbListStoriesInput,
@@ -70,6 +72,7 @@ import {
 } from '../crud-operations/analytics-operations.js'
 // Re-export schemas and types for external use
 export {
+  KbCreateStoryInputSchema,
   KbGetStoryInputSchema,
   KbGetStoryResultSchema,
   KbListStoriesInputSchema,
@@ -82,6 +85,7 @@ export {
   KbGetChurnAnalysisInputSchema,
 }
 export type {
+  KbCreateStoryInput,
   KbGetStoryInput,
   KbGetStoryResult,
   KbListStoriesInput,
@@ -2637,6 +2641,65 @@ Example (write evidence, KB write disabled):
 // ============================================================================
 
 /**
+ * kb_create_story tool definition.
+ *
+ * Upserts a story by story_id with partial-merge semantics.
+ */
+export const kbCreateStoryToolDefinition: McpToolDefinition = {
+  name: 'kb_create_story',
+  description: `Create or upsert a story record in the KB stories table.
+
+Upserts based on story_id — creates a new record if the ID does not exist,
+or merges the provided fields into the existing record (partial-merge semantics).
+Fields not supplied in the input are NOT overwritten on an existing story.
+
+This is the primary way to bootstrap a new story or update its metadata.
+title is required when creating a new story; optional on subsequent updates.
+
+Parameters:
+- story_id (required): Unique story identifier (e.g., 'KFMB-1020')
+- title (required on create, optional on update): Story title
+- feature (optional): Feature prefix (e.g., 'kfmb', 'wish')
+- epic (optional): Epic name
+- story_dir (optional): Relative path to story directory
+- story_file (optional): Story file name (default: story.yaml)
+- story_type (optional): 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt'
+- points (optional): Story points estimate
+- priority (optional): 'critical' | 'high' | 'medium' | 'low'
+- state (optional): Workflow state
+- phase (optional): Implementation phase
+- blocked (optional): Whether story is blocked
+- blocked_reason (optional): Reason for being blocked
+- blocked_by_story (optional): Story ID that blocks this one
+- touches_backend (optional): Scope flag
+- touches_frontend (optional): Scope flag
+- touches_database (optional): Scope flag
+- touches_infra (optional): Scope flag
+- description (optional): Human-readable story description
+- acceptance_criteria (optional): JSONB structure of acceptance criteria
+- non_goals (optional): Array of non-goals
+- packages (optional): Array of packages touched
+
+Returns: The upserted story record and whether it was newly created.
+
+Example (create):
+{
+  "story_id": "KFMB-1020",
+  "title": "kb_create_story MCP Tool",
+  "epic": "platform",
+  "feature": "kfmb"
+}
+
+Example (partial update — only merges supplied fields):
+{
+  "story_id": "KFMB-1020",
+  "description": "Adds upsert-by-story_id semantics to KB",
+  "non_goals": ["No UI changes"]
+}`,
+  inputSchema: zodToMcpSchema(KbCreateStoryInputSchema),
+}
+
+/**
  * kb_get_story tool definition.
  *
  * Retrieves a story by its ID.
@@ -3448,6 +3511,7 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbListArtifactsToolDefinition,
   kbDeleteArtifactToolDefinition,
   // Story status tools
+  kbCreateStoryToolDefinition,
   kbGetStoryToolDefinition,
   kbListStoriesToolDefinition,
   kbUpdateStoryStatusToolDefinition,

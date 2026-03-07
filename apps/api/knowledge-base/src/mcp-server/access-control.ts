@@ -42,6 +42,7 @@ export const ToolNameSchema = z.enum([
   'kb_list_artifacts',
   'kb_delete_artifact',
   // Story status tools
+  'kb_create_story',
   'kb_get_story',
   'kb_list_stories',
   'kb_update_story_status',
@@ -120,6 +121,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   kb_list_artifacts: new Set(['pm', 'dev', 'qa', 'all']),
   kb_delete_artifact: new Set(['pm']), // Admin only - destructive operation
   // Story status tools - available to all roles
+  kb_create_story: new Set(['pm', 'dev', 'qa', 'all']),
   kb_get_story: new Set(['pm', 'dev', 'qa', 'all']),
   kb_list_stories: new Set(['pm', 'dev', 'qa', 'all']),
   kb_update_story_status: new Set(['pm', 'dev', 'qa', 'all']),
