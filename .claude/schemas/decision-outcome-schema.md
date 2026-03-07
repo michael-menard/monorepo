@@ -36,7 +36,7 @@ schema_version: 1
 
 # Decision identification
 story_id: string            # Story where decision occurred (e.g., "WISH-2045")
-decision_id: string         # Unique ID from DECISIONS.yaml (e.g., "D-001")
+decision_id: string         # Unique ID from ELAB.yaml gaps[] or ARCHITECTURAL-DECISIONS.yaml (e.g., "D-001")
 pattern: string             # Regex pattern that matched (from decision-classification.yaml)
 timestamp: datetime         # ISO 8601 timestamp of decision
 
@@ -72,7 +72,7 @@ override_reason: string     # User explanation if overridden (optional)
 | `type` | string | Yes | Always "decision_outcome" |
 | `schema_version` | number | Yes | Schema version (currently 1) |
 | `story_id` | string | Yes | Story identifier (e.g., WISH-2045) |
-| `decision_id` | string | Yes | Unique decision identifier from DECISIONS.yaml |
+| `decision_id` | string | Yes | Unique decision identifier from ELAB.yaml (elab phase) or ARCHITECTURAL-DECISIONS.yaml (implementation phase) |
 | `pattern` | string | Yes | Regex pattern that triggered classification |
 | `timestamp` | datetime | Yes | When decision was made (ISO 8601) |
 
@@ -188,7 +188,7 @@ Decision outcomes are produced by:
 - **dev-fix-worker**: When making fix decisions (refactor vs patch, test coverage)
 - **qa-verify-leader**: When making verification decisions (test scope, acceptable edge cases)
 
-Each agent logs decisions to `DECISIONS.yaml` in the story's `_implementation/` directory. At the end of each phase, the leader writes decision_outcome entries to the KB.
+For elaboration-phase decisions: agents log to `ELAB.yaml` `gaps[].decision` and `opportunities[].decision` fields. For implementation-phase decisions: agents log to `ARCHITECTURAL-DECISIONS.yaml`. At the end of each phase, the leader writes decision_outcome entries to the KB.
 
 ### Consumers
 
@@ -216,7 +216,7 @@ Decision outcomes are consumed by:
    ↓
 6. User confirms/overrides/modifies
    ↓
-7. Agent logs to DECISIONS.yaml
+7. Agent logs to ELAB.yaml (elab phase) or ARCHITECTURAL-DECISIONS.yaml (implementation phase)
    ↓
 8. End of phase: Leader writes decision_outcome to KB
    ↓

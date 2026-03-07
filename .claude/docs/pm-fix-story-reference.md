@@ -47,7 +47,7 @@ Estimated tokens:
 
 | Check | Requirement |
 |-------|-------------|
-| QA audit exists | `ELAB-STORY-XXX.md` with FAIL or CONDITIONAL PASS |
+| QA audit exists | `_implementation/ELAB.yaml` with `preliminary_verdict` set to FAIL or CONDITIONAL_PASS |
 | Story status | `status: needs-refinement` in frontmatter |
 | Story location | `plans/stories/elaboration/STORY-XXX/` |
 
@@ -118,6 +118,6 @@ After:
 | Issue | Check |
 |-------|-------|
 | Story not found | Verify `elaboration/STORY-XXX/` exists |
-| No QA feedback | Check for `ELAB-STORY-XXX.md` or `## QA Feedback` section |
+| No QA feedback | Check for `_implementation/ELAB.yaml` with `preliminary_verdict` set |
 | Status not updating | Verify frontmatter YAML syntax |
 | Re-audit fails again | Review if all Critical/High items truly addressed |

@@ -128,10 +128,10 @@ totals:
   gate_attempts: {from VERIFICATION.yaml}
 
 decisions:
-  auto_accepted: {from DECISIONS.yaml or 0}
-  escalated: {from DECISIONS.yaml or 0}
+  auto_accepted: {from ELAB.yaml summary.gaps_resolved}
+  escalated: {from ELAB.yaml summary.gaps_found - gaps_resolved}
   overridden: {0}
-  deferred: {from DECISIONS.yaml or 0}
+  deferred: {from ELAB.yaml opportunities not kb-logged}
 
 predictions: null  # Placeholder for WKFL-002
 human_feedback: [] # Placeholder for WKFL-004
