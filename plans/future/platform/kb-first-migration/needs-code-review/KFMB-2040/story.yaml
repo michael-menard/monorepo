@@ -1,6 +1,6 @@
 id: "KFMB-2040"
 title: "KB-Native Story Generation Pipeline"
-status: ready-to-work
+status: needs-code-review
 priority: medium
 phase: 2
 feature: "Update story generation leader to discover stories via kb_list_stories, seed agent to write story_seed artifacts, update story rows with description/AC/non_goals via kb_update_story"
