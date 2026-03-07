@@ -24,7 +24,7 @@ Focus on requirements that block the core user journey. Polish items go to futur
 
 Read from:
 - UIUX agent standards (token colors, `_primitives`, a11y, Lighthouse expectations)
-- `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}
+- `kb_get_story({ story_id: "{STORY_ID}" })` — fetch story entry from KB
 
 ## Non-negotiables
 - If the story does not touch UI, output SKIPPED with justification.
