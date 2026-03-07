@@ -44,8 +44,8 @@ For **Feature + Story ID** mode, the database is the primary source of truth. Th
 
 **Migration window context**: During the Phase 1 migration window, some stories may not yet exist in the database. The directory fallback ensures these stories remain visible via filesystem state. The DB is authoritative for all stories that have been written to it.
 
-**Non-Goals (deferred)**:
-- Feature Only DB routing (e.g., `/story-status plans/future/wishlist` summary via DB) is deferred to WINT-1070. Feature-level queries still read `stories.index.md` directly.
+**Non-Goals (updated)**:
+- Feature Only mode (e.g., `/story-status plans/future/wishlist` summary) now uses `kb_list_stories` for story counts (KFMB-3020). The WINT-1070 deferral has been resolved via the KFMB migration path.
 
 ### DB State Display Labels
 
@@ -72,11 +72,11 @@ When a DB result is returned, map the `state` field to a human-readable display 
 Show summary of all features in `plans/future/`
 
 ### Feature Only
-Show summary of that feature (story counts by status)
+Show summary of that feature (story counts by status). Use `kb_list_stories({ feature: PREFIX })` for counts (KFMB-3020). Fall back to directory scan if KB is unavailable.
 
 ### Feature + --depth (or INDEX_PATH)
 Show in-depth epic view:
-1. Read `stories.index.md`
+1. Use `kb_list_stories({ feature: PREFIX })` to fetch stories (KFMB-3020). Fall back to reading `stories.index.md` if KB is unavailable.
 2. Parse all stories (ID, status, dependencies)
 3. Check `_implementation/CHECKPOINT.md` for phase progress
 4. Build dependency graph
@@ -86,9 +86,9 @@ For output format, read: `.claude/agents/_reference/examples/story-status-output
 
 ### Feature + --deps-order
 Show stories as a dependency-ordered work list:
-1. Read `stories.index.md`
+1. Use `kb_list_stories({ feature: PREFIX })` to fetch stories (KFMB-3020). Fall back to reading `stories.index.md` if KB is unavailable.
 2. Parse all stories (ID, title, status, phase, dependencies)
-3. Build dependency graph from "Depends On" and "Blocks" fields
+3. Build dependency graph from `depends_on` fields in KB story records (or "Depends On"/"Blocks" fields if using index fallback)
 4. Assign each story to a **tier** based on dependency depth:
    - **Tier 0**: No dependencies (can start immediately)
    - **Tier 1**: All dependencies are Tier 0 stories
@@ -116,7 +116,7 @@ Show single story status:
    - Display single-story output (see Output Examples below)
 4. If result is null (DB miss or tool unavailable):
    - Fall back to directory scan:
-     - Read `stories.index.md`
+     - Read `stories.index.md` (legacy fallback)
      - Find `## <STORY_ID>:` section
      - Extract Status, Feature, Depends On
      - Locate directory

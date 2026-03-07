@@ -6,6 +6,8 @@ type: utility-skill
 permission_level: docs-only
 ---
 
+> **DEPRECATED as of KFMB-3020.** All callers have been migrated to KB tools (`kb_list_stories`, `kb_get_story`, `kb_update_story_status`). This command will be deleted in KFMB-6020. The body below is preserved for reference during the deprecation window.
+
 # /index-update {FEATURE_DIR} {STORY_ID} [--status=X] [--clear-deps] [--add-dep=Y]
 
 Update a story's entry in the feature's stories index file.

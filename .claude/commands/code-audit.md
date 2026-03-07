@@ -195,9 +195,9 @@ Read latest `plans/audit/FINDINGS-*.yaml` and present formatted summary.
 | `--id` | Promote specific finding IDs (comma-separated) |
 
 Spawn `audit-promote-leader` to:
-1. Dedup against existing `stories.index.md` entries
+1. Dedup against existing stories via `kb_list_stories({ feature: PREFIX, limit: 100 })` (KFMB-3020: replaces `stories.index.md` check)
 2. Create stories in appropriate backlog
-3. Update `stories.index.md`
+3. Seed new stories into KB via `kb_update_story_status` or migration script
 4. Mark promoted findings in FINDINGS yaml
 
 ---

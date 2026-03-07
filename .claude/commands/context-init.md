@@ -157,10 +157,10 @@ command: elab-epic
 
 paths:
   base: plans/
-  stories_index: plans/stories/WRKF.stories.index.md
   output: plans/WRKF.epic-elab/
   meta_plan: plans/WRKF.plan.meta.md
   exec_plan: plans/WRKF.plan.exec.md
+  # Note: stories_index removed (KFMB-3020) — story context resolved from KB via feature_dir
 
 status:
   current_phase: setup
