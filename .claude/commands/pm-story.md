@@ -112,7 +112,7 @@ When `--elab` is used:
 Before generating ANY story ID, the system MUST check:
 
 1. **Directory check**: Does `{OUTPUT_DIR}/{STORY_ID}/` already exist?
-2. **Index check**: Does `stories.index.md` contain an entry for `{STORY_ID}`?
+2. **KB check**: Does `kb_list_stories({ feature: PREFIX, limit: 100 })` return an entry for `{STORY_ID}`? (KFMB-3020: replaces `stories.index.md` index check)
 
 If collision detected:
 - For splits: Increment Y until unique (Y=1, Y=2, ...)
@@ -237,7 +237,7 @@ Example: Story `KBAR-0050` in platform dir `plans/future/platform/`:
 
 When `story_id == "next"` or not provided:
 
-1. Read the index file
+1. Use `kb_list_stories({ feature: PREFIX, limit: 100 })` to retrieve story records (KFMB-3020: replaces reading `stories.index.md` directly). Fall back to reading the index file if KB is unavailable.
 2. Parse the "Stories by Phase" tables
 3. Find first story matching criteria:
    - Status is `Draft`, `Pending`, or `Ready` (not yet generated/in-progress)
@@ -414,10 +414,10 @@ Task tool:
 
     CONTEXT:
     Action: <action>
-    Index path: {INDEX_PATH}           # Per-epic index (for /index-update)
     Feature directory: {FEATURE_DIR}   # Epic's feature directory
     Story ID: {STORY_ID}              # Already resolved from "next" if applicable
     Seed path: {SEED_PATH}            # Path to story seed generated in Phase 0
+    # Note: Index path removed (KFMB-3020) — story lookups use KB tools, not stories.index.md
 
     # Platform-specific context (only when is_platform == true):
     Platform index path: {PLATFORM_INDEX_PATH}  # or "N/A" if not platform
