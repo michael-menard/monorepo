@@ -1,0 +1,128 @@
+schema: 2
+story_id: KFMB-1010
+timestamp: '2026-03-07T04:10:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Add acceptance_criteria (jsonb, nullable), non_goals (text[], nullable), and packages (text[], nullable) columns
+      to the stories table definition in kbar.ts
+    files:
+      - packages/backend/database-schema/src/schema/kbar.ts
+    files_to_read:
+      - packages/backend/database-schema/src/schema/cohesion.ts
+      - packages/backend/database-schema/src/schema/sets.ts
+    dependencies: []
+    slice: backend
+    verification: pnpm check-types --filter @repo/database-schema
+    acs_covered:
+      - AC-3
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Run pnpm db:generate from packages/backend/database-schema to produce the Drizzle-kit SQL migration file in
+      src/migrations/app/
+    files:
+      - packages/backend/database-schema/src/migrations/app/
+    files_to_read:
+      - packages/backend/database-schema/src/migrations/app/0033_wint_2040_agent_missions_enum.sql
+    dependencies:
+      - 1
+    slice: backend
+    verification: ls packages/backend/database-schema/src/migrations/app/ | grep -E '^003[4-9]|^00[4-9]'
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 3
+    subtask_id: ST-3
+    description: Apply migration locally with pnpm db:migrate and verify columns are present with correct types in kbar.stories
+    files: []
+    files_to_read: []
+    dependencies:
+      - 2
+    slice: backend
+    verification: pnpm --filter @repo/database-schema db:migrate
+    acs_covered:
+      - AC-1
+      - AC-2
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Verify drizzle-zod TypeScript types (insertStorySchema / selectStorySchema) reflect the three new columns and run
+      pnpm check-types
+    files: []
+    files_to_read:
+      - packages/backend/database-schema/src/schema/kbar.ts
+    dependencies:
+      - 1
+    slice: backend
+    verification: pnpm check-types --filter @repo/database-schema
+    acs_covered:
+      - AC-3
+  - id: 5
+    subtask_id: ST-5
+    description: Run existing tests for packages/backend/database-schema to verify all pass after schema change
+    files: []
+    files_to_read:
+      - packages/backend/database-schema/src/schema/__tests__/kbar-schema.test.ts
+    dependencies:
+      - 1
+      - 4
+    slice: backend
+    verification: pnpm test --filter @repo/database-schema
+    acs_covered:
+      - AC-4
+files_to_change:
+  - path: packages/backend/database-schema/src/schema/kbar.ts
+    action: modify
+    reason: >-
+      Add acceptance_criteria (jsonb), non_goals (text[]), packages (text[]) nullable columns to the stories table
+      definition
+  - path: packages/backend/database-schema/src/migrations/app/
+    action: create
+    reason: Drizzle-kit db:generate produces a new SQL migration file for the 3 new columns
+commands_to_run:
+  - command: pnpm --filter @repo/database-schema db:generate
+    when: after ST-1 schema edit
+    required: true
+  - command: pnpm --filter @repo/database-schema db:migrate
+    when: after migration file is generated
+    required: true
+  - command: pnpm check-types --filter @repo/database-schema
+    when: after schema edit
+    required: true
+  - command: pnpm test --filter @repo/database-schema
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: pnpm db:migrate runs without errors (command output)
+    evidence_type: command
+  - ac_id: AC-2
+    planned_evidence: >-
+      Migration SQL contains ALTER TABLE kbar.stories ADD COLUMN for all 3 columns with correct types; psql
+      introspection confirms nullable
+    evidence_type: command
+  - ac_id: AC-3
+    planned_evidence: >-
+      pnpm check-types passes; insertStorySchema and selectStorySchema include acceptanceCriteria, nonGoals, packages
+      fields
+    evidence_type: command
+  - ac_id: AC-4
+    planned_evidence: pnpm test --filter @repo/database-schema passes with no failures
+    evidence_type: test
+architectural_decisions: []
+complexity: simple
+notes:
+  - jsonb is already imported in kbar.ts — no new imports needed for acceptance_criteria column
+  - text().array() is the Drizzle pattern for text[] arrays — confirmed in cohesion.ts and sets.ts
+  - All 3 columns are nullable with no default per DEC-2 in story.yaml for backward compatibility
+  - ST-2 (db:generate) produces the migration file automatically — no manual SQL authoring needed
+  - >-
+    ST-3 (db:migrate) may require a running local database; if not available, AC-1/AC-2 can be verified by inspecting
+    generated SQL
+  - >-
+    The kbar-schema.test.ts stories table column test checks named columns — new columns do not break existing
+    assertions (additive only)
+  - Only kbar.stories is in scope per DEC-1; wint.stories is explicitly excluded

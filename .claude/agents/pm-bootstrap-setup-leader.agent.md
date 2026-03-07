@@ -1,7 +1,7 @@
 ---
 created: 2026-01-24
-updated: 2026-02-22
-version: 4.0.0
+updated: 2026-03-07
+version: 4.2.0
 type: leader
 permission_level: setup
 triggers: ["/pm-bootstrap-workflow"]
@@ -41,7 +41,7 @@ The orchestrator provides `feature_dir`. Read `PLAN.md` or `PRD.md` from disk. W
 1. **Validate plan_content** — must be non-empty and >100 chars. If not: BLOCKED: "Plan content is empty or too short"
 2. **Validate prefix** — must be 2–6 uppercase alphanumeric chars
 3. **Validate feature_dir** — must be a valid path string (does not need to exist yet)
-4. **Check for collision** — if `{feature_dir}/stories.index.md` already exists on disk: BLOCKED: "stories.index.md already exists in {feature_dir} — bootstrap already run"
+4. **Check for collision** — follow `.claude/agents/_shared/collision-detection.md`. Use `project_name` as the feature identifier. On collision: BLOCKED. On clear: proceed to Step 5.
 5. **Extract raw plan summary** — first 500 chars of plan_content
 6. **Return SETUP-CONTEXT inline**
 
@@ -108,7 +108,9 @@ timestamp: "{TIMESTAMP}"
 | Error | Action |
 |-------|--------|
 | Plan content empty | BLOCKED: "Plan content is empty or too short" |
-| stories.index.md exists | BLOCKED: "stories.index.md already exists in {feature_dir}" |
+| KB stories exist for plan | BLOCKED: "Stories already exist in KB for plan '{project_name}' — bootstrap already run" |
+| kb_list_stories unavailable | Warning: "KB collision check unavailable — falling back to filesystem check" → filesystem fallback |
+| stories.index.md exists (fallback) | BLOCKED: "stories.index.md already exists in {feature_dir} — bootstrap already run (filesystem fallback)" |
 | Directory not found (file mode) | BLOCKED: "Directory not found: {path}" |
 | No plan file (file mode) | BLOCKED: "No PLAN.md or PRD.md in {dir}" |
 
@@ -132,29 +134,8 @@ End output with:
 
 ## Context Cache Integration (REQUIRED)
 
-**MUST query Context Cache at workflow start** to retrieve pre-distilled project conventions.
+See: `.claude/agents/_shared/context-cache.md`
 
-### When to Query
+**This agent queries:** `architecture/project-conventions` only (before validation, at workflow start).
 
-| Trigger | packType | packKey | Purpose |
-|---------|----------|---------|---------|
-| Workflow start (before validation) | `architecture` | `project-conventions` | Project conventions, coding standards, patterns |
-
-### Call Pattern
-
-```javascript
-context_cache_get({ packType: 'architecture', packKey: 'project-conventions' })
-  → if null: log warning via @repo/logger, continue without cache context
-  → if hit: inject content.conventions (first 5 entries) and content.summary into setup context
-```
-
-### Content Injection Limits
-
-- Inject: `summary`, `conventions` (first 5 entries only)
-- Skip: `raw_content`, `full_text`, verbose examples (unbounded size)
-- Max injection: ~1500 tokens
-
-### Fallback Behavior
-
-- Cache miss (null): Log `"Cache miss for architecture/project-conventions — proceeding without cache context"` via `@repo/logger`. Continue setup execution.
-- Tool error (exception): Catch, log warning via `@repo/logger`, continue. Never block setup execution.
+Inject `content.summary` and `content.conventions` (first 5 entries) into setup context. Max ~1500 tokens. On cache miss or tool error: log warning via `@repo/logger` and continue — never block setup execution.

@@ -1,0 +1,12 @@
+schema: 1
+story_id: KFMB-2020
+feature_dir: plans/future/platform/kb-first-migration
+timestamp: '2026-03-07T20:05:00.000Z'
+current_phase: fix
+last_successful_phase: code_review
+iteration: 1
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: false
