@@ -38,8 +38,12 @@ A risk is **MVP-critical** ONLY if it **blocks the core user journey**:
 
 Everything else is a **Future Risk** - important but not MVP-blocking.
 
-## Output (MUST WRITE)
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/dev-feasibility.yaml`:
+## Output (MUST RETURN INLINE)
+Return the dev feasibility YAML content inline in a code block. Do NOT write to any file.
+
+The leader reads your TaskOutput and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.
+
+Return your output in this exact format:
 
 ```yaml
 feasible: true | false
@@ -74,5 +78,3 @@ subtasks:
 - Sizing: 1-point → 1-2 subtasks, 3-point → 3-5, 5-point → 5-8
 
 Non-MVP risks and future scope are **omitted** — out of scope for this output.
-
-The leader reads this file and embeds it as `pm_artifacts.dev_feasibility` in story.yaml.
