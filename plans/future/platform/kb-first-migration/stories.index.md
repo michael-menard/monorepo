@@ -30,7 +30,7 @@ Extend the stories table, add PM artifact types, update CRUD operations, and reg
 |----|-------|--------------|----------|--------|
 | KFMB-1010 | Stories Table Content Columns Migration | — | Medium | Ready to Work |
 | KFMB-1020 | kb_create_story MCP Tool and CRUD Update | KFMB-1010 | Medium | Ready to Work |
-| KFMB-1030 | PM Artifact Types and Detail Tables | KFMB-1010 | Medium | In Elaboration |
+| KFMB-1030 | PM Artifact Types and Detail Tables | KFMB-1010 | Medium | Failed Code Review |
 | KFMB-1040 | Register kb_delete_artifact MCP Tool | — | Medium | Ready to Work |
 
 ---
@@ -45,7 +45,7 @@ Migrate story bootstrap to write directly to the KB with no filesystem output.
 |----|-------|--------------|----------|--------|
 | KFMB-2010 | KB-Native Bootstrap Generation Leader | KFMB-1020 | Medium | Created |
 | KFMB-2020 | KB-Native Bootstrap Setup Leader | KFMB-1020 | Medium | Ready to Work |
-| KFMB-2030 | Update /pm-bootstrap-workflow Command | KFMB-2010, KFMB-2020 | Medium | Ready to Work |
+| KFMB-2030 | Update /pm-bootstrap-workflow Command | KFMB-2010, KFMB-2020 | Medium | Needs Code Review |
 | KFMB-2040 | KB-Native Story Generation Pipeline | KFMB-1020, KFMB-1030 | Medium | Ready to Work |
 
 ---
