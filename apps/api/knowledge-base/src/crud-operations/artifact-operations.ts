@@ -14,6 +14,7 @@
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { eq, and, desc, sql } from 'drizzle-orm'
+import type { AnyPgTable } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import {
   storyArtifacts,
@@ -451,21 +452,38 @@ function mapContentToTypedColumns(
 }
 
 /**
- * A detail table reference with the minimum columns needed for CRUD operations.
- * All 13 type-specific tables share id, data, createdAt, updatedAt.
+ * Union of all detail table references.
+ * Used to type the return value of getDetailTableRef so callers can
+ * pass it directly to db.insert/update/select/delete without unsafe casts.
  */
-type DetailTableRef = {
-  id: typeof artifactCheckpoints.id
-  [key: string]: unknown
-}
+type DetailTableRef =
+  | typeof artifactCheckpoints
+  | typeof artifactContexts
+  | typeof artifactReviews
+  | typeof artifactElaborations
+  | typeof artifactAnalyses
+  | typeof artifactScopes
+  | typeof artifactPlans
+  | typeof artifactEvidence
+  | typeof artifactVerifications
+  | typeof artifactFixSummaries
+  | typeof artifactProofs
+  | typeof artifactQaGates
+  | typeof artifactCompletionReports
+  | typeof artifactTestPlans
+  | typeof artifactDevFeasibility
+  | typeof artifactUiuxNotes
+  | typeof artifactStorySeeds
 
 /**
  * Get the Drizzle table reference for a given detail table name.
- * Uses `as any` because Drizzle PgTable types are nominally typed by table name,
- * but all our detail tables share the same structural pattern (id, data, timestamps).
+ * Drizzle PgTable types are nominally typed by table name, but all our detail tables
+ * share the same structural pattern (id, data, timestamps). We use DetailTableRef
+ * to capture the shared minimum interface and Record<string, unknown> for the map values,
+ * since each table's exact Drizzle type is distinct but structurally compatible.
  */
 function getDetailTableRef(detailTable: string): DetailTableRef | null {
-  const tableMap: Record<string, any> = {
+  const tableMap: Partial<Record<string, DetailTableRef>> = {
     artifact_checkpoints: artifactCheckpoints,
     artifact_contexts: artifactContexts,
     artifact_reviews: artifactReviews,
@@ -581,9 +599,11 @@ function toArtifactListItem(
  * Insert a row into the appropriate type-specific table.
  * Returns the UUID of the inserted row.
  *
- * Uses `as any` casts for dynamic table operations because Drizzle's type system
- * is nominally typed per-table — all 13 tables share the same structural pattern
- * but TypeScript treats each as a distinct type.
+ * We cast tableRef to AnyPgTable when passing to db.insert/update/select/delete
+ * because Drizzle's generics require the exact schema-registered table type.
+ * All 13 detail tables share the same structural pattern (id, data, timestamps),
+ * so the cast is safe and the union return type of getDetailTableRef ensures
+ * tableRef is always a real Drizzle table.
  */
 async function insertDetailRow(
   db: NodePgDatabase<typeof schema>,
@@ -606,12 +626,12 @@ async function insertDetailRow(
     throw new Error(`No table reference for: ${detailTable}`)
   }
 
-  const result = await (db as any)
-    .insert(tableRef)
+  const result = await db
+    .insert(tableRef as AnyPgTable)
     .values({ id, ...columns })
-    .returning({ id: (tableRef as any).id })
+    .returning({ id: tableRef.id })
 
-  return { detailTable, detailId: result[0].id }
+  return { detailTable, detailId: result[0].id as string }
 }
 
 /**
@@ -634,10 +654,10 @@ async function updateDetailRow(
 
   const now = new Date()
 
-  await (db as any)
-    .update(tableRef)
+  await db
+    .update(tableRef as AnyPgTable)
     .set({ ...typedColumns, data, updatedAt: now })
-    .where(eq((tableRef as any).id, detailId))
+    .where(eq(tableRef.id, detailId))
 }
 
 /**
@@ -651,10 +671,10 @@ async function readDetailRow(
   const tableRef = getDetailTableRef(detailTable)
   if (!tableRef) return null
 
-  const result = await (db as any)
+  const result = await db
     .select()
-    .from(tableRef)
-    .where(eq((tableRef as any).id, detailId))
+    .from(tableRef as AnyPgTable)
+    .where(eq(tableRef.id, detailId))
     .limit(1)
 
   if (result.length === 0) return null
@@ -672,7 +692,7 @@ async function deleteDetailRow(
   const tableRef = getDetailTableRef(detailTable)
   if (!tableRef) return
 
-  await (db as any).delete(tableRef).where(eq((tableRef as any).id, detailId))
+  await db.delete(tableRef as AnyPgTable).where(eq(tableRef.id, detailId))
 }
 
 // ============================================================================
