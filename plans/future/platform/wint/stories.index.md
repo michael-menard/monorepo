@@ -2518,7 +2518,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9106: Implement LangGraph Checkpointer & State Recovery
 
-**Status:** elaboration
+**Status:** needs-code-review
 **Depends On:** WINT-9105, WINT-0070
 **Phase:** 9
 **Feature:** PostgreSQL-backed checkpointer for LangGraph graphs with crash-safe state recovery, resume-graph CLI, checkpoint TTL/cleanup, and integration tests
@@ -2526,7 +2526,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 - packages/backend/orchestrator/src/checkpointer/
 - wint.workflow_checkpoints table (via WINT-0070 migration)
 
-**Story File:** `wint/elaboration/WINT-9106/WINT-9106.md`
+**Story File:** `wint/needs-code-review/WINT-9106/WINT-9106.md`
 
 **Goal:** Replace file-based CHECKPOINT.yaml recovery with DB-backed LangGraph thread checkpoint persistence
 
