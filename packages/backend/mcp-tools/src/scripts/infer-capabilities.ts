@@ -100,7 +100,7 @@ export function mapKeywordsToStages(text: string): Set<LifecycleStage> {
   const lower = text.toLowerCase()
 
   // Split on word boundaries: spaces, punctuation, newlines
-  const words = lower.split(/[\s,.:;!?()\[\]{}"'`\-_/\\|@#$%^&*+=~<>]+/)
+  const words = lower.split(/[\s,.:;!?()[\]{}"'`\-_/\\|@#$%^&*+=~<>]+/)
 
   for (const word of words) {
     const trimmed = word.trim()
@@ -530,7 +530,9 @@ async function printValidationReport(allFeatures: FeatureRow[]): Promise<void> {
       )
     } catch (error) {
       rows.push(
-        `${feature.featureName.padEnd(30)} | ERROR: ${error instanceof Error ? error.message : String(error)}`,
+        `${feature.featureName.padEnd(30)} | ERROR: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       )
     }
   }
