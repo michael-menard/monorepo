@@ -1,10 +1,11 @@
 /**
- * Infer Capabilities from Story History
+ * Infer Existing Capabilities from Story History
+ * WINT-4040: Scans story YAML files and populates graph.capabilities
  *
- * Scans existing story YAML files under plans/future/platform/, applies keyword-to-lifecycle-stage
- * heuristics, and populates graph.capabilities with feature-linked CRUD capability rows.
- *
- * Story: WINT-4040
+ * Reads story YAML files from plans/future/platform/*\/,
+ * applies keyword heuristics to infer CRUD lifecycle stages,
+ * looks up feature UUIDs from graph.features by epic prefix,
+ * and inserts rows into graph.capabilities via Drizzle ORM.
  *
  * @example Run from monorepo root
  * ```bash
@@ -15,348 +16,343 @@
  * @requires DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
-import { z } from 'zod'
 import { logger } from '@repo/logger'
 import type {
   LifecycleStage,
   InferredCapability,
   StoryEntry,
   CapabilityInferenceResult,
-  InferCapabilitiesOptions,
   InsertFn,
-  FeatureRow,
   DbFeatureQueryFn,
+  FeatureRow,
 } from './__types__/index.js'
 import {
-  CapabilityInferenceResultSchema,
   InferCapabilitiesOptionsSchema,
-  FeatureRowSchema,
+  CapabilityInferenceResultSchema,
+  InferredCapabilitySchema,
 } from './__types__/index.js'
 
-// Resolve from monorepo root (packages/backend/mcp-tools/src/scripts -> ../../../../..)
+// Resolve from monorepo root
 const MONOREPO_ROOT = resolve(import.meta.dirname ?? __dirname, '../../../../../')
 
 // ============================================================================
-// Keyword Map (AC-3)
+// ST-2: Keyword-to-lifecycle-stage mapping
 // ============================================================================
 
 /**
- * Maps CRUD lifecycle keywords to lifecycle stages.
- * Keys are lowercase keyword strings; values are LifecycleStage literals.
- * Zod-validated as a Record for extensibility.
+ * Keyword → lifecycle stage mapping (CRUD).
+ * Keys are lowercase keywords; values are CRUD stages.
+ * AC-3 requirement.
  */
-const KeywordMapSchema = z.record(z.enum(['create', 'read', 'update', 'delete']))
-
-const KEYWORD_MAP: z.infer<typeof KeywordMapSchema> = KeywordMapSchema.parse({
+const KEYWORD_MAP: Record<string, LifecycleStage> = {
   // create
   create: 'create',
   add: 'create',
   new: 'create',
   upload: 'create',
   insert: 'create',
+  submit: 'create',
   post: 'create',
   generate: 'create',
-  build: 'create',
+  publish: 'create',
   register: 'create',
   // read
-  view: 'read',
   read: 'read',
+  view: 'read',
   get: 'read',
   list: 'read',
   query: 'read',
   download: 'read',
   fetch: 'read',
   search: 'read',
-  display: 'read',
-  show: 'read',
   browse: 'read',
-  find: 'read',
+  show: 'read',
+  display: 'read',
   // update
-  edit: 'update',
   update: 'update',
+  edit: 'update',
   modify: 'update',
   replace: 'update',
   change: 'update',
   patch: 'update',
+  rename: 'update',
+  move: 'update',
   // delete
   delete: 'delete',
   remove: 'delete',
   archive: 'delete',
   purge: 'delete',
-  clear: 'delete',
-})
-
-// ============================================================================
-// Keyword mapping function (AC-3)
-// ============================================================================
+  destroy: 'delete',
+  revoke: 'delete',
+}
 
 /**
- * Maps keywords in text to lifecycle stages.
- * Case-insensitive. Returns deduplicated Set of matched stages.
+ * Maps keywords found in text to CRUD lifecycle stages.
+ * Case-insensitive. Returns a Set for automatic deduplication.
  *
- * @param text - Story title, feature description, or AC text to scan
+ * @param text - Combined text from story title, description, and AC text
  * @returns Set of matched lifecycle stages
  */
 export function mapKeywordsToStages(text: string): Set<LifecycleStage> {
   const stages = new Set<LifecycleStage>()
-  if (!text) return stages
+  const lower = text.toLowerCase()
 
-  const words = text.toLowerCase().split(/\W+/).filter(Boolean)
+  // Split on word boundaries: spaces, punctuation, newlines
+  const words = lower.split(/[\s,.:;!?()\[\]{}"'`\-_/\\|@#$%^&*+=~<>]+/)
+
   for (const word of words) {
-    const stage = KEYWORD_MAP[word]
-    if (stage !== undefined) {
-      stages.add(stage)
+    const trimmed = word.trim()
+    if (trimmed && trimmed in KEYWORD_MAP) {
+      const stage = KEYWORD_MAP[trimmed]
+      if (stage !== undefined) {
+        stages.add(stage)
+      }
     }
   }
+
   return stages
 }
 
 // ============================================================================
-// Story file discovery helpers (AC-2)
+// ST-3: Story scanner
 // ============================================================================
 
 /**
- * Recursively find story files (story.yaml or {STORY_ID}.md with frontmatter).
- * Returns absolute file paths.
+ * Recursively find all story.yaml and {STORY_ID}.md files under a directory.
  */
-export function findStoryFiles(dir: string): string[] {
-  const results: string[] = []
-
-  let entries: string[]
+function findStoryFiles(dir: string, results: string[] = []): string[] {
   try {
-    entries = readdirSync(dir)
+    const entries = readdirSync(dir)
+    for (const entry of entries) {
+      const fullPath = join(dir, entry)
+      try {
+        const stat = statSync(fullPath)
+        if (stat.isDirectory()) {
+          findStoryFiles(fullPath, results)
+        } else if (stat.isFile()) {
+          // Match story.yaml files and {STORY_ID}.md files (e.g. WINT-4040.md)
+          if (entry === 'story.yaml' || /^[A-Z]+-\d+\.md$/.test(entry)) {
+            results.push(fullPath)
+          }
+        }
+      } catch {
+        // Ignore stat errors (broken symlinks, permission issues)
+      }
+    }
   } catch {
-    return results
+    // Ignore readdir errors
   }
-
-  for (const entry of entries) {
-    const fullPath = join(dir, entry)
-    let stat
-    try {
-      stat = statSync(fullPath)
-    } catch {
-      continue
-    }
-
-    if (stat.isDirectory()) {
-      // Recurse into subdirectory
-      results.push(...findStoryFiles(fullPath))
-    } else if (entry === 'story.yaml' || /^[A-Z]+-\d+\.md$/.test(entry)) {
-      results.push(fullPath)
-    }
-  }
-
   return results
 }
 
 /**
- * Extract epic prefix from a story ID.
- * e.g. "WINT-4040" -> "WINT", "WISH-001" -> "WISH"
+ * Extract epic prefix from story ID (e.g., 'WINT' from 'WINT-4040').
  */
-export function extractEpic(storyId: string): string {
-  const match = storyId.match(/^([A-Z]+)-\d+$/)
-  return match ? match[1]! : ''
+function extractEpic(storyId: string): string {
+  const match = storyId.match(/^([A-Z]+)-/)
+  return match ? (match[1] ?? storyId) : storyId
 }
 
 /**
  * Extract story ID from file path.
- * Tries the filename first (for .md files), then reads YAML frontmatter.
+ * For story.yaml: uses parent directory name if it looks like a story ID.
+ * For {STORY_ID}.md: uses filename without extension.
  */
-export function extractStoryIdFromPath(filePath: string): string {
-  // For .md files: filename is the story ID
-  const mdMatch = filePath.match(/\/([A-Z]+-\d+)\.md$/)
-  if (mdMatch) return mdMatch[1]!
+function extractStoryIdFromPath(filePath: string): string | null {
+  const parts = filePath.split('/')
+  const filename = parts[parts.length - 1] ?? ''
 
-  // For story.yaml: parent directory name is usually the story ID
-  const dirMatch = filePath.match(/\/([A-Z]+-\d+)\/story\.yaml$/)
-  if (dirMatch) return dirMatch[1]!
+  // {STORY_ID}.md pattern
+  if (filename !== 'story.yaml') {
+    const match = filename.match(/^([A-Z]+-\d+)\.md$/)
+    return match ? (match[1] ?? null) : null
+  }
 
-  return ''
+  // story.yaml: use parent directory name
+  const parentDir = parts[parts.length - 2] ?? ''
+  if (/^[A-Z]+-\d+$/.test(parentDir)) {
+    return parentDir
+  }
+
+  return null
 }
 
 /**
- * Read and parse a story file to extract relevant text for keyword analysis.
- * Returns null if the file cannot be read or has no usable content.
+ * Read and extract text from a story file.
+ * Returns null if the file cannot be read.
  */
-export function readStoryFile(filePath: string): { storyId: string; text: string } | null {
-  let raw: string
+function readStoryFile(filePath: string): string | null {
   try {
-    raw = readFileSync(filePath, 'utf-8')
+    return readFileSync(filePath, 'utf-8')
   } catch {
     return null
   }
-
-  const storyId = extractStoryIdFromPath(filePath)
-  if (!storyId) return null
-
-  // Collect all text for keyword analysis (title, ac_text, description, feature fields)
-  const textParts: string[] = [raw]
-  return { storyId, text: textParts.join(' ') }
 }
 
-// ============================================================================
-// Story scanner (AC-2)
-// ============================================================================
-
 /**
- * Scan plans/ for story files and extract StoryEntry objects.
- * Handles missing files gracefully (returns empty array).
+ * Scan plans/future/platform/*\/ for story YAML and MD files.
+ * Extracts storyId, epic, title, and text (title + AC text) for keyword analysis.
  *
- * @param rootDir - Root directory to scan (defaults to monorepo plans/future/platform/)
- * @returns Array of story entries with extracted fields
+ * @param rootDir - Monorepo root directory (defaults to auto-resolved)
+ * @returns Array of StoryEntry objects
  */
-export function scanStories(rootDir?: string): StoryEntry[] {
-  const plansRoot = rootDir ?? resolve(MONOREPO_ROOT, 'plans/future/platform')
+export function scanStories(rootDir: string = MONOREPO_ROOT): StoryEntry[] {
+  const plansDir = join(rootDir, 'plans', 'future', 'platform')
+  const storyFiles = findStoryFiles(plansDir)
 
-  const files = findStoryFiles(plansRoot)
+  logger.info('[infer-capabilities] Scanning story files', {
+    plansDir,
+    fileCount: storyFiles.length,
+  })
+
   const entries: StoryEntry[] = []
+  const seenIds = new Set<string>()
 
-  for (const filePath of files) {
-    const parsed = readStoryFile(filePath)
-    if (!parsed) continue
+  for (const filePath of storyFiles) {
+    const storyId = extractStoryIdFromPath(filePath)
+    if (!storyId) continue
 
-    const { storyId, text } = parsed
+    // Deduplicate by story ID (prefer first found)
+    if (seenIds.has(storyId)) continue
+    seenIds.add(storyId)
+
+    const content = readStoryFile(filePath)
+    if (!content) {
+      logger.warn('[infer-capabilities] Could not read story file', { filePath })
+      continue
+    }
+
     const epic = extractEpic(storyId)
-    if (!epic) continue
 
-    // Extract title from YAML frontmatter if available
-    const titleMatch = text.match(/^title:\s*["']?(.+?)["']?\s*$/m)
-    const title = titleMatch ? titleMatch[1]!.trim() : storyId
+    // Extract title from YAML (title: "...") or first markdown heading
+    let title = ''
+    const yamlTitleMatch = content.match(/^title:\s*["']?(.+?)["']?\s*$/m)
+    if (yamlTitleMatch) {
+      title = yamlTitleMatch[1]?.trim() ?? ''
+    } else {
+      const mdHeadingMatch = content.match(/^#\s+(.+)$/m)
+      if (mdHeadingMatch) {
+        title = mdHeadingMatch[1]?.trim() ?? ''
+      }
+    }
 
-    entries.push({
-      storyId,
-      epic,
-      title,
-      text,
-    })
+    // Combine all text for keyword analysis: title + full content
+    const text = [title, content].filter(Boolean).join(' ')
+
+    entries.push({ storyId, epic, title, text })
   }
 
+  logger.info('[infer-capabilities] Story scan complete', { entriesFound: entries.length })
   return entries
 }
 
 // ============================================================================
-// Feature resolver (AC-4, AC-9)
+// ST-4: Feature resolver
 // ============================================================================
 
 /**
- * Default DB feature query function.
- * Queries graph.features table via Drizzle ORM.
+ * Default DB query function for features table.
+ * Uses dynamic import to avoid DB connection at module load time.
+ * Injectable for testability (AC-4).
  */
-export async function defaultDbFeatureQueryFn(): Promise<FeatureRow[]> {
-  // Dynamic import to avoid circular dependencies at module load time
+async function defaultDbFeatureQueryFn(): Promise<FeatureRow[]> {
   const { db } = await import('@repo/db')
-  const { features } = await import('@repo/knowledge-base/db')
-
-  const rows = await db
-    .select({ id: features.id, featureName: features.featureName })
-    .from(features)
-
-  return rows.map(row => FeatureRowSchema.parse({ id: row.id, featureName: row.featureName }))
+  const { features } = await import('@repo/database-schema')
+  const rows = await db.select({ id: features.id, featureName: features.featureName }).from(features)
+  return rows.map(r => ({ id: r.id, featureName: r.featureName }))
 }
 
 /**
- * Resolve a feature UUID from an epic prefix.
- * Looks up graph.features by featureName (case-insensitive partial match on prefix).
- * Returns null if no match found.
+ * Resolve a feature UUID from graph.features by epic prefix.
+ * Looks for a feature whose featureName contains the epic prefix (case-insensitive).
  *
- * @param epicPrefix - e.g. "WINT", "WISH"
- * @param featureRows - Array of feature rows from graph.features
- * @returns Feature UUID or null
+ * @param epicPrefix - Story epic prefix (e.g., 'WINT', 'WISH')
+ * @param allFeatures - All feature rows from DB (injectable for testability)
+ * @returns Feature UUID or null if not found
  */
-export function resolveFeatureId(epicPrefix: string, featureRows: FeatureRow[]): string | null {
-  const prefix = epicPrefix.toLowerCase()
+export function resolveFeatureId(
+  epicPrefix: string,
+  allFeatures: FeatureRow[],
+): string | null {
+  const lower = epicPrefix.toLowerCase()
 
-  // Exact match preferred (featureName equals prefix exactly)
-  const exactMatch = featureRows.find(r => r.featureName.toLowerCase() === prefix)
+  // Try exact match first (feature name equals epic prefix)
+  const exactMatch = allFeatures.find(f => f.featureName.toLowerCase() === lower)
   if (exactMatch) return exactMatch.id
 
-  // Partial match: featureName starts with or contains the prefix
-  const partialMatch = featureRows.find(r => r.featureName.toLowerCase().includes(prefix))
+  // Try partial match (feature name contains epic prefix)
+  const partialMatch = allFeatures.find(f => f.featureName.toLowerCase().includes(lower))
   if (partialMatch) return partialMatch.id
 
   return null
 }
 
 // ============================================================================
-// Default insert function (AC-5, AC-6, AC-7)
+// ST-5: Default insert function (Drizzle with onConflictDoNothing)
 // ============================================================================
 
 /**
- * Default insert function that writes to graph.capabilities via Drizzle ORM.
- * Uses .onConflictDoNothing() for AC-6 deduplication semantics.
- * Dry-run: logs rows without writing to DB (AC-7).
- *
- * @param rows - Capability rows to insert
- * @param dryRun - If true, log only; do not write to DB
+ * Default insert function using Drizzle ORM.
+ * Uses .onConflictDoNothing() for AC-6 deduplication.
+ * In dry-run mode, logs without writing to DB.
+ * Uses dynamic import to avoid DB connection at module load time.
  */
 export async function defaultInsertFn(rows: InferredCapability[], dryRun: boolean): Promise<void> {
-  if (rows.length === 0) return
-
   if (dryRun) {
-    logger.info('[infer-capabilities] DRY RUN — would insert capabilities', {
+    logger.info('[infer-capabilities] [dry-run] Would insert capabilities', {
       count: rows.length,
-      rows: rows.map(r => ({
-        capabilityName: r.capabilityName,
-        lifecycleStage: r.lifecycleStage,
-        featureId: r.featureId,
-        wouldInsert: true,
-      })),
+      rows,
     })
     return
   }
 
-  // Dynamic import to avoid circular dependencies at module load time
+  if (rows.length === 0) return
+
   const { db } = await import('@repo/db')
-  const { capabilities } = await import('@repo/knowledge-base/db')
+  const { capabilities } = await import('@repo/database-schema')
 
   await db
     .insert(capabilities)
     .values(
-      rows.map(r => ({
-        capabilityName: r.capabilityName,
-        capabilityType: r.capabilityType,
-        maturityLevel: r.maturityLevel,
-        lifecycleStage: r.lifecycleStage,
-        featureId: r.featureId,
+      rows.map(row => ({
+        capabilityName: row.capabilityName,
+        capabilityType: row.capabilityType,
+        lifecycleStage: row.lifecycleStage,
+        maturityLevel: row.maturityLevel,
+        featureId: row.featureId,
       })),
     )
     .onConflictDoNothing()
 }
 
 // ============================================================================
-// Main orchestrator (AC-5, AC-6, AC-7, AC-8, AC-9)
+// ST-5: Main orchestrator
 // ============================================================================
 
 /**
- * Infer capabilities from story history and populate graph.capabilities.
+ * Main capability inference orchestrator.
  *
- * Orchestration:
- * 1. Load feature rows from graph.features (AC-9: early exit if empty)
- * 2. Scan story files from plans/ (AC-2)
- * 3. Map story text to lifecycle stages (AC-3)
- * 4. Resolve feature UUIDs from epic prefixes (AC-4)
- * 5. Deduplicate in-memory (AC-6)
- * 6. Insert via injectable insertFn (AC-5, AC-7, AC-10)
- * 7. Emit summary result (AC-8)
+ * Orchestrates:
+ * 1. scanStories() — find and parse story files
+ * 2. mapKeywordsToStages() — extract CRUD stages from text
+ * 3. resolveFeatureId() — look up feature UUID by epic prefix
+ * 4. insertFn — insert inferred capabilities with dedup
  *
- * @param options - Inference options (dryRun, validate, rootDir)
- * @param insertFn - Injectable insert function (defaults to defaultInsertFn)
- * @param dbFn - Injectable DB feature query function (defaults to defaultDbFeatureQueryFn)
- * @returns Summary result { attempted, succeeded, failed, skipped }
+ * @param opts - Options including dryRun, validate, rootDir, insertFn, dbFn
+ * @returns PopulateResultSchema-compatible summary
  */
-export async function inferCapabilities(
-  options: InferCapabilitiesOptions = {},
-  insertFn: InsertFn = defaultInsertFn,
-  dbFn: DbFeatureQueryFn = defaultDbFeatureQueryFn,
-): Promise<CapabilityInferenceResult> {
-  const parsedOpts = InferCapabilitiesOptionsSchema.parse(options)
-  const opts = {
-    dryRun: parsedOpts.dryRun ?? false,
-    validate: parsedOpts.validate ?? false,
-    rootDir: parsedOpts.rootDir,
-  }
+export async function inferCapabilities(opts: {
+  dryRun?: boolean
+  validate?: boolean
+  rootDir?: string
+  insertFn?: InsertFn
+  dbFn?: DbFeatureQueryFn
+}): Promise<CapabilityInferenceResult> {
+  const { dryRun = false, validate = false, rootDir = MONOREPO_ROOT } = opts
+  const insertFn = opts.insertFn ?? defaultInsertFn
+  const dbFn = opts.dbFn ?? defaultDbFeatureQueryFn
 
   const result: CapabilityInferenceResult = {
     attempted: 0,
@@ -365,73 +361,51 @@ export async function inferCapabilities(
     skipped: 0,
   }
 
-  // Step 1: Load features (AC-9: early exit if zero features)
-  let featureRows: FeatureRow[]
+  // AC-9: If graph.features has zero rows, exit early
+  let allFeatures: FeatureRow[]
   try {
-    featureRows = await dbFn()
-  } catch (err) {
+    allFeatures = await dbFn()
+  } catch (error) {
     logger.error('[infer-capabilities] Failed to query graph.features', {
-      error: err instanceof Error ? err.message : String(err),
+      error: error instanceof Error ? error.message : String(error),
     })
-    result.failed++
-    return CapabilityInferenceResultSchema.parse(result)
+    throw error
   }
 
-  if (featureRows.length === 0) {
+  if (allFeatures.length === 0) {
     logger.warn('[infer-capabilities] No features found — run WINT-4030 script first')
-    return CapabilityInferenceResultSchema.parse(result)
+    return result
   }
 
-  logger.info('[infer-capabilities] Features loaded', { count: featureRows.length })
+  logger.info('[infer-capabilities] Features loaded', { count: allFeatures.length })
 
-  // Step 2: Scan story files (AC-2)
-  const stories = scanStories(opts.rootDir)
-  logger.info('[infer-capabilities] Stories scanned', { count: stories.length })
+  // Scan story files
+  const stories = scanStories(rootDir)
 
-  if (stories.length === 0) {
-    logger.warn('[infer-capabilities] No story files found in plans/future/platform/')
-    return CapabilityInferenceResultSchema.parse(result)
-  }
-
-  // Step 3-5: Map keywords, resolve features, deduplicate in-memory (AC-3, AC-4, AC-6)
-  // Use capabilityName as deduplication key within this run
+  // Build inferred capabilities — deduplicate by capabilityName
   const capabilityMap = new Map<string, InferredCapability>()
 
-  // Group stories by epic prefix and resolve feature IDs in parallel (Promise.allSettled pattern)
-  const epicPrefixes = [...new Set(stories.map(s => s.epic))]
-
-  const epicToFeatureId = new Map<string, string | null>()
-  for (const epic of epicPrefixes) {
-    const featureId = resolveFeatureId(epic, featureRows)
-    if (featureId === null) {
-      logger.warn('[infer-capabilities] Feature not found for prefix — skipping', { epic })
-    }
-    epicToFeatureId.set(epic, featureId)
-  }
-
-  // Process each story
   for (const story of stories) {
-    const featureId = epicToFeatureId.get(story.epic)
+    const featureId = resolveFeatureId(story.epic, allFeatures)
     if (!featureId) {
-      // Epic not found in features — skipped (EC-4)
+      logger.warn('[infer-capabilities] No feature found for epic', {
+        storyId: story.storyId,
+        epic: story.epic,
+      })
       continue
     }
+
+    // Find the feature name for building capability name
+    const featureRow = allFeatures.find(f => f.id === featureId)
+    const featureName = featureRow?.featureName ?? story.epic.toLowerCase()
 
     const stages = mapKeywordsToStages(story.text)
-    if (stages.size === 0) {
-      // No keywords found in this story (EC-3)
-      continue
-    }
-
-    // Find featureName for this featureId to build capability name
-    const featureRow = featureRows.find(r => r.id === featureId)
-    const featureName = featureRow?.featureName ?? story.epic.toLowerCase()
 
     for (const stage of stages) {
       const capabilityName = `${featureName}-${stage}-inferred`
 
+      // Skip duplicates (first one wins)
       if (capabilityMap.has(capabilityName)) {
-        // Already seen in this run — deduplicate in-memory (AC-6)
         result.skipped++
         continue
       }
@@ -439,163 +413,180 @@ export async function inferCapabilities(
       const capability: InferredCapability = {
         capabilityName,
         capabilityType: 'business',
-        maturityLevel: 'beta',
         lifecycleStage: stage,
+        maturityLevel: 'beta',
         featureId,
       }
 
-      capabilityMap.set(capabilityName, capability)
+      // Validate with Zod before accepting
+      const parsed = InferredCapabilitySchema.safeParse(capability)
+      if (!parsed.success) {
+        logger.warn('[infer-capabilities] Invalid capability shape, skipping', {
+          capabilityName,
+          error: parsed.error.message,
+        })
+        result.skipped++
+        continue
+      }
+
+      capabilityMap.set(capabilityName, parsed.data)
     }
   }
 
-  // Step 6: Insert (AC-5, AC-7)
-  const capabilitiesToInsert = [...capabilityMap.values()]
-  result.attempted = capabilitiesToInsert.length
+  const toInsert = Array.from(capabilityMap.values())
+  result.attempted = toInsert.length
 
-  logger.info('[infer-capabilities] Capabilities to insert', {
-    count: capabilitiesToInsert.length,
-    dryRun: opts.dryRun,
-  })
+  if (toInsert.length === 0) {
+    logger.info('[infer-capabilities] No capabilities to insert')
+    return CapabilityInferenceResultSchema.parse(result)
+  }
 
-  if (capabilitiesToInsert.length > 0) {
+  // Insert in batches of 50
+  const BATCH_SIZE = 50
+  for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+    const batch = toInsert.slice(i, i + BATCH_SIZE)
     try {
-      await insertFn(capabilitiesToInsert, opts.dryRun ?? false)
-      result.succeeded = capabilitiesToInsert.length
-      logger.info('[infer-capabilities] Insert complete', {
-        succeeded: result.succeeded,
-        dryRun: opts.dryRun,
+      await insertFn(batch, dryRun)
+      result.succeeded += batch.length
+      logger.info('[infer-capabilities] Batch inserted', {
+        batchStart: i,
+        batchSize: batch.length,
+        dryRun,
       })
-    } catch (err) {
-      logger.error('[infer-capabilities] Insert failed', {
-        error: err instanceof Error ? err.message : String(err),
+    } catch (error) {
+      result.failed += batch.length
+      logger.error('[infer-capabilities] Batch insert failed', {
+        batchStart: i,
+        batchSize: batch.length,
+        error: error instanceof Error ? error.message : String(error),
       })
-      result.failed = capabilitiesToInsert.length
     }
   }
 
-  // Step 7: --validate flag: call coverage tool per feature (AC-11)
-  if (opts.validate && !opts.dryRun) {
-    await printValidationReport(featureRows)
+  logger.info('[infer-capabilities] Run complete', result)
+
+  // AC-11: --validate flag triggers coverage report
+  if (validate && !dryRun) {
+    await printValidationReport(allFeatures)
   }
 
   return CapabilityInferenceResultSchema.parse(result)
 }
 
 // ============================================================================
-// Validation report (AC-11)
+// ST-6: Validation report
 // ============================================================================
 
 /**
- * Print capability coverage report per feature using graph_get_capability_coverage.
- * Called when --validate flag is set after successful insertion.
+ * Print coverage report per feature using graph_get_capability_coverage.
+ * Called when --validate flag is set.
  */
-async function printValidationReport(featureRows: FeatureRow[]): Promise<void> {
-  logger.info('[infer-capabilities] Running validation coverage report...')
+async function printValidationReport(allFeatures: FeatureRow[]): Promise<void> {
+  const { graph_get_capability_coverage } = await import(
+    '../graph-query/graph-get-capability-coverage.js'
+  )
 
-  // Dynamic import to avoid circular dependency at module load time
-  const { graph_get_capability_coverage } =
-    await import('../graph-query/graph-get-capability-coverage.js')
+  logger.info('[infer-capabilities] Generating validation coverage report...')
 
-  const CRUD_STAGES: LifecycleStage[] = ['create', 'read', 'update', 'delete']
+  const rows: string[] = []
+  rows.push('Feature Coverage Report')
+  rows.push('='.repeat(80))
+  rows.push(
+    [
+      'Feature'.padEnd(30),
+      'create'.padEnd(8),
+      'read'.padEnd(8),
+      'update'.padEnd(8),
+      'delete'.padEnd(8),
+      'total'.padEnd(8),
+      'missing',
+    ].join(' | '),
+  )
+  rows.push('-'.repeat(80))
 
-  const rows: Array<{
-    feature: string
-    create: number
-    read: number
-    update: number
-    delete: number
-    total: number
-    missing: string[]
-  }> = []
+  for (const feature of allFeatures) {
+    try {
+      const coverage = await graph_get_capability_coverage({ featureId: feature.featureName })
+      if (!coverage) {
+        rows.push(`${feature.featureName.padEnd(30)} | (no data)`)
+        continue
+      }
 
-  for (const featureRow of featureRows) {
-    const coverage = await graph_get_capability_coverage({
-      featureId: featureRow.featureName,
-    }).catch(() => null)
+      const caps = coverage.capabilities
+      const missing: string[] = []
+      if (caps.create === 0) missing.push('create')
+      if (caps.read === 0) missing.push('read')
+      if (caps.update === 0) missing.push('update')
+      if (caps.delete === 0) missing.push('delete')
 
-    if (!coverage) {
-      rows.push({
-        feature: featureRow.featureName,
-        create: 0,
-        read: 0,
-        update: 0,
-        delete: 0,
-        total: 0,
-        missing: CRUD_STAGES,
-      })
-      continue
+      rows.push(
+        [
+          feature.featureName.padEnd(30),
+          String(caps.create).padEnd(8),
+          String(caps.read).padEnd(8),
+          String(caps.update).padEnd(8),
+          String(caps.delete).padEnd(8),
+          String(coverage.totalCount).padEnd(8),
+          missing.length > 0 ? missing.join(', ') : 'complete',
+        ].join(' | '),
+      )
+    } catch (error) {
+      rows.push(`${feature.featureName.padEnd(30)} | ERROR: ${error instanceof Error ? error.message : String(error)}`)
     }
-
-    const caps = coverage.capabilities ?? {}
-    const create = (caps as Record<string, number>)['create'] ?? 0
-    const read = (caps as Record<string, number>)['read'] ?? 0
-    const update = (caps as Record<string, number>)['update'] ?? 0
-    const del = (caps as Record<string, number>)['delete'] ?? 0
-    const total = coverage.totalCount ?? 0
-
-    const missing: LifecycleStage[] = []
-    if (create === 0) missing.push('create')
-    if (read === 0) missing.push('read')
-    if (update === 0) missing.push('update')
-    if (del === 0) missing.push('delete')
-
-    rows.push({
-      feature: featureRow.featureName,
-      create,
-      read,
-      update,
-      delete: del,
-      total,
-      missing,
-    })
   }
 
-  // Print table
-  logger.info('[infer-capabilities] CRUD coverage report', { features: rows.length })
-  for (const row of rows) {
-    const status =
-      row.missing.length === 0 ? 'COMPLETE' : `INCOMPLETE (missing: ${row.missing.join(', ')})`
-    logger.info(
-      `  ${row.feature}: create=${row.create} read=${row.read} update=${row.update} delete=${row.delete} total=${row.total} [${status}]`,
-    )
-  }
+  const report = rows.join('\n')
+  logger.info('[infer-capabilities] Coverage report:\n' + report)
+  process.stdout.write(report + '\n')
 }
 
 // ============================================================================
-// Script entry point (AC-1)
+// ST-6: CLI entrypoint
 // ============================================================================
 
 const isMain =
   typeof process !== 'undefined' &&
-  (process.argv[1]?.endsWith('infer-capabilities.ts') ||
-    process.argv[1]?.endsWith('infer-capabilities.js'))
+  (process.argv[1]?.includes('infer-capabilities.ts') ||
+    process.argv[1]?.includes('infer-capabilities.js'))
 
 if (isMain) {
   const args = process.argv.slice(2)
 
-  if (args.includes('--help')) {
-    logger.info(
-      'infer-capabilities.ts — Infer capabilities from story history (WINT-4040)\n' +
-        '\n' +
-        'Usage:\n' +
-        '  pnpm tsx packages/backend/mcp-tools/src/scripts/infer-capabilities.ts [options]\n' +
-        '\n' +
-        'Options:\n' +
-        '  --dry-run    Log would-be inserts without writing to DB\n' +
-        '  --validate   Print capability coverage report per feature after insertion\n' +
-        '  --help       Show this help message\n' +
-        '\n' +
-        'Requires: DATABASE_URL env var pointing at lego_dev (port 5432)',
-    )
+  if (args.includes('--help') || args.includes('-h')) {
+    process.stdout.write(`
+infer-capabilities.ts — Infer capabilities from story history (WINT-4040)
+
+Usage:
+  pnpm tsx packages/backend/mcp-tools/src/scripts/infer-capabilities.ts [options]
+
+Options:
+  --dry-run    Log would-be inserts without writing to DB
+  --validate   After population, print CRUD coverage report per feature
+  --help, -h   Show this help
+
+Environment:
+  DATABASE_URL   PostgreSQL connection string (port 5432, lego_dev)
+
+Examples:
+  pnpm tsx packages/backend/mcp-tools/src/scripts/infer-capabilities.ts --dry-run
+  pnpm tsx packages/backend/mcp-tools/src/scripts/infer-capabilities.ts --validate
+`)
     process.exit(0)
   }
 
   const dryRun = args.includes('--dry-run')
   const validate = args.includes('--validate')
 
+  const parsed = InferCapabilitiesOptionsSchema.safeParse({ dryRun, validate })
+  if (!parsed.success) {
+    logger.error('[infer-capabilities] Invalid options', { error: parsed.error.message })
+    process.exit(1)
+  }
+
   inferCapabilities({ dryRun, validate })
     .then(summary => {
       logger.info('[infer-capabilities] Done', summary)
+      process.stdout.write(JSON.stringify(summary) + '\n')
       process.exit(summary.failed > 0 ? 1 : 0)
     })
     .catch(err => {
