@@ -14,6 +14,8 @@ description: Show the active roadmap — current and future plans only (excludes
 /roadmap --prefix=APIP     # Filter by story prefix
 ```
 
+Multiple filters can be combined: `/roadmap --priority=P1 --type=infra`
+
 ## Execution
 
 ### Step 1 — Parse Arguments
@@ -29,25 +31,29 @@ Parse the user's input for optional filters:
 
 ### Step 2 — Query KB
 
-Call `kb_get_roadmap` with the parsed filters and `limit: 50`.
+Call `kb_list_plans` for each active status: `in-progress`, `stories-created`, `draft`. Make the three calls **in parallel**.
 
-This tool automatically excludes `implemented`, `superseded`, and `archived` plans. Only `draft`, `accepted`, `stories-created`, and `in-progress` plans are returned.
+Pass any parsed filters (`plan_type`, `priority`, `story_prefix`) to each call. Use `limit: 50` for each.
 
-Results are pre-sorted by priority (P1 first), then status, then slug.
+Merge all results into a single list and sort by:
+1. Priority (P1 first)
+2. Status order: in-progress > stories-created > draft
+3. Plan slug alphabetically
 
 ### Step 3 — Format Output
 
 Display results as a markdown table:
 
 ```
-| Priority | Status | Plan Slug | Description | Prefix | Stories | Updated |
+| Priority | Type | Status | Plan Slug | Description | Prefix | Stories | Updated |
 ```
 
 **Column formatting:**
 - **Priority**: P1-P5
+- **Type**: planType value (feature, infra, workflow, etc.)
 - **Status**: as-is
 - **Plan Slug**: backtick-wrapped slug
-- **Description**: use `summary` field from KB response, truncate to 80 chars if needed (append "…")
+- **Description**: use `summary` field from KB response, truncate to 80 chars if needed (append "...")
 - **Prefix**: story_prefix or `--`
 - **Stories**: If the plan has stories (status is `stories-created` or `in-progress`), call `kb_list_stories` with the plan's `story_prefix` to get total and completed counts, then display as `completed/total` (e.g., `3/20`). Count a story as "completed" if its status is `UAT`, `done`, or `implemented`. If no stories exist yet, show `estimated_stories` or `--`.
 - **Updated**: relative date (e.g., "2h ago", "3d ago")

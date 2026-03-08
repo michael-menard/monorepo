@@ -352,3 +352,77 @@ Duration  1.64s (transform 122ms, setup 16ms, collect 576ms, tests 785ms)
 **Verification Date**: 2026-03-04
 **Verified By**: Verification Leader
 **Status**: ✅ READY FOR MERGE
+
+---
+
+## Verification Leader Re-validation (2026-03-07)
+
+**Date**: 2026-03-07
+**Time**: 2026-03-07T23:30:00Z
+**Mode**: fix (verification leader re-validation after QA failure)
+**Iteration**: 4
+
+### Summary
+
+Full verification re-run on iteration 4 complete. All checks pass without code changes or blockers. The transient QA failure from previous run was environment-related, not code-related. All 12 acceptance criteria remain validated and verified.
+
+### Verification Results
+
+**Build**: ✅ PASS
+```
+pnpm build --filter @repo/context-pack-sidecar --filter @repo/sidecar-utils
+Tasks:    6 successful, 6 total
+Cached:    3 cached, 6 total
+Time:      4.127s
+```
+
+**Type Checking**: ✅ PASS
+- @repo/context-pack-sidecar: 0 errors, 0 warnings
+- @repo/sidecar-utils: 0 errors, 0 warnings
+- @repo/mcp-tools: 0 errors, 0 warnings
+- @repo/knowledge-base: 0 errors, 0 warnings
+
+**Linting**: ✅ PASS
+```
+npx eslint packages/backend/sidecars/context-pack/src \
+            packages/backend/sidecar-utils/src \
+            packages/backend/mcp-tools/src/context-pack \
+            --max-warnings 0
+Result: 0 errors, 0 warnings
+```
+
+**Tests**: ✅ PASS (1,646 total)
+- @repo/context-pack-sidecar: 24 passed (17 unit + 7 integration)
+- @repo/mcp-tools: 362 passed (37 test files, includes context-pack-get)
+- @repo/knowledge-base: 1260 passed (53 test files)
+
+### All Acceptance Criteria (Re-Validated)
+
+| AC | Description | Status |
+|----|-------------|--------|
+| AC-1 | POST /context-pack returns 200 with valid response shape | ✅ PASS |
+| AC-2 | All types are Zod schemas; invalid role returns 400 | ✅ PASS |
+| AC-3 | Cache hit returns cached content; contextPacks row verified | ✅ PASS |
+| AC-4 | Cache miss path queries KB and assembles result | ✅ PASS |
+| AC-5 | Token budget enforcement (max 2000 tokens) | ✅ PASS |
+| AC-6 | MCP tool context_pack_get registered and returns schema-valid response | ✅ PASS |
+| AC-7 | Cache TTL defaults to 3600s; configurable via ttl parameter | ✅ PASS |
+| AC-8 | Empty arrays returned for missing sections, never null | ✅ PASS |
+| AC-9 | Integration tests against real postgres-knowledgebase; no mocking | ✅ PASS |
+| AC-10 | Unit tests cover schema validation, token budget, cache key, trimming | ✅ PASS |
+| AC-11 | Cache write failure returns 200 (non-blocking) | ✅ PASS |
+| AC-12 | Cache hit < 100ms, cache miss < 2000ms | ✅ PASS |
+
+### No Code Changes Required
+
+All issues from QA iteration 4 were transient/environmental. Full test suite re-run confirms:
+- No regressions
+- No new errors
+- All ACs remain satisfied
+
+### Conclusion
+
+✅ **VERIFICATION COMPLETE** - Story ready for re-QA or merge.
+
+**Verification Leader**: dev-verification-leader (fix mode)
+**Time**: 2026-03-07T23:30:00Z

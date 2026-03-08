@@ -23,44 +23,35 @@
  │     │ Wave 8 — Context &    │                                  │                       │                                                              │
  │     │ Session               │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 89  │ KBAR-0200             │ Update Knowledge Context Loader  │ in-progress           │ /dev-implement-story plans/future/platform/kb-artifact-       │
- │     │                       │                                  │                       │ migration KBAR-0200                                          │
+│ 89  │ KBAR-0200             │ Update Knowledge Context Loader  │ backlog               │ /elab-story plans/future/platform/kb-artifact- KBAR-0200      │
+│     │                       │                                  │ backlog               │ /elab-story plans/future/platform/kb-artifact- KBAR-0200     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 9 — LangGraph    │                                  │                       │                                                              │
  │     │ Operational!          │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 92a │ WINT-9105             │ Define LangGraph Error Handling  │ backlog               │ /elab-story plans/future/platform/wint WINT-9105              │
- │     │                       │ & Retry Strategy                 │                       │                                                              │
+│ 92a │ WINT-9105             │ Define LangGraph Error Handling  │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9105         │
+│     │                       │ & Retry Strategy                 │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 92b │ WINT-9106             │ Implement LangGraph Checkpointer │ backlog               │ /elab-story plans/future/platform/wint WINT-9106              │
- │     │                       │  & State Recovery                │                       │                                                              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 96  │ KBAR-0230             │ DB-Driven Index Generation       │ backlog               │ /elab-story plans/future/platform/kb-artifact-migration       │
- │     │                       │                                  │                       │ KBAR-0230                                                    │
+│ 92b │ WINT-9106             │ Implement LangGraph Checkpointer │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-9106         │
+│     │                       │  & State Recovery                │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │     │ Wave 10 — Context     │                                  │                       │                                                              │
  │     │ Caching               │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 98  │ WINT-2010             │ Create Role Pack Sidecar         │ backlog               │ /elab-story plans/future/platform/wint WINT-2010              │
+│ 99  │ WINT-2020             │ Create Context Pack Sidecar      │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2020           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 99  │ WINT-2020             │ Create Context Pack Sidecar      │ backlog               │ /elab-story plans/future/platform/wint WINT-2020              │
+│ 100 │ WINT-2030             │ Populate Project Context Cache   │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2030           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 100 │ WINT-2030             │ Populate Project Context Cache   │ backlog               │ /elab-story plans/future/platform/wint WINT-2030              │
+│ 103 │ WINT-2060             │ Populate Library Cache           │ failed-qa             │ /dev-fix-story plans/future/platform/wint WINT-2060           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 103 │ WINT-2060             │ Populate Library Cache           │ backlog               │ /elab-story plans/future/platform/wint WINT-2060              │
+│ 106 │ WINT-2110             │ Update 5 High-Volume Agents to   │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2110         │
+│     │                       │ Use Cache                        │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 104 │ WINT-2070             │ Implement Cache Warming Strategy │ backlog               │ /elab-story plans/future/platform/wint WINT-2070              │
+│ 107 │ WINT-2120             │ Measure Token Reduction          │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-2120         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 105 │ WINT-2080             │ Create context-warmer Agent      │ backlog               │ /elab-story plans/future/platform/wint WINT-2080              │
+│ 108 │ WINT-4010             │ Create Cohesion Sidecar          │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-4010           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 106 │ WINT-2110             │ Update 5 High-Volume Agents to   │ backlog               │ /elab-story plans/future/platform/wint WINT-2110              │
- │     │                       │ Use Cache                        │                       │                                                              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 107 │ WINT-2120             │ Measure Token Reduction          │ backlog               │ /elab-story plans/future/platform/wint WINT-2120              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 108 │ WINT-4010             │ Create Cohesion Sidecar          │ backlog               │ /elab-story plans/future/platform/wint WINT-4010              │
- ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
- │ 109 │ WINT-4020             │ Create Rules Registry Sidecar    │ backlog               │ /elab-story plans/future/platform/wint WINT-4020              │
+│ 109 │ WINT-4020             │ Create Rules Registry Sidecar    │ ready-to-work         │ /dev-implement-story plans/future/platform/wint WINT-4020     │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 110 │ WINT-4030             │ Populate Graph with Existing     │ backlog               │ /elab-story plans/future/platform/wint WINT-4030              │
  │     │                       │ Features                         │                       │                                                              │

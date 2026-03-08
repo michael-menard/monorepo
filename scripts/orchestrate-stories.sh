@@ -815,8 +815,28 @@ update_index_status() {
   echo "$TAG IDX  UPDATE:  $STORY_ID → $index_status"
 }
 
+# ── Work order locking (mkdir-based, POSIX-safe, macOS-compatible) ────
+WO_LOCK_DIR="$LOG_DIR/.wo-lock.d"
+
+wo_lock() {
+  local max_wait=30
+  local waited=0
+  while ! mkdir "$WO_LOCK_DIR" 2>/dev/null; do
+    sleep 1
+    waited=$((waited + 1))
+    if [[ $waited -ge $max_wait ]]; then
+      echo "WARN: work order lock timeout after ${max_wait}s, proceeding" >&2
+      break
+    fi
+  done
+}
+
+wo_unlock() {
+  rmdir "$WO_LOCK_DIR" 2>/dev/null || true
+}
+
 # Remove a completed/UAT story row from the work order file.
-# Uses sed to delete lines containing the story ID from the table.
+# Uses line-by-line filtering with a lock to prevent parallel write races.
 remove_from_work_order() {
   local STORY_ID="$1"
   local WO_FILE="$2"
@@ -830,6 +850,8 @@ remove_from_work_order() {
   if ! grep -q "$STORY_ID" "$WO_FILE" 2>/dev/null; then
     return 0
   fi
+
+  wo_lock
 
   # Remove all lines containing this story ID (data rows + continuation rows)
   # Create temp file (macOS sed doesn't support -i without extension)
@@ -864,7 +886,127 @@ remove_from_work_order() {
   done < "$WO_FILE" > "$TMP_FILE"
 
   mv "$TMP_FILE" "$WO_FILE"
+
+  wo_unlock
+
   echo "$TAG WO   REMOVE:  $STORY_ID (removed from work order)"
+}
+
+# ── State → work order status mapping ─────────────────────────────────
+_state_to_wo_status() {
+  case "$1" in
+    NOT_FOUND)      echo "backlog" ;;
+    GENERATED)      echo "backlog" ;;
+    ELABORATED)     echo "ready-to-work" ;;
+    NEEDS_REVIEW)   echo "needs-code-review" ;;
+    FAILED_REVIEW)  echo "failed-code-review" ;;
+    READY_FOR_QA)   echo "ready-for-qa" ;;
+    FAILED_QA)      echo "failed-qa" ;;
+    UAT)            echo "UAT" ;;
+    NEEDS_SPLIT)    echo "needs-split" ;;
+    *)              echo "unknown" ;;
+  esac
+}
+
+# ── State → next command mapping ──────────────────────────────────────
+_state_to_wo_command() {
+  local state="$1" feat_dir="$2" story_id="$3"
+  case "$state" in
+    NOT_FOUND)      echo "/pm-story generate ${feat_dir} ${story_id}" ;;
+    GENERATED)      echo "/elab-story ${feat_dir} ${story_id}" ;;
+    ELABORATED)     echo "/dev-implement-story ${feat_dir} ${story_id}" ;;
+    NEEDS_REVIEW)   echo "/dev-code-review ${feat_dir} ${story_id}" ;;
+    FAILED_REVIEW)  echo "/dev-fix-story ${feat_dir} ${story_id}" ;;
+    READY_FOR_QA)   echo "/qa-verify-story ${feat_dir} ${story_id}" ;;
+    FAILED_QA)      echo "/dev-fix-story ${feat_dir} ${story_id}" ;;
+    *)              echo "" ;;
+  esac
+}
+
+# Update a story's Status and Next Command columns in the work order.
+# Does NOT remove — only rewrites the Status and Command columns in-place.
+update_wo_status() {
+  local STORY_ID="$1"
+  local NEW_STATE="$2"
+  local FEAT_DIR="$3"
+  local WO_FILE="$4"
+  local TAG="$5"
+
+  if [[ ! -f "$WO_FILE" ]]; then
+    return 0
+  fi
+
+  if ! grep -q "$STORY_ID" "$WO_FILE" 2>/dev/null; then
+    return 0
+  fi
+
+  local NEW_STATUS
+  NEW_STATUS=$(_state_to_wo_status "$NEW_STATE")
+  local NEW_CMD
+  NEW_CMD=$(_state_to_wo_command "$NEW_STATE" "$FEAT_DIR" "$STORY_ID")
+
+  # Read current status to avoid no-op writes
+  local CUR_STATUS
+  CUR_STATUS=$(grep "$STORY_ID" "$WO_FILE" 2>/dev/null | awk -F '│' '{print $5}' | head -1 | xargs) || true
+  if [[ "$CUR_STATUS" == "$NEW_STATUS" ]]; then
+    return 0
+  fi
+
+  wo_lock
+
+  local TMP_FILE
+  TMP_FILE=$(mktemp /tmp/wo-update-XXXXXX)
+  local in_story=false
+
+  while IFS= read -r line; do
+    if [[ "$line" == *"$STORY_ID"* && "$line" == *"│"* ]]; then
+      # Main data row — rewrite Status and Command columns
+      local col1 col2 col3 orig_status orig_cmd sw cw
+      col1=$(echo "$line" | awk -F '│' '{print $2}')
+      col2=$(echo "$line" | awk -F '│' '{print $3}')
+      col3=$(echo "$line" | awk -F '│' '{print $4}')
+      orig_status=$(echo "$line" | awk -F '│' '{print $5}')
+      orig_cmd=$(echo "$line" | awk -F '│' '{print $6}')
+      sw=${#orig_status}
+      cw=${#orig_cmd}
+
+      local padded_status padded_cmd
+      padded_status=$(printf "%-${sw}s" " $NEW_STATUS")
+      padded_cmd=$(printf "%-${cw}s" " $NEW_CMD")
+
+      echo "│${col1}│${col2}│${col3}│${padded_status}│${padded_cmd}│"
+      in_story=true
+    elif $in_story; then
+      local story_col
+      story_col=$(echo "$line" | awk -F '│' '{print $3}' 2>/dev/null | xargs) || true
+      if [[ -z "$story_col" && "$line" == *"│"* && "$line" != *"├"* && "$line" != *"┌"* && "$line" != *"└"* ]]; then
+        # Continuation row — clear status/command continuation
+        local col1 col2 col3 orig_status orig_cmd sw cw
+        col1=$(echo "$line" | awk -F '│' '{print $2}')
+        col2=$(echo "$line" | awk -F '│' '{print $3}')
+        col3=$(echo "$line" | awk -F '│' '{print $4}')
+        orig_status=$(echo "$line" | awk -F '│' '{print $5}')
+        orig_cmd=$(echo "$line" | awk -F '│' '{print $6}')
+        sw=${#orig_status}
+        cw=${#orig_cmd}
+        local padded_status padded_cmd
+        padded_status=$(printf "%-${sw}s" " ")
+        padded_cmd=$(printf "%-${cw}s" " ")
+        echo "│${col1}│${col2}│${col3}│${padded_status}│${padded_cmd}│"
+      else
+        in_story=false
+        echo "$line"
+      fi
+    else
+      echo "$line"
+    fi
+  done < "$WO_FILE" > "$TMP_FILE"
+
+  mv "$TMP_FILE" "$WO_FILE"
+
+  wo_unlock
+
+  echo "$TAG WO   UPDATE:  $STORY_ID → $NEW_STATUS"
 }
 
 # Combined sync: update KB + index + work order after a state transition.
@@ -882,9 +1024,11 @@ sync_status_after_transition() {
   # Update stories.index.md (best-effort, in background)
   update_index_status "$FEAT_DIR" "$STORY_ID" "$NEW_STATE" "$TAG" &
 
-  # If completed/UAT, remove from work order
+  # If completed/UAT, remove from work order; otherwise update status column
   if [[ "$NEW_STATE" == "UAT" ]]; then
     remove_from_work_order "$STORY_ID" "$WORK_ORDER" "$TAG"
+  else
+    update_wo_status "$STORY_ID" "$NEW_STATE" "$FEAT_DIR" "$WORK_ORDER" "$TAG"
   fi
 
   # Don't wait for background jobs here — they're best-effort

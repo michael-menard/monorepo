@@ -6,8 +6,8 @@ Plan: [workflow-artifact-streamlining](../..)
 
 | Status | Count |
 |--------|-------|
-| Ready | 3 |
-| UAT | 3 |
+| Blocked | 1 |
+| UAT | 5 |
 | **Total** | **6** |
 
 ## Phase 1: P0 Critical Consolidations
@@ -26,7 +26,7 @@ Move fix-cycle summaries into CHECKPOINT.yaml and move token logs from Markdown 
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
 | AC-2010 | FIX-VERIFICATION-SUMMARY → CHECKPOINT.yaml | AC-1010, AC-1020 | ✅ uat |
-| AC-2020 | TOKEN-LOG.md → KB | AC-1010 | ⏳ ready-to-work |
+| AC-2020 | TOKEN-LOG.md → KB | AC-1010 | ✅ uat |
 
 ## Phase 3: P2 Structural Cleanup
 
@@ -34,8 +34,8 @@ Fold _pm/ worker outputs into story.yaml and remove dead bootstrap artifacts tha
 
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
-| AC-3010 | _pm/ Folder → story.yaml Sections | AC-1010, AC-2010, AC-2020 | ⏳ ready-to-work |
-| AC-3020 | Bootstrap Dead Artifact Cleanup | AC-3010 | ⏳ ready-to-work |
+| AC-3010 | _pm/ Folder → story.yaml Sections | AC-1010, AC-2010, AC-2020 | ✅ uat |
+| AC-3020 | Bootstrap Dead Artifact Cleanup | AC-3010, KFMB-5050, CDTS | ⏸️ blocked (by KFMB + CDTS plans) |
 
 ## Metrics
 

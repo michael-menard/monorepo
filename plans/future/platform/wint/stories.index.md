@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-03-04T00:30:00Z"
+updated_at: "2026-03-08T02:15:00Z"
 ---
 
 # WINT Stories Index
@@ -16,18 +16,18 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 23 |
+| uat | 24 |
 | in-qa | 2 |
-| ready-for-qa | 2 |
-| needs-code-review | 6 |
-| ready-for-code-review | 1 |
-| failed-code-review | 1 |
-| failed-qa | 1 |
+| ready-for-qa | 1 |
+| needs-code-review | 7 |
+| ready-for-code-review | 0 |
+| failed-code-review | 0 |
+| failed-qa | 4 |
 | elaboration | 0 |
-| created | 2 |
+| created | 0 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
+| ready-to-work | 4 |
 | pending | 86 |
 
 ---
@@ -979,7 +979,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2010: Create Role Pack Sidecar
 
-**Status:** ready-for-code-review
+**Status:** uat
 **Depends On:** WINT-1120
 **Phase:** 2
 **Feature:** Create versioned role pack sidecar service at GET /role-pack?role=dev|po|qa|da&v=X returning 150-300 token role instructions
@@ -997,7 +997,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2020: Create Context Pack Sidecar
 
-**Status:** created
+**Status:** failed-qa
 **Depends On:** WINT-2010
 **Phase:** 2
 **Feature:** Create context pack sidecar at POST /context-pack returning node-scoped context: story_brief, kb_facts, kb_rules, kb_links, repo_snippets
@@ -1009,14 +1009,14 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 **Risk Notes:** Must query KB efficiently, respect token budgets
 
-**Story File:** `created/WINT-2020/WINT-2020.md`
+**Story File:** `failed-qa/WINT-2020/WINT-2020.md`
 
 ---
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** ready-for-code-review
-**Story File:** `wint/needs-code-review/WINT-2030/WINT-2030.md`
+**Status:** failed-qa
+**Story File:** `wint/failed-qa/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1064,7 +1064,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2060: Populate Library Cache
 
-**Status:** ready-to-work
+**Status:** failed-qa
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs
@@ -1155,7 +1155,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2120: Measure Token Reduction
 
-**Status:** failed-code-review
+**Status:** ready-for-qa
 **Depends On:** WINT-2110
 **Phase:** 2
 **Feature:** Run benchmark comparing token usage before/after cache implementation, target 80% reduction
@@ -1330,7 +1330,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4010: Create Cohesion Sidecar
 
-**Status:** created
+**Status:** needs-code-review
 **Depends On:** WINT-2020, WINT-1080
 **Phase:** 4
 **Feature:** Create cohesion sidecar at POST /cohesion/audit (post-bootstrap) and POST /cohesion/check (gates) to detect Franken-features and capability gaps
@@ -1346,7 +1346,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4020: Create Rules Registry Sidecar
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WINT-2020
 **Phase:** 4
 **Feature:** Create rules registry sidecar at GET/POST /rules for enforceable rules from retros with propose/promote workflow
@@ -2518,7 +2518,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 
 ### WINT-9106: Implement LangGraph Checkpointer & State Recovery
 
-**Status:** elaboration
+**Status:** needs-code-review
 **Depends On:** WINT-9105, WINT-0070
 **Phase:** 9
 **Feature:** PostgreSQL-backed checkpointer for LangGraph graphs with crash-safe state recovery, resume-graph CLI, checkpoint TTL/cleanup, and integration tests
@@ -2526,7 +2526,7 @@ LangGraph parity phase - Port all WINT agents to LangGraph nodes for full featur
 - packages/backend/orchestrator/src/checkpointer/
 - wint.workflow_checkpoints table (via WINT-0070 migration)
 
-**Story File:** `wint/elaboration/WINT-9106/WINT-9106.md`
+**Story File:** `wint/needs-code-review/WINT-9106/WINT-9106.md`
 
 **Goal:** Replace file-based CHECKPOINT.yaml recovery with DB-backed LangGraph thread checkpoint persistence
 
