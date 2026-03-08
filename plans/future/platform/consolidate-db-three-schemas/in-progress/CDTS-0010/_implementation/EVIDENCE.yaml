@@ -1,0 +1,106 @@
+schema: 1
+story_id: "CDTS-0010"
+version: 1
+timestamp: "2026-03-08T06:25:00Z"
+
+acceptance_criteria:
+  - ac_id: "AC1"
+    ac_text: "schema_migrations table: id SERIAL, filename TEXT UNIQUE, applied_at TIMESTAMPTZ DEFAULT now(), applied_by TEXT"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "docker exec knowledge-base-postgres psql -U kbuser -d knowledgebase -c '\\d schema_migrations'"
+        result: "PASS — id integer SERIAL PK, filename TEXT NOT NULL UNIQUE, applied_at TIMESTAMPTZ NOT NULL DEFAULT now(), applied_by TEXT nullable"
+
+  - ac_id: "AC2"
+    ac_text: "Migration 020_cdts_safety_preamble.sql creates table and self-inserts"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "docker exec -i knowledge-base-postgres psql -U kbuser -d knowledgebase < 020_cdts_safety_preamble.sql"
+        result: "PASS — Output: DO, CREATE TABLE, COMMENT (x5), INSERT 0 1"
+
+  - ac_id: "AC3"
+    ac_text: "Safety preamble with current_database() check"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "Run safety preamble DO-block against 'postgres' database"
+        result: "PASS — ERROR raised: 'Safety check failed: expected database \"knowledgebase\" but connected to \"postgres\"'"
+
+  - ac_id: "AC4"
+    ac_text: "RUNNER.md with canonical psql command and full procedures"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "Created RUNNER.md (174 lines)"
+        result: "PASS — Contains: canonical psql command, pre-flight checklist, execution steps, rollback procedure, post-flight verification queries, naming convention, safety preamble reference"
+
+  - ac_id: "AC5"
+    ac_text: "Migration applied successfully to knowledgebase DB"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "docker exec -i knowledge-base-postgres psql -U kbuser -d knowledgebase < 020_cdts_safety_preamble.sql"
+        result: "PASS — Exit code 0, all statements executed successfully"
+
+  - ac_id: "AC6"
+    ac_text: "schema_migrations table contains exactly one row"
+    status: PASS
+    evidence_items:
+      - type: command
+        command: "docker exec knowledge-base-postgres psql -U kbuser -d knowledgebase -c 'SELECT COUNT(*) FROM schema_migrations;'"
+        result: "PASS — row_count: 1, filename: 020_cdts_safety_preamble.sql, applied_by: kbuser"
+
+touched_files:
+  - path: "packages/backend/database-schema/src/migrations/knowledgebase/020_cdts_safety_preamble.sql"
+    action: created
+    lines: 45
+    description: "Safety preamble DO-block + schema_migrations table creation + self-registration INSERT"
+
+  - path: "packages/backend/database-schema/src/migrations/knowledgebase/RUNNER.md"
+    action: created
+    lines: 174
+    description: "Canonical psql command, pre-flight checklist, execution steps, rollback procedure, post-flight verification, naming convention"
+
+commands_run:
+  - command: "docker exec -i knowledge-base-postgres psql -U kbuser -d knowledgebase < 020_cdts_safety_preamble.sql"
+    result: SUCCESS
+    output: "DO\nCREATE TABLE\nCOMMENT (x5)\nINSERT 0 1"
+    timestamp: "2026-03-08T06:24:25Z"
+
+  - command: "docker exec knowledge-base-postgres psql -U kbuser -d knowledgebase -c 'SELECT COUNT(*) FROM schema_migrations;'"
+    result: SUCCESS
+    output: "row_count: 1"
+    timestamp: "2026-03-08T06:24:30Z"
+
+  - command: "Safety preamble rejection test against postgres database"
+    result: SUCCESS
+    output: "ERROR: Safety check failed — expected knowledgebase but connected to postgres"
+    timestamp: "2026-03-08T06:24:40Z"
+
+endpoints_exercised: []
+
+test_summary:
+  unit: { pass: 0, fail: 0 }
+  sql: { pass: 3, fail: 0 }
+  e2e: { pass: 0, fail: 0 }
+
+e2e_tests:
+  status: exempt
+  exempt_reason: "story_type: infra — pure SQL + docs, no application code changed"
+  tests_written: false
+
+coverage: {}
+
+notable_decisions:
+  - "Used docker exec -i for migration application since psql not installed locally on macOS host"
+  - "Safety preamble uses RAISE EXCEPTION inside DO-block for clean transaction abort on wrong database"
+  - "Added ON CONFLICT (filename) DO NOTHING to self-registration INSERT for idempotency"
+  - "New knowledgebase/ subdirectory is entirely separate from Drizzle-managed app/ and umami/ directories"
+  - "All COMMENT ON statements included for documentation even though not strictly required by ACs"
+
+known_deviations: []
+
+token_summary:
+  execute: { in: 0, out: 0 }
