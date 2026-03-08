@@ -9,7 +9,7 @@
 
 import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { desc, eq, sql, and, type SQL } from 'drizzle-orm'
+import { desc, eq, sql, and, isNull, type SQL } from 'drizzle-orm'
 import { knowledgeEntries, type KnowledgeEntry } from '../db/schema.js'
 import { KbListInputSchema, type KbListInput } from './schemas.js'
 
@@ -114,8 +114,8 @@ export async function kb_list(input?: KbListInput, deps?: KbListDeps): Promise<K
   // Enforce maximum limit
   const effectiveLimit = Math.min(limit, MAX_LIMIT)
 
-  // Step 2: Build filter conditions
-  const conditions: SQL<unknown>[] = []
+  // Step 2: Build filter conditions (soft-deleted entries excluded by default)
+  const conditions: SQL<unknown>[] = [isNull(knowledgeEntries.deletedAt)]
 
   if (role !== undefined) {
     conditions.push(eq(knowledgeEntries.role, role))

@@ -1480,14 +1480,16 @@ export async function handleKbStats(
     // Query total unique tags (KNOW-006 AC5)
     const totalTagsResult = await db.execute(sql`
       SELECT count(DISTINCT tag)::int as total_tags
-      FROM knowledge_entries, unnest(tags) as tag
+      FROM public.knowledge_entries, unnest(tags) as tag
+      WHERE deleted_at IS NULL
     `)
     const totalTags = (totalTagsResult.rows as Array<{ total_tags: number }>)[0]?.total_tags ?? 0
 
     // Query top tags (top 10 by count DESC)
     const tagsResult = await db.execute(sql`
       SELECT tag, count(*)::int as count
-      FROM knowledge_entries, unnest(tags) as tag
+      FROM public.knowledge_entries, unnest(tags) as tag
+      WHERE deleted_at IS NULL
       GROUP BY tag
       ORDER BY count DESC
       LIMIT 10
@@ -1501,7 +1503,7 @@ export async function handleKbStats(
     // Query cache entries count (KNOW-006 AC5)
     const cacheResult = await db.execute(sql`
       SELECT count(*)::int as cache_entries
-      FROM embedding_cache
+      FROM public.embedding_cache
     `)
     const cacheEntries =
       (cacheResult.rows as Array<{ cache_entries: number }>)[0]?.cache_entries ?? 0
