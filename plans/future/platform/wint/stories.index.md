@@ -1015,8 +1015,8 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2030: Populate Project Context Cache
 
-**Status:** failed-qa
-**Story File:** `wint/failed-qa/WINT-2030/WINT-2030.md`
+**Status:** needs-code-review
+**Story File:** `wint/needs-code-review/WINT-2030/WINT-2030.md`
 **Story Generated:** 2026-03-02
 **Depends On:** WINT-0100
 **Phase:** 2
@@ -1064,7 +1064,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2060: Populate Library Cache
 
-**Status:** failed-qa
+**Status:** needs-code-review
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs
