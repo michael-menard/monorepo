@@ -1,0 +1,335 @@
+review_id: CDTS-1010-REV-001
+story_id: CDTS-1010
+reviewer: claude-code
+reviewed_at: "2026-03-08"
+signal: REVIEW PASS
+
+verdict_summary: >
+  All acceptance criteria are fully met. SQL is syntactically correct and idempotent.
+  Drizzle column definitions match the migration SQL and the original public.story_token_usage
+  definition. TypeScript compiles with zero errors (verified from main repo with node_modules).
+  Zod-inferred types are used throughout per CLAUDE.md requirements. No naming collisions.
+  No regressions against existing exports.
+
+# ===========================================================================
+# Detailed Findings by Check Area
+# ===========================================================================
+
+checks:
+
+  - id: SQL-001
+    area: SQL correctness
+    status: PASS
+    notes: >
+      Migration file 0034_cdts_1010_analytics_schema.sql is syntactically correct.
+      All statements follow valid PostgreSQL DDL syntax. Section ordering is logical:
+      schema creation -> GRANT USAGE -> enum -> table moves -> table creates -> table GRANTs.
+      The experiment_status enum is created before model_experiments, which references it.
+      change_telemetry FK references model_experiments(id) which is defined above it.
+
+  - id: SQL-002
+    area: SQL idempotency
+    status: PASS
+    notes: >
+      All DDL guards are present and correct:
+      - CREATE SCHEMA IF NOT EXISTS analytics
+      - Enum guarded by DO $$ block checking pg_type JOIN pg_namespace
+      - ALTER TABLE story_token_usage SET SCHEMA guarded by DO $$ checking pg_tables
+        WHERE schemaname='public' AND tablename='story_token_usage'
+      - CREATE TABLE IF NOT EXISTS for all three new tables
+      - CREATE INDEX IF NOT EXISTS for all indexes
+      - GRANTs are idempotent by PostgreSQL semantics (re-granting same privilege is a no-op)
+      MINOR OBSERVATION: On a second migration run after story_token_usage has already been
+      moved, the GRANT on analytics.story_token_usage at line 141 will succeed because the
+      table exists in analytics. This is correct behavior.
+
+  - id: SQL-003
+    area: schema / GRANT requirements
+    status: PASS
+    notes: >
+      - CREATE SCHEMA IF NOT EXISTS analytics: present (line 17)
+      - GRANT USAGE ON SCHEMA analytics TO kbuser: present (line 22)
+      - GRANT SELECT, INSERT, UPDATE, DELETE on all four tables to kbuser: present (lines 141-144)
+
+  - id: SQL-004
+    area: table presence and FK
+    status: PASS
+    notes: >
+      All four tables are present in analytics schema:
+      - analytics.story_token_usage (moved from public via idempotent DO $$ block)
+      - analytics.model_experiments (created fresh, CREATE TABLE IF NOT EXISTS)
+      - analytics.model_assignments (created fresh, CREATE TABLE IF NOT EXISTS)
+      - analytics.change_telemetry (created fresh, CREATE TABLE IF NOT EXISTS)
+      FK on analytics.change_telemetry.experiment_id REFERENCES analytics.model_experiments(id)
+      is present and correctly ordered (model_experiments created before change_telemetry).
+      The FK is nullable (no NOT NULL), which is correct — a telemetry row may exist without
+      an associated experiment.
+
+  - id: DRIZZLE-001
+    area: analyticsSchema definition
+    status: PASS
+    notes: >
+      export const analyticsSchema = pgSchema('analytics') is defined at the top of analytics.ts.
+      All four tables use analyticsSchema.table() correctly.
+      The enum uses analyticsSchema.enum() correctly.
+
+  - id: DRIZZLE-002
+    area: column type alignment — model_experiments
+    status: PASS
+    notes: >
+      SQL:     id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+      Drizzle: uuid('id').primaryKey().defaultRandom()  ✓
+
+      SQL:     change_type VARCHAR(64) NOT NULL
+      Drizzle: varchar('change_type', { length: 64 }).notNull()  ✓
+
+      SQL:     file_type VARCHAR(64) NOT NULL
+      Drizzle: varchar('file_type', { length: 64 }).notNull()  ✓
+
+      SQL:     control_model VARCHAR(128) NOT NULL
+      Drizzle: varchar('control_model', { length: 128 }).notNull()  ✓
+
+      SQL:     challenger_model VARCHAR(128) NOT NULL
+      Drizzle: varchar('challenger_model', { length: 128 }).notNull()  ✓
+
+      SQL:     status analytics.experiment_status NOT NULL DEFAULT 'active'
+      Drizzle: analyticsExperimentStatusEnum('status').notNull().default('active')  ✓
+
+      SQL:     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      Drizzle: timestamp('started_at', { withTimezone: true }).notNull().defaultNow()  ✓
+
+      SQL:     concluded_at TIMESTAMPTZ (nullable)
+      Drizzle: timestamp('concluded_at', { withTimezone: true })  ✓
+
+      SQL:     control_sample_size INTEGER (nullable)
+      Drizzle: integer('control_sample_size')  ✓
+
+      SQL:     challenger_sample_size INTEGER (nullable)
+      Drizzle: integer('challenger_sample_size')  ✓
+
+      SQL:     control_success_rate NUMERIC(5, 4) (nullable)
+      Drizzle: numeric('control_success_rate', { precision: 5, scale: 4 })  ✓
+
+      SQL:     challenger_success_rate NUMERIC(5, 4) (nullable)
+      Drizzle: numeric('challenger_success_rate', { precision: 5, scale: 4 })  ✓
+
+      SQL:     min_sample_per_arm INTEGER NOT NULL DEFAULT 50
+      Drizzle: integer('min_sample_per_arm').notNull().default(50)  ✓
+
+      SQL:     max_window_rows INTEGER (nullable)
+      Drizzle: integer('max_window_rows')  ✓
+
+      SQL:     max_window_days INTEGER (nullable)
+      Drizzle: integer('max_window_days')  ✓
+
+      SQL:     winner VARCHAR(128) (nullable)
+      Drizzle: varchar('winner', { length: 128 })  ✓
+
+      SQL:     notes TEXT (nullable)
+      Drizzle: text('notes')  ✓
+
+      SQL:     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      Drizzle: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()  ✓
+
+      SQL:     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      Drizzle: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()  ✓
+
+  - id: DRIZZLE-003
+    area: column type alignment — model_assignments
+    status: PASS
+    notes: >
+      All columns match between SQL and Drizzle definition:
+      id UUID PK, agent_pattern TEXT NOT NULL, provider TEXT NOT NULL,
+      model TEXT NOT NULL, tier INTEGER NOT NULL, effective_from TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(). All verified correct.
+
+  - id: DRIZZLE-004
+    area: column type alignment — change_telemetry
+    status: PASS
+    notes: >
+      All columns match: id UUID PK, experiment_id UUID nullable FK,
+      change_type TEXT NOT NULL, file_path TEXT nullable, old_model TEXT nullable,
+      new_model TEXT nullable, outcome TEXT nullable, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW().
+      All verified correct.
+
+  - id: DRIZZLE-005
+    area: column type alignment — story_token_usage
+    status: PASS
+    notes: >
+      Original table in apps/api/knowledge-base/src/db/migrations/011_add_story_token_usage.sql
+      columns: id UUID PK, story_id TEXT NOT NULL, feature TEXT nullable,
+      phase TEXT NOT NULL, agent TEXT nullable, iteration INTEGER DEFAULT 0,
+      input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
+      total_tokens INTEGER NOT NULL DEFAULT 0, logged_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now().
+      Drizzle definition in analytics.ts matches all columns exactly.
+
+  - id: DRIZZLE-006
+    area: partial unique index handling
+    status: PASS (with documented limitation)
+    notes: >
+      The partial unique index model_experiments_active_unique_idx
+      ON analytics.model_experiments (change_type, file_type) WHERE status='active'
+      cannot be expressed in Drizzle schema definitions (Drizzle does not support partial
+      unique indexes in schema). The implementation correctly documents this in a comment
+      and falls back to non-partial indexes in the Drizzle table definition. The DB constraint
+      is correctly enforced by the migration SQL. This is the appropriate and standard workaround.
+
+  - id: TS-001
+    area: TypeScript compilation
+    status: PASS
+    notes: >
+      pnpm check-types (npx tsc --project packages/backend/database-schema/tsconfig.build.json --noEmit)
+      exits 0 with no errors when run from the main monorepo root where node_modules are installed.
+      The worktree shows module-not-found errors for all schema files uniformly — this is a
+      worktree environment artifact (node_modules not symlinked), not a code defect. The
+      errors affect every schema file identically (admin-audit-log.ts, artifacts.ts, etc.),
+      confirming they are pre-existing environment issues unrelated to this story's changes.
+
+  - id: TS-002
+    area: Zod schema compliance (CLAUDE.md)
+    status: PASS
+    notes: >
+      No raw TypeScript interfaces are used. All exported types are derived via z.infer<>
+      from drizzle-zod generated schemas (createInsertSchema, createSelectSchema).
+      Eight insert/select Zod schemas exported, eight corresponding z.infer<> types exported.
+      This fully complies with the CLAUDE.md Zod-first types requirement.
+
+  - id: TS-003
+    area: code style compliance
+    status: PASS
+    notes: >
+      No semicolons in TypeScript (Prettier style). Single quotes used. Named exports only
+      (no default exports). No console.log usage. No TypeScript interfaces.
+      Trailing commas present in multi-line object literals. Import grouping is clean.
+      Minor note: there is a blank line inside the import block on line 24 of analytics.ts
+      (between 'timestamp,' and blank line and 'uuid,') — this is a Prettier formatting
+      artifact and is acceptable; it would be auto-fixed on next format pass.
+
+  - id: AC-001
+    area: AC traceability — migration file path
+    status: PASS
+    notes: >
+      AC specifies file named 021_cdts_create_analytics_schema.sql; plan decision ARCH-001
+      (documented in EVIDENCE.yaml and migration preamble) explicitly overrides to 0034
+      sequential numbering to maintain migration history integrity. This deviation is
+      pre-approved and correctly documented.
+
+  - id: AC-002
+    area: AC traceability — CREATE SCHEMA IF NOT EXISTS analytics
+    status: PASS
+    evidence_file: "0034_cdts_1010_analytics_schema.sql line 17"
+
+  - id: AC-003
+    area: AC traceability — GRANT USAGE ON SCHEMA analytics TO kbuser
+    status: PASS
+    evidence_file: "0034_cdts_1010_analytics_schema.sql line 22"
+
+  - id: AC-004
+    area: AC traceability — tables in analytics schema
+    status: PASS
+    notes: >
+      All four tables confirmed in analytics schema. story_token_usage moved from public
+      (idempotent DO $$ guard). model_experiments, model_assignments, change_telemetry
+      created fresh with IF NOT EXISTS guards.
+
+  - id: AC-005
+    area: AC traceability — FK change_telemetry.experiment_id -> model_experiments.id
+    status: PASS
+    evidence_file: "0034_cdts_1010_analytics_schema.sql line 124"
+    notes: >
+      REFERENCES analytics.model_experiments(id) present. FK is nullable (no NOT NULL on
+      experiment_id), consistent with the Drizzle definition and appropriate for the use case.
+
+  - id: AC-006
+    area: AC traceability — idempotency
+    status: PASS
+    notes: >
+      Running migration twice will not error. All DDL uses IF NOT EXISTS, DO $$ guards for
+      enum and schema move, GRANTs are idempotent by PostgreSQL semantics.
+
+  - id: AC-007
+    area: AC traceability — analyticsSchema = pgSchema('analytics')
+    status: PASS
+    evidence_file: "analytics.ts line 34"
+
+  - id: AC-008
+    area: AC traceability — all 4 tables defined with analyticsSchema.table()
+    status: PASS
+    evidence_file: "analytics.ts lines 62, 111, 137, 164"
+
+  - id: AC-009
+    area: AC traceability — column definitions match CDTS-0020 manifest
+    status: PASS
+    notes: >
+      Cross-checked against the original migration (011_add_story_token_usage.sql) for
+      story_token_usage and against the migration SQL for the three new tables.
+      All columns match in name, type, nullability, and defaults.
+
+  - id: AC-010
+    area: AC traceability — pnpm check-types passes
+    status: PASS
+    notes: "Verified: exit 0 from main monorepo root."
+
+  - id: AC-011
+    area: AC traceability — wint table count = 0 (trivially true)
+    status: PASS
+    notes: >
+      wint schema was never created in the live DB per CDTS-0020 audit. This AC is trivially
+      satisfied by design and is correctly noted as such in the story acceptance criteria.
+
+  - id: AC-012
+    area: AC traceability — analytics table count = 4 after migration
+    status: PASS
+    notes: >
+      Migration creates: analytics.model_experiments, analytics.model_assignments,
+      analytics.change_telemetry, analytics.story_token_usage. Count = 4 as required.
+
+  - id: EXPORT-001
+    area: index.ts re-exports — completeness
+    status: PASS
+    notes: >
+      All exports from analytics.ts are re-exported from schema/index.ts:
+      analyticsSchema, analyticsExperimentStatusEnum, all four tables,
+      all eight Zod schemas (insert/select per table), all eight TypeScript types.
+      No missing exports.
+
+  - id: EXPORT-002
+    area: index.ts re-exports — naming collisions
+    status: PASS
+    notes: >
+      The pre-existing changeTelemetry export (from change-telemetry.ts, wint schema)
+      and the new analyticsChangeTelemetry export (from analytics.ts, analytics schema)
+      have distinct names. No collision. The two tables are distinct: one is in wint,
+      one is in analytics; they serve different purposes per their respective stories
+      (APIP-3010 vs CDTS-1010).
+
+# ===========================================================================
+# Summary
+# ===========================================================================
+
+issues_blocking: []
+
+issues_advisory:
+  - id: ADV-001
+    severity: cosmetic
+    description: >
+      analytics.ts import block has an extra blank line between 'timestamp,' and 'uuid,'
+      (line 24). This is a minor Prettier formatting artifact. It does not affect
+      compilation or runtime behaviour. Auto-fixed on next `pnpm format` run.
+
+  - id: ADV-002
+    severity: informational
+    description: >
+      The SQL migration does not issue GRANT on SEQUENCES for analytics schema (e.g.,
+      for UUID defaults from gen_random_uuid()). This is acceptable because gen_random_uuid()
+      uses the pg_crypto extension function, not a sequence, so no sequence GRANTs are needed.
+      Confirmed non-issue.
+
+  - id: ADV-003
+    severity: informational
+    description: >
+      The migration does not issue ALTER DEFAULT PRIVILEGES for future tables in the analytics
+      schema. This is not required for the current story scope — only the four specific tables
+      are in scope. Future stories adding tables to analytics schema should consider
+      ALTER DEFAULT PRIVILEGES for completeness.
