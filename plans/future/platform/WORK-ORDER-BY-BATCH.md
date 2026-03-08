@@ -59,9 +59,9 @@
  │     │ Wave 11 — Graph &     │                                  │                       │                                                              │
  │     │ Cohesion              │                                  │                       │                                                              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
-│ 111 │ WINT-4040             │ Infer Existing Capabilities      │ needs-code-review     │ /dev-code-review plans/future/platform/wint WINT-4040         │
+│ 111 │ WINT-4040             │ Infer Existing Capabilities      │ failed-code-review    │ /dev-fix-story plans/future/platform/wint WINT-4040           │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
-│ 112 │ WINT-4050             │ Create Cohesion Rules            │ 🔧 WINT-4050          │ /dev-implement-story plans/future/platform/wint WINT-4050     │
+│ 112 │ WINT-4050             │ Create Cohesion Rules            │ 🚧 needs-code-review  │ /dev-code-review plans/future/platform/wint WINT-4050         │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
  │ 113 │ WINT-4060             │ Create graph-checker Agent       │ backlog               │ /elab-story plans/future/platform/wint WINT-4060              │
  ├─────┼───────────────────────┼──────────────────────────────────┼───────────────────────┼────────────────────────────────────────────────────────────────┤
