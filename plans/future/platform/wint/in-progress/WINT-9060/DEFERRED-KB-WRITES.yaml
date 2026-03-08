@@ -1,0 +1,19 @@
+deferred_at: "2026-03-08"
+reason: "KB MCP tool not available via bash during story generation"
+writes:
+  - table: core.stories
+    operation: upsert
+    data:
+      story_id: WINT-9060
+      feature: wint
+      title: "Create batch-coordinator LangGraph Graph (batch-process.ts)"
+      story_dir: plans/future/platform/wint/backlog/WINT-9060
+      story_file: plans/future/platform/wint/backlog/WINT-9060/WINT-9060.md
+      story_type: feature
+      points: 5
+      priority: medium
+      state: backlog
+      touches_backend: true
+      touches_frontend: false
+      touches_database: false
+      touches_infra: false
