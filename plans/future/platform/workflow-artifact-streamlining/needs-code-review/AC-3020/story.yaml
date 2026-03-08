@@ -1,6 +1,6 @@
 id: AC-3020
 title: "Bootstrap Dead Artifact Cleanup"
-status: ready-to-work
+status: needs-code-review
 priority: medium
 phase: 3
 feature: "Remove PLAN.meta.md, PLAN.exec.md, and roadmap.md generation steps from pm-bootstrap-generation-leader; merge _bootstrap/CHECKPOINT.md into SUMMARY.yaml as a phases_completed field; update pm-bootstrap-workflow command Done section"
