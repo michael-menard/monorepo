@@ -260,7 +260,9 @@ export function scanStories(rootDir: string = MONOREPO_ROOT): StoryEntry[] {
 async function defaultDbFeatureQueryFn(): Promise<FeatureRow[]> {
   const { db } = await import('@repo/db')
   const { features } = await import('@repo/database-schema')
-  const rows = await db.select({ id: features.id, featureName: features.featureName }).from(features)
+  const rows = await db
+    .select({ id: features.id, featureName: features.featureName })
+    .from(features)
   return rows.map(r => ({ id: r.id, featureName: r.featureName }))
 }
 
@@ -272,10 +274,7 @@ async function defaultDbFeatureQueryFn(): Promise<FeatureRow[]> {
  * @param allFeatures - All feature rows from DB (injectable for testability)
  * @returns Feature UUID or null if not found
  */
-export function resolveFeatureId(
-  epicPrefix: string,
-  allFeatures: FeatureRow[],
-): string | null {
+export function resolveFeatureId(epicPrefix: string, allFeatures: FeatureRow[]): string | null {
   const lower = epicPrefix.toLowerCase()
 
   // Try exact match first (feature name equals epic prefix)
@@ -482,9 +481,8 @@ export async function inferCapabilities(opts: {
  * Called when --validate flag is set.
  */
 async function printValidationReport(allFeatures: FeatureRow[]): Promise<void> {
-  const { graph_get_capability_coverage } = await import(
-    '../graph-query/graph-get-capability-coverage.js'
-  )
+  const { graph_get_capability_coverage } =
+    await import('../graph-query/graph-get-capability-coverage.js')
 
   logger.info('[infer-capabilities] Generating validation coverage report...')
 
@@ -531,7 +529,9 @@ async function printValidationReport(allFeatures: FeatureRow[]): Promise<void> {
         ].join(' | '),
       )
     } catch (error) {
-      rows.push(`${feature.featureName.padEnd(30)} | ERROR: ${error instanceof Error ? error.message : String(error)}`)
+      rows.push(
+        `${feature.featureName.padEnd(30)} | ERROR: ${error instanceof Error ? error.message : String(error)}`,
+      )
     }
   }
 
