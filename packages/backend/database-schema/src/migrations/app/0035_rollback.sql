@@ -107,6 +107,16 @@ FROM plan_details pd WHERE pd.plan_id = p.id;
 
 DROP TABLE IF EXISTS plan_details;
 
+-- Restore FK on plans.kb_entry_id (originally had SET NULL behavior)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints
+                 WHERE constraint_name = 'plans_kb_entry_id_knowledge_entries_id_fk'
+                   AND constraint_type = 'FOREIGN KEY') THEN
+    ALTER TABLE plans ADD CONSTRAINT plans_kb_entry_id_knowledge_entries_id_fk
+      FOREIGN KEY (kb_entry_id) REFERENCES knowledge_entries(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 -- ---------------------------------------------------------------------------
 -- 5. Remove soft-delete columns
 -- ---------------------------------------------------------------------------
