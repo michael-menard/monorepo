@@ -1,0 +1,61 @@
+id: CDTS-1020
+title: Write Structural DDL Migrations
+status: in-progress
+priority: medium
+phase: 1
+feature: "Author migration 022_cdts_structural_ddl.sql in a single transaction: split plans into plans (header) + plan_details (1:1 detail), split stories into stories (header) + story_details (1:1 detail), add soft-delete columns, add all missing FK constraints with RESTRICT, create plan_dependencies table, create story_knowledge_links graph edge table. All tables stay in public schema."
+goal: "All structural DDL changes in a single reversible migration with rollback script. FK count delta documented."
+depends_on:
+  - CDTS-1010
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Plans split — header (hot) + detail (cold)
+  - "Create plan_details table (1:1): id, plan_id FK -> plans.id RESTRICT, raw_content, phases, dependencies, source_file, content_hash, kb_entry_id FK, imported_at, archived_at, updated_at"
+  - "Migrate existing data: INSERT INTO plan_details SELECT ... FROM plans"
+  - "Drop migrated columns from plans header after data migration"
+  - "plans header keeps: id, plan_slug, title, summary, plan_type, status, priority, story_prefix, estimated_stories, parent_plan_id, tags, feature_dir, created_at, updated_at, deleted_at, deleted_by"
+
+  # Stories split — header (hot) + detail (cold)
+  - "Create story_details table (1:1): id, story_id FK -> stories.story_id RESTRICT, story_dir, story_file, blocked_reason, blocked_by_story, touches_backend, touches_frontend, touches_database, touches_infra, started_at, completed_at, file_synced_at, file_hash, updated_at"
+  - "Migrate existing data: INSERT INTO story_details SELECT ... FROM stories"
+  - "Drop migrated columns from stories header after data migration"
+  - "stories header keeps: id, story_id, title, feature, epic, story_type, points, priority, state, phase, iteration, blocked, created_at, updated_at, deleted_at, deleted_by"
+
+  # Soft delete — add to all entity tables
+  - "Add deleted_at TIMESTAMPTZ NULL and deleted_by TEXT NULL to: plans, stories, tasks, knowledge_entries"
+
+  # New table: plan_dependencies
+  - "Create plan_dependencies: id, plan_slug, depends_on_slug, satisfied BOOLEAN DEFAULT false, created_at"
+  - "FK: plan_dependencies.plan_slug -> plans.plan_slug RESTRICT"
+  - "FK: plan_dependencies.depends_on_slug -> plans.plan_slug RESTRICT"
+
+  # New table: story_knowledge_links (graph edge)
+  - "Create story_knowledge_links: id UUID, story_id TEXT, kb_entry_id UUID, link_type TEXT CHECK (produced_lesson, applied_constraint, referenced_decision, similar_pattern, blocked_by), confidence REAL DEFAULT 1.0, created_by TEXT, created_at TIMESTAMPTZ"
+  - "FK: story_knowledge_links.story_id -> stories.story_id RESTRICT"
+  - "FK: story_knowledge_links.kb_entry_id -> knowledge_entries.id RESTRICT"
+  - "UNIQUE constraint on (story_id, kb_entry_id, link_type)"
+
+  # Plan FKs (all RESTRICT)
+  - "FK: plans.parent_plan_id -> plans.id RESTRICT"
+  - "FK: plan_story_links.plan_slug -> plans.plan_slug RESTRICT"
+  - "FK: plan_story_links.story_id -> stories.story_id RESTRICT"
+
+  # Story dependency FKs
+  - "FK: story_dependencies.story_id -> stories.story_id RESTRICT"
+  - "FK: story_dependencies.target_story_id -> stories.story_id RESTRICT"
+
+  # Story child table FKs
+  - "FK: story_artifacts.story_id -> stories.story_id RESTRICT"
+  - "FK: analytics.story_token_usage.story_id -> public.stories.story_id RESTRICT (cross-schema)"
+  - "FK: work_state.story_id -> stories.story_id RESTRICT"
+  - "FK: work_state_history.story_id -> stories.story_id RESTRICT"
+
+  # Rollback
+  - "Rollback script 022_rollback.sql reverses all changes"
+  - "FK count AC: capture information_schema constraint counts before/after; verify exact delta matches expected additions"
+risk_notes: "Single-transaction migration is critical — partial application would leave schema in inconsistent state. Data migration (INSERT INTO ... SELECT) must preserve all existing data. Cross-schema FK (analytics.story_token_usage -> public.stories) requires both schemas to exist."
+resolves_blockers:
+  - "QA-002: No FK verification AC"
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"
