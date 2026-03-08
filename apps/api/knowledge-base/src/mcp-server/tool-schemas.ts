@@ -3453,6 +3453,49 @@ Example (search by phase):
   inputSchema: zodToMcpSchema(ArtifactSearchInputSchema),
 }
 
+// ============================================================================
+// Story Similarity Search (CDTS-2010)
+// ============================================================================
+
+export const KbFindSimilarStoriesInputSchema = z.object({
+  /** Natural language query to find similar stories */
+  query: z.string().min(1).max(2000),
+  /** Maximum number of results (default 5, max 20) */
+  limit: z.number().int().positive().max(20).default(5),
+  /** Optional feature filter to narrow results */
+  feature_filter: z.string().optional(),
+})
+
+export type KbFindSimilarStoriesInput = z.infer<typeof KbFindSimilarStoriesInputSchema>
+
+export const kbFindSimilarStoriesToolDefinition: McpToolDefinition = {
+  name: 'kb_find_similar_stories',
+  description: `Find stories similar to a given query using semantic similarity.
+
+Uses pgvector cosine similarity on story embeddings (text-embedding-3-small).
+Returns stories ranked by similarity score with their current workflow state.
+
+Parameters:
+- query (required): Natural language query to find similar stories
+- limit (optional): Maximum results (1-20, default 5)
+- feature_filter (optional): Filter by feature prefix (e.g., 'wish', 'wint')
+
+Returns: Array of {story_id, title, feature, state, similarity_score}
+
+Example (find similar stories):
+{
+  "query": "database migration and schema consolidation",
+  "limit": 5
+}
+
+Example (search within a feature):
+{
+  "query": "embedding similarity search",
+  "feature_filter": "consolidate-db-three-schemas"
+}`,
+  inputSchema: zodToMcpSchema(KbFindSimilarStoriesInputSchema),
+}
+
 export const toolDefinitions: McpToolDefinition[] = [
   kbAddToolDefinition,
   kbGetToolDefinition,
@@ -3536,6 +3579,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   kbUpsertPlanToolDefinition,
   // Artifact search tool (KBAR-0130)
   artifactSearchToolDefinition,
+  // Story similarity search (CDTS-2010)
+  kbFindSimilarStoriesToolDefinition,
 ]
 
 /**

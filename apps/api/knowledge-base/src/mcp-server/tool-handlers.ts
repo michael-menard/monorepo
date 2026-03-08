@@ -12,7 +12,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
-import { sql } from 'drizzle-orm'
+import { sql, eq } from 'drizzle-orm'
 import {
   worktreeRegister,
   worktreeGetByStory,
@@ -46,6 +46,7 @@ import {
   type KbSearchDeps,
   type KbGetRelatedDeps,
 } from '../search/index.js'
+import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
 import {
   AuditLogger,
   queryAuditByEntry,
@@ -54,7 +55,7 @@ import {
   parseAuditConfig,
   type AuditUserContext,
 } from '../audit/index.js'
-import { knowledgeEntries } from '../db/schema.js'
+import { knowledgeEntries, stories } from '../db/schema.js'
 import { computeContentHash } from '../embedding-client/cache-manager.js'
 import {
   kb_add_task,
@@ -168,6 +169,8 @@ import {
   KbListTasksInputSchema,
   // Artifact search tool (KBAR-0130)
   ArtifactSearchInputSchema,
+  // Story similarity search (CDTS-2010)
+  KbFindSimilarStoriesInputSchema,
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
@@ -3828,6 +3831,18 @@ export async function handleKbCreateStory(
     const validated = KbCreateStoryInputSchema.parse(input)
     const result = await kb_create_story({ db: deps.db }, validated)
 
+    // Generate story embedding async (fire-and-forget, CDTS-2010)
+    if (result.story && validated.title) {
+      generateAndSaveStoryEmbedding(
+        deps,
+        validated.story_id,
+        validated.title,
+        validated.feature,
+        validated.acceptance_criteria,
+        correlationId,
+      ).catch(() => {}) // swallow — embedding is best-effort
+    }
+
     const queryTimeMs = Date.now() - startTime
     logger.info('kb_create_story succeeded', {
       correlation_id: correlationId,
@@ -4013,6 +4028,19 @@ export async function handleKbUpdateStory(
     enforceAuthorization('kb_update_story' as ToolName, context)
     const validated = KbUpdateStoryInputSchema.parse(input)
     const result = await kb_update_story({ db: deps.db }, validated)
+
+    // Re-generate story embedding if content fields changed (CDTS-2010)
+    if (result.story && result.updated && (validated.title || validated.acceptance_criteria)) {
+      const story = result.story
+      generateAndSaveStoryEmbedding(
+        deps,
+        validated.story_id,
+        story.title,
+        story.feature,
+        story.acceptanceCriteria,
+        correlationId,
+      ).catch(() => {}) // swallow — embedding is best-effort
+    }
 
     const queryTimeMs = Date.now() - startTime
     logger.info('kb_update_story succeeded', {
@@ -4628,6 +4656,83 @@ export async function handleKbUpdatePlan(
 }
 
 /**
+ * Generate and save an embedding for a story (fire-and-forget helper).
+ * Called after story create/update to keep embeddings fresh.
+ */
+async function generateAndSaveStoryEmbedding(
+  deps: ToolHandlerDeps,
+  storyId: string,
+  title: string,
+  feature?: string | null,
+  acceptanceCriteria?: unknown,
+  correlationId?: string,
+): Promise<void> {
+  try {
+    const text = buildStoryEmbeddingText(title, feature, acceptanceCriteria)
+    if (!text.trim()) return
+
+    const embedding = await deps.embeddingClient.generateEmbedding(text)
+    await deps.db
+      .update(stories)
+      .set({ embedding })
+      .where(eq(stories.storyId, storyId))
+
+    logger.debug('Story embedding generated', {
+      correlation_id: correlationId,
+      story_id: storyId,
+    })
+  } catch (error) {
+    logger.warn('Story embedding generation failed (non-fatal)', {
+      correlation_id: correlationId,
+      story_id: storyId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Handle kb_find_similar_stories tool call (CDTS-2010).
+ *
+ * Generates embedding for query, then finds similar stories via pgvector cosine similarity.
+ */
+async function handleKbFindSimilarStories(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_find_similar_stories' as ToolName, context)
+    const validated = KbFindSimilarStoriesInputSchema.parse(input)
+
+    // Generate query embedding
+    const queryEmbedding = await deps.embeddingClient.generateEmbedding(validated.query)
+
+    // Find similar stories
+    const results = await findSimilarStories(
+      deps.db,
+      queryEmbedding,
+      validated.limit,
+      validated.feature_filter,
+    )
+
+    logger.info('kb_find_similar_stories succeeded', {
+      correlation_id: correlationId,
+      count: results.length,
+      feature_filter: validated.feature_filter,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_find_similar_stories failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Tool handler type with context support.
  */
 type ToolHandler = (
@@ -4721,6 +4826,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
   kb_upsert_plan: handleKbUpsertPlan,
   // Artifact search tool (KBAR-0130)
   artifact_search: handleArtifactSearch,
+  // Story similarity search (CDTS-2010)
+  kb_find_similar_stories: handleKbFindSimilarStories,
 }
 
 /**
