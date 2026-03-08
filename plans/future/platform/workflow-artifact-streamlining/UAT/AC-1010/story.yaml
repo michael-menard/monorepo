@@ -1,6 +1,6 @@
 id: AC-1010
 title: "ELAB.yaml Consolidation"
-status: ready
+status: in-qa
 priority: medium
 phase: 1
 feature: "Replace ANALYSIS.md, DECISIONS.yaml, FUTURE-OPPORTUNITIES.md, and ELAB-{ID}.md with a single _implementation/ELAB.yaml structured record; update all 13 downstream agent and command files"

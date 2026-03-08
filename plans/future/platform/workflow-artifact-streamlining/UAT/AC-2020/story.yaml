@@ -1,6 +1,6 @@
 id: AC-2020
 title: "TOKEN-LOG.md → KB"
-status: backlog
+status: uat
 priority: medium
 phase: 2
 feature: "Update the token-log skill to write to KB instead of appending to a Markdown file; update dev-documentation-leader and _token-logging.md shared instructions to query KB for token entries; update OUTCOME.yaml sources map"

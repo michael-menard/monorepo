@@ -1,7 +1,7 @@
 id: AC-3010
 title: "_pm/ Folder → story.yaml Sections"
-status: ready-to-work
-updated_at: "2026-03-07T04:31:00Z"
+status: uat
+updated_at: "2026-03-08T00:00:00Z"
 priority: medium
 phase: 3
 feature: "Update pm-draft-test-plan, pm-uiux-recommendations, and pm-dev-feasibility-review agents to write their outputs as pm_artifacts.* sections in story.yaml instead of separate _pm/ files; update pm-story-generation-leader to remove intermediate _pm/ file reads; update pm-spawn-patterns.md to remove stale Output file directives"

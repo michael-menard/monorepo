@@ -1,0 +1,71 @@
+id: AC-3020
+title: "Bootstrap Dead Artifact Cleanup"
+status: ready-to-work
+priority: medium
+phase: 3
+feature: "Remove PLAN.meta.md, PLAN.exec.md, and roadmap.md generation steps from pm-bootstrap-generation-leader; merge _bootstrap/CHECKPOINT.md into SUMMARY.yaml as a phases_completed field; update pm-bootstrap-workflow command Done section"
+goal: "Bootstrap execution produces no dead artifacts; SUMMARY.yaml carries phase completion state and no separate CHECKPOINT.md is written."
+depends_on:
+  - AC-3010
+  - KFMB-5050
+  - CDTS
+endpoints: []
+infrastructure: []
+risk_notes: "Smallest change set (2 files). Verify no human-facing doc or onboarding guide references PLAN.meta.md or roadmap.md before removal. SUMMARY.yaml phases_completed field must not clash with any existing field in the schema."
+sizing_warning: false
+created: "2026-03-03T00:00:00Z"
+updated_at: "2026-03-08T00:00:00Z"
+action_items:
+  - "Include a grep checklist step in the implementation plan to catch stale cross-references before committing"
+ac_decisions:
+  - id: ENG-REC-002
+    decision: accept
+    notes: "Grep checklist required before commit"
+  - id: SCHEMA-DEC-001
+    decision: accept
+    notes: >
+      SUMMARY.yaml phases_completed field schema: field name is 'phases_completed', type is
+      array of strings, allowed values are ['setup', 'analysis', 'generation', 'review', 'done'].
+      This field replaces _bootstrap/CHECKPOINT.md entirely — CHECKPOINT.md is no longer written
+      by pm-bootstrap-generation-leader in any mode. File Mode bootstrap must also use
+      SUMMARY.yaml phases_completed instead of writing CHECKPOINT.md.
+non_goals:
+  - "Updating elab-analyst.agent.md conditional read branches for PLAN.exec.md and PLAN.meta.md — those read 'if exists' so they tolerate absence; a separate cleanup story (OPP-001) covers that"
+  - "Updating pm-bootstrap-workflow-reference.md artifacts table — that is a doc-sync task (OPP-002)"
+  - "Updating pm-story-seed-agent.agent.md context inputs — covered by OPP-003"
+acceptance_criteria:
+  - id: AC-001
+    description: "PLAN.meta.md generation step removed from pm-bootstrap-generation-leader.agent.md"
+    evidence: "grep -c 'PLAN.meta.md' .opencode/agents/pm-bootstrap-generation-leader.agent.md && echo 'FAIL: still referenced' || echo 'PASS: no references'"
+    evidence_command: "grep -rn 'PLAN\\.meta\\.md' .opencode/agents/pm-bootstrap-generation-leader.agent.md"
+    pass_condition: "Zero matches — the file contains no references to PLAN.meta.md"
+
+  - id: AC-002
+    description: "PLAN.exec.md generation step removed from pm-bootstrap-generation-leader.agent.md"
+    evidence_command: "grep -rn 'PLAN\\.exec\\.md' .opencode/agents/pm-bootstrap-generation-leader.agent.md"
+    pass_condition: "Zero matches — the file contains no references to PLAN.exec.md"
+
+  - id: AC-003
+    description: "roadmap.md generation step removed from pm-bootstrap-generation-leader.agent.md"
+    evidence_command: "grep -rn 'roadmap\\.md' .opencode/agents/pm-bootstrap-generation-leader.agent.md"
+    pass_condition: "Zero matches — the file contains no references to roadmap.md as a generated artifact"
+
+  - id: AC-004
+    description: "SUMMARY.yaml phases_completed field schema is defined and documented in pm-bootstrap-generation-leader.agent.md"
+    evidence_command: "grep -n 'phases_completed' .opencode/agents/pm-bootstrap-generation-leader.agent.md"
+    pass_condition: >
+      At least one match showing the field is written as an array of strings with allowed values
+      ['setup', 'analysis', 'generation', 'review', 'done']. CHECKPOINT.md is no longer generated.
+
+  - id: AC-005
+    description: "pm-bootstrap-workflow.md Done section updated to reflect removed artifacts and SUMMARY.yaml phases_completed"
+    evidence_command: "grep -n 'phases_completed' .opencode/docs/pm-bootstrap-workflow.md && grep -c 'CHECKPOINT\\.md' .opencode/docs/pm-bootstrap-workflow.md"
+    pass_condition: "phases_completed appears in Done section; CHECKPOINT.md references are zero or annotated as 'removed'"
+
+qa_notes:
+  verdict: CONDITIONAL_PASS
+  decided_at: "2026-03-08T00:00:00Z"
+  mode: autonomous
+  acs_added: 5
+  gaps_resolved: 3
+  opportunities_logged: 3

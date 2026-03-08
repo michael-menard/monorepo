@@ -130,6 +130,13 @@ feature_dir: "{feature_dir}"
 prefix: "{PREFIX}"
 completed: "{ISO timestamp}"
 
+phases_completed:
+  # Array of strings. Allowed values: setup, analysis, generation, review, done
+  # This field replaces _bootstrap/CHECKPOINT.md entirely — CHECKPOINT.md is no longer written.
+  - setup
+  - analysis
+  - generation
+
 files_created:
   - path: "{feature_dir}/stories.index.md"
     type: index
@@ -151,7 +158,9 @@ next_step: "/elab-epic {PREFIX}"
 
 ### File Mode — Write to Disk
 
-Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`.
+Write the same structure to `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml`, including the `phases_completed` field.
+
+**CHECKPOINT.md is no longer written in any mode.** Do not create `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md`. Phase completion state is tracked via `phases_completed` in SUMMARY.yaml instead.
 
 ## Error Handling
 

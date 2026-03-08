@@ -1,6 +1,7 @@
 id: AC-2010
 title: "FIX-VERIFICATION-SUMMARY → CHECKPOINT.yaml"
-status: backlog
+status: uat
+updated_at: "2026-03-08T00:00:00Z"
 priority: medium
 phase: 2
 feature: "Extend CHECKPOINT.yaml schema with a fix_cycles array and update dev-verification-leader to write there; update dev-documentation-leader fix mode and dev-fix-fix-leader to read fix_cycles from CHECKPOINT instead of a separate file"

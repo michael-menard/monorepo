@@ -199,14 +199,21 @@ On `GENERATION COMPLETE`:
    })
    ```
 
-4. Report to user.
+4. Read `phases_completed` from the SUMMARY returned by Phase 2 to confirm all phases ran:
+   - Expected: `[setup, analysis, generation]`
+   - If `generation` is absent from `phases_completed`, treat as a partial failure and re-run Phase 2.
+   - Note: `_bootstrap/CHECKPOINT.md` is no longer written. Phase state is carried exclusively in `phases_completed` within SUMMARY.yaml.
+
+5. Report to user.
 
 ### File Mode (legacy)
 1. Seed stories:
    ```bash
    pnpm --filter @repo/knowledge-base run migrate:stories 2>/dev/null
    ```
-2. Report to user.
+2. Read `phases_completed` from `{FEATURE_DIR}/_bootstrap/SUMMARY.yaml` to confirm completion.
+   - Note: `_bootstrap/CHECKPOINT.md` is no longer written in File Mode. Do not expect it.
+3. Report to user.
 
 ### Completion Report
 
