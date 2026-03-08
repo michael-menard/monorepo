@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '@repo/db'
 import { contextPacks } from '@repo/knowledge-base/db'
 import { inArray } from 'drizzle-orm'
-import { populateLibraryCache, PopulateResultSchema } from '../populate-library-cache.js'
+import { populateLibraryCache, PopulateResultSchema, LibraryContentSchema } from '../populate-library-cache.js'
 
 // ============================================================================
 // Constants
@@ -146,6 +146,31 @@ describe('populateLibraryCache unit tests (mocked contextCachePutFn)', () => {
     expect(result.succeeded).toBe(3)
     expect(result.failed).toBe(1)
   })
+
+  it('ED-1: minimal/empty source doc does not throw — extraction returns valid LibraryContent', async () => {
+    const mockPut = vi.fn().mockResolvedValue({ id: 'mock-id', packKey: 'mock' })
+    // Mock readDoc to return an empty string (minimal source doc)
+    const mockReadDoc = vi.fn().mockReturnValue('')
+
+    const result = await populateLibraryCache({
+      contextCachePutFn: mockPut,
+      readDocFn: mockReadDoc,
+    })
+
+    // All 4 packs should still be attempted and succeed — extraction functions never throw
+    expect(result.attempted).toBe(4)
+    expect(result.succeeded).toBe(4)
+    expect(result.failed).toBe(0)
+
+    // Verify each call produces valid content conforming to LibraryContentSchema
+    for (const call of mockPut.mock.calls) {
+      const content = call[0].content
+      const parsed = LibraryContentSchema.safeParse(content)
+      expect(parsed.success).toBe(true)
+      // Content size must be < 8000 bytes even for minimal docs
+      expect(JSON.stringify(content).length).toBeLessThan(8000)
+    }
+  })
 })
 
 // ============================================================================
@@ -182,7 +207,7 @@ describe('populateLibraryCache integration (real lego_dev at port 5432)', () => 
     expect(rows.every(r => r.packType === 'codebase')).toBe(true)
   })
 
-  it('HP-2: content is structured JSONB with summary field and patterns array >= 3 entries', async () => {
+  it('HP-2: content is structured JSONB with summary field, patterns array >= 3 entries, and rules array >= 1 entry', async () => {
     await populateLibraryCache()
 
     const rows = await db
@@ -202,6 +227,10 @@ describe('populateLibraryCache integration (real lego_dev at port 5432)', () => 
 
       expect(Array.isArray(content['patterns'])).toBe(true)
       expect((content['patterns'] as unknown[]).length).toBeGreaterThanOrEqual(3)
+
+      // HP-3: rules array must have at least 1 entry
+      expect(Array.isArray(content['rules'])).toBe(true)
+      expect((content['rules'] as unknown[]).length).toBeGreaterThanOrEqual(1)
     }
   })
 
