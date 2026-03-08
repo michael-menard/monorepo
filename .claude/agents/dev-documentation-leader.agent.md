@@ -29,7 +29,7 @@ Orchestrates Learnings worker.
 | Mode | Source | Workers | Output |
 |------|--------|---------|--------|
 | `implement` | `/dev-implement-story` | Learnings | KB learnings, OUTCOME.yaml, TOKEN-SUMMARY |
-| `fix` | `/dev-fix-story` | — | CHECKPOINT.yaml fix_cycles updated, status updated |
+| `fix` | `/dev-fix-story` | — | Status updated (fix_cycles written by dev-verification-leader) |
 
 **IMPORTANT:** The `mode` parameter MUST be provided in the orchestrator prompt.
 
@@ -246,28 +246,10 @@ This updates the index entry and Progress Summary counts.
 ### Step 1: Read Context
 
 Read `_implementation/AGENT-CONTEXT.md` for story paths.
-Read `_implementation/CHECKPOINT.yaml` to identify iteration number for fix_cycles entry.
 
-### Step 2: Update CHECKPOINT.yaml fix_cycles
+> **Note:** fix_cycles entries are written by dev-verification-leader (canonical writer). This agent does not write fix_cycles.
 
-Append to `_implementation/CHECKPOINT.yaml` `fix_cycles` array:
-
-```yaml
-fix_cycles:
-  - iteration: N
-    triggered_by: code_review    # code_review | qa
-    completed_at: "{ISO_TIMESTAMP}"
-    issues_fixed:
-      - file: "src/..."
-        line: N
-        issue: "..."
-        severity: high
-    verification_result: PASS    # PASS | FAIL
-```
-
-Read issue details from `_implementation/FIX-CONTEXT.yaml`.
-
-### Step 3: Token Logging
+### Step 2: Token Logging
 
 Call token-log for this phase:
 ```
@@ -276,13 +258,13 @@ Call token-log for this phase:
 
 Note: No full token report for fix cycles (already generated during initial implementation).
 
-### Step 4: Update Story Status (use /story-update skill)
+### Step 3: Update Story Status (use /story-update skill)
 
 ```
 /story-update {FEATURE_DIR} {STORY_ID} ready-for-code-review
 ```
 
-### Step 5: Update Story Index (use /index-update skill)
+### Step 4: Update Story Index (use /index-update skill)
 
 ```
 /index-update {FEATURE_DIR} {STORY_ID} --status=ready-for-code-review
@@ -290,7 +272,6 @@ Note: No full token report for fix cycles (already generated during initial impl
 
 ### Output (fix mode)
 
-- `_implementation/CHECKPOINT.yaml` - updated with fix_cycles entry
 - Story status updated (via /story-update and /index-update)
 
 ---
@@ -318,7 +299,7 @@ End with exactly one of:
 - OUTCOME.yaml: created
 
 **Artifacts** (fix):
-- CHECKPOINT.yaml: fix_cycles updated
+- (fix_cycles written by dev-verification-leader)
 
 **Status Updates**:
 - Story frontmatter: ready-for-code-review (via /story-update)
@@ -352,4 +333,4 @@ Before reporting completion signal:
 - ALWAYS report next step: `/dev-code-review STORY-XXX`
 - implement mode: MUST call `/token-report` for full summary
 - implement mode: MUST generate OUTCOME.yaml for workflow learning
-- fix mode: MUST update CHECKPOINT.yaml fix_cycles array
+- fix mode: fix_cycles are written by dev-verification-leader (not this agent)
