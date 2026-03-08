@@ -4,7 +4,7 @@ title: "WINT Stories Index"
 status: active
 story_prefix: "WINT"
 created_at: "2026-02-09T22:30:00Z"
-updated_at: "2026-03-08T02:15:00Z"
+updated_at: "2026-03-08T12:00:00Z"
 ---
 
 # WINT Stories Index
@@ -16,9 +16,9 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | Status | Count |
 |--------|-------|
 | completed | 17 |
-| uat | 24 |
-| in-qa | 2 |
-| ready-for-qa | 1 |
+| uat | 26 |
+| in-qa | 1 |
+| ready-for-qa | 0 |
 | needs-code-review | 7 |
 | ready-for-code-review | 0 |
 | failed-code-review | 0 |
@@ -27,8 +27,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | created | 0 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 4 |
-| pending | 86 |
+| ready-to-work | 5 |
+| pending | 85 |
 
 ---
 
@@ -1064,7 +1064,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2060: Populate Library Cache
 
-**Status:** needs-code-review
+**Status:** uat
 **Depends On:** WINT-2020, WINT-0030, WINT-0100
 **Phase:** 2
 **Feature:** Cache common library patterns (React 19, Tailwind, Zod, Vitest) from existing code examples and docs
@@ -1141,7 +1141,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2110: Update 5 High-Volume Agents to Use Cache
 
-**Status:** needs-code-review
+**Status:** ready-for-qa
 **Depends On:** WINT-2030, WINT-2050, WINT-2060, WINT-0100
 **Phase:** 2
 **Feature:** Update pm-bootstrap-workflow, dev-implement-story, elab-story, qa-verify-story, dev-fix-story to use context cache
@@ -1155,7 +1155,7 @@ Context cache and sidecars phase - Shared sidecar services, agent missions, KB c
 
 ### WINT-2120: Measure Token Reduction
 
-**Status:** ready-for-qa
+**Status:** uat
 **Depends On:** WINT-2110
 **Phase:** 2
 **Feature:** Run benchmark comparing token usage before/after cache implementation, target 80% reduction
@@ -1330,7 +1330,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4010: Create Cohesion Sidecar
 
-**Status:** needs-code-review
+**Status:** in-progress
 **Depends On:** WINT-2020, WINT-1080
 **Phase:** 4
 **Feature:** Create cohesion sidecar at POST /cohesion/audit (post-bootstrap) and POST /cohesion/check (gates) to detect Franken-features and capability gaps
@@ -1346,7 +1346,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4020: Create Rules Registry Sidecar
 
-**Status:** ready-to-work
+**Status:** needs-code-review
 **Depends On:** WINT-2020
 **Phase:** 4
 **Feature:** Create rules registry sidecar at GET/POST /rules for enforceable rules from retros with propose/promote workflow
@@ -1360,18 +1360,22 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ---
 
-### WINT-4030: Populate Graph with Existing Features
+### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** pending
-**Depends On:** WINT-0060, WINT-0130
+**Status:** ready-to-work
+**Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
-**Feature:** Scan all existing features, populate graph.epics and graph.features tables
+**Points:** 5
+**Priority:** high
+**Feature:** Add graph.epics table (migration 0036), create populate-graph-features.ts script that scans monorepo for features and inserts known epics into graph.epics and graph.features tables
 **Infrastructure:**
-- graph population script
+- packages/backend/database-schema (migration 0036)
+- packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
+**Story File:** `in-progress/WINT-4030/WINT-4030.md`
 
-**Goal:** Build initial graph from current codebase
+**Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 
-**Risk Notes:** Feature extraction may need manual validation
+**Risk Notes:** Feature extraction may need manual validation; graph.epics table must be created by this story (new migration 0036)
 
 ---
 

@@ -1,0 +1,25 @@
+id: WINT-4030
+title: "Populate Graph with Existing Features and Epics"
+status: backlog
+priority: high
+points: 5
+phase: 4
+epic: WINT
+story_type: feature
+experiment_variant: "control"
+created: "2026-03-08"
+depends_on:
+  - WINT-0060
+  - WINT-0130
+  - WINT-0131
+blocks:
+  - WINT-4060
+  - WINT-4070
+surfaces:
+  - backend
+touches_backend: true
+touches_frontend: false
+touches_database: true
+touches_infra: false
+story_dir: "plans/future/platform/wint/backlog/WINT-4030"
+story_file: "plans/future/platform/wint/backlog/WINT-4030/WINT-4030.md"
