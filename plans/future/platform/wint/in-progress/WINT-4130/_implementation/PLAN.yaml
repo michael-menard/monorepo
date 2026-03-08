@@ -1,0 +1,282 @@
+schema: 2
+story_id: WINT-4130
+timestamp: '2026-03-08T16:30:00Z'
+subtask_source: story
+steps:
+  - id: 1
+    subtask_id: ST-1
+    description: >-
+      Pre-flight check and fixture identification. Query live dev DB: (1) SELECT COUNT(*) FROM
+      graph.features to verify >= 1 row; (2) call rulesRegistryGet({ status: 'active' }) to verify
+      >= 1 active rule; (3) SELECT COUNT(*) FROM graph.feature_capabilities to verify >= 1 row.
+      Then call graph_get_franken_features({}) and identify at least one feature with 'upload'
+      present but 'replace' missing (upload-without-replace fixture) and one with 'create' present
+      but 'delete' missing (create-without-delete fixture). Document capability_mode: 'builtin'
+      if feature_capabilities is empty (WINT-4040 degradation). Write EVIDENCE.yaml with
+      pre_conditions and fixture_features sections.
+    files:
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+    files_to_read:
+      - packages/backend/mcp-tools/src/graph-query/graph-get-franken-features.ts
+      - packages/backend/mcp-tools/src/rules-registry/rules-registry-get.ts
+      - packages/backend/mcp-tools/src/graph-query/graph-get-capability-coverage.ts
+      - packages/backend/mcp-tools/src/graph-query/__types__/index.ts
+      - .claude/agents/graph-checker.agent.md
+    dependencies: []
+    slice: backend
+    verification: >-
+      EVIDENCE.yaml pre_conditions section contains graph_features_count, active_rules_count,
+      feature_capabilities_count with pass/fail per condition. fixture_features section contains
+      >= 2 entries with feature_id, feature_name, present_stages, missing_stages. capability_mode
+      field set to 'rules' or 'builtin'.
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+
+  - id: 2
+    subtask_id: ST-2
+    description: >-
+      Invoke graph-checker agent via /cohesion-check command (or direct agent invocation as
+      fallback) against plans/future/platform/wint WINT-4130. Wait for graph-check-results.json
+      to be written to _implementation/ directory. Verify: (a) franken_features_found > 0;
+      (b) violations array contains at least one entry for each known fixture from ST-1;
+      (c) all 6 required schema fields are present and correctly typed (story_id string,
+      generated_at ISO 8601, franken_features_found integer, violations array, warnings array,
+      warning_count integer); (d) each violation has non-empty rule_id (registry ID or
+      'BUILTIN-CRUD-COMPLETENESS') and non-empty actionable_hint; (e) final output line matches
+      one of the defined completion signals. Update EVIDENCE.yaml e2e_tests[0] with results.
+      If capability_mode is 'builtin' from ST-1, violations may use BUILTIN-CRUD-COMPLETENESS
+      rule_id — this is expected and not a defect.
+    files:
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/graph-check-results.json
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+    files_to_read:
+      - .claude/agents/graph-checker.agent.md
+      - .claude/commands/cohesion-check.md
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+    dependencies:
+      - 1
+    slice: backend
+    verification: >-
+      graph-check-results.json present in _implementation/. franken_features_found > 0.
+      All 6 schema fields present. All violations have non-empty rule_id and actionable_hint.
+      EVIDENCE.yaml e2e_tests[0] populated with schema_check: pass/fail, rule_ids_found list,
+      completion_signal value.
+    acs_covered:
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-9
+
+  - id: 3
+    subtask_id: ST-3
+    description: >-
+      Validate degradation paths. EC-1 (empty graph): invoke graph-checker scoped to a feature
+      ID that does not exist in graph.features (use a random UUID as the nonexistent-feature-id
+      fixture). Confirm violations: [], warning_count >= 1, warnings contains
+      'graph.features empty — WINT-4030 may not have run', completion signal is
+      'GRAPH-CHECKER COMPLETE WITH WARNINGS: 1 warnings'. EC-2 (empty rules): if no live empty-rules
+      state is available, perform structural verification of graph-checker.agent.md to confirm
+      the empty-rules warning path and BUILTIN-CRUD-COMPLETENESS fallback are specified in the
+      Graceful Degradation section. Update EVIDENCE.yaml e2e_tests[1] (empty-graph degradation)
+      and e2e_tests[2] (empty-rules degradation — structural or live).
+    files:
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+    files_to_read:
+      - .claude/agents/graph-checker.agent.md
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+    dependencies:
+      - 2
+    slice: backend
+    verification: >-
+      EVIDENCE.yaml e2e_tests[1] shows EC-1 result with warnings array and warning_count >= 1.
+      EVIDENCE.yaml e2e_tests[2] shows EC-2 result as 'structural' or 'live' with expected
+      warning text confirmed. Both degradation paths confirmed: BUILTIN-CRUD-COMPLETENESS
+      fallback documented.
+    acs_covered:
+      - AC-7
+      - AC-8
+
+  - id: 4
+    subtask_id: ST-4
+    description: >-
+      Triage defects and produce final VERIFICATION.md. Review EVIDENCE.yaml and
+      graph-check-results.json for all detection failures: missing violations for known
+      fixtures, schema field mismatches, wrong rule IDs, incorrect completion signals,
+      degradation paths not matching spec. For each defect: document in EVIDENCE.yaml
+      known_deviations with a recommended owner story (WINT-4060, WINT-4030, WINT-4050,
+      or defer). Write VERIFICATION.md with per-AC status summary (PASS / PARTIAL / FAIL)
+      for all 11 ACs (AC-1 through AC-11). Finalize EVIDENCE.yaml acceptance_criteria
+      section with status per AC.
+    files:
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/VERIFICATION.md
+    files_to_read:
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+      - plans/future/platform/wint/in-progress/WINT-4130/_implementation/graph-check-results.json
+      - plans/future/platform/wint/in-progress/WINT-4130/WINT-4130.md
+    dependencies:
+      - 3
+    slice: backend
+    verification: >-
+      VERIFICATION.md present with per-AC status for all 11 ACs. EVIDENCE.yaml known_deviations
+      section populated (may be empty if no defects found). Each defect entry has recommended
+      owner story. EVIDENCE.yaml acceptance_criteria section covers AC-1 through AC-11 with
+      PASS/PARTIAL/MISSING status.
+    acs_covered:
+      - AC-10
+      - AC-11
+
+files_to_change:
+  - path: plans/future/platform/wint/in-progress/WINT-4130/_implementation/EVIDENCE.yaml
+    action: create
+    reason: >-
+      Structured validation results per ADR-006: pre_conditions, fixture_features, e2e_tests,
+      acceptance_criteria, known_deviations sections
+  - path: plans/future/platform/wint/in-progress/WINT-4130/_implementation/graph-check-results.json
+    action: create
+    reason: Output produced by graph-checker agent invocation (written by agent, not manually)
+  - path: plans/future/platform/wint/in-progress/WINT-4130/_implementation/VERIFICATION.md
+    action: create
+    reason: Human-readable per-AC summary (PASS/PARTIAL/FAIL) across all 11 ACs
+
+commands_to_run:
+  - command: "SELECT COUNT(*) FROM graph.features"
+    when: ST-1 pre-flight
+    required: true
+  - command: "SELECT COUNT(*) FROM graph.feature_capabilities"
+    when: ST-1 pre-flight
+    required: true
+  - command: rulesRegistryGet({ status:'active' }) — direct import call
+    when: ST-1 pre-flight
+    required: true
+  - command: graph_get_franken_features({}) — direct import call
+    when: ST-1 fixture identification
+    required: true
+  - command: "/cohesion-check plans/future/platform/wint WINT-4130"
+    when: ST-2 graph-checker invocation
+    required: true
+
+acceptance_criteria_map:
+  - ac_id: AC-1
+    planned_evidence: >-
+      EVIDENCE.yaml pre_conditions block with graph_features_count, active_rules_count,
+      feature_capabilities_count and pass/fail per condition (ST-1)
+    evidence_type: file
+  - ac_id: AC-2
+    planned_evidence: >-
+      EVIDENCE.yaml fixture_features[0] with feature_id, feature_name, present_stages
+      (includes 'upload'), missing_stages (includes 'replace') (ST-1)
+    evidence_type: file
+  - ac_id: AC-3
+    planned_evidence: >-
+      EVIDENCE.yaml fixture_features[1] with feature_id, feature_name, present_stages
+      (includes 'create'), missing_stages (includes 'delete') (ST-1)
+    evidence_type: file
+  - ac_id: AC-4
+    planned_evidence: >-
+      graph-check-results.json franken_features_found > 0, violations contains entries for
+      known fixtures from AC-2 and AC-3 (ST-2)
+    evidence_type: file
+  - ac_id: AC-5
+    planned_evidence: >-
+      EVIDENCE.yaml e2e_tests[0].schema_check: pass — all 6 required fields present and
+      correctly typed in graph-check-results.json (ST-2)
+    evidence_type: file
+  - ac_id: AC-6
+    planned_evidence: >-
+      EVIDENCE.yaml e2e_tests[0].rule_ids_found: [list] — all violations have non-empty
+      rule_id and actionable_hint (ST-2)
+    evidence_type: file
+  - ac_id: AC-7
+    planned_evidence: >-
+      EVIDENCE.yaml e2e_tests[1] — EC-1 live test with nonexistent feature ID showing
+      violations:[], warning_count:1, correct warning text (ST-3)
+    evidence_type: file
+  - ac_id: AC-8
+    planned_evidence: >-
+      EVIDENCE.yaml e2e_tests[2] — EC-2 structural or live verification of empty-rules
+      degradation path and BUILTIN-CRUD-COMPLETENESS fallback (ST-3)
+    evidence_type: file
+  - ac_id: AC-9
+    planned_evidence: >-
+      EVIDENCE.yaml e2e_tests[0].completion_signal — final output line of graph-checker
+      invocation matches one of 3 defined signal formats (ST-2)
+    evidence_type: file
+  - ac_id: AC-10
+    planned_evidence: >-
+      EVIDENCE.yaml acceptance_criteria section covers all AC-1 through AC-11 outcomes.
+      e2e_tests, pre_conditions, fixture_features, known_deviations all present (ST-4)
+    evidence_type: file
+  - ac_id: AC-11
+    planned_evidence: >-
+      EVIDENCE.yaml known_deviations populated with any defects found, each with recommended
+      owner story. VERIFICATION.md documents all defects found. (ST-4)
+    evidence_type: file
+
+architectural_decisions:
+  - id: ARCH-001
+    question: Should validation use a TypeScript runner script or direct agent invocation?
+    decision: >-
+      Direct agent invocation via /cohesion-check command (primary). Optional TypeScript
+      runner script (validate-cohesion-detection.ts) is deferred — only create if direct
+      invocation cannot produce needed evidence.
+    rationale: >-
+      Story is a spike with no new code requirement. Agent invocation is the canonical
+      approach per cohesion-check.md. TypeScript runner is listed as optional in story scope.
+    decided_by: autonomous_elaboration
+
+  - id: ARCH-002
+    question: >-
+      What EVIDENCE.yaml schema should be used — standard EvidenceSchema from evidence.ts or
+      a custom spike schema?
+    decision: >-
+      Use standard EvidenceSchema v2 from packages/backend/orchestrator/src/artifacts/evidence.ts
+      as structural template, extended with spike-specific fields: pre_conditions, fixture_features,
+      capability_mode in the top-level or inside e2e_tests entries.
+    rationale: >-
+      ADR-006 requires e2e_tests section for live resource runs. The standard schema's
+      acceptance_criteria, known_deviations, and e2e_tests fields map directly to this story's
+      evidence needs. Custom spike fields are additive, not breaking.
+    decided_by: autonomous_elaboration
+
+  - id: ARCH-003
+    question: >-
+      If graph.feature_capabilities is empty (WINT-4040 not run), should the story BLOCK
+      or continue in BUILTIN mode?
+    decision: >-
+      Continue in BUILTIN mode. Document capability_mode: 'builtin' in EVIDENCE.yaml. Do NOT
+      block story execution. graph_get_franken_features inner-joins features with capabilities —
+      if no capability rows exist, it returns []. Validate structural agent spec (BUILTIN fallback)
+      instead of live detection. Story is designed for this degradation path.
+    rationale: >-
+      WINT-4040 is in failed-code-review. The story explicitly scopes this as a known degradation
+      path. WINT-4130 must not be blocked by WINT-4040's failure.
+    decided_by: autonomous_elaboration
+
+complexity: moderate
+notes:
+  - >-
+    CRITICAL RUNTIME DEPENDENCY: graph-checker.agent.md MUST exist at
+    .claude/agents/graph-checker.agent.md before ST-2 can run. Confirmed present as of 2026-03-08.
+  - >-
+    WINT-4040 risk: graph.feature_capabilities may be empty due to failed code review.
+    graph_get_franken_features uses INNER JOIN — empty capabilities = empty results even if
+    graph.features has rows. Pre-flight ST-1 MUST check feature_capabilities count explicitly.
+  - >-
+    Output files go to _implementation/ under the current story directory:
+    plans/future/platform/wint/in-progress/WINT-4130/_implementation/ — NOT backlog/ as noted
+    in story subtasks (path was updated when story moved to in-progress).
+  - >-
+    graph_get_franken_features uses CRUD_STAGES = ['create', 'read', 'update', 'delete'].
+    'upload' and 'replace' are NOT in this set. Franken-feature identification for the
+    upload-without-replace fixture must look for features where 'upload' appears in
+    capabilities but 'replace' does not — this requires querying graph.feature_capabilities
+    directly or interpreting feature names, not relying on CRUD_STAGES alone.
+  - >-
+    ST-2 through ST-4 are strictly sequential (each depends on prior). ST-1 has no dependencies.
+  - >-
+    No code changes required for this story. All deliverables are documentation artifacts
+    written to _implementation/. TypeScript runner is optional and deferred unless direct
+    invocation proves insufficient.
