@@ -1,6 +1,6 @@
 id: CDTS-1010
 title: Create analytics Schema and Move wint Tables into Drizzle
-status: in-progress
+status: needs-code-review
 priority: medium
 phase: 1
 feature: "Create the analytics schema, move wint.model_experiments, wint.model_assignments, wint.change_telemetry from wint to analytics, move public.story_token_usage to analytics, re-create FK change_telemetry.experiment_id -> model_experiments.id within analytics, and add Drizzle definitions for all 4 analytics tables."
