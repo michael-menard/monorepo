@@ -1,0 +1,13 @@
+schema: 1
+story_id: ST-3010
+feature_dir: plans/future/platform/story-generation-small-llm-compat
+timestamp: "2026-03-08T07:10:00Z"
+current_phase: setup
+last_successful_phase: null
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings: []
+gen_mode: true
+worktree: tree/story/ST-3010
