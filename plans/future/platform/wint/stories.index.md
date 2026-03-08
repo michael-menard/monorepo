@@ -27,8 +27,8 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | created | 0 |
 | backlog | 0 |
 | in-progress | 0 |
-| ready-to-work | 5 |
-| pending | 85 |
+| ready-to-work | 6 |
+| pending | 84 |
 
 ---
 
@@ -38,6 +38,7 @@ Stories with all dependencies satisfied (can be worked in parallel):
 
 | Story | Feature | Blocked By |
 |-------|---------|------------|
+| WINT-4050 | Create Cohesion Rules | — |
 | WINT-4060 | Create scope-defender Agent | — |
 | WINT-7010 | Audit Agent Directory References | — |
 | WINT-0230 | Create Unified Model Interface | — |
@@ -1381,7 +1382,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4040: Infer Existing Capabilities
 
-**Status:** pending
+**Status:** needs-code-review
 **Depends On:** WINT-4010
 **Phase:** 4
 **Feature:** Analyze existing stories to infer which capabilities (create/view/edit/delete/upload/replace/download) each feature has, populate graph.feature_capabilities
@@ -1396,7 +1397,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4050: Create Cohesion Rules
 
-**Status:** pending
+**Status:** ready-to-work
 **Depends On:** WINT-4020
 **Phase:** 4
 **Feature:** Define rules: features with 'create' need 'delete', features with 'upload' need 'replace', etc.
