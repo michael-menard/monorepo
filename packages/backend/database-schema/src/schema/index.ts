@@ -1210,3 +1210,16 @@ export {
   type InsertChangeTelemetry,
   type SelectChangeTelemetry,
 } from './change-telemetry.js'
+
+
+// Re-export Rules Registry table (WINT-4020)
+export {
+  ruleTypeEnum,
+  ruleSeverityEnum,
+  ruleStatusEnum,
+  rules,
+  insertRuleSchema,
+  selectRuleSchema,
+  type InsertRule,
+  type SelectRule,
+} from './rules-registry.js'

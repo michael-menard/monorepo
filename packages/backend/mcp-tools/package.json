@@ -66,6 +66,7 @@
     "@repo/database-schema": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/sidecar-rules-registry": "workspace:*",
     "@repo/workflow-logic": "workspace:*",
     "drizzle-orm": "^0.44.3",
     "zod": "^3.22.4"
