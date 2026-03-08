@@ -219,7 +219,8 @@ Read `_implementation/CHECKPOINT.yaml` and append to `fix_cycles` array:
 
 ```yaml
 fix_cycles:
-  - iteration: N                   # increment from last entry, or 1 if first
+  - schema_version: 1              # backward compatibility tracking
+    iteration: N                   # increment from last entry, or 1 if first
     triggered_by: code_review      # code_review | qa
     started_at: "{ISO_TIMESTAMP}"  # from AGENT-CONTEXT.md or current time
     completed_at: "{ISO_TIMESTAMP}"
