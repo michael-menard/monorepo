@@ -3496,6 +3496,55 @@ Example (search within a feature):
   inputSchema: zodToMcpSchema(KbFindSimilarStoriesInputSchema),
 }
 
+// ============================================================================
+// Composite Story Context (CDTS-2020)
+// ============================================================================
+
+export const KbGetStoryContextInputSchema = z.object({
+  /** Story ID to retrieve context for */
+  story_id: z.string().min(1),
+  /** Include similar stories via embedding search (default true) */
+  include_similar: z.boolean().default(true),
+  /** Max KB entries from story_knowledge_links (default 10) */
+  max_kb_entries: z.number().int().positive().max(50).default(10),
+  /** Max similar stories (default 5) */
+  max_similar_stories: z.number().int().positive().max(20).default(5),
+})
+
+export type KbGetStoryContextInput = z.infer<typeof KbGetStoryContextInputSchema>
+
+export const kbGetStoryContextToolDefinition: McpToolDefinition = {
+  name: 'kb_get_story_context',
+  description: `Get complete story context in one call.
+
+Returns a composite view of a story including:
+- Story header + story_details (joined)
+- story_artifacts array
+- linked_knowledge from story_knowledge_links JOIN knowledge_entries
+- similar_stories via embedding cosine similarity
+- applicable_constraints (entry_type = 'constraint')
+
+Single call replaces 5+ separate tool calls. Target: <500ms response time.
+
+Parameters:
+- story_id (required): Story ID (e.g., 'WISH-2045')
+- include_similar (optional): Include similar stories via embeddings (default true)
+- max_kb_entries (optional): Max linked KB entries (default 10)
+- max_similar_stories (optional): Max similar stories (default 5)
+
+Returns partial results if some sections have no data.
+Returns error if story_id not found.
+
+Example:
+{
+  "story_id": "WISH-2045",
+  "include_similar": true,
+  "max_kb_entries": 10,
+  "max_similar_stories": 5
+}`,
+  inputSchema: zodToMcpSchema(KbGetStoryContextInputSchema),
+}
+
 export const toolDefinitions: McpToolDefinition[] = [
   kbAddToolDefinition,
   kbGetToolDefinition,
@@ -3581,6 +3630,8 @@ export const toolDefinitions: McpToolDefinition[] = [
   artifactSearchToolDefinition,
   // Story similarity search (CDTS-2010)
   kbFindSimilarStoriesToolDefinition,
+  // Composite story context (CDTS-2020)
+  kbGetStoryContextToolDefinition,
 ]
 
 /**
