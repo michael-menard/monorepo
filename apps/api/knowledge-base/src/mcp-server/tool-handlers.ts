@@ -47,6 +47,7 @@ import {
   type KbGetRelatedDeps,
 } from '../search/index.js'
 import { findSimilarStories, buildStoryEmbeddingText } from '../search/story-similarity.js'
+import { kb_get_story_context } from '../crud-operations/story-context.js'
 import {
   AuditLogger,
   queryAuditByEntry,
@@ -171,6 +172,8 @@ import {
   ArtifactSearchInputSchema,
   // Story similarity search (CDTS-2010)
   KbFindSimilarStoriesInputSchema,
+  // Composite story context (CDTS-2020)
+  KbGetStoryContextInputSchema,
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
@@ -4733,6 +4736,42 @@ async function handleKbFindSimilarStories(
 }
 
 /**
+ * Handle kb_get_story_context tool call (CDTS-2020).
+ *
+ * Returns composite story context in one call using parallel queries.
+ */
+async function handleKbGetStoryContext(
+  input: unknown,
+  deps: ToolHandlerDeps,
+  context?: ToolCallContext,
+): Promise<McpToolResult> {
+  const correlationId = context?.correlation_id ?? 'no-correlation-id'
+
+  try {
+    enforceAuthorization('kb_get_story_context' as ToolName, context)
+    const validated = KbGetStoryContextInputSchema.parse(input)
+
+    const result = await kb_get_story_context(validated, {
+      db: deps.db,
+      embeddingClient: deps.embeddingClient,
+    })
+
+    logger.info('kb_get_story_context succeeded', {
+      correlation_id: correlationId,
+      story_id: validated.story_id,
+      found: result.story !== null,
+    })
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    }
+  } catch (error) {
+    logger.error('kb_get_story_context failed', { correlation_id: correlationId, error })
+    return errorToToolResult(error)
+  }
+}
+
+/**
  * Tool handler type with context support.
  */
 type ToolHandler = (
@@ -4828,6 +4867,8 @@ export const toolHandlers: Record<string, ToolHandler> = {
   artifact_search: handleArtifactSearch,
   // Story similarity search (CDTS-2010)
   kb_find_similar_stories: handleKbFindSimilarStories,
+  // Composite story context (CDTS-2020)
+  kb_get_story_context: handleKbGetStoryContext,
 }
 
 /**
