@@ -1,6 +1,6 @@
 id: "KFMB-1030"
 title: "PM Artifact Types and Detail Tables"
-status: ready-to-work
+status: in-progress
 priority: medium
 phase: 1
 feature: "Add test_plan, dev_feasibility, uiux_notes, story_seed artifact types and corresponding detail tables"

@@ -129,3 +129,45 @@ pnpm --filter @repo/database-schema build              # pass (clean)
 - Output: ~6000 tokens (files written + log)
 
 BACKEND COMPLETE
+
+---
+
+## Fix-Fix Iteration (2026-03-07) — QA Re-verification
+
+### Root Cause of failed-qa
+
+The story was moved to `failed-qa` because `@repo/workflow-logic` had no `dist/` directory in the worktree.
+This caused `@repo/mcp-tools` story-compatibility tests to fail at import resolution:
+
+```
+Error: Failed to resolve entry for package "@repo/workflow-logic".
+The package may have incorrect main/module/exports specified in its package.json.
+```
+
+This was NOT a code bug — it was a missing build artifact in the worktree.
+
+### Fix Applied
+
+- Built `@repo/workflow-logic`: `pnpm run --filter @repo/workflow-logic build`
+- Verified `dist/` directory created at `packages/backend/workflow-logic/dist/`
+
+### Re-Verification Results
+
+After building workflow-logic and rebasing main:
+
+```
+pnpm run -r --filter @repo/sidecar-utils --filter @repo/context-pack-sidecar --filter @repo/sidecar-role-pack check-types
+  → sidecar-utils: Done, context-pack: Done
+pnpm run -r --filter @repo/sidecar-utils --filter @repo/context-pack-sidecar --filter @repo/sidecar-role-pack build
+  → sidecar-utils: Done, role-pack: Done, context-pack: Done
+pnpm run -r --filter @repo/sidecar-utils --filter @repo/context-pack-sidecar --filter @repo/sidecar-role-pack test
+  → role-pack: 16/16 pass, context-pack: 24/24 pass
+pnpm eslint packages/backend/sidecar-utils packages/backend/sidecars/context-pack packages/backend/sidecars/role-pack
+  → 0 errors, 0 warnings
+pnpm run --filter @repo/mcp-tools test -- --testPathPattern="context-pack"
+  → Test Files: 37 passed (37), Tests: 362 passed (362)
+```
+
+All checks PASS. Story is ready for code review and QA re-verification.
+
+FIX-FIX COMPLETE

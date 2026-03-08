@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
+    "@repo/sidecar-utils": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

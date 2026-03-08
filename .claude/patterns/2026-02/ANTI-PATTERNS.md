@@ -142,7 +142,7 @@ None identified in this period.
 
 3. **Token Budget Calibration**: For integration stories (backend + frontend):
    - Apply 1.3x multiplier to estimated token budget
-   - Log actual vs estimated in TOKEN-LOG.md
+   - Log actual vs estimated via `/token-log` skill (KB-backed)
 
 ---
 
