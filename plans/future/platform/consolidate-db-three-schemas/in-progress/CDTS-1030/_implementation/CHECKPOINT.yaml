@@ -1,12 +1,15 @@
 schema: 1
 story_id: CDTS-1030
 feature_dir: plans/future/platform/consolidate-db-three-schemas
-timestamp: "2026-03-08T00:48:00Z"
-current_phase: setup
-last_successful_phase: null
+timestamp: '2026-03-08T01:30:00Z'
+current_phase: plan
+last_successful_phase: setup
 iteration: 0
 max_iterations: 3
 blocked: false
 forced: false
-warnings: []
+warnings:
+  - >-
+    SCOPE.yaml glob 'packages/backend/database-schema/**' is incorrect — actual target is
+    apps/api/knowledge-base/src/db/schema.ts
 gen_mode: false
