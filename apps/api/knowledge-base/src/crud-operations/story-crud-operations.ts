@@ -11,7 +11,14 @@ import { z } from 'zod'
 import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks, storyDetails } from '../db/schema.js'
+import {
+  stories,
+  storyArtifacts,
+  storyDependencies,
+  plans,
+  planStoryLinks,
+  storyDetails,
+} from '../db/schema.js'
 import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__types__/index.js'
 
 // ============================================================================

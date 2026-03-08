@@ -360,16 +360,7 @@ async function insertStory(
     `INSERT INTO stories (
       story_id, feature, epic, title, story_type, points, priority, state
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [
-      r.storyId,
-      r.feature,
-      r.epic,
-      r.title,
-      r.storyType,
-      r.points,
-      r.priority,
-      r.state,
-    ],
+    [r.storyId, r.feature, r.epic, r.title, r.storyType, r.points, r.priority, r.state],
   )
 
   // Insert story_details (story_dir, story_file, touches_*, file tracking — moved here)

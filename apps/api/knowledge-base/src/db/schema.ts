@@ -487,7 +487,10 @@ export const workState = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story ID this work state belongs to (unique) */
-    storyId: text('story_id').notNull().unique().references(() => stories.storyId, { onDelete: 'restrict' }),
+    storyId: text('story_id')
+      .notNull()
+      .unique()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /** Git branch associated with this story */
     branch: text('branch'),
@@ -540,7 +543,9 @@ export const workStateHistory = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story ID this archive belongs to */
-    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
+    storyId: text('story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /** Full snapshot of work_state at archive time */
     stateSnapshot: jsonb('state_snapshot').notNull(),
@@ -702,10 +707,14 @@ export const storyDependencies = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story that has the dependency */
-    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
+    storyId: text('story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /** Story that is depended upon */
-    targetStoryId: text('target_story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
+    targetStoryId: text('target_story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /**
      * Type of dependency relationship.
@@ -744,7 +753,9 @@ export const storyArtifacts = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story this artifact belongs to */
-    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
+    storyId: text('story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /**
      * Type of artifact.
@@ -1274,7 +1285,10 @@ export const plans = pgTable(
      * Self-referential FK: sub-epic plans point to their parent program plan.
      * References plans.id with RESTRICT on delete.
      */
-    parentPlanId: uuid('parent_plan_id').references((): import('drizzle-orm/pg-core').AnyPgColumn => plans.id, { onDelete: 'restrict' }),
+    parentPlanId: uuid('parent_plan_id').references(
+      (): import('drizzle-orm/pg-core').AnyPgColumn => plans.id,
+      { onDelete: 'restrict' },
+    ),
 
     /** Tags for filtering (inferred from content) */
     tags: text('tags').array(),
@@ -1322,10 +1336,14 @@ export const planStoryLinks = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Plan slug (matches plans.plan_slug) */
-    planSlug: text('plan_slug').notNull().references(() => plans.planSlug, { onDelete: 'restrict' }),
+    planSlug: text('plan_slug')
+      .notNull()
+      .references(() => plans.planSlug, { onDelete: 'restrict' }),
 
     /** Story ID (e.g., 'WKFL-020', 'DASH-001') */
-    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
+    storyId: text('story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /**
      * Nature of the relationship.
