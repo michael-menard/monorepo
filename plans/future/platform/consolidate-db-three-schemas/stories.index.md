@@ -12,11 +12,11 @@
 
 | Phase | Status | Stories | Progress |
 |-------|--------|---------|----------|
-| 0: Infrastructure Foundation | In Progress | 2 | 1/2 (50%) |
+| 0: Infrastructure Foundation | In Progress | 2 | 2/2 (100%) |
 | 1: Schema DDL, Drizzle, and Code | Backlog | 5 | 0/5 (0%) |
 | 2: Graph Infrastructure | Backlog | 2 | 0/2 (0%) |
 | 3: Aurora Cleanup | Backlog | 2 | 0/2 (0%) |
-| **Total** | **In Progress** | **11** | **1/11 (9%)** |
+| **Total** | **In Progress** | **11** | **2/11 (18%)** |
 
 ## Schema Assignment
 
@@ -38,7 +38,7 @@ Establish migration runner, safety guardrails, ground-truth table inventory, and
 | ID | Title | Dependencies | Status | Resolves |
 |----|-------|--------------|--------|----------|
 | CDTS-0010 | Establish Migration Runner and Safety Preamble | None | 👀 Needs Code Review | PLAT-001, PLAT-002 |
-| CDTS-0020 | Audit Actual Table Locations and Produce Migration Manifest | CDTS-0010 | 🔧 In Progress | ENG-001, QA-001 |
+| CDTS-0020 | Audit Actual Table Locations and Produce Migration Manifest | CDTS-0010 | 👀 Needs Code Review | ENG-001, QA-001 |
 
 ## Phase 1: Schema DDL, Drizzle, and Code
 
