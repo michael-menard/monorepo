@@ -1330,7 +1330,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4010: Create Cohesion Sidecar
 
-**Status:** ready-for-code-review
+**Status:** failed-code-review
 **Depends On:** WINT-2020, WINT-1080
 **Phase:** 4
 **Feature:** Create cohesion sidecar at POST /cohesion/audit (post-bootstrap) and POST /cohesion/check (gates) to detect Franken-features and capability gaps
@@ -1362,7 +1362,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4030: Populate Graph with Existing Features and Epics
 
-**Status:** ready-to-work
+**Status:** needs-code-review
 **Depends On:** WINT-0060, WINT-0130, WINT-0131
 **Phase:** 4
 **Points:** 5
@@ -1371,7 +1371,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 **Infrastructure:**
 - packages/backend/database-schema (migration 0036)
 - packages/backend/mcp-tools/src/scripts/populate-graph-features.ts
-**Story File:** `in-progress/WINT-4030/WINT-4030.md`
+**Story File:** `needs-code-review/WINT-4030/WINT-4030.md`
 
 **Goal:** Build initial graph from current codebase so that WINT-4060 (graph-checker) and WINT-4070 (cohesion-prosecutor) can operate on real data
 
