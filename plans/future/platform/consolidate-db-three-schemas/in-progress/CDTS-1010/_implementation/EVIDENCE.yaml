@@ -1,0 +1,114 @@
+story_id: CDTS-1010
+phase: implementation
+iteration: 1
+generated_at: "2026-03-08"
+
+summary: >
+  Created analytics PostgreSQL schema with four tables:
+  model_experiments, model_assignments, change_telemetry (all new from scratch),
+  and story_token_usage (moved from public via ALTER TABLE ... SET SCHEMA).
+  All DDL is idempotent. TypeScript builds with zero errors.
+
+acceptance_criteria:
+  - id: AC-1
+    description: Migration SQL file exists at correct path with migration number 0034
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: >
+          File created with safety preamble, CREATE SCHEMA IF NOT EXISTS analytics,
+          GRANT USAGE ON SCHEMA analytics TO kbuser, experiment_status enum guard,
+          story_token_usage schema move guard, all four tables with IF NOT EXISTS,
+          all indexes idempotent with IF NOT EXISTS.
+
+  - id: AC-2
+    description: analytics schema created in migration with GRANT USAGE to kbuser
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: "Lines: CREATE SCHEMA IF NOT EXISTS analytics; GRANT USAGE ON SCHEMA analytics TO kbuser;"
+
+  - id: AC-3
+    description: experiment_status enum created in analytics schema (idempotent)
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: >
+          DO $$ block guards creation: checks pg_type JOIN pg_namespace WHERE nspname='analytics'
+          AND typname='experiment_status' before executing CREATE TYPE.
+
+  - id: AC-4
+    description: story_token_usage moved from public to analytics schema (idempotent)
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: >
+          DO $$ block guards: checks pg_tables WHERE schemaname='public' AND tablename='story_token_usage'
+          before ALTER TABLE public.story_token_usage SET SCHEMA analytics.
+
+  - id: AC-5
+    description: model_experiments table created fresh in analytics schema
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: >
+          CREATE TABLE IF NOT EXISTS analytics.model_experiments with all columns from WINT-TABLE-DEFS.md:
+          id, change_type, file_type, control_model, challenger_model, status, started_at, concluded_at,
+          sample sizes, success rates, min_sample_per_arm, max_window_rows, max_window_days, winner, notes,
+          created_at, updated_at. Partial unique index on (change_type, file_type) WHERE status='active'.
+
+  - id: AC-6
+    description: model_assignments table created fresh in analytics schema
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: >
+          CREATE TABLE IF NOT EXISTS analytics.model_assignments with all columns:
+          id, agent_pattern, provider, model, tier, effective_from, created_at.
+          Indexes on agent_pattern and effective_from DESC.
+
+  - id: AC-7
+    description: change_telemetry table created in analytics schema with experiment_id FK
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+      - details: >
+          CREATE TABLE IF NOT EXISTS analytics.change_telemetry with:
+          id UUID PK, experiment_id UUID REFERENCES analytics.model_experiments(id),
+          change_type TEXT NOT NULL, file_path TEXT, old_model TEXT, new_model TEXT,
+          outcome TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW().
+
+  - id: AC-8
+    description: Drizzle schema file analytics.ts defines all four tables and enum
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/schema/analytics.ts
+      - details: >
+          Exports: analyticsSchema (pgSchema), analyticsExperimentStatusEnum,
+          analyticsModelExperiments, analyticsModelAssignments, analyticsChangeTelemetry,
+          analyticsStoryTokenUsage. Plus drizzle-zod insert/select schemas and
+          Zod-inferred TypeScript types for all four tables per CLAUDE.md requirements.
+
+  - id: AC-9
+    description: schema/index.ts updated to re-export all analytics exports
+    status: PASS
+    evidence:
+      - file: packages/backend/database-schema/src/schema/index.ts
+      - details: >
+          Appended re-export block at end of file exporting analyticsSchema,
+          analyticsExperimentStatusEnum, all four tables, all eight Zod schemas,
+          and all eight TypeScript types.
+
+  - id: AC-10
+    description: TypeScript compiles with zero errors
+    status: PASS
+    evidence:
+      - command: "npx tsc --project packages/backend/database-schema/tsconfig.build.json --noEmit"
+      - result: "Exit 0 — no errors"
+
+files_created:
+  - packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+  - packages/backend/database-schema/src/schema/analytics.ts
+
+files_modified:
+  - packages/backend/database-schema/src/schema/index.ts
