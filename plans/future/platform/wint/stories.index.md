@@ -19,9 +19,9 @@ All stories use `WINT-{phase}{story}{variant}` format (e.g., `WINT-1010` for Pha
 | uat | 26 |
 | in-qa | 1 |
 | ready-for-qa | 0 |
-| needs-code-review | 7 |
+| needs-code-review | 6 |
 | ready-for-code-review | 0 |
-| failed-code-review | 0 |
+| failed-code-review | 1 |
 | failed-qa | 4 |
 | elaboration | 0 |
 | created | 0 |
@@ -1330,7 +1330,7 @@ Graph & cohesion phase - Cohesion/Rules sidecars, capabilities, rules, PO agent 
 
 ### WINT-4010: Create Cohesion Sidecar
 
-**Status:** in-progress
+**Status:** ready-for-code-review
 **Depends On:** WINT-2020, WINT-1080
 **Phase:** 4
 **Feature:** Create cohesion sidecar at POST /cohesion/audit (post-bootstrap) and POST /cohesion/check (gates) to detect Franken-features and capability gaps
