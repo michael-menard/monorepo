@@ -14,6 +14,29 @@ import * as schema from '../db/schema.js'
 import { plans, planDetails } from '../db/schema.js'
 
 // ============================================================================
+// Explicit column selectors — guard against schema-vs-DB drift
+// ============================================================================
+
+const planColumns = {
+  id: plans.id,
+  planSlug: plans.planSlug,
+  title: plans.title,
+  summary: plans.summary,
+  planType: plans.planType,
+  status: plans.status,
+  featureDir: plans.featureDir,
+  storyPrefix: plans.storyPrefix,
+  estimatedStories: plans.estimatedStories,
+  priority: plans.priority,
+  parentPlanId: plans.parentPlanId,
+  tags: plans.tags,
+  createdAt: plans.createdAt,
+  updatedAt: plans.updatedAt,
+  deletedAt: plans.deletedAt,
+  deletedBy: plans.deletedBy,
+} as const
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
@@ -297,13 +320,14 @@ export async function kb_get_plan(
   deps: PlanCrudDeps,
   input: KbGetPlanInput,
 ): Promise<{
-  plan: typeof plans.$inferSelect | null
+  plan: Partial<typeof plans.$inferSelect> | null
   message: string
 }> {
   const validated = KbGetPlanInputSchema.parse(input)
 
+  // Use explicit column selection to avoid schema-vs-DB drift
   const result = await deps.db
-    .select()
+    .select(planColumns)
     .from(plans)
     .where(eq(plans.planSlug, validated.plan_slug))
     .limit(1)
@@ -364,41 +388,14 @@ export async function kb_list_plans(
 
   const total = countResult[0]?.count ?? 0
 
-  // Select columns based on include_content flag
-  const selectColumns = validated.include_content
-    ? undefined // select all
-    : {
-        id: plans.id,
-        planSlug: plans.planSlug,
-        title: plans.title,
-        summary: plans.summary,
-        planType: plans.planType,
-        status: plans.status,
-        featureDir: plans.featureDir,
-        storyPrefix: plans.storyPrefix,
-        estimatedStories: plans.estimatedStories,
-        priority: plans.priority,
-        parentPlanId: plans.parentPlanId,
-        tags: plans.tags,
-        createdAt: plans.createdAt,
-        updatedAt: plans.updatedAt,
-      }
-
-  const result = selectColumns
-    ? await deps.db
-        .select(selectColumns)
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(plans.createdAt)
-    : await deps.db
-        .select()
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(plans.createdAt)
+  // Always use explicit columns; include_content adds planDetails join
+  const result = await deps.db
+    .select(planColumns)
+    .from(plans)
+    .where(whereClause)
+    .limit(validated.limit)
+    .offset(validated.offset)
+    .orderBy(plans.createdAt)
 
   return {
     plans: result,
@@ -507,7 +504,7 @@ export async function kb_update_plan(
 
   // Check if plan exists
   const existing = await deps.db
-    .select()
+    .select(planColumns)
     .from(plans)
     .where(eq(plans.planSlug, validated.plan_slug))
     .limit(1)
@@ -603,43 +600,16 @@ export async function kb_get_roadmap(
 
   const total = countResult[0]?.count ?? 0
 
-  // Select columns based on include_content flag
-  const selectColumns = validated.include_content
-    ? undefined // select all (include planDetails join)
-    : {
-        id: plans.id,
-        planSlug: plans.planSlug,
-        title: plans.title,
-        summary: plans.summary,
-        planType: plans.planType,
-        status: plans.status,
-        featureDir: plans.featureDir,
-        storyPrefix: plans.storyPrefix,
-        estimatedStories: plans.estimatedStories,
-        priority: plans.priority,
-        parentPlanId: plans.parentPlanId,
-        tags: plans.tags,
-        createdAt: plans.createdAt,
-        updatedAt: plans.updatedAt,
-      }
-
   const orderBy = [plans.priority, plans.status, plans.planSlug]
 
-  const result = selectColumns
-    ? await deps.db
-        .select(selectColumns)
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(...orderBy)
-    : await deps.db
-        .select()
-        .from(plans)
-        .where(whereClause)
-        .limit(validated.limit)
-        .offset(validated.offset)
-        .orderBy(...orderBy)
+  // Always use explicit columns
+  const result = await deps.db
+    .select(planColumns)
+    .from(plans)
+    .where(whereClause)
+    .limit(validated.limit)
+    .offset(validated.offset)
+    .orderBy(...orderBy)
 
   return {
     plans: result,

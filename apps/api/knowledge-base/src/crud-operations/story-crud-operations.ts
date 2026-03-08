@@ -19,6 +19,78 @@ import {
   planStoryLinks,
   storyDetails,
 } from '../db/schema.js'
+
+// ============================================================================
+// Explicit column selectors — guard against schema-vs-DB drift
+// ============================================================================
+
+const storyColumns = {
+  id: stories.id,
+  storyId: stories.storyId,
+  feature: stories.feature,
+  epic: stories.epic,
+  title: stories.title,
+  storyType: stories.storyType,
+  points: stories.points,
+  priority: stories.priority,
+  state: stories.state,
+  phase: stories.phase,
+  iteration: stories.iteration,
+  blocked: stories.blocked,
+  createdAt: stories.createdAt,
+  updatedAt: stories.updatedAt,
+  deletedAt: stories.deletedAt,
+  deletedBy: stories.deletedBy,
+  completedAt: stories.completedAt,
+  fileSyncedAt: stories.fileSyncedAt,
+  fileHash: stories.fileHash,
+  description: stories.description,
+  acceptanceCriteria: stories.acceptanceCriteria,
+  nonGoals: stories.nonGoals,
+  packages: stories.packages,
+} as const
+
+const storyArtifactColumns = {
+  id: storyArtifacts.id,
+  storyId: storyArtifacts.storyId,
+  artifactType: storyArtifacts.artifactType,
+  artifactName: storyArtifacts.artifactName,
+  kbEntryId: storyArtifacts.kbEntryId,
+  phase: storyArtifacts.phase,
+  iteration: storyArtifacts.iteration,
+  summary: storyArtifacts.summary,
+  detailTable: storyArtifacts.detailTable,
+  detailId: storyArtifacts.detailId,
+  createdAt: storyArtifacts.createdAt,
+  updatedAt: storyArtifacts.updatedAt,
+} as const
+
+const storyDependencyColumns = {
+  id: storyDependencies.id,
+  storyId: storyDependencies.storyId,
+  targetStoryId: storyDependencies.targetStoryId,
+  dependencyType: storyDependencies.dependencyType,
+  satisfied: storyDependencies.satisfied,
+  createdAt: storyDependencies.createdAt,
+} as const
+
+const storyDetailColumns = {
+  id: storyDetails.id,
+  storyId: storyDetails.storyId,
+  storyDir: storyDetails.storyDir,
+  storyFile: storyDetails.storyFile,
+  blockedReason: storyDetails.blockedReason,
+  blockedByStory: storyDetails.blockedByStory,
+  touchesBackend: storyDetails.touchesBackend,
+  touchesFrontend: storyDetails.touchesFrontend,
+  touchesDatabase: storyDetails.touchesDatabase,
+  touchesInfra: storyDetails.touchesInfra,
+  startedAt: storyDetails.startedAt,
+  completedAt: storyDetails.completedAt,
+  fileSyncedAt: storyDetails.fileSyncedAt,
+  fileHash: storyDetails.fileHash,
+  updatedAt: storyDetails.updatedAt,
+} as const
 import {
   StoryStateSchema,
   StoryPhaseSchema,
@@ -332,7 +404,7 @@ export async function kb_get_story(
   const validated = KbGetStoryInputSchema.parse(input)
 
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -353,7 +425,7 @@ export async function kb_get_story(
   let artifacts: (typeof storyArtifacts.$inferSelect)[] | undefined
   if (validated.include_artifacts) {
     artifacts = await deps.db
-      .select()
+      .select(storyArtifactColumns)
       .from(storyArtifacts)
       .where(eq(storyArtifacts.storyId, validated.story_id))
   }
@@ -362,7 +434,7 @@ export async function kb_get_story(
   let dependencies: (typeof storyDependencies.$inferSelect)[] | undefined
   if (validated.include_dependencies) {
     dependencies = await deps.db
-      .select()
+      .select(storyDependencyColumns)
       .from(storyDependencies)
       .where(
         or(
@@ -458,7 +530,7 @@ export async function kb_list_stories(
 
   // Get paginated results
   const result = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(desc(stories.updatedAt))
@@ -491,7 +563,7 @@ export async function kb_update_story_status(
 
   // Check if story exists
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -506,7 +578,7 @@ export async function kb_update_story_status(
 
   // Fetch storyDetails to check timestamps (moved from stories header in CDTS-1030)
   const existingDetails = await deps.db
-    .select()
+    .select(storyDetailColumns)
     .from(storyDetails)
     .where(eq(storyDetails.storyId, validated.story_id))
     .limit(1)
@@ -676,7 +748,7 @@ export async function kb_get_next_story(
 
   // Get candidate stories (unblocked, in correct state)
   const candidates = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(whereCondition)
     .orderBy(
@@ -792,7 +864,7 @@ export async function kb_update_story(
   const validated = KbUpdateStoryInputSchema.parse(input)
 
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)
@@ -888,7 +960,7 @@ export async function kb_create_story(
 
   // Require title for new stories — check existence first
   const existing = await deps.db
-    .select()
+    .select(storyColumns)
     .from(stories)
     .where(eq(stories.storyId, validated.story_id))
     .limit(1)

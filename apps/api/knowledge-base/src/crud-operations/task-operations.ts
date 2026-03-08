@@ -21,6 +21,29 @@ import {
   TaskEffortSchema,
 } from '../__types__/index.js'
 
+// Explicit column selector — guard against schema-vs-DB drift
+const taskColumns = {
+  id: tasks.id,
+  title: tasks.title,
+  description: tasks.description,
+  sourceStoryId: tasks.sourceStoryId,
+  sourcePhase: tasks.sourcePhase,
+  sourceAgent: tasks.sourceAgent,
+  taskType: tasks.taskType,
+  priority: tasks.priority,
+  status: tasks.status,
+  blockedBy: tasks.blockedBy,
+  relatedKbEntries: tasks.relatedKbEntries,
+  promotedToStory: tasks.promotedToStory,
+  tags: tasks.tags,
+  estimatedEffort: tasks.estimatedEffort,
+  createdAt: tasks.createdAt,
+  updatedAt: tasks.updatedAt,
+  completedAt: tasks.completedAt,
+  deletedAt: tasks.deletedAt,
+  deletedBy: tasks.deletedBy,
+} as const
+
 // ============================================================================
 // Input Schemas
 // ============================================================================
@@ -233,7 +256,7 @@ export async function kb_get_task(
   const validatedInput = KbGetTaskInputSchema.parse(input)
   const { db } = deps
 
-  const result = await db.select().from(tasks).where(eq(tasks.id, validatedInput.id)).limit(1)
+  const result = await db.select(taskColumns).from(tasks).where(eq(tasks.id, validatedInput.id)).limit(1)
 
   return result[0] ?? null
 }
@@ -379,7 +402,7 @@ export async function kb_list_tasks(
 
   // Get paginated results
   const result = await db
-    .select()
+    .select(taskColumns)
     .from(tasks)
     .where(whereClause)
     .orderBy(desc(tasks.createdAt))

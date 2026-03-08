@@ -14,6 +14,28 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { workState, workStateHistory } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
+
+// Explicit column selectors — guard against schema-vs-DB drift
+const workStateColumns = {
+  id: workState.id,
+  storyId: workState.storyId,
+  branch: workState.branch,
+  phase: workState.phase,
+  constraints: workState.constraints,
+  recentActions: workState.recentActions,
+  nextSteps: workState.nextSteps,
+  blockers: workState.blockers,
+  kbReferences: workState.kbReferences,
+  createdAt: workState.createdAt,
+  updatedAt: workState.updatedAt,
+} as const
+
+const workStateHistoryColumns = {
+  id: workStateHistory.id,
+  storyId: workStateHistory.storyId,
+  stateSnapshot: workStateHistory.stateSnapshot,
+  archivedAt: workStateHistory.archivedAt,
+} as const
 import {
   WorkPhaseSchema,
   WorkConstraintSchema,
@@ -145,7 +167,7 @@ export async function kb_get_work_state(
   const { db } = deps
 
   const result = await db
-    .select()
+    .select(workStateColumns)
     .from(workState)
     .where(eq(workState.storyId, validatedInput.story_id))
     .limit(1)
@@ -250,7 +272,7 @@ export async function kb_archive_work_state(
 
   // Get existing work state
   const existing = await db
-    .select()
+    .select(workStateColumns)
     .from(workState)
     .where(eq(workState.storyId, validatedInput.story_id))
     .limit(1)
@@ -318,7 +340,7 @@ export async function kb_get_work_state_history(
   const { db } = deps
 
   const result = await db
-    .select()
+    .select(workStateHistoryColumns)
     .from(workStateHistory)
     .where(eq(workStateHistory.storyId, storyId))
     .orderBy(workStateHistory.archivedAt)

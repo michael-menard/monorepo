@@ -35,6 +35,22 @@ import type * as schema from '../db/schema.js'
 import { ArtifactTypeSchema, StoryPhaseSchema } from '../__types__/index.js'
 import { extractArtifactSummary } from './artifact-summary.js'
 
+// Explicit column selector — guard against schema-vs-DB drift
+const artifactColumns = {
+  id: storyArtifacts.id,
+  storyId: storyArtifacts.storyId,
+  artifactType: storyArtifacts.artifactType,
+  artifactName: storyArtifacts.artifactName,
+  kbEntryId: storyArtifacts.kbEntryId,
+  phase: storyArtifacts.phase,
+  iteration: storyArtifacts.iteration,
+  summary: storyArtifacts.summary,
+  detailTable: storyArtifacts.detailTable,
+  detailId: storyArtifacts.detailId,
+  createdAt: storyArtifacts.createdAt,
+  updatedAt: storyArtifacts.updatedAt,
+} as const
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -645,7 +661,7 @@ export async function kb_write_artifact(
 
   // Check if artifact exists (using story_id + artifact_type + artifact_name + iteration)
   const existing = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(
       and(
@@ -697,6 +713,9 @@ export async function kb_write_artifact(
   // Update existing: update detail row, then jump table
   const existingRow = existing[0]
 
+  let resolvedDetailTable = existingRow.detailTable
+  let resolvedDetailId = existingRow.detailId
+
   if (existingRow.detailTable && existingRow.detailId) {
     // Update existing detail row
     await updateDetailRow(
@@ -715,8 +734,8 @@ export async function kb_write_artifact(
       validatedInput.content,
       validatedInput.story_id,
     )
-    existingRow.detailTable = detailTable
-    existingRow.detailId = detailId
+    resolvedDetailTable = detailTable
+    resolvedDetailId = detailId
   }
 
   const result = await db
@@ -725,8 +744,8 @@ export async function kb_write_artifact(
       artifactName,
       phase: validatedInput.phase ?? existingRow.phase,
       summary: validatedInput.summary ?? existingRow.summary,
-      detailTable: existingRow.detailTable,
-      detailId: existingRow.detailId,
+      detailTable: resolvedDetailTable,
+      detailId: resolvedDetailId,
       updatedAt: now,
     })
     .where(eq(storyArtifacts.id, existingRow.id))
@@ -779,7 +798,7 @@ export async function kb_read_artifact(
 
   // Query jump table, ordered by iteration desc to get latest
   const result = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(and(...conditions))
     .orderBy(desc(storyArtifacts.iteration))
@@ -836,7 +855,7 @@ export async function kb_list_artifacts(
 
   // Query jump table
   const result = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(and(...conditions))
     .orderBy(desc(storyArtifacts.createdAt))
@@ -882,7 +901,7 @@ export async function kb_delete_artifact(
 
   // Read jump table row to get detail_table + detail_id
   const jumpRows = await db
-    .select()
+    .select(artifactColumns)
     .from(storyArtifacts)
     .where(eq(storyArtifacts.id, artifactId))
     .limit(1)

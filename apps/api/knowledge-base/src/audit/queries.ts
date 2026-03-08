@@ -11,6 +11,19 @@ import { logger } from '@repo/logger'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm'
 import { auditLog } from '../db/schema.js'
+
+// Explicit column selector — guard against schema-vs-DB drift
+const auditLogColumns = {
+  id: auditLog.id,
+  entryId: auditLog.entryId,
+  operation: auditLog.operation,
+  previousValue: auditLog.previousValue,
+  newValue: auditLog.newValue,
+  timestamp: auditLog.timestamp,
+  userContext: auditLog.userContext,
+  createdAt: auditLog.createdAt,
+} as const
+
 import {
   AuditByEntryInputSchema,
   AuditQueryInputSchema,
@@ -64,7 +77,7 @@ export async function queryAuditByEntry(
 
   // Query audit logs with pagination
   const results = await db
-    .select()
+    .select(auditLogColumns)
     .from(auditLog)
     .where(eq(auditLog.entryId, validated.entry_id))
     .orderBy(asc(auditLog.timestamp)) // Oldest first for entry history
@@ -148,7 +161,7 @@ export async function queryAuditByTimeRange(
 
   // Query audit logs with pagination
   const results = await db
-    .select()
+    .select(auditLogColumns)
     .from(auditLog)
     .where(and(...conditions))
     .orderBy(desc(auditLog.timestamp)) // Newest first for time range queries
