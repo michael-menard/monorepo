@@ -68,7 +68,7 @@ describe('storyGetByFeature', () => {
         id: randomUUID(),
         storyId: 'WINT-0010',
         title: 'First WINT Story',
-        state: 'done' as const,
+        state: 'completed' as const,
         priority: 'P1' as const,
         storyType: 'feature',
         epic: 'WINT',

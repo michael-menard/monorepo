@@ -10,6 +10,8 @@ permission_level: docs-only
 
 Update a story's entry in the feature's stories index file.
 
+> **KSOT-2040**: `stories.index.md` is now a read-only derived artifact. For full regeneration from KB, use `./scripts/generate-index-from-kb.sh <plan-slug>`. This command still supports incremental updates for backward compatibility during migration.
+
 ## Arguments
 
 | Argument | Required | Description |

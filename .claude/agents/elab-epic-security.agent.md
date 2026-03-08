@@ -78,6 +78,9 @@ Per `.claude/agents/_shared/severity-calibration.md`:
 - `PREFIX`: Story prefix (e.g., "WISH")
 
 Read from `{FEATURE_DIR}/`:
+
+**KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story state. Fallback: if KB is unavailable, read from the files listed below.
+
 - `stories.index.md`
 - `PLAN.meta.md`
 - `PLAN.exec.md`

@@ -19,7 +19,7 @@ Focus ONLY on risks that block the core user journey. Track non-MVP concerns sep
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}
+- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` entry for {STORY_ID}.
 - repo architecture rules (ports/adapters, reuse-first, packages/** boundaries)
 - dev agent standards (no mocks/stubs in core paths, proof-of-work expectations)
 

@@ -166,7 +166,7 @@ describe('shimGetStoriesByFeature', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0].storyId).toBe('TEST-0001')
-    expect(result[0].state).toBe('done')
+    expect(result[0].state).toBe('completed')
 
     fs.rmSync(storiesRoot, { recursive: true, force: true })
   })

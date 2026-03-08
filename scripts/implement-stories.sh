@@ -1053,6 +1053,9 @@ RECONCYAML
 
 # Orchestrator: run the full KB-filesystem reconciliation cycle.
 # Idempotent: safe to run multiple times.
+# NOTE (KSOT-1040): With KB writes now happening inline in move_story_to(),
+# this function is primarily an audit/repair pass. It catches any drift that
+# occurred before the inline writes were added or from manual filesystem moves.
 # Args: $1 = quiet (optional — suppress per-correction output)
 reconcile_kb_filesystem() {
   local quiet="${1:-}"
@@ -1311,6 +1314,44 @@ RUN_LOG="$LOG_DIR/run.log"
 # The worker loops: resolve stage → pick action → run → re-resolve → repeat
 # until the story reaches UAT/done or an action fails.
 
+# Map filesystem stage name → KB state enum value
+# Mirrors SWIM_LANE_TO_STATE from packages/backend/mcp-tools/src/story-compatibility/__types__/index.ts
+fs_stage_to_kb_state() {
+  local stage="$1"
+  case "$stage" in
+    backlog)               echo "backlog" ;;
+    created)               echo "backlog" ;;
+    elaboration)           echo "in_progress" ;;
+    ready-to-work)         echo "ready" ;;
+    in-progress)           echo "in_progress" ;;
+    needs-code-review)     echo "ready_for_review" ;;
+    failed-code-review)    echo "failed_code_review" ;;
+    ready-for-qa)          echo "ready_for_qa" ;;
+    failed-qa)             echo "failed_qa" ;;
+    UAT)                   echo "in_qa" ;;
+    done)                  echo "completed" ;;
+    *)                     echo "" ;;
+  esac
+}
+
+# Update story state in KB (non-blocking — log warning on failure, never halt pipeline)
+update_kb_state() {
+  local STORY_ID="$1"
+  local KB_STATE="$2"
+  local TAG="${3:-}"
+
+  if [[ -z "$KB_STATE" ]]; then
+    return 0
+  fi
+
+  timeout 30 env -u CLAUDECODE claude -p \
+    "Call kb_update_story_status with story_id='${STORY_ID}' and state='${KB_STATE}'. Output only: OK or ERROR." \
+    --allowedTools "mcp__knowledge-base__kb_update_story_status" \
+    --output-format text >/dev/null 2>&1 || {
+    echo "${TAG:+$TAG }KB WARN:      Failed to update KB state for $STORY_ID → $KB_STATE (non-fatal)"
+  }
+}
+
 # Move story directory to a new stage (if not already there)
 move_story_to() {
   local STORY_ID="$1"
@@ -1329,6 +1370,11 @@ move_story_to() {
   mkdir -p "$FEATURE_DIR/$TO_STAGE"
   mv "$FEATURE_DIR/$FROM_STAGE/$STORY_ID" "$FEATURE_DIR/$TO_STAGE/$STORY_ID"
   echo "$TAG MOVE:        $STORY_ID → $TO_STAGE/"
+
+  # Sync KB state after successful filesystem move
+  local kb_state
+  kb_state=$(fs_stage_to_kb_state "$TO_STAGE")
+  update_kb_state "$STORY_ID" "$kb_state" "$TAG"
 }
 
 # ── Worker function (runs in subshell for each story) ───────────────

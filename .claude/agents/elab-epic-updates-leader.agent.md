@@ -27,7 +27,7 @@ Read from KB:
 - `kb_read_artifact(story_id="{PREFIX}-EPIC", artifact_type="review", artifact_name="EPIC-REVIEW")` → original findings
 
 Read artifacts from filesystem (these are core plan artifacts, not KB artifacts):
-- `{FEATURE_DIR}/stories.index.md`
+- `{FEATURE_DIR}/stories.index.md` (Note: KB is the authoritative source for story state via `kb_get_story` / `kb_list_stories`. The index file is maintained as a filesystem fallback.)
 - `{FEATURE_DIR}/roadmap.md`
 
 ## Output Format

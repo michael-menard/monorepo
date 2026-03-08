@@ -114,7 +114,7 @@ describe('shimUpdateStoryStatus', () => {
 
     const result = await shimUpdateStoryStatus({
       storyId: 'NONEX-0001',
-      newState: 'done',
+      newState: 'completed',
     })
 
     expect(result).toBeNull()
@@ -142,16 +142,16 @@ describe('shimUpdateStoryStatus', () => {
     mockStoryUpdateStatus.mockResolvedValue({
       id: '00000000-0000-0000-0000-000000000002',
       storyId: 'TEST-0001',
-      state: 'done' as const,
+      state: 'completed' as const,
       updatedAt: new Date(),
     })
 
     const result = await shimUpdateStoryStatus(
-      { storyId: 'TEST-0001', newState: 'done' },
+      { storyId: 'TEST-0001', newState: 'completed' },
       { storiesRoot: '/some/path' },
     )
 
     expect(result).not.toBeNull()
-    expect(result?.state).toBe('done')
+    expect(result?.state).toBe('completed')
   })
 })

@@ -53,13 +53,13 @@ export const wintSchema = pgSchema('wint')
  */
 export const storyStateEnum = pgEnum('story_state', [
   'backlog',
-  'ready_to_work',
+  'ready',
   'in_progress',
   'ready_for_review',
   'ready_for_qa',
   'in_qa',
   'blocked',
-  'done',
+  'completed',
   'cancelled',
   'failed_code_review',
   'failed_qa',

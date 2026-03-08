@@ -51,7 +51,7 @@ If preconditions fail → `PM BLOCKED: <reason>`
 ### Phase 1: Determine Bug ID
 
 If bug ID not provided:
-1. Read `{FEATURE_DIR}/stories.index.md`
+1. **KB-first**: Call `kb_list_stories({ planSlug: PLAN_SLUG })` for authoritative story list. Fallback: read `{FEATURE_DIR}/stories.index.md`
 2. Find highest existing BUG-NNN
 3. Assign next sequential: BUG-(NNN+1)
 

@@ -41,7 +41,7 @@ Read the most recent `plans/audit/FINDINGS-*.yaml`.
 
 ### 3. Dedup Against Existing Stories
 For each finding to promote:
-- Read `plans/future/*/stories.index.md` files
+- **KB-first**: Call `kb_list_stories` for dedup checks. Fallback: read `plans/future/*/stories.index.md` files
 - Compare finding title against existing story titles (semantic similarity)
 - If match found (>80% similar): skip promotion, mark as `duplicate` with story reference
 - If partial match (50-80%): flag as `related` and prompt user
@@ -103,7 +103,7 @@ promotion:
 - Do NOT create duplicate stories
 - Preserve finding evidence in story description
 - Map severity to story priority: critical→P1, high→P2, medium→P3, low→P4
-- Update both the FINDINGS yaml AND the stories.index
+- Update both the FINDINGS yaml AND the stories.index (and KB via `kb_update_story` if available)
 
 ## Completion Signal
 - `PROMOTE COMPLETE: {promoted} stories created from {total_reviewed} findings`

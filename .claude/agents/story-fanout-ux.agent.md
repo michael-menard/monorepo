@@ -31,7 +31,7 @@ From orchestrator context:
 From filesystem:
 - Story seed at `story_seed_path`
 - Baseline reality at `baseline_path` (may be null)
-- Stories index at `{feature_dir}/stories.index.md`
+- **KB-first**: Call `kb_get_story({ storyId: "{story_id}" })` for authoritative story state. Fallback: if KB is unavailable, read stories index at `{feature_dir}/stories.index.md`.
 - UIUX agent standards (if referenced)
 
 ---

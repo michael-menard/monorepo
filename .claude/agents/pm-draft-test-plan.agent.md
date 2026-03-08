@@ -22,7 +22,7 @@ Do not write implementation code.
 - Story ID (e.g., `WISH-001`)
 
 Read from:
-- `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry)
+- **KB-first**: Call `kb_get_story({ storyId: "{STORY_ID}" })` for authoritative story state and metadata. Fallback: if KB is unavailable, read `{FEATURE_DIR}/stories.index.md` (relevant {STORY_ID} entry).
 - `{FEATURE_DIR}/PLAN.exec.md` / `PLAN.meta.md` (if relevant)
 - Any prior story patterns referenced by the PM orchestrator
 

@@ -72,6 +72,8 @@ Story directory is `{feature_dir}/{story_id}/` — no stage-based subdirectories
 
 ### Stories Index (both modes)
 
+Note: Story state is authoritative from KB (`kb_get_story` / `kb_list_stories`), not from this index file. The index file is maintained as a filesystem fallback.
+
 File: `{feature_dir}/stories.index.md`
 
 Use the reference template from `.claude/docs/pm-bootstrap-workflow-reference.md`. Populate:

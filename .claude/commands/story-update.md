@@ -84,7 +84,9 @@ The MCP tools (`worktree_get_by_story`, `worktree_mark_complete`) are called by 
 
 ### 1. Locate Story File
 
-Search within `{FEATURE_DIR}`:
+**KB-first (KSOT Phase 2)**: Try `kb_get_story({storyId: STORY_ID})` to get the story's current state. If found, use the state to determine which stage directory the story should be in. If KB is unavailable, fall back to directory scan.
+
+**Directory fallback** — search within `{FEATURE_DIR}`:
 1. `{FEATURE_DIR}/backlog/{STORY_ID}/`
 2. `{FEATURE_DIR}/created/{STORY_ID}/`
 3. `{FEATURE_DIR}/elaboration/{STORY_ID}/`
@@ -96,7 +98,7 @@ Search within `{FEATURE_DIR}`:
 9. `{FEATURE_DIR}/ready-for-qa/{STORY_ID}/`
 10. `{FEATURE_DIR}/UAT/{STORY_ID}/`
 
-If not found: `UPDATE FAILED: Story not found`
+If not found via KB or directory: `UPDATE FAILED: Story not found`
 
 ### 2. Worktree Cleanup (if NEW_STATUS == 'completed')
 
@@ -109,21 +111,21 @@ Look up `NEW_STATUS` in the inline mapping table (sourced from `packages/backend
 | Command status | DB newState | Action |
 |----------------|-------------|--------|
 | `backlog` | `backlog` | call shimUpdateStoryStatus |
-| `ready-to-work` | `ready_to_work` | call shimUpdateStoryStatus |
+| `created` | `backlog` | call shimUpdateStoryStatus |
+| `elaboration` | `in_progress` | call shimUpdateStoryStatus |
+| `ready-to-work` | `ready` | call shimUpdateStoryStatus |
 | `in-progress` | `in_progress` | call shimUpdateStoryStatus |
+| `needs-code-review` | `ready_for_review` | call shimUpdateStoryStatus |
+| `failed-code-review` | `failed_code_review` | call shimUpdateStoryStatus |
 | `ready-for-qa` | `ready_for_qa` | call shimUpdateStoryStatus |
+| `failed-qa` | `failed_qa` | call shimUpdateStoryStatus |
 | `uat` | `in_qa` | call shimUpdateStoryStatus |
-| `completed` | `done` | call shimUpdateStoryStatus |
+| `completed` | `completed` | call shimUpdateStoryStatus |
 | `BLOCKED` | `blocked` | call shimUpdateStoryStatus |
 | `superseded` | `cancelled` | call shimUpdateStoryStatus |
-| `created` | skip | no DB state mapping (pre-tracking phase) |
-| `elaboration` | skip | no DB state mapping (pre-tracking phase) |
-| `needs-code-review` | skip | no DB state mapping (transient review state) |
-| `failed-code-review` | skip | no DB state mapping (transient review state) |
-| `failed-qa` | skip | no DB state mapping (transient QA state) |
-| `needs-split` | skip | no DB state mapping (administrative state) |
+| `needs-split` | `backlog` | call shimUpdateStoryStatus |
 
-**If NEW_STATUS is in the mapped rows (has a DB newState):**
+Every status has a DB mapping — no statuses are skipped.
 
 ```
 result = shimUpdateStoryStatus({
@@ -139,19 +141,13 @@ else:
   db_updated = true
 ```
 
-**If NEW_STATUS is NOT in the mapped rows (skip action):**
-
-```
-db_updated = false  # no call made
-```
-
 **Notes:**
 - The DB write is never blocking — Step 3b (frontmatter update) proceeds regardless of DB outcome.
-- The `--no-index` flag does NOT suppress this step. Step 3a always executes for mapped statuses.
+- The `--no-index` flag does NOT suppress this step. Step 3a always executes.
 
-### 3b. Update Frontmatter
+### 3b. Update Frontmatter (informational only)
 
-In `{STORY_ID}.md`:
+Update frontmatter in `{STORY_ID}.md` for human readability. **Note (KSOT-2050)**: Frontmatter is informational — agents must use `kb_get_story` for authoritative state, not frontmatter.
 
 ```yaml
 ---
@@ -229,7 +225,7 @@ These scenarios require manual execution against a live `postgres-knowledgebase`
 | **A** | Mapped status, DB available | Story exists in DB; `postgres-knowledgebase` reachable | `/story-update {FEATURE_DIR} {STORY_ID} in-progress` | `shimUpdateStoryStatus` called with `newState: in_progress`; returns non-null; `db_updated: true`; frontmatter updated to `in-progress` |
 | **B** | DB unavailable, mapped status | Story exists in DB; `postgres-knowledgebase` unreachable (simulated) | `/story-update {FEATURE_DIR} {STORY_ID} in-progress` | `shimUpdateStoryStatus` called; returns null; WARNING emitted: `"WARNING: DB write failed for story '{STORY_ID}' — DB unavailable. Proceeding with filesystem update only."`; `db_updated: false`; frontmatter still updated |
 | **C** | New story not yet in DB | Story directory exists on filesystem but no DB record; mapped status | `/story-update {FEATURE_DIR} {STORY_ID} ready-to-work` | `shimUpdateStoryStatus` called; returns null (story not found in DB); WARNING emitted; `db_updated: false`; frontmatter updated |
-| **D** | Unmapped status | Story in any state | `/story-update {FEATURE_DIR} {STORY_ID} needs-code-review` | No `shimUpdateStoryStatus` call made; `db_updated: false`; frontmatter updated to `needs-code-review` |
+| **D** | Previously-unmapped status now mapped | Story in any state | `/story-update {FEATURE_DIR} {STORY_ID} needs-code-review` | `shimUpdateStoryStatus` called with `newState: ready_for_review`; returns non-null; `db_updated: true`; frontmatter updated to `needs-code-review` |
 | **E** | Invalid transition | Story currently in `backlog` | `/story-update {FEATURE_DIR} {STORY_ID} uat` | `UPDATE FAILED: Cannot transition from backlog to uat`; no DB write; no file changes |
 | **F** | `--no-index` with mapped status, DB available | Story exists in DB; `postgres-knowledgebase` reachable | `/story-update {FEATURE_DIR} {STORY_ID} ready-for-qa --no-index` | `shimUpdateStoryStatus` called with `newState: ready_for_qa`; returns non-null; `db_updated: true`; frontmatter updated; `stories.index.md` NOT updated |
 

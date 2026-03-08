@@ -26,7 +26,7 @@ From orchestrator prompt:
 Required artifacts (all inside `{FEATURE_DIR}/`):
 | Artifact | Location | Required |
 |----------|----------|----------|
-| Stories Index | `{FEATURE_DIR}/stories.index.md` | Yes |
+| Stories Index | **KB-first**: `kb_list_stories`. Fallback: `{FEATURE_DIR}/stories.index.md` | Yes |
 | Bootstrap Context | `{FEATURE_DIR}/_bootstrap/AGENT-CONTEXT.md` | Yes |
 
 ## Derive Prefix

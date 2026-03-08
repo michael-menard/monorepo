@@ -45,6 +45,7 @@ The orchestrator provides `feature_dir`. Read `PLAN.md` or `PRD.md` from disk. W
    - If one or more stories returned: BLOCKED: "Stories already exist in KB for plan '{project_name}' — bootstrap already run"
    - If zero stories returned: proceed to Step 5
    - If `kb_list_stories` is unavailable (tool not found, connection error, timeout): log warning `"KB collision check unavailable — falling back to filesystem check"`, then fall back to filesystem check: if `{feature_dir}/stories.index.md` exists on disk: BLOCKED: "stories.index.md already exists in {feature_dir} — bootstrap already run (filesystem fallback)"; otherwise proceed to Step 5
+   - Note: KB is the authoritative source for story state. The filesystem check is a fallback only.
 5. **Extract raw plan summary** — first 500 chars of plan_content
 6. **Return SETUP-CONTEXT inline**
 
@@ -53,7 +54,7 @@ The orchestrator provides `feature_dir`. Read `PLAN.md` or `PRD.md` from disk. W
 1. **Check for existing context** — Read `{FEATURE_DIR}/_bootstrap/CHECKPOINT.md` if exists
 2. **Validate feature directory** — must exist and contain `PLAN.md` or `PRD.md`
 3. **Derive prefix** — from directory name (remove hyphens, first 4 chars, uppercase)
-4. **Check for collision** — verify `stories.index.md` doesn't already exist
+4. **Check for collision** — KB-first: call `kb_list_stories` to check for existing stories. Fallback: verify `stories.index.md` doesn't already exist
 5. **Create bootstrap dir** — create `{FEATURE_DIR}/_bootstrap/` if needed
 6. **Write AGENT-CONTEXT.md** — see format below
 7. **Write CHECKPOINT.md** — see format below

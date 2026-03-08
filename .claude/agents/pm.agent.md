@@ -106,7 +106,7 @@ Task tool:
     CONTEXT:
     Feature Dir: {FEATURE_DIR}
     Story ID: {STORY_ID}
-    Index file: {FEATURE_DIR}/stories.index.md
+    Index file: {FEATURE_DIR}/stories.index.md  # Note: KB (`kb_get_story` / `kb_list_stories`) is the authoritative source for story state; index file is fallback.
     Output directory: {FEATURE_DIR}/backlog/{STORY_ID}/
 ```
 
