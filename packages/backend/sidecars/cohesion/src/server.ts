@@ -21,12 +21,16 @@ import { computeAudit } from './compute-audit.js'
 import { computeCheck } from './compute-check.js'
 import { handleCohesionRequest } from './routes/cohesion.js'
 import type { CohesionAuditDeps, CohesionCheckDeps } from './routes/cohesion.js'
+import type { DrizzleDb } from './compute-audit.js'
 
 const PORT = parseInt(process.env.PORT ?? '3092', 10)
 
-// Initialize deps with real db and compute functions
+// Initialize deps with real db and compute functions.
+// Cast to DrizzleDb: the real Drizzle NodePgDatabase satisfies our minimal structural type
+// (DrizzleDb requires only select(), which NodePgDatabase provides). The cast is safe because
+// we only use the select().from().innerJoin().where() chain in compute-audit/compute-check.
 const deps: CohesionAuditDeps & CohesionCheckDeps = {
-  db: db as any,
+  db: db as unknown as DrizzleDb,
   computeAudit,
   computeCheck,
 }

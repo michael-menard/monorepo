@@ -13,6 +13,7 @@
  * Dependency injection: accepts db as parameter for testability (AC-6).
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { features, capabilities } from '@repo/database-schema'
 import { eq, isNotNull } from 'drizzle-orm'
@@ -21,21 +22,35 @@ import type { CohesionAuditResult } from './__types__/index.js'
 const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
 
 /**
- * Minimal Drizzle DB type — accepts injectable db for testing (AC-6).
+ * Minimal Drizzle DB schema — accepts injectable db for testing (AC-6).
+ * Uses z.custom<T>() per CLAUDE.md Zod-first requirement.
+ * The structural shape describes the chainable query API surface used by computeAudit.
  * Matches the pattern from context-pack assemble-context-pack.ts.
  */
-export type DrizzleDb = {
-  select: () => {
-    from: (table: any) => {
-      innerJoin: (
-        table: any,
-        on: any,
-      ) => {
-        where: (cond: any) => Promise<any[]>
-      }
-    }
-  }
+
+// Structural type for Drizzle's chainable query builder (not a data payload — no z.object()).
+// Covers both usage patterns in this sidecar:
+//   - computeAudit: select().from(t).innerJoin(t2, on).where(cond)
+//   - computeCheck: select().from(t).where(cond)  (no join)
+type DrizzleFromResult = {
+  innerJoin: (table: unknown, on: unknown) => { where: (cond: unknown) => Promise<unknown[]> }
+  where: (cond: unknown) => Promise<unknown[]>
 }
+
+type DrizzleQueryChain = {
+  from: (table: unknown) => DrizzleFromResult
+}
+
+type DrizzleDbShape = {
+  select: () => DrizzleQueryChain
+}
+
+export const DrizzleDbSchema = z.custom<DrizzleDbShape>(
+  val => val !== null && typeof val === 'object' && 'select' in (val as object),
+  { message: 'Expected a Drizzle DB instance with a select() method' },
+)
+
+export type DrizzleDb = z.infer<typeof DrizzleDbSchema>
 
 /**
  * Compute cohesion audit — identifies Franken-features across the graph.
@@ -60,20 +75,25 @@ export async function computeAudit(
   db: DrizzleDb,
   packageName?: string,
 ): Promise<CohesionAuditResult> {
+  // Row shape returned by Drizzle ORM join query (features JOIN capabilities)
+  type AuditRow = {
+    features: { id: string; featureName: string; packageName: string | null }
+    capabilities: { lifecycleStage: string | null }
+  }
+
   try {
     // Query all features with their linked capabilities (Drizzle ORM — parameterized, no raw SQL)
-    const rows = await db
+    // Cast to AuditRow[]: safe because the Drizzle ORM join on features+capabilities always
+    // returns this shape per the database schema definitions in @repo/database-schema.
+    const rows = (await db
       .select()
       .from(features)
       .innerJoin(capabilities, eq(capabilities.featureId, features.id))
-      .where(isNotNull(capabilities.featureId))
+      .where(isNotNull(capabilities.featureId))) as AuditRow[]
 
     // Apply optional packageName filter in TypeScript (avoids additional DB round-trip)
     const filteredRows = packageName
-      ? rows.filter(
-          (row: { features: { packageName: string | null } }) =>
-            row.features.packageName === packageName,
-        )
+      ? rows.filter(row => row.features.packageName === packageName)
       : rows
 
     // Group capabilities by featureId in TypeScript
@@ -93,6 +113,7 @@ export async function computeAudit(
       }
       const lifecycleStage = row.capabilities.lifecycleStage
       if (lifecycleStage) {
+        // Non-null assertion safe: featureId was just set in featureMap.set() above in this loop iteration
         featureMap.get(featureId)!.stages.add(lifecycleStage)
       }
     }

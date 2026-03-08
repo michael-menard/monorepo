@@ -38,10 +38,14 @@ const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
  * // => { featureId: 'nonexistent-feature', status: 'unknown', violations: ['Feature not found'], capabilityCoverage: { create: false, read: false, update: false, delete: false } }
  * ```
  */
+// Row shape returned by Drizzle ORM query on capabilities table
+type CapabilityRow = { lifecycleStage: string | null }
+
 export async function computeCheck(db: DrizzleDb, featureId: string): Promise<CohesionCheckResult> {
   try {
-    // First check if the feature exists
-    const featureRows = await (db as any).select().from(features).where(eq(features.id, featureId))
+    // First check if the feature exists.
+    // Cast to unknown[]: safe — Drizzle returns an array (possibly empty) for any select query.
+    const featureRows = await db.select().from(features).where(eq(features.id, featureId))
 
     if (!featureRows || featureRows.length === 0) {
       // Feature not found — return graceful unknown result (AC-8)
@@ -59,11 +63,13 @@ export async function computeCheck(db: DrizzleDb, featureId: string): Promise<Co
       }
     }
 
-    // Query capabilities for this feature
-    const capabilityRows = await (db as any)
+    // Query capabilities for this feature.
+    // Cast to CapabilityRow[]: safe because Drizzle ORM select() on capabilities always
+    // returns this shape per the database schema definitions in @repo/database-schema.
+    const capabilityRows = (await db
       .select()
       .from(capabilities)
-      .where(eq(capabilities.featureId, featureId))
+      .where(eq(capabilities.featureId, featureId))) as CapabilityRow[]
 
     // Collect distinct CRUD stages present
     const stages = new Set<string>()

@@ -40,6 +40,8 @@ export type CohesionCheckDeps = {
 // Helpers (copied from context-pack — no cross-sidecar import per policy)
 // ============================================================================
 
+// BY DESIGN (WINT-4010 Reuse Plan): sendJson is intentionally copied here, not imported
+// cross-sidecar. Each sidecar is self-contained. Do NOT extract to a shared package.
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body)
   res.writeHead(status, {
@@ -55,6 +57,8 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
  */
 const MAX_BODY_SIZE_BYTES = 1 * 1024 * 1024 // 1 MB
 
+// BY DESIGN (WINT-4010 Reuse Plan): readBody is intentionally copied here, not imported
+// cross-sidecar. Each sidecar is self-contained. Do NOT extract to a shared package.
 /**
  * Read the request body as a string, enforcing a maximum size.
  */
@@ -83,6 +87,9 @@ async function readBody(req: IncomingMessage): Promise<string> {
 /**
  * Handle POST /cohesion/audit requests.
  * Validates request body with Zod, calls computeAudit, returns JSON response.
+ *
+ * SEC-002: No auth check here — intentionally deferred per WINT-4010 non-goals.
+ * Internal VPC deployment; network isolation is the current security boundary.
  */
 export async function handleCohesionAuditRequest(
   req: IncomingMessage,
@@ -142,6 +149,9 @@ export async function handleCohesionAuditRequest(
 /**
  * Handle POST /cohesion/check requests.
  * Validates request body with Zod, calls computeCheck, returns JSON response.
+ *
+ * SEC-002: No auth check here — intentionally deferred per WINT-4010 non-goals.
+ * Internal VPC deployment; network isolation is the current security boundary.
  */
 export async function handleCohesionCheckRequest(
   req: IncomingMessage,
