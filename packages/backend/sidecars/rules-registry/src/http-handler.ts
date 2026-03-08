@@ -21,7 +21,6 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { logger } from '@repo/logger'
-import { sendJson, readBody } from '@repo/sidecar-http-utils'
 import {
   GetRulesQuerySchema,
   ProposeRuleInputSchema,
@@ -33,18 +32,37 @@ import { getRules, proposeRule, promoteRule } from './rules-registry.js'
 // Helpers
 // ============================================================================
 
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  const payload = JSON.stringify(body)
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(payload),
+  })
+  res.end(payload)
+}
+
 /**
  * Read and parse the request body as JSON.
  * Returns null if body is empty or unparseable.
  */
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  try {
-    const raw = (await readBody(req)).trim()
-    if (!raw) return {}
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
+  return new Promise(resolve => {
+    const chunks: Buffer[] = []
+    req.on('data', chunk => chunks.push(chunk))
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf-8').trim()
+      if (!raw) {
+        resolve({})
+        return
+      }
+      try {
+        resolve(JSON.parse(raw))
+      } catch {
+        resolve(null)
+      }
+    })
+    req.on('error', () => resolve(null))
+  })
 }
 
 // ============================================================================
@@ -54,7 +72,11 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 /**
  * GET /rules — list rules with optional ?type, ?scope, ?status filters.
  */
-async function handleGetRules(_req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+async function handleGetRules(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
   const rawQuery = {
     type: url.searchParams.get('type') ?? undefined,
     scope: url.searchParams.get('scope') ?? undefined,
@@ -62,7 +84,9 @@ async function handleGetRules(_req: IncomingMessage, res: ServerResponse, url: U
   }
 
   // Remove undefined keys
-  const filtered = Object.fromEntries(Object.entries(rawQuery).filter(([, v]) => v !== undefined))
+  const filtered = Object.fromEntries(
+    Object.entries(rawQuery).filter(([, v]) => v !== undefined),
+  )
 
   const parsed = GetRulesQuerySchema.safeParse(filtered)
   if (!parsed.success) {
