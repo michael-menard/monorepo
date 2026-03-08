@@ -21,6 +21,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { logger } from '@repo/logger'
+import { sendJson, readBody } from '@repo/sidecar-http-utils'
 import {
   GetRulesQuerySchema,
   ProposeRuleInputSchema,
@@ -32,37 +33,18 @@ import { getRules, proposeRule, promoteRule } from './rules-registry.js'
 // Helpers
 // ============================================================================
 
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  const payload = JSON.stringify(body)
-  res.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Content-Length': Buffer.byteLength(payload),
-  })
-  res.end(payload)
-}
-
 /**
  * Read and parse the request body as JSON.
  * Returns null if body is empty or unparseable.
  */
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  return new Promise(resolve => {
-    const chunks: Buffer[] = []
-    req.on('data', chunk => chunks.push(chunk))
-    req.on('end', () => {
-      const raw = Buffer.concat(chunks).toString('utf-8').trim()
-      if (!raw) {
-        resolve({})
-        return
-      }
-      try {
-        resolve(JSON.parse(raw))
-      } catch {
-        resolve(null)
-      }
-    })
-    req.on('error', () => resolve(null))
-  })
+  try {
+    const raw = (await readBody(req)).trim()
+    if (!raw) return {}
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
 }
 
 // ============================================================================
