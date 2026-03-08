@@ -1,6 +1,6 @@
 id: CDTS-1040
 title: Update MCP Tool SQL
-status: backlog
+status: in-progress
 priority: medium
 phase: 1
 feature: "Schema-qualify raw SQL in semantic.ts, keyword.ts, kb-get-related.ts with explicit public. prefix. Update list tools to query header tables only; get-by-id tools JOIN to detail tables. Add WHERE deleted_at IS NULL to all entity queries. Update analytics.story_token_usage references in token-operations.ts."

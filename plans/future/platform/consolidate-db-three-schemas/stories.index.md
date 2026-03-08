@@ -13,10 +13,10 @@
 | Phase | Status | Stories | Progress |
 |-------|--------|---------|----------|
 | 0: Infrastructure Foundation | Backlog | 2 | 0/2 (0%) |
-| 1: Schema DDL, Drizzle, and Code | Backlog | 5 | 0/5 (0%) |
+| 1: Schema DDL, Drizzle, and Code | In Progress | 5 | 1/5 (20%) |
 | 2: Graph Infrastructure | Backlog | 2 | 0/2 (0%) |
 | 3: Aurora Cleanup | Backlog | 2 | 0/2 (0%) |
-| **Total** | **Backlog** | **11** | **0/11 (0%)** |
+| **Total** | **In Progress** | **11** | **1/11 (9%)** |
 
 ## Schema Assignment
 
@@ -50,8 +50,8 @@ Create analytics schema, move wint tables, write structural DDL (header/detail s
 |----|-------|--------------|--------|----------|
 | CDTS-1010 | Create analytics Schema and Move wint Tables into Drizzle | CDTS-0020 | Backlog | ENG-002 |
 | CDTS-1020 | Write Structural DDL Migrations | CDTS-1010 | Backlog | QA-002 |
-| CDTS-1030 | Update Drizzle schema.ts | CDTS-1020 | needs-code-review | ENG-003 |
-| CDTS-1040 | Update MCP Tool SQL | CDTS-1030 | Backlog | ENG-003 |
+| CDTS-1030 | Update Drizzle schema.ts | CDTS-1020 | uat | ENG-003 |
+| CDTS-1040 | Update MCP Tool SQL | None | Backlog | ENG-003 |
 | CDTS-1050 | Apply Phase 1 Migrations and Verify | CDTS-1040 | Backlog | ENG-003, QA-001, QA-002, PLAT-001, PLAT-002 |
 
 ## Phase 2: Graph Infrastructure

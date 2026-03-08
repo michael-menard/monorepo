@@ -1,6 +1,6 @@
 schema: 1
-story_id: CDTS-1030
-timestamp: "2026-03-08T00:48:00Z"
+story_id: CDTS-1040
+timestamp: "2026-03-08T01:50:00Z"
 gen_mode: false
 touches:
   backend: true
@@ -11,13 +11,15 @@ touches:
   ui: false
   infra: false
 touched_paths_globs:
+  - "packages/backend/mcp-tools/**"
   - "packages/backend/database-schema/**"
+  - "packages/backend/orchestrator/**"
 risk_flags:
   auth: false
   payments: false
   migrations: true
   external_apis: false
-  security: false
+  security: true
   performance: true
-summary: "Update Drizzle schema.ts with new table definitions matching CDTS-1020 DDL, add soft-delete columns, and FK constraints"
+summary: "Schema-qualify MCP tool SQL queries and implement header/detail split with soft-delete filtering"
 elaboration: "completed"
