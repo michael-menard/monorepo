@@ -20,7 +20,7 @@
  */
 
 import { logger } from '@repo/logger'
-import { getPool, closePool } from '@repo/db'
+import pg from 'pg'
 import { createCheckpointRepository } from '../checkpointer/checkpoint-repository.js'
 import { createStoryCreationGraph } from '../graphs/story-creation.js'
 import type { DbPool } from '../checkpointer/checkpoint-repository.js'
@@ -69,15 +69,28 @@ EXIT CODES
 }
 
 // ============================================================================
-// DB Pool from @repo/db
+// DB Pool from DATABASE_URL
 // ============================================================================
 
+let _pool: pg.Pool | null = null
+
 /**
- * Gets the shared pool from @repo/db.
- * AC-001: Uses getPool() from @repo/db — no separate pool created.
+ * Creates a pg.Pool from DATABASE_URL env var.
+ * AC-001: Uses standard pg pool with max: 1 (matching Lambda constraints).
  */
 function getDbPool(): DbPool {
-  return getPool() as unknown as DbPool
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required')
+  }
+  _pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
+  return _pool as unknown as DbPool
+}
+
+async function closeDbPool(): Promise<void> {
+  if (_pool) {
+    await _pool.end()
+    _pool = null
+  }
 }
 
 // ============================================================================
@@ -213,7 +226,7 @@ async function main(): Promise<void> {
     process.stderr.write(`Error: ${message}\n`)
     process.exitCode = 1
   } finally {
-    await closePool()
+    await closeDbPool()
   }
 }
 
