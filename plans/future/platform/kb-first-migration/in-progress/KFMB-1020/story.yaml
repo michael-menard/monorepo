@@ -1,6 +1,6 @@
 id: "KFMB-1020"
 title: "kb_create_story MCP Tool and CRUD Update"
-status: in-progress
+status: backlog
 priority: medium
 phase: 1
 feature: "Add kb_create_story (upsert by story_id) MCP tool and update kb_update_story / kb_get_story to handle new content fields"

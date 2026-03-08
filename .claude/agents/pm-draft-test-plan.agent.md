@@ -31,8 +31,12 @@ Read from:
 - Do NOT invent endpoints beyond the index/story scope.
 - Tests must be locally runnable and evidence-based.
 
-## Output (MUST WRITE)
-Write `{FEATURE_DIR}/backlog/{STORY_ID}/_pm/test-plan.yaml`:
+## Output (MUST RETURN INLINE)
+Return the test plan YAML content inline in a code block. Do NOT write to any file.
+
+The leader reads your TaskOutput and embeds it as `pm_artifacts.test_plan` in story.yaml.
+
+Return your output in this exact format:
 
 ```yaml
 strategy: unit+integration+e2e   # unit | integration | e2e | manual
@@ -72,5 +76,3 @@ manual_cases: []                 # { id, title, steps, expected } for manual-onl
 fixture_definitions: []          # { name, type, description }
 risks: []                        # test fragility, ambiguity, missing prereqs
 ```
-
-The leader reads this file and embeds it as `pm_artifacts.test_plan` in story.yaml.

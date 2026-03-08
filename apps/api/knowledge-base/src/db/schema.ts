@@ -681,6 +681,34 @@ export const stories = pgTable(
 
     /** Soft-delete: who deleted this story (agent ID or user) */
     deletedBy: text('deleted_by'),
+
+    /** When the story was completed */
+    completedAt: timestamp('completed_at'),
+
+    /** When the story was last synced from YAML file */
+    fileSyncedAt: timestamp('file_synced_at'),
+
+    /** SHA hash of YAML file for change detection */
+    fileHash: text('file_hash'),
+
+    // -------------------------------------------------------------------------
+    // Content fields (AC-9 / KFMB-1020): added to match KFMB-1010 column types
+    // -------------------------------------------------------------------------
+
+    /** Human-readable story description */
+    description: text('description'),
+
+    /**
+     * Acceptance criteria stored as JSONB (matches kbar.stories column type).
+     * Structure: array of {id, text} objects or arbitrary JSON.
+     */
+    acceptanceCriteria: jsonb('acceptance_criteria'),
+
+    /** Non-goals for this story (text array) */
+    nonGoals: text('non_goals').array(),
+
+    /** Packages touched by this story (text array) */
+    packages: text('packages').array(),
   },
   table => ({
     featureIdx: index('idx_stories_feature').on(table.feature),
