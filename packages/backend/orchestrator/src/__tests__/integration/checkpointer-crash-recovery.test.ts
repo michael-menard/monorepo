@@ -19,6 +19,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { logger } from '@repo/logger'
 import { CheckpointRepository } from '../../checkpointer/checkpoint-repository.js'
 import { archiveExpiredCheckpoints } from '../../checkpointer/checkpoint-cleanup.js'
 import type { CheckpointPayload } from '../../checkpointer/__types__/index.js'
@@ -70,7 +71,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
 
   beforeAll(async () => {
     if (!DATABASE_URL) {
-      console.warn(`[SKIP] ${TEST_THREAD_BASE}: DATABASE_URL not set — skipping integration tests`)
+      logger.warn(`[SKIP] ${TEST_THREAD_BASE}: DATABASE_URL not set — skipping integration tests`)
       return
     }
 
@@ -86,7 +87,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
         client.release?.()
       }
     } catch (error) {
-      console.warn(
+      logger.warn(
         `[SKIP] ${TEST_THREAD_BASE}: DB not reachable — ${error instanceof Error ? error.message : String(error)}`,
       )
       pool = null
@@ -133,7 +134,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
     'HP-2: checkpoint rows persisted after each node write to live DB',
     async () => {
       if (!dbReachable || !pool) {
-        console.log('[SKIPPED] No live DB available')
+        logger.info('[SKIPPED] No live DB available')
         return
       }
 
@@ -183,7 +184,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
     'HP-3: get() returns the LATEST checkpoint for a thread_id',
     async () => {
       if (!dbReachable || !pool) {
-        console.log('[SKIPPED] No live DB available')
+        logger.info('[SKIPPED] No live DB available')
         return
       }
 
@@ -223,7 +224,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
     'EC-1: get() returns null for non-existent thread_id',
     async () => {
       if (!dbReachable || !pool) {
-        console.log('[SKIPPED] No live DB available')
+        logger.info('[SKIPPED] No live DB available')
         return
       }
 
@@ -238,7 +239,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
     'EC-4: putWithRollback() persists rollback_actions in state JSONB',
     async () => {
       if (!dbReachable || !pool) {
-        console.log('[SKIPPED] No live DB available')
+        logger.info('[SKIPPED] No live DB available')
         return
       }
 
@@ -307,7 +308,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
     'HP-5: archiveExpiredCheckpoints sets status=archived on old rows (not deleted)',
     async () => {
       if (!dbReachable || !pool) {
-        console.log('[SKIPPED] No live DB available')
+        logger.info('[SKIPPED] No live DB available')
         return
       }
 
@@ -365,7 +366,7 @@ describe('Checkpointer Crash Recovery Integration', () => {
     'ED-3: retry_counts persisted in JSONB with correct node keys and values',
     async () => {
       if (!dbReachable || !pool) {
-        console.log('[SKIPPED] No live DB available')
+        logger.info('[SKIPPED] No live DB available')
         return
       }
 

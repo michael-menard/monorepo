@@ -19,4 +19,4 @@ findings: []
 metrics:
   files_scanned: 0
 trend_data:
-  previous_run: FINDINGS-2026-03-07.yaml
+  previous_run: FINDINGS-2026-03-05.yaml

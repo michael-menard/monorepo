@@ -72,7 +72,7 @@ export function parseCheckpointPayload(
 
   if (!result.success) {
     const message = result.error.message
-    logger.error('Invalid checkpoint payload', { error: message, rawState })
+    logger.error('Invalid checkpoint payload', { error: message })
     return { payload: null, error: `Invalid checkpoint payload: ${message}` }
   }
 

@@ -170,18 +170,3 @@ export async function withCheckpointer<T>(
     throw nodeError
   }
 }
-
-/**
- * Creates a checkpoint repository bound to a specific pool.
- * Convenience wrapper that reads pool from getPool() and instantiates the repo.
- *
- * @param pool - DB pool from @repo/db getPool()
- * @param config - Optional configuration
- * @returns CheckpointRepository instance
- */
-export function createCheckpointer(
-  pool: DbPool,
-  config: Partial<CheckpointConfig> = {},
-): CheckpointRepository {
-  return new CheckpointRepository(pool, config)
-}

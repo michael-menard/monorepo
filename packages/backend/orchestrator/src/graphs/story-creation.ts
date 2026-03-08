@@ -10,6 +10,7 @@
 
 import { z } from 'zod'
 import { Annotation, StateGraph, END, START } from '@langchain/langgraph'
+import { CheckpointConfigSchema } from '../checkpointer/__types__/index.js'
 import type { GraphState } from '../state/index.js'
 import type { BaselineReality, RetrievedContext } from '../nodes/reality/index.js'
 import type { StoryStructure, StoryRequest } from '../nodes/story/seed.js'
@@ -78,7 +79,7 @@ export const StoryCreationConfigSchema = z.object({
    * AC-002: Enables crash recovery via resume-graph CLI.
    * Set to undefined to disable checkpointing (default — backward compatible).
    */
-  checkpointerConfig: z.unknown().optional(),
+  checkpointerConfig: CheckpointConfigSchema.partial().optional(),
   /**
    * LangGraph thread ID for checkpoint persistence.
    * Required when checkpointerConfig is provided.

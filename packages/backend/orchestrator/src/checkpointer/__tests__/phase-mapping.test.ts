@@ -149,7 +149,7 @@ describe('translatePhaseToNode', () => {
   })
 
   it('returns string values (not null) for all defined phases', () => {
-    const phases: Phase[] = ['setup', 'plan', 'execute', 'proof', 'review', 'fix', 'qa-setup', 'qa-verify', 'qa-complete', 'done']
+    const phases: Phase[] = ['setup', 'plan', 'execute', 'proof', 'review', 'fix', 'qa-setup', 'qa-verify', 'qa-complete', 'qa-completion', 'uat-complete', 'done']
     for (const phase of phases) {
       const result = translatePhaseToNode(phase)
       expect(result).not.toBeNull()

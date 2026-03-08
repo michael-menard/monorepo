@@ -87,8 +87,8 @@ export class CheckpointRepository {
    * @param storyId - Optional story ID for cross-referencing
    * @returns The execution row UUID (workflow_executions.id)
    */
-  async ensureExecution(threadId: string, storyId?: string): Promise<string> {
-    const client = await this.pool.connect()
+  async ensureExecution(threadId: string, storyId?: string, existingClient?: DbClient): Promise<string> {
+    const client = existingClient ?? await this.pool.connect()
     try {
       // Check if execution already exists
       const existing = await client.query<{ id: string }>(
@@ -124,7 +124,7 @@ export class CheckpointRepository {
       })
       throw error
     } finally {
-      client.release?.()
+      if (!existingClient) client.release?.()
     }
   }
 
@@ -184,8 +184,8 @@ export class CheckpointRepository {
   ): Promise<void> {
     const client = await this.pool.connect()
     try {
-      // Ensure execution row exists
-      const executionUuid = await this.ensureExecution(threadId, storyId)
+      // Ensure execution row exists (reuse client to avoid nested connection)
+      const executionUuid = await this.ensureExecution(threadId, storyId, client)
 
       // Serialize state snapshot
       const stateResult = serializeState(payload)
@@ -240,7 +240,7 @@ export class CheckpointRepository {
 
     const client = await this.pool.connect()
     try {
-      const executionUuid = await this.ensureExecution(threadId, storyId)
+      const executionUuid = await this.ensureExecution(threadId, storyId, client)
 
       const stateResult = serializeState(enrichedPayload)
       if (!stateResult.success) {

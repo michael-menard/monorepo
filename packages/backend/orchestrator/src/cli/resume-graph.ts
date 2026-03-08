@@ -20,6 +20,7 @@
  */
 
 import { logger } from '@repo/logger'
+import { getPool, closePool } from '@repo/db'
 import { createCheckpointRepository } from '../checkpointer/checkpoint-repository.js'
 import { createStoryCreationGraph } from '../graphs/story-creation.js'
 import type { DbPool } from '../checkpointer/checkpoint-repository.js'
@@ -68,31 +69,15 @@ EXIT CODES
 }
 
 // ============================================================================
-// DB Pool from DATABASE_URL
+// DB Pool from @repo/db
 // ============================================================================
 
 /**
- * Creates a minimal pg pool from DATABASE_URL environment variable.
- * Uses max: 1 per Lambda constraint.
+ * Gets the shared pool from @repo/db.
+ * AC-001: Uses getPool() from @repo/db — no separate pool created.
  */
-async function createPoolFromEnv(): Promise<DbPool> {
-  // Dynamic import to keep CLI startup fast
-  const pg = await import('pg')
-  const Pool = pg.default?.Pool ?? (pg as unknown as { Pool: new (opts: object) => DbPool }).Pool
-
-  const databaseUrl = process.env.DATABASE_URL
-  if (!databaseUrl) {
-    throw new Error(
-      'DATABASE_URL environment variable is required. ' +
-        'Example: DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lego_dev',
-    )
-  }
-
-  return new Pool({
-    connectionString: databaseUrl,
-    max: 1, // Match Lambda connection pool constraint
-    idleTimeoutMillis: 10000,
-  }) as unknown as DbPool
+function getDbPool(): DbPool {
+  return getPool() as unknown as DbPool
 }
 
 // ============================================================================
@@ -152,11 +137,14 @@ async function resumeGraph(threadId: string, pool: DbPool): Promise<void> {
   const storyId = execution?.story_id ?? (restoredState['storyId'] as string | undefined)
 
   // Step 4: Reconstruct and reinvoke the graph
-  // Create a minimal graph config from restored state
+  // Create a minimal graph config from restored state, ensuring safety flags are enforced
+  const restoredConfig = (restoredState['config'] as Record<string, unknown> | undefined) ?? {}
   const graphConfig = {
+    ...restoredConfig,
     persistToDb: false, // Don't re-persist on resume
     requireHiTL: false, // Skip HiTL on resume (already decided)
-    ...(restoredState['config'] as Record<string, unknown> | undefined ?? {}),
+    checkpointerConfig: { workflowName: 'story-creation' },
+    checkpointThreadId: threadId,
   }
 
   process.stdout.write(`[resume-graph] resuming graph execution...\n`)
@@ -216,9 +204,8 @@ async function main(): Promise<void> {
     return
   }
 
-  let pool: DbPool | undefined
   try {
-    pool = await createPoolFromEnv()
+    const pool = getDbPool()
     await resumeGraph(parsed.threadId, pool)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
@@ -226,10 +213,7 @@ async function main(): Promise<void> {
     process.stderr.write(`Error: ${message}\n`)
     process.exitCode = 1
   } finally {
-    // Release pool
-    if (pool && typeof (pool as unknown as { end: () => Promise<void> }).end === 'function') {
-      await (pool as unknown as { end: () => Promise<void> }).end()
-    }
+    await closePool()
   }
 }
 

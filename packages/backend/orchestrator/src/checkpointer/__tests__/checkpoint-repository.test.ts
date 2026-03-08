@@ -340,10 +340,10 @@ describe('CheckpointRepository', () => {
   })
 })
 
-describe('ED-1: checkpoint write latency benchmark (max=1 pool)', () => {
-  it('p99 write latency < 50ms for 10 sequential writes', async () => {
-    // Use in-memory mock to simulate pool with max:1 constraint
-    // The mock instantly resolves but we measure the call overhead
+describe('ED-1: checkpoint write local call overhead (max=1 pool)', () => {
+  it('local call overhead < 50ms for 10 sequential writes (mocked DB)', async () => {
+    // NOTE: This measures local function overhead only (mocked pool).
+    // Real DB latency must be validated via integration test with live DB.
     const latencies: number[] = []
 
     const responses = new Map([
@@ -364,7 +364,6 @@ describe('ED-1: checkpoint write latency benchmark (max=1 pool)', () => {
     const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? sorted[sorted.length - 1] ?? Infinity
 
     // With mocked DB, p99 should be well under 50ms
-    // In real DB conditions, callers should benchmark with live DB
     expect(p99).toBeLessThan(50)
     expect(latencies).toHaveLength(10)
   })
