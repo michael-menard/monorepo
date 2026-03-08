@@ -74,7 +74,7 @@ From filesystem:
 
 ---
 
-## Audit Checklist (9 Points)
+## Audit Checklist (10 Points)
 
 ### 1. Scope Alignment
 - Story scope matches stories.index.md exactly
@@ -149,6 +149,25 @@ Check for "too large" indicators:
 - Dependency order
 - Each split independently testable
 
+### 10. Clarity Format
+- Story has a `## Goal` section
+- Story has an `## Examples` section
+- Story has an `## Edge Cases` section
+
+**Scoring:**
+- All three sections present → PASS
+- One section missing → CONDITIONAL with note: "Missing {section} — story may be unclear for small-context LLMs"
+- Two or more sections missing → FAIL with note: "Missing {sections} — clarity format incomplete; story not executable by small-context LLMs"
+
+**Verification fixtures:**
+
+| Fixture | Sections Present | Expected clarity_format Status |
+|---------|-----------------|-------------------------------|
+| A | None of Goal / Examples / Edge Cases | FAIL |
+| B | Only Goal present (Examples + Edge Cases missing) | FAIL |
+| C | Goal + Examples present, Edge Cases missing | CONDITIONAL |
+| D | All three present | PASS |
+
 ---
 
 ## Discovery Analysis
@@ -221,6 +240,9 @@ audit:
     status: PASS | FAIL | SPLIT
     note: ""
   - id: subtask_decomposition
+    status: PASS | CONDITIONAL | FAIL
+    note: ""
+  - id: clarity_format
     status: PASS | CONDITIONAL | FAIL
     note: ""
 
