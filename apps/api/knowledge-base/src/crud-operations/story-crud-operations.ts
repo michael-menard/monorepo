@@ -48,6 +48,7 @@ const storyColumns = {
   acceptanceCriteria: stories.acceptanceCriteria,
   nonGoals: stories.nonGoals,
   packages: stories.packages,
+  embedding: stories.embedding,
 } as const
 
 const storyArtifactColumns = {
