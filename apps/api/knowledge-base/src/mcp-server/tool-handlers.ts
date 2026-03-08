@@ -4791,7 +4791,25 @@ export async function handleToolCall(
     }
   }
 
-  return withRetry(() => handler(input, deps, context))
+  const startTime = Date.now()
+  const timeoutConfig = getTimeoutConfig()
+  const GLOBAL_TIMEOUT_MS = 15000
+
+  const result = await withRetry(() =>
+    withTimeout(() => handler(input, deps, context), GLOBAL_TIMEOUT_MS, toolName),
+  )
+
+  const totalTimeMs = Date.now() - startTime
+  if (totalTimeMs > timeoutConfig.log_slow_queries_ms) {
+    logger.warn('[knowledge-base] Slow tool call detected', {
+      correlation_id: correlationId,
+      tool_name: toolName,
+      duration_ms: totalTimeMs,
+      threshold_ms: timeoutConfig.log_slow_queries_ms,
+    })
+  }
+
+  return result
 }
 
 // ============================================================================

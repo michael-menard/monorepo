@@ -903,9 +903,8 @@ export async function kb_create_story(
 
   if (isNew) {
     // -----------------------------------------------------------------------
-    // INSERT path: create the story header, then upsert storyDetails
-    // Note: storyDir, storyFile, blockedReason, blockedByStory, touches*
-    // were moved to story_details table by CDTS-1030.
+    // INSERT path: create the story header + storyDetails atomically
+    // Wrapped in a transaction to prevent partial state on crash.
     // -----------------------------------------------------------------------
     const insertValues: typeof stories.$inferInsert = {
       storyId: validated.story_id,
@@ -926,10 +925,6 @@ export async function kb_create_story(
       updatedAt: now,
     }
 
-    const result = await deps.db.insert(stories).values(insertValues).returning()
-    const story = result[0]!
-
-    // Upsert detail fields into story_details
     const hasDetailFields =
       validated.story_dir !== undefined ||
       validated.story_file !== undefined ||
@@ -940,24 +935,15 @@ export async function kb_create_story(
       validated.touches_database !== undefined ||
       validated.touches_infra !== undefined
 
-    if (hasDetailFields) {
-      await deps.db
-        .insert(storyDetails)
-        .values({
-          storyId: validated.story_id,
-          storyDir: validated.story_dir ?? null,
-          storyFile: validated.story_file ?? 'story.yaml',
-          blockedReason: validated.blocked_reason ?? null,
-          blockedByStory: validated.blocked_by_story ?? null,
-          touchesBackend: validated.touches_backend ?? false,
-          touchesFrontend: validated.touches_frontend ?? false,
-          touchesDatabase: validated.touches_database ?? false,
-          touchesInfra: validated.touches_infra ?? false,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: storyDetails.storyId,
-          set: {
+    const story = await deps.db.transaction(async tx => {
+      const result = await tx.insert(stories).values(insertValues).returning()
+      const created = result[0]!
+
+      if (hasDetailFields) {
+        await tx
+          .insert(storyDetails)
+          .values({
+            storyId: validated.story_id,
             storyDir: validated.story_dir ?? null,
             storyFile: validated.story_file ?? 'story.yaml',
             blockedReason: validated.blocked_reason ?? null,
@@ -967,9 +953,25 @@ export async function kb_create_story(
             touchesDatabase: validated.touches_database ?? false,
             touchesInfra: validated.touches_infra ?? false,
             updatedAt: now,
-          },
-        })
-    }
+          })
+          .onConflictDoUpdate({
+            target: storyDetails.storyId,
+            set: {
+              storyDir: validated.story_dir ?? null,
+              storyFile: validated.story_file ?? 'story.yaml',
+              blockedReason: validated.blocked_reason ?? null,
+              blockedByStory: validated.blocked_by_story ?? null,
+              touchesBackend: validated.touches_backend ?? false,
+              touchesFrontend: validated.touches_frontend ?? false,
+              touchesDatabase: validated.touches_database ?? false,
+              touchesInfra: validated.touches_infra ?? false,
+              updatedAt: now,
+            },
+          })
+      }
+
+      return created
+    })
 
     return {
       story,
@@ -999,14 +1001,6 @@ export async function kb_create_story(
     updates.acceptanceCriteria = validated.acceptance_criteria
   if (validated.non_goals !== undefined) updates.nonGoals = validated.non_goals
   if (validated.packages !== undefined) updates.packages = validated.packages
-
-  const result = await deps.db
-    .update(stories)
-    .set(updates)
-    .where(eq(stories.storyId, validated.story_id))
-    .returning()
-
-  const story = result[0]!
 
   // Upsert detail fields if any were supplied
   const detailUpdates: Partial<typeof storyDetails.$inferInsert> = { updatedAt: now }
@@ -1045,12 +1039,25 @@ export async function kb_create_story(
     hasDetailUpdates = true
   }
 
-  if (hasDetailUpdates) {
-    await deps.db
-      .insert(storyDetails)
-      .values({ storyId: validated.story_id, ...detailUpdates })
-      .onConflictDoUpdate({ target: storyDetails.storyId, set: detailUpdates })
-  }
+  // Wrap stories + story_details writes in a transaction for atomicity
+  const story = await deps.db.transaction(async tx => {
+    const result = await tx
+      .update(stories)
+      .set(updates)
+      .where(eq(stories.storyId, validated.story_id))
+      .returning()
+
+    const updated = result[0]!
+
+    if (hasDetailUpdates) {
+      await tx
+        .insert(storyDetails)
+        .values({ storyId: validated.story_id, ...detailUpdates })
+        .onConflictDoUpdate({ target: storyDetails.storyId, set: detailUpdates })
+    }
+
+    return updated
+  })
 
   return {
     story,
