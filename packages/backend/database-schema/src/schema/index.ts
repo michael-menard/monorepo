@@ -1210,3 +1210,44 @@ export {
   type InsertChangeTelemetry,
   type SelectChangeTelemetry,
 } from './change-telemetry.js'
+
+// Re-export Analytics schema tables, enum, Zod schemas, and types (CDTS-1010)
+export {
+  // Schema namespace
+  analyticsSchema,
+
+  // Enums
+  analyticsExperimentStatusEnum,
+
+  // Tables
+  analyticsModelExperiments,
+  analyticsModelAssignments,
+  analyticsChangeTelemetry,
+  analyticsStoryTokenUsage,
+
+  // Zod schemas — model_experiments
+  insertAnalyticsModelExperimentsSchema,
+  selectAnalyticsModelExperimentsSchema,
+
+  // Zod schemas — model_assignments
+  insertAnalyticsModelAssignmentsSchema,
+  selectAnalyticsModelAssignmentsSchema,
+
+  // Zod schemas — change_telemetry
+  insertAnalyticsChangeTelemetrySchema,
+  selectAnalyticsChangeTelemetrySchema,
+
+  // Zod schemas — story_token_usage
+  insertAnalyticsStoryTokenUsageSchema,
+  selectAnalyticsStoryTokenUsageSchema,
+
+  // TypeScript types
+  type InsertAnalyticsModelExperiment,
+  type SelectAnalyticsModelExperiment,
+  type InsertAnalyticsModelAssignment,
+  type SelectAnalyticsModelAssignment,
+  type InsertAnalyticsChangeTelemetry,
+  type SelectAnalyticsChangeTelemetry,
+  type InsertAnalyticsStoryTokenUsage,
+  type SelectAnalyticsStoryTokenUsage,
+} from './analytics.js'
