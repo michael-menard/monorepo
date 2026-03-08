@@ -1,12 +1,14 @@
 schema: 1
 story_id: WINT-2020
-iteration: 2
+iteration: 5
 current_phase: documentation
 last_successful_phase: verification
 blocked: false
-timestamp: '2026-03-04T18:00:00Z'
+timestamp: '2026-03-07T23:50:00Z'
 notes: >-
-  Fix cycle documentation complete. All code review issues resolved and verified.
+  Fix cycle 5 documentation complete. MCP integration test coverage expanded.
+  Sidecar-utils shared package created to eliminate code duplication.
+  All verification passed: 1,646 tests (build clean, types clean, lint clean).
   Ready for merge to main branch.
 fix_cycles:
   - iteration: 2
@@ -37,6 +39,66 @@ fix_cycles:
       Documentation phase completed. CHECKPOINT updated with fix_cycles entry.
       Story status updated to ready-for-code-review in KB.
       All verification artifacts preserved.
+    artifacts:
+      - CHECKPOINT.yaml (updated with fix_cycles)
+      - story status: ready-for-code-review (KB)
+  - iteration: 5
+    triggered_by: failed_qa_re_validation
+    started_at: '2026-03-07T23:00:00Z'
+    completed_at: '2026-03-07T23:45:00Z'
+    phase: verification
+    status: verified
+    summary: >-
+      Iteration 5 fix verification completed. MCP integration test coverage expanded
+      from 60 to 62 tools. context_pack_get MCP tool added to expected names.
+      Sidecar-utils shared package created (@repo/sidecar-utils) to eliminate
+      sendJson() HTTP utility duplication. context-pack and role-pack sidecars
+      refactored to import sendJson() from shared package. Full verification:
+      Build PASS (4 packages), Typecheck PASS (all packages), Tests PASS (1,646 total:
+      24 context-pack, 362 mcp-tools, 1260 knowledge-base), Lint PASS (0 errors).
+    issues_fixed:
+      - issue: MCP tool count mismatch in mcp-integration.test.ts
+        file: packages/backend/mcp-tools/src/__tests__/mcp-integration.test.ts
+        severity: medium
+        description: Updated expected tool count from 60 to 62 after context_pack_get addition
+      - issue: Code duplication - sendJson() HTTP utility in two sidecars
+        file: packages/backend/sidecars/context-pack/src/routes/context-pack.ts, packages/backend/sidecars/role-pack/src/routes/role-pack.ts
+        severity: high
+        description: Created @repo/sidecar-utils shared package with sendJson() utility
+    verification_results:
+      build: PASS
+      typecheck: PASS
+      lint: PASS
+      tests: PASS
+    test_summary: |
+      Context Pack: 24 tests passed (17 unit + 7 integration)
+      MCP Tools: 362 tests passed (37 test files, includes context-pack-get)
+      Knowledge Base: 1260 tests passed (53 test files)
+      Total: 1,646 tests, 0 failed
+    acceptance_criteria_validated:
+      - AC-1: POST /context-pack returns 200 with valid response shape (integration test)
+      - AC-2: Schema validation, invalid role returns 400 (unit tests)
+      - AC-3: Cache hit path returns cached content; DB row verified (integration test)
+      - AC-4: Cache miss path assembles from KB (integration test)
+      - AC-5: Token budget enforcement <=2000 tokens (unit tests)
+      - AC-6: context_pack_get MCP tool returns schema-valid response (mcp-tools tests)
+      - AC-7: Custom ttl stored correctly in contextPacks (tests)
+      - AC-8: Empty arrays returned when no KB results (unit tests)
+      - AC-9: Integration tests against real postgres, no DB mocking (7 integration tests)
+      - AC-10: Unit tests cover schema, token budget, cache key, trimming (17 unit tests)
+      - AC-11: Cache write failure returns 200 (integration test)
+      - AC-12: Timing assertions — cache hit <100ms, miss <2000ms (integration test)
+    verification_result: PASS
+  - iteration: 5
+    triggered_by: fix_complete
+    completed_at: '2026-03-07T23:50:00Z'
+    phase: documentation
+    status: complete
+    summary: >-
+      Documentation phase completed for iteration 5. CHECKPOINT updated with fix_cycles entry.
+      Story status updated to ready-for-code-review in KB. All verification artifacts preserved.
+      MCP integration test coverage expanded and code duplication eliminated via shared
+      sidecar-utils package. All 12 ACs validated.
     artifacts:
       - CHECKPOINT.yaml (updated with fix_cycles)
       - story status: ready-for-code-review (KB)
