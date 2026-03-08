@@ -1,0 +1,37 @@
+id: CDTS-1010
+title: Create analytics Schema and Move wint Tables into Drizzle
+status: needs-code-review
+priority: medium
+phase: 1
+feature: "Create the analytics schema, move wint.model_experiments, wint.model_assignments, wint.change_telemetry from wint to analytics, move public.story_token_usage to analytics, re-create FK change_telemetry.experiment_id -> model_experiments.id within analytics, and add Drizzle definitions for all 4 analytics tables."
+goal: "analytics schema exists with 4 tables, wint schema has 0 tables, Drizzle analyticsSchema definitions compile correctly."
+depends_on:
+  - CDTS-0020
+endpoints: []
+infrastructure: []
+acceptance_criteria:
+  # Migration SQL
+  - "Migration 021_cdts_create_analytics_schema.sql with safety preamble"
+  - "CREATE SCHEMA IF NOT EXISTS analytics"
+  - "GRANT USAGE ON SCHEMA analytics TO kbuser"
+  - "ALTER TABLE wint.model_experiments SET SCHEMA analytics"
+  - "ALTER TABLE wint.model_assignments SET SCHEMA analytics"
+  - "ALTER TABLE wint.change_telemetry SET SCHEMA analytics"
+  - "ALTER TABLE public.story_token_usage SET SCHEMA analytics"
+  - "Re-create FK: analytics.change_telemetry.experiment_id -> analytics.model_experiments.id"
+  - "Migration is idempotent — running twice does not error"
+
+  # Drizzle definitions
+  - "Add analyticsSchema = pgSchema('analytics') to schema.ts"
+  - "Define all 4 analytics tables using analyticsSchema.table(): model_experiments, model_assignments, change_telemetry (rename from telemetry_experiment_results), story_token_usage"
+  - "Column definitions match actual database columns from CDTS-0020 manifest"
+  - "pnpm check-types passes"
+
+  # Verification
+  - "After migration: SELECT count(*) FROM information_schema.tables WHERE table_schema = 'wint' returns 0"
+  - "After migration: SELECT count(*) FROM information_schema.tables WHERE table_schema = 'analytics' returns 4"
+risk_notes: "ALTER TABLE SET SCHEMA will fail if there are cross-schema FK dependencies from other schemas pointing into these tables. CDTS-0020 FK edge map must confirm no such dependencies exist before running."
+resolves_blockers:
+  - "ENG-002: wint FK dependency unmapped"
+sizing_warning: false
+created: "2026-03-07T22:16:29Z"

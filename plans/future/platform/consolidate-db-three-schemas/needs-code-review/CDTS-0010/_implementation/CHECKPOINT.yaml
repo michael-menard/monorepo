@@ -1,0 +1,16 @@
+schema: 1
+story_id: CDTS-0010
+timestamp: '2026-03-08T07:00:00Z'
+feature_dir: plans/future/platform/consolidate-db-three-schemas
+current_phase: plan
+last_successful_phase: setup
+iteration: 0
+max_iterations: 3
+blocked: false
+blocked_reason: null
+warnings: []
+pr_number: null
+pr_url: null
+e2e_gate: null
+completed_at: null
+forced: false

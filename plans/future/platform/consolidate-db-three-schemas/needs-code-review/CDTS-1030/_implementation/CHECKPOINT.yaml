@@ -1,0 +1,19 @@
+schema: 1
+story_id: CDTS-1030
+feature_dir: plans/future/platform/consolidate-db-three-schemas
+timestamp: '2026-03-08T04:00:00Z'
+current_phase: execute
+last_successful_phase: plan
+iteration: 0
+max_iterations: 3
+blocked: false
+forced: false
+warnings:
+  - >-
+    SCOPE.yaml glob 'packages/backend/database-schema/**' is incorrect — actual target is
+    apps/api/knowledge-base/src/db/schema.ts
+  - >-
+    5 integration tests fail against live DB (expected — CDTS-1020 migration not yet run)
+  - >-
+    CDTS-1010 analytics schema not yet merged — AC8 aspirational
+gen_mode: false

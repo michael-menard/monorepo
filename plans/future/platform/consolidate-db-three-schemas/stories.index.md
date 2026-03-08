@@ -50,7 +50,7 @@ Create analytics schema, move wint tables, write structural DDL (header/detail s
 |----|-------|--------------|--------|----------|
 | CDTS-1010 | Create analytics Schema and Move wint Tables into Drizzle | CDTS-0020 | Backlog | ENG-002 |
 | CDTS-1020 | Write Structural DDL Migrations | CDTS-1010 | Backlog | QA-002 |
-| CDTS-1030 | Update Drizzle schema.ts | CDTS-1020 | Backlog | ENG-003 |
+| CDTS-1030 | Update Drizzle schema.ts | CDTS-1020 | needs-code-review | ENG-003 |
 | CDTS-1040 | Update MCP Tool SQL | CDTS-1030 | Backlog | ENG-003 |
 | CDTS-1050 | Apply Phase 1 Migrations and Verify | CDTS-1040 | Backlog | ENG-003, QA-001, QA-002, PLAT-001, PLAT-002 |
 
