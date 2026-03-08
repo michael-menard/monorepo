@@ -1,12 +1,16 @@
 schema: 1
 story_id: CDTS-1010
 feature_dir: plans/future/platform/consolidate-db-three-schemas
-timestamp: "2026-03-08T00:03:00Z"
-current_phase: setup
-last_successful_phase: null
+timestamp: '2026-03-08T00:15:00Z'
+current_phase: plan
+last_successful_phase: setup
 iteration: 0
 max_iterations: 3
 blocked: false
 forced: false
-warnings: []
+warnings:
+  - >-
+    Story ACs reference ALTER TABLE wint.* SET SCHEMA analytics but wint schema never existed per CDTS-0020 audit. Plan
+    correctly uses CREATE TABLE analytics.* instead.
+  - Migration number 0034 used (not 0021 from prompt — 0021 already exists as 0021_wealthy_sunfire.sql).
 gen_mode: false

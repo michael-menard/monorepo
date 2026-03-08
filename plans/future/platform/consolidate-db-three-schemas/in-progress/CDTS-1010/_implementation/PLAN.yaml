@@ -1,0 +1,215 @@
+schema: 1
+story_id: CDTS-1010
+timestamp: '2026-03-08T00:15:00Z'
+steps:
+  - id: 1
+    description: 'Write migration SQL: Create analytics schema, move story_token_usage, create 3 analytics tables with correct FK'
+    files:
+      - packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+    files_to_read:
+      - packages/backend/database-schema/src/migrations/app/0028_apip_3010_change_telemetry.sql
+      - >-
+        plans/future/platform/consolidate-db-three-schemas/needs-code-review/CDTS-0020/_implementation/WINT-TABLE-DEFS.md
+      - plans/future/platform/consolidate-db-three-schemas/needs-code-review/CDTS-0020/_implementation/FK-EDGE-MAP.md
+    dependencies: []
+    slice: backend
+    verification: Review SQL syntax; psql dry-run if DB available
+    acs_covered:
+      - AC-1
+      - AC-2
+      - AC-3
+      - AC-4
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+      - AC-9
+  - id: 2
+    description: >-
+      Write Drizzle analytics.ts schema file: analyticsSchema, experimentStatusEnum, all 4 analytics tables with Zod
+      schemas
+    files:
+      - packages/backend/database-schema/src/schema/analytics.ts
+    files_to_read:
+      - packages/backend/database-schema/src/schema/telemetry.ts
+      - packages/backend/database-schema/src/schema/change-telemetry.ts
+      - packages/backend/database-schema/src/schema/wint.ts
+      - apps/api/knowledge-base/src/db/schema.ts
+    dependencies: []
+    slice: packages
+    verification: pnpm check-types --filter @repo/database-schema
+    acs_covered:
+      - AC-10
+      - AC-11
+      - AC-12
+      - AC-13
+  - id: 3
+    description: Update packages/backend/database-schema/src/schema/index.ts to export analytics schema
+    files:
+      - packages/backend/database-schema/src/schema/index.ts
+    files_to_read:
+      - packages/backend/database-schema/src/schema/index.ts
+    dependencies:
+      - 2
+    slice: packages
+    verification: pnpm check-types --filter @repo/database-schema
+    acs_covered:
+      - AC-10
+files_to_change:
+  - path: packages/backend/database-schema/src/migrations/app/0034_cdts_1010_analytics_schema.sql
+    action: create
+    reason: >-
+      Migration to create analytics schema, move story_token_usage, create
+      model_experiments/model_assignments/change_telemetry fresh in analytics (they never existed in live DB)
+  - path: packages/backend/database-schema/src/schema/analytics.ts
+    action: create
+    reason: New Drizzle schema file defining analyticsSchema and all 4 analytics tables
+  - path: packages/backend/database-schema/src/schema/index.ts
+    action: modify
+    reason: Export analytics schema, tables, enums, and Zod schemas from analytics.ts
+commands_to_run:
+  - command: pnpm check-types --filter @repo/database-schema
+    when: after step 3
+    required: true
+  - command: pnpm build --filter @repo/database-schema
+    when: after all code changes
+    required: true
+  - command: pnpm test --filter @repo/database-schema
+    when: after all code changes
+    required: true
+acceptance_criteria_map:
+  - ac_id: AC-1
+    description: Migration 0034_cdts_1010_analytics_schema.sql with safety preamble
+    planned_evidence: File exists with DO $$ BEGIN ... END $$ idempotency guards
+    evidence_type: file
+  - ac_id: AC-2
+    description: CREATE SCHEMA IF NOT EXISTS analytics
+    planned_evidence: SQL contains CREATE SCHEMA IF NOT EXISTS analytics
+    evidence_type: file
+  - ac_id: AC-3
+    description: GRANT USAGE ON SCHEMA analytics TO kbuser
+    planned_evidence: SQL contains GRANT statement
+    evidence_type: file
+  - ac_id: AC-4
+    description: ALTER TABLE public.story_token_usage SET SCHEMA analytics
+    planned_evidence: SQL contains ALTER TABLE public.story_token_usage SET SCHEMA analytics wrapped in idempotency guard
+    evidence_type: file
+  - ac_id: AC-5
+    description: 'CREATE TABLE analytics.model_experiments (correct approach per CDTS-0020 audit: table never existed in live DB)'
+    planned_evidence: SQL contains CREATE TABLE IF NOT EXISTS analytics.model_experiments matching WINT-TABLE-DEFS.md column spec
+    evidence_type: file
+  - ac_id: AC-6
+    description: CREATE TABLE analytics.model_assignments
+    planned_evidence: SQL contains CREATE TABLE IF NOT EXISTS analytics.model_assignments
+    evidence_type: file
+  - ac_id: AC-7
+    description: CREATE TABLE analytics.change_telemetry (designed from change-telemetry.ts columns + experiment_id FK)
+    planned_evidence: >-
+      SQL contains CREATE TABLE IF NOT EXISTS analytics.change_telemetry with all columns from change-telemetry.ts plus
+      experiment_id FK
+    evidence_type: file
+  - ac_id: AC-8
+    description: 'FK: analytics.change_telemetry.experiment_id -> analytics.model_experiments(id)'
+    planned_evidence: SQL contains REFERENCES analytics.model_experiments(id) on change_telemetry.experiment_id
+    evidence_type: file
+  - ac_id: AC-9
+    description: Migration is idempotent
+    planned_evidence: All DDL uses IF NOT EXISTS; SET SCHEMA guarded by DO $$ IF NOT EXISTS check
+    evidence_type: file
+  - ac_id: AC-10
+    description: analyticsSchema = pgSchema('analytics') exported from index.ts
+    planned_evidence: analytics.ts exports analyticsSchema; index.ts re-exports it
+    evidence_type: file
+  - ac_id: AC-11
+    description: All 4 analytics tables defined using analyticsSchema.table()
+    planned_evidence: >-
+      analytics.ts contains model_experiments, model_assignments, change_telemetry (analyticsChangeTelemetry),
+      story_token_usage using analyticsSchema.table()
+    evidence_type: file
+  - ac_id: AC-12
+    description: Column definitions match actual DB columns from CDTS-0020 manifest
+    planned_evidence: Drizzle columns match WINT-TABLE-DEFS.md and KB schema.ts story_token_usage definition
+    evidence_type: file
+  - ac_id: AC-13
+    description: pnpm check-types passes
+    planned_evidence: TypeScript compilation succeeds for @repo/database-schema
+    evidence_type: command
+architectural_decisions:
+  - id: ARCH-001
+    question: 'Migration filename: prompt says 0021 but worktree already has migrations up to 0033. Use next available number?'
+    decision: Use 0034_cdts_1010_analytics_schema.sql — next available sequential number in the worktree
+    rationale: >-
+      0021 already exists (0021_wealthy_sunfire.sql). Sequential numbering is required to avoid conflicts. The 0021
+      reference in the prompt is stale.
+    decided_by: auto
+  - id: ARCH-002
+    question: >-
+      Story ACs mention ALTER TABLE wint.* SET SCHEMA analytics but CDTS-0020 audit confirms wint schema never existed.
+      How to handle?
+    decision: >-
+      Use CREATE TABLE analytics.* for model_experiments, model_assignments, change_telemetry. Skip the ALTER TABLE
+      wint.* DDL from story ACs.
+    rationale: >-
+      CDTS-0020 audit (WINT-TABLE-DEFS.md) definitively confirms wint schema and these 3 tables never existed in the
+      live DB. Creating them fresh in analytics is the correct approach. The story ACs are based on incorrect
+      assumptions pre-dating the CDTS-0020 audit.
+    decided_by: auto
+  - id: ARCH-003
+    question: >-
+      change_telemetry already has a Drizzle definition in change-telemetry.ts targeting wintSchema. How to handle the
+      analytics version?
+    decision: >-
+      Create analyticsChangeTelemetry in analytics.ts targeting analyticsSchema. The change-telemetry.ts / wintSchema
+      version remains untouched (it targets wint.change_telemetry which is the version for the non-KB database). The
+      analytics version is for the knowledgebase DB.
+    rationale: >-
+      Per MANIFEST.md, the analytics.change_telemetry table is a fresh CREATE in the knowledgebase DB. The
+      wint.change_telemetry definition in change-telemetry.ts targets a different DB deployment (main app DB, port
+      5432). These are distinct tables in distinct databases.
+    decided_by: auto
+  - id: ARCH-004
+    question: >-
+      experimentStatusEnum: story says it needs to be created in analytics schema. wint.ts has
+      pgEnum('experiment_status', ...) which creates it in public schema. How to handle?
+    decision: >-
+      Define experiment_status as analyticsSchema.enum('experiment_status', [...]) in analytics.ts — scoped to the
+      analytics schema. This avoids conflict with any potential public-schema experiment_status enum.
+    rationale: >-
+      Pattern from telemetry.ts: wintSchema.enum() and telemetrySchema.enum() create enums scoped to their schema. The
+      analytics schema-scoped enum is the correct approach per the story AC and avoids public schema pollution.
+    decided_by: auto
+  - id: ARCH-005
+    question: >-
+      story_token_usage cross-schema FK: MANIFEST.md notes analytics.story_token_usage.story_id ->
+      public.stories.story_id. But stories.story_id is TEXT and not a FK target in the live DB (no unique constraint).
+      Include or omit FK?
+    decision: >-
+      Omit cross-schema FK from story_token_usage in the migration. The FK is listed in the MANIFEST under CDTS-1010
+      scope, but the FK-EDGE-MAP.md shows this FK does not currently exist and public.stories.story_id has no unique
+      constraint. Adding a FK to a column without a unique constraint will fail. Defer FK to CDTS-1020 which handles FK
+      additions.
+    rationale: >-
+      FK-EDGE-MAP.md section 'Tables With No FK Constraints (potentially missing)' lists story_token_usage.story_id as a
+      MISSING FK. CDTS-1020 is the story that adds FKs. Adding this FK in CDTS-1010 before CDTS-1020 creates a story_id
+      unique constraint would fail.
+    decided_by: auto
+complexity: moderate
+notes:
+  - >-
+    The story ACs reference ALTER TABLE wint.* SET SCHEMA — these are WRONG per CDTS-0020 audit. wint schema never
+    existed. Use CREATE TABLE analytics.* instead.
+  - >-
+    Migration number 0034 is used (not 0021 from prompt — 0021 already exists in the worktree as
+    0021_wealthy_sunfire.sql).
+  - >-
+    story_token_usage moves from public schema via ALTER TABLE public.story_token_usage SET SCHEMA analytics — this
+    table IS in the live DB (per MANIFEST.md).
+  - >-
+    change_telemetry in analytics.ts is exported as analyticsChangeTelemetry to avoid name collision with
+    changeTelemetry from change-telemetry.ts.
+  - >-
+    experimentStatusEnum is scoped to analyticsSchema (analyticsSchema.enum) to follow the pattern from telemetry.ts /
+    wint.ts schema-scoped enums.
+  - >-
+    The cross-schema FK analytics.story_token_usage.story_id -> public.stories.story_id is deferred to CDTS-1020 per
+    ARCH-005 decision.
