@@ -64,7 +64,7 @@ const MAX_BODY_SIZE_BYTES = 1 * 1024 * 1024 // 1 MB
  */
 async function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
-    let body = ''
+    const chunks: string[] = []
     let size = 0
     req.on('data', chunk => {
       size += chunk.length
@@ -73,9 +73,9 @@ async function readBody(req: IncomingMessage): Promise<string> {
         req.destroy()
         return
       }
-      body += chunk.toString()
+      chunks.push(chunk.toString())
     })
-    req.on('end', () => resolve(body))
+    req.on('end', () => resolve(chunks.join('')))
     req.on('error', reject)
   })
 }
@@ -123,11 +123,7 @@ export async function handleCohesionAuditRequest(
   // Validate with Zod (AC-7 Zod schemas, AC-5 error handling)
   const validated = CohesionAuditRequestSchema.safeParse(parsedBody)
   if (!validated.success) {
-    sendJson(res, 400, {
-      ok: false,
-      error: 'Invalid request body',
-      details: validated.error.issues,
-    })
+    sendJson(res, 400, { ok: false, error: 'Invalid request body' })
     return
   }
 
@@ -185,11 +181,7 @@ export async function handleCohesionCheckRequest(
   // Validate with Zod (AC-7 Zod schemas, AC-5 error handling)
   const validated = CohesionCheckRequestSchema.safeParse(parsedBody)
   if (!validated.success) {
-    sendJson(res, 400, {
-      ok: false,
-      error: 'Invalid request body',
-      details: validated.error.issues,
-    })
+    sendJson(res, 400, { ok: false, error: 'Invalid request body' })
     return
   }
 

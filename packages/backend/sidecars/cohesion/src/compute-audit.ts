@@ -17,9 +17,8 @@ import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { features, capabilities } from '@repo/database-schema'
 import { eq } from 'drizzle-orm'
+import { CRUD_STAGES } from './__types__/index.js'
 import type { CohesionAuditResult } from './__types__/index.js'
-
-const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
 
 /**
  * Minimal Drizzle DB schema — accepts injectable db for testing (AC-6).

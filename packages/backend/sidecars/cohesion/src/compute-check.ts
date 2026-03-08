@@ -18,9 +18,8 @@ import { logger } from '@repo/logger'
 import { features, capabilities } from '@repo/database-schema'
 import { eq } from 'drizzle-orm'
 import type { DrizzleDb } from './compute-audit.js'
+import { CRUD_STAGES } from './__types__/index.js'
 import type { CohesionCheckResult } from './__types__/index.js'
-
-const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
 
 /**
  * Compute cohesion check for a specific feature.

@@ -13,6 +13,16 @@ import { z } from 'zod'
 import { FrankenFeatureItemSchema } from '@repo/mcp-tools'
 
 // ============================================================================
+// Shared Constants
+// ============================================================================
+
+/**
+ * The four CRUD lifecycle stages used for cohesion checks.
+ * Shared between computeAudit and computeCheck to avoid duplication.
+ */
+export const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
+
+// ============================================================================
 // Request Schemas
 // ============================================================================
 
@@ -104,7 +114,6 @@ export const CohesionAuditHttpResponseSchema = z.discriminatedUnion('ok', [
   z.object({
     ok: z.literal(false),
     error: z.string(),
-    details: z.unknown().optional(),
   }),
 ])
 
@@ -121,7 +130,6 @@ export const CohesionCheckHttpResponseSchema = z.discriminatedUnion('ok', [
   z.object({
     ok: z.literal(false),
     error: z.string(),
-    details: z.unknown().optional(),
   }),
 ])
 
