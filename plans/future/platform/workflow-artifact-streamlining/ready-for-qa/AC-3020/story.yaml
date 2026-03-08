@@ -1,6 +1,6 @@
 id: AC-3020
 title: "Bootstrap Dead Artifact Cleanup"
-status: needs-code-review
+status: ready-for-qa
 priority: medium
 phase: 3
 feature: "Remove PLAN.meta.md, PLAN.exec.md, and roadmap.md generation steps from pm-bootstrap-generation-leader; merge _bootstrap/CHECKPOINT.md into SUMMARY.yaml as a phases_completed field; update pm-bootstrap-workflow command Done section"
@@ -14,7 +14,7 @@ infrastructure: []
 risk_notes: "Smallest change set (2 files). Verify no human-facing doc or onboarding guide references PLAN.meta.md or roadmap.md before removal. SUMMARY.yaml phases_completed field must not clash with any existing field in the schema."
 sizing_warning: false
 created: "2026-03-03T00:00:00Z"
-updated_at: "2026-03-08T00:00:00Z"
+updated_at: "2026-03-08T07:45:00Z"
 action_items:
   - "Include a grep checklist step in the implementation plan to catch stale cross-references before committing"
 ac_decisions:

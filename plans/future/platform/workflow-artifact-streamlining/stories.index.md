@@ -6,7 +6,7 @@ Plan: [workflow-artifact-streamlining](../..)
 
 | Status | Count |
 |--------|-------|
-| Ready to Work | 1 |
+| Ready for QA | 1 |
 | UAT | 5 |
 | **Total** | **6** |
 
@@ -35,7 +35,7 @@ Fold _pm/ worker outputs into story.yaml and remove dead bootstrap artifacts tha
 | Story | Title | Dependencies | Status |
 |-------|-------|--------------|--------|
 | AC-3010 | _pm/ Folder → story.yaml Sections | AC-1010, AC-2010, AC-2020 | ✅ uat |
-| AC-3020 | Bootstrap Dead Artifact Cleanup | AC-3010, KFMB-5050, CDTS | 📋 ready-to-work |
+| AC-3020 | Bootstrap Dead Artifact Cleanup | AC-3010, KFMB-5050, CDTS | 🔍 ready-for-qa |
 
 ## Metrics
 
