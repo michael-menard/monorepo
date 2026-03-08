@@ -355,24 +355,34 @@ async function insertStory(
   const existing = await pool.query('SELECT id FROM stories WHERE story_id = $1', [r.storyId])
   if (existing.rows.length > 0) return 'skipped'
 
+  // Insert stories header (hot columns only — detail columns moved to story_details)
   await pool.query(
     `INSERT INTO stories (
-      story_id, feature, epic, title, story_dir, story_file, story_type,
-      points, priority, state,
-      touches_backend, touches_frontend, touches_database, touches_infra,
-      file_synced_at, file_hash
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),$15)`,
+      story_id, feature, epic, title, story_type, points, priority, state
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [
       r.storyId,
       r.feature,
       r.epic,
       r.title,
-      r.storyDir,
-      r.storyFile,
       r.storyType,
       r.points,
       r.priority,
       r.state,
+    ],
+  )
+
+  // Insert story_details (story_dir, story_file, touches_*, file tracking — moved here)
+  await pool.query(
+    `INSERT INTO story_details (
+      story_id, story_dir, story_file, touches_backend, touches_frontend,
+      touches_database, touches_infra, file_synced_at, file_hash, updated_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),$8,NOW())
+    ON CONFLICT (story_id) DO NOTHING`,
+    [
+      r.storyId,
+      r.storyDir,
+      r.storyFile,
       r.touchesBackend,
       r.touchesFrontend,
       r.touchesDatabase,
@@ -380,6 +390,7 @@ async function insertStory(
       fileHash,
     ],
   )
+
   return 'inserted'
 }
 

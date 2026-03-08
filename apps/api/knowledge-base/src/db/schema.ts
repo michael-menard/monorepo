@@ -23,6 +23,7 @@ import {
   jsonb,
   boolean,
   integer,
+  real,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -187,6 +188,12 @@ export const knowledgeEntries = pgTable(
      * Canonical entries represent the deduplicated, merged version of similar entries.
      */
     isCanonical: boolean('is_canonical').default(false).notNull(),
+
+    /** Soft-delete: timestamp when this entry was deleted (null = active) */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+    /** Soft-delete: who deleted this entry (agent ID or user) */
+    deletedBy: text('deleted_by'),
   },
   table => ({
     /**
@@ -450,6 +457,12 @@ export const tasks = pgTable(
 
     /** When the task was completed */
     completedAt: timestamp('completed_at'),
+
+    /** Soft-delete: timestamp when this task was deleted (null = active) */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+    /** Soft-delete: who deleted this task (agent ID or user) */
+    deletedBy: text('deleted_by'),
   },
   table => ({
     statusIdx: index('idx_tasks_status').on(table.status),
@@ -474,7 +487,7 @@ export const workState = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story ID this work state belongs to (unique) */
-    storyId: text('story_id').notNull().unique(),
+    storyId: text('story_id').notNull().unique().references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /** Git branch associated with this story */
     branch: text('branch'),
@@ -527,7 +540,7 @@ export const workStateHistory = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story ID this archive belongs to */
-    storyId: text('story_id').notNull(),
+    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /** Full snapshot of work_state at archive time */
     stateSnapshot: jsonb('state_snapshot').notNull(),
@@ -617,12 +630,6 @@ export const stories = pgTable(
     /** Story title (required) */
     title: text('title').notNull(),
 
-    /** Relative path to story directory */
-    storyDir: text('story_dir'),
-
-    /** Story file name (default: story.yaml) */
-    storyFile: text('story_file').default('story.yaml'),
-
     /**
      * Type of story.
      * Values: 'feature' | 'bug' | 'spike' | 'chore' | 'tech_debt'
@@ -658,41 +665,17 @@ export const stories = pgTable(
     /** Whether story is blocked */
     blocked: boolean('blocked').default(false),
 
-    /** Reason for being blocked */
-    blockedReason: text('blocked_reason'),
-
-    /** Story ID that blocks this one */
-    blockedByStory: text('blocked_by_story'),
-
-    /** Scope flag: touches backend code */
-    touchesBackend: boolean('touches_backend').default(false),
-
-    /** Scope flag: touches frontend code */
-    touchesFrontend: boolean('touches_frontend').default(false),
-
-    /** Scope flag: touches database */
-    touchesDatabase: boolean('touches_database').default(false),
-
-    /** Scope flag: touches infrastructure */
-    touchesInfra: boolean('touches_infra').default(false),
-
     /** When the story record was created */
     createdAt: timestamp('created_at').notNull().defaultNow(),
 
     /** When the story record was last updated */
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
 
-    /** When work started on this story */
-    startedAt: timestamp('started_at'),
+    /** Soft-delete: timestamp when this story was deleted (null = active) */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 
-    /** When the story was completed */
-    completedAt: timestamp('completed_at'),
-
-    /** When the story was last synced from YAML file */
-    fileSyncedAt: timestamp('file_synced_at'),
-
-    /** SHA hash of YAML file for change detection */
-    fileHash: text('file_hash'),
+    /** Soft-delete: who deleted this story (agent ID or user) */
+    deletedBy: text('deleted_by'),
   },
   table => ({
     featureIdx: index('idx_stories_feature').on(table.feature),
@@ -719,10 +702,10 @@ export const storyDependencies = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story that has the dependency */
-    storyId: text('story_id').notNull(),
+    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /** Story that is depended upon */
-    targetStoryId: text('target_story_id').notNull(),
+    targetStoryId: text('target_story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /**
      * Type of dependency relationship.
@@ -761,7 +744,7 @@ export const storyArtifacts = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Story this artifact belongs to */
-    storyId: text('story_id').notNull(),
+    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /**
      * Type of artifact.
@@ -1281,44 +1264,20 @@ export const plans = pgTable(
     estimatedStories: integer('estimated_stories'),
 
     /**
-     * Phase breakdown extracted from ## Phase N headings.
-     * Schema: [{number: number, name: string, description: string, storyIds: string[]}]
-     */
-    phases: jsonb('phases'),
-
-    /**
      * Priority level. P1 is highest, P5 is lowest. Multiple plans can share the same priority.
      * Values: 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
      * Default: 'P3'
      */
     priority: text('priority').default('P3'),
 
-    /** Plan slugs that must reach 'implemented' before this plan can start */
-    dependencies: jsonb('dependencies').$type<string[]>(),
-
-    /** Self-referential FK: sub-epic plans point to their parent program plan */
-    parentPlanId: uuid('parent_plan_id'),
+    /**
+     * Self-referential FK: sub-epic plans point to their parent program plan.
+     * References plans.id with RESTRICT on delete.
+     */
+    parentPlanId: uuid('parent_plan_id').references((): import('drizzle-orm/pg-core').AnyPgColumn => plans.id, { onDelete: 'restrict' }),
 
     /** Tags for filtering (inferred from content) */
     tags: text('tags').array(),
-
-    /** Full raw markdown content of the plan */
-    rawContent: text('raw_content').notNull(),
-
-    /** Original source file path (e.g., '~/.claude/plans/dapper-chasing-horizon.md') */
-    sourceFile: text('source_file'),
-
-    /** SHA-256 prefix (16 hex chars) of raw_content for change detection */
-    contentHash: text('content_hash'),
-
-    /**
-     * Optional link to a knowledge_entries record for semantic vector search.
-     * When set, the plan summary is searchable via kb_search.
-     */
-    kbEntryId: uuid('kb_entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
-
-    /** When the plan was first imported from disk */
-    importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
 
     /** When the record was created */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1326,8 +1285,11 @@ export const plans = pgTable(
     /** When the record was last updated */
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 
-    /** When the plan was archived */
-    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    /** Soft-delete: timestamp when this plan was deleted (null = active) */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+    /** Soft-delete: who deleted this plan (agent ID or user) */
+    deletedBy: text('deleted_by'),
   },
   table => ({
     statusIdx: index('idx_plans_status').on(table.status),
@@ -1360,10 +1322,10 @@ export const planStoryLinks = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     /** Plan slug (matches plans.plan_slug) */
-    planSlug: text('plan_slug').notNull(),
+    planSlug: text('plan_slug').notNull().references(() => plans.planSlug, { onDelete: 'restrict' }),
 
     /** Story ID (e.g., 'WKFL-020', 'DASH-001') */
-    storyId: text('story_id').notNull(),
+    storyId: text('story_id').notNull().references(() => stories.storyId, { onDelete: 'restrict' }),
 
     /**
      * Nature of the relationship.
@@ -1381,6 +1343,217 @@ export const planStoryLinks = pgTable(
       table.planSlug,
       table.storyId,
     ),
+  }),
+)
+
+// ============================================================================
+// New tables from CDTS-1030: detail tables, dependency/link tables
+// ============================================================================
+
+/**
+ * Plan Details Table (CDTS-1030)
+ *
+ * 1:1 with plans. Stores cold/detail columns moved from the plans header table.
+ * Keeps the plans header lean for hot-path queries.
+ */
+export const planDetails = pgTable(
+  'plan_details',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** FK to plans.id (1:1, RESTRICT on delete) */
+    planId: uuid('plan_id')
+      .notNull()
+      .unique()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+
+    /** Full raw markdown content of the plan */
+    rawContent: text('raw_content').notNull(),
+
+    /**
+     * Phase breakdown extracted from ## Phase N headings.
+     * Schema: [{number: number, name: string, description: string, storyIds: string[]}]
+     */
+    phases: jsonb('phases'),
+
+    /** Plan slugs that must reach 'implemented' before this plan can start */
+    dependencies: jsonb('dependencies').$type<string[]>(),
+
+    /** Original source file path (e.g., '~/.claude/plans/dapper-chasing-horizon.md') */
+    sourceFile: text('source_file'),
+
+    /** SHA-256 prefix (16 hex chars) of raw_content for change detection */
+    contentHash: text('content_hash'),
+
+    /**
+     * Optional link to a knowledge_entries record for semantic vector search.
+     * When set, the plan summary is searchable via kb_search.
+     */
+    kbEntryId: uuid('kb_entry_id').references(() => knowledgeEntries.id, { onDelete: 'set null' }),
+
+    /** When the plan was first imported from disk */
+    importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** When the plan was archived */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+
+    /** When the detail record was last updated */
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    planIdIdx: index('idx_plan_details_plan_id').on(table.planId),
+    contentHashIdx: index('idx_plan_details_content_hash').on(table.contentHash),
+  }),
+)
+
+/**
+ * Story Details Table (CDTS-1030)
+ *
+ * 1:1 with stories. Stores cold/detail columns moved from the stories header table.
+ * Keeps the stories header lean for hot-path queries.
+ */
+export const storyDetails = pgTable(
+  'story_details',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** FK to stories.story_id (1:1 via text PK, RESTRICT on delete) */
+    storyId: text('story_id')
+      .notNull()
+      .unique()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
+
+    /** Relative path to story directory */
+    storyDir: text('story_dir'),
+
+    /** Story file name (default: story.yaml) */
+    storyFile: text('story_file').default('story.yaml'),
+
+    /** Reason for being blocked */
+    blockedReason: text('blocked_reason'),
+
+    /** Story ID that blocks this one */
+    blockedByStory: text('blocked_by_story'),
+
+    /** Scope flag: touches backend code */
+    touchesBackend: boolean('touches_backend').default(false),
+
+    /** Scope flag: touches frontend code */
+    touchesFrontend: boolean('touches_frontend').default(false),
+
+    /** Scope flag: touches database */
+    touchesDatabase: boolean('touches_database').default(false),
+
+    /** Scope flag: touches infrastructure */
+    touchesInfra: boolean('touches_infra').default(false),
+
+    /** When work started on this story */
+    startedAt: timestamp('started_at'),
+
+    /** When the story was completed */
+    completedAt: timestamp('completed_at'),
+
+    /** When the story was last synced from YAML file */
+    fileSyncedAt: timestamp('file_synced_at'),
+
+    /** SHA hash of YAML file for change detection */
+    fileHash: text('file_hash'),
+
+    /** When the detail record was last updated */
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  table => ({
+    storyIdIdx: index('idx_story_details_story_id').on(table.storyId),
+  }),
+)
+
+/**
+ * Plan Dependencies Table (CDTS-1030)
+ *
+ * Explicit prerequisite relationships between plans.
+ * Both FKs reference plans.plan_slug with RESTRICT to prevent orphaning.
+ */
+export const planDependencies = pgTable(
+  'plan_dependencies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** The plan that has a dependency */
+    planSlug: text('plan_slug')
+      .notNull()
+      .references(() => plans.planSlug, { onDelete: 'restrict' }),
+
+    /** The plan that must be 'implemented' before planSlug can start */
+    dependsOnSlug: text('depends_on_slug')
+      .notNull()
+      .references(() => plans.planSlug, { onDelete: 'restrict' }),
+
+    /** Whether this prerequisite has been satisfied */
+    satisfied: boolean('satisfied').default(false),
+
+    /** When the dependency was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    uniquePlanDep: uniqueIndex('idx_plan_dependencies_unique').on(
+      table.planSlug,
+      table.dependsOnSlug,
+    ),
+    planSlugIdx: index('idx_plan_dependencies_plan_slug').on(table.planSlug),
+    dependsOnIdx: index('idx_plan_dependencies_depends_on').on(table.dependsOnSlug),
+  }),
+)
+
+/**
+ * Story Knowledge Links Table (CDTS-1030)
+ *
+ * Graph edge table linking stories to KB entries.
+ * Tracks the nature of the relationship (produced_lesson, applied_constraint, etc.)
+ * The CHECK constraint on link_type is enforced by the DB migration (CDTS-1020).
+ *
+ * Valid link_type values: produced_lesson, applied_constraint, referenced_decision,
+ *                          similar_pattern, blocked_by
+ */
+export const storyKnowledgeLinks = pgTable(
+  'story_knowledge_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** Story ID (FK to stories.story_id RESTRICT) */
+    storyId: text('story_id')
+      .notNull()
+      .references(() => stories.storyId, { onDelete: 'restrict' }),
+
+    /** KB entry ID (FK to knowledge_entries.id RESTRICT) */
+    kbEntryId: uuid('kb_entry_id')
+      .notNull()
+      .references(() => knowledgeEntries.id, { onDelete: 'restrict' }),
+
+    /**
+     * Nature of the link.
+     * Valid values: 'produced_lesson' | 'applied_constraint' | 'referenced_decision' |
+     *               'similar_pattern' | 'blocked_by'
+     * CHECK constraint enforced in DB migration CDTS-1020.
+     */
+    linkType: text('link_type').notNull(),
+
+    /** Confidence score for ML-generated links (1.0 = manually created) */
+    confidence: real('confidence').default(1.0),
+
+    /** Who created this link (agent ID or tool name) */
+    createdBy: text('created_by'),
+
+    /** When the link was created */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => ({
+    storyKbUnique: uniqueIndex('idx_story_knowledge_links_unique').on(
+      table.storyId,
+      table.kbEntryId,
+      table.linkType,
+    ),
+    storyIdIdx: index('idx_story_knowledge_links_story_id').on(table.storyId),
+    kbEntryIdx: index('idx_story_knowledge_links_kb_entry').on(table.kbEntryId),
   }),
 )
 
@@ -1426,3 +1599,11 @@ export type Plan = typeof plans.$inferSelect
 export type NewPlan = typeof plans.$inferInsert
 export type PlanStoryLink = typeof planStoryLinks.$inferSelect
 export type NewPlanStoryLink = typeof planStoryLinks.$inferInsert
+export type PlanDetail = typeof planDetails.$inferSelect
+export type NewPlanDetail = typeof planDetails.$inferInsert
+export type StoryDetail = typeof storyDetails.$inferSelect
+export type NewStoryDetail = typeof storyDetails.$inferInsert
+export type PlanDependency = typeof planDependencies.$inferSelect
+export type NewPlanDependency = typeof planDependencies.$inferInsert
+export type StoryKnowledgeLink = typeof storyKnowledgeLinks.$inferSelect
+export type NewStoryKnowledgeLink = typeof storyKnowledgeLinks.$inferInsert

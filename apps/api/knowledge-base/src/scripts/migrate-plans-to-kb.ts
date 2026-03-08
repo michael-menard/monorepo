@@ -254,10 +254,14 @@ async function importPlan(
     return
   }
 
-  // Check for existing record
-  const existing = await pool.query('SELECT id, content_hash FROM plans WHERE plan_slug = $1', [
-    planSlug,
-  ])
+  // Check for existing record — content_hash is now in plan_details
+  const existing = await pool.query(
+    `SELECT p.id, pd.content_hash
+     FROM plans p
+     LEFT JOIN plan_details pd ON pd.plan_id = p.id
+     WHERE p.plan_slug = $1`,
+    [planSlug],
+  )
 
   if (existing.rows.length > 0) {
     if (existing.rows[0].content_hash === fields.contentHash) {
@@ -266,12 +270,12 @@ async function importPlan(
       return
     }
 
+    // Update plans header (no detail columns)
     await pool.query(
       `UPDATE plans SET
         title = $2, summary = $3, plan_type = $4, status = $5,
         feature_dir = $6, story_prefix = $7, estimated_stories = $8,
-        phases = $9, tags = $10, raw_content = $11, source_file = $12,
-        content_hash = $13, updated_at = NOW()
+        tags = $9, updated_at = NOW()
        WHERE plan_slug = $1`,
       [
         planSlug,
@@ -282,21 +286,39 @@ async function importPlan(
         fields.featureDir,
         fields.storyPrefix,
         fields.estimatedStories,
-        JSON.stringify(fields.phases),
         fields.tags,
+      ],
+    )
+
+    // Upsert plan_details (detail columns moved here)
+    await pool.query(
+      `INSERT INTO plan_details (plan_id, raw_content, phases, source_file, content_hash, imported_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       ON CONFLICT (plan_id) DO UPDATE SET
+         raw_content = EXCLUDED.raw_content,
+         phases = EXCLUDED.phases,
+         source_file = EXCLUDED.source_file,
+         content_hash = EXCLUDED.content_hash,
+         updated_at = NOW()`,
+      [
+        existing.rows[0].id,
         fields.rawContent,
+        JSON.stringify(fields.phases),
         fields.sourceFile,
         fields.contentHash,
       ],
     )
+
     console.log(`  [UPD] ${planSlug}`)
     stats.updated++
   } else {
-    await pool.query(
+    // Insert plans header
+    const inserted = await pool.query(
       `INSERT INTO plans
         (plan_slug, title, summary, plan_type, status, feature_dir, story_prefix,
-         estimated_stories, phases, tags, raw_content, source_file, content_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+         estimated_stories, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
       [
         planSlug,
         fields.title,
@@ -306,13 +328,23 @@ async function importPlan(
         fields.featureDir,
         fields.storyPrefix,
         fields.estimatedStories,
-        JSON.stringify(fields.phases),
         fields.tags,
+      ],
+    )
+
+    // Insert plan_details
+    await pool.query(
+      `INSERT INTO plan_details (plan_id, raw_content, phases, source_file, content_hash, imported_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [
+        inserted.rows[0].id,
         fields.rawContent,
+        JSON.stringify(fields.phases),
         fields.sourceFile,
         fields.contentHash,
       ],
     )
+
     console.log(`  [NEW] ${planSlug}`)
     stats.imported++
   }

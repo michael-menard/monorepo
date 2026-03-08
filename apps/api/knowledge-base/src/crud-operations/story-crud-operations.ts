@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { eq, and, or, sql, desc, asc, inArray, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks } from '../db/schema.js'
+import { stories, storyArtifacts, storyDependencies, plans, planStoryLinks, storyDetails } from '../db/schema.js'
 import { StoryStateSchema, StoryPhaseSchema, StoryPrioritySchema } from '../__types__/index.js'
 
 // ============================================================================
@@ -397,6 +397,15 @@ export async function kb_update_story_status(
     }
   }
 
+  // Fetch storyDetails to check timestamps (moved from stories header in CDTS-1030)
+  const existingDetails = await deps.db
+    .select()
+    .from(storyDetails)
+    .where(eq(storyDetails.storyId, validated.story_id))
+    .limit(1)
+
+  const currentDetail = existingDetails[0] ?? null
+
   // Terminal-state guard: prevent transitions OUT of terminal states
   // Same-state transitions are always allowed (idempotent)
   const TERMINAL_STATES = ['completed', 'cancelled', 'deferred', 'failed_code_review', 'failed_qa']
@@ -414,20 +423,23 @@ export async function kb_update_story_status(
     }
   }
 
-  // Build update object
+  // Build update object for stories header
   const updates: Partial<typeof stories.$inferInsert> = {
     updatedAt: new Date(),
   }
 
+  // Build update object for storyDetails (moved columns)
+  const detailUpdates: Partial<typeof storyDetails.$inferInsert> = {}
+
   if (validated.state !== undefined) {
     updates.state = validated.state
 
-    // Auto-set timestamps for state transitions
-    if (validated.state === 'in_progress' && !existing[0].startedAt) {
-      updates.startedAt = new Date()
+    // Auto-set timestamps for state transitions (stored in storyDetails)
+    if (validated.state === 'in_progress' && !currentDetail?.startedAt) {
+      detailUpdates.startedAt = new Date()
     }
-    if (validated.state === 'completed' && !existing[0].completedAt) {
-      updates.completedAt = new Date()
+    if (validated.state === 'completed' && !currentDetail?.completedAt) {
+      detailUpdates.completedAt = new Date()
     }
   }
 
@@ -442,31 +454,45 @@ export async function kb_update_story_status(
   if (validated.blocked !== undefined) {
     updates.blocked = validated.blocked
 
-    // Clear blocked fields when unblocking
+    // Clear blocked fields when unblocking (stored in storyDetails)
     if (!validated.blocked) {
-      updates.blockedReason = null
-      updates.blockedByStory = null
+      detailUpdates.blockedReason = null
+      detailUpdates.blockedByStory = null
     }
   }
 
   if (validated.blocked_reason !== undefined) {
-    updates.blockedReason = validated.blocked_reason
+    detailUpdates.blockedReason = validated.blocked_reason
   }
 
   if (validated.blocked_by_story !== undefined) {
-    updates.blockedByStory = validated.blocked_by_story
+    detailUpdates.blockedByStory = validated.blocked_by_story
   }
 
   if (validated.priority !== undefined) {
     updates.priority = validated.priority
   }
 
-  // Perform update
+  // Perform update on stories header
   const result = await deps.db
     .update(stories)
     .set(updates)
     .where(eq(stories.storyId, validated.story_id))
     .returning()
+
+  // Upsert storyDetails if there are detail fields to update
+  if (Object.keys(detailUpdates).length > 0) {
+    await deps.db
+      .insert(storyDetails)
+      .values({
+        storyId: validated.story_id,
+        ...detailUpdates,
+      })
+      .onConflictDoUpdate({
+        target: storyDetails.storyId,
+        set: { ...detailUpdates, updatedAt: new Date() },
+      })
+  }
 
   const story = result[0] ?? null
 

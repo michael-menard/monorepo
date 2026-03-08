@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { eq, sql, and, ne, isNotNull, notInArray, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '../db/schema.js'
-import { plans } from '../db/schema.js'
+import { plans, planDetails } from '../db/schema.js'
 
 // ============================================================================
 // Helpers
@@ -378,11 +378,8 @@ export async function kb_list_plans(
         storyPrefix: plans.storyPrefix,
         estimatedStories: plans.estimatedStories,
         priority: plans.priority,
-        phases: plans.phases,
-        dependencies: plans.dependencies,
         parentPlanId: plans.parentPlanId,
         tags: plans.tags,
-        sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,
         updatedAt: plans.updatedAt,
       }
@@ -436,7 +433,6 @@ export async function kb_upsert_plan(
   const values = {
     planSlug: validated.plan_slug,
     title: validated.title,
-    rawContent: validated.raw_content,
     summary: validated.summary ?? null,
     planType: validated.plan_type ?? null,
     status: validated.status ?? 'draft',
@@ -444,16 +440,14 @@ export async function kb_upsert_plan(
     storyPrefix: validated.story_prefix ?? null,
     estimatedStories: validated.estimated_stories ?? null,
     priority: validated.priority ?? 'P3',
-    dependencies: validated.dependencies ?? null,
     parentPlanId,
     tags: validated.tags ?? null,
-    sourceFile: validated.source_file ?? null,
     updatedAt: now,
   }
 
   const result = await deps.db
     .insert(plans)
-    .values({ ...values, importedAt: now, createdAt: now })
+    .values({ ...values, createdAt: now })
     .onConflictDoUpdate({
       target: plans.planSlug,
       set: { ...values },
@@ -462,6 +456,29 @@ export async function kb_upsert_plan(
 
   const plan = result[0]!
   const created = plan.createdAt.getTime() === now.getTime()
+
+  // Upsert plan details (moved columns)
+  await deps.db
+    .insert(planDetails)
+    .values({
+      planId: plan.id,
+      rawContent: validated.raw_content,
+      phases: null,
+      dependencies: validated.dependencies ?? null,
+      sourceFile: validated.source_file ?? null,
+      contentHash: null,
+      importedAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: planDetails.planId,
+      set: {
+        rawContent: validated.raw_content,
+        dependencies: validated.dependencies ?? null,
+        sourceFile: validated.source_file ?? null,
+        updatedAt: now,
+      },
+    })
 
   return {
     plan,
@@ -520,7 +537,7 @@ export async function kb_update_plan(
   if (validated.story_prefix !== undefined) updates.storyPrefix = validated.story_prefix
   if (validated.estimated_stories !== undefined)
     updates.estimatedStories = validated.estimated_stories
-  if (validated.dependencies !== undefined) updates.dependencies = validated.dependencies
+  // Note: dependencies moved to planDetails table (CDTS-1030) — not updatable via this endpoint
   if (validated.parent_plan_slug !== undefined) {
     updates.parentPlanId =
       validated.parent_plan_slug === null
@@ -588,7 +605,7 @@ export async function kb_get_roadmap(
 
   // Select columns based on include_content flag
   const selectColumns = validated.include_content
-    ? undefined // select all
+    ? undefined // select all (include planDetails join)
     : {
         id: plans.id,
         planSlug: plans.planSlug,
@@ -600,11 +617,8 @@ export async function kb_get_roadmap(
         storyPrefix: plans.storyPrefix,
         estimatedStories: plans.estimatedStories,
         priority: plans.priority,
-        phases: plans.phases,
-        dependencies: plans.dependencies,
         parentPlanId: plans.parentPlanId,
         tags: plans.tags,
-        sourceFile: plans.sourceFile,
         createdAt: plans.createdAt,
         updatedAt: plans.updatedAt,
       }
