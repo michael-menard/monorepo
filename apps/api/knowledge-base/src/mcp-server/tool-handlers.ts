@@ -171,6 +171,7 @@ import {
 } from './tool-schemas.js'
 import { checkAccess, cacheGet, cacheSet, type AgentRole, type ToolName } from './access-control.js'
 import { AuthorizationError, errorToToolResult, type McpToolResult } from './error-handling.js'
+import { withRetry } from '../db/client.js'
 import { createMcpLogger } from './logger.js'
 import {
   type ToolCallContext,
@@ -4790,7 +4791,7 @@ export async function handleToolCall(
     }
   }
 
-  return handler(input, deps, context)
+  return withRetry(() => handler(input, deps, context))
 }
 
 // ============================================================================

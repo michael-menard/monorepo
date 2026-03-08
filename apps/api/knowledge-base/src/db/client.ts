@@ -4,7 +4,7 @@
  * Provides connection pooling optimized for serverless (Lambda) context.
  *
  * Configuration:
- * - Max connections: 3 (low per-process; each MCP stdio instance needs few connections)
+ * - Max connections: 5 (per-process; reads DB_POOL_SIZE or KB_DB_MAX_CONNECTIONS)
  * - Idle timeout: 10s (release connections quickly)
  * - Connection timeout: 5s (fail fast)
  *
@@ -84,7 +84,7 @@ function getDbConfig(): DbConfig {
     database: process.env.KB_DB_NAME || 'knowledgebase',
     user: process.env.KB_DB_USER || 'kbuser',
     password,
-    maxConnections: parseInt(process.env.KB_DB_MAX_CONNECTIONS || '3', 10),
+    maxConnections: parseInt(process.env.DB_POOL_SIZE || process.env.KB_DB_MAX_CONNECTIONS || '5', 10),
     idleTimeoutMs: parseInt(process.env.KB_DB_IDLE_TIMEOUT_MS || '10000', 10),
     connectionTimeoutMs: parseInt(process.env.KB_DB_CONNECTION_TIMEOUT_MS || '5000', 10),
   }
@@ -114,16 +114,19 @@ function createPool(dbConfig: DbConfig): Pool {
     max: dbConfig.maxConnections,
     idleTimeoutMillis: dbConfig.idleTimeoutMs,
     connectionTimeoutMillis: dbConfig.connectionTimeoutMs,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
   })
 
-  // Handle pool errors
+  // Handle pool errors — recreate pool on fatal connection failures
   newPool.on('error', (err: Error) => {
-    // Sanitize error message to avoid leaking credentials
     const sanitizedMessage = sanitizeErrorMessage(err.message)
-    logger.error('[knowledge-base] Unexpected pool error', {
+    logger.error('[knowledge-base] Unexpected pool error, will recreate pool on next use', {
       error: sanitizedMessage,
-      help: 'See README.md troubleshooting section for help.',
     })
+    // Mark pool for replacement so the next getPool() call creates a fresh one.
+    // Don't call pool.end() here — it can throw if the pool is already broken.
+    pool = null
   })
 
   return newPool
@@ -233,6 +236,51 @@ export async function testConnection(): Promise<{ success: boolean; error?: stri
       success: false,
       error: `Connection failed: ${message}\n\nSee README.md troubleshooting section for help.`,
     }
+  }
+}
+
+/**
+ * Execute a database operation with a single retry on transient connection errors.
+ *
+ * Catches socket resets, broken pipes, and pool exhaustion timeouts,
+ * waits 200ms, then retries once. Non-transient errors are thrown immediately.
+ */
+const TRANSIENT_PATTERNS = [
+  'econnreset',
+  'econnrefused',
+  'epipe',
+  'socket hang up',
+  'connection terminated unexpectedly',
+  'client has encountered a connection error',
+  'timeout expired',
+  'read econnreset',
+  'write epipe',
+  'cannot use a pool after calling end',
+  'remaining connection slots are reserved',
+  'too many clients already',
+  'sorry, too many clients',
+]
+
+function isTransientError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const msg = err.message.toLowerCase()
+  return TRANSIENT_PATTERNS.some(p => msg.includes(p))
+}
+
+export async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (!isTransientError(err)) throw err
+    logger.warn('[knowledge-base] Transient DB error, retrying in 200ms', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    // Force pool recreation before retry
+    if (pool) {
+      pool = null
+    }
+    await new Promise(resolve => setTimeout(resolve, 200))
+    return fn()
   }
 }
 
