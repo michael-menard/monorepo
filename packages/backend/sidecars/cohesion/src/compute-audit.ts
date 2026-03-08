@@ -16,7 +16,7 @@
 import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { features, capabilities } from '@repo/database-schema'
-import { eq, isNotNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { CohesionAuditResult } from './__types__/index.js'
 
 const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
@@ -30,10 +30,10 @@ const CRUD_STAGES = ['create', 'read', 'update', 'delete'] as const
 
 // Structural type for Drizzle's chainable query builder (not a data payload — no z.object()).
 // Covers both usage patterns in this sidecar:
-//   - computeAudit: select().from(t).innerJoin(t2, on).where(cond)
+//   - computeAudit: select().from(t).leftJoin(t2, on).where(cond)   [CR-1: leftJoin]
 //   - computeCheck: select().from(t).where(cond)  (no join)
 type DrizzleFromResult = {
-  innerJoin: (table: unknown, on: unknown) => { where: (cond: unknown) => Promise<unknown[]> }
+  leftJoin: (table: unknown, on: unknown) => { where: (cond: unknown) => Promise<unknown[]> } & PromiseLike<unknown[]>
   where: (cond: unknown) => Promise<unknown[]>
 }
 
@@ -82,19 +82,20 @@ export async function computeAudit(
   }
 
   try {
-    // Query all features with their linked capabilities (Drizzle ORM — parameterized, no raw SQL)
+    // CR-1: leftJoin (not innerJoin) so features with zero capabilities are included —
+    //       they appear as franken-features with all CRUD stages missing (AC-3, AC-8).
+    // CR-2: packageName predicate pushed into the DB query so the DB can use indexes
+    //       instead of filtering all rows in TypeScript memory (AC-3).
     // Cast to AuditRow[]: safe because the Drizzle ORM join on features+capabilities always
     // returns this shape per the database schema definitions in @repo/database-schema.
-    const rows = (await db
+    const baseQuery = db
       .select()
       .from(features)
-      .innerJoin(capabilities, eq(capabilities.featureId, features.id))
-      .where(isNotNull(capabilities.featureId))) as AuditRow[]
+      .leftJoin(capabilities, eq(capabilities.featureId, features.id))
 
-    // Apply optional packageName filter in TypeScript (avoids additional DB round-trip)
-    const filteredRows = packageName
-      ? rows.filter(row => row.features.packageName === packageName)
-      : rows
+    const rows = (await (packageName
+      ? baseQuery.where(eq(features.packageName, packageName))
+      : baseQuery)) as AuditRow[]
 
     // Group capabilities by featureId in TypeScript
     const featureMap = new Map<
@@ -102,7 +103,7 @@ export async function computeAudit(
       { featureName: string; packageName: string | null; stages: Set<string> }
     >()
 
-    for (const row of filteredRows) {
+    for (const row of rows) {
       const featureId = row.features.id
       if (!featureMap.has(featureId)) {
         featureMap.set(featureId, {

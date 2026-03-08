@@ -17,39 +17,59 @@ import type { DrizzleDb } from '../compute-audit.js'
 // ============================================================================
 
 /**
- * Build a chainable mock Drizzle query that resolves with the provided rows.
+ * Build a chainable mock Drizzle query using leftJoin (CR-1 fix).
+ *
+ * @param allRows - Rows returned when no packageName filter is applied (direct await)
+ * @param whereResult - Rows returned when .where() is called (packageName filter path).
+ *                      Defaults to allRows if not provided (no-filter tests).
+ *
+ * The leftJoin result is both thenable (direct await) and has .where() for the filter path,
+ * mirroring the new CR-2 SQL-WHERE pattern:
+ *   db.select().from(features).leftJoin()          → direct await → allRows
+ *   db.select().from(features).leftJoin().where()  → filtered await → whereResult
  */
-function buildMockDb(rows: Record<string, any>[]): DrizzleDb {
-  const mockWhere = vi.fn().mockResolvedValue(rows)
-  const mockInnerJoin = vi.fn().mockReturnValue({ where: mockWhere })
-  const mockFrom = vi.fn().mockReturnValue({ innerJoin: mockInnerJoin })
+function buildMockDb(rows: Record<string, any>[], whereResult?: Record<string, any>[]): DrizzleDb {
+  const resolvedWhereRows = whereResult ?? rows
+  const leftJoinResult: any = {
+    where: vi.fn().mockResolvedValue(resolvedWhereRows),
+  }
+  // Make leftJoinResult directly awaitable (PromiseLike) for the no-filter path
+  leftJoinResult.then = (onFulfilled: any, onRejected: any) =>
+    Promise.resolve(rows).then(onFulfilled, onRejected)
+
+  const mockLeftJoin = vi.fn().mockReturnValue(leftJoinResult)
+  const mockFrom = vi.fn().mockReturnValue({ leftJoin: mockLeftJoin })
   const mockSelect = vi.fn().mockReturnValue({ from: mockFrom })
 
   return { select: mockSelect } as unknown as DrizzleDb
 }
+
+const POPULATED_ALL_ROWS = [
+  // feature-complete — all 4 CRUD
+  { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-1', lifecycleStage: 'create', featureId: 'feat-complete' } },
+  { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-2', lifecycleStage: 'read', featureId: 'feat-complete' } },
+  { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-3', lifecycleStage: 'update', featureId: 'feat-complete' } },
+  { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-4', lifecycleStage: 'delete', featureId: 'feat-complete' } },
+  // feature-incomplete — missing create + delete
+  { features: { id: 'feat-incomplete', featureName: 'incomplete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-5', lifecycleStage: 'read', featureId: 'feat-incomplete' } },
+  { features: { id: 'feat-incomplete', featureName: 'incomplete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-6', lifecycleStage: 'update', featureId: 'feat-incomplete' } },
+  // feature-other-pkg — in @repo/other, missing read, update, delete
+  { features: { id: 'feat-other', featureName: 'other-feature', packageName: '@repo/other' }, capabilities: { id: 'cap-7', lifecycleStage: 'create', featureId: 'feat-other' } },
+]
+const UI_ROWS_ONLY = POPULATED_ALL_ROWS.filter(r => r.features.packageName === '@repo/ui')
 
 /**
  * MockDbWithPopulatedGraph: 3 features.
  * - feature-complete: has all 4 CRUD stages
  * - feature-incomplete: only has read + update (missing create + delete)
  * - feature-other-pkg: in @repo/other, has only create (missing read, update, delete)
+ *
+ * @param packageName - When provided, pre-filters rows (simulating DB WHERE clause, CR-2).
  */
-function makeMockDbWithPopulatedGraph(): DrizzleDb {
-  const rows = [
-    // feature-complete — all 4 CRUD
-    { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-1', lifecycleStage: 'create', featureId: 'feat-complete' } },
-    { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-2', lifecycleStage: 'read', featureId: 'feat-complete' } },
-    { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-3', lifecycleStage: 'update', featureId: 'feat-complete' } },
-    { features: { id: 'feat-complete', featureName: 'complete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-4', lifecycleStage: 'delete', featureId: 'feat-complete' } },
-
-    // feature-incomplete — missing create + delete
-    { features: { id: 'feat-incomplete', featureName: 'incomplete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-5', lifecycleStage: 'read', featureId: 'feat-incomplete' } },
-    { features: { id: 'feat-incomplete', featureName: 'incomplete-feature', packageName: '@repo/ui' }, capabilities: { id: 'cap-6', lifecycleStage: 'update', featureId: 'feat-incomplete' } },
-
-    // feature-other-pkg — in @repo/other, missing read, update, delete
-    { features: { id: 'feat-other', featureName: 'other-feature', packageName: '@repo/other' }, capabilities: { id: 'cap-7', lifecycleStage: 'create', featureId: 'feat-other' } },
-  ]
-  return buildMockDb(rows)
+function makeMockDbWithPopulatedGraph(packageName?: string): DrizzleDb {
+  if (packageName === '@repo/ui') return buildMockDb(POPULATED_ALL_ROWS, UI_ROWS_ONLY)
+  if (packageName === '@repo/nonexistent') return buildMockDb(POPULATED_ALL_ROWS, [])
+  return buildMockDb(POPULATED_ALL_ROWS)
 }
 
 /**
@@ -60,12 +80,17 @@ function makeMockDbEmpty(): DrizzleDb {
 }
 
 /**
- * MockDbThrowsOnQuery: simulates DB error.
+ * MockDbThrowsOnQuery: simulates DB error on leftJoin (CR-1 fix).
  */
 function makeMockDbThrowsOnQuery(): DrizzleDb {
-  const mockWhere = vi.fn().mockRejectedValue(new Error('DB connection failed'))
-  const mockInnerJoin = vi.fn().mockReturnValue({ where: mockWhere })
-  const mockFrom = vi.fn().mockReturnValue({ innerJoin: mockInnerJoin })
+  const throwingResult: any = {
+    where: vi.fn().mockRejectedValue(new Error('DB connection failed')),
+  }
+  throwingResult.then = (_onFulfilled: any, onRejected: any) =>
+    Promise.reject(new Error('DB connection failed')).then(undefined, onRejected)
+
+  const mockLeftJoin = vi.fn().mockReturnValue(throwingResult)
+  const mockFrom = vi.fn().mockReturnValue({ leftJoin: mockLeftJoin })
   const mockSelect = vi.fn().mockReturnValue({ from: mockFrom })
 
   return { select: mockSelect } as unknown as DrizzleDb
@@ -112,7 +137,8 @@ describe('computeAudit', () => {
     })
 
     it('filters by packageName (AC-3)', async () => {
-      const db = makeMockDbWithPopulatedGraph()
+      // Mock simulates DB WHERE clause returning only @repo/ui rows (CR-2).
+      const db = makeMockDbWithPopulatedGraph('@repo/ui')
       const result = await computeAudit(db, '@repo/ui')
 
       // Should only see @repo/ui features: feat-complete + feat-incomplete
@@ -125,7 +151,8 @@ describe('computeAudit', () => {
     })
 
     it('returns empty frankenFeatures when packageName has no matches', async () => {
-      const db = makeMockDbWithPopulatedGraph()
+      // Mock simulates DB WHERE clause returning no rows for unknown package (CR-2).
+      const db = makeMockDbWithPopulatedGraph('@repo/nonexistent')
       const result = await computeAudit(db, '@repo/nonexistent')
 
       expect(result.frankenFeatures).toHaveLength(0)
