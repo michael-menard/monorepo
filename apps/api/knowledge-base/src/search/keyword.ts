@@ -56,8 +56,9 @@ export async function keywordSearch(
           plainto_tsquery('english', ${query}),
           32
         ) as score
-      FROM knowledge_entries
-      WHERE to_tsvector('english', content) @@ plainto_tsquery('english', ${query})
+      FROM public.knowledge_entries
+      WHERE deleted_at IS NULL
+        AND to_tsvector('english', content) @@ plainto_tsquery('english', ${query})
         ${filters.role ? sql`AND (role = ${filters.role} OR role = 'all')` : sql``}
         ${filters.tags && filters.tags.length > 0 ? sql`AND tags && ${filters.tags}::text[]` : sql``}
       ORDER BY score DESC, updated_at DESC
@@ -119,8 +120,9 @@ export async function hasKeywordMatches(
     const result = await db.execute(sql`
       SELECT EXISTS(
         SELECT 1
-        FROM knowledge_entries
-        WHERE to_tsvector('english', content) @@ plainto_tsquery('english', ${query})
+        FROM public.knowledge_entries
+        WHERE deleted_at IS NULL
+          AND to_tsvector('english', content) @@ plainto_tsquery('english', ${query})
         LIMIT 1
       ) as has_matches
     `)
