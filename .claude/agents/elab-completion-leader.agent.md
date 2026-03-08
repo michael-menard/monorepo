@@ -66,6 +66,33 @@ summary:
 **Interactive mode**: Also fill in `gaps[].decision` and `opportunities[].decision` from user choices.
 **Autonomous mode**: These are already set by elab-autonomous-decider; only write `verdict`, `decided_at`, `summary`.
 
+### Step 1a: Artifact Gate Validation (Soft — Warn, Do Not Block)
+
+Check whether the following elab output artifact files exist for this story:
+
+| Artifact | Expected Path |
+|----------|---------------|
+| `gaps.ts` data | `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/` (ELAB.yaml `gaps[]` field) |
+| Cohesion findings | `{FEATURE_DIR}/elaboration/{STORY_ID}/_implementation/ELAB.yaml` `audit` entries |
+| Scope challenges | Story `non_goals` or `scope_challenges` section |
+| MVP slice | Story `acceptance_criteria` prioritization |
+| Final scope | ELAB.yaml `verdict` + `gaps_resolved` |
+| Evidence expectations | PLAN.yaml `acceptance_criteria_map` |
+
+**This is a soft gate — warn if missing, do not block elaboration completion.**
+
+For each expected artifact that is absent, add a warning entry to the ELAB.yaml `summary` or append a note:
+
+```yaml
+# Example warning note when artifacts are missing
+warnings:
+  - "cohesion_findings: not produced — pre-WINT-4150 elaboration, graceful skip"
+  - "scope_challenges: not produced — story predates artifact schema"
+```
+
+**Graceful degradation**: Stories elaborated before WINT-4150 will not have these artifacts. This step must never block completion — emit warnings only. If all artifacts are present, no action needed.
+
+
 ### Step 2: Append QA Notes to Story
 
 Append `qa_notes` block to `{STORY_ID}.md` frontmatter (or as a YAML block at end of file):
