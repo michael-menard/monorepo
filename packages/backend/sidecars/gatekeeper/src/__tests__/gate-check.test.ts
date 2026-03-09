@@ -3,14 +3,22 @@
  * WINT-3010: Create Gatekeeper Sidecar
  *
  * AC-14: >=80% coverage on gate-check.ts
- * AC-5: All 4 stages covered, pass+fail paths
+ * AC-5: All 4 stages covered, pass+fail paths — nested proof structures per AC-5 spec
  * AC-6: ok:true returns { passed: true, stage, story_id, timestamp }
  * AC-7: ok:false returns { error: 'Gate check failed', missing_proofs: [...] }
  *
+ * Proof structures mirror real artifact shapes:
+ *   POST_BOOTSTRAP: { proof: { checkpoint: { phase: "setup_complete" } } }
+ *   ELAB_COMPLETE:  { proof: { elab: { verdict: "PASS"|"CONDITIONAL_PASS", findings: string[] } } }
+ *   SCOPE_OK:       { proof: { scope: { included_files: string[] } } }
+ *                OR { proof: { scope: { no_scope_files: true } } }
+ *   PATCH_COMPLETE: { proof: { evidence: { touched_files: number > 0 } } }
+ *
  * Boundary conditions:
- *   - CONDITIONAL_PASS (elab_verdict: 'CONDITIONAL_PASS', gaps_resolved: true)
- *   - no_scope_files=true + touched_files=0 (valid empty scope)
- *   - coverage_pct boundary (79 = fail, 80 = pass)
+ *   - CONDITIONAL_PASS (elab.verdict: 'CONDITIONAL_PASS', elab.findings: [...])
+ *   - no_scope_files=true (valid empty scope)
+ *   - touched_files=0 fails, touched_files=1 passes
+ *   - elab.findings must be non-empty to pass
  */
 
 import { describe, it, expect } from 'vitest'
@@ -18,17 +26,18 @@ import { gateCheck } from '../gate-check.js'
 
 // ============================================================================
 // POST_BOOTSTRAP stage
+// AC-5: proof.checkpoint.phase must equal "setup_complete"
 // ============================================================================
 
 describe('gateCheck — POST_BOOTSTRAP', () => {
-  it('passes when setup_complete=true and worktree_path provided', () => {
+  it('passes when checkpoint.phase = "setup_complete"', () => {
     const result = gateCheck({
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        setup_complete: true,
-        worktree_path: '/tree/story/WINT-3010',
+        checkpoint: {
+          phase: 'setup_complete',
+        },
       },
     })
 
@@ -41,39 +50,39 @@ describe('gateCheck — POST_BOOTSTRAP', () => {
     }
   })
 
-  it('fails when setup_complete=false', () => {
+  it('fails when checkpoint.phase is missing', () => {
     const result = gateCheck({
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        setup_complete: false,
-        worktree_path: '/tree/story/WINT-3010',
-      },
+        checkpoint: {
+          phase: '',
+        },
+      } as any,
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toBe('Gate check failed')
-      expect(result.missing_proofs).toContain('proof.setup_complete must be true')
+      expect(result.missing_proofs).toContain('proof.checkpoint.phase is required')
     }
   })
 
-  it('fails when worktree_path is empty string', () => {
+  it('fails when checkpoint.phase is not "setup_complete"', () => {
     const result = gateCheck({
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        setup_complete: true,
-        worktree_path: '',
+        checkpoint: {
+          phase: 'in_progress',
+        },
       },
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toBe('Gate check failed')
-      expect(result.missing_proofs).toContain('proof.worktree_path is required')
+      expect(result.missing_proofs).toContain('proof.checkpoint.phase must be "setup_complete"')
     }
   })
 
@@ -82,10 +91,11 @@ describe('gateCheck — POST_BOOTSTRAP', () => {
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        setup_complete: true,
-        worktree_path: '/tree/story/WINT-3010',
-        extra_field: 'value', // extra field should not cause failure
+        checkpoint: {
+          phase: 'setup_complete',
+          extra_field: 'value',
+        },
+        another_extra: true,
       } as any,
     })
 
@@ -95,17 +105,19 @@ describe('gateCheck — POST_BOOTSTRAP', () => {
 
 // ============================================================================
 // ELAB_COMPLETE stage
+// AC-5: proof.elab.verdict must be PASS or CONDITIONAL_PASS, findings non-empty
 // ============================================================================
 
 describe('gateCheck — ELAB_COMPLETE', () => {
-  it('passes when elab_verdict=PASS and gaps_resolved=true', () => {
+  it('passes when elab.verdict=PASS and findings is non-empty', () => {
     const result = gateCheck({
       stage: 'ELAB_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        elab_verdict: 'PASS',
-        gaps_resolved: true,
+        elab: {
+          verdict: 'PASS',
+          findings: ['All ACs are well-defined'],
+        },
       },
     })
 
@@ -115,62 +127,66 @@ describe('gateCheck — ELAB_COMPLETE', () => {
     }
   })
 
-  it('passes when elab_verdict=CONDITIONAL_PASS and gaps_resolved=true (boundary condition)', () => {
+  it('passes when elab.verdict=CONDITIONAL_PASS and findings is non-empty (boundary condition)', () => {
     const result = gateCheck({
       stage: 'ELAB_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        elab_verdict: 'CONDITIONAL_PASS',
-        gaps_resolved: true,
+        elab: {
+          verdict: 'CONDITIONAL_PASS',
+          findings: ['Minor gap in AC-3, acceptable risk'],
+        },
       },
     })
 
     expect(result.ok).toBe(true)
   })
 
-  it('fails when elab_verdict=FAIL', () => {
+  it('fails when elab.verdict=FAIL', () => {
     const result = gateCheck({
       stage: 'ELAB_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        elab_verdict: 'FAIL',
-        gaps_resolved: true,
+        elab: {
+          verdict: 'FAIL',
+          findings: ['Critical gaps found'],
+        },
       },
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.missing_proofs).toContain('proof.elab_verdict must be PASS or CONDITIONAL_PASS')
+      expect(result.missing_proofs).toContain('proof.elab.verdict must be PASS or CONDITIONAL_PASS')
     }
   })
 
-  it('fails when gaps_resolved=false', () => {
+  it('fails when elab.findings is empty array', () => {
     const result = gateCheck({
       stage: 'ELAB_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        elab_verdict: 'PASS',
-        gaps_resolved: false,
+        elab: {
+          verdict: 'PASS',
+          findings: [],
+        },
       },
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.missing_proofs).toContain('proof.gaps_resolved must be true')
+      expect(result.missing_proofs).toContain('proof.elab.findings must be a non-empty array')
     }
   })
 
-  it('returns multiple missing_proofs when multiple fields fail', () => {
+  it('returns multiple missing_proofs when verdict=FAIL and findings empty', () => {
     const result = gateCheck({
       stage: 'ELAB_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        elab_verdict: 'FAIL',
-        gaps_resolved: false,
+        elab: {
+          verdict: 'FAIL',
+          findings: [],
+        },
       },
     })
 
@@ -183,17 +199,21 @@ describe('gateCheck — ELAB_COMPLETE', () => {
 
 // ============================================================================
 // SCOPE_OK stage
+// AC-5: proof.scope.included_files (non-empty array) OR proof.scope.no_scope_files=true
 // ============================================================================
 
 describe('gateCheck — SCOPE_OK', () => {
-  it('passes when no_scope_files=false and touched_files>0', () => {
+  it('passes when scope.included_files is non-empty', () => {
     const result = gateCheck({
       stage: 'SCOPE_OK',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        touched_files: 5,
-        no_scope_files: false,
+        scope: {
+          included_files: [
+            'packages/backend/sidecars/gatekeeper/src/__types__/index.ts',
+            'packages/backend/sidecars/gatekeeper/src/gate-check.ts',
+          ],
+        },
       },
     })
 
@@ -203,55 +223,70 @@ describe('gateCheck — SCOPE_OK', () => {
     }
   })
 
-  it('passes when no_scope_files=true and touched_files=0 (valid empty scope boundary condition)', () => {
+  it('passes when scope.no_scope_files=true (valid empty scope boundary condition)', () => {
     const result = gateCheck({
       stage: 'SCOPE_OK',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        touched_files: 0,
-        no_scope_files: true,
+        scope: {
+          no_scope_files: true,
+        },
       },
     })
 
-    // no_scope_files=true + touched_files=0 is a valid CONDITIONAL_PASS scenario
+    // no_scope_files=true is a valid CONDITIONAL_PASS scenario
     expect(result.ok).toBe(true)
   })
 
-  it('fails when no_scope_files=false and touched_files=0', () => {
+  it('fails when scope.included_files is empty and no_scope_files is not set', () => {
     const result = gateCheck({
       stage: 'SCOPE_OK',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        touched_files: 0,
-        no_scope_files: false,
+        scope: {
+          included_files: [],
+        },
       },
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.missing_proofs).toContain(
-        'proof.touched_files must be > 0 when no_scope_files is false',
+        'proof.scope.included_files must be a non-empty array, or proof.scope.no_scope_files must be true',
       )
+    }
+  })
+
+  it('fails when scope object has neither included_files nor no_scope_files', () => {
+    const result = gateCheck({
+      stage: 'SCOPE_OK',
+      story_id: 'WINT-3010',
+      proof: {
+        scope: {},
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.missing_proofs?.length).toBeGreaterThan(0)
     }
   })
 })
 
 // ============================================================================
 // PATCH_COMPLETE stage
+// AC-5: proof.evidence.touched_files must be > 0
 // ============================================================================
 
 describe('gateCheck — PATCH_COMPLETE', () => {
-  it('passes when build_passed=true, tests_passed=true, coverage_pct=80', () => {
+  it('passes when evidence.touched_files > 0', () => {
     const result = gateCheck({
       stage: 'PATCH_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        build_passed: true,
-        tests_passed: true,
-        coverage_pct: 80,
+        evidence: {
+          touched_files: 5,
+        },
       },
     })
 
@@ -261,91 +296,64 @@ describe('gateCheck — PATCH_COMPLETE', () => {
     }
   })
 
-  it('passes when coverage_pct=100', () => {
+  it('passes when evidence.touched_files = 1 (boundary: minimum valid value)', () => {
     const result = gateCheck({
       stage: 'PATCH_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        build_passed: true,
-        tests_passed: true,
-        coverage_pct: 100,
+        evidence: {
+          touched_files: 1,
+        },
       },
     })
 
     expect(result.ok).toBe(true)
   })
 
-  it('fails when build_passed=false', () => {
+  it('fails when evidence.touched_files = 0 (boundary: must be > 0)', () => {
     const result = gateCheck({
       stage: 'PATCH_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        build_passed: false,
-        tests_passed: true,
-        coverage_pct: 90,
+        evidence: {
+          touched_files: 0,
+        },
       },
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.missing_proofs).toContain('proof.build_passed must be true')
+      expect(result.missing_proofs).toContain('proof.evidence.touched_files must be > 0 (got 0)')
     }
   })
 
-  it('fails when tests_passed=false', () => {
+  it('fails when evidence.touched_files is missing', () => {
     const result = gateCheck({
       stage: 'PATCH_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        build_passed: true,
-        tests_passed: false,
-        coverage_pct: 90,
+        evidence: {} as any,
       },
     })
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.missing_proofs).toContain('proof.tests_passed must be true')
+      expect(result.missing_proofs?.length).toBeGreaterThan(0)
     }
   })
 
-  it('fails when coverage_pct=79 (below 80 boundary)', () => {
+  it('passes with large touched_files count', () => {
     const result = gateCheck({
       stage: 'PATCH_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        build_passed: true,
-        tests_passed: true,
-        coverage_pct: 79,
+        evidence: {
+          touched_files: 42,
+        },
       },
     })
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.missing_proofs).toContain('proof.coverage_pct must be >= 80 (got 79)')
-    }
-  })
-
-  it('returns multiple missing_proofs for all failures', () => {
-    const result = gateCheck({
-      stage: 'PATCH_COMPLETE',
-      story_id: 'WINT-3010',
-      proof: {
-        story_id: 'WINT-3010',
-        build_passed: false,
-        tests_passed: false,
-        coverage_pct: 50,
-      },
-    })
-
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.missing_proofs?.length).toBe(3)
-    }
+    expect(result.ok).toBe(true)
   })
 })
 
@@ -359,9 +367,9 @@ describe('gateCheck — response shape', () => {
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-TEST',
       proof: {
-        story_id: 'WINT-TEST',
-        setup_complete: true,
-        worktree_path: '/tree/story/WINT-TEST',
+        checkpoint: {
+          phase: 'setup_complete',
+        },
       },
     })
 
@@ -384,9 +392,9 @@ describe('gateCheck — response shape', () => {
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-TEST',
       proof: {
-        story_id: 'WINT-TEST',
-        setup_complete: false,
-        worktree_path: '',
+        checkpoint: {
+          phase: 'wrong_phase',
+        },
       },
     })
 

@@ -6,6 +6,7 @@
  * mock IncomingMessage and ServerResponse objects.
  *
  * AC-3: POST /gate/check handler with Zod validation; 400 on invalid input
+ * AC-5: Proof payloads use nested artifact-mirroring structures per spec
  * AC-8: sendJson/readBody from @repo/sidecar-http-utils
  * AC-12: SEC-002 auth-deferral comment present (verified at code level)
  */
@@ -82,9 +83,9 @@ describe('handleGateCheckRequest', () => {
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        setup_complete: true,
-        worktree_path: '/tree/story/WINT-3010',
+        checkpoint: {
+          phase: 'setup_complete',
+        },
       },
     })
     const req = createMockRequest(body)
@@ -99,14 +100,14 @@ describe('handleGateCheckRequest', () => {
     expect(responseBody.data.stage).toBe('POST_BOOTSTRAP')
   })
 
-  it('returns 422 ok:false with missing_proofs for invalid proof', async () => {
+  it('returns 422 ok:false with missing_proofs for invalid POST_BOOTSTRAP proof', async () => {
     const body = JSON.stringify({
       stage: 'POST_BOOTSTRAP',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        setup_complete: false,
-        worktree_path: '/tree/story/WINT-3010',
+        checkpoint: {
+          phase: 'wrong_phase',
+        },
       },
     })
     const req = createMockRequest(body)
@@ -167,9 +168,10 @@ describe('handleGateCheckRequest', () => {
       stage: 'ELAB_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        elab_verdict: 'CONDITIONAL_PASS',
-        gaps_resolved: true,
+        elab: {
+          verdict: 'CONDITIONAL_PASS',
+          findings: ['Minor gap in AC-3, acceptable risk'],
+        },
       },
     })
     const req = createMockRequest(body)
@@ -182,15 +184,14 @@ describe('handleGateCheckRequest', () => {
     expect(responseBody.ok).toBe(true)
   })
 
-  it('returns 200 for valid PATCH_COMPLETE at 80% coverage boundary', async () => {
+  it('returns 200 for valid PATCH_COMPLETE with touched_files > 0', async () => {
     const body = JSON.stringify({
       stage: 'PATCH_COMPLETE',
       story_id: 'WINT-3010',
       proof: {
-        story_id: 'WINT-3010',
-        build_passed: true,
-        tests_passed: true,
-        coverage_pct: 80,
+        evidence: {
+          touched_files: 5,
+        },
       },
     })
     const req = createMockRequest(body)

@@ -1,0 +1,11 @@
+schema: 1
+story_id: WINT-3010
+timestamp: '2026-03-09T21:34:00.000Z'
+iteration: 1
+current_phase: qa-verify
+last_successful_phase: qa-setup
+blocked: false
+verdict: FAIL
+fail_reason: >-
+  AC-5 proof schema mismatch — implementation uses flat custom fields instead of nested artifact-mirroring structures
+  mandated by AC-5
