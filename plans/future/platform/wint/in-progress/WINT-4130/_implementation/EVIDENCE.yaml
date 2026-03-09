@@ -377,29 +377,3 @@ acceptance_criteria:
     status: PASS
     evidence: "known_deviations: 4 entries (DEV-001 through DEV-004) with owner stories"
     note: "All detection failures and design gaps documented with recommended owner stories."
-
-# ─── FIX ITERATION RECORD ────────────────────────────────────────────────────
-
-fix_iterations:
-  - iteration: 2
-    timestamp: "2026-03-08T23:30:00Z"
-    backend_worker: skipped
-    frontend_worker: skipped
-    skip_reason: >-
-      Spike/validation story with zero source code changes. REVIEW.yaml verdict: PASS,
-      ranked_patches: []. No backend or frontend code issues to fix. All failing ACs are caused
-      by upstream environment pre-conditions (wint schema absent, WINT-4030/WINT-4050 not applied)
-      owned by other stories. No worker spawning required.
-    issues_fixed: 0
-    issues_total: 0
-    review_iteration_after: 1
-
-touched_files: []
-
-commands_run:
-  - cmd: "review review artifact (REVIEW.yaml)"
-    result: "verdict: PASS, ranked_patches: [], total_errors: 0 — no code issues"
-    timestamp: "2026-03-08T23:30:00Z"
-  - cmd: "fix phase assessment"
-    result: "No workers spawned — spike story, zero source code changes, all issues are upstream blockers"
-    timestamp: "2026-03-08T23:30:00Z"
