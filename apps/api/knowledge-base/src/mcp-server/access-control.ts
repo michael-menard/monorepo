@@ -62,6 +62,7 @@ export const ToolNameSchema = z.enum([
   // Plan tools (SKCR - KB-native story creation)
   'kb_get_plan',
   'kb_list_plans',
+  'kb_get_roadmap',
   'kb_update_plan',
   'kb_upsert_plan',
   // PDBM Phase 0 plan tools
@@ -152,6 +153,7 @@ const ACCESS_MATRIX: Record<ToolName, Set<AgentRole>> = {
   // Plan tools (SKCR) - available to all roles
   kb_get_plan: new Set(['pm', 'dev', 'qa', 'all']),
   kb_list_plans: new Set(['pm', 'dev', 'qa', 'all']),
+  kb_get_roadmap: new Set(['pm', 'dev', 'qa', 'all']),
   kb_update_plan: new Set(['pm', 'dev', 'all']),
   kb_upsert_plan: new Set(['pm', 'dev', 'all']),
   // PDBM Phase 0 plan tools

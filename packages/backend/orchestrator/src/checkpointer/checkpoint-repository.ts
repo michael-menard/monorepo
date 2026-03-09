@@ -284,7 +284,7 @@ export class CheckpointRepository {
    */
   async get(
     threadId: string,
-  ): Promise<{ payload: CheckpointPayload; nodeName: string; phase: string } | null> {
+  ): Promise<{ payload: CheckpointPayload; nodeName: string; phase: string; reachedAt: Date } | null> {
     const client = await this.pool.connect()
     try {
       const result = await client.query<CheckpointRow>(
@@ -320,6 +320,7 @@ export class CheckpointRepository {
         payload,
         nodeName: row.checkpoint_name,
         phase: row.phase,
+        reachedAt: row.reached_at,
       }
     } catch (error) {
       logger.error('Checkpoint read failed', {

@@ -11,10 +11,13 @@
  * AC-002: Graph state serializable and restorable via withCheckpointer().
  */
 
+import { z } from 'zod'
 import { logger } from '@repo/logger'
 import { CheckpointRepository, createCheckpointRepository } from './checkpoint-repository.js'
 import type { DbPool } from './checkpoint-repository.js'
 import type { CheckpointConfig, CheckpointPayload, NodeHistoryEntry } from './__types__/index.js'
+import { PHASE_TO_CHECKPOINT_MAP } from './phase-mapping.js'
+import type { Phase } from '../artifacts/checkpoint.js'
 
 // Re-export types and classes for consumers
 export { CheckpointRepository, createCheckpointRepository }
@@ -32,32 +35,39 @@ export { PHASE_TO_CHECKPOINT_MAP, translatePhaseToNode } from './phase-mapping.j
 /**
  * Options for the withCheckpointer() wrapper.
  */
-export interface WithCheckpointerOptions {
+export const WithCheckpointerOptionsSchema = z.object({
   /** LangGraph thread ID for this graph run. Required for checkpoint persistence. */
-  threadId: string
+  threadId: z.string().min(1),
   /** Optional story ID for cross-reference in workflow_executions */
-  storyId?: string
+  storyId: z.string().optional(),
   /** Checkpoint repository configuration */
-  checkpointConfig?: Partial<CheckpointConfig>
+  checkpointConfig: z.custom<Partial<CheckpointConfig>>().optional(),
   /**
    * Whether to write checkpoints after each node.
    * Default: true. Set to false to disable in tests.
    */
-  enabled?: boolean
-}
+  enabled: z.boolean().optional().default(true),
+})
+
+export type WithCheckpointerOptions = z.infer<typeof WithCheckpointerOptionsSchema>
 
 /**
  * Result of a node execution wrapped by withCheckpointer().
+ * Generic parameter T represents the node's return type.
  */
-export interface CheckpointedNodeResult<T> {
+export const CheckpointedNodeResultSchema = z.object({
+  /** Whether a checkpoint was written */
+  checkpointed: z.boolean(),
+  /** Thread ID used for this checkpoint */
+  threadId: z.string(),
+  /** Node name that was checkpointed */
+  nodeName: z.string(),
+})
+
+// The full result type includes the generic result field not expressible in plain Zod
+export type CheckpointedNodeResult<T> = z.infer<typeof CheckpointedNodeResultSchema> & {
   /** The node's return value */
   result: T
-  /** Whether a checkpoint was written */
-  checkpointed: boolean
-  /** Thread ID used for this checkpoint */
-  threadId: string
-  /** Node name that was checkpointed */
-  nodeName: string
 }
 
 /**
@@ -93,7 +103,7 @@ export interface CheckpointedNodeResult<T> {
  * @param pool - DB pool from @repo/db getPool()
  * @param options - Checkpointer options (threadId, storyId, etc.)
  * @param nodeName - LangGraph node name
- * @param phase - Workflow phase string
+ * @param phase - Workflow phase (must be a valid Phase value from PHASE_TO_CHECKPOINT_MAP)
  * @param stateSnapshot - Current graph state (will be serialized)
  * @param nodeHistory - Node execution history up to this point
  * @param retryCounts - Retry counts per node
@@ -104,13 +114,20 @@ export async function withCheckpointer<T>(
   pool: DbPool,
   options: WithCheckpointerOptions,
   nodeName: string,
-  phase: string,
+  phase: Phase,
   stateSnapshot: Record<string, unknown>,
   nodeHistory: NodeHistoryEntry[],
   retryCounts: Record<string, number>,
   nodeFn: () => Promise<T>,
 ): Promise<CheckpointedNodeResult<T>> {
   const { threadId, storyId, checkpointConfig, enabled = true } = options
+
+  // Runtime validation: phase must be a key in PHASE_TO_CHECKPOINT_MAP
+  if (!(phase in PHASE_TO_CHECKPOINT_MAP)) {
+    throw new Error(
+      `withCheckpointer: unknown phase '${phase}'. Must be one of: ${Object.keys(PHASE_TO_CHECKPOINT_MAP).join(', ')}`,
+    )
+  }
 
   const repo = createCheckpointRepository(pool, checkpointConfig)
   const startedAt = new Date().toISOString()
@@ -134,10 +151,17 @@ export async function withCheckpointer<T>(
           durationMs,
         }
 
+        // Use post-node state: if the node returned an object, treat it as the
+        // updated state snapshot; otherwise fall back to the pre-execution snapshot.
+        const checkpointState =
+          result && typeof result === 'object'
+            ? (result as Record<string, unknown>)
+            : stateSnapshot
+
         const payload = repo.buildPayload(
           threadId,
           nodeName,
-          stateSnapshot,
+          checkpointState,
           [...nodeHistory, historyEntry],
           retryCounts,
           null,
